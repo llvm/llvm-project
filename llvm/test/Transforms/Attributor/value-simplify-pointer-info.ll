@@ -57,30 +57,30 @@
 ; CHECK: @[[GLOBAL:[a-zA-Z0-9_$"\\.-]+]] = internal global [[STRUCT_STY:%.*]] zeroinitializer, align 8
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
 ;.
-define void @write_arg(i32* %p, i32 %v) {
+define void @write_arg(ptr %p, i32 %v) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@write_arg
-; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 [[V]], i32* [[P]], align 4, !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    store i32 [[V]], ptr [[P]], align 4, !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store i32 %v, i32* %p, align 4, !tbaa !3
+  store i32 %v, ptr %p, align 4, !tbaa !3
   ret void
 }
 
-define void @write_random(i32* %p) {
+define void @write_random(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@write_random
-; CHECK-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) {
+; CHECK-SAME: (ptr nocapture nofree writeonly [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 (...) @random()
-; CHECK-NEXT:    store i32 [[CALL]], i32* [[P]], align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 [[CALL]], ptr [[P]], align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %call = call i32 (...) @random()
-  store i32 %call, i32* %p, align 4, !tbaa !3
+  store i32 %call, ptr %p, align 4, !tbaa !3
   ret void
 }
 
@@ -103,150 +103,134 @@ declare i32 @random(...)
 ;      r.i3 = s.i3 + s.i1;
 ;      return r;
 ;    }
-define void @local_alloca_simplifiable_1(%struct.S* noalias sret(%struct.S) align 4 %agg.result) {
+define void @local_alloca_simplifiable_1(ptr noalias sret(%struct.S) align 4 %agg.result) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@local_alloca_simplifiable_1
-; TUNIT-SAME: (%struct.S* noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR1:[0-9]+]] {
+; TUNIT-SAME: (ptr noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
-; TUNIT-NEXT:    [[I:%.*]] = bitcast %struct.S* [[S]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I]]) #[[ATTR16:[0-9]+]]
-; TUNIT-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; TUNIT-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 4
-; TUNIT-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
-; TUNIT-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR17:[0-9]+]]
-; TUNIT-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR17]]
-; TUNIT-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR17]]
-; TUNIT-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
-; TUNIT-NEXT:    store float 0x3FF19999A0000000, float* [[F12]], align 4, !tbaa [[TBAA7:![0-9]+]]
-; TUNIT-NEXT:    [[F24:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 4
-; TUNIT-NEXT:    store float 0x40119999A0000000, float* [[F24]], align 4, !tbaa [[TBAA10:![0-9]+]]
-; TUNIT-NEXT:    [[F37:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 5
-; TUNIT-NEXT:    store float 0x40119999A0000000, float* [[F37]], align 4, !tbaa [[TBAA11:![0-9]+]]
-; TUNIT-NEXT:    [[I19:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 0
-; TUNIT-NEXT:    store i32 1, i32* [[I19]], align 4, !tbaa [[TBAA12:![0-9]+]]
-; TUNIT-NEXT:    [[I212:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 1
-; TUNIT-NEXT:    store i32 4, i32* [[I212]], align 4, !tbaa [[TBAA13:![0-9]+]]
-; TUNIT-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 2
-; TUNIT-NEXT:    store i32 4, i32* [[I316]], align 4, !tbaa [[TBAA14:![0-9]+]]
-; TUNIT-NEXT:    [[I12:%.*]] = bitcast %struct.S* [[S]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I12]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 24, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(24) [[S]]) #[[ATTR16:[0-9]+]]
+; TUNIT-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; TUNIT-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 4
+; TUNIT-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 5
+; TUNIT-NEXT:    call void @write_arg(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) [[S]], i32 noundef 1) #[[ATTR17:[0-9]+]]
+; TUNIT-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 1
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR17]]
+; TUNIT-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree nonnull writeonly align 4 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR17]]
+; TUNIT-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 3
+; TUNIT-NEXT:    store float 0x3FF19999A0000000, ptr [[F12]], align 4, !tbaa [[TBAA7:![0-9]+]]
+; TUNIT-NEXT:    [[F24:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 4
+; TUNIT-NEXT:    store float 0x40119999A0000000, ptr [[F24]], align 4, !tbaa [[TBAA10:![0-9]+]]
+; TUNIT-NEXT:    [[F37:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 5
+; TUNIT-NEXT:    store float 0x40119999A0000000, ptr [[F37]], align 4, !tbaa [[TBAA11:![0-9]+]]
+; TUNIT-NEXT:    store i32 1, ptr [[AGG_RESULT]], align 4, !tbaa [[TBAA12:![0-9]+]]
+; TUNIT-NEXT:    [[I212:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 1
+; TUNIT-NEXT:    store i32 4, ptr [[I212]], align 4, !tbaa [[TBAA13:![0-9]+]]
+; TUNIT-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 2
+; TUNIT-NEXT:    store i32 4, ptr [[I316]], align 4, !tbaa [[TBAA14:![0-9]+]]
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 24, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(24) [[S]]) #[[ATTR16]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@local_alloca_simplifiable_1
-; CGSCC-SAME: (%struct.S* noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[S:%.*]] = alloca [[STRUCT_S]], align 4
-; CGSCC-NEXT:    [[I:%.*]] = bitcast %struct.S* [[S]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I]]) #[[ATTR19:[0-9]+]]
-; CGSCC-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; CGSCC-NEXT:    store float 0x3FF19999A0000000, float* [[F1]], align 4, !tbaa [[TBAA7:![0-9]+]]
-; CGSCC-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 4
-; CGSCC-NEXT:    store float 0x40019999A0000000, float* [[F2]], align 4, !tbaa [[TBAA10:![0-9]+]]
-; CGSCC-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
-; CGSCC-NEXT:    store float 0x400A666660000000, float* [[F3]], align 4, !tbaa [[TBAA11:![0-9]+]]
-; CGSCC-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR20:[0-9]+]]
-; CGSCC-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR20]]
-; CGSCC-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR20]]
-; CGSCC-NEXT:    [[F11:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; CGSCC-NEXT:    [[I4:%.*]] = load float, float* [[F11]], align 4, !tbaa [[TBAA7]]
-; CGSCC-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
-; CGSCC-NEXT:    store float [[I4]], float* [[F12]], align 4, !tbaa [[TBAA7]]
-; CGSCC-NEXT:    [[F23:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 4
-; CGSCC-NEXT:    [[I5:%.*]] = load float, float* [[F23]], align 4, !tbaa [[TBAA10]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 24, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(24) [[S]]) #[[ATTR19:[0-9]+]]
+; CGSCC-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; CGSCC-NEXT:    store float 0x3FF19999A0000000, ptr [[F1]], align 4, !tbaa [[TBAA7:![0-9]+]]
+; CGSCC-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 4
+; CGSCC-NEXT:    store float 0x40019999A0000000, ptr [[F2]], align 4, !tbaa [[TBAA10:![0-9]+]]
+; CGSCC-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 5
+; CGSCC-NEXT:    store float 0x400A666660000000, ptr [[F3]], align 4, !tbaa [[TBAA11:![0-9]+]]
+; CGSCC-NEXT:    call void @write_arg(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) [[S]], i32 noundef 1) #[[ATTR20:[0-9]+]]
+; CGSCC-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 1
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR20]]
+; CGSCC-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR20]]
+; CGSCC-NEXT:    [[F11:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; CGSCC-NEXT:    [[I4:%.*]] = load float, ptr [[F11]], align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 3
+; CGSCC-NEXT:    store float [[I4]], ptr [[F12]], align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[F23:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 4
+; CGSCC-NEXT:    [[I5:%.*]] = load float, ptr [[F23]], align 4, !tbaa [[TBAA10]]
 ; CGSCC-NEXT:    [[MUL:%.*]] = fmul float [[I5]], 2.000000e+00
-; CGSCC-NEXT:    [[F24:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 4
-; CGSCC-NEXT:    store float [[MUL]], float* [[F24]], align 4, !tbaa [[TBAA10]]
-; CGSCC-NEXT:    [[F35:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
-; CGSCC-NEXT:    [[I6:%.*]] = load float, float* [[F35]], align 4, !tbaa [[TBAA11]]
-; CGSCC-NEXT:    [[F16:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; CGSCC-NEXT:    [[I7:%.*]] = load float, float* [[F16]], align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[F24:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 4
+; CGSCC-NEXT:    store float [[MUL]], ptr [[F24]], align 4, !tbaa [[TBAA10]]
+; CGSCC-NEXT:    [[F35:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 5
+; CGSCC-NEXT:    [[I6:%.*]] = load float, ptr [[F35]], align 4, !tbaa [[TBAA11]]
+; CGSCC-NEXT:    [[F16:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; CGSCC-NEXT:    [[I7:%.*]] = load float, ptr [[F16]], align 4, !tbaa [[TBAA7]]
 ; CGSCC-NEXT:    [[ADD:%.*]] = fadd float [[I6]], [[I7]]
-; CGSCC-NEXT:    [[F37:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 5
-; CGSCC-NEXT:    store float [[ADD]], float* [[F37]], align 4, !tbaa [[TBAA11]]
-; CGSCC-NEXT:    [[I18:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; CGSCC-NEXT:    [[I8:%.*]] = load i32, i32* [[I18]], align 4, !tbaa [[TBAA12:![0-9]+]]
-; CGSCC-NEXT:    [[I19:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 0
-; CGSCC-NEXT:    store i32 [[I8]], i32* [[I19]], align 4, !tbaa [[TBAA12]]
-; CGSCC-NEXT:    [[I210:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; CGSCC-NEXT:    [[I9:%.*]] = load i32, i32* [[I210]], align 4, !tbaa [[TBAA13:![0-9]+]]
+; CGSCC-NEXT:    [[F37:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 5
+; CGSCC-NEXT:    store float [[ADD]], ptr [[F37]], align 4, !tbaa [[TBAA11]]
+; CGSCC-NEXT:    [[I8:%.*]] = load i32, ptr [[S]], align 4, !tbaa [[TBAA12:![0-9]+]]
+; CGSCC-NEXT:    store i32 [[I8]], ptr [[AGG_RESULT]], align 4, !tbaa [[TBAA12]]
+; CGSCC-NEXT:    [[I210:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 1
+; CGSCC-NEXT:    [[I9:%.*]] = load i32, ptr [[I210]], align 4, !tbaa [[TBAA13:![0-9]+]]
 ; CGSCC-NEXT:    [[MUL11:%.*]] = shl nsw i32 [[I9]], 1
-; CGSCC-NEXT:    [[I212:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 1
-; CGSCC-NEXT:    store i32 [[MUL11]], i32* [[I212]], align 4, !tbaa [[TBAA13]]
-; CGSCC-NEXT:    [[I313:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; CGSCC-NEXT:    [[I10:%.*]] = load i32, i32* [[I313]], align 4, !tbaa [[TBAA14:![0-9]+]]
-; CGSCC-NEXT:    [[I114:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; CGSCC-NEXT:    [[I11:%.*]] = load i32, i32* [[I114]], align 4, !tbaa [[TBAA12]]
+; CGSCC-NEXT:    [[I212:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 1
+; CGSCC-NEXT:    store i32 [[MUL11]], ptr [[I212]], align 4, !tbaa [[TBAA13]]
+; CGSCC-NEXT:    [[I313:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
+; CGSCC-NEXT:    [[I10:%.*]] = load i32, ptr [[I313]], align 4, !tbaa [[TBAA14:![0-9]+]]
+; CGSCC-NEXT:    [[I11:%.*]] = load i32, ptr [[S]], align 4, !tbaa [[TBAA12]]
 ; CGSCC-NEXT:    [[ADD15:%.*]] = add nsw i32 [[I10]], [[I11]]
-; CGSCC-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 2
-; CGSCC-NEXT:    store i32 [[ADD15]], i32* [[I316]], align 4, !tbaa [[TBAA14]]
-; CGSCC-NEXT:    [[I12:%.*]] = bitcast %struct.S* [[S]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 24, i8* nocapture nofree noundef nonnull align 4 dereferenceable(24) [[I12]]) #[[ATTR19]]
+; CGSCC-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 2
+; CGSCC-NEXT:    store i32 [[ADD15]], ptr [[I316]], align 4, !tbaa [[TBAA14]]
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 24, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(24) [[S]]) #[[ATTR19]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %s = alloca %struct.S, align 4
-  %i = bitcast %struct.S* %s to i8*
-  call void @llvm.lifetime.start.p0i8(i64 24, i8* nonnull %i)
-  %f1 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 3
-  store float 0x3FF19999A0000000, float* %f1, align 4, !tbaa !7
-  %f2 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 4
-  store float 0x40019999A0000000, float* %f2, align 4, !tbaa !10
-  %f3 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 5
-  store float 0x400A666660000000, float* %f3, align 4, !tbaa !11
-  %i1 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
-  call void @write_arg(i32* nonnull %i1, i32 1)
-  %i2 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 1
-  call void @write_arg(i32* nonnull %i2, i32 2)
-  %i3 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 2
-  call void @write_arg(i32* nonnull %i3, i32 3)
-  %f11 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 3
-  %i4 = load float, float* %f11, align 4, !tbaa !7
-  %f12 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 3
-  store float %i4, float* %f12, align 4, !tbaa !7
-  %f23 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 4
-  %i5 = load float, float* %f23, align 4, !tbaa !10
+  call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %s)
+  %f1 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 3
+  store float 0x3FF19999A0000000, ptr %f1, align 4, !tbaa !7
+  %f2 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 4
+  store float 0x40019999A0000000, ptr %f2, align 4, !tbaa !10
+  %f3 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 5
+  store float 0x400A666660000000, ptr %f3, align 4, !tbaa !11
+  call void @write_arg(ptr nonnull %s, i32 1)
+  %i2 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 1
+  call void @write_arg(ptr nonnull %i2, i32 2)
+  %i3 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 2
+  call void @write_arg(ptr nonnull %i3, i32 3)
+  %f11 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 3
+  %i4 = load float, ptr %f11, align 4, !tbaa !7
+  %f12 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 3
+  store float %i4, ptr %f12, align 4, !tbaa !7
+  %f23 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 4
+  %i5 = load float, ptr %f23, align 4, !tbaa !10
   %mul = fmul float %i5, 2.000000e+00
-  %f24 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 4
-  store float %mul, float* %f24, align 4, !tbaa !10
-  %f35 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 5
-  %i6 = load float, float* %f35, align 4, !tbaa !11
-  %f16 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 3
-  %i7 = load float, float* %f16, align 4, !tbaa !7
+  %f24 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 4
+  store float %mul, ptr %f24, align 4, !tbaa !10
+  %f35 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 5
+  %i6 = load float, ptr %f35, align 4, !tbaa !11
+  %f16 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 3
+  %i7 = load float, ptr %f16, align 4, !tbaa !7
   %add = fadd float %i6, %i7
-  %f37 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 5
-  store float %add, float* %f37, align 4, !tbaa !11
-  %i18 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
-  %i8 = load i32, i32* %i18, align 4, !tbaa !12
-  %i19 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 0
-  store i32 %i8, i32* %i19, align 4, !tbaa !12
-  %i210 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 1
-  %i9 = load i32, i32* %i210, align 4, !tbaa !13
+  %f37 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 5
+  store float %add, ptr %f37, align 4, !tbaa !11
+  %i8 = load i32, ptr %s, align 4, !tbaa !12
+  store i32 %i8, ptr %agg.result, align 4, !tbaa !12
+  %i210 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 1
+  %i9 = load i32, ptr %i210, align 4, !tbaa !13
   %mul11 = shl nsw i32 %i9, 1
-  %i212 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 1
-  store i32 %mul11, i32* %i212, align 4, !tbaa !13
-  %i313 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 2
-  %i10 = load i32, i32* %i313, align 4, !tbaa !14
-  %i114 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
-  %i11 = load i32, i32* %i114, align 4, !tbaa !12
+  %i212 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 1
+  store i32 %mul11, ptr %i212, align 4, !tbaa !13
+  %i313 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 2
+  %i10 = load i32, ptr %i313, align 4, !tbaa !14
+  %i11 = load i32, ptr %s, align 4, !tbaa !12
   %add15 = add nsw i32 %i10, %i11
-  %i316 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 2
-  store i32 %add15, i32* %i316, align 4, !tbaa !14
-  %i12 = bitcast %struct.S* %s to i8*
-  call void @llvm.lifetime.end.p0i8(i64 24, i8* nonnull %i12)
+  %i316 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 2
+  store i32 %add15, ptr %i316, align 4, !tbaa !14
+  call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %s)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ;    void local_alloca_simplifiable_2(void) {
 ;      char Bytes[1024];
@@ -269,8 +253,7 @@ define void @local_alloca_simplifiable_2() {
 ; TUNIT-SAME: () #[[ATTR3:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; TUNIT-NEXT:    [[I:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1024, i8* nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[I]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1024, ptr noalias nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[BYTES]]) #[[ATTR16]]
 ; TUNIT-NEXT:    br label [[FOR_COND:%.*]]
 ; TUNIT:       for.cond:
 ; TUNIT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
@@ -280,7 +263,7 @@ define void @local_alloca_simplifiable_2() {
 ; TUNIT-NEXT:    br label [[FOR_END:%.*]]
 ; TUNIT:       for.body:
 ; TUNIT-NEXT:    [[I15:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], 10
-; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[I15]]
+; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[I15]]
 ; TUNIT-NEXT:    br label [[FOR_INC]]
 ; TUNIT:       for.inc:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -294,10 +277,9 @@ define void @local_alloca_simplifiable_2() {
 ; TUNIT:       for.cond.cleanup4:
 ; TUNIT-NEXT:    br label [[FOR_END11:%.*]]
 ; TUNIT:       for.body5:
-; TUNIT-NEXT:    [[I16:%.*]] = bitcast [1024 x i8]* [[BYTES]] to float*
 ; TUNIT-NEXT:    [[I17:%.*]] = mul nuw nsw i64 [[INDVARS_IV2]], 10
 ; TUNIT-NEXT:    [[I18:%.*]] = or i64 [[I17]], 1
-; TUNIT-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[I16]], i64 [[I18]]
+; TUNIT-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[BYTES]], i64 [[I18]]
 ; TUNIT-NEXT:    br label [[FOR_INC9]]
 ; TUNIT:       for.inc9:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
@@ -311,19 +293,17 @@ define void @local_alloca_simplifiable_2() {
 ; TUNIT:       for.cond.cleanup15:
 ; TUNIT-NEXT:    br label [[FOR_END24:%.*]]
 ; TUNIT:       for.body16:
-; TUNIT-NEXT:    [[I19:%.*]] = bitcast [1024 x i8]* [[BYTES]] to i64*
 ; TUNIT-NEXT:    [[I20:%.*]] = mul nuw nsw i64 [[INDVARS_IV7]], 10
 ; TUNIT-NEXT:    [[I21:%.*]] = add nuw nsw i64 [[I20]], 2
-; TUNIT-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i64, i64* [[I19]], i64 [[I21]]
+; TUNIT-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i64, ptr [[BYTES]], i64 [[I21]]
 ; TUNIT-NEXT:    br label [[FOR_INC22]]
 ; TUNIT:       for.inc22:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT8]] = add nuw nsw i64 [[INDVARS_IV7]], 1
 ; TUNIT-NEXT:    br label [[FOR_COND13]], !llvm.loop [[LOOP18:![0-9]+]]
 ; TUNIT:       for.end24:
-; TUNIT-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 1023
-; TUNIT-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 500
-; TUNIT-NEXT:    [[I22:%.*]] = bitcast i8* [[ARRAYIDX26]] to i32*
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(524) [[I22]], i32 noundef 0) #[[ATTR17]]
+; TUNIT-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 1023
+; TUNIT-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 500
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree nonnull writeonly align 4 dereferenceable(524) [[ARRAYIDX26]], i32 noundef 0) #[[ATTR17]]
 ; TUNIT-NEXT:    br label [[FOR_COND28:%.*]]
 ; TUNIT:       for.cond28:
 ; TUNIT-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC36:%.*]] ], [ 0, [[FOR_END24]] ]
@@ -332,15 +312,14 @@ define void @local_alloca_simplifiable_2() {
 ; TUNIT:       for.cond.cleanup30:
 ; TUNIT-NEXT:    br label [[FOR_END38:%.*]]
 ; TUNIT:       for.body31:
-; TUNIT-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* @globalBytes, i64 0, i64 [[INDVARS_IV12]]
-; TUNIT-NEXT:    store i8 0, i8* [[ARRAYIDX35]], align 1, !tbaa [[TBAA19:![0-9]+]]
+; TUNIT-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds [1024 x i8], ptr @globalBytes, i64 0, i64 [[INDVARS_IV12]]
+; TUNIT-NEXT:    store i8 0, ptr [[ARRAYIDX35]], align 1, !tbaa [[TBAA19:![0-9]+]]
 ; TUNIT-NEXT:    br label [[FOR_INC36]]
 ; TUNIT:       for.inc36:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT13]] = add nuw nsw i64 [[INDVARS_IV12]], 1
 ; TUNIT-NEXT:    br label [[FOR_COND28]], !llvm.loop [[LOOP20:![0-9]+]]
 ; TUNIT:       for.end38:
-; TUNIT-NEXT:    [[I24:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1024, i8* nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[I24]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1024, ptr noalias nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[BYTES]]) #[[ATTR16]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn
@@ -348,8 +327,7 @@ define void @local_alloca_simplifiable_2() {
 ; CGSCC-SAME: () #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CGSCC-NEXT:    [[I:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1024, i8* nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[I]]) #[[ATTR19]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1024, ptr noalias nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[BYTES]]) #[[ATTR19]]
 ; CGSCC-NEXT:    br label [[FOR_COND:%.*]]
 ; CGSCC:       for.cond:
 ; CGSCC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
@@ -359,8 +337,8 @@ define void @local_alloca_simplifiable_2() {
 ; CGSCC-NEXT:    br label [[FOR_END:%.*]]
 ; CGSCC:       for.body:
 ; CGSCC-NEXT:    [[I15:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], 10
-; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[I15]]
-; CGSCC-NEXT:    store i8 0, i8* [[ARRAYIDX]], align 2, !tbaa [[TBAA15:![0-9]+]]
+; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[I15]]
+; CGSCC-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 2, !tbaa [[TBAA15:![0-9]+]]
 ; CGSCC-NEXT:    br label [[FOR_INC]]
 ; CGSCC:       for.inc:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -374,11 +352,10 @@ define void @local_alloca_simplifiable_2() {
 ; CGSCC:       for.cond.cleanup4:
 ; CGSCC-NEXT:    br label [[FOR_END11:%.*]]
 ; CGSCC:       for.body5:
-; CGSCC-NEXT:    [[I16:%.*]] = bitcast [1024 x i8]* [[BYTES]] to float*
 ; CGSCC-NEXT:    [[I17:%.*]] = mul nuw nsw i64 [[INDVARS_IV2]], 10
 ; CGSCC-NEXT:    [[I18:%.*]] = or i64 [[I17]], 1
-; CGSCC-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[I16]], i64 [[I18]]
-; CGSCC-NEXT:    store float 0.000000e+00, float* [[ARRAYIDX8]], align 4, !tbaa [[TBAA18:![0-9]+]]
+; CGSCC-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[BYTES]], i64 [[I18]]
+; CGSCC-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA18:![0-9]+]]
 ; CGSCC-NEXT:    br label [[FOR_INC9]]
 ; CGSCC:       for.inc9:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
@@ -392,21 +369,19 @@ define void @local_alloca_simplifiable_2() {
 ; CGSCC:       for.cond.cleanup15:
 ; CGSCC-NEXT:    br label [[FOR_END24:%.*]]
 ; CGSCC:       for.body16:
-; CGSCC-NEXT:    [[I19:%.*]] = bitcast [1024 x i8]* [[BYTES]] to i64*
 ; CGSCC-NEXT:    [[I20:%.*]] = mul nuw nsw i64 [[INDVARS_IV7]], 10
 ; CGSCC-NEXT:    [[I21:%.*]] = add nuw nsw i64 [[I20]], 2
-; CGSCC-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i64, i64* [[I19]], i64 [[I21]]
-; CGSCC-NEXT:    store i64 0, i64* [[ARRAYIDX21]], align 16, !tbaa [[TBAA20:![0-9]+]]
+; CGSCC-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i64, ptr [[BYTES]], i64 [[I21]]
+; CGSCC-NEXT:    store i64 0, ptr [[ARRAYIDX21]], align 16, !tbaa [[TBAA20:![0-9]+]]
 ; CGSCC-NEXT:    br label [[FOR_INC22]]
 ; CGSCC:       for.inc22:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT8]] = add nuw nsw i64 [[INDVARS_IV7]], 1
 ; CGSCC-NEXT:    br label [[FOR_COND13]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CGSCC:       for.end24:
-; CGSCC-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 1023
-; CGSCC-NEXT:    store i8 0, i8* [[ARRAYIDX25]], align 1, !tbaa [[TBAA15]]
-; CGSCC-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 500
-; CGSCC-NEXT:    [[I22:%.*]] = bitcast i8* [[ARRAYIDX26]] to i32*
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(524) [[I22]], i32 noundef 0) #[[ATTR20]]
+; CGSCC-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 1023
+; CGSCC-NEXT:    store i8 0, ptr [[ARRAYIDX25]], align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 500
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(524) [[ARRAYIDX26]], i32 noundef 0) #[[ATTR20]]
 ; CGSCC-NEXT:    br label [[FOR_COND28:%.*]]
 ; CGSCC:       for.cond28:
 ; CGSCC-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC36:%.*]] ], [ 0, [[FOR_END24]] ]
@@ -415,23 +390,21 @@ define void @local_alloca_simplifiable_2() {
 ; CGSCC:       for.cond.cleanup30:
 ; CGSCC-NEXT:    br label [[FOR_END38:%.*]]
 ; CGSCC:       for.body31:
-; CGSCC-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[INDVARS_IV12]]
-; CGSCC-NEXT:    [[I23:%.*]] = load i8, i8* [[ARRAYIDX33]], align 1, !tbaa [[TBAA15]]
-; CGSCC-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* @globalBytes, i64 0, i64 [[INDVARS_IV12]]
-; CGSCC-NEXT:    store i8 [[I23]], i8* [[ARRAYIDX35]], align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDVARS_IV12]]
+; CGSCC-NEXT:    [[I23:%.*]] = load i8, ptr [[ARRAYIDX33]], align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds [1024 x i8], ptr @globalBytes, i64 0, i64 [[INDVARS_IV12]]
+; CGSCC-NEXT:    store i8 [[I23]], ptr [[ARRAYIDX35]], align 1, !tbaa [[TBAA15]]
 ; CGSCC-NEXT:    br label [[FOR_INC36]]
 ; CGSCC:       for.inc36:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT13]] = add nuw nsw i64 [[INDVARS_IV12]], 1
 ; CGSCC-NEXT:    br label [[FOR_COND28]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CGSCC:       for.end38:
-; CGSCC-NEXT:    [[I24:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1024, i8* nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[I24]]) #[[ATTR19]]
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1024, ptr noalias nocapture nofree noundef nonnull align 16 dereferenceable(1024) [[BYTES]]) #[[ATTR19]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
-  %i = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 1024, i8* nonnull %i)
+  call void @llvm.lifetime.start.p0(i64 1024, ptr nonnull %Bytes)
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
@@ -444,8 +417,8 @@ for.cond.cleanup:                                 ; preds = %for.cond
 
 for.body:                                         ; preds = %for.cond
   %i15 = mul nuw nsw i64 %indvars.iv, 10
-  %arrayidx = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %i15
-  store i8 0, i8* %arrayidx, align 2, !tbaa !15
+  %arrayidx = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %i15
+  store i8 0, ptr %arrayidx, align 2, !tbaa !15
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -464,11 +437,10 @@ for.cond.cleanup4:                                ; preds = %for.cond2
   br label %for.end11
 
 for.body5:                                        ; preds = %for.cond2
-  %i16 = bitcast [1024 x i8]* %Bytes to float*
   %i17 = mul nuw nsw i64 %indvars.iv2, 10
   %i18 = or i64 %i17, 1
-  %arrayidx8 = getelementptr inbounds float, float* %i16, i64 %i18
-  store float 0.000000e+00, float* %arrayidx8, align 4, !tbaa !18
+  %arrayidx8 = getelementptr inbounds float, ptr %Bytes, i64 %i18
+  store float 0.000000e+00, ptr %arrayidx8, align 4, !tbaa !18
   br label %for.inc9
 
 for.inc9:                                         ; preds = %for.body5
@@ -487,11 +459,10 @@ for.cond.cleanup15:                               ; preds = %for.cond13
   br label %for.end24
 
 for.body16:                                       ; preds = %for.cond13
-  %i19 = bitcast [1024 x i8]* %Bytes to i64*
   %i20 = mul nuw nsw i64 %indvars.iv7, 10
   %i21 = add nuw nsw i64 %i20, 2
-  %arrayidx21 = getelementptr inbounds i64, i64* %i19, i64 %i21
-  store i64 0, i64* %arrayidx21, align 16, !tbaa !20
+  %arrayidx21 = getelementptr inbounds i64, ptr %Bytes, i64 %i21
+  store i64 0, ptr %arrayidx21, align 16, !tbaa !20
   br label %for.inc22
 
 for.inc22:                                        ; preds = %for.body16
@@ -499,11 +470,10 @@ for.inc22:                                        ; preds = %for.body16
   br label %for.cond13, !llvm.loop !22
 
 for.end24:                                        ; preds = %for.cond.cleanup15
-  %arrayidx25 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 1023
-  store i8 0, i8* %arrayidx25, align 1, !tbaa !15
-  %arrayidx26 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 500
-  %i22 = bitcast i8* %arrayidx26 to i32*
-  call void @write_arg(i32* nonnull %i22, i32 0)
+  %arrayidx25 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 1023
+  store i8 0, ptr %arrayidx25, align 1, !tbaa !15
+  %arrayidx26 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 500
+  call void @write_arg(ptr nonnull %arrayidx26, i32 0)
   br label %for.cond28
 
 for.cond28:                                       ; preds = %for.inc36, %for.end24
@@ -515,10 +485,10 @@ for.cond.cleanup30:                               ; preds = %for.cond28
   br label %for.end38
 
 for.body31:                                       ; preds = %for.cond28
-  %arrayidx33 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %indvars.iv12
-  %i23 = load i8, i8* %arrayidx33, align 1, !tbaa !15
-  %arrayidx35 = getelementptr inbounds [1024 x i8], [1024 x i8]* @globalBytes, i64 0, i64 %indvars.iv12
-  store i8 %i23, i8* %arrayidx35, align 1, !tbaa !15
+  %arrayidx33 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %indvars.iv12
+  %i23 = load i8, ptr %arrayidx33, align 1, !tbaa !15
+  %arrayidx35 = getelementptr inbounds [1024 x i8], ptr @globalBytes, i64 0, i64 %indvars.iv12
+  store i8 %i23, ptr %arrayidx35, align 1, !tbaa !15
   br label %for.inc36
 
 for.inc36:                                        ; preds = %for.body31
@@ -526,8 +496,7 @@ for.inc36:                                        ; preds = %for.body31
   br label %for.cond28, !llvm.loop !23
 
 for.end38:                                        ; preds = %for.cond.cleanup30
-  %i24 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 0
-  call void @llvm.lifetime.end.p0i8(i64 1024, i8* nonnull %i24)
+  call void @llvm.lifetime.end.p0(i64 1024, ptr nonnull %Bytes)
   ret void
 }
 
@@ -547,11 +516,11 @@ define i32 @local_alloca_simplifiable_3() {
 ; CHECK-NEXT:    ret i32 2
 ;
   %A = alloca i32, align 4
-  store i32 1, i32* %A
+  store i32 1, ptr %A
   br label %split
 split:
-  store i32 2, i32* %A
-  %l = load i32, i32* %A, align 4
+  store i32 2, ptr %A
+  %l = load i32, ptr %A, align 4
   ret i32 %l
 }
 ;    int local_alloca_simplifiable_4() {
@@ -566,7 +535,7 @@ define i32 @local_alloca_simplifiable_4() {
 ; CHECK-NEXT:    ret i32 undef
 ;
   %A = alloca i32, align 4
-  %l = load i32, i32* %A, align 4
+  %l = load i32, ptr %A, align 4
   ret i32 %l
 }
 
@@ -582,8 +551,7 @@ define i32 @multi_obj_simplifiable_1(i32 %cnd) {
 ; TUNIT-SAME: (i32 [[CND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[L:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[I:%.*]] = bitcast i32* [[L]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[L]]) #[[ATTR16]]
 ; TUNIT-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CND]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL_NOT]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]]
 ; TUNIT:       cond.true:
@@ -591,8 +559,7 @@ define i32 @multi_obj_simplifiable_1(i32 %cnd) {
 ; TUNIT:       cond.false:
 ; TUNIT-NEXT:    br label [[COND_END]]
 ; TUNIT:       cond.end:
-; TUNIT-NEXT:    [[I2:%.*]] = bitcast i32* [[L]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I2]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[L]]) #[[ATTR16]]
 ; TUNIT-NEXT:    ret i32 5
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
@@ -600,8 +567,7 @@ define i32 @multi_obj_simplifiable_1(i32 %cnd) {
 ; CGSCC-SAME: (i32 [[CND:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[L:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[I:%.*]] = bitcast i32* [[L]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR19]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[L]]) #[[ATTR19]]
 ; CGSCC-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CND]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL_NOT]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]]
 ; CGSCC:       cond.true:
@@ -609,16 +575,14 @@ define i32 @multi_obj_simplifiable_1(i32 %cnd) {
 ; CGSCC:       cond.false:
 ; CGSCC-NEXT:    br label [[COND_END]]
 ; CGSCC:       cond.end:
-; CGSCC-NEXT:    [[I2:%.*]] = bitcast i32* [[L]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I2]]) #[[ATTR19]]
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[L]]) #[[ATTR19]]
 ; CGSCC-NEXT:    ret i32 5
 ;
 entry:
   %L = alloca i32, align 4
-  %i = bitcast i32* %L to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %i)
-  store i32 5, i32* @GI1, align 4, !tbaa !3
-  store i32 5, i32* %L, align 4, !tbaa !3
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %L)
+  store i32 5, ptr @GI1, align 4, !tbaa !3
+  store i32 5, ptr %L, align 4, !tbaa !3
   %tobool.not = icmp eq i32 %cnd, 0
   br i1 %tobool.not, label %cond.false, label %cond.true
 
@@ -629,10 +593,9 @@ cond.false:                                       ; preds = %entry
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %cond.true
-  %cond = phi i32* [ @GI1, %cond.true ], [ %L, %cond.false ]
-  %i1 = load i32, i32* %cond, align 4, !tbaa !3
-  %i2 = bitcast i32* %L to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %i2)
+  %cond = phi ptr [ @GI1, %cond.true ], [ %L, %cond.false ]
+  %i1 = load i32, ptr %cond, align 4, !tbaa !3
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %L)
   ret i32 %i1
 }
 
@@ -650,8 +613,7 @@ define i32 @multi_obj_simplifiable_2(i32 %cnd) {
 ; TUNIT-SAME: (i32 [[CND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[L:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[I:%.*]] = bitcast i32* [[L]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[L]]) #[[ATTR16]]
 ; TUNIT-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CND]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL_NOT]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]]
 ; TUNIT:       cond.true:
@@ -659,8 +621,7 @@ define i32 @multi_obj_simplifiable_2(i32 %cnd) {
 ; TUNIT:       cond.false:
 ; TUNIT-NEXT:    br label [[COND_END]]
 ; TUNIT:       cond.end:
-; TUNIT-NEXT:    [[I1:%.*]] = bitcast i32* [[L]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[L]]) #[[ATTR16]]
 ; TUNIT-NEXT:    ret i32 5
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
@@ -668,8 +629,7 @@ define i32 @multi_obj_simplifiable_2(i32 %cnd) {
 ; CGSCC-SAME: (i32 [[CND:%.*]]) #[[ATTR5]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[L:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[I:%.*]] = bitcast i32* [[L]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR19]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[L]]) #[[ATTR19]]
 ; CGSCC-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CND]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL_NOT]], label [[COND_FALSE:%.*]], label [[COND_TRUE:%.*]]
 ; CGSCC:       cond.true:
@@ -677,14 +637,12 @@ define i32 @multi_obj_simplifiable_2(i32 %cnd) {
 ; CGSCC:       cond.false:
 ; CGSCC-NEXT:    br label [[COND_END]]
 ; CGSCC:       cond.end:
-; CGSCC-NEXT:    [[I1:%.*]] = bitcast i32* [[L]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR19]]
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[L]]) #[[ATTR19]]
 ; CGSCC-NEXT:    ret i32 5
 ;
 entry:
   %L = alloca i32, align 4
-  %i = bitcast i32* %L to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %i)
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %L)
   %tobool.not = icmp eq i32 %cnd, 0
   br i1 %tobool.not, label %cond.false, label %cond.true
 
@@ -695,11 +653,10 @@ cond.false:                                       ; preds = %entry
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %cond.true
-  %cond = phi i32* [ @GI2, %cond.true ], [ %L, %cond.false ]
-  store i32 5, i32* %cond, align 4, !tbaa !3
-  %i1 = bitcast i32* %L to i8*
-  %l = load i32, i32* %cond, align 4, !tbaa !3
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %i1)
+  %cond = phi ptr [ @GI2, %cond.true ], [ %L, %cond.false ]
+  store i32 5, ptr %cond, align 4, !tbaa !3
+  %l = load i32, ptr %cond, align 4, !tbaa !3
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %L)
   ret i32 %l
 }
 
@@ -721,95 +678,92 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 ;      return r;
 ;    }
 ;
-define void @static_global_simplifiable_1(%struct.S* noalias sret(%struct.S) align 4 %agg.result) {
+define void @static_global_simplifiable_1(ptr noalias sret(%struct.S) align 4 %agg.result) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@static_global_simplifiable_1
-; TUNIT-SAME: (%struct.S* noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR5:[0-9]+]] {
+; TUNIT-SAME: (ptr noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR5:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i32 0, i32 0), i32 noundef 1) #[[ATTR17]]
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(20) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR17]]
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(16) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR17]]
-; TUNIT-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
-; TUNIT-NEXT:    store float 0x3FF19999A0000000, float* [[F1]], align 4, !tbaa [[TBAA7]]
-; TUNIT-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 4
-; TUNIT-NEXT:    store float 0x40119999A0000000, float* [[F2]], align 4, !tbaa [[TBAA10]]
-; TUNIT-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 5
-; TUNIT-NEXT:    store float 0x40119999A0000000, float* [[F3]], align 4, !tbaa [[TBAA11]]
-; TUNIT-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 0
-; TUNIT-NEXT:    store i32 1, i32* [[I1]], align 4, !tbaa [[TBAA12]]
-; TUNIT-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 1
-; TUNIT-NEXT:    store i32 4, i32* [[I2]], align 4, !tbaa [[TBAA13]]
-; TUNIT-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 2
-; TUNIT-NEXT:    store i32 4, i32* [[I3]], align 4, !tbaa [[TBAA14]]
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) @Gs1, i32 noundef 1) #[[ATTR17]]
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree nonnull writeonly align 4 dereferenceable(20) getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR17]]
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree nonnull writeonly align 4 dereferenceable(16) getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR17]]
+; TUNIT-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 3
+; TUNIT-NEXT:    store float 0x3FF19999A0000000, ptr [[F1]], align 4, !tbaa [[TBAA7]]
+; TUNIT-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 4
+; TUNIT-NEXT:    store float 0x40119999A0000000, ptr [[F2]], align 4, !tbaa [[TBAA10]]
+; TUNIT-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 5
+; TUNIT-NEXT:    store float 0x40119999A0000000, ptr [[F3]], align 4, !tbaa [[TBAA11]]
+; TUNIT-NEXT:    store i32 1, ptr [[AGG_RESULT]], align 4, !tbaa [[TBAA12]]
+; TUNIT-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 1
+; TUNIT-NEXT:    store i32 4, ptr [[I2]], align 4, !tbaa [[TBAA13]]
+; TUNIT-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 2
+; TUNIT-NEXT:    store i32 4, ptr [[I3]], align 4, !tbaa [[TBAA14]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@static_global_simplifiable_1
-; CGSCC-SAME: (%struct.S* noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR3]] {
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    store float 0x3FF19999A0000000, float* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 3), align 4, !tbaa [[TBAA7]]
-; CGSCC-NEXT:    store float 0x40019999A0000000, float* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 4), align 4, !tbaa [[TBAA10]]
-; CGSCC-NEXT:    store float 0x400A666660000000, float* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 5), align 4, !tbaa [[TBAA11]]
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i32 0, i32 0), i32 noundef 1) #[[ATTR20]]
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR20]]
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR20]]
-; CGSCC-NEXT:    [[I:%.*]] = load float, float* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 3), align 4, !tbaa [[TBAA7]]
-; CGSCC-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
-; CGSCC-NEXT:    store float [[I]], float* [[F1]], align 4, !tbaa [[TBAA7]]
-; CGSCC-NEXT:    [[I4:%.*]] = load float, float* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 4), align 4, !tbaa [[TBAA10]]
+; CGSCC-NEXT:    store float 0x3FF19999A0000000, ptr getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 3), align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    store float 0x40019999A0000000, ptr getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 4), align 4, !tbaa [[TBAA10]]
+; CGSCC-NEXT:    store float 0x400A666660000000, ptr getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 5), align 4, !tbaa [[TBAA11]]
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) @Gs1, i32 noundef 1) #[[ATTR20]]
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR20]]
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(16) getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR20]]
+; CGSCC-NEXT:    [[I:%.*]] = load float, ptr getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 3), align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 3
+; CGSCC-NEXT:    store float [[I]], ptr [[F1]], align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[I4:%.*]] = load float, ptr getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 4), align 4, !tbaa [[TBAA10]]
 ; CGSCC-NEXT:    [[MUL:%.*]] = fmul float [[I4]], 2.000000e+00
-; CGSCC-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 4
-; CGSCC-NEXT:    store float [[MUL]], float* [[F2]], align 4, !tbaa [[TBAA10]]
-; CGSCC-NEXT:    [[I5:%.*]] = load float, float* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 5), align 4, !tbaa [[TBAA11]]
-; CGSCC-NEXT:    [[I6:%.*]] = load float, float* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 3), align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 4
+; CGSCC-NEXT:    store float [[MUL]], ptr [[F2]], align 4, !tbaa [[TBAA10]]
+; CGSCC-NEXT:    [[I5:%.*]] = load float, ptr getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 5), align 4, !tbaa [[TBAA11]]
+; CGSCC-NEXT:    [[I6:%.*]] = load float, ptr getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 3), align 4, !tbaa [[TBAA7]]
 ; CGSCC-NEXT:    [[ADD:%.*]] = fadd float [[I5]], [[I6]]
-; CGSCC-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 5
-; CGSCC-NEXT:    store float [[ADD]], float* [[F3]], align 4, !tbaa [[TBAA11]]
-; CGSCC-NEXT:    [[I7:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i32 0, i32 0), align 4, !tbaa [[TBAA12]]
-; CGSCC-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 0
-; CGSCC-NEXT:    store i32 [[I7]], i32* [[I1]], align 4, !tbaa [[TBAA12]]
-; CGSCC-NEXT:    [[I8:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 1), align 4, !tbaa [[TBAA13]]
+; CGSCC-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 5
+; CGSCC-NEXT:    store float [[ADD]], ptr [[F3]], align 4, !tbaa [[TBAA11]]
+; CGSCC-NEXT:    [[I7:%.*]] = load i32, ptr @Gs1, align 4, !tbaa [[TBAA12]]
+; CGSCC-NEXT:    store i32 [[I7]], ptr [[AGG_RESULT]], align 4, !tbaa [[TBAA12]]
+; CGSCC-NEXT:    [[I8:%.*]] = load i32, ptr getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 1), align 4, !tbaa [[TBAA13]]
 ; CGSCC-NEXT:    [[MUL1:%.*]] = shl nsw i32 [[I8]], 1
-; CGSCC-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 1
-; CGSCC-NEXT:    store i32 [[MUL1]], i32* [[I2]], align 4, !tbaa [[TBAA13]]
-; CGSCC-NEXT:    [[I9:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 2), align 4, !tbaa [[TBAA14]]
-; CGSCC-NEXT:    [[I10:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i32 0, i32 0), align 4, !tbaa [[TBAA12]]
+; CGSCC-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 1
+; CGSCC-NEXT:    store i32 [[MUL1]], ptr [[I2]], align 4, !tbaa [[TBAA13]]
+; CGSCC-NEXT:    [[I9:%.*]] = load i32, ptr getelementptr inbounds ([[STRUCT_S]], ptr @Gs1, i64 0, i32 2), align 4, !tbaa [[TBAA14]]
+; CGSCC-NEXT:    [[I10:%.*]] = load i32, ptr @Gs1, align 4, !tbaa [[TBAA12]]
 ; CGSCC-NEXT:    [[ADD2:%.*]] = add nsw i32 [[I9]], [[I10]]
-; CGSCC-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 2
-; CGSCC-NEXT:    store i32 [[ADD2]], i32* [[I3]], align 4, !tbaa [[TBAA14]]
+; CGSCC-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 2
+; CGSCC-NEXT:    store i32 [[ADD2]], ptr [[I3]], align 4, !tbaa [[TBAA14]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  store float 0x3FF19999A0000000, float* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 3), align 4, !tbaa !7
-  store float 0x40019999A0000000, float* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 4), align 4, !tbaa !10
-  store float 0x400A666660000000, float* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 5), align 4, !tbaa !11
-  call void @write_arg(i32* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 0), i32 1)
-  call void @write_arg(i32* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 1), i32 2)
-  call void @write_arg(i32* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 2), i32 3)
-  %i = load float, float* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 3), align 4, !tbaa !7
-  %f1 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 3
-  store float %i, float* %f1, align 4, !tbaa !7
-  %i4 = load float, float* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 4), align 4, !tbaa !10
+  store float 0x3FF19999A0000000, ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 3), align 4, !tbaa !7
+  store float 0x40019999A0000000, ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 4), align 4, !tbaa !10
+  store float 0x400A666660000000, ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 5), align 4, !tbaa !11
+  call void @write_arg(ptr @Gs1, i32 1)
+  call void @write_arg(ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 1), i32 2)
+  call void @write_arg(ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 2), i32 3)
+  %i = load float, ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 3), align 4, !tbaa !7
+  %f1 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 3
+  store float %i, ptr %f1, align 4, !tbaa !7
+  %i4 = load float, ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 4), align 4, !tbaa !10
   %mul = fmul float %i4, 2.000000e+00
-  %f2 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 4
-  store float %mul, float* %f2, align 4, !tbaa !10
-  %i5 = load float, float* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 5), align 4, !tbaa !11
-  %i6 = load float, float* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 3), align 4, !tbaa !7
+  %f2 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 4
+  store float %mul, ptr %f2, align 4, !tbaa !10
+  %i5 = load float, ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 5), align 4, !tbaa !11
+  %i6 = load float, ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 3), align 4, !tbaa !7
   %add = fadd float %i5, %i6
-  %f3 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 5
-  store float %add, float* %f3, align 4, !tbaa !11
-  %i7 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 0), align 4, !tbaa !12
-  %i1 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 0
-  store i32 %i7, i32* %i1, align 4, !tbaa !12
-  %i8 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 1), align 4, !tbaa !13
+  %f3 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 5
+  store float %add, ptr %f3, align 4, !tbaa !11
+  %i7 = load i32, ptr @Gs1, align 4, !tbaa !12
+  store i32 %i7, ptr %agg.result, align 4, !tbaa !12
+  %i8 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 1), align 4, !tbaa !13
   %mul1 = shl nsw i32 %i8, 1
-  %i2 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 1
-  store i32 %mul1, i32* %i2, align 4, !tbaa !13
-  %i9 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 2), align 4, !tbaa !14
-  %i10 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @Gs1, i64 0, i32 0), align 4, !tbaa !12
+  %i2 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 1
+  store i32 %mul1, ptr %i2, align 4, !tbaa !13
+  %i9 = load i32, ptr getelementptr inbounds (%struct.S, ptr @Gs1, i64 0, i32 2), align 4, !tbaa !14
+  %i10 = load i32, ptr @Gs1, align 4, !tbaa !12
   %add2 = add nsw i32 %i9, %i10
-  %i3 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 2
-  store i32 %add2, i32* %i3, align 4, !tbaa !14
+  %i3 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 2
+  store i32 %add2, ptr %i3, align 4, !tbaa !14
   ret void
 }
 
@@ -842,7 +796,7 @@ define void @static_global_simplifiable_2() {
 ; TUNIT-NEXT:    br label [[FOR_END:%.*]]
 ; TUNIT:       for.body:
 ; TUNIT-NEXT:    [[I:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], 10
-; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 [[I]]
+; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], ptr @GBytes, i64 0, i64 [[I]]
 ; TUNIT-NEXT:    br label [[FOR_INC]]
 ; TUNIT:       for.inc:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -858,7 +812,7 @@ define void @static_global_simplifiable_2() {
 ; TUNIT:       for.body5:
 ; TUNIT-NEXT:    [[I15:%.*]] = mul nuw nsw i64 [[INDVARS_IV2]], 10
 ; TUNIT-NEXT:    [[I16:%.*]] = or i64 [[I15]], 1
-; TUNIT-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* bitcast ([1024 x i8]* @GBytes to float*), i64 [[I16]]
+; TUNIT-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr @GBytes, i64 [[I16]]
 ; TUNIT-NEXT:    br label [[FOR_INC9]]
 ; TUNIT:       for.inc9:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
@@ -874,13 +828,13 @@ define void @static_global_simplifiable_2() {
 ; TUNIT:       for.body16:
 ; TUNIT-NEXT:    [[I17:%.*]] = mul nuw nsw i64 [[INDVARS_IV7]], 10
 ; TUNIT-NEXT:    [[I18:%.*]] = add nuw nsw i64 [[I17]], 2
-; TUNIT-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i64, i64* bitcast ([1024 x i8]* @GBytes to i64*), i64 [[I18]]
+; TUNIT-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i64, ptr @GBytes, i64 [[I18]]
 ; TUNIT-NEXT:    br label [[FOR_INC21]]
 ; TUNIT:       for.inc21:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT8]] = add nuw nsw i64 [[INDVARS_IV7]], 1
 ; TUNIT-NEXT:    br label [[FOR_COND13]], !llvm.loop [[LOOP23:![0-9]+]]
 ; TUNIT:       for.end23:
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(524) bitcast (i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 500) to i32*), i32 noundef 0) #[[ATTR17]]
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree nonnull writeonly align 4 dereferenceable(524) getelementptr inbounds ([1024 x i8], ptr @GBytes, i64 0, i64 500), i32 noundef 0) #[[ATTR17]]
 ; TUNIT-NEXT:    br label [[FOR_COND25:%.*]]
 ; TUNIT:       for.cond25:
 ; TUNIT-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC33:%.*]] ], [ 0, [[FOR_END23]] ]
@@ -889,8 +843,8 @@ define void @static_global_simplifiable_2() {
 ; TUNIT:       for.cond.cleanup27:
 ; TUNIT-NEXT:    br label [[FOR_END35:%.*]]
 ; TUNIT:       for.body28:
-; TUNIT-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* @globalBytes, i64 0, i64 [[INDVARS_IV12]]
-; TUNIT-NEXT:    store i8 0, i8* [[ARRAYIDX32]], align 1, !tbaa [[TBAA19]]
+; TUNIT-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds [1024 x i8], ptr @globalBytes, i64 0, i64 [[INDVARS_IV12]]
+; TUNIT-NEXT:    store i8 0, ptr [[ARRAYIDX32]], align 1, !tbaa [[TBAA19]]
 ; TUNIT-NEXT:    br label [[FOR_INC33]]
 ; TUNIT:       for.inc33:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT13]] = add nuw nsw i64 [[INDVARS_IV12]], 1
@@ -911,8 +865,8 @@ define void @static_global_simplifiable_2() {
 ; CGSCC-NEXT:    br label [[FOR_END:%.*]]
 ; CGSCC:       for.body:
 ; CGSCC-NEXT:    [[I:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], 10
-; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 [[I]]
-; CGSCC-NEXT:    store i8 0, i8* [[ARRAYIDX]], align 2, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i8], ptr @GBytes, i64 0, i64 [[I]]
+; CGSCC-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 2, !tbaa [[TBAA15]]
 ; CGSCC-NEXT:    br label [[FOR_INC]]
 ; CGSCC:       for.inc:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -928,8 +882,8 @@ define void @static_global_simplifiable_2() {
 ; CGSCC:       for.body5:
 ; CGSCC-NEXT:    [[I15:%.*]] = mul nuw nsw i64 [[INDVARS_IV2]], 10
 ; CGSCC-NEXT:    [[I16:%.*]] = or i64 [[I15]], 1
-; CGSCC-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* bitcast ([1024 x i8]* @GBytes to float*), i64 [[I16]]
-; CGSCC-NEXT:    store float 0.000000e+00, float* [[ARRAYIDX8]], align 4, !tbaa [[TBAA18]]
+; CGSCC-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr @GBytes, i64 [[I16]]
+; CGSCC-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA18]]
 ; CGSCC-NEXT:    br label [[FOR_INC9]]
 ; CGSCC:       for.inc9:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
@@ -945,15 +899,15 @@ define void @static_global_simplifiable_2() {
 ; CGSCC:       for.body16:
 ; CGSCC-NEXT:    [[I17:%.*]] = mul nuw nsw i64 [[INDVARS_IV7]], 10
 ; CGSCC-NEXT:    [[I18:%.*]] = add nuw nsw i64 [[I17]], 2
-; CGSCC-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i64, i64* bitcast ([1024 x i8]* @GBytes to i64*), i64 [[I18]]
-; CGSCC-NEXT:    store i64 0, i64* [[ARRAYIDX20]], align 16, !tbaa [[TBAA20]]
+; CGSCC-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i64, ptr @GBytes, i64 [[I18]]
+; CGSCC-NEXT:    store i64 0, ptr [[ARRAYIDX20]], align 16, !tbaa [[TBAA20]]
 ; CGSCC-NEXT:    br label [[FOR_INC21]]
 ; CGSCC:       for.inc21:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT8]] = add nuw nsw i64 [[INDVARS_IV7]], 1
 ; CGSCC-NEXT:    br label [[FOR_COND13]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CGSCC:       for.end23:
-; CGSCC-NEXT:    store i8 0, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 1023), align 1, !tbaa [[TBAA15]]
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(524) bitcast (i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 500) to i32*), i32 noundef 0) #[[ATTR20]]
+; CGSCC-NEXT:    store i8 0, ptr getelementptr inbounds ([1024 x i8], ptr @GBytes, i64 0, i64 1023), align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(524) getelementptr inbounds ([1024 x i8], ptr @GBytes, i64 0, i64 500), i32 noundef 0) #[[ATTR20]]
 ; CGSCC-NEXT:    br label [[FOR_COND25:%.*]]
 ; CGSCC:       for.cond25:
 ; CGSCC-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC33:%.*]] ], [ 0, [[FOR_END23]] ]
@@ -962,10 +916,10 @@ define void @static_global_simplifiable_2() {
 ; CGSCC:       for.cond.cleanup27:
 ; CGSCC-NEXT:    br label [[FOR_END35:%.*]]
 ; CGSCC:       for.body28:
-; CGSCC-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 [[INDVARS_IV12]]
-; CGSCC-NEXT:    [[I19:%.*]] = load i8, i8* [[ARRAYIDX30]], align 1, !tbaa [[TBAA15]]
-; CGSCC-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* @globalBytes, i64 0, i64 [[INDVARS_IV12]]
-; CGSCC-NEXT:    store i8 [[I19]], i8* [[ARRAYIDX32]], align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds [1024 x i8], ptr @GBytes, i64 0, i64 [[INDVARS_IV12]]
+; CGSCC-NEXT:    [[I19:%.*]] = load i8, ptr [[ARRAYIDX30]], align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds [1024 x i8], ptr @globalBytes, i64 0, i64 [[INDVARS_IV12]]
+; CGSCC-NEXT:    store i8 [[I19]], ptr [[ARRAYIDX32]], align 1, !tbaa [[TBAA15]]
 ; CGSCC-NEXT:    br label [[FOR_INC33]]
 ; CGSCC:       for.inc33:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT13]] = add nuw nsw i64 [[INDVARS_IV12]], 1
@@ -986,8 +940,8 @@ for.cond.cleanup:                                 ; preds = %for.cond
 
 for.body:                                         ; preds = %for.cond
   %i = mul nuw nsw i64 %indvars.iv, 10
-  %arrayidx = getelementptr inbounds [1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 %i
-  store i8 0, i8* %arrayidx, align 2, !tbaa !15
+  %arrayidx = getelementptr inbounds [1024 x i8], ptr @GBytes, i64 0, i64 %i
+  store i8 0, ptr %arrayidx, align 2, !tbaa !15
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -1008,8 +962,8 @@ for.cond.cleanup4:                                ; preds = %for.cond2
 for.body5:                                        ; preds = %for.cond2
   %i15 = mul nuw nsw i64 %indvars.iv2, 10
   %i16 = or i64 %i15, 1
-  %arrayidx8 = getelementptr inbounds float, float* bitcast ([1024 x i8]* @GBytes to float*), i64 %i16
-  store float 0.000000e+00, float* %arrayidx8, align 4, !tbaa !18
+  %arrayidx8 = getelementptr inbounds float, ptr @GBytes, i64 %i16
+  store float 0.000000e+00, ptr %arrayidx8, align 4, !tbaa !18
   br label %for.inc9
 
 for.inc9:                                         ; preds = %for.body5
@@ -1030,8 +984,8 @@ for.cond.cleanup15:                               ; preds = %for.cond13
 for.body16:                                       ; preds = %for.cond13
   %i17 = mul nuw nsw i64 %indvars.iv7, 10
   %i18 = add nuw nsw i64 %i17, 2
-  %arrayidx20 = getelementptr inbounds i64, i64* bitcast ([1024 x i8]* @GBytes to i64*), i64 %i18
-  store i64 0, i64* %arrayidx20, align 16, !tbaa !20
+  %arrayidx20 = getelementptr inbounds i64, ptr @GBytes, i64 %i18
+  store i64 0, ptr %arrayidx20, align 16, !tbaa !20
   br label %for.inc21
 
 for.inc21:                                        ; preds = %for.body16
@@ -1039,8 +993,8 @@ for.inc21:                                        ; preds = %for.body16
   br label %for.cond13, !llvm.loop !26
 
 for.end23:                                        ; preds = %for.cond.cleanup15
-  store i8 0, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 1023), align 1, !tbaa !15
-  call void @write_arg(i32* bitcast (i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 500) to i32*), i32 0)
+  store i8 0, ptr getelementptr inbounds ([1024 x i8], ptr @GBytes, i64 0, i64 1023), align 1, !tbaa !15
+  call void @write_arg(ptr getelementptr inbounds ([1024 x i8], ptr @GBytes, i64 0, i64 500), i32 0)
   br label %for.cond25
 
 for.cond25:                                       ; preds = %for.inc33, %for.end23
@@ -1052,10 +1006,10 @@ for.cond.cleanup27:                               ; preds = %for.cond25
   br label %for.end35
 
 for.body28:                                       ; preds = %for.cond25
-  %arrayidx30 = getelementptr inbounds [1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 %indvars.iv12
-  %i19 = load i8, i8* %arrayidx30, align 1, !tbaa !15
-  %arrayidx32 = getelementptr inbounds [1024 x i8], [1024 x i8]* @globalBytes, i64 0, i64 %indvars.iv12
-  store i8 %i19, i8* %arrayidx32, align 1, !tbaa !15
+  %arrayidx30 = getelementptr inbounds [1024 x i8], ptr @GBytes, i64 0, i64 %indvars.iv12
+  %i19 = load i8, ptr %arrayidx30, align 1, !tbaa !15
+  %arrayidx32 = getelementptr inbounds [1024 x i8], ptr @globalBytes, i64 0, i64 %indvars.iv12
+  store i8 %i19, ptr %arrayidx32, align 1, !tbaa !15
   br label %for.inc33
 
 for.inc33:                                        ; preds = %for.body28
@@ -1075,17 +1029,17 @@ define i32 @static_global_simplifiable_3() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@static_global_simplifiable_3
 ; TUNIT-SAME: () #[[ATTR5]] {
-; TUNIT-NEXT:    store i32 1, i32* @Flag3, align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    store i32 1, ptr @Flag3, align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    ret i32 1
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@static_global_simplifiable_3
 ; CGSCC-SAME: () #[[ATTR6:[0-9]+]] {
-; CGSCC-NEXT:    store i32 1, i32* @Flag3, align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    store i32 1, ptr @Flag3, align 4, !tbaa [[TBAA3]]
 ; CGSCC-NEXT:    ret i32 1
 ;
-  store i32 1, i32* @Flag3, align 4, !tbaa !3
-  %i = load i32, i32* @Flag3, align 4, !tbaa !3
+  store i32 1, ptr @Flag3, align 4, !tbaa !3
+  %i = load i32, ptr @Flag3, align 4, !tbaa !3
   ret i32 %i
 }
 
@@ -1106,152 +1060,140 @@ define i32 @static_global_simplifiable_3() {
 ;      return r;
 ;    }
 ;
-define void @noalias_arg_simplifiable_1(%struct.S* noalias sret(%struct.S) align 4 %agg.result, %struct.S* byval(%struct.S) align 8 %s) {
+define void @noalias_arg_simplifiable_1(ptr noalias sret(%struct.S) align 4 %agg.result, ptr byval(%struct.S) align 8 %s) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@noalias_arg_simplifiable_1
-; TUNIT-SAME: (%struct.S* noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]], %struct.S* noalias nocapture nofree nonnull byval([[STRUCT_S]]) align 8 dereferenceable(24) [[S:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (ptr noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]], ptr noalias nocapture nofree nonnull byval([[STRUCT_S]]) align 8 dereferenceable(24) [[S:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; TUNIT-NEXT:    store float 0x3FF19999A0000000, float* [[F1]], align 4, !tbaa [[TBAA7]]
-; TUNIT-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 4
-; TUNIT-NEXT:    store float 0x40019999A0000000, float* [[F2]], align 8, !tbaa [[TBAA10]]
-; TUNIT-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
-; TUNIT-NEXT:    store float 0x400A666660000000, float* [[F3]], align 4, !tbaa [[TBAA11]]
-; TUNIT-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 8 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR17]]
-; TUNIT-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR17]]
-; TUNIT-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 8 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR17]]
-; TUNIT-NEXT:    [[F11:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; TUNIT-NEXT:    [[I:%.*]] = load float, float* [[F11]], align 4, !tbaa [[TBAA7]]
-; TUNIT-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
-; TUNIT-NEXT:    store float [[I]], float* [[F12]], align 4, !tbaa [[TBAA7]]
-; TUNIT-NEXT:    [[F23:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 4
-; TUNIT-NEXT:    [[I4:%.*]] = load float, float* [[F23]], align 8, !tbaa [[TBAA10]]
+; TUNIT-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; TUNIT-NEXT:    store float 0x3FF19999A0000000, ptr [[F1]], align 4, !tbaa [[TBAA7]]
+; TUNIT-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 4
+; TUNIT-NEXT:    store float 0x40019999A0000000, ptr [[F2]], align 8, !tbaa [[TBAA10]]
+; TUNIT-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 5
+; TUNIT-NEXT:    store float 0x400A666660000000, ptr [[F3]], align 4, !tbaa [[TBAA11]]
+; TUNIT-NEXT:    call void @write_arg(ptr noalias nocapture nofree noundef nonnull writeonly align 8 dereferenceable(24) [[S]], i32 noundef 1) #[[ATTR17]]
+; TUNIT-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 1
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR17]]
+; TUNIT-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree nonnull writeonly align 8 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR17]]
+; TUNIT-NEXT:    [[F11:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; TUNIT-NEXT:    [[I:%.*]] = load float, ptr [[F11]], align 4, !tbaa [[TBAA7]]
+; TUNIT-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 3
+; TUNIT-NEXT:    store float [[I]], ptr [[F12]], align 4, !tbaa [[TBAA7]]
+; TUNIT-NEXT:    [[F23:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 4
+; TUNIT-NEXT:    [[I4:%.*]] = load float, ptr [[F23]], align 8, !tbaa [[TBAA10]]
 ; TUNIT-NEXT:    [[MUL:%.*]] = fmul float [[I4]], 2.000000e+00
-; TUNIT-NEXT:    [[F24:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 4
-; TUNIT-NEXT:    store float [[MUL]], float* [[F24]], align 4, !tbaa [[TBAA10]]
-; TUNIT-NEXT:    [[F35:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
-; TUNIT-NEXT:    [[I5:%.*]] = load float, float* [[F35]], align 4, !tbaa [[TBAA11]]
-; TUNIT-NEXT:    [[F16:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; TUNIT-NEXT:    [[I6:%.*]] = load float, float* [[F16]], align 4, !tbaa [[TBAA7]]
+; TUNIT-NEXT:    [[F24:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 4
+; TUNIT-NEXT:    store float [[MUL]], ptr [[F24]], align 4, !tbaa [[TBAA10]]
+; TUNIT-NEXT:    [[F35:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 5
+; TUNIT-NEXT:    [[I5:%.*]] = load float, ptr [[F35]], align 4, !tbaa [[TBAA11]]
+; TUNIT-NEXT:    [[F16:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; TUNIT-NEXT:    [[I6:%.*]] = load float, ptr [[F16]], align 4, !tbaa [[TBAA7]]
 ; TUNIT-NEXT:    [[ADD:%.*]] = fadd float [[I5]], [[I6]]
-; TUNIT-NEXT:    [[F37:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 5
-; TUNIT-NEXT:    store float [[ADD]], float* [[F37]], align 4, !tbaa [[TBAA11]]
-; TUNIT-NEXT:    [[I18:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; TUNIT-NEXT:    [[I7:%.*]] = load i32, i32* [[I18]], align 8, !tbaa [[TBAA12]]
-; TUNIT-NEXT:    [[I19:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 0
-; TUNIT-NEXT:    store i32 [[I7]], i32* [[I19]], align 4, !tbaa [[TBAA12]]
-; TUNIT-NEXT:    [[I210:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; TUNIT-NEXT:    [[I8:%.*]] = load i32, i32* [[I210]], align 4, !tbaa [[TBAA13]]
+; TUNIT-NEXT:    [[F37:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 5
+; TUNIT-NEXT:    store float [[ADD]], ptr [[F37]], align 4, !tbaa [[TBAA11]]
+; TUNIT-NEXT:    [[I7:%.*]] = load i32, ptr [[S]], align 8, !tbaa [[TBAA12]]
+; TUNIT-NEXT:    store i32 [[I7]], ptr [[AGG_RESULT]], align 4, !tbaa [[TBAA12]]
+; TUNIT-NEXT:    [[I210:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 1
+; TUNIT-NEXT:    [[I8:%.*]] = load i32, ptr [[I210]], align 4, !tbaa [[TBAA13]]
 ; TUNIT-NEXT:    [[MUL11:%.*]] = shl nsw i32 [[I8]], 1
-; TUNIT-NEXT:    [[I212:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 1
-; TUNIT-NEXT:    store i32 [[MUL11]], i32* [[I212]], align 4, !tbaa [[TBAA13]]
-; TUNIT-NEXT:    [[I313:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; TUNIT-NEXT:    [[I9:%.*]] = load i32, i32* [[I313]], align 8, !tbaa [[TBAA14]]
-; TUNIT-NEXT:    [[I114:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; TUNIT-NEXT:    [[I10:%.*]] = load i32, i32* [[I114]], align 8, !tbaa [[TBAA12]]
+; TUNIT-NEXT:    [[I212:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 1
+; TUNIT-NEXT:    store i32 [[MUL11]], ptr [[I212]], align 4, !tbaa [[TBAA13]]
+; TUNIT-NEXT:    [[I313:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
+; TUNIT-NEXT:    [[I9:%.*]] = load i32, ptr [[I313]], align 8, !tbaa [[TBAA14]]
+; TUNIT-NEXT:    [[I10:%.*]] = load i32, ptr [[S]], align 8, !tbaa [[TBAA12]]
 ; TUNIT-NEXT:    [[ADD15:%.*]] = add nsw i32 [[I9]], [[I10]]
-; TUNIT-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 2
-; TUNIT-NEXT:    store i32 [[ADD15]], i32* [[I316]], align 4, !tbaa [[TBAA14]]
+; TUNIT-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 2
+; TUNIT-NEXT:    store i32 [[ADD15]], ptr [[I316]], align 4, !tbaa [[TBAA14]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@noalias_arg_simplifiable_1
-; CGSCC-SAME: (%struct.S* noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]], %struct.S* noalias nocapture nofree nonnull byval([[STRUCT_S]]) align 8 dereferenceable(24) [[S:%.*]]) #[[ATTR1]] {
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]], ptr noalias nocapture nofree noundef nonnull byval([[STRUCT_S]]) align 8 dereferenceable(24) [[S:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; CGSCC-NEXT:    store float 0x3FF19999A0000000, float* [[F1]], align 4, !tbaa [[TBAA7]]
-; CGSCC-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 4
-; CGSCC-NEXT:    store float 0x40019999A0000000, float* [[F2]], align 8, !tbaa [[TBAA10]]
-; CGSCC-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
-; CGSCC-NEXT:    store float 0x400A666660000000, float* [[F3]], align 4, !tbaa [[TBAA11]]
-; CGSCC-NEXT:    [[I1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(24) [[I1]], i32 noundef 1) #[[ATTR20]]
-; CGSCC-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR20]]
-; CGSCC-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 8 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR20]]
-; CGSCC-NEXT:    [[F11:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; CGSCC-NEXT:    [[I:%.*]] = load float, float* [[F11]], align 4, !tbaa [[TBAA7]]
-; CGSCC-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
-; CGSCC-NEXT:    store float [[I]], float* [[F12]], align 4, !tbaa [[TBAA7]]
-; CGSCC-NEXT:    [[F23:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 4
-; CGSCC-NEXT:    [[I4:%.*]] = load float, float* [[F23]], align 8, !tbaa [[TBAA10]]
+; CGSCC-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; CGSCC-NEXT:    store float 0x3FF19999A0000000, ptr [[F1]], align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 4
+; CGSCC-NEXT:    store float 0x40019999A0000000, ptr [[F2]], align 8, !tbaa [[TBAA10]]
+; CGSCC-NEXT:    [[F3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 5
+; CGSCC-NEXT:    store float 0x400A666660000000, ptr [[F3]], align 4, !tbaa [[TBAA11]]
+; CGSCC-NEXT:    call void @write_arg(ptr noalias nocapture nofree noundef nonnull writeonly align 8 dereferenceable(24) [[S]], i32 noundef 1) #[[ATTR20]]
+; CGSCC-NEXT:    [[I2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 1
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(20) [[I2]], i32 noundef 2) #[[ATTR20]]
+; CGSCC-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(16) [[I3]], i32 noundef 3) #[[ATTR20]]
+; CGSCC-NEXT:    [[F11:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; CGSCC-NEXT:    [[I:%.*]] = load float, ptr [[F11]], align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[F12:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 3
+; CGSCC-NEXT:    store float [[I]], ptr [[F12]], align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[F23:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 4
+; CGSCC-NEXT:    [[I4:%.*]] = load float, ptr [[F23]], align 8, !tbaa [[TBAA10]]
 ; CGSCC-NEXT:    [[MUL:%.*]] = fmul float [[I4]], 2.000000e+00
-; CGSCC-NEXT:    [[F24:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 4
-; CGSCC-NEXT:    store float [[MUL]], float* [[F24]], align 4, !tbaa [[TBAA10]]
-; CGSCC-NEXT:    [[F35:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 5
-; CGSCC-NEXT:    [[I5:%.*]] = load float, float* [[F35]], align 4, !tbaa [[TBAA11]]
-; CGSCC-NEXT:    [[F16:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 3
-; CGSCC-NEXT:    [[I6:%.*]] = load float, float* [[F16]], align 4, !tbaa [[TBAA7]]
+; CGSCC-NEXT:    [[F24:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 4
+; CGSCC-NEXT:    store float [[MUL]], ptr [[F24]], align 4, !tbaa [[TBAA10]]
+; CGSCC-NEXT:    [[F35:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 5
+; CGSCC-NEXT:    [[I5:%.*]] = load float, ptr [[F35]], align 4, !tbaa [[TBAA11]]
+; CGSCC-NEXT:    [[F16:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 3
+; CGSCC-NEXT:    [[I6:%.*]] = load float, ptr [[F16]], align 4, !tbaa [[TBAA7]]
 ; CGSCC-NEXT:    [[ADD:%.*]] = fadd float [[I5]], [[I6]]
-; CGSCC-NEXT:    [[F37:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 5
-; CGSCC-NEXT:    store float [[ADD]], float* [[F37]], align 4, !tbaa [[TBAA11]]
-; CGSCC-NEXT:    [[I18:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; CGSCC-NEXT:    [[I7:%.*]] = load i32, i32* [[I18]], align 8, !tbaa [[TBAA12]]
-; CGSCC-NEXT:    [[I19:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 0
-; CGSCC-NEXT:    store i32 [[I7]], i32* [[I19]], align 4, !tbaa [[TBAA12]]
-; CGSCC-NEXT:    [[I210:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 1
-; CGSCC-NEXT:    [[I8:%.*]] = load i32, i32* [[I210]], align 4, !tbaa [[TBAA13]]
+; CGSCC-NEXT:    [[F37:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 5
+; CGSCC-NEXT:    store float [[ADD]], ptr [[F37]], align 4, !tbaa [[TBAA11]]
+; CGSCC-NEXT:    [[I7:%.*]] = load i32, ptr [[S]], align 8, !tbaa [[TBAA12]]
+; CGSCC-NEXT:    store i32 [[I7]], ptr [[AGG_RESULT]], align 4, !tbaa [[TBAA12]]
+; CGSCC-NEXT:    [[I210:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 1
+; CGSCC-NEXT:    [[I8:%.*]] = load i32, ptr [[I210]], align 4, !tbaa [[TBAA13]]
 ; CGSCC-NEXT:    [[MUL11:%.*]] = shl nsw i32 [[I8]], 1
-; CGSCC-NEXT:    [[I212:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 1
-; CGSCC-NEXT:    store i32 [[MUL11]], i32* [[I212]], align 4, !tbaa [[TBAA13]]
-; CGSCC-NEXT:    [[I313:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; CGSCC-NEXT:    [[I9:%.*]] = load i32, i32* [[I313]], align 8, !tbaa [[TBAA14]]
-; CGSCC-NEXT:    [[I114:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 0
-; CGSCC-NEXT:    [[I10:%.*]] = load i32, i32* [[I114]], align 8, !tbaa [[TBAA12]]
+; CGSCC-NEXT:    [[I212:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 1
+; CGSCC-NEXT:    store i32 [[MUL11]], ptr [[I212]], align 4, !tbaa [[TBAA13]]
+; CGSCC-NEXT:    [[I313:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
+; CGSCC-NEXT:    [[I9:%.*]] = load i32, ptr [[I313]], align 8, !tbaa [[TBAA14]]
+; CGSCC-NEXT:    [[I10:%.*]] = load i32, ptr [[S]], align 8, !tbaa [[TBAA12]]
 ; CGSCC-NEXT:    [[ADD15:%.*]] = add nsw i32 [[I9]], [[I10]]
-; CGSCC-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 2
-; CGSCC-NEXT:    store i32 [[ADD15]], i32* [[I316]], align 4, !tbaa [[TBAA14]]
+; CGSCC-NEXT:    [[I316:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[AGG_RESULT]], i64 0, i32 2
+; CGSCC-NEXT:    store i32 [[ADD15]], ptr [[I316]], align 4, !tbaa [[TBAA14]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  %f1 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 3
-  store float 0x3FF19999A0000000, float* %f1, align 4, !tbaa !7
-  %f2 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 4
-  store float 0x40019999A0000000, float* %f2, align 8, !tbaa !10
-  %f3 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 5
-  store float 0x400A666660000000, float* %f3, align 4, !tbaa !11
-  %i1 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
-  call void @write_arg(i32* nonnull %i1, i32 1)
-  %i2 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 1
-  call void @write_arg(i32* nonnull %i2, i32 2)
-  %i3 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 2
-  call void @write_arg(i32* nonnull %i3, i32 3)
-  %f11 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 3
-  %i = load float, float* %f11, align 4, !tbaa !7
-  %f12 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 3
-  store float %i, float* %f12, align 4, !tbaa !7
-  %f23 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 4
-  %i4 = load float, float* %f23, align 8, !tbaa !10
+  %f1 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 3
+  store float 0x3FF19999A0000000, ptr %f1, align 4, !tbaa !7
+  %f2 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 4
+  store float 0x40019999A0000000, ptr %f2, align 8, !tbaa !10
+  %f3 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 5
+  store float 0x400A666660000000, ptr %f3, align 4, !tbaa !11
+  call void @write_arg(ptr nonnull %s, i32 1)
+  %i2 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 1
+  call void @write_arg(ptr nonnull %i2, i32 2)
+  %i3 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 2
+  call void @write_arg(ptr nonnull %i3, i32 3)
+  %f11 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 3
+  %i = load float, ptr %f11, align 4, !tbaa !7
+  %f12 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 3
+  store float %i, ptr %f12, align 4, !tbaa !7
+  %f23 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 4
+  %i4 = load float, ptr %f23, align 8, !tbaa !10
   %mul = fmul float %i4, 2.000000e+00
-  %f24 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 4
-  store float %mul, float* %f24, align 4, !tbaa !10
-  %f35 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 5
-  %i5 = load float, float* %f35, align 4, !tbaa !11
-  %f16 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 3
-  %i6 = load float, float* %f16, align 4, !tbaa !7
+  %f24 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 4
+  store float %mul, ptr %f24, align 4, !tbaa !10
+  %f35 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 5
+  %i5 = load float, ptr %f35, align 4, !tbaa !11
+  %f16 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 3
+  %i6 = load float, ptr %f16, align 4, !tbaa !7
   %add = fadd float %i5, %i6
-  %f37 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 5
-  store float %add, float* %f37, align 4, !tbaa !11
-  %i18 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
-  %i7 = load i32, i32* %i18, align 8, !tbaa !12
-  %i19 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 0
-  store i32 %i7, i32* %i19, align 4, !tbaa !12
-  %i210 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 1
-  %i8 = load i32, i32* %i210, align 4, !tbaa !13
+  %f37 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 5
+  store float %add, ptr %f37, align 4, !tbaa !11
+  %i7 = load i32, ptr %s, align 8, !tbaa !12
+  store i32 %i7, ptr %agg.result, align 4, !tbaa !12
+  %i210 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 1
+  %i8 = load i32, ptr %i210, align 4, !tbaa !13
   %mul11 = shl nsw i32 %i8, 1
-  %i212 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 1
-  store i32 %mul11, i32* %i212, align 4, !tbaa !13
-  %i313 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 2
-  %i9 = load i32, i32* %i313, align 8, !tbaa !14
-  %i114 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
-  %i10 = load i32, i32* %i114, align 8, !tbaa !12
+  %i212 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 1
+  store i32 %mul11, ptr %i212, align 4, !tbaa !13
+  %i313 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 2
+  %i9 = load i32, ptr %i313, align 8, !tbaa !14
+  %i10 = load i32, ptr %s, align 8, !tbaa !12
   %add15 = add nsw i32 %i9, %i10
-  %i316 = getelementptr inbounds %struct.S, %struct.S* %agg.result, i64 0, i32 2
-  store i32 %add15, i32* %i316, align 4, !tbaa !14
+  %i316 = getelementptr inbounds %struct.S, ptr %agg.result, i64 0, i32 2
+  store i32 %add15, ptr %i316, align 4, !tbaa !14
   ret void
 }
 
@@ -1269,10 +1211,10 @@ entry:
 ;        globalBytes[i] = Bytes[i];
 ;    }
 ;
-define void @noalias_arg_simplifiable_2(i8* %Bytes) {
+define void @noalias_arg_simplifiable_2(ptr %Bytes) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@noalias_arg_simplifiable_2
-; TUNIT-SAME: (i8* nocapture nofree [[BYTES:%.*]]) #[[ATTR3]] {
+; TUNIT-SAME: (ptr nocapture nofree [[BYTES:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br label [[FOR_COND:%.*]]
 ; TUNIT:       for.cond:
@@ -1283,8 +1225,8 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; TUNIT-NEXT:    br label [[FOR_END:%.*]]
 ; TUNIT:       for.body:
 ; TUNIT-NEXT:    [[I:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], 10
-; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 [[I]]
-; TUNIT-NEXT:    store i8 0, i8* [[ARRAYIDX]], align 1, !tbaa [[TBAA19]]
+; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 [[I]]
+; TUNIT-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA19]]
 ; TUNIT-NEXT:    br label [[FOR_INC]]
 ; TUNIT:       for.inc:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -1298,11 +1240,10 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; TUNIT:       for.cond.cleanup4:
 ; TUNIT-NEXT:    br label [[FOR_END11:%.*]]
 ; TUNIT:       for.body5:
-; TUNIT-NEXT:    [[I15:%.*]] = bitcast i8* [[BYTES]] to float*
 ; TUNIT-NEXT:    [[I16:%.*]] = mul nuw nsw i64 [[INDVARS_IV2]], 10
 ; TUNIT-NEXT:    [[I17:%.*]] = or i64 [[I16]], 1
-; TUNIT-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[I15]], i64 [[I17]]
-; TUNIT-NEXT:    store float 0.000000e+00, float* [[ARRAYIDX8]], align 4, !tbaa [[TBAA26:![0-9]+]]
+; TUNIT-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[BYTES]], i64 [[I17]]
+; TUNIT-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA26:![0-9]+]]
 ; TUNIT-NEXT:    br label [[FOR_INC9]]
 ; TUNIT:       for.inc9:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
@@ -1316,21 +1257,19 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; TUNIT:       for.cond.cleanup15:
 ; TUNIT-NEXT:    br label [[FOR_END23:%.*]]
 ; TUNIT:       for.body16:
-; TUNIT-NEXT:    [[I18:%.*]] = bitcast i8* [[BYTES]] to i64*
 ; TUNIT-NEXT:    [[I19:%.*]] = mul nuw nsw i64 [[INDVARS_IV7]], 10
 ; TUNIT-NEXT:    [[I20:%.*]] = add nuw nsw i64 [[I19]], 2
-; TUNIT-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i64, i64* [[I18]], i64 [[I20]]
-; TUNIT-NEXT:    store i64 0, i64* [[ARRAYIDX20]], align 8, !tbaa [[TBAA28:![0-9]+]]
+; TUNIT-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i64, ptr [[BYTES]], i64 [[I20]]
+; TUNIT-NEXT:    store i64 0, ptr [[ARRAYIDX20]], align 8, !tbaa [[TBAA28:![0-9]+]]
 ; TUNIT-NEXT:    br label [[FOR_INC21]]
 ; TUNIT:       for.inc21:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT8]] = add nuw nsw i64 [[INDVARS_IV7]], 1
 ; TUNIT-NEXT:    br label [[FOR_COND13]], !llvm.loop [[LOOP30:![0-9]+]]
 ; TUNIT:       for.end23:
-; TUNIT-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 1023
-; TUNIT-NEXT:    store i8 0, i8* [[ARRAYIDX24]], align 1, !tbaa [[TBAA19]]
-; TUNIT-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 500
-; TUNIT-NEXT:    [[I21:%.*]] = bitcast i8* [[ARRAYIDX25]] to i32*
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 [[I21]], i32 noundef 0) #[[ATTR17]]
+; TUNIT-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 1023
+; TUNIT-NEXT:    store i8 0, ptr [[ARRAYIDX24]], align 1, !tbaa [[TBAA19]]
+; TUNIT-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 500
+; TUNIT-NEXT:    call void @write_arg(ptr nocapture nofree nonnull writeonly align 4 [[ARRAYIDX25]], i32 noundef 0) #[[ATTR17]]
 ; TUNIT-NEXT:    br label [[FOR_COND27:%.*]]
 ; TUNIT:       for.cond27:
 ; TUNIT-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC35:%.*]] ], [ 0, [[FOR_END23]] ]
@@ -1339,10 +1278,10 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; TUNIT:       for.cond.cleanup29:
 ; TUNIT-NEXT:    br label [[FOR_END37:%.*]]
 ; TUNIT:       for.body30:
-; TUNIT-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 [[INDVARS_IV12]]
-; TUNIT-NEXT:    [[I22:%.*]] = load i8, i8* [[ARRAYIDX32]], align 1, !tbaa [[TBAA19]]
-; TUNIT-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* @globalBytes, i64 0, i64 [[INDVARS_IV12]]
-; TUNIT-NEXT:    store i8 [[I22]], i8* [[ARRAYIDX34]], align 1, !tbaa [[TBAA19]]
+; TUNIT-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 [[INDVARS_IV12]]
+; TUNIT-NEXT:    [[I22:%.*]] = load i8, ptr [[ARRAYIDX32]], align 1, !tbaa [[TBAA19]]
+; TUNIT-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [1024 x i8], ptr @globalBytes, i64 0, i64 [[INDVARS_IV12]]
+; TUNIT-NEXT:    store i8 [[I22]], ptr [[ARRAYIDX34]], align 1, !tbaa [[TBAA19]]
 ; TUNIT-NEXT:    br label [[FOR_INC35]]
 ; TUNIT:       for.inc35:
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT13]] = add nuw nsw i64 [[INDVARS_IV12]], 1
@@ -1352,7 +1291,7 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@noalias_arg_simplifiable_2
-; CGSCC-SAME: (i8* nocapture nofree [[BYTES:%.*]]) #[[ATTR3]] {
+; CGSCC-SAME: (ptr nocapture nofree [[BYTES:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[FOR_COND:%.*]]
 ; CGSCC:       for.cond:
@@ -1363,8 +1302,8 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; CGSCC-NEXT:    br label [[FOR_END:%.*]]
 ; CGSCC:       for.body:
 ; CGSCC-NEXT:    [[I:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], 10
-; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 [[I]]
-; CGSCC-NEXT:    store i8 0, i8* [[ARRAYIDX]], align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 [[I]]
+; CGSCC-NEXT:    store i8 0, ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA15]]
 ; CGSCC-NEXT:    br label [[FOR_INC]]
 ; CGSCC:       for.inc:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -1378,11 +1317,10 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; CGSCC:       for.cond.cleanup4:
 ; CGSCC-NEXT:    br label [[FOR_END11:%.*]]
 ; CGSCC:       for.body5:
-; CGSCC-NEXT:    [[I15:%.*]] = bitcast i8* [[BYTES]] to float*
 ; CGSCC-NEXT:    [[I16:%.*]] = mul nuw nsw i64 [[INDVARS_IV2]], 10
 ; CGSCC-NEXT:    [[I17:%.*]] = or i64 [[I16]], 1
-; CGSCC-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[I15]], i64 [[I17]]
-; CGSCC-NEXT:    store float 0.000000e+00, float* [[ARRAYIDX8]], align 4, !tbaa [[TBAA18]]
+; CGSCC-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[BYTES]], i64 [[I17]]
+; CGSCC-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA18]]
 ; CGSCC-NEXT:    br label [[FOR_INC9]]
 ; CGSCC:       for.inc9:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
@@ -1396,21 +1334,19 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; CGSCC:       for.cond.cleanup15:
 ; CGSCC-NEXT:    br label [[FOR_END23:%.*]]
 ; CGSCC:       for.body16:
-; CGSCC-NEXT:    [[I18:%.*]] = bitcast i8* [[BYTES]] to i64*
 ; CGSCC-NEXT:    [[I19:%.*]] = mul nuw nsw i64 [[INDVARS_IV7]], 10
 ; CGSCC-NEXT:    [[I20:%.*]] = add nuw nsw i64 [[I19]], 2
-; CGSCC-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i64, i64* [[I18]], i64 [[I20]]
-; CGSCC-NEXT:    store i64 0, i64* [[ARRAYIDX20]], align 8, !tbaa [[TBAA20]]
+; CGSCC-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i64, ptr [[BYTES]], i64 [[I20]]
+; CGSCC-NEXT:    store i64 0, ptr [[ARRAYIDX20]], align 8, !tbaa [[TBAA20]]
 ; CGSCC-NEXT:    br label [[FOR_INC21]]
 ; CGSCC:       for.inc21:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT8]] = add nuw nsw i64 [[INDVARS_IV7]], 1
 ; CGSCC-NEXT:    br label [[FOR_COND13]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CGSCC:       for.end23:
-; CGSCC-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 1023
-; CGSCC-NEXT:    store i8 0, i8* [[ARRAYIDX24]], align 1, !tbaa [[TBAA15]]
-; CGSCC-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 500
-; CGSCC-NEXT:    [[I21:%.*]] = bitcast i8* [[ARRAYIDX25]] to i32*
-; CGSCC-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[I21]], i32 noundef 0) #[[ATTR20]]
+; CGSCC-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 1023
+; CGSCC-NEXT:    store i8 0, ptr [[ARRAYIDX24]], align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 500
+; CGSCC-NEXT:    call void @write_arg(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ARRAYIDX25]], i32 noundef 0) #[[ATTR20]]
 ; CGSCC-NEXT:    br label [[FOR_COND27:%.*]]
 ; CGSCC:       for.cond27:
 ; CGSCC-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC35:%.*]] ], [ 0, [[FOR_END23]] ]
@@ -1419,10 +1355,10 @@ define void @noalias_arg_simplifiable_2(i8* %Bytes) {
 ; CGSCC:       for.cond.cleanup29:
 ; CGSCC-NEXT:    br label [[FOR_END37:%.*]]
 ; CGSCC:       for.body30:
-; CGSCC-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i8, i8* [[BYTES]], i64 [[INDVARS_IV12]]
-; CGSCC-NEXT:    [[I22:%.*]] = load i8, i8* [[ARRAYIDX32]], align 1, !tbaa [[TBAA15]]
-; CGSCC-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* @globalBytes, i64 0, i64 [[INDVARS_IV12]]
-; CGSCC-NEXT:    store i8 [[I22]], i8* [[ARRAYIDX34]], align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 [[INDVARS_IV12]]
+; CGSCC-NEXT:    [[I22:%.*]] = load i8, ptr [[ARRAYIDX32]], align 1, !tbaa [[TBAA15]]
+; CGSCC-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [1024 x i8], ptr @globalBytes, i64 0, i64 [[INDVARS_IV12]]
+; CGSCC-NEXT:    store i8 [[I22]], ptr [[ARRAYIDX34]], align 1, !tbaa [[TBAA15]]
 ; CGSCC-NEXT:    br label [[FOR_INC35]]
 ; CGSCC:       for.inc35:
 ; CGSCC-NEXT:    [[INDVARS_IV_NEXT13]] = add nuw nsw i64 [[INDVARS_IV12]], 1
@@ -1443,8 +1379,8 @@ for.cond.cleanup:                                 ; preds = %for.cond
 
 for.body:                                         ; preds = %for.cond
   %i = mul nuw nsw i64 %indvars.iv, 10
-  %arrayidx = getelementptr inbounds i8, i8* %Bytes, i64 %i
-  store i8 0, i8* %arrayidx, align 1, !tbaa !15
+  %arrayidx = getelementptr inbounds i8, ptr %Bytes, i64 %i
+  store i8 0, ptr %arrayidx, align 1, !tbaa !15
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -1463,11 +1399,10 @@ for.cond.cleanup4:                                ; preds = %for.cond2
   br label %for.end11
 
 for.body5:                                        ; preds = %for.cond2
-  %i15 = bitcast i8* %Bytes to float*
   %i16 = mul nuw nsw i64 %indvars.iv2, 10
   %i17 = or i64 %i16, 1
-  %arrayidx8 = getelementptr inbounds float, float* %i15, i64 %i17
-  store float 0.000000e+00, float* %arrayidx8, align 4, !tbaa !18
+  %arrayidx8 = getelementptr inbounds float, ptr %Bytes, i64 %i17
+  store float 0.000000e+00, ptr %arrayidx8, align 4, !tbaa !18
   br label %for.inc9
 
 for.inc9:                                         ; preds = %for.body5
@@ -1486,11 +1421,10 @@ for.cond.cleanup15:                               ; preds = %for.cond13
   br label %for.end23
 
 for.body16:                                       ; preds = %for.cond13
-  %i18 = bitcast i8* %Bytes to i64*
   %i19 = mul nuw nsw i64 %indvars.iv7, 10
   %i20 = add nuw nsw i64 %i19, 2
-  %arrayidx20 = getelementptr inbounds i64, i64* %i18, i64 %i20
-  store i64 0, i64* %arrayidx20, align 8, !tbaa !20
+  %arrayidx20 = getelementptr inbounds i64, ptr %Bytes, i64 %i20
+  store i64 0, ptr %arrayidx20, align 8, !tbaa !20
   br label %for.inc21
 
 for.inc21:                                        ; preds = %for.body16
@@ -1498,11 +1432,10 @@ for.inc21:                                        ; preds = %for.body16
   br label %for.cond13, !llvm.loop !30
 
 for.end23:                                        ; preds = %for.cond.cleanup15
-  %arrayidx24 = getelementptr inbounds i8, i8* %Bytes, i64 1023
-  store i8 0, i8* %arrayidx24, align 1, !tbaa !15
-  %arrayidx25 = getelementptr inbounds i8, i8* %Bytes, i64 500
-  %i21 = bitcast i8* %arrayidx25 to i32*
-  call void @write_arg(i32* nonnull %i21, i32 0)
+  %arrayidx24 = getelementptr inbounds i8, ptr %Bytes, i64 1023
+  store i8 0, ptr %arrayidx24, align 1, !tbaa !15
+  %arrayidx25 = getelementptr inbounds i8, ptr %Bytes, i64 500
+  call void @write_arg(ptr nonnull %arrayidx25, i32 0)
   br label %for.cond27
 
 for.cond27:                                       ; preds = %for.inc35, %for.end23
@@ -1514,10 +1447,10 @@ for.cond.cleanup29:                               ; preds = %for.cond27
   br label %for.end37
 
 for.body30:                                       ; preds = %for.cond27
-  %arrayidx32 = getelementptr inbounds i8, i8* %Bytes, i64 %indvars.iv12
-  %i22 = load i8, i8* %arrayidx32, align 1, !tbaa !15
-  %arrayidx34 = getelementptr inbounds [1024 x i8], [1024 x i8]* @globalBytes, i64 0, i64 %indvars.iv12
-  store i8 %i22, i8* %arrayidx34, align 1, !tbaa !15
+  %arrayidx32 = getelementptr inbounds i8, ptr %Bytes, i64 %indvars.iv12
+  %i22 = load i8, ptr %arrayidx32, align 1, !tbaa !15
+  %arrayidx34 = getelementptr inbounds [1024 x i8], ptr @globalBytes, i64 0, i64 %indvars.iv12
+  store i8 %i22, ptr %arrayidx34, align 1, !tbaa !15
   br label %for.inc35
 
 for.inc35:                                        ; preds = %for.body30
@@ -1542,74 +1475,59 @@ define i32 @local_alloca_not_simplifiable_1() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[Y:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[I:%.*]] = bitcast i32* [[X]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR16]]
-; TUNIT-NEXT:    [[I1:%.*]] = bitcast i32* [[Y]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR16]]
-; TUNIT-NEXT:    store i32 1, i32* [[Y]], align 4, !tbaa [[TBAA3]]
-; TUNIT-NEXT:    store i32 1, i32* [[X]], align 4, !tbaa [[TBAA3]]
-; TUNIT-NEXT:    [[I2:%.*]] = bitcast i32* [[X]] to i8*
-; TUNIT-NEXT:    call void @escape(i8* noundef nonnull align 4 dereferenceable(4) [[I2]])
-; TUNIT-NEXT:    call void @write_random(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
-; TUNIT-NEXT:    [[I3:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[X]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[Y]]) #[[ATTR16]]
+; TUNIT-NEXT:    store i32 1, ptr [[Y]], align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    store i32 1, ptr [[X]], align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    call void @escape(ptr noundef nonnull align 4 dereferenceable(4) [[X]])
+; TUNIT-NEXT:    call void @write_random(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
+; TUNIT-NEXT:    [[I3:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[I3]], 0
 ; TUNIT-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 2, i32 1
-; TUNIT-NEXT:    [[I4:%.*]] = load i32, i32* [[Y]], align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    [[I4:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    [[ADD:%.*]] = add nsw i32 [[I3]], [[I4]]
 ; TUNIT-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[COND]]
-; TUNIT-NEXT:    [[I5:%.*]] = bitcast i32* [[Y]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I5]])
-; TUNIT-NEXT:    [[I6:%.*]] = bitcast i32* [[X]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I6]])
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[Y]])
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[X]])
 ; TUNIT-NEXT:    ret i32 [[ADD1]]
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_1() {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    [[Y:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[I:%.*]] = bitcast i32* [[X]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR19]]
-; CGSCC-NEXT:    [[I1:%.*]] = bitcast i32* [[Y]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I1]]) #[[ATTR19]]
-; CGSCC-NEXT:    store i32 1, i32* [[Y]], align 4, !tbaa [[TBAA3]]
-; CGSCC-NEXT:    store i32 1, i32* [[X]], align 4, !tbaa [[TBAA3]]
-; CGSCC-NEXT:    [[I2:%.*]] = bitcast i32* [[X]] to i8*
-; CGSCC-NEXT:    call void @escape(i8* noundef nonnull align 4 dereferenceable(4) [[I2]])
-; CGSCC-NEXT:    call void @write_random(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
-; CGSCC-NEXT:    [[I3:%.*]] = load i32, i32* [[X]], align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[X]]) #[[ATTR19]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[Y]]) #[[ATTR19]]
+; CGSCC-NEXT:    store i32 1, ptr [[Y]], align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    store i32 1, ptr [[X]], align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    call void @escape(ptr noundef nonnull align 4 dereferenceable(4) [[X]])
+; CGSCC-NEXT:    call void @write_random(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[Y]])
+; CGSCC-NEXT:    [[I3:%.*]] = load i32, ptr [[X]], align 4, !tbaa [[TBAA3]]
 ; CGSCC-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[I3]], 0
 ; CGSCC-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 2, i32 1
-; CGSCC-NEXT:    [[I4:%.*]] = load i32, i32* [[Y]], align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    [[I4:%.*]] = load i32, ptr [[Y]], align 4, !tbaa [[TBAA3]]
 ; CGSCC-NEXT:    [[ADD:%.*]] = add nsw i32 [[I3]], [[I4]]
 ; CGSCC-NEXT:    [[ADD1:%.*]] = add nsw i32 [[ADD]], [[COND]]
-; CGSCC-NEXT:    [[I5:%.*]] = bitcast i32* [[Y]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I5]])
-; CGSCC-NEXT:    [[I6:%.*]] = bitcast i32* [[X]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[I6]])
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[Y]])
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 4, ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[X]])
 ; CGSCC-NEXT:    ret i32 [[ADD1]]
 ;
 entry:
   %X = alloca i32, align 4
   %Y = alloca i32, align 4
-  %i = bitcast i32* %X to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %i)
-  %i1 = bitcast i32* %Y to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %i1)
-  store i32 1, i32* %Y, align 4, !tbaa !3
-  store i32 1, i32* %X, align 4, !tbaa !3
-  %i2 = bitcast i32* %X to i8*
-  call void @escape(i8* nonnull %i2)
-  call void @write_random(i32* nonnull %Y)
-  %i3 = load i32, i32* %X, align 4, !tbaa !3
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %X)
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %Y)
+  store i32 1, ptr %Y, align 4, !tbaa !3
+  store i32 1, ptr %X, align 4, !tbaa !3
+  call void @escape(ptr nonnull %X)
+  call void @write_random(ptr nonnull %Y)
+  %i3 = load i32, ptr %X, align 4, !tbaa !3
   %tobool.not = icmp eq i32 %i3, 0
   %cond = select i1 %tobool.not, i32 2, i32 1
-  %i4 = load i32, i32* %Y, align 4, !tbaa !3
+  %i4 = load i32, ptr %Y, align 4, !tbaa !3
   %add = add nsw i32 %i3, %i4
   %add1 = add nsw i32 %add, %cond
-  %i5 = bitcast i32* %Y to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %i5)
-  %i6 = bitcast i32* %X to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %i6)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %Y)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %X)
   ret i32 %add1
 }
 
@@ -1619,19 +1537,18 @@ define i8 @local_alloca_not_simplifiable_2(i64 %index1, i64 %index2, i1 %cnd) {
 ; TUNIT-SAME: (i64 [[INDEX1:%.*]], i64 [[INDEX2:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; TUNIT-NEXT:    [[GEP0:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; TUNIT-NEXT:    store i8 7, i8* [[GEP0]], align 16
+; TUNIT-NEXT:    store i8 7, ptr [[BYTES]], align 16
 ; TUNIT-NEXT:    br i1 [[CND]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; TUNIT:       left:
-; TUNIT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[INDEX1]]
+; TUNIT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX1]]
 ; TUNIT-NEXT:    br label [[JOIN:%.*]]
 ; TUNIT:       right:
-; TUNIT-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[INDEX2]]
+; TUNIT-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX2]]
 ; TUNIT-NEXT:    br label [[JOIN]]
 ; TUNIT:       join:
-; TUNIT-NEXT:    [[GEP_JOIN:%.*]] = phi i8* [ [[GEP1]], [[LEFT]] ], [ [[GEP2]], [[RIGHT]] ]
-; TUNIT-NEXT:    store i8 9, i8* [[GEP_JOIN]], align 4
-; TUNIT-NEXT:    [[I:%.*]] = load i8, i8* [[GEP0]], align 16
+; TUNIT-NEXT:    [[GEP_JOIN:%.*]] = phi ptr [ [[GEP1]], [[LEFT]] ], [ [[GEP2]], [[RIGHT]] ]
+; TUNIT-NEXT:    store i8 9, ptr [[GEP_JOIN]], align 4
+; TUNIT-NEXT:    [[I:%.*]] = load i8, ptr [[BYTES]], align 16
 ; TUNIT-NEXT:    ret i8 [[I]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
@@ -1639,42 +1556,40 @@ define i8 @local_alloca_not_simplifiable_2(i64 %index1, i64 %index2, i1 %cnd) {
 ; CGSCC-SAME: (i64 [[INDEX1:%.*]], i64 [[INDEX2:%.*]], i1 noundef [[CND:%.*]]) #[[ATTR5]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CGSCC-NEXT:    [[GEP0:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
-; CGSCC-NEXT:    store i8 7, i8* [[GEP0]], align 16
+; CGSCC-NEXT:    store i8 7, ptr [[BYTES]], align 16
 ; CGSCC-NEXT:    br i1 [[CND]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CGSCC:       left:
-; CGSCC-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[INDEX1]]
+; CGSCC-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX1]]
 ; CGSCC-NEXT:    br label [[JOIN:%.*]]
 ; CGSCC:       right:
-; CGSCC-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[INDEX2]]
+; CGSCC-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[INDEX2]]
 ; CGSCC-NEXT:    br label [[JOIN]]
 ; CGSCC:       join:
-; CGSCC-NEXT:    [[GEP_JOIN:%.*]] = phi i8* [ [[GEP1]], [[LEFT]] ], [ [[GEP2]], [[RIGHT]] ]
-; CGSCC-NEXT:    store i8 9, i8* [[GEP_JOIN]], align 4
-; CGSCC-NEXT:    [[I:%.*]] = load i8, i8* [[GEP0]], align 16
+; CGSCC-NEXT:    [[GEP_JOIN:%.*]] = phi ptr [ [[GEP1]], [[LEFT]] ], [ [[GEP2]], [[RIGHT]] ]
+; CGSCC-NEXT:    store i8 9, ptr [[GEP_JOIN]], align 4
+; CGSCC-NEXT:    [[I:%.*]] = load i8, ptr [[BYTES]], align 16
 ; CGSCC-NEXT:    ret i8 [[I]]
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
-  %gep0 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 0
-  store i8 7, i8* %gep0, align 4
+  store i8 7, ptr %Bytes, align 4
   br i1 %cnd, label %left, label %right
 
 left:                                             ; preds = %entry
-  %gep1 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %index1
+  %gep1 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %index1
   br label %join
 
 right:                                            ; preds = %entry
-  %gep2 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %index2
+  %gep2 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %index2
   br label %join
 
 join:                                             ; preds = %right, %left
-  %gep.join = phi i8* [ %gep1, %left ], [ %gep2, %right ]
-  store i8 9, i8* %gep.join, align 4
+  %gep.join = phi ptr [ %gep1, %left ], [ %gep2, %right ]
+  store i8 9, ptr %gep.join, align 4
 
   ; This load cannot be replaced by the value 7 from %entry, since the previous
   ; store interferes due to its unknown offset.
-  %i = load i8, i8* %gep0, align 4
+  %i = load i8, ptr %Bytes, align 4
   ret i8 %i
 }
 
@@ -1685,32 +1600,30 @@ define i32 @unknown_access_mixed_simplifiable(i32 %arg1, i32 %arg2) {
 ; CHECK-SAME: (i32 [[ARG1:%.*]], i32 [[ARG2:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 4
-; CHECK-NEXT:    [[BC:%.*]] = bitcast %struct.S* [[S]] to i32*
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, i32* [[BC]], i32 [[ARG1]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, i32* [[BC]], i32 [[ARG2]]
-; CHECK-NEXT:    store i32 7, i32* [[GEP1]], align 4
-; CHECK-NEXT:    store i32 7, i32* [[GEP2]], align 4
-; CHECK-NEXT:    store i32 7, i32* [[GEP3]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[GEP1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, i32* [[GEP2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, i32* [[GEP3]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[S]], i32 [[ARG1]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[S]], i32 [[ARG2]]
+; CHECK-NEXT:    store i32 7, ptr [[GEP1]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[GEP2]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[GEP3]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[GEP3]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[L1]], [[L2]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[L3]]
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
 entry:
   %s = alloca %struct.S, align 4
-  %bc = bitcast %struct.S* %s to i32*
-  %gep1 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 2
-  %gep2 = getelementptr inbounds i32, i32* %bc, i32 %arg1
-  %gep3 = getelementptr inbounds i32, i32* %bc, i32 %arg2
-  store i32 7, i32* %gep1
-  store i32 7, i32* %gep2
-  store i32 7, i32* %gep3
-  %l1 = load i32, i32* %gep1
-  %l2 = load i32, i32* %gep2
-  %l3 = load i32, i32* %gep3
+  %gep1 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 2
+  %gep2 = getelementptr inbounds i32, ptr %s, i32 %arg1
+  %gep3 = getelementptr inbounds i32, ptr %s, i32 %arg2
+  store i32 7, ptr %gep1
+  store i32 7, ptr %gep2
+  store i32 7, ptr %gep3
+  %l1 = load i32, ptr %gep1
+  %l2 = load i32, ptr %gep2
+  %l3 = load i32, ptr %gep3
   %add1 = add i32 %l1, %l2
   %add2 = add i32 %add1, %l3
   ret i32 %add2
@@ -1723,21 +1636,18 @@ define i32 @unknown_access_mixed_not_simplifiable(i32 %arg1, i32 %arg2, i32 %arg
 ; CHECK-SAME: (i32 [[ARG1:%.*]], i32 [[ARG2:%.*]], i32 [[ARG3:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 4
-; CHECK-NEXT:    [[BC:%.*]] = bitcast %struct.S* [[S]] to i32*
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[S]], i64 0, i32 2
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, i32* [[BC]], i32 [[ARG1]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, i32* [[BC]], i32 [[ARG2]]
-; CHECK-NEXT:    [[BC4A:%.*]] = bitcast %struct.S* [[S]] to i8*
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i8, i8* [[BC4A]], i32 [[ARG3]]
-; CHECK-NEXT:    [[BC4B:%.*]] = bitcast i8* [[GEP4]] to i32*
-; CHECK-NEXT:    store i32 7, i32* [[GEP1]], align 4
-; CHECK-NEXT:    store i32 7, i32* [[GEP2]], align 4
-; CHECK-NEXT:    store i32 7, i32* [[GEP3]], align 4
-; CHECK-NEXT:    store i32 7, i32* [[BC4B]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, i32* [[GEP1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, i32* [[GEP2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, i32* [[GEP3]], align 4
-; CHECK-NEXT:    [[L4:%.*]] = load i32, i32* [[BC4B]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S]], i64 0, i32 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[S]], i32 [[ARG1]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[S]], i32 [[ARG2]]
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i8, ptr [[S]], i32 [[ARG3]]
+; CHECK-NEXT:    store i32 7, ptr [[GEP1]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[GEP2]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[GEP3]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[GEP4]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[GEP3]], align 4
+; CHECK-NEXT:    [[L4:%.*]] = load i32, ptr [[GEP4]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[L1]], [[L2]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[L3]]
 ; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[L4]]
@@ -1745,28 +1655,25 @@ define i32 @unknown_access_mixed_not_simplifiable(i32 %arg1, i32 %arg2, i32 %arg
 ;
 entry:
   %s = alloca %struct.S, align 4
-  %bc = bitcast %struct.S* %s to i32*
-  %gep1 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 2
-  %gep2 = getelementptr inbounds i32, i32* %bc, i32 %arg1
-  %gep3 = getelementptr inbounds i32, i32* %bc, i32 %arg2
-  %bc4a = bitcast %struct.S* %s to i8*
-  %gep4 = getelementptr inbounds i8, i8* %bc4a, i32 %arg3
-  %bc4b = bitcast i8* %gep4 to i32*
-  store i32 7, i32* %gep1
-  store i32 7, i32* %gep2
-  store i32 7, i32* %gep3
-  store i32 7, i32* %bc4b
-  %l1 = load i32, i32* %gep1
-  %l2 = load i32, i32* %gep2
-  %l3 = load i32, i32* %gep3
-  %l4 = load i32, i32* %bc4b
+  %gep1 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 2
+  %gep2 = getelementptr inbounds i32, ptr %s, i32 %arg1
+  %gep3 = getelementptr inbounds i32, ptr %s, i32 %arg2
+  %gep4 = getelementptr inbounds i8, ptr %s, i32 %arg3
+  store i32 7, ptr %gep1
+  store i32 7, ptr %gep2
+  store i32 7, ptr %gep3
+  store i32 7, ptr %gep4
+  %l1 = load i32, ptr %gep1
+  %l2 = load i32, ptr %gep2
+  %l3 = load i32, ptr %gep3
+  %l4 = load i32, ptr %gep4
   %add1 = add i32 %l1, %l2
   %add2 = add i32 %add1, %l3
   %add3 = add i32 %add2, %l4
   ret i32 %add3
 }
 
-declare void @escape(i8*)
+declare void @escape(ptr)
 
 ;    int Flag0 = 0;
 ;    int global_not_simplifiable_1(int cnd) {
@@ -1778,18 +1685,18 @@ define i32 @global_not_simplifiable_1(i32 %cnd) {
 ; TUNIT-LABEL: define {{[^@]+}}@global_not_simplifiable_1
 ; TUNIT-SAME: (i32 [[CND:%.*]]) #[[ATTR6:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[I:%.*]] = load i32, i32* @Flag0, align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    [[I:%.*]] = load i32, ptr @Flag0, align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    ret i32 [[I]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@global_not_simplifiable_1
 ; CGSCC-SAME: (i32 [[CND:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[I:%.*]] = load i32, i32* @Flag0, align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    [[I:%.*]] = load i32, ptr @Flag0, align 4, !tbaa [[TBAA3]]
 ; CGSCC-NEXT:    ret i32 [[I]]
 ;
 entry:
-  %i = load i32, i32* @Flag0, align 4, !tbaa !3
+  %i = load i32, ptr @Flag0, align 4, !tbaa !3
   ret i32 %i
 }
 
@@ -1815,13 +1722,13 @@ define i32 @static_global_not_simplifiable_1(i32 %cnd) {
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
-  %i = load i32, i32* @Flag1, align 4, !tbaa !3
+  %i = load i32, ptr @Flag1, align 4, !tbaa !3
   call void @sync()
   %tobool.not = icmp eq i32 %cnd, 0
   br i1 %tobool.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* @Flag1, align 4, !tbaa !3
+  store i32 1, ptr @Flag1, align 4, !tbaa !3
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -1842,17 +1749,17 @@ define i32 @static_global_simplifiable_4(i32 %cnd) {
 ; CHECK-LABEL: define {{[^@]+}}@static_global_simplifiable_4
 ; CHECK-SAME: (i32 [[CND:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 1, i32* @Flag2, align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 1, ptr @Flag2, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    call void @sync()
-; CHECK-NEXT:    [[I:%.*]] = load i32, i32* @Flag2, align 4, !tbaa [[TBAA3]]
-; CHECK-NEXT:    store i32 2, i32* @Flag2, align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    [[I:%.*]] = load i32, ptr @Flag2, align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store i32 2, ptr @Flag2, align 4, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret i32 [[I]]
 ;
 entry:
-  store i32 1, i32* @Flag2, align 4, !tbaa !3
+  store i32 1, ptr @Flag2, align 4, !tbaa !3
   call void @sync()
-  %i = load i32, i32* @Flag2, align 4, !tbaa !3
-  store i32 2, i32* @Flag2, align 4, !tbaa !3
+  %i = load i32, ptr @Flag2, align 4, !tbaa !3
+  store i32 2, ptr @Flag2, align 4, !tbaa !3
   ret i32 %i
 }
 
@@ -1868,66 +1775,66 @@ define i32 @static_global_not_simplifiable_2(i32 %cnd) {
 ; TUNIT-LABEL: define {{[^@]+}}@static_global_not_simplifiable_2
 ; TUNIT-SAME: (i32 [[CND:%.*]]) {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    store i32 1, i32* @Flag4, align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    store i32 1, ptr @Flag4, align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    call void @sync() #[[ATTR18:[0-9]+]]
-; TUNIT-NEXT:    [[I:%.*]] = load i32, i32* @Flag4, align 4, !tbaa [[TBAA3]]
-; TUNIT-NEXT:    store i32 2, i32* @Flag4, align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    [[I:%.*]] = load i32, ptr @Flag4, align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    store i32 2, ptr @Flag4, align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    ret i32 [[I]]
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@static_global_not_simplifiable_2
 ; CGSCC-SAME: (i32 [[CND:%.*]]) {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    store i32 1, i32* @Flag4, align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    store i32 1, ptr @Flag4, align 4, !tbaa [[TBAA3]]
 ; CGSCC-NEXT:    call void @sync() #[[ATTR21:[0-9]+]]
-; CGSCC-NEXT:    [[I:%.*]] = load i32, i32* @Flag4, align 4, !tbaa [[TBAA3]]
-; CGSCC-NEXT:    store i32 2, i32* @Flag4, align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    [[I:%.*]] = load i32, ptr @Flag4, align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    store i32 2, ptr @Flag4, align 4, !tbaa [[TBAA3]]
 ; CGSCC-NEXT:    ret i32 [[I]]
 ;
 entry:
-  store i32 1, i32* @Flag4, align 4, !tbaa !3
+  store i32 1, ptr @Flag4, align 4, !tbaa !3
   call void @sync() nocallback
-  %i = load i32, i32* @Flag4, align 4, !tbaa !3
-  store i32 2, i32* @Flag4, align 4, !tbaa !3
+  %i = load i32, ptr @Flag4, align 4, !tbaa !3
+  store i32 2, ptr @Flag4, align 4, !tbaa !3
   ret i32 %i
 }
 define void @static_global_not_simplifiable_2_helper() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@static_global_not_simplifiable_2_helper
 ; TUNIT-SAME: () #[[ATTR5]] {
-; TUNIT-NEXT:    store i32 2, i32* @Flag4, align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    store i32 2, ptr @Flag4, align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@static_global_not_simplifiable_2_helper
 ; CGSCC-SAME: () #[[ATTR6]] {
-; CGSCC-NEXT:    store i32 2, i32* @Flag4, align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    store i32 2, ptr @Flag4, align 4, !tbaa [[TBAA3]]
 ; CGSCC-NEXT:    ret void
 ;
-  store i32 2, i32* @Flag4, align 4, !tbaa !3
+  store i32 2, ptr @Flag4, align 4, !tbaa !3
   ret void
 }
 
 ; Similiar to static_global_simplifiable_3 but with a may-store.
-define i32 @static_global_not_simplifiable_3(i1 %c, i32* %p) {
+define i32 @static_global_not_simplifiable_3(i1 %c, ptr %p) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@static_global_not_simplifiable_3
-; TUNIT-SAME: (i1 [[C:%.*]], i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR3]] {
-; TUNIT-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32* @Flag3, i32* [[P]]
-; TUNIT-NEXT:    store i32 1, i32* [[SEL]], align 4, !tbaa [[TBAA3]]
-; TUNIT-NEXT:    [[I:%.*]] = load i32, i32* @Flag3, align 4, !tbaa [[TBAA3]]
+; TUNIT-SAME: (i1 [[C:%.*]], ptr nocapture nofree writeonly [[P:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[SEL:%.*]] = select i1 [[C]], ptr @Flag3, ptr [[P]]
+; TUNIT-NEXT:    store i32 1, ptr [[SEL]], align 4, !tbaa [[TBAA3]]
+; TUNIT-NEXT:    [[I:%.*]] = load i32, ptr @Flag3, align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    ret i32 [[I]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@static_global_not_simplifiable_3
-; CGSCC-SAME: (i1 [[C:%.*]], i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR5]] {
-; CGSCC-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32* @Flag3, i32* [[P]]
-; CGSCC-NEXT:    store i32 1, i32* [[SEL]], align 4, !tbaa [[TBAA3]]
-; CGSCC-NEXT:    [[I:%.*]] = load i32, i32* @Flag3, align 4, !tbaa [[TBAA3]]
+; CGSCC-SAME: (i1 [[C:%.*]], ptr nocapture nofree writeonly [[P:%.*]]) #[[ATTR5]] {
+; CGSCC-NEXT:    [[SEL:%.*]] = select i1 [[C]], ptr @Flag3, ptr [[P]]
+; CGSCC-NEXT:    store i32 1, ptr [[SEL]], align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    [[I:%.*]] = load i32, ptr @Flag3, align 4, !tbaa [[TBAA3]]
 ; CGSCC-NEXT:    ret i32 [[I]]
 ;
-  %sel = select i1 %c, i32* @Flag3, i32* %p
-  store i32 1, i32* %sel, align 4, !tbaa !3
-  %i = load i32, i32* @Flag3, align 4, !tbaa !3
+  %sel = select i1 %c, ptr @Flag3, ptr %p
+  store i32 1, ptr %sel, align 4, !tbaa !3
+  %i = load i32, ptr @Flag3, align 4, !tbaa !3
   ret i32 %i
 }
 
@@ -1948,51 +1855,51 @@ define i32 @write_read_global() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@write_read_global
 ; TUNIT-SAME: () #[[ATTR3]] {
-; TUNIT-NEXT:    store i32 7, i32* @Gint1, align 4
-; TUNIT-NEXT:    [[L:%.*]] = load i32, i32* @Gint1, align 4
+; TUNIT-NEXT:    store i32 7, ptr @Gint1, align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr @Gint1, align 4
 ; TUNIT-NEXT:    ret i32 [[L]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@write_read_global
 ; CGSCC-SAME: () #[[ATTR5]] {
-; CGSCC-NEXT:    store i32 7, i32* @Gint1, align 4
-; CGSCC-NEXT:    [[L:%.*]] = load i32, i32* @Gint1, align 4
+; CGSCC-NEXT:    store i32 7, ptr @Gint1, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr @Gint1, align 4
 ; CGSCC-NEXT:    ret i32 [[L]]
 ;
-  store i32 7, i32* @Gint1
-  %l = load i32, i32* @Gint1
+  store i32 7, ptr @Gint1
+  %l = load i32, ptr @Gint1
   ret i32 %l
 }
 define void @write_global() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@write_global
 ; TUNIT-SAME: () #[[ATTR5]] {
-; TUNIT-NEXT:    store i32 7, i32* @Gint2, align 4
+; TUNIT-NEXT:    store i32 7, ptr @Gint2, align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@write_global
 ; CGSCC-SAME: () #[[ATTR6]] {
-; CGSCC-NEXT:    store i32 7, i32* @Gint2, align 4
+; CGSCC-NEXT:    store i32 7, ptr @Gint2, align 4
 ; CGSCC-NEXT:    ret void
 ;
-  store i32 7, i32* @Gint2
+  store i32 7, ptr @Gint2
   ret void
 }
 define i32 @read_global() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@read_global
 ; TUNIT-SAME: () #[[ATTR6]] {
-; TUNIT-NEXT:    [[L:%.*]] = load i32, i32* @Gint2, align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr @Gint2, align 4
 ; TUNIT-NEXT:    ret i32 [[L]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@read_global
 ; CGSCC-SAME: () #[[ATTR7]] {
-; CGSCC-NEXT:    [[L:%.*]] = load i32, i32* @Gint2, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr @Gint2, align 4
 ; CGSCC-NEXT:    ret i32 [[L]]
 ;
-  %l = load i32, i32* @Gint2
+  %l = load i32, ptr @Gint2
   ret i32 %l
 }
 define i32 @write_read_static_global() {
@@ -2006,40 +1913,40 @@ define i32 @write_read_static_global() {
 ; CGSCC-SAME: () #[[ATTR6]] {
 ; CGSCC-NEXT:    ret i32 7
 ;
-  store i32 7, i32* @Gstatic_int1
-  %l = load i32, i32* @Gstatic_int1
+  store i32 7, ptr @Gstatic_int1
+  %l = load i32, ptr @Gstatic_int1
   ret i32 %l
 }
 define void @write_static_global() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@write_static_global
 ; TUNIT-SAME: () #[[ATTR5]] {
-; TUNIT-NEXT:    store i32 7, i32* @Gstatic_int2, align 4
+; TUNIT-NEXT:    store i32 7, ptr @Gstatic_int2, align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@write_static_global
 ; CGSCC-SAME: () #[[ATTR6]] {
-; CGSCC-NEXT:    store i32 7, i32* @Gstatic_int2, align 4
+; CGSCC-NEXT:    store i32 7, ptr @Gstatic_int2, align 4
 ; CGSCC-NEXT:    ret void
 ;
-  store i32 7, i32* @Gstatic_int2
+  store i32 7, ptr @Gstatic_int2
   ret void
 }
 define i32 @read_static_global() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@read_static_global
 ; TUNIT-SAME: () #[[ATTR6]] {
-; TUNIT-NEXT:    [[L:%.*]] = load i32, i32* @Gstatic_int2, align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr @Gstatic_int2, align 4
 ; TUNIT-NEXT:    ret i32 [[L]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@read_static_global
 ; CGSCC-SAME: () #[[ATTR7]] {
-; CGSCC-NEXT:    [[L:%.*]] = load i32, i32* @Gstatic_int2, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr @Gstatic_int2, align 4
 ; CGSCC-NEXT:    ret i32 [[L]]
 ;
-  %l = load i32, i32* @Gstatic_int2
+  %l = load i32, ptr @Gstatic_int2
   ret i32 %l
 }
 define i32 @write_read_static_undef_global() {
@@ -2053,8 +1960,8 @@ define i32 @write_read_static_undef_global() {
 ; CGSCC-SAME: () #[[ATTR6]] {
 ; CGSCC-NEXT:    ret i32 7
 ;
-  store i32 7, i32* @Gstatic_undef_int1
-  %l = load i32, i32* @Gstatic_undef_int1
+  store i32 7, ptr @Gstatic_undef_int1
+  %l = load i32, ptr @Gstatic_undef_int1
   ret i32 %l
 }
 define void @write_static_undef_global() {
@@ -2066,10 +1973,10 @@ define void @write_static_undef_global() {
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@write_static_undef_global
 ; CGSCC-SAME: () #[[ATTR6]] {
-; CGSCC-NEXT:    store i32 7, i32* @Gstatic_undef_int2, align 4
+; CGSCC-NEXT:    store i32 7, ptr @Gstatic_undef_int2, align 4
 ; CGSCC-NEXT:    ret void
 ;
-  store i32 7, i32* @Gstatic_undef_int2
+  store i32 7, ptr @Gstatic_undef_int2
   ret void
 }
 define i32 @read_static_undef_global() {
@@ -2078,7 +1985,7 @@ define i32 @read_static_undef_global() {
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret i32 7
 ;
-  %l = load i32, i32* @Gstatic_undef_int2
+  %l = load i32, ptr @Gstatic_undef_int2
   ret i32 %l
 }
 
@@ -2088,7 +1995,7 @@ define i32 @single_read_of_static_global() {
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:    ret i32 0
 ;
-  %l = load i32, i32* @Gstatic_int3
+  %l = load i32, ptr @Gstatic_int3
   ret i32 %l
 }
 
@@ -2098,36 +2005,34 @@ define i8 @phi_store() {
 ; CHECK-SAME: () #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i16, align 2
-; CHECK-NEXT:    [[B:%.*]] = bitcast i16* [[A]] to i8*
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[B]], [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i8 1, i8* [[P]], align 1
-; CHECK-NEXT:    [[G]] = getelementptr i8, i8* [[P]], i64 1
+; CHECK-NEXT:    store i8 1, ptr [[P]], align 1
+; CHECK-NEXT:    [[G]] = getelementptr i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 2
 ; CHECK-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[S:%.*]] = getelementptr i8, i8* [[B]], i64 1
-; CHECK-NEXT:    [[L:%.*]] = load i8, i8* [[S]], align 1
+; CHECK-NEXT:    [[S:%.*]] = getelementptr i8, ptr [[A]], i64 1
+; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[S]], align 1
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
 entry:
   %a = alloca i16
-  %b = bitcast i16* %a to i8*
   br label %loop
 loop:
-  %p = phi i8* [%b, %entry], [%g, %loop]
+  %p = phi ptr [%a, %entry], [%g, %loop]
   %i = phi i8 [0, %entry], [%o, %loop]
-  store i8 1, i8* %p
-  %g = getelementptr i8, i8* %p, i64 1
+  store i8 1, ptr %p
+  %g = getelementptr i8, ptr %p, i64 1
   %o = add nsw i8 %i, 1
   %c = icmp eq i8 %o, 2
   br i1 %c, label %end, label %loop
 end:
-  %s = getelementptr i8, i8* %b, i64 1
-  %l = load i8, i8* %s
+  %s = getelementptr i8, ptr %a, i64 1
+  %l = load i8, ptr %s
   ret i8 %l
 }
 
@@ -2140,16 +2045,18 @@ define i8 @phi_no_store_1() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br label [[LOOP:%.*]]
 ; TUNIT:       loop:
-; TUNIT-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a1 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
+; TUNIT-NEXT:    [[P:%.*]] = phi ptr [ @a1, [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; TUNIT-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; TUNIT-NEXT:    store i8 1, i8* [[P]], align 1
-; TUNIT-NEXT:    [[G]] = getelementptr i8, i8* [[P]], i64 1
+; TUNIT-NEXT:    store i8 1, ptr [[P]], align 1
+; TUNIT-NEXT:    [[G]] = getelementptr i8, ptr [[P]], i64 1
 ; TUNIT-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; TUNIT-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 3
 ; TUNIT-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; TUNIT:       end:
-; TUNIT-NEXT:    [[L11:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 2), align 2
-; TUNIT-NEXT:    [[L12:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 3), align 1
+; TUNIT-NEXT:    [[S11:%.*]] = getelementptr i8, ptr @a1, i64 2
+; TUNIT-NEXT:    [[L11:%.*]] = load i8, ptr [[S11]], align 2
+; TUNIT-NEXT:    [[S12:%.*]] = getelementptr i8, ptr @a1, i64 3
+; TUNIT-NEXT:    [[L12:%.*]] = load i8, ptr [[S12]], align 1
 ; TUNIT-NEXT:    [[ADD:%.*]] = add i8 [[L11]], [[L12]]
 ; TUNIT-NEXT:    ret i8 [[ADD]]
 ;
@@ -2159,35 +2066,36 @@ define i8 @phi_no_store_1() {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[LOOP:%.*]]
 ; CGSCC:       loop:
-; CGSCC-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a1 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
+; CGSCC-NEXT:    [[P:%.*]] = phi ptr [ @a1, [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; CGSCC-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; CGSCC-NEXT:    store i8 1, i8* [[P]], align 1
-; CGSCC-NEXT:    [[G]] = getelementptr i8, i8* [[P]], i64 1
+; CGSCC-NEXT:    store i8 1, ptr [[P]], align 1
+; CGSCC-NEXT:    [[G]] = getelementptr i8, ptr [[P]], i64 1
 ; CGSCC-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; CGSCC-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 3
 ; CGSCC-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; CGSCC:       end:
-; CGSCC-NEXT:    [[L11:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 2), align 2
-; CGSCC-NEXT:    [[L12:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a1 to i8*), i64 3), align 1
+; CGSCC-NEXT:    [[S11:%.*]] = getelementptr i8, ptr @a1, i64 2
+; CGSCC-NEXT:    [[L11:%.*]] = load i8, ptr [[S11]], align 2
+; CGSCC-NEXT:    [[S12:%.*]] = getelementptr i8, ptr @a1, i64 3
+; CGSCC-NEXT:    [[L12:%.*]] = load i8, ptr [[S12]], align 1
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i8 [[L11]], [[L12]]
 ; CGSCC-NEXT:    ret i8 [[ADD]]
 ;
 entry:
-  %b = bitcast i32* @a1 to i8*
   br label %loop
 loop:
-  %p = phi i8* [%b, %entry], [%g, %loop]
+  %p = phi ptr [@a1, %entry], [%g, %loop]
   %i = phi i8 [0, %entry], [%o, %loop]
-  store i8 1, i8* %p
-  %g = getelementptr i8, i8* %p, i64 1
+  store i8 1, ptr %p
+  %g = getelementptr i8, ptr %p, i64 1
   %o = add nsw i8 %i, 1
   %c = icmp eq i8 %o, 3
   br i1 %c, label %end, label %loop
 end:
-  %s11 = getelementptr i8, i8* %b, i64 2
-  %l11 = load i8, i8* %s11
-  %s12 = getelementptr i8, i8* %b, i64 3
-  %l12 = load i8, i8* %s12
+  %s11 = getelementptr i8, ptr @a1, i64 2
+  %l11 = load i8, ptr %s11
+  %s12 = getelementptr i8, ptr @a1, i64 3
+  %l12 = load i8, ptr %s12
   %add = add i8 %l11, %l12
   ret i8 %add
 }
@@ -2201,16 +2109,18 @@ define i8 @phi_no_store_2() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br label [[LOOP:%.*]]
 ; TUNIT:       loop:
-; TUNIT-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
+; TUNIT-NEXT:    [[P:%.*]] = phi ptr [ @a2, [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; TUNIT-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; TUNIT-NEXT:    store i8 1, i8* [[P]], align 2
-; TUNIT-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
+; TUNIT-NEXT:    store i8 1, ptr [[P]], align 2
+; TUNIT-NEXT:    [[G]] = getelementptr i8, ptr @a2, i64 2
 ; TUNIT-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; TUNIT-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; TUNIT-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; TUNIT:       end:
-; TUNIT-NEXT:    [[L21:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 2), align 2
-; TUNIT-NEXT:    [[L22:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 3), align 1
+; TUNIT-NEXT:    [[S21:%.*]] = getelementptr i8, ptr @a2, i64 2
+; TUNIT-NEXT:    [[L21:%.*]] = load i8, ptr [[S21]], align 2
+; TUNIT-NEXT:    [[S22:%.*]] = getelementptr i8, ptr @a2, i64 3
+; TUNIT-NEXT:    [[L22:%.*]] = load i8, ptr [[S22]], align 1
 ; TUNIT-NEXT:    [[ADD:%.*]] = add i8 [[L21]], [[L22]]
 ; TUNIT-NEXT:    ret i8 [[ADD]]
 ;
@@ -2220,35 +2130,36 @@ define i8 @phi_no_store_2() {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[LOOP:%.*]]
 ; CGSCC:       loop:
-; CGSCC-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
+; CGSCC-NEXT:    [[P:%.*]] = phi ptr [ @a2, [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; CGSCC-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; CGSCC-NEXT:    store i8 1, i8* [[P]], align 2
-; CGSCC-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
+; CGSCC-NEXT:    store i8 1, ptr [[P]], align 2
+; CGSCC-NEXT:    [[G]] = getelementptr i8, ptr @a2, i64 2
 ; CGSCC-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; CGSCC-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; CGSCC-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; CGSCC:       end:
-; CGSCC-NEXT:    [[L21:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 2), align 2
-; CGSCC-NEXT:    [[L22:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a2 to i8*), i64 3), align 1
+; CGSCC-NEXT:    [[S21:%.*]] = getelementptr i8, ptr @a2, i64 2
+; CGSCC-NEXT:    [[L21:%.*]] = load i8, ptr [[S21]], align 2
+; CGSCC-NEXT:    [[S22:%.*]] = getelementptr i8, ptr @a2, i64 3
+; CGSCC-NEXT:    [[L22:%.*]] = load i8, ptr [[S22]], align 1
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i8 [[L21]], [[L22]]
 ; CGSCC-NEXT:    ret i8 [[ADD]]
 ;
 entry:
-  %b = bitcast i32* @a2 to i8*
   br label %loop
 loop:
-  %p = phi i8* [%b, %entry], [%g, %loop]
+  %p = phi ptr [@a2, %entry], [%g, %loop]
   %i = phi i8 [0, %entry], [%o, %loop]
-  store i8 1, i8* %p
-  %g = getelementptr i8, i8* %b, i64 2
+  store i8 1, ptr %p
+  %g = getelementptr i8, ptr @a2, i64 2
   %o = add nsw i8 %i, 1
   %c = icmp eq i8 %o, 7
   br i1 %c, label %end, label %loop
 end:
-  %s21 = getelementptr i8, i8* %b, i64 2
-  %l21 = load i8, i8* %s21
-  %s22 = getelementptr i8, i8* %b, i64 3
-  %l22 = load i8, i8* %s22
+  %s21 = getelementptr i8, ptr @a2, i64 2
+  %l21 = load i8, ptr %s21
+  %s22 = getelementptr i8, ptr @a2, i64 3
+  %l22 = load i8, ptr %s22
   %add = add i8 %l21, %l22
   ret i8 %add
 }
@@ -2258,21 +2169,25 @@ define i8 @phi_no_store_3() {
 ; TUNIT-LABEL: define {{[^@]+}}@phi_no_store_3
 ; TUNIT-SAME: () #[[ATTR3]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    store i8 0, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
+; TUNIT-NEXT:    [[S30:%.*]] = getelementptr i8, ptr @a3, i64 3
+; TUNIT-NEXT:    store i8 0, ptr [[S30]], align 1
 ; TUNIT-NEXT:    br label [[LOOP:%.*]]
 ; TUNIT:       loop:
-; TUNIT-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
+; TUNIT-NEXT:    [[P:%.*]] = phi ptr [ @a3, [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; TUNIT-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; TUNIT-NEXT:    store i8 1, i8* [[P]], align 2
-; TUNIT-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a3 to i8*), i64 2
+; TUNIT-NEXT:    store i8 1, ptr [[P]], align 2
+; TUNIT-NEXT:    [[G]] = getelementptr i8, ptr @a3, i64 2
 ; TUNIT-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; TUNIT-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; TUNIT-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; TUNIT:       end:
-; TUNIT-NEXT:    [[L31:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 2), align 2
-; TUNIT-NEXT:    [[L32:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
+; TUNIT-NEXT:    [[S31:%.*]] = getelementptr i8, ptr @a3, i64 2
+; TUNIT-NEXT:    [[L31:%.*]] = load i8, ptr [[S31]], align 2
+; TUNIT-NEXT:    [[S32:%.*]] = getelementptr i8, ptr @a3, i64 3
+; TUNIT-NEXT:    [[L32:%.*]] = load i8, ptr [[S32]], align 1
 ; TUNIT-NEXT:    [[ADD:%.*]] = add i8 [[L31]], [[L32]]
-; TUNIT-NEXT:    [[L34:%.*]] = load i8, i8* bitcast (i32* getelementptr inbounds (i32, i32* @a3, i64 1) to i8*), align 4
+; TUNIT-NEXT:    [[S34:%.*]] = getelementptr i8, ptr @a3, i64 4
+; TUNIT-NEXT:    [[L34:%.*]] = load i8, ptr [[S34]], align 4
 ; TUNIT-NEXT:    [[ADD2:%.*]] = add i8 [[ADD]], [[L34]]
 ; TUNIT-NEXT:    ret i8 [[ADD2]]
 ;
@@ -2280,45 +2195,48 @@ define i8 @phi_no_store_3() {
 ; CGSCC-LABEL: define {{[^@]+}}@phi_no_store_3
 ; CGSCC-SAME: () #[[ATTR5]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    store i8 0, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
+; CGSCC-NEXT:    [[S30:%.*]] = getelementptr i8, ptr @a3, i64 3
+; CGSCC-NEXT:    store i8 0, ptr [[S30]], align 1
 ; CGSCC-NEXT:    br label [[LOOP:%.*]]
 ; CGSCC:       loop:
-; CGSCC-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
+; CGSCC-NEXT:    [[P:%.*]] = phi ptr [ @a3, [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; CGSCC-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; CGSCC-NEXT:    store i8 1, i8* [[P]], align 2
-; CGSCC-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a3 to i8*), i64 2
+; CGSCC-NEXT:    store i8 1, ptr [[P]], align 2
+; CGSCC-NEXT:    [[G]] = getelementptr i8, ptr @a3, i64 2
 ; CGSCC-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; CGSCC-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
 ; CGSCC-NEXT:    br i1 [[C]], label [[END:%.*]], label [[LOOP]]
 ; CGSCC:       end:
-; CGSCC-NEXT:    [[L31:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 2), align 2
-; CGSCC-NEXT:    [[L32:%.*]] = load i8, i8* getelementptr (i8, i8* bitcast (i32* @a3 to i8*), i64 3), align 1
+; CGSCC-NEXT:    [[S31:%.*]] = getelementptr i8, ptr @a3, i64 2
+; CGSCC-NEXT:    [[L31:%.*]] = load i8, ptr [[S31]], align 2
+; CGSCC-NEXT:    [[S32:%.*]] = getelementptr i8, ptr @a3, i64 3
+; CGSCC-NEXT:    [[L32:%.*]] = load i8, ptr [[S32]], align 1
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i8 [[L31]], [[L32]]
-; CGSCC-NEXT:    [[L34:%.*]] = load i8, i8* bitcast (i32* getelementptr inbounds (i32, i32* @a3, i64 1) to i8*), align 4
+; CGSCC-NEXT:    [[S34:%.*]] = getelementptr i8, ptr @a3, i64 4
+; CGSCC-NEXT:    [[L34:%.*]] = load i8, ptr [[S34]], align 4
 ; CGSCC-NEXT:    [[ADD2:%.*]] = add i8 [[ADD]], [[L34]]
 ; CGSCC-NEXT:    ret i8 [[ADD2]]
 ;
 entry:
-  %b = bitcast i32* @a3 to i8*
-  %s30 = getelementptr i8, i8* %b, i64 3
-  store i8 0, i8* %s30
+  %s30 = getelementptr i8, ptr @a3, i64 3
+  store i8 0, ptr %s30
   br label %loop
 loop:
-  %p = phi i8* [%b, %entry], [%g, %loop]
+  %p = phi ptr [@a3, %entry], [%g, %loop]
   %i = phi i8 [0, %entry], [%o, %loop]
-  store i8 1, i8* %p
-  %g = getelementptr i8, i8* %b, i64 2
+  store i8 1, ptr %p
+  %g = getelementptr i8, ptr @a3, i64 2
   %o = add nsw i8 %i, 1
   %c = icmp eq i8 %o, 7
   br i1 %c, label %end, label %loop
 end:
-  %s31 = getelementptr i8, i8* %b, i64 2
-  %l31 = load i8, i8* %s31
-  %s32 = getelementptr i8, i8* %b, i64 3
-  %l32 = load i8, i8* %s32
+  %s31 = getelementptr i8, ptr @a3, i64 2
+  %l31 = load i8, ptr %s31
+  %s32 = getelementptr i8, ptr @a3, i64 3
+  %l32 = load i8, ptr %s32
   %add = add i8 %l31, %l32
-  %s34 = getelementptr i8, i8* %b, i64 4
-  %l34 = load i8, i8* %s34
+  %s34 = getelementptr i8, ptr @a3, i64 4
+  %l34 = load i8, ptr %s34
   %add2 = add i8 %add, %l34
   ret i8 %add2
 }
@@ -2327,20 +2245,19 @@ define i8 @cast_and_load_1() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@cast_and_load_1
 ; TUNIT-SAME: () #[[ATTR3]] {
-; TUNIT-NEXT:    store i32 42, i32* @bytes1, align 4
-; TUNIT-NEXT:    [[L:%.*]] = load i8, i8* bitcast (i32* @bytes1 to i8*), align 4
+; TUNIT-NEXT:    store i32 42, ptr @bytes1, align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i8, ptr @bytes1, align 4
 ; TUNIT-NEXT:    ret i8 [[L]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@cast_and_load_1
 ; CGSCC-SAME: () #[[ATTR5]] {
-; CGSCC-NEXT:    store i32 42, i32* @bytes1, align 4
-; CGSCC-NEXT:    [[L:%.*]] = load i8, i8* bitcast (i32* @bytes1 to i8*), align 4
+; CGSCC-NEXT:    store i32 42, ptr @bytes1, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i8, ptr @bytes1, align 4
 ; CGSCC-NEXT:    ret i8 [[L]]
 ;
-  store i32 42, i32* @bytes1
-  %bc = bitcast i32* @bytes1 to i8*
-  %l = load i8, i8* %bc
+  store i32 42, ptr @bytes1
+  %l = load i8, ptr @bytes1
   ret i8 %l
 }
 
@@ -2348,20 +2265,19 @@ define i64 @cast_and_load_2() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@cast_and_load_2
 ; TUNIT-SAME: () #[[ATTR3]] {
-; TUNIT-NEXT:    store i32 42, i32* @bytes2, align 4
-; TUNIT-NEXT:    [[L:%.*]] = load i64, i64* bitcast (i32* @bytes2 to i64*), align 4
+; TUNIT-NEXT:    store i32 42, ptr @bytes2, align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i64, ptr @bytes2, align 4
 ; TUNIT-NEXT:    ret i64 [[L]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@cast_and_load_2
 ; CGSCC-SAME: () #[[ATTR5]] {
-; CGSCC-NEXT:    store i32 42, i32* @bytes2, align 4
-; CGSCC-NEXT:    [[L:%.*]] = load i64, i64* bitcast (i32* @bytes2 to i64*), align 4
+; CGSCC-NEXT:    store i32 42, ptr @bytes2, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i64, ptr @bytes2, align 4
 ; CGSCC-NEXT:    ret i64 [[L]]
 ;
-  store i32 42, i32* @bytes2
-  %bc = bitcast i32* @bytes2 to i64*
-  %l = load i64, i64* %bc
+  store i32 42, ptr @bytes2
+  %l = load i64, ptr @bytes2
   ret i64 %l
 }
 
@@ -2398,7 +2314,7 @@ define void @recursive_load_store(i64 %N, i32 %v) {
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  store i32 %v, i32* @rec_storage
+  store i32 %v, ptr @rec_storage
   br label %for.cond
 
 for.cond:
@@ -2407,14 +2323,14 @@ for.cond:
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:
-  %ll = load i32, i32* @rec_storage
-  store i32 %ll, i32* @rec_storage
+  %ll = load i32, ptr @rec_storage
+  store i32 %ll, ptr @rec_storage
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   br label %for.cond
 
 for.end:
-  %lr = load i32, i32* @rec_storage
-  store i32 %lr, i32* @rec_storage
+  %lr = load i32, ptr @rec_storage
+  store i32 %lr, ptr @rec_storage
   ret void
 }
 
@@ -2423,18 +2339,15 @@ define dso_local i32 @round_trip_malloc(i32 %x) {
 ; CHECK-SAME: (i32 returned [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL_H2S]] to i32*
-; CHECK-NEXT:    store i32 [[X]], i32* [[TMP0]], align 4
+; CHECK-NEXT:    store i32 [[X]], ptr [[CALL_H2S]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
-  %call = call noalias i8* @malloc(i64 4) norecurse
-  %0 = bitcast i8* %call to i32*
-  store i32 %x, i32* %0, align 4
-  %1 = load i32, i32* %0, align 4
-  %2 = bitcast i32* %0 to i8*
-  call void @free(i8* %2) norecurse
-  ret i32 %1
+  %call = call noalias ptr @malloc(i64 4) norecurse
+  store i32 %x, ptr %call, align 4
+  %0 = load i32, ptr %call, align 4
+  call void @free(ptr %call) norecurse
+  ret i32 %0
 }
 
 define dso_local i32 @round_trip_malloc_constant() {
@@ -2443,46 +2356,42 @@ define dso_local i32 @round_trip_malloc_constant() {
 ; CHECK-NEXT:    ret i32 7
 ;
 entry:
-  %call = call noalias i8* @malloc(i64 4) norecurse
-  %0 = bitcast i8* %call to i32*
-  store i32 7, i32* %0, align 4
-  %1 = load i32, i32* %0, align 4
-  %2 = bitcast i32* %0 to i8*
-  call void @free(i8* %2) norecurse
-  ret i32 %1
+  %call = call noalias ptr @malloc(i64 4) norecurse
+  store i32 7, ptr %call, align 4
+  %0 = load i32, ptr %call, align 4
+  call void @free(ptr %call) norecurse
+  ret i32 %0
 }
 
-declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
+declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
 
-declare void @free(i8*) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr) allockind("free") "alloc-family"="malloc"
 
 define dso_local i32 @conditional_malloc(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@conditional_malloc
 ; CHECK-SAME: (i32 returned [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL_H2S]] to i32*
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[X]], i32* [[TMP0]], align 4
+; CHECK-NEXT:    store i32 [[X]], ptr [[CALL_H2S]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
-  %call = call noalias i8* @malloc(i64 4) norecurse
-  %0 = bitcast i8* %call to i32*
+  %call = call noalias ptr @malloc(i64 4) norecurse
   %tobool = icmp ne i32 %x, 0
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 %x, i32* %0, align 4
+  store i32 %x, ptr %call, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %1 = load i32, i32* %0, align 4
-  ret i32 %1
+  %0 = load i32, ptr %call, align 4
+  ret i32 %0
 }
 
 define dso_local i32 @round_trip_calloc(i32 %x) {
@@ -2490,67 +2399,61 @@ define dso_local i32 @round_trip_calloc(i32 %x) {
 ; CHECK-SAME: (i32 returned [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL_H2S]], i8 0, i64 4, i1 false)
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL_H2S]] to i32*
-; CHECK-NEXT:    store i32 [[X]], i32* [[TMP0]], align 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[CALL_H2S]], i8 0, i64 4, i1 false)
+; CHECK-NEXT:    store i32 [[X]], ptr [[CALL_H2S]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
-  %call = call noalias i8* @calloc(i64 4, i64 1) norecurse
-  %0 = bitcast i8* %call to i32*
-  store i32 %x, i32* %0, align 4
-  %1 = load i32, i32* %0, align 4
-  ret i32 %1
+  %call = call noalias ptr @calloc(i64 4, i64 1) norecurse
+  store i32 %x, ptr %call, align 4
+  %0 = load i32, ptr %call, align 4
+  ret i32 %0
 }
 
 define dso_local i32 @round_trip_calloc_constant() {
 ; CHECK-LABEL: define {{[^@]+}}@round_trip_calloc_constant() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL_H2S]], i8 0, i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[CALL_H2S]], i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    ret i32 11
 ;
 entry:
-  %call = call noalias i8* @calloc(i64 4, i64 1) norecurse
-  %0 = bitcast i8* %call to i32*
-  store i32 11, i32* %0, align 4
-  %1 = load i32, i32* %0, align 4
-  ret i32 %1
+  %call = call noalias ptr @calloc(i64 4, i64 1) norecurse
+  store i32 11, ptr %call, align 4
+  %0 = load i32, ptr %call, align 4
+  ret i32 %0
 }
 
-declare noalias i8* @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1) "alloc-family"="malloc"
+declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1) "alloc-family"="malloc"
 
 define dso_local i32 @conditional_calloc(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@conditional_calloc
 ; CHECK-SAME: (i32 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL_H2S]], i8 0, i64 4, i1 false)
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL_H2S]] to i32*
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[CALL_H2S]], i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[X]], i32* [[TMP0]], align 4
+; CHECK-NEXT:    store i32 [[X]], ptr [[CALL_H2S]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CALL_H2S]], align 4
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  %call = call noalias i8* @calloc(i64 1, i64 4) norecurse
-  %0 = bitcast i8* %call to i32*
+  %call = call noalias ptr @calloc(i64 1, i64 4) norecurse
   %tobool = icmp ne i32 %x, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 %x, i32* %0, align 4
+  store i32 %x, ptr %call, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %1 = load i32, i32* %0, align 4
-  %2 = bitcast i32* %0 to i8*
-  call void @free(i8* %2) norecurse
-  ret i32 %1
+  %0 = load i32, ptr %call, align 4
+  call void @free(ptr %call) norecurse
+  ret i32 %0
 }
 
 define dso_local i32 @conditional_calloc_zero(i1 %c) {
@@ -2558,7 +2461,7 @@ define dso_local i32 @conditional_calloc_zero(i1 %c) {
 ; CHECK-SAME: (i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 4, align 1
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL_H2S]], i8 0, i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[CALL_H2S]], i8 0, i64 4, i1 false)
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END]]
@@ -2566,72 +2469,64 @@ define dso_local i32 @conditional_calloc_zero(i1 %c) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %call = call noalias i8* @calloc(i64 1, i64 4) norecurse
-  %0 = bitcast i8* %call to i32*
+  %call = call noalias ptr @calloc(i64 1, i64 4) norecurse
   br i1 %c, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 0, i32* %0, align 4
+  store i32 0, ptr %call, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %1 = load i32, i32* %0, align 4
-  %2 = bitcast i32* %0 to i8*
-  call void @free(i8* %2) norecurse
-  ret i32 %1
+  %0 = load i32, ptr %call, align 4
+  call void @free(ptr %call) norecurse
+  ret i32 %0
 }
 
-define dso_local i32* @malloc_like(i32 %s) {
+define dso_local ptr @malloc_like(i32 %s) {
 ; TUNIT-LABEL: define {{[^@]+}}@malloc_like
 ; TUNIT-SAME: (i32 [[S:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CONV:%.*]] = sext i32 [[S]] to i64
-; TUNIT-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 [[CONV]]) #[[ATTR19:[0-9]+]]
-; TUNIT-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
-; TUNIT-NEXT:    ret i32* [[TMP0]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 [[CONV]]) #[[ATTR19:[0-9]+]]
+; TUNIT-NEXT:    ret ptr [[CALL]]
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@malloc_like
 ; CGSCC-SAME: (i32 [[S:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[CONV:%.*]] = sext i32 [[S]] to i64
-; CGSCC-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 [[CONV]]) #[[ATTR22:[0-9]+]]
-; CGSCC-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
-; CGSCC-NEXT:    ret i32* [[TMP0]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc(i64 [[CONV]]) #[[ATTR22:[0-9]+]]
+; CGSCC-NEXT:    ret ptr [[CALL]]
 ;
 entry:
   %conv = sext i32 %s to i64
-  %call = call noalias i8* @malloc(i64 %conv) norecurse
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
+  %call = call noalias ptr @malloc(i64 %conv) norecurse
+  ret ptr %call
 }
 
 define dso_local i32 @round_trip_malloc_like(i32 %x) {
 ; TUNIT-LABEL: define {{[^@]+}}@round_trip_malloc_like
 ; TUNIT-SAME: (i32 [[X:%.*]]) {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32* @malloc_like(i32 noundef 4) #[[ATTR19]]
-; TUNIT-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; TUNIT-NEXT:    call void @free(i8* noundef nonnull [[TMP1]]) #[[ATTR19]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc_like(i32 noundef 4) #[[ATTR19]]
+; TUNIT-NEXT:    store i32 [[X]], ptr [[CALL]], align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CALL]], align 4
+; TUNIT-NEXT:    call void @free(ptr noundef nonnull align 4 dereferenceable(4) [[CALL]]) #[[ATTR19]]
 ; TUNIT-NEXT:    ret i32 [[TMP0]]
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@round_trip_malloc_like
 ; CGSCC-SAME: (i32 [[X:%.*]]) {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @malloc_like(i32 noundef 4) #[[ATTR22]]
-; CGSCC-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
-; CGSCC-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; CGSCC-NEXT:    call void @free(i8* noundef nonnull [[TMP1]]) #[[ATTR22]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias ptr @malloc_like(i32 noundef 4) #[[ATTR22]]
+; CGSCC-NEXT:    store i32 [[X]], ptr [[CALL]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CALL]], align 4
+; CGSCC-NEXT:    call void @free(ptr noundef nonnull align 4 dereferenceable(4) [[CALL]]) #[[ATTR22]]
 ; CGSCC-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  %call = call i32* @malloc_like(i32 4) norecurse
-  store i32 %x, i32* %call, align 4
-  %0 = load i32, i32* %call, align 4
-  %1 = bitcast i32* %call to i8*
-  call void @free(i8* %1) norecurse
+  %call = call ptr @malloc_like(i32 4) norecurse
+  store i32 %x, ptr %call, align 4
+  %0 = load i32, ptr %call, align 4
+  call void @free(ptr %call) norecurse
   ret i32 %0
 }
 
@@ -2639,214 +2534,194 @@ define dso_local i32 @round_trip_unknown_alloc(i32 %x) {
 ; TUNIT-LABEL: define {{[^@]+}}@round_trip_unknown_alloc
 ; TUNIT-SAME: (i32 [[X:%.*]]) {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32* @unknown_alloc(i32 noundef 4) #[[ATTR19]]
-; TUNIT-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; TUNIT-NEXT:    call void @free(i8* noundef nonnull [[TMP1]]) #[[ATTR19]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @unknown_alloc(i32 noundef 4) #[[ATTR19]]
+; TUNIT-NEXT:    store i32 [[X]], ptr [[CALL]], align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CALL]], align 4
+; TUNIT-NEXT:    call void @free(ptr noundef nonnull align 4 dereferenceable(4) [[CALL]]) #[[ATTR19]]
 ; TUNIT-NEXT:    ret i32 [[TMP0]]
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@round_trip_unknown_alloc
 ; CGSCC-SAME: (i32 [[X:%.*]]) {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @unknown_alloc(i32 noundef 4) #[[ATTR22]]
-; CGSCC-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
-; CGSCC-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; CGSCC-NEXT:    call void @free(i8* noundef nonnull [[TMP1]]) #[[ATTR22]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias ptr @unknown_alloc(i32 noundef 4) #[[ATTR22]]
+; CGSCC-NEXT:    store i32 [[X]], ptr [[CALL]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CALL]], align 4
+; CGSCC-NEXT:    call void @free(ptr noundef nonnull align 4 dereferenceable(4) [[CALL]]) #[[ATTR22]]
 ; CGSCC-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  %call = call i32* @unknown_alloc(i32 4) norecurse
-  store i32 %x, i32* %call, align 4
-  %0 = load i32, i32* %call, align 4
-  %1 = bitcast i32* %call to i8*
-  call void @free(i8* %1) norecurse
+  %call = call ptr @unknown_alloc(i32 4) norecurse
+  store i32 %x, ptr %call, align 4
+  %0 = load i32, ptr %call, align 4
+  call void @free(ptr %call) norecurse
   ret i32 %0
 }
 
-declare noalias i32* @unknown_alloc(i32)
+declare noalias ptr @unknown_alloc(i32)
 
 define dso_local i32 @conditional_unknown_alloc(i32 %x) {
 ; TUNIT-LABEL: define {{[^@]+}}@conditional_unknown_alloc
 ; TUNIT-SAME: (i32 [[X:%.*]]) {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call noalias i32* @unknown_alloc(i32 noundef 4) #[[ATTR19]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @unknown_alloc(i32 noundef 4) #[[ATTR19]]
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
+; TUNIT-NEXT:    store i32 [[X]], ptr [[CALL]], align 4
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; TUNIT-NEXT:    call void @free(i8* nonnull [[TMP1]]) #[[ATTR19]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CALL]], align 4
+; TUNIT-NEXT:    call void @free(ptr nonnull align 4 dereferenceable(4) [[CALL]]) #[[ATTR19]]
 ; TUNIT-NEXT:    ret i32 [[TMP0]]
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@conditional_unknown_alloc
 ; CGSCC-SAME: (i32 [[X:%.*]]) {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call noalias i32* @unknown_alloc(i32 noundef 4) #[[ATTR22]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias ptr @unknown_alloc(i32 noundef 4) #[[ATTR22]]
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    store i32 [[X]], i32* [[CALL]], align 4
+; CGSCC-NEXT:    store i32 [[X]], ptr [[CALL]], align 4
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
-; CGSCC-NEXT:    [[TMP1:%.*]] = bitcast i32* [[CALL]] to i8*
-; CGSCC-NEXT:    call void @free(i8* nonnull [[TMP1]]) #[[ATTR22]]
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[CALL]], align 4
+; CGSCC-NEXT:    call void @free(ptr nonnull align 4 dereferenceable(4) [[CALL]]) #[[ATTR22]]
 ; CGSCC-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  %call = call noalias i32* @unknown_alloc(i32 4) norecurse
+  %call = call noalias ptr @unknown_alloc(i32 4) norecurse
   %tobool = icmp ne i32 %x, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  store i32 %x, i32* %call, align 4
+  store i32 %x, ptr %call, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %0 = load i32, i32* %call, align 4
-  %1 = bitcast i32* %call to i8*
-  call void @free(i8* %1) norecurse
+  %0 = load i32, ptr %call, align 4
+  call void @free(ptr %call) norecurse
   ret i32 %0
 }
 
-%struct.STy = type { float*, double*, %struct.STy* }
+%struct.STy = type { ptr, ptr, ptr }
 
 @global = internal global %struct.STy zeroinitializer, align 8
 
 ; We mark %dst as writeonly and %src as readonly, that is (for now) all we can expect.
-define dso_local void @test_nested_memory(float* %dst, double* %src) {
+define dso_local void @test_nested_memory(ptr %dst, ptr %src) {
 ; TUNIT-LABEL: define {{[^@]+}}@test_nested_memory
-; TUNIT-SAME: (float* nocapture nofree writeonly [[DST:%.*]], double* nocapture nofree readonly [[SRC:%.*]]) {
+; TUNIT-SAME: (ptr nocapture nofree writeonly [[DST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CALL_H2S:%.*]] = alloca i8, i64 24, align 1
 ; TUNIT-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; TUNIT-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 2
-; TUNIT-NEXT:    store %struct.STy* @global, %struct.STy** [[INNER]], align 8
-; TUNIT-NEXT:    [[DST1:%.*]] = bitcast i8* [[CALL_H2S]] to float**
-; TUNIT-NEXT:    store float* [[DST]], float** [[DST1]], align 8
-; TUNIT-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, i8* [[CALL_H2S]], i64 8
-; TUNIT-NEXT:    [[TMP0:%.*]] = bitcast i8* [[SRC2]] to double**
-; TUNIT-NEXT:    store double* [[SRC]], double** [[TMP0]], align 8
-; TUNIT-NEXT:    store i8* [[CALL_H2S]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; TUNIT-NEXT:    [[LOCAL_CAST:%.*]] = bitcast %struct.STy* [[LOCAL]] to float**
-; TUNIT-NEXT:    [[TMP1:%.*]] = load float*, float** [[LOCAL_CAST]], align 8
-; TUNIT-NEXT:    [[LOCAL_0_1:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 1
-; TUNIT-NEXT:    [[TMP2:%.*]] = load double*, double** [[LOCAL_0_1]], align 8
-; TUNIT-NEXT:    [[LOCAL_0_2:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 2
-; TUNIT-NEXT:    [[TMP3:%.*]] = load %struct.STy*, %struct.STy** [[LOCAL_0_2]], align 8
-; TUNIT-NEXT:    call fastcc void @nested_memory_callee(float* [[TMP1]], double* [[TMP2]], %struct.STy* [[TMP3]]) #[[ATTR20:[0-9]+]]
+; TUNIT-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[LOCAL]], i64 0, i32 2
+; TUNIT-NEXT:    store ptr @global, ptr [[INNER]], align 8
+; TUNIT-NEXT:    store ptr [[DST]], ptr [[CALL_H2S]], align 8
+; TUNIT-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[CALL_H2S]], i64 8
+; TUNIT-NEXT:    store ptr [[SRC]], ptr [[SRC2]], align 8
+; TUNIT-NEXT:    store ptr [[CALL_H2S]], ptr getelementptr inbounds ([[STRUCT_STY]], ptr @global, i64 0, i32 2), align 8
+; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[LOCAL]], align 8
+; TUNIT-NEXT:    [[LOCAL_0_1:%.*]] = getelementptr [[STRUCT_STY]], ptr [[LOCAL]], i64 0, i32 1
+; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[LOCAL_0_1]], align 8
+; TUNIT-NEXT:    [[LOCAL_0_2:%.*]] = getelementptr [[STRUCT_STY]], ptr [[LOCAL]], i64 0, i32 2
+; TUNIT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[LOCAL_0_2]], align 8
+; TUNIT-NEXT:    call fastcc void @nested_memory_callee(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]]) #[[ATTR20:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@test_nested_memory
-; CGSCC-SAME: (float* nofree [[DST:%.*]], double* nofree [[SRC:%.*]]) {
+; CGSCC-SAME: (ptr nofree [[DST:%.*]], ptr nofree [[SRC:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; CGSCC-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[LOCAL]], i64 0, i32 2
-; CGSCC-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(24) i8* @malloc(i64 noundef 24)
-; CGSCC-NEXT:    [[DST1:%.*]] = bitcast i8* [[CALL]] to float**
-; CGSCC-NEXT:    store float* [[DST]], float** [[DST1]], align 8
-; CGSCC-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 8
-; CGSCC-NEXT:    [[TMP0:%.*]] = bitcast i8* [[SRC2]] to double**
-; CGSCC-NEXT:    store double* [[SRC]], double** [[TMP0]], align 8
-; CGSCC-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.STy** getelementptr inbounds ([[STRUCT_STY]], %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-; CGSCC-NEXT:    call fastcc void @nested_memory_callee(float* nofree nonnull align 4294967296 undef, double* nofree nonnull align 4294967296 undef, %struct.STy* nofree noundef nonnull align 8 dereferenceable(24) @global) #[[ATTR23:[0-9]+]]
+; CGSCC-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[LOCAL]], i64 0, i32 2
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(24) ptr @malloc(i64 noundef 24)
+; CGSCC-NEXT:    store ptr [[DST]], ptr [[CALL]], align 8
+; CGSCC-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
+; CGSCC-NEXT:    store ptr [[SRC]], ptr [[SRC2]], align 8
+; CGSCC-NEXT:    store ptr [[CALL]], ptr getelementptr inbounds ([[STRUCT_STY]], ptr @global, i64 0, i32 2), align 8
+; CGSCC-NEXT:    call fastcc void @nested_memory_callee(ptr nofree nonnull align 4294967296 undef, ptr nofree nonnull align 4294967296 undef, ptr nofree noundef nonnull align 8 dereferenceable(24) @global) #[[ATTR23:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %local = alloca %struct.STy, align 8
-  %0 = bitcast %struct.STy* %local to i8*
-  %inner = getelementptr inbounds %struct.STy, %struct.STy* %local, i64 0, i32 2
-  store %struct.STy* @global, %struct.STy** %inner, align 8
-  %call = call noalias dereferenceable_or_null(24) i8* @malloc(i64 24) #4
-  %dst1 = bitcast i8* %call to float**
-  store float* %dst, float** %dst1, align 8
-  %src2 = getelementptr inbounds i8, i8* %call, i64 8
-  %1 = bitcast i8* %src2 to double**
-  store double* %src, double** %1, align 8
-  store i8* %call, i8** bitcast (%struct.STy** getelementptr inbounds (%struct.STy, %struct.STy* @global, i64 0, i32 2) to i8**), align 8
-  call fastcc void @nested_memory_callee(%struct.STy* nonnull %local)
+  %inner = getelementptr inbounds %struct.STy, ptr %local, i64 0, i32 2
+  store ptr @global, ptr %inner, align 8
+  %call = call noalias dereferenceable_or_null(24) ptr @malloc(i64 24) #4
+  store ptr %dst, ptr %call, align 8
+  %src2 = getelementptr inbounds i8, ptr %call, i64 8
+  store ptr %src, ptr %src2, align 8
+  store ptr %call, ptr getelementptr inbounds (%struct.STy, ptr @global, i64 0, i32 2), align 8
+  call fastcc void @nested_memory_callee(ptr nonnull %local)
   ret void
 }
 
-define internal fastcc void @nested_memory_callee(%struct.STy* nocapture readonly %S) nofree norecurse nounwind uwtable {
+define internal fastcc void @nested_memory_callee(ptr nocapture readonly %S) nofree norecurse nounwind uwtable {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@nested_memory_callee
-; TUNIT-SAME: (float* [[TMP0:%.*]], double* [[TMP1:%.*]], %struct.STy* [[TMP2:%.*]]) #[[ATTR11:[0-9]+]] {
+; TUNIT-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], ptr [[TMP2:%.*]]) #[[ATTR11:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[S_PRIV:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; TUNIT-NEXT:    [[S_PRIV_CAST:%.*]] = bitcast %struct.STy* [[S_PRIV]] to float**
-; TUNIT-NEXT:    store float* [[TMP0]], float** [[S_PRIV_CAST]], align 8
-; TUNIT-NEXT:    [[S_PRIV_0_1:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 1
-; TUNIT-NEXT:    store double* [[TMP1]], double** [[S_PRIV_0_1]], align 8
-; TUNIT-NEXT:    [[S_PRIV_0_2:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 2
-; TUNIT-NEXT:    store %struct.STy* [[TMP2]], %struct.STy** [[S_PRIV_0_2]], align 8
-; TUNIT-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 2
-; TUNIT-NEXT:    [[TMP3:%.*]] = load %struct.STy*, %struct.STy** [[INNER]], align 8
-; TUNIT-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP3]], i64 0, i32 2
-; TUNIT-NEXT:    [[TMP4:%.*]] = load %struct.STy*, %struct.STy** [[INNER1]], align 8
-; TUNIT-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP4]], i64 0, i32 1
-; TUNIT-NEXT:    [[TMP5:%.*]] = load double*, double** [[SRC]], align 8
-; TUNIT-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP5]], align 8
+; TUNIT-NEXT:    store ptr [[TMP0]], ptr [[S_PRIV]], align 8
+; TUNIT-NEXT:    [[S_PRIV_0_1:%.*]] = getelementptr [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 1
+; TUNIT-NEXT:    store ptr [[TMP1]], ptr [[S_PRIV_0_1]], align 8
+; TUNIT-NEXT:    [[S_PRIV_0_2:%.*]] = getelementptr [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
+; TUNIT-NEXT:    store ptr [[TMP2]], ptr [[S_PRIV_0_2]], align 8
+; TUNIT-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
+; TUNIT-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[INNER]], align 8
+; TUNIT-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[TMP3]], i64 0, i32 2
+; TUNIT-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[INNER1]], align 8
+; TUNIT-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[TMP4]], i64 0, i32 1
+; TUNIT-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SRC]], align 8
+; TUNIT-NEXT:    [[TMP6:%.*]] = load double, ptr [[TMP5]], align 8
 ; TUNIT-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP6]] to float
-; TUNIT-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP4]], i64 0, i32 0
-; TUNIT-NEXT:    [[TMP7:%.*]] = load float*, float** [[DST]], align 8
-; TUNIT-NEXT:    store float [[CONV]], float* [[TMP7]], align 4
+; TUNIT-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP4]], align 8
+; TUNIT-NEXT:    store float [[CONV]], ptr [[TMP7]], align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@nested_memory_callee
-; CGSCC-SAME: (float* [[TMP0:%.*]], double* [[TMP1:%.*]], %struct.STy* [[TMP2:%.*]]) #[[ATTR12:[0-9]+]] {
+; CGSCC-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], ptr [[TMP2:%.*]]) #[[ATTR12:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[S_PRIV:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; CGSCC-NEXT:    [[S_PRIV_CAST:%.*]] = bitcast %struct.STy* [[S_PRIV]] to float**
-; CGSCC-NEXT:    store float* [[TMP0]], float** [[S_PRIV_CAST]], align 8
-; CGSCC-NEXT:    [[S_PRIV_0_1:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 1
-; CGSCC-NEXT:    store double* [[TMP1]], double** [[S_PRIV_0_1]], align 8
-; CGSCC-NEXT:    [[S_PRIV_0_2:%.*]] = getelementptr [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 2
-; CGSCC-NEXT:    store %struct.STy* [[TMP2]], %struct.STy** [[S_PRIV_0_2]], align 8
-; CGSCC-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[S_PRIV]], i64 0, i32 2
-; CGSCC-NEXT:    [[TMP3:%.*]] = load %struct.STy*, %struct.STy** [[INNER]], align 8
-; CGSCC-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP3]], i64 0, i32 2
-; CGSCC-NEXT:    [[TMP4:%.*]] = load %struct.STy*, %struct.STy** [[INNER1]], align 8
-; CGSCC-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP4]], i64 0, i32 1
-; CGSCC-NEXT:    [[TMP5:%.*]] = load double*, double** [[SRC]], align 8
-; CGSCC-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP5]], align 8
+; CGSCC-NEXT:    store ptr [[TMP0]], ptr [[S_PRIV]], align 8
+; CGSCC-NEXT:    [[S_PRIV_0_1:%.*]] = getelementptr [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 1
+; CGSCC-NEXT:    store ptr [[TMP1]], ptr [[S_PRIV_0_1]], align 8
+; CGSCC-NEXT:    [[S_PRIV_0_2:%.*]] = getelementptr [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
+; CGSCC-NEXT:    store ptr [[TMP2]], ptr [[S_PRIV_0_2]], align 8
+; CGSCC-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
+; CGSCC-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[INNER]], align 8
+; CGSCC-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[TMP3]], i64 0, i32 2
+; CGSCC-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[INNER1]], align 8
+; CGSCC-NEXT:    [[SRC:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[TMP4]], i64 0, i32 1
+; CGSCC-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[SRC]], align 8
+; CGSCC-NEXT:    [[TMP6:%.*]] = load double, ptr [[TMP5]], align 8
 ; CGSCC-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP6]] to float
-; CGSCC-NEXT:    [[DST:%.*]] = getelementptr inbounds [[STRUCT_STY]], %struct.STy* [[TMP4]], i64 0, i32 0
-; CGSCC-NEXT:    [[TMP7:%.*]] = load float*, float** [[DST]], align 8
-; CGSCC-NEXT:    store float [[CONV]], float* [[TMP7]], align 4
+; CGSCC-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP4]], align 8
+; CGSCC-NEXT:    store float [[CONV]], ptr [[TMP7]], align 4
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  %inner = getelementptr inbounds %struct.STy, %struct.STy* %S, i64 0, i32 2
-  %0 = load %struct.STy*, %struct.STy** %inner, align 8
-  %inner1 = getelementptr inbounds %struct.STy, %struct.STy* %0, i64 0, i32 2
-  %1 = load %struct.STy*, %struct.STy** %inner1, align 8
-  %src = getelementptr inbounds %struct.STy, %struct.STy* %1, i64 0, i32 1
-  %2 = load double*, double** %src, align 8
-  %3 = load double, double* %2, align 8
+  %inner = getelementptr inbounds %struct.STy, ptr %S, i64 0, i32 2
+  %0 = load ptr, ptr %inner, align 8
+  %inner1 = getelementptr inbounds %struct.STy, ptr %0, i64 0, i32 2
+  %1 = load ptr, ptr %inner1, align 8
+  %src = getelementptr inbounds %struct.STy, ptr %1, i64 0, i32 1
+  %2 = load ptr, ptr %src, align 8
+  %3 = load double, ptr %2, align 8
   %conv = fptrunc double %3 to float
-  %dst = getelementptr inbounds %struct.STy, %struct.STy* %1, i64 0, i32 0
-  %4 = load float*, float** %dst, align 8
-  store float %conv, float* %4, align 4
+  %4 = load ptr, ptr %1, align 8
+  store float %conv, ptr %4, align 4
   ret void
 }
 
 ; Make sure the access %1 is not forwarded to the loads %2 and %3 as the indices are
 ; varying and the accesses thus not "exact". This used to simplify %cmp12 to true.
-define hidden void @no_propagation_of_unknown_index_access(i32* %in, i32* %out, i32 %idx) #0 {
+define hidden void @no_propagation_of_unknown_index_access(ptr %in, ptr %out, i32 %idx) #0 {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@no_propagation_of_unknown_index_access
-; TUNIT-SAME: (i32* nocapture nofree readonly [[IN:%.*]], i32* nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (ptr nocapture nofree readonly [[IN:%.*]], ptr nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[BUF:%.*]] = alloca [128 x i32], align 16
-; TUNIT-NEXT:    [[TMP0:%.*]] = bitcast [128 x i32]* [[BUF]] to i8*
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 512, ptr noalias nocapture nofree noundef nonnull align 16 dereferenceable(512) [[BUF]]) #[[ATTR16]]
 ; TUNIT-NEXT:    br label [[FOR_COND:%.*]]
 ; TUNIT:       for.cond:
 ; TUNIT-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -2856,10 +2731,10 @@ define hidden void @no_propagation_of_unknown_index_access(i32* %in, i32* %out, 
 ; TUNIT-NEXT:    br label [[FOR_COND4:%.*]]
 ; TUNIT:       for.body:
 ; TUNIT-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I_0]] to i64
-; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[IDXPROM]]
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; TUNIT-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM]]
-; TUNIT-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
+; TUNIT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[IDXPROM]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; TUNIT-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], ptr [[BUF]], i64 0, i64 [[IDXPROM]]
+; TUNIT-NEXT:    store i32 [[TMP0]], ptr [[ARRAYIDX2]], align 4
 ; TUNIT-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; TUNIT-NEXT:    br label [[FOR_COND]], !llvm.loop [[TBAA10]]
 ; TUNIT:       for.cond4:
@@ -2867,29 +2742,28 @@ define hidden void @no_propagation_of_unknown_index_access(i32* %in, i32* %out, 
 ; TUNIT-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[I3_0]], 128
 ; TUNIT-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
 ; TUNIT:       for.cond.cleanup6:
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR16]]
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 512, ptr noalias nocapture nofree noundef nonnull align 16 dereferenceable(512) [[BUF]]) #[[ATTR16]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       for.body7:
 ; TUNIT-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[I3_0]] to i64
-; TUNIT-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM8]]
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX9]], align 4
+; TUNIT-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], ptr [[BUF]], i64 0, i64 [[IDXPROM8]]
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX9]], align 4
 ; TUNIT-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[IDX]] to i64
-; TUNIT-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM10]]
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
-; TUNIT-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
+; TUNIT-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], ptr [[BUF]], i64 0, i64 [[IDXPROM10]]
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX11]], align 4
+; TUNIT-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP1]], [[TMP2]]
 ; TUNIT-NEXT:    [[CONV:%.*]] = zext i1 [[CMP12]] to i32
-; TUNIT-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[IDXPROM8]]
-; TUNIT-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX14]], align 4
+; TUNIT-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[IDXPROM8]]
+; TUNIT-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX14]], align 4
 ; TUNIT-NEXT:    [[INC16]] = add nsw i32 [[I3_0]], 1
 ; TUNIT-NEXT:    br label [[FOR_COND4]], !llvm.loop [[TBAA12]]
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@no_propagation_of_unknown_index_access
-; CGSCC-SAME: (i32* nocapture nofree readonly [[IN:%.*]], i32* nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR13:[0-9]+]] {
+; CGSCC-SAME: (ptr nocapture nofree readonly [[IN:%.*]], ptr nocapture nofree writeonly [[OUT:%.*]], i32 [[IDX:%.*]]) #[[ATTR13:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[BUF:%.*]] = alloca [128 x i32], align 16
-; CGSCC-NEXT:    [[TMP0:%.*]] = bitcast [128 x i32]* [[BUF]] to i8*
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR19]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 512, ptr noalias nocapture nofree noundef nonnull align 16 dereferenceable(512) [[BUF]]) #[[ATTR19]]
 ; CGSCC-NEXT:    br label [[FOR_COND:%.*]]
 ; CGSCC:       for.cond:
 ; CGSCC-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -2899,10 +2773,10 @@ define hidden void @no_propagation_of_unknown_index_access(i32* %in, i32* %out, 
 ; CGSCC-NEXT:    br label [[FOR_COND4:%.*]]
 ; CGSCC:       for.body:
 ; CGSCC-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I_0]] to i64
-; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[IN]], i64 [[IDXPROM]]
-; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CGSCC-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM]]
-; CGSCC-NEXT:    store i32 [[TMP1]], i32* [[ARRAYIDX2]], align 4
+; CGSCC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[IDXPROM]]
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CGSCC-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [128 x i32], ptr [[BUF]], i64 0, i64 [[IDXPROM]]
+; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[ARRAYIDX2]], align 4
 ; CGSCC-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
 ; CGSCC-NEXT:    br label [[FOR_COND]], !llvm.loop [[TBAA10]]
 ; CGSCC:       for.cond4:
@@ -2910,26 +2784,25 @@ define hidden void @no_propagation_of_unknown_index_access(i32* %in, i32* %out, 
 ; CGSCC-NEXT:    [[CMP5:%.*]] = icmp slt i32 [[I3_0]], 128
 ; CGSCC-NEXT:    br i1 [[CMP5]], label [[FOR_BODY7]], label [[FOR_COND_CLEANUP6:%.*]]
 ; CGSCC:       for.cond.cleanup6:
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 512, i8* nocapture nofree noundef nonnull align 16 dereferenceable(512) [[TMP0]]) #[[ATTR19]]
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 512, ptr noalias nocapture nofree noundef nonnull align 16 dereferenceable(512) [[BUF]]) #[[ATTR19]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       for.body7:
 ; CGSCC-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[I3_0]] to i64
-; CGSCC-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM8]]
-; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX9]], align 4
+; CGSCC-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [128 x i32], ptr [[BUF]], i64 0, i64 [[IDXPROM8]]
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX9]], align 4
 ; CGSCC-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[IDX]] to i64
-; CGSCC-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], [128 x i32]* [[BUF]], i64 0, i64 [[IDXPROM10]]
-; CGSCC-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX11]], align 4
-; CGSCC-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
+; CGSCC-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [128 x i32], ptr [[BUF]], i64 0, i64 [[IDXPROM10]]
+; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX11]], align 4
+; CGSCC-NEXT:    [[CMP12:%.*]] = icmp sle i32 [[TMP1]], [[TMP2]]
 ; CGSCC-NEXT:    [[CONV:%.*]] = zext i1 [[CMP12]] to i32
-; CGSCC-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 [[IDXPROM8]]
-; CGSCC-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX14]], align 4
+; CGSCC-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[IDXPROM8]]
+; CGSCC-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX14]], align 4
 ; CGSCC-NEXT:    [[INC16]] = add nsw i32 [[I3_0]], 1
 ; CGSCC-NEXT:    br label [[FOR_COND4]], !llvm.loop [[TBAA12]]
 ;
 entry:
   %buf = alloca [128 x i32], align 16
-  %0 = bitcast [128 x i32]* %buf to i8*
-  call void @llvm.lifetime.start.p0i8(i64 512, i8* %0) #2
+  call void @llvm.lifetime.start.p0(i64 512, ptr %buf) #2
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
@@ -2942,10 +2815,10 @@ for.cond.cleanup:                                 ; preds = %for.cond
 
 for.body:                                         ; preds = %for.cond
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %in, i64 %idxprom
-  %1 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds [128 x i32], [128 x i32]* %buf, i64 0, i64 %idxprom
-  store i32 %1, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %in, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds [128 x i32], ptr %buf, i64 0, i64 %idxprom
+  store i32 %0, ptr %arrayidx2, align 4
   %inc = add nsw i32 %i.0, 1
   br label %for.cond, !llvm.loop !10
 
@@ -2955,62 +2828,62 @@ for.cond4:                                        ; preds = %for.body7, %for.con
   br i1 %cmp5, label %for.body7, label %for.cond.cleanup6
 
 for.cond.cleanup6:                                ; preds = %for.cond4
-  call void @llvm.lifetime.end.p0i8(i64 512, i8* %0) #2
+  call void @llvm.lifetime.end.p0(i64 512, ptr %buf) #2
   ret void
 
 for.body7:                                        ; preds = %for.cond4
   %idxprom8 = sext i32 %i3.0 to i64
-  %arrayidx9 = getelementptr inbounds [128 x i32], [128 x i32]* %buf, i64 0, i64 %idxprom8
-  %2 = load i32, i32* %arrayidx9, align 4
+  %arrayidx9 = getelementptr inbounds [128 x i32], ptr %buf, i64 0, i64 %idxprom8
+  %1 = load i32, ptr %arrayidx9, align 4
   %idxprom10 = sext i32 %idx to i64
-  %arrayidx11 = getelementptr inbounds [128 x i32], [128 x i32]* %buf, i64 0, i64 %idxprom10
-  %3 = load i32, i32* %arrayidx11, align 4
-  %cmp12 = icmp sle i32 %2, %3
+  %arrayidx11 = getelementptr inbounds [128 x i32], ptr %buf, i64 0, i64 %idxprom10
+  %2 = load i32, ptr %arrayidx11, align 4
+  %cmp12 = icmp sle i32 %1, %2
   %conv = zext i1 %cmp12 to i32
-  %arrayidx14 = getelementptr inbounds i32, i32* %out, i64 %idxprom8
-  store i32 %conv, i32* %arrayidx14, align 4
+  %arrayidx14 = getelementptr inbounds i32, ptr %out, i64 %idxprom8
+  store i32 %conv, ptr %arrayidx14, align 4
   %inc16 = add nsw i32 %i3.0, 1
   br label %for.cond4, !llvm.loop !12
 }
 
 ; Ensure we do not return true.
-define internal i1 @alloca_non_unique(i32* %p, i32 %in, i1 %c) {
+define internal i1 @alloca_non_unique(ptr %p, i32 %in, i1 %c) {
 ; TUNIT: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@alloca_non_unique
-; TUNIT-SAME: (i32* nocapture nofree nonnull readonly align 4 [[P:%.*]], i32 [[IN:%.*]], i1 noundef [[C:%.*]]) #[[ATTR12:[0-9]+]] {
+; TUNIT-SAME: (ptr nocapture nofree nonnull readonly align 4 [[P:%.*]], i32 [[IN:%.*]], i1 noundef [[C:%.*]]) #[[ATTR12:[0-9]+]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    store i32 [[IN]], i32* [[A]], align 4
+; TUNIT-NEXT:    store i32 [[IN]], ptr [[A]], align 4
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32 noundef 42, i1 noundef false) #[[ATTR14:[0-9]+]]
+; TUNIT-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32 noundef 42, i1 noundef false) #[[ATTR14:[0-9]+]]
 ; TUNIT-NEXT:    ret i1 [[R]]
 ; TUNIT:       f:
-; TUNIT-NEXT:    [[L:%.*]] = load i32, i32* [[P]], align 4
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr [[P]], align 4
 ; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IN]], [[L]]
 ; TUNIT-NEXT:    ret i1 [[CMP]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@alloca_non_unique
-; CGSCC-SAME: (i32* nocapture nofree nonnull readonly align 4 [[P:%.*]], i32 [[IN:%.*]], i1 noundef [[C:%.*]]) #[[ATTR14:[0-9]+]] {
+; CGSCC-SAME: (ptr nocapture nofree nonnull readonly align 4 [[P:%.*]], i32 [[IN:%.*]], i1 noundef [[C:%.*]]) #[[ATTR14:[0-9]+]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    store i32 [[IN]], i32* [[A]], align 4
+; CGSCC-NEXT:    store i32 [[IN]], ptr [[A]], align 4
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32 noundef 42, i1 noundef false) #[[ATTR17:[0-9]+]]
+; CGSCC-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32 noundef 42, i1 noundef false) #[[ATTR17:[0-9]+]]
 ; CGSCC-NEXT:    ret i1 [[R]]
 ; CGSCC:       f:
-; CGSCC-NEXT:    [[L:%.*]] = load i32, i32* [[P]], align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[P]], align 4
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IN]], [[L]]
 ; CGSCC-NEXT:    ret i1 [[CMP]]
 ;
   %a = alloca i32
-  store i32 %in, i32* %a
+  store i32 %in, ptr %a
   br i1 %c, label %t, label %f
 t:
-  %r = call i1 @alloca_non_unique(i32* %a, i32 42, i1 false)
+  %r = call i1 @alloca_non_unique(ptr %a, i32 42, i1 false)
   ret i1 %r
 f:
-  %l = load i32, i32* %p
+  %l = load i32, ptr %p
   %cmp = icmp eq i32 %in, %l
   ret i1 %cmp
 }
@@ -3020,16 +2893,16 @@ define i1 @alloca_non_unique_caller(i32 %in, i1 %c) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@alloca_non_unique_caller
 ; TUNIT-SAME: (i32 [[IN:%.*]], i1 [[C:%.*]]) #[[ATTR13:[0-9]+]] {
-; TUNIT-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(i32* undef, i32 [[IN]], i1 [[C]]) #[[ATTR14]]
+; TUNIT-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(ptr undef, i32 [[IN]], i1 [[C]]) #[[ATTR14]]
 ; TUNIT-NEXT:    ret i1 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@alloca_non_unique_caller
 ; CGSCC-SAME: (i32 [[IN:%.*]], i1 noundef [[C:%.*]]) #[[ATTR15:[0-9]+]] {
-; CGSCC-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(i32* undef, i32 [[IN]], i1 noundef [[C]]) #[[ATTR23]]
+; CGSCC-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(ptr undef, i32 [[IN]], i1 noundef [[C]]) #[[ATTR23]]
 ; CGSCC-NEXT:    ret i1 [[R]]
 ;
-  %r = call i1 @alloca_non_unique(i32* undef, i32 %in, i1 %c)
+  %r = call i1 @alloca_non_unique(ptr undef, i32 %in, i1 %c)
   ret i1 %r
 }
 
@@ -3039,9 +2912,9 @@ define i32 @scope_value_traversal(i32 %bad, i1 %c, i1 %c2) {
 ; TUNIT-LABEL: define {{[^@]+}}@scope_value_traversal
 ; TUNIT-SAME: (i32 [[BAD:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) #[[ATTR4]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    store i32 [[BAD]], i32* [[A]], align 4
-; TUNIT-NEXT:    call void @scope_value_traversal_helper(i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]], i1 [[C2]]) #[[ATTR17]]
-; TUNIT-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
+; TUNIT-NEXT:    store i32 [[BAD]], ptr [[A]], align 4
+; TUNIT-NEXT:    call void @scope_value_traversal_helper(ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]], i1 [[C2]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr [[A]], align 4
 ; TUNIT-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 [[BAD]], i32 [[L]]
 ; TUNIT-NEXT:    ret i32 [[SEL]]
 ;
@@ -3049,40 +2922,40 @@ define i32 @scope_value_traversal(i32 %bad, i1 %c, i1 %c2) {
 ; CGSCC-LABEL: define {{[^@]+}}@scope_value_traversal
 ; CGSCC-SAME: (i32 [[BAD:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) #[[ATTR16:[0-9]+]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    store i32 [[BAD]], i32* [[A]], align 4
-; CGSCC-NEXT:    call void @scope_value_traversal_helper(i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]], i1 [[C2]]) #[[ATTR20]]
-; CGSCC-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
+; CGSCC-NEXT:    store i32 [[BAD]], ptr [[A]], align 4
+; CGSCC-NEXT:    call void @scope_value_traversal_helper(ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]], i1 [[C2]]) #[[ATTR20]]
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[A]], align 4
 ; CGSCC-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 [[BAD]], i32 [[L]]
 ; CGSCC-NEXT:    ret i32 [[SEL]]
 ;
   %a = alloca i32
-  store i32 %bad, i32* %a
-  call void @scope_value_traversal_helper(i32* %a, i1 %c2)
-  %l = load i32, i32* %a
+  store i32 %bad, ptr %a
+  call void @scope_value_traversal_helper(ptr %a, i1 %c2)
+  %l = load i32, ptr %a
   %sel = select i1 %c, i32 %bad, i32 %l
   ret i32 %sel
 }
 
-define void @scope_value_traversal_helper(i32* %a, i1 %c) {
+define void @scope_value_traversal_helper(ptr %a, i1 %c) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@scope_value_traversal_helper
-; TUNIT-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i1 [[C:%.*]]) #[[ATTR1]] {
-; TUNIT-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
+; TUNIT-SAME: (ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr [[A]], align 4
 ; TUNIT-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 [[L]], i32 42
-; TUNIT-NEXT:    store i32 [[SEL]], i32* [[A]], align 4
+; TUNIT-NEXT:    store i32 [[SEL]], ptr [[A]], align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@scope_value_traversal_helper
-; CGSCC-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i1 [[C:%.*]]) #[[ATTR13]] {
-; CGSCC-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i1 [[C:%.*]]) #[[ATTR13]] {
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[A]], align 4
 ; CGSCC-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 [[L]], i32 42
-; CGSCC-NEXT:    store i32 [[SEL]], i32* [[A]], align 4
+; CGSCC-NEXT:    store i32 [[SEL]], ptr [[A]], align 4
 ; CGSCC-NEXT:    ret void
 ;
-  %l = load i32, i32* %a
+  %l = load i32, ptr %a
   %sel = select i1 %c, i32 %l, i32 42
-  store i32 %sel, i32* %a
+  store i32 %sel, ptr %a
   ret void
 }
 
@@ -3092,16 +2965,16 @@ define i8 @gep_index_from_binary_operator(i1 %cnd1, i1 %cnd2) {
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP_FIXED:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 12
+; CHECK-NEXT:    [[GEP_FIXED:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 12
 ; CHECK-NEXT:    ret i8 100
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
   %offset = add i64 5, 7
-  %gep.fixed = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 12
-  %gep.sum = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %offset
-  store i8 100, i8* %gep.fixed, align 4
-  %i = load i8, i8* %gep.sum, align 4
+  %gep.fixed = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 12
+  %gep.sum = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %offset
+  store i8 100, ptr %gep.fixed, align 4
+  %i = load i8, ptr %gep.sum, align 4
   ret i8 %i
 }
 
@@ -3111,21 +2984,20 @@ define i8 @gep_index_from_memory(i1 %cnd1, i1 %cnd2) {
 ; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP_LOADED:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 12
+; CHECK-NEXT:    [[GEP_LOADED:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 12
 ; CHECK-NEXT:    ret i8 100
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
   %addr = alloca i64, align 16
-  %gep.addr = getelementptr inbounds i64, i64* %addr, i64 0
-  store i64 12, i64* %gep.addr, align 8
-  %offset = load i64, i64* %gep.addr, align 8
-  %gep.fixed = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 12
+  store i64 12, ptr %addr, align 8
+  %offset = load i64, ptr %addr, align 8
+  %gep.fixed = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 12
 
-  %gep.loaded = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %offset
-  store i8 100, i8* %gep.loaded, align 4
+  %gep.loaded = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %offset
+  store i8 100, ptr %gep.loaded, align 4
 
-  %i = load i8, i8* %gep.fixed, align 4
+  %i = load i8, ptr %gep.fixed, align 4
   ret i8 %i
 }
 
@@ -3136,30 +3008,30 @@ define i32 @a(i1 %c) {
 ; TUNIT: Function Attrs: nofree nosync nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@a
 ; TUNIT-SAME: (i1 noundef [[C:%.*]]) #[[ATTR14]] {
-; TUNIT-NEXT:    store i32 3, i32* @G, align 4
+; TUNIT-NEXT:    store i32 3, ptr @G, align 4
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    [[REC:%.*]] = call i32 @a(i1 noundef false) #[[ATTR14]]
 ; TUNIT-NEXT:    br label [[F]]
 ; TUNIT:       f:
-; TUNIT-NEXT:    [[R:%.*]] = load i32, i32* @G, align 4
-; TUNIT-NEXT:    store i32 5, i32* @G, align 4
+; TUNIT-NEXT:    [[R:%.*]] = load i32, ptr @G, align 4
+; TUNIT-NEXT:    store i32 5, ptr @G, align 4
 ; TUNIT-NEXT:    ret i32 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@a
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR17]] {
-; CGSCC-NEXT:    store i32 3, i32* @G, align 4
+; CGSCC-NEXT:    store i32 3, ptr @G, align 4
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    [[REC:%.*]] = call i32 @a(i1 noundef false) #[[ATTR17]]
 ; CGSCC-NEXT:    br label [[F]]
 ; CGSCC:       f:
-; CGSCC-NEXT:    [[R:%.*]] = load i32, i32* @G, align 4
-; CGSCC-NEXT:    store i32 5, i32* @G, align 4
+; CGSCC-NEXT:    [[R:%.*]] = load i32, ptr @G, align 4
+; CGSCC-NEXT:    store i32 5, ptr @G, align 4
 ; CGSCC-NEXT:    ret i32 [[R]]
 ;
-  store i32 3, i32* @G
+  store i32 3, ptr @G
   br i1 %c, label %t, label %f
 
 t:
@@ -3167,8 +3039,8 @@ t:
   br label %f
 
 f:
-  %r = load i32, i32* @G
-  store i32 5, i32* @G
+  %r = load i32, ptr @G
+  store i32 5, ptr @G
   ret i32 %r
 }
 

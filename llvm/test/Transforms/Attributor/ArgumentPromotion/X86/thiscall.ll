@@ -12,55 +12,51 @@ target triple = "i386-pc-windows-msvc19.11.0"
 
 %struct.a = type { i8 }
 
-define internal x86_thiscallcc void @internalfun(%struct.a* %this, <{ %struct.a }>* inalloca(<{ %struct.a }>)) {
+define internal x86_thiscallcc void @internalfun(ptr %this, ptr inalloca(<{ %struct.a }>)) {
 ; CHECK-LABEL: define {{[^@]+}}@internalfun
-; CHECK-SAME: (%struct.a* noalias nocapture nofree readnone [[THIS:%.*]], <{ [[STRUCT_A:%.*]] }>* noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[TMP0:%.*]]) {
+; CHECK-SAME: (ptr noalias nocapture nofree readnone [[THIS:%.*]], ptr noundef nonnull inalloca(<{ [[STRUCT_A:%.*]] }>) align 4 dereferenceable(1) [[TMP0:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[TMP0]], i32 0, i32 0
 ; CHECK-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A]] }>, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <{ [[STRUCT_A]] }>, <{ [[STRUCT_A]] }>* [[ARGMEM]], i32 0, i32 0
-; CHECK-NEXT:    [[CALL:%.*]] = call x86_thiscallcc %struct.a* @copy_ctor(%struct.a* noundef nonnull align 4 dereferenceable(1) [[TMP1]], %struct.a* noundef nonnull dereferenceable(1) [[A]])
-; CHECK-NEXT:    call void @ext(<{ [[STRUCT_A]] }>* noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
+; CHECK-NEXT:    [[CALL:%.*]] = call x86_thiscallcc ptr @copy_ctor(ptr noundef nonnull align 4 dereferenceable(1) [[ARGMEM]], ptr noundef nonnull align 4 dereferenceable(1) [[TMP0]])
+; CHECK-NEXT:    call void @ext(ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = getelementptr inbounds <{ %struct.a }>, <{ %struct.a }>* %0, i32 0, i32 0
   %argmem = alloca inalloca <{ %struct.a }>, align 4
-  %1 = getelementptr inbounds <{ %struct.a }>, <{ %struct.a }>* %argmem, i32 0, i32 0
-  %call = call x86_thiscallcc %struct.a* @copy_ctor(%struct.a* %1, %struct.a* dereferenceable(1) %a)
-  call void @ext(<{ %struct.a }>* inalloca(<{ %struct.a }>) %argmem)
+  %call = call x86_thiscallcc ptr @copy_ctor(ptr %argmem, ptr dereferenceable(1) %0)
+  call void @ext(ptr inalloca(<{ %struct.a }>) %argmem)
   ret void
 }
 
 ; This is here to ensure @internalfun is live.
-define void @exportedfun(%struct.a* %a) {
+define void @exportedfun(ptr %a) {
 ; TUNIT-LABEL: define {{[^@]+}}@exportedfun
-; TUNIT-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]]) {
-; TUNIT-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave() #[[ATTR1:[0-9]+]]
+; TUNIT-SAME: (ptr nocapture nofree readnone [[A:%.*]]) {
+; TUNIT-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave() #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
-; TUNIT-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nocapture nofree readnone undef, <{ [[STRUCT_A]] }>* noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
-; TUNIT-NEXT:    call void @llvm.stackrestore(i8* nofree [[INALLOCA_SAVE]])
+; TUNIT-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nocapture nofree readnone undef, ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
+; TUNIT-NEXT:    call void @llvm.stackrestore(ptr nofree [[INALLOCA_SAVE]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@exportedfun
-; CGSCC-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]]) {
-; CGSCC-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave() #[[ATTR1:[0-9]+]]
+; CGSCC-SAME: (ptr nocapture nofree readnone [[A:%.*]]) {
+; CGSCC-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call ptr @llvm.stacksave() #[[ATTR1:[0-9]+]]
 ; CGSCC-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
-; CGSCC-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nocapture nofree readnone [[A]], <{ [[STRUCT_A]] }>* noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
-; CGSCC-NEXT:    call void @llvm.stackrestore(i8* nofree [[INALLOCA_SAVE]])
+; CGSCC-NEXT:    call x86_thiscallcc void @internalfun(ptr noalias nocapture nofree readnone [[A]], ptr noundef nonnull inalloca(<{ [[STRUCT_A]] }>) align 4 dereferenceable(1) [[ARGMEM]])
+; CGSCC-NEXT:    call void @llvm.stackrestore(ptr nofree [[INALLOCA_SAVE]])
 ; CGSCC-NEXT:    ret void
 ;
-  %inalloca.save = tail call i8* @llvm.stacksave()
+  %inalloca.save = tail call ptr @llvm.stacksave()
   %argmem = alloca inalloca <{ %struct.a }>, align 4
-  call x86_thiscallcc void @internalfun(%struct.a* %a, <{ %struct.a }>* inalloca(<{ %struct.a }>) %argmem)
-  call void @llvm.stackrestore(i8* %inalloca.save)
+  call x86_thiscallcc void @internalfun(ptr %a, ptr inalloca(<{ %struct.a }>) %argmem)
+  call void @llvm.stackrestore(ptr %inalloca.save)
   ret void
 }
 
-declare x86_thiscallcc %struct.a* @copy_ctor(%struct.a* returned, %struct.a* dereferenceable(1))
-declare void @ext(<{ %struct.a }>* inalloca(<{ %struct.a }>))
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare x86_thiscallcc ptr @copy_ctor(ptr returned, ptr dereferenceable(1))
+declare void @ext(ptr inalloca(<{ %struct.a }>))
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { willreturn }
