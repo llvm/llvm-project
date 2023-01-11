@@ -99,3 +99,66 @@ constexpr void invalid2() {
   huh(); // expected-error {{use of undeclared identifier}} \
          // ref-error {{use of undeclared identifier}}
 }
+
+namespace FunctionPointers {
+  constexpr int add(int a, int b) {
+    return a + b;
+  }
+
+  struct S { int a; };
+  constexpr S getS() {
+    return S{12};
+  }
+
+  constexpr int applyBinOp(int a, int b, int (*op)(int, int)) {
+    return op(a, b);
+  }
+  static_assert(applyBinOp(1, 2, add) == 3, "");
+
+  constexpr int ignoreReturnValue() {
+    int (*foo)(int, int) = add;
+
+    foo(1, 2);
+    return 1;
+  }
+  static_assert(ignoreReturnValue() == 1, "");
+
+  constexpr int createS(S (*gimme)()) {
+    gimme(); // Ignored return value
+    return gimme().a;
+  }
+  static_assert(createS(getS) == 12, "");
+
+namespace FunctionReturnType {
+  typedef int (*ptr)(int*);
+  typedef ptr (*pm)();
+
+  constexpr int fun1(int* y) {
+      return *y + 10;
+  }
+  constexpr ptr fun() {
+      return &fun1;
+  }
+  static_assert(fun() == nullptr, ""); // expected-error {{static assertion failed}} \
+                                       // ref-error {{static assertion failed}}
+
+  constexpr int foo() {
+    int (*f)(int *) = fun();
+    int m = 0;
+
+    m = f(&m);
+
+    return m;
+  }
+  static_assert(foo() == 10);
+
+  struct S {
+    int i;
+    void (*fp)();
+  };
+
+  constexpr S s{ 12 };
+  static_assert(s.fp == nullptr); // zero-initialized function pointer.
+}
+
+}
