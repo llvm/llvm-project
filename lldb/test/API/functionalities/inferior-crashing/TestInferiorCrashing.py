@@ -124,8 +124,8 @@ class CrashingInferiorTestCase(TestBase):
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argc",
+        self.expect("expression argc",
                     startstr='(int) $0 = 1')
 
-        self.expect("p hello_world",
+        self.expect("expression hello_world",
                     substrs=['Hello'])
