@@ -349,7 +349,8 @@ class PlaceholderQueue {
 
 public:
   ~PlaceholderQueue() {
-    assert(empty() && "PlaceholderQueue hasn't been flushed before being destroyed");
+    assert(empty() &&
+           "PlaceholderQueue hasn't been flushed before being destroyed");
   }
   bool empty() const { return PHs.empty(); }
   DistinctMDOperandPlaceholder &getPlaceholderOp(unsigned ID);

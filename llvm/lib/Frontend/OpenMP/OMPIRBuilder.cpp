@@ -4715,7 +4715,6 @@ OpenMPIRBuilder::createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
 void OpenMPIRBuilder::initializeTypes(Module &M) {
   LLVMContext &Ctx = M.getContext();
   StructType *T;
-
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
