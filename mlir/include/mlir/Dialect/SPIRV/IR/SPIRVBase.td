@@ -48,6 +48,7 @@ def SPIRV_Dialect : Dialect {
 
   let cppNamespace = "::mlir::spirv";
   let useDefaultTypePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
