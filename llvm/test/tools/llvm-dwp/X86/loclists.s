@@ -15,12 +15,12 @@
 # CHECK-NEXT: DW_LLE_offset_pair     (0x0000000000000004, 0x0000000000000008): DW_OP_reg3 RBX
 
 # CHECK-DAG: .debug_cu_index contents:
-# CHECK: Index Signature          INFO                         ABBREV                   LOCLISTS
-# CHECK:     1 {{.*}} [0x0000000000000018, 0x000000000000002d) [0x00000000, 0x00000004) [0x00000000, 0x0000001d)
+# CHECK: Index Signature          INFO                     ABBREV                   LOCLISTS
+# CHECK:     1 {{.*}} [0x00000018, 0x0000002d) [0x00000000, 0x00000004) [0x00000000, 0x0000001d)
 
 # CHECK-DAG: .debug_tu_index contents:
-# CHECK: Index Signature          INFO                         ABBREV                   LOCLISTS
-# CHECK:     2 {{.*}} [0x0000000000000000, 0x0000000000000018) [0x00000000, 0x00000004) [0x00000000, 0x0000001d)
+# CHECK: Index Signature          INFO                     ABBREV                   LOCLISTS
+# CHECK:     2 {{.*}} [0x00000000, 0x00000018) [0x00000000, 0x00000004) [0x00000000, 0x0000001d)
 
 	.section	.debug_info.dwo,"e",@progbits
 	.long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit
