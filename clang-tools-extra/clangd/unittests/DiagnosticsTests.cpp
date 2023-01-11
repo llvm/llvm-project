@@ -527,6 +527,37 @@ TEST(DiagnosticTest, ClangTidySuppressionComment) {
           diagName("bugprone-integer-division")))));
 }
 
+TEST(DiagnosticTest, ClangTidySystemMacro) {
+  Annotations Main(R"cpp(
+    #include "user.h"
+    #include "system.h"
+    int i = 3;
+    double x = $inline[[8]] / i;
+    double y = $user[[DIVIDE_USER]](i);
+    double z = DIVIDE_SYS(i);
+  )cpp");
+
+  auto TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles["user.h"] = R"cpp(
+    #define DIVIDE_USER(Y) 8/Y
+  )cpp";
+  TU.AdditionalFiles["system.h"] = R"cpp(
+    #pragma clang system_header
+    #define DIVIDE_SYS(Y) 8/Y
+  )cpp";
+
+  TU.ClangTidyProvider = addTidyChecks("bugprone-integer-division");
+  std::string BadDivision = "result of integer division used in a floating "
+                            "point context; possible loss of precision";
+
+  // Expect to see warning from user macros, but not system macros.
+  // This matches clang-tidy --system-headers=0 (the default).
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              ifTidyChecks(
+                  UnorderedElementsAre(Diag(Main.range("inline"), BadDivision),
+                                       Diag(Main.range("user"), BadDivision))));
+}
+
 TEST(DiagnosticTest, ClangTidyWarningAsError) {
   Annotations Main(R"cpp(
     int main() {
