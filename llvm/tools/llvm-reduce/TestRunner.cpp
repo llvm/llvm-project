@@ -18,12 +18,6 @@
 
 using namespace llvm;
 
-extern cl::OptionCategory LLVMReduceOptions;
-static cl::opt<unsigned> PollInterval("process-poll-interval",
-                                      cl::desc("child process wait polling"),
-                                      cl::init(5), cl::Hidden,
-                                      cl::cat(LLVMReduceOptions));
-
 TestRunner::TestRunner(StringRef TestName,
                        const std::vector<std::string> &TestArgs,
                        std::unique_ptr<ReducerWorkItem> Program,
@@ -43,7 +37,7 @@ static constexpr std::array<std::optional<StringRef>, 3> NullRedirects;
 
 /// Runs the interestingness test, passes file to be tested as first argument
 /// and other specified test arguments after that.
-int TestRunner::run(StringRef Filename, const std::atomic<bool> &Killed) const {
+int TestRunner::run(StringRef Filename) const {
   std::vector<StringRef> ProgramArgs;
   ProgramArgs.push_back(TestName);
 
@@ -53,13 +47,13 @@ int TestRunner::run(StringRef Filename, const std::atomic<bool> &Killed) const {
   ProgramArgs.push_back(Filename);
 
   std::string ErrMsg;
-  bool ExecutionFailed;
-  sys::ProcessInfo PI =
-      sys::ExecuteNoWait(TestName, ProgramArgs, /*Env=*/std::nullopt,
-                         Verbose ? DefaultRedirects : NullRedirects,
-                         /*MemoryLimit=*/0, &ErrMsg, &ExecutionFailed);
 
-  if (ExecutionFailed) {
+  int Result =
+      sys::ExecuteAndWait(TestName, ProgramArgs, /*Env=*/std::nullopt,
+                          Verbose ? DefaultRedirects : NullRedirects,
+                          /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
+
+  if (Result < 0) {
     Error E = make_error<StringError>("Error running interesting-ness test: " +
                                           ErrMsg,
                                       inconvertibleErrorCode());
@@ -67,25 +61,7 @@ int TestRunner::run(StringRef Filename, const std::atomic<bool> &Killed) const {
     exit(1);
   }
 
-  // Poll every few seconds, taking a break to check if we should try to kill
-  // the process. We're trying to early exit on long running parallel reductions
-  // once we know they don't matter.
-  std::optional<unsigned> SecondsToWait(PollInterval);
-  bool Polling = true;
-  sys::ProcessInfo WaitPI;
-
-  while (WaitPI.Pid == 0) { // Process has not changed state.
-    WaitPI = sys::Wait(PI, SecondsToWait, &ErrMsg, nullptr, Polling);
-    // TODO: This should probably be std::atomic_flag
-    if (Killed) {
-      // The current Program API does not have a way to directly kill, but we
-      // can timeout after 0 seconds.
-      SecondsToWait = 0;
-      Polling = false;
-    }
-  }
-
-  return !WaitPI.ReturnCode;
+  return !Result;
 }
 
 void TestRunner::setProgram(std::unique_ptr<ReducerWorkItem> P) {
