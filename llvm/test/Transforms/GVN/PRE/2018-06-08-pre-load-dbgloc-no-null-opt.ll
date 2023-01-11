@@ -28,39 +28,36 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 
-%struct.desc = type { %struct.node* }
-%struct.node = type { i32*, %struct.desc* }
+%struct.desc = type { ptr }
+%struct.node = type { ptr, ptr }
 
-define i32 @test_no_null_opt(%struct.desc* readonly %desc) local_unnamed_addr #0 !dbg !4 {
+define i32 @test_no_null_opt(ptr readonly %desc) local_unnamed_addr #0 !dbg !4 {
 entry:
-  %tobool = icmp eq %struct.desc* %desc, null
+  %tobool = icmp eq ptr %desc, null
   br i1 %tobool, label %cond.end, label %cond.false, !dbg !9
 ; ALL: br i1 %tobool, label %entry.cond.end_crit_edge, label %cond.false, !dbg [[LOC_15_6:![0-9]+]]
 ; ALL: entry.cond.end_crit_edge:
-; ALL: load %struct.node*, %struct.node** null, align {{[0-9]+}}, !dbg [[LOC_16_13:![0-9]+]]
+; ALL: load ptr, ptr null, align {{[0-9]+}}, !dbg [[LOC_16_13:![0-9]+]]
 
 cond.false:
-  %0 = bitcast %struct.desc* %desc to i8***, !dbg !11
-  %1 = load i8**, i8*** %0, align 8, !dbg !11
-  %2 = load i8*, i8** %1, align 8
+  %0 = load ptr, ptr %desc, align 8, !dbg !11
+  %1 = load ptr, ptr %0, align 8
   br label %cond.end, !dbg !9
 
 cond.end:
-; ALL: phi %struct.node* [ %3, %cond.false ], [ %.pre, %entry.cond.end_crit_edge ]
-; ALL: phi i8* [ %2, %cond.false ], [ null, %entry.cond.end_crit_edge ]
+; ALL: phi ptr [ %0, %cond.false ], [ %.pre, %entry.cond.end_crit_edge ]
+; ALL: phi ptr [ %1, %cond.false ], [ null, %entry.cond.end_crit_edge ]
 
-  %3 = phi i8* [ %2, %cond.false ], [ null, %entry ], !dbg !9
-  %node2 = getelementptr inbounds %struct.desc, %struct.desc* %desc, i64 0, i32 0
-  %4 = load %struct.node*, %struct.node** %node2, align 8, !dbg !10
-  %descs = getelementptr inbounds %struct.node, %struct.node* %4, i64 0, i32 1
-  %5 = bitcast %struct.desc** %descs to i8**
-  %6 = load i8*, i8** %5, align 8
-  %call = tail call i32 @bar(i8* %3, i8* %6)
+  %2 = phi ptr [ %1, %cond.false ], [ null, %entry ], !dbg !9
+  %3 = load ptr, ptr %desc, align 8, !dbg !10
+  %descs = getelementptr inbounds %struct.node, ptr %3, i64 0, i32 1
+  %4 = load ptr, ptr %descs, align 8
+  %call = tail call i32 @bar(ptr %2, ptr %4)
   ret i32 %call
 }
 attributes #0 = { null_pointer_is_valid }
 
-declare i32 @bar(i8*, i8*) local_unnamed_addr #1
+declare i32 @bar(ptr, ptr) local_unnamed_addr #1
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}
 
