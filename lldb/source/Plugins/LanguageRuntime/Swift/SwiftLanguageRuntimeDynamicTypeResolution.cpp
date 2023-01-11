@@ -643,13 +643,17 @@ public:
     if (auto ti = m_runtime.lookupClangTypeInfo(clang_type))
       return *ti;
 
+    auto &process = m_runtime.GetProcess();
+    ExecutionContext exe_ctx;
+    process.CalculateExecutionContext(exe_ctx);
+    auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
     // Build a TypeInfo for the Clang type.
-    auto size = clang_type.GetByteSize(nullptr);
-    auto bit_align = clang_type.GetTypeBitAlign(nullptr);
+    auto size = clang_type.GetByteSize(exe_scope);
+    auto bit_align = clang_type.GetTypeBitAlign(exe_scope);
     std::vector<swift::reflection::FieldInfo> fields;
     if (clang_type.IsAggregateType()) {
       // Recursively collect TypeInfo records for all fields.
-      for (uint32_t i = 0, e = clang_type.GetNumFields(); i != e; ++i) {
+      for (uint32_t i = 0, e = clang_type.GetNumFields(&exe_ctx); i != e; ++i) {
         std::string name;
         uint64_t bit_offset_ptr = 0;
         uint32_t bitfield_bit_size_ptr = 0;
@@ -2416,6 +2420,11 @@ void SwiftLanguageRuntimeImpl::DumpTyperef(
   std::ostringstream string_stream;
   typeref->dump(string_stream);
   s->PutCString(string_stream.str());
+}
+
+
+Process &SwiftLanguageRuntimeImpl::GetProcess() const {
+  return m_process;
 }
 
 // Dynamic type resolution tends to want to generate scalar data - but there are
