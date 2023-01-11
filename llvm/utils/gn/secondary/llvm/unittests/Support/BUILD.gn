@@ -83,7 +83,6 @@ unittest("SupportTests") {
     "SymbolRemappingReaderTest.cpp",
     "TarWriterTest.cpp",
     "TaskQueueTest.cpp",
-    "ThreadLocalTest.cpp",
     "ThreadPool.cpp",
     "Threading.cpp",
     "TimeProfilerTest.cpp",
