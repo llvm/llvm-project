@@ -70,6 +70,9 @@ void check_exception([[maybe_unused]] std::string_view what,
         std::cerr << "\nFormat string   " << fmt << "\nExpected exception " << what << "\nActual exception   "
                   << e.what() << '\n';
     assert(e.what() == what);
+#  else
+    (void)what;
+    (void)e;
 #  endif
     return;
   }
@@ -92,10 +95,9 @@ void check_invalid_type(const std::set<std::basic_string_view<CharT>>& valid_typ
           std::basic_string_view<CharT>{fmt}, std::make_format_args<format_context<CharT>>(arg));
 #ifndef TEST_HAS_NO_EXCEPTIONS
     } catch (const std::format_error& e) {
-#  if defined(_LIBCPP_VERSION)
+      (void)e;
       if constexpr (std::same_as<CharT, char>)
         std::cerr << "\nFormat string        " << fmt << "\nUnexpected exception " << e.what() << '\n';
-#  endif
       assert(false);
     }
 #endif
