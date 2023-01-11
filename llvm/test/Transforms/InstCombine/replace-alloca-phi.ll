@@ -152,13 +152,11 @@ exit:
 define i32 @remove_alloca_ptr_arg(i1 %c, ptr %ptr) {
 ; CHECK-LABEL: @remove_alloca_ptr_arg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(32) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[ALLOCA]], [[IF]] ], [ [[PTR:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @g1, [[IF]] ], [ [[PTR:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PHI]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
@@ -269,11 +267,9 @@ join:
 define i32 @phi_loop(i1 %c) {
 ; CHECK-LABEL: @phi_loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(32) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[ALLOCA]], [[ENTRY:%.*]] ], [ [[PTR_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ @g1, [[ENTRY:%.*]] ], [ [[PTR_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
