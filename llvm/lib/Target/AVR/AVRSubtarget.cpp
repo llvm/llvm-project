@@ -35,9 +35,9 @@ AVRSubtarget::AVRSubtarget(const Triple &TT, const std::string &CPU,
       m_hasSRAM(false), m_hasJMPCALL(false), m_hasIJMPCALL(false),
       m_hasEIJMPCALL(false), m_hasADDSUBIW(false), m_hasSmallStack(false),
       m_hasMOVW(false), m_hasLPM(false), m_hasLPMX(false), m_hasELPM(false),
-      m_hasELPMX(false), m_hasSPM(false), m_hasSPMX(false), m_hasDES(false),
-      m_supportsRMW(false), m_supportsMultiplication(false), m_hasBREAK(false),
-      m_hasTinyEncoding(false), m_hasMemMappedGPR(false),
+      m_hasELPMX(false), m_hasPROGMEM(false), m_hasSPM(false), m_hasSPMX(false),
+      m_hasDES(false), m_supportsRMW(false), m_supportsMultiplication(false),
+      m_hasBREAK(false), m_hasTinyEncoding(false), m_hasMemMappedGPR(false),
       m_FeatureSetDummy(false),
 
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)) {
