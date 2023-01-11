@@ -5,79 +5,72 @@
 %struct.ss = type { i32, i64 }
 
 ; Don't drop 'byval' on %X here.
-define internal i32 @f(%struct.ss* byval(%struct.ss) %b, i32* byval(i32) %X, i32 %i) nounwind {
+define internal i32 @f(ptr byval(%struct.ss) %b, ptr byval(i32) %X, i32 %i) nounwind {
 ;
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[X_PRIV]], align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[X_PRIV]], align 4
 ; CHECK-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
-; CHECK-NEXT:    [[B_PRIV_CAST:%.*]] = bitcast %struct.ss* [[B_PRIV]] to i32*
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV_CAST]], align 4
-; CHECK-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i64 0, i32 1
-; CHECK-NEXT:    store i64 [[TMP1]], i64* [[B_PRIV_0_1]], align 4
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP]], align 4
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[B_PRIV]], align 4
+; CHECK-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[B_PRIV]], i64 0, i32 1
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[B_PRIV_0_1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_PRIV]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[TMP]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[X_PRIV]], align 4
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[X_PRIV]], align 4
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[B_PRIV]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[X_PRIV]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[X_PRIV]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[L]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
 entry:
 
-  %tmp = getelementptr %struct.ss, %struct.ss* %b, i32 0, i32 0
-  %tmp1 = load i32, i32* %tmp, align 4
+  %tmp1 = load i32, ptr %b, align 4
   %tmp2 = add i32 %tmp1, 1
-  store i32 %tmp2, i32* %tmp, align 4
+  store i32 %tmp2, ptr %b, align 4
 
-  store i32 %i, i32* %X
-  %l = load i32, i32* %X
+  store i32 %i, ptr %X
+  %l = load i32, ptr %X
   %a = add i32 %l, %tmp2
   ret i32 %a
 }
 
 ; Also make sure we don't drop the call zeroext attribute.
-define i32 @test(i32* %X) {
+define i32 @test(ptr %X) {
 ;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test
-; TUNIT-SAME: (i32* nocapture nofree readonly [[X:%.*]]) #[[ATTR0]] {
+; TUNIT-SAME: (ptr nocapture nofree readonly [[X:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
-; TUNIT-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; TUNIT-NEXT:    store i32 1, i32* [[TMP1]], align 8
-; TUNIT-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; TUNIT-NEXT:    [[S_CAST:%.*]] = bitcast %struct.ss* [[S]] to i32*
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* [[S_CAST]], align 8
-; TUNIT-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 1
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_1]], align 8
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X]], align 4
+; TUNIT-NEXT:    store i32 1, ptr [[S]], align 8
+; TUNIT-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[S]], align 8
+; TUNIT-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i64 0, i32 1
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[S_0_1]], align 8
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
 ; TUNIT-NEXT:    [[C:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]], i32 [[TMP2]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[C]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@test
-; CGSCC-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
-; CGSCC-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; CGSCC-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, i32* [[X]], align 4
+; CGSCC-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 4
 ; CGSCC-NEXT:    [[C:%.*]] = call i32 @f(i32 noundef 1, i64 noundef 2, i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[C]]
 ;
 entry:
   %S = alloca %struct.ss
-  %tmp1 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 0
-  store i32 1, i32* %tmp1, align 8
-  %tmp4 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
-  store i64 2, i64* %tmp4, align 4
+  store i32 1, ptr %S, align 8
+  %tmp4 = getelementptr %struct.ss, ptr %S, i32 0, i32 1
+  store i64 2, ptr %tmp4, align 4
 
-  %c = call i32 @f(%struct.ss* byval(%struct.ss) %S, i32* byval(i32) %X, i32 zeroext 0)
+  %c = call i32 @f(ptr byval(%struct.ss) %S, ptr byval(i32) %X, i32 zeroext 0)
 
   ret i32 %c
 }

@@ -1729,13 +1729,13 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     Example NC_to_NCnc:
 
     ```mlir
-    tensor.pack %source inner_dims_pos = [0, 1]
+    %0 = tensor.pack %source inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
     ```
     Example CK to KCck
 
     ```mlir
-    tensor.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+    %0 = tensor.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<8x16x8x32xf32>
     ```
 
@@ -1747,7 +1747,7 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     Example NC_to_NCnc with padding:
 
     ```mlir
-    tensor.pack %arg padding_value(%pad : f32) inner_dims_pos = [0, 1]
+    %0 = tensor.pack %arg padding_value(%pad : f32) inner_dims_pos = [0, 1]
       inner_tiles = [8, 2] into %arg1 : tensor<13x15xf32> -> tensor<2x8x8x2xf32>
     ```
 
@@ -1809,14 +1809,14 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
     Example NCnc_to_NC:
 
     ```mlir
-    tensor.unpack %source inner_dims_pos = [0, 1]
+    %0 = tensor.unpack %source inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
     ```
 
     Example CK to KCck:
 
     ```mlir
-    tensor.unapck %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+    %0 = tensor.unapck %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<8x16x8x32xf32> -> tensor<128x256xf32>
     ```
   }];

@@ -169,23 +169,23 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   // call void @func8
   Instruction &F9SecondInst = *++(F9.getEntryBlock().begin());
 
-  const AAFunctionReachability &F1AA =
-      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(F1));
+  const AAInterFnReachability &F1AA =
+      A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F1));
 
-  const AAFunctionReachability &F6AA =
-      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(F6));
+  const AAInterFnReachability &F6AA =
+      A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F6));
 
-  const AAFunctionReachability &F7AA =
-      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(F7));
+  const AAInterFnReachability &F7AA =
+      A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F7));
 
-  const AAFunctionReachability &F9AA =
-      A.getOrCreateAAFor<AAFunctionReachability>(IRPosition::function(F9));
+  const AAInterFnReachability &F9AA =
+      A.getOrCreateAAFor<AAInterFnReachability>(IRPosition::function(F9));
 
   F1AA.canReach(A, F3);
   F1AA.canReach(A, F4);
   F6AA.canReach(A, F4);
-  F7AA.canReach(A, F7FirstCB, F3);
-  F7AA.canReach(A, F7FirstCB, F4);
+  F7AA.instructionCanReach(A, F7FirstCB, F3);
+  F7AA.instructionCanReach(A, F7FirstCB, F4);
   F9AA.instructionCanReach(A, F9FirstInst, F3);
   F9AA.instructionCanReach(A, F9FirstInst, F4);
 
@@ -194,8 +194,8 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   ASSERT_TRUE(F1AA.canReach(A, F3));
   ASSERT_FALSE(F1AA.canReach(A, F4));
 
-  ASSERT_TRUE(F7AA.canReach(A, F7FirstCB, F3));
-  ASSERT_FALSE(F7AA.canReach(A, F7FirstCB, F4));
+  ASSERT_TRUE(F7AA.instructionCanReach(A, F7FirstCB, F3));
+  ASSERT_TRUE(F7AA.instructionCanReach(A, F7FirstCB, F4));
 
   // Assumed to be reacahable, since F6 can reach a function with
   // a unknown callee.

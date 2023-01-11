@@ -98,15 +98,12 @@ define void @neg_empty_2() {
 @GPtr4 = addrspace(4) global ptr addrspace(4) null
 define void @pos_constant_loads() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_constant_loads() {
-; CHECK-NEXT:    [[GPTR4C:%.*]] = addrspacecast ptr addrspace(4) @GPtr4 to ptr
-; CHECK-NEXT:    [[ARG:%.*]] = load ptr addrspace(4), ptr [[GPTR4C]], align 8
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @GC1, align 4
-; CHECK-NEXT:    [[GC2C:%.*]] = addrspacecast ptr addrspace(4) @GC2 to ptr
-; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[GC2C]], align 4
+; CHECK-NEXT:    [[ARG:%.*]] = load ptr addrspace(4), ptr addrspacecast (ptr addrspace(4) @GPtr4 to ptr), align 8
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr addrspacecast (ptr addrspace(4) @GC2 to ptr), align 4
 ; CHECK-NEXT:    [[ARGC:%.*]] = addrspacecast ptr addrspace(4) [[ARG]] to ptr
 ; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[ARGC]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    [[D:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[D:%.*]] = add i32 42, [[B]]
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[D]], [[C]]
 ; CHECK-NEXT:    call void @useI32(i32 [[E]])
 ; CHECK-NEXT:    ret void
@@ -135,8 +132,7 @@ define void @neg_loads() {
 ; CHECK-NEXT:    [[ARG:%.*]] = load ptr, ptr @GPtr, align 8
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @G, align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    [[GSC:%.*]] = addrspacecast ptr addrspace(3) @GS to ptr
-; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[GSC]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr addrspacecast (ptr addrspace(3) @GS to ptr), align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[ARG]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
@@ -200,8 +196,7 @@ define void @neg_mem() {
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    store i32 [[A]], ptr [[ARG]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    [[G2C:%.*]] = addrspacecast ptr addrspace(1) @G2 to ptr
-; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[G2C]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr addrspacecast (ptr addrspace(1) @G2 to ptr), align 4
 ; CHECK-NEXT:    store i32 [[B]], ptr @G1, align 4
 ; CHECK-NEXT:    ret void
 ;

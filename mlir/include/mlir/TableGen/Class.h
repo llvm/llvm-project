@@ -436,6 +436,13 @@ operator|(mlir::tblgen::Method::Properties lhs,
                                           static_cast<unsigned>(rhs));
 }
 
+inline constexpr mlir::tblgen::Method::Properties &
+operator|=(mlir::tblgen::Method::Properties &lhs,
+           mlir::tblgen::Method::Properties rhs) {
+  return lhs = mlir::tblgen::Method::Properties(static_cast<unsigned>(lhs) |
+                                                static_cast<unsigned>(rhs));
+}
+
 namespace mlir {
 namespace tblgen {
 
@@ -488,11 +495,27 @@ public:
   /// Write the using declaration.
   void writeDeclTo(raw_indented_ostream &os) const override;
 
+  /// Add a template parameter.
+  template <typename ParamT>
+  void addTemplateParam(ParamT param) {
+    templateParams.insert(stringify(param));
+  }
+
+  /// Add a list of template parameters.
+  template <typename ContainerT>
+  void addTemplateParams(ContainerT &&container) {
+    templateParams.insert(std::begin(container), std::end(container));
+  }
+
 private:
   /// The name of the declaration, or a resolved name to an inherited function.
   std::string name;
   /// The type that is being aliased. Leave empty for inheriting functions.
   std::string value;
+  /// An optional list of class template parameters.
+  /// This is simply a ordered list of parameter names that are then added as
+  /// template type parameters when the using declaration is emitted.
+  SetVector<std::string, SmallVector<std::string>, StringSet<>> templateParams;
 };
 
 /// This class describes a class field.
@@ -583,8 +606,13 @@ public:
   /// returns a pointer to the new constructor.
   template <Method::Properties Properties = Method::None, typename... Args>
   Constructor *addConstructor(Args &&...args) {
+    Method::Properties defaultProperties = Method::Constructor;
+    // If the class has template parameters, the constructor has to be defined
+    // inline.
+    if (!templateParams.empty())
+      defaultProperties |= Method::Inline;
     return addConstructorAndPrune(Constructor(getClassName(),
-                                              Properties | Method::Constructor,
+                                              Properties | defaultProperties,
                                               std::forward<Args>(args)...));
   }
 
@@ -592,12 +620,33 @@ public:
   /// Returns null if the method was not added (because an existing method would
   /// make it redundant). Else, returns a pointer to the new method.
   template <Method::Properties Properties = Method::None, typename RetTypeT,
+            typename NameT>
+  Method *addMethod(RetTypeT &&retType, NameT &&name,
+                    Method::Properties properties,
+                    ArrayRef<MethodParameter> parameters) {
+    // If the class has template parameters, the has to defined inline.
+    if (!templateParams.empty())
+      properties |= Method::Inline;
+    return addMethodAndPrune(Method(std::forward<RetTypeT>(retType),
+                                    std::forward<NameT>(name),
+                                    Properties | properties, parameters));
+  }
+
+  /// Add a method with statically-known properties.
+  template <Method::Properties Properties = Method::None, typename RetTypeT,
+            typename NameT>
+  Method *addMethod(RetTypeT &&retType, NameT &&name,
+                    ArrayRef<MethodParameter> parameters) {
+    return addMethod(std::forward<RetTypeT>(retType), std::forward<NameT>(name),
+                     Properties, parameters);
+  }
+
+  template <Method::Properties Properties = Method::None, typename RetTypeT,
             typename NameT, typename... Args>
   Method *addMethod(RetTypeT &&retType, NameT &&name,
                     Method::Properties properties, Args &&...args) {
-    return addMethodAndPrune(
-        Method(std::forward<RetTypeT>(retType), std::forward<NameT>(name),
-               Properties | properties, std::forward<Args>(args)...));
+    return addMethod(std::forward<RetTypeT>(retType), std::forward<NameT>(name),
+                     properties | Properties, {std::forward<Args>(args)...});
   }
 
   /// Add a method with statically-known properties.
@@ -673,6 +722,18 @@ public:
 
   /// Add a parent class.
   ParentClass &addParent(ParentClass parent);
+
+  /// Add a template parameter.
+  template <typename ParamT>
+  void addTemplateParam(ParamT param) {
+    templateParams.insert(stringify(param));
+  }
+
+  /// Add a list of template parameters.
+  template <typename ContainerT>
+  void addTemplateParams(ContainerT &&container) {
+    templateParams.insert(std::begin(container), std::end(container));
+  }
 
   /// Return the C++ name of the class.
   StringRef getClassName() const { return className; }
@@ -751,6 +812,9 @@ protected:
 
   /// A list of declarations in the class, emitted in order.
   std::vector<std::unique_ptr<ClassDeclaration>> declarations;
+
+  /// An optional list of class template parameters.
+  SetVector<std::string, SmallVector<std::string>, StringSet<>> templateParams;
 };
 
 } // namespace tblgen

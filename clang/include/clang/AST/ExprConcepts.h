@@ -528,6 +528,12 @@ public:
     return RequiresExprBits.IsSatisfied;
   }
 
+  void setSatisfied(bool IsSatisfied) {
+    assert(!isValueDependent() &&
+           "setSatisfied called on a dependent RequiresExpr");
+    RequiresExprBits.IsSatisfied = IsSatisfied;
+  }
+
   SourceLocation getRequiresKWLoc() const {
     return RequiresExprBits.RequiresKWLoc;
   }

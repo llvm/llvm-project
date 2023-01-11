@@ -17693,6 +17693,20 @@ TEST_F(FormatTest, AlignCompoundAssignments) {
                "dvsdsv        <<= 5;\n"
                "int dsvvdvsdvvv = 123;",
                Alignment);
+  verifyFormat("int xxx = 5;\n"
+               "xxx     = 5;\n"
+               "{\n"
+               "  int yyy = 6;\n"
+               "  yyy     = 6;\n"
+               "}",
+               Alignment);
+  verifyFormat("int xxx = 5;\n"
+               "xxx    += 5;\n"
+               "{\n"
+               "  int yyy = 6;\n"
+               "  yyy    += 6;\n"
+               "}",
+               Alignment);
   // Test that `<=` is not treated as a compound assignment.
   verifyFormat("aa &= 5;\n"
                "b <= 10;\n"
@@ -22998,6 +23012,41 @@ TEST_F(FormatTest, AtomicQualifier) {
   verifyFormat("x = (_Atomic( uint64_t ))&a;", Style);
 }
 
+TEST_F(FormatTest, C11Generic) {
+  verifyFormat("_Generic(x, int: 1, default: 0)");
+  verifyFormat("#define cbrt(X) _Generic((X), float: cbrtf, default: cbrt)(X)");
+  verifyFormat("_Generic(x, const char *: 1, char *const: 16, int: 8);");
+  verifyFormat("_Generic(x, int: f1, const int: f2)();");
+  verifyFormat("_Generic(x, struct A: 1, void (*)(void): 2);");
+
+  verifyFormat("_Generic(x,\n"
+               "    float: f,\n"
+               "    default: d,\n"
+               "    long double: ld,\n"
+               "    float _Complex: fc,\n"
+               "    double _Complex: dc,\n"
+               "    long double _Complex: ldc)");
+
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 40;
+  verifyFormat("#define LIMIT_MAX(T)                   \\\n"
+               "  _Generic(((T)0),                     \\\n"
+               "      unsigned int: UINT_MAX,          \\\n"
+               "      unsigned long: ULONG_MAX,        \\\n"
+               "      unsigned long long: ULLONG_MAX)",
+               Style);
+  verifyFormat("_Generic(x,\n"
+               "    struct A: 1,\n"
+               "    void (*)(void): 2);",
+               Style);
+
+  Style.ContinuationIndentWidth = 2;
+  verifyFormat("_Generic(x,\n"
+               "  struct A: 1,\n"
+               "  void (*)(void): 2);",
+               Style);
+}
+
 TEST_F(FormatTest, AmbersandInLamda) {
   // Test case reported in https://bugs.llvm.org/show_bug.cgi?id=41899
   FormatStyle AlignStyle = getLLVMStyle();
@@ -25125,6 +25174,56 @@ TEST_F(FormatTest, RemoveSemicolon) {
                "; int bar;",
                Style);
 #endif
+}
+
+TEST_F(FormatTest, BreakAfterAttributes) {
+  FormatStyle Style = getLLVMStyle();
+  EXPECT_EQ(Style.BreakAfterAttributes, FormatStyle::ABS_Never);
+
+  const StringRef Code("[[nodiscard]] inline int f(int &i);\n"
+                       "[[foo([[]])]] [[nodiscard]]\n"
+                       "int g(int &i);\n"
+                       "[[nodiscard]]\n"
+                       "inline int f(int &i) {\n"
+                       "  i = 1;\n"
+                       "  return 0;\n"
+                       "}\n"
+                       "[[foo([[]])]] [[nodiscard]] int g(int &i) {\n"
+                       "  i = 0;\n"
+                       "  return 1;\n"
+                       "}");
+
+  verifyFormat("[[nodiscard]] inline int f(int &i);\n"
+               "[[foo([[]])]] [[nodiscard]] int g(int &i);\n"
+               "[[nodiscard]] inline int f(int &i) {\n"
+               "  i = 1;\n"
+               "  return 0;\n"
+               "}\n"
+               "[[foo([[]])]] [[nodiscard]] int g(int &i) {\n"
+               "  i = 0;\n"
+               "  return 1;\n"
+               "}",
+               Code, Style);
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Always;
+  verifyFormat("[[nodiscard]]\n"
+               "inline int f(int &i);\n"
+               "[[foo([[]])]] [[nodiscard]]\n"
+               "int g(int &i);\n"
+               "[[nodiscard]]\n"
+               "inline int f(int &i) {\n"
+               "  i = 1;\n"
+               "  return 0;\n"
+               "}\n"
+               "[[foo([[]])]] [[nodiscard]]\n"
+               "int g(int &i) {\n"
+               "  i = 0;\n"
+               "  return 1;\n"
+               "}",
+               Code, Style);
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Leave;
+  EXPECT_EQ(Code, format(Code, Style));
 }
 
 TEST_F(FormatTest, InsertNewlineAtEOF) {

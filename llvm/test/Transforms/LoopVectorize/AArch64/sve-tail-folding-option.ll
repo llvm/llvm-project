@@ -11,7 +11,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 ; CHECK-NOTF-LABEL: @simple_memset(
 ; CHECK-NOTF:       vector.ph:
-; CHECK-NOTF:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-NOTF:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-NOTF:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NOTF:       vector.body:
 ; CHECK-NOTF-NOT:     %{{.*}} = phi <vscale x 4 x i1>
@@ -19,7 +19,7 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 
 ; CHECK-TF-NORED-LABEL: @simple_memset(
 ; CHECK-TF-NORED:       vector.ph:
-; CHECK-TF-NORED:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-TF-NORED:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-TF-NORED:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-TF-NORED:       vector.body:
 ; CHECK-TF-NORED:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
@@ -27,7 +27,7 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 
 ; CHECK-TF-NOREC-LABEL: @simple_memset(
 ; CHECK-TF-NOREC:       vector.ph:
-; CHECK-TF-NOREC:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-TF-NOREC:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-TF-NOREC:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-TF-NOREC:       vector.body:
 ; CHECK-TF-NOREC:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
@@ -35,7 +35,7 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 
 ; CHECK-TF-LABEL: @simple_memset(
 ; CHECK-TF:       vector.ph:
-; CHECK-TF:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-TF:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-TF:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-TF:       vector.body:
 ; CHECK-TF:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
@@ -43,7 +43,7 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 
 ; CHECK-TF-ONLYRED-LABEL: @simple_memset(
 ; CHECK-TF-ONLYRED:       vector.ph:
-; CHECK-TF-ONLYRED:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-TF-ONLYRED:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-TF-ONLYRED:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-TF-ONLYRED:       vector.body:
 ; CHECK-TF-ONLYRED-NOT:     %{{.*}} = phi <vscale x 4 x i1>

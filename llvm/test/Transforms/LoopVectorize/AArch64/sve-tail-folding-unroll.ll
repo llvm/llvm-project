@@ -34,13 +34,13 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK3:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK4:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT1]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK5:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT2]], i64 [[UMAX]])
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT11]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT13:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT13:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT14:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT13]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT15]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -103,10 +103,10 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK23]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT19]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK24]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT20]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK25]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT21]], i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP57:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK22]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP58:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK23]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP59:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK24]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP60:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK25]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP57:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK22]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP58:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK23]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP59:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK24]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP60:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK25]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP61:%.*]] = extractelement <vscale x 4 x i1> [[TMP57]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP61]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -158,13 +158,13 @@ define void @cond_memset(i32 %val, i32* noalias readonly %cond_ptr, i32* noalias
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK3:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK4:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT1]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK5:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT2]], i64 [[UMAX]])
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT15:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT14]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT16:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT16:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT17:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT16]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT18:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT18:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT19:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT18]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -257,10 +257,10 @@ define void @cond_memset(i32 %val, i32* noalias readonly %cond_ptr, i32* noalias
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK26]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT22]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK27]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT23]], i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK28]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT24]], i64 [[UMAX]])
-; CHECK-NEXT:    [[TMP83:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK25]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP84:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK26]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP85:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK27]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP86:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK28]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP83:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK25]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP84:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK26]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP85:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK27]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP86:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK28]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP87:%.*]] = extractelement <vscale x 4 x i1> [[TMP83]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP87]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:

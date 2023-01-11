@@ -42,7 +42,7 @@ define <2 x i8> @trunc_ctlz_zext_v2i8_v2i33(<2 x i8> %x) {
 define <vscale x 2 x i16> @trunc_ctlz_zext_nxv2i16_nxv2i64(<vscale x 2 x i16> %x) {
 ; CHECK-LABEL: @trunc_ctlz_zext_nxv2i16_nxv2i64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.ctlz.nxv2i16(<vscale x 2 x i16> [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <vscale x 2 x i16> [[TMP1]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 48, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <vscale x 2 x i16> [[TMP1]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 48, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[ZZ]]
 ;
   %z = zext <vscale x 2 x i16> %x to <vscale x 2 x i64>
@@ -74,7 +74,7 @@ define <vscale x 2 x i16> @trunc_ctlz_zext_nxv2i16_nxv2i63_multiple_uses(<vscale
 ; CHECK-LABEL: @trunc_ctlz_zext_nxv2i16_nxv2i63_multiple_uses(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <vscale x 2 x i16> [[X:%.*]] to <vscale x 2 x i63>
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i16> @llvm.ctlz.nxv2i16(<vscale x 2 x i16> [[X]], i1 true)
-; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <vscale x 2 x i16> [[TMP1]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 47, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[ZZ:%.*]] = add nuw nsw <vscale x 2 x i16> [[TMP1]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> poison, i16 47, i64 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    call void @use1(<vscale x 2 x i63> [[Z]])
 ; CHECK-NEXT:    ret <vscale x 2 x i16> [[ZZ]]
 ;

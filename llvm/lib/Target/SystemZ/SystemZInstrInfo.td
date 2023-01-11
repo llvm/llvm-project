@@ -1716,10 +1716,6 @@ let Predicates = [FeatureExecutionHint], hasSideEffects = 1 in {
 let hasSideEffects = 1 in
 def Serialize : Alias<2, (outs), (ins), []>;
 
-// A pseudo instruction that serves as a compiler barrier.
-let hasSideEffects = 1, hasNoSchedulingInfo = 1 in
-def MemBarrier : Pseudo<(outs), (ins), [(membarrier)]>;
-
 let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
   def LAA   : LoadAndOpRSY<"laa",   0xEBF8, atomic_load_add_32, GR32>;
   def LAAG  : LoadAndOpRSY<"laag",  0xEBE8, atomic_load_add_64, GR64>;

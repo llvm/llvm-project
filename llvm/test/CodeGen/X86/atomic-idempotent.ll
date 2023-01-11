@@ -359,6 +359,8 @@ define void @or32_nouse_monotonic(i32* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
   atomicrmw or i32* %p, i32 0 monotonic
   ret void
@@ -379,6 +381,8 @@ define void @or32_nouse_acquire(i32* %p) {
 ; X86-ATOM-LABEL: or32_nouse_acquire:
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    #MEMBARRIER
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
@@ -410,6 +414,8 @@ define void @or32_nouse_release(i32* %p) {
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    retl
   atomicrmw or i32* %p, i32 0 release
   ret void
@@ -429,6 +435,8 @@ define void @or32_nouse_acq_rel(i32* %p) {
 ; X86-ATOM-LABEL: or32_nouse_acq_rel:
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    #MEMBARRIER
+; X86-ATOM-NEXT:    nop
+; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop
 ; X86-ATOM-NEXT:    nop

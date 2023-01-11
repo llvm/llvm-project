@@ -37,7 +37,7 @@ declare i32 @__kmpc_target_init(ptr, i8, i1) local_unnamed_addr
 
 declare void @__kmpc_target_deinit(ptr, i8) local_unnamed_addr
 
-define internal void @__omp_offloading__fd02_85283c04_Device_l6_ctor() {
+define weak void @__omp_offloading__fd02_85283c04_Device_l6_ctor() {
 entry:
   %call.i = tail call double @__nv_log(double noundef 2.000000e+00) #1
   %call.i2 = tail call double @__nv_log(double noundef 2.000000e+00) #1
@@ -78,31 +78,29 @@ attributes #1 = { convergent nounwind }
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_fd02_85283c04_main_l11
 ; CHECK-SAME: (ptr nonnull align 8 dereferenceable(8) [[X:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr nonnull @[[GLOB1:[0-9]+]], i8 2, i1 false) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr nonnull @[[GLOB1:[0-9]+]], i8 2, i1 false) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @_ZL6Device, align 8, !tbaa [[TBAA11:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @__kmpc_get_hardware_thread_id_in_block() #[[ATTR2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @__kmpc_get_hardware_thread_id_in_block() #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
 ; CHECK:       region.guarded:
 ; CHECK-NEXT:    store double [[TMP1]], ptr [[X]], align 8, !tbaa [[TBAA11]]
 ; CHECK-NEXT:    br label [[REGION_BARRIER]]
 ; CHECK:       region.barrier:
-; CHECK-NEXT:    tail call void @__kmpc_barrier_simple_spmd(ptr nonnull @[[GLOB1]], i32 [[TMP2]]) #[[ATTR2]]
-; CHECK-NEXT:    tail call void @__kmpc_target_deinit(ptr nonnull @[[GLOB1]], i8 2) #[[ATTR2]]
+; CHECK-NEXT:    tail call void @__kmpc_barrier_simple_spmd(ptr nonnull @[[GLOB1]], i32 [[TMP2]]) #[[ATTR1]]
+; CHECK-NEXT:    tail call void @__kmpc_target_deinit(ptr nonnull @[[GLOB1]], i8 2) #[[ATTR1]]
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 ;
-; CHECK: Function Attrs: norecurse
-; CHECK-LABEL: define {{[^@]+}}@__omp_offloading__fd02_85283c04_Device_l6_ctor
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define {{[^@]+}}@__omp_offloading__fd02_85283c04_Device_l6_ctor() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL_I:%.*]] = tail call double @__nv_log(double noundef 2.000000e+00) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[CALL_I2:%.*]] = tail call double @__nv_log(double noundef 2.000000e+00) #[[ATTR1]]
+; CHECK-NEXT:    [[CALL_I:%.*]] = tail call double @__nv_log(double noundef 2.000000e+00) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[CALL_I2:%.*]] = tail call double @__nv_log(double noundef 2.000000e+00) #[[ATTR0]]
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[CALL_I]], [[CALL_I2]]
 ; CHECK-NEXT:    store double [[DIV]], ptr @_ZL6Device, align 8, !tbaa [[TBAA11]]
 ; CHECK-NEXT:    ret void

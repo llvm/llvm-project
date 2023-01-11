@@ -1219,3 +1219,19 @@ func.func @regression_do_not_perform_invalid_replacements(%arg0: index) {
   "test.foo"(%1) : (index) -> ()
   return
 }
+
+// -----
+// CHECK-LABEL: func @min.oneval(%arg0: index)
+func.func @min.oneval(%arg0: index) -> index {
+  %min = affine.min affine_map<()[s0] -> (s0)> ()[%arg0]
+  // CHECK: return %arg0 : index
+  return %min: index
+}
+
+// -----
+// CHECK-LABEL: func @max.oneval(%arg0: index)
+func.func @max.oneval(%arg0: index) -> index {
+  %max = affine.max affine_map<()[s0] -> (s0)> ()[%arg0]
+  // CHECK: return %arg0 : index
+  return %max: index
+}

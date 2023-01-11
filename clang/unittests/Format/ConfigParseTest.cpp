@@ -879,6 +879,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Always);
   CHECK_PARSE("BreakBeforeConceptDeclarations: false",
               BreakBeforeConceptDeclarations, FormatStyle::BBCDS_Allowed);
+
+  CHECK_PARSE("BreakAfterAttributes: Always", BreakAfterAttributes,
+              FormatStyle::ABS_Always);
+  CHECK_PARSE("BreakAfterAttributes: Leave", BreakAfterAttributes,
+              FormatStyle::ABS_Leave);
+  CHECK_PARSE("BreakAfterAttributes: Never", BreakAfterAttributes,
+              FormatStyle::ABS_Never);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

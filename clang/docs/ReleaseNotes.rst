@@ -735,6 +735,8 @@ C++20 Feature Support
 - Do not hide templated base members introduced via using-decl in derived class
   (useful specially for constrained members). Fixes `GH50886 <https://github.com/llvm/llvm-project/issues/50886>`_.
 - Implemented CWG2635 as a Defect Report, which prohibits structured bindings from being constrained.
+- Correctly handle access-checks in requires expression. Fixes `GH53364 <https://github.com/llvm/llvm-project/issues/53364>`_,
+  `GH53334 <https://github.com/llvm/llvm-project/issues/53334>`_.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -889,6 +891,8 @@ clang-format
   To match the default behavior of clang-format 15, use the ``Keyword`` value.
 - Add ``IntegerLiteralSeparator`` option for fixing integer literal separators
   in C++, C#, Java, and JavaScript.
+- Add ``BreakAfterAttributes`` option for breaking after a group of C++11
+  attributes before a function declaration/definition name.
 - Add ``InsertNewlineAtEOF`` option for inserting a newline at EOF if missing.
 
 clang-extdef-mapping

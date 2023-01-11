@@ -112,6 +112,15 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::AttributeBreakingStyle> {
+  static void enumeration(IO &IO, FormatStyle::AttributeBreakingStyle &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::ABS_Always);
+    IO.enumCase(Value, "Leave", FormatStyle::ABS_Leave);
+    IO.enumCase(Value, "Never", FormatStyle::ABS_Never);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::ArrayInitializerAlignmentStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::ArrayInitializerAlignmentStyle &Value) {
@@ -838,6 +847,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BinPackParameters", Style.BinPackParameters);
     IO.mapOptional("BitFieldColonSpacing", Style.BitFieldColonSpacing);
     IO.mapOptional("BraceWrapping", Style.BraceWrapping);
+    IO.mapOptional("BreakAfterAttributes", Style.BreakAfterAttributes);
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
     IO.mapOptional("BreakArrays", Style.BreakArrays);
@@ -1302,6 +1312,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*SplitEmptyFunction=*/true,
                              /*SplitEmptyRecord=*/true,
                              /*SplitEmptyNamespace=*/true};
+  LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Never;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;

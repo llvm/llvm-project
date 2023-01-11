@@ -359,6 +359,7 @@ public:
   ExprScope(ByteCodeExprGen<Emitter> *Ctx) : LocalScope<Emitter>(Ctx) {}
 
   void addExtended(const Scope::Local &Local) override {
+    assert(this->Parent);
     this->Parent->addLocal(Local);
   }
 };

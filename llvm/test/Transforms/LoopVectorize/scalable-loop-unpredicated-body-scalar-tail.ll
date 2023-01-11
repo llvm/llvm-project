@@ -17,7 +17,7 @@
 ; CHECKUF1: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECKUF1: %[[IDXB:.*]] = getelementptr inbounds double, ptr %b, i64 %index
 ; CHECKUF1: %wide.load = load <vscale x 4 x double>, ptr %[[IDXB]], align 8
-; CHECKUF1: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i32 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECKUF1: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i64 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECKUF1: %[[IDXA:.*]] = getelementptr inbounds double, ptr %a, i64 %index
 ; CHECKUF1: store <vscale x 4 x double> %[[FADD]], ptr %[[IDXA]], align 8
 ; CHECKUF1: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
@@ -51,8 +51,8 @@
 ; CHECKUF2: %[[VSCALE2_EXT:.*]] = sext i32 %[[VSCALE2]] to i64
 ; CHECKUF2: %[[IDXB_NEXT:.*]] = getelementptr inbounds double, ptr %[[IDXB]], i64 %[[VSCALE2_EXT]]
 ; CHECKUF2: %wide.load{{[0-9]+}} = load <vscale x 4 x double>, ptr %[[IDXB_NEXT]], align 8
-; CHECKUF2: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i32 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECKUF2: %[[FADD_NEXT:.*]] = fadd <vscale x 4 x double> %wide.load{{[0-9]+}}, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i32 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECKUF2: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i64 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECKUF2: %[[FADD_NEXT:.*]] = fadd <vscale x 4 x double> %wide.load{{[0-9]+}}, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i64 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECKUF2: %[[IDXA:.*]] = getelementptr inbounds double, ptr %a, i64 %index
 ; CHECKUF2: store <vscale x 4 x double> %[[FADD]], ptr %[[IDXA]], align 8
 ; CHECKUF2: %[[VSCALE:.*]] = call i32 @llvm.vscale.i32()

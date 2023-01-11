@@ -27,7 +27,7 @@ define void @trip5_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr [[TMP10]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i8> poison)
-; CHECK-NEXT:    [[TMP11:%.*]] = shl <vscale x 8 x i8> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP11:%.*]] = shl <vscale x 8 x i8> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i64 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i32 0
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr [[TMP13]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i8> poison)

@@ -156,7 +156,7 @@ If the operation has a single result the following will be generated:
 ///     of the operation. The caller will remove the operation and use that
 ///     result instead.
 ///
-OpFoldResult MyOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult MyOp::fold(FoldAdaptor adaptor) {
   ...
 }
 ```
@@ -178,19 +178,19 @@ Otherwise, the following is generated:
 ///     the operation and use those results instead.
 ///
 /// Note that this mechanism cannot be used to remove 0-result operations.
-LogicalResult MyOp::fold(ArrayRef<Attribute> operands,
+LogicalResult MyOp::fold(FoldAdaptor adaptor,
                          SmallVectorImpl<OpFoldResult> &results) {
   ...
 }
 ```
 
-In the above, for each method an `ArrayRef<Attribute>` is provided that
-corresponds to the constant attribute value of each of the operands. These
+In the above, for each method a `FoldAdaptor` is provided with getters for
+each of the operands, returning the corresponding constant attribute. These
 operands are those that implement the `ConstantLike` trait. If any of the
 operands are non-constant, a null `Attribute` value is provided instead. For
 example, if MyOp provides three operands [`a`, `b`, `c`], but only `b` is
-constant then `operands` will be of the form [Attribute(), b-value,
-Attribute()].
+constant then `adaptor` will return Attribute() for `getA()` and `getC()`, 
+and b-value for `getB()`.
 
 Also above, is the use of `OpFoldResult`. This class represents the possible
 result of folding an operation result: either an SSA `Value`, or an

@@ -297,4 +297,94 @@ TEST(ArrayRefTest, makeMutableArrayRef) {
   EXPECT_EQ(ER.size(), E.size());
 }
 
+TEST(ArrayRefTest, MutableArrayRefDeductionGuides) {
+  // Single element
+  {
+    int x = 0;
+    auto aref = MutableArrayRef(x);
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref)>);
+    EXPECT_EQ(aref.data(), &x);
+    EXPECT_EQ(aref.size(), 1u);
+
+    // Make sure it's mutable still
+    aref[0] = 1;
+    EXPECT_EQ(x, 1);
+  }
+
+  // Pointer + length
+  {
+    int x[] = {0, 1, 2, 3};
+    auto aref = MutableArrayRef(&x[0], 4);
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref)>);
+    EXPECT_EQ(aref.data(), &x[0]);
+    EXPECT_EQ(aref.size(), 4u);
+  }
+
+  // // Pointer + pointer
+  {
+    int x[] = {0, 1, 2, 3};
+    auto aref = MutableArrayRef(std::begin(x), std::end(x));
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref)>);
+    EXPECT_EQ(aref.data(), &x[0]);
+    EXPECT_EQ(aref.size(), 4u);
+  }
+
+  // SmallVector
+  {
+    SmallVector<int> sv1;
+    SmallVectorImpl<int> &sv2 = sv1;
+    sv1.resize(5);
+    auto aref1 = MutableArrayRef(sv1);
+    auto aref2 = MutableArrayRef(sv2);
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref1)>);
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref2)>);
+    EXPECT_EQ(aref1.data(), sv1.data());
+    EXPECT_EQ(aref1.size(), sv1.size());
+    EXPECT_EQ(aref2.data(), sv2.data());
+    EXPECT_EQ(aref2.size(), sv2.size());
+  }
+
+  // std::vector
+  {
+    std::vector<int> x(5);
+    auto aref = MutableArrayRef(x);
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref)>);
+    EXPECT_EQ(aref.data(), x.data());
+    EXPECT_EQ(aref.size(), x.size());
+  }
+
+  // std::array
+  {
+    std::array<int, 5> x{};
+    auto aref = MutableArrayRef(x);
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref)>);
+    EXPECT_EQ(aref.data(), x.data());
+    EXPECT_EQ(aref.size(), x.size());
+  }
+
+  // MutableArrayRef
+  {
+    MutableArrayRef<int> x{};
+    auto aref = MutableArrayRef(x);
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref)>);
+    EXPECT_EQ(aref.data(), x.data());
+    EXPECT_EQ(aref.size(), x.size());
+
+    const MutableArrayRef<int> y{};
+    auto aref2 = MutableArrayRef(y);
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref2)>);
+    EXPECT_EQ(aref2.data(), y.data());
+    EXPECT_EQ(aref2.size(), y.size());
+  }
+
+  // C-style array
+  {
+    int x[] = {0, 1, 2, 3};
+    auto aref = MutableArrayRef(x);
+    static_assert(std::is_same_v<MutableArrayRef<int>, decltype(aref)>);
+    EXPECT_EQ(aref.data(), &x[0]);
+    EXPECT_EQ(aref.size(), 4u);
+  }
+}
+
 } // end anonymous namespace

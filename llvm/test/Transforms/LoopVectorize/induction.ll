@@ -280,7 +280,7 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -473,9 +473,9 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[B:%.*]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[B:%.*]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <2 x float> poison, float [[B]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <2 x float> poison, float [[B]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT7]], <2 x float> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
@@ -1262,7 +1262,7 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -1414,9 +1414,9 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 4
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[Y]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[Y]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
@@ -1983,7 +1983,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SMAX]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SMAX]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -2214,9 +2214,9 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SMAX]], 4
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[SMAX]], [[N_MOD_VF]]
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <2 x i1> poison, i1 [[C]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <2 x i1> poison, i1 [[C]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT5]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
@@ -2482,7 +2482,7 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -2641,9 +2641,9 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
@@ -3241,7 +3241,7 @@ define i32 @testoverflowcheck() {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 -1, i32 -1>, i32 [[C_PROMOTED_I]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -3372,9 +3372,9 @@ define i32 @testoverflowcheck() {
 ; UNROLL-NO-IC-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[DOTCAST]]
 ; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 -1, i32 -1>, i32 [[C_PROMOTED_I]], i32 0
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
@@ -3503,7 +3503,7 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i8 [[T]], [[DOTCAST]]
 ; CHECK-NEXT:    [[IND_END2:%.*]] = add i32 [[EXT]], [[N_VEC]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EXT]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EXT]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3708,7 +3708,7 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NO-IC-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i8
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = add i8 [[T]], [[DOTCAST]]
 ; UNROLL-NO-IC-NEXT:    [[IND_END2:%.*]] = add i32 [[EXT]], [[N_VEC]]
-; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EXT]], i32 0
+; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EXT]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3885,7 +3885,7 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i8 [[T]], [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i32 [[N_VEC]], 4
 ; CHECK-NEXT:    [[IND_END1:%.*]] = add i32 [[EXT_MUL]], [[TMP12]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EXT_MUL]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EXT_MUL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[DOTSPLAT]], <i32 0, i32 4>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -4099,7 +4099,7 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = add i8 [[T]], [[DOTCAST]]
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = mul i32 [[N_VEC]], 4
 ; UNROLL-NO-IC-NEXT:    [[IND_END1:%.*]] = add i32 [[EXT_MUL]], [[TMP12]]
-; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EXT_MUL]], i32 0
+; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EXT_MUL]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[DOTSPLAT]], <i32 0, i32 4>
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -4697,7 +4697,7 @@ define void @nonprimary(ptr nocapture %a, i32 %start, i32 %i, i32 %k) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[I]], [[N_VEC]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[I]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[I]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -4821,7 +4821,7 @@ define void @nonprimary(ptr nocapture %a, i32 %start, i32 %i, i32 %k) {
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 4
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = add i32 [[I]], [[N_VEC]]
-; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[I]], i32 0
+; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[I]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -6013,7 +6013,7 @@ define void @pr52460_first_order_recurrence_truncated_iv(ptr noalias %src, ptr %
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[VEC_IND]], <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST:%.*]], i32 [[TMP1]]
@@ -6137,7 +6137,7 @@ define void @pr52460_first_order_recurrence_truncated_iv(ptr noalias %src, ptr %
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[VEC_IND]], <2 x i32> <i32 1, i32 2>
 ; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[VEC_IND]], <2 x i32> [[STEP_ADD]], <2 x i32> <i32 1, i32 2>
 ; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT3]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT4]], [[TMP3]]
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT4]], [[TMP4]]
@@ -6295,12 +6295,12 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> zeroinitializer, [[TMP17]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i32 [[STEP]], 2
-; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -6519,12 +6519,12 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
-; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i32 0
+; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[STEP]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = mul <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
 ; UNROLL-NO-IC-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> zeroinitializer, [[TMP17]]
 ; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = mul i32 [[STEP]], 2
-; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i32 0
+; UNROLL-NO-IC-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i64 0
 ; UNROLL-NO-IC-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
