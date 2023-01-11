@@ -250,7 +250,7 @@ public:
     if (Loc.isMacroID())
       Loc = SM.getExpansionRange(Loc).getEnd();
     for (const ObjCMethodDecl *M :
-         makeArrayRef(MethodsFromProtocolInContainer).drop_front()) {
+         ArrayRef(MethodsFromProtocolInContainer).drop_front()) {
       SourceLocation EndLoc = M->getEndLoc();
       if (EndLoc.isMacroID())
         EndLoc = SM.getExpansionRange(EndLoc).getEnd();

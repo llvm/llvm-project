@@ -282,7 +282,7 @@ ExtractRepeatedExpressionIntoVariableOperation::perform(
   Replacements.push_back(RefactoringReplacement(
       SourceRange(InsertionLoc, InsertionLoc), OS.str(), CreatedSymbol,
       RefactoringReplacement::AssociatedSymbolLocation(
-          llvm::makeArrayRef(NameOffset), /*IsDeclaration=*/true)));
+          ArrayRef(NameOffset), /*IsDeclaration=*/true)));
 
   // Replace the duplicates with a reference to the variable.
   for (const Expr *E : DuplicateExpressions) {
@@ -291,7 +291,7 @@ ExtractRepeatedExpressionIntoVariableOperation::perform(
                     getPreciseTokenLocEnd(SM.getSpellingLoc(E->getEndLoc()), SM,
                                           Context.getLangOpts())),
         Name, CreatedSymbol,
-        /*NameOffset=*/llvm::makeArrayRef(unsigned(0))));
+        /*NameOffset=*/ArrayRef(unsigned(0))));
   }
 
   return std::move(Result);

@@ -45,14 +45,14 @@ public:
   InMemoryCASData(const InMemoryCASData &) = delete;
 
   ArrayRef<const InMemoryIndexValueT *> getRefs() const {
-    return makeArrayRef(
+    return ArrayRef(
         reinterpret_cast<const InMemoryIndexValueT *const *>(this + 1),
         NumRefs);
   }
 
   ArrayRef<char> getData() const {
     ArrayRef<const InMemoryIndexValueT *> Refs = getRefs();
-    return makeArrayRef(
+    return ArrayRef(
         reinterpret_cast<const char *>(Refs.data() + Refs.size()), DataSize);
   }
 

@@ -130,7 +130,7 @@ public:
   ArrayRef<APINotesReader *> getCurrentModuleReaders() const {
     unsigned numReaders = static_cast<unsigned>(CurrentModuleReaders[0] != nullptr) +
       static_cast<unsigned>(CurrentModuleReaders[1] != nullptr);
-    return llvm::makeArrayRef(CurrentModuleReaders).slice(0, numReaders);
+    return ArrayRef(CurrentModuleReaders).slice(0, numReaders);
   }
 
   /// Find the API notes readers that correspond to the given source location.

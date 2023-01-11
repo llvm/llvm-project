@@ -655,7 +655,7 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
             ? ObjCSymbolSelectorKind::MessageSend
             : ObjCSymbolSelectorKind::MethodDecl;
     if (findObjCSymbolSelectorPieces(
-            llvm::makeArrayRef(Tokens).drop_front(I.index()),
+            ArrayRef(Tokens).drop_front(I.index()),
             Symbols[SymbolIndex].Name, SelectorPieces, Kind)) {
       OldSymbolOccurrence Result(OldSymbolOccurrence::MatchingSymbol,
                                  /*IsMacroExpansion=*/false, SymbolIndex,

@@ -194,7 +194,7 @@ ImplementDeclaredCXXMethodsOperation::perform(
   using namespace indexer;
   return continueInExternalASTUnit(
       fileThatShouldContainImplementationOf(Container), runInImplementationAST,
-      Container, filter(llvm::makeArrayRef(SelectedMethods),
+      Container, filter(ArrayRef(SelectedMethods),
                         [](const DeclEntity &D) { return !D.isDefined(); }));
 }
 
@@ -403,7 +403,7 @@ ImplementDeclaredObjCMethodsOperation::perform(
   return continueInExternalASTUnit(
       fileThatShouldContainImplementationOf(Container), runInImplementationAST,
       Container, Interface, MethodDeclarations,
-      filter(llvm::makeArrayRef(SelectedMethods),
+      filter(ArrayRef(SelectedMethods),
              [](const DeclEntity &D) { return !D.isDefined(); }));
 }
 

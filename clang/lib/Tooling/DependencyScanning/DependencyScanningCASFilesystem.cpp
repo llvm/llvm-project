@@ -367,6 +367,6 @@ Optional<ArrayRef<dependency_directives_scan::Directive>>
 DependencyScanningCASFilesystem::getDirectiveTokens(const Twine &Path) {
   LookupPathResult Result = lookupPath(Path);
   if (Result.Entry && !Result.Entry->DepDirectives.empty())
-    return llvm::makeArrayRef(Result.Entry->DepDirectives);
+    return ArrayRef(Result.Entry->DepDirectives);
   return std::nullopt;
 }

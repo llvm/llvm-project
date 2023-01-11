@@ -40,7 +40,7 @@ struct TrieContent final : public TrieNode {
 
   ArrayRef<uint8_t> getHash() const {
     auto *Begin = reinterpret_cast<const uint8_t *>(this) + HashOffset;
-    return makeArrayRef(Begin, Begin + HashSize);
+    return ArrayRef(Begin, Begin + HashSize);
   }
 
   TrieContent(size_t ContentOffset, size_t HashSize, size_t HashOffset)

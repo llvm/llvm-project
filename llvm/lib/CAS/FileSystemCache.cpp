@@ -490,7 +490,7 @@ FileSystemCache::VFSDirIterImpl::create(
   return std::shared_ptr<VFSDirIterImpl>(new (IterPtr) VFSDirIterImpl(
       std::move(LookupSymlinkPath),
       StringRef(HungOffParentPath, ParentPath.size()),
-      makeArrayRef(HungOffEntries, Entries.size())));
+      ArrayRef(HungOffEntries, Entries.size())));
 }
 
 FileSystemCache::DiscoveryInstance::~DiscoveryInstance() {}

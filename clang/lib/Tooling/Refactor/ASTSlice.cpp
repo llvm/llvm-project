@@ -537,7 +537,7 @@ Optional<SelectedStmtSet> ASTSlice::computeSelectedStmtSet() {
         if (const auto *Case =
                 dyn_cast<SwitchCase>(Result.containsSelectionRange)) {
           auto Switch = findSwitchSourceConstruct(
-              Case, makeArrayRef(NodeTree).drop_front(N.index() + 1));
+              Case, ArrayRef(NodeTree).drop_front(N.index() + 1));
           return SelectedStmtSet::createFromEntirelySelected(
               Switch.first, N.index() + Switch.second);
         }
@@ -559,7 +559,7 @@ Optional<SelectedStmtSet> ASTSlice::computeSelectedStmtSet() {
       // when one of the braces is selected, or when an actual `case` of the
       // switch is selected.
       auto Construct = findCompoundStatementSourceConstruct(
-          CS, makeArrayRef(NodeTree).drop_front(N.index() + 1));
+          CS, ArrayRef(NodeTree).drop_front(N.index() + 1));
       if (Construct.first != CS &&
           ((IsLBraceSelected || IsRBraceSelected) ||
            (isa<SwitchStmt>(Construct.first) &&

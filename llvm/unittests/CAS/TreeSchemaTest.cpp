@@ -133,7 +133,7 @@ TEST(TreeSchemaTest, Trees) {
   for (int I = 0, E = FlatTreeEntries.size() * 3; I != E; ++I) {
     // Copy one of the flat entries and add some trees.
     auto OriginalEntries =
-        makeArrayRef(FlatTreeEntries[I % FlatTreeEntries.size()]);
+        ArrayRef(FlatTreeEntries[I % FlatTreeEntries.size()]);
     SmallVector<NamedTreeEntry> Entries(OriginalEntries.begin(),
                                         OriginalEntries.end());
     std::string Name = ("tree" + Twine(I)).str();
@@ -249,7 +249,7 @@ TEST(TreeSchemaTest, walkFileTreeRecursively) {
       {"/t3/t1nested", true},
       {"/t3/t1nested/d1", false},
   };
-  auto RemainingEntries = makeArrayRef(ExpectedEntries);
+  auto RemainingEntries = ArrayRef(ExpectedEntries);
 
   TreeSchema Schema(*CAS);
   Error E = Schema.walkFileTreeRecursively(

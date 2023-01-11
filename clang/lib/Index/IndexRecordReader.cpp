@@ -325,7 +325,7 @@ public:
     }
     case REC_DECLOFFSETS_BLOCK_ID:
       assert(RecID == REC_DECLOFFSETS);
-      Reader.setDeclOffsets(makeArrayRef((const uint32_t*)Blob.data(),
+      Reader.setDeclOffsets(ArrayRef((const uint32_t*)Blob.data(),
                             Record[0]));
       break;
 

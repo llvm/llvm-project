@@ -349,7 +349,7 @@ addCaseReplacements(const IfStmt *If, const CasePlacement &CaseInfo,
 
   SourceLocation PrevCaseEnd = getPreciseTokenLocEnd(
       SM.getSpellingLoc(CaseValues[0]->getEndLoc()), SM, LangOpts);
-  for (const Expr *CaseValue : llvm::makeArrayRef(CaseValues).drop_front()) {
+  for (const Expr *CaseValue : ArrayRef(CaseValues).drop_front()) {
     Replacements.emplace_back(
         SourceRange(PrevCaseEnd, SM.getSpellingLoc(CaseValue->getBeginLoc())),
         StringRef(":\ncase "));

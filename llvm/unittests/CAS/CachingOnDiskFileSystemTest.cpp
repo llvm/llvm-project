@@ -365,7 +365,7 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
 
     // Track accesses and access files from I to the end (different subset in
     // each iteration).
-    auto Files = makeArrayRef(Temps.begin() + I, Temps.end());
+    auto Files = ArrayRef(Temps.begin() + I, Temps.end());
     FS->trackNewAccesses();
     for (const auto &F : Files)
       EXPECT_FALSE(FS->getRealPath(F.path(), Path));
