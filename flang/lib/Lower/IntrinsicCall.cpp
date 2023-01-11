@@ -501,6 +501,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genEoshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genExit(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genExtendsTypeOf(mlir::Type,
+                                      llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -815,6 +817,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"status", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"exponent", &I::genExponent},
+    {"extends_type_of",
+     &I::genExtendsTypeOf,
+     {{{"a", asBox}, {"mold", asBox}}},
+     /*isElemental=*/false},
     {"findloc",
      &I::genFindloc,
      {{{"array", asBox},
@@ -3290,6 +3296,18 @@ mlir::Value IntrinsicLibrary::genExponent(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genExponent(builder, loc, resultType,
                                 fir::getBase(args[0])));
+}
+
+// EXTENDS_TYPE_OF
+fir::ExtendedValue
+IntrinsicLibrary::genExtendsTypeOf(mlir::Type resultType,
+                                   llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genExtendsTypeOf(builder, loc, fir::getBase(args[0]),
+                                     fir::getBase(args[1])));
 }
 
 // FINDLOC

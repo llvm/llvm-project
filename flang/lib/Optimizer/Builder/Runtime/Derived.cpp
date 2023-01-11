@@ -72,3 +72,13 @@ mlir::Value fir::runtime::genSameTypeAs(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, a, b);
   return builder.create<fir::CallOp>(loc, sameTypeAsFunc, args).getResult(0);
 }
+
+mlir::Value fir::runtime::genExtendsTypeOf(fir::FirOpBuilder &builder,
+                                           mlir::Location loc, mlir::Value a,
+                                           mlir::Value mold) {
+  mlir::func::FuncOp extendsTypeOfFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(ExtendsTypeOf)>(loc, builder);
+  auto fTy = extendsTypeOfFunc.getFunctionType();
+  auto args = fir::runtime::createArguments(builder, loc, fTy, a, mold);
+  return builder.create<fir::CallOp>(loc, extendsTypeOfFunc, args).getResult(0);
+}

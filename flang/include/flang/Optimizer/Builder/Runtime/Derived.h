@@ -40,5 +40,8 @@ void genNullifyDerivedType(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genSameTypeAs(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::Value a, mlir::Value b);
 
+mlir::Value genExtendsTypeOf(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value a, mlir::Value b);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_DERIVED_H
