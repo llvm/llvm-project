@@ -58,6 +58,44 @@ bool RTNAME(ClassIs)(
   return false;
 }
 
+static bool CompareDerivedTypeNames(const Descriptor &a, const Descriptor &b) {
+  if (a.raw().version == CFI_VERSION &&
+      a.type() == TypeCode{TypeCategory::Character, 1} &&
+      a.ElementBytes() > 0 && a.rank() == 0 && a.OffsetElement() != nullptr &&
+      a.raw().version == CFI_VERSION &&
+      b.type() == TypeCode{TypeCategory::Character, 1} &&
+      b.ElementBytes() > 0 && b.rank() == 0 && b.OffsetElement() != nullptr &&
+      a.ElementBytes() == b.ElementBytes() &&
+      memcmp(a.OffsetElement(), b.OffsetElement(), a.ElementBytes()) == 0) {
+    return true;
+  }
+  return false;
+}
+
+static const typeInfo::DerivedType *GetDerivedType(const Descriptor &desc) {
+  if (const DescriptorAddendum * addendum{desc.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      return derived;
+    }
+  }
+  return nullptr;
+}
+
+bool RTNAME(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
+  const typeInfo::DerivedType *derivedTypeA{GetDerivedType(a)};
+  const typeInfo::DerivedType *derivedTypeB{GetDerivedType(b)};
+  if (derivedTypeA == nullptr || derivedTypeB == nullptr) {
+    return false;
+  }
+  // Exact match of derived type.
+  if (derivedTypeA == derivedTypeB) {
+    return true;
+  }
+  // Otherwise compare with the name. Note 16.29 kind type parameters are not
+  // considered in the test.
+  return CompareDerivedTypeNames(derivedTypeA->name(), derivedTypeB->name());
+}
+
 // TODO: Assign()
 
 } // extern "C"
