@@ -1022,8 +1022,8 @@ EVT SystemZTargetLowering::getOptimalMemOpType(const MemOp &Op,
 bool SystemZTargetLowering::isTruncateFree(Type *FromType, Type *ToType) const {
   if (!FromType->isIntegerTy() || !ToType->isIntegerTy())
     return false;
-  unsigned FromBits = FromType->getPrimitiveSizeInBits().getFixedSize();
-  unsigned ToBits = ToType->getPrimitiveSizeInBits().getFixedSize();
+  unsigned FromBits = FromType->getPrimitiveSizeInBits().getFixedValue();
+  unsigned ToBits = ToType->getPrimitiveSizeInBits().getFixedValue();
   return FromBits > ToBits;
 }
 
@@ -2489,8 +2489,8 @@ static void adjustICmpTruncate(SelectionDAG &DAG, const SDLoc &DL,
       C.Op1.getOpcode() == ISD::Constant &&
       cast<ConstantSDNode>(C.Op1)->getZExtValue() == 0) {
     auto *L = cast<LoadSDNode>(C.Op0.getOperand(0));
-    if (L->getMemoryVT().getStoreSizeInBits().getFixedSize() <=
-        C.Op0.getValueSizeInBits().getFixedSize()) {
+    if (L->getMemoryVT().getStoreSizeInBits().getFixedValue() <=
+        C.Op0.getValueSizeInBits().getFixedValue()) {
       unsigned Type = L->getExtensionType();
       if ((Type == ISD::ZEXTLOAD && C.ICmpType != SystemZICMP::SignedOnly) ||
           (Type == ISD::SEXTLOAD && C.ICmpType != SystemZICMP::UnsignedOnly)) {

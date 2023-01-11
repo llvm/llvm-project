@@ -63,9 +63,11 @@ public:
   static constexpr LLT vector(ElementCount EC, LLT ScalarTy) {
     assert(!EC.isScalar() && "invalid number of vector elements");
     assert(!ScalarTy.isVector() && "invalid vector element type");
-    return LLT{ScalarTy.isPointer(), /*isVector=*/true, /*isScalar=*/false,
+    return LLT{ScalarTy.isPointer(),
+               /*isVector=*/true,
+               /*isScalar=*/false,
                EC,
-               ScalarTy.getSizeInBits().getFixedSize(),
+               ScalarTy.getSizeInBits().getFixedValue(),
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
 

@@ -774,7 +774,7 @@ bool TypePromotionImpl::isLegalToPromote(Value *V) {
 bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
                                  const LoopInfo &LI) {
   Type *OrigTy = V->getType();
-  TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedSize();
+  TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedValue();
   SafeToPromote.clear();
   SafeWrap.clear();
 
@@ -919,7 +919,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
   const TargetSubtargetInfo *SubtargetInfo = TM->getSubtargetImpl(F);
   const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
   RegisterBitWidth =
-      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedSize();
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
   Ctx = &F.getParent()->getContext();
 
   // Return the preferred integer width of the instruction, or zero if we

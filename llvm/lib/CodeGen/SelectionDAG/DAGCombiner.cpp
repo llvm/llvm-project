@@ -13292,8 +13292,8 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
 
   auto AdjustBigEndianShift = [&](unsigned ShAmt) {
     unsigned LVTStoreBits =
-        LN0->getMemoryVT().getStoreSizeInBits().getFixedSize();
-    unsigned EVTStoreBits = ExtVT.getStoreSizeInBits().getFixedSize();
+        LN0->getMemoryVT().getStoreSizeInBits().getFixedValue();
+    unsigned EVTStoreBits = ExtVT.getStoreSizeInBits().getFixedValue();
     return LVTStoreBits - EVTStoreBits - ShAmt;
   };
 
@@ -17208,8 +17208,8 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   // n:th least significant byte of the stored value.
   int64_t OrigOffset = Offset;
   if (DAG.getDataLayout().isBigEndian())
-    Offset = ((int64_t)STMemType.getStoreSizeInBits().getFixedSize() -
-              (int64_t)LDMemType.getStoreSizeInBits().getFixedSize()) /
+    Offset = ((int64_t)STMemType.getStoreSizeInBits().getFixedValue() -
+              (int64_t)LDMemType.getStoreSizeInBits().getFixedValue()) /
                  8 -
              Offset;
 
@@ -17221,8 +17221,8 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   if (LdStScalable)
     STCoversLD = (Offset == 0) && LdMemSize == StMemSize;
   else
-    STCoversLD = (Offset >= 0) && (Offset * 8 + LdMemSize.getFixedSize() <=
-                                   StMemSize.getFixedSize());
+    STCoversLD = (Offset >= 0) && (Offset * 8 + LdMemSize.getFixedValue() <=
+                                   StMemSize.getFixedValue());
 
   auto ReplaceLd = [&](LoadSDNode *LD, SDValue Val, SDValue Chain) -> SDValue {
     if (LD->isIndexed()) {
@@ -17251,7 +17251,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
       // Mask to size of LDMemType
       auto Mask =
           DAG.getConstant(APInt::getLowBitsSet(STType.getFixedSizeInBits(),
-                                               StMemSize.getFixedSize()),
+                                               StMemSize.getFixedValue()),
                           SDLoc(ST), STType);
       auto Val = DAG.getNode(ISD::AND, SDLoc(LD), LDType, ST->getValue(), Mask);
       return ReplaceLd(LD, Val, Chain);
@@ -18277,7 +18277,7 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
       return SDValue();
 
     unsigned FastLD = 0, FastST = 0;
-    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VTSize.getFixedSize());
+    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VTSize.getFixedValue());
     if (!TLI.isOperationLegal(ISD::LOAD, IntVT) ||
         !TLI.isOperationLegal(ISD::STORE, IntVT) ||
         !TLI.isDesirableToTransformToIntegerOp(ISD::LOAD, VT) ||
@@ -19781,7 +19781,7 @@ SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
       // If we store purely within object bounds just before its lifetime ends,
       // we can remove the store.
       if (LifetimeEndBase.contains(DAG, LifetimeEnd->getSize() * 8, StoreBase,
-                                   StoreSize.getFixedSize() * 8)) {
+                                   StoreSize.getFixedValue() * 8)) {
         LLVM_DEBUG(dbgs() << "\nRemoving store:"; StoreBase.dump();
                    dbgs() << "\nwithin LIFETIME_END of : ";
                    LifetimeEndBase.dump(); dbgs() << "\n");
@@ -21563,7 +21563,7 @@ SDValue DAGCombiner::convertBuildVecZextToBuildVecWithZeros(SDNode *N) {
     if (Op.getOpcode() != ISD::ZERO_EXTEND)
       return SDValue();
     unsigned CurrActiveBits =
-        Op.getOperand(0).getValueSizeInBits().getFixedSize();
+        Op.getOperand(0).getValueSizeInBits().getFixedValue();
     assert(!ActiveBits && "Already encountered non-constant-zero operand?");
     ActiveBits = CurrActiveBits;
     // We want to at least halve the element size.
@@ -22476,7 +22476,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
         MachinePointerInfo(Ld->getPointerInfo().getAddrSpace());
     MMO = MF.getMachineMemOperand(Ld->getMemOperand(), MPI, StoreSize);
   } else
-    MMO = MF.getMachineMemOperand(Ld->getMemOperand(), Offset.getFixedSize(),
+    MMO = MF.getMachineMemOperand(Ld->getMemOperand(), Offset.getFixedValue(),
                                   StoreSize);
 
   SDValue NewLd = DAG.getLoad(VT, DL, Ld->getChain(), NewAddr, MMO);

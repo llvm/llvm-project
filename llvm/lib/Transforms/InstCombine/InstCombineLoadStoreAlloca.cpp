@@ -800,7 +800,7 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
         return false;
       // Make sure that, even if the multiplication below would wrap as an
       // uint64_t, we still do the right thing.
-      if ((CS->getValue().zext(128) * APInt(128, TS.getFixedSize()))
+      if ((CS->getValue().zext(128) * APInt(128, TS.getFixedValue()))
               .ugt(MaxSize))
         return false;
       continue;
@@ -878,7 +878,7 @@ static bool canReplaceGEPIdxWithZero(InstCombinerImpl &IC,
   if (!AllocTy || !AllocTy->isSized())
     return false;
   const DataLayout &DL = IC.getDataLayout();
-  uint64_t TyAllocSize = DL.getTypeAllocSize(AllocTy).getFixedSize();
+  uint64_t TyAllocSize = DL.getTypeAllocSize(AllocTy).getFixedValue();
 
   // If there are more indices after the one we might replace with a zero, make
   // sure they're all non-negative. If any of them are negative, the overall

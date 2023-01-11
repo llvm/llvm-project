@@ -459,10 +459,10 @@ public:
   /// Return the estimated number of vector ops required for an operation on
   /// \p VT * N.
   unsigned getNumOps(Type *ST, unsigned N) {
-    return std::ceil((ST->getPrimitiveSizeInBits() * N).getFixedSize() /
+    return std::ceil((ST->getPrimitiveSizeInBits() * N).getFixedValue() /
                      double(TTI.getRegisterBitWidth(
                                    TargetTransformInfo::RGK_FixedWidthVector)
-                                .getFixedSize()));
+                                .getFixedValue()));
   }
 
   /// Return the set of vectors that a matrix value is lowered to.
@@ -1260,8 +1260,8 @@ public:
                           bool IsScalarMatrixTransposed, FastMathFlags FMF) {
     const unsigned VF = std::max<unsigned>(
         TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-                .getFixedSize() /
-            Result.getElementType()->getPrimitiveSizeInBits().getFixedSize(),
+                .getFixedValue() /
+            Result.getElementType()->getPrimitiveSizeInBits().getFixedValue(),
         1U);
     unsigned R = Result.getNumRows();
     unsigned C = Result.getNumColumns();
@@ -1439,8 +1439,8 @@ public:
 
     const unsigned VF = std::max<unsigned>(
         TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-                .getFixedSize() /
-            EltType->getPrimitiveSizeInBits().getFixedSize(),
+                .getFixedValue() /
+            EltType->getPrimitiveSizeInBits().getFixedValue(),
         1U);
 
     // Cost model for tiling

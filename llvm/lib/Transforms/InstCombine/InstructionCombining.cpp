@@ -2463,7 +2463,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     unsigned AS = GEP.getPointerAddressSpace();
     if (GEP.getOperand(1)->getType()->getScalarSizeInBits() ==
         DL.getIndexSizeInBits(AS)) {
-      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
+      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
 
       bool Matched = false;
       uint64_t C;
@@ -2593,8 +2593,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       if (GEPEltType->isSized() && StrippedPtrEltTy->isSized()) {
         // Check that changing the type amounts to dividing the index by a scale
         // factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
-        uint64_t SrcSize = DL.getTypeAllocSize(StrippedPtrEltTy).getFixedSize();
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
+        uint64_t SrcSize =
+            DL.getTypeAllocSize(StrippedPtrEltTy).getFixedValue();
         if (ResSize && SrcSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -2630,10 +2631,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           StrippedPtrEltTy->isArrayTy()) {
         // Check that changing to the array element type amounts to dividing the
         // index by a scale factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
         uint64_t ArrayEltSize =
             DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType())
-                .getFixedSize();
+                .getFixedValue();
         if (ResSize && ArrayEltSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
