@@ -3945,7 +3945,7 @@ void AArch64DAGToDAGISel::SelectTagP(SDNode *N) {
 // vector types larger than NEON don't have a matching SubRegIndex.
 static SDNode *extractSubReg(SelectionDAG *DAG, EVT VT, SDValue V) {
   assert(V.getValueType().isScalableVector() &&
-         V.getValueType().getSizeInBits().getKnownMinSize() ==
+         V.getValueType().getSizeInBits().getKnownMinValue() ==
              AArch64::SVEBitsPerBlock &&
          "Expected to extract from a packed scalable vector!");
   assert(VT.isFixedLengthVector() &&
@@ -3972,7 +3972,7 @@ static SDNode *extractSubReg(SelectionDAG *DAG, EVT VT, SDValue V) {
 // vector types larger than NEON don't have a matching SubRegIndex.
 static SDNode *insertSubReg(SelectionDAG *DAG, EVT VT, SDValue V) {
   assert(VT.isScalableVector() &&
-         VT.getSizeInBits().getKnownMinSize() == AArch64::SVEBitsPerBlock &&
+         VT.getSizeInBits().getKnownMinValue() == AArch64::SVEBitsPerBlock &&
          "Expected to insert into a packed scalable vector!");
   assert(V.getValueType().isFixedLengthVector() &&
          "Expected to insert a fixed length vector!");
@@ -5697,7 +5697,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     return false;
 
   TypeSize TS = MemVT.getSizeInBits();
-  int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinSize()) / 8;
+  int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinValue()) / 8;
   int64_t MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
 
   if ((MulImm % MemWidthBytes) != 0)

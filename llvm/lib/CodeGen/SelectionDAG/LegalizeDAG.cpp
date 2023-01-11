@@ -769,7 +769,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
     Value = Result;
     Chain = Ch;
-  } else if (!isPowerOf2_64(SrcWidth.getKnownMinSize())) {
+  } else if (!isPowerOf2_64(SrcWidth.getKnownMinValue())) {
     // If not loading a power-of-2 number of bits, expand as two loads.
     assert(!SrcVT.isVector() && "Unsupported extload!");
     unsigned SrcWidthBits = SrcWidth.getFixedSize();

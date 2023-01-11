@@ -13844,8 +13844,8 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
     LLVMContext &Context = *DAG.getContext();
     EVT ValueEltVT = ValueVT.getVectorElementType();
     EVT PartEltVT = PartVT.getVectorElementType();
-    unsigned ValueVTBitSize = ValueVT.getSizeInBits().getKnownMinSize();
-    unsigned PartVTBitSize = PartVT.getSizeInBits().getKnownMinSize();
+    unsigned ValueVTBitSize = ValueVT.getSizeInBits().getKnownMinValue();
+    unsigned PartVTBitSize = PartVT.getSizeInBits().getKnownMinValue();
     if (PartVTBitSize % ValueVTBitSize == 0) {
       assert(PartVTBitSize >= ValueVTBitSize);
       // If the element types are different, bitcast to the same element type of
@@ -13896,8 +13896,8 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     SDValue Val = Parts[0];
     EVT ValueEltVT = ValueVT.getVectorElementType();
     EVT PartEltVT = PartVT.getVectorElementType();
-    unsigned ValueVTBitSize = ValueVT.getSizeInBits().getKnownMinSize();
-    unsigned PartVTBitSize = PartVT.getSizeInBits().getKnownMinSize();
+    unsigned ValueVTBitSize = ValueVT.getSizeInBits().getKnownMinValue();
+    unsigned PartVTBitSize = PartVT.getSizeInBits().getKnownMinValue();
     if (PartVTBitSize % ValueVTBitSize == 0) {
       assert(PartVTBitSize >= ValueVTBitSize);
       EVT SameEltTypeVT = ValueVT;

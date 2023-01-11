@@ -800,7 +800,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::X86_MMXTyID:
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
-    unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinSize();
+    unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinValue();
     auto I = findAlignmentLowerBound(VECTOR_ALIGN, BitWidth);
     if (I != Alignments.end() && I->AlignType == VECTOR_ALIGN &&
         I->TypeBitWidth == BitWidth)
@@ -812,7 +812,7 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     // We're only calculating a natural alignment, so it doesn't have to be
     // based on the full size for scalable vectors. Using the minimum element
     // count should be enough here.
-    return Align(PowerOf2Ceil(getTypeStoreSize(Ty).getKnownMinSize()));
+    return Align(PowerOf2Ceil(getTypeStoreSize(Ty).getKnownMinValue()));
   }
   case Type::X86_AMXTyID:
     return Align(64);

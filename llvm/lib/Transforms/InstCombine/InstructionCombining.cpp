@@ -2694,7 +2694,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           BasePtrOffset.isNonNegative()) {
         APInt AllocSize(
             IdxWidth,
-            DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinSize());
+            DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinValue());
         if (BasePtrOffset.ule(AllocSize)) {
           return GetElementPtrInst::CreateInBounds(
               GEP.getSourceElementType(), PtrOp, Indices, GEP.getName());

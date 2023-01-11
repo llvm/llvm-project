@@ -287,7 +287,7 @@ TEST(VectorTypesTest, FixedLenComparisons) {
   auto *V2Int64Ty = FixedVectorType::get(Int64Ty, 2);
 
   TypeSize V2I32Len = V2Int32Ty->getPrimitiveSizeInBits();
-  EXPECT_EQ(V2I32Len.getKnownMinSize(), 64U);
+  EXPECT_EQ(V2I32Len.getKnownMinValue(), 64U);
   EXPECT_FALSE(V2I32Len.isScalable());
 
   EXPECT_LT(V2Int32Ty->getPrimitiveSizeInBits().getFixedSize(),
@@ -333,32 +333,32 @@ TEST(VectorTypesTest, ScalableComparisons) {
   auto *ScV2Int64Ty = ScalableVectorType::get(Int64Ty, 2);
 
   TypeSize ScV2I32Len = ScV2Int32Ty->getPrimitiveSizeInBits();
-  EXPECT_EQ(ScV2I32Len.getKnownMinSize(), 64U);
+  EXPECT_EQ(ScV2I32Len.getKnownMinValue(), 64U);
   EXPECT_TRUE(ScV2I32Len.isScalable());
 
-  EXPECT_LT(ScV2Int32Ty->getPrimitiveSizeInBits().getKnownMinSize(),
-            ScV4Int32Ty->getPrimitiveSizeInBits().getKnownMinSize());
-  EXPECT_GT(ScV2Int64Ty->getPrimitiveSizeInBits().getKnownMinSize(),
-            ScV2Int32Ty->getPrimitiveSizeInBits().getKnownMinSize());
-  EXPECT_EQ(ScV4Int32Ty->getPrimitiveSizeInBits().getKnownMinSize(),
-            ScV2Int64Ty->getPrimitiveSizeInBits().getKnownMinSize());
-  EXPECT_NE(ScV2Int32Ty->getPrimitiveSizeInBits().getKnownMinSize(),
-            ScV2Int64Ty->getPrimitiveSizeInBits().getKnownMinSize());
+  EXPECT_LT(ScV2Int32Ty->getPrimitiveSizeInBits().getKnownMinValue(),
+            ScV4Int32Ty->getPrimitiveSizeInBits().getKnownMinValue());
+  EXPECT_GT(ScV2Int64Ty->getPrimitiveSizeInBits().getKnownMinValue(),
+            ScV2Int32Ty->getPrimitiveSizeInBits().getKnownMinValue());
+  EXPECT_EQ(ScV4Int32Ty->getPrimitiveSizeInBits().getKnownMinValue(),
+            ScV2Int64Ty->getPrimitiveSizeInBits().getKnownMinValue());
+  EXPECT_NE(ScV2Int32Ty->getPrimitiveSizeInBits().getKnownMinValue(),
+            ScV2Int64Ty->getPrimitiveSizeInBits().getKnownMinValue());
 
   // Check the DataLayout interfaces.
   EXPECT_EQ(DL.getTypeSizeInBits(ScV2Int64Ty),
             DL.getTypeSizeInBits(ScV4Int32Ty));
-  EXPECT_EQ(DL.getTypeSizeInBits(ScV2Int32Ty).getKnownMinSize(), 64U);
+  EXPECT_EQ(DL.getTypeSizeInBits(ScV2Int32Ty).getKnownMinValue(), 64U);
   EXPECT_EQ(DL.getTypeStoreSize(ScV2Int64Ty), DL.getTypeStoreSize(ScV4Int32Ty));
   EXPECT_NE(DL.getTypeStoreSizeInBits(ScV2Int32Ty),
             DL.getTypeStoreSizeInBits(ScV2Int64Ty));
-  EXPECT_EQ(DL.getTypeStoreSizeInBits(ScV2Int32Ty).getKnownMinSize(), 64U);
-  EXPECT_EQ(DL.getTypeStoreSize(ScV2Int64Ty).getKnownMinSize(), 16U);
+  EXPECT_EQ(DL.getTypeStoreSizeInBits(ScV2Int32Ty).getKnownMinValue(), 64U);
+  EXPECT_EQ(DL.getTypeStoreSize(ScV2Int64Ty).getKnownMinValue(), 16U);
   EXPECT_EQ(DL.getTypeAllocSize(ScV4Int32Ty), DL.getTypeAllocSize(ScV2Int64Ty));
   EXPECT_NE(DL.getTypeAllocSizeInBits(ScV2Int32Ty),
             DL.getTypeAllocSizeInBits(ScV2Int64Ty));
-  EXPECT_EQ(DL.getTypeAllocSizeInBits(ScV4Int32Ty).getKnownMinSize(), 128U);
-  EXPECT_EQ(DL.getTypeAllocSize(ScV2Int32Ty).getKnownMinSize(), 8U);
+  EXPECT_EQ(DL.getTypeAllocSizeInBits(ScV4Int32Ty).getKnownMinValue(), 128U);
+  EXPECT_EQ(DL.getTypeAllocSize(ScV2Int32Ty).getKnownMinValue(), 8U);
   ASSERT_TRUE(DL.typeSizeEqualsStoreSize(ScV4Int32Ty));
 }
 
@@ -375,8 +375,8 @@ TEST(VectorTypesTest, CrossComparisons) {
   EXPECT_NE(V4Int32Ty->getPrimitiveSizeInBits(),
             ScV4Int32Ty->getPrimitiveSizeInBits());
   // If we are only checking the minimum, then they are the same size.
-  EXPECT_EQ(V4Int32Ty->getPrimitiveSizeInBits().getKnownMinSize(),
-            ScV4Int32Ty->getPrimitiveSizeInBits().getKnownMinSize());
+  EXPECT_EQ(V4Int32Ty->getPrimitiveSizeInBits().getKnownMinValue(),
+            ScV4Int32Ty->getPrimitiveSizeInBits().getKnownMinValue());
 
   // We can't use ordering comparisons (<,<=,>,>=) between scalable and
   // non-scalable vector sizes.

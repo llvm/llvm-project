@@ -1166,7 +1166,7 @@ void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,
                                         MachinePointerInfo &MPI, SDValue &Ptr,
                                         uint64_t *ScaledOffset) {
   SDLoc DL(N);
-  unsigned IncrementSize = MemVT.getSizeInBits().getKnownMinSize() / 8;
+  unsigned IncrementSize = MemVT.getSizeInBits().getKnownMinValue() / 8;
 
   if (MemVT.isScalableVector()) {
     SDNodeFlags Flags;
@@ -2006,7 +2006,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD,
     Align Alignment = SLD->getOriginalAlign();
     if (LoMemVT.isScalableVector())
       Alignment = commonAlignment(
-          Alignment, LoMemVT.getSizeInBits().getKnownMinSize() / 8);
+          Alignment, LoMemVT.getSizeInBits().getKnownMinValue() / 8);
 
     MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo(SLD->getPointerInfo().getAddrSpace()),
@@ -3310,7 +3310,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo) {
   MachinePointerInfo MPI;
   if (LoMemVT.isScalableVector()) {
     Alignment = commonAlignment(Alignment,
-                                LoMemVT.getSizeInBits().getKnownMinSize() / 8);
+                                LoMemVT.getSizeInBits().getKnownMinValue() / 8);
     MPI = MachinePointerInfo(N->getPointerInfo().getAddrSpace());
   } else
     MPI = N->getPointerInfo().getWithOffset(
@@ -3386,7 +3386,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STRIDED_STORE(VPStridedStoreSDNode *N,
   Align Alignment = N->getOriginalAlign();
   if (LoMemVT.isScalableVector())
     Alignment = commonAlignment(Alignment,
-                                LoMemVT.getSizeInBits().getKnownMinSize() / 8);
+                                LoMemVT.getSizeInBits().getKnownMinValue() / 8);
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(N->getPointerInfo().getAddrSpace()),
@@ -3460,7 +3460,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
     MachinePointerInfo MPI;
     if (LoMemVT.isScalableVector()) {
       Alignment = commonAlignment(
-          Alignment, LoMemVT.getSizeInBits().getKnownMinSize() / 8);
+          Alignment, LoMemVT.getSizeInBits().getKnownMinValue() / 8);
       MPI = MachinePointerInfo(N->getPointerInfo().getAddrSpace());
     } else
       MPI = N->getPointerInfo().getWithOffset(
@@ -6611,7 +6611,7 @@ static std::optional<EVT> findMemType(SelectionDAG &DAG,
                                       unsigned WidenEx = 0) {
   EVT WidenEltVT = WidenVT.getVectorElementType();
   const bool Scalable = WidenVT.isScalableVector();
-  unsigned WidenWidth = WidenVT.getSizeInBits().getKnownMinSize();
+  unsigned WidenWidth = WidenVT.getSizeInBits().getKnownMinValue();
   unsigned WidenEltWidth = WidenEltVT.getSizeInBits();
   unsigned AlignInBits = Align*8;
 
@@ -6649,7 +6649,7 @@ static std::optional<EVT> findMemType(SelectionDAG &DAG,
     // Skip vector MVTs which don't match the scalable property of WidenVT.
     if (Scalable != MemVT.isScalableVector())
       continue;
-    unsigned MemVTWidth = MemVT.getSizeInBits().getKnownMinSize();
+    unsigned MemVTWidth = MemVT.getSizeInBits().getKnownMinValue();
     auto Action = TLI.getTypeAction(*DAG.getContext(), MemVT);
     if ((Action == TargetLowering::TypeLegal ||
          Action == TargetLowering::TypePromoteInteger) &&
@@ -6732,8 +6732,8 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
 
   // Find the vector type that can load from.
   std::optional<EVT> FirstVT =
-      findMemType(DAG, TLI, LdWidth.getKnownMinSize(), WidenVT, LdAlign,
-                  WidthDiff.getKnownMinSize());
+      findMemType(DAG, TLI, LdWidth.getKnownMinValue(), WidenVT, LdAlign,
+                  WidthDiff.getKnownMinValue());
 
   if (!FirstVT)
     return SDValue();
@@ -6751,8 +6751,8 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
       RemainingWidth -= NewVTWidth;
       if (TypeSize::isKnownLT(RemainingWidth, NewVTWidth)) {
         // The current type we are using is too large. Find a better size.
-        NewVT = findMemType(DAG, TLI, RemainingWidth.getKnownMinSize(), WidenVT,
-                            LdAlign, WidthDiff.getKnownMinSize());
+        NewVT = findMemType(DAG, TLI, RemainingWidth.getKnownMinValue(),
+                            WidenVT, LdAlign, WidthDiff.getKnownMinValue());
         if (!NewVT)
           return SDValue();
         NewVTWidth = NewVT->getSizeInBits();
@@ -6844,9 +6844,9 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
       TypeSize LdTySize = LdTy.getSizeInBits();
       TypeSize NewLdTySize = NewLdTy.getSizeInBits();
       assert(NewLdTySize.isScalable() == LdTySize.isScalable() &&
-             NewLdTySize.isKnownMultipleOf(LdTySize.getKnownMinSize()));
+             NewLdTySize.isKnownMultipleOf(LdTySize.getKnownMinValue()));
       unsigned NumOps =
-          NewLdTySize.getKnownMinSize() / LdTySize.getKnownMinSize();
+          NewLdTySize.getKnownMinValue() / LdTySize.getKnownMinValue();
       SmallVector<SDValue, 16> WidenOps(NumOps);
       unsigned j = 0;
       for (; j != End-Idx; ++j)
@@ -6868,7 +6868,7 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
 
   // We need to fill the rest with undefs to build the vector.
   unsigned NumOps =
-      WidenWidth.getKnownMinSize() / LdTy.getSizeInBits().getKnownMinSize();
+      WidenWidth.getKnownMinValue() / LdTy.getSizeInBits().getKnownMinValue();
   SmallVector<SDValue, 16> WidenOps(NumOps);
   SDValue UndefVal = DAG.getUNDEF(LdTy);
   {
@@ -6968,7 +6968,7 @@ bool DAGTypeLegalizer::GenWidenVectorStores(SmallVectorImpl<SDValue> &StChain,
   while (StWidth.isNonZero()) {
     // Find the largest vector type we can store with.
     std::optional<EVT> NewVT =
-        findMemType(DAG, TLI, StWidth.getKnownMinSize(), ValVT);
+        findMemType(DAG, TLI, StWidth.getKnownMinValue(), ValVT);
     if (!NewVT)
       return false;
     MemVTs.push_back({*NewVT, 0});
