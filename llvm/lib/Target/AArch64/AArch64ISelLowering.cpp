@@ -16319,6 +16319,17 @@ static bool isAllActivePredicate(SelectionDAG &DAG, SDValue N) {
   return false;
 }
 
+static SDValue performReinterpretCastCombine(SDNode *N) {
+  SDValue LeafOp = SDValue(N, 0);
+  SDValue Op = N->getOperand(0);
+  while (Op.getOpcode() == AArch64ISD::REINTERPRET_CAST &&
+         LeafOp.getValueType() != Op.getValueType())
+    Op = Op->getOperand(0);
+  if (LeafOp.getValueType() == Op.getValueType())
+    return Op;
+  return SDValue();
+}
+
 static SDValue performSVEAndCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   if (DCI.isBeforeLegalizeOps())
@@ -16364,6 +16375,13 @@ static SDValue performSVEAndCombine(SDNode *N,
 
     return DAG.getNode(Opc, DL, N->getValueType(0), And);
   }
+
+  // If both sides of AND operations are i1 splat_vectors then
+  // we can produce just i1 splat_vector as the result.
+  if (isAllActivePredicate(DAG, N->getOperand(0)))
+    return N->getOperand(1);
+  if (isAllActivePredicate(DAG, N->getOperand(1)))
+    return N->getOperand(0);
 
   if (!EnableCombineMGatherIntrinsics)
     return SDValue();
@@ -21400,6 +21418,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performUzpCombine(N, DAG);
   case AArch64ISD::SETCC_MERGE_ZERO:
     return performSetccMergeZeroCombine(N, DCI);
+  case AArch64ISD::REINTERPRET_CAST:
+    return performReinterpretCastCombine(N);
   case AArch64ISD::GLD1_MERGE_ZERO:
   case AArch64ISD::GLD1_SCALED_MERGE_ZERO:
   case AArch64ISD::GLD1_UXTW_MERGE_ZERO:
