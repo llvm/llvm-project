@@ -1542,6 +1542,10 @@ def Tosa_TransposeOp : Tosa_Op<"transpose", [
     outs Tosa_Tensor1Dto6D:$output
   );
 
+  let extraClassDeclaration = [{
+    LogicalResult getConstantPerms(llvm::SmallVector<int64_t> &perms);
+  }];
+
   let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
