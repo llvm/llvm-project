@@ -339,7 +339,7 @@ public:
   /// convention and ABI as an OpenCL kernel. The wrapper function accepts
   /// block context and block arguments in target-specific way and calls
   /// the original block invoke function.
-  virtual llvm::Function *
+  virtual llvm::Value *
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
                             llvm::Type *BlockTy) const;
