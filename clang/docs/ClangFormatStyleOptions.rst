@@ -3222,7 +3222,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``int8_t Binary`` Format separators in binary literals.
 
-    .. code-block:: c++
+    .. code-block:: text
 
        -1: 0b100111101101
         0: 0b10011'11'0110'1
