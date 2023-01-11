@@ -1263,7 +1263,11 @@ void AssignmentTrackingLowering::emitDbgValue(
     const auto *DAI = cast<DbgAssignIntrinsic>(Source);
     // Check the address hasn't been dropped (e.g. the debug uses may not have
     // been replaced before deleting a Value).
-    if (Value *Val = DAI->getAddress()) {
+    if (DAI->isKillAddress()) {
+      // The address isn't valid so treat this as a non-memory def.
+      Kind = LocKind::Val;
+    } else {
+      Value *Val = DAI->getAddress();
       DIExpression *Expr = DAI->getAddressExpression();
       assert(!Expr->getFragmentInfo() &&
              "fragment info should be stored in value-expression only");
@@ -1279,9 +1283,6 @@ void AssignmentTrackingLowering::emitDbgValue(
           walkToAllocaAndPrependOffsetDeref(Layout, Val, Expr);
       Emit(Val, Expr);
       return;
-    } else {
-      // The address isn't valid so treat this as a non-memory def.
-      Kind = LocKind::Val;
     }
   }
 
@@ -1483,11 +1484,10 @@ void AssignmentTrackingLowering::processDbgAssign(DbgAssignIntrinsic &DAI,
     // that an assignment happened here, and we know that specific assignment
     // was the last one to take place in memory for this variable.
     LocKind Kind;
-    if (isa<UndefValue>(DAI.getAddress())) {
-      // Address may be undef to indicate that although the store does take
-      // place, this part of the original store has been elided.
+    if (DAI.isKillAddress()) {
       LLVM_DEBUG(
-          dbgs() << "Val, Stack matches Debug program but address is undef\n";);
+          dbgs()
+              << "Val, Stack matches Debug program but address is killed\n";);
       Kind = LocKind::Val;
     } else {
       LLVM_DEBUG(dbgs() << "Mem, Stack matches Debug program\n";);
