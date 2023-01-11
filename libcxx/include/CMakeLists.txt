@@ -824,6 +824,7 @@ set(files
   set
   setjmp.h
   shared_mutex
+  source_location
   span
   sstream
   stack
