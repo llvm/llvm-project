@@ -23,11 +23,17 @@ duplicate_warnings(void);
 
 void baz(void) {
   foo(); // expected-error {{call to 'foo' declared with 'error' attribute: oh no foo}}
+         // expected-note@* {{called by function 'baz'}}
   if (x())
     bar(); // expected-error {{call to 'bar' declared with 'error' attribute: oh no bar}}
+           // expected-note@* {{called by function 'baz'}}
 
   quux();                     // enabled-warning {{call to 'quux' declared with 'warning' attribute: oh no quux}}
+                              // enabled-note@* {{called by function 'baz'}}
   __compiletime_assert_455(); // expected-error {{call to '__compiletime_assert_455' declared with 'error' attribute: demangle me}}
+                              // expected-note@* {{called by function 'baz'}}
   duplicate_errors();         // expected-error {{call to 'duplicate_errors' declared with 'error' attribute: two}}
+                              // expected-note@* {{called by function 'baz'}}
   duplicate_warnings();       // enabled-warning {{call to 'duplicate_warnings' declared with 'warning' attribute: two}}
+                              // enabled-note@* {{called by function 'baz'}}
 }

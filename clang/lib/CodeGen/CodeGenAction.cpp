@@ -52,6 +52,8 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include <optional>
+#include <string>
+
 using namespace clang;
 using namespace llvm;
 
@@ -794,6 +796,14 @@ void BackendConsumer::DontCallDiagHandler(const DiagnosticInfoDontCall &D) {
                               ? diag::err_fe_backend_error_attr
                               : diag::warn_fe_backend_warning_attr)
       << llvm::demangle(D.getFunctionName()) << D.getNote();
+
+  SmallVector<std::string, 4> InliningDecisions;
+  D.getInliningDecisions(InliningDecisions);
+  InliningDecisions.push_back(D.getCaller().str());
+  for (auto Dec : llvm::enumerate(InliningDecisions))
+    Diags.Report(Dec.index() ? diag::note_fe_backend_inlined
+                             : diag::note_fe_backend_in)
+        << llvm::demangle(Dec.value());
 }
 
 void BackendConsumer::MisExpectDiagHandler(

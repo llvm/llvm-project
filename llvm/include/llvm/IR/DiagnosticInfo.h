@@ -1099,15 +1099,19 @@ public:
 void diagnoseDontCall(const CallInst &CI);
 
 class DiagnosticInfoDontCall : public DiagnosticInfo {
+  StringRef CallerName;
   StringRef CalleeName;
   StringRef Note;
   unsigned LocCookie;
+  MDNode *MDN;
 
 public:
-  DiagnosticInfoDontCall(StringRef CalleeName, StringRef Note,
-                         DiagnosticSeverity DS, unsigned LocCookie)
-      : DiagnosticInfo(DK_DontCall, DS), CalleeName(CalleeName), Note(Note),
-        LocCookie(LocCookie) {}
+  DiagnosticInfoDontCall(StringRef CallerName, StringRef CalleeName,
+                         StringRef Note, DiagnosticSeverity DS,
+                         unsigned LocCookie, MDNode *MDN)
+      : DiagnosticInfo(DK_DontCall, DS), CallerName(CallerName),
+        CalleeName(CalleeName), Note(Note), LocCookie(LocCookie), MDN(MDN) {}
+  StringRef getCaller() const { return CallerName; }
   StringRef getFunctionName() const { return CalleeName; }
   StringRef getNote() const { return Note; }
   unsigned getLocCookie() const { return LocCookie; }
@@ -1115,6 +1119,8 @@ public:
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_DontCall;
   }
+  void
+  getInliningDecisions(SmallVectorImpl<std::string> &InliningDecisions) const;
 };
 
 } // end namespace llvm
