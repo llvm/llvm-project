@@ -31,6 +31,7 @@ def fir_Dialect : Dialect {
     // supported by some FIR operations.
     "arith::ArithDialect"
   ];
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // FORTRAN_DIALECT_FIR_DIALECT
