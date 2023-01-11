@@ -1,6 +1,3 @@
-include_directories($<TARGET_PROPERTY:LLVMRemoteCacheKVProto,BINARY_DIR>)
-include_directories($<TARGET_PROPERTY:LLVMRemoteCacheCASProto,BINARY_DIR>)
-
 set(LLVM_LINK_COMPONENTS
   CAS
   RemoteCacheServer

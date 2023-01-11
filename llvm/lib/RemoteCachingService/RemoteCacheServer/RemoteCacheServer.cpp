@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/RemoteCachingService/RemoteCacheServer.h"
-#include "RemoteCacheProvider.h"
-#include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/ObjectStore.h"
+#include "llvm/RemoteCachingService/RemoteCacheProvider.h"
+
+#include "compilation_caching_cas.grpc.pb.h"
+#include "compilation_caching_kv.grpc.pb.h"
 #include <grpcpp/grpcpp.h>
 
 using namespace llvm;
@@ -24,6 +25,169 @@ using grpc::ServerBuilder;
 using grpc::ServerCompletionQueue;
 using grpc::ServerContext;
 using grpc::Status;
+
+void RemoteCacheProvider::anchor() {}
+
+static GetValueResponse GetValueWithError(Error &&E) {
+  GetValueResponse Response;
+  Response.set_outcome(GetValueResponse_Outcome_ERROR);
+  Response.mutable_error()->set_description(toString(std::move(E)));
+  return Response;
+}
+
+static PutValueResponse PutValueWithError(Error &&E) {
+  PutValueResponse Response;
+  Response.mutable_error()->set_description(toString(std::move(E)));
+  return Response;
+}
+
+static CASLoadResponse CASLoadWithError(Error &&E) {
+  CASLoadResponse Response;
+  Response.set_outcome(CASLoadResponse_Outcome_ERROR);
+  Response.mutable_error()->set_description(toString(std::move(E)));
+  return Response;
+}
+
+static CASSaveResponse CASSaveWithError(Error &&E) {
+  CASSaveResponse Response;
+  Response.mutable_error()->set_description(toString(std::move(E)));
+  return Response;
+}
+
+static CASGetResponse CASGetWithError(Error &&E) {
+  CASGetResponse Response;
+  Response.set_outcome(CASGetResponse_Outcome_ERROR);
+  Response.mutable_error()->set_description(toString(std::move(E)));
+  return Response;
+}
+
+static CASPutResponse CASPutWithError(Error &&E) {
+  CASPutResponse Response;
+  Response.mutable_error()->set_description(toString(std::move(E)));
+  return Response;
+}
+
+static void
+GetValueAdapter(const GetValueRequest &Request, RemoteCacheProvider &Provider,
+                std::function<void(const GetValueResponse &)> Receiver) {
+  Provider.GetValueAsync(
+      Request.key(), [Receiver = std::move(Receiver)](
+                         Expected<Optional<std::string>> Response) {
+        if (!Response)
+          return Receiver(GetValueWithError(Response.takeError()));
+
+        GetValueResponse grpcResponse;
+        if (*Response) {
+          StringRef Value = **Response;
+          grpcResponse.mutable_value()->ParseFromArray(Value.data(),
+                                                       Value.size());
+        } else {
+          grpcResponse.set_outcome(GetValueResponse_Outcome_KEY_NOT_FOUND);
+        }
+        return Receiver(grpcResponse);
+      });
+}
+
+static void
+PutValueAdapter(const PutValueRequest &Request, RemoteCacheProvider &Provider,
+                std::function<void(const PutValueResponse &)> Receiver) {
+  Provider.PutValueAsync(Request.key(), Request.value().SerializeAsString(),
+                         [Receiver = std::move(Receiver)](Error E) {
+                           if (E)
+                             return Receiver(PutValueWithError(std::move(E)));
+                           return Receiver(PutValueResponse());
+                         });
+}
+
+static void
+CASLoadAdapter(const CASLoadRequest &Request, RemoteCacheProvider &Provider,
+               std::function<void(const CASLoadResponse &)> Receiver) {
+  Provider.CASLoadAsync(
+      Request.cas_id().id(), Request.write_to_disk(),
+      [Receiver = std::move(Receiver)](
+          Expected<RemoteCacheProvider::LoadResponse> Response) {
+        if (!Response)
+          return Receiver(CASLoadWithError(Response.takeError()));
+
+        CASLoadResponse grpcResponse;
+        grpcResponse.set_outcome(CASLoadResponse_Outcome_SUCCESS);
+        if (Response->Blob.IsFilePath) {
+          grpcResponse.mutable_data()->mutable_blob()->set_file_path(
+              std::move(Response->Blob.DataOrPath));
+        } else {
+          grpcResponse.mutable_data()->mutable_blob()->set_data(
+              std::move(Response->Blob.DataOrPath));
+        }
+        return Receiver(grpcResponse);
+      });
+}
+
+static void
+CASSaveAdapter(const CASSaveRequest &Request, RemoteCacheProvider &Provider,
+               std::function<void(const CASSaveResponse &)> Receiver) {
+  const CASBytes &grpcBlob = Request.data().blob();
+  RemoteCacheProvider::BlobContents Blob{
+      grpcBlob.has_file_path(),
+      grpcBlob.has_file_path() ? grpcBlob.file_path() : grpcBlob.data()};
+
+  Provider.CASSaveAsync(std::move(Blob), [Receiver = std::move(Receiver)](
+                                             Expected<std::string> ID) {
+    if (!ID)
+      return Receiver(CASSaveWithError(ID.takeError()));
+    CASSaveResponse grpcResponse;
+    grpcResponse.mutable_cas_id()->set_id(std::move(*ID));
+    return Receiver(grpcResponse);
+  });
+}
+
+static void
+CASGetAdapter(const CASGetRequest &Request, RemoteCacheProvider &Provider,
+              std::function<void(const CASGetResponse &)> Receiver) {
+  Provider.CASGetAsync(
+      Request.cas_id().id(), Request.write_to_disk(),
+      [Receiver = std::move(Receiver)](
+          Expected<RemoteCacheProvider::GetResponse> Response) {
+        if (!Response)
+          return Receiver(CASGetWithError(Response.takeError()));
+
+        CASGetResponse grpcResponse;
+        grpcResponse.set_outcome(CASGetResponse_Outcome_SUCCESS);
+        if (Response->Blob.IsFilePath) {
+          grpcResponse.mutable_data()->mutable_blob()->set_file_path(
+              std::move(Response->Blob.DataOrPath));
+        } else {
+          grpcResponse.mutable_data()->mutable_blob()->set_data(
+              std::move(Response->Blob.DataOrPath));
+        }
+        for (std::string &Ref : Response->Refs) {
+          grpcResponse.mutable_data()->add_references()->set_id(std::move(Ref));
+        }
+        return Receiver(grpcResponse);
+      });
+}
+
+static void
+CASPutAdapter(const CASPutRequest &Request, RemoteCacheProvider &Provider,
+              std::function<void(const CASPutResponse &)> Receiver) {
+  const CASBytes &grpcBlob = Request.data().blob();
+  RemoteCacheProvider::BlobContents Blob{
+      grpcBlob.has_file_path(),
+      grpcBlob.has_file_path() ? grpcBlob.file_path() : grpcBlob.data()};
+  SmallVector<std::string> Refs;
+  Refs.reserve(Request.data().references().size());
+  for (auto &Ref : Request.data().references())
+    Refs.push_back(Ref.id());
+
+  Provider.CASPutAsync(
+      std::move(Blob), std::move(Refs),
+      [Receiver = std::move(Receiver)](Expected<std::string> ID) {
+        if (!ID)
+          return Receiver(CASPutWithError(ID.takeError()));
+        CASPutResponse grpcResponse;
+        grpcResponse.mutable_cas_id()->set_id(std::move(*ID));
+        return Receiver(grpcResponse);
+      });
+}
 
 /// A gRPC server implementation for the remote cache service protocol. The
 /// actual work of storing and retrieving data is done via the provided
@@ -76,7 +240,7 @@ private:
     using ResponseT = GetValueResponse;
     using ServiceT = KeyValueDB::AsyncService;
 
-    static constexpr auto ProviderFunc = &RemoteCacheProvider::GetValueAsync;
+    static constexpr auto ProviderFunc = GetValueAdapter;
     static constexpr auto ServiceRequest = &ServiceT::RequestGetValue;
   };
 
@@ -84,7 +248,7 @@ private:
     using ResponseT = PutValueResponse;
     using ServiceT = KeyValueDB::AsyncService;
 
-    static constexpr auto ProviderFunc = &RemoteCacheProvider::PutValueAsync;
+    static constexpr auto ProviderFunc = PutValueAdapter;
     static constexpr auto ServiceRequest = &ServiceT::RequestPutValue;
   };
 
@@ -92,7 +256,7 @@ private:
     using ResponseT = CASLoadResponse;
     using ServiceT = CASDBService::AsyncService;
 
-    static constexpr auto ProviderFunc = &RemoteCacheProvider::CASLoadAsync;
+    static constexpr auto ProviderFunc = CASLoadAdapter;
     static constexpr auto ServiceRequest = &ServiceT::RequestLoad;
   };
 
@@ -100,7 +264,7 @@ private:
     using ResponseT = CASSaveResponse;
     using ServiceT = CASDBService::AsyncService;
 
-    static constexpr auto ProviderFunc = &RemoteCacheProvider::CASSaveAsync;
+    static constexpr auto ProviderFunc = CASSaveAdapter;
     static constexpr auto ServiceRequest = &ServiceT::RequestSave;
   };
 
@@ -108,7 +272,7 @@ private:
     using ResponseT = CASGetResponse;
     using ServiceT = CASDBService::AsyncService;
 
-    static constexpr auto ProviderFunc = &RemoteCacheProvider::CASGetAsync;
+    static constexpr auto ProviderFunc = CASGetAdapter;
     static constexpr auto ServiceRequest = &ServiceT::RequestGet;
   };
 
@@ -116,7 +280,7 @@ private:
     using ResponseT = CASPutResponse;
     using ServiceT = CASDBService::AsyncService;
 
-    static constexpr auto ProviderFunc = &RemoteCacheProvider::CASPutAsync;
+    static constexpr auto ProviderFunc = CASPutAdapter;
     static constexpr auto ServiceRequest = &ServiceT::RequestPut;
   };
 
@@ -161,8 +325,8 @@ private:
 
         // The actual processing.
         Status = CallStatus::Finish;
-        (Provider->*RequestTraits<RequestT>::ProviderFunc)(
-            Request, [this](const ResponseT &Response) {
+        RequestTraits<RequestT>::ProviderFunc(
+            Request, *Provider, [this](const ResponseT &Response) {
               Responder.Finish(Response, grpc::Status::OK, this);
             });
         break;
@@ -239,9 +403,7 @@ RemoteCacheServer::RemoteCacheServer(
     std::unique_ptr<RemoteCacheServer::Implementation> Impl)
     : Impl(std::move(Impl)) {}
 
-RemoteCacheServer::RemoteCacheServer(StringRef SocketPath, StringRef TempPath,
-                                     std::unique_ptr<ObjectStore> CAS,
-                                     std::unique_ptr<ActionCache> Cache)
+RemoteCacheServer::RemoteCacheServer(
+    StringRef SocketPath, std::unique_ptr<RemoteCacheProvider> CacheProvider)
     : RemoteCacheServer(std::make_unique<RemoteCacheServer::Implementation>(
-          SocketPath, createLLVMCASCacheProvider(TempPath, std::move(CAS),
-                                                 std::move(Cache)))) {}
+          SocketPath, std::move(CacheProvider))) {}
