@@ -43998,7 +43998,7 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
           cast<CondCodeSDNode>(Match.getOperand(2))->get() ==
               ISD::CondCode::SETEQ) {
         EVT VecSVT = Match.getOperand(0).getValueType().getScalarType();
-        if (VecSVT != MVT::i8) {
+        if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
           NumElts *= VecSVT.getSizeInBits() / 8;
           EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, NumElts);
           MatchVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElts);
