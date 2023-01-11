@@ -266,6 +266,35 @@ join:
   ret i32 %v
 }
 
+define i32 @phi_loop(i1 %c) {
+; CHECK-LABEL: @phi_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(32) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[ALLOCA]], [[ENTRY:%.*]] ], [ [[PTR_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  %alloca = alloca [32 x i8]
+  call void @llvm.memcpy.p0.p0.i64(ptr %alloca, ptr @g1, i64 32, i1 false)
+  br label %loop
+
+loop:
+  %ptr = phi ptr [ %alloca, %entry ], [ %ptr.next, %loop ]
+  %ptr.next = getelementptr i8, ptr %ptr, i64 4
+  br i1 %c, label %exit, label %loop
+
+exit:
+  %v = load i32, ptr %ptr
+  ret i32 %v
+}
+
 declare void @llvm.memcpy.p1i8.p0i8.i64(ptr addrspace(1), ptr, i64, i1)
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 declare void @llvm.memcpy.p0.p1.i64(ptr, ptr addrspace(1), i64, i1)
