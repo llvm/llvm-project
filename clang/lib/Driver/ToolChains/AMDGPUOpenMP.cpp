@@ -33,13 +33,24 @@ namespace {
 
 static bool checkSystemForAMDGPU(const ArgList &Args, const AMDGPUToolChain &TC,
                                  std::string &GPUArch) {
-  if (auto Err = TC.getSystemGPUArch(Args, GPUArch)) {
+  auto CheckError = [&](llvm::Error Err) -> bool {
     std::string ErrMsg =
         llvm::formatv("{0}", llvm::fmt_consume(std::move(Err)));
-    TC.getDriver().Diag(diag::err_drv_undetermined_amdgpu_arch) << ErrMsg;
+    TC.getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+        << llvm::Triple::getArchTypeName(TC.getArch()) << ErrMsg << "-march";
     return false;
-  }
+  };
 
+  auto ArchsOrErr = TC.getSystemGPUArchs(Args);
+  if (!ArchsOrErr)
+    return CheckError(ArchsOrErr.takeError());
+
+  if (ArchsOrErr->size() > 1)
+    if (!llvm::all_equal(*ArchsOrErr))
+      return CheckError(llvm::createStringError(
+          std::error_code(), "Multiple AMD GPUs found with different archs"));
+
+  GPUArch = ArchsOrErr->front();
   return true;
 }
 } // namespace
