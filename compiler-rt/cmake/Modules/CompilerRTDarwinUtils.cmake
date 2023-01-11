@@ -142,6 +142,11 @@ function(darwin_test_archs os valid_archs)
     list(REMOVE_ITEM archs "x86_64h")
   endif()
 
+  if(${os} MATCHES "iossim")
+    message(STATUS "Disabling i386 slice for iossim")
+    list(REMOVE_ITEM archs "i386")
+  endif()
+
   set(working_archs)
   foreach(arch ${archs})
    
