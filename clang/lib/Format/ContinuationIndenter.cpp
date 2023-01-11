@@ -1538,6 +1538,12 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
           std::max(State.Column, NewParenState.Indent), CurrentState.LastSpace);
     }
 
+    // Special case for generic selection expressions, its comma-separated
+    // expressions are not aligned to the opening paren like regular calls, but
+    // rather continuation-indented relative to the _Generic keyword.
+    if (Previous && Previous->endsSequence(tok::l_paren, tok::kw__Generic))
+      NewParenState.Indent = CurrentState.LastSpace;
+
     if (Previous &&
         (Previous->getPrecedence() == prec::Assignment ||
          Previous->isOneOf(tok::kw_return, TT_RequiresClause) ||
@@ -1684,8 +1690,12 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         (State.Line->Type != LT_ObjCDecl && Style.BinPackParameters) ||
         (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
 
+    bool GenericSelection =
+        Current.getPreviousNonComment() &&
+        Current.getPreviousNonComment()->is(tok::kw__Generic);
+
     AvoidBinPacking =
-        (CurrentState.IsCSharpGenericTypeConstraint) ||
+        (CurrentState.IsCSharpGenericTypeConstraint) || GenericSelection ||
         (Style.isJavaScript() && EndsInComma) ||
         (State.Line->MustBeDeclaration && !BinPackDeclaration) ||
         (!State.Line->MustBeDeclaration && !Style.BinPackArguments) ||
