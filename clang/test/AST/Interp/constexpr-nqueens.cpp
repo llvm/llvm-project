@@ -17,7 +17,8 @@ struct Board {
   constexpr Board(uint64_t State, bool Failed = false) :
     Failed(Failed) {}
   constexpr Board addQueen(int Row, int Col) const {
-    return Board(State | ((uint64_t)Row << (Col * 4))); // ref-note {{read of uninitialized object}}
+    return Board(State | ((uint64_t)Row << (Col * 4))); // ref-note {{read of uninitialized object}} \
+                                                        // expected-note {{read of object outside its lifetime}}
   }
   constexpr int getQueenRow(int Col) const {
     return (State >> (Col * 4)) & 0xf;
@@ -47,17 +48,22 @@ constexpr Board tryBoard(const Board &Try,
 constexpr Board buildBoardScan(int N, int Col, int Row, const Board &B) {
   return Row == N ? Board(0, true) :
          B.ok(Row, Col) ?
-         tryBoard(buildBoardRecurse(N, Col + 1, B.addQueen(Row, Col)), // ref-note {{in call to '&Board()->addQueen(0, 0)}}
+         tryBoard(buildBoardRecurse(N, Col + 1, B.addQueen(Row, Col)), // ref-note {{in call to '&Board()->addQueen(0, 0)}} \
+                                                                       // expected-note {{in call to '&Board()->addQueen(0, 0)}}
                   N, Col, Row+1, B) :
          buildBoardScan(N, Col, Row + 1, B);
 }
 constexpr Board buildBoardRecurse(int N, int Col, const Board &B) {
-  return Col == N ? B : buildBoardScan(N, Col, 0, B); // ref-note {{in call to 'buildBoardScan(8, 0, 0, Board())'}}
+  return Col == N ? B : buildBoardScan(N, Col, 0, B); // ref-note {{in call to 'buildBoardScan(8, 0, 0, Board())'}} \
+                                                      // expected-note {{in call to 'buildBoardScan(8, 0, 0, Board())'}}
+
 }
 constexpr Board buildBoard(int N) {
-  return buildBoardRecurse(N, 0, Board()); // ref-note {{in call to 'buildBoardRecurse(8, 0, Board())'}}
+  return buildBoardRecurse(N, 0, Board()); // ref-note {{in call to 'buildBoardRecurse(8, 0, Board())'}} \
+                                           // expected-note {{in call to 'buildBoardRecurse(8, 0, Board())'}}
 }
 
 constexpr Board q8 = buildBoard(8); // ref-error {{must be initialized by a constant expression}} \
                                     // ref-note {{in call to 'buildBoard(8)'}} \
-                                    // expected-error {{must be initialized by a constant expression}}
+                                    // expected-error {{must be initialized by a constant expression}} \
+                                    // expected-note {{in call to 'buildBoard(8)'}}
