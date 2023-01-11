@@ -1432,6 +1432,14 @@ def ICALL_BRANCH_FUNNEL : StandardPseudoInstruction {
   let AsmString = "";
   let hasSideEffects = true;
 }
+def MEMBARRIER : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let AsmString = "";
+  let hasSideEffects = true;
+  let Size = 0;
+  let isMeta = true;
+}
 
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"

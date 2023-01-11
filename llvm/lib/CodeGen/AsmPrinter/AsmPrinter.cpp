@@ -1653,6 +1653,9 @@ void AsmPrinter::emitFunctionBody() {
         if (isVerbose())
           OutStreamer->emitRawComment("ARITH_FENCE");
         break;
+      case TargetOpcode::MEMBARRIER:
+        OutStreamer->emitRawComment("MEMBARRIER");
+        break;
       default:
         emitInstruction(&MI);
         if (CanDoExtraAnalysis) {

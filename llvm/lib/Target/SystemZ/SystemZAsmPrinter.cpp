@@ -530,11 +530,6 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
         .addImm(15).addReg(SystemZ::R0D);
     break;
 
-  // Emit nothing here but a comment if we can.
-  case SystemZ::MemBarrier:
-    OutStreamer->emitRawComment("MEMBARRIER");
-    return;
-
   // We want to emit "j .+2" for traps, jumping to the relative immediate field
   // of the jump instruction, which is an illegal instruction. We cannot emit a
   // "." symbol, so create and emit a temp label before the instruction and use
