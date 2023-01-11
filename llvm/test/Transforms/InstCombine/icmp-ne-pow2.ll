@@ -9,8 +9,7 @@ define i32 @pow2_32_assume(i32 %x) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 4
-; CHECK-NEXT:    ret i32 [[AND2]]
+; CHECK-NEXT:    ret i32 4
 ;
   %and = and i32 %x, 4
   %cmp = icmp ne i32 %and, 0
@@ -39,8 +38,7 @@ define i64 @pow2_64_assume(i64 %x) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[AND]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[X]], 1
-; CHECK-NEXT:    ret i64 [[OR]]
+; CHECK-NEXT:    ret i64 [[X]]
 ;
   %and = and i64 %x, 1
   %cmp = icmp ne i64 %and, 0
@@ -69,8 +67,7 @@ define i16 @pow2_16_assume(i16 %x) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 16384
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X]], 16384
-; CHECK-NEXT:    ret i16 [[AND2]]
+; CHECK-NEXT:    ret i16 16384
 ;
   %and = and i16 %x, 16384
   %cmp = icmp eq i16 %and, 16384
