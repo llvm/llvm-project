@@ -1063,6 +1063,18 @@ cc_library(
     ],
 )
 
+gentbl(
+    name = "RISCVTargetParserDefGen",
+    tbl_outs = [("-gen-riscv-target-def", "include/llvm/TargetParser/RISCVTargetParserDef.inc")],
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/RISCV/RISCV.td",
+    td_srcs = [
+        ":common_target_td_sources",
+    ] + glob([
+        "lib/Target/RISCV/**/*.td",
+    ]),
+)
+
 cc_library(
     name = "TargetParser",
     srcs = glob([
@@ -1083,7 +1095,9 @@ cc_library(
     ]),
     copts = llvm_copts,
     includes = ["include"],
-    textual_hdrs = glob([
+    textual_hdrs = [
+        "include/llvm/TargetParser/RISCVTargetParserDef.inc",
+    ] + glob([
         "include/llvm/TargetParser/*.def",
     ]),
     deps = [
