@@ -2501,7 +2501,7 @@ struct FormatStyle {
   /// \endcode
   struct IntegerLiteralSeparatorStyle {
     /// Format separators in binary literals.
-    /// \code
+    /// \code{.text}
     ///    -1: 0b100111101101
     ///     0: 0b10011'11'0110'1
     ///     3: 0b100'111'101'101
