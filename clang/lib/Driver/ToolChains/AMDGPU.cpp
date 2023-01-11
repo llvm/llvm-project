@@ -9,6 +9,7 @@
 #include "AMDGPU.h"
 #include "CommonArgs.h"
 #include "clang/Basic/TargetID.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -391,61 +392,44 @@ void RocmInstallationDetector::detectDeviceLibrary() {
     return;
   }
 
-  // The install path situation in old versions of ROCm is a real mess, and
-  // use a different install layout. Multiple copies of the device libraries
-  // exist for each frontend project, and differ depending on which build
-  // system produced the packages. Standalone OpenCL builds also have a
-  // different directory structure from the ROCm OpenCL package.
-  auto &ROCmDirs = getInstallationPathCandidates();
-  for (const auto &Candidate : ROCmDirs) {
-    auto CandidatePath = Candidate.Path;
+  // Check device library exists at the given path.
+  auto CheckDeviceLib = [&](StringRef Path, bool StrictChecking) {
+    bool CheckLibDevice = (!NoBuiltinLibs || StrictChecking);
+    if (CheckLibDevice && !FS.exists(Path))
+      return false;
 
-    // Check device library exists at the given path.
-    auto CheckDeviceLib = [&](StringRef Path) {
-      bool CheckLibDevice = (!NoBuiltinLibs || Candidate.StrictChecking);
-      if (CheckLibDevice && !FS.exists(Path))
+    scanLibDevicePath(Path);
+
+    if (!NoBuiltinLibs) {
+      // Check that the required non-target libraries are all available.
+      if (!allGenericLibsValid())
         return false;
 
-      scanLibDevicePath(Path);
-
-      if (!NoBuiltinLibs) {
-        // Check that the required non-target libraries are all available.
-        if (!allGenericLibsValid())
-          return false;
-
-        // Check that we have found at least one libdevice that we can link in
-        // if -nobuiltinlib hasn't been specified.
-        if (LibDeviceMap.empty())
-          return false;
-      }
-      return true;
-    };
-
-    // The possible structures are:
-    // - ${ROCM_ROOT}/amdgcn/bitcode/*
-    // - ${ROCM_ROOT}/lib/*
-    // - ${ROCM_ROOT}/lib/bitcode/*
-    // so try to detect these layouts.
-    static constexpr std::array<const char *, 2> SubDirsList[] = {
-        {"amdgcn", "bitcode"},
-        {"lib", ""},
-        {"lib", "bitcode"},
-    };
-
-    // Make a path by appending sub-directories to InstallPath.
-    auto MakePath = [&](const llvm::ArrayRef<const char *> &SubDirs) {
-      auto Path = CandidatePath;
-      for (auto SubDir : SubDirs)
-        llvm::sys::path::append(Path, SubDir);
-      return Path;
-    };
-
-    for (auto SubDirs : SubDirsList) {
-      LibDevicePath = MakePath(SubDirs);
-      HasDeviceLibrary = CheckDeviceLib(LibDevicePath);
-      if (HasDeviceLibrary)
-        return;
+      // Check that we have found at least one libdevice that we can link in
+      // if -nobuiltinlib hasn't been specified.
+      if (LibDeviceMap.empty())
+        return false;
     }
+    return true;
+  };
+
+  // Find device libraries in <LLVM_DIR>/lib/clang/<ver>/lib/amdgcn/bitcode
+  LibDevicePath = D.ResourceDir;
+  llvm::sys::path::append(LibDevicePath, CLANG_INSTALL_LIBDIR_BASENAME,
+                          "amdgcn", "bitcode");
+  HasDeviceLibrary = CheckDeviceLib(LibDevicePath, true);
+  if (HasDeviceLibrary)
+    return;
+
+  // Find device libraries in a legacy ROCm directory structure
+  // ${ROCM_ROOT}/amdgcn/bitcode/*
+  auto &ROCmDirs = getInstallationPathCandidates();
+  for (const auto &Candidate : ROCmDirs) {
+    LibDevicePath = Candidate.Path;
+    llvm::sys::path::append(LibDevicePath, "amdgcn", "bitcode");
+    HasDeviceLibrary = CheckDeviceLib(LibDevicePath, Candidate.StrictChecking);
+    if (HasDeviceLibrary)
+      return;
   }
 }
 
