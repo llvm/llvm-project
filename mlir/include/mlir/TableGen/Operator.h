@@ -64,6 +64,9 @@ public:
   /// Returns the name of op's adaptor C++ class.
   std::string getAdaptorName() const;
 
+  /// Returns the name of op's generic adaptor C++ class.
+  std::string getGenericAdaptorName() const;
+
   /// Check invariants (like no duplicated or conflicted names) and abort the
   /// process if any invariant is broken.
   void assertInvariants() const;
