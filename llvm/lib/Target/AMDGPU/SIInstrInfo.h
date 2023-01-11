@@ -777,6 +777,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FPAtomic;
   }
 
+  static bool doesNotReadTiedSource(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::TiedSourceNotRead;
+  }
+
+  bool doesNotReadTiedSource(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::TiedSourceNotRead;
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(MI.isCopy());
     Register Dest = MI.getOperand(0).getReg();
