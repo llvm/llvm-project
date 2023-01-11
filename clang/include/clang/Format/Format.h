@@ -2509,14 +2509,14 @@ struct FormatStyle {
     /// \endcode
     int8_t Binary;
     /// Format separators in decimal literals.
-    /// \code
+    /// \code{.text}
     ///    -1: 18446744073709550592ull
     ///     0: 184467'440737'0'95505'92ull
     ///     3: 18'446'744'073'709'550'592ull
     /// \endcode
     int8_t Decimal;
     /// Format separators in hexadecimal literals.
-    /// \code
+    /// \code{.text}
     ///    -1: 0xDEADBEEFDEADBEEFuz
     ///     0: 0xDEAD'BEEF'DE'AD'BEE'Fuz
     ///     2: 0xDE'AD'BE'EF'DE'AD'BE'EFuz
