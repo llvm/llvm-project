@@ -695,22 +695,36 @@ private:
       }
     }
 
-    RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
-    auto cooBuffer =
-        rewriter.create<AllocTensorOp>(loc, cooTp, dynSizes).getResult();
+    SparseTensorEncodingAttr encDst = getSparseTensorEncoding(dstTp);
+    // We don't need a temporary COO tensor if the destination has an identity
+    // ordering. Otherwise, we use the destination ordering for the temporary
+    // COO tensor.
+    // TODO: enhance foreachOp to take ordering to remove the need of a
+    // temporary COO tensor here.
+    RankedTensorType bufferTp = encDst.hasIdDimOrdering()
+                                    ? dstTp
+                                    : getUnorderedCOOFromTypeWithOrdering(
+                                          dstTp, encDst.getDimOrdering());
+    auto buffer =
+        rewriter.create<AllocTensorOp>(loc, bufferTp, dynSizes).getResult();
     auto foreachOp = rewriter.create<ForeachOp>(
-        loc, src, cooBuffer,
+        loc, src, buffer,
         [&](OpBuilder &builder, Location loc, ValueRange indices, Value v,
             ValueRange reduc) {
           Value input = reduc.front();
+          uint64_t rank = dstTp.getRank();
+          SmallVector<Value> indicesArray(rank, Value());
+          for (uint64_t i = 0; i < rank; i++)
+            indicesArray[toStoredDim(encDst, i)] = indices[i];
           if (fromSparseConst) {
-            input = builder.create<InsertOp>(loc, v, input, indices);
+            input = builder.create<InsertOp>(loc, v, input, indicesArray);
           } else {
             Value cond = genIsNonzero(builder, loc, v);
             auto ifOp = builder.create<scf::IfOp>(
                 loc, TypeRange(input.getType()), cond, /*else*/ true);
             builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-            Value insert = builder.create<InsertOp>(loc, v, input, indices);
+            Value insert =
+                builder.create<InsertOp>(loc, v, input, indicesArray);
             builder.create<scf::YieldOp>(loc, insert);
             builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
             builder.create<scf::YieldOp>(loc, input);
@@ -721,8 +735,12 @@ private:
         });
     rewriter.setInsertionPointAfter(op);
     src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
-    rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, src);
-    rewriter.create<DeallocTensorOp>(loc, src);
+    if (bufferTp != dstTp) {
+      rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, src);
+      rewriter.create<DeallocTensorOp>(loc, src);
+    } else {
+      rewriter.replaceOp(op, src);
+    }
 
     return success();
   }
