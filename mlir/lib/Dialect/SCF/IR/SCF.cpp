@@ -1598,7 +1598,7 @@ void IfOp::getSuccessorRegions(std::optional<unsigned> index,
   regions.push_back(RegionSuccessor(condition ? &getThenRegion() : elseRegion));
 }
 
-LogicalResult IfOp::fold(ArrayRef<Attribute> operands,
+LogicalResult IfOp::fold(FoldAdaptor adaptor,
                          SmallVectorImpl<OpFoldResult> &results) {
   // if (!c) then A() else B() -> if c then B() else A()
   if (getElseRegion().empty())

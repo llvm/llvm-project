@@ -129,8 +129,7 @@ LogicalResult emitc::ConstantOp::verify() {
   return success();
 }
 
-OpFoldResult emitc::ConstantOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "constant has no operands");
+OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) {
   return getValue();
 }
 
