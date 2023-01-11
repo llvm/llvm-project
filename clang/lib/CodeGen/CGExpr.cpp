@@ -3089,7 +3089,7 @@ llvm::Value *CodeGenFunction::EmitCheckValue(llvm::Value *V) {
   // Floating-point types which fit into intptr_t are bitcast to integers
   // and then passed directly (after zero-extension, if necessary).
   if (V->getType()->isFloatingPointTy()) {
-    unsigned Bits = V->getType()->getPrimitiveSizeInBits().getFixedSize();
+    unsigned Bits = V->getType()->getPrimitiveSizeInBits().getFixedValue();
     if (Bits <= TargetTy->getIntegerBitWidth())
       V = Builder.CreateBitCast(V, llvm::Type::getIntNTy(getLLVMContext(),
                                                          Bits));
