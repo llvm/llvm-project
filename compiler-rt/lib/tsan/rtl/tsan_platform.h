@@ -34,6 +34,14 @@ enum {
   // This is bad and can lead to unpredictable memory corruptions, etc
   // because range access functions assume linearity.
   kBrokenLinearity = 1 << 2,
+  // Meta for an app region overlaps with the meta of another app region.
+  // This is determined by recomputing the individual meta regions for
+  // each app region.
+  //
+  // N.B. There is no "kBrokenReverseMetaMapping" constant because there
+  // is no MetaToMem function. However, note that (!kBrokenLinearity
+  // && !kBrokenAliasedMetas) implies that MemToMeta is invertible.
+  kBrokenAliasedMetas = 1 << 3,
 };
 
 /*
@@ -159,6 +167,7 @@ C/C++ on linux/aarch64 (39-bit VMA)
 7d00 0000 00 - 7fff ffff ff: modules and main thread stack
 */
 struct MappingAarch64_39 {
+  static const uptr kBroken = kBrokenAliasedMetas;
   static const uptr kLoAppMemBeg   = 0x0000001000ull;
   static const uptr kLoAppMemEnd   = 0x0100000000ull;
   static const uptr kShadowBeg = 0x0400000000ull;
@@ -191,7 +200,7 @@ C/C++ on linux/aarch64 (42-bit VMA)
 3f000 0000 00 - 3ffff ffff ff: modules and main thread stack
 */
 struct MappingAarch64_42 {
-  static const uptr kBroken = kBrokenReverseMapping;
+  static const uptr kBroken = kBrokenReverseMapping | kBrokenAliasedMetas;
   static const uptr kLoAppMemBeg   = 0x00000001000ull;
   static const uptr kLoAppMemEnd   = 0x01000000000ull;
   static const uptr kShadowBeg = 0x08000000000ull;
@@ -274,8 +283,8 @@ C/C++ on linux/powerpc64 (44-bit VMA)
 0f60 0000 0000 - 1000 0000 0000: modules and main thread stack
 */
 struct MappingPPC64_44 {
-  static const uptr kBroken =
-      kBrokenMapping | kBrokenReverseMapping | kBrokenLinearity;
+  static const uptr kBroken = kBrokenMapping | kBrokenReverseMapping |
+                              kBrokenLinearity | kBrokenAliasedMetas;
   static const uptr kMetaShadowBeg = 0x0b0000000000ull;
   static const uptr kMetaShadowEnd = 0x0d0000000000ull;
   static const uptr kShadowBeg     = 0x000100000000ull;
@@ -286,6 +295,7 @@ struct MappingPPC64_44 {
   static const uptr kHeapMemEnd    = 0x0f5000000000ull;
   static const uptr kHiAppMemBeg   = 0x0f6000000000ull;
   static const uptr kHiAppMemEnd   = 0x100000000000ull; // 44 bits
+
   static const uptr kShadowMsk = 0x0f0000000000ull;
   static const uptr kShadowXor = 0x002100000000ull;
   static const uptr kShadowAdd = 0x000000000000ull;

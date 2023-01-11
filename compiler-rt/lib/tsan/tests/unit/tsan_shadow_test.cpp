@@ -15,6 +15,11 @@
 
 namespace __tsan {
 
+struct Region {
+  uptr start;
+  uptr end;
+};
+
 void CheckShadow(const Shadow *s, Sid sid, Epoch epoch, uptr addr, uptr size,
                  AccessType typ) {
   uptr addr1 = 0;
@@ -126,6 +131,30 @@ bool broken(uptr what, typename Has<Mapping::kBroken>::Result = false) {
   return Mapping::kBroken & what;
 }
 
+static int CompareRegion(const void *region_a, const void *region_b) {
+  uptr start_a = ((struct Region *)region_a)->start;
+  uptr start_b = ((struct Region *)region_b)->start;
+
+  if (start_a < start_b) {
+    return -1;
+  } else if (start_a > start_b) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+template <typename Mapping>
+static void AddMetaRegion(struct Region *shadows, int *num_regions, uptr start,
+                          uptr end) {
+  // If the app region is not empty, add its meta to the array.
+  if (start != end) {
+    shadows[*num_regions].start = (uptr)MemToMetaImpl::Apply<Mapping>(start);
+    shadows[*num_regions].end = (uptr)MemToMetaImpl::Apply<Mapping>(end - 1);
+    *num_regions = (*num_regions) + 1;
+  }
+}
+
 struct MappingTest {
   template <typename Mapping>
   static void Apply() {
@@ -135,6 +164,11 @@ struct MappingTest {
     TestRegion<Mapping>(Mapping::kMidAppMemBeg, Mapping::kMidAppMemEnd);
     TestRegion<Mapping>(Mapping::kHiAppMemBeg, Mapping::kHiAppMemEnd);
     TestRegion<Mapping>(Mapping::kHeapMemBeg, Mapping::kHeapMemEnd);
+
+    TestDisjointMetas<Mapping>();
+
+    // Not tested: the ordering of regions (low app vs. shadow vs. mid app
+    // etc.). That is enforced at runtime by CheckAndProtect.
   }
 
   template <typename Mapping>
@@ -171,6 +205,41 @@ struct MappingTest {
         prev = p;
       }
     }
+  }
+
+  template <typename Mapping>
+  static void TestDisjointMetas() {
+    // Checks that the meta for each app region does not overlap with
+    // the meta for other app regions. For example, the meta for a high
+    // app pointer shouldn't be aliased to the meta of a mid app pointer.
+    // Notice that this is important even though there does not exist a
+    // MetaToMem function.
+    // (If a MetaToMem function did exist, we could simply
+    // check in the TestRegion function that it inverts MemToMeta.)
+    //
+    // We don't try to be clever by allowing the non-PIE (low app)
+    // and PIE (mid and high app) meta regions to overlap.
+    struct Region metas[4];
+    int num_regions = 0;
+    AddMetaRegion<Mapping>(metas, &num_regions, Mapping::kLoAppMemBeg,
+                           Mapping::kLoAppMemEnd);
+    AddMetaRegion<Mapping>(metas, &num_regions, Mapping::kMidAppMemBeg,
+                           Mapping::kMidAppMemEnd);
+    AddMetaRegion<Mapping>(metas, &num_regions, Mapping::kHiAppMemBeg,
+                           Mapping::kHiAppMemEnd);
+    AddMetaRegion<Mapping>(metas, &num_regions, Mapping::kHeapMemBeg,
+                           Mapping::kHeapMemEnd);
+
+    // It is not required that the low app shadow is below the mid app
+    // shadow etc., hence we sort the shadows.
+    qsort(metas, num_regions, sizeof(struct Region), CompareRegion);
+
+    for (int i = 0; i < num_regions; i++)
+      Printf("[0x%lu, 0x%lu]\n", metas[i].start, metas[i].end);
+
+    if (!broken<Mapping>(kBrokenAliasedMetas))
+      for (int i = 1; i < num_regions; i++)
+        CHECK(metas[i - 1].end <= metas[i].start);
   }
 };
 
