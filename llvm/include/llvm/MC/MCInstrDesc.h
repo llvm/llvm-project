@@ -207,10 +207,11 @@ public:
   unsigned char NumDefs;         // Num of args that are definitions
   unsigned char Size;            // Number of bytes in encoding.
   unsigned short SchedClass;     // enum identifying instr sched class
+  unsigned char NumImplicitUses; // Num of regs implicitly used
+  unsigned char NumImplicitDefs; // Num of regs implicitly defined
   uint64_t Flags;                // Flags identifying machine instr class
   uint64_t TSFlags;              // Target Specific Flag values
-  const MCPhysReg *ImplicitUses; // Registers implicitly read by this instr
-  const MCPhysReg *ImplicitDefs; // Registers implicitly defined by this instr
+  const MCPhysReg *ImplicitOps;  // List of implicit uses followed by defs
   const MCOperandInfo *OpInfo;   // 'NumOperands' entries about operands
 
   /// Returns the value of the specified operand constraint if
@@ -566,21 +567,8 @@ public:
   /// flags register.  In this case, the instruction is marked as implicitly
   /// reading the flags.  Likewise, the variable shift instruction on X86 is
   /// marked as implicitly reading the 'CL' register, which it always does.
-  ///
-  /// This method returns null if the instruction has no implicit uses.
-  const MCPhysReg *getImplicitUses() const { return ImplicitUses; }
   ArrayRef<MCPhysReg> implicit_uses() const {
-    return {ImplicitUses, getNumImplicitUses()};
-  }
-
-  /// Return the number of implicit uses this instruction has.
-  unsigned getNumImplicitUses() const {
-    if (!ImplicitUses)
-      return 0;
-    unsigned i = 0;
-    for (; ImplicitUses[i]; ++i) /*empty*/
-      ;
-    return i;
+    return {ImplicitOps, NumImplicitUses};
   }
 
   /// Return a list of registers that are potentially written by any
@@ -591,21 +579,8 @@ public:
   /// instruction always deposits the quotient and remainder in the EAX/EDX
   /// registers.  For that instruction, this will return a list containing the
   /// EAX/EDX/EFLAGS registers.
-  ///
-  /// This method returns null if the instruction has no implicit defs.
-  const MCPhysReg *getImplicitDefs() const { return ImplicitDefs; }
   ArrayRef<MCPhysReg> implicit_defs() const {
-    return {ImplicitDefs, getNumImplicitDefs()};
-  }
-
-  /// Return the number of implicit defs this instruct has.
-  unsigned getNumImplicitDefs() const {
-    if (!ImplicitDefs)
-      return 0;
-    unsigned i = 0;
-    for (; ImplicitDefs[i]; ++i) /*empty*/
-      ;
-    return i;
+    return {ImplicitOps + NumImplicitUses, NumImplicitDefs};
   }
 
   /// Return true if this instruction implicitly
