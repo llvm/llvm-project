@@ -101,8 +101,7 @@ static cl::opt<int>
 
 static codegen::RegisterCodeGenFlags CGF;
 
-bool isReduced(ReducerWorkItem &M, const TestRunner &Test,
-               const std::atomic<bool> &Killed);
+bool isReduced(ReducerWorkItem &M, const TestRunner &Test);
 
 /// Turn off crash debugging features
 ///
@@ -218,7 +217,7 @@ int main(int Argc, char **Argv) {
   // test, rather than evaluating the source IR directly. This is for the
   // convenience of lit tests; the stripped out comments may have broken the
   // interestingness checks.
-  if (!isReduced(Tester.getProgram(), Tester, std::atomic<bool>())) {
+  if (!isReduced(Tester.getProgram(), Tester)) {
     errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
     return 1;
   }
