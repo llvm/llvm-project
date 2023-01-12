@@ -306,7 +306,20 @@ RValue CIRGenFunction::buildLoadOfLValue(LValue LV, SourceLocation Loc) {
 
 void CIRGenFunction::buildStoreThroughLValue(RValue Src, LValue Dst) {
   assert(Dst.isSimple() && "only implemented simple");
-  // TODO: ObjC lifetime.
+
+  // There's special magic for assigning into an ARC-qualified l-value.
+  if (Qualifiers::ObjCLifetime Lifetime = Dst.getQuals().getObjCLifetime()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (Dst.isObjCWeak() && !Dst.isNonGC()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (Dst.isObjCStrong() && !Dst.isNonGC()) {
+    llvm_unreachable("NYI");
+  }
+
   assert(Src.isScalar() && "Can't emit an agg store with this method");
   buildStoreOfScalar(Src.getScalarVal(), Dst);
 }
