@@ -57,5 +57,6 @@ target_link_libraries(ClangTidyTests
   clangTidyObjCModule
   clangTidyReadabilityModule
   clangTidyUtils
+  LLVMTestingAnnotations
   LLVMTestingSupport
   )

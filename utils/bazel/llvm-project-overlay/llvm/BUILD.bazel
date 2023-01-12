@@ -4516,9 +4516,7 @@ cc_library(
         "lib/Testing/Support/*.cpp",
         "lib/Testing/Support/*.h",
     ]),
-    hdrs = glob([
-        "include/llvm/Testing/Support/*.h",
-    ]),
+    hdrs = glob(["include/llvm/Testing/Support/*.h"]),
     copts = llvm_copts,
     deps = [
         ":Support",
@@ -4526,6 +4524,15 @@ cc_library(
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
     ],
+)
+
+cc_library(
+    name = "TestingAnnotations",
+    testonly = True,
+    srcs = ["lib/Testing/Annotations/Annotations.cpp"],
+    hdrs = ["include/llvm/Testing/Annotations/Annotations.h"],
+    copts = llvm_copts,
+    deps = [":Support"],
 )
 
 ################################################################################
