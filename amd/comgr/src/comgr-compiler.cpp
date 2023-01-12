@@ -843,6 +843,14 @@ amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
   }
 
   ArgsV.push_back("--genco");
+
+  if (env::shouldEmitVerboseLogs()) {
+    LogS << "\t    hipcc Command: ";
+    for (auto A : ArgsV)
+      LogS << A << " ";
+    LogS << "\n";
+  }
+
   llvm::ArrayRef<std::optional<StringRef>> Redirects;
   std::string ErrMsg;
   int RC = sys::ExecuteAndWait(Exec, ArgsV,
