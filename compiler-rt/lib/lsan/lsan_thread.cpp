@@ -87,9 +87,15 @@ ThreadRegistry *GetLsanThreadRegistryLocked() {
   return thread_registry;
 }
 
-void RunCallbackForEachThreadLocked(
-    __sanitizer::ThreadRegistry::ThreadCallback cb, void *arg) {
-  GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(cb, arg);
+void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
+  GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+      [](ThreadContextBase *tctx, void *threads) {
+        if (tctx->status == ThreadStatusRunning) {
+          reinterpret_cast<InternalMmapVector<tid_t> *>(threads)->push_back(
+              tctx->os_id);
+        }
+      },
+      threads);
 }
 
 }  // namespace __lsan

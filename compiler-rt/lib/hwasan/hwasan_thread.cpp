@@ -198,6 +198,6 @@ void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg) {}
 
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {}
-void ReportUnsuspendedThreadsLocked(InternalMmapVector<tid_t> *threads) {}
+void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {}
 
 }  // namespace __lsan
