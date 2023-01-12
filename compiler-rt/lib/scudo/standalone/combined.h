@@ -936,7 +936,7 @@ public:
 
   const char *getRingBufferAddress() {
     initThreadMaybe();
-    return reinterpret_cast<const char *>(getRingBuffer());
+    return RawRingBuffer;
   }
 
   uptr getRingBufferSize() {
