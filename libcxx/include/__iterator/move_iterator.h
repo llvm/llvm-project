@@ -53,7 +53,7 @@ struct __move_iter_category_base<_Iter> {
 
 template<class _Iter, class _Sent>
 concept __move_iter_comparable = requires {
-    { declval<const _Iter&>() == declval<_Sent>() } -> convertible_to<bool>;
+    { std::declval<const _Iter&>() == std::declval<_Sent>() } -> convertible_to<bool>;
 };
 #endif // _LIBCPP_STD_VER > 17
 
