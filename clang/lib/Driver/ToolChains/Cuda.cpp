@@ -794,7 +794,7 @@ CudaToolChain::getSystemGPUArchs(const ArgList &Args) const {
     return llvm::createStringError(std::error_code(),
                                    "No NVIDIA GPU detected in the system");
 
-  return GPUArchs;
+  return std::move(GPUArchs);
 }
 
 Tool *CudaToolChain::buildAssembler() const {
