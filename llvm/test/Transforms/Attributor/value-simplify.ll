@@ -13,6 +13,7 @@ declare ptr @llvm.call.preallocated.arg(token, i32)
 ; CHECK: @[[CONSTAS3PTR:[a-zA-Z0-9_$"\\.-]+]] = addrspace(3) global i32 0, align 4
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external global [[STRUCT_X:%.*]]
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal constant { [2 x ptr] } { [2 x ptr] [ptr @f1, ptr @f2] }
+; CHECK: @[[X:[a-zA-Z0-9_$"\\.-]+]] = external global i32
 ;.
 define internal ptr addrspace(3) @const_ptr_return_as3() {
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
@@ -88,11 +89,11 @@ define i32 @test2_1(i1 %c) {
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CGSCC:       if.true:
-; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @return0() #[[ATTR12:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = tail call i32 @return0() #[[ATTR13:[0-9]+]]
 ; CGSCC-NEXT:    [[RET0:%.*]] = add i32 [[CALL]], 1
 ; CGSCC-NEXT:    br label [[END:%.*]]
 ; CGSCC:       if.false:
-; CGSCC-NEXT:    [[RET1:%.*]] = tail call i32 @return1() #[[ATTR12]]
+; CGSCC-NEXT:    [[RET1:%.*]] = tail call i32 @return1() #[[ATTR13]]
 ; CGSCC-NEXT:    br label [[END]]
 ; CGSCC:       end:
 ; CGSCC-NEXT:    [[RET:%.*]] = phi i32 [ [[RET0]], [[IF_TRUE]] ], [ [[RET1]], [[IF_FALSE]] ]
@@ -124,7 +125,7 @@ define i32 @test2_2(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test2_2
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR2]] {
-; CGSCC-NEXT:    [[RET:%.*]] = tail call noundef i32 @test2_1(i1 noundef [[C]]) #[[ATTR12]]
+; CGSCC-NEXT:    [[RET:%.*]] = tail call noundef i32 @test2_1(i1 noundef [[C]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret i32 [[RET]]
 ;
   %ret = tail call i32 @test2_1(i1 %c)
@@ -151,7 +152,7 @@ define void @test3(i1 %c) {
 ; CGSCC:       if.true:
 ; CGSCC-NEXT:    br label [[END:%.*]]
 ; CGSCC:       if.false:
-; CGSCC-NEXT:    [[RET1:%.*]] = tail call i32 @return1() #[[ATTR12]]
+; CGSCC-NEXT:    [[RET1:%.*]] = tail call i32 @return1() #[[ATTR13]]
 ; CGSCC-NEXT:    br label [[END]]
 ; CGSCC:       end:
 ; CGSCC-NEXT:    [[R:%.*]] = phi i32 [ 1, [[IF_TRUE]] ], [ [[RET1]], [[IF_FALSE]] ]
@@ -273,7 +274,7 @@ define i1 @ipccp2() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@ipccp2
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[R:%.*]] = call noundef i1 @ipccp2i() #[[ATTR12]]
+; CGSCC-NEXT:    [[R:%.*]] = call noundef i1 @ipccp2i() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @ipccp2i(i1 true)
@@ -307,7 +308,7 @@ define i1 @ipccp2b() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@ipccp2b
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[R:%.*]] = call noundef i1 @ipccp2ib() #[[ATTR12]]
+; CGSCC-NEXT:    [[R:%.*]] = call noundef i1 @ipccp2ib() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @ipccp2ib(i1 true)
@@ -342,7 +343,7 @@ define i32 @ipccp3() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@ipccp3
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[R:%.*]] = call noundef i32 @ipccp3i() #[[ATTR12]]
+; CGSCC-NEXT:    [[R:%.*]] = call noundef i32 @ipccp3i() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @ipccp3i(i32 7)
@@ -371,7 +372,7 @@ define internal i32 @ipccp4ib(i32 %a) {
 ; CGSCC-SAME: () #[[ATTR2]] {
 ; CGSCC-NEXT:    br label [[T:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[R:%.*]] = call noundef i32 @ipccp4ia(i1 noundef true) #[[ATTR12]]
+; CGSCC-NEXT:    [[R:%.*]] = call noundef i32 @ipccp4ia(i1 noundef true) #[[ATTR13]]
 ; CGSCC-NEXT:    ret i32 [[R]]
 ; CGSCC:       f:
 ; CGSCC-NEXT:    unreachable
@@ -402,7 +403,7 @@ define i32 @ipccp4(i1 %c) {
 ; CGSCC:       t:
 ; CGSCC-NEXT:    br label [[F]]
 ; CGSCC:       f:
-; CGSCC-NEXT:    [[R:%.*]] = call noundef i32 @ipccp4ib() #[[ATTR12]]
+; CGSCC-NEXT:    [[R:%.*]] = call noundef i32 @ipccp4ib() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i32 [[R]]
 ;
   br i1 %c, label %t, label %f
@@ -434,7 +435,7 @@ define ptr @complicated_args_inalloca(ptr %arg) {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@complicated_args_inalloca
 ; CGSCC-SAME: (ptr nofree noundef nonnull readnone dereferenceable(4) [[ARG:%.*]]) #[[ATTR2]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call noalias nonnull dereferenceable(4) ptr @test_inalloca(ptr noalias nofree noundef nonnull writeonly inalloca(i32) dereferenceable(4) [[ARG]]) #[[ATTR12]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias nonnull dereferenceable(4) ptr @test_inalloca(ptr noalias nofree noundef nonnull writeonly inalloca(i32) dereferenceable(4) [[ARG]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret ptr [[CALL]]
 ;
   %call = call ptr @test_inalloca(ptr inalloca(i32) %arg)
@@ -460,8 +461,8 @@ define ptr @complicated_args_preallocated() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; CGSCC-SAME: () #[[ATTR3:[0-9]+]] {
-; CGSCC-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR12]]
-; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @test_preallocated(ptr noalias nocapture nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR13:[0-9]+]] [ "preallocated"(token [[C]]) ]
+; CGSCC-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR13]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @test_preallocated(ptr noalias nocapture nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR14:[0-9]+]] [ "preallocated"(token [[C]]) ]
 ; CGSCC-NEXT:    ret ptr null
 ;
   %c = call token @llvm.call.preallocated.setup(i32 1)
@@ -522,7 +523,7 @@ define ptr @complicated_args_nest() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@complicated_args_nest
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call noalias noundef align 4294967296 ptr @test_nest(ptr noalias nocapture nofree noundef readnone align 4294967296 null) #[[ATTR12]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias noundef align 4294967296 ptr @test_nest(ptr noalias nocapture nofree noundef readnone align 4294967296 null) #[[ATTR13]]
 ; CGSCC-NEXT:    ret ptr [[CALL]]
 ;
   %call = call ptr @test_nest(ptr null)
@@ -562,7 +563,7 @@ define void @complicated_args_byval() {
 ; CGSCC-LABEL: define {{[^@]+}}@complicated_args_byval
 ; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:    [[TMP1:%.*]] = load ptr, ptr @S, align 8
-; CGSCC-NEXT:    call void @test_byval(ptr nofree writeonly [[TMP1]]) #[[ATTR13]]
+; CGSCC-NEXT:    call void @test_byval(ptr nofree writeonly [[TMP1]]) #[[ATTR14]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @test_byval(ptr byval(%struct.X) @S)
@@ -678,7 +679,7 @@ define i8 @caller0() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller0
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR12]]
+; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i8 [[C]]
 ;
   %c = call i8 @callee(i8 undef)
@@ -693,7 +694,7 @@ define i8 @caller1() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller1
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR12]]
+; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i8 [[C]]
 ;
   %c = call i8 @callee(i8 undef)
@@ -708,7 +709,7 @@ define i8 @caller2() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller2
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR12]]
+; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i8 [[C]]
 ;
   %c = call i8 @callee(i8 undef)
@@ -723,7 +724,7 @@ define i8 @caller_middle() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller_middle
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR12]]
+; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i8 [[C]]
 ;
   %c = call i8 @callee(i8 42)
@@ -738,7 +739,7 @@ define i8 @caller3() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller3
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR12]]
+; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i8 [[C]]
 ;
   %c = call i8 @callee(i8 undef)
@@ -753,7 +754,7 @@ define i8 @caller4() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller4
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR12]]
+; CGSCC-NEXT:    [[C:%.*]] = call noundef i8 @callee() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i8 [[C]]
 ;
   %c = call i8 @callee(i8 undef)
@@ -779,7 +780,7 @@ define void @user_as3() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@user_as3
 ; CGSCC-SAME: () #[[ATTR6:[0-9]+]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call fastcc align 4 ptr addrspace(3) @const_ptr_return_as3() #[[ATTR12]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call fastcc align 4 ptr addrspace(3) @const_ptr_return_as3() #[[ATTR13]]
 ; CGSCC-NEXT:    store i32 0, ptr addrspace(3) [[CALL]], align 4
 ; CGSCC-NEXT:    ret void
 ;
@@ -797,7 +798,7 @@ define void @user() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@user
 ; CGSCC-SAME: () #[[ATTR6]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call fastcc align 4 ptr @const_ptr_return() #[[ATTR12]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call fastcc align 4 ptr @const_ptr_return() #[[ATTR13]]
 ; CGSCC-NEXT:    store i32 0, ptr [[CALL]], align 4
 ; CGSCC-NEXT:    ret void
 ;
@@ -816,7 +817,7 @@ define i1 @test_merge_with_undef_values_ptr(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_merge_with_undef_values_ptr
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2]] {
-; CGSCC-NEXT:    [[R1:%.*]] = call noundef i1 @undef_then_null(i1 [[C]]) #[[ATTR12]]
+; CGSCC-NEXT:    [[R1:%.*]] = call noundef i1 @undef_then_null(i1 [[C]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret i1 [[R1]]
 ;
   %r1 = call i1 @undef_then_null(i1 %c, ptr undef, ptr undef)
@@ -852,7 +853,7 @@ define i1 @test_merge_with_undef_values(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_merge_with_undef_values
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2]] {
-; CGSCC-NEXT:    [[R1:%.*]] = call noundef i1 @undef_then_1(i1 [[C]]) #[[ATTR12]]
+; CGSCC-NEXT:    [[R1:%.*]] = call noundef i1 @undef_then_1(i1 [[C]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret i1 [[R1]]
 ;
   %r1 = call i1 @undef_then_1(i1 %c, i32 undef, i32 undef)
@@ -889,7 +890,7 @@ define i32 @test_select(i32 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_select
 ; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR2]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call noundef i32 @select() #[[ATTR12]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noundef i32 @select() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @select(i1 1, i32 42, i32 %c)
@@ -936,7 +937,7 @@ define void @test_callee_is_undef(ptr %fn) {
 define internal void @callee_is_undef(ptr %fn) {
 ;
 ; CHECK-LABEL: define {{[^@]+}}@callee_is_undef() {
-; CHECK-NEXT:    call void poison()
+; CHECK-NEXT:    call void undef()
 ; CHECK-NEXT:    ret void
 ;
   call void %fn()
@@ -1035,7 +1036,7 @@ define i1 @test_cmp_null_after_cast() {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_cmp_null_after_cast
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[C:%.*]] = call noundef i1 @cmp_null_after_cast() #[[ATTR12]]
+; CGSCC-NEXT:    [[C:%.*]] = call noundef i1 @cmp_null_after_cast() #[[ATTR13]]
 ; CGSCC-NEXT:    ret i1 [[C]]
 ;
   %c = call i1 @cmp_null_after_cast(i32 0, i8 0)
@@ -1156,7 +1157,7 @@ define i1 @test_liveness(i1 %c) {
 ; CGSCC-NEXT:    br label [[F]]
 ; CGSCC:       f:
 ; CGSCC-NEXT:    [[P:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[T]] ]
-; CGSCC-NEXT:    [[RC1:%.*]] = call noundef i1 @ret(i1 noundef [[P]]) #[[ATTR12]]
+; CGSCC-NEXT:    [[RC1:%.*]] = call noundef i1 @ret(i1 noundef [[P]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret i1 [[RC1]]
 ;
 entry:
@@ -1228,7 +1229,7 @@ define internal i8 @memcpy_uses_store(i8 %arg) {
 ; CGSCC-NEXT:    [[SRC:%.*]] = alloca i8, align 1
 ; CGSCC-NEXT:    [[DST:%.*]] = alloca i8, align 1
 ; CGSCC-NEXT:    store i8 [[ARG]], ptr [[SRC]], align 1
-; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[DST]], ptr noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[SRC]], i32 noundef 1, i1 noundef false) #[[ATTR14:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[DST]], ptr noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[SRC]], i32 noundef 1, i1 noundef false) #[[ATTR15:[0-9]+]]
 ; CGSCC-NEXT:    [[L:%.*]] = load i8, ptr [[DST]], align 1
 ; CGSCC-NEXT:    ret i8 [[L]]
 ;
@@ -1250,7 +1251,7 @@ define i8 @memcpy_uses_store_caller(i8 %arg) {
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@memcpy_uses_store_caller
 ; CGSCC-SAME: (i8 [[ARG:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @memcpy_uses_store(i8 [[ARG]]) #[[ATTR13]]
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @memcpy_uses_store(i8 [[ARG]]) #[[ATTR14]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
   %r = call i8 @memcpy_uses_store(i8 %arg)
@@ -1364,6 +1365,48 @@ define i1 @user_of_not_called() {
   ret i1 %cmp
 }
 
+@x = external global i32
+define internal void @indirect() {
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; TUNIT-LABEL: define {{[^@]+}}@indirect
+; TUNIT-SAME: () #[[ATTR4]] {
+; TUNIT-NEXT:    store i32 0, ptr @x, align 4
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; CGSCC-LABEL: define {{[^@]+}}@indirect
+; CGSCC-SAME: () #[[ATTR11:[0-9]+]] {
+; CGSCC-NEXT:    store i32 0, ptr @x, align 4
+; CGSCC-NEXT:    ret void
+;
+  store i32 0, i32* @x
+  ret void
+}
+
+define internal void @broker(void ()* %ptr) {
+; CHECK-LABEL: define {{[^@]+}}@broker() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @indirect()
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void %ptr()
+  call void @unknown()
+  ret void
+}
+
+define void @entry() {
+; CHECK-LABEL: define {{[^@]+}}@entry() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @broker()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @broker(void ()* @indirect)
+  ret void
+}
+
 ;.
 ; TUNIT: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 ; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
@@ -1390,8 +1433,9 @@ define i1 @user_of_not_called() {
 ; CGSCC: attributes #[[ATTR8:[0-9]+]] = { speculatable memory(none) }
 ; CGSCC: attributes #[[ATTR9]] = { norecurse nosync memory(none) }
 ; CGSCC: attributes #[[ATTR10]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
-; CGSCC: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR12]] = { willreturn }
-; CGSCC: attributes #[[ATTR13]] = { nounwind willreturn }
-; CGSCC: attributes #[[ATTR14]] = { willreturn memory(readwrite) }
+; CGSCC: attributes #[[ATTR11]] = { nofree norecurse nosync nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR13]] = { willreturn }
+; CGSCC: attributes #[[ATTR14]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR15]] = { willreturn memory(readwrite) }
 ;.
