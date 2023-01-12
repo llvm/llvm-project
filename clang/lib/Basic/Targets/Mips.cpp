@@ -195,11 +195,11 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (StringRef(CPU).startswith("octeon"))
     Builder.defineMacro("__OCTEON__");
 
-  // These shouldn't be defined for MIPS-I but there's no need to check
-  // for that since MIPS-I isn't supported.
-  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
-  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
-  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  if (CPU != "mips1") {
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  }
 
   // 32-bit MIPS processors don't have the necessary lld/scd instructions
   // found in 64-bit processors. In the case of O32 on a 64-bit processor,
