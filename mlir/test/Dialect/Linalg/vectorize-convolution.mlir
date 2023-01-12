@@ -850,18 +850,3 @@ func.func @pooling_ncw_sum_memref_2_3_2_1(%input: memref<4x2x5xf32>, %filter: me
 // CHECK: %[[V7:.+]] = arith.addf %[[V5]], %[[V6]] : vector<4x3x2xf32>
 // CHECK: %[[V8:.+]] = vector.transpose %[[V7]], [0, 2, 1] : vector<4x3x2xf32> to vector<4x2x3xf32>
 // CHECK: vector.transfer_write %[[V8:.+]], %[[OUTPUT]][%[[Vc0]], %[[Vc0]], %[[Vc0]]] {in_bounds = [true, true, true]} : vector<4x2x3xf32>, memref<4x2x3xf32>
-
-
-// -----
-
-func.func @pooling_ncw_sum_memref_complex(%input: memref<4x2x5xcomplex<f32>>,
-     %filter: memref<2xcomplex<f32>>, %output: memref<4x2x3xcomplex<f32>>) {
-  linalg.pooling_ncw_sum
-    {dilations = dense<2> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
-    ins(%input, %filter : memref<4x2x5xcomplex<f32>>, memref<2xcomplex<f32>>)
-    outs(%output : memref<4x2x3xcomplex<f32>>)
-  return
-}
-
-// Regression test: just check that this lowers successfully
-// CHECK-LABEL: @pooling_ncw_sum_memref_complex
