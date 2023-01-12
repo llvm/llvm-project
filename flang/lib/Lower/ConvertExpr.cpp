@@ -38,6 +38,7 @@
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
+#include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -2165,14 +2166,8 @@ public:
 
     if (isActualArgBox) {
       // Check at runtime if the argument is contiguous so no copy is needed.
-      mlir::func::FuncOp isContiguousFct =
-          fir::runtime::getRuntimeFunc<mkRTKey(IsContiguous)>(loc, builder);
-      fir::CallOp isContiguous = builder.create<fir::CallOp>(
-          loc, isContiguousFct,
-          mlir::ValueRange{builder.createConvert(
-              loc, isContiguousFct.getFunctionType().getInput(0),
-              fir::getBase(actualArg))});
-      isContiguousResult = isContiguous.getResult(0);
+      isContiguousResult =
+          fir::runtime::genIsContiguous(builder, loc, fir::getBase(actualArg));
     }
 
     auto doCopyIn = [&]() -> ExtValue {

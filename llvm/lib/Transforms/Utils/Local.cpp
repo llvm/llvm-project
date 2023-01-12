@@ -1496,7 +1496,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   if (std::optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits()) {
     assert(!ValueSize.isScalable() &&
            "Fragments don't work on scalable types.");
-    return ValueSize.getFixedSize() >= *FragmentSize;
+    return ValueSize.getFixedValue() >= *FragmentSize;
   }
   // We can't always calculate the size of the DI variable (e.g. if it is a
   // VLA). Try to use the size of the alloca that the dbg intrinsic describes
@@ -1842,7 +1842,7 @@ static void salvageDbgAssignAddress(DbgAssignIntrinsic *DAI) {
     DAI->setAddress(NewV);
     DAI->setAddressExpression(SalvagedExpr);
   } else {
-    DAI->setAddress(UndefValue::get(I->getType()));
+    DAI->setKillAddress();
   }
 }
 

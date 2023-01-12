@@ -65,6 +65,7 @@ DisableOption(
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");
 DisableOption(TargetRewrite, "target-rewrite", "rewrite FIR for target");
+DisableOption(DebugFoundation, "debug-foundation", "Add debug foundation");
 DisableOption(FirToLlvmIr, "fir-to-llvmir", "FIR to LLVM-IR dialect");
 DisableOption(LlvmIrToLlvm, "llvm", "conversion to LLVM");
 DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
@@ -125,6 +126,11 @@ inline void addTargetRewritePass(mlir::PassManager &pm) {
   addPassConditionally(pm, disableTargetRewrite, []() {
     return fir::createFirTargetRewritePass(fir::TargetRewriteOptions{});
   });
+}
+
+inline void addDebugFoundationPass(mlir::PassManager &pm) {
+  addPassConditionally(pm, disableDebugFoundation,
+      [&]() { return fir::createAddDebugFoundationPass(); });
 }
 
 inline void addFIRToLLVMPass(mlir::PassManager &pm) {

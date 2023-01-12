@@ -31,7 +31,6 @@ private:
   CudaVersion Version = CudaVersion::UNKNOWN;
   std::string InstallPath;
   std::string BinPath;
-  std::string LibPath;
   std::string LibDevicePath;
   std::string IncludePath;
   llvm::StringMap<std::string> LibDeviceMap;
@@ -69,8 +68,6 @@ public:
   StringRef getBinPath() const { return BinPath; }
   /// Get the detected Cuda Include path.
   StringRef getIncludePath() const { return IncludePath; }
-  /// Get the detected Cuda library path.
-  StringRef getLibPath() const { return LibPath; }
   /// Get the detected Cuda device library path.
   StringRef getLibDevicePath() const { return LibDevicePath; }
   /// Get libdevice file for given architecture
@@ -182,6 +179,11 @@ public:
 
   const ToolChain &HostTC;
   CudaInstallationDetector CudaInstallation;
+
+  /// Uses nvptx-arch tool to get arch of the system GPU. Will return error
+  /// if unable to find one.
+  virtual Expected<SmallVector<std::string>>
+  getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
 protected:
   Tool *buildAssembler() const override;  // ptxas

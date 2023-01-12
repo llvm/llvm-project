@@ -88,10 +88,7 @@ public:
   explicit FlatAffineValueConstraints(ArrayRef<const AffineValueMap *> avmRef);
 
   /// Creates an affine constraint system from an IntegerSet.
-  explicit FlatAffineValueConstraints(IntegerSet set);
-
-  FlatAffineValueConstraints(ArrayRef<const AffineValueMap *> avmRef,
-                             IntegerSet set);
+  explicit FlatAffineValueConstraints(IntegerSet set, ValueRange operands = {});
 
   // Construct a hyperrectangular constraint set from ValueRanges that represent
   // induction variables, lower and upper bounds. `ivs`, `lbs` and `ubs` are
@@ -139,7 +136,6 @@ public:
   /// 'affine.for' operation are added as trailing variables (either
   /// dimensional or symbolic depending on whether the operand is a valid
   /// symbol).
-  //  TODO: add support for non-unit strides.
   LogicalResult addAffineForOpDomain(AffineForOp forOp);
 
   /// Add constraints (lower and upper bounds) for the specified
@@ -279,7 +275,7 @@ public:
 
   /// Returns true if an variable with the specified Value exists, false
   /// otherwise.
-  bool containsVar(Value mayBeVar) const;
+  bool containsVar(Value val) const;
 
   /// Swap the posA^th variable with the posB^th variable.
   void swapVar(unsigned posA, unsigned posB) override;

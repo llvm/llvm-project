@@ -117,18 +117,18 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
 
   //  64-bit fixed width vector types can be losslessly converted to x86mmx.
   if (((isa<FixedVectorType>(this)) && Ty->isX86_MMXTy()) &&
-      getPrimitiveSizeInBits().getFixedSize() == 64)
+      getPrimitiveSizeInBits().getFixedValue() == 64)
     return true;
   if ((isX86_MMXTy() && isa<FixedVectorType>(Ty)) &&
-      Ty->getPrimitiveSizeInBits().getFixedSize() == 64)
+      Ty->getPrimitiveSizeInBits().getFixedValue() == 64)
     return true;
 
   //  8192-bit fixed width vector types can be losslessly converted to x86amx.
   if (((isa<FixedVectorType>(this)) && Ty->isX86_AMXTy()) &&
-      getPrimitiveSizeInBits().getFixedSize() == 8192)
+      getPrimitiveSizeInBits().getFixedValue() == 8192)
     return true;
   if ((isX86_AMXTy() && isa<FixedVectorType>(Ty)) &&
-      Ty->getPrimitiveSizeInBits().getFixedSize() == 8192)
+      Ty->getPrimitiveSizeInBits().getFixedValue() == 8192)
     return true;
 
   // At this point we have only various mismatches of the first class types
@@ -179,7 +179,7 @@ TypeSize Type::getPrimitiveSizeInBits() const {
     ElementCount EC = VTy->getElementCount();
     TypeSize ETS = VTy->getElementType()->getPrimitiveSizeInBits();
     assert(!ETS.isScalable() && "Vector type should have fixed-width elements");
-    return {ETS.getFixedSize() * EC.getKnownMinValue(), EC.isScalable()};
+    return {ETS.getFixedValue() * EC.getKnownMinValue(), EC.isScalable()};
   }
   default: return TypeSize::Fixed(0);
   }
@@ -187,7 +187,7 @@ TypeSize Type::getPrimitiveSizeInBits() const {
 
 unsigned Type::getScalarSizeInBits() const {
   // It is safe to assume that the scalar types have a fixed size.
-  return getScalarType()->getPrimitiveSizeInBits().getFixedSize();
+  return getScalarType()->getPrimitiveSizeInBits().getFixedValue();
 }
 
 int Type::getFPMantissaWidth() const {

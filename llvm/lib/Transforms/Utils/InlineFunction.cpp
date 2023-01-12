@@ -2504,7 +2504,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         if (!AllocaTypeSize.isScalable() &&
             AllocaArraySize != std::numeric_limits<uint64_t>::max() &&
             std::numeric_limits<uint64_t>::max() / AllocaArraySize >=
-                AllocaTypeSize.getFixedSize()) {
+                AllocaTypeSize.getFixedValue()) {
           AllocaSize = ConstantInt::get(Type::getInt64Ty(AI->getContext()),
                                         AllocaArraySize * AllocaTypeSize);
         }

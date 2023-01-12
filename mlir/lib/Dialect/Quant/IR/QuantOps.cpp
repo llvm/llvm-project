@@ -36,7 +36,7 @@ void QuantizationDialect::initialize() {
   addBytecodeInterface(this);
 }
 
-OpFoldResult StorageCastOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult StorageCastOp::fold(FoldAdaptor adaptor) {
   // Matches x -> [scast -> scast] -> y, replacing the second scast with the
   // value of x if the casts invert each other.
   auto srcScastOp = getArg().getDefiningOp<StorageCastOp>();

@@ -973,7 +973,7 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Case<LLVMFixedVectorType>([](LLVMFixedVectorType t) {
         llvm::TypeSize elementSize =
             getPrimitiveTypeSizeInBits(t.getElementType());
-        return llvm::TypeSize(elementSize.getFixedSize() * t.getNumElements(),
+        return llvm::TypeSize(elementSize.getFixedValue() * t.getNumElements(),
                               elementSize.isScalable());
       })
       .Case<VectorType>([](VectorType t) {
@@ -981,7 +981,7 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
                "unexpected incompatible with LLVM vector type");
         llvm::TypeSize elementSize =
             getPrimitiveTypeSizeInBits(t.getElementType());
-        return llvm::TypeSize(elementSize.getFixedSize() * t.getNumElements(),
+        return llvm::TypeSize(elementSize.getFixedValue() * t.getNumElements(),
                               elementSize.isScalable());
       })
       .Default([](Type ty) {

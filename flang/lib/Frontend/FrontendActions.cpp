@@ -171,7 +171,8 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getSemanticsContext().targetCharacteristics(),
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
-      ci.getInvocation().getFrontendOpts().envDefaults);
+      ci.getInvocation().getFrontendOpts().envDefaults,
+      getCurrentFileOrBufferName());
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());

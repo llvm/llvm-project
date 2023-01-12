@@ -59,9 +59,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class DwarfutilOptTable : public opt::OptTable {
+class DwarfutilOptTable : public opt::GenericOptTable {
 public:
-  DwarfutilOptTable() : OptTable(InfoTable) {}
+  DwarfutilOptTable() : opt::GenericOptTable(InfoTable) {}
 };
 } // namespace
 

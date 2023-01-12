@@ -201,8 +201,7 @@ LogicalResult ConstantOp::verify() {
   return success();
 }
 
-OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "constant has no operands");
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) {
   return getValueAttr();
 }
 

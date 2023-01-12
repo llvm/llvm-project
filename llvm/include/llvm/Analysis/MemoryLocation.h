@@ -103,7 +103,7 @@ public:
   static LocationSize precise(TypeSize Value) {
     if (Value.isScalable())
       return afterPointer();
-    return precise(Value.getFixedSize());
+    return precise(Value.getFixedValue());
   }
 
   static LocationSize upperBound(uint64_t Value) {
@@ -117,7 +117,7 @@ public:
   static LocationSize upperBound(TypeSize Value) {
     if (Value.isScalable())
       return afterPointer();
-    return upperBound(Value.getFixedSize());
+    return upperBound(Value.getFixedValue());
   }
 
   /// Any location after the base pointer (but still within the underlying
@@ -283,7 +283,7 @@ public:
   // Return the exact size if the exact size is known at compiletime,
   // otherwise return MemoryLocation::UnknownSize.
   static uint64_t getSizeOrUnknown(const TypeSize &T) {
-    return T.isScalable() ? UnknownSize : T.getFixedSize();
+    return T.isScalable() ? UnknownSize : T.getFixedValue();
   }
 
   MemoryLocation() : Ptr(nullptr), Size(LocationSize::beforeOrAfterPointer()) {}

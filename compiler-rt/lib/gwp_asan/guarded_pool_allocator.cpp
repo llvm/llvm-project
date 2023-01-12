@@ -8,6 +8,7 @@
 
 #include "gwp_asan/guarded_pool_allocator.h"
 
+#include "gwp_asan/crash_handler.h"
 #include "gwp_asan/options.h"
 #include "gwp_asan/utilities.h"
 
@@ -73,8 +74,15 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
   assert((PageSize & (PageSize - 1)) == 0);
   State.PageSize = PageSize;
 
+  // Number of pages required =
+  //  + MaxSimultaneousAllocations * maximumAllocationSize (N pages per slot)
+  //  + MaxSimultaneousAllocations (one guard on the left side of each slot)
+  //  + 1 (an extra guard page at the end of the pool, on the right side)
+  //  + 1 (an extra page that's used for reporting internally-detected crashes,
+  //       like double free and invalid free, to the signal handler; see
+  //       raiseInternallyDetectedError() for more info)
   size_t PoolBytesRequired =
-      PageSize * (1 + State.MaxSimultaneousAllocations) +
+      PageSize * (2 + State.MaxSimultaneousAllocations) +
       State.MaxSimultaneousAllocations * State.maximumAllocationSize();
   assert(PoolBytesRequired % PageSize == 0);
   void *GuardedPoolMemory = reserveGuardedPool(PoolBytesRequired);
@@ -258,22 +266,60 @@ void *GuardedPoolAllocator::allocate(size_t Size, size_t Alignment) {
   return reinterpret_cast<void *>(UserPtr);
 }
 
-void GuardedPoolAllocator::trapOnAddress(uintptr_t Address, Error E) {
+void GuardedPoolAllocator::raiseInternallyDetectedError(uintptr_t Address,
+                                                        Error E) {
+  // Disable the allocator before setting the internal failure state. In
+  // non-recoverable mode, the allocator will be permanently disabled, and so
+  // things will be accessed without locks.
+  disable();
+
+  // Races between internally- and externally-raised faults can happen. Right
+  // now, in this thread we've locked the allocator in order to raise an
+  // internally-detected fault, and another thread could SIGSEGV to raise an
+  // externally-detected fault. What will happen is that the other thread will
+  // wait in the signal handler, as we hold the allocator's locks from the
+  // disable() above. We'll trigger the signal handler by touching the
+  // internal-signal-raising address below, and the signal handler from our
+  // thread will get to run first as we will continue to hold the allocator
+  // locks until the enable() at the end of this function. Be careful though, if
+  // this thread receives another SIGSEGV after the disable() above, but before
+  // touching the internal-signal-raising address below, then this thread will
+  // get an "externally-raised" SIGSEGV while *also* holding the allocator
+  // locks, which means this thread's signal handler will deadlock. This could
+  // be resolved with a re-entrant lock, but asking platforms to implement this
+  // seems unnecessary given the only way to get a SIGSEGV in this critical
+  // section is either a memory safety bug in the couple lines of code below (be
+  // careful!), or someone outside uses `kill(this_thread, SIGSEGV)`, which
+  // really shouldn't happen.
+
   State.FailureType = E;
   State.FailureAddress = Address;
 
-  // Raise a SEGV by touching first guard page.
-  volatile char *p = reinterpret_cast<char *>(State.GuardedPagePool);
+  // Raise a SEGV by touching a specific address that identifies to the crash
+  // handler that this is an internally-raised fault. Changing this address?
+  // Don't forget to update __gwp_asan_get_internal_crash_address.
+  volatile char *p =
+      reinterpret_cast<char *>(State.internallyDetectedErrorFaultAddress());
   *p = 0;
-  // Normally, would be __builtin_unreachable(), but because of
-  // https://bugs.llvm.org/show_bug.cgi?id=47480, unreachable will DCE the
-  // volatile store above, even though it has side effects.
-  __builtin_trap();
-}
 
-void GuardedPoolAllocator::stop() {
-  getThreadLocals()->RecursiveGuard = true;
-  PoolMutex.tryLock();
+  // This should never be reached in non-recoverable mode. Ensure that the
+  // signal handler called handleRecoverablePostCrashReport(), which was
+  // responsible for re-setting these fields.
+  assert(State.FailureType == Error::UNKNOWN);
+  assert(State.FailureAddress == 0u);
+
+  // In recoverable mode, the signal handler (after dumping the crash) marked
+  // the page containing the InternalFaultSegvAddress as read/writeable, to
+  // allow the second touch to succeed after returning from the signal handler.
+  // Now, we need to mark the page as non-read/write-able again, so future
+  // internal faults can be raised.
+  deallocateInGuardedPool(
+      reinterpret_cast<void *>(getPageAddr(
+          State.internallyDetectedErrorFaultAddress(), State.PageSize)),
+      State.PageSize);
+
+  // And now we're done with patching ourselves back up, enable the allocator.
+  enable();
 }
 
 void GuardedPoolAllocator::deallocate(void *Ptr) {
@@ -282,19 +328,25 @@ void GuardedPoolAllocator::deallocate(void *Ptr) {
   size_t Slot = State.getNearestSlot(UPtr);
   uintptr_t SlotStart = State.slotToAddr(Slot);
   AllocationMetadata *Meta = addrToMetadata(UPtr);
+
+  // If this allocation is responsible for crash, never recycle it. Turn the
+  // deallocate() call into a no-op.
+  if (Meta->HasCrashed)
+    return;
+
   if (Meta->Addr != UPtr) {
-    // If multiple errors occur at the same time, use the first one.
-    ScopedLock L(PoolMutex);
-    trapOnAddress(UPtr, Error::INVALID_FREE);
+    raiseInternallyDetectedError(UPtr, Error::INVALID_FREE);
+    return;
+  }
+  if (Meta->IsDeallocated) {
+    raiseInternallyDetectedError(UPtr, Error::DOUBLE_FREE);
+    return;
   }
 
   // Intentionally scope the mutex here, so that other threads can access the
   // pool during the expensive markInaccessible() call.
   {
     ScopedLock L(PoolMutex);
-    if (Meta->IsDeallocated) {
-      trapOnAddress(UPtr, Error::DOUBLE_FREE);
-    }
 
     // Ensure that the deallocation is recorded before marking the page as
     // inaccessible. Otherwise, a racy use-after-free will have inconsistent
@@ -316,6 +368,62 @@ void GuardedPoolAllocator::deallocate(void *Ptr) {
   // And finally, lock again to release the slot back into the pool.
   ScopedLock L(PoolMutex);
   freeSlot(Slot);
+}
+
+// Thread-compatible, protected by PoolMutex.
+static bool PreviousRecursiveGuard;
+
+void GuardedPoolAllocator::preCrashReport(void *Ptr) {
+  assert(pointerIsMine(Ptr) && "Pointer is not mine!");
+  uintptr_t InternalCrashAddr = __gwp_asan_get_internal_crash_address(
+      &State, reinterpret_cast<uintptr_t>(Ptr));
+  if (!InternalCrashAddr)
+    disable();
+
+  // If something in the signal handler calls malloc() while dumping the
+  // GWP-ASan report (e.g. backtrace_symbols()), make sure that GWP-ASan doesn't
+  // service that allocation. `PreviousRecursiveGuard` is protected by the
+  // allocator locks taken in disable(), either explicitly above for
+  // externally-raised errors, or implicitly in raiseInternallyDetectedError()
+  // for internally-detected errors.
+  PreviousRecursiveGuard = getThreadLocals()->RecursiveGuard;
+  getThreadLocals()->RecursiveGuard = true;
+}
+
+void GuardedPoolAllocator::postCrashReportRecoverableOnly(void *SignalPtr) {
+  uintptr_t SignalUPtr = reinterpret_cast<uintptr_t>(SignalPtr);
+  uintptr_t InternalCrashAddr =
+      __gwp_asan_get_internal_crash_address(&State, SignalUPtr);
+  uintptr_t ErrorUptr = InternalCrashAddr ?: SignalUPtr;
+
+  AllocationMetadata *Metadata = addrToMetadata(ErrorUptr);
+  Metadata->HasCrashed = true;
+
+  allocateInGuardedPool(
+      reinterpret_cast<void *>(getPageAddr(SignalUPtr, State.PageSize)),
+      State.PageSize);
+
+  // Clear the internal state in order to not confuse the crash handler if a
+  // use-after-free or buffer-overflow comes from a different allocation in the
+  // future.
+  if (InternalCrashAddr) {
+    State.FailureType = Error::UNKNOWN;
+    State.FailureAddress = 0;
+  }
+
+  size_t Slot = State.getNearestSlot(ErrorUptr);
+  // If the slot is available, remove it permanently.
+  for (size_t i = 0; i < FreeSlotsLength; ++i) {
+    if (FreeSlots[i] == Slot) {
+      FreeSlots[i] = FreeSlots[FreeSlotsLength - 1];
+      FreeSlotsLength -= 1;
+      break;
+    }
+  }
+
+  getThreadLocals()->RecursiveGuard = PreviousRecursiveGuard;
+  if (!InternalCrashAddr)
+    enable();
 }
 
 size_t GuardedPoolAllocator::getSize(const void *Ptr) {

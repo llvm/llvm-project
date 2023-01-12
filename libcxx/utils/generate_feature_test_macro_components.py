@@ -644,7 +644,8 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_source_location",
     "values": { "c++20": 201907 },
     "headers": ["source_location"],
-    "unimplemented": True,
+    "test_suite_guard": "__has_builtin(__builtin_source_location)",
+    "libcxx_guard": "__has_builtin(__builtin_source_location)",
   }, {
     "name": "__cpp_lib_span",
     "values": { "c++20": 202002 },

@@ -104,6 +104,13 @@ int RTNAME(AllocatableDeallocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
     int sourceLine = 0);
 
+// Same as AllocatableDeallocate but also set the dynamic type as the declared
+// type as mentioned in 7.3.2.3 note 7.
+int RTNAME(AllocatableDeallocatePolymorphic)(Descriptor &,
+    const typeInfo::DerivedType *, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0);
+
 // Variant of above that does not finalize; for intermediate results
 void RTNAME(AllocatableDeallocateNoFinal)(
     Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);

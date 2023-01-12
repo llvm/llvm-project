@@ -79,9 +79,9 @@ static constexpr opt::OptTable::Info infoTable[] = {
 };
 
 namespace {
-class MinGWOptTable : public opt::OptTable {
+class MinGWOptTable : public opt::GenericOptTable {
 public:
-  MinGWOptTable() : OptTable(infoTable, false) {}
+  MinGWOptTable() : opt::GenericOptTable(infoTable, false) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace

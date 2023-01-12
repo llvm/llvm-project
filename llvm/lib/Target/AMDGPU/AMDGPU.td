@@ -1329,7 +1329,6 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureBackOffBarrier,
    FeatureMADIntraFwdBug]>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<

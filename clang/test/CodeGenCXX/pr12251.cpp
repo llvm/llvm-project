@@ -5,7 +5,7 @@ bool f(bool *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} zeroext i1 @_Z1fPb
-// CHECK: load i8, ptr %{{[^ ]*}}, align 1, !range [[RANGE_i8_0_2:![^ ]*]]
+// CHECK: load i8, ptr %{{[^ ]*}}, align 1, !range [[RANGE_i8_0_2:![0-9]+]], !noundef [[NOUNDEF:![0-9]+]]
 
 // Only enum-tests follow. Ensure that after the bool test, no further range
 // metadata shows up when strict enums are disabled.
@@ -32,63 +32,63 @@ e3 g3(e3 *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} i32 @_Z2g3P2e3
-// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_0_32:![^ ]*]]
+// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_0_32:![0-9]+]], !noundef [[NOUNDEF]]
 
 enum e4 { e4_a = -16};
 e4 g4(e4 *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} i32 @_Z2g4P2e4
-// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m16_16:![^ ]*]]
+// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m16_16:![0-9]+]], !noundef [[NOUNDEF]]
 
 enum e5 { e5_a = -16, e5_b = 16};
 e5 g5(e5 *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} i32 @_Z2g5P2e5
-// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m32_32:![^ ]*]]
+// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m32_32:![0-9]+]], !noundef [[NOUNDEF]]
 
 enum e6 { e6_a = -1 };
 e6 g6(e6 *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} i32 @_Z2g6P2e6
-// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m1_1:![^ ]*]]
+// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m1_1:![0-9]+]], !noundef [[NOUNDEF]]
 
 enum e7 { e7_a = -16, e7_b = 2};
 e7 g7(e7 *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} i32 @_Z2g7P2e7
-// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m16_16]]
+// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m16_16]], !noundef [[NOUNDEF]]
 
 enum e8 { e8_a = -17};
 e8 g8(e8 *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} i32 @_Z2g8P2e8
-// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m32_32:![^ ]*]]
+// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m32_32:![0-9]+]], !noundef [[NOUNDEF]]
 
 enum e9 { e9_a = 17};
 e9 g9(e9 *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} i32 @_Z2g9P2e9
-// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_0_32]]
+// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_0_32]], !noundef [[NOUNDEF]]
 
 enum e10 { e10_a = -16, e10_b = 32};
 e10 g10(e10 *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} i32 @_Z3g10P3e10
-// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m64_64:![^ ]*]]
+// CHECK: load i32, ptr %x, align 4, !range [[RANGE_i32_m64_64:![0-9]+]], !noundef [[NOUNDEF]]
 
 enum e11 {e11_a = 4294967296 };
 enum e11 g11(enum e11 *x) {
   return *x;
 }
 // CHECK-LABEL: define{{.*}} i64 @_Z3g11P3e11
-// CHECK: load i64, ptr %x, align {{[84]}}, !range [[RANGE_i64_0_2pow33:![^ ]*]]
+// CHECK: load i64, ptr %x, align {{[84]}}, !range [[RANGE_i64_0_2pow33:![0-9]+]], !noundef [[NOUNDEF]]
 
 enum e12 {e12_a = 9223372036854775808U };
 enum e12 g12(enum e12 *x) {
@@ -137,6 +137,7 @@ e16 g16(e16 *x) {
 
 
 // CHECK: [[RANGE_i8_0_2]] = !{i8 0, i8 2}
+// CHECK: [[NOUNDEF]] = !{}
 // CHECK: [[RANGE_i32_0_32]] = !{i32 0, i32 32}
 // CHECK: [[RANGE_i32_m16_16]] = !{i32 -16, i32 16}
 // CHECK: [[RANGE_i32_m32_32]] = !{i32 -32, i32 32}

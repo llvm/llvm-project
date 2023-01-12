@@ -496,8 +496,8 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   // When storing out scalable vectors we bail out for now, since the code
   // below currently only works for constant strides.
   TypeSize SizeInBits = DL->getTypeSizeInBits(StoredVal->getType());
-  if (SizeInBits.isScalable() || (SizeInBits.getFixedSize() & 7) ||
-      (SizeInBits.getFixedSize() >> 32) != 0)
+  if (SizeInBits.isScalable() || (SizeInBits.getFixedValue() & 7) ||
+      (SizeInBits.getFixedValue() >> 32) != 0)
     return LegalStoreKind::None;
 
   // See if the pointer expression is an AddRec like {base,+,1} on the current
@@ -1296,7 +1296,7 @@ public:
       // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
       // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
       int64_t LoadSize =
-          DL.getTypeSizeInBits(TheLoad.getType()).getFixedSize() / 8;
+          DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
       if (BP1 != BP2 || LoadSize != int64_t(StoreSize))
         return false;
       if ((!IsNegStride && LoadOff < StoreOff + int64_t(StoreSize)) ||

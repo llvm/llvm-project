@@ -1002,6 +1002,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
     S.DiagnoseUnsatisfiedConstraint(CSE->getSatisfaction());
     return;
   } else if (auto *RE = dyn_cast<RequiresExpr>(SubstExpr)) {
+    // FIXME: RequiresExpr should store dependent diagnostics.
     for (concepts::Requirement *Req : RE->getRequirements())
       if (!Req->isDependent() && !Req->isSatisfied()) {
         if (auto *E = dyn_cast<concepts::ExprRequirement>(Req))
@@ -1353,6 +1354,7 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
     };
     const auto *FD2 = dyn_cast<FunctionDecl>(D2);
     (void)IsExpectedEntity;
+    (void)FD1;
     (void)FD2;
     assert(IsExpectedEntity(FD1) && FD2 && IsExpectedEntity(FD2) &&
            "use non-instantiated function declaration for constraints partial "

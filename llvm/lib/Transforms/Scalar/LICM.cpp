@@ -1097,7 +1097,7 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
     // in bits. Also, the invariant.start should dominate the load, and we
     // should not hoist the load out of a loop that contains this dominating
     // invariant.start.
-    if (LocSizeInBits.getFixedSize() <= InvariantSizeInBits &&
+    if (LocSizeInBits.getFixedValue() <= InvariantSizeInBits &&
         DT->properlyDominates(II->getParent(), CurLoop->getHeader()))
       return true;
   }

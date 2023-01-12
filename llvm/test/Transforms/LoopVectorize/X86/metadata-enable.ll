@@ -1180,7 +1180,7 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; O1VEC2-NEXT:  entry:
 ; O1VEC2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; O1VEC2:       vector.ph:
-; O1VEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; O1VEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; O1VEC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; O1VEC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; O1VEC2:       vector.body:
@@ -1220,7 +1220,7 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; OzVEC2-NEXT:  entry:
 ; OzVEC2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; OzVEC2:       vector.ph:
-; OzVEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; OzVEC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i64 0
 ; OzVEC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; OzVEC2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; OzVEC2:       vector.body:

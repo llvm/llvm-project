@@ -481,10 +481,11 @@ public:
 
   /// Returns the set of bound architectures active for this offload kind.
   /// If there are no bound architctures we return a set containing only the
-  /// empty string.
+  /// empty string. The \p SuppressError option is used to suppress errors.
   llvm::DenseSet<StringRef>
   getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
-                  Action::OffloadKind Kind, const ToolChain *TC) const;
+                  Action::OffloadKind Kind, const ToolChain *TC,
+                  bool SuppressError = false) const;
 
   /// Check that the file referenced by Value exists. If it doesn't,
   /// issue a diagnostic and return false.

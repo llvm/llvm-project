@@ -249,13 +249,6 @@ static cl::opt<bool>
                      cl::desc("Show the sizes of all debug sections, "
                               "expressed in bytes."),
                      cat(DwarfDumpCategory));
-static cl::opt<bool> ManuallyGenerateUnitIndex(
-    "manaully-generate-unit-index",
-    cl::desc("if the input is dwp file, parse .debug_info "
-             "section and use it to populate "
-             "DW_SECT_INFO contributions in cu-index. "
-             "For DWARF5 it also populated TU Index."),
-    cl::init(false), cl::Hidden, cl::cat(DwarfDumpCategory));
 static cl::opt<bool>
     ShowSources("show-sources",
                 cl::desc("Show the sources across all compilation units."),
@@ -682,7 +675,6 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
       std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
           *Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
           RecoverableErrorHandler);
-      DICtx->setParseCUTUIndexManually(ManuallyGenerateUnitIndex);
       if (!HandleObj(*Obj, *DICtx, Filename, OS))
         Result = false;
     }

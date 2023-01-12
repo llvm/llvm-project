@@ -599,7 +599,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     LLVM_DEBUG(dbgs() << "  try: " << OrigMI);
 
     auto OrigOp = OrigMI.getOpcode();
-    assert((TII->get(OrigOp).Size != 4 || !AMDGPU::isTrue16Inst(OrigOp)) &&
+    assert((TII->get(OrigOp).getSize() != 4 || !AMDGPU::isTrue16Inst(OrigOp)) &&
            "There should not be e32 True16 instructions pre-RA");
     if (OrigOp == AMDGPU::REG_SEQUENCE) {
       Register FwdReg = OrigMI.getOperand(0).getReg();

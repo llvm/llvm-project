@@ -194,7 +194,7 @@ define void @add_unique_ind32(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = shl i32 [[CAST_CRD]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <vscale x 4 x i32> [[TMP4]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP5:%.*]] = shl <vscale x 4 x i32> [[TMP4]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP6]], 3
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP7]], i64 0
@@ -273,7 +273,7 @@ define void @add_unique_indf32(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = fadd float [[TMP4]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
 ; CHECK-NEXT:    [[TMP6:%.*]] = uitofp <vscale x 4 x i32> [[TMP5]] to <vscale x 4 x float>
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <vscale x 4 x float> [[TMP6]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 2.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul <vscale x 4 x float> [[TMP6]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 2.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = fadd <vscale x 4 x float> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[TMP8]], 2

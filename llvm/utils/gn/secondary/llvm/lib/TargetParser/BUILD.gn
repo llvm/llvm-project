@@ -1,6 +1,7 @@
 static_library("TargetParser") {
   output_name = "LLVMTargetParser"
   deps = [ "//llvm/lib/Support" ]
+  public_deps = [ "//llvm/include/llvm/TargetParser:gen" ]
   include_dirs = [
     "Unix",
     "Windows",
@@ -12,6 +13,7 @@ static_library("TargetParser") {
     "CSKYTargetParser.cpp",
     "Host.cpp",
     "LoongArchTargetParser.cpp",
+    "RISCVTargetParser.cpp",
     "TargetParser.cpp",
     "Triple.cpp",
     "X86TargetParser.cpp",

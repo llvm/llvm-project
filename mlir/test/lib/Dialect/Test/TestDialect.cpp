@@ -33,6 +33,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 
+#include <numeric>
+
 // Include this before the using namespace lines below to
 // test that we don't have namespace dependencies.
 #include "TestOpsDialect.cpp.inc"
@@ -1097,33 +1099,51 @@ void TestOpWithRegionPattern::getCanonicalizationPatterns(
   results.add<TestRemoveOpWithInnerOps>(context);
 }
 
-OpFoldResult TestOpWithRegionFold::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TestOpWithRegionFold::fold(FoldAdaptor adaptor) {
   return getOperand();
 }
 
-OpFoldResult TestOpConstant::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TestOpConstant::fold(FoldAdaptor adaptor) {
   return getValue();
 }
 
 LogicalResult TestOpWithVariadicResultsAndFolder::fold(
-    ArrayRef<Attribute> operands, SmallVectorImpl<OpFoldResult> &results) {
+    FoldAdaptor adaptor, SmallVectorImpl<OpFoldResult> &results) {
   for (Value input : this->getOperands()) {
     results.push_back(input);
   }
   return success();
 }
 
-OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 1);
-  if (operands.front()) {
-    (*this)->setAttr("attr", operands.front());
+OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
+  if (adaptor.getOp()) {
+    (*this)->setAttr("attr", adaptor.getOp());
     return getResult();
   }
   return {};
 }
 
-OpFoldResult TestPassthroughFold::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TestPassthroughFold::fold(FoldAdaptor adaptor) {
   return getOperand();
+}
+
+OpFoldResult TestOpFoldWithFoldAdaptor::fold(FoldAdaptor adaptor) {
+  int64_t sum = 0;
+  if (auto value = dyn_cast_or_null<IntegerAttr>(adaptor.getOp()))
+    sum += value.getValue().getSExtValue();
+
+  for (Attribute attr : adaptor.getVariadic())
+    if (auto value = dyn_cast_or_null<IntegerAttr>(attr))
+      sum += 2 * value.getValue().getSExtValue();
+
+  for (ArrayRef<Attribute> attrs : adaptor.getVarOfVar())
+    for (Attribute attr : attrs)
+      if (auto value = dyn_cast_or_null<IntegerAttr>(attr))
+        sum += 3 * value.getValue().getSExtValue();
+
+  sum += 4 * std::distance(adaptor.getBody().begin(), adaptor.getBody().end());
+
+  return IntegerAttr::get(getType(), sum);
 }
 
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(

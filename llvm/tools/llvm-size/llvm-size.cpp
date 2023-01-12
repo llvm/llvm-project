@@ -66,9 +66,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class SizeOptTable : public opt::OptTable {
+class SizeOptTable : public opt::GenericOptTable {
 public:
-  SizeOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  SizeOptTable() : GenericOptTable(InfoTable) { setGroupedShortOptions(true); }
 };
 
 enum OutputFormatTy { berkeley, sysv, darwin };

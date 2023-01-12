@@ -6429,10 +6429,8 @@ static llvm::Value *getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
     }
     if (isOpenMPSimdDirective(Dir->getDirectiveKind()))
       return CGF.Builder.getInt32(1);
-    return DefaultThreadLimitVal;
   }
-  return DefaultThreadLimitVal ? DefaultThreadLimitVal
-                               : CGF.Builder.getInt32(0);
+  return DefaultThreadLimitVal;
 }
 
 const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
@@ -6575,12 +6573,14 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
       return NumThreads;
     const Stmt *Child = CGOpenMPRuntime::getSingleCompoundChild(
         CGF.getContext(), CS->getCapturedStmt());
+    // TODO: The standard is not clear how to resolve two thread limit clauses,
+    //       let's pick the teams one if it's present, otherwise the target one.
+    const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
     if (const auto *Dir = dyn_cast_or_null<OMPExecutableDirective>(Child)) {
-      if (Dir->hasClausesOfKind<OMPThreadLimitClause>()) {
+      if (const auto *TLC = Dir->getSingleClause<OMPThreadLimitClause>()) {
+        ThreadLimitClause = TLC;
         CGOpenMPInnerExprInfo CGInfo(CGF, *CS);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-        const auto *ThreadLimitClause =
-            Dir->getSingleClause<OMPThreadLimitClause>();
         CodeGenFunction::LexicalScope Scope(
             CGF, ThreadLimitClause->getThreadLimit()->getSourceRange());
         if (const auto *PreInit =
@@ -6595,11 +6595,15 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
             }
           }
         }
-        llvm::Value *ThreadLimit = CGF.EmitScalarExpr(
-            ThreadLimitClause->getThreadLimit(), /*IgnoreResultAssign=*/true);
-        ThreadLimitVal =
-            Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*isSigned=*/false);
       }
+    }
+    if (ThreadLimitClause) {
+      llvm::Value *ThreadLimit = CGF.EmitScalarExpr(
+          ThreadLimitClause->getThreadLimit(), /*IgnoreResultAssign=*/true);
+      ThreadLimitVal =
+          Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*isSigned=*/false);
+    }
+    if (const auto *Dir = dyn_cast_or_null<OMPExecutableDirective>(Child)) {
       if (isOpenMPTeamsDirective(Dir->getDirectiveKind()) &&
           !isOpenMPDistributeDirective(Dir->getDirectiveKind())) {
         CS = Dir->getInnermostCapturedStmt();
@@ -6650,7 +6654,10 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
       ThreadLimitVal =
           Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*isSigned=*/false);
     }
-    return getNumThreads(CGF, D.getInnermostCapturedStmt(), ThreadLimitVal);
+    if (llvm::Value *NumThreads =
+            getNumThreads(CGF, D.getInnermostCapturedStmt(), ThreadLimitVal))
+      return NumThreads;
+    return Bld.getInt32(0);
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:

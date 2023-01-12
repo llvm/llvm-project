@@ -821,7 +821,7 @@ private:
   Error parseAttrKind(uint64_t Code, Attribute::AttrKind *Kind);
   Error parseModule(
       uint64_t ResumeBit, bool ShouldLazyLoadMetadata = false,
-      DataLayoutCallbackTy DataLayoutCallback = [](StringRef) {
+      DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
         return std::nullopt;
       });
 
@@ -4192,21 +4192,35 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   // Parts of bitcode parsing depend on the datalayout.  Make sure we
   // finalize the datalayout before we run any of that code.
   bool ResolvedDataLayout = false;
-  auto ResolveDataLayout = [&] {
-    if (ResolvedDataLayout)
-      return;
+  // In order to support importing modules with illegal data layout strings,
+  // delay parsing the data layout string until after upgrades and overrides
+  // have been applied, allowing to fix illegal data layout strings.
+  // Initialize to the current module's layout string in case none is specified.
+  std::string TentativeDataLayoutStr = TheModule->getDataLayoutStr();
 
-    // datalayout and triple can't be parsed after this point.
+  auto ResolveDataLayout = [&]() -> Error {
+    if (ResolvedDataLayout)
+      return Error::success();
+
+    // Datalayout and triple can't be parsed after this point.
     ResolvedDataLayout = true;
 
-    // Upgrade data layout string.
-    std::string DL = llvm::UpgradeDataLayoutString(
-        TheModule->getDataLayoutStr(), TheModule->getTargetTriple());
-    TheModule->setDataLayout(DL);
+    // Auto-upgrade the layout string
+    TentativeDataLayoutStr = llvm::UpgradeDataLayoutString(
+        TentativeDataLayoutStr, TheModule->getTargetTriple());
 
-    if (auto LayoutOverride =
-            DataLayoutCallback(TheModule->getTargetTriple()))
-      TheModule->setDataLayout(*LayoutOverride);
+    // Apply override
+    if (auto LayoutOverride = DataLayoutCallback(TheModule->getTargetTriple(),
+                                                 TentativeDataLayoutStr))
+      TentativeDataLayoutStr = *LayoutOverride;
+
+    // Now the layout string is finalized in TentativeDataLayoutStr. Parse it.
+    Expected<DataLayout> MaybeDL = DataLayout::parse(TentativeDataLayoutStr);
+    if (!MaybeDL)
+      return MaybeDL.takeError();
+
+    TheModule->setDataLayout(MaybeDL.get());
+    return Error::success();
   };
 
   // Read all the records for this module.
@@ -4220,7 +4234,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      ResolveDataLayout();
+      if (Error Err = ResolveDataLayout())
+        return Err;
       return globalCleanup();
 
     case BitstreamEntry::SubBlock:
@@ -4285,7 +4300,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
           return Err;
         break;
       case bitc::FUNCTION_BLOCK_ID:
-        ResolveDataLayout();
+        if (Error Err = ResolveDataLayout())
+          return Err;
 
         // If this is the first function body we've seen, reverse the
         // FunctionsWithBodies list.
@@ -4384,13 +4400,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     case bitc::MODULE_CODE_DATALAYOUT: {  // DATALAYOUT: [strchr x N]
       if (ResolvedDataLayout)
         return error("datalayout too late in module");
-      std::string S;
-      if (convertToString(Record, 0, S))
+      if (convertToString(Record, 0, TentativeDataLayoutStr))
         return error("Invalid record");
-      Expected<DataLayout> MaybeDL = DataLayout::parse(S);
-      if (!MaybeDL)
-        return MaybeDL.takeError();
-      TheModule->setDataLayout(MaybeDL.get());
       break;
     }
     case bitc::MODULE_CODE_ASM: {  // ASM: [strchr x N]
@@ -4436,7 +4447,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
         return Err;
       break;
     case bitc::MODULE_CODE_FUNCTION:
-      ResolveDataLayout();
+      if (Error Err = ResolveDataLayout())
+        return Err;
       if (Error Err = parseFunctionRecord(Record))
         return Err;
       break;
@@ -4465,6 +4477,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     }
     Record.clear();
   }
+  return Error::success();
 }
 
 Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
@@ -7946,9 +7959,10 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
 
 Expected<std::unique_ptr<Module>>
 BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
-                             bool IsImporting) {
+                             bool IsImporting,
+                             DataLayoutCallbackTy DataLayoutCallback) {
   return getModuleImpl(Context, false, ShouldLazyLoadMetadata, IsImporting,
-                       [](StringRef) { return std::nullopt; });
+                       DataLayoutCallback);
 }
 
 // Parse the specified bitcode buffer and merge the index into CombinedIndex.
@@ -8094,12 +8108,14 @@ static Expected<BitcodeModule> getSingleModule(MemoryBufferRef Buffer) {
 
 Expected<std::unique_ptr<Module>>
 llvm::getLazyBitcodeModule(MemoryBufferRef Buffer, LLVMContext &Context,
-                           bool ShouldLazyLoadMetadata, bool IsImporting) {
+                           bool ShouldLazyLoadMetadata, bool IsImporting,
+                           DataLayoutCallbackTy DataLayoutCallback) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
 
-  return BM->getLazyModule(Context, ShouldLazyLoadMetadata, IsImporting);
+  return BM->getLazyModule(Context, ShouldLazyLoadMetadata, IsImporting,
+                           DataLayoutCallback);
 }
 
 Expected<std::unique_ptr<Module>> llvm::getOwningLazyBitcodeModule(
