@@ -467,13 +467,12 @@ CsectGroup &XCOFFObjectWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
     return TOCCsects;
   case XCOFF::XMC_TC:
   case XCOFF::XMC_TE:
+  case XCOFF::XMC_TD:
     assert(XCOFF::XTY_SD == MCSec->getCSectType() &&
            "Only an initialized csect can contain TC entry.");
     assert(!TOCCsects.empty() &&
            "We should at least have a TOC-base in this CsectGroup.");
     return TOCCsects;
-  case XCOFF::XMC_TD:
-    report_fatal_error("toc-data not yet supported when writing object files.");
   default:
     report_fatal_error("Unhandled mapping of csect to section.");
   }
@@ -617,10 +616,6 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
       TargetObjectWriter->getRelocTypeAndSignSize(Target, Fixup, IsPCRel);
 
   const MCSectionXCOFF *SymASec = getContainingCsect(cast<MCSymbolXCOFF>(SymA));
-
-  if (SymASec->isCsect() && SymASec->getMappingClass() == XCOFF::XMC_TD)
-    report_fatal_error("toc-data not yet supported when writing object files.");
-
   assert(SectionMap.find(SymASec) != SectionMap.end() &&
          "Expected containing csect to exist in map.");
 
@@ -636,15 +631,24 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     FixedValue = 0;
   else if (Type == XCOFF::RelocationType::R_TOC ||
            Type == XCOFF::RelocationType::R_TOCL) {
-    // The FixedValue should be the TOC entry offset from the TOC-base plus any
-    // constant offset value.
-    const int64_t TOCEntryOffset = SectionMap[SymASec]->Address -
-                                   TOCCsects.front().Address +
-                                   Target.getConstant();
-    if (Type == XCOFF::RelocationType::R_TOC && !isInt<16>(TOCEntryOffset))
-      report_fatal_error("TOCEntryOffset overflows in small code model mode");
+    // For non toc-data external symbols, R_TOC type relocation will relocate to
+    // data symbols that have XCOFF::XTY_SD type csect. For toc-data external
+    // symbols, R_TOC type relocation will relocate to data symbols that have
+    // XCOFF_ER type csect. For XCOFF_ER kind symbols, there will be no TOC
+    // entry for them, so the FixedValue should always be 0.
+    if (SymASec->getCSectType() == XCOFF::XTY_ER) {
+      FixedValue = 0;
+    } else {
+      // The FixedValue should be the TOC entry offset from the TOC-base plus
+      // any constant offset value.
+      const int64_t TOCEntryOffset = SectionMap[SymASec]->Address -
+                                     TOCCsects.front().Address +
+                                     Target.getConstant();
+      if (Type == XCOFF::RelocationType::R_TOC && !isInt<16>(TOCEntryOffset))
+        report_fatal_error("TOCEntryOffset overflows in small code model mode");
 
-    FixedValue = TOCEntryOffset;
+      FixedValue = TOCEntryOffset;
+    }
   } else if (Type == XCOFF::RelocationType::R_RBR) {
     MCSectionXCOFF *ParentSec = cast<MCSectionXCOFF>(Fragment->getParent());
     assert((SymASec->getMappingClass() == XCOFF::XMC_PR &&
