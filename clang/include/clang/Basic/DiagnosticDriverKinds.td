@@ -632,6 +632,11 @@ def warn_drv_libstdcxx_not_found : Warning<
   "command line to use the libc++ standard library instead">,
   InGroup<DiagGroup<"stdlibcxx-not-found">>;
 
+def warn_deperecated_fcoroutines_ts_flag : Warning<
+  "the '-fcoroutines-ts' flag is deprecated and it will be removed in Clang 17; "
+  "use '-std=c++20' or higher to use standard C++ coroutines instead">,
+  InGroup<DeprecatedExperimentalCoroutine>;
+
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 
 def err_drv_invalid_object_mode : Error<
