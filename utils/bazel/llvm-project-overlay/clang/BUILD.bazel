@@ -9,6 +9,7 @@ load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
 
 package(
     default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
 )
 
 licenses(["notice"])
