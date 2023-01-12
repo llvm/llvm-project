@@ -1314,7 +1314,8 @@ private:
                 [&Diagnostics,
                  Diagnoser = UncheckedOptionalAccessDiagnoser(Options)](
                     ASTContext &Ctx, const CFGElement &Elt,
-                    const TypeErasedDataflowAnalysisState &State) mutable {
+                    const TransferStateForDiagnostics<NoopLattice>
+                        &State) mutable {
                   auto EltDiagnostics =
                       Diagnoser.diagnose(Ctx, &Elt, State.Env);
                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
@@ -2856,6 +2857,59 @@ TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
         opt = Make<$ns::$optional<int>>();
         if (!opt.has_value()) continue;
       }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, StructuredBindingsFromStruct) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct kv { $ns::$optional<int> opt; int x; };
+    int target() {
+      auto [contents, x] = Make<kv>();
+      return contents ? *contents : x;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T1, typename T2>
+    struct pair { T1 fst;  T2 snd; };
+    int target() {
+      auto [contents, x] = Make<pair<$ns::$optional<int>, int>>();
+      return contents ? *contents : x;
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, StructuredBindingsFromTupleLikeType) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    namespace std {
+    template <class> struct tuple_size;
+    template <size_t, class> struct tuple_element;
+    template <class...> class tuple;
+
+    template <class... T>
+    struct tuple_size<tuple<T...>> : integral_constant<size_t, sizeof...(T)> {};
+
+    template <size_t I, class... T>
+    struct tuple_element<I, tuple<T...>> {
+      using type =  __type_pack_element<I, T...>;
+    };
+
+    template <class...> class tuple {};
+    template <size_t I, class... T>
+    typename tuple_element<I, tuple<T...>>::type get(tuple<T...>);
+    } // namespace std
+
+    std::tuple<$ns::$optional<const char *>, int> get_opt();
+    void target() {
+      auto [content, ck] = get_opt();
+      content ? *content : "";
     }
   )");
 }

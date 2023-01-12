@@ -283,7 +283,7 @@ public:
 
 private:
   // Return true if the directive starts an always-taken conditional branch,
-  // false if the branch is never taken, and None otherwise.
+  // false if the branch is never taken, and std::nullopt otherwise.
   llvm::Optional<bool> isTakenWhenReached(const DirectiveTree::Directive &Dir) {
     switch (Dir.Kind) {
     case clang::tok::pp_if:

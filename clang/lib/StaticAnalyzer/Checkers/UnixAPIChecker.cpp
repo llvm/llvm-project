@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -40,7 +41,7 @@ namespace {
 
 class UnixAPIMisuseChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable std::unique_ptr<BugType> BT_open, BT_pthreadOnce;
-  mutable Optional<uint64_t> Val_O_CREAT;
+  mutable std::optional<uint64_t> Val_O_CREAT;
 
 public:
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;

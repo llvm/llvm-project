@@ -15,6 +15,7 @@
 #include "RetainCountChecker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -165,11 +166,11 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
 
 /// Finds argument index of the out paramter in the call @c S
 /// corresponding to the symbol @c Sym.
-/// If none found, returns None.
-static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
-                                             const LocationContext *LCtx,
-                                             SymbolRef &Sym,
-                                             Optional<CallEventRef<>> CE) {
+/// If none found, returns std::nullopt.
+static std::optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
+                                                  const LocationContext *LCtx,
+                                                  SymbolRef &Sym,
+                                                  Optional<CallEventRef<>> CE) {
   if (!CE)
     return std::nullopt;
 
@@ -182,7 +183,7 @@ static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
   return std::nullopt;
 }
 
-static Optional<std::string> findMetaClassAlloc(const Expr *Callee) {
+static std::optional<std::string> findMetaClassAlloc(const Expr *Callee) {
   if (const auto *ME = dyn_cast<MemberExpr>(Callee)) {
     if (ME->getMemberDecl()->getNameAsString() != "alloc")
       return std::nullopt;
@@ -602,7 +603,7 @@ RefCountReportVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   return std::move(P);
 }
 
-static Optional<std::string> describeRegion(const MemRegion *MR) {
+static std::optional<std::string> describeRegion(const MemRegion *MR) {
   if (const auto *VR = dyn_cast_or_null<VarRegion>(MR))
     return std::string(VR->getDecl()->getName());
   // Once we support more storage locations for bindings,
@@ -771,7 +772,7 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
 
   os << "Object leaked: ";
 
-  Optional<std::string> RegionDescription = describeRegion(LastBinding);
+  std::optional<std::string> RegionDescription = describeRegion(LastBinding);
   if (RegionDescription) {
     os << "object allocated and stored into '" << *RegionDescription << '\'';
   } else {
@@ -917,7 +918,7 @@ void RefLeakReport::createDescription(CheckerContext &Ctx) {
   llvm::raw_string_ostream os(Description);
   os << "Potential leak of an object";
 
-  Optional<std::string> RegionDescription =
+  std::optional<std::string> RegionDescription =
       describeRegion(AllocBindingToReport);
   if (RegionDescription) {
     os << " stored into '" << *RegionDescription << '\'';

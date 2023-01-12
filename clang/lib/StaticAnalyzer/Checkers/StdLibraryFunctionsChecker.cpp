@@ -52,6 +52,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 
+#include <optional>
 #include <string>
 
 using namespace clang;
@@ -296,13 +297,13 @@ class StdLibraryFunctionsChecker
   //   // Here, ptr is the buffer, and its minimum size is `size * nmemb`.
   class BufferSizeConstraint : public ValueConstraint {
     // The concrete value which is the minimum size for the buffer.
-    llvm::Optional<llvm::APSInt> ConcreteSize;
+    std::optional<llvm::APSInt> ConcreteSize;
     // The argument which holds the size of the buffer.
-    llvm::Optional<ArgNo> SizeArgN;
+    std::optional<ArgNo> SizeArgN;
     // The argument which is a multiplier to size. This is set in case of
     // `fread` like functions where the size is computed as a multiplication of
     // two arguments.
-    llvm::Optional<ArgNo> SizeMultiplierArgN;
+    std::optional<ArgNo> SizeMultiplierArgN;
     // The operator we use in apply. This is negated in negate().
     BinaryOperator::Opcode Op = BO_LE;
 
@@ -950,7 +951,7 @@ void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
         Constraint->negate()->apply(NewState, Call, Summary, C);
     // The argument constraint is not satisfied.
     if (FailureSt && !SuccessSt) {
-      if (ExplodedNode *N = C.generateErrorNode(NewState))
+      if (ExplodedNode *N = C.generateErrorNode(NewState, NewNode))
         reportBug(Call, N, Constraint.get(), Summary, C);
       break;
     }

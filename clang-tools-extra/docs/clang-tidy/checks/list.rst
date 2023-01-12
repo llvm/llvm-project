@@ -115,6 +115,7 @@ Clang-Tidy Checks
    `bugprone-sizeof-container <bugprone/sizeof-container.html>`_,
    `bugprone-sizeof-expression <bugprone/sizeof-expression.html>`_,
    `bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions.html>`_,
+   `bugprone-standalone-empty <bugprone/standalone-empty.html>`_, "Yes"
    `bugprone-string-constructor <bugprone/string-constructor.html>`_, "Yes"
    `bugprone-string-integer-assignment <bugprone/string-integer-assignment.html>`_, "Yes"
    `bugprone-string-literal-with-embedded-nul <bugprone/string-literal-with-embedded-nul.html>`_,

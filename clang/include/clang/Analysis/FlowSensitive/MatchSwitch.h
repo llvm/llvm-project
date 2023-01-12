@@ -48,6 +48,16 @@ template <typename LatticeT> struct TransferState {
   Environment &Env;
 };
 
+/// A read-only version of TransferState.
+template <typename LatticeT> struct TransferStateForDiagnostics {
+  TransferStateForDiagnostics(const LatticeT &Lattice, const Environment &Env)
+      : Lattice(Lattice), Env(Env) {}
+
+  /// Current lattice element.
+  const LatticeT &Lattice;
+  const Environment &Env;
+};
+
 template <typename T>
 using MatchSwitchMatcher = ast_matchers::internal::Matcher<T>;
 
