@@ -1625,6 +1625,12 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
   if (instance_ptr == LLDB_INVALID_ADDRESS || instance_ptr == 0)
     return false;
 
+  // Unwrap reference types.
+  Status error;
+  instance_ptr = FixupAddress(instance_ptr, class_type, error);
+  if (!error.Success())
+    return false;
+
   auto tss = class_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!tss)
     return false;
@@ -2799,26 +2805,17 @@ SwiftLanguageRuntimeImpl::FixupPointerValue(lldb::addr_t addr,
 lldb::addr_t SwiftLanguageRuntimeImpl::FixupAddress(lldb::addr_t addr,
                                                     CompilerType type,
                                                     Status &error) {
-  swift::CanType swift_can_type = GetCanonicalSwiftType(type);
-  if (!swift_can_type)
-    return addr;
-  switch (swift_can_type->getKind()) {
-  case swift::TypeKind::UnownedStorage: {
-    // Peek into the reference to see whether it needs an extra deref.
-    // If yes, return the fixed-up address we just read.
+  // Peek into the reference to see whether it needs an extra deref.
+  // If yes, return the fixed-up address we just read.
+  lldb::addr_t stripped_addr = LLDB_INVALID_ADDRESS;
+  bool extra_deref;
+  std::tie(stripped_addr, extra_deref) = FixupPointerValue(addr, type);
+  if (extra_deref) {
     Target &target = m_process.GetTarget();
     size_t ptr_size = m_process.GetAddressByteSize();
     lldb::addr_t refd_addr = LLDB_INVALID_ADDRESS;
-    target.ReadMemory(addr, &refd_addr, ptr_size, error, true);
-    if (error.Success()) {
-      bool extra_deref;
-      std::tie(refd_addr, extra_deref) = FixupPointerValue(refd_addr, type);
-      if (extra_deref)
-        return refd_addr;
-    }
-  } break;
-  default:
-    break;
+    target.ReadMemory(stripped_addr, &refd_addr, ptr_size, error, true);
+    return refd_addr;
   }
   return addr;
 }

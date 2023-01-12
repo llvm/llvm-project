@@ -982,8 +982,17 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           (unsigned long long)offset);
   }
 
-  return SwiftExpressionParser::SILVariableInfo(variable.GetType(), offset,
-                                                needs_init);
+  bool unowned_self = false;
+  if (variable.IsSelf()) {
+    SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy;
+    if (SwiftASTContext::IsNonTriviallyManagedReferenceType(compiler_type,
+                                                            strategy))
+      unowned_self =
+          strategy ==
+          SwiftASTContext::NonTriviallyManagedReferenceStrategy::eUnowned;
+  }
+  return SwiftExpressionParser::SILVariableInfo(
+      variable.GetType(), offset, needs_init, unowned_self);
 }
 
 namespace {
