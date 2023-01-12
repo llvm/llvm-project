@@ -1,9 +1,17 @@
 ! Test correct deallocation of intent(out) allocatables.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -polymorphic-type %s -o - | FileCheck %s
 
 module mod1
   type, bind(c) :: t1
     integer :: i
+  end type
+
+  type :: t
+    integer :: a
+  end type
+
+  type, extends(t) :: t2
+    integer :: b
   end type
 
   interface
@@ -91,8 +99,14 @@ contains
 
 ! CHECK-LABEL: func.func @_QMmod1Psub5(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>> {fir.bindc_name = "t"})
-! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>) -> !fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>
+! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMmod1Tt1{i:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
   subroutine sub6()
     type(t1), allocatable :: t
@@ -188,6 +202,38 @@ contains
 ! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK: fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 
+
+  subroutine sub14(p)
+    class(t), intent(out), allocatable :: p
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmod1Psub14(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>> {fir.bindc_name = "p"}) {
+! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>) -> !fir.heap<!fir.type<_QMmod1Tt{a:i32}>>
+! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK: }
+
+  subroutine sub15(p)
+    class(*), intent(out), allocatable :: p
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmod1Psub15(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<none>>> {fir.bindc_name = "p"}) {
+! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.class<!fir.heap<none>>) -> !fir.heap<none>
+! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<none>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
+! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK: }
 
 end module
 

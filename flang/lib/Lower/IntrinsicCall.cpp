@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Command.h"
+#include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
@@ -500,6 +501,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genEoshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genExit(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genExtendsTypeOf(mlir::Type,
+                                      llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -564,6 +567,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
                            llvm::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genSameTypeAs(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSelectedIntKind(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -812,6 +817,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"status", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"exponent", &I::genExponent},
+    {"extends_type_of",
+     &I::genExtendsTypeOf,
+     {{{"a", asBox}, {"mold", asBox}}},
+     /*isElemental=*/false},
     {"findloc",
      &I::genFindloc,
      {{{"array", asBox},
@@ -1013,6 +1022,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"order", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"rrspacing", &I::genRRSpacing},
+    {"same_type_as",
+     &I::genSameTypeAs,
+     {{{"a", asBox}, {"b", asBox}}},
+     /*isElemental=*/false},
     {"scale",
      &I::genScale,
      {{{"x", asValue}, {"i", asValue}}},
@@ -3285,6 +3298,18 @@ mlir::Value IntrinsicLibrary::genExponent(mlir::Type resultType,
                                 fir::getBase(args[0])));
 }
 
+// EXTENDS_TYPE_OF
+fir::ExtendedValue
+IntrinsicLibrary::genExtendsTypeOf(mlir::Type resultType,
+                                   llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genExtendsTypeOf(builder, loc, fir::getBase(args[0]),
+                                     fir::getBase(args[1])));
+}
+
 // FINDLOC
 fir::ExtendedValue
 IntrinsicLibrary::genFindloc(mlir::Type resultType,
@@ -4489,6 +4514,18 @@ mlir::Value IntrinsicLibrary::genRRSpacing(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genRRSpacing(builder, loc, fir::getBase(args[0])));
+}
+
+// SAME_TYPE_AS
+fir::ExtendedValue
+IntrinsicLibrary::genSameTypeAs(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSameTypeAs(builder, loc, fir::getBase(args[0]),
+                                  fir::getBase(args[1])));
 }
 
 // SCALE
