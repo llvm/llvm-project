@@ -176,6 +176,7 @@ public:
 
   Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
+  bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
 
   bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                               SDValue C) const override;
