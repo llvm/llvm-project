@@ -200,11 +200,6 @@ the choice at each instruction, iteratively joining the results for each block.
 As this is an experimental work in progress so there are some items we still need
 to tackle:
 
-* LLVM is trying to replace usage of `Undef` with `Poison`. Use `Poison` rather
-  than `Undef` as the sentinal to denote "unknown location" for the address. See
-  D133293. This will be unecessary if the address can be removed, as described
-  below.
-
 * As mentioned in test llvm/test/DebugInfo/assignment-tracking/X86/diamond-3.ll,
   the analysis should treat escaping calls like untagged stores.
 
