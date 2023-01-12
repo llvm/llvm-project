@@ -104,7 +104,7 @@ public:
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-    report(E->getLocation(), E->getConstructor(),
+    report(E->getLocation(), getMemberProvider(E->getType()),
            E->getParenOrBraceRange().isValid() ? RefType::Explicit
                                                : RefType::Implicit);
     return true;
