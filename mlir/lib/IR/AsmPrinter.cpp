@@ -602,12 +602,8 @@ public:
 
     // If requested, always print the generic form.
     if (!printerFlags.shouldPrintGenericOpForm()) {
-      // Check to see if this is a known operation.  If so, use the registered
-      // custom printer hook.
-      if (auto opInfo = op->getRegisteredInfo()) {
-        opInfo->printAssembly(op, *this, /*defaultDialect=*/"");
-        return;
-      }
+      op->getName().printAssembly(op, *this, /*defaultDialect=*/"");
+      return;
     }
 
     // Otherwise print with the generic assembly form.
