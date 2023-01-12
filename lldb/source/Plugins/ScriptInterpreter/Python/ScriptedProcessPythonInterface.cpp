@@ -37,16 +37,18 @@ StructuredData::GenericSP ScriptedProcessPythonInterface::CreatePluginObject(
   if (class_name.empty())
     return {};
 
-  TargetSP target_sp = exe_ctx.GetTargetSP();
   StructuredDataImpl args_impl(args_sp);
   std::string error_string;
 
   Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                  Locker::FreeLock);
 
-  PythonObject ret_val = LLDBSwigPythonCreateScriptedProcess(
-      class_name.str().c_str(), m_interpreter.GetDictionaryName(), target_sp,
-      args_impl, error_string);
+  lldb::ExecutionContextRefSP exe_ctx_ref_sp =
+      std::make_shared<ExecutionContextRef>(exe_ctx);
+
+  PythonObject ret_val = LLDBSwigPythonCreateScriptedObject(
+      class_name.str().c_str(), m_interpreter.GetDictionaryName(),
+      exe_ctx_ref_sp, args_impl, error_string);
 
   m_object_instance_sp =
       StructuredData::GenericSP(new StructuredPythonObject(std::move(ret_val)));
