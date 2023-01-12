@@ -836,6 +836,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   target.addLegalDialect<mlir::LLVM::LLVMDialect>();
   target.addIllegalDialect<mlir::cir::CIRDialect, mlir::func::FuncDialect>();
 
+  getOperation()->removeAttr("cir.sob");
+
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
