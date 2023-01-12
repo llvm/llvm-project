@@ -2094,13 +2094,23 @@ void Attributor::identifyDeadInternalFunctions() {
   if (!Configuration.DeleteFns)
     return;
 
+  // To avoid triggering an assertion in the lazy call graph we will not delete
+  // any internal library functions. We should modify the assertion though and
+  // allow internals to be deleted.
+  const auto *TLI =
+      isModulePass()
+          ? nullptr
+          : getInfoCache().getTargetLibraryInfoForFunction(*Functions.back());
+  LibFunc LF;
+
   // Identify dead internal functions and delete them. This happens outside
   // the other fixpoint analysis as we might treat potentially dead functions
   // as live to lower the number of iterations. If they happen to be dead, the
   // below fixpoint loop will identify and eliminate them.
+
   SmallVector<Function *, 8> InternalFns;
   for (Function *F : Functions)
-    if (F->hasLocalLinkage())
+    if (F->hasLocalLinkage() && (isModulePass() || !TLI->getLibFunc(*F, LF)))
       InternalFns.push_back(F);
 
   SmallPtrSet<Function *, 8> LiveInternalFns;
