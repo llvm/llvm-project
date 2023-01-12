@@ -12,7 +12,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
@@ -68,14 +67,17 @@ private:
   unsigned InputOptionID = 0;
   unsigned UnknownOptionID = 0;
 
+protected:
   /// The index of the first option which can be parsed (i.e., is not a
   /// special option like 'input' or 'unknown', and is not an option group).
   unsigned FirstSearchableIndex = 0;
 
+  /// The union of the first element of all option prefixes.
+  SmallString<8> PrefixChars;
+
   /// The union of all option prefixes. If an argument does not begin with
   /// one of these, it is an input.
-  StringSet<> PrefixesUnion;
-  SmallString<8> PrefixChars;
+  virtual ArrayRef<StringLiteral> getPrefixesUnion() const = 0;
 
 private:
   const Info &getInfo(OptSpecifier Opt) const {
@@ -88,10 +90,15 @@ private:
                                           unsigned &Index) const;
 
 protected:
+  /// Initialize OptTable using Tablegen'ed OptionInfos. Child class must
+  /// manually call \c buildPrefixChars once they are fully constructed.
   OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
 
+  /// Build (or rebuild) the PrefixChars member.
+  void buildPrefixChars();
+
 public:
-  ~OptTable();
+  virtual ~OptTable();
 
   /// Return the total number of option classes.
   unsigned getNumOptions() const { return OptionInfos.size(); }
@@ -244,6 +251,32 @@ public:
 
   void printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                  bool ShowHidden = false, bool ShowAllAliases = false) const;
+};
+
+/// Specialization of OptTable
+class GenericOptTable : public OptTable {
+  SmallVector<StringLiteral> PrefixesUnionBuffer;
+
+protected:
+  GenericOptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
+  ArrayRef<StringLiteral> getPrefixesUnion() const final {
+    return PrefixesUnionBuffer;
+  }
+};
+
+class PrecomputedOptTable : public OptTable {
+  ArrayRef<StringLiteral> PrefixesUnion;
+
+protected:
+  PrecomputedOptTable(ArrayRef<Info> OptionInfos,
+                      ArrayRef<StringLiteral> PrefixesTable,
+                      bool IgnoreCase = false)
+      : OptTable(OptionInfos, IgnoreCase), PrefixesUnion(PrefixesTable) {
+    buildPrefixChars();
+  }
+  ArrayRef<StringLiteral> getPrefixesUnion() const final {
+    return PrefixesUnion;
+  }
 };
 
 } // end namespace opt

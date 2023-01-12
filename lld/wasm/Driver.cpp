@@ -120,9 +120,9 @@ static constexpr opt::OptTable::Info optInfo[] = {
 };
 
 namespace {
-class WasmOptTable : public llvm::opt::OptTable {
+class WasmOptTable : public opt::GenericOptTable {
 public:
-  WasmOptTable() : OptTable(optInfo) {}
+  WasmOptTable() : opt::GenericOptTable(optInfo) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace

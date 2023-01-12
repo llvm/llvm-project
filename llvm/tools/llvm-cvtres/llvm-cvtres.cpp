@@ -63,9 +63,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class CvtResOptTable : public opt::OptTable {
+class CvtResOptTable : public opt::GenericOptTable {
 public:
-  CvtResOptTable() : OptTable(InfoTable, true) {}
+  CvtResOptTable() : opt::GenericOptTable(InfoTable, true) {}
 };
 }
 

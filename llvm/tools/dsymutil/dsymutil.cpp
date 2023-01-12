@@ -82,9 +82,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class DsymutilOptTable : public opt::OptTable {
+class DsymutilOptTable : public opt::GenericOptTable {
 public:
-  DsymutilOptTable() : OptTable(InfoTable) {}
+  DsymutilOptTable() : opt::GenericOptTable(InfoTable) {}
 };
 } // namespace
 
