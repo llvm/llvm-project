@@ -1180,8 +1180,8 @@ mlir::LogicalResult fir::EmboxOp::verify() {
     return emitOpError("shape must not be provided for a scalar");
   if (getSlice() && !isArray)
     return emitOpError("slice must not be provided for a scalar");
-  if (getTdesc() && !getResult().getType().isa<fir::ClassType>())
-    return emitOpError("tdesc must be used with fir.class result type");
+  if (getSourceBox() && !getResult().getType().isa<fir::ClassType>())
+    return emitOpError("source_box must be used with fir.class result type");
   return mlir::success();
 }
 
