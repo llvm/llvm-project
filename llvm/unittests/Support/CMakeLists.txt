@@ -8,7 +8,6 @@ add_llvm_unittest(SupportTests
   AlignmentTest.cpp
   AlignOfTest.cpp
   AllocatorTest.cpp
-  AnnotationsTest.cpp
   ARMAttributeParser.cpp
   ArrayRecyclerTest.cpp
   Base64Test.cpp
