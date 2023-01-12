@@ -1361,6 +1361,10 @@ bool Attributor::isAssumedDead(const Instruction &I,
     FnLivenessAA = &getOrCreateAAFor<AAIsDead>(IRPosition::function(F, CBCtx),
                                                QueryingAA, DepClassTy::NONE);
 
+  // Don't use recursive reasoning.
+  if (QueryingAA == FnLivenessAA)
+    return false;
+
   // If we have a context instruction and a liveness AA we use it.
   if (CheckBBLivenessOnly ? FnLivenessAA->isAssumedDead(I.getParent())
                           : FnLivenessAA->isAssumedDead(&I)) {
@@ -1377,7 +1381,8 @@ bool Attributor::isAssumedDead(const Instruction &I,
   const IRPosition IRP = IRPosition::inst(I, CBCtx);
   const AAIsDead &IsDeadAA =
       getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
-  // Don't check liveness for AAIsDead.
+
+  // Don't use recursive reasoning.
   if (QueryingAA == &IsDeadAA)
     return false;
 
@@ -1422,7 +1427,8 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
         QueryingAA, DepClassTy::NONE);
   else
     IsDeadAA = &getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
-  // Don't check liveness for AAIsDead.
+
+  // Don't use recursive reasoning.
   if (QueryingAA == IsDeadAA)
     return false;
 
@@ -1445,6 +1451,10 @@ bool Attributor::isAssumedDead(const BasicBlock &BB,
   if (!FnLivenessAA || FnLivenessAA->getAnchorScope() != &F)
     FnLivenessAA = &getOrCreateAAFor<AAIsDead>(IRPosition::function(F),
                                                QueryingAA, DepClassTy::NONE);
+
+  // Don't use recursive reasoning.
+  if (QueryingAA == FnLivenessAA)
+    return false;
 
   if (FnLivenessAA->isAssumedDead(&BB)) {
     if (QueryingAA)
