@@ -28,7 +28,7 @@ namespace interp {
 /// Scope used to handle temporaries in toplevel variable declarations.
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
-  DeclScope(ByteCodeExprGen<Emitter> *Ctx, const VarDecl *VD)
+  DeclScope(ByteCodeExprGen<Emitter> *Ctx, const ValueDecl *VD)
       : LocalScope<Emitter>(Ctx), Scope(Ctx->P, VD) {}
 
   void addExtended(const Scope::Local &Local) override {
@@ -936,11 +936,11 @@ bool ByteCodeExprGen<Emitter>::dereference(
   if (std::optional<PrimType> T = classify(LV->getType())) {
     if (!LV->refersToBitField()) {
       // Only primitive, non bit-field types can be dereferenced directly.
-      if (auto *DE = dyn_cast<DeclRefExpr>(LV)) {
+      if (const auto *DE = dyn_cast<DeclRefExpr>(LV)) {
         if (!DE->getDecl()->getType()->isReferenceType()) {
-          if (auto *PD = dyn_cast<ParmVarDecl>(DE->getDecl()))
+          if (const auto *PD = dyn_cast<ParmVarDecl>(DE->getDecl()))
             return dereferenceParam(LV, *T, PD, AK, Direct, Indirect);
-          if (auto *VD = dyn_cast<VarDecl>(DE->getDecl()))
+          if (const auto *VD = dyn_cast<VarDecl>(DE->getDecl()))
             return dereferenceVar(LV, *T, VD, AK, Direct, Indirect);
         }
       }
@@ -1823,6 +1823,8 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     }
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Decl)) {
     return this->emitConst(ECD->getInitVal(), E);
+  } else if (const auto *BD = dyn_cast<BindingDecl>(Decl)) {
+    return this->visit(BD->getBinding());
   }
 
   return false;
