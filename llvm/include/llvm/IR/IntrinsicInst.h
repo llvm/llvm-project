@@ -440,6 +440,13 @@ public:
   }
   void setAssignId(DIAssignID *New);
   void setAddress(Value *V);
+  /// Kill the address component.
+  void setKillAddress();
+  /// Check whether this kills the address component. This doesn't take into
+  /// account the position of the intrinsic, therefore a returned value of false
+  /// does not guarentee the address is a valid location for the variable at the
+  /// intrinsic's position in IR.
+  bool isKillAddress() const;
   void setValue(Value *V);
   /// \name Casting methods
   /// @{
