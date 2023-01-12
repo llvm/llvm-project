@@ -18,7 +18,7 @@ template <typename T> using TestWithParam = ::zxtest::TestWithParam<T>;
 #else
 #include "gtest/gtest.h"
 using Test = ::testing::Test;
-template <typename T> using TestWithParam = ::zxtest::TestWithParam<T>;
+template <typename T> using TestWithParam = ::testing::TestWithParam<T>;
 #endif
 
 #include "gwp_asan/guarded_pool_allocator.h"
