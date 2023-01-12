@@ -87,9 +87,9 @@ ThreadRegistry *GetLsanThreadRegistryLocked() {
   return thread_registry;
 }
 
-void RunCallbackForEachThreadLocked(
-    __sanitizer::ThreadRegistry::ThreadCallback cb, void *arg) {
-  GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(cb, arg);
+void ReportUnsuspendedThreadsLocked(InternalMmapVector<tid_t> *threads) {
+  GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+      &ReportIfNotSuspended, threads);
 }
 
 }  // namespace __lsan
