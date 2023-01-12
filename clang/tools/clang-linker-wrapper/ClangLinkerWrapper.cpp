@@ -510,6 +510,42 @@ const char *getLDMOption(const llvm::Triple &T) {
   }
 }
 
+Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args) {
+  llvm::TimeTraceScope TimeScope("Clang Assembler");
+  // Use `clang` to invoke the generic assembler.
+  Expected<std::string> ClangPath =
+      findProgram("clang", {getMainExecutable("clang")});
+  if (!ClangPath)
+    return ClangPath.takeError();
+
+  const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  // Create a new file to write the linked device image to. Assume that the
+  // input filename already has the device and architecture.
+  auto TempFileOrErr = createOutputFile(sys::path::stem(InputFile), "o");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+
+  StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
+  SmallVector<StringRef, 16> CmdArgs{
+      *ClangPath,
+      "-o",
+      *TempFileOrErr,
+      "-fPIC",
+      "-c",
+      Args.MakeArgString("--target=" + Triple.getTriple()),
+      Args.MakeArgString("-" + OptLevel),
+      Triple.isAMDGPU() ? Args.MakeArgString("-mcpu=" + Arch)
+                        : Args.MakeArgString("-march=" + Arch),
+      InputFile,
+  };
+
+  if (Error Err = executeCommands(*ClangPath, CmdArgs))
+    return std::move(Err);
+
+  return *TempFileOrErr;
+}
+
 Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("Generic linker");
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
@@ -685,7 +721,8 @@ std::unique_ptr<lto::LTO> createLTO(
     };
   }
   Conf.PostOptModuleHook = Hook;
-  Conf.CGFileType = Triple.isNVPTX() ? CGFT_AssemblyFile : CGFT_ObjectFile;
+  Conf.CGFileType =
+      (Triple.isNVPTX() || SaveTemps) ? CGFT_AssemblyFile : CGFT_ObjectFile;
 
   // TODO: Handle remark files
   Conf.HasWholeProgramVisibility = Args.hasArg(OPT_whole_program);
@@ -852,7 +889,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
           const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
     int FD = -1;
     auto &TempFile = Files[Task];
-    StringRef Extension = (Triple.isNVPTX()) ? "s" : "o";
+    StringRef Extension = (Triple.isNVPTX() || SaveTemps) ? "s" : "o";
     std::string TaskStr = Task ? "." + std::to_string(Task) : "";
     auto TempFileOrErr =
         createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
@@ -885,9 +922,12 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   }
 
   // Is we are compiling for NVPTX we need to run the assembler first.
-  if (Triple.isNVPTX()) {
+  if (Triple.isNVPTX() || SaveTemps) {
     for (StringRef &File : Files) {
-      auto FileOrErr = nvptx::assemble(File, Args, !SingleOutput);
+
+      auto FileOrErr = Triple.isNVPTX()
+                           ? nvptx::assemble(File, Args, !SingleOutput)
+                           : generic::assemble(File, Args);
       if (!FileOrErr)
         return FileOrErr.takeError();
       File = *FileOrErr;

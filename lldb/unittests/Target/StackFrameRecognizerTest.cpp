@@ -32,8 +32,9 @@ public:
     // Pretend Linux is the host platform.
     platform_linux::PlatformLinux::Initialize();
     ArchSpec arch("powerpc64-pc-linux");
-    Platform::SetHostPlatform(
-        platform_linux::PlatformLinux::CreateInstance(true, &arch));
+    Platform::SetHostPlatform(platform_linux::PlatformLinux::CreateInstance(
+        true, &arch, /*debugger=*/nullptr,
+        /*metadata=*/nullptr));
   }
 
   void TearDown() override {

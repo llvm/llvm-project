@@ -2748,19 +2748,6 @@ TEST_P(UncheckedOptionalAccessTest, CorrelatedBranches) {
       }
     }
   )");
-
-  // FIXME: Add support for operator==.
-  // ExpectDiagnosticsFor(R"(
-  //   #include "unchecked_optional_access_test.h"
-  //
-  //   void target($ns::$optional<int> opt1, $ns::$optional<int> opt2) {
-  //     if (opt1 == opt2) {
-  //       if (opt1.has_value()) {
-  //         opt2.value();
-  //       }
-  //     }
-  //   }
-  // )");
 }
 
 TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
@@ -2846,7 +2833,7 @@ TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
   )code");
 }
 
-TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
+TEST_P(UncheckedOptionalAccessTest, AccessValueInLoop) {
   ExpectDiagnosticsFor(R"(
     #include "unchecked_optional_access_test.h"
 
@@ -2857,7 +2844,9 @@ TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
       }
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopWithCheckSafe) {
   ExpectDiagnosticsFor(R"(
     #include "unchecked_optional_access_test.h"
 
@@ -2871,7 +2860,9 @@ TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
       }
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopNoCheckUnsafe) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -2885,7 +2876,60 @@ TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
       }
     }
   )");
+}
 
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopToUnsetUnsafe) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = 3;
+      while (Make<bool>())
+        opt = $ns::nullopt;
+      $ns::$optional<int> opt2 = $ns::nullopt;
+      if (opt.has_value())
+        opt2 = $ns::$optional<int>(3);
+      opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopToSetUnsafe) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = $ns::nullopt;
+      while (Make<bool>())
+        opt = $ns::$optional<int>(3);
+      $ns::$optional<int> opt2 = $ns::nullopt;
+      if (!opt.has_value())
+        opt2 = $ns::$optional<int>(3);
+      opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopToUnknownUnsafe) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = $ns::nullopt;
+      while (Make<bool>())
+        opt = Make<$ns::$optional<int>>();
+      $ns::$optional<int> opt2 = $ns::nullopt;
+      if (!opt.has_value())
+        opt2 = $ns::$optional<int>(3);
+      opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoopBadConditionUnsafe) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"

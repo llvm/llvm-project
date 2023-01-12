@@ -161,6 +161,7 @@ class PersistentExpressionState;
 class Platform;
 class Process;
 class ProcessAttachInfo;
+class ProcessLaunchInfo;
 class ProcessInfo;
 class ProcessInstanceInfo;
 class ProcessInstanceInfoMatch;
@@ -180,6 +181,7 @@ class RichManglingContext;
 class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
+class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
 class ScriptedThreadInterface;
 class ScriptedSyntheticChildren;
@@ -364,6 +366,7 @@ typedef std::shared_ptr<lldb_private::OptionValueProperties>
 typedef std::shared_ptr<lldb_private::Platform> PlatformSP;
 typedef std::shared_ptr<lldb_private::Process> ProcessSP;
 typedef std::shared_ptr<lldb_private::ProcessAttachInfo> ProcessAttachInfoSP;
+typedef std::shared_ptr<lldb_private::ProcessLaunchInfo> ProcessLaunchInfoSP;
 typedef std::weak_ptr<lldb_private::Process> ProcessWP;
 typedef std::shared_ptr<lldb_private::RegisterCheckpoint> RegisterCheckpointSP;
 typedef std::shared_ptr<lldb_private::RegisterContext> RegisterContextSP;
@@ -377,6 +380,8 @@ typedef std::shared_ptr<lldb_private::RecognizedStackFrame>
 typedef std::shared_ptr<lldb_private::ScriptSummaryFormat>
     ScriptSummaryFormatSP;
 typedef std::shared_ptr<lldb_private::ScriptInterpreter> ScriptInterpreterSP;
+typedef std::unique_ptr<lldb_private::ScriptedPlatformInterface>
+    ScriptedPlatformInterfaceUP;
 typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>

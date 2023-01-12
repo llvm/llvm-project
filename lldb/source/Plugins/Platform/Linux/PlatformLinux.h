@@ -24,7 +24,9 @@ public:
   static void Terminate();
 
   // lldb_private::PluginInterface functions
-  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
+  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch,
+                                         const Debugger *debugger,
+                                         const ScriptedMetadata *metadata);
 
   static llvm::StringRef GetPluginNameStatic(bool is_host) {
     return is_host ? Platform::GetHostPlatformName() : "remote-linux";

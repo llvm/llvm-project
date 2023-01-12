@@ -36,7 +36,9 @@ class Stream;
 
 class PlatformDarwinKernel : public PlatformDarwin {
 public:
-  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
+  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch,
+                                         const Debugger *debugger,
+                                         const ScriptedMetadata *metadata);
 
   static void DebuggerInitialize(Debugger &debugger);
 

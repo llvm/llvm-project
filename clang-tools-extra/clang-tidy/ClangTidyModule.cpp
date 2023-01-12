@@ -22,7 +22,7 @@ void ClangTidyCheckFactories::registerCheckFactory(StringRef Name,
 }
 
 std::vector<std::unique_ptr<ClangTidyCheck>>
-ClangTidyCheckFactories::createChecks(ClangTidyContext *Context) {
+ClangTidyCheckFactories::createChecks(ClangTidyContext *Context) const {
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
   for (const auto &Factory : Factories) {
     if (Context->isCheckEnabled(Factory.getKey()))
@@ -32,7 +32,8 @@ ClangTidyCheckFactories::createChecks(ClangTidyContext *Context) {
 }
 
 std::vector<std::unique_ptr<ClangTidyCheck>>
-ClangTidyCheckFactories::createChecksForLanguage(ClangTidyContext *Context) {
+ClangTidyCheckFactories::createChecksForLanguage(
+    ClangTidyContext *Context) const {
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
   const LangOptions &LO = Context->getLangOpts();
   for (const auto &Factory : Factories) {

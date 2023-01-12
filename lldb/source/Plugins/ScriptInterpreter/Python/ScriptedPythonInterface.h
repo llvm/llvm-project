@@ -100,7 +100,13 @@ protected:
     return ExtractValueFromPythonObject<T>(py_return, error);
   }
 
-  Status GetStatusFromMethod(llvm::StringRef method_name);
+  template <typename... Args>
+  Status GetStatusFromMethod(llvm::StringRef method_name, Args &&...args) {
+    Status error;
+    Dispatch<Status>(method_name, error, std::forward<Args>(args)...);
+
+    return error;
+  }
 
   template <typename T> T Transform(T object) {
     // No Transformation for generic usage
