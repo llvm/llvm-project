@@ -6264,11 +6264,6 @@ foreach vti = AllIntegerVectors in {
 
 let Predicates = [HasVInstructionsAnyF] in {
 foreach fvti = AllFloatVectors in {
-  defvar instr = !cast<Instruction>("PseudoVFMV_"#fvti.ScalarSuffix#"_S_" #
-                                    fvti.LMul.MX);
-  def : Pat<(fvti.Scalar (int_riscv_vfmv_f_s (fvti.Vector fvti.RegClass:$rs2))),
-                         (instr $rs2, fvti.Log2SEW)>;
-
   def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
                          (fvti.Scalar fvti.ScalarRegClass:$rs2), VLOpFrag)),
             (!cast<Instruction>("PseudoVFMV_S_"#fvti.ScalarSuffix#"_" #
