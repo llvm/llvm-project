@@ -475,6 +475,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -1138,6 +1139,7 @@ cc_library(
     deps = [
         ":basic",
         ":codegen",
+        ":driver",
         ":frontend",
         ":lex",
         ":serialization",
@@ -1552,6 +1554,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:Option",
         "//llvm:ProfileData",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:config",
@@ -1635,6 +1638,7 @@ cc_library(
         ":type_nodes_gen",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:Analysis",
+        "//llvm:BinaryFormat",
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:BitstreamReader",
@@ -1661,6 +1665,7 @@ cc_library(
         "//llvm:Scalar",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
     ],
 )
@@ -2117,6 +2122,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":basic",
+        ":driver",
         ":tooling",
         "//llvm:BitWriter",
         "//llvm:Core",
