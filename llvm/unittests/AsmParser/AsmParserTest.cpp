@@ -10,8 +10,10 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -378,6 +380,41 @@ TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
   ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
   // We go to the next token, i.e., we read "i32" + ' '.
   ASSERT_TRUE(Read == 4);
+}
+
+TEST(AsmParserTest, InvalidDataLayoutStringCallback) {
+  LLVMContext Ctx;
+  SMDiagnostic Error;
+  // Note the invalid i8:7 part
+  // Overalign i32 as marker so we can check that indeed this DL was used,
+  // and not some default.
+  StringRef InvalidDLStr =
+      "e-m:e-p:64:64-i8:7-i16:16-i32:64-i64:64-f80:128-n8:16:32:64";
+  StringRef FixedDLStr =
+      "e-m:e-p:64:64-i8:8-i16:16-i32:64-i64:64-f80:128-n8:16:32:64";
+  Expected<DataLayout> ExpectedFixedDL = DataLayout::parse(FixedDLStr);
+  ASSERT_TRUE(!ExpectedFixedDL.takeError());
+  DataLayout FixedDL = ExpectedFixedDL.get();
+  std::string Source = ("target datalayout = \"" + InvalidDLStr + "\"\n").str();
+  MemoryBufferRef SourceBuffer(Source, "<string>");
+
+  // Check that we reject the source without a DL override.
+  SlotMapping Mapping1;
+  auto Mod1 = parseAssembly(SourceBuffer, Error, Ctx, &Mapping1);
+  EXPECT_TRUE(Mod1 == nullptr);
+
+  // Check that we pass the correct DL str to the callback,
+  // that fixing the DL str from the callback works,
+  // and that the resulting module has the correct DL.
+  SlotMapping Mapping2;
+  auto Mod2 = parseAssembly(
+      SourceBuffer, Error, Ctx, &Mapping2,
+      [&](StringRef Triple, StringRef DLStr) -> std::optional<std::string> {
+        EXPECT_EQ(DLStr, InvalidDLStr);
+        return std::string{FixedDLStr};
+      });
+  ASSERT_TRUE(Mod2 != nullptr);
+  EXPECT_EQ(Mod2->getDataLayout(), FixedDL);
 }
 
 } // end anonymous namespace
