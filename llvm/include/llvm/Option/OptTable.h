@@ -60,7 +60,7 @@ public:
 
 private:
   /// The option information table.
-  std::vector<Info> OptionInfos;
+  ArrayRef<Info> OptionInfos;
   bool IgnoreCase;
   bool GroupedShortOptions = false;
   const char *EnvVar = nullptr;
@@ -173,17 +173,6 @@ public:
   unsigned findNearest(StringRef Option, std::string &NearestString,
                        unsigned FlagsToInclude = 0, unsigned FlagsToExclude = 0,
                        unsigned MinimumLength = 4) const;
-
-  /// Add Values to Option's Values class
-  ///
-  /// \param [in] Option - Prefix + Name of the flag which Values will be
-  ///  changed. For example, "-analyzer-checker".
-  /// \param [in] Values - String of Values seperated by ",", such as
-  ///  "foo, bar..", where foo and bar is the argument which the Option flag
-  ///  takes
-  ///
-  /// \return true in success, and false in fail.
-  bool addValues(StringRef Option, const char *Values);
 
   /// Parse a single argument; returning the new argument and
   /// updating Index.
