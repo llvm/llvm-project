@@ -1565,8 +1565,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   std::tuple<fir::BaseBoxType, mlir::Value, mlir::Value>
   consDescriptorPrefix(BOX box, mlir::Type inputType,
                        mlir::ConversionPatternRewriter &rewriter, unsigned rank,
-                       mlir::ValueRange lenParams,
-                       mlir::Value typeDesc = {}) const {
+                       mlir::ValueRange lenParams, mlir::Value sourceBox = {},
+                       mlir::Type sourceBoxType = {}) const {
     auto loc = box.getLoc();
     auto boxTy = box.getType().template dyn_cast<fir::BaseBoxType>();
     bool useInputType = fir::isPolymorphicType(boxTy) &&
@@ -1584,25 +1584,19 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     auto [eleSize, cfiTy] = getSizeAndTypeCode(
         loc, rewriter, useInputType ? inputType : boxTy.getEleTy(), typeparams);
 
+    mlir::Value typeDesc;
+    if (sourceBox)
+      typeDesc =
+          this->loadTypeDescAddress(loc, sourceBoxType, sourceBox, rewriter);
     // When emboxing a fir.ref<none> to an unlimited polymorphic box, get the
     // type code and element size from the box used to extract the type desc.
     if (fir::isUnlimitedPolymorphicType(boxTy) &&
-        inputType.isa<mlir::NoneType>() && typeDesc) {
-      if (auto *typeDescOp = typeDesc.getDefiningOp()) {
-        if (auto loadOp = mlir::dyn_cast<mlir::LLVM::LoadOp>(typeDescOp)) {
-          if (auto *gepOp = loadOp.getAddr().getDefiningOp()) {
-            if (auto gep = mlir::dyn_cast<mlir::LLVM::GEPOp>(gepOp)) {
-              mlir::Type idxTy = this->lowerTy().indexType();
-              eleSize = this->getElementSizeFromBox(loc, idxTy, gep.getBase(),
-                                                    rewriter);
-              cfiTy = this->getValueFromBox(loc, gep.getBase(), cfiTy.getType(),
-                                            rewriter, kTypePosInBox);
-            }
-          }
-        }
-      }
+        inputType.isa<mlir::NoneType>() && sourceBox) {
+      mlir::Type idxTy = this->lowerTy().indexType();
+      eleSize = this->getElementSizeFromBox(loc, idxTy, sourceBox, rewriter);
+      cfiTy = this->getValueFromBox(loc, sourceBox, cfiTy.getType(), rewriter,
+                                    kTypePosInBox);
     }
-
     auto mod = box->template getParentOfType<mlir::ModuleOp>();
     mlir::Value descriptor = populateDescriptor(
         loc, mod, boxTy, inputType, rewriter, rank, eleSize, cfiTy, typeDesc);
@@ -1769,13 +1763,17 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
   matchAndRewrite(fir::EmboxOp embox, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::ValueRange operands = adaptor.getOperands();
-    mlir::Value tdesc;
-    if (embox.getTdesc())
-      tdesc = operands[embox.getTdescOffset()];
+    mlir::Value sourceBox;
+    mlir::Type sourceBoxType;
+    if (embox.getSourceBox()) {
+      sourceBox = operands[embox.getSourceBoxOffset()];
+      sourceBoxType = embox.getSourceBox().getType();
+    }
     assert(!embox.getShape() && "There should be no dims on this embox op");
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
         embox, fir::unwrapRefType(embox.getMemref().getType()), rewriter,
-        /*rank=*/0, /*lenParams=*/operands.drop_front(1), tdesc);
+        /*rank=*/0, /*lenParams=*/operands.drop_front(1), sourceBox,
+        sourceBoxType);
     dest = insertBaseAddress(rewriter, embox.getLoc(), dest, operands[0]);
     if (isDerivedTypeWithLenParams(boxTy)) {
       TODO(embox.getLoc(),
@@ -1796,12 +1794,16 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
   matchAndRewrite(fir::cg::XEmboxOp xbox, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::ValueRange operands = adaptor.getOperands();
-    mlir::Value tdesc;
-    if (xbox.getTdesc())
-      tdesc = operands[xbox.getTdescOffset()];
+    mlir::Value sourceBox;
+    mlir::Type sourceBoxType;
+    if (xbox.getSourceBox()) {
+      sourceBox = operands[xbox.getSourceBoxOffset()];
+      sourceBoxType = xbox.getSourceBox().getType();
+    }
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
         xbox, fir::unwrapRefType(xbox.getMemref().getType()), rewriter,
-        xbox.getOutRank(), operands.drop_front(xbox.lenParamOffset()), tdesc);
+        xbox.getOutRank(), operands.drop_front(xbox.lenParamOffset()),
+        sourceBox, sourceBoxType);
     // Generate the triples in the dims field of the descriptor
     auto i64Ty = mlir::IntegerType::get(xbox.getContext(), 64);
     mlir::Value base = operands[0];

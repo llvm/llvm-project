@@ -763,7 +763,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
     Optional<AnyShapeType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_TypeDescType>:$tdesc,
+    Optional<fir_ClassType>:$sourceBox,
     OptionalAttr<AffineMapAttr>:$accessMap
   );
 
@@ -774,14 +774,14 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
       "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
       CArg<"mlir::Value", "{}">:$slice,
       CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::Value", "{}">:$tdesc),
+      CArg<"mlir::Value", "{}">:$sourceBox),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    typeparams, tdesc, mlir::AffineMapAttr{}); }]>
+                    typeparams, sourceBox, mlir::AffineMapAttr{}); }]>
   ];
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
-      (`tdesc` $tdesc^)? (`map` $accessMap^)? attr-dict `:`
+      (`source_box` $sourceBox^)? (`map` $accessMap^)? attr-dict `:`
       functional-type(operands, results)
   }];
 
@@ -790,7 +790,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
   let extraClassDeclaration = [{
     bool hasLenParams() { return !getTypeparams().empty(); }
     unsigned numLenParams() { return getTypeparams().size(); }
-    unsigned getTdescOffset() {
+    unsigned getSourceBoxOffset() {
       return 1 + (getShape() ? 1 : 0) + (getSlice() ? 1 : 0)
           + numLenParams();
     }

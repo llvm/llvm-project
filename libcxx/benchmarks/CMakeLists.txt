@@ -185,6 +185,7 @@ set(BENCHMARK_TESTS
     formatter_int.bench.cpp
     function.bench.cpp
     map.bench.cpp
+    monotonic_buffer.bench.cpp
     ordered_set.bench.cpp
     std_format_spec_string_unicode.bench.cpp
     string.bench.cpp
