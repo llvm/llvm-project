@@ -123,15 +123,6 @@ def LLVM_DITagParameter : LLVM_DIParameter<
 >;
 
 //===----------------------------------------------------------------------===//
-// DIVoidResultTypeAttr
-//===----------------------------------------------------------------------===//
-
-def LLVM_DIVoidResultTypeAttr : LLVM_Attr<"DIVoidResultType", "di_void_result_type",
-                                          /*traits=*/[], "DITypeAttr"> {
-  let parameters = (ins);
-}
-
-//===----------------------------------------------------------------------===//
 // DIBasicTypeAttr
 //===----------------------------------------------------------------------===//
 
@@ -362,15 +353,16 @@ def LLVM_DISubroutineTypeAttr : LLVM_Attr<"DISubroutineType", "di_subroutine_typ
   ], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DICallingConventionParameter:$callingConvention,
-    OptionalArrayRefParameter<"DITypeAttr">:$types
+    OptionalParameter<"DITypeAttr">:$resultType,
+    OptionalArrayRefParameter<"DITypeAttr">:$argumentTypes
   );
   let builders = [
-    TypeBuilder<(ins "ArrayRef<DITypeAttr>":$types), [{
-      return $_get($_ctxt, /*callingConvention=*/0, types);
+    TypeBuilder<(ins "DITypeAttr":$resultType,
+                     "ArrayRef<DITypeAttr>":$argumentTypes), [{
+      return $_get($_ctxt, /*callingConvention=*/0, resultType, argumentTypes);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
-  let genVerifyDecl = 1;
 }
 
 #endif // LLVMIR_ATTRDEFS

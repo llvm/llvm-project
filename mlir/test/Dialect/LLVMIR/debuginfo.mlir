@@ -9,9 +9,6 @@
   isOptimized = true, emissionKind = Full
 >
 
-// CHECK-DAG: #[[VOID:.*]] = #llvm.di_void_result_type
-#void = #llvm.di_void_result_type
-
 // CHECK-DAG: #[[INT0:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int0">
 #int0 = #llvm.di_basic_type<
   // Omit the optional sizeInBits and encoding parameters.
@@ -56,21 +53,15 @@
   flags = "TypePassByReference|NonTrivial"
 >
 
-// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[VOID]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
+// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, argumentTypes = #[[INT0]], #[[PTR0]], #[[PTR1]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #void, #int0, #ptr0, #ptr1, #comp0, #comp1, #comp2
+  callingConvention = DW_CC_normal, argumentTypes = #int0, #ptr0, #ptr1, #comp0, #comp1, #comp2
 >
 
-// CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>
+// CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<resultType = #[[INT1]], argumentTypes = #[[INT1]]>
 #spType1 = #llvm.di_subroutine_type<
   // Omit the optional callingConvention parameter.
-  types = #int1, #int1
->
-
-// CHECK-DAG: #[[SPTYPE2:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
-#spType2 = #llvm.di_subroutine_type<
-  // Omit the optional types parameter array.
-  callingConvention = DW_CC_normal
+  resultType = #int1, argumentTypes = #int1
 >
 
 // CHECK-DAG: #[[SP0:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "addr", linkageName = "addr", file = #[[FILE]], line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #[[SPTYPE0]]>
@@ -86,21 +77,11 @@
   file = #file, subprogramFlags = "Definition", type = #spType1
 >
 
-// CHECK-DAG: #[[SP2:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE2]]>
-#sp2 = #llvm.di_subprogram<
-  // Omit the optional linkageName parameter.
-  compileUnit = #cu, scope = #file, name = "value",
-  file = #file, subprogramFlags = "Definition", type = #spType2
->
-
 // CHECK-DAG: #[[BLOCK0:.*]] = #llvm.di_lexical_block<scope = #[[SP0]], line = 1, column = 2>
 #block0 = #llvm.di_lexical_block<scope = #sp0, line = 1, column = 2>
 
 // CHECK-DAG: #[[BLOCK1:.*]] = #llvm.di_lexical_block<scope = #[[SP1]]>
 #block1 = #llvm.di_lexical_block<scope = #sp1>
-
-// CHECK-DAG: #[[BLOCK2:.*]] = #llvm.di_lexical_block<scope = #[[SP2]]>
-#block2 = #llvm.di_lexical_block<scope = #sp2>
 
 // CHECK-DAG: #[[VAR0:.*]] = #llvm.di_local_variable<scope = #[[BLOCK0]], name = "alloc", file = #[[FILE]], line = 6, arg = 1, alignInBits = 32, type = #[[INT0]]>
 #var0 = #llvm.di_local_variable<
@@ -108,16 +89,10 @@
   line = 6, arg = 1, alignInBits = 32, type = #int0
 >
 
-// CHECK-DAG: #[[VAR1:.*]] = #llvm.di_local_variable<scope = #[[BLOCK1]], name = "arg1">
+// CHECK-DAG: #[[VAR1:.*]] = #llvm.di_local_variable<scope = #[[BLOCK1]], name = "arg">
 #var1 = #llvm.di_local_variable<
   // Omit the optional parameters.
-  scope = #block1, name = "arg1"
->
-
-// CHECK-DAG: #[[VAR2:.*]] = #llvm.di_local_variable<scope = #[[BLOCK2]], name = "arg2">
-#var2 = #llvm.di_local_variable<
-  // Omit the optional parameters.
-  scope = #block2, name = "arg2"
+  scope = #block1, name = "arg"
 >
 
 // CHECK: llvm.func @addr(%[[ARG:.*]]: i64)
@@ -133,11 +108,9 @@ llvm.func @addr(%arg: i64) {
   llvm.return
 }
 
-// CHECK: llvm.func @value(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
-llvm.func @value(%arg1: i32, %arg2: i32) {
-  // CHECK: llvm.intr.dbg.value #[[VAR1]] = %[[ARG1]]
-  llvm.intr.dbg.value #var1 = %arg1 : i32
-  // CHECK: llvm.intr.dbg.value #[[VAR2]] = %[[ARG2]]
-  llvm.intr.dbg.value #var2 = %arg2 : i32
-  llvm.return
+// CHECK: llvm.func @value(%[[ARG:.*]]: i32)
+llvm.func @value(%arg: i32) -> i32 {
+  // CHECK: llvm.intr.dbg.value #[[VAR1]] = %[[ARG]]
+  llvm.intr.dbg.value #var1 = %arg : i32
+  llvm.return %arg : i32
 }
