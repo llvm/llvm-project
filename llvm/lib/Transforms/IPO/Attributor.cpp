@@ -1397,6 +1397,13 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
                                const AAIsDead *FnLivenessAA,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  // Don't check liveness for constants, e.g. functions, used as (floating)
+  // values since the context instruction and such is here meaningless.
+  if (IRP.getPositionKind() == IRPosition::IRP_FLOAT &&
+      isa<Constant>(IRP.getAssociatedValue())) {
+    return false;
+  }
+
   Instruction *CtxI = IRP.getCtxI();
   if (CtxI &&
       isAssumedDead(*CtxI, QueryingAA, FnLivenessAA, UsedAssumedInformation,
