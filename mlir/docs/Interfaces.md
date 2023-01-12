@@ -379,6 +379,9 @@ comprised of the following components:
 
 *   C++ Class Name (Provided via template parameter)
     -   The name of the C++ interface class.
+*   Interface Base Classes
+    -   A set of interfaces that the interface class should derived from. See
+        [Interface Inheritance](#interface-inheritance) below for more details.
 *   Description (`description`)
     -   A string description of the interface, its invariants, example usages,
         etc.
@@ -414,6 +417,8 @@ comprised of the following components:
         operation that the interface is attached to.
     -   The structure of this code block corresponds 1-1 with the structure of a
         [`Trait::verifyTrait`](Traits.md) method.
+
+##### Interface Methods
 
 There are two types of methods that can be used with an interface,
 `InterfaceMethod` and `StaticInterfaceMethod`. They are both comprised of the
@@ -633,6 +638,71 @@ def OpWithInferTypeInterfaceOp : Op<...
 def OpWithOverrideInferTypeInterfaceOp : Op<...
     [DeclareOpInterfaceMethods<MyInterface, ["getNumWithDefault"]>]> { ... }
 ```
+
+##### Interface Inheritance
+
+Interfaces also support a limited form of inheritance, which allows for
+building upon pre-existing interfaces in a way similar to that of classes in
+programming languages like C++. This more easily allows for building modular
+interfaces, without suffering from the pain of lots of explicit casting. To
+enable inheritance, an interface simply needs to provide the desired set of
+base classes in its definition. For example:
+
+```tablegen
+def MyBaseInterface : OpInterface<"MyBaseInterface"> {
+  ...
+}
+
+def MyInterface : OpInterface<"MyInterface", [MyBaseInterface]> {
+  ...
+}
+```
+
+This will result in `MyInterface` inheriting various components from
+`MyBaseInterface`, namely its interface methods and extra class declarations.
+Given that these inherited components are comprised of opaque C++ blobs, we
+cannot properly sandbox the names. As such, it's important to ensure that inherited
+components do not create name overlaps, as these will result in errors during
+interface generation.
+
+`MyInterface` will also implicitly inherit any base classes defined on
+`MyBaseInterface` as well. It's important to note, however, that there is only
+ever one instance of each interface for a given attribute, operation, or type.
+Inherited interface methods simplify forward to base interface implementation.
+This produces a simpler system overall, and also removes any potential problems
+surrounding "diamond inheritance". The interfaces on an attribute/op/type can be
+thought of as comprising a set, with each interface (including base interfaces)
+uniqued within this set and referenced elsewhere as necessary.
+
+When adding an interface with inheritance to an attribute, operation, or type,
+all of the base interfaces are also implicitly added as well. The user may still
+manually specify the base interfaces if they desire, such as for use with the
+`Declare<Attr|Op|Type>InterfaceMethods` helper classes.
+
+If our interface were to be specified as:
+
+```tablegen
+def MyBaseInterface : OpInterface<"MyBaseInterface"> {
+  ...
+}
+
+def MyOtherBaseInterface : OpInterface<MyOtherBaseInterface, [MyBaseInterface]> {
+  ...
+}
+
+def MyInterface : OpInterface<"MyInterface", [MyBaseInterface, MyOtherBaseInterface]> {
+  ...
+}
+```
+
+An operation with `MyInterface` attached, would have the following interfaces added:
+
+* MyBaseInterface, MyOtherBaseInterface, MyInterface
+
+The methods from `MyBaseInterface` in both `MyInterface` and `MyOtherBaseInterface` would
+forward to a single unique implementation for the operation.
+
+##### Generation
 
 Once the interfaces have been defined, the C++ header and source files can be
 generated using the `--gen-<attr|op|type>-interface-decls` and

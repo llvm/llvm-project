@@ -173,28 +173,21 @@ static void emitInterfaceMethodDoc(const InterfaceMethod &method,
   if (std::optional<StringRef> description = method.getDescription())
     tblgen::emitDescriptionComment(*description, os, prefix);
 }
-
-static void emitInterfaceDef(const Interface &interface, StringRef valueType,
-                             raw_ostream &os) {
-  StringRef interfaceName = interface.getName();
-  StringRef cppNamespace = interface.getCppNamespace();
-  cppNamespace.consume_front("::");
-
-  // Insert the method definitions.
-  bool isOpInterface = isa<OpInterface>(interface);
+static void emitInterfaceDefMethods(StringRef interfaceQualName,
+                                    const Interface &interface,
+                                    StringRef valueType, const Twine &implValue,
+                                    raw_ostream &os, bool isOpInterface) {
   for (auto &method : interface.getMethods()) {
     emitInterfaceMethodDoc(method, os);
     emitCPPType(method.getReturnType(), os);
-    if (!cppNamespace.empty())
-      os << cppNamespace << "::";
-    os << interfaceName << "::";
+    os << interfaceQualName << "::";
     emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
                           /*addConst=*/!isOpInterface);
 
     // Forward to the method on the concrete operation type.
-    os << " {\n      return getImpl()->" << method.getName() << '(';
+    os << " {\n      return " << implValue << "->" << method.getName() << '(';
     if (!method.isStatic()) {
-      os << "getImpl(), ";
+      os << implValue << ", ";
       os << (isOpInterface ? "getOperation()" : "*this");
       os << (method.arg_empty() ? "" : ", ");
     }
@@ -202,6 +195,25 @@ static void emitInterfaceDef(const Interface &interface, StringRef valueType,
         method.getArguments(), os,
         [&](const InterfaceMethod::Argument &arg) { os << arg.name; });
     os << ");\n  }\n";
+  }
+}
+
+static void emitInterfaceDef(const Interface &interface, StringRef valueType,
+                             raw_ostream &os) {
+  std::string interfaceQualNameStr = interface.getFullyQualifiedName();
+  StringRef interfaceQualName = interfaceQualNameStr;
+  interfaceQualName.consume_front("::");
+
+  // Insert the method definitions.
+  bool isOpInterface = isa<OpInterface>(interface);
+  emitInterfaceDefMethods(interfaceQualName, interface, valueType, "getImpl()",
+                          os, isOpInterface);
+
+  // Insert the method definitions for base classes.
+  for (auto &base : interface.getBaseInterfaces()) {
+    emitInterfaceDefMethods(interfaceQualName, base, valueType,
+                            "getImpl()->impl" + base.getName(), os,
+                            isOpInterface);
   }
 }
 
@@ -221,6 +233,7 @@ void InterfaceGenerator::emitConceptDecl(const Interface &interface) {
   os << "  struct Concept {\n";
 
   // Insert each of the pure virtual concept methods.
+  os << "    /// The methods defined by the interface.\n";
   for (auto &method : interface.getMethods()) {
     os << "    ";
     emitCPPType(method.getReturnType(), os);
@@ -234,6 +247,33 @@ void InterfaceGenerator::emitConceptDecl(const Interface &interface) {
         [&](const InterfaceMethod::Argument &arg) { os << arg.type; });
     os << ");\n";
   }
+
+  // Insert a field containing a concept for each of the base interfaces.
+  auto baseInterfaces = interface.getBaseInterfaces();
+  if (!baseInterfaces.empty()) {
+    os << "    /// The base classes of this interface.\n";
+    for (const auto &base : interface.getBaseInterfaces()) {
+      os << "    const " << base.getFullyQualifiedName() << "::Concept *impl"
+         << base.getName() << " = nullptr;\n";
+    }
+
+    // Define an "initialize" method that allows for the initialization of the
+    // base class concepts.
+    os << "\n    void initializeInterfaceConcept(::mlir::detail::InterfaceMap "
+          "&interfaceMap) {\n";
+    std::string interfaceQualName = interface.getFullyQualifiedName();
+    for (const auto &base : interface.getBaseInterfaces()) {
+      StringRef baseName = base.getName();
+      std::string baseQualName = base.getFullyQualifiedName();
+      os << "      impl" << baseName << " = interfaceMap.lookup<"
+         << baseQualName << ">();\n"
+         << "      assert(impl" << baseName << " && \"`" << interfaceQualName
+         << "` expected its base interface `" << baseQualName
+         << "` to be registered\");\n";
+    }
+    os << "    }\n";
+  }
+
   os << "  };\n";
 }
 
@@ -242,9 +282,8 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
   for (const char *modelClass : {"Model", "FallbackModel"}) {
     os << "  template<typename " << valueTemplate << ">\n";
     os << "  class " << modelClass << " : public Concept {\n  public:\n";
-    os << "    using Interface = " << interface.getCppNamespace()
-       << (interface.getCppNamespace().empty() ? "" : "::")
-       << interface.getName() << ";\n";
+    os << "    using Interface = " << interface.getFullyQualifiedName()
+       << ";\n";
     os << "    " << modelClass << "() : Concept{";
     llvm::interleaveComma(
         interface.getMethods(), os,
@@ -455,6 +494,27 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
   os << "  };\n";
 }
 
+static void emitInterfaceDeclMethods(const Interface &interface,
+                                     raw_ostream &os, StringRef valueType,
+                                     bool isOpInterface,
+                                     tblgen::FmtContext &extraDeclsFmt) {
+  for (auto &method : interface.getMethods()) {
+    emitInterfaceMethodDoc(method, os, "  ");
+    emitCPPType(method.getReturnType(), os << "  ");
+    emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
+                          /*addConst=*/!isOpInterface);
+    os << ";\n";
+  }
+
+  // Emit any extra declarations.
+  if (std::optional<StringRef> extraDecls =
+          interface.getExtraClassDeclaration())
+    os << extraDecls->rtrim() << "\n";
+  if (std::optional<StringRef> extraDecls =
+          interface.getExtraSharedClassDeclaration())
+    os << tblgen::tgfmt(extraDecls->rtrim(), &extraDeclsFmt) << "\n";
+}
+
 void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   llvm::SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
@@ -495,21 +555,29 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
   // Insert the method declarations.
   bool isOpInterface = isa<OpInterface>(interface);
-  for (auto &method : interface.getMethods()) {
-    emitInterfaceMethodDoc(method, os, "  ");
-    emitCPPType(method.getReturnType(), os << "  ");
-    emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
-                          /*addConst=*/!isOpInterface);
-    os << ";\n";
-  }
+  emitInterfaceDeclMethods(interface, os, valueType, isOpInterface,
+                           extraDeclsFmt);
 
-  // Emit any extra declarations.
-  if (std::optional<StringRef> extraDecls =
-          interface.getExtraClassDeclaration())
-    os << *extraDecls << "\n";
-  if (std::optional<StringRef> extraDecls =
-          interface.getExtraSharedClassDeclaration())
-    os << tblgen::tgfmt(*extraDecls, &extraDeclsFmt);
+  // Insert the method declarations for base classes.
+  for (auto &base : interface.getBaseInterfaces()) {
+    std::string baseQualName = base.getFullyQualifiedName();
+    os << "  //"
+          "===---------------------------------------------------------------"
+          "-===//\n"
+       << "  // Inherited from " << baseQualName << "\n"
+       << "  //"
+          "===---------------------------------------------------------------"
+          "-===//\n\n";
+
+    // Allow implicit conversion to the base interface.
+    os << "  operator " << baseQualName << " () const {\n"
+       << "    return " << baseQualName << "(*this, getImpl()->impl"
+       << base.getName() << ");\n"
+       << "  }\n\n";
+
+    // Inherit the base interface's methods.
+    emitInterfaceDeclMethods(base, os, valueType, isOpInterface, extraDeclsFmt);
+  }
 
   // Emit classof code if necessary.
   if (std::optional<StringRef> extraClassOf = interface.getExtraClassOf()) {
