@@ -1301,6 +1301,10 @@ multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_f
   } // end SubtargetPredicate = isGFX11Plus
 }
 
+multiclass VOP3PseudoScalarInst<string OpName, VOPProfile P> {
+  def _e64 : VOP3_Pseudo<OpName, P>;
+}
+
 //===----------------------------------------------------------------------===//
 // VOP3 DPP
 //===----------------------------------------------------------------------===//

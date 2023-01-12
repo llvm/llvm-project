@@ -190,6 +190,7 @@ public:
 
   MCOperand decodeOperand_SReg_16(unsigned Val) const;
   MCOperand decodeOperand_SReg_32(unsigned Val) const;
+  MCOperand decodeOperand_SReg_32_XEXEC(unsigned Val) const;
   MCOperand decodeOperand_SReg_32_XM0_XEXEC(unsigned Val) const;
   MCOperand decodeOperand_SReg_32_XEXEC_HI(unsigned Val) const;
   MCOperand decodeOperand_SRegOrLds_32(unsigned Val) const;
