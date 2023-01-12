@@ -74,13 +74,10 @@ entry:
   ret ptr %ret
 }
 
-; FIXME: Should not produce assume.
 define ptr @dont_turn_nonnull_without_noundef_into_assume(ptr %arg) {
 ; CHECK-LABEL: @dont_turn_nonnull_without_noundef_into_assume(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BUF_0_COPYLOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[BUF_0_COPYLOAD]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    ret ptr [[BUF_0_COPYLOAD]]
 ;
 entry:

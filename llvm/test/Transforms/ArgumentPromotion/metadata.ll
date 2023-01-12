@@ -7,8 +7,8 @@ declare void @use.p32(ptr)
 define internal void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
 ; CHECK-SAME: (i32 [[P1_0_VAL:%.*]], ptr [[P2_0_VAL:%.*]], ptr [[P3_0_VAL:%.*]], ptr [[P4_0_VAL:%.*]], ptr [[P5_0_VAL:%.*]], ptr [[P6_0_VAL:%.*]], ptr [[P7_0_VAL:%.*]]) {
-; CHECK-NEXT:    [[IS_NOT_NULL:%.*]] = icmp ne ptr [[P2_0_VAL]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_NOT_NULL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[P2_0_VAL]], null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[P1_0_VAL]])
 ; CHECK-NEXT:    call void @use.p32(ptr [[P2_0_VAL]])
 ; CHECK-NEXT:    call void @use.p32(ptr [[P3_0_VAL]])
@@ -19,7 +19,7 @@ define internal void @callee(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load i32, ptr %p1, !range !0
-  %v2 = load ptr, ptr %p2, !nonnull !1
+  %v2 = load ptr, ptr %p2, !nonnull !1, !noundef !1
   %v3 = load ptr, ptr %p3, !dereferenceable !2
   %v4 = load ptr, ptr %p4, !dereferenceable_or_null !2
   %v5 = load ptr, ptr %p5, !align !3
@@ -39,7 +39,7 @@ define void @caller(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p
 ; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]], ptr [[P4:%.*]], ptr [[P5:%.*]], ptr [[P6:%.*]], ptr [[P7:%.*]]) {
 ; CHECK-NEXT:    [[P1_VAL:%.*]] = load i32, ptr [[P1]], align 4, !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[P2_VAL:%.*]] = load ptr, ptr [[P2]], align 8, !nonnull !1
+; CHECK-NEXT:    [[P2_VAL:%.*]] = load ptr, ptr [[P2]], align 8, !nonnull !1, !noundef !1
 ; CHECK-NEXT:    [[P3_VAL:%.*]] = load ptr, ptr [[P3]], align 8, !dereferenceable !2
 ; CHECK-NEXT:    [[P4_VAL:%.*]] = load ptr, ptr [[P4]], align 8, !dereferenceable_or_null !2
 ; CHECK-NEXT:    [[P5_VAL:%.*]] = load ptr, ptr [[P5]], align 8, !align !3
@@ -57,8 +57,8 @@ define internal ptr @callee_conditional(i1 %c, ptr dereferenceable(8) align 8 %p
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P_0_VAL:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[IS_NOT_NULL:%.*]] = icmp ne ptr [[P_0_VAL]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_NOT_NULL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[P_0_VAL]], null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
 ; CHECK-NEXT:    ret ptr [[P_0_VAL]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret ptr null
@@ -66,7 +66,7 @@ define internal ptr @callee_conditional(i1 %c, ptr dereferenceable(8) align 8 %p
   br i1 %c, label %if, label %else
 
 if:
-  %v = load ptr, ptr %p, !nonnull !1
+  %v = load ptr, ptr %p, !nonnull !1, !noundef !1
   ret ptr %v
 
 else:
