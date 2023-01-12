@@ -157,13 +157,13 @@ public:
   //------------------------------------------------------------------
   struct SILVariableInfo {
     CompilerType type;
-    uint64_t offset;
-    bool needs_init;
+    uint64_t offset = 0;
+    bool needs_init = false;
+    bool is_unowned_self = false;
 
-    SILVariableInfo(CompilerType t, uint64_t o, bool ni)
-        : type(t), offset(o), needs_init(ni) {}
-
-    SILVariableInfo() : type(), offset(0), needs_init(false) {}
+    SILVariableInfo() = default;
+    SILVariableInfo(CompilerType t, uint64_t o, bool ni, bool s)
+      : type(t), offset(o), needs_init(ni), is_unowned_self(s) {}
   };
 
   //------------------------------------------------------------------
