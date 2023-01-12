@@ -157,17 +157,19 @@ define internal ptr @f1(ptr readnone %0) local_unnamed_addr #0 {
 }
 
 ; Function Attrs: nounwind readnone ssp uwtable
-define internal ptr @f2(ptr readnone %0) local_unnamed_addr #0 {
-; CGSCC: Function Attrs: noinline nounwind uwtable
-; CGSCC-LABEL: define {{[^@]+}}@f2
-; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    unreachable
-; CGSCC:       2:
-; CGSCC-NEXT:    unreachable
-; CGSCC:       3:
-; CGSCC-NEXT:    unreachable
-; CGSCC:       4:
-; CGSCC-NEXT:    unreachable
+define ptr @f2(ptr readnone %0) local_unnamed_addr #0 {
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
+; CHECK-LABEL: define {{[^@]+}}@f2
+; CHECK-SAME: (ptr nofree readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
+; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP3:%.*]]
+; CHECK:       3:
+; CHECK-NEXT:    br label [[TMP5:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    br label [[TMP5]]
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[TMP0]], [[TMP3]] ], [ @a1, [[TMP4]] ]
+; CHECK-NEXT:    ret ptr [[TMP6]]
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
@@ -188,14 +190,14 @@ define internal ptr @f2(ptr readnone %0) local_unnamed_addr #0 {
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal ptr @f3(ptr readnone %0) local_unnamed_addr #0 {
-; CGSCC: Function Attrs: noinline nounwind uwtable
+; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f3
-; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CGSCC-SAME: () local_unnamed_addr #[[ATTR0]] {
+; CGSCC-NEXT:    br label [[TMP2:%.*]]
+; CGSCC:       1:
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       2:
-; CGSCC-NEXT:    unreachable
-; CGSCC:       3:
-; CGSCC-NEXT:    unreachable
+; CGSCC-NEXT:    ret ptr undef
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
@@ -219,7 +221,7 @@ define align 4 ptr @test7() #0 {
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@test7
-; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[C:%.*]] = tail call noundef nonnull align 8 dereferenceable(1) ptr @f1() #[[ATTR13:[0-9]+]]
 ; CGSCC-NEXT:    ret ptr [[C]]
 ;
@@ -258,7 +260,7 @@ define internal ptr @f2b(ptr readnone %0) local_unnamed_addr #0 {
 ;
 ; CGSCC: Function Attrs: noinline nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f2b
-; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       2:
 ; CGSCC-NEXT:    unreachable
@@ -289,7 +291,7 @@ define internal ptr @f3b(ptr readnone %0) local_unnamed_addr #0 {
 ;
 ; CGSCC: Function Attrs: noinline nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f3b
-; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       2:
 ; CGSCC-NEXT:    unreachable
@@ -316,7 +318,7 @@ define align 4 ptr @test7b(ptr align 32 %p) #0 {
 ;
 ; CGSCC: Function Attrs: nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@test7b
-; CGSCC-SAME: (ptr nofree readnone returned align 32 "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (ptr nofree readnone returned align 32 "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    ret ptr [[P]]
 ;
   tail call i8* @f1b(i8* align 8 dereferenceable(1) @a1)
@@ -1101,8 +1103,8 @@ attributes #2 = { null_pointer_is_valid }
 ; TUNIT: attributes #[[ATTR11]] = { nofree nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
-; CGSCC: attributes #[[ATTR1]] = { noinline nounwind uwtable }
-; CGSCC: attributes #[[ATTR2]] = { nofree noinline nosync nounwind willreturn memory(none) uwtable }
+; CGSCC: attributes #[[ATTR1]] = { nofree noinline nosync nounwind willreturn memory(none) uwtable }
+; CGSCC: attributes #[[ATTR2]] = { noinline nounwind uwtable }
 ; CGSCC: attributes #[[ATTR3]] = { nounwind }
 ; CGSCC: attributes #[[ATTR4]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR5]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
