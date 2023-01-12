@@ -34,16 +34,16 @@ body: |
   ; EXPANDED-NEXT: {{  $}}
   ; EXPANDED-NEXT:   S_NOP 0, implicit-def renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
   ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr4, 0, $vgpr0, implicit-def $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr5, 1, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr6, 2, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr7, 3, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr8, 4, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr9, 5, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr10, 6, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr11, 7, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr12, 8, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr13, 9, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr14, 10, $vgpr0, implicit $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr5, 1, $vgpr0
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr6, 2, $vgpr0
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr7, 3, $vgpr0
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr8, 4, $vgpr0
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr9, 5, $vgpr0
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr10, 6, $vgpr0
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr11, 7, $vgpr0
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr12, 8, $vgpr0
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr13, 9, $vgpr0
+  ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 $sgpr14, 10, $vgpr0
   ; EXPANDED-NEXT:   $vgpr0 = V_WRITELANE_B32 killed $sgpr15, 11, $vgpr0, implicit killed $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
   ; EXPANDED-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
   ; EXPANDED-NEXT: {{  $}}
