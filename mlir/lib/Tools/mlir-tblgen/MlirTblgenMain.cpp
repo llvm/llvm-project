@@ -106,11 +106,6 @@ static void warnOfDeprecatedUses(RecordKeeper &records) {
         // Skip anonymous defs.
         if (jt.second->isAnonymous())
           continue;
-        // Skip all outside main file to avoid flagging redundantly.
-        unsigned buf =
-            SrcMgr.FindBufferContainingLoc(jt.second->getLoc().front());
-        if (buf != SrcMgr.getMainFileID())
-          continue;
 
         if (findUse(*jt.second, it.second->getDefInit(), hasUse)) {
           PrintWarning(jt.second->getLoc(),
