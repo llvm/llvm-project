@@ -1,0 +1,188 @@
+// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+module {
+  cir.func @dot(%arg0: !cir.ptr<f64>, %arg1: !cir.ptr<f64>, %arg2: i32) -> f64 {
+    %0 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["a", init] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["b", init] {alignment = 8 : i64}
+    %2 = cir.alloca i32, cir.ptr <i32>, ["size", init] {alignment = 4 : i64}
+    %3 = cir.alloca f64, cir.ptr <f64>, ["__retval"] {alignment = 8 : i64}
+    %4 = cir.alloca f64, cir.ptr <f64>, ["q", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
+    cir.store %arg1, %1 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
+    cir.store %arg2, %2 : i32, cir.ptr <i32>
+    %5 = cir.cst(0.000000e+00 : f64) : f64
+    cir.store %5, %4 : f64, cir.ptr <f64>
+    cir.scope {
+      %8 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
+      %9 = cir.cst(0 : i32) : i32
+      cir.store %9, %8 : i32, cir.ptr <i32>
+      cir.loop for(cond : {
+        %10 = cir.load %8 : cir.ptr <i32>, i32
+        %11 = cir.load %2 : cir.ptr <i32>, i32
+        %12 = cir.cmp(lt, %10, %11) : i32, i32
+        %13 = cir.cast(int_to_bool, %12 : i32), !cir.bool
+        cir.brcond %13 ^bb1, ^bb2
+      ^bb1:  // pred: ^bb0
+        cir.yield continue
+      ^bb2:  // pred: ^bb0
+        cir.yield
+      }, step : {
+        %10 = cir.load %8 : cir.ptr <i32>, i32
+        %11 = cir.unary(inc, %10) : i32, i32
+        cir.store %11, %8 : i32, cir.ptr <i32>
+        cir.yield
+      }) {
+        %10 = cir.load %0 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
+        %11 = cir.load %8 : cir.ptr <i32>, i32
+        %12 = cir.ptr_stride(%10 : !cir.ptr<f64>, %11 : i32), !cir.ptr<f64>
+        %13 = cir.load %12 : cir.ptr <f64>, f64
+        %14 = cir.load %1 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
+        %15 = cir.load %8 : cir.ptr <i32>, i32
+        %16 = cir.ptr_stride(%14 : !cir.ptr<f64>, %15 : i32), !cir.ptr<f64>
+        %17 = cir.load %16 : cir.ptr <f64>, f64
+        %18 = cir.binop(mul, %13, %17) : f64
+        %19 = cir.load %4 : cir.ptr <f64>, f64
+        %20 = cir.binop(add, %19, %18) : f64
+        cir.store %20, %4 : f64, cir.ptr <f64>
+        cir.yield
+      }
+    }
+    %6 = cir.load %4 : cir.ptr <f64>, f64
+    cir.store %6, %3 : f64, cir.ptr <f64>
+    %7 = cir.load %3 : cir.ptr <f64>, f64
+    cir.return %7 : f64
+  }
+}
+
+//      MLIR: module {
+// MLIR-NEXT:   llvm.func @dot(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: i32) -> f64 {
+// MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:     %1 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:     %2 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:     %3 = llvm.alloca %2 x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:     %4 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:     %5 = llvm.alloca %4 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:     %6 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:     %7 = llvm.alloca %6 x f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:     %8 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:     %9 = llvm.alloca %8 x f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:     llvm.store %arg0, %1 : !llvm.ptr
+// MLIR-NEXT:     llvm.store %arg1, %3 : !llvm.ptr
+// MLIR-NEXT:     llvm.store %arg2, %5 : i32, !llvm.ptr
+// MLIR-NEXT:     %10 = llvm.mlir.constant(0.000000e+00 : f64) : f64
+// MLIR-NEXT:     llvm.store %10, %9 : f64, !llvm.ptr
+// MLIR-NEXT:     llvm.br ^bb1
+// MLIR-NEXT:   ^bb1:  // pred: ^bb0
+// MLIR-NEXT:     %11 = llvm.mlir.constant(1 : index) : i64
+// MLIR-NEXT:     %12 = llvm.alloca %11 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// MLIR-NEXT:     %13 = llvm.mlir.constant(0 : i32) : i32
+// MLIR-NEXT:     llvm.store %13, %12 : i32, !llvm.ptr
+// MLIR-NEXT:     llvm.br ^bb2
+// MLIR-NEXT:   ^bb2:  // 2 preds: ^bb1, ^bb6
+// MLIR-NEXT:     %14 = llvm.load %12 : !llvm.ptr
+// MLIR-NEXT:     %15 = llvm.load %5 : !llvm.ptr
+// MLIR-NEXT:     %16 = llvm.icmp "ult" %14, %15 : i32
+// MLIR-NEXT:     %17 = llvm.zext %16 : i1 to i32
+// MLIR-NEXT:     %18 = llvm.mlir.constant(0 : i32) : i32
+// MLIR-NEXT:     %19 = llvm.icmp "ne" %17, %18 : i32
+// MLIR-NEXT:     %20 = llvm.zext %19 : i1 to i8
+// MLIR-NEXT:     %21 = llvm.trunc %20 : i8 to i1
+// MLIR-NEXT:     llvm.cond_br %21, ^bb3, ^bb4
+// MLIR-NEXT:   ^bb3:  // pred: ^bb2
+// MLIR-NEXT:     llvm.br ^bb5
+// MLIR-NEXT:   ^bb4:  // pred: ^bb2
+// MLIR-NEXT:     llvm.br ^bb7
+// MLIR-NEXT:   ^bb5:  // pred: ^bb3
+// MLIR-NEXT:     %22 = llvm.load %12 : !llvm.ptr
+// MLIR-NEXT:     %23 = llvm.mlir.constant(1 : i32) : i32
+// MLIR-NEXT:     %24 = llvm.add %22, %23  : i32
+// MLIR-NEXT:     llvm.store %24, %12 : i32, !llvm.ptr
+// MLIR-NEXT:     llvm.br ^bb6
+// MLIR-NEXT:   ^bb6:  // pred: ^bb5
+// MLIR-NEXT:     %25 = llvm.load %1 : !llvm.ptr
+// MLIR-NEXT:     %26 = llvm.load %12 : !llvm.ptr
+// MLIR-NEXT:     %27 = llvm.getelementptr %25[%26] : (!llvm.ptr, i32) -> !llvm.ptr
+// MLIR-NEXT:     %28 = llvm.load %27 : !llvm.ptr
+// MLIR-NEXT:     %29 = llvm.load %3 : !llvm.ptr
+// MLIR-NEXT:     %30 = llvm.load %12 : !llvm.ptr
+// MLIR-NEXT:     %31 = llvm.getelementptr %29[%30] : (!llvm.ptr, i32) -> !llvm.ptr
+// MLIR-NEXT:     %32 = llvm.load %31 : !llvm.ptr
+// MLIR-NEXT:     %33 = llvm.fmul %28, %32  : f64
+// MLIR-NEXT:     %34 = llvm.load %9 : !llvm.ptr
+// MLIR-NEXT:     %35 = llvm.fadd %34, %33  : f64
+// MLIR-NEXT:     llvm.store %35, %9 : f64, !llvm.ptr
+// MLIR-NEXT:     llvm.br ^bb2
+// MLIR-NEXT:   ^bb7:  // pred: ^bb4
+// MLIR-NEXT:     llvm.br ^bb8
+// MLIR-NEXT:   ^bb8:  // pred: ^bb7
+// MLIR-NEXT:     %36 = llvm.load %9 : !llvm.ptr
+// MLIR-NEXT:     llvm.store %36, %7 : f64, !llvm.ptr
+// MLIR-NEXT:     %37 = llvm.load %7 : !llvm.ptr
+// MLIR-NEXT:     llvm.return %37 : f64
+// MLIR-NEXT:   }
+// MLIR-NEXT: }
+
+//       LLVM: define double @dot(ptr %0, ptr %1, i32 %2) {
+//  LLVM-NEXT:   %4 = alloca ptr, i64 1, align 8
+//  LLVM-NEXT:   %5 = alloca ptr, i64 1, align 8
+//  LLVM-NEXT:   %6 = alloca i32, i64 1, align 4
+//  LLVM-NEXT:   %7 = alloca double, i64 1, align 8
+//  LLVM-NEXT:   %8 = alloca double, i64 1, align 8
+//  LLVM-NEXT:   store ptr %0, ptr %4, align 8
+//  LLVM-NEXT:   store ptr %1, ptr %5, align 8
+//  LLVM-NEXT:   store i32 %2, ptr %6, align 4
+//  LLVM-NEXT:   store double 0.000000e+00, ptr %8, align 8
+//  LLVM-NEXT:   br label %9
+// LLVM-EMPTY:
+//  LLVM-NEXT: 9:                                                ; preds = %3
+//  LLVM-NEXT:   %10 = alloca i32, i64 1, align 4
+//  LLVM-NEXT:   store i32 0, ptr %10, align 4
+//  LLVM-NEXT:   br label %11
+// LLVM-EMPTY:
+//  LLVM-NEXT: 11:                                               ; preds = %24, %9
+//  LLVM-NEXT:   %12 = load i32, ptr %10, align 4
+//  LLVM-NEXT:   %13 = load i32, ptr %6, align 4
+//  LLVM-NEXT:   %14 = icmp ult i32 %12, %13
+//  LLVM-NEXT:   %15 = zext i1 %14 to i32
+//  LLVM-NEXT:   %16 = icmp ne i32 %15, 0
+//  LLVM-NEXT:   %17 = zext i1 %16 to i8
+//  LLVM-NEXT:   %18 = trunc i8 %17 to i1
+//  LLVM-NEXT:   br i1 %18, label %19, label %20
+// LLVM-EMPTY:
+//  LLVM-NEXT: 19:                                               ; preds = %11
+//  LLVM-NEXT:   br label %21
+// LLVM-EMPTY:
+//  LLVM-NEXT: 20:                                               ; preds = %11
+//  LLVM-NEXT:   br label %36
+// LLVM-EMPTY:
+//  LLVM-NEXT: 21:                                               ; preds = %19
+//  LLVM-NEXT:   %22 = load i32, ptr %10, align 4
+//  LLVM-NEXT:   %23 = add i32 %22, 1
+//  LLVM-NEXT:   store i32 %23, ptr %10, align 4
+//  LLVM-NEXT:   br label %24
+// LLVM-EMPTY:
+//  LLVM-NEXT: 24:                                               ; preds = %21
+//  LLVM-NEXT:   %25 = load ptr, ptr %4, align 8
+//  LLVM-NEXT:   %26 = load i32, ptr %10, align 4
+//  LLVM-NEXT:   %27 = getelementptr double, ptr %25, i32 %26
+//  LLVM-NEXT:   %28 = load double, ptr %27, align 8
+//  LLVM-NEXT:   %29 = load ptr, ptr %5, align 8
+//  LLVM-NEXT:   %30 = load i32, ptr %10, align 4
+//  LLVM-NEXT:   %31 = getelementptr double, ptr %29, i32 %30
+//  LLVM-NEXT:   %32 = load double, ptr %31, align 8
+//  LLVM-NEXT:   %33 = fmul double %28, %32
+//  LLVM-NEXT:   %34 = load double, ptr %8, align 8
+//  LLVM-NEXT:   %35 = fadd double %34, %33
+//  LLVM-NEXT:   store double %35, ptr %8, align 8
+//  LLVM-NEXT:   br label %11
+// LLVM-EMPTY:
+//  LLVM-NEXT: 36:                                               ; preds = %20
+//  LLVM-NEXT:   br label %37
+// LLVM-EMPTY:
+//  LLVM-NEXT: 37:                                               ; preds = %36
+//  LLVM-NEXT:   %38 = load double, ptr %8, align 8
+//  LLVM-NEXT:   store double %38, ptr %7, align 8
+//  LLVM-NEXT:   %39 = load double, ptr %7, align 8
+//  LLVM-NEXT:   ret double %39
+//  LLVM-NEXT: }
