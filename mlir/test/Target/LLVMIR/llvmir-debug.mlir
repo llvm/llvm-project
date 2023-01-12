@@ -58,7 +58,7 @@ llvm.func @func_no_debug() {
   resultType = #si64, argumentTypes = #si64>
 #callee = #llvm.di_subprogram<
   // Omit the optional linkageName, line, and scopeLine parameters.
-  compileUnit = #cu, scope = #file, name = "callee",
+  compileUnit = #cu, scope = #composite, name = "callee",
   file = #file, subprogramFlags = "Definition", type = #calleeType
 >
 #fileScope = #llvm.di_lexical_block_file<scope = #sp, file = #file, discriminator = 0>
@@ -127,7 +127,7 @@ llvm.func @func_with_debug(%arg: i64) {
 
 // CHECK: ![[FUSEDWITH_LOC]] = !DILocation(line: 2, column: 4, scope: ![[FUSEDWITH_SCOPE:.*]], inlinedAt: ![[INLINE_LOC:.*]])
 // CHECK: ![[FUSEDWITH_SCOPE]] = !DILexicalBlockFile(scope: ![[CALLEE_LOC:.*]], file:
-// CHECK: ![[CALLEE_LOC]] = distinct !DISubprogram(name: "callee", scope: ![[CU_FILE_LOC]], file: ![[CU_FILE_LOC]], type: ![[CALLEE_TYPE:.*]], spFlags: DISPFlagDefinition, unit: ![[CU_LOC]])
+// CHECK: ![[CALLEE_LOC]] = distinct !DISubprogram(name: "callee", scope: ![[COMPOSITE_TYPE]], file: ![[CU_FILE_LOC]], type: ![[CALLEE_TYPE:.*]], spFlags: DISPFlagDefinition, unit: ![[CU_LOC]])
 // CHECK: ![[CALLEE_TYPE]] = !DISubroutineType(types: ![[CALLEE_ARGS:.*]])
 // CHECK: ![[CALLEE_ARGS]] = !{![[ARG_TYPE:.*]], ![[ARG_TYPE:.*]]}
 // CHECK: ![[INLINE_LOC]] = !DILocation(line: 28, column: 5,
