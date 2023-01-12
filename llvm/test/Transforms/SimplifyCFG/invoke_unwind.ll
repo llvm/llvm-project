@@ -7,7 +7,7 @@ declare void @bar()
 ; instructions to call instructions if the handler just rethrows the exception.
 define i32 @test1() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    call void @bar(), !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    call void @bar() #[[ATTR0:[0-9]+]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 0
 ;
   invoke void @bar( )
@@ -23,7 +23,7 @@ Rethrow:
 
 define i32 @test2() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    call void @bar() [ "foo"(i32 100) ]
+; CHECK-NEXT:    call void @bar() #[[ATTR0]] [ "foo"(i32 100) ]
 ; CHECK-NEXT:    ret i32 0
 ;
   invoke void @bar( ) [ "foo"(i32 100) ]
@@ -46,10 +46,10 @@ define i64 @test3(i1 %cond) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BR1:%.*]], label [[BR2:%.*]]
 ; CHECK:       br1:
-; CHECK-NEXT:    [[CALL1:%.*]] = call i64 @dummy1()
+; CHECK-NEXT:    [[CALL1:%.*]] = call i64 @dummy1() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[INVOKE_CONT:%.*]]
 ; CHECK:       br2:
-; CHECK-NEXT:    [[CALL2:%.*]] = call i64 @dummy2()
+; CHECK-NEXT:    [[CALL2:%.*]] = call i64 @dummy2() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[INVOKE_CONT]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    [[C:%.*]] = phi i64 [ [[CALL1]], [[BR1]] ], [ [[CALL2]], [[BR2]] ]
@@ -87,6 +87,8 @@ lpad2:
 }
 
 declare i32 @__gxx_personality_v0(...)
+;.
+; CHECK: attributes #[[ATTR0]] = { nounwind }
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 371}
 ;.

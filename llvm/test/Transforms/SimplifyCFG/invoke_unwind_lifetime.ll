@@ -28,10 +28,10 @@ define void @caller(i1 %c) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    call void @escape(ptr [[I6]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[V0:%.*]], label [[V1:%.*]]
 ; CHECK:       v0:
-; CHECK-NEXT:    call void @throwing_callee_foo()
+; CHECK-NEXT:    call void @throwing_callee_foo() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       v1:
-; CHECK-NEXT:    call void @throwing_callee_bar()
+; CHECK-NEXT:    call void @throwing_callee_bar() #[[ATTR1]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -82,4 +82,5 @@ end:
 }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR1]] = { nounwind }
 ;.
