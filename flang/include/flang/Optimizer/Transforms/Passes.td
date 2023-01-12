@@ -178,6 +178,19 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   ];
 }
 
+// This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
+// the module in this pass.
+def AddDebugFoundation : Pass<"add-debug-foundation", "mlir::ModuleOp"> {
+  let summary = "Add the foundation for debug info";
+  let description = [{
+    Add the foundation for emitting debug info that can be understood by llvm.
+  }];
+  let constructor = "::fir::createAddDebugFoundationPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
+  ];
+}
+
 // This needs to be a "mlir::ModuleOp" pass, because it inserts simplified
 // functions into the module, which is invalid if a finer grain mlir::Operation
 // is used as the pass specification says to not touch things outside hte scope

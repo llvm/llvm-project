@@ -3792,7 +3792,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
     fir::KindMapping &kindMap,
     const Fortran::lower::LoweringOptions &loweringOptions,
-    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults)
+    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
+    llvm::StringRef filePath)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -3822,7 +3823,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
 
   // Create the module and attach the attributes.
   module = std::make_unique<mlir::ModuleOp>(
-      mlir::ModuleOp::create(mlir::UnknownLoc::get(&context)));
+      mlir::ModuleOp::create(mlir::FileLineColLoc::get(
+          &getMLIRContext(), filePath, /*line=*/0, /*col=*/0)));
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);
