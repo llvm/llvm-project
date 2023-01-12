@@ -64,6 +64,19 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
   assert(*curPtr == '<');
   SmallVector<char, 8> nestedPunctuation;
   const char *codeCompleteLoc = state.lex.getCodeCompleteLoc();
+
+  // Functor used to emit an unbalanced punctuation error.
+  auto emitPunctError = [&] {
+    return emitError() << "unbalanced '" << nestedPunctuation.back()
+                       << "' character in pretty dialect name";
+  };
+  // Functor used to check for unbalanced punctuation.
+  auto checkNestedPunctuation = [&](char expectedToken) -> ParseResult {
+    if (nestedPunctuation.back() != expectedToken)
+      return emitPunctError();
+    nestedPunctuation.pop_back();
+    return success();
+  };
   do {
     // Handle code completions, which may appear in the middle of the symbol
     // body.
@@ -77,10 +90,8 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
     switch (c) {
     case '\0':
       // This also handles the EOF case.
-      if (!nestedPunctuation.empty()) {
-        return emitError() << "unbalanced '" << nestedPunctuation.back()
-                           << "' character in pretty dialect name";
-      }
+      if (!nestedPunctuation.empty())
+        return emitPunctError();
       return emitError("unexpected nul or EOF in pretty dialect name");
     case '<':
     case '[':
@@ -96,20 +107,20 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
       continue;
 
     case '>':
-      if (nestedPunctuation.pop_back_val() != '<')
-        return emitError("unbalanced '>' character in pretty dialect name");
+      if (failed(checkNestedPunctuation('<')))
+        return failure();
       break;
     case ']':
-      if (nestedPunctuation.pop_back_val() != '[')
-        return emitError("unbalanced ']' character in pretty dialect name");
+      if (failed(checkNestedPunctuation('[')))
+        return failure();
       break;
     case ')':
-      if (nestedPunctuation.pop_back_val() != '(')
-        return emitError("unbalanced ')' character in pretty dialect name");
+      if (failed(checkNestedPunctuation('(')))
+        return failure();
       break;
     case '}':
-      if (nestedPunctuation.pop_back_val() != '{')
-        return emitError("unbalanced '}' character in pretty dialect name");
+      if (failed(checkNestedPunctuation('{')))
+        return failure();
       break;
     case '"': {
       // Dispatch to the lexer to lex past strings.
