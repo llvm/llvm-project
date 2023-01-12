@@ -298,6 +298,15 @@ constexpr float negpi = -pi; // expect no error on unary operator
     static_assert(isinf(f6), "");
     static_assert(isinf(f9), "");
   }
+
+#if __cplusplus >= 201703L
+namespace CompoundAssignment {
+constexpr int rem() { // expected-error {{constexpr function never produces a constant expression}}
+    int x = ~__INT_MAX__;
+    return x%=-1; // cxx20-note {{value 2147483648 is outside the range of representable values of type 'int'}}
+}
+}
+#endif
 }
 
 // - a lambda-expression (5.1.2);
