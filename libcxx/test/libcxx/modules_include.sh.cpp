@@ -154,7 +154,7 @@ END-SCRIPT
 #include <condition_variable>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_26
-#if defined(TEST_26)
+#if defined(TEST_26) && (defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)
 #include <coroutine>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_27
