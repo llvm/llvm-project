@@ -25,8 +25,6 @@ define ptr @single_store_missing_noundef(ptr %arg) {
 ; CHECK-LABEL: @single_store_missing_noundef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[ARG_LOAD]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ;
 entry:
@@ -60,8 +58,6 @@ define ptr @single_block_missing_noundef(ptr %arg) {
 ; CHECK-LABEL: @single_block_missing_noundef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[ARG_LOAD]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ;
 entry:
@@ -102,8 +98,6 @@ define ptr @multi_block_missing_noundef(ptr %arg) {
 ; CHECK-NEXT:    [[ARG_LOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[ARG_LOAD]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    ret ptr [[ARG_LOAD]]
 ;
 entry:
