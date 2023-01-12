@@ -1187,8 +1187,12 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
     for (OffloadKind Kind : ActiveOffloadKinds) {
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
           llvm::MemoryBuffer::getFileOrSTDIN(*OutputOrErr);
-      if (std::error_code EC = FileOrErr.getError())
-        return createFileError(*OutputOrErr, EC);
+      if (std::error_code EC = FileOrErr.getError()) {
+        if (DryRun)
+          FileOrErr = MemoryBuffer::getMemBuffer("");
+        else
+          return createFileError(*OutputOrErr, EC);
+      }
 
       OffloadingImage TheImage{};
       TheImage.TheImageKind =
