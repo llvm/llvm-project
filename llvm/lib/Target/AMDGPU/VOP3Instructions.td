@@ -813,7 +813,8 @@ class VOP_Pseudo_Scalar<RegisterClass Dst, RegisterOperand SrcOp,
 def VOP_Pseudo_Scalar_F32 : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_f32, f32>;
 def VOP_Pseudo_Scalar_F16 : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_f16, f32, f16>;
 
-let SubtargetPredicate = isGFX12Plus, TRANS = 1, isReMaterializable = 1 in {
+let SubtargetPredicate = isGFX12Plus, TRANS = 1,
+    isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
   defm V_S_EXP_F32  : VOP3PseudoScalarInst<"v_s_exp_f32", VOP_Pseudo_Scalar_F32>;
   defm V_S_EXP_F16  : VOP3PseudoScalarInst<"v_s_exp_f16", VOP_Pseudo_Scalar_F16>;
   defm V_S_LOG_F32  : VOP3PseudoScalarInst<"v_s_log_f32", VOP_Pseudo_Scalar_F32>;
