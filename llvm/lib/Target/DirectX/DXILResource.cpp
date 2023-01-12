@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILResource.h"
+#include "CBufferDataLayout.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -22,23 +23,43 @@ using namespace llvm;
 using namespace llvm::dxil;
 using namespace llvm::hlsl;
 
-void Resources::collectUAVs(Module &M) {
-  NamedMDNode *Entry = M.getNamedMetadata("hlsl.uavs");
+template <typename T> void ResourceTable<T>::collect(Module &M) {
+  NamedMDNode *Entry = M.getNamedMetadata(MDName);
   if (!Entry || Entry->getNumOperands() == 0)
     return;
 
   uint32_t Counter = 0;
-  for (auto *UAV : Entry->operands()) {
-    UAVs.push_back(UAVResource(Counter++, FrontendResource(cast<MDNode>(UAV))));
+  for (auto *Res : Entry->operands()) {
+    Data.push_back(T(Counter++, FrontendResource(cast<MDNode>(Res))));
   }
 }
 
-void Resources::collect(Module &M) { collectUAVs(M); }
+template <> void ResourceTable<ConstantBuffer>::collect(Module &M) {
+  NamedMDNode *Entry = M.getNamedMetadata(MDName);
+  if (!Entry || Entry->getNumOperands() == 0)
+    return;
+
+  uint32_t Counter = 0;
+  for (auto *Res : Entry->operands()) {
+    Data.push_back(
+        ConstantBuffer(Counter++, FrontendResource(cast<MDNode>(Res))));
+  }
+  // FIXME: share CBufferDataLayout with CBuffer load lowering.
+  //   See https://github.com/llvm/llvm-project/issues/58381
+  CBufferDataLayout CBDL(M.getDataLayout(), /*IsLegacy*/ true);
+  for (auto &CB : Data)
+    CB.setSize(CBDL);
+}
+
+void Resources::collect(Module &M) {
+  UAVs.collect(M);
+  CBuffers.collect(M);
+}
 
 ResourceBase::ResourceBase(uint32_t I, FrontendResource R)
     : ID(I), GV(R.getGlobalVariable()), Name(""), Space(R.getSpace()),
       LowerBound(R.getResourceIndex()), RangeSize(1) {
-  if (auto *ArrTy = dyn_cast<ArrayType>(GV->getInitializer()->getType()))
+  if (auto *ArrTy = dyn_cast<ArrayType>(GV->getValueType()))
     RangeSize = ArrTy->getNumElements();
 }
 
@@ -276,6 +297,30 @@ void UAVResource::parseSourceType(StringRef S) {
     ExtProps.ElementType = ElTy;
 }
 
+ConstantBuffer::ConstantBuffer(uint32_t I, hlsl::FrontendResource R)
+    : ResourceBase(I, R) {}
+
+void ConstantBuffer::setSize(CBufferDataLayout &DL) {
+  CBufferSizeInBytes = DL.getTypeAllocSizeInBytes(GV->getValueType());
+}
+
+void ConstantBuffer::print(raw_ostream &OS) const {
+  OS << "; " << left_justify(Name, 31);
+
+  OS << right_justify("cbuffer", 10);
+
+  printComponentType(Kinds::CBuffer, ComponentType::Invalid, 8, OS);
+
+  printKind(Kinds::CBuffer, 12, OS, /*SRV*/ false, /*HasCounter*/ false);
+  // Print the binding part.
+  ResourceBase::print(OS, "CB", "cb");
+}
+
+template <typename T> void ResourceTable<T>::print(raw_ostream &OS) const {
+  for (auto &Res : Data)
+    Res.print(OS);
+}
+
 MDNode *ResourceBase::ExtendedProperties::write(LLVMContext &Ctx) const {
   IRBuilder<> B(Ctx);
   SmallVector<Metadata *> Entries;
@@ -315,14 +360,36 @@ MDNode *UAVResource::write() const {
   return MDNode::get(Ctx, Entries);
 }
 
+MDNode *ConstantBuffer::write() const {
+  auto &Ctx = GV->getContext();
+  IRBuilder<> B(Ctx);
+  Metadata *Entries[7];
+  ResourceBase::write(Ctx, Entries);
+
+  Entries[6] = ConstantAsMetadata::get(B.getInt32(CBufferSizeInBytes));
+  return MDNode::get(Ctx, Entries);
+}
+
+template <typename T> MDNode *ResourceTable<T>::write(Module &M) const {
+  if (Data.empty())
+    return nullptr;
+  SmallVector<Metadata *> MDs;
+  for (auto &Res : Data)
+    MDs.emplace_back(Res.write());
+
+  NamedMDNode *Entry = M.getNamedMetadata(MDName);
+  if (Entry)
+    Entry->eraseFromParent();
+
+  return MDNode::get(M.getContext(), MDs);
+}
+
 void Resources::write(Module &M) const {
   Metadata *ResourceMDs[4] = {nullptr, nullptr, nullptr, nullptr};
-  SmallVector<Metadata *> UAVMDs;
-  for (auto &UAV : UAVs)
-    UAVMDs.emplace_back(UAV.write());
 
-  if (!UAVMDs.empty())
-    ResourceMDs[1] = MDNode::get(M.getContext(), UAVMDs);
+  ResourceMDs[1] = UAVs.write(M);
+
+  ResourceMDs[2] = CBuffers.write(M);
 
   bool HasResource = ResourceMDs[0] != nullptr || ResourceMDs[1] != nullptr ||
                      ResourceMDs[2] != nullptr || ResourceMDs[3] != nullptr;
@@ -346,8 +413,8 @@ void Resources::print(raw_ostream &O) const {
     << "; ------------------------------ ---------- ------- ----------- "
        "------- -------------- ------\n";
 
-  for (auto &UAV : UAVs)
-    UAV.print(O);
+  CBuffers.print(O);
+  UAVs.print(O);
 }
 
 void Resources::dump() const { print(dbgs()); }
