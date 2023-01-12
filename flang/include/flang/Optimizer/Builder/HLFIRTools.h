@@ -224,6 +224,10 @@ hlfir::Entity getElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
 /// Compute the lower and upper bounds of an entity.
 llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
 genBounds(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
+/// Compute the lower and upper bounds given a fir.shape or fir.shape_shift
+/// (fir.shift is not allowed here).
+llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
+genBounds(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape);
 
 /// Compute fir.shape<> (no lower bounds) for an entity.
 mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,
