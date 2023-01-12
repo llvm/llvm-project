@@ -130,7 +130,6 @@
 #define BUILTIN_CANONICALIZE_F32(X) __builtin_canonicalizef(X)
 #define BUILTIN_CANONICALIZE_F64(X) __builtin_canonicalize(X)
 #define BUILTIN_CANONICALIZE_F16(X) __builtin_canonicalizef16(X)
-#define BUILTIN_CANONICALIZE_2F16(X) __llvm_canonicalize_2f16(X)
 
 #define BUILTIN_MULHI_U32(A,B) (((ulong)(A) * (ulong)(B)) >> 32)
 

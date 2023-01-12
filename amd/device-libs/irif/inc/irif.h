@@ -21,7 +21,6 @@ extern __attribute__((const)) float2 __llvm_fma_2f32(float2, float2, float2) __a
 extern __attribute__((const)) half2 __llvm_fma_2f16(half2, half2, half2) __asm("llvm.fma.v2f16");
 extern __attribute__((const)) half2 __llvm_round_2f16(half2) __asm("llvm.round.v2f16");
 extern __attribute__((const)) half2 __llvm_rint_2f16(half2) __asm("llvm.rint.v2f16");
-extern __attribute__((const)) half2 __llvm_canonicalize_2f16(half2) __asm("llvm.canonicalize.v2f16");
 
 #define BUILTIN_CLZ_U8(x) (uchar)(x == 0u ? 8 : __builtin_clz(x) - 24)
 #define BUILTIN_CLZ_U16(x) (ushort)(x == 0u ? 16 : __builtin_clzs(x))
