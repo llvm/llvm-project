@@ -1486,7 +1486,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<ArrayAttr>:$passthrough,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
-    OptionalAttr<I64Attr>:$function_entry_count
+    OptionalAttr<I64Attr>:$function_entry_count,
+    OptionalAttr<LLVM_MemoryEffectsAttr>:$memory
   );
 
   let regions = (region AnyRegion:$body);
