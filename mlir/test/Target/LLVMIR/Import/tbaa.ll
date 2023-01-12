@@ -7,7 +7,6 @@
 ; CHECK-NEXT:    llvm.tbaa_tag @[[T0:tbaa_tag_[0-9]+]] {access_type = @[[R0]], base_type = @[[R0]], offset = 0 : i64}
 ; CHECK-NEXT:    llvm.tbaa_root @[[R1:tbaa_root_[0-9]+]] {id = "Other language TBAA"}
 ; CHECK-NEXT:    llvm.tbaa_tag @[[T1:tbaa_tag_[0-9]+]] {access_type = @[[R1]], base_type = @[[R1]], offset = 0 : i64}
-; CHECK-NEXT:    llvm.return
 ; CHECK-NEXT:  }
 ; CHECK:       llvm.func @tbaa1
 ; CHECK:         llvm.store %{{.*}}, %{{.*}} {
@@ -38,7 +37,6 @@ define dso_local void @tbaa1(ptr %0, ptr %1) {
 ; CHECK-NEXT:    llvm.tbaa_tag @[[T1:tbaa_tag_[0-9]+]] {access_type = @[[D3:tbaa_type_desc_[0-9]+]], base_type = @[[D4:tbaa_type_desc_[0-9]+]], offset = 0 : i64}
 ; CHECK-NEXT:    llvm.tbaa_type_desc @[[D3]] {id = "int", members = {<@[[D0]], 0>}}
 ; CHECK-NEXT:    llvm.tbaa_type_desc @[[D4]] {id = "agg1_t", members = {<@[[D3]], 0>, <@[[D3]], 4>}}
-; CHECK-NEXT:    llvm.return
 ; CHECK-NEXT:  }
 ; CHECK:       llvm.func @tbaa2
 ; CHECK:         llvm.load %{{.*}} {

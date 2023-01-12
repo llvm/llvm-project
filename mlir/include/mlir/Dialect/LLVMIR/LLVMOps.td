@@ -989,7 +989,7 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 }
 
 def LLVM_MetadataOp : LLVM_Op<"metadata", [
-   NoRegionArguments, SymbolTable, Symbol
+   NoRegionArguments, NoTerminator, SymbolTable, Symbol
 ]> {
   let arguments = (ins
     SymbolNameAttr:$sym_name
@@ -1002,11 +1002,19 @@ def LLVM_MetadataOp : LLVM_Op<"metadata", [
       llvm.metadata @metadata {
         llvm.access_group @group1
         llvm.access_group @group2
-        llvm.return
       }
   }];
   let regions = (region SizedRegion<1>:$body);
-  let assemblyFormat = "$sym_name attr-dict-with-keyword $body";
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins "StringRef":$symName,
+        CArg<"bool", "true">:$createBodyBlock,
+        CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+  ];
+
+  let hasCustomAssemblyFormat = 1;
   let hasRegionVerifier = 1;
 }
 
@@ -1060,7 +1068,6 @@ def LLVM_AliasScopeMetadataOp : LLVM_Op<"alias_scope", [
           llvm.alias_scope_domain @domain { description = "Optional domain description"}
           llvm.alias_scope @scope1 { domain = @domain }
           llvm.alias_scope @scope2 { domain = @domain, description = "Optional scope description" }
-          llvm.return
         }
       }
 
@@ -1104,7 +1111,6 @@ def LLVM_TBAARootMetadataOp : LLVM_Op<"tbaa_root", [
     Example:
       llvm.metadata @tbaa {
         llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-        llvm.return
       }
 
     See the following link for more details:
@@ -1157,7 +1163,6 @@ def LLVM_TBAATypeDescriptorOp : LLVM_Op<"tbaa_type_desc", [
             members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
             offsets = array<i64: 0, 4>
         }
-        llvm.return
       }
 
     See the following link for more details:
@@ -1227,7 +1232,6 @@ def LLVM_TBAATagOp : LLVM_Op<"tbaa_tag", [
             base_type = @tbaa_type_desc_6,
             offset = 0 : i64
         }
-        llvm.return
       }
 
     See the following link for more details:

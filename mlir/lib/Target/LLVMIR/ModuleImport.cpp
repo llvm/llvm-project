@@ -367,8 +367,6 @@ MetadataOp ModuleImport::getTBAAMetadataOp() {
 
   builder.setInsertionPointToEnd(mlirModule.getBody());
   tbaaMetadataOp = builder.create<MetadataOp>(loc, getTBAAMetadataOpName());
-  builder.createBlock(&tbaaMetadataOp.getBody());
-  builder.create<ReturnOp>(loc, Value{});
 
   return tbaaMetadataOp;
 }
@@ -535,9 +533,9 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
     return true;
   };
 
-  // Insert new operations before the terminator.
+  // Insert new operations at the end of the MetadataOp.
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPoint(&getTBAAMetadataOp().getBody().back().back());
+  builder.setInsertionPointToEnd(&getTBAAMetadataOp().getBody().back());
   StringAttr metadataOpName = SymbolTable::getSymbolName(getTBAAMetadataOp());
 
   // On the first walk, create SymbolRefAttr's and map them
@@ -614,7 +612,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
 
 LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
+  builder.setInsertionPointToEnd(mlirModule.getBody());
   for (const llvm::Function &func : llvmModule->functions())
     for (const llvm::Instruction &inst : llvm::instructions(func)) {
       llvm::AAMDNodes nodes = inst.getAAMetadata();
