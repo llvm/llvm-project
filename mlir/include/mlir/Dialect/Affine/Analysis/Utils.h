@@ -34,10 +34,9 @@ struct MemRefAccess;
 class Operation;
 class Value;
 
-/// Populates 'loops' with IVs of the loops surrounding 'op' ordered from
-/// the outermost 'affine.for' operation to the innermost one.
-//  TODO: handle 'affine.if' ops.
-void getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
+/// Populates 'loops' with IVs of the affine.for ops surrounding 'op' ordered
+/// from the outermost 'affine.for' operation to the innermost one.
+void getAffineForIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
 
 /// Populates 'ops' with affine operations enclosing `op` ordered from outermost
 /// to innermost. affine.for, affine.if, or affine.parallel ops comprise such

@@ -1066,17 +1066,21 @@ func.func @test_interleaved_affine_for_if() {
 }
 
 // -----
-// CHECK-LABEL: func @parallel_dependence_check_failure() {
-func.func @parallel_dependence_check_failure() {
+// CHECK-LABEL: func @dependent_parallel() {
+func.func @dependent_parallel() {
   %0 = memref.alloc() : memref<10xf32>
   %cst = arith.constant 7.000000e+00 : f32
   affine.parallel (%i0) = (0) to (10) {
-    // expected-error @+1 {{dependence check failed}}
     affine.store %cst, %0[%i0] : memref<10xf32>
+    // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 1 = true}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
   }
   affine.parallel (%i1) = (0) to (10) {
-    // expected-error @+1 {{dependence check failed}}
     %1 = affine.load %0[%i1] : memref<10xf32>
+    // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
   }
   return
 }

@@ -2298,7 +2298,7 @@ Speculation::Speculatability AffineForOp::getSpeculatability() {
 
 /// Returns true if the provided value is the induction variable of a
 /// AffineForOp.
-bool mlir::isForInductionVar(Value val) {
+bool mlir::isAffineForInductionVar(Value val) {
   return getForInductionVarOwner(val) != AffineForOp();
 }
 
