@@ -187,21 +187,36 @@ static mlir::Value genRuntimeAllocate(fir::FirOpBuilder &builder,
 static mlir::Value genRuntimeDeallocate(fir::FirOpBuilder &builder,
                                         mlir::Location loc,
                                         const fir::MutableBoxValue &box,
-                                        ErrorManager &errorManager) {
+                                        ErrorManager &errorManager,
+                                        mlir::Value declaredTypeDesc = {}) {
   // Ensure fir.box is up-to-date before passing it to deallocate runtime.
   mlir::Value boxAddress = fir::factory::getMutableIRBox(builder, loc, box);
-  mlir::func::FuncOp callee =
-      box.isPointer()
-          ? fir::runtime::getRuntimeFunc<mkRTKey(PointerDeallocate)>(loc,
-                                                                     builder)
-          : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(
-                loc, builder);
-  llvm::SmallVector<mlir::Value> args{
-      boxAddress, errorManager.hasStat, errorManager.errMsgAddr,
-      errorManager.sourceFile, errorManager.sourceLine};
+  mlir::func::FuncOp callee;
+  llvm::SmallVector<mlir::Value> args;
   llvm::SmallVector<mlir::Value> operands;
-  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
-    operands.emplace_back(builder.createConvert(loc, snd, fst));
+  if (box.isPolymorphic() || box.isUnlimitedPolymorphic()) {
+    callee = box.isPointer()
+                 ? fir::runtime::getRuntimeFunc<mkRTKey(
+                       PointerDeallocatePolymorphic)>(loc, builder)
+                 : fir::runtime::getRuntimeFunc<mkRTKey(
+                       AllocatableDeallocatePolymorphic)>(loc, builder);
+    if (!declaredTypeDesc)
+      declaredTypeDesc = builder.createNullConstant(loc);
+    operands = fir::runtime::createArguments(
+        builder, loc, callee.getFunctionType(), boxAddress, declaredTypeDesc,
+        errorManager.hasStat, errorManager.errMsgAddr, errorManager.sourceFile,
+        errorManager.sourceLine);
+  } else {
+    callee = box.isPointer()
+                 ? fir::runtime::getRuntimeFunc<mkRTKey(PointerDeallocate)>(
+                       loc, builder)
+                 : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(
+                       loc, builder);
+    operands = fir::runtime::createArguments(
+        builder, loc, callee.getFunctionType(), boxAddress,
+        errorManager.hasStat, errorManager.errMsgAddr, errorManager.sourceFile,
+        errorManager.sourceLine);
+  }
   return builder.create<fir::CallOp>(loc, callee, operands).getResult(0);
 }
 
@@ -519,19 +534,8 @@ private:
     if (!typeSpec->AsDerived())
       return;
 
-    // Set up descriptor for allocation with derived type spec.
-    std::string typeName =
-        Fortran::lower::mangle::mangleName(typeSpec->derivedTypeSpec());
-    std::string typeDescName =
-        fir::NameUniquer::getTypeDescriptorName(typeName);
-
-    auto typeDescGlobal =
-        builder.getModule().lookupSymbol<fir::GlobalOp>(typeDescName);
-    if (!typeDescGlobal)
-      fir::emitFatalError(loc, "type descriptor not defined");
-    auto typeDescAddr = builder.create<fir::AddrOfOp>(
-        loc, fir::ReferenceType::get(typeDescGlobal.getType()),
-        typeDescGlobal.getSymbol());
+    auto typeDescAddr = Fortran::lower::getTypeDescAddr(
+        builder, loc, typeSpec->derivedTypeSpec());
     mlir::func::FuncOp callee =
         box.isPointer()
             ? fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyDerived)>(
@@ -590,7 +594,8 @@ void Fortran::lower::genAllocateStmt(
 // Generate deallocation of a pointer/allocatable.
 static void genDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
                           const fir::MutableBoxValue &box,
-                          ErrorManager &errorManager) {
+                          ErrorManager &errorManager,
+                          mlir::Value declaredTypeDesc = {}) {
   // Deallocate intrinsic types inline.
   if (!box.isDerived() && !box.isPolymorphic() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
@@ -601,20 +606,22 @@ static void genDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
   // Use runtime calls to deallocate descriptor cases. Sync MutableBoxValue
   // with its descriptor before and after calls if needed.
   errorManager.genStatCheck(builder, loc);
-  mlir::Value stat = genRuntimeDeallocate(builder, loc, box, errorManager);
+  mlir::Value stat =
+      genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
   fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
   errorManager.assignStat(builder, loc, stat);
 }
 
 void Fortran::lower::genDeallocateBox(
     Fortran::lower::AbstractConverter &converter,
-    const fir::MutableBoxValue &box, mlir::Location loc) {
+    const fir::MutableBoxValue &box, mlir::Location loc,
+    mlir::Value declaredTypeDesc) {
   const Fortran::lower::SomeExpr *statExpr = nullptr;
   const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
   ErrorManager errorManager;
   errorManager.init(converter, loc, statExpr, errMsgExpr);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  genDeallocate(builder, loc, box, errorManager);
+  genDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
 }
 
 void Fortran::lower::genDeallocateStmt(
@@ -641,7 +648,18 @@ void Fortran::lower::genDeallocateStmt(
        std::get<std::list<Fortran::parser::AllocateObject>>(stmt.t)) {
     fir::MutableBoxValue box =
         genMutableBoxValue(converter, loc, allocateObject);
-    genDeallocate(builder, loc, box, errorManager);
+
+    mlir::Value declaredTypeDesc = {};
+    if (box.isPolymorphic()) {
+      const Fortran::semantics::Symbol &symbol = unwrapSymbol(allocateObject);
+      assert(symbol.GetType());
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              symbol.GetType()->AsDerived()) {
+        declaredTypeDesc =
+            Fortran::lower::getTypeDescAddr(builder, loc, *derivedTypeSpec);
+      }
+    }
+    genDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
   }
   builder.restoreInsertionPoint(insertPt);
 }
@@ -854,4 +872,18 @@ mlir::Value Fortran::lower::getAssumedCharAllocatableOrPointerLen(
   }
 
   return readLength();
+}
+
+mlir::Value Fortran::lower::getTypeDescAddr(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const Fortran::semantics::DerivedTypeSpec &typeSpec) {
+  std::string typeName = Fortran::lower::mangle::mangleName(typeSpec);
+  std::string typeDescName = fir::NameUniquer::getTypeDescriptorName(typeName);
+  auto typeDescGlobal =
+      builder.getModule().lookupSymbol<fir::GlobalOp>(typeDescName);
+  if (!typeDescGlobal)
+    fir::emitFatalError(loc, "type descriptor not defined");
+  return builder.create<fir::AddrOfOp>(
+      loc, fir::ReferenceType::get(typeDescGlobal.getType()),
+      typeDescGlobal.getSymbol());
 }

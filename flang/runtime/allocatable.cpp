@@ -100,6 +100,19 @@ int RTNAME(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
   return ReturnError(terminator, descriptor.Destroy(true), errMsg, hasStat);
 }
 
+int RTNAME(AllocatableDeallocatePolymorphic)(Descriptor &descriptor,
+    const typeInfo::DerivedType *derivedType, bool hasStat,
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+  int stat{RTNAME(AllocatableDeallocate)(
+      descriptor, hasStat, errMsg, sourceFile, sourceLine)};
+  if (stat == StatOk) {
+    DescriptorAddendum *addendum{descriptor.Addendum()};
+    INTERNAL_CHECK(addendum != nullptr);
+    addendum->set_derivedType(derivedType);
+  }
+  return stat;
+}
+
 void RTNAME(AllocatableDeallocateNoFinal)(
     Descriptor &descriptor, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
