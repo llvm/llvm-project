@@ -4347,8 +4347,18 @@ struct AAIsDeadFunction : public AAIsDead {
       indicatePessimisticFixpoint();
       return;
     }
-    ToBeExploredFrom.insert(&F->getEntryBlock().front());
-    assumeLive(A, F->getEntryBlock());
+    if (!isAssumedDeadInternalFunction(A)) {
+      ToBeExploredFrom.insert(&F->getEntryBlock().front());
+      assumeLive(A, F->getEntryBlock());
+    }
+  }
+
+  bool isAssumedDeadInternalFunction(Attributor &A) {
+    if (!getAnchorScope()->hasLocalLinkage())
+      return false;
+    bool UsedAssumedInformation = false;
+    return A.checkForAllCallSites([](AbstractCallSite) { return false; }, *this,
+                                  true, UsedAssumedInformation);
   }
 
   /// See AbstractAttribute::getAsStr().
@@ -4595,6 +4605,16 @@ identifyAliveSuccessors(Attributor &A, const SwitchInst &SI,
 
 ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
   ChangeStatus Change = ChangeStatus::UNCHANGED;
+
+  if (AssumedLiveBlocks.empty()) {
+    if (isAssumedDeadInternalFunction(A))
+      return ChangeStatus::UNCHANGED;
+
+    Function *F = getAnchorScope();
+    ToBeExploredFrom.insert(&F->getEntryBlock().front());
+    assumeLive(A, F->getEntryBlock());
+    Change = ChangeStatus::CHANGED;
+  }
 
   LLVM_DEBUG(dbgs() << "[AAIsDead] Live [" << AssumedLiveBlocks.size() << "/"
                     << getAnchorScope()->size() << "] BBs and "
