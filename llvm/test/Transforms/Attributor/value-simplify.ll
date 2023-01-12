@@ -1317,6 +1317,52 @@ define internal i32 @ret_speculatable_expr(ptr %mem, i32 %a2) {
   ret i32 %add
 }
 
+define internal void @not_called1() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@not_called1
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+define internal void @not_called2() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@not_called2
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+define internal void @not_called3() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@not_called3
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+declare void @useFnDecl(ptr addrspace(42));
+define void @useFnDef(ptr addrspace(42) %arg) {
+; CHECK-LABEL: define {{[^@]+}}@useFnDef
+; CHECK-SAME: (ptr addrspace(42) [[ARG:%.*]]) {
+; CHECK-NEXT:    call void @useFnDecl(ptr addrspace(42) [[ARG]])
+; CHECK-NEXT:    ret void
+;
+  call void @useFnDecl(ptr addrspace(42) %arg)
+  ret void
+}
+define i1 @user_of_not_called() {
+; CHECK-LABEL: define {{[^@]+}}@user_of_not_called() {
+; CHECK-NEXT:    call void @useFnDecl(ptr addrspace(42) noundef addrspacecast (ptr @not_called1 to ptr addrspace(42)))
+; CHECK-NEXT:    call void @useFnDef(ptr addrspace(42) noundef addrspacecast (ptr @not_called2 to ptr addrspace(42)))
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(42) addrspacecast (ptr @not_called3 to ptr addrspace(42)), null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  call void @useFnDecl(ptr addrspace(42) addrspacecast (ptr @not_called1 to ptr addrspace(42)))
+  call void @useFnDef(ptr addrspace(42) addrspacecast (ptr @not_called2 to ptr addrspace(42)))
+  %cmp = icmp eq ptr addrspace(42) addrspacecast (ptr @not_called3 to ptr addrspace(42)), null
+  ret i1 %cmp
+}
 
 ;.
 ; TUNIT: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
