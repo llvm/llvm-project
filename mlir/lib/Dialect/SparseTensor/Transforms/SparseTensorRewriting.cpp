@@ -532,8 +532,11 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     SparseTensorEncodingAttr encDst = getSparseTensorEncoding(dstTp);
     Value dst; // Destination tensor for inserting source tensor values.
     bool needTmpCOO = true;
+    bool allDense = false;
+    Value annotatedDenseDst;
+    int64_t rank = dstTp.getRank();
     if (encDst) {
-      bool allDense = encDst.isAllDense();
+      allDense = encDst.isAllDense();
       bool allOrdered = false;
       // When concatenating on dimension 0, and all inputs are sorted and have
       // an identity dimOrdering, the concatenate will generate coords in
@@ -564,16 +567,25 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
         encDst = getSparseTensorEncoding(tp);
       }
       dst = rewriter.create<AllocTensorOp>(loc, tp, dynSizes).getResult();
+      if (allDense) {
+        // Create a view of the values buffer to match the unannotated dense
+        // tensor.
+        Value valuesBuffer = genToValues(rewriter, loc, dst);
+        Value idxBuffer = genAlloca(
+            rewriter, loc, rank, rewriter.getIndexType(), /*staticShape=*/true);
+        annotatedDenseDst = dst;
+        dst = reshapeValuesToLevels(rewriter, loc, encDst, sizes, valuesBuffer,
+                                    idxBuffer);
+      }
     } else {
       // TODO: Dense buffers should be allocated/deallocated via the callback
       // in BufferizationOptions.
       dst = allocDenseTensor(rewriter, loc, dstTp, sizes);
     }
 
-    int64_t rank = dstTp.getRank();
     Value offset = constantIndex(rewriter, loc, 0);
     SmallVector<Value> initArgs;
-    if (encDst)
+    if (encDst && !allDense)
       initArgs.push_back(dst);
     ForeachOp foreachOp;
     for (Value input : op.getInputs()) {
@@ -591,7 +603,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
                 idx = builder.create<arith::AddIOp>(loc, idx, offset);
               indices[toStoredDim(encDst, i)] = idx;
             }
-            if (encDst) {
+            if (encDst && !allDense) {
               Value cond = genIsNonzero(rewriter, loc, v);
               scf::IfOp ifOp = builder.create<scf::IfOp>(
                   loc, TypeRange(reduc.front().getType()), cond, /*else*/ true);
@@ -615,18 +627,23 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
       assert(!ShapedType::isDynamic(d));
       offset = rewriter.create<arith::AddIOp>(loc, offset,
                                               constantIndex(rewriter, loc, d));
-      if (encDst) {
+      if (encDst && !allDense) {
         dst = foreachOp.getResult(0);
         initArgs[0] = dst;
       }
     }
 
     if (encDst) {
-      dst = rewriter.create<LoadOp>(loc, dst, true);
-      if (needTmpCOO) {
-        Value tmpCoo = dst;
-        dst = rewriter.create<ConvertOp>(loc, dstTp, tmpCoo).getResult();
-        rewriter.create<DeallocTensorOp>(loc, tmpCoo);
+      if (!allDense) {
+        dst = rewriter.create<LoadOp>(loc, dst, true);
+        if (needTmpCOO) {
+          Value tmpCoo = dst;
+          dst = rewriter.create<ConvertOp>(loc, dstTp, tmpCoo).getResult();
+          rewriter.create<DeallocTensorOp>(loc, tmpCoo);
+        }
+      } else {
+        dst = rewriter.create<ConvertOp>(loc, dstTp, annotatedDenseDst)
+                  .getResult();
       }
       rewriter.replaceOp(op, dst);
     } else {

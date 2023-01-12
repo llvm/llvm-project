@@ -372,7 +372,11 @@ Type mlir::sparse_tensor::getOpaquePointerType(OpBuilder &builder) {
 }
 
 Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc,
-                                     unsigned sz, Type tp) {
+                                     unsigned sz, Type tp, bool staticShape) {
+  if (staticShape) {
+    auto memTp = MemRefType::get({sz}, tp);
+    return builder.create<memref::AllocaOp>(loc, memTp);
+  }
   return genAlloca(builder, loc, constantIndex(builder, loc, sz), tp);
 }
 
