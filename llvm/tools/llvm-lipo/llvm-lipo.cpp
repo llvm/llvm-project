@@ -93,9 +93,9 @@ static constexpr opt::OptTable::Info LipoInfoTable[] = {
 };
 } // namespace lipo
 
-class LipoOptTable : public opt::OptTable {
+class LipoOptTable : public opt::GenericOptTable {
 public:
-  LipoOptTable() : OptTable(lipo::LipoInfoTable) {}
+  LipoOptTable() : opt::GenericOptTable(lipo::LipoInfoTable) {}
 };
 
 enum class LipoAction {

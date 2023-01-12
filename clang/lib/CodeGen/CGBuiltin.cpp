@@ -687,6 +687,8 @@ static Value *emitRangedBuiltin(CodeGenFunction &CGF,
     Function *F = CGF.CGM.getIntrinsic(IntrinsicID, {});
     llvm::Instruction *Call = CGF.Builder.CreateCall(F);
     Call->setMetadata(llvm::LLVMContext::MD_range, RNode);
+    Call->setMetadata(llvm::LLVMContext::MD_noundef,
+                      llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
     return Call;
 }
 
@@ -6784,8 +6786,8 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
 
   Value *Result = CGF.EmitNeonCall(F, Ops, s);
   llvm::Type *ResultType = CGF.ConvertType(E->getType());
-  if (ResultType->getPrimitiveSizeInBits().getFixedSize() <
-      Result->getType()->getPrimitiveSizeInBits().getFixedSize())
+  if (ResultType->getPrimitiveSizeInBits().getFixedValue() <
+      Result->getType()->getPrimitiveSizeInBits().getFixedValue())
     return CGF.Builder.CreateExtractElement(Result, C0);
 
   return CGF.Builder.CreateBitCast(Result, ResultType, s);
@@ -16785,6 +16787,8 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   llvm::MDNode *RNode = MDHelper.createRange(APInt(16, 1),
       APInt(16, CGF.getTarget().getMaxOpenCLWorkGroupSize() + 1));
   LD->setMetadata(llvm::LLVMContext::MD_range, RNode);
+  LD->setMetadata(llvm::LLVMContext::MD_noundef,
+                  llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
   LD->setMetadata(llvm::LLVMContext::MD_invariant_load,
                   llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
   return LD;

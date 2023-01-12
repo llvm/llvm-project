@@ -2326,6 +2326,10 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
   return Chain;
 }
 
+bool LoongArchTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
+  return CI->isTailCall();
+}
+
 // Check whether the call is eligible for tail call optimization.
 bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
     CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

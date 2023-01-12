@@ -27,6 +27,20 @@ if.end:
   ret void
 }
 
+; CHECK: [openmp-opt] Basic block @foo entry is executed by a single thread.
+; Function Attrs: noinline
+define internal void @foo() {
+entry:
+  ret void
+}
+
+; CHECK: [openmp-opt] Basic block @bar.internalized entry is executed by a single thread.
+; Function Attrs: noinline
+define void @bar() {
+entry:
+  ret void
+}
+
 ; REMARKS: remark: single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
 ; REMARKS-NOT: remark: single_threaded_execution.c:1:0: Could not internalize function. Some optimizations may not be possible.
 
@@ -51,13 +65,6 @@ if.end:
   ret void
 }
 
-; CHECK: [openmp-opt] Basic block @foo entry is executed by a single thread.
-; Function Attrs: noinline
-define internal void @foo() {
-entry:
-  ret void
-}
-
 ; CHECK-NOT: [openmp-opt] Basic block @amdgcn entry is executed by a single thread.
 ; CHECK-DAG: [openmp-opt] Basic block @amdgcn if.then is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @amdgcn if.end is executed by a single thread.
@@ -76,13 +83,6 @@ if.then:
   br label %if.end
 
 if.end:
-  ret void
-}
-
-; CHECK: [openmp-opt] Basic block @bar.internalized entry is executed by a single thread.
-; Function Attrs: noinline
-define void @bar() {
-entry:
   ret void
 }
 

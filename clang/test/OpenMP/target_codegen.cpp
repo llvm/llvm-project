@@ -13,6 +13,13 @@
 // RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix OMP50
 
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=51 -D_DOMP51 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix OMP51
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -fopenmp-version=51 -D_DOMP51 -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -fopenmp-version=51 -D_DOMP51 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix OMP51
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=51 -D_DOMP51 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix OMP51
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=51 -D_DOMP51 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=51 -D_DOMP51 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32 --check-prefix OMP51
+
 // RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
@@ -901,6 +908,52 @@ public:
       a++;
   }
 };
+
+#ifdef _DOMP51
+void thread_limit_target(int TargetTL, int TeamsTL) {
+
+#pragma omp target
+{}
+// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 -1, i32 0,
+
+#pragma omp target
+#pragma omp teams
+{}
+// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 0, i32 0,
+
+#pragma omp target thread_limit(TargetTL)
+{}
+// OMP51: [[TL:%.*]] = load {{.*}} %TargetTL.addr
+// OMP51: store {{.*}} [[TL]], {{.*}} [[CEA:%.*]]
+// OMP51: load {{.*}} [[CEA]]
+// OMP51: [[CE:%.*]] = load {{.*}} [[CEA]]
+// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 -1, i32 [[CE]],
+
+#pragma omp target thread_limit(TargetTL)
+#pragma omp teams
+{}
+// OMP51: [[TL:%.*]] = load {{.*}} %TargetTL.addr
+// OMP51: store {{.*}} [[TL]], {{.*}} [[CEA:%.*]]
+// OMP51: load {{.*}} [[CEA]]
+// OMP51: [[CE:%.*]] = load {{.*}} [[CEA]]
+// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 0, i32 [[CE]],
+
+#pragma omp target
+#pragma omp teams thread_limit(TeamsTL)
+{}
+// OMP51: load {{.*}} %TeamsTL.addr
+// OMP51: [[TeamsL:%.*]] = load {{.*}} %TeamsTL.addr
+// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 0, i32 [[TeamsL]],
+
+#pragma omp target thread_limit(TargetTL)
+#pragma omp teams thread_limit(TeamsTL)
+{}
+// OMP51: load {{.*}} %TeamsTL.addr
+// OMP51: [[TeamsL:%.*]] = load {{.*}} %TeamsTL.addr
+// OMP51: call i32 @__tgt_target_kernel({{.*}}, i64 -1, i32 0, i32 [[TeamsL]],
+
+}
+#endif
 
 // CHECK:     define internal void @.omp_offloading.requires_reg()
 // CHECK:     call void @__tgt_register_requires(i64 1)

@@ -114,6 +114,7 @@ private:
   }
   bool IsResultOkToDiffer(const FunctionResult &);
   void CheckBindC(const Symbol &);
+  void CheckBindCFunctionResult(const Symbol &);
   // Check functions for defined I/O procedures
   void CheckDefinedIoProc(
       const Symbol &, const GenericDetails &, GenericKind::DefinedIo);
@@ -399,6 +400,7 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A function result may not have the SAVE attribute"_err_en_US);
     }
+    CheckBindCFunctionResult(symbol);
   }
   if (symbol.owner().IsDerivedType() &&
       (symbol.attrs().test(Attr::CONTIGUOUS) &&
@@ -415,6 +417,35 @@ void CheckHelper::Check(const Symbol &symbol) {
 }
 
 void CheckHelper::CheckCommonBlock(const Symbol &symbol) { CheckBindC(symbol); }
+
+void CheckHelper::CheckBindCFunctionResult(const Symbol &symbol) { // C1553
+  if (!innermostSymbol_ || !IsBindCProcedure(*innermostSymbol_)) {
+    return;
+  }
+  if (IsPointer(symbol) || IsAllocatable(symbol)) {
+    messages_.Say(
+        "BIND(C) function result cannot have ALLOCATABLE or POINTER attribute"_err_en_US);
+  }
+  if (const DeclTypeSpec * type{symbol.GetType()};
+      type && type->category() == DeclTypeSpec::Character) {
+    bool isConstOne{false}; // 18.3.1(1)
+    if (const auto &len{type->characterTypeSpec().length().GetExplicit()}) {
+      if (auto constLen{evaluate::ToInt64(*len)}) {
+        isConstOne = constLen == 1;
+      }
+    }
+    if (!isConstOne) {
+      messages_.Say(
+          "BIND(C) character function result must have length one"_err_en_US);
+    }
+  }
+  if (symbol.Rank() > 0) {
+    messages_.Say("BIND(C) function result must be scalar"_err_en_US);
+  }
+  if (symbol.Corank()) {
+    messages_.Say("BIND(C) function result cannot be a coarray"_err_en_US);
+  }
+}
 
 void CheckHelper::CheckValue(
     const Symbol &symbol, const DerivedTypeSpec *derived) { // C863 - C865

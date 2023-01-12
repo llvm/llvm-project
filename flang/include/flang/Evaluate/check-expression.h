@@ -100,6 +100,16 @@ template <typename A>
 std::optional<bool> IsContiguous(const A &, FoldingContext &);
 extern template std::optional<bool> IsContiguous(
     const Expr<SomeType> &, FoldingContext &);
+extern template std::optional<bool> IsContiguous(
+    const ArrayRef &, FoldingContext &);
+extern template std::optional<bool> IsContiguous(
+    const Substring &, FoldingContext &);
+extern template std::optional<bool> IsContiguous(
+    const Component &, FoldingContext &);
+extern template std::optional<bool> IsContiguous(
+    const ComplexPart &, FoldingContext &);
+extern template std::optional<bool> IsContiguous(
+    const CoarrayRef &, FoldingContext &);
 template <typename A>
 bool IsSimplyContiguous(const A &x, FoldingContext &context) {
   return IsContiguous(x, context).value_or(false);

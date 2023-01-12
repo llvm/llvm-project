@@ -654,7 +654,7 @@ ArrayAttr {0}::getIndexingMaps() {{
 // Parameters:
 // {0}: Class name
 const char structuredOpFoldersFormat[] = R"FMT(
-LogicalResult {0}::fold(ArrayRef<Attribute>,
+LogicalResult {0}::fold(FoldAdaptor,
                         SmallVectorImpl<OpFoldResult> &) {{
   return memref::foldMemRefCast(*this);
 }

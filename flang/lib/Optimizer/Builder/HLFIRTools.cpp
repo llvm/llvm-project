@@ -20,46 +20,52 @@
 
 // Return explicit extents. If the base is a fir.box, this won't read it to
 // return the extents and will instead return an empty vector.
-static llvm::SmallVector<mlir::Value>
-getExplicitExtents(fir::FortranVariableOpInterface var) {
+static llvm::SmallVector<mlir::Value> getExplicitExtents(mlir::Value shape) {
   llvm::SmallVector<mlir::Value> result;
-  if (mlir::Value shape = var.getShape()) {
-    auto *shapeOp = shape.getDefiningOp();
-    if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
-      auto e = s.getExtents();
-      result.append(e.begin(), e.end());
-    } else if (auto s = mlir::dyn_cast_or_null<fir::ShapeShiftOp>(shapeOp)) {
-      auto e = s.getExtents();
-      result.append(e.begin(), e.end());
-    } else if (mlir::dyn_cast_or_null<fir::ShiftOp>(shapeOp)) {
-      return {};
-    } else {
-      TODO(var->getLoc(), "read fir.shape to get extents");
-    }
+  auto *shapeOp = shape.getDefiningOp();
+  if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
+    auto e = s.getExtents();
+    result.append(e.begin(), e.end());
+  } else if (auto s = mlir::dyn_cast_or_null<fir::ShapeShiftOp>(shapeOp)) {
+    auto e = s.getExtents();
+    result.append(e.begin(), e.end());
+  } else if (mlir::dyn_cast_or_null<fir::ShiftOp>(shapeOp)) {
+    return {};
+  } else {
+    TODO(shape.getLoc(), "read fir.shape to get extents");
   }
   return result;
+}
+static llvm::SmallVector<mlir::Value>
+getExplicitExtents(fir::FortranVariableOpInterface var) {
+  if (mlir::Value shape = var.getShape())
+    return getExplicitExtents(var.getShape());
+  return {};
 }
 
 // Return explicit lower bounds. For pointers and allocatables, this will not
 // read the lower bounds and instead return an empty vector.
-static llvm::SmallVector<mlir::Value>
-getExplicitLbounds(fir::FortranVariableOpInterface var) {
+static llvm::SmallVector<mlir::Value> getExplicitLbounds(mlir::Value shape) {
   llvm::SmallVector<mlir::Value> result;
-  if (mlir::Value shape = var.getShape()) {
-    auto *shapeOp = shape.getDefiningOp();
-    if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
-      return {};
-    } else if (auto s = mlir::dyn_cast_or_null<fir::ShapeShiftOp>(shapeOp)) {
-      auto e = s.getOrigins();
-      result.append(e.begin(), e.end());
-    } else if (auto s = mlir::dyn_cast_or_null<fir::ShiftOp>(shapeOp)) {
-      auto e = s.getOrigins();
-      result.append(e.begin(), e.end());
-    } else {
-      TODO(var->getLoc(), "read fir.shape to get lower bounds");
-    }
+  auto *shapeOp = shape.getDefiningOp();
+  if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
+    return {};
+  } else if (auto s = mlir::dyn_cast_or_null<fir::ShapeShiftOp>(shapeOp)) {
+    auto e = s.getOrigins();
+    result.append(e.begin(), e.end());
+  } else if (auto s = mlir::dyn_cast_or_null<fir::ShiftOp>(shapeOp)) {
+    auto e = s.getOrigins();
+    result.append(e.begin(), e.end());
+  } else {
+    TODO(shape.getLoc(), "read fir.shape to get lower bounds");
   }
   return result;
+}
+static llvm::SmallVector<mlir::Value>
+getExplicitLbounds(fir::FortranVariableOpInterface var) {
+  if (mlir::Value shape = var.getShape())
+    return getExplicitLbounds(shape);
+  return {};
 }
 
 static llvm::SmallVector<mlir::Value>
@@ -331,6 +337,28 @@ hlfir::genBounds(mlir::Location loc, fir::FirOpBuilder &builder,
     mlir::Value extent = fir::factory::readExtent(builder, loc, exv, dim);
     mlir::Value lb = fir::factory::readLowerBound(builder, loc, exv, dim, one);
     mlir::Value ub = genUBound(loc, builder, lb, extent, one);
+    result.push_back({lb, ub});
+  }
+  return result;
+}
+
+llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
+hlfir::genBounds(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value shape) {
+  assert((shape.getType().isa<fir::ShapeShiftType>() ||
+          shape.getType().isa<fir::ShapeType>()) &&
+         "shape must contain extents");
+  auto extents = getExplicitExtents(shape);
+  auto lowers = getExplicitLbounds(shape);
+  assert(lowers.empty() || lowers.size() == extents.size());
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  llvm::SmallVector<std::pair<mlir::Value, mlir::Value>> result;
+  for (auto extent : llvm::enumerate(extents)) {
+    mlir::Value lb = lowers.empty() ? one : lowers[extent.index()];
+    mlir::Value ub = lowers.empty()
+                         ? extent.value()
+                         : genUBound(loc, builder, lb, extent.value(), one);
     result.push_back({lb, ub});
   }
   return result;

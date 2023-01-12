@@ -473,12 +473,12 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK:       vector.main.loop.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i8 [[INDUCTION_IV]], 4
-; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP3]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT1]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i8 84, [[INDUCTION_IV]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -504,14 +504,14 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 84, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[IND_END4:%.*]] = mul i8 84, [[INDUCTION_IV]]
-; CHECK-NEXT:    [[DOTSPLATINSERT9:%.*]] = insertelement <4 x i8> poison, i8 [[BC_RESUME_VAL]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT9:%.*]] = insertelement <4 x i8> poison, i8 [[BC_RESUME_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT10:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT9]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTSPLATINSERT11:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT11:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT12:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT11]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT12]]
 ; CHECK-NEXT:    [[INDUCTION13:%.*]] = add <4 x i8> [[DOTSPLAT10]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i8 [[INDUCTION_IV]], 4
-; CHECK-NEXT:    [[DOTSPLATINSERT14:%.*]] = insertelement <4 x i8> poison, i8 [[TMP9]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT14:%.*]] = insertelement <4 x i8> poison, i8 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT15:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT14]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
@@ -565,12 +565,12 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT:       vector.main.loop.iter.check:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vector.ph:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i32 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP2:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDUCTION:%.*]] = add <4 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP3:%.*]] = mul i8 [[INDUCTION_IV]], 4
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP3]], i32 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP3]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT1]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IND_END:%.*]] = mul i8 84, [[INDUCTION_IV]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -596,14 +596,14 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 84, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IND_END4:%.*]] = mul i8 84, [[INDUCTION_IV]]
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT9:%.*]] = insertelement <2 x i8> poison, i8 [[BC_RESUME_VAL]], i32 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT9:%.*]] = insertelement <2 x i8> poison, i8 [[BC_RESUME_VAL]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT10:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT9]], <2 x i8> poison, <2 x i32> zeroinitializer
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT11:%.*]] = insertelement <2 x i8> poison, i8 [[INDUCTION_IV]], i32 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT11:%.*]] = insertelement <2 x i8> poison, i8 [[INDUCTION_IV]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT12:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT11]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP8:%.*]] = mul <2 x i8> <i8 0, i8 1>, [[DOTSPLAT12]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDUCTION13:%.*]] = add <2 x i8> [[DOTSPLAT10]], [[TMP8]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP9:%.*]] = mul i8 [[INDUCTION_IV]], 2
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT14:%.*]] = insertelement <2 x i8> poison, i8 [[TMP9]], i32 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT14:%.*]] = insertelement <2 x i8> poison, i8 [[TMP9]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT15:%.*]] = shufflevector <2 x i8> [[DOTSPLATINSERT14]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.vector.body:
@@ -705,7 +705,7 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i32
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[DOTSPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -776,7 +776,7 @@ define void @f4(ptr noalias %A, i32 signext %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 2
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[N_VEC3:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF2]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP5:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i32
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> [[DOTSPLAT]], <i32 0, i32 1>
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]

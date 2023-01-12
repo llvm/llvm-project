@@ -855,7 +855,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       if (Type *ArgMemTy = A->getPointeeInMemoryValueType()) {
         if (ArgMemTy->isSized()) {
           // FIXME: Why isn't this the type alloc size?
-          DerefBytes = DL.getTypeStoreSize(ArgMemTy).getKnownMinSize();
+          DerefBytes = DL.getTypeStoreSize(ArgMemTy).getKnownMinValue();
         }
       }
     }
@@ -899,7 +899,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
   } else if (auto *AI = dyn_cast<AllocaInst>(this)) {
     if (!AI->isArrayAllocation()) {
       DerefBytes =
-          DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinSize();
+          DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinValue();
       CanBeNull = false;
       CanBeFreed = false;
     }
@@ -907,7 +907,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     if (GV->getValueType()->isSized() && !GV->hasExternalWeakLinkage()) {
       // TODO: Don't outright reject hasExternalWeakLinkage but set the
       // CanBeNull flag.
-      DerefBytes = DL.getTypeStoreSize(GV->getValueType()).getFixedSize();
+      DerefBytes = DL.getTypeStoreSize(GV->getValueType()).getFixedValue();
       CanBeNull = false;
       CanBeFreed = false;
     }

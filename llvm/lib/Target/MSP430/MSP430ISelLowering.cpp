@@ -1392,8 +1392,8 @@ bool MSP430TargetLowering::isTruncateFree(Type *Ty1,
   if (!Ty1->isIntegerTy() || !Ty2->isIntegerTy())
     return false;
 
-  return (Ty1->getPrimitiveSizeInBits().getFixedSize() >
-          Ty2->getPrimitiveSizeInBits().getFixedSize());
+  return (Ty1->getPrimitiveSizeInBits().getFixedValue() >
+          Ty2->getPrimitiveSizeInBits().getFixedValue());
 }
 
 bool MSP430TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {

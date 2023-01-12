@@ -1261,7 +1261,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
 
   if (llvm::StructType *SrcSTy = dyn_cast<llvm::StructType>(SrcTy)) {
     Src = EnterStructPointerForCoercedAccess(Src, SrcSTy,
-                                             DstSize.getFixedSize(), CGF);
+                                             DstSize.getFixedValue(), CGF);
     SrcTy = Src.getElementType();
   }
 
@@ -1277,7 +1277,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
 
   // If load is legal, just bitcast the src pointer.
   if (!SrcSize.isScalable() && !DstSize.isScalable() &&
-      SrcSize.getFixedSize() >= DstSize.getFixedSize()) {
+      SrcSize.getFixedValue() >= DstSize.getFixedValue()) {
     // Generally SrcSize is never greater than DstSize, since this means we are
     // losing bits. However, this can happen in cases where the structure has
     // additional padding, for example due to a user specified alignment.
@@ -1323,7 +1323,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
   CGF.Builder.CreateMemCpy(
       Tmp.getPointer(), Tmp.getAlignment().getAsAlign(), Src.getPointer(),
       Src.getAlignment().getAsAlign(),
-      llvm::ConstantInt::get(CGF.IntPtrTy, SrcSize.getKnownMinSize()));
+      llvm::ConstantInt::get(CGF.IntPtrTy, SrcSize.getKnownMinValue()));
   return CGF.Builder.CreateLoad(Tmp);
 }
 
@@ -1366,7 +1366,7 @@ static void CreateCoercedStore(llvm::Value *Src,
 
   if (llvm::StructType *DstSTy = dyn_cast<llvm::StructType>(DstTy)) {
     Dst = EnterStructPointerForCoercedAccess(Dst, DstSTy,
-                                             SrcSize.getFixedSize(), CGF);
+                                             SrcSize.getFixedValue(), CGF);
     DstTy = Dst.getElementType();
   }
 
@@ -1393,7 +1393,7 @@ static void CreateCoercedStore(llvm::Value *Src,
   // If store is legal, just bitcast the src pointer.
   if (isa<llvm::ScalableVectorType>(SrcTy) ||
       isa<llvm::ScalableVectorType>(DstTy) ||
-      SrcSize.getFixedSize() <= DstSize.getFixedSize()) {
+      SrcSize.getFixedValue() <= DstSize.getFixedValue()) {
     Dst = CGF.Builder.CreateElementBitCast(Dst, SrcTy);
     CGF.EmitAggregateStore(Src, Dst, DstIsVolatile);
   } else {
@@ -1411,7 +1411,7 @@ static void CreateCoercedStore(llvm::Value *Src,
     CGF.Builder.CreateMemCpy(
         Dst.getPointer(), Dst.getAlignment().getAsAlign(), Tmp.getPointer(),
         Tmp.getAlignment().getAsAlign(),
-        llvm::ConstantInt::get(CGF.IntPtrTy, DstSize.getFixedSize()));
+        llvm::ConstantInt::get(CGF.IntPtrTy, DstSize.getFixedValue()));
   }
 }
 
@@ -4725,7 +4725,7 @@ public:
 
 static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
   if (auto *VT = dyn_cast<llvm::VectorType>(Ty))
-    return VT->getPrimitiveSizeInBits().getKnownMinSize();
+    return VT->getPrimitiveSizeInBits().getKnownMinValue();
   if (auto *AT = dyn_cast<llvm::ArrayType>(Ty))
     return getMaxVectorWidth(AT->getElementType());
 

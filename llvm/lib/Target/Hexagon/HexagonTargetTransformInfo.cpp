@@ -189,11 +189,11 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   if (Src->isVectorTy()) {
     VectorType *VecTy = cast<VectorType>(Src);
-    unsigned VecWidth = VecTy->getPrimitiveSizeInBits().getFixedSize();
+    unsigned VecWidth = VecTy->getPrimitiveSizeInBits().getFixedValue();
     if (isHVXVectorType(VecTy)) {
       unsigned RegWidth =
           getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-              .getFixedSize();
+              .getFixedValue();
       assert(RegWidth && "Non-zero vector register width expected");
       // Cost of HVX loads.
       if (VecWidth % RegWidth == 0)

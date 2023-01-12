@@ -737,7 +737,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __constexpr_logb(_Tp __x
     }
     return _Tp(__exp);
   }
-#endif // _LIBCPP_STD_VER > 17
+#endif // !__has_constexpr_builtin(__builtin_logb)
   return __builtin_logb(__x);
 }
 
@@ -778,7 +778,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp __constexpr_scalbn(_Tp _
     }
     return __x;
   }
-#endif // _LIBCPP_STD_VER > 17
+#endif // !__has_constexpr_builtin(__builtin_scalbln)
   return __builtin_scalbn(__x, __exp);
 }
 

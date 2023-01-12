@@ -153,6 +153,8 @@ void test_pair_int_int(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void test_pair_int_string(TestFunction check, ExceptionTest check_exception) {
   test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_pair(42, SV("hello")));
+  test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_pair(42, STR("hello")));
+  test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_pair(42, CSTR("hello")));
 }
 
 //
@@ -265,6 +267,8 @@ void test_tuple_int_int(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void test_tuple_int_string(TestFunction check, ExceptionTest check_exception) {
   test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_tuple(42, SV("hello")));
+  test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_tuple(42, STR("hello")));
+  test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_tuple(42, CSTR("hello")));
 }
 
 //

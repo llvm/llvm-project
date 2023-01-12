@@ -28,7 +28,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[IV_START]] to i32
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP9]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <16 x i32> [[DOTSPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <16 x i32> [[DOTSPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IV_START]], [[N_VEC]]
@@ -66,7 +66,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[N_VEC4:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF3]]
 ; CHECK-NEXT:    [[IND_END5:%.*]] = add i64 [[IV_START]], [[N_VEC4]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i32
-; CHECK-NEXT:    [[DOTSPLATINSERT10:%.*]] = insertelement <8 x i32> poison, i32 [[TMP20]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT10:%.*]] = insertelement <8 x i32> poison, i32 [[TMP20]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT11:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT10]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION12:%.*]] = add <8 x i32> [[DOTSPLAT11]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]

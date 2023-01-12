@@ -86,6 +86,15 @@ public:
   /// operations or types.
   bool isExtensible() const;
 
+  enum class FolderAPI {
+    RawAttributes = 0, /// fold method with ArrayRef<Attribute>.
+    FolderAdaptor = 1, /// fold method with the operation's FoldAdaptor.
+  };
+
+  /// Returns the folder API that should be emitted for operations in this
+  /// dialect.
+  FolderAPI getFolderAPI() const;
+
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.
   bool operator==(const Dialect &other) const;

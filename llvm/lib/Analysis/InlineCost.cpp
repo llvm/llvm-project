@@ -1394,7 +1394,7 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
       Type *Ty = I.getAllocatedType();
       AllocatedSize = SaturatingMultiplyAdd(
           AllocSize->getLimitedValue(),
-          DL.getTypeAllocSize(Ty).getKnownMinSize(), AllocatedSize);
+          DL.getTypeAllocSize(Ty).getKnownMinValue(), AllocatedSize);
       if (AllocatedSize > InlineConstants::MaxSimplifiedDynamicAllocaToInline)
         HasDynamicAlloca = true;
       return false;
@@ -1404,8 +1404,8 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   // Accumulate the allocated size.
   if (I.isStaticAlloca()) {
     Type *Ty = I.getAllocatedType();
-    AllocatedSize =
-        SaturatingAdd(DL.getTypeAllocSize(Ty).getKnownMinSize(), AllocatedSize);
+    AllocatedSize = SaturatingAdd(DL.getTypeAllocSize(Ty).getKnownMinValue(),
+                                  AllocatedSize);
   }
 
   // FIXME: This is overly conservative. Dynamic allocas are inefficient for

@@ -137,14 +137,12 @@ public:
   public:
     const SectionContribution *getContribution(DWARFSectionKind Sec) const;
     const SectionContribution *getContribution() const;
-    SectionContribution &getContribution();
 
     const SectionContribution *getContributions() const {
       return Contributions.get();
     }
 
     uint64_t getSignature() const { return Signature; }
-    bool isValid() { return Index; }
   };
 
 private:
@@ -184,10 +182,6 @@ public:
 
   ArrayRef<Entry> getRows() const {
     return ArrayRef(Rows.get(), Header.NumBuckets);
-  }
-
-  MutableArrayRef<Entry> getMutableRows() {
-    return makeMutableArrayRef(Rows.get(), Header.NumBuckets);
   }
 };
 

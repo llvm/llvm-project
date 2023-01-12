@@ -83,6 +83,7 @@ def SparseTensor_Dialect : Dialect {
 
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // SPARSETENSOR_BASE

@@ -1041,20 +1041,12 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
 
     return true;
   } else if (const CallExpr *CE = dyn_cast<CallExpr>(Initializer)) {
-    const Decl *Callee = CE->getCalleeDecl();
-    const Function *Func = getFunction(dyn_cast<FunctionDecl>(Callee));
-
-    if (!Func)
+    // RVO functions expect a pointer to initialize on the stack.
+    // Dup our existing pointer so it has its own copy to use.
+    if (!this->emitDupPtr(Initializer))
       return false;
 
-    if (Func->hasRVO()) {
-      // RVO functions expect a pointer to initialize on the stack.
-      // Dup our existing pointer so it has its own copy to use.
-      if (!this->emitDupPtr(Initializer))
-        return false;
-
-      return this->visit(CE);
-    }
+    return this->VisitCallExpr(CE);
   } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
     return this->visitInitializer(DIE->getExpr());
   }

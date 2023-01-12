@@ -307,7 +307,7 @@ static LONG CALLBACK ExceptionHandler(PEXCEPTION_POINTERS ExceptionInfo)
 // CrashRecoveryContext at all.  So we make use of a thread-local
 // exception table.  The handles contained in here will either be
 // non-NULL, valid VEH handles, or NULL.
-static sys::ThreadLocal<const void> sCurrentExceptionHandle;
+static LLVM_THREAD_LOCAL const void* sCurrentExceptionHandle;
 
 static void installExceptionOrSignalHandlers() {
   // We can set up vectored exception handling now.  We will install our
@@ -315,17 +315,17 @@ static void installExceptionOrSignalHandlers() {
   // it will remain at the front (another call could install itself before
   // our handler).  This 1) isn't likely, and 2) shouldn't cause problems.
   PVOID handle = ::AddVectoredExceptionHandler(1, ExceptionHandler);
-  sCurrentExceptionHandle.set(handle);
+  sCurrentExceptionHandle = handle;
 }
 
 static void uninstallExceptionOrSignalHandlers() {
-  PVOID currentHandle = const_cast<PVOID>(sCurrentExceptionHandle.get());
+  PVOID currentHandle = const_cast<PVOID>(sCurrentExceptionHandle);
   if (currentHandle) {
     // Now we can remove the vectored exception handler from the chain
     ::RemoveVectoredExceptionHandler(currentHandle);
 
     // Reset the handle in our thread-local set.
-    sCurrentExceptionHandle.set(NULL);
+    sCurrentExceptionHandle = NULL;
   }
 }
 

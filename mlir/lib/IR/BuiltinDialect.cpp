@@ -190,7 +190,7 @@ LogicalResult ModuleOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-UnrealizedConversionCastOp::fold(ArrayRef<Attribute> attrOperands,
+UnrealizedConversionCastOp::fold(FoldAdaptor adaptor,
                                  SmallVectorImpl<OpFoldResult> &foldResults) {
   OperandRange operands = getInputs();
   ResultRange results = getOutputs();

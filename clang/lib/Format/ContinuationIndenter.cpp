@@ -566,6 +566,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   // If the return type spans multiple lines, wrap before the function name.
   if (((Current.is(TT_FunctionDeclarationName) &&
+        !State.Line->ReturnTypeWrapped &&
         // Don't break before a C# function when no break after return type.
         (!Style.isCSharp() ||
          Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None) &&
