@@ -20,6 +20,7 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/Queue.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
@@ -495,6 +496,17 @@ lldb_private::StructuredData::DictionarySP ScriptedProcess::GetMetadata() {
         LLVM_PRETTY_FUNCTION, "No metadata.", error);
 
   return metadata_sp;
+}
+
+void ScriptedProcess::UpdateQueueListIfNeeded() {
+  CheckInterpreterAndScriptObject();
+  for (ThreadSP thread_sp : Threads()) {
+    if (const char *queue_name = thread_sp->GetQueueName()) {
+      QueueSP queue_sp = std::make_shared<Queue>(
+          m_process->shared_from_this(), thread_sp->GetQueueID(), queue_name);
+      m_queue_list.AddQueue(queue_sp);
+    }
+  }
 }
 
 ScriptedProcessInterface &ScriptedProcess::GetInterface() const {

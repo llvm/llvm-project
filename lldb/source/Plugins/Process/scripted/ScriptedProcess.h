@@ -72,6 +72,8 @@ public:
 
   lldb_private::StructuredData::DictionarySP GetMetadata() override;
 
+  void UpdateQueueListIfNeeded() override;
+
 protected:
   ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                   const ScriptedMetadata &scripted_metadata, Status &error);
