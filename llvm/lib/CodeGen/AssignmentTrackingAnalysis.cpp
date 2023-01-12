@@ -1239,10 +1239,8 @@ void AssignmentTrackingLowering::emitDbgValue(
   DILocation *DL = Source->getDebugLoc();
   auto Emit = [this, Source, After, DL](Value *Val, DIExpression *Expr) {
     assert(Expr);
-    // It's possible that getVariableLocationOp(0) is null. Occurs in
-    // llvm/test/DebugInfo/Generic/2010-05-03-OriginDIE.ll Treat it as undef.
     if (!Val)
-      Val = UndefValue::get(Type::getInt1Ty(Source->getContext()));
+      Val = PoisonValue::get(Type::getInt1Ty(Source->getContext()));
 
     // Find a suitable insert point.
     Instruction *InsertBefore = After->getNextNode();
@@ -1289,16 +1287,13 @@ void AssignmentTrackingLowering::emitDbgValue(
   if (Kind == LocKind::Val) {
     /// Get the value component, converting to Undef if it is variadic.
     Value *Val =
-        Source->hasArgList()
-            ? UndefValue::get(Source->getVariableLocationOp(0)->getType())
-            : Source->getVariableLocationOp(0);
+        Source->hasArgList() ? nullptr : Source->getVariableLocationOp(0);
     Emit(Val, Source->getExpression());
     return;
   }
 
   if (Kind == LocKind::None) {
-    Value *Val = UndefValue::get(Source->getVariableLocationOp(0)->getType());
-    Emit(Val, Source->getExpression());
+    Emit(nullptr, Source->getExpression());
     return;
   }
 }
@@ -2111,13 +2106,11 @@ bool AssignmentTrackingLowering::emitPromotedVarLocs(
         continue;
       // Wrapper to get a single value (or undef) from DVI.
       auto GetValue = [DVI]() -> Value * {
-        // Conditions for undef: Any operand undef, zero operands or single
-        // operand is nullptr. We also can't handle variadic DIExpressions yet.
-        // Some of those conditions don't have a type we can pick for
-        // undef. Use i32.
+        // We can't handle variadic DIExpressions yet so treat those as
+        // kill locations.
         if (DVI->isKillLocation() || DVI->getValue() == nullptr ||
             DVI->hasArgList())
-          return UndefValue::get(Type::getInt32Ty(DVI->getContext()));
+          return PoisonValue::get(Type::getInt32Ty(DVI->getContext()));
         return DVI->getValue();
       };
       Instruction *InsertBefore = I.getNextNode();
