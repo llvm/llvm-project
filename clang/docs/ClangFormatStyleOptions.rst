@@ -3222,7 +3222,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``int8_t Binary`` Format separators in binary literals.
 
-    .. code-block:: c++
+    .. code-block:: text
 
       /* -1: */ b = 0b100111101101;
       /*  0: */ b = 0b10011'11'0110'1;
@@ -3231,7 +3231,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``int8_t Decimal`` Format separators in decimal literals.
 
-    .. code-block:: c++
+    .. code-block:: text
 
       /* -1: */ d = 18446744073709550592ull;
       /*  0: */ d = 184467'440737'0'95505'92ull;
@@ -3239,7 +3239,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``int8_t Hex`` Format separators in hexadecimal literals.
 
-    .. code-block:: c++
+    .. code-block:: text
 
       /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
       /*  0: */ h = 0xDEAD'BEEF'DE'AD'BEE'Fuz;
