@@ -31,11 +31,11 @@ truncateIfIntegral(const FloatingLiteral &FloatLiteral) {
   double Value = FloatLiteral.getValueAsApproximateDouble();
   if (std::fmod(Value, 1) == 0) {
     if (Value >= static_cast<double>(1u << 31))
-      return llvm::None;
+      return std::nullopt;
 
     return llvm::APSInt::get(static_cast<int64_t>(Value));
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 const std::pair<llvm::StringRef, llvm::StringRef> &
@@ -68,7 +68,7 @@ getDurationInverseForScale(DurationScale Scale) {
 }
 
 /// If `Node` is a call to the inverse of `Scale`, return that inverse's
-/// argument, otherwise None.
+/// argument, otherwise std::nullopt.
 static llvm::Optional<std::string>
 rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
                            DurationScale Scale, const Expr &Node) {
@@ -83,11 +83,11 @@ rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
     return tooling::fixit::getText(*MaybeCallArg, *Result.Context).str();
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// If `Node` is a call to the inverse of `Scale`, return that inverse's
-/// argument, otherwise None.
+/// argument, otherwise std::nullopt.
 static llvm::Optional<std::string>
 rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
                        DurationScale Scale, const Expr &Node) {
@@ -99,7 +99,7 @@ rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
     return tooling::fixit::getText(*MaybeCallArg, *Result.Context).str();
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Returns the factory function name for a given `Scale`.
@@ -201,7 +201,7 @@ stripFloatCast(const ast_matchers::MatchFinder::MatchResult &Result,
                 Node, *Result.Context)))
     return tooling::fixit::getText(*MaybeCastArg, *Result.Context).str();
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::Optional<std::string>
@@ -212,7 +212,7 @@ stripFloatLiteralFraction(const MatchFinder::MatchResult &Result,
     if (llvm::Optional<llvm::APSInt> IntValue = truncateIfIntegral(*LitFloat))
       return toString(*IntValue, /*radix=*/10);
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 std::string simplifyDurationFactoryArg(const MatchFinder::MatchResult &Result,
@@ -247,7 +247,7 @@ llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
 
   auto ScaleIter = ScaleMap.find(std::string(Name));
   if (ScaleIter == ScaleMap.end())
-    return llvm::None;
+    return std::nullopt;
 
   return ScaleIter->second;
 }
@@ -263,7 +263,7 @@ llvm::Optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name) {
 
   auto ScaleIter = ScaleMap.find(std::string(Name));
   if (ScaleIter == ScaleMap.end())
-    return llvm::None;
+    return std::nullopt;
 
   return ScaleIter->second;
 }

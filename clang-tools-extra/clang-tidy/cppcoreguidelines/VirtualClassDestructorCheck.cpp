@@ -51,7 +51,7 @@ static Optional<CharSourceRange>
 getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
                        const SourceManager &SM, const LangOptions &LangOpts) {
   if (Destructor.getLocation().isMacroID())
-    return None;
+    return std::nullopt;
 
   SourceLocation VirtualBeginLoc = Destructor.getBeginLoc();
   SourceLocation VirtualBeginSpellingLoc =
@@ -63,7 +63,7 @@ getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
   /// virtual is included.
   Optional<Token> NextToken = Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
   if (!NextToken)
-    return None;
+    return std::nullopt;
   SourceLocation StartOfNextToken = NextToken->getLocation();
 
   return CharSourceRange::getCharRange(VirtualBeginLoc, StartOfNextToken);

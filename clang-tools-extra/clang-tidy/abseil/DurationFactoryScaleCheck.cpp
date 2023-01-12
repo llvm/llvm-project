@@ -20,7 +20,7 @@ namespace abseil {
 
 // Given the name of a duration factory function, return the appropriate
 // `DurationScale` for that factory.  If no factory can be found for
-// `FactoryName`, return `None`.
+// `FactoryName`, return `std::nullopt`.
 static llvm::Optional<DurationScale>
 getScaleForFactory(llvm::StringRef FactoryName) {
   return llvm::StringSwitch<llvm::Optional<DurationScale>>(FactoryName)
@@ -30,7 +30,7 @@ getScaleForFactory(llvm::StringRef FactoryName) {
       .Case("Seconds", DurationScale::Seconds)
       .Case("Minutes", DurationScale::Minutes)
       .Case("Hours", DurationScale::Hours)
-      .Default(llvm::None);
+      .Default(std::nullopt);
 }
 
 // Given either an integer or float literal, return its value.
@@ -89,11 +89,11 @@ getNewScaleSingleStep(DurationScale OldScale, double Multiplier) {
     break;
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Given the scale of a duration and a `Multiplier`, determine if `Multiplier`
-// would produce a new scale.  If so, return it, otherwise `None`.
+// would produce a new scale.  If so, return it, otherwise `std::nullopt`.
 static llvm::Optional<DurationScale> getNewScale(DurationScale OldScale,
                                                  double Multiplier) {
   while (Multiplier != 1.0) {
@@ -107,7 +107,7 @@ static llvm::Optional<DurationScale> getNewScale(DurationScale OldScale,
     OldScale = std::get<0>(*Result);
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 void DurationFactoryScaleCheck::registerMatchers(MatchFinder *Finder) {

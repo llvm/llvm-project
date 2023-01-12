@@ -21,14 +21,14 @@ namespace tidy {
 namespace readability {
 
 // Finds the location of the qualifying `const` token in the `FunctionDecl`'s
-// return type. Returns `None` when the return type is not `const`-qualified or
-// `const` does not appear in `Def`'s source, like when the type is an alias or
-// a macro.
+// return type. Returns `std::nullopt` when the return type is not
+// `const`-qualified or `const` does not appear in `Def`'s source, like when the
+// type is an alias or a macro.
 static llvm::Optional<Token>
 findConstToRemove(const FunctionDecl *Def,
                   const MatchFinder::MatchResult &Result) {
   if (!Def->getReturnType().isLocalConstQualified())
-    return None;
+    return std::nullopt;
 
   // Get the begin location for the function name, including any qualifiers
   // written in the source (for out-of-line declarations). A FunctionDecl's
@@ -45,7 +45,7 @@ findConstToRemove(const FunctionDecl *Def,
       *Result.SourceManager, Result.Context->getLangOpts());
 
   if (FileRange.isInvalid())
-    return None;
+    return std::nullopt;
 
   return utils::lexer::getQualifyingToken(
       tok::kw_const, FileRange, *Result.Context, *Result.SourceManager);

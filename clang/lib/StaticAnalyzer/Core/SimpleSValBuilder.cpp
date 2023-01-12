@@ -361,35 +361,35 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
   //        rearrange additive operations but rearrange comparisons only if
   //        option is set.
   if (!SVB.getAnalyzerOptions().ShouldAggressivelySimplifyBinaryOperation)
-    return None;
+    return std::nullopt;
 
   SymbolRef LSym = Lhs.getAsSymbol();
   if (!LSym)
-    return None;
+    return std::nullopt;
 
   if (BinaryOperator::isComparisonOp(Op)) {
     SingleTy = LSym->getType();
     if (ResultTy != SVB.getConditionType())
-      return None;
+      return std::nullopt;
     // Initialize SingleTy later with a symbol's type.
   } else if (BinaryOperator::isAdditiveOp(Op)) {
     SingleTy = ResultTy;
     if (LSym->getType() != SingleTy)
-      return None;
+      return std::nullopt;
   } else {
     // Don't rearrange other operations.
-    return None;
+    return std::nullopt;
   }
 
   assert(!SingleTy.isNull() && "We should have figured out the type by now!");
 
   // Rearrange signed symbolic expressions only
   if (!SingleTy->isSignedIntegerOrEnumerationType())
-    return None;
+    return std::nullopt;
 
   SymbolRef RSym = Rhs.getAsSymbol();
   if (!RSym || RSym->getType() != SingleTy)
-    return None;
+    return std::nullopt;
 
   BasicValueFactory &BV = State->getBasicVals();
   llvm::APSInt LInt, RInt;
@@ -397,7 +397,7 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
   std::tie(RSym, RInt) = decomposeSymbol(RSym, BV);
   if (!shouldRearrange(State, Op, LSym, LInt, SingleTy) ||
       !shouldRearrange(State, Op, RSym, RInt, SingleTy))
-    return None;
+    return std::nullopt;
 
   // We know that no overflows can occur anymore.
   return doRearrangeUnchecked(State, Op, LSym, LInt, RSym, RInt);
