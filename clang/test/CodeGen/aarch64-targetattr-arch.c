@@ -22,14 +22,14 @@ svint8_t test_svadd_attr(svbool_t pg, svint8_t op1, svint8_t op2)
   return svadd_s8_z(pg, op1, op2);
 }
 
-svint8_t test_errors(svbool_t pg, svint8_t op1, svint8_t op2)
+void test_errors()
 {
 #ifdef HAS8
 // expected-error@+2{{always_inline function '__crc32cd' requires target feature 'crc'}}
 #endif
   __crc32cd(1, 1);
 #if defined(HAS8) || defined(HAS81)
-// expected-error@+2{{'svadd_s8_z' needs target feature sve}}
+// expected-error@+2{{'svundef_s8' needs target feature sve}}
 #endif
-  return svadd_s8_z(pg, op1, op2);
+  svundef_s8();
 }
