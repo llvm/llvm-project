@@ -753,6 +753,12 @@ def FeatureVGPRSingleUseHintInsts : SubtargetFeature<"vgpr-singleuse-hint",
   "Has single-use VGPR hint instructions"
 >;
 
+def FeaturePseudoScalarTrans : SubtargetFeature<"pseudo-scalar-trans",
+  "HasPseudoScalarTrans",
+  "true",
+  "Has Pseudo Scalar Transcendental instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1403,7 +1409,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureSALUFloatInsts]>;
+   FeatureSALUFloatInsts,
+   FeaturePseudoScalarTrans]>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1904,6 +1911,9 @@ def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
 
 def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts()">,
   AssemblerPredicate<(all_of FeatureVGPRSingleUseHintInsts)>;
+
+def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
+  AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

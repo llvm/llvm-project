@@ -182,6 +182,7 @@ protected:
   bool ScalarizeGlobal = false;
   bool HasSALUFloatInsts = false;
   bool HasVGPRSingleUseHintInsts = false;
+  bool HasPseudoScalarTrans = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -1115,6 +1116,8 @@ public:
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
+
+  bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
 
   /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
   /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.

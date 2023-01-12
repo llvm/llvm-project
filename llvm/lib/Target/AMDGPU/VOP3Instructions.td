@@ -813,18 +813,34 @@ class VOP_Pseudo_Scalar<RegisterClass Dst, RegisterOperand SrcOp,
 def VOP_Pseudo_Scalar_F32 : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_f32, f32>;
 def VOP_Pseudo_Scalar_F16 : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_f16, f32, f16>;
 
-let SubtargetPredicate = isGFX12Plus, TRANS = 1,
+let SubtargetPredicate = HasPseudoScalarTrans, TRANS = 1,
     isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
-  defm V_S_EXP_F32  : VOP3PseudoScalarInst<"v_s_exp_f32", VOP_Pseudo_Scalar_F32>;
+  defm V_S_EXP_F32  : VOP3PseudoScalarInst<"v_s_exp_f32", VOP_Pseudo_Scalar_F32, fexp2>;
   defm V_S_EXP_F16  : VOP3PseudoScalarInst<"v_s_exp_f16", VOP_Pseudo_Scalar_F16>;
-  defm V_S_LOG_F32  : VOP3PseudoScalarInst<"v_s_log_f32", VOP_Pseudo_Scalar_F32>;
+  defm V_S_LOG_F32  : VOP3PseudoScalarInst<"v_s_log_f32", VOP_Pseudo_Scalar_F32, flog2>;
   defm V_S_LOG_F16  : VOP3PseudoScalarInst<"v_s_log_f16", VOP_Pseudo_Scalar_F16>;
-  defm V_S_RCP_F32  : VOP3PseudoScalarInst<"v_s_rcp_f32", VOP_Pseudo_Scalar_F32>;
+  defm V_S_RCP_F32  : VOP3PseudoScalarInst<"v_s_rcp_f32", VOP_Pseudo_Scalar_F32, AMDGPUrcp>;
   defm V_S_RCP_F16  : VOP3PseudoScalarInst<"v_s_rcp_f16", VOP_Pseudo_Scalar_F16>;
-  defm V_S_RSQ_F32  : VOP3PseudoScalarInst<"v_s_rsq_f32", VOP_Pseudo_Scalar_F32>;
+  defm V_S_RSQ_F32  : VOP3PseudoScalarInst<"v_s_rsq_f32", VOP_Pseudo_Scalar_F32, AMDGPUrsq>;
   defm V_S_RSQ_F16  : VOP3PseudoScalarInst<"v_s_rsq_f16", VOP_Pseudo_Scalar_F16>;
-  defm V_S_SQRT_F32 : VOP3PseudoScalarInst<"v_s_sqrt_f32", VOP_Pseudo_Scalar_F32>;
+  defm V_S_SQRT_F32 : VOP3PseudoScalarInst<"v_s_sqrt_f32", VOP_Pseudo_Scalar_F32, any_amdgcn_sqrt>;
   defm V_S_SQRT_F16 : VOP3PseudoScalarInst<"v_s_sqrt_f16", VOP_Pseudo_Scalar_F16>;
+}
+
+class PseudoScalarPatF16<SDPatternOperator node, VOP3_Pseudo inst> : GCNPat <
+  (f16 (UniformUnaryFrag<node> (f16 (VOP3Mods0 f16:$src0, i32:$src0_modifiers,
+                                               i1:$clamp, i32:$omod)))),
+  (f16 (COPY_TO_REGCLASS (f32 (inst i32:$src0_modifiers, f16:$src0, i1:$clamp,
+                                    i32:$omod)),
+                         SReg_32_XEXEC))
+>;
+
+let SubtargetPredicate = HasPseudoScalarTrans in {
+  def : PseudoScalarPatF16<fexp2, V_S_EXP_F16_e64>;
+  def : PseudoScalarPatF16<flog2, V_S_LOG_F16_e64>;
+  def : PseudoScalarPatF16<AMDGPUrcp, V_S_RCP_F16_e64>;
+  def : PseudoScalarPatF16<AMDGPUrsq, V_S_RSQ_F16_e64>;
+  def : PseudoScalarPatF16<any_amdgcn_sqrt, V_S_SQRT_F16_e64>;
 }
 
 //===----------------------------------------------------------------------===//
