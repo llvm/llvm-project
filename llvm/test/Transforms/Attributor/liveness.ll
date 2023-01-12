@@ -2283,17 +2283,22 @@ define void @call_via_pointer_with_dead_args(i32* %a, i32* %b, void (i32*, i32*,
 define internal void @call_via_pointer_with_dead_args_internal_a(i32* %a, i32* %b, void (i32*, i32*, i32*, i64, i32**)* %fp) {
 ; CHECK-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
 ; CHECK-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
-; CHECK-NEXT:    call void poison(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
+; CHECK-NEXT:    call void @called_via_pointer(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
 ; CHECK-NEXT:    ret void
 ;
   call void %fp(i32* %a, i32* %b, i32* %a, i64 -1, i32** null)
   ret void
 }
 define internal void @call_via_pointer_with_dead_args_internal_b(i32* %a, i32* %b, void (i32*, i32*, i32*, i64, i32**)* %fp) {
-; CHECK-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
-; CHECK-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
-; CHECK-NEXT:    call void poison(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
-; CHECK-NEXT:    ret void
+; TUNIT-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
+; TUNIT-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
+; TUNIT-NEXT:    call void @called_via_pointer_internal_2(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
+; CGSCC-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
+; CGSCC-NEXT:    call void @called_via_pointer_internal_2(i32* [[A]])
+; CGSCC-NEXT:    ret void
 ;
   call void %fp(i32* %a, i32* %b, i32* %a, i64 -1, i32** null)
   ret void
@@ -2361,8 +2366,15 @@ entry:
 }
 ; FIXME: Figure out why the MODULE has the unused arguments still
 define internal void @called_via_pointer_internal_2(i32* %a, i32* %b, i32* %c, i64 %d, i32** %e) {
+; TUNIT-LABEL: define {{[^@]+}}@called_via_pointer_internal_2
+; TUNIT-SAME: (i32* [[A:%.*]], i32* nocapture nofree readnone [[B:%.*]], i32* nocapture nofree readnone [[C:%.*]], i64 [[D:%.*]], i32** nocapture nofree readnone [[E:%.*]]) {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    tail call void @use_i32p(i32* [[A]])
+; TUNIT-NEXT:    tail call void @use_i32p(i32* [[A]])
+; TUNIT-NEXT:    ret void
+;
 ; CGSCC-LABEL: define {{[^@]+}}@called_via_pointer_internal_2
-; CGSCC-SAME: (i32* [[A:%.*]], i32* [[B:%.*]], i32* [[C:%.*]], i64 [[D:%.*]], i32** [[E:%.*]]) {
+; CGSCC-SAME: (i32* [[A:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    tail call void @use_i32p(i32* [[A]])
 ; CGSCC-NEXT:    tail call void @use_i32p(i32* [[A]])
