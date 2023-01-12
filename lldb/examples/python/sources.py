@@ -27,5 +27,5 @@ def info_sources(debugger, command, result, dict):
 def __lldb_init_module(debugger, dict):
     # Add any commands contained in this module to LLDB
     debugger.HandleCommand(
-        'command script add -f sources.info_sources info_sources')
+        'command script add -o -f sources.info_sources info_sources')
     print('The "info_sources" command has been installed, type "help info_sources" or "info_sources --help" for detailed help.')

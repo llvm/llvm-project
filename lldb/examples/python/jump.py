@@ -192,5 +192,5 @@ def jump(debugger, command, result, internal_dict):
 def __lldb_init_module(debugger, internal_dict):
     # Module is being run inside the LLDB interpreter
     jump.__doc__ = usage_string()
-    debugger.HandleCommand('command script add -f jump.jump jump')
+    debugger.HandleCommand('command script add -o -f jump.jump jump')
     print('The "jump" command has been installed, type "help jump" or "jump <ENTER>" for detailed help.')
