@@ -1650,6 +1650,43 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
   return ConstantRange::getFull(Width);
 }
 
+ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
+                                                   bool UndefAllowed) {
+  Value *V = U.get();
+  ConstantRange CR =
+      getConstantRange(V, cast<Instruction>(U.getUser()), UndefAllowed);
+
+  // Check whether the only (possibly transitive) use of the value is in a
+  // position where V can be constrained by a select or branch condition.
+  const Use *CurrU = &U;
+  // TODO: Increase limit?
+  const unsigned MaxUsesToInspect = 2;
+  for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
+    std::optional<ValueLatticeElement> CondVal;
+    auto *CurrI = cast<Instruction>(CurrU->getUser());
+    if (auto *SI = dyn_cast<SelectInst>(CurrI)) {
+      if (CurrU->getOperandNo() == 1)
+        CondVal = getValueFromCondition(V, SI->getCondition(), true);
+      else if (CurrU->getOperandNo() == 2)
+        CondVal = getValueFromCondition(V, SI->getCondition(), false);
+    } else if (auto *PHI = dyn_cast<PHINode>(CurrI)) {
+      // TODO: Use non-local query?
+      CondVal =
+          getEdgeValueLocal(V, PHI->getIncomingBlock(*CurrU), PHI->getParent());
+    }
+    if (CondVal && CondVal->isConstantRange())
+      CR = CR.intersectWith(CondVal->getConstantRange());
+
+    // Only follow one-use chain, to allow direct intersection of conditions.
+    // If there are multiple uses, we would have to intersect with the union of
+    // all conditions at different uses.
+    if (!CurrI->hasOneUse())
+      break;
+    CurrU = &*CurrI->use_begin();
+  }
+  return CR;
+}
+
 /// Determine whether the specified value is known to be a
 /// constant on the specified edge. Return null if not.
 Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
