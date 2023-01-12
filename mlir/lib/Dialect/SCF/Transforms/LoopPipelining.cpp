@@ -15,7 +15,7 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -320,7 +320,7 @@ static void updateInductionVariableUses(RewriterBase &rewriter, Location loc,
 
 /// If the value is a loop carried value coming from stage N + 1 remap, it will
 /// become a direct use.
-static void updateIterArgUses(RewriterBase &rewriter, BlockAndValueMapping &bvm,
+static void updateIterArgUses(RewriterBase &rewriter, IRMapping &bvm,
                               Operation *newOp, ForOp oldForOp, ForOp newForOp,
                               unsigned useStage,
                               const DenseMap<Operation *, unsigned> &stages) {
@@ -344,9 +344,8 @@ static void updateIterArgUses(RewriterBase &rewriter, BlockAndValueMapping &bvm,
 /// correct region argument. We look for the right version of the Value based
 /// on the stage where it is used.
 static void updateCrossStageUses(
-    RewriterBase &rewriter, Operation *newOp, BlockAndValueMapping &bvm,
-    ForOp newForOp, unsigned useStage,
-    const DenseMap<Operation *, unsigned> &stages,
+    RewriterBase &rewriter, Operation *newOp, IRMapping &bvm, ForOp newForOp,
+    unsigned useStage, const DenseMap<Operation *, unsigned> &stages,
     const llvm::DenseMap<std::pair<Value, unsigned>, unsigned> &loopArgMap) {
   // Because we automatically cloned the sub-regions, there's no simple way
   // to walk the nested regions in pairs of (oldOps, newOps), so we just
@@ -381,7 +380,7 @@ void LoopPipelinerInternal::createKernel(
   // Create the kernel, we clone instruction based on the order given by
   // user and remap operands coming from a previous stages.
   rewriter.setInsertionPoint(newForOp.getBody(), newForOp.getBody()->begin());
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   mapping.map(forOp.getInductionVar(), newForOp.getInductionVar());
   for (const auto &arg : llvm::enumerate(forOp.getRegionIterArgs())) {
     mapping.map(arg.value(), newForOp.getRegionIterArgs()[arg.index()]);

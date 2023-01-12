@@ -23,7 +23,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
@@ -747,10 +747,10 @@ struct VectorizationState {
   // Maps input scalar operations to their vector counterparts.
   DenseMap<Operation *, Operation *> opVectorReplacement;
   // Maps input scalar values to their vector counterparts.
-  BlockAndValueMapping valueVectorReplacement;
+  IRMapping valueVectorReplacement;
   // Maps input scalar values to their new scalar counterparts in the vector
   // loop nest.
-  BlockAndValueMapping valueScalarReplacement;
+  IRMapping valueScalarReplacement;
   // Maps results of reduction loops to their new scalar counterparts.
   DenseMap<Value, Value> loopResultScalarReplacement;
 

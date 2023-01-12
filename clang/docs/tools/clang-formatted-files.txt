@@ -5536,7 +5536,7 @@ llvm/include/llvm/TableGen/Parser.h
 llvm/include/llvm/TableGen/StringToOffsetTable.h
 llvm/include/llvm/Target/CGPassBuilderOption.h
 llvm/include/llvm/Target/CodeGenCWrappers.h
-llvm/include/llvm/Testing/Support/Annotations.h
+llvm/include/llvm/Testing/Annotations/Annotations.h
 llvm/include/llvm/Testing/Support/SupportHelpers.h
 llvm/include/llvm/TextAPI/Architecture.h
 llvm/include/llvm/TextAPI/ArchitectureSet.h
@@ -6839,7 +6839,7 @@ llvm/lib/Target/XCore/MCTargetDesc/XCoreMCAsmInfo.h
 llvm/lib/Target/XCore/MCTargetDesc/XCoreMCTargetDesc.cpp
 llvm/lib/Target/XCore/MCTargetDesc/XCoreMCTargetDesc.h
 llvm/lib/Target/XCore/TargetInfo/XCoreTargetInfo.cpp
-llvm/lib/Testing/Support/Annotations.cpp
+llvm/lib/Testing/Annotations/Annotations.cpp
 llvm/lib/Testing/Support/Error.cpp
 llvm/lib/Testing/Support/SupportHelpers.cpp
 llvm/lib/TextAPI/ArchitectureSet.cpp

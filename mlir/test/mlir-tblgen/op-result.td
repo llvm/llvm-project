@@ -155,6 +155,22 @@ def OpL3 : NS_Op<"op_with_all_types_constraint",
 // CHECK: ::mlir::Type odsInferredType0 = attributes.get("a").cast<::mlir::TypedAttr>().getType();
 // CHECK: inferredReturnTypes[0] = odsInferredType0;
 
+def OpL4 : NS_Op<"two_inference_edges", [
+    TypesMatchWith<"", "a", "b", "infer0($_self)">,
+    TypesMatchWith<"", "b", "c", "infer1($_self)">,
+    TypesMatchWith<"", "input", "a", "fromInput($_self)">]> {
+  let arguments = (ins I32:$input);
+  let results = (outs AnyType:$a, AnyType:$b, AnyType:$c);
+}
+
+// CHECK-LABEL: LogicalResult OpL4::inferReturnTypes
+// CHECK: odsInferredType0 = fromInput(operands[0].getType())
+// CHECK: odsInferredType1 = infer0(odsInferredType0)
+// CHECK: odsInferredType2 = infer1(odsInferredType1)
+// CHECK: inferredReturnTypes[0] = odsInferredType0
+// CHECK: inferredReturnTypes[1] = odsInferredType1
+// CHECK: inferredReturnTypes[2] = odsInferredType2
+
 def OpM : NS_Op<"mix_diff_size_variadic_and_normal_results_op", [AttrSizedResultSegments]> {
   let results = (outs Variadic<AnyTensor>:$output1, AnyTensor:$output2, Optional<AnyTensor>:$output3);
 }

@@ -12,10 +12,10 @@
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -49,8 +49,7 @@ struct ControlFlowInlinerInterface : public DialectInlinerInterface {
                        bool wouldBeCloned) const final {
     return true;
   }
-  bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
 

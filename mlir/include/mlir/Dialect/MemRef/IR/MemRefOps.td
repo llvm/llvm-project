@@ -1158,14 +1158,6 @@ def LoadOp : MemRef_Op<"load",
                        Variadic<Index>:$indices);
   let results = (outs AnyType:$result);
 
-  let builders = [
-    OpBuilder<(ins "Value":$memref, CArg<"ValueRange", "{}">:$indices), [{
-      auto memrefType = memref.getType().cast<MemRefType>();
-      $_state.addOperands(memref);
-      $_state.addOperands(indices);
-      $_state.types.push_back(memrefType.getElementType());
-    }]>];
-
   let extraClassDeclaration = [{
     Value getMemRef() { return getOperand(0); }
     void setMemRef(Value value) { setOperand(0, value); }

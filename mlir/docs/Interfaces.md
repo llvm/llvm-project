@@ -53,7 +53,7 @@ public:
   /// This can be used to examine what values will replace entry arguments into
   /// the 'src' region, for example.
   virtual bool isLegalToInline(Region *dest, Region *src,
-                               BlockAndValueMapping &valueMapping) const {
+                               IRMapping &valueMapping) const {
     return false;
   }
 };
@@ -63,7 +63,7 @@ public:
 struct AffineInlinerInterface : public DialectInlinerInterface {
   /// Affine structures have specific inlining constraints.
   bool isLegalToInline(Region *dest, Region *src,
-                       BlockAndValueMapping &valueMapping) const final {
+                       IRMapping &valueMapping) const final {
     ...
   }
 };
@@ -99,7 +99,7 @@ class InlinerInterface : public
   /// with default implementations that call the hook on the interface for a
   /// given dialect.
   virtual bool isLegalToInline(Region *dest, Region *src,
-                               BlockAndValueMapping &valueMapping) const {
+                               IRMapping &valueMapping) const {
     auto *handler = getInterfaceFor(dest->getContainingOp());
     return handler ? handler->isLegalToInline(dest, src, valueMapping) : false;
   }

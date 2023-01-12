@@ -327,9 +327,9 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   // Create a new file to write the linked device image to.
   auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
-                           Triple.getArchName() + "-" + Arch,
-                       "out");
+      createOutputFile(sys::path::filename(ExecutableName) + "." +
+                           Triple.getArchName() + "." + Arch,
+                       "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -371,8 +371,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
   // Create a new file to write the linked device image to.
-  auto TempFileOrErr = createOutputFile(
-      sys::path::filename(ExecutableName) + "-device", "fatbin");
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName), "fatbin");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -406,9 +406,9 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   // Create a new file to write the linked device image to.
   auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "-" +
-                           Triple.getArchName() + "-" + Arch,
-                       "out");
+      createOutputFile(sys::path::filename(ExecutableName) + "." +
+                           Triple.getArchName() + "." + Arch,
+                       "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
   std::string ArchArg = ("-plugin-opt=mcpu=" + Arch).str();
@@ -451,9 +451,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
   // Create a new file to write the linked device image to.
-  auto TempFileOrErr = createOutputFile(sys::path::filename(ExecutableName) +
-                                            "-device-" + Triple.getArchName(),
-                                        "hipfb");
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName), "hipfb");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -553,9 +552,9 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   // Create a new file to write the linked device image to.
   auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "-" +
-                           Triple.getArchName() + "-" + Arch,
-                       "out");
+      createOutputFile(sys::path::filename(ExecutableName) + "." +
+                           Triple.getArchName() + "." + Arch,
+                       "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -706,12 +705,24 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
   if (SaveTemps) {
-    std::string TempName = (sys::path::filename(ExecutableName) + "-device-" +
-                            Triple.getTriple() + "-" + Arch)
+    std::string TempName = (sys::path::filename(ExecutableName) + "." +
+                            Triple.getTriple() + "." + Arch)
                                .str();
     Conf.PostInternalizeModuleHook = [=](size_t Task, const Module &M) {
-      std::string File = !Task ? TempName + ".bc"
-                               : TempName + "." + std::to_string(Task) + ".bc";
+      std::string File =
+          !Task ? TempName + ".postlink.bc"
+                : TempName + "." + std::to_string(Task) + ".postlink.bc";
+      error_code EC;
+      raw_fd_ostream LinkedBitcode(File, EC, sys::fs::OF_None);
+      if (EC)
+        reportError(errorCodeToError(EC));
+      WriteBitcodeToFile(M, LinkedBitcode);
+      return true;
+    };
+    Conf.PreCodeGenModuleHook = [=](size_t Task, const Module &M) {
+      std::string File =
+          !Task ? TempName + ".postopt.bc"
+                : TempName + "." + std::to_string(Task) + ".postopt.bc";
       error_code EC;
       raw_fd_ostream LinkedBitcode(File, EC, sys::fs::OF_None);
       if (EC)
@@ -743,6 +754,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
                        const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("Link bitcode files");
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
 
   SmallVector<OffloadFile, 4> BitcodeInputFiles;
   DenseSet<StringRef> UsedInRegularObj;
@@ -892,8 +904,8 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     StringRef Extension = (Triple.isNVPTX() || SaveTemps) ? "s" : "o";
     std::string TaskStr = Task ? "." + std::to_string(Task) : "";
     auto TempFileOrErr =
-        createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
-                             Triple.getTriple() + TaskStr,
+        createOutputFile(sys::path::filename(ExecutableName) + "." +
+                             Triple.getTriple() + "." + Arch + TaskStr,
                          Extension);
     if (!TempFileOrErr)
       reportError(TempFileOrErr.takeError());
@@ -986,8 +998,8 @@ Expected<StringRef> compileModule(Module &M) {
     M.setDataLayout(TM->createDataLayout());
 
   int FD = -1;
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "-wrapper", "o");
+  auto TempFileOrErr = createOutputFile(
+      sys::path::filename(ExecutableName) + ".image.wrapper", "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
   if (std::error_code EC = sys::fs::openFileForWrite(*TempFileOrErr, FD))

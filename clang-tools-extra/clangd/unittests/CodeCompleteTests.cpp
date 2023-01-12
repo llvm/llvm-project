@@ -29,7 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
