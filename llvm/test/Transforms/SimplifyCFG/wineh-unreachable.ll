@@ -7,7 +7,7 @@ declare void @f()
 define void @test1() personality ptr @Personality {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @f() #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -61,7 +61,7 @@ define void @test3() personality ptr @Personality {
 ; CHECK-NEXT:    to label [[EXIT:%.*]] unwind label [[CLEANUP_PAD:%.*]]
 ; CHECK:       cleanup.pad:
 ; CHECK-NEXT:    [[CLEANUP:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    call void @f() #[[ATTR0]]
+; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -238,6 +238,3 @@ catch.body2:
 exit:
   ret void
 }
-;.
-; CHECK: attributes #[[ATTR0]] = { nounwind }
-;.

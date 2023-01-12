@@ -2557,14 +2557,11 @@ static bool markAliveBlocks(Function &F,
   return Changed;
 }
 
-void llvm::removeUnwindEdge(BasicBlock *BB, bool WouldUnwindBeUB,
-                            DomTreeUpdater *DTU) {
+void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   Instruction *TI = BB->getTerminator();
 
   if (auto *II = dyn_cast<InvokeInst>(TI)) {
-    CallInst *CI = changeToCall(II, DTU);
-    if (WouldUnwindBeUB && !CI->doesNotThrow())
-      CI->setDoesNotThrow();
+    changeToCall(II, DTU);
     return;
   }
 
