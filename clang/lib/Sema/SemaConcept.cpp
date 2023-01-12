@@ -1354,6 +1354,7 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
     };
     const auto *FD2 = dyn_cast<FunctionDecl>(D2);
     (void)IsExpectedEntity;
+    (void)FD1;
     (void)FD2;
     assert(IsExpectedEntity(FD1) && FD2 && IsExpectedEntity(FD2) &&
            "use non-instantiated function declaration for constraints partial "
