@@ -4,7 +4,8 @@ namespace atomiccondition {
 
 bool isASinFunction(const string FunctionName) {
   if(FunctionName.find("asin") != std::string::npos) {
-    return FunctionName.compare("asin") == 0;
+    return FunctionName.compare("asin") == 0 ||
+           FunctionName.compare("asinf") == 0;
   }
 
   return false;
@@ -12,7 +13,8 @@ bool isASinFunction(const string FunctionName) {
 
 bool isACosFunction(const string FunctionName) {
   if(FunctionName.find("acos") != std::string::npos) {
-    return FunctionName.compare("acos") == 0;
+    return FunctionName.compare("acos") == 0 ||
+           FunctionName.compare("acosf") == 0;
   }
 
   return false;
@@ -20,7 +22,8 @@ bool isACosFunction(const string FunctionName) {
 
 bool isATanFunction(const string FunctionName) {
   if(FunctionName.find("atan") != std::string::npos) {
-    return FunctionName.compare("atan") == 0;
+    return FunctionName.compare("atan") == 0 ||
+           FunctionName.compare("atanf") == 0;
   }
 
   return false;
@@ -29,6 +32,7 @@ bool isATanFunction(const string FunctionName) {
 bool isSinFunction(const string FunctionName) {
   if(FunctionName.find("sin") != std::string::npos) {
     return FunctionName.compare("sin") == 0 ||
+           FunctionName.compare("sinf") == 0 ||
            FunctionName.find("llvm.sin.")  != std::string::npos;
   }
 
@@ -38,6 +42,7 @@ bool isSinFunction(const string FunctionName) {
 bool isCosFunction(const string FunctionName) {
   if(FunctionName.find("cos") != std::string::npos) {
     return FunctionName.compare("cos") == 0 ||
+           FunctionName.compare("cosf") == 0 ||
            FunctionName.find("llvm.cos.")  != std::string::npos;
   }
 
@@ -47,6 +52,7 @@ bool isCosFunction(const string FunctionName) {
 bool isTanFunction(const string FunctionName) {
   if(FunctionName.find("tan") != std::string::npos) {
     return FunctionName.compare("tan") == 0 ||
+           FunctionName.compare("tanf") == 0 ||
            FunctionName.find("llvm.tan.")  != std::string::npos;
   }
 

@@ -2,8 +2,6 @@
 #include <math.h>
 #include <stdint.h>
 #include<stdio.h>
-#define TRUE 1
-#define FALSE 0
 
 int main() {
   double x, y;
