@@ -990,10 +990,15 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
       valobj ? valobj->GetExecutionContextRef().GetFrameSP().get() : nullptr;
   const swift::reflection::TypeRef *tr = nullptr;
   auto *ti = GetSwiftRuntimeTypeInfo(type, frame, &tr);
-  if (!ti)
+  if (!ti) {
+    LLDB_LOG(GetLog(LLDBLog::Types), "GetSwiftRuntimeTypeInfo() failed for {0}",
+             type.GetMangledTypeName());
     return {};
+  }
   // Structs and Tuples.
   if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
+    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: RecordTypeInfo(num_fields={1})",
+             type.GetMangledTypeName(), rti->getNumFields());
     switch (rti->getRecordKind()) {
     case swift::reflection::RecordKind::ExistentialMetatype:
     case swift::reflection::RecordKind::ThickFunction:
@@ -1011,10 +1016,14 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     }
   }
   if (auto *eti = llvm::dyn_cast<swift::reflection::EnumTypeInfo>(ti)) {
+    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: EnumTypeInfo(num_payload_cases={1})",
+             type.GetMangledTypeName(), eti->getNumPayloadCases());
     return eti->getNumPayloadCases();
   }
   // Objects.
   if (auto *rti = llvm::dyn_cast<swift::reflection::ReferenceTypeInfo>(ti)) {
+    LLDB_LOG(GetLog(LLDBLog::Types), "{0}: ReferenceTypeInfo()",
+             type.GetMangledTypeName());
     switch (rti->getReferenceKind()) {
     case swift::reflection::ReferenceKind::Weak:
     case swift::reflection::ReferenceKind::Unowned:
@@ -1038,6 +1047,10 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     auto *cti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
     if (auto *rti =
             llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
+      LLDB_LOG(GetLog(LLDBLog::Types),
+               "{0}: class RecordTypeInfo(num_fields={1})",
+               type.GetMangledTypeName(), rti->getNumFields());
+
       // The superclass, if any, is an extra child.
       if (builder.lookupSuperclass(tr))
         return rti->getNumFields() + 1;
@@ -1047,6 +1060,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     return {};
   }
   // FIXME: Implement more cases.
+  LLDB_LOG(GetLog(LLDBLog::Types), "{0}: unimplemented type info",
+            type.GetMangledTypeName());
   return {};
 }
 
@@ -1645,15 +1660,18 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
   auto *reflection_ctx = GetReflectionContext();
   const auto *typeref = reflection_ctx->readTypeFromInstance(instance_ptr);
   if (!typeref) {
-    if (log) {
-      log->Printf("could not read typeref for type: %s\n",
-                  class_type.GetMangledTypeName().GetCString());
-    }
+    LLDB_LOGF(log,
+              "could not read typeref for type: %s (instance_ptr = 0x%" PRIx64
+              ")",
+              class_type.GetMangledTypeName().GetCString(), instance_ptr);
     return false;
   }
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = typeref->getDemangling(dem);
-  class_type_or_name.SetCompilerType(ts.RemangleAsType(dem, node));
+  CompilerType dynamic_type = ts.RemangleAsType(dem, node);
+  LLDB_LOGF(log, "dynamic type of instance_ptr 0x%" PRIx64 " is %s",
+            instance_ptr, class_type.GetMangledTypeName().GetCString());
+  class_type_or_name.SetCompilerType(dynamic_type);
 
 #ifndef NDEBUG
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
