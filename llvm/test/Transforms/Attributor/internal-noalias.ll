@@ -5,7 +5,7 @@
 define dso_local i32 @visible(ptr noalias %A, ptr noalias %B) #0 {
 ; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@visible
-; TUNIT-SAME: (ptr noalias nocapture nofree readonly [[A:%.*]], ptr noalias nocapture nofree readonly align 4 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr noalias nocapture nofree readonly [[A:%.*]], ptr noalias nocapture nofree readonly [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(ptr noalias nocapture nofree readonly align 4 [[A]], ptr noalias nocapture nofree readonly align 4 [[B]]) #[[ATTR4:[0-9]+]]
 ; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(ptr noalias nocapture nofree readonly align 4 [[A]], ptr noalias nocapture nofree readonly align 4 [[B]]) #[[ATTR4]]
