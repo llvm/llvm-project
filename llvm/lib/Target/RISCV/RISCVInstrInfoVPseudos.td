@@ -3406,6 +3406,17 @@ multiclass VPseudoVCVTF_V {
   }
 }
 
+multiclass VPseudoVCVTF_RM_V {
+  foreach m = MxListF in {
+    defvar mx = m.MX;
+    defvar WriteVFCvtIToFV_MX = !cast<SchedWrite>("WriteVFCvtIToFV_" # mx);
+    defvar ReadVFCvtIToFV_MX = !cast<SchedRead>("ReadVFCvtIToFV_" # mx);
+
+    defm _V : VPseudoConversionRM<m.vrclass, m.vrclass, m>,
+              Sched<[WriteVFCvtIToFV_MX, ReadVFCvtIToFV_MX, ReadVMask]>;
+  }
+}
+
 multiclass VPseudoConversionW_V {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListW in
@@ -3468,6 +3479,18 @@ multiclass VPseudoVNCVTF_W {
     defvar ReadVFNCvtIToFV_MX = !cast<SchedRead>("ReadVFNCvtIToFV_" # mx);
 
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>,
+              Sched<[WriteVFNCvtIToFV_MX, ReadVFNCvtIToFV_MX, ReadVMask]>;
+  }
+}
+
+multiclass VPseudoVNCVTF_RM_W {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxListFW in {
+    defvar mx = m.MX;
+    defvar WriteVFNCvtIToFV_MX = !cast<SchedWrite>("WriteVFNCvtIToFV_" # mx);
+    defvar ReadVFNCvtIToFV_MX = !cast<SchedRead>("ReadVFNCvtIToFV_" # mx);
+
+    defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint>,
               Sched<[WriteVFNCvtIToFV_MX, ReadVFNCvtIToFV_MX, ReadVMask]>;
   }
 }
@@ -5495,6 +5518,7 @@ let Uses = [FRM] in {
 defm PseudoVFCVT_F_XU : VPseudoVCVTF_V;
 defm PseudoVFCVT_F_X : VPseudoVCVTF_V;
 }
+defm PseudoVFCVT_RM_F_XU : VPseudoVCVTF_RM_V;
 } // mayRaiseFPException = true
 
 //===----------------------------------------------------------------------===//
@@ -5528,6 +5552,7 @@ defm PseudoVFNCVT_F_X      : VPseudoVNCVTF_W;
 defm PseudoVFNCVT_F_F      : VPseudoVNCVTD_W;
 }
 defm PseudoVFNCVT_ROD_F_F  : VPseudoVNCVTD_W;
+defm PseudoVFNCVT_RM_F_XU  : VPseudoVNCVTF_RM_W;
 } // mayRaiseFPException = true
 } // Predicates = [HasVInstructionsAnyF]
 
