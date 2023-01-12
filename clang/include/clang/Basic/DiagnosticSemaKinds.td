@@ -11274,8 +11274,8 @@ def err_implied_coroutine_type_not_found : Error<
   "a coroutine; include <experimental/coroutine> if your version "
   "of libcxx is less than 14.0">;
 def warn_deprecated_coroutine_namespace : Warning<
-  "support for std::experimental::%0 will be removed in LLVM 17; "
-  "use std::%0 instead">,
+  "support for 'std::experimental::%0' will be removed in Clang 17; "
+  "use 'std::%0' instead">,
   InGroup<DeprecatedExperimentalCoroutine>;
 def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
   "conflicting mixed use of std and std::experimental namespaces for "

@@ -125,7 +125,7 @@ ASM_FUNCTION_SPARC_RE = re.compile(
 
 ASM_FUNCTION_SYSTEMZ_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
-    r'[ \t]+.cfi_startproc\n'
+    r'(?:[ \t]+.cfi_startproc\n)?'
     r'(?P<body>.*?)\n'
     r'.Lfunc_end[0-9]+:\n',
     flags=(re.M | re.S))

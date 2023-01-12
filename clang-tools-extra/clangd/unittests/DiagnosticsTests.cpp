@@ -1851,6 +1851,17 @@ TEST(Diagnostics, Tags) {
                         withTag(DiagnosticTag::Unnecessary)),
                   AllOf(Diag(Test.range("deprecated"), "'bar' is deprecated"),
                         withTag(DiagnosticTag::Deprecated))));
+
+  Test = Annotations(R"cpp(
+    $typedef[[typedef int INT]];
+  )cpp");
+  TU.Code = Test.code();
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                withTag(DiagnosticTag::Deprecated))));
 }
 
 TEST(DiagnosticsTest, IncludeCleaner) {
