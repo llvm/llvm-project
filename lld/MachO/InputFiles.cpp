@@ -251,7 +251,7 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
                                               path.copy(bAlloc));
   }
 
-  error("unable to find matching architecture in " + path);
+  warn("unable to find matching architecture in " + path);
   return std::nullopt;
 }
 
