@@ -368,7 +368,7 @@ class OptionalArrayRefParameter<string arrayOf, string desc = ""> :
     OptionalParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
   let cppStorageType = "::llvm::SmallVector<" # arrayOf # ">";
-  let comparator = "::llvm::ArrayRef($_lhs) == ::llvm::ArrayRef($_rhs)";
+  let comparator = cppType # "($_lhs) == " # cppType # "($_rhs)";
 }
 
 // For classes which require allocation and have their own allocateInto method.
