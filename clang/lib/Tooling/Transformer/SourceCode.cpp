@@ -50,8 +50,9 @@ CharSourceRange clang::tooling::maybeExtendRange(CharSourceRange Range,
   return CharSourceRange::getTokenRange(Range.getBegin(), Tok.getLocation());
 }
 
-llvm::Error clang::tooling::validateEditRange(const CharSourceRange &Range,
-                                              const SourceManager &SM) {
+static llvm::Error validateRange(const CharSourceRange &Range,
+                                 const SourceManager &SM,
+                                 bool AllowSystemHeaders) {
   if (Range.isInvalid())
     return llvm::make_error<StringError>(errc::invalid_argument,
                                          "Invalid range");
@@ -60,10 +61,12 @@ llvm::Error clang::tooling::validateEditRange(const CharSourceRange &Range,
     return llvm::make_error<StringError>(
         errc::invalid_argument, "Range starts or ends in a macro expansion");
 
-  if (SM.isInSystemHeader(Range.getBegin()) ||
-      SM.isInSystemHeader(Range.getEnd()))
-    return llvm::make_error<StringError>(errc::invalid_argument,
-                                         "Range is in system header");
+  if (!AllowSystemHeaders) {
+    if (SM.isInSystemHeader(Range.getBegin()) ||
+        SM.isInSystemHeader(Range.getEnd()))
+      return llvm::make_error<StringError>(errc::invalid_argument,
+                                           "Range is in system header");
+  }
 
   std::pair<FileID, unsigned> BeginInfo = SM.getDecomposedLoc(Range.getBegin());
   std::pair<FileID, unsigned> EndInfo = SM.getDecomposedLoc(Range.getEnd());
@@ -72,13 +75,18 @@ llvm::Error clang::tooling::validateEditRange(const CharSourceRange &Range,
         errc::invalid_argument, "Range begins and ends in different files");
 
   if (BeginInfo.second > EndInfo.second)
-    return llvm::make_error<StringError>(
-        errc::invalid_argument, "Range's begin is past its end");
+    return llvm::make_error<StringError>(errc::invalid_argument,
+                                         "Range's begin is past its end");
 
   return llvm::Error::success();
 }
 
-static bool SpelledInMacroDefinition(SourceLocation Loc,
+llvm::Error clang::tooling::validateEditRange(const CharSourceRange &Range,
+                                              const SourceManager &SM) {
+  return validateRange(Range, SM, /*AllowSystemHeaders=*/false);
+}
+
+static bool spelledInMacroDefinition(SourceLocation Loc,
                                      const SourceManager &SM) {
   while (Loc.isMacroID()) {
     const auto &Expansion = SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
@@ -93,16 +101,17 @@ static bool SpelledInMacroDefinition(SourceLocation Loc,
   return false;
 }
 
-std::optional<CharSourceRange> clang::tooling::getRangeForEdit(
-    const CharSourceRange &EditRange, const SourceManager &SM,
-    const LangOptions &LangOpts, bool IncludeMacroExpansion) {
+static CharSourceRange getRange(const CharSourceRange &EditRange,
+                                const SourceManager &SM,
+                                const LangOptions &LangOpts,
+                                bool IncludeMacroExpansion) {
   CharSourceRange Range;
   if (IncludeMacroExpansion) {
     Range = Lexer::makeFileCharRange(EditRange, SM, LangOpts);
   } else {
-    if (SpelledInMacroDefinition(EditRange.getBegin(), SM) ||
-        SpelledInMacroDefinition(EditRange.getEnd(), SM))
-      return std::nullopt;
+    if (spelledInMacroDefinition(EditRange.getBegin(), SM) ||
+        spelledInMacroDefinition(EditRange.getEnd(), SM))
+      return {};
 
     auto B = SM.getSpellingLoc(EditRange.getBegin());
     auto E = SM.getSpellingLoc(EditRange.getEnd());
@@ -110,8 +119,27 @@ std::optional<CharSourceRange> clang::tooling::getRangeForEdit(
       E = Lexer::getLocForEndOfToken(E, 0, SM, LangOpts);
     Range = CharSourceRange::getCharRange(B, E);
   }
+  return Range;
+}
 
+std::optional<CharSourceRange> clang::tooling::getRangeForEdit(
+    const CharSourceRange &EditRange, const SourceManager &SM,
+    const LangOptions &LangOpts, bool IncludeMacroExpansion) {
+  CharSourceRange Range =
+      getRange(EditRange, SM, LangOpts, IncludeMacroExpansion);
   bool IsInvalid = llvm::errorToBool(validateEditRange(Range, SM));
+  if (IsInvalid)
+    return std::nullopt;
+  return Range;
+}
+
+std::optional<CharSourceRange> clang::tooling::getFileRange(
+    const CharSourceRange &EditRange, const SourceManager &SM,
+    const LangOptions &LangOpts, bool IncludeMacroExpansion) {
+  CharSourceRange Range =
+      getRange(EditRange, SM, LangOpts, IncludeMacroExpansion);
+  bool IsInvalid =
+      llvm::errorToBool(validateRange(Range, SM, /*AllowSystemHeaders=*/true));
   if (IsInvalid)
     return std::nullopt;
   return Range;
