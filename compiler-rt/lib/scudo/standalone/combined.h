@@ -1510,7 +1510,7 @@ private:
                   "invalid alignment");
   }
 
-  static constexpr u32 ringBufferSizeInBytes(u32 AllocationRingBufferSize) {
+  static constexpr size_t ringBufferSizeInBytes(u32 AllocationRingBufferSize) {
     return sizeof(AllocationRingBuffer) +
            AllocationRingBufferSize *
                sizeof(typename AllocationRingBuffer::Entry);
