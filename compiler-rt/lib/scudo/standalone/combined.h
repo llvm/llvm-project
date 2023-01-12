@@ -1482,12 +1482,12 @@ private:
   }
 
   static typename AllocationRingBuffer::Entry *
-  getRingBufferEntry(char *RawRingBuffer, u32 N) {
+  getRingBufferEntry(char *RawRingBuffer, uptr N) {
     return &reinterpret_cast<typename AllocationRingBuffer::Entry *>(
         &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
   }
   static const typename AllocationRingBuffer::Entry *
-  getRingBufferEntry(const char *RawRingBuffer, u32 N) {
+  getRingBufferEntry(const char *RawRingBuffer, uptr N) {
     return &reinterpret_cast<const typename AllocationRingBuffer::Entry *>(
         &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
   }
