@@ -1040,8 +1040,6 @@ foreach vti = AllFloatVectors in {
 
   let AddedComplexity = 2 in {
   // Add complexity to increase the priority of this pattern being matched.
-  def : Pat<(store (vti.Scalar (int_riscv_vfmv_f_s (vti.Vector vti.RegClass:$rs2))), GPR:$rs1),
-            (store_instr vti.RegClass:$rs2, GPR:$rs1, 1, vti.Log2SEW)>;
   def : Pat<(store (extractelt (vti.Vector vti.RegClass:$rs2), 0), GPR:$rs1),
             (store_instr vti.RegClass:$rs2, GPR:$rs1, 1, vti.Log2SEW)>;
   }
