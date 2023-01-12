@@ -20,7 +20,7 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 define void @f1() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @g() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -189,7 +189,7 @@ ehcleanup.1:
 define void @f4() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @g() #[[ATTR1]]
+; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    invoke void @g()
 ; CHECK-NEXT:    to label [[TRY_CONT:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
@@ -473,7 +473,7 @@ try.cont:
 define void @f10(i32 %V) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @f10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @g() #[[ATTR1]]
+; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -559,5 +559,4 @@ declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CHECK: attributes #[[ATTR1]] = { nounwind }
 ;.

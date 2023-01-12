@@ -6,7 +6,7 @@ define void @foo() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[A]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    call void @bar() #[[ATTR1]]
+; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr nonnull [[A]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
