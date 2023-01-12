@@ -35,6 +35,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
@@ -662,7 +663,20 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
             mlir::Value isAlloc = fir::factory::genIsAllocatedOrAssociatedTest(
                 builder, loc, *mutBox);
             builder.genIfThen(loc, isAlloc)
-                .genThen([&]() { genDeallocateBox(converter, *mutBox, loc); })
+                .genThen([&]() {
+                  if (mutBox->isPolymorphic()) {
+                    mlir::Value declaredTypeDesc;
+                    assert(sym.GetType());
+                    if (const Fortran::semantics::DerivedTypeSpec
+                            *derivedTypeSpec = sym.GetType()->AsDerived()) {
+                      declaredTypeDesc = Fortran::lower::getTypeDescAddr(
+                          builder, loc, *derivedTypeSpec);
+                    }
+                    genDeallocateBox(converter, *mutBox, loc, declaredTypeDesc);
+                  } else {
+                    genDeallocateBox(converter, *mutBox, loc);
+                  }
+                })
                 .end();
           } else {
             genDeallocateBox(converter, *mutBox, loc);

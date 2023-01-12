@@ -144,6 +144,19 @@ int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   return ReturnError(terminator, pointer.Destroy(true, true), errMsg, hasStat);
 }
 
+int RTNAME(PointerDeallocatePolymorphic)(Descriptor &pointer,
+    const typeInfo::DerivedType *derivedType, bool hasStat,
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+  int stat{RTNAME(PointerDeallocate)(
+      pointer, hasStat, errMsg, sourceFile, sourceLine)};
+  if (stat == StatOk) {
+    DescriptorAddendum *addendum{pointer.Addendum()};
+    INTERNAL_CHECK(addendum != nullptr);
+    addendum->set_derivedType(derivedType);
+  }
+  return stat;
+}
+
 bool RTNAME(PointerIsAssociated)(const Descriptor &pointer) {
   return pointer.raw().base_addr != nullptr;
 }
