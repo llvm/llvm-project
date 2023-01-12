@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -41,11 +42,11 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
-                   DILexicalBlockFileAttr, DILocalVariableAttr,
-                   DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
-      attr);
+  return llvm::isa<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
+                   DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+                   DILexicalBlockAttr, DILexicalBlockFileAttr,
+                   DILocalVariableAttr, DISubprogramAttr, DISubrangeAttr,
+                   DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -63,8 +64,23 @@ bool DIScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
-  return llvm::isa<DIBasicTypeAttr, DICompositeTypeAttr, DIDerivedTypeAttr,
-                   DISubroutineTypeAttr>(attr);
+  return llvm::isa<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
+                   DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
+// DISubroutineTypeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DISubroutineTypeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             unsigned int callingConventions,
+                             ArrayRef<DITypeAttr> types) {
+  if (llvm::any_of(llvm::drop_begin(types), [](DITypeAttr type) {
+        return type.isa<DIVoidResultTypeAttr>();
+      }))
+    return emitError() << "expected subroutine to have non-void argument types";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
