@@ -175,9 +175,9 @@ cl::opt<bool> SectionHeaders("section-headers",
 static cl::alias SectionHeadersShort("headers",
                                      cl::desc("Alias for --section-headers"),
                                      cl::aliasopt(SectionHeaders));
-static cl::alias SectionHeadersShorter("h",
-                                       cl::desc("Alias for --section-headers"),
-                                       cl::aliasopt(SectionHeaders));
+// The following option has been removed to avoid conflicts with
+// other llvm tools/instances also attempting to register a -h option
+//   static cl::alias SectionHeadersShorter("h", ...)
 
 cl::list<std::string>
     FilterSections("section",
