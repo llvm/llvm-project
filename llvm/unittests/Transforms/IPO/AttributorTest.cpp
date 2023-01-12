@@ -77,7 +77,7 @@ TEST_F(AttributorTestBase, TestCast) {
 TEST_F(AttributorTestBase, AAReachabilityTest) {
   const char *ModuleString = R"(
     @x = external global i32
-    define internal void @func4() {
+    define void @func4() {
       store i32 0, i32* @x
       ret void
     }
@@ -98,7 +98,7 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
       ret void
     }
 
-    define internal void @func1() {
+    define void @func1() {
     entry:
       call void @func2()
       ret void
@@ -112,13 +112,14 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
       ret void
     }
 
-    define internal void @func6() {
+    define void @func6() {
     entry:
+      store i32 0, i32* @x
       call void @func5(void ()* @func3)
       ret void
     }
 
-    define internal void @func7() {
+    define void @func7() {
     entry:
       call void @func2()
       call void @func4()
@@ -186,13 +187,12 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   F6AA.canReach(A, F4);
   F7AA.instructionCanReach(A, F7FirstCB, F3);
   F7AA.instructionCanReach(A, F7FirstCB, F4);
+  F9AA.instructionCanReach(A, F9SecondInst, F3);
   F9AA.instructionCanReach(A, F9FirstInst, F3);
   F9AA.instructionCanReach(A, F9FirstInst, F4);
 
   A.run();
 
-  // Under investigation
-#if 0
   ASSERT_TRUE(F1AA.canReach(A, F3));
   ASSERT_FALSE(F1AA.canReach(A, F4));
 
@@ -211,7 +211,6 @@ TEST_F(AttributorTestBase, AAReachabilityTest) {
   // Because func10 calls the func4 after the call to func9 it is reachable but
   // as it requires backwards logic we would need AA::isPotentiallyReachable.
   ASSERT_FALSE(F9AA.instructionCanReach(A, F9FirstInst, F4));
-#endif
 }
 
 } // namespace llvm
