@@ -18,39 +18,34 @@ define amdgpu_kernel void @test_s_load_i8(ptr addrspace(4) nocapture %in, ptr ad
   ret void
 }
 
-define amdgpu_ps void @test_s_load_i8_imm(ptr addrspace(4) %in, i64  %offset, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_s_load_i8_imm(ptr addrspace(4) %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_i8_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
-; GCN-NEXT:    s_load_i8 s0, s[0:1], 0x0
+; GCN-NEXT:    s_load_i8 s0, s[0:1], -0x64
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    global_store_b32 v[4:5], v0, off
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr addrspace(4) %in, i64 %offset
+  %gep = getelementptr i8, ptr addrspace(4) %in, i64 -100
   %ld = load i8, ptr addrspace(4) %gep, align 4
   %sext = sext i8 %ld to i32
   store i32 %sext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_ps void @test_s_load_i8_sgpr_imm(ptr addrspace(4) %in, i32  %offset, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_s_load_i8_sgpr_imm(ptr addrspace(4) %in, i32 inreg %offset, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_i8_sgpr_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_readfirstlane_b32 s2, v2
-; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    v_readfirstlane_b32 s1, v1
-; GCN-NEXT:    s_load_i8 s0, s[0:1], s2 offset:0x10
+; GCN-NEXT:    v_readfirstlane_b32 s2, v0
+; GCN-NEXT:    v_readfirstlane_b32 s3, v1
+; GCN-NEXT:    s_load_i8 s0, s[2:3], s0 offset:0x10
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    global_store_b32 v[3:4], v0, off
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %gep1 = getelementptr i8, ptr addrspace(4) %in, i64 16
@@ -79,39 +74,34 @@ define amdgpu_kernel void @test_s_load_u8(ptr addrspace(4) nocapture %in, ptr ad
   ret void
 }
 
-define amdgpu_ps void @test_s_load_u8_imm(ptr addrspace(4) %in, i64  %offset, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_s_load_u8_imm(ptr addrspace(4) %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_u8_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
-; GCN-NEXT:    s_load_u8 s0, s[0:1], 0x0
+; GCN-NEXT:    s_load_u8 s0, s[0:1], 0xff
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    global_store_b32 v[4:5], v0, off
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr addrspace(4) %in, i64 %offset
+  %gep = getelementptr i8, ptr addrspace(4) %in, i64 255
   %ld = load i8, ptr addrspace(4) %gep, align 4
   %zext = zext i8 %ld to i32
   store i32 %zext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_ps void @test_s_load_u8_sgpr_imm(ptr addrspace(4) %in, i32  %offset, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_s_load_u8_sgpr_imm(ptr addrspace(4) %in, i32 inreg %offset, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_u8_sgpr_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_readfirstlane_b32 s2, v2
-; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    v_readfirstlane_b32 s1, v1
-; GCN-NEXT:    s_load_u8 s0, s[0:1], s2 offset:0x10
+; GCN-NEXT:    v_readfirstlane_b32 s2, v0
+; GCN-NEXT:    v_readfirstlane_b32 s3, v1
+; GCN-NEXT:    s_load_u8 s0, s[2:3], s0 offset:0x10
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    global_store_b32 v[3:4], v0, off
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %gep1 = getelementptr i8, ptr addrspace(4) %in, i64 16
@@ -140,46 +130,41 @@ define amdgpu_kernel void @test_s_load_i16(ptr addrspace(4) nocapture %in, ptr a
   ret void
 }
 
-define amdgpu_ps void @test_s_load_i16_imm(ptr addrspace(4) %in, i64  %offset, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_s_load_i16_imm(ptr addrspace(4) %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_i16_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_lshlrev_b64_e32 v[2:3], 1, v[2:3]
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
-; GCN-NEXT:    s_load_i16 s0, s[0:1], 0x0
+; GCN-NEXT:    s_load_i16 s0, s[0:1], -0xc8
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    global_store_b32 v[4:5], v0, off
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
-  %gep = getelementptr i16, ptr addrspace(4) %in, i64 %offset
+  %gep = getelementptr i16, ptr addrspace(4) %in, i64 -100
   %ld = load i16, ptr addrspace(4) %gep, align 4
   %sext = sext i16 %ld to i32
   store i32 %sext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_ps void @test_s_load_i16_sgpr_imm(ptr addrspace(4) %in, i32  %offset, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_s_load_i16_sgpr_imm(ptr addrspace(4) %in, i32 inreg %offset, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_i16_sgpr_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, 0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b64_e32 v[5:6], 1, v[5:6]
-; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v5
+; GCN-NEXT:    s_mov_b32 s1, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], 1
+; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, s0
+; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v6, vcc_lo
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    s_load_i16 s0, s[0:1], 0x20
 ; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    global_store_b32 v[3:4], v0, off
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %gep1 = getelementptr i16, ptr addrspace(4) %in, i64 16
@@ -211,43 +196,38 @@ define amdgpu_kernel void @test_s_load_u16(ptr addrspace(4) nocapture %in, ptr a
 define amdgpu_ps void @test_s_load_u16_imm(ptr addrspace(4) %in, i64  %offset, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_u16_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_lshlrev_b64_e32 v[2:3], 1, v[2:3]
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
-; GCN-NEXT:    s_load_u16 s0, s[0:1], 0x0
+; GCN-NEXT:    s_load_u16 s0, s[0:1], 0x1fe
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    global_store_b32 v[4:5], v0, off
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
-  %gep = getelementptr i16, ptr addrspace(4) %in, i64 %offset
+  %gep = getelementptr i16, ptr addrspace(4) %in, i64 255
   %ld = load i16, ptr addrspace(4) %gep, align 4
   %zext = zext i16 %ld to i32
   store i32 %zext, ptr addrspace(1) %out, align 4
   ret void
 }
 
-define amdgpu_ps void @test_s_load_u16_sgpr_imm(ptr addrspace(4) %in, i32  %offset, ptr addrspace(1) %out) {
+define amdgpu_ps void @test_s_load_u16_sgpr_imm(ptr addrspace(4) %in, i32 inreg %offset, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_u16_sgpr_imm:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, 0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b64_e32 v[5:6], 1, v[5:6]
-; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v5
+; GCN-NEXT:    s_mov_b32 s1, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], 1
+; GCN-NEXT:    v_add_co_u32 v0, vcc_lo, v0, s0
+; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GCN-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v6, vcc_lo
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    s_load_u16 s0, s[0:1], 0x20
 ; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    global_store_b32 v[3:4], v0, off
+; GCN-NEXT:    global_store_b32 v[2:3], v0, off
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %gep1 = getelementptr i16, ptr addrspace(4) %in, i64 16
