@@ -112,10 +112,9 @@ define i32 @lexical_block_file(i32 %arg1) {
 
 ; // -----
 
-; CHECK-DAG: #[[VOID:.+]] = #llvm.di_void_result_type
-; CHECK-DAG: #[[INT1:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int1">
-; CHECK-DAG: #[[INT2:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int2", sizeInBits = 32, encoding = DW_ATE_signed>
-; CHECK-DAG: #llvm.di_subroutine_type<types = #[[VOID]], #[[INT1]], #[[INT2]]>
+; CHECK: #[[INT1:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int1">
+; CHECK: #[[INT2:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int2", sizeInBits = 32, encoding = DW_ATE_signed>
+; CHECK: #llvm.di_subroutine_type<argumentTypes = #[[INT1]], #[[INT2]]>
 
 define void @basic_type() !dbg !3 {
   ret void
@@ -137,7 +136,7 @@ define void @basic_type() !dbg !3 {
 ; CHECK: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
 ; CHECK: #[[PTR1:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]]>
 ; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4>
-; CHECK: #llvm.di_subroutine_type<types = #[[PTR1]], #[[PTR2]]>
+; CHECK: #llvm.di_subroutine_type<argumentTypes = #[[PTR1]], #[[PTR2]]>
 
 define void @derived_type() !dbg !3 {
   ret void
@@ -150,7 +149,7 @@ define void @derived_type() !dbg !3 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "derived_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
-!5 = !{!7, !8}
+!5 = !{null, !7, !8}
 !6 = !DIBasicType(name: "int")
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6)
 !8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4)
@@ -163,7 +162,7 @@ define void @derived_type() !dbg !3 {
 ; CHECK-DAG: #[[COMP2:.+]] = #llvm.di_composite_type<{{.*}}, file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT]]>
 ; CHECK-DAG: #[[COMP3:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<count = 4 : i64>>
 ; CHECK-DAG: #[[COMP4:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
-; CHECK-DAG: #llvm.di_subroutine_type<types = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]]>
+; CHECK-DAG: #llvm.di_subroutine_type<argumentTypes = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]]>
 
 define void @composite_type() !dbg !3 {
   ret void
@@ -176,7 +175,7 @@ define void @composite_type() !dbg !3 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "composite_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
-!5 = !{!7, !8, !9, !10}
+!5 = !{null, !7, !8, !9, !10}
 !6 = !DIBasicType(name: "int")
 !7 = !DICompositeType(tag: DW_TAG_array_type, name: "array1", line: 10, size: 128, align: 32)
 !8 = !DICompositeType(tag: DW_TAG_array_type, name: "array2", file: !2, scope: !2, baseType: !6)
@@ -189,11 +188,11 @@ define void @composite_type() !dbg !3 {
 
 ; // -----
 
-; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "", isOptimized = false, emissionKind = None>
-; Verify an empty subroutine types list is supported.
-; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
-; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "subprogram", linkageName = "subprogram", file = #[[FILE]], line = 42, scopeLine = 42, subprogramFlags = Definition, type = #[[SP_TYPE]]>
+; CHECK: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
+; CHECK: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
+; CHECK: #[[CU:.+]] = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #[[FILE]], producer = "", isOptimized = false, emissionKind = None>
+; CHECK: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, resultType = #[[INT]], argumentTypes = #[[INT]]>
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "subprogram", linkageName = "subprogram", file = #[[FILE]], line = 42, scopeLine = 42, subprogramFlags = Definition, type = #[[SP_TYPE]]>
 
 define void @subprogram() !dbg !3 {
   ret void
@@ -206,7 +205,7 @@ define void @subprogram() !dbg !3 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "subprogram", linkageName: "subprogram", scope: !2, file: !2, line: 42, scopeLine: 42, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(cc: DW_CC_normal, types: !5)
-!5 = !{}
+!5 = !{!6, !6}
 !6 = !DIBasicType(name: "int")
 
 ; // -----

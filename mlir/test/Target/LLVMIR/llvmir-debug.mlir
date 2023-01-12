@@ -48,30 +48,23 @@ llvm.func @func_no_debug() {
   baseType = #si64, flags = Vector,
   elements = #llvm.di_subrange<lowerBound = 0, upperBound = 4, stride = 1>
 >
-#void = #llvm.di_void_result_type
-#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #void, #si64, #ptr, #named, #composite, #vector>
-#sp0 = #llvm.di_subprogram<
+#spType = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, argumentTypes = #si64, #ptr, #named, #composite, #vector>
+#sp = #llvm.di_subprogram<
   compileUnit = #cu, scope = #file, name = "func_with_debug", linkageName = "func_with_debug",
-  file = #file, line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #spType0
+  file = #file, line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #spType
 >
 #calleeType = #llvm.di_subroutine_type<
-  // Omit the optional callingConvention parameter.
-  types = #si64, #si64>
+  // Omit the optional callingConvention parameter but specify a result type.
+  resultType = #si64, argumentTypes = #si64>
 #callee = #llvm.di_subprogram<
   // Omit the optional linkageName, line, and scopeLine parameters.
   compileUnit = #cu, scope = #composite, name = "callee",
   file = #file, subprogramFlags = "Definition", type = #calleeType
 >
-#fileScope = #llvm.di_lexical_block_file<scope = #sp0, file = #file, discriminator = 0>
-#blockScope = #llvm.di_lexical_block<scope = #sp0>
+#fileScope = #llvm.di_lexical_block_file<scope = #sp, file = #file, discriminator = 0>
+#blockScope = #llvm.di_lexical_block<scope = #sp>
 #variable = #llvm.di_local_variable<scope = #fileScope, name = "arg", file = #file, line = 6, arg = 1, alignInBits = 32, type = #si64>
 #variableAddr = #llvm.di_local_variable<scope = #blockScope, name = "alloc">
-
-#spType1 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
-#sp1 = #llvm.di_subprogram<
-  compileUnit = #cu, scope = #file, name = "empty_types",
-  file = #file, subprogramFlags = "Definition", type = #spType1
->
 
 // CHECK-LABEL: define void @func_with_debug(
 // CHECK-SAME: i64 %[[ARG:.*]]) !dbg ![[FUNC_LOC:[0-9]+]]
@@ -100,15 +93,10 @@ llvm.func @func_with_debug(%arg: i64) {
   llvm.call @func_no_debug() : () -> () loc(fused[callsite("mysource.cc":5:6 at "mysource.cc":1:1), "mysource.cc":1:1])
 
   // CHECK: add i64 %[[ARG]], %[[ARG]], !dbg ![[FUSEDWITH_LOC:[0-9]+]]
-  %sum = llvm.add %arg, %arg : i64 loc(fused<#callee>[callsite("foo.mlir":2:4 at fused<#sp0>["foo.mlir":28:5])])
+  %sum = llvm.add %arg, %arg : i64 loc(fused<#callee>[callsite("foo.mlir":2:4 at fused<#sp>["foo.mlir":28:5])])
 
   llvm.return
-} loc(fused<#sp0>["foo.mlir":1:1])
-
-// CHECK: define void @empty_types() !dbg ![[EMPTY_TYPES_LOC:[0-9]+]]
-llvm.func @empty_types() {
-  llvm.return
-} loc(fused<#sp1>["foo.mlir":2:1])
+} loc(fused<#sp>["foo.mlir":1:1])
 
 // CHECK: ![[CU_LOC:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[CU_FILE_LOC:.*]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 // CHECK: ![[CU_FILE_LOC]] = !DIFile(filename: "foo.mlir", directory: "/test/")
@@ -143,7 +131,3 @@ llvm.func @empty_types() {
 // CHECK: ![[CALLEE_TYPE]] = !DISubroutineType(types: ![[CALLEE_ARGS:.*]])
 // CHECK: ![[CALLEE_ARGS]] = !{![[ARG_TYPE:.*]], ![[ARG_TYPE:.*]]}
 // CHECK: ![[INLINE_LOC]] = !DILocation(line: 28, column: 5,
-
-// CHECK: ![[EMPTY_TYPES_LOC]] = distinct !DISubprogram(name: "empty_types", scope: ![[CU_FILE_LOC]], file: ![[CU_FILE_LOC]], type: ![[EMPTY_TYPES_TYPE:.*]], spFlags: DISPFlagDefinition
-// CHECK: ![[EMPTY_TYPES_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[EMPTY_TYPES_ARGS:.*]])
-// CHECK: ![[EMPTY_TYPES_ARGS]] = !{}
