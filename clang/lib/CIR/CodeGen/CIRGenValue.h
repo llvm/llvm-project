@@ -168,6 +168,10 @@ class LValue {
   clang::QualType Type;
   clang::Qualifiers Quals;
 
+  // LValue is non-gc'able for any reason, including being a parameter or local
+  // variable.
+  bool NonGC : 1;
+
   // This flag shows if a nontemporal load/stores should be used when accessing
   // this lvalue.
   bool Nontemporal : 1;
@@ -198,6 +202,7 @@ private:
 
     // TODO: ObjC flags
     // Initialize Objective-C flags.
+    this->NonGC = false;
     this->Nontemporal = false;
   }
 
@@ -216,13 +221,24 @@ public:
   bool isGlobalReg() const { return LVType == GlobalReg; }
   bool isMatrixElt() const { return LVType == MatrixElt; }
 
+  bool isVolatileQualified() const { return Quals.hasVolatile(); }
+
   unsigned getVRQualifiers() const {
     return Quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
   }
 
-  bool isVolatile() const { return Quals.hasVolatile(); }
+  bool isNonGC() const { return NonGC; }
 
   bool isNontemporal() const { return Nontemporal; }
+
+  bool isObjCWeak() const {
+    return Quals.getObjCGCAttr() == clang::Qualifiers::Weak;
+  }
+  bool isObjCStrong() const {
+    return Quals.getObjCGCAttr() == clang::Qualifiers::Strong;
+  }
+
+  bool isVolatile() const { return Quals.hasVolatile(); }
 
   clang::QualType getType() const { return Type; }
 
