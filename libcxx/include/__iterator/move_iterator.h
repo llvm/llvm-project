@@ -25,8 +25,10 @@
 #include <__iterator/move_sentinel.h>
 #include <__iterator/readable_traits.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__utility/declval.h>
 #include <__utility/move.h>
