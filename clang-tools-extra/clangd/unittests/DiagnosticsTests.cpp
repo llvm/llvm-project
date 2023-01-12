@@ -1859,9 +1859,9 @@ TEST(Diagnostics, Tags) {
   TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
   EXPECT_THAT(
       *TU.build().getDiagnostics(),
-      UnorderedElementsAre(
+      ifTidyChecks(UnorderedElementsAre(
           AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
-                withTag(DiagnosticTag::Deprecated))));
+                withTag(DiagnosticTag::Deprecated)))));
 }
 
 TEST(DiagnosticsTest, IncludeCleaner) {
