@@ -261,13 +261,17 @@ define internal ptr @f2b(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC: Function Attrs: noinline nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f2b
 ; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
-; CGSCC-NEXT:    unreachable
-; CGSCC:       2:
-; CGSCC-NEXT:    unreachable
+; CGSCC-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
+; CGSCC-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
 ; CGSCC:       3:
-; CGSCC-NEXT:    unreachable
-; CGSCC:       4:
-; CGSCC-NEXT:    unreachable
+; CGSCC-NEXT:    [[TMP4:%.*]] = tail call ptr poison(ptr nonnull [[TMP0]])
+; CGSCC-NEXT:    br label [[TMP7:%.*]]
+; CGSCC:       5:
+; CGSCC-NEXT:    [[TMP6:%.*]] = tail call ptr @f3b()
+; CGSCC-NEXT:    br label [[TMP7]]
+; CGSCC:       7:
+; CGSCC-NEXT:    [[TMP8:%.*]] = phi ptr [ [[TMP4]], [[TMP3]] ], [ [[TMP6]], [[TMP5]] ]
+; CGSCC-NEXT:    ret ptr [[TMP8]]
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
@@ -289,14 +293,14 @@ define internal ptr @f2b(ptr readnone %0) local_unnamed_addr #0 {
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal ptr @f3b(ptr readnone %0) local_unnamed_addr #0 {
 ;
-; CGSCC: Function Attrs: noinline nounwind uwtable
+; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@f3b
-; CGSCC-SAME: (ptr readnone [[TMP0:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CGSCC-SAME: () local_unnamed_addr #[[ATTR0]] {
+; CGSCC-NEXT:    br label [[TMP2:%.*]]
+; CGSCC:       1:
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       2:
-; CGSCC-NEXT:    unreachable
-; CGSCC:       3:
-; CGSCC-NEXT:    unreachable
+; CGSCC-NEXT:    ret ptr @a1
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
