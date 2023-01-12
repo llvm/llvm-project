@@ -1500,7 +1500,8 @@ private:
       AllocationRingBufferSize = 1;
     MapPlatformData Data = {};
     RawRingBuffer = static_cast<char *>(
-        map(/*Addr=*/nullptr, ringBufferSizeInBytes(AllocationRingBufferSize),
+        map(/*Addr=*/nullptr,
+            roundUpTo(ringBufferSizeInBytes(AllocationRingBufferSize), getPageSizeCached()),
             "AllocatorRingBuffer", /*Flags=*/0, &Data));
     auto *RingBuffer = reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
     RingBuffer->Size = AllocationRingBufferSize;
