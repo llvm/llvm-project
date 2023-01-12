@@ -22,6 +22,8 @@
 
 #if LLVM_CAS_ENABLE_REMOTE_CACHE
 
+#include "llvm/RemoteCachingService/LLVMCASCacheProvider.h"
+#include "llvm/RemoteCachingService/RemoteCacheProvider.h"
 #include "llvm/RemoteCachingService/RemoteCacheServer.h"
 
 using namespace llvm;
@@ -46,7 +48,8 @@ private:
 MockEnvImpl::MockEnvImpl(StringRef Socket, StringRef Temp,
                          std::unique_ptr<ObjectStore> CAS,
                          std::unique_ptr<ActionCache> Cache)
-    : Server(Socket, Temp, std::move(CAS), std::move(Cache)) {
+    : Server(Socket, remote::createLLVMCASCacheProvider(Temp, std::move(CAS),
+                                                        std::move(Cache))) {
   Server.Start();
   auto ServerFunc = [&]() { Server.Listen(); };
   Thread = std::make_unique<thread>(ServerFunc);
