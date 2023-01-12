@@ -62,8 +62,8 @@ class CrashLogScriptedProcess(ScriptedProcess):
                                                                self.addr_mask,
                                                                self.target)
 
-    def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
-        super().__init__(target, args)
+    def __init__(self, exe_ctx: lldb.SBExecutionContext, args : lldb.SBStructuredData):
+        super().__init__(exe_ctx, args)
 
         if not self.target or not self.target.IsValid():
             # Return error
