@@ -229,9 +229,9 @@ PythonObject lldb_private::LLDBSwigPythonCreateCommandObject(
   return pfunc(ToSWIGWrapper(std::move(debugger_sp)), dict);
 }
 
-PythonObject lldb_private::LLDBSwigPythonCreateScriptedProcess(
+PythonObject lldb_private::LLDBSwigPythonCreateScriptedObject(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::TargetSP &target_sp,
+    lldb::ExecutionContextRefSP exe_ctx_sp,
     const lldb_private::StructuredDataImpl &args_impl,
     std::string &error_string) {
   if (python_class_name == NULL || python_class_name[0] == '\0' ||
@@ -251,8 +251,6 @@ PythonObject lldb_private::LLDBSwigPythonCreateScriptedProcess(
     return PythonObject();
   }
 
-  PythonObject target_arg = ToSWIGWrapper(target_sp);
-
   llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
   if (!arg_info) {
     llvm::handleAllErrors(
@@ -266,52 +264,12 @@ PythonObject lldb_private::LLDBSwigPythonCreateScriptedProcess(
 
   PythonObject result = {};
   if (arg_info.get().max_positional_args == 2) {
-    result = pfunc(target_arg, ToSWIGWrapper(args_impl));
+      result = pfunc(ToSWIGWrapper(exe_ctx_sp), ToSWIGWrapper(args_impl));
   } else {
     error_string.assign("wrong number of arguments in __init__, should be 2 "
                         "(not including self)");
   }
   return result;
-}
-
-PythonObject lldb_private::LLDBSwigPythonCreateScriptedThread(
-    const char *python_class_name, const char *session_dictionary_name,
-    const lldb::ProcessSP &process_sp, const StructuredDataImpl &args_impl,
-    std::string &error_string) {
-  if (python_class_name == NULL || python_class_name[0] == '\0' ||
-      !session_dictionary_name)
-    return PythonObject();
-
-  PyErr_Cleaner py_err_cleaner(true);
-
-  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
-      session_dictionary_name);
-  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
-      python_class_name, dict);
-
-  if (!pfunc.IsAllocated()) {
-    error_string.append("could not find script class: ");
-    error_string.append(python_class_name);
-    return PythonObject();
-  }
-
-  llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
-  if (!arg_info) {
-    llvm::handleAllErrors(
-        arg_info.takeError(),
-        [&](PythonException &E) { error_string.append(E.ReadBacktrace()); },
-        [&](const llvm::ErrorInfoBase &E) {
-          error_string.append(E.message());
-        });
-    return PythonObject();
-  }
-
-  if (arg_info.get().max_positional_args == 2)
-    return pfunc(ToSWIGWrapper(process_sp), ToSWIGWrapper(args_impl));
-
-  error_string.assign("wrong number of arguments in __init__, should be 2 "
-                      "(not including self)");
-  return PythonObject();
 }
 
 PythonObject lldb_private::LLDBSwigPythonCreateScriptedThreadPlan(

@@ -20,17 +20,20 @@ class ScriptedProcess(metaclass=ABCMeta):
     metadata = None
 
     @abstractmethod
-    def __init__(self, target, args):
+    def __init__(self, exe_ctx, args):
         """ Construct a scripted process.
 
         Args:
-            target (lldb.SBTarget): The target launching the scripted process.
+            exe_ctx (lldb.SBExecutionContext): The execution context for the scripted process.
             args (lldb.SBStructuredData): A Dictionary holding arbitrary
                 key/value pairs used by the scripted process.
         """
+        target = None
         self.target = None
         self.args = None
         self.arch = None
+        if isinstance(exe_ctx, lldb.SBExecutionContext):
+            target = exe_ctx.target
         if isinstance(target, lldb.SBTarget) and target.IsValid():
             self.target = target
             triple = self.target.triple
