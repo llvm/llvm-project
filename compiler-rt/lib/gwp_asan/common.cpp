@@ -105,8 +105,4 @@ size_t AllocatorState::getNearestSlot(uintptr_t Ptr) const {
   return addrToSlot(this, Ptr + PageSize);   // Round up.
 }
 
-uintptr_t AllocatorState::internallyDetectedErrorFaultAddress() const {
-  return GuardedPagePoolEnd - 0x10;
-}
-
 } // namespace gwp_asan

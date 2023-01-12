@@ -15,8 +15,7 @@ namespace segv_handler {
 void installSignalHandlers(gwp_asan::GuardedPoolAllocator * /* GPA */,
                            Printf_t /* Printf */,
                            backtrace::PrintBacktrace_t /* PrintBacktrace */,
-                           backtrace::SegvBacktrace_t /* SegvBacktrace */,
-                           bool /* Recoverable */) {}
+                           backtrace::SegvBacktrace_t /* SegvBacktrace */) {}
 
 void uninstallSignalHandlers() {}
 } // namespace segv_handler
