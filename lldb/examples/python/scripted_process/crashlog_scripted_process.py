@@ -10,7 +10,7 @@ from lldb.macosx.crashlog import CrashLog,CrashLogParser
 
 class CrashLogScriptedProcess(ScriptedProcess):
     def parse_crashlog(self):
-        crashlog_parser = CrashLogParser(self.dbg, self.crashlog_path, False)
+        crashlog_parser = CrashLogParser.create(self.dbg, self.crashlog_path, False)
         crash_log = crashlog_parser.parse()
 
         self.pid = crash_log.process_id
