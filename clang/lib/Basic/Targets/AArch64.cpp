@@ -736,17 +736,33 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
 void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
                                           StringRef Name, bool Enabled) const {
   Features[Name] = Enabled;
+
+  // If the feature is an architecture feature (like v8.2a), add all previous
+  // architecture versions and any dependant target features.
   llvm::AArch64::ArchKind AK = llvm::AArch64::getSubArchArchKind(Name);
-  // Add all previous architecture versions.
+  if (AK == llvm::AArch64::ArchKind::INVALID)
+    return;
   // In case of v9.x the v8.x counterparts are added too.
   if ("9" == getArchVersionString(AK))
     for (llvm::AArch64::ArchKind I = llvm::AArch64::convertV9toV8(AK);
          I != llvm::AArch64::ArchKind::INVALID; --I)
       Features[llvm::AArch64::getSubArch(I)] = Enabled;
 
-  for (llvm::AArch64::ArchKind I = --AK; I != llvm::AArch64::ArchKind::INVALID;
-       --I)
+  llvm::AArch64::ArchKind I = AK;
+  for (--I; I != llvm::AArch64::ArchKind::INVALID; --I)
     Features[llvm::AArch64::getSubArch(I)] = Enabled;
+
+  // Set any features implied by the architecture
+  uint64_t Extensions = llvm::AArch64::getDefaultExtensions("generic", AK);
+  std::vector<StringRef> CPUFeats;
+  if (llvm::AArch64::getExtensionFeatures(Extensions, CPUFeats)) {
+    for (auto F : CPUFeats) {
+      assert(F[0] == '+' && "Expected + in target feature!");
+      if (F == "+crypto")
+        continue;
+      Features[F.drop_front(1)] = true;
+    }
+  }
 }
 
 bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,

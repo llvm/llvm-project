@@ -12,9 +12,11 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using ::testing::HasSubstr;
 
 namespace {
 
@@ -31,8 +33,8 @@ TEST(AsmWriterTest, DebugPrintDetachedInstruction) {
   std::string S;
   raw_string_ostream OS(S);
   Add->print(OS);
-  std::size_t r = OS.str().find("<badref> = add i32 poison, poison, !<empty");
-  EXPECT_TRUE(r != std::string::npos);
+  EXPECT_THAT(OS.str(),
+              HasSubstr("<badref> = add i32 poison, poison, !<empty"));
 }
 
 TEST(AsmWriterTest, DebugPrintDetachedArgument) {
@@ -64,11 +66,11 @@ TEST(AsmWriterTest, DumpDIExpression) {
 
 TEST(AsmWriterTest, PrintAddrspaceWithNullOperand) {
   LLVMContext Ctx;
-  std::unique_ptr<Module> M;
+  Module M("test module", Ctx);
   SmallVector<Type *, 3> FArgTypes;
   FArgTypes.push_back(Type::getInt64Ty(Ctx));
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), FArgTypes, false);
-  Function *F = Function::Create(FTy, Function::ExternalLinkage, "", M.get());
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "", &M);
   Argument *Arg0 = F->getArg(0);
   Value *Args[] = {Arg0};
   std::unique_ptr<CallInst> Call(CallInst::Create(F, Args));
@@ -78,8 +80,7 @@ TEST(AsmWriterTest, PrintAddrspaceWithNullOperand) {
   std::string S;
   raw_string_ostream OS(S);
   Call->print(OS);
-  std::size_t r = OS.str().find("<cannot get addrspace!>");
-  EXPECT_TRUE(r != std::string::npos);
+  EXPECT_THAT(OS.str(), HasSubstr("<cannot get addrspace!>"));
 }
 
 TEST(AsmWriterTest, PrintNullOperandBundle) {
@@ -102,6 +103,6 @@ TEST(AsmWriterTest, PrintNullOperandBundle) {
   std::string S;
   raw_string_ostream OS(S);
   Invoke->print(OS);
-  EXPECT_TRUE(OS.str().find("<null operand bundle!>") != std::string::npos);
+  EXPECT_THAT(OS.str(), HasSubstr("<null operand bundle!>"));
 }
 }
