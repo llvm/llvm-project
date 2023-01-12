@@ -742,7 +742,7 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
     auto nameAttr = StringAttr::get(context, name);
     it.first->second = std::make_unique<UnregisteredOpModel>(
         nameAttr, nameAttr.getReferencedDialect(), TypeID::get<void>(),
-        detail::InterfaceMap(std::nullopt));
+        detail::InterfaceMap());
   }
   impl = it.first->second.get();
 }

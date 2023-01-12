@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 
 namespace llvm {
 class Init;
@@ -72,9 +73,16 @@ private:
 class Interface {
 public:
   explicit Interface(const llvm::Record *def);
+  Interface(const Interface &rhs) : def(rhs.def), methods(rhs.methods) {
+    for (auto &base : rhs.baseInterfaces)
+      baseInterfaces.push_back(std::make_unique<Interface>(*base));
+  }
 
   // Return the name of this interface.
   StringRef getName() const;
+
+  // Returns this interface's name prefixed with namespaces.
+  std::string getFullyQualifiedName() const;
 
   // Return the C++ namespace of this interface.
   StringRef getCppNamespace() const;
@@ -101,6 +109,11 @@ public:
   // Return the verify method body if it has one.
   std::optional<StringRef> getVerify() const;
 
+  // Return the base interfaces of this interface.
+  auto getBaseInterfaces() const {
+    return llvm::make_pointee_range(baseInterfaces);
+  }
+
   // If there's a verify method, return if it needs to access the ops in the
   // regions.
   bool verifyWithRegions() const;
@@ -114,6 +127,9 @@ private:
 
   // The methods of this interface.
   SmallVector<InterfaceMethod, 8> methods;
+
+  // The base interfaces of this interface.
+  SmallVector<std::unique_ptr<Interface>> baseInterfaces;
 };
 
 // An interface that is registered to an Attribute.

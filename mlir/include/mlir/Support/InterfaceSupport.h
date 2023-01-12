@@ -111,8 +111,8 @@ public:
   }
 
   /// Constructor for a known concept.
-  Interface(ValueT t, Concept *conceptImpl)
-      : BaseType(t), conceptImpl(conceptImpl) {
+  Interface(ValueT t, const Concept *conceptImpl)
+      : BaseType(t), conceptImpl(const_cast<Concept *>(conceptImpl)) {
     assert(!t || ConcreteType::getInterfaceFor(t) == conceptImpl);
   }
 
@@ -152,25 +152,6 @@ struct count_if_t_impl<Pred, N, T, Us...>
 template <template <class> class Pred, typename... Ts>
 using count_if_t = count_if_t_impl<Pred, 0, Ts...>;
 
-namespace {
-/// Type trait indicating whether all template arguments are
-/// trivially-destructible.
-template <typename... Args>
-struct all_trivially_destructible;
-
-template <typename Arg, typename... Args>
-struct all_trivially_destructible<Arg, Args...> {
-  static constexpr const bool value =
-      std::is_trivially_destructible<Arg>::value &&
-      all_trivially_destructible<Args...>::value;
-};
-
-template <>
-struct all_trivially_destructible<> {
-  static constexpr const bool value = true;
-};
-} // namespace
-
 /// This class provides an efficient mapping between a given `Interface` type,
 /// and a particular implementation of its concept.
 class InterfaceMap {
@@ -182,7 +163,16 @@ class InterfaceMap {
   template <typename... Types>
   using num_interface_types_t = count_if_t<detect_get_interface_id, Types...>;
 
+  /// Trait to check if T provides a 'initializeInterfaceConcept' method.
+  template <typename T, typename... Args>
+  using has_initialize_method =
+      decltype(std::declval<T>().initializeInterfaceConcept(
+          std::declval<InterfaceMap &>()));
+  template <typename T>
+  using detect_initialize_method = llvm::is_detected<has_initialize_method, T>;
+
 public:
+  InterfaceMap() = default;
   InterfaceMap(InterfaceMap &&) = default;
   InterfaceMap &operator=(InterfaceMap &&rhs) {
     for (auto &it : interfaces)
@@ -205,11 +195,9 @@ public:
     if constexpr (numInterfaces == 0)
       return InterfaceMap();
 
-    std::array<std::pair<TypeID, void *>, numInterfaces> elements;
-    std::pair<TypeID, void *> *elementIt = elements.data();
-    (void)elementIt;
-    (addModelAndUpdateIterator<Types>(elementIt), ...);
-    return InterfaceMap(elements);
+    InterfaceMap map;
+    (map.insertPotentialInterface<Types>(), ...);
+    return map;
   }
 
   /// Returns an instance of the concept object for the given interface if it
@@ -222,42 +210,40 @@ public:
   /// Returns true if the interface map contains an interface for the given id.
   bool contains(TypeID interfaceID) const { return lookup(interfaceID); }
 
-  /// Create an InterfaceMap given with the implementation of the interfaces.
-  /// The use of this constructor is in general discouraged in favor of
-  /// 'InterfaceMap::get<InterfaceA, ...>()'.
-  InterfaceMap(MutableArrayRef<std::pair<TypeID, void *>> elements);
-
-  /// Insert the given models as implementations of the corresponding interfaces
-  /// for the concrete attribute class.
+  /// Insert the given interface models.
   template <typename... IfaceModels>
-  void insert() {
-    static_assert(all_trivially_destructible<IfaceModels...>::value,
-                  "interface models must be trivially destructible");
-    std::pair<TypeID, void *> elements[] = {
-        std::make_pair(IfaceModels::Interface::getInterfaceID(),
-                       new (malloc(sizeof(IfaceModels))) IfaceModels())...};
-    insert(elements);
+  void insertModels() {
+    (insertModel<IfaceModels>(), ...);
   }
 
 private:
-  InterfaceMap() = default;
-
-  /// Assign the interface model of the type to the given opaque element
-  /// iterator and increment it.
+  /// Insert the given interface type into the map, ignoring it if it doesn't
+  /// actually represent an interface.
   template <typename T>
-  static inline std::enable_if_t<detect_get_interface_id<T>::value>
-  addModelAndUpdateIterator(std::pair<TypeID, void *> *&elementIt) {
-    *elementIt = {T::getInterfaceID(), new (malloc(sizeof(typename T::ModelT)))
-                                           typename T::ModelT()};
-    ++elementIt;
+  inline void insertPotentialInterface() {
+    if constexpr (detect_get_interface_id<T>::value)
+      insertModel<typename T::ModelT>();
   }
-  /// Overload when `T` isn't an interface.
-  template <typename T>
-  static inline std::enable_if_t<!detect_get_interface_id<T>::value>
-  addModelAndUpdateIterator(std::pair<TypeID, void *> *&) {}
 
-  /// Insert the given set of interface models into the interface map.
-  void insert(ArrayRef<std::pair<TypeID, void *>> elements);
+  /// Insert the given interface model into the map.
+  template <typename InterfaceModel>
+  void insertModel() {
+    // FIXME(#59975): Uncomment this when SPIRV no longer awkwardly reimplements
+    // interfaces in a way that isn't clean/compatible.
+    // static_assert(std::is_trivially_destructible_v<InterfaceModel>,
+    //               "interface models must be trivially destructible");
+
+    // Build the interface model, optionally initializing if necessary.
+    InterfaceModel *model =
+        new (malloc(sizeof(InterfaceModel))) InterfaceModel();
+    if constexpr (detect_initialize_method<InterfaceModel>::value)
+      model->initializeInterfaceConcept(*this);
+
+    insert(InterfaceModel::Interface::getInterfaceID(), model);
+  }
+  /// Insert the given set of interface id and concept implementation into the
+  /// interface map.
+  void insert(TypeID interfaceId, void *conceptImpl);
 
   /// Compare two TypeID instances by comparing the underlying pointer.
   static bool compare(TypeID lhs, TypeID rhs) {
