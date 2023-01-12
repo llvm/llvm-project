@@ -244,6 +244,14 @@ void CIRGenFunction::buildVarDecl(const VarDecl &D) {
   return buildAutoVarDecl(D);
 }
 
+void CIRGenFunction::buildNullabilityCheck(LValue LHS, mlir::Value RHS,
+                                           SourceLocation Loc) {
+  if (!SanOpts.has(SanitizerKind::NullabilityAssign))
+    return;
+
+  llvm_unreachable("NYI");
+}
+
 void CIRGenFunction::buildScalarInit(const Expr *init, const ValueDecl *D,
                                      LValue lvalue) {
   // TODO: this is where a lot of ObjC lifetime stuff would be done.

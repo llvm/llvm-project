@@ -47,6 +47,9 @@ public:
 
   mlir::Type ConvertType(QualType T) { return CGF.ConvertType(T); }
   LValue buildLValue(const Expr *E) { return CGF.buildLValue(E); }
+  LValue buildCheckedLValue(const Expr *E, CIRGenFunction::TypeCheckKind TCK) {
+    return CGF.buildCheckedLValue(E, TCK);
+  }
 
   /// Emit a value that corresponds to null for the given type.
   mlir::Value buildNullValue(QualType Ty, mlir::Location loc);
@@ -493,9 +496,7 @@ public:
   VISITCOMP(NE)
 #undef VISITCOMP
 
-  mlir::Value VisitBinAssign(const BinaryOperator *E) {
-    llvm_unreachable("NYI");
-  }
+  mlir::Value VisitBinAssign(const BinaryOperator *E);
   mlir::Value VisitBinLAnd(const BinaryOperator *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitBinLOr(const BinaryOperator *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitBinComma(const BinaryOperator *E) {
@@ -1379,4 +1380,54 @@ mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
   // evaluation through the shared cleanup block.
   // TODO(cir): Scope.ForceCleanup({&V});
   return scope.getNumResults() > 0 ? scope->getResult(0) : nullptr;
+}
+
+mlir::Value ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
+  bool Ignore = TestAndClearIgnoreResultAssign();
+
+  mlir::Value RHS;
+  LValue LHS;
+
+  switch (E->getLHS()->getType().getObjCLifetime()) {
+  case Qualifiers::OCL_Strong:
+    llvm_unreachable("NYI");
+  case Qualifiers::OCL_Autoreleasing:
+    llvm_unreachable("NYI");
+  case Qualifiers::OCL_ExplicitNone:
+    llvm_unreachable("NYI");
+  case Qualifiers::OCL_Weak:
+    llvm_unreachable("NYI");
+  case Qualifiers::OCL_None:
+    // __block variables need to have the rhs evaluated first, plus this should
+    // improve codegen just a little.
+    RHS = Visit(E->getRHS());
+    LHS = buildCheckedLValue(E->getLHS(), CIRGenFunction::TCK_Store);
+
+    // Store the value into the LHS. Bit-fields are handled specially because
+    // the result is altered by the store, i.e., [C99 6.5.16p1]
+    // 'An assignment expression has the value of the left operand after the
+    // assignment...'.
+    if (LHS.isBitField()) {
+      llvm_unreachable("NYI");
+    } else {
+      CGF.buildNullabilityCheck(LHS, RHS, E->getExprLoc());
+      CGF.currSrcLoc = CGF.getLoc(E->getBeginLoc());
+      CGF.buildStoreThroughLValue(RValue::get(RHS), LHS);
+    }
+  }
+
+  // If the result is clearly ignored, return now.
+  if (Ignore)
+    return nullptr;
+
+  // The result of an assignment in C is the assigned r-value.
+  if (!CGF.getLangOpts().CPlusPlus)
+    return RHS;
+
+  // If the lvalue is non-volatile, return the computed value of the assignment.
+  if (!LHS.isVolatileQualified())
+    llvm_unreachable("NYI");
+
+  // Otherwise, reload the value.
+  return buildLoadOfLValue(LHS, E->getExprLoc());
 }

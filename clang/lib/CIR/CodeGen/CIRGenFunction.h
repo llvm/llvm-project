@@ -972,6 +972,11 @@ public:
                                                 clang::LabelDecl *L,
                                                 mlir::Location Loc);
 
+  /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
+  /// nonnull, if 1\p LHS is marked _Nonnull.
+  void buildNullabilityCheck(LValue LHS, mlir::Value RHS,
+                             clang::SourceLocation Loc);
+
   void buildScalarInit(const clang::Expr *init, const clang::ValueDecl *D,
                        LValue lvalue);
 
