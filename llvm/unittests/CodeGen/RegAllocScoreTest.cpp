@@ -64,7 +64,7 @@ enum MockInstrId {
 
 const std::array<MCInstrDesc, MockInstrId::TotalMockInstrs> MockInstrDescs{{
 #define MOCK_SPEC(IGNORE, OPCODE, FLAGS)                                       \
-  {OPCODE, 0, 0, 0, 0, 0, 0, FLAGS, 0, nullptr, nullptr},
+  {OPCODE, 0, 0, 0, 0, 0, 0, 0, FLAGS, 0, nullptr},
     MOCK_INSTR(MOCK_SPEC)
 #undef MOCK_SPEC
 }};

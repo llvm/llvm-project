@@ -114,14 +114,6 @@ private:
 
 } // end anonymous namespace
 
-static void PrintDefList(const std::vector<Record *> &Uses, unsigned Num,
-                         raw_ostream &OS) {
-  OS << "static const MCPhysReg ImplicitList" << Num << "[] = { ";
-  for (auto [Idx, U] : enumerate(Uses))
-    OS << (Idx ? ", " : "") << getQualifiedName(U);
-  OS << " };\n";
-}
-
 //===----------------------------------------------------------------------===//
 // Operand Info Emission.
 //===----------------------------------------------------------------------===//
@@ -221,7 +213,6 @@ void InstrInfoEmitter::EmitOperandInfo(raw_ostream &OS,
   unsigned OperandListNum = 0;
   OperandInfoIDs[std::vector<std::string>()] = ++OperandListNum;
 
-  OS << "\n";
   const CodeGenTarget &Target = CDP.getTargetInfo();
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
     std::vector<std::string> OperandInfo = GetOperandInfo(*Inst);
@@ -891,45 +882,55 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("Target Instruction Enum Values and Descriptors", OS);
   emitEnums(OS);
 
-  OS << "#ifdef GET_INSTRINFO_MC_DESC\n";
-  OS << "#undef GET_INSTRINFO_MC_DESC\n";
-
-  OS << "namespace llvm {\n\n";
-
   CodeGenTarget &Target = CDP.getTargetInfo();
   const std::string &TargetName = std::string(Target.getName());
   Record *InstrInfo = Target.getInstructionSet();
 
-  // Keep track of all of the def lists we have emitted already.
+  // Collect all of the instruction's implicit uses and defs.
+  Records.startTimer("Collect uses/defs");
   std::map<std::vector<Record*>, unsigned> EmittedLists;
-  unsigned ListNumber = 0;
-
-  // Emit all of the instruction's implicit uses and defs.
-  Records.startTimer("Emit uses/defs");
+  std::vector<std::vector<Record *>> ImplicitLists;
+  unsigned ImplicitListSize = 0;
   for (const CodeGenInstruction *II : Target.getInstructionsByEnumValue()) {
     std::vector<Record *> ImplicitOps = II->ImplicitUses;
     llvm::append_range(ImplicitOps, II->ImplicitDefs);
-    if (!ImplicitOps.empty()) {
-      unsigned &IL = EmittedLists[ImplicitOps];
-      if (!IL) {
-        IL = ++ListNumber;
-        PrintDefList(ImplicitOps, IL, OS);
-      }
+    if (EmittedLists.insert({ImplicitOps, ImplicitListSize}).second) {
+      ImplicitLists.push_back(ImplicitOps);
+      ImplicitListSize += ImplicitOps.size();
     }
   }
 
-  OperandInfoMapTy OperandInfoIDs;
+  ArrayRef<const CodeGenInstruction *> NumberedInstructions =
+      Target.getInstructionsByEnumValue();
+  OS << "#if defined(GET_INSTRINFO_MC_DESC) || "
+        "defined(GET_INSTRINFO_CTOR_DTOR)\n";
+  OS << "namespace llvm {\n\n";
+
+  OS << "struct " << TargetName << "InstrTable {\n";
+  OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
+  OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCPhysReg), "
+        "\"Unwanted padding between Insts and ImplicitOps\");\n";
+  OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U) << "];\n";
+  OS << "};\n\n";
+
+  OS << "} // end namespace llvm\n";
+  OS << "#endif // defined(GET_INSTRINFO_MC_DESC) || "
+        "defined(GET_INSTRINFO_CTOR_DTOR)\n\n";
+
+  OS << "#ifdef GET_INSTRINFO_MC_DESC\n";
+  OS << "#undef GET_INSTRINFO_MC_DESC\n";
+  OS << "namespace llvm {\n\n";
 
   // Emit all of the operand info records.
   Records.startTimer("Emit operand info");
+  OperandInfoMapTy OperandInfoIDs;
   EmitOperandInfo(OS, OperandInfoIDs);
+  OS << "\n";
 
   // Emit all of the MCInstrDesc records in reverse ENUM ordering.
   Records.startTimer("Emit InstrDesc records");
-  OS << "\nextern const MCInstrDesc " << TargetName << "Insts[] = {\n";
-  ArrayRef<const CodeGenInstruction*> NumberedInstructions =
-    Target.getInstructionsByEnumValue();
-
+  OS << "extern const " << TargetName << "InstrTable " << TargetName
+     << "Descs = {\n  {\n";
   SequenceToOffsetTable<std::string> InstrNames;
   unsigned Num = NumberedInstructions.size();
   for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
@@ -938,7 +939,19 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     // Emit the record into the table.
     emitRecord(*Inst, --Num, InstrInfo, EmittedLists, OperandInfoIDs, OS);
   }
-  OS << "};\n\n";
+
+  OS << "  }, {\n";
+
+  // Emit all of the instruction's implicit uses and defs.
+  Records.startTimer("Emit uses/defs");
+  for (auto &List : ImplicitLists) {
+    OS << "    /* " << EmittedLists[List] << " */";
+    for (auto &Reg : List)
+      OS << ' ' << getQualifiedName(Reg) << ',';
+    OS << '\n';
+  }
+
+  OS << "  }\n};\n\n";
 
   // Emit the array of instruction names.
   Records.startTimer("Emit instruction names");
@@ -1005,7 +1018,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   Records.startTimer("Emit initialization routine");
   OS << "static inline void Init" << TargetName
      << "MCInstrInfo(MCInstrInfo *II) {\n";
-  OS << "  II->InitMCInstrInfo(" << TargetName << "Insts, " << TargetName
+  OS << "  II->InitMCInstrInfo(" << TargetName << "Descs.Insts, " << TargetName
      << "InstrNameIndices, " << TargetName << "InstrNameData, ";
   if (HasDeprecationFeatures)
     OS << TargetName << "InstrDeprecationFeatures, ";
@@ -1053,7 +1066,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "#undef GET_INSTRINFO_CTOR_DTOR\n";
 
   OS << "namespace llvm {\n";
-  OS << "extern const MCInstrDesc " << TargetName << "Insts[];\n";
+  OS << "extern const " << TargetName << "InstrTable " << TargetName
+     << "Descs;\n";
   OS << "extern const unsigned " << TargetName << "InstrNameIndices[];\n";
   OS << "extern const char " << TargetName << "InstrNameData[];\n";
   if (HasDeprecationFeatures)
@@ -1067,7 +1081,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
         "CatchRetOpcode, unsigned ReturnOpcode)\n"
      << "  : TargetInstrInfo(CFSetupOpcode, CFDestroyOpcode, CatchRetOpcode, "
         "ReturnOpcode) {\n"
-     << "  InitMCInstrInfo(" << TargetName << "Insts, " << TargetName
+     << "  InitMCInstrInfo(" << TargetName << "Descs.Insts, " << TargetName
      << "InstrNameIndices, " << TargetName << "InstrNameData, ";
   if (HasDeprecationFeatures)
     OS << TargetName << "InstrDeprecationFeatures, ";
@@ -1112,13 +1126,16 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
     MinOperands = Inst.Operands.back().MIOperandNo +
                   Inst.Operands.back().MINumOperands;
 
-  OS << "  { ";
-  OS << Num << ",\t" << MinOperands << ",\t"
-     << Inst.Operands.NumDefs << ",\t"
+  OS << "    { ";
+  OS << Num << ",\t" << MinOperands << ",\t" << Inst.Operands.NumDefs << ",\t"
      << Inst.TheDef->getValueAsInt("Size") << ",\t"
-     << SchedModels.getSchedClassIdx(Inst) << ",\t"
-     << Inst.ImplicitUses.size() << ",\t"
-     << Inst.ImplicitDefs.size() << ",\t0";
+     << SchedModels.getSchedClassIdx(Inst) << ",\t";
+
+  // Emit the implicit use/def list...
+  OS << Inst.ImplicitUses.size() << ",\t" << Inst.ImplicitDefs.size() << ",\t";
+  std::vector<Record *> ImplicitOps = Inst.ImplicitUses;
+  llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
+  OS << EmittedLists[ImplicitOps] << ",\t0";
 
   CodeGenTarget &Target = CDP.getTargetInfo();
 
@@ -1182,14 +1199,6 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   OS << ", 0x";
   OS.write_hex(Value);
   OS << "ULL, ";
-
-  // Emit the implicit use/def list...
-  std::vector<Record *> ImplicitOps = Inst.ImplicitUses;
-  llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
-  if (ImplicitOps.empty())
-    OS << "nullptr, ";
-  else
-    OS << "ImplicitList" << EmittedLists[ImplicitOps] << ", ";
 
   // Emit the operand info.
   std::vector<std::string> OperandInfo = GetOperandInfo(Inst);
