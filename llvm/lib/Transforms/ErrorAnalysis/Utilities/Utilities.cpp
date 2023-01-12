@@ -130,6 +130,7 @@ bool isInstructionOfInterest(Instruction *Inst) {
   return false;
 }
 
+// Functions defined in AtomicCondition library
 int getFunctionEnum(Instruction *Inst) {
   string FunctionName = "";
 

@@ -226,6 +226,11 @@ void ACInstrumentation::instrumentCallsForAFComputation(
       assert(InstructionAFMap.count(BaseInstruction->getOperand(I)) == 1);
       AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
       IncompletePHINodes.push_back(NULL);
+    } else if (isFloatToFloatCastOperation(static_cast<const Instruction *>(
+                   BaseInstruction->getOperand(I))) &&
+               InstructionAFMap.count(BaseInstruction->getOperand(I)) == 1) {
+      AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
+      IncompletePHINodes.push_back(NULL);
     } else if (isa<Instruction>(BaseInstruction->getOperand(I)) &&
                static_cast<Instruction *>(BaseInstruction->getOperand(I))
                        ->getOpcode() == Instruction::PHI &&
@@ -408,9 +413,11 @@ void ACInstrumentation::instrumentBasicBlock(
     Instruction *CurrentInstruction = &*I;
 
     // Branch based on kind of Instruction
-    if (isOtherOperation(&*I)) {
+    if (isFloatToFloatCastOperation(&*I)) {
+      mapFloatCastToAFValue(&*I);
+    } else if (isOtherOperation(&*I)) {
       instrumentCallsToAnalyzeInstruction(CurrentInstruction, &I,
-                                          NumInstrumentedInstructions);
+                                            NumInstrumentedInstructions);
     } else if (isUnaryOperation(&*I)) {
       instrumentCallsToAnalyzeInstruction(CurrentInstruction, &I,
                                           NumInstrumentedInstructions);
@@ -551,6 +558,11 @@ bool ACInstrumentation::isIntegerToFloatCastOperation(const Instruction *Inst) {
          Inst->getOpcode() == Instruction::SIToFP;
 }
 
+bool ACInstrumentation::isFloatToFloatCastOperation(const Instruction *Inst) {
+  return Inst->getOpcode() == Instruction::FPTrunc ||
+         Inst->getOpcode() == Instruction::FPExt;
+}
+
 bool ACInstrumentation::isUnaryOperation(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::FNeg ||
          (Inst->getOpcode() == Instruction::Call &&
@@ -602,8 +614,6 @@ bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
     switch (Inst->getOpcode()) {
     case 12:
       return Inst->getOperand(0)->getType()->isFloatTy();
-    case 46:
-      return static_cast<const FPExtInst *>(Inst)->getSrcTy()->isFloatTy();
     case 56:
       // Assuming that operand 0 for this call instruction contains the operand
       // used to calculate the AC.
@@ -630,8 +640,6 @@ bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
     switch (Inst->getOpcode()) {
     case 12:
       return Inst->getOperand(0)->getType()->isDoubleTy();
-    case 45:
-      return static_cast<const FPTruncInst *>(Inst)->getSrcTy()->isDoubleTy();
     case 56:
       // Assuming that operand 0 for this call instruction contains the operand
       // used to calculate the AC.
@@ -676,6 +684,22 @@ bool ACInstrumentation::isFunctionOfInterest(const Function *Func) {
            FunctionName.find("sqrt") != std::string::npos;
   }
   return false;
+}
+
+void ACInstrumentation::mapFloatCastToAFValue(Instruction *Inst) {
+  if (Inst->getOpcode() == Instruction::FPTrunc &&
+      static_cast<const FPTruncInst *>(Inst)->getDestTy()->isDoubleTy() &&
+      InstructionAFMap.count(static_cast<const FPTruncInst *>(Inst)->getOperand(0)) == 1) {
+    std::pair<Value *, Value *> InstructionAFPair =
+        std::make_pair((Value *)Inst, static_cast<const FPTruncInst *>(Inst)->getOperand(0));
+    InstructionAFMap.insert(InstructionAFPair);
+  } else if(Inst->getOpcode() == Instruction::FPExt &&
+             static_cast<const FPExtInst *>(Inst)->getDestTy()->isDoubleTy() &&
+             InstructionAFMap.count(static_cast<const FPExtInst *>(Inst)->getOperand(0)) == 1) {
+    std::pair<Value *, Value *> InstructionAFPair =
+        std::make_pair((Value *)Inst, static_cast<const FPExtInst *>(Inst)->getOperand(0));
+    InstructionAFMap.insert(InstructionAFPair);
+  }
 }
 
 }  // namespace atomiccondition

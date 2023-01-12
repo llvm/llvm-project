@@ -74,6 +74,7 @@ public:
   static bool isPhiNode(const Instruction *Inst);
   static bool isMemoryLoadOperation(const Instruction *Inst);
   static bool isIntegerToFloatCastOperation(const Instruction *Inst);
+  static bool isFloatToFloatCastOperation(const Instruction *Inst);
   static bool isUnaryOperation(const Instruction *Inst);
   static bool isBinaryOperation(const Instruction *Inst);
   static bool isOtherOperation(const Instruction *Inst);
@@ -89,6 +90,8 @@ public:
   static bool isUnwantedFunction(const Function *Func);
   static bool isFunctionOfInterest(const Function *Func);
 
+  // Other Utilities
+  void mapFloatCastToAFValue(Instruction *Inst);
 };
 
 } // namespace atomiccondition
