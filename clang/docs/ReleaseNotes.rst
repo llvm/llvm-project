@@ -449,6 +449,7 @@ Improvements to Clang's diagnostics
   concepts-ts compatibility extension.
 - Clang now diagnoses overflow undefined behavior in a constant expression while
   evaluating a compound assignment with remainder as operand.
+- Add ``-Wreturn-local-addr``, a GCC alias for ``-Wreturn-stack-address``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
