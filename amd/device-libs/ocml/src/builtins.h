@@ -83,7 +83,7 @@
 #define BUILTIN_COPYSIGN_F32 __builtin_copysignf
 #define BUILTIN_COPYSIGN_F64 __builtin_copysign
 #define BUILTIN_COPYSIGN_F16 __builtin_copysignf16
-#define BUILTIN_COPYSIGN_2F16 __llvm_copysign_2f16
+#define BUILTIN_COPYSIGN_2F16 __builtin_elementwise_copysign
 
 #define BUILTIN_FLOOR_F32 __builtin_floorf
 #define BUILTIN_FLOOR_F64 __builtin_floor

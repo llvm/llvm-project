@@ -19,7 +19,6 @@
 extern __attribute__((const)) float2 __llvm_fma_2f32(float2, float2, float2) __asm("llvm.fma.v2f32");
 
 extern __attribute__((const)) half2 __llvm_fma_2f16(half2, half2, half2) __asm("llvm.fma.v2f16");
-extern __attribute__((const)) half2 __llvm_copysign_2f16(half2, half2) __asm("llvm.copysign.v2f16");
 extern __attribute__((const)) half2 __llvm_round_2f16(half2) __asm("llvm.round.v2f16");
 extern __attribute__((const)) half2 __llvm_rint_2f16(half2) __asm("llvm.rint.v2f16");
 extern __attribute__((const)) half2 __llvm_canonicalize_2f16(half2) __asm("llvm.canonicalize.v2f16");
