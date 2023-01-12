@@ -708,8 +708,9 @@ void CodeGenFunction::EmitOMPAggregateAssign(
   llvm::Value *SrcBegin = SrcAddr.getPointer();
   llvm::Value *DestBegin = DestAddr.getPointer();
   // Cast from pointer to array type to pointer to single element.
-  llvm::Value *DestEnd =
-      Builder.CreateGEP(DestAddr.getElementType(), DestBegin, NumElements);
+  llvm::Value *DestEnd = Builder.CreateInBoundsGEP(DestAddr.getElementType(),
+                                                   DestBegin, NumElements);
+
   // The basic structure here is a while-do loop.
   llvm::BasicBlock *BodyBB = createBasicBlock("omp.arraycpy.body");
   llvm::BasicBlock *DoneBB = createBasicBlock("omp.arraycpy.done");
