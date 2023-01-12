@@ -162,3 +162,21 @@ namespace FunctionReturnType {
 }
 
 }
+
+struct F {
+  constexpr bool ok() const {
+    return okRecurse();
+  }
+  constexpr bool okRecurse() const {
+    return true;
+  }
+};
+
+struct BodylessMemberFunction {
+  constexpr int first() const {
+    return second();
+  }
+  constexpr int second() const {
+    return 1;
+  }
+};
