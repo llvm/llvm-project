@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -x c++ -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -fpatchable-function-entry-offset=3 -o - %s | FileCheck %s --check-prefixes=CHECK,OFFSET
 #if !__has_feature(kcfi)
 #error Missing kcfi?
 #endif
@@ -54,5 +55,6 @@ int test(void) {
 }
 
 // CHECK-DAG: ![[#]] = !{i32 4, !"kcfi", i32 1}
+// OFFSET-DAG: ![[#]] = !{i32 4, !"kcfi-offset", i32 3}
 // CHECK-DAG: ![[#TYPE]] = !{i32 [[#HASH]]}
 // CHECK-DAG: ![[#TYPE2]] = !{i32 [[#%d,HASH2:]]}
