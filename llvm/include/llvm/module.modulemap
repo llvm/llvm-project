@@ -391,6 +391,16 @@ module LLVM_Transforms {
 
 extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
 
+// Build the module with the tablegen-generated files needed by the
+// TargetParser module before building the TargetParser module itself.
+module TargetParserGen {
+  module RISCVTargetParserDef {
+    header "TargetParser/RISCVTargetParser.h"
+    extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
+    export *
+  }
+}
+
 // A module covering ADT/ and Support/. These are intertwined and
 // codependent, and notionally form a single module.
 module LLVM_Utils {
@@ -427,7 +437,6 @@ module LLVM_Utils {
     textual header "TargetParser/AArch64TargetParser.def"
     textual header "TargetParser/ARMTargetParser.def"
     textual header "TargetParser/CSKYTargetParser.def"
-    textual header "TargetParser/RISCVTargetParser.def"
     textual header "TargetParser/X86TargetParser.def"
     textual header "TargetParser/LoongArchTargetParser.def"
   }

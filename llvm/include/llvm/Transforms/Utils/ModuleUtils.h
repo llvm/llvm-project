@@ -42,6 +42,10 @@ void appendToGlobalCtors(Module &M, Function *F, int Priority,
 void appendToGlobalDtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
 
+/// Sets the KCFI type for the function. Used for compiler-generated functions
+/// that are indirectly called in instrumented code.
+void setKCFIType(Module &M, Function &F, StringRef MangledType);
+
 FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
                                             ArrayRef<Type *> InitArgTypes);
 

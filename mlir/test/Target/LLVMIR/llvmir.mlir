@@ -939,7 +939,7 @@ llvm.func @vector_splat_nonzero() -> vector<4xf32> {
 
 // CHECK-LABEL: @vector_splat_nonzero_scalable
 llvm.func @vector_splat_nonzero_scalable() -> vector<[4]xf32> {
-  // CHECK: ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  // CHECK: ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
   %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
   llvm.return %0 : vector<[4]xf32>
 }

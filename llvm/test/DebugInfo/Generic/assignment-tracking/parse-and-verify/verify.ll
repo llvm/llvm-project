@@ -31,6 +31,9 @@ entry:
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !2, metadata ptr undef, metadata !DIExpression()), !dbg !13
   ; CHECK: invalid llvm.dbg.assign intrinsic address
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata !3, metadata !DIExpression()), !dbg !13
+  ;; Empty metadata debug operands are allowed.
+  ; CHECK-NOT: invalid llvm.dbg.assign
+  call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata !2, metadata !DIExpression()), !dbg !13
   ; CHECK: invalid llvm.dbg.assign intrinsic address expression
   call void @llvm.dbg.assign(metadata !14, metadata !10, metadata !DIExpression(), metadata !14, metadata ptr undef, metadata !2), !dbg !13
   ret void

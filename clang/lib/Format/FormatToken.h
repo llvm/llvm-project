@@ -249,7 +249,8 @@ struct FormatToken {
         CanBreakBefore(false), ClosesTemplateDeclaration(false),
         StartsBinaryExpression(false), EndsBinaryExpression(false),
         PartOfMultiVariableDeclStmt(false), ContinuesLineCommentSection(false),
-        Finalized(false), ClosesRequiresClause(false), BlockKind(BK_Unknown),
+        Finalized(false), ClosesRequiresClause(false),
+        EndsCppAttributeGroup(false), BlockKind(BK_Unknown),
         Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
         TypeIsFinalized(false), Type(TT_Unknown) {}
 
@@ -319,6 +320,9 @@ struct FormatToken {
 
   /// \c true if this is the last token within requires clause.
   unsigned ClosesRequiresClause : 1;
+
+  /// \c true if this token ends a group of C++ attributes.
+  unsigned EndsCppAttributeGroup : 1;
 
 private:
   /// Contains the kind of block if this token is a brace.

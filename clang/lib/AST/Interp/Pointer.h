@@ -298,7 +298,7 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const {
-    OS << "{" << Base << ", " << Offset << ", ";
+    OS << Pointee << " {" << Base << ", " << Offset << ", ";
     if (Pointee)
       OS << Pointee->getSize();
     else

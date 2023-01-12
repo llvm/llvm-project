@@ -614,7 +614,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           return Decomposed;
         }
 
-        Decomposed.Offset += AllocTypeSize.getFixedSize() *
+        Decomposed.Offset += AllocTypeSize.getFixedValue() *
                              CIdx->getValue().sextOrTrunc(MaxIndexSize);
         continue;
       }
@@ -636,7 +636,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
 
       // Scale by the type size.
-      unsigned TypeSize = AllocTypeSize.getFixedSize();
+      unsigned TypeSize = AllocTypeSize.getFixedValue();
       LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);

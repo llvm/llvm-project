@@ -109,7 +109,7 @@ static Operation *getLastDependentOpInRange(Operation *opA, Operation *opB) {
         for (Operation *user : value.getUsers()) {
           SmallVector<AffineForOp, 4> loops;
           // Check if any loop in loop nest surrounding 'user' is 'opB'.
-          getLoopIVs(*user, &loops);
+          getAffineForIVs(*user, &loops);
           if (llvm::is_contained(loops, cast<AffineForOp>(opB))) {
             lastDepOp = opX;
             return WalkResult::interrupt();
@@ -605,7 +605,7 @@ bool mlir::getFusionComputeCost(AffineForOp srcForOp, LoopNestStats &srcStats,
           SmallVector<AffineForOp, 4> loops;
           // Check if any loop in loop nest surrounding 'user' is
           // 'insertPointParent'.
-          getLoopIVs(*user, &loops);
+          getAffineForIVs(*user, &loops);
           if (llvm::is_contained(loops, cast<AffineForOp>(insertPointParent))) {
             if (auto forOp =
                     dyn_cast_or_null<AffineForOp>(user->getParentOp())) {

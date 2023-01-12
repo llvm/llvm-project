@@ -7,8 +7,8 @@ define void @test_vector_clobber(ptr addrspace(1) %ptr) gc "statepoint-example" 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 2, i32 0, i32 62, i32 0, i32 13, i32 0, i32 7, ptr null, i32 7, ptr null, i32 7, ptr null, i32 3, i32 14, i32 3, i32 -2406, i32 3, i32 28963, i32 3, i32 30401, i32 3, i32 -11, i32 3, i32 -5, i32 3, i32 1, i32 0, ptr addrspace(1) [[PTR:%.*]], i32 0, ptr addrspace(1) [[PTR]], i32 7, ptr null), "gc-live"(ptr addrspace(1) [[PTR]]) ]
 ; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
-; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <8 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[PTR_RELOCATED]], i32 0, !is_base_value !0
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x ptr addrspace(1)> poison, ptr addrspace(1) [[PTR_RELOCATED]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <8 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[PTR_RELOCATED]], i64 0, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x ptr addrspace(1)> poison, ptr addrspace(1) [[PTR_RELOCATED]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <8 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <8 x ptr addrspace(1)> undef, <8 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x ptr addrspace(1)> [[DOTSPLATINSERT]], <8 x ptr addrspace(1)> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, <8 x ptr addrspace(1)> [[DOTSPLAT]], <8 x i64> <i64 83, i64 81, i64 79, i64 77, i64 75, i64 73, i64 71, i64 69>

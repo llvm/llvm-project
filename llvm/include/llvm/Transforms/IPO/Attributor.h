@@ -1596,7 +1596,8 @@ struct Attributor {
 
     // If this is queried in the manifest stage, we force the AA to indicate
     // pessimistic fixpoint immediately.
-    if (Phase == AttributorPhase::MANIFEST) {
+    if (Phase == AttributorPhase::MANIFEST ||
+        Phase == AttributorPhase::CLEANUP) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
@@ -1884,10 +1885,20 @@ struct Attributor {
     return SimplificationCallbacks.count(IRP);
   }
 
+  using VirtualUseCallbackTy =
+      std::function<bool(Attributor &, const AbstractAttribute *)>;
+  void registerVirtualUseCallback(const Value &V,
+                                  const VirtualUseCallbackTy &CB) {
+    VirtualUseCallbacks[&V].emplace_back(CB);
+  }
+
 private:
   /// The vector with all simplification callbacks registered by outside AAs.
   DenseMap<IRPosition, SmallVector<SimplifictionCallbackTy, 1>>
       SimplificationCallbacks;
+
+  DenseMap<const Value *, SmallVector<VirtualUseCallbackTy, 1>>
+      VirtualUseCallbacks;
 
 public:
   /// Translate \p V from the callee context into the call site context.

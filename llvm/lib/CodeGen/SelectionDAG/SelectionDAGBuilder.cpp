@@ -3948,7 +3948,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
           DAG.getDataLayout().getTypeAllocSize(GTI.getIndexedType());
       // We intentionally mask away the high bits here; ElementSize may not
       // fit in IdxTy.
-      APInt ElementMul(IdxSize, ElementSize.getKnownMinSize());
+      APInt ElementMul(IdxSize, ElementSize.getKnownMinValue());
       bool ElementScalable = ElementSize.isScalable();
 
       // If this is a scalar constant or a splat vector of constants,
@@ -10145,7 +10145,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         ISD::OutputArg MyFlags(
             Flags, Parts[j].getValueType().getSimpleVT(), VT,
             i < CLI.NumFixedArgs, i,
-            j * Parts[j].getValueType().getStoreSize().getKnownMinSize());
+            j * Parts[j].getValueType().getStoreSize().getKnownMinValue());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();
         else if (j != 0) {
@@ -10672,8 +10672,9 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // For scalable vectors, use the minimum size; individual targets
         // are responsible for handling scalable vector arguments and
         // return values.
-        ISD::InputArg MyFlags(Flags, RegisterVT, VT, isArgValueUsed,
-                 ArgNo, PartBase+i*RegisterVT.getStoreSize().getKnownMinSize());
+        ISD::InputArg MyFlags(
+            Flags, RegisterVT, VT, isArgValueUsed, ArgNo,
+            PartBase + i * RegisterVT.getStoreSize().getKnownMinValue());
         if (NumRegs > 1 && i == 0)
           MyFlags.Flags.setSplit();
         // if it isn't first piece, alignment must be 1
@@ -10686,7 +10687,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       }
       if (NeedsRegBlock && Value == NumValues - 1)
         Ins[Ins.size() - 1].Flags.setInConsecutiveRegsLast();
-      PartBase += VT.getStoreSize().getKnownMinSize();
+      PartBase += VT.getStoreSize().getKnownMinValue();
     }
   }
 

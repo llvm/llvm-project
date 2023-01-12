@@ -846,3 +846,25 @@ func.func @parallel_surrounding_for() {
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
 }
+
+// CHECK-LABEL: func.func @dead_affine_region_op
+func.func @dead_affine_region_op() {
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<15xi1>
+  %true = arith.constant true
+  affine.store %true, %alloc[%c1] : memref<15xi1>
+  // Dead store.
+  affine.store %true, %alloc[%c1] : memref<15xi1>
+  // This affine.if is dead.
+  affine.if affine_set<(d0, d1, d2, d3) : ((d0 + 1) mod 8 >= 0, d0 * -8 >= 0)>(%c1, %c1, %c1, %c1){
+    // No forwarding will happen.
+    affine.load %alloc[%c1] : memref<15xi1>
+  }
+  // CHECK-NEXT: arith.constant
+  // CHECK-NEXT: memref.alloc
+  // CHECK-NEXT: arith.constant
+  // CHECK-NEXT: affine.store
+  // CHECK-NEXT: affine.if
+  // CHECK-NEXT:   affine.load
+  return
+}

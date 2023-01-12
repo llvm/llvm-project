@@ -76,7 +76,7 @@ define void @small_trip_count_min_vlen_32(ptr nocapture %a) nounwind vscale_rang
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr [[TMP10]], i32 4, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i32> poison)
-; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <vscale x 2 x i32> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <vscale x 2 x i32> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i64 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i32.p0(<vscale x 2 x i32> [[TMP11]], ptr [[TMP10]], i32 4, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], 2

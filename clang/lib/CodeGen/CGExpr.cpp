@@ -1751,8 +1751,11 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     // In order to prevent the optimizer from throwing away the check, don't
     // attach range metadata to the load.
   } else if (CGM.getCodeGenOpts().OptimizationLevel > 0)
-    if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty))
+    if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty)) {
       Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
+      Load->setMetadata(llvm::LLVMContext::MD_noundef,
+                        llvm::MDNode::get(getLLVMContext(), std::nullopt));
+    }
 
   return EmitFromMemory(Load, Ty);
 }
@@ -3089,7 +3092,7 @@ llvm::Value *CodeGenFunction::EmitCheckValue(llvm::Value *V) {
   // Floating-point types which fit into intptr_t are bitcast to integers
   // and then passed directly (after zero-extension, if necessary).
   if (V->getType()->isFloatingPointTy()) {
-    unsigned Bits = V->getType()->getPrimitiveSizeInBits().getFixedSize();
+    unsigned Bits = V->getType()->getPrimitiveSizeInBits().getFixedValue();
     if (Bits <= TargetTy->getIntegerBitWidth())
       V = Builder.CreateBitCast(V, llvm::Type::getIntNTy(getLLVMContext(),
                                                          Bits));

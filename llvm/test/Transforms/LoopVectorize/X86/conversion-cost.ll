@@ -49,7 +49,7 @@ define i32 @conversion_cost1(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwin
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF2]]
 ; CHECK-NEXT:    [[IND_END4:%.*]] = add i64 3, [[N_VEC3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[BC_RESUME_VAL]] to i8
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP9]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <16 x i8> [[DOTSPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <16 x i8> [[DOTSPLAT]], <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]

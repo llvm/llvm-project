@@ -69,6 +69,10 @@ std::string Operator::getAdaptorName() const {
   return std::string(llvm::formatv("{0}Adaptor", getCppClassName()));
 }
 
+std::string Operator::getGenericAdaptorName() const {
+  return std::string(llvm::formatv("{0}GenericAdaptor", getCppClassName()));
+}
+
 /// Assert the invariants of accessors generated for the given name.
 static void assertAccessorInvariants(const Operator &op, StringRef name) {
   std::string accessorName =
@@ -741,3 +745,5 @@ std::string Operator::getSetterName(StringRef name) const {
 std::string Operator::getRemoverName(StringRef name) const {
   return "remove" + convertToCamelFromSnakeCase(name, /*capitalizeFirst=*/true);
 }
+
+bool Operator::hasFolder() const { return def.getValueAsBit("hasFolder"); }

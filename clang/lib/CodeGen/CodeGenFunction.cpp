@@ -481,13 +481,13 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     if (auto *VT = dyn_cast<llvm::VectorType>(A.getType()))
       LargestVectorWidth =
           std::max((uint64_t)LargestVectorWidth,
-                   VT->getPrimitiveSizeInBits().getKnownMinSize());
+                   VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   // Update vector width based on return type.
   if (auto *VT = dyn_cast<llvm::VectorType>(CurFn->getReturnType()))
     LargestVectorWidth =
         std::max((uint64_t)LargestVectorWidth,
-                 VT->getPrimitiveSizeInBits().getKnownMinSize());
+                 VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   if (CurFnInfo->getMaxVectorWidth() > LargestVectorWidth)
     LargestVectorWidth = CurFnInfo->getMaxVectorWidth();

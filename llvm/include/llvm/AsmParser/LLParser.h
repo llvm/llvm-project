@@ -179,8 +179,10 @@ namespace llvm {
           Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
           BlockAddressPFS(nullptr) {}
     bool Run(
-        bool UpgradeDebugInfo, DataLayoutCallbackTy DataLayoutCallback =
-                                   [](StringRef) { return std::nullopt; });
+        bool UpgradeDebugInfo,
+        DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+          return std::nullopt;
+        });
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
 
@@ -318,8 +320,8 @@ namespace llvm {
     bool parseTopLevelEntities();
     bool validateEndOfModule(bool UpgradeDebugInfo);
     bool validateEndOfIndex();
-    bool parseTargetDefinitions();
-    bool parseTargetDefinition();
+    bool parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback);
+    bool parseTargetDefinition(std::string &TentativeDLStr, LocTy &DLStrLoc);
     bool parseModuleAsm();
     bool parseSourceFileName();
     bool parseUnnamedType();

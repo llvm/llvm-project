@@ -186,7 +186,7 @@ public:
       return false;
 
     if (Alignment <
-        DL.getTypeStoreSize(DataType->getScalarType()).getFixedSize())
+        DL.getTypeStoreSize(DataType->getScalarType()).getFixedValue())
       return false;
 
     return TLI->isLegalElementTypeForRVV(DataType->getScalarType());
@@ -214,7 +214,7 @@ public:
       return false;
 
     if (Alignment <
-        DL.getTypeStoreSize(DataType->getScalarType()).getFixedSize())
+        DL.getTypeStoreSize(DataType->getScalarType()).getFixedValue())
       return false;
 
     return TLI->isLegalElementTypeForRVV(DataType->getScalarType());

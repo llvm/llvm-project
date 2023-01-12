@@ -83,9 +83,11 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class NmOptTable : public opt::OptTable {
+class NmOptTable : public opt::GenericOptTable {
 public:
-  NmOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  NmOptTable() : opt::GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 
 enum OutputFormatTy { bsd, sysv, posix, darwin, just_symbols };

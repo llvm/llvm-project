@@ -2201,9 +2201,9 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       if (TLI->isOperationLegalOrCustom(ISD, LT.second) && ST->hasSVE()) {
         // SDIV/UDIV operations are lowered using SVE, then we can have less
         // costs.
-        if (isa<FixedVectorType>(Ty) &&
-            cast<FixedVectorType>(Ty)->getPrimitiveSizeInBits().getFixedSize() <
-                128) {
+        if (isa<FixedVectorType>(Ty) && cast<FixedVectorType>(Ty)
+                                                ->getPrimitiveSizeInBits()
+                                                .getFixedValue() < 128) {
           EVT VT = TLI->getValueType(DL, Ty);
           static const CostTblEntry DivTbl[]{
               {ISD::SDIV, MVT::v2i8, 5},  {ISD::SDIV, MVT::v4i8, 8},

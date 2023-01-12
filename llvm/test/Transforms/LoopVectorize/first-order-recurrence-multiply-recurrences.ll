@@ -106,11 +106,11 @@ define void @test_pr54223_sink_after_insertion_order(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[DST:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[VECTOR_RECUR]], <4 x float> [[BROADCAST_SPLAT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[TMP4]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[VECTOR_RECUR1]], <4 x float> [[BROADCAST_SPLAT3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fneg <4 x float> [[TMP5]]

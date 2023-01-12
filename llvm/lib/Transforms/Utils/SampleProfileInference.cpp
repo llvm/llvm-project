@@ -100,6 +100,8 @@ public:
 
   // Run the algorithm.
   int64_t run() {
+    LLVM_DEBUG(dbgs() << "Starting profi for " << Nodes.size() << " nodes\n");
+
     // Iteratively find an augmentation path/dag in the network and send the
     // flow along its edges
     size_t AugmentationIters = applyFlowAugmentation();
@@ -578,7 +580,7 @@ private:
   const ProfiParams &Params;
 };
 
-/// A post-processing adjustment of control flow. It applies two steps by
+/// A post-processing adjustment of the control flow. It applies two steps by
 /// rerouting some flow and making it more realistic:
 ///
 /// - First, it removes all isolated components ("islands") with a positive flow
@@ -597,20 +599,17 @@ private:
 class FlowAdjuster {
 public:
   FlowAdjuster(const ProfiParams &Params, FlowFunction &Func)
-      : Params(Params), Func(Func) {
-    assert(Func.Blocks[Func.Entry].isEntry() &&
-           "incorrect index of the entry block");
-  }
+      : Params(Params), Func(Func) {}
 
-  // Run the post-processing
+  /// Apply the post-processing.
   void run() {
     if (Params.JoinIslands) {
-      /// Adjust the flow to get rid of isolated components.
+      // Adjust the flow to get rid of isolated components
       joinIsolatedComponents();
     }
 
     if (Params.RebalanceUnknown) {
-      /// Rebalance the flow inside unknown subgraphs.
+      // Rebalance the flow inside unknown subgraphs
       rebalanceUnknownSubgraphs();
     }
   }
@@ -753,14 +752,13 @@ private:
   int64_t jumpDistance(FlowJump *Jump) const {
     if (Jump->IsUnlikely)
       return Params.CostUnlikely;
-
     uint64_t BaseDistance =
         std::max(FlowAdjuster::MinBaseDistance,
                  std::min(Func.Blocks[Func.Entry].Flow,
-                          Params.CostUnlikely / NumBlocks()));
+                          Params.CostUnlikely / (2 * (NumBlocks() + 1))));
     if (Jump->Flow > 0)
       return BaseDistance + BaseDistance / Jump->Flow;
-    return BaseDistance * NumBlocks();
+    return 2 * BaseDistance * (NumBlocks() + 1);
   };
 
   uint64_t NumBlocks() const { return Func.Blocks.size(); }
@@ -1044,100 +1042,79 @@ private:
   FlowFunction &Func;
 };
 
+std::pair<int64_t, int64_t> assignBlockCosts(const ProfiParams &Params,
+                                             const FlowBlock &Block);
+std::pair<int64_t, int64_t> assignJumpCosts(const ProfiParams &Params,
+                                            const FlowJump &Jump);
+
 /// Initializing flow network for a given function.
 ///
-/// Every block is split into three nodes that are responsible for (i) an
-/// incoming flow, (ii) an outgoing flow, and (iii) penalizing an increase or
+/// Every block is split into two nodes that are responsible for (i) an
+/// incoming flow, (ii) an outgoing flow; they penalize an increase or a
 /// reduction of the block weight.
 void initializeNetwork(const ProfiParams &Params, MinCostMaxFlow &Network,
                        FlowFunction &Func) {
   uint64_t NumBlocks = Func.Blocks.size();
   assert(NumBlocks > 1 && "Too few blocks in a function");
-  LLVM_DEBUG(dbgs() << "Initializing profi for " << NumBlocks << " blocks\n");
+  uint64_t NumJumps = Func.Jumps.size();
+  assert(NumJumps > 0 && "Too few jumps in a function");
 
-  // Pre-process data: make sure the entry weight is at least 1
-  if (Func.Blocks[Func.Entry].Weight == 0) {
-    Func.Blocks[Func.Entry].Weight = 1;
-  }
   // Introducing dummy source/sink pairs to allow flow circulation.
-  // The nodes corresponding to blocks of Func have indicies in the range
-  // [0..3 * NumBlocks); the dummy nodes are indexed by the next four values.
-  uint64_t S = 3 * NumBlocks;
+  // The nodes corresponding to blocks of the function have indicies in
+  // the range [0 .. 2 * NumBlocks); the dummy sources/sinks are indexed by the
+  // next four values.
+  uint64_t S = 2 * NumBlocks;
   uint64_t T = S + 1;
   uint64_t S1 = S + 2;
   uint64_t T1 = S + 3;
 
-  Network.initialize(3 * NumBlocks + 4, S1, T1);
+  Network.initialize(2 * NumBlocks + 4, S1, T1);
 
-  // Create three nodes for every block of the function
+  // Initialize nodes of the flow network
   for (uint64_t B = 0; B < NumBlocks; B++) {
     auto &Block = Func.Blocks[B];
-    assert((!Block.HasUnknownWeight || Block.Weight == 0 || Block.isEntry()) &&
-           "non-zero weight of a block w/o weight except for an entry");
 
-    // Split every block into two nodes
-    uint64_t Bin = 3 * B;
-    uint64_t Bout = 3 * B + 1;
-    uint64_t Baux = 3 * B + 2;
-    if (Block.Weight > 0) {
-      Network.addEdge(S1, Bout, Block.Weight, 0);
-      Network.addEdge(Bin, T1, Block.Weight, 0);
-    }
+    // Split every block into two auxiliary nodes to allow
+    // increase/reduction of the block count.
+    uint64_t Bin = 2 * B;
+    uint64_t Bout = 2 * B + 1;
 
     // Edges from S and to T
-    assert((!Block.isEntry() || !Block.isExit()) &&
-           "a block cannot be an entry and an exit");
     if (Block.isEntry()) {
       Network.addEdge(S, Bin, 0);
     } else if (Block.isExit()) {
       Network.addEdge(Bout, T, 0);
     }
 
-    // An auxiliary node to allow increase/reduction of block counts:
-    // We assume that decreasing block counts is more expensive than increasing,
-    // and thus, setting separate costs here. In the future we may want to tune
-    // the relative costs so as to maximize the quality of generated profiles.
-    int64_t AuxCostInc = Params.CostBlockInc;
-    int64_t AuxCostDec = Params.CostBlockDec;
-    if (Block.HasUnknownWeight) {
-      // Do not penalize changing weights of blocks w/o known profile count
-      AuxCostInc = Params.CostBlockUnknownInc;
-      AuxCostDec = 0;
-    } else {
-      // Increasing the count for "cold" blocks with zero initial count is more
-      // expensive than for "hot" ones
-      if (Block.Weight == 0) {
-        AuxCostInc = Params.CostBlockZeroInc;
-      }
-      // Modifying the count of the entry block is expensive
-      if (Block.isEntry()) {
-        AuxCostInc = Params.CostBlockEntryInc;
-        AuxCostDec = Params.CostBlockEntryDec;
-      }
-    }
-    // For blocks with self-edges, do not penalize a reduction of the count,
-    // as all of the increase can be attributed to the self-edge
-    if (Block.HasSelfEdge) {
-      AuxCostDec = 0;
-    }
+    // Assign costs for increasing/decreasing the block counts
+    auto [AuxCostInc, AuxCostDec] = assignBlockCosts(Params, Block);
 
-    Network.addEdge(Bin, Baux, AuxCostInc);
-    Network.addEdge(Baux, Bout, AuxCostInc);
+    // Add the corresponding edges to the network
+    Network.addEdge(Bin, Bout, AuxCostInc);
     if (Block.Weight > 0) {
-      Network.addEdge(Bout, Baux, AuxCostDec);
-      Network.addEdge(Baux, Bin, AuxCostDec);
+      Network.addEdge(Bout, Bin, Block.Weight, AuxCostDec);
+      Network.addEdge(S1, Bout, Block.Weight, 0);
+      Network.addEdge(Bin, T1, Block.Weight, 0);
     }
   }
 
-  // Creating edges for every jump
-  for (auto &Jump : Func.Jumps) {
-    uint64_t Src = Jump.Source;
-    uint64_t Dst = Jump.Target;
-    if (Src != Dst) {
-      uint64_t SrcOut = 3 * Src + 1;
-      uint64_t DstIn = 3 * Dst;
-      uint64_t Cost = Jump.IsUnlikely ? Params.CostUnlikely : 0;
-      Network.addEdge(SrcOut, DstIn, Cost);
+  // Initialize edges of the flow network
+  for (uint64_t J = 0; J < NumJumps; J++) {
+    auto &Jump = Func.Jumps[J];
+
+    // Get the endpoints corresponding to the jump
+    uint64_t Jin = 2 * Jump.Source + 1;
+    uint64_t Jout = 2 * Jump.Target;
+
+    // Assign costs for increasing/decreasing the jump counts
+    auto [AuxCostInc, AuxCostDec] = assignJumpCosts(Params, Jump);
+
+    // Add the corresponding edges to the network
+    Network.addEdge(Jin, Jout, AuxCostInc);
+    if (Jump.Weight > 0) {
+      Network.addEdge(Jout, Jin, Jump.Weight, AuxCostDec);
+      Network.addEdge(S1, Jout, Jump.Weight, 0);
+      Network.addEdge(Jin, T1, Jump.Weight, 0);
     }
   }
 
@@ -1145,51 +1122,126 @@ void initializeNetwork(const ProfiParams &Params, MinCostMaxFlow &Network,
   Network.addEdge(T, S, 0);
 }
 
-/// Extract resulting block and edge counts from the flow network.
-void extractWeights(MinCostMaxFlow &Network, FlowFunction &Func) {
-  uint64_t NumBlocks = Func.Blocks.size();
+/// Assign costs for increasing/decreasing the block counts.
+std::pair<int64_t, int64_t> assignBlockCosts(const ProfiParams &Params,
+                                             const FlowBlock &Block) {
+  // Modifying the weight of an unlikely block is expensive
+  if (Block.IsUnlikely)
+    return std::make_pair(Params.CostUnlikely, Params.CostUnlikely);
 
-  // Extract resulting block counts
-  for (uint64_t Src = 0; Src < NumBlocks; Src++) {
-    auto &Block = Func.Blocks[Src];
-    uint64_t SrcOut = 3 * Src + 1;
-    int64_t Flow = 0;
-    for (const auto &Adj : Network.getFlow(SrcOut)) {
-      uint64_t DstIn = Adj.first;
-      int64_t DstFlow = Adj.second;
-      bool IsAuxNode = (DstIn < 3 * NumBlocks && DstIn % 3 == 2);
-      if (!IsAuxNode || Block.HasSelfEdge) {
-        Flow += DstFlow;
-      }
+  // Assign default values for the costs
+  int64_t CostInc = Params.CostBlockInc;
+  int64_t CostDec = Params.CostBlockDec;
+  // Update the costs depending on the block metadata
+  if (Block.HasUnknownWeight) {
+    CostInc = Params.CostBlockUnknownInc;
+    CostDec = 0;
+  } else {
+    // Increasing the count for "cold" blocks with zero initial count is more
+    // expensive than for "hot" ones
+    if (Block.Weight == 0)
+      CostInc = Params.CostBlockZeroInc;
+    // Modifying the count of the entry block is expensive
+    if (Block.isEntry()) {
+      CostInc = Params.CostBlockEntryInc;
+      CostDec = Params.CostBlockEntryDec;
     }
-    Block.Flow = Flow;
-    assert(Flow >= 0 && "negative block flow");
   }
+  return std::make_pair(CostInc, CostDec);
+}
+
+/// Assign costs for increasing/decreasing the jump counts.
+std::pair<int64_t, int64_t> assignJumpCosts(const ProfiParams &Params,
+                                            const FlowJump &Jump) {
+  // Modifying the weight of an unlikely jump is expensive
+  if (Jump.IsUnlikely)
+    return std::make_pair(Params.CostUnlikely, Params.CostUnlikely);
+
+  // Assign default values for the costs
+  int64_t CostInc = Params.CostJumpInc;
+  int64_t CostDec = Params.CostJumpDec;
+  // Update the costs depending on the block metadata
+  if (Jump.Source + 1 == Jump.Target) {
+    // Adjusting the fall-through branch
+    CostInc = Params.CostJumpFTInc;
+    CostDec = Params.CostJumpFTDec;
+  }
+  if (Jump.HasUnknownWeight) {
+    // The cost is different for fall-through and non-fall-through branches
+    if (Jump.Source + 1 == Jump.Target)
+      CostInc = Params.CostJumpUnknownFTInc;
+    else
+      CostInc = Params.CostJumpUnknownInc;
+    CostDec = 0;
+  } else {
+    assert(Jump.Weight > 0 && "found zero-weight jump with a positive weight");
+  }
+  return std::make_pair(CostInc, CostDec);
+}
+
+/// Extract resulting block and edge counts from the flow network.
+void extractWeights(const ProfiParams &Params, MinCostMaxFlow &Network,
+                    FlowFunction &Func) {
+  uint64_t NumBlocks = Func.Blocks.size();
+  uint64_t NumJumps = Func.Jumps.size();
 
   // Extract resulting jump counts
-  for (auto &Jump : Func.Jumps) {
-    uint64_t Src = Jump.Source;
-    uint64_t Dst = Jump.Target;
+  for (uint64_t J = 0; J < NumJumps; J++) {
+    auto &Jump = Func.Jumps[J];
+    uint64_t SrcOut = 2 * Jump.Source + 1;
+    uint64_t DstIn = 2 * Jump.Target;
+
     int64_t Flow = 0;
-    if (Src != Dst) {
-      uint64_t SrcOut = 3 * Src + 1;
-      uint64_t DstIn = 3 * Dst;
-      Flow = Network.getFlow(SrcOut, DstIn);
-    } else {
-      uint64_t SrcOut = 3 * Src + 1;
-      uint64_t SrcAux = 3 * Src + 2;
-      int64_t AuxFlow = Network.getFlow(SrcOut, SrcAux);
-      if (AuxFlow > 0)
-        Flow = AuxFlow;
-    }
+    int64_t AuxFlow = Network.getFlow(SrcOut, DstIn);
+    if (Jump.Source != Jump.Target)
+      Flow = int64_t(Jump.Weight) + AuxFlow;
+    else
+      Flow = int64_t(Jump.Weight) + (AuxFlow > 0 ? AuxFlow : 0);
+
     Jump.Flow = Flow;
     assert(Flow >= 0 && "negative jump flow");
+  }
+
+  // Extract resulting block counts
+  auto InFlow = std::vector<uint64_t>(NumBlocks, 0);
+  auto OutFlow = std::vector<uint64_t>(NumBlocks, 0);
+  for (auto &Jump : Func.Jumps) {
+    InFlow[Jump.Target] += Jump.Flow;
+    OutFlow[Jump.Source] += Jump.Flow;
+  }
+  for (uint64_t B = 0; B < NumBlocks; B++) {
+    auto &Block = Func.Blocks[B];
+    Block.Flow = std::max(OutFlow[B], InFlow[B]);
   }
 }
 
 #ifndef NDEBUG
-/// Verify that the computed flow values satisfy flow conservation rules
-void verifyWeights(const FlowFunction &Func) {
+/// Verify that the provided block/jump weights are as expected.
+void verifyInput(const FlowFunction &Func) {
+  // Verify the entry block
+  assert(Func.Entry == 0 && Func.Blocks[0].isEntry());
+  for (size_t I = 1; I < Func.Blocks.size(); I++) {
+    assert(!Func.Blocks[I].isEntry() && "multiple entry blocks");
+  }
+  // Verify CFG jumps
+  for (auto &Block : Func.Blocks) {
+    assert((!Block.isEntry() || !Block.isExit()) &&
+           "a block cannot be an entry and an exit");
+  }
+  // Verify input block weights
+  for (auto &Block : Func.Blocks) {
+    assert((!Block.HasUnknownWeight || Block.Weight == 0 || Block.isEntry()) &&
+           "non-zero weight of a block w/o weight except for an entry");
+  }
+  // Verify input jump weights
+  for (auto &Jump : Func.Jumps) {
+    assert((!Jump.HasUnknownWeight || Jump.Weight == 0) &&
+           "non-zero weight of a jump w/o weight");
+  }
+}
+
+/// Verify that the computed flow values satisfy flow conservation rules.
+void verifyOutput(const FlowFunction &Func) {
   const uint64_t NumBlocks = Func.Blocks.size();
   auto InFlow = std::vector<uint64_t>(NumBlocks, 0);
   auto OutFlow = std::vector<uint64_t>(NumBlocks, 0);
@@ -1252,15 +1304,20 @@ void verifyWeights(const FlowFunction &Func) {
 
 } // end of anonymous namespace
 
-/// Apply the profile inference algorithm for a given flow function
+/// Apply the profile inference algorithm for a given function
 void llvm::applyFlowInference(const ProfiParams &Params, FlowFunction &Func) {
+#ifndef NDEBUG
+  // Verify the input data
+  verifyInput(Func);
+#endif
+
   // Create and apply an inference network model
   auto InferenceNetwork = MinCostMaxFlow(Params);
   initializeNetwork(Params, InferenceNetwork, Func);
   InferenceNetwork.run();
 
   // Extract flow values for every block and every edge
-  extractWeights(InferenceNetwork, Func);
+  extractWeights(Params, InferenceNetwork, Func);
 
   // Post-processing adjustments to the flow
   auto Adjuster = FlowAdjuster(Params, Func);
@@ -1268,7 +1325,7 @@ void llvm::applyFlowInference(const ProfiParams &Params, FlowFunction &Func) {
 
 #ifndef NDEBUG
   // Verify the result
-  verifyWeights(Func);
+  verifyOutput(Func);
 #endif
 }
 

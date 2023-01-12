@@ -25,3 +25,7 @@ module LLVM_Extern_Utils_DataTypes {
   header "Support/DataTypes.h"
   export *
 }
+
+module LLVM_Extern_TargetParser_Gen {
+  textual header "TargetParser/RISCVTargetParserDef.inc"
+}

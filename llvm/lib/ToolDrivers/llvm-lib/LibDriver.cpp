@@ -56,11 +56,10 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class LibOptTable : public opt::OptTable {
+class LibOptTable : public opt::GenericOptTable {
 public:
-  LibOptTable() : OptTable(InfoTable, true) {}
+  LibOptTable() : opt::GenericOptTable(InfoTable, true) {}
 };
-
 }
 
 static std::string getDefaultOutputPath(const NewArchiveMember &FirstMember) {

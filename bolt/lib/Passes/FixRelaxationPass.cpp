@@ -39,6 +39,7 @@ void FixRelaxations::runOnFunction(BinaryFunction &BF) {
       if (!Symbol || AdrpSymbol == Symbol)
         continue;
 
+      auto L = BC.scopeLock();
       const int64_t Addend = BC.MIB->getTargetAddend(Add);
       BC.MIB->setOperandToSymbolRef(Adrp, /*OpNum*/ 1, Symbol, Addend,
                                     BC.Ctx.get(), ELF::R_AARCH64_NONE);

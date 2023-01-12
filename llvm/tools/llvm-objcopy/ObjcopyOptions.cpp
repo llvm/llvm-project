@@ -56,9 +56,9 @@ static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
 };
 } // namespace objcopy_opt
 
-class ObjcopyOptTable : public opt::OptTable {
+class ObjcopyOptTable : public opt::GenericOptTable {
 public:
-  ObjcopyOptTable() : OptTable(objcopy_opt::ObjcopyInfoTable) {
+  ObjcopyOptTable() : opt::GenericOptTable(objcopy_opt::ObjcopyInfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -101,10 +101,10 @@ static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
 };
 } // namespace install_name_tool
 
-class InstallNameToolOptTable : public opt::OptTable {
+class InstallNameToolOptTable : public opt::GenericOptTable {
 public:
   InstallNameToolOptTable()
-      : OptTable(install_name_tool::InstallNameToolInfoTable) {}
+      : GenericOptTable(install_name_tool::InstallNameToolInfoTable) {}
 };
 
 enum BitcodeStripID {
@@ -145,9 +145,10 @@ static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
 };
 } // namespace bitcode_strip
 
-class BitcodeStripOptTable : public opt::OptTable {
+class BitcodeStripOptTable : public opt::GenericOptTable {
 public:
-  BitcodeStripOptTable() : OptTable(bitcode_strip::BitcodeStripInfoTable) {}
+  BitcodeStripOptTable()
+      : opt::GenericOptTable(bitcode_strip::BitcodeStripInfoTable) {}
 };
 
 enum StripID {
@@ -179,9 +180,9 @@ static constexpr opt::OptTable::Info StripInfoTable[] = {
 };
 } // namespace strip
 
-class StripOptTable : public opt::OptTable {
+class StripOptTable : public opt::GenericOptTable {
 public:
-  StripOptTable() : OptTable(strip::StripInfoTable) {
+  StripOptTable() : GenericOptTable(strip::StripInfoTable) {
     setGroupedShortOptions(true);
   }
 };

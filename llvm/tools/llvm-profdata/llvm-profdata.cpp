@@ -13,7 +13,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"

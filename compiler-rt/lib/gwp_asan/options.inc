@@ -49,6 +49,16 @@ GWP_ASAN_OPTION(
     "the same. Note, if the previously installed SIGSEGV handler is SIG_IGN, "
     "we terminate the process after dumping the error report.")
 
+GWP_ASAN_OPTION(
+    bool, Recoverable, false,
+    "Install GWP-ASan's signal handler in recoverable mode. This means that "
+    "upon GWP-ASan detecting an error, it'll print the error report, but *not* "
+    "crash. Only one crash per sampled allocation will ever be recorded, and "
+    "if a sampled allocation does actually cause a crash, it'll permanently "
+    "occupy a slot in the pool. The recoverable mode also means that "
+    "previously-installed signal handlers will only be triggered for "
+    "non-GWP-ASan errors, as all GWP-ASan errors won't be forwarded.")
+
 GWP_ASAN_OPTION(bool, InstallForkHandlers, true,
                 "Install GWP-ASan atfork handlers to acquire internal locks "
                 "before fork and release them after.")

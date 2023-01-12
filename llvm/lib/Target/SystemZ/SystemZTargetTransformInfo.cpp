@@ -647,8 +647,8 @@ static unsigned getElSizeLog2Diff(Type *Ty0, Type *Ty1) {
 unsigned SystemZTTIImpl::
 getVectorTruncCost(Type *SrcTy, Type *DstTy) {
   assert (SrcTy->isVectorTy() && DstTy->isVectorTy());
-  assert(SrcTy->getPrimitiveSizeInBits().getFixedSize() >
-             DstTy->getPrimitiveSizeInBits().getFixedSize() &&
+  assert(SrcTy->getPrimitiveSizeInBits().getFixedValue() >
+             DstTy->getPrimitiveSizeInBits().getFixedValue() &&
          "Packing must reduce size of vector type.");
   assert(cast<FixedVectorType>(SrcTy)->getNumElements() ==
              cast<FixedVectorType>(DstTy)->getNumElements() &&

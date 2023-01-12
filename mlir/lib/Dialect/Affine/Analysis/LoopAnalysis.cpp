@@ -160,7 +160,7 @@ uint64_t mlir::getLargestDivisorOfTripCount(AffineForOp forOp) {
 /// Returns false in cases with more than one AffineApplyOp, this is
 /// conservative.
 static bool isAccessIndexInvariant(Value iv, Value index) {
-  assert(isForInductionVar(iv) && "iv must be a AffineForOp");
+  assert(isAffineForInductionVar(iv) && "iv must be a AffineForOp");
   assert(index.getType().isa<IndexType>() && "index must be of IndexType");
   SmallVector<Operation *, 4> affineApplyOps;
   getReachableAffineApplyOps({index}, affineApplyOps);

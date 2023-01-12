@@ -79,9 +79,11 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class IFSOptTable : public opt::OptTable {
+class IFSOptTable : public opt::GenericOptTable {
 public:
-  IFSOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  IFSOptTable() : opt::GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 
 struct DriverConfig {

@@ -529,6 +529,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIparity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIsContiguous(mlir::Type,
+                                     llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -892,6 +894,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"is_contiguous",
+     &I::genIsContiguous,
+     {{{"array", asBox}}},
      /*isElemental=*/false},
     {"ishft", &I::genIshft},
     {"ishftc", &I::genIshftc},
@@ -3834,6 +3840,20 @@ IntrinsicLibrary::genIparity(mlir::Type resultType,
   return genReduction(fir::runtime::genIParity, fir::runtime::genIParityDim,
                       resultType, builder, loc, stmtCtx,
                       "unexpected result for IPARITY", args);
+}
+
+// IS_CONTIGUOUS
+fir::ExtendedValue
+IntrinsicLibrary::genIsContiguous(mlir::Type resultType,
+                                  llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  if (const auto *boxValue = args[0].getBoxOf<fir::BoxValue>())
+    if (boxValue->hasAssumedRank())
+      TODO(loc, "intrinsic: is_contiguous with assumed rank argument");
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genIsContiguous(builder, loc, fir::getBase(args[0])));
 }
 
 // ISHFT

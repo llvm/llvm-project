@@ -847,6 +847,8 @@ CreateFileHandler(MemoryBuffer &FirstInput,
     return std::make_unique<TextFileHandler>(/*Comment=*/"//");
   if (FilesType == "cui")
     return std::make_unique<TextFileHandler>(/*Comment=*/"//");
+  if (FilesType == "hipi")
+    return std::make_unique<TextFileHandler>(/*Comment=*/"//");
   // TODO: `.d` should be eventually removed once `-M` and its variants are
   // handled properly in offload compilation.
   if (FilesType == "d")

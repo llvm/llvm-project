@@ -1,10 +1,8 @@
 RUN: llvm-dwp %p/../Inputs/type_dedup/a.dwo %p/../Inputs/type_dedup/b.dwo -o %t
-RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix=CHECK %s
-RUN: llvm-dwarfdump -v -manaully-generate-unit-index %t | FileCheck -check-prefix=CHECK2 %s
+RUN: llvm-dwarfdump -v %t | FileCheck %s
 RUN: llvm-dwp %p/../Inputs/type_dedup/b.dwo -o %tb.dwp
 RUN: llvm-dwp %p/../Inputs/type_dedup/a.dwo %tb.dwp -o %t
-RUN: llvm-dwarfdump -v %t | FileCheck -check-prefix=CHECK %s
-RUN: llvm-dwarfdump -v -manaully-generate-unit-index %t | FileCheck -check-prefix=CHECK2 %s
+RUN: llvm-dwarfdump -v %t | FileCheck %s
 
 a.cpp:
   struct common { };
@@ -38,24 +36,3 @@ CHECK:             DW_TAG_type_unit
 CHECK: 0x00000066:   DW_TAG_structure_type
 CHECK:                 DW_AT_name {{.*}} "bdistinct"
 CHECK-NOT: Type Unit
-
-CHECK2-LABEL: .debug_types.dwo contents:
-CHECK2: [[COMMONUOFF:0x[0-9a-f]*]]:
-CHECK2-LABEL: Type Unit: length = 0x00000020, format = DWARF32, version = 0x0004, abbr_offset =
-CHECK2:         0x0000, addr_size = 0x08, name = 'common', type_signature = [[COMMONSIG:0x[0-9a-f]*]], type_offset = 0x[[COMMONOFF:.*]] (next unit at [[AUOFF:.*]])
-CHECK2:                DW_TAG_type_unit
-CHECK2: [[COMMONOFF]]:   DW_TAG_structure_type
-CHECK2:                    DW_AT_name {{.*}} "common"
-CHECK2: [[AUOFF]]:
-CHECK2-LABEL: Type Unit: length = 0x00000020, format = DWARF32, version = 0x0004, abbr_offset =
-CHECK2:         0x0000, addr_size = 0x08, name = 'adistinct', type_signature = [[ASIG:0x[0-9a-f]*]], type_offset = 0x[[AOFF:.*]] (next unit at [[BUOFF:.*]])
-CHECK2:             DW_TAG_type_unit
-CHECK2: 0x00000042:   DW_TAG_structure_type
-CHECK2:                 DW_AT_name {{.*}} "adistinct"
-CHECK2: [[BUOFF]]:
-CHECK2-LABEL: Type Unit: length = 0x00000020, format = DWARF32, version = 0x0004, abbr_offset =
-CHECK2:         0x{{.*}}, addr_size = 0x08, name = 'bdistinct', type_signature = [[BSIG:0x[0-9a-f]*]], type_offset = 0x[[BOFF:.*]] (next unit at [[XUOFF:.*]])
-CHECK2:             DW_TAG_type_unit
-CHECK2: 0x00000066:   DW_TAG_structure_type
-CHECK2:                 DW_AT_name {{.*}} "bdistinct"
-CHECK2-NOT: Type Unit
