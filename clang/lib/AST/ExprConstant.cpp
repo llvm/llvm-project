@@ -2751,6 +2751,7 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
 static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
                               BinaryOperatorKind Opcode, APSInt RHS,
                               APSInt &Result) {
+  bool HandleOverflowResult = true;
   switch (Opcode) {
   default:
     Info.FFDiag(E);
@@ -2773,14 +2774,14 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
       Info.FFDiag(E, diag::note_expr_divide_by_zero);
       return false;
     }
-    Result = (Opcode == BO_Rem ? LHS % RHS : LHS / RHS);
     // Check for overflow case: INT_MIN / -1 or INT_MIN % -1. APSInt supports
     // this operation and gives the two's complement result.
     if (RHS.isNegative() && RHS.isAllOnes() && LHS.isSigned() &&
         LHS.isMinSignedValue())
-      return HandleOverflow(Info, E, -LHS.extend(LHS.getBitWidth() + 1),
-                            E->getType());
-    return true;
+      HandleOverflowResult = HandleOverflow(
+          Info, E, -LHS.extend(LHS.getBitWidth() + 1), E->getType());
+    Result = (Opcode == BO_Rem ? LHS % RHS : LHS / RHS);
+    return HandleOverflowResult;
   case BO_Shl: {
     if (Info.getLangOpts().OpenCL)
       // OpenCL 6.3j: shift values are effectively % word size of LHS.
