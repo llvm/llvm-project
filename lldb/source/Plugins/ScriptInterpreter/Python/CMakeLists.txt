@@ -20,6 +20,7 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
   ScriptedPythonInterface.cpp
   ScriptedProcessPythonInterface.cpp
   ScriptedThreadPythonInterface.cpp
+  ScriptedPlatformPythonInterface.cpp
 
   LINK_LIBS
     lldbBreakpoint
