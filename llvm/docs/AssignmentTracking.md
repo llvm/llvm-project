@@ -63,9 +63,11 @@ void @llvm.dbg.assign(Value *Value,
 
 The first three parameters look and behave like an `llvm.dbg.value`. `ID` is a
 reference to a store (see next section). `Address` is the destination address
-of the store and it is modified by `AddressExpression`. LLVM currently encodes
-variable fragment information in `DIExpression`s, so as an implementation quirk
-the `FragmentInfo` for `Variable` is contained within `ValueExpression` only.
+of the store and it is modified by `AddressExpression`. An empty/undef/poison
+address means the address component has been killed (the memory address is no
+longer a valid location). LLVM currently encodes variable fragment information
+in `DIExpression`s, so as an implementation quirk the `FragmentInfo` for
+`Variable` is contained within `ValueExpression` only.
 
 The formal LLVM-IR signature is:
 ```
