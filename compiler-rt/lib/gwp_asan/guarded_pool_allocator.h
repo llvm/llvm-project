@@ -67,6 +67,11 @@ public:
   // allocate.
   void iterate(void *Base, size_t Size, iterate_callback Cb, void *Arg);
 
+  // This function is used to signal the allocator to indefinitely stop
+  // functioning, as a crash has occurred. This stops the allocator from
+  // servicing any further allocations permanently.
+  void stop();
+
   // Return whether the allocation should be randomly chosen for sampling.
   GWP_ASAN_ALWAYS_INLINE bool shouldSample() {
     // NextSampleCounter == 0 means we "should regenerate the counter".
@@ -109,12 +114,6 @@ public:
 
   // Returns a pointer to the AllocatorState region.
   const AllocatorState *getAllocatorState() const { return &State; }
-
-  // Functions that the signal handler is responsible for calling, while
-  // providing the SEGV pointer, prior to dumping the crash, and after dumping
-  // the crash (in recoverable mode only).
-  void preCrashReport(void *Ptr);
-  void postCrashReportRecoverableOnly(void *Ptr);
 
   // Exposed as protected for testing.
 protected:
@@ -186,7 +185,7 @@ private:
   // Raise a SEGV and set the corresponding fields in the Allocator's State in
   // order to tell the crash handler what happened. Used when errors are
   // detected internally (Double Free, Invalid Free).
-  void raiseInternallyDetectedError(uintptr_t Address, Error E);
+  void trapOnAddress(uintptr_t Address, Error E);
 
   static GuardedPoolAllocator *getSingleton();
 
