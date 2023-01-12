@@ -316,7 +316,8 @@ struct TypeBuilderImpl {
          Fortran::semantics::OrderedComponentIterator(tySpec)) {
       // Lowering is assuming non deferred component lower bounds are always 1.
       // Catch any situations where this is not true for now.
-      if (componentHasNonDefaultLowerBounds(field))
+      if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
+          componentHasNonDefaultLowerBounds(field))
         TODO(converter.genLocation(field.name()),
              "derived type components with non default lower bounds");
       if (IsProcedure(field))
