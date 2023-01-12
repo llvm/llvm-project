@@ -177,6 +177,8 @@ public:
     Quarantine.init(
         static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
         static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
+
+    initRingBuffer();
   }
 
   // Initialize the embedded GWP-ASan instance. Requires the main allocator to
@@ -932,11 +934,28 @@ public:
     return PrimaryT::getRegionInfoArraySize();
   }
 
-  const char *getRingBufferAddress() const {
-    return reinterpret_cast<const char *>(&RingBuffer);
+  const char *getRingBufferAddress() {
+    initThreadMaybe();
+    return reinterpret_cast<const char *>(getRingBuffer());
   }
 
-  static uptr getRingBufferSize() { return sizeof(RingBuffer); }
+  uptr getRingBufferSize() {
+    initThreadMaybe();
+    return ringBufferSizeInBytes(getRingBuffer()->Size);
+  }
+
+  static bool setRingBufferSizeForBuffer(char *Buffer, size_t Size) {
+    // Need at least one entry.
+    if (Size < sizeof(AllocationRingBuffer) +
+                   sizeof(typename AllocationRingBuffer::Entry)) {
+      return false;
+    }
+    AllocationRingBuffer *RingBuffer =
+        reinterpret_cast<AllocationRingBuffer *>(Buffer);
+    RingBuffer->Size = (Size - sizeof(AllocationRingBuffer)) /
+                       sizeof(typename AllocationRingBuffer::Entry);
+    return true;
+  }
 
   static const uptr MaxTraceSize = 64;
 
@@ -1040,14 +1059,13 @@ private:
     };
 
     atomic_uptr Pos;
-#ifdef SCUDO_FUZZ
-    static const uptr NumEntries = 2;
-#else
-    static const uptr NumEntries = 32768;
-#endif
-    Entry Entries[NumEntries];
+    u32 Size;
+    // An array of Size (at least one) elements of type Entry is immediately
+    // following to this struct.
   };
-  AllocationRingBuffer RingBuffer = {};
+  // Pointer to memory mapped area starting with AllocationRingBuffer struct,
+  // and immediately followed by Size elements of type Entry.
+  char *RawRingBuffer = {};
 
   // The following might get optimized out by the compiler.
   NOINLINE void performSanityChecks() {
@@ -1244,9 +1262,9 @@ private:
   void storeRingBufferEntry(void *Ptr, u32 AllocationTrace, u32 AllocationTid,
                             uptr AllocationSize, u32 DeallocationTrace,
                             u32 DeallocationTid) {
-    uptr Pos = atomic_fetch_add(&RingBuffer.Pos, 1, memory_order_relaxed);
+    uptr Pos = atomic_fetch_add(&getRingBuffer()->Pos, 1, memory_order_relaxed);
     typename AllocationRingBuffer::Entry *Entry =
-        &RingBuffer.Entries[Pos % AllocationRingBuffer::NumEntries];
+        getRingBufferEntry(RawRingBuffer, Pos % getRingBuffer()->Size);
 
     // First invalidate our entry so that we don't attempt to interpret a
     // partially written state in getSecondaryErrorInfo(). The fences below
@@ -1390,12 +1408,14 @@ private:
                                      const char *RingBufferPtr) {
     auto *RingBuffer =
         reinterpret_cast<const AllocationRingBuffer *>(RingBufferPtr);
+    if (!RingBuffer)
+      return; //  just in case; called before init
     uptr Pos = atomic_load_relaxed(&RingBuffer->Pos);
 
-    for (uptr I = Pos - 1; I != Pos - 1 - AllocationRingBuffer::NumEntries &&
-                           NextErrorReport != NumErrorReports;
+    for (uptr I = Pos - 1;
+         I != Pos - 1 - RingBuffer->Size && NextErrorReport != NumErrorReports;
          --I) {
-      auto *Entry = &RingBuffer->Entries[I % AllocationRingBuffer::NumEntries];
+      auto *Entry = getRingBufferEntry(RingBufferPtr, I % RingBuffer->Size);
       uptr EntryPtr = atomic_load_relaxed(&Entry->Ptr);
       if (!EntryPtr)
         continue;
@@ -1459,6 +1479,45 @@ private:
     Secondary.getStats(Str);
     Quarantine.getStats(Str);
     return Str->length();
+  }
+
+  static typename AllocationRingBuffer::Entry *
+  getRingBufferEntry(char *RawRingBuffer, u32 N) {
+    return &reinterpret_cast<typename AllocationRingBuffer::Entry *>(
+        &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
+  }
+  static const typename AllocationRingBuffer::Entry *
+  getRingBufferEntry(const char *RawRingBuffer, u32 N) {
+    return &reinterpret_cast<const typename AllocationRingBuffer::Entry *>(
+        &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
+  }
+
+  void initRingBuffer() {
+    u32 AllocationRingBufferSize =
+        static_cast<u32>(getFlags()->allocation_ring_buffer_size);
+    // Have at least one entry so we don't need to special case.
+    if (AllocationRingBufferSize < 1)
+      AllocationRingBufferSize = 1;
+    MapPlatformData Data = {};
+    RawRingBuffer = static_cast<char *>(
+        map(/*Addr=*/nullptr, ringBufferSizeInBytes(AllocationRingBufferSize),
+            "AllocatorRingBuffer", /*Flags=*/0, &Data));
+    auto *RingBuffer = reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
+    RingBuffer->Size = AllocationRingBufferSize;
+    static_assert(sizeof(AllocationRingBuffer) %
+                          alignof(typename AllocationRingBuffer::Entry) ==
+                      0,
+                  "invalid alignment");
+  }
+
+  static constexpr u32 ringBufferSizeInBytes(u32 AllocationRingBufferSize) {
+    return sizeof(AllocationRingBuffer) +
+           AllocationRingBufferSize *
+               sizeof(typename AllocationRingBuffer::Entry);
+  }
+
+  inline AllocationRingBuffer *getRingBuffer() {
+    return reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
   }
 };
 
