@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -2059,6 +2058,15 @@ public:
   virtual InstructionUniformity
   getInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::Default;
+  }
+
+  /// Returns true if the given \p MI defines a TargetIndex operand that can be
+  /// tracked by their offset, can have values, and can have debug info
+  /// associated with it. If so, sets \p Index and \p Offset of the target index
+  /// operand.
+  virtual bool isExplicitTargetIndexDef(const MachineInstr &MI, int &Index,
+                                        int64_t &Offset) const {
+    return false;
   }
 
 private:

@@ -282,6 +282,45 @@ def Index_MaxUOp : IndexBinaryOp<"maxu"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MinSOp
+//===----------------------------------------------------------------------===//
+
+def Index_MinSOp : IndexBinaryOp<"mins"> {
+  let summary = "index signed minimum";
+  let description = [{
+    The `index.mins` operation takes two index values and computes their signed
+    minimum value. Treats the leading bit as the sign, i.e. `min(-2, 6) = -2`.
+
+    Example:
+
+    ```mlir
+    // c = min(a, b)
+    %c = index.mins %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinUOp
+//===----------------------------------------------------------------------===//
+
+def Index_MinUOp : IndexBinaryOp<"minu"> {
+  let summary = "index unsigned minimum";
+  let description = [{
+    The `index.minu` operation takes two index values and computes their
+    unsigned minimum value. Treats the leading bit as the most significant, i.e.
+    `min(15, 6) = 6` or `min(-2, 6) = 6`.
+
+    Example:
+
+    ```mlir
+    // c = min(a, b)
+    %c = index.minu %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ShlOp
 //===----------------------------------------------------------------------===//
 

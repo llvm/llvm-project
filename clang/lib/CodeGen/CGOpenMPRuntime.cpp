@@ -6429,10 +6429,8 @@ static llvm::Value *getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
     }
     if (isOpenMPSimdDirective(Dir->getDirectiveKind()))
       return CGF.Builder.getInt32(1);
-    return DefaultThreadLimitVal;
   }
-  return DefaultThreadLimitVal ? DefaultThreadLimitVal
-                               : CGF.Builder.getInt32(0);
+  return DefaultThreadLimitVal;
 }
 
 const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
@@ -6575,12 +6573,14 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
       return NumThreads;
     const Stmt *Child = CGOpenMPRuntime::getSingleCompoundChild(
         CGF.getContext(), CS->getCapturedStmt());
+    // TODO: The standard is not clear how to resolve two thread limit clauses,
+    //       let's pick the teams one if it's present, otherwise the target one.
+    const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
     if (const auto *Dir = dyn_cast_or_null<OMPExecutableDirective>(Child)) {
-      if (Dir->hasClausesOfKind<OMPThreadLimitClause>()) {
+      if (const auto *TLC = Dir->getSingleClause<OMPThreadLimitClause>()) {
+        ThreadLimitClause = TLC;
         CGOpenMPInnerExprInfo CGInfo(CGF, *CS);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-        const auto *ThreadLimitClause =
-            Dir->getSingleClause<OMPThreadLimitClause>();
         CodeGenFunction::LexicalScope Scope(
             CGF, ThreadLimitClause->getThreadLimit()->getSourceRange());
         if (const auto *PreInit =
@@ -6595,11 +6595,15 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
             }
           }
         }
-        llvm::Value *ThreadLimit = CGF.EmitScalarExpr(
-            ThreadLimitClause->getThreadLimit(), /*IgnoreResultAssign=*/true);
-        ThreadLimitVal =
-            Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*isSigned=*/false);
       }
+    }
+    if (ThreadLimitClause) {
+      llvm::Value *ThreadLimit = CGF.EmitScalarExpr(
+          ThreadLimitClause->getThreadLimit(), /*IgnoreResultAssign=*/true);
+      ThreadLimitVal =
+          Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*isSigned=*/false);
+    }
+    if (const auto *Dir = dyn_cast_or_null<OMPExecutableDirective>(Child)) {
       if (isOpenMPTeamsDirective(Dir->getDirectiveKind()) &&
           !isOpenMPDistributeDirective(Dir->getDirectiveKind())) {
         CS = Dir->getInnermostCapturedStmt();
@@ -6650,7 +6654,10 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
       ThreadLimitVal =
           Bld.CreateIntCast(ThreadLimit, CGF.Int32Ty, /*isSigned=*/false);
     }
-    return getNumThreads(CGF, D.getInnermostCapturedStmt(), ThreadLimitVal);
+    if (llvm::Value *NumThreads =
+            getNumThreads(CGF, D.getInnermostCapturedStmt(), ThreadLimitVal))
+      return NumThreads;
+    return Bld.getInt32(0);
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
@@ -8444,19 +8451,39 @@ public:
     CombinedInfo.BasePointers.push_back(PartialStruct.Base.getPointer());
     // Pointer is the address of the lowest element
     llvm::Value *LB = LBAddr.getPointer();
-    CombinedInfo.Pointers.push_back(LB);
+    const CXXMethodDecl *MD =
+        CGF.CurFuncDecl ? dyn_cast<CXXMethodDecl>(CGF.CurFuncDecl) : nullptr;
+    const CXXRecordDecl *RD = MD ? MD->getParent() : nullptr;
+    bool HasBaseClass = RD ? RD->getNumBases() > 0 : false;
     // There should not be a mapper for a combined entry.
+    if (HasBaseClass) {
+      // OpenMP 5.2 148:21:
+      // If the target construct is within a class non-static member function,
+      // and a variable is an accessible data member of the object for which the
+      // non-static data member function is invoked, the variable is treated as
+      // if the this[:1] expression had appeared in a map clause with a map-type
+      // of tofrom.
+      // Emit this[:1]
+      CombinedInfo.Pointers.push_back(PartialStruct.Base.getPointer());
+      QualType Ty = MD->getThisType()->getPointeeType();
+      llvm::Value *Size =
+          CGF.Builder.CreateIntCast(CGF.getTypeSize(Ty), CGF.Int64Ty,
+                                    /*isSigned=*/true);
+      CombinedInfo.Sizes.push_back(Size);
+    } else {
+      CombinedInfo.Pointers.push_back(LB);
+      // Size is (addr of {highest+1} element) - (addr of lowest element)
+      llvm::Value *HB = HBAddr.getPointer();
+      llvm::Value *HAddr = CGF.Builder.CreateConstGEP1_32(
+          HBAddr.getElementType(), HB, /*Idx0=*/1);
+      llvm::Value *CLAddr = CGF.Builder.CreatePointerCast(LB, CGF.VoidPtrTy);
+      llvm::Value *CHAddr = CGF.Builder.CreatePointerCast(HAddr, CGF.VoidPtrTy);
+      llvm::Value *Diff = CGF.Builder.CreatePtrDiff(CGF.Int8Ty, CHAddr, CLAddr);
+      llvm::Value *Size = CGF.Builder.CreateIntCast(Diff, CGF.Int64Ty,
+                                                    /*isSigned=*/false);
+      CombinedInfo.Sizes.push_back(Size);
+    }
     CombinedInfo.Mappers.push_back(nullptr);
-    // Size is (addr of {highest+1} element) - (addr of lowest element)
-    llvm::Value *HB = HBAddr.getPointer();
-    llvm::Value *HAddr =
-        CGF.Builder.CreateConstGEP1_32(HBAddr.getElementType(), HB, /*Idx0=*/1);
-    llvm::Value *CLAddr = CGF.Builder.CreatePointerCast(LB, CGF.VoidPtrTy);
-    llvm::Value *CHAddr = CGF.Builder.CreatePointerCast(HAddr, CGF.VoidPtrTy);
-    llvm::Value *Diff = CGF.Builder.CreatePtrDiff(CGF.Int8Ty, CHAddr, CLAddr);
-    llvm::Value *Size = CGF.Builder.CreateIntCast(Diff, CGF.Int64Ty,
-                                                  /*isSigned=*/false);
-    CombinedInfo.Sizes.push_back(Size);
     // Map type is always TARGET_PARAM, if generate info for captures.
     CombinedInfo.Types.push_back(
         NotTargetParams ? OpenMPOffloadMappingFlags::OMP_MAP_NONE
@@ -8733,7 +8760,7 @@ public:
       std::tie(Components, MapType, MapModifiers, IsImplicit, Mapper, VarRef) =
           L;
       ++Count;
-      for (const MapData &L1 : makeArrayRef(DeclComponentLists).slice(Count)) {
+      for (const MapData &L1 : ArrayRef(DeclComponentLists).slice(Count)) {
         OMPClauseMappableExprCommon::MappableExprComponentListRef Components1;
         std::tie(Components1, MapType, MapModifiers, IsImplicit, Mapper,
                  VarRef) = L1;
@@ -11612,7 +11639,7 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
   llvm::FunctionCallee FiniRTLFn = OMPBuilder.getOrCreateRuntimeFunction(
       CGM.getModule(), OMPRTL___kmpc_doacross_fini);
   CGF.EHStack.pushCleanup<DoacrossCleanupTy>(NormalAndEHCleanup, FiniRTLFn,
-                                             llvm::makeArrayRef(FiniArgs));
+                                             llvm::ArrayRef(FiniArgs));
 }
 
 void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,

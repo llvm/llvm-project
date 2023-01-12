@@ -1623,10 +1623,9 @@ Sema::ActOnGenericSelectionExpr(SourceLocation KeyLoc,
       Types[i] = nullptr;
   }
 
-  ExprResult ER = CreateGenericSelectionExpr(KeyLoc, DefaultLoc, RParenLoc,
-                                             ControllingExpr,
-                                             llvm::makeArrayRef(Types, NumAssocs),
-                                             ArgExprs);
+  ExprResult ER =
+      CreateGenericSelectionExpr(KeyLoc, DefaultLoc, RParenLoc, ControllingExpr,
+                                 llvm::ArrayRef(Types, NumAssocs), ArgExprs);
   delete [] Types;
   return ER;
 }
@@ -1838,7 +1837,7 @@ static ExprResult BuildCookedLiteralOperatorCall(Sema &S, Scope *Scope,
   OpNameInfo.setCXXLiteralOperatorNameLoc(UDSuffixLoc);
 
   LookupResult R(S, OpName, UDSuffixLoc, Sema::LookupOrdinaryName);
-  if (S.LookupLiteralOperator(Scope, R, llvm::makeArrayRef(ArgTy, Args.size()),
+  if (S.LookupLiteralOperator(Scope, R, llvm::ArrayRef(ArgTy, Args.size()),
                               /*AllowRaw*/ false, /*AllowTemplate*/ false,
                               /*AllowStringTemplatePack*/ false,
                               /*DiagnoseMissing*/ true) == Sema::LOLR_Error)
@@ -7268,7 +7267,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     TheCall = dyn_cast<CallExpr>(Result.get());
     bool CorrectedTypos = TheCall != TheOldCall;
     if (!TheCall) return Result;
-    Args = llvm::makeArrayRef(TheCall->getArgs(), TheCall->getNumArgs());
+    Args = llvm::ArrayRef(TheCall->getArgs(), TheCall->getNumArgs());
 
     // A new call expression node was created if some typos were corrected.
     // However it may not have been constructed with enough storage. In this
@@ -18483,10 +18482,13 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 ///  - else capture it in the DeclContext that maps to the
 ///    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.
 static void
-MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
+MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
                    const unsigned *const FunctionScopeIndexToStopAt = nullptr) {
   // Keep track of used but undefined variables.
   // FIXME: We shouldn't suppress this warning for static data members.
+  VarDecl *Var = V->getPotentiallyDecomposedVarDecl();
+  assert(Var && "expected a capturable variable");
+
   if (Var->hasDefinition(SemaRef.Context) == VarDecl::DeclarationOnly &&
       (!Var->isExternallyVisible() || Var->isInline() ||
        SemaRef.isExternalWithNoLinkageType(Var)) &&
@@ -18497,12 +18499,11 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
   }
   QualType CaptureType, DeclRefType;
   if (SemaRef.LangOpts.OpenMP)
-    SemaRef.tryCaptureOpenMPLambdas(Var);
-  SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit,
-    /*EllipsisLoc*/ SourceLocation(),
-    /*BuildAndDiagnose*/ true,
-    CaptureType, DeclRefType,
-    FunctionScopeIndexToStopAt);
+    SemaRef.tryCaptureOpenMPLambdas(V);
+  SemaRef.tryCaptureVariable(V, Loc, Sema::TryCapture_Implicit,
+                             /*EllipsisLoc*/ SourceLocation(),
+                             /*BuildAndDiagnose*/ true, CaptureType,
+                             DeclRefType, FunctionScopeIndexToStopAt);
 
   if (SemaRef.LangOpts.CUDA && Var->hasGlobalStorage()) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(SemaRef.CurContext);
@@ -18542,10 +18543,10 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
     }
   }
 
-  Var->markUsed(SemaRef.Context);
+  V->markUsed(SemaRef.Context);
 }
 
-void Sema::MarkCaptureUsedInEnclosingContext(VarDecl *Capture,
+void Sema::MarkCaptureUsedInEnclosingContext(ValueDecl *Capture,
                                              SourceLocation Loc,
                                              unsigned CapturingScopeIndex) {
   MarkVarDeclODRUsed(Capture, Loc, *this, &CapturingScopeIndex);
@@ -18632,13 +18633,9 @@ static DeclContext *getParentOfCapturingContextOrNull(DeclContext *DC,
   if (isa<BlockDecl>(DC) || isa<CapturedDecl>(DC) || isLambdaCallOperator(DC))
     return getLambdaAwareParentOfDeclContext(DC);
 
-  ValueDecl *Underlying = Var;
-  auto *BD = dyn_cast_or_null<BindingDecl>(Var);
-  if (BD)
-    Underlying = BD->getDecomposedDecl();
-
-  if (auto *VD = dyn_cast<VarDecl>(Underlying)) {
-    if (VD->hasLocalStorage() && Diagnose)
+  VarDecl *Underlying = Var->getPotentiallyDecomposedVarDecl();
+  if (Underlying) {
+    if (Underlying->hasLocalStorage() && Diagnose)
       diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
   }
   return nullptr;
@@ -19054,8 +19051,7 @@ bool Sema::tryCaptureVariable(
     if (VD->isInitCapture())
       VarDC = VarDC->getParent();
   } else {
-    VD = dyn_cast<DecompositionDecl>(
-        cast<BindingDecl>(Var)->getDecomposedDecl());
+    VD = Var->getPotentiallyDecomposedVarDecl();
   }
   assert(VD && "Cannot capture a null variable");
 
@@ -19729,6 +19725,38 @@ void Sema::CleanupVarDeclMarking() {
          "MarkVarDeclODRUsed failed to cleanup MaybeODRUseExprs?");
 }
 
+static void DoMarkPotentialCapture(Sema &SemaRef, SourceLocation Loc,
+                                   ValueDecl *Var, Expr *E) {
+  VarDecl *VD = Var->getPotentiallyDecomposedVarDecl();
+  if (!VD)
+    return;
+
+  const bool RefersToEnclosingScope =
+      (SemaRef.CurContext != VD->getDeclContext() &&
+       VD->getDeclContext()->isFunctionOrMethod() && VD->hasLocalStorage());
+  if (RefersToEnclosingScope) {
+    LambdaScopeInfo *const LSI =
+        SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true);
+    if (LSI && (!LSI->CallOperator ||
+                !LSI->CallOperator->Encloses(Var->getDeclContext()))) {
+      // If a variable could potentially be odr-used, defer marking it so
+      // until we finish analyzing the full expression for any
+      // lvalue-to-rvalue
+      // or discarded value conversions that would obviate odr-use.
+      // Add it to the list of potential captures that will be analyzed
+      // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
+      // unless the variable is a reference that was initialized by a constant
+      // expression (this will never need to be captured or odr-used).
+      //
+      // FIXME: We can simplify this a lot after implementing P0588R1.
+      assert(E && "Capture variable should be used in an expression.");
+      if (!Var->getType()->isReferenceType() ||
+          !VD->isUsableInConstantExpressions(SemaRef.Context))
+        LSI->addPotentialCapture(E->IgnoreParens());
+    }
+  }
+}
+
 static void DoMarkVarDeclReferenced(
     Sema &SemaRef, SourceLocation Loc, VarDecl *Var, Expr *E,
     llvm::DenseMap<const VarDecl *, int> &RefsMinusAssignments) {
@@ -19878,36 +19906,13 @@ static void DoMarkVarDeclReferenced(
     // odr-used, but we may still need to track them for lambda capture.
     // FIXME: Do we also need to do this inside dependent typeid expressions
     // (which are modeled as unevaluated at this point)?
-    const bool RefersToEnclosingScope =
-        (SemaRef.CurContext != Var->getDeclContext() &&
-         Var->getDeclContext()->isFunctionOrMethod() && Var->hasLocalStorage());
-    if (RefersToEnclosingScope) {
-      LambdaScopeInfo *const LSI =
-          SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true);
-      if (LSI && (!LSI->CallOperator ||
-                  !LSI->CallOperator->Encloses(Var->getDeclContext()))) {
-        // If a variable could potentially be odr-used, defer marking it so
-        // until we finish analyzing the full expression for any
-        // lvalue-to-rvalue
-        // or discarded value conversions that would obviate odr-use.
-        // Add it to the list of potential captures that will be analyzed
-        // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
-        // unless the variable is a reference that was initialized by a constant
-        // expression (this will never need to be captured or odr-used).
-        //
-        // FIXME: We can simplify this a lot after implementing P0588R1.
-        assert(E && "Capture variable should be used in an expression.");
-        if (!Var->getType()->isReferenceType() ||
-            !Var->isUsableInConstantExpressions(SemaRef.Context))
-          LSI->addPotentialCapture(E->IgnoreParens());
-      }
-    }
+    DoMarkPotentialCapture(SemaRef, Loc, Var, E);
     break;
   }
 }
 
 static void DoMarkBindingDeclReferenced(Sema &SemaRef, SourceLocation Loc,
-                                        BindingDecl *BD) {
+                                        BindingDecl *BD, Expr *E) {
   BD->setReferenced();
 
   if (BD->isInvalidDecl())
@@ -19921,6 +19926,8 @@ static void DoMarkBindingDeclReferenced(Sema &SemaRef, SourceLocation Loc,
                                /*BuildAndDiagnose*/ true, CaptureType,
                                DeclRefType,
                                /*FunctionScopeIndexToStopAt*/ nullptr);
+  } else if (OdrUse == OdrUseContext::Dependent) {
+    DoMarkPotentialCapture(SemaRef, Loc, BD, E);
   }
 }
 
@@ -19944,7 +19951,7 @@ MarkExprReferenced(Sema &SemaRef, SourceLocation Loc, Decl *D, Expr *E,
   }
 
   if (BindingDecl *Decl = dyn_cast<BindingDecl>(D)) {
-    DoMarkBindingDeclReferenced(SemaRef, Loc, Decl);
+    DoMarkBindingDeclReferenced(SemaRef, Loc, Decl, E);
     return;
   }
 
@@ -20224,7 +20231,7 @@ bool Sema::DiagRuntimeBehavior(SourceLocation Loc, ArrayRef<const Stmt*> Stmts,
 bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
                                const PartialDiagnostic &PD) {
   return DiagRuntimeBehavior(
-      Loc, Statement ? llvm::makeArrayRef(Statement) : std::nullopt, PD);
+      Loc, Statement ? llvm::ArrayRef(Statement) : std::nullopt, PD);
 }
 
 bool Sema::CheckCallReturnType(QualType ReturnType, SourceLocation Loc,

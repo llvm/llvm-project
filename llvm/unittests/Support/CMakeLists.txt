@@ -51,7 +51,6 @@ add_llvm_unittest(SupportTests
   JSONTest.cpp
   KnownBitsTest.cpp
   LEB128Test.cpp
-  LinearPolyBaseTest.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp
   MatchersTest.cpp
@@ -81,7 +80,6 @@ add_llvm_unittest(SupportTests
   SymbolRemappingReaderTest.cpp
   TarWriterTest.cpp
   TaskQueueTest.cpp
-  ThreadLocalTest.cpp
   ThreadPool.cpp
   Threading.cpp
   TimerTest.cpp

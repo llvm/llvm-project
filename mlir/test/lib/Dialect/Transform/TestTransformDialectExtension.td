@@ -334,4 +334,34 @@ def TestProduceTransformParamOrForwardOperandOp
   }];
 }
 
+def TestProduceNullPayloadOp
+  : Op<Transform_Dialect, "test_produce_null_payload",
+      [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let results = (outs TransformHandleTypeInterface:$out);
+  let assemblyFormat = "attr-dict `:` type($out)";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestProduceNullParamOp
+  : Op<Transform_Dialect, "test_produce_null_param",
+      [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let results = (outs TransformParamTypeInterface:$out);
+  let assemblyFormat = "attr-dict `:` type($out)";
+  let cppNamespace = "::mlir::test";
+}
+
+def TestRequiredMemoryEffectsOp
+  : Op<Transform_Dialect, "test_required_memory_effects",
+      [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins TransformHandleTypeInterface:$in,
+                       UnitAttr:$has_operand_effect,
+                       UnitAttr:$has_result_effect);
+  let results = (outs TransformHandleTypeInterface:$out);
+  let assemblyFormat = "$in attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

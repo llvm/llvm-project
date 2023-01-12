@@ -758,8 +758,14 @@ void CodeGenModule::Release() {
                               CodeGenOpts.SanitizeCfiCanonicalJumpTables);
   }
 
-  if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
+  if (LangOpts.Sanitize.has(SanitizerKind::KCFI)) {
     getModule().addModuleFlag(llvm::Module::Override, "kcfi", 1);
+    // KCFI assumes patchable-function-prefix is the same for all indirectly
+    // called functions. Store the expected offset for code generation.
+    if (CodeGenOpts.PatchableFunctionEntryOffset)
+      getModule().addModuleFlag(llvm::Module::Override, "kcfi-offset",
+                                CodeGenOpts.PatchableFunctionEntryOffset);
+  }
 
   if (CodeGenOpts.CFProtectionReturn &&
       Target.checkCFProtectionReturnSupported(getDiags())) {
@@ -4824,7 +4830,13 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   llvm::TrackingVH<llvm::Constant> Init;
   bool NeedsGlobalCtor = false;
+  // Whether the definition of the variable is available externally.
+  // If yes, we shouldn't emit the GloablCtor and GlobalDtor for the variable
+  // since this is the job for its original source.
+  bool IsDefinitionAvailableExternally =
+      getContext().GetGVALinkageForVariable(D) == GVA_AvailableExternally;
   bool NeedsGlobalDtor =
+      !IsDefinitionAvailableExternally &&
       D->needsDestruction(getContext()) == QualType::DK_cxx_destructor;
 
   const VarDecl *InitDecl;
@@ -4878,7 +4890,9 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
         if (InitDecl->hasFlexibleArrayInit(getContext()))
           ErrorUnsupported(D, "flexible array initializer");
         Init = EmitNullConstant(T);
-        NeedsGlobalCtor = true;
+
+        if (!IsDefinitionAvailableExternally)
+          NeedsGlobalCtor = true;
       } else {
         ErrorUnsupported(D, "static initializer");
         Init = llvm::UndefValue::get(getTypes().ConvertType(T));
@@ -5697,7 +5711,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   // String pointer.
   llvm::Constant *C = nullptr;
   if (isUTF16) {
-    auto Arr = llvm::makeArrayRef(
+    auto Arr = llvm::ArrayRef(
         reinterpret_cast<uint16_t *>(const_cast<char *>(Entry.first().data())),
         Entry.first().size() / 2);
     C = llvm::ConstantDataArray::get(VMContext, Arr);

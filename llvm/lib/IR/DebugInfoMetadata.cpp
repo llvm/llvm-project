@@ -1463,6 +1463,16 @@ bool DIExpression::isSingleLocationExpression() const {
 }
 
 const DIExpression *
+DIExpression::convertToUndefExpression(const DIExpression *Expr) {
+  SmallVector<uint64_t, 3> UndefOps;
+  if (auto FragmentInfo = Expr->getFragmentInfo()) {
+    UndefOps.append({dwarf::DW_OP_LLVM_fragment, FragmentInfo->OffsetInBits,
+                     FragmentInfo->SizeInBits});
+  }
+  return DIExpression::get(Expr->getContext(), UndefOps);
+}
+
+const DIExpression *
 DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
   if (any_of(Expr->expr_ops(), [](auto ExprOp) {
         return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;

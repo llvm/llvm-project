@@ -46,6 +46,7 @@
 // CHECK-NOT: __riscv_xventanacondops
 // CHECK-NOT: __riscv_zcd
 // CHECK-NOT: __riscv_zcf
+// CHECK-NOT: __riscv_h
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-M-EXT %s
@@ -448,6 +449,12 @@
 // RUN: %clang -target riscv64 -march=rv64isvinval -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-SVINVAL-EXT %s
 // CHECK-SVINVAL-EXT: __riscv_svinval 1000000{{$}}
+
+// RUN: %clang -target riscv32 -march=rv32ih -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-H-EXT %s
+// RUN: %clang -target riscv64 -march=rv64ih -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-H-EXT %s
+// CHECK-H-EXT: __riscv_h 1000000{{$}}
 
 // RUN: %clang -target riscv64 -march=rv64ixventanacondops -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-XVENTANACONDOPS-EXT %s

@@ -504,7 +504,6 @@ protected:
                                    // file)
   std::optional<std::vector<lldb::CompUnitSP>> m_compile_units;
   TypeList m_type_list;
-  Symtab *m_symtab = nullptr;
   uint32_t m_abilities = 0;
   bool m_calculated_abilities = false;
   bool m_index_was_loaded_from_cache = false;
@@ -517,6 +516,10 @@ protected:
 private:
   SymbolFileCommon(const SymbolFileCommon &) = delete;
   const SymbolFileCommon &operator=(const SymbolFileCommon &) = delete;
+
+  /// Do not use m_symtab directly, as it may be freed. Use GetSymtab()
+  /// to access it instead.
+  Symtab *m_symtab = nullptr;
 };
 
 } // namespace lldb_private

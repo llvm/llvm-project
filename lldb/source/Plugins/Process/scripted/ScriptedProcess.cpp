@@ -40,7 +40,7 @@ static constexpr lldb::ScriptLanguage g_supported_script_languages[] = {
 
 bool ScriptedProcess::IsScriptLanguageSupported(lldb::ScriptLanguage language) {
   llvm::ArrayRef<lldb::ScriptLanguage> supported_languages =
-      llvm::makeArrayRef(g_supported_script_languages);
+      llvm::ArrayRef(g_supported_script_languages);
 
   return llvm::is_contained(supported_languages, language);
 }

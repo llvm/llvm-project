@@ -437,7 +437,7 @@ define i1 @eq_and_shl_one(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_and_shl_one(
 ; CHECK-NEXT:    [[POW2:%.*]] = shl nuw i8 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[POW2]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], [[POW2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %pow2 = shl i8 1, %y
@@ -450,7 +450,7 @@ define <2 x i1> @ne_and_shl_one_commute(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @ne_and_shl_one_commute(
 ; CHECK-NEXT:    [[POW2:%.*]] = shl nuw <2 x i8> <i8 1, i8 poison>, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[POW2]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[POW2]], [[AND]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %pow2 = shl <2 x i8> <i8 1, i8 poison>, %y
@@ -464,7 +464,7 @@ define i1 @ne_and_lshr_minval(i8 %px, i8 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], [[PX]]
 ; CHECK-NEXT:    [[POW2:%.*]] = lshr i8 -128, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[POW2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], [[POW2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = mul i8 %px, %px ; thwart complexity-based canonicalization
@@ -481,7 +481,7 @@ define i1 @eq_and_lshr_minval_commute(i8 %px, i8 %y) {
 ; CHECK-NEXT:    call void @use(i8 [[POW2]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[POW2]]
 ; CHECK-NEXT:    call void @use(i8 [[AND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[POW2]], [[AND]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = mul i8 %px, %px ; thwart complexity-based canonicalization
@@ -493,6 +493,7 @@ define i1 @eq_and_lshr_minval_commute(i8 %px, i8 %y) {
   ret i1 %cmp
 }
 
+; Negative test: May be power of two or zero.
 define i1 @eq_and_shl_two(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_and_shl_two(
 ; CHECK-NEXT:    [[POW2_OR_ZERO:%.*]] = shl i8 2, [[Y:%.*]]
@@ -506,6 +507,7 @@ define i1 @eq_and_shl_two(i8 %x, i8 %y) {
   ret i1 %cmp
 }
 
+; Negative test: Wrong predicate.
 define i1 @slt_and_shl_one(i8 %x, i8 %y) {
 ; CHECK-LABEL: @slt_and_shl_one(
 ; CHECK-NEXT:    [[POW2:%.*]] = shl nuw i8 1, [[Y:%.*]]

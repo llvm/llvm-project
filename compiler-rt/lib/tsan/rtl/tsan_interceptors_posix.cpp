@@ -249,13 +249,21 @@ SANITIZER_WEAK_CXX_DEFAULT_IMPL void OnPotentiallyBlockingRegionEnd() {}
 }  // namespace __tsan
 
 static ThreadSignalContext *SigCtx(ThreadState *thr) {
-  ThreadSignalContext *ctx = (ThreadSignalContext*)thr->signal_ctx;
+  // This function may be called reentrantly if it is interrupted by a signal
+  // handler. Use CAS to handle the race.
+  uptr ctx = atomic_load(&thr->signal_ctx, memory_order_relaxed);
   if (ctx == 0 && !thr->is_dead) {
-    ctx = (ThreadSignalContext*)MmapOrDie(sizeof(*ctx), "ThreadSignalContext");
-    MemoryResetRange(thr, (uptr)&SigCtx, (uptr)ctx, sizeof(*ctx));
-    thr->signal_ctx = ctx;
+    uptr pctx =
+        (uptr)MmapOrDie(sizeof(ThreadSignalContext), "ThreadSignalContext");
+    MemoryResetRange(thr, (uptr)&SigCtx, pctx, sizeof(ThreadSignalContext));
+    if (atomic_compare_exchange_strong(&thr->signal_ctx, &ctx, pctx,
+                                       memory_order_relaxed)) {
+      ctx = pctx;
+    } else {
+      UnmapOrDie((ThreadSignalContext *)pctx, sizeof(ThreadSignalContext));
+    }
   }
-  return ctx;
+  return (ThreadSignalContext *)ctx;
 }
 
 ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
@@ -970,9 +978,10 @@ void DestroyThreadState() {
 }
 
 void PlatformCleanUpThreadState(ThreadState *thr) {
-  ThreadSignalContext *sctx = thr->signal_ctx;
+  ThreadSignalContext *sctx = (ThreadSignalContext *)atomic_load(
+      &thr->signal_ctx, memory_order_relaxed);
   if (sctx) {
-    thr->signal_ctx = 0;
+    atomic_store(&thr->signal_ctx, 0, memory_order_relaxed);
     UnmapOrDie(sctx, sizeof(*sctx));
   }
 }

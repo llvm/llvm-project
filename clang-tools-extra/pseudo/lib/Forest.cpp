@@ -192,7 +192,7 @@ ForestArena::createTerminals(const TokenStream &Code) {
                  /*Start=*/Index, /*TerminalData*/ 0);
   ++Index;
   NodeCount = Index;
-  return llvm::makeArrayRef(Terminals, Index);
+  return llvm::ArrayRef(Terminals, Index);
 }
 
 } // namespace pseudo

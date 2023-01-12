@@ -1563,6 +1563,79 @@ define i1 @icmp0_v64i8_v64i1(<64 x i8>) {
   ret i1 %b
 }
 
+define i8 @icmp0_v8i1(<8 x i8>) {
+; SSE2-LABEL: icmp0_v8i1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    psllw $15, %xmm1
+; SSE2-NEXT:    packsswb %xmm1, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-NEXT:    cmpb $-1, %al
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: icmp0_v8i1:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    pxor %xmm0, %xmm1
+; SSE41-NEXT:    psllw $15, %xmm1
+; SSE41-NEXT:    packsswb %xmm1, %xmm1
+; SSE41-NEXT:    pmovmskb %xmm1, %eax
+; SSE41-NEXT:    cmpb $-1, %al
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: icmp0_v8i1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpmovmskb %xmm0, %eax
+; AVX-NEXT:    cmpb $-1, %al
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
+;
+; AVX512F-LABEL: icmp0_v8i1:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512F-NEXT:    vpslld $31, %zmm0, %zmm0
+; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    sete %al
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: icmp0_v8i1:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpsllw $7, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpmovb2m %zmm0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    testb %al, %al
+; AVX512BW-NEXT:    sete %al
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VL-LABEL: icmp0_v8i1:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpsllw $7, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpmovb2m %xmm0, %k0
+; AVX512VL-NEXT:    kmovd %k0, %eax
+; AVX512VL-NEXT:    testb %al, %al
+; AVX512VL-NEXT:    sete %al
+; AVX512VL-NEXT:    retq
+  %a = trunc <8 x i8> %0 to <8 x i1>
+  %b = icmp eq <8 x i1> %a, zeroinitializer
+  %c = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> %b)
+  %d = zext i1 %c to i8
+  ret i8 %d
+}
+
 ;
 ; Comparison
 ;

@@ -18,7 +18,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 
 namespace llvm {
@@ -243,6 +243,7 @@ enum NodeType : unsigned {
   VFCVT_RM_X_F_VL, // Has a rounding mode operand.
   SINT_TO_FP_VL,
   UINT_TO_FP_VL,
+  VFCVT_RM_F_XU_VL, // Has a rounding mode operand.
   FP_ROUND_VL,
   FP_EXTEND_VL,
 
@@ -704,6 +705,7 @@ private:
   SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;

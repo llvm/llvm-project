@@ -4,19 +4,19 @@
 
 // Check that we enable LTO-mode properly with '-fopenmp-target-jit' and that it
 // still enabled LTO-mode if `-fno-offload-lto` is on.
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp=libomp \
 // RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=PHASES-JIT %s
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp=libomp \
 // RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -foffload-lto -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=PHASES-JIT %s
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp=libomp \
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=PHASES-JIT %s
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp=libomp \
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -foffload-lto -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=PHASES-JIT %s
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp=libomp \
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fno-offload-lto -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=PHASES-JIT %s
 //
@@ -36,19 +36,19 @@
 // PHASES-JIT-NEXT: 13: clang-linker-wrapper, {12}, image, (host-openmp)
 
 // Check that we add the `--embed-bitcode` flag to the linker wrapper.
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=LINKER %s
 // LINKER: clang-linker-wrapper"{{.*}}"--embed-bitcode"
 
 // Check for incompatible combinations
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fno-offload-lto \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fno-offload-lto \
 // RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=NO-LTO %s
 // NO-LTO: error: The combination of '-fno-offload-lto' and '-fopenmp-target-jit' is incompatible
 
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -foffload-lto=thin \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -foffload-lto=thin \
 // RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-target-jit %s 2>&1 \
 // RUN: | FileCheck -check-prefix=THIN-LTO %s
 // THIN-LTO: error: The combination of '-foffload-lto=' and '-fopenmp-target-jit' is incompatible

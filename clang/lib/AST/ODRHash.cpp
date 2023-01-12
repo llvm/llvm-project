@@ -172,8 +172,14 @@ void ODRHash::AddTemplateArgument(TemplateArgument TA) {
       AddDecl(TA.getAsDecl());
       break;
     case TemplateArgument::NullPtr:
-    case TemplateArgument::Integral:
+      ID.AddPointer(nullptr);
       break;
+    case TemplateArgument::Integral: {
+      // There are integrals (e.g.: _BitInt(128)) that cannot be represented as
+      // any builtin integral type, so we use the hash of APSInt instead.
+      TA.getAsIntegral().Profile(ID);
+      break;
+    }
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       AddTemplateName(TA.getAsTemplateOrTemplatePattern());

@@ -240,7 +240,7 @@ uint32_t AVR::calcEFlags() const {
   uint32_t flags = getEFlags(ctx.objectFiles[0]);
   bool hasLinkRelaxFlag = flags & EF_AVR_LINKRELAX_PREPARED;
 
-  for (InputFile *f : makeArrayRef(ctx.objectFiles).slice(1)) {
+  for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     uint32_t objFlags = getEFlags(f);
     if ((objFlags & EF_AVR_ARCH_MASK) != (flags & EF_AVR_ARCH_MASK))
       error(toString(f) +

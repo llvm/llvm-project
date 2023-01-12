@@ -349,7 +349,7 @@ are no syntax errors may indicate that a function was declared but never called.
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_command_add_options);
+      return llvm::ArrayRef(g_watchpoint_command_add_options);
     }
 
     // Instance variables to hold the values for command options.

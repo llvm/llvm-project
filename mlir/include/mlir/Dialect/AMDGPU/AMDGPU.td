@@ -28,6 +28,7 @@ def AMDGPU_Dialect : Dialect {
     "arith::ArithDialect"
   ];
   let useDefaultAttributePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//

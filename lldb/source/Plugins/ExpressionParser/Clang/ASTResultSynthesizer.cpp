@@ -470,7 +470,7 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
 
   auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
 
-  TypeSystemClang *scratch_ctx = ScratchTypeSystemClang::GetForTarget(
+  lldb::TypeSystemClangSP scratch_ts_sp = ScratchTypeSystemClang::GetForTarget(
       m_target, m_ast_context->getLangOpts());
 
   for (clang::NamedDecl *decl : m_decls) {
@@ -478,7 +478,7 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
     ConstString name_cs(name.str().c_str());
 
     Decl *D_scratch = persistent_vars->GetClangASTImporter()->DeportDecl(
-        &scratch_ctx->getASTContext(), decl);
+        &scratch_ts_sp->getASTContext(), decl);
 
     if (!D_scratch) {
       Log *log = GetLog(LLDBLog::Expressions);
@@ -497,7 +497,7 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
 
     if (NamedDecl *NamedDecl_scratch = dyn_cast<NamedDecl>(D_scratch))
       persistent_vars->RegisterPersistentDecl(name_cs, NamedDecl_scratch,
-                                              scratch_ctx);
+                                              scratch_ts_sp);
   }
 }
 

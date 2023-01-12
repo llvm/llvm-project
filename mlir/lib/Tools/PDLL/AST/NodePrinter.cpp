@@ -107,7 +107,7 @@ private:
     if (elementIndentStack.empty())
       return;
 
-    for (bool isLastElt : llvm::makeArrayRef(elementIndentStack).drop_back())
+    for (bool isLastElt : llvm::ArrayRef(elementIndentStack).drop_back())
       os << (isLastElt ? "  " : " |");
     os << (elementIndentStack.back() ? " `" : " |");
   }

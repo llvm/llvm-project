@@ -112,7 +112,7 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
         Input, DepDirectivesObjects.back()->Tokens,
         DepDirectivesObjects.back()->Directives);
     EXPECT_FALSE(Err);
-    return llvm::makeArrayRef(DepDirectivesObjects.back()->Directives);
+    return llvm::ArrayRef(DepDirectivesObjects.back()->Directives);
   };
 
   auto PPOpts = std::make_shared<PreprocessorOptions>();

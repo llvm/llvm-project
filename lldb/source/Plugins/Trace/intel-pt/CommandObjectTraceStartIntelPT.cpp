@@ -70,7 +70,7 @@ void CommandObjectThreadTraceStartIntelPT::CommandOptions::
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectThreadTraceStartIntelPT::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_thread_trace_start_intel_pt_options);
+  return llvm::ArrayRef(g_thread_trace_start_intel_pt_options);
 }
 
 bool CommandObjectThreadTraceStartIntelPT::DoExecuteOnThreads(
@@ -155,7 +155,7 @@ void CommandObjectProcessTraceStartIntelPT::CommandOptions::
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectProcessTraceStartIntelPT::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_process_trace_start_intel_pt_options);
+  return llvm::ArrayRef(g_process_trace_start_intel_pt_options);
 }
 
 bool CommandObjectProcessTraceStartIntelPT::DoExecute(

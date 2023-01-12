@@ -2117,6 +2117,35 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   unsigned Opc = MI.getOpcode();
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
   switch (Opc) {
+  case AMDGPU::G_CONSTANT: {
+    Register DstReg = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    if (DstTy != LLT::scalar(1))
+      break;
+
+    const RegisterBank *DstBank =
+        OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+    if (DstBank == &AMDGPU::VCCRegBank)
+      break;
+    SmallVector<Register, 1> DefRegs(OpdMapper.getVRegs(0));
+    if (DefRegs.empty())
+      DefRegs.push_back(DstReg);
+
+    MachineIRBuilder B(MI);
+    B.setInsertPt(*MI.getParent(), ++MI.getIterator());
+
+    Register NewDstReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    LLVMContext &Ctx = B.getMF().getFunction().getContext();
+
+    MI.getOperand(0).setReg(NewDstReg);
+    uint64_t ConstVal = MI.getOperand(1).getCImm()->getZExtValue();
+    MI.getOperand(1).setCImm(
+        ConstantInt::get(IntegerType::getInt32Ty(Ctx), ConstVal));
+
+    MRI.setRegBank(NewDstReg, *DstBank);
+    B.buildTrunc(DefRegs[0], NewDstReg);
+    return;
+  }
   case AMDGPU::G_PHI: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
@@ -3006,11 +3035,16 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingImage(MI, OpdMapper, MRI, RSrcIntrin->RsrcArg);
     return;
   }
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_DUAL_INTERSECT_RAY: {
-    unsigned N = MI.getNumExplicitOperands() - 2;
+  case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
+  case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY: {
+    // On GFX12+ we have NV modifiers in addition to A16 ones.
+    bool IsGFX12Plus = AMDGPU::isGFX12Plus(Subtarget);
+    unsigned NumMods =
+      IsGFX12Plus && MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY ?
+        2 : 1;
+    unsigned LastRegOpIdx = (MI.getNumExplicitOperands() - 1) - NumMods;
     applyDefaultMapping(OpdMapper);
-    executeInWaterfallLoop(MI, MRI, { N });
+    executeInWaterfallLoop(MI, MRI, {LastRegOpIdx});
     return;
   }
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
@@ -3775,14 +3809,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
   }
+  case AMDGPU::G_FSQRT:
+  case AMDGPU::G_FEXP2:
+  case AMDGPU::G_FLOG2: {
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    if (Subtarget.hasPseudoScalarTrans() && (Size == 16 || Size == 32) &&
+        isSALUMapping(MI))
+      return getDefaultMappingSOP(MI);
+    return getDefaultMappingVOP(MI);
+  }
   case AMDGPU::G_SADDSAT: // FIXME: Could lower sat ops for SALU
   case AMDGPU::G_SSUBSAT:
   case AMDGPU::G_UADDSAT:
   case AMDGPU::G_USUBSAT:
   case AMDGPU::G_FMAD:
-  case AMDGPU::G_FSQRT:
-  case AMDGPU::G_FEXP2:
-  case AMDGPU::G_FLOG2:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FCANONICALIZE:
@@ -4244,10 +4284,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_sin:
     case Intrinsic::amdgcn_cos:
     case Intrinsic::amdgcn_log_clamp:
-    case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
-    case Intrinsic::amdgcn_sqrt:
-    case Intrinsic::amdgcn_rsq:
     case Intrinsic::amdgcn_rsq_legacy:
     case Intrinsic::amdgcn_rsq_clamp:
     case Intrinsic::amdgcn_fmul_legacy:
@@ -4303,6 +4340,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wmma_i32_16x16x16_iu4:
     case Intrinsic::amdgcn_wmma_i32_16x16x16_iu8:
       return getDefaultMappingVOP(MI);
+    case Intrinsic::amdgcn_rcp:
+    case Intrinsic::amdgcn_rsq:
+    case Intrinsic::amdgcn_sqrt: {
+      unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      if (Subtarget.hasPseudoScalarTrans() && (Size == 16 || Size == 32) &&
+          isSALUMapping(MI))
+        return getDefaultMappingSOP(MI);
+      return getDefaultMappingVOP(MI);
+    }
     case Intrinsic::amdgcn_sbfe:
     case Intrinsic::amdgcn_ubfe:
       if (isSALUMapping(MI))
@@ -4560,13 +4606,25 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     assert(RSrcIntrin->IsImage);
     return getImageMapping(MRI, MI, RSrcIntrin->RsrcArg);
   }
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_DUAL_INTERSECT_RAY: {
-    unsigned N = MI.getNumExplicitOperands() - 2;
+  case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
+  case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY: {
+    // On GFX12+ we have NV modifiers in addition to A16 ones.
+    bool IsGFX12Plus = AMDGPU::isGFX12Plus(Subtarget);
+    unsigned NumMods =
+      IsGFX12Plus && MI.getOpcode() != AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY
+        ? 2 : 1;
+    unsigned LastRegOpIdx = (MI.getNumExplicitOperands() - 1) - NumMods;
     unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
-    OpdsMapping[N] = getSGPROpMapping(MI.getOperand(N).getReg(), MRI, *TRI);
-    if (N == 3) {
+    if (MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY) {
+      OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID,
+        MRI.getType(MI.getOperand(1).getReg()).getSizeInBits());
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID,
+        MRI.getType(MI.getOperand(2).getReg()).getSizeInBits());
+    }
+    OpdsMapping[LastRegOpIdx] =
+        getSGPROpMapping(MI.getOperand(LastRegOpIdx).getReg(), MRI, *TRI);
+    if (LastRegOpIdx == 3) {
       // Sequential form: all operands combined into VGPR256/VGPR512
       unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
       if (Size > 256)
@@ -4574,7 +4632,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
     } else {
       // NSA form
-      for (unsigned I = 2; I < N; ++I) {
+      unsigned FirstSrcOpIdx =
+          MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY ? 4 : 2;
+      for (unsigned I = FirstSrcOpIdx; I < LastRegOpIdx; ++I) {
         unsigned Size = MRI.getType(MI.getOperand(I).getReg()).getSizeInBits();
         OpdsMapping[I] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
       }

@@ -10,6 +10,8 @@
 
 // Contains the common part of the formatter tests for different papers.
 
+#include <algorithm>
+#include <charconv>
 #include <format>
 
 #include "make_string.h"

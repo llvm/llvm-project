@@ -2030,8 +2030,8 @@ bool hasMIMG_R128(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureMIMG_R128] && !STI.getFeatureBits()[AMDGPU::FeatureR128A16];
 }
 
-bool hasGFX10A16(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10A16];
+bool hasA16(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureA16];
 }
 
 bool hasG16(const MCSubtargetInfo &STI) {
@@ -2672,12 +2672,12 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                    : std::nullopt;
 }
 
-unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed) {
+unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
   // Address offset is 12-bit signed for GFX10, 13-bit for GFX9 and GFX11+.
   if (AMDGPU::isGFX10(ST))
-    return Signed ? 12 : 11;
+    return 12;
 
-  return Signed ? 13 : 12;
+  return 13;
 }
 
 // Given Imm, split it into the values to put into the SOffset and ImmOffset

@@ -101,6 +101,10 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
       return diag;
     }
   }];
+
+  let verify = [{
+    return ::mlir::transform::detail::verifyTransformOpInterface($_op);
+  }];
 }
 
 class TransformTypeInterfaceBase<string cppClass, string cppObjectType>

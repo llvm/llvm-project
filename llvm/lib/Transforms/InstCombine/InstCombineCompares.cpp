@@ -282,7 +282,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   if (!GEP->isInBounds()) {
     Type *IntPtrTy = DL.getIntPtrType(GEP->getType());
     unsigned PtrSize = IntPtrTy->getIntegerBitWidth();
-    if (Idx->getType()->getPrimitiveSizeInBits().getFixedSize() > PtrSize)
+    if (Idx->getType()->getPrimitiveSizeInBits().getFixedValue() > PtrSize)
       Idx = Builder.CreateTrunc(Idx, IntPtrTy);
   }
 
@@ -816,8 +816,8 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
         Type *LHSIndexTy = LOffset->getType();
         Type *RHSIndexTy = ROffset->getType();
         if (LHSIndexTy != RHSIndexTy) {
-          if (LHSIndexTy->getPrimitiveSizeInBits().getFixedSize() <
-              RHSIndexTy->getPrimitiveSizeInBits().getFixedSize()) {
+          if (LHSIndexTy->getPrimitiveSizeInBits().getFixedValue() <
+              RHSIndexTy->getPrimitiveSizeInBits().getFixedValue()) {
             ROffset = Builder.CreateTrunc(ROffset, LHSIndexTy);
           } else
             LOffset = Builder.CreateTrunc(LOffset, RHSIndexTy);
@@ -1722,7 +1722,7 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
     APInt NewC2 = *C2;
     KnownBits Know = computeKnownBits(And->getOperand(0), 0, And);
     // Set high zeros of C2 to allow matching negated power-of-2.
-    NewC2 = *C2 + APInt::getHighBitsSet(C2->getBitWidth(),
+    NewC2 = *C2 | APInt::getHighBitsSet(C2->getBitWidth(),
                                         Know.countMinLeadingZeros());
 
     // Restrict this fold only for single-use 'and' (PR10267).
@@ -4782,6 +4782,20 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
                                                   : ICmpInst::ICMP_UGE,
                         Add, ConstantInt::get(A->getType(), C.shl(1)));
   }
+
+  // Canonicalize:
+  // Assume B_Pow2 != 0
+  // 1. A & B_Pow2 != B_Pow2 -> A & B_Pow2 == 0
+  // 2. A & B_Pow2 == B_Pow2 -> A & B_Pow2 != 0
+  if (match(Op0, m_c_And(m_Specific(Op1), m_Value())) &&
+      isKnownToBeAPowerOfTwo(Op1, /* OrZero */ false, 0, &I))
+    return new ICmpInst(CmpInst::getInversePredicate(Pred), Op0,
+                        ConstantInt::getNullValue(Op0->getType()));
+
+  if (match(Op1, m_c_And(m_Specific(Op0), m_Value())) &&
+      isKnownToBeAPowerOfTwo(Op0, /* OrZero */ false, 0, &I))
+    return new ICmpInst(CmpInst::getInversePredicate(Pred), Op1,
+                        ConstantInt::getNullValue(Op1->getType()));
 
   return nullptr;
 }

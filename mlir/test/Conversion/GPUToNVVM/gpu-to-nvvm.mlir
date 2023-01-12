@@ -181,6 +181,21 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK: llvm.func @__nv_cbrtf(f32) -> f32
+  // CHECK: llvm.func @__nv_cbrt(f64) -> f64
+  // CHECK-LABEL: func @gpu_cbrt
+  func.func @gpu_cbrt(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.cbrt %arg_f32 : f32
+    // CHECK: llvm.call @__nv_cbrtf(%{{.*}}) : (f32) -> f32
+    %result64 = math.cbrt %arg_f64 : f64
+    // CHECK: llvm.call @__nv_cbrt(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK: llvm.func @__nv_ceilf(f32) -> f32
   // CHECK: llvm.func @__nv_ceil(f64) -> f64
   // CHECK-LABEL: func @gpu_ceil
@@ -526,7 +541,7 @@ gpu.module @test_module {
   gpu.func @test_printf(%arg0: i32, %arg1: f32) {
     // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL1]] : !llvm.ptr<array<11 x i8>>
     // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr<array<11 x i8>>) -> !llvm.ptr<i8>
-    // CHECK-NEXT: %[[EXT:.+]] = llvm.fpext %[[ARG1]] : f32 to f64 
+    // CHECK-NEXT: %[[EXT:.+]] = llvm.fpext %[[ARG1]] : f32 to f64
     // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : index) : i64
     // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<(i32, f64)> : (i64) -> !llvm.ptr<struct<(i32, f64)>>
     // CHECK-NEXT: %[[EL0:.*]] = llvm.getelementptr %[[ALLOC]][0, 0] : (!llvm.ptr<struct<(i32, f64)>>) -> !llvm.ptr<i32>

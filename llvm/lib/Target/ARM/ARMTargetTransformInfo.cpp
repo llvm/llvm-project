@@ -1545,7 +1545,7 @@ InstructionCost ARMTTIImpl::getInterleavedMemoryOpCost(
     // vmovn.
     if (ST->hasMVEIntegerOps() && Factor == 2 && NumElts / Factor > 2 &&
         VecTy->isIntOrIntVectorTy() &&
-        DL.getTypeSizeInBits(SubVecTy).getFixedSize() <= 64)
+        DL.getTypeSizeInBits(SubVecTy).getFixedValue() <= 64)
       return 2 * BaseCost;
   }
 

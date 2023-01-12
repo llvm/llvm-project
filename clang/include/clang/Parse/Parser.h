@@ -1233,7 +1233,7 @@ public:
   /// returns false.
   bool SkipUntil(tok::TokenKind T,
                  SkipUntilFlags Flags = static_cast<SkipUntilFlags>(0)) {
-    return SkipUntil(llvm::makeArrayRef(T), Flags);
+    return SkipUntil(llvm::ArrayRef(T), Flags);
   }
   bool SkipUntil(tok::TokenKind T1, tok::TokenKind T2,
                  SkipUntilFlags Flags = static_cast<SkipUntilFlags>(0)) {

@@ -99,7 +99,7 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_source_info_options);
+      return llvm::ArrayRef(g_source_info_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -696,7 +696,7 @@ class CommandObjectSourceList : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_source_list_options);
+      return llvm::ArrayRef(g_source_list_options);
     }
 
     // Instance variables to hold the values for command options.

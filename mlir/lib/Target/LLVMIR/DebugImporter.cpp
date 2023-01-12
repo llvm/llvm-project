@@ -191,7 +191,7 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
 
 Location DebugImporter::translateLoc(llvm::DILocation *loc) {
   if (!loc)
-    return UnknownLoc::get(context);
+    return mlirModule.getLoc();
 
   // Get the file location of the instruction.
   Location result = FileLineColLoc::get(context, loc->getFilename(),

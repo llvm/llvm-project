@@ -47,11 +47,11 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i32 0
-; CHECK-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), ptr [[TMP14]], align 1
+; CHECK-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i32 [[TMP16]]
-; CHECK-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), ptr [[TMP17]], align 1
+; CHECK-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), ptr [[TMP17]], align 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 32
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
@@ -78,7 +78,7 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i32 0
-; CHECK-NEXT:    store <vscale x 8 x i8> shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer), ptr [[TMP27]], align 1
+; CHECK-NEXT:    store <vscale x 8 x i8> shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i64 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer), ptr [[TMP27]], align 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 [[TMP28]], 8
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[OFFSET_IDX]], [[TMP29]]
@@ -125,11 +125,11 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-VF8-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP4]]
 ; CHECK-VF8-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP9]]
 ; CHECK-VF8-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i32 0
-; CHECK-VF8-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), ptr [[TMP12]], align 1
+; CHECK-VF8-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), ptr [[TMP12]], align 1
 ; CHECK-VF8-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF8-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 16
 ; CHECK-VF8-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i32 [[TMP14]]
-; CHECK-VF8-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), ptr [[TMP15]], align 1
+; CHECK-VF8-NEXT:    store <vscale x 16 x i8> shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> poison, i8 1, i64 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer), ptr [[TMP15]], align 1
 ; CHECK-VF8-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 32
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP17]]
@@ -226,11 +226,11 @@ define void @main_vf_vscale_x_2(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 0
-; CHECK-NEXT:    store <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP12]], align 1
+; CHECK-NEXT:    store <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP12]], align 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 [[TMP14]]
-; CHECK-NEXT:    store <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP15]], align 1
+; CHECK-NEXT:    store <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP15]], align 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP17]]
@@ -296,11 +296,11 @@ define void @main_vf_vscale_x_2(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP4]]
 ; CHECK-VF8-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP9]]
 ; CHECK-VF8-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 0
-; CHECK-VF8-NEXT:    store <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP12]], align 1
+; CHECK-VF8-NEXT:    store <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP12]], align 1
 ; CHECK-VF8-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF8-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 2
 ; CHECK-VF8-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 [[TMP14]]
-; CHECK-VF8-NEXT:    store <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP15]], align 1
+; CHECK-VF8-NEXT:    store <vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 1, i64 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), ptr [[TMP15]], align 1
 ; CHECK-VF8-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 4
 ; CHECK-VF8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP17]]

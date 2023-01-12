@@ -1033,7 +1033,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
     auto llvmFuncType = LLVM::LLVMFunctionType::get(llvmResultType, argTypes);
     auto wrappedFuncType = LLVM::LLVMPointerType::get(llvmFuncType);
 
-    auto funcArguments = llvm::makeArrayRef(operands).drop_front();
+    auto funcArguments = llvm::ArrayRef(operands).drop_front();
 
     // Make sure that the first operand (indirect callee) matches the wrapped
     // LLVM IR function type, and that the types of the other call operands
@@ -1156,7 +1156,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
 
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    StringAttr callee, ValueRange args) {
-  build(builder, state, results, SymbolRefAttr::get(callee), args, nullptr);
+  build(builder, state, results, SymbolRefAttr::get(callee), args, nullptr,
+        nullptr);
+}
+
+void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
+                   FlatSymbolRefAttr callee, ValueRange args) {
+  build(builder, state, results, callee, args, nullptr, nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
@@ -1165,7 +1171,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   Type resultType = func.getFunctionType().getReturnType();
   if (!resultType.isa<LLVM::LLVMVoidType>())
     results.push_back(resultType);
-  build(builder, state, results, SymbolRefAttr::get(func), args, nullptr);
+  build(builder, state, results, SymbolRefAttr::get(func), args, nullptr,
+        nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {
@@ -1434,7 +1441,7 @@ static Type getInsertExtractValueElementType(Type llvmType,
   return llvmType;
 }
 
-OpFoldResult LLVM::ExtractValueOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
   auto insertValueOp = getContainer().getDefiningOp<InsertValueOp>();
   OpFoldResult result = {};
   while (insertValueOp) {
@@ -2268,7 +2275,7 @@ LogicalResult LLVM::ConstantOp::verify() {
 }
 
 // Constant op constant-folds to its value.
-OpFoldResult LLVM::ConstantOp::fold(ArrayRef<Attribute>) { return getValue(); }
+OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
 // Utility functions for parsing atomic ops
@@ -2506,7 +2513,7 @@ LogicalResult FenceOp::verify() {
 // Folder for LLVM::BitcastOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult LLVM::BitcastOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
   // bitcast(x : T0, T0) -> x
   if (getArg().getType() == getType())
     return getArg();
@@ -2521,7 +2528,7 @@ OpFoldResult LLVM::BitcastOp::fold(ArrayRef<Attribute> operands) {
 // Folder for LLVM::AddrSpaceCastOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult LLVM::AddrSpaceCastOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
   // addrcast(x : T0, T0) -> x
   if (getArg().getType() == getType())
     return getArg();
@@ -2536,9 +2543,9 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(ArrayRef<Attribute> operands) {
 // Folder for LLVM::GEPOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   GEPIndicesAdaptor<ArrayRef<Attribute>> indices(getRawConstantIndicesAttr(),
-                                                 operands.drop_front());
+                                                 adaptor.getDynamicIndices());
 
   // gep %x:T, 0 -> %x
   if (getBase().getType() == getType() && indices.size() == 1)
@@ -2823,10 +2830,25 @@ namespace {
 struct LLVMInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
-  /// Conservatively only allow inlining of pure ops.
+  /// Conservative allowlist-based inlining of operations supported so far.
   bool isLegalToInline(Operation *op, Region *, bool,
                        BlockAndValueMapping &) const final {
-    return isPure(op);
+    if (isPure(op))
+      return true;
+    return llvm::TypeSwitch<Operation *, bool>(op)
+        .Case<LLVM::LoadOp, LLVM::StoreOp>([&](auto memOp) {
+          // Some attributes on load and store operations require handling
+          // during inlining. Since this is not yet implemented, refuse to
+          // inline memory operations that have any of these attributes.
+          if (memOp.getAccessGroups())
+            return false;
+          if (memOp.getAliasScopes())
+            return false;
+          if (memOp.getNoaliasScopes())
+            return false;
+          return true;
+        })
+        .Default([](auto) { return false; });
   }
 };
 } // end anonymous namespace

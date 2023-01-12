@@ -1533,7 +1533,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Type *getShadowTyNoVec(Type *ty) {
     if (VectorType *vt = dyn_cast<VectorType>(ty))
       return IntegerType::get(*MS.C,
-                              vt->getPrimitiveSizeInBits().getFixedSize());
+                              vt->getPrimitiveSizeInBits().getFixedValue());
     return ty;
   }
 

@@ -11,28 +11,7 @@
 #include <concepts>
 #include <format>
 
-#include "make_string.h"
-
-#define STR(S) MAKE_STRING(CharT, S)
-#define SV(S) MAKE_STRING_VIEW(CharT, S)
-
-template <class T>
-struct context {};
-
-template <>
-struct context<char> {
-  using type = std::format_context;
-};
-
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-template <>
-struct context<wchar_t> {
-  using type = std::wformat_context;
-};
-#endif
-
-template <class T>
-using context_t = typename context<T>::type;
+#include "format.functions.common.h"
 
 enum class color { black, red, gold };
 
@@ -174,6 +153,8 @@ void test_pair_int_int(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void test_pair_int_string(TestFunction check, ExceptionTest check_exception) {
   test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_pair(42, SV("hello")));
+  test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_pair(42, STR("hello")));
+  test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_pair(42, CSTR("hello")));
 }
 
 //
@@ -286,6 +267,8 @@ void test_tuple_int_int(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void test_tuple_int_string(TestFunction check, ExceptionTest check_exception) {
   test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_tuple(42, SV("hello")));
+  test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_tuple(42, STR("hello")));
+  test_tuple_or_pair_int_string<CharT>(check, check_exception, std::make_tuple(42, CSTR("hello")));
 }
 
 //

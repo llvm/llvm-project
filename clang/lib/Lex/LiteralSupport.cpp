@@ -515,8 +515,9 @@ static void DiagnoseInvalidUnicodeCharacterName(
 
     std::string Str;
     llvm::UTF32 V = Match.Value;
-    LLVM_ATTRIBUTE_UNUSED bool Converted =
+    bool Converted =
         llvm::convertUTF32ToUTF8String(llvm::ArrayRef<llvm::UTF32>(&V, 1), Str);
+    (void)Converted;
     assert(Converted && "Found a match wich is not a unicode character");
 
     Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,

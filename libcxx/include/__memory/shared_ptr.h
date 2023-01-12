@@ -991,7 +991,7 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count
         return (__bytes + __align - 1) & ~(__align - 1);
     }
 
-    _LIBCPP_HIDE_FROM_ABI
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     ~__unbounded_array_control_block() override { } // can't be `= default` because of the sometimes-non-trivial union member __data_
 
 private:
@@ -1058,7 +1058,7 @@ struct __bounded_array_control_block<_Tp[_Count], _Alloc>
         std::__uninitialized_allocator_value_construct_n(__alloc_, std::addressof(__data_[0]), _Count);
     }
 
-    _LIBCPP_HIDE_FROM_ABI
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     ~__bounded_array_control_block() override { } // can't be `= default` because of the sometimes-non-trivial union member __data_
 
 private:

@@ -552,6 +552,16 @@ def top32Zero: PatLeaf<(i64 GPR64:$src), [{
          CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(64, 32));
   }]>;
 
+// topbitsallzero - Return true if all bits except the lowest bit are known zero
+def topbitsallzero32: PatLeaf<(i32 GPR32:$src), [{
+  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 31));
+  }]>;
+def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
+  return SDValue(N,0)->getValueType(0) == MVT::i64 &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(64, 63));
+  }]>;
+
 // Node definitions.
 def AArch64adrp          : SDNode<"AArch64ISD::ADRP", SDTIntUnaryOp, []>;
 def AArch64adr           : SDNode<"AArch64ISD::ADR", SDTIntUnaryOp, []>;
@@ -2463,6 +2473,20 @@ def : Pat<(add GPR32:$val, (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
           (CSINCWr GPR32:$val, GPR32:$val, (i32 imm:$cc))>;
 def : Pat<(add GPR64:$val, (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
           (CSINCXr GPR64:$val, GPR64:$val, (i32 imm:$cc))>;
+
+def : Pat<(or (topbitsallzero32:$val), (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
+          (CSINCWr GPR32:$val, WZR, imm:$cc)>;
+def : Pat<(or (topbitsallzero64:$val), (AArch64csel (i64 0), (i64 1), (i32 imm:$cc), NZCV)),
+          (CSINCXr GPR64:$val, XZR, imm:$cc)>;
+def : Pat<(or (topbitsallzero64:$val), (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
+          (CSINCXr GPR64:$val, XZR, imm:$cc)>;
+
+def : Pat<(and (topbitsallzero32:$val), (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
+          (CSELWr WZR, GPR32:$val, imm:$cc)>;
+def : Pat<(and (topbitsallzero64:$val), (AArch64csel (i64 0), (i64 1), (i32 imm:$cc), NZCV)),
+          (CSELXr XZR, GPR64:$val, imm:$cc)>;
+def : Pat<(and (topbitsallzero64:$val), (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
+          (CSELXr XZR, GPR64:$val, imm:$cc)>;
 
 // The inverse of the condition code from the alias instruction is what is used
 // in the aliased instruction. The parser all ready inverts the condition code
@@ -5842,6 +5866,10 @@ def : Pat<(v16i8 (scalar_to_vector GPR32:$Rn)),
 def : Pat<(v8i8 (scalar_to_vector GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
+
+// The top bits will be zero from the FMOVWSr
+def : Pat<(v8i8 (bitconvert (i64 (zext GPR32:$Rn)))),
+          (SUBREG_TO_REG (i32 0), (f32 (FMOVWSr GPR32:$Rn)), ssub)>;
 
 def : Pat<(v8i16 (scalar_to_vector GPR32:$Rn)),
           (SUBREG_TO_REG (i32 0),

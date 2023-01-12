@@ -856,7 +856,7 @@ spirv::Deserializer::processFunctionType(ArrayRef<uint32_t> operands) {
   }
   ArrayRef<Type> returnTypes;
   if (!isVoidType(returnType)) {
-    returnTypes = llvm::makeArrayRef(returnType);
+    returnTypes = llvm::ArrayRef(returnType);
   }
   typeMap[operands[0]] = FunctionType::get(context, argTypes, returnTypes);
   return success();

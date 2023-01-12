@@ -2557,15 +2557,8 @@ LSRInstance::OptimizeLoopTermCond() {
   // must dominate all the post-inc comparisons we just set up, and it must
   // dominate the loop latch edge.
   IVIncInsertPos = L->getLoopLatch()->getTerminator();
-  for (Instruction *Inst : PostIncs) {
-    BasicBlock *BB =
-      DT.findNearestCommonDominator(IVIncInsertPos->getParent(),
-                                    Inst->getParent());
-    if (BB == Inst->getParent())
-      IVIncInsertPos = Inst;
-    else if (BB != IVIncInsertPos->getParent())
-      IVIncInsertPos = BB->getTerminator();
-  }
+  for (Instruction *Inst : PostIncs)
+    IVIncInsertPos = DT.findNearestCommonDominator(IVIncInsertPos, Inst);
 }
 
 /// Determine if the given use can accommodate a fixup at the given offset and

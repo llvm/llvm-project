@@ -853,13 +853,13 @@ LibcxxWStringSummaryProvider(ValueObject &valobj, Stream &stream,
     return false;
 
   // std::wstring::size() is measured in 'characters', not bytes
-  TypeSystemClang *ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*valobj.GetTargetSP());
-  if (!ast_context)
+  if (!scratch_ts_sp)
     return false;
 
   auto wchar_t_size =
-      ast_context->GetBasicType(lldb::eBasicTypeWChar).GetByteSize(nullptr);
+      scratch_ts_sp->GetBasicType(lldb::eBasicTypeWChar).GetByteSize(nullptr);
   if (!wchar_t_size)
     return false;
 

@@ -44,7 +44,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -1136,52 +1135,58 @@ void MachineFunction::finalizeDebugInstrRefs() {
   auto MakeUndefDbgValue = [&](MachineInstr &MI) {
     const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE_LIST);
     MI.setDesc(RefII);
-    MI.getDebugOperand(0).setReg(0);
+    MI.setDebugValueUndef();
   };
 
   DenseMap<Register, DebugInstrOperandPair> ArgDbgPHIs;
   for (auto &MBB : *this) {
     for (auto &MI : MBB) {
-      if (!MI.isDebugRef() || !MI.getDebugOperand(0).isReg())
+      if (!MI.isDebugRef())
         continue;
 
-      Register Reg = MI.getDebugOperand(0).getReg();
+      bool IsValidRef = true;
 
-      // Some vregs can be deleted as redundant in the meantime. Mark those
-      // as DBG_VALUE $noreg. Additionally, some normal instructions are
-      // quickly deleted, leaving dangling references to vregs with no def.
-      if (Reg == 0 || !RegInfo->hasOneDef(Reg)) {
-        MakeUndefDbgValue(MI);
-        continue;
-      }
-      // Only convert Expr to variadic form when we're sure we're emitting a
-      // complete instruction reference.
-      MI.getDebugExpressionOp().setMetadata(
-          DIExpression::convertToVariadicExpression(MI.getDebugExpression()));
+      for (MachineOperand &MO : MI.debug_operands()) {
+        if (!MO.isReg())
+          continue;
 
-      assert(Reg.isVirtual());
-      MachineInstr &DefMI = *RegInfo->def_instr_begin(Reg);
+        Register Reg = MO.getReg();
 
-      // If we've found a copy-like instruction, follow it back to the
-      // instruction that defines the source value, see salvageCopySSA docs
-      // for why this is important.
-      if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
-        auto Result = salvageCopySSA(DefMI, ArgDbgPHIs);
-        MI.getDebugOperand(0).ChangeToDbgInstrRef(Result.first, Result.second);
-      } else {
-        // Otherwise, identify the operand number that the VReg refers to.
-        unsigned OperandIdx = 0;
-        for (const auto &MO : DefMI.operands()) {
-          if (MO.isReg() && MO.isDef() && MO.getReg() == Reg)
-            break;
-          ++OperandIdx;
+        // Some vregs can be deleted as redundant in the meantime. Mark those
+        // as DBG_VALUE $noreg. Additionally, some normal instructions are
+        // quickly deleted, leaving dangling references to vregs with no def.
+        if (Reg == 0 || !RegInfo->hasOneDef(Reg)) {
+          IsValidRef = false;
+          break;
         }
-        assert(OperandIdx < DefMI.getNumOperands());
 
-        // Morph this instr ref to point at the given instruction and operand.
-        unsigned ID = DefMI.getDebugInstrNum();
-        MI.getDebugOperand(0).ChangeToDbgInstrRef(ID, OperandIdx);
+        assert(Reg.isVirtual());
+        MachineInstr &DefMI = *RegInfo->def_instr_begin(Reg);
+
+        // If we've found a copy-like instruction, follow it back to the
+        // instruction that defines the source value, see salvageCopySSA docs
+        // for why this is important.
+        if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
+          auto Result = salvageCopySSA(DefMI, ArgDbgPHIs);
+          MO.ChangeToDbgInstrRef(Result.first, Result.second);
+        } else {
+          // Otherwise, identify the operand number that the VReg refers to.
+          unsigned OperandIdx = 0;
+          for (const auto &DefMO : DefMI.operands()) {
+            if (DefMO.isReg() && DefMO.isDef() && DefMO.getReg() == Reg)
+              break;
+            ++OperandIdx;
+          }
+          assert(OperandIdx < DefMI.getNumOperands());
+
+          // Morph this instr ref to point at the given instruction and operand.
+          unsigned ID = DefMI.getDebugInstrNum();
+          MO.ChangeToDbgInstrRef(ID, OperandIdx);
+        }
       }
+
+      if (!IsValidRef)
+        MakeUndefDbgValue(MI);
     }
   }
 }

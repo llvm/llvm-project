@@ -35,7 +35,7 @@ static_assert(!CEElementCountFixed3.isScalable());
 constexpr ElementCount CEElementCountScalable4 = ElementCount::getScalable(4);
 
 static_assert(CEElementCountScalable4.isScalable());
-static_assert(!ElementCount::getNull().isScalable());
+static_assert(!ElementCount().isScalable());
 static_assert(
     CEElementCountScalable4.hasKnownScalarFactor(ElementCount::getScalable(2)));
 static_assert(ElementCount::getScalable(8).getKnownScalarFactor(
@@ -63,12 +63,12 @@ constexpr TypeSize TSFixed0 = TypeSize::Fixed(0);
 constexpr TypeSize TSFixed1 = TypeSize::Fixed(1);
 constexpr TypeSize TSFixed32 = TypeSize::Fixed(32);
 
-static_assert(TSFixed0.getFixedSize() == 0);
-static_assert(TSFixed1.getFixedSize() == 1);
-static_assert(TSFixed32.getFixedSize() == 32);
-static_assert(TSFixed32.getKnownMinSize() == 32);
+static_assert(TSFixed0.getFixedValue() == 0);
+static_assert(TSFixed1.getFixedValue() == 1);
+static_assert(TSFixed32.getFixedValue() == 32);
+static_assert(TSFixed32.getKnownMinValue() == 32);
 
-static_assert(TypeSize::Scalable(32).getKnownMinSize() == 32);
+static_assert(TypeSize::Scalable(32).getKnownMinValue() == 32);
 
 static_assert(TSFixed32 * 2 == TypeSize::Fixed(64));
 static_assert(TSFixed32 * 2u == TypeSize::Fixed(64));

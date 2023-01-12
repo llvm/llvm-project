@@ -44,7 +44,7 @@ def AOp : NS_Op<"a_op", []> {
 // DECL:      static ::llvm::ArrayRef<::llvm::StringRef> getAttributeNames()
 // DECL-NEXT:   static ::llvm::StringRef attrNames[] =
 // DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr"), ::llvm::StringRef("dAttr")};
-// DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
+// DECL-NEXT:   return ::llvm::ArrayRef(attrNames);
 
 // DECL:      ::mlir::StringAttr getAAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(0);
@@ -193,7 +193,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 // DECL:      static ::llvm::ArrayRef<::llvm::StringRef> getAttributeNames()
 // DECL-NEXT:   static ::llvm::StringRef attrNames[] =
 // DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr")};
-// DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
+// DECL-NEXT:   return ::llvm::ArrayRef(attrNames);
 
 // DECL:      ::mlir::StringAttr getAAttrAttrName()
 // DECL-NEXT:      return getAttributeNameForIndex(0);

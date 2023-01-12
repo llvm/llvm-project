@@ -96,7 +96,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_frame_diag_options);
+      return llvm::ArrayRef(g_frame_diag_options);
     }
 
     // Options.
@@ -254,7 +254,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_frame_select_options);
+      return llvm::ArrayRef(g_frame_select_options);
     }
 
     std::optional<int32_t> relative_frame_offset;
@@ -778,7 +778,7 @@ private:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_frame_recognizer_add_options);
+      return llvm::ArrayRef(g_frame_recognizer_add_options);
     }
 
     // Instance variables to hold the values for command options.

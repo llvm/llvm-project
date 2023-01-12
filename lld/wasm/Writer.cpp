@@ -1226,7 +1226,7 @@ void Writer::createInitMemoryFunction() {
 
         if (s->isBss) {
           writeI32Const(os, 0, "fill value");
-          writeI32Const(os, s->size, "memory region size");
+          writePtrConst(os, s->size, is64, "memory region size");
           writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
           writeUleb128(os, WASM_OPCODE_MEMORY_FILL, "memory.fill");
           writeU8(os, 0, "memory index immediate");

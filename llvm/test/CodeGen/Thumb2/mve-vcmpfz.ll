@@ -47,22 +47,18 @@ define arm_aapcs_vfpcc <4 x float> @vcmp_one_v4f32(<4 x float> %src, <4 x float>
 ; CHECK-MVE-NEXT:    cset r0, mi
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s0, #0
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s3, #0
 ; CHECK-MVE-NEXT:    cset r1, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r1, #1
+; CHECK-MVE-NEXT:    csinc r1, r1, zr, gt
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s2, #0
 ; CHECK-MVE-NEXT:    cset r2, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r2, #1
+; CHECK-MVE-NEXT:    csinc r2, r2, zr, gt
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r3, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r3, #1
+; CHECK-MVE-NEXT:    csinc r3, r3, zr, gt
 ; CHECK-MVE-NEXT:    cmp r2, #0
 ; CHECK-MVE-NEXT:    vseleq.f32 s3, s11, s7
 ; CHECK-MVE-NEXT:    cmp r3, #0
@@ -238,22 +234,18 @@ define arm_aapcs_vfpcc <4 x float> @vcmp_ueq_v4f32(<4 x float> %src, <4 x float>
 ; CHECK-MVE-NEXT:    cset r0, eq
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s0, #0
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s3, #0
 ; CHECK-MVE-NEXT:    cset r1, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r1, #1
+; CHECK-MVE-NEXT:    csinc r1, r1, zr, vs
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s2, #0
 ; CHECK-MVE-NEXT:    cset r2, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r2, #1
+; CHECK-MVE-NEXT:    csinc r2, r2, zr, vs
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r3, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r3, #1
+; CHECK-MVE-NEXT:    csinc r3, r3, zr, vs
 ; CHECK-MVE-NEXT:    cmp r2, #0
 ; CHECK-MVE-NEXT:    vseleq.f32 s3, s11, s7
 ; CHECK-MVE-NEXT:    cmp r3, #0
@@ -606,14 +598,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_one_v8f16(<8 x half> %src, <8 x half> %a
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s0, #0
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s12, s14, s12
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s0, s8, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
@@ -624,15 +614,13 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_one_v8f16(<8 x half> %src, <8 x half> %a
 ; CHECK-MVE-NEXT:    vcmp.f16 s1, #0
 ; CHECK-MVE-NEXT:    vins.f16 s0, s12
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s10
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s1, s9, s5
 ; CHECK-MVE-NEXT:    vins.f16 s1, s4
@@ -642,14 +630,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_one_v8f16(<8 x half> %src, <8 x half> %a
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s2, #0
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s2, s10, s6
 ; CHECK-MVE-NEXT:    vmovx.f16 s6, s11
@@ -660,14 +646,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_one_v8f16(<8 x half> %src, <8 x half> %a
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s3, #0
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s6, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s3, s11, s7
 ; CHECK-MVE-NEXT:    vins.f16 s3, s4
@@ -983,14 +967,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_ueq_v8f16(<8 x half> %src, <8 x half> %a
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s0, #0
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s12, s14, s12
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s0, s8, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
@@ -1001,15 +983,13 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_ueq_v8f16(<8 x half> %src, <8 x half> %a
 ; CHECK-MVE-NEXT:    vcmp.f16 s1, #0
 ; CHECK-MVE-NEXT:    vins.f16 s0, s12
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s10
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s1, s9, s5
 ; CHECK-MVE-NEXT:    vins.f16 s1, s4
@@ -1019,14 +999,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_ueq_v8f16(<8 x half> %src, <8 x half> %a
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s2, #0
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s2, s10, s6
 ; CHECK-MVE-NEXT:    vmovx.f16 s6, s11
@@ -1037,14 +1015,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_ueq_v8f16(<8 x half> %src, <8 x half> %a
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s3, #0
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s6, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s3, s11, s7
 ; CHECK-MVE-NEXT:    vins.f16 s3, s4
@@ -1600,22 +1576,18 @@ define arm_aapcs_vfpcc <4 x float> @vcmp_r_one_v4f32(<4 x float> %src, <4 x floa
 ; CHECK-MVE-NEXT:    cset r0, mi
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s0, #0
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s3, #0
 ; CHECK-MVE-NEXT:    cset r1, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r1, #1
+; CHECK-MVE-NEXT:    csinc r1, r1, zr, gt
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s2, #0
 ; CHECK-MVE-NEXT:    cset r2, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r2, #1
+; CHECK-MVE-NEXT:    csinc r2, r2, zr, gt
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r3, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r3, #1
+; CHECK-MVE-NEXT:    csinc r3, r3, zr, gt
 ; CHECK-MVE-NEXT:    cmp r2, #0
 ; CHECK-MVE-NEXT:    vseleq.f32 s3, s11, s7
 ; CHECK-MVE-NEXT:    cmp r3, #0
@@ -1791,22 +1763,18 @@ define arm_aapcs_vfpcc <4 x float> @vcmp_r_ueq_v4f32(<4 x float> %src, <4 x floa
 ; CHECK-MVE-NEXT:    cset r0, eq
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s0, #0
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s3, #0
 ; CHECK-MVE-NEXT:    cset r1, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r1, #1
+; CHECK-MVE-NEXT:    csinc r1, r1, zr, vs
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f32 s2, #0
 ; CHECK-MVE-NEXT:    cset r2, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r2, #1
+; CHECK-MVE-NEXT:    csinc r2, r2, zr, vs
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r3, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r3, #1
+; CHECK-MVE-NEXT:    csinc r3, r3, zr, vs
 ; CHECK-MVE-NEXT:    cmp r2, #0
 ; CHECK-MVE-NEXT:    vseleq.f32 s3, s11, s7
 ; CHECK-MVE-NEXT:    cmp r3, #0
@@ -2159,14 +2127,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_r_one_v8f16(<8 x half> %src, <8 x half> 
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s0, #0
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s12, s14, s12
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s0, s8, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
@@ -2177,15 +2143,13 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_r_one_v8f16(<8 x half> %src, <8 x half> 
 ; CHECK-MVE-NEXT:    vcmp.f16 s1, #0
 ; CHECK-MVE-NEXT:    vins.f16 s0, s12
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s10
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s1, s9, s5
 ; CHECK-MVE-NEXT:    vins.f16 s1, s4
@@ -2195,14 +2159,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_r_one_v8f16(<8 x half> %src, <8 x half> 
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s2, #0
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s2, s10, s6
 ; CHECK-MVE-NEXT:    vmovx.f16 s6, s11
@@ -2213,14 +2175,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_r_one_v8f16(<8 x half> %src, <8 x half> 
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s3, #0
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s6, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, mi
-; CHECK-MVE-NEXT:    it gt
-; CHECK-MVE-NEXT:    movgt r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, gt
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s3, s11, s7
 ; CHECK-MVE-NEXT:    vins.f16 s3, s4
@@ -2536,14 +2496,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_r_ueq_v8f16(<8 x half> %src, <8 x half> 
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s0, #0
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s12, s14, s12
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s0, s8, s4
 ; CHECK-MVE-NEXT:    vmovx.f16 s4, s1
@@ -2554,15 +2512,13 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_r_ueq_v8f16(<8 x half> %src, <8 x half> 
 ; CHECK-MVE-NEXT:    vcmp.f16 s1, #0
 ; CHECK-MVE-NEXT:    vins.f16 s0, s12
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vmovx.f16 s8, s10
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s1, s9, s5
 ; CHECK-MVE-NEXT:    vins.f16 s1, s4
@@ -2572,14 +2528,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_r_ueq_v8f16(<8 x half> %src, <8 x half> 
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s2, #0
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s8, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s2, s10, s6
 ; CHECK-MVE-NEXT:    vmovx.f16 s6, s11
@@ -2590,14 +2544,12 @@ define arm_aapcs_vfpcc <8 x half> @vcmp_r_ueq_v8f16(<8 x half> %src, <8 x half> 
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    vcmp.f16 s3, #0
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s4, s6, s4
 ; CHECK-MVE-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-MVE-NEXT:    cset r0, eq
-; CHECK-MVE-NEXT:    it vs
-; CHECK-MVE-NEXT:    movvs r0, #1
+; CHECK-MVE-NEXT:    csinc r0, r0, zr, vs
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    vseleq.f16 s3, s11, s7
 ; CHECK-MVE-NEXT:    vins.f16 s3, s4

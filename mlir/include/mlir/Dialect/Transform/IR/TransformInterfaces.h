@@ -494,6 +494,9 @@ mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
 
 /// Verification hook for PossibleTopLevelTransformOpTrait.
 LogicalResult verifyPossibleTopLevelTransformOpTrait(Operation *op);
+
+/// Verification hook for TransformOpInterface.
+LogicalResult verifyTransformOpInterface(Operation *op);
 } // namespace detail
 
 /// This trait is supposed to be attached to Transform dialect operations that
@@ -832,36 +835,30 @@ applyTransformToEach(TransformOpTy transformOp, ArrayRef<Operation *> targets,
   SmallVector<Diagnostic> silenceableStack;
   unsigned expectedNumResults = transformOp->getNumResults();
   for (Operation *target : targets) {
-    // Emplace back a placeholder for the returned new ops and params.
-    // This is filled with `expectedNumResults` if the op fails to apply.
-    ApplyToEachResultList placeholder;
-    placeholder.reserve(expectedNumResults);
-    results.push_back(std::move(placeholder));
-
     auto specificOp = dyn_cast<OpTy>(target);
     if (!specificOp) {
       Diagnostic diag(transformOp->getLoc(), DiagnosticSeverity::Error);
       diag << "transform applied to the wrong op kind";
       diag.attachNote(target->getLoc()) << "when applied to this op";
-      // Producing `expectedNumResults` nullptr is a silenceableFailure mode.
-      // TODO: encode this implicit `expectedNumResults` nullptr ==
-      // silenceableFailure with a proper trait.
-      results.back().assign(expectedNumResults, nullptr);
       silenceableStack.push_back(std::move(diag));
       continue;
     }
 
+    ApplyToEachResultList partialResults;
+    partialResults.reserve(expectedNumResults);
     Location specificOpLoc = specificOp->getLoc();
     DiagnosedSilenceableFailure res =
-        transformOp.applyToOne(specificOp, results.back(), state);
+        transformOp.applyToOne(specificOp, partialResults, state);
     if (res.isDefiniteFailure() ||
         failed(detail::checkApplyToOne(transformOp, specificOpLoc,
-                                       results.back()))) {
+                                       partialResults))) {
       return DiagnosedSilenceableFailure::definiteFailure();
     }
 
     if (res.isSilenceableFailure())
       res.takeDiagnostics(silenceableStack);
+    else
+      results.push_back(std::move(partialResults));
   }
   if (!silenceableStack.empty()) {
     return DiagnosedSilenceableFailure::silenceableFailure(

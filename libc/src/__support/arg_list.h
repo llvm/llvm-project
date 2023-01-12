@@ -22,6 +22,11 @@ public:
   ArgList(ArgList &other) { va_copy(this->vlist, other.vlist); }
   ~ArgList() { va_end(this->vlist); }
 
+  ArgList &operator=(ArgList &rhs) {
+    va_copy(vlist, rhs.vlist);
+    return *this;
+  }
+
   template <class T> T inline next_var() { return va_arg(vlist, T); }
 };
 

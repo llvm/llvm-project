@@ -588,7 +588,7 @@ def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
            "such as whether the parameter of isalpha is in the range [0, 255] "
            "or is EOF.">,
   Dependencies<[StdCLibraryFunctionsChecker]>,
-  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
+  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.unix"

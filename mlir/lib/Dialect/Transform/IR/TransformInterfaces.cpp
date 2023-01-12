@@ -80,6 +80,13 @@ transform::TransformState::setPayloadOps(Value value,
   assert(!value.getType().isa<TransformParamTypeInterface>() &&
          "cannot associate payload ops with a value of parameter type");
 
+  for (Operation *target : targets) {
+    if (target)
+      continue;
+    return emitError(value.getLoc())
+           << "attempting to assign a null payload op to this transform value";
+  }
+
   auto iface = value.getType().cast<TransformHandleTypeInterface>();
   DiagnosedSilenceableFailure result =
       iface.checkPayload(value.getLoc(), targets);
@@ -104,6 +111,13 @@ transform::TransformState::setPayloadOps(Value value,
 LogicalResult transform::TransformState::setParams(Value value,
                                                    ArrayRef<Param> params) {
   assert(value != nullptr && "attempting to set params for a null value");
+
+  for (Attribute attr : params) {
+    if (attr)
+      continue;
+    return emitError(value.getLoc())
+           << "attempting to assign a null parameter to this transform value";
+  }
 
   auto valueType = value.getType().dyn_cast<TransformParamTypeInterface>();
   assert(value &&
@@ -369,7 +383,7 @@ void transform::TransformResults::set(OpResult value,
   assert(segments[position].data() == nullptr && "results already set");
   int64_t start = operations.size();
   llvm::append_range(operations, ops);
-  segments[position] = makeArrayRef(operations).drop_front(start);
+  segments[position] = ArrayRef(operations).drop_front(start);
 }
 
 void transform::TransformResults::setParams(
@@ -380,7 +394,7 @@ void transform::TransformResults::setParams(
   assert(paramSegments[position].data() == nullptr && "params already set");
   size_t start = this->params.size();
   llvm::append_range(this->params, params);
-  paramSegments[position] = makeArrayRef(this->params).drop_front(start);
+  paramSegments[position] = ArrayRef(this->params).drop_front(start);
 }
 
 ArrayRef<Operation *>
@@ -602,8 +616,8 @@ void transform::consumesHandle(
 
 /// Returns `true` if the given list of effects instances contains an instance
 /// with the effect type specified as template parameter.
-template <typename EffectTy, typename ResourceTy = SideEffects::DefaultResource>
-static bool hasEffect(ArrayRef<MemoryEffects::EffectInstance> effects) {
+template <typename EffectTy, typename ResourceTy, typename Range>
+static bool hasEffect(Range &&effects) {
   return llvm::any_of(effects, [](const MemoryEffects::EffectInstance &effect) {
     return isa<EffectTy>(effect.getEffect()) &&
            isa<ResourceTy>(effect.getResource());
@@ -648,6 +662,48 @@ void transform::modifiesPayload(
 void transform::onlyReadsPayload(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+}
+
+//===----------------------------------------------------------------------===//
+// Utilities for TransformOpInterface.
+//===----------------------------------------------------------------------===//
+
+LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
+  auto iface = cast<MemoryEffectOpInterface>(op);
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  iface.getEffects(effects);
+
+  auto effectsOn = [&](Value value) {
+    return llvm::make_filter_range(
+        effects, [value](const MemoryEffects::EffectInstance &instance) {
+          return instance.getValue() == value;
+        });
+  };
+
+  for (OpOperand &operand : op->getOpOperands()) {
+    auto range = effectsOn(operand.get());
+    if (range.empty()) {
+      InFlightDiagnostic diag =
+          op->emitError() << "TransformOpInterface requires memory effects "
+                             "on operands to be specified";
+      diag.attachNote() << "no effects specified for operand #"
+                        << operand.getOperandNumber();
+      return diag;
+    }
+  }
+  for (OpResult result : op->getResults()) {
+    auto range = effectsOn(result);
+    if (!::hasEffect<MemoryEffects::Allocate, TransformMappingResource>(
+            range)) {
+      InFlightDiagnostic diag =
+          op->emitError() << "TransformOpInterface requires 'allocate' memory "
+                             "effect to be specified for results";
+      diag.attachNote() << "no 'allocate' effect specified for result #"
+                        << result.getResultNumber();
+      return diag;
+    }
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

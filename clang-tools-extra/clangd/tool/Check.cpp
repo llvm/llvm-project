@@ -145,7 +145,7 @@ public:
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
     auto Mangler = CommandMangler::detect();
     Mangler.SystemIncludeExtractor =
-        getSystemIncludeExtractor(llvm::makeArrayRef(Opts.QueryDriverGlobs));
+        getSystemIncludeExtractor(llvm::ArrayRef(Opts.QueryDriverGlobs));
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
     auto CDB = std::make_unique<OverlayCDB>(
@@ -228,7 +228,7 @@ public:
       elog("Failed to build AST");
       return false;
     }
-    ErrCount += showErrors(llvm::makeArrayRef(*AST->getDiagnostics())
+    ErrCount += showErrors(llvm::ArrayRef(*AST->getDiagnostics())
                                .drop_front(Preamble->Diags.size()));
 
     if (Opts.BuildDynamicSymbolIndex) {

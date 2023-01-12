@@ -140,6 +140,208 @@ define amdgpu_vs void @promote_load_from_store_aggr() #0 {
   ret void
 }
 
+define amdgpu_vs void @promote_memmove_aggr() #0 {
+; CHECK-LABEL: @promote_memmove_aggr(
+; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO1:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <5 x float> [[TMP1]], float 1.000000e+00, i64 1
+; CHECK-NEXT:    store <5 x float> [[TMP2]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO2:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x float> [[TMP3]], float 2.000000e+00, i64 3
+; CHECK-NEXT:    store <5 x float> [[TMP4]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <5 x float> [[TMP5]], <5 x float> poison, <5 x i32> <i32 1, i32 2, i32 3, i32 4, i32 4>
+; CHECK-NEXT:    store <5 x float> [[TMP6]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <5 x float> [[TMP7]], i32 0
+; CHECK-NEXT:    store float [[TMP8]], ptr addrspace(1) @pv, align 4
+; CHECK-NEXT:    ret void
+;
+  %f1 = alloca [5 x float], addrspace(5)
+  store [5 x float] zeroinitializer, ptr addrspace(5) %f1
+  %foo1 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 1
+  store float 1.0, ptr addrspace(5) %foo1
+  %foo2 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 3
+  store float 2.0, ptr addrspace(5) %foo2
+  call void @llvm.memmove.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %foo1, i32 16, i1 false)
+  %foo3 = load float, ptr addrspace(5) %f1
+  store float %foo3, ptr addrspace(1) @pv
+  ret void
+}
+
+define amdgpu_vs void @promote_memcpy_aggr() #0 {
+; CHECK-LABEL: @promote_memcpy_aggr(
+; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO2:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <5 x float> [[TMP1]], float 2.000000e+00, i64 3
+; CHECK-NEXT:    store <5 x float> [[TMP2]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
+; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
+; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x float> [[TMP3]], float 3.000000e+00, i32 [[FOO4]]
+; CHECK-NEXT:    store <5 x float> [[TMP4]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <5 x float> [[TMP5]], <5 x float> poison, <5 x i32> <i32 3, i32 4, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <5 x float> [[TMP6]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <5 x float> [[TMP7]], i32 0
+; CHECK-NEXT:    store float [[TMP8]], ptr addrspace(1) @pv, align 4
+; CHECK-NEXT:    ret void
+;
+  %f1 = alloca [5 x float], addrspace(5)
+  store [5 x float] zeroinitializer, ptr addrspace(5) %f1
+
+  %foo2 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 3
+  store float 2.0, ptr addrspace(5) %foo2
+
+  %foo3 = getelementptr %Block3, ptr addrspace(1) @block3, i32 0, i32 0
+  %foo4 = load i32, ptr addrspace(1) %foo3
+  %foo5 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 %foo4
+  store float 3.0, ptr addrspace(5) %foo5
+
+  call void @llvm.memcpy.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %foo2, i32 8, i1 false)
+  %foo6 = load float, ptr addrspace(5) %f1
+  store float %foo6, ptr addrspace(1) @pv
+  ret void
+}
+
+define amdgpu_vs void @promote_memcpy_identity_aggr() #0 {
+; CHECK-LABEL: @promote_memcpy_identity_aggr(
+; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO1:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <5 x float> [[TMP1]], float 1.000000e+00, i64 1
+; CHECK-NEXT:    store <5 x float> [[TMP2]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO2:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x float> [[TMP3]], float 2.000000e+00, i64 3
+; CHECK-NEXT:    store <5 x float> [[TMP4]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <5 x float> [[TMP5]], <5 x float> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <5 x float> [[TMP6]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <5 x float> [[TMP7]], i32 0
+; CHECK-NEXT:    store float [[TMP8]], ptr addrspace(1) @pv, align 4
+; CHECK-NEXT:    ret void
+;
+  %f1 = alloca [5 x float], addrspace(5)
+  store [5 x float] zeroinitializer, ptr addrspace(5) %f1
+  %foo1 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 1
+  store float 1.0, ptr addrspace(5) %foo1
+  %foo2 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 3
+  store float 2.0, ptr addrspace(5) %foo2
+  call void @llvm.memcpy.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %f1, i32 20, i1 false)
+  %foo3 = load float, ptr addrspace(5) %f1
+  store float %foo3, ptr addrspace(1) @pv
+  ret void
+}
+
+; TODO: promote alloca even there is a memcpy between different alloca
+define amdgpu_vs void @promote_memcpy_two_aggrs() #0 {
+; CHECK-LABEL: @promote_memcpy_two_aggrs(
+; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
+; CHECK-NEXT:    [[F2:%.*]] = alloca [5 x float], align 4, addrspace(5)
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F2]], align 4
+; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
+; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
+; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
+; CHECK-NEXT:    store float 3.000000e+00, ptr addrspace(5) [[FOO5]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) align 4 [[F2]], ptr addrspace(5) align 4 [[F1]], i32 8, i1 false)
+; CHECK-NEXT:    [[FOO6:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F2]], i32 0, i32 [[FOO4]]
+; CHECK-NEXT:    [[FOO7:%.*]] = load float, ptr addrspace(5) [[FOO6]], align 4
+; CHECK-NEXT:    store float [[FOO7]], ptr addrspace(1) @pv, align 4
+; CHECK-NEXT:    ret void
+;
+  %f1 = alloca [5 x float], addrspace(5)
+  %f2 = alloca [5 x float], addrspace(5)
+
+  store [5 x float] zeroinitializer, ptr addrspace(5) %f1
+  store [5 x float] zeroinitializer, ptr addrspace(5) %f2
+
+  %foo3 = getelementptr %Block3, ptr addrspace(1) @block3, i32 0, i32 0
+  %foo4 = load i32, ptr addrspace(1) %foo3
+  %foo5 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 %foo4
+  store float 3.0, ptr addrspace(5) %foo5
+
+  call void @llvm.memcpy.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f2, ptr addrspace(5) align 4 %f1, i32 8, i1 false)
+
+  %foo6 = getelementptr [5 x float], ptr addrspace(5) %f2, i32 0, i32 %foo4
+  %foo7 = load float, ptr addrspace(5) %foo6
+  store float %foo7, ptr addrspace(1) @pv
+  ret void
+}
+
+; TODO: promote alloca even there is a memcpy between the alloca and other memory space.
+define amdgpu_vs void @promote_memcpy_p1p5_aggr(ptr addrspace(1) inreg %src) #0 {
+; CHECK-LABEL: @promote_memcpy_p1p5_aggr(
+; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
+; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
+; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
+; CHECK-NEXT:    store float 3.000000e+00, ptr addrspace(5) [[FOO5]], align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p5.i32(ptr addrspace(1) align 4 @pv, ptr addrspace(5) align 4 [[F1]], i32 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %f1 = alloca [5 x float], addrspace(5)
+  store [5 x float] zeroinitializer, ptr addrspace(5) %f1
+
+  %foo3 = getelementptr %Block3, ptr addrspace(1) @block3, i32 0, i32 0
+  %foo4 = load i32, ptr addrspace(1) %foo3
+  %foo5 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 %foo4
+  store float 3.0, ptr addrspace(5) %foo5
+
+  call void @llvm.memcpy.p1i8.p5i8.i32(ptr addrspace(1) align 4 @pv, ptr addrspace(5) align 4 %f1, i32 8, i1 false)
+  ret void
+}
+
+define amdgpu_vs void @promote_memcpy_inline_aggr() #0 {
+; CHECK-LABEL: @promote_memcpy_inline_aggr(
+; CHECK-NEXT:    [[F1:%.*]] = alloca [5 x float], align 4, addrspace(5)
+; CHECK-NEXT:    store [5 x float] zeroinitializer, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[FOO2:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 3
+; CHECK-NEXT:    [[FOO3:%.*]] = getelementptr [[BLOCK3:%.*]], ptr addrspace(1) @block3, i32 0, i32 0
+; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
+; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <5 x float> [[TMP1]], float 3.000000e+00, i32 [[FOO4]]
+; CHECK-NEXT:    store <5 x float> [[TMP2]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <5 x float> [[TMP3]], <5 x float> poison, <5 x i32> <i32 3, i32 4, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <5 x float> [[TMP4]], ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <5 x float>, ptr addrspace(5) [[F1]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <5 x float> [[TMP5]], i32 0
+; CHECK-NEXT:    store float [[TMP6]], ptr addrspace(1) @pv, align 4
+; CHECK-NEXT:    ret void
+;
+  %f1 = alloca [5 x float], addrspace(5)
+  store [5 x float] zeroinitializer, ptr addrspace(5) %f1
+
+  %foo2 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 3
+  %foo3 = getelementptr %Block3, ptr addrspace(1) @block3, i32 0, i32 0
+  %foo4 = load i32, ptr addrspace(1) %foo3
+  %foo5 = getelementptr [5 x float], ptr addrspace(5) %f1, i32 0, i32 %foo4
+  store float 3.0, ptr addrspace(5) %foo5
+
+  call void @llvm.memcpy.inline.p5i8.p5i8.i32(ptr addrspace(5) align 4 %f1, ptr addrspace(5) align 4 %foo2, i32 8, i1 false)
+  %foo6 = load float, ptr addrspace(5) %f1
+  store float %foo6, ptr addrspace(1) @pv
+  ret void
+}
+
+declare void @llvm.memcpy.p5i8.p5i8.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
+declare void @llvm.memcpy.p1i8.p5i8.i32(ptr addrspace(1) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
+declare void @llvm.memcpy.inline.p5i8.p5i8.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
+declare void @llvm.memmove.p5i8.p5i8.i32(ptr addrspace(5) nocapture writeonly, ptr addrspace(5) nocapture readonly, i32, i1 immarg)
+
 @tmp_g = external addrspace(1) global { [4 x double], <2 x double>, <3 x double>, <4 x double> }
 @frag_color = external addrspace(1) global <4 x float>
 

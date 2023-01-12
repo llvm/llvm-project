@@ -23,11 +23,11 @@
 
 #include "boolean_testable.h"
 
-auto unary_pred = [](int i) { return BooleanTestable(i > 0); };
+constexpr auto unary_pred = [](int i) { return BooleanTestable(i > 0); };
 static_assert(!std::same_as<decltype(unary_pred(1)), bool>);
 static_assert(std::convertible_to<decltype(unary_pred(1)), bool>);
 
-auto binary_pred = [](int i, int j) { return BooleanTestable(i < j); };
+constexpr auto binary_pred = [](int i, int j) { return BooleanTestable(i < j); };
 static_assert(!std::same_as<decltype(binary_pred(1, 2)), bool>);
 static_assert(std::convertible_to<decltype(binary_pred(1, 2)), bool>);
 

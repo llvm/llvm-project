@@ -15,9 +15,10 @@
 //          T is an unsigned integer type
 
 #include <bit>
+#include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <cassert>
 
 #include "test_macros.h"
 

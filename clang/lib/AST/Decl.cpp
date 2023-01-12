@@ -5379,8 +5379,8 @@ ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
     return std::nullopt;
 
   const auto *StoredLocs = getTrailingObjects<SourceLocation>();
-  return llvm::makeArrayRef(StoredLocs,
-                            getNumModuleIdentifiers(getImportedModule()));
+  return llvm::ArrayRef(StoredLocs,
+                        getNumModuleIdentifiers(getImportedModule()));
 }
 
 SourceRange ImportDecl::getSourceRange() const {

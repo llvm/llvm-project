@@ -357,11 +357,11 @@ private:
     }
 
     ArrayRef<CXXBaseSpecifier> bases() const {
-      return llvm::makeArrayRef(getBases(), NumBases);
+      return llvm::ArrayRef(getBases(), NumBases);
     }
 
     ArrayRef<CXXBaseSpecifier> vbases() const {
-      return llvm::makeArrayRef(getVBases(), NumVBases);
+      return llvm::ArrayRef(getVBases(), NumVBases);
     }
 
   private:
@@ -3739,7 +3739,7 @@ public:
   /// Get the set of using declarations that this pack expanded into. Note that
   /// some of these may still be unresolved.
   ArrayRef<NamedDecl *> expansions() const {
-    return llvm::makeArrayRef(getTrailingObjects<NamedDecl *>(), NumExpansions);
+    return llvm::ArrayRef(getTrailingObjects<NamedDecl *>(), NumExpansions);
   }
 
   static UsingPackDecl *Create(ASTContext &C, DeclContext *DC,
@@ -4109,7 +4109,7 @@ public:
                                                unsigned NumBindings);
 
   ArrayRef<BindingDecl *> bindings() const {
-    return llvm::makeArrayRef(getTrailingObjects<BindingDecl *>(), NumBindings);
+    return llvm::ArrayRef(getTrailingObjects<BindingDecl *>(), NumBindings);
   }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;

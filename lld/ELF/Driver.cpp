@@ -2688,7 +2688,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // compileBitcodeFiles may have produced lto.tmp object files. After this, no
   // more file will be added.
-  auto newObjectFiles = makeArrayRef(ctx.objectFiles).slice(numObjsBeforeLTO);
+  auto newObjectFiles = ArrayRef(ctx.objectFiles).slice(numObjsBeforeLTO);
   parallelForEach(newObjectFiles, [](ELFFileBase *file) {
     initSectionsAndLocalSyms(file, /*ignoreComdats=*/true);
   });

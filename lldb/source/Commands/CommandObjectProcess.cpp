@@ -361,7 +361,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_attach_options);
+      return llvm::ArrayRef(g_process_attach_options);
     }
 
     ProcessAttachInfo attach_info;
@@ -544,7 +544,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_continue_options);
+      return llvm::ArrayRef(g_process_continue_options);
     }
 
     uint32_t m_ignore = 0;
@@ -838,7 +838,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_detach_options);
+      return llvm::ArrayRef(g_process_detach_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -921,7 +921,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_connect_options);
+      return llvm::ArrayRef(g_process_connect_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1046,7 +1046,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_load_options);
+      return llvm::ArrayRef(g_process_load_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1362,7 +1362,7 @@ public:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_save_core_options);
+      return llvm::ArrayRef(g_process_save_core_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -1484,7 +1484,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_status_options);
+      return llvm::ArrayRef(g_process_status_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1605,7 +1605,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_process_handle_options);
+      return llvm::ArrayRef(g_process_handle_options);
     }
 
     // Instance variables to hold the values for command options.

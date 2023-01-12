@@ -28,11 +28,11 @@ def SPIRV_KHRAssumeTrueOp : SPIRV_KhrVendorOp<"AssumeTrue", []> {
 
     ```
     assumetruekhr-op ::= `spirv.KHR.AssumeTrue` ssa-use
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     spirv.KHR.AssumeTrue %arg
     ```
   }];

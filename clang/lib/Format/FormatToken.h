@@ -70,6 +70,8 @@ namespace format {
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
+  /* The colons as part of a C11 _Generic selection */                         \
+  TYPE(GenericSelectionColon)                                                  \
   /* The colon at the end of a goto label or a case label. Currently only used \
    * for Verilog. */                                                           \
   TYPE(GotoLabelColon)                                                         \

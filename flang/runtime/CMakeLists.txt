@@ -65,6 +65,13 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
+check_cxx_compiler_flag(-fno-lto FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
+if (FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
+  set(NO_LTO_FLAGS "-fno-lto")
+else()
+  set(NO_LTO_FLAGS "")
+endif()
+
 if (NOT (HAVE_STRERROR OR HAVE_STRERROR_R OR HAVE_DECL_STRERROR_S))
   message(FATAL_ERROR "None of strerror, strerror_r, strerror_s found.")
 endif()
@@ -74,6 +81,9 @@ configure_file(config.h.cmake config.h)
 # because add_flang_library creates multiple objects (STATIC/SHARED, OBJECT)
 # with different names
 include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR})
+
+append(${NO_LTO_FLAGS} CMAKE_C_FLAGS)
+append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
 
 add_subdirectory(FortranMain)
 

@@ -2485,27 +2485,41 @@ struct FormatStyle {
   TrailingCommaStyle InsertTrailingCommas;
 
   /// Separator format of integer literals of different bases.
-  /// If <0: Remove separators.
-  /// If  0: Leave the literal as is.
-  /// If >0: Insert separators between digits starting from the rightmost digit.
+  ///
+  /// If negative, remove separators. If  ``0``, leave the literal as is. If
+  /// positive, insert separators between digits starting from the rightmost
+  /// digit.
+  ///
+  /// For example, the config below will leave separators in binary literals
+  /// alone, insert separators in decimal literals to separate the digits into
+  /// groups of 3, and remove separators in hexadecimal literals.
+  /// \code
+  ///   IntegerLiteralSeparator:
+  ///     Binary: 0
+  ///     Decimal: 3
+  ///     Hex: -1
+  /// \endcode
   struct IntegerLiteralSeparatorStyle {
+    /// Format separators in binary literals.
     /// \code
-    ///    -1: 0b100111101101
-    ///     0: 0b10011'11'0110'1
-    ///     3: 0b100'111'101'101
-    ///     4: 0b1001'1110'1101
+    ///   /* -1: */ b = 0b100111101101;
+    ///   /*  0: */ b = 0b10011'11'0110'1;
+    ///   /*  3: */ b = 0b100'111'101'101;
+    ///   /*  4: */ b = 0b1001'1110'1101;
     /// \endcode
     int8_t Binary;
+    /// Format separators in decimal literals.
     /// \code
-    ///    -1: 18446744073709550592ull
-    ///     0: 184467'440737'0'95505'92ull
-    ///     3: 18'446'744'073'709'550'592ull
+    ///   /* -1: */ d = 18446744073709550592ull;
+    ///   /*  0: */ d = 184467'440737'0'95505'92ull;
+    ///   /*  3: */ d = 18'446'744'073'709'550'592ull;
     /// \endcode
     int8_t Decimal;
+    /// Format separators in hexadecimal literals.
     /// \code
-    ///    -1: 0xDEADBEEFDEADBEEFuz
-    ///     0: 0xDEAD'BEEF'DE'AD'BEE'Fuz
-    ///     2: 0xDE'AD'BE'EF'DE'AD'BE'EFuz
+    ///   /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
+    ///   /*  0: */ h = 0xDEAD'BEEF'DE'AD'BEE'Fuz;
+    ///   /*  2: */ h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;
     /// \endcode
     int8_t Hex;
   };

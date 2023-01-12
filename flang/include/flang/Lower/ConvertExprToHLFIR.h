@@ -17,6 +17,7 @@
 #ifndef FORTRAN_LOWER_CONVERTEXPRTOHLFIR_H
 #define FORTRAN_LOWER_CONVERTEXPRTOHLFIR_H
 
+#include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -29,13 +30,36 @@ class Location;
 namespace Fortran::lower {
 
 class AbstractConverter;
-class StatementContext;
 class SymMap;
 
 hlfir::EntityWithAttributes
 convertExprToHLFIR(mlir::Location loc, Fortran::lower::AbstractConverter &,
                    const Fortran::lower::SomeExpr &, Fortran::lower::SymMap &,
                    Fortran::lower::StatementContext &);
+
+inline fir::ExtendedValue
+translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                         hlfir::EntityWithAttributes entity,
+                         Fortran::lower::StatementContext &context) {
+  auto [exv, exvCleanup] =
+      hlfir::translateToExtendedValue(loc, builder, entity);
+  if (exvCleanup)
+    context.attachCleanup(*exvCleanup);
+  return exv;
+}
+
+fir::BoxValue convertExprToBox(mlir::Location loc,
+                               Fortran::lower::AbstractConverter &,
+                               const Fortran::lower::SomeExpr &,
+                               Fortran::lower::SymMap &,
+                               Fortran::lower::StatementContext &);
+
+// Probably not what you think.
+fir::ExtendedValue convertExprToAddress(mlir::Location loc,
+                                        Fortran::lower::AbstractConverter &,
+                                        const Fortran::lower::SomeExpr &,
+                                        Fortran::lower::SymMap &,
+                                        Fortran::lower::StatementContext &);
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPRTOHLFIR_H

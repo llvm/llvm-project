@@ -18,6 +18,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -116,15 +117,13 @@ static LogicalResult setProfilingAttrs(OpBuilder &builder, llvm::MDNode *node,
   }
 
   // Attach the branch weights to the operations that support it.
-  if (auto condBrOp = dyn_cast<CondBrOp>(op)) {
-    condBrOp.setBranchWeightsAttr(builder.getI32VectorAttr(branchWeights));
-    return success();
-  }
-  if (auto switchOp = dyn_cast<SwitchOp>(op)) {
-    switchOp.setBranchWeightsAttr(builder.getI32VectorAttr(branchWeights));
-    return success();
-  }
-  return failure();
+  return llvm::TypeSwitch<Operation *, LogicalResult>(op)
+      .Case<CondBrOp, SwitchOp, CallOp, InvokeOp>([&](auto branchWeightOp) {
+        branchWeightOp.setBranchWeightsAttr(
+            builder.getI32VectorAttr(branchWeights));
+        return success();
+      })
+      .Default([](auto) { return failure(); });
 }
 
 /// Attaches the given TBAA metadata `node` to the imported operation.

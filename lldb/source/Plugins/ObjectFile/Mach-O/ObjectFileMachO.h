@@ -143,6 +143,8 @@ public:
 
   bool GetIsDynamicLinkEditor() override;
 
+  bool CanTrustAddressRanges() override;
+
   static bool ParseHeader(lldb_private::DataExtractor &data,
                           lldb::offset_t *data_offset_ptr,
                           llvm::MachO::mach_header &header);

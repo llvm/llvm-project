@@ -32,7 +32,7 @@ static void extractFunctionsFromModule(Oracle &O, Module &Program) {
     // Intrinsics don't have function bodies that are useful to
     // reduce. Additionally, intrinsics may have additional operand
     // constraints. But, do drop intrinsics that are not referenced.
-    if ((!F.isIntrinsic() || F.use_empty()) && !hasAliasUse(F) &&
+    if ((!F.isIntrinsic() || F.use_empty()) && !hasAliasOrBlockAddressUse(F) &&
         !O.shouldKeep())
       FuncsToRemove.insert(&F);
   }

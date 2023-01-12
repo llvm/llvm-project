@@ -426,6 +426,12 @@ def top16Zero: PatLeaf<(i32 GPR:$src), [{
          CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
   }]>;
 
+// topbitsallzero - Return true if all bits except the lowest bit are known zero
+def topbitsallzero32 : PatLeaf<(i32 GPRwithZR:$src), [{
+  return SDValue(N,0)->getValueType(0) == MVT::i32 &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 31));
+  }]>;
+
 class BinOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$RHS), res>;
 class UnOpFrag <dag res> : PatFrag<(ops node:$Src), res>;
 

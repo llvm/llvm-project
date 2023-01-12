@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 
@@ -286,6 +287,10 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, OpAdaptor adaptor,
   SmallVector<Type, 8> returnTypes;
   for (auto result : ifOp.getResults()) {
     auto convertedType = typeConverter.convertType(result.getType());
+    if (!convertedType)
+      return rewriter.notifyMatchFailure(
+          loc, llvm::formatv("failed to convert type '{0}'", result.getType()));
+
     returnTypes.push_back(convertedType);
   }
   replaceSCFOutputValue(ifOp, selectionOp, rewriter, scfToSPIRVContext,

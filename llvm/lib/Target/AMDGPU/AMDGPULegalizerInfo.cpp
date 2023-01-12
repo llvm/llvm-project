@@ -5407,8 +5407,8 @@ bool AMDGPULegalizerInfo::legalizeDebugTrapIntrinsic(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
-                                               MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
   MachineRegisterInfo &MRI = *B.getMRI();
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
@@ -5431,28 +5431,34 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     return false;
   }
 
+  const bool IsGFX11 = AMDGPU::isGFX11(ST);
   const bool IsGFX11Plus = AMDGPU::isGFX11Plus(ST);
+  const bool IsGFX12Plus = AMDGPU::isGFX12Plus(ST);
   const bool IsA16 = MRI.getType(RayDir).getElementType().getSizeInBits() == 16;
   const bool Is64 = MRI.getType(NodePtr).getSizeInBits() == 64;
   const unsigned NumVDataDwords = 4;
   const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
   const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
   const bool UseNSA = ST.hasNSAEncoding() && NumVAddrs <= ST.getNSAMaxSize();
+
   const unsigned BaseOpcodes[2][2] = {
       {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
       {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
        AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16}};
   int Opcode;
   if (UseNSA) {
-    Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                   IsGFX11Plus ? AMDGPU::MIMGEncGfx11NSA
-                                               : AMDGPU::MIMGEncGfx10NSA,
-                                   NumVDataDwords, NumVAddrDwords);
+    Opcode =
+        AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                              IsGFX12Plus ? AMDGPU::MIMGEncGfx12 :
+                              IsGFX11 ? AMDGPU::MIMGEncGfx11NSA :
+                                        AMDGPU::MIMGEncGfx10NSA,
+                              NumVDataDwords, NumVAddrDwords);
   } else {
-    Opcode = AMDGPU::getMIMGOpcode(
-        BaseOpcodes[Is64][IsA16],
-        IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default : AMDGPU::MIMGEncGfx10Default,
-        NumVDataDwords, NumVAddrDwords);
+    assert(!IsGFX12Plus);
+    Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                   IsGFX11 ? AMDGPU::MIMGEncGfx11Default
+                                           : AMDGPU::MIMGEncGfx10Default,
+                                   NumVDataDwords, NumVAddrDwords);
   }
   assert(Opcode != -1);
 
@@ -5533,7 +5539,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     Ops.push_back(MergedOps);
   }
 
-  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY)
+  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY)
     .addDef(DstReg)
     .addImm(Opcode);
 
@@ -5541,27 +5547,33 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     MIB.addUse(R);
   }
 
-  MIB.addUse(TDescr)
-     .addImm(IsA16 ? 1 : 0)
+  MIB.addUse(TDescr);
+
+  if (IsGFX12Plus)
+    MIB.addImm(0); // nv
+
+  MIB.addImm(IsA16 ? 1 : 0)
      .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeBVHDualIntrinsic(MachineInstr &MI,
-                                                   MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeBVHDualIntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
   const LLT S32 = LLT::scalar(32);
   const LLT V2S32 = LLT::fixed_vector(2, 32);
 
   Register DstReg = MI.getOperand(0).getReg();
-  Register NodePtr = MI.getOperand(2).getReg();
-  Register RayExtent = MI.getOperand(3).getReg();
-  Register InstanceMask = MI.getOperand(4).getReg();
-  Register RayOrigin = MI.getOperand(5).getReg();
-  Register RayDir = MI.getOperand(6).getReg();
-  Register Offsets = MI.getOperand(7).getReg();
-  Register TDescr = MI.getOperand(8).getReg();
+  Register DstOrigin = MI.getOperand(1).getReg();
+  Register DstDir = MI.getOperand(2).getReg();
+  Register NodePtr = MI.getOperand(4).getReg();
+  Register RayExtent = MI.getOperand(5).getReg();
+  Register InstanceMask = MI.getOperand(6).getReg();
+  Register RayOrigin = MI.getOperand(7).getReg();
+  Register RayDir = MI.getOperand(8).getReg();
+  Register Offsets = MI.getOperand(9).getReg();
+  Register TDescr = MI.getOperand(10).getReg();
 
   if (!AMDGPU::isGFX12Plus(ST)) {
     DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
@@ -5586,8 +5598,10 @@ bool AMDGPULegalizerInfo::legalizeBVHDualIntrinsic(MachineInstr &MI,
   Ops.push_back(RayDir);
   Ops.push_back(Offsets);
 
-  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_INTRIN_BVH_DUAL_INTERSECT_RAY)
+  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
     .addDef(DstReg)
+    .addDef(DstOrigin)
+    .addDef(DstDir)
     .addImm(Opcode);
 
   for (Register R : Ops)
@@ -5862,9 +5876,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_ds_fmax:
     return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
-    return legalizeBVHIntrinsic(MI, B);
+    return legalizeBVHIntersectRayIntrinsic(MI, B);
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
-    return legalizeBVHDualIntrinsic(MI, B);
+    return legalizeBVHDualIntersectRayIntrinsic(MI, B);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

@@ -7,42 +7,39 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %pair = type { i32, i32 }
 
-declare i8* @foo(%pair*)
+declare ptr @foo(ptr)
 
-define internal void @bar(%pair* byval(%pair) %Data) {
+define internal void @bar(ptr byval(%pair) %Data) {
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; CHECK-NEXT:    [[DATA_PRIV:%.*]] = alloca [[PAIR:%.*]], align 8
-; CHECK-NEXT:    [[DATA_PRIV_CAST:%.*]] = bitcast %pair* [[DATA_PRIV]] to i32*
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[DATA_PRIV_CAST]], align 4
-; CHECK-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA_PRIV]], i64 0, i32 1
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DATA_PRIV_0_1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call i8* @foo(%pair* nonnull dereferenceable(8) [[DATA_PRIV]])
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[DATA_PRIV]], align 4
+; CHECK-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], ptr [[DATA_PRIV]], i64 0, i32 1
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[DATA_PRIV_0_1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call ptr @foo(ptr nonnull dereferenceable(8) [[DATA_PRIV]])
 ; CHECK-NEXT:    ret void
 ;
-  tail call i8* @foo(%pair* %Data)
+  tail call ptr @foo(ptr %Data)
   ret void
 }
 
-define void @zed(%pair* byval(%pair) %Data) {
+define void @zed(ptr byval(%pair) %Data) {
 ; TUNIT-LABEL: define {{[^@]+}}@zed
-; TUNIT-SAME: (%pair* noalias nocapture nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
-; TUNIT-NEXT:    [[DATA_CAST:%.*]] = bitcast %pair* [[DATA]] to i32*
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DATA_CAST]], align 1
-; TUNIT-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i64 0, i32 1
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DATA_0_1]], align 1
+; TUNIT-SAME: (ptr noalias nocapture nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DATA]], align 1
+; TUNIT-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], ptr [[DATA]], i64 0, i32 1
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DATA_0_1]], align 1
 ; TUNIT-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@zed
-; CGSCC-SAME: (%pair* noalias nocapture nofree nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
-; CGSCC-NEXT:    [[DATA_CAST:%.*]] = bitcast %pair* [[DATA]] to i32*
-; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DATA_CAST]], align 1
-; CGSCC-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i64 0, i32 1
-; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DATA_0_1]], align 1
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DATA]], align 1
+; CGSCC-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], ptr [[DATA]], i64 0, i32 1
+; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DATA_0_1]], align 1
 ; CGSCC-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
 ; CGSCC-NEXT:    ret void
 ;
-  call void @bar(%pair* byval(%pair) %Data)
+  call void @bar(ptr byval(%pair) %Data)
   ret void
 }

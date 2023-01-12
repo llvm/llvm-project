@@ -5327,8 +5327,8 @@ void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
       *this,
       [&S]() -> ArrayRef<const Expr *> {
         if (const auto *FlushClause = S.getSingleClause<OMPFlushClause>())
-          return llvm::makeArrayRef(FlushClause->varlist_begin(),
-                                    FlushClause->varlist_end());
+          return llvm::ArrayRef(FlushClause->varlist_begin(),
+                                FlushClause->varlist_end());
         return std::nullopt;
       }(),
       S.getBeginLoc(), AO);

@@ -1558,6 +1558,32 @@ void vwrite_csr(enum RVV_CSR __csr, unsigned long __value) {
 }] in
 def vread_vwrite_csr: RVVHeader;
 
+let HeaderCode =
+[{
+#define vlenb() __builtin_rvv_vlenb()
+}] in
+def vlenb_macro: RVVHeader;
+
+let HasBuiltinAlias = false, HasVL = false, HasMasked = false,
+    UnMaskedPolicyScheme = NonePolicy, MaskedPolicyScheme = NonePolicy,
+    Log2LMUL = [0], IRName = "",
+    ManualCodegen = [{
+    {
+      LLVMContext &Context = CGM.getLLVMContext();
+      llvm::MDBuilder MDHelper(Context);
+
+      llvm::Metadata *Ops[] = {llvm::MDString::get(Context, "vlenb")};
+      llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
+      llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+      llvm::Function *F =
+        CGM.getIntrinsic(llvm::Intrinsic::read_register, {SizeTy});
+      return Builder.CreateCall(F, Metadata);
+    }
+    }] in
+{
+  def vlenb : RVVBuiltin<"", "u", "i">;
+}
+
 // 6. Configuration-Setting Instructions
 // 6.1. vsetvli/vsetvl instructions
 

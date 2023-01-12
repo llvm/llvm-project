@@ -2633,7 +2633,7 @@ static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {
   if (MaxAlign == 16)
     return;
   if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
-    if (VTy->getPrimitiveSizeInBits().getFixedSize() == 128)
+    if (VTy->getPrimitiveSizeInBits().getFixedValue() == 128)
       MaxAlign = Align(16);
   } else if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
     Align EltAlign;
@@ -5060,7 +5060,7 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
     return false;
 
   if (VA.getLocVT().getFixedSizeInBits() >
-      Arg.getValueSizeInBits().getFixedSize()) {
+      Arg.getValueSizeInBits().getFixedValue()) {
     // If the argument location is wider than the argument type, check that any
     // extension flags match.
     if (Flags.isZExt() != MFI.isObjectZExt(FI) ||
@@ -6520,7 +6520,7 @@ static SDValue insert128BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
 static SDValue widenSubVector(MVT VT, SDValue Vec, bool ZeroNewElements,
                               const X86Subtarget &Subtarget, SelectionDAG &DAG,
                               const SDLoc &dl) {
-  assert(Vec.getValueSizeInBits().getFixedSize() < VT.getFixedSizeInBits() &&
+  assert(Vec.getValueSizeInBits().getFixedValue() < VT.getFixedSizeInBits() &&
          Vec.getValueType().getScalarType() == VT.getScalarType() &&
          "Unsupported vector widening type");
   SDValue Res = ZeroNewElements ? getZeroVector(VT, Subtarget, DAG, dl)
@@ -8352,7 +8352,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     // Subvector shuffle inputs must not be larger than the subvector.
     if (llvm::any_of(SubInputs, [SubVT](SDValue SubInput) {
           return SubVT.getFixedSizeInBits() <
-                 SubInput.getValueSizeInBits().getFixedSize();
+                 SubInput.getValueSizeInBits().getFixedValue();
         }))
       return false;
 
@@ -31661,7 +31661,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   // rmw. In practice, they do not look useful, so we don't try to be
   // especially clever.
   if (SSID == SyncScope::SingleThread)
-    // FIXME: we could just insert an X86ISD::MEMBARRIER here, except we are at
+    // FIXME: we could just insert an ISD::MEMBARRIER here, except we are at
     // the IR level, so we must wrap it in an intrinsic.
     return nullptr;
 
@@ -31782,7 +31782,7 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   // MEMBARRIER is a compiler barrier; it codegens to a no-op.
-  return DAG.getNode(X86ISD::MEMBARRIER, dl, MVT::Other, Op.getOperand(0));
+  return DAG.getNode(ISD::MEMBARRIER, dl, MVT::Other, Op.getOperand(0));
 }
 
 static SDValue LowerCMP_SWAP(SDValue Op, const X86Subtarget &Subtarget,
@@ -32331,7 +32331,7 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
                          DAG.getUNDEF(VT), NewChain);
     }
     // MEMBARRIER is a compiler barrier; it codegens to a no-op.
-    SDValue NewChain = DAG.getNode(X86ISD::MEMBARRIER, DL, MVT::Other, Chain);
+    SDValue NewChain = DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Chain);
     assert(!N->hasAnyUseOfValue(0));
     // NOTE: The getUNDEF is needed to give something for the unused result 0.
     return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(),
@@ -34113,13 +34113,28 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(V);
     return;
   }
-  case ISD::BITREVERSE:
+  case ISD::BITREVERSE: {
     assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
     assert(Subtarget.hasXOP() && "Expected XOP");
     // We can use VPPERM by copying to a vector register and back. We'll need
     // to move the scalar in two i32 pieces.
     Results.push_back(LowerBITREVERSE(SDValue(N, 0), Subtarget, DAG));
     return;
+  }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    // f16 = extract vXf16 %vec, i64 %idx
+    assert(N->getSimpleValueType(0) == MVT::f16 &&
+           "Unexpected Value type of EXTRACT_VECTOR_ELT!");
+    assert(Subtarget.hasFP16() && "Expected FP16");
+    SDValue VecOp = N->getOperand(0);
+    EVT ExtVT = VecOp.getValueType().changeVectorElementTypeToInteger();
+    SDValue Split = DAG.getBitcast(ExtVT, N->getOperand(0));
+    Split = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i16, Split,
+                        N->getOperand(1));
+    Split = DAG.getBitcast(MVT::f16, Split);
+    Results.push_back(Split);
+    return;
+  }
   }
 }
 
@@ -34341,7 +34356,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VAARG_64)
   NODE_NAME_CASE(VAARG_X32)
   NODE_NAME_CASE(DYN_ALLOCA)
-  NODE_NAME_CASE(MEMBARRIER)
   NODE_NAME_CASE(MFENCE)
   NODE_NAME_CASE(SEG_ALLOCA)
   NODE_NAME_CASE(PROBED_ALLOCA)
@@ -40684,7 +40698,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     for (SDNode *User : Src->uses())
       if (User != N.getNode() && User->getOpcode() == X86ISD::VBROADCAST &&
           Src == User->getOperand(0) &&
-          User->getValueSizeInBits(0).getFixedSize() >
+          User->getValueSizeInBits(0).getFixedValue() >
               VT.getFixedSizeInBits()) {
         return extractSubVector(SDValue(User, 0), 0, DAG, DL,
                                 VT.getSizeInBits());
@@ -43984,7 +43998,7 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
           cast<CondCodeSDNode>(Match.getOperand(2))->get() ==
               ISD::CondCode::SETEQ) {
         EVT VecSVT = Match.getOperand(0).getValueType().getScalarType();
-        if (VecSVT != MVT::i8) {
+        if (VecSVT != MVT::i8 && (VecSVT.getSizeInBits() % 8) == 0) {
           NumElts *= VecSVT.getSizeInBits() / 8;
           EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, NumElts);
           MatchVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElts);
@@ -50001,7 +50015,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
               MemVT.getSizeInBits() &&
           !User->hasAnyUseOfValue(1) &&
-          User->getValueSizeInBits(0).getFixedSize() >
+          User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
         SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                            RegVT.getSizeInBits());
@@ -55232,11 +55246,11 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       SDValue Ins = SubVec.getOperand(0);
       if (isNullConstant(Ins.getOperand(2)) &&
           ISD::isBuildVectorAllZeros(Ins.getOperand(0).getNode()) &&
-          Ins.getOperand(1).getValueSizeInBits().getFixedSize() <=
+          Ins.getOperand(1).getValueSizeInBits().getFixedValue() <=
               SubVecVT.getFixedSizeInBits())
-        return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
-                           getZeroVector(OpVT, Subtarget, DAG, dl),
-                           Ins.getOperand(1), N->getOperand(2));
+          return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
+                             getZeroVector(OpVT, Subtarget, DAG, dl),
+                             Ins.getOperand(1), N->getOperand(2));
     }
   }
 
@@ -55647,7 +55661,7 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
           Src == User->getOperand(0)) {
         unsigned SizeInBits = VT.getFixedSizeInBits();
         unsigned BroadcastSizeInBits =
-            User->getValueSizeInBits(0).getFixedSize();
+            User->getValueSizeInBits(0).getFixedValue();
         if (BroadcastSizeInBits == SizeInBits)
           return SDValue(User, 0);
         if (BroadcastSizeInBits > SizeInBits)
@@ -55944,7 +55958,7 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
         cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
             MemVT.getSizeInBits() &&
         !User->hasAnyUseOfValue(1) &&
-        User->getValueSizeInBits(0).getFixedSize() > VT.getFixedSizeInBits()) {
+        User->getValueSizeInBits(0).getFixedValue() > VT.getFixedSizeInBits()) {
       SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
                                          VT.getSizeInBits());
       Extract = DAG.getBitcast(VT, Extract);

@@ -88,11 +88,11 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(*m_dwo_id);
 
   if (!dwo_cu) {
-    SetDwoError(
-        Status("unable to load .dwo file from \"%s\" due to ID (0x%16.16" PRIx64
-               ") mismatch for skeleton DIE at 0x%8.8" PRIx32,
-               dwo_symbol_file->GetObjectFile()->GetFileSpec().GetPath().c_str(),
-               *m_dwo_id, m_first_die.GetOffset()));
+    SetDwoError(Status::createWithFormat(
+        "unable to load .dwo file from \"{0}\" due to ID ({1:x16}) mismatch "
+        "for skeleton DIE at {2:x8}",
+        dwo_symbol_file->GetObjectFile()->GetFileSpec().GetPath().c_str(),
+        *m_dwo_id, m_first_die.GetOffset()));
     return; // Can't fetch the compile unit from the dwo file.
   }
   dwo_cu->SetUserData(this);
@@ -100,9 +100,10 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
   if (!dwo_cu_die.IsValid()) {
     // Can't fetch the compile unit DIE from the dwo file.
-    SetDwoError(
-        Status("unable to extract compile unit DIE from .dwo file for skeleton "
-               "DIE at 0x%8.8" PRIx32, m_first_die.GetOffset()));
+    SetDwoError(Status::createWithFormat(
+        "unable to extract compile unit DIE from .dwo file for skeleton "
+        "DIE at {0:x16}",
+        m_first_die.GetOffset()));
     return;
   }
 
@@ -213,7 +214,11 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   llvm::sys::ScopedWriter first_die_lock(m_first_die_mutex);
 
   ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
-  LLDB_SCOPED_TIMERF("%8.8x: DWARFUnit::ExtractDIEsIfNeeded()", GetOffset());
+  LLDB_SCOPED_TIMERF(
+      "%s",
+      llvm::formatv("{0:x16}: DWARFUnit::ExtractDIEsIfNeeded()", GetOffset())
+          .str()
+          .c_str());
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
@@ -336,7 +341,7 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
     if (const auto *contribution =
             entry->getContribution(llvm::DW_SECT_STR_OFFSETS))
-      baseOffset = contribution->Offset;
+      baseOffset = contribution->getOffset32();
     else
       return;
   }
@@ -480,11 +485,11 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
     if (!contribution) {
       GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
           "Failed to find location list contribution for CU with DWO Id "
-          "0x%" PRIx64,
+          "{0:x16}",
           *GetDWOId());
       return;
     }
-    offset += contribution->Offset;
+    offset += contribution->getOffset32();
   }
   m_loclists_base = loclists_base;
 
@@ -498,8 +503,8 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
           m_dwarf.GetDWARFContext().getOrLoadLocListsData().GetAsLLVM(),
           &offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "Failed to extract location list table at offset 0x%" PRIx64
-        " (location list base: 0x%" PRIx64 "): %s",
+        "Failed to extract location list table at offset {0:x16} (location "
+        "list base: {1:x16}): {2}",
         offset, loclists_base, toString(std::move(E)).c_str());
   }
 }
@@ -522,8 +527,8 @@ DWARFDataExtractor DWARFUnit::GetLocationData() const {
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
     if (const auto *contribution = entry->getContribution(
             GetVersion() >= 5 ? llvm::DW_SECT_LOCLISTS : llvm::DW_SECT_EXT_LOC))
-      return DWARFDataExtractor(data, contribution->Offset,
-                                contribution->Length);
+      return DWARFDataExtractor(data, contribution->getOffset32(),
+                                contribution->getLength32());
     return DWARFDataExtractor();
   }
   return data;
@@ -535,11 +540,10 @@ DWARFDataExtractor DWARFUnit::GetRnglistData() const {
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.GetIndexEntry()) {
     if (const auto *contribution =
             entry->getContribution(llvm::DW_SECT_RNGLISTS))
-      return DWARFDataExtractor(data, contribution->Offset,
-                                contribution->Length);
+      return DWARFDataExtractor(data, contribution->getOffset32(),
+                                contribution->getLength32());
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "Failed to find range list contribution for CU with signature "
-        "0x%" PRIx64,
+        "Failed to find range list contribution for CU with signature {0:x16}",
         entry->getSignature());
 
     return DWARFDataExtractor();
@@ -563,7 +567,7 @@ DWARFUnit::GetRnglistTable() {
       m_rnglist_table = std::move(table_or_error.get());
     else
       GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "Failed to extract range list table at offset 0x%" PRIx64 ": %s",
+          "Failed to extract range list table at offset {0:x16}: {1}",
           m_ranges_base, toString(table_or_error.takeError()).c_str());
   }
   return m_rnglist_table;
@@ -575,10 +579,13 @@ llvm::Expected<uint64_t> DWARFUnit::GetRnglistOffset(uint32_t Index) {
     return llvm::createStringError(std::errc::invalid_argument,
                                    "missing or invalid range list table");
   if (!m_ranges_base)
-    return llvm::createStringError(std::errc::invalid_argument,
-                                   "DW_FORM_rnglistx cannot be used without "
-                                   "DW_AT_rnglists_base for CU at 0x%8.8x",
-                                   GetOffset());
+    return llvm::createStringError(
+        std::errc::invalid_argument,
+        llvm::formatv("DW_FORM_rnglistx cannot be used without "
+                      "DW_AT_rnglists_base for CU at {0:x16}",
+                      GetOffset())
+            .str()
+            .c_str());
   if (std::optional<uint64_t> off = GetRnglistTable()->getOffsetEntry(
           GetRnglistData().GetAsLLVM(), Index))
     return *off + m_ranges_base;
@@ -637,8 +644,8 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
 
   if (!ContainsDIEOffset(die_offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
-        die_offset, GetOffset());
+        "GetDIE for DIE {0:x16} is outside of its CU {0:x16}", die_offset,
+        GetOffset());
     return DWARFDIE(); // Not found
   }
 
@@ -917,7 +924,7 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
           "Package unit with a non-zero abbreviation offset");
     }
     auto *unit_contrib = header.m_index_entry->getContribution();
-    if (!unit_contrib || unit_contrib->Length != header.m_length + 4) {
+    if (!unit_contrib || unit_contrib->getLength32() != header.m_length + 4) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Inconsistent DWARF package unit index");
     }
@@ -928,7 +935,7 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
           llvm::inconvertibleErrorCode(),
           "DWARF package index missing abbreviation column");
     }
-    header.m_abbr_offset = abbr_entry->Offset;
+    header.m_abbr_offset = abbr_entry->getOffset32();
   }
 
   bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);

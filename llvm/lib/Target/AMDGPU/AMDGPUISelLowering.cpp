@@ -1361,21 +1361,36 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
 SDValue AMDGPUTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
                                                   SelectionDAG &DAG) const {
   SmallVector<SDValue, 8> Args;
+  SDLoc SL(Op);
 
   EVT VT = Op.getValueType();
-  if (VT == MVT::v4i16 || VT == MVT::v4f16) {
-    SDLoc SL(Op);
-    SDValue Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Op.getOperand(0));
-    SDValue Hi = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Op.getOperand(1));
+  if (VT.getVectorElementType().getSizeInBits() < 32) {
+    unsigned OpBitSize = Op.getOperand(0).getValueType().getSizeInBits();
+    if (OpBitSize >= 32 && OpBitSize % 32 == 0) {
+      unsigned NewNumElt = OpBitSize / 32;
+      EVT NewEltVT = (NewNumElt == 1) ? MVT::i32
+                                      : EVT::getVectorVT(*DAG.getContext(),
+                                                         MVT::i32, NewNumElt);
+      for (const SDUse &U : Op->ops()) {
+        SDValue In = U.get();
+        SDValue NewIn = DAG.getNode(ISD::BITCAST, SL, NewEltVT, In);
+        if (NewNumElt > 1)
+          DAG.ExtractVectorElements(NewIn, Args);
+        else
+          Args.push_back(NewIn);
+      }
 
-    SDValue BV = DAG.getBuildVector(MVT::v2i32, SL, { Lo, Hi });
-    return DAG.getNode(ISD::BITCAST, SL, VT, BV);
+      EVT NewVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                   NewNumElt * Op.getNumOperands());
+      SDValue BV = DAG.getBuildVector(NewVT, SL, Args);
+      return DAG.getNode(ISD::BITCAST, SL, VT, BV);
+    }
   }
 
   for (const SDUse &U : Op->ops())
     DAG.ExtractVectorElements(U.get(), Args);
 
-  return DAG.getBuildVector(Op.getValueType(), SDLoc(Op), Args);
+  return DAG.getBuildVector(Op.getValueType(), SL, Args);
 }
 
 SDValue AMDGPUTargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,

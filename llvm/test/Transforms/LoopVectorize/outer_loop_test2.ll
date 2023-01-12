@@ -16,7 +16,7 @@
 ; RUN: opt -S -passes=loop-vectorize -enable-vplan-native-path < %s | FileCheck %s
 ; CHECK: %[[ZeroTripChk:.*]] = icmp sgt i32 %jCount, 0
 ; CHECK-LABEL: vector.ph:
-; CHECK: %[[CVal0:.*]] = insertelement <4 x i32> poison, i32 %c, i32 0
+; CHECK: %[[CVal0:.*]] = insertelement <4 x i32> poison, i32 %c, i64 0
 ; CHECK-NEXT: %[[CSplat:.*]] = shufflevector <4 x i32> %[[CVal0]], <4 x i32> poison, <4 x i32> zeroinitializer
 
 ; CHECK-LABEL: vector.body:

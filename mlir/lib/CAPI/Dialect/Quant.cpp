@@ -167,7 +167,7 @@ MlirType mlirUniformQuantizedPerAxisTypeGet(
     int64_t storageTypeMax) {
   return wrap(quant::UniformQuantizedPerAxisType::get(
       flags, unwrap(storageType), unwrap(expressedType),
-      llvm::makeArrayRef(scales, nDims), llvm::makeArrayRef(zeroPoints, nDims),
+      llvm::ArrayRef(scales, nDims), llvm::ArrayRef(zeroPoints, nDims),
       quantizedDimension, storageTypeMin, storageTypeMax));
 }
 

@@ -72,7 +72,7 @@ std::string lld::toString(const coff::InputFile *file) {
 /// Checks that Source is compatible with being a weak alias to Target.
 /// If Source is Undefined and has no weak alias set, makes it a weak
 /// alias to Target.
-static void checkAndSetWeakAlias(SymbolTable *symtab, InputFile *f,
+static void checkAndSetWeakAlias(COFFLinkerContext &ctx, InputFile *f,
                                  Symbol *source, Symbol *target) {
   if (auto *u = dyn_cast<Undefined>(source)) {
     if (u->weakAlias && u->weakAlias != target) {
@@ -81,9 +81,9 @@ static void checkAndSetWeakAlias(SymbolTable *symtab, InputFile *f,
       // of another symbol emitted near the weak symbol.
       // Just use the definition from the first object file that defined
       // this weak symbol.
-      if (config->mingw)
+      if (ctx.config.mingw)
         return;
-      symtab->reportDuplicate(source, f);
+      ctx.symtab.reportDuplicate(source, f);
     }
     u->weakAlias = target;
   }
@@ -109,13 +109,13 @@ void ArchiveFile::parse() {
 void ArchiveFile::addMember(const Archive::Symbol &sym) {
   const Archive::Child &c =
       CHECK(sym.getMember(),
-            "could not get the member for symbol " + toCOFFString(sym));
+            "could not get the member for symbol " + toCOFFString(ctx, sym));
 
   // Return an empty buffer if we have already returned the same buffer.
   if (!seen.insert(c.getChildOffset()).second)
     return;
 
-  driver->enqueueArchiveMember(c, sym, getName());
+  ctx.driver.enqueueArchiveMember(c, sym, getName());
 }
 
 std::vector<MemoryBufferRef> lld::coff::getArchiveMembers(Archive *file) {
@@ -237,7 +237,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   // and then write it to a separate .pdb file.
 
   // Ignore DWARF debug info unless /debug is given.
-  if (!config->debug && name.startswith(".debug_"))
+  if (!ctx.config.debug && name.startswith(".debug_"))
     return nullptr;
 
   if (sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
@@ -260,7 +260,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     guardEHContChunks.push_back(c);
   else if (name == ".sxdata")
     sxDataChunks.push_back(c);
-  else if (config->tailMerge && sec->NumberOfRelocations == 0 &&
+  else if (ctx.config.tailMerge && sec->NumberOfRelocations == 0 &&
            name == ".rdata" && leaderName.startswith("??_C@"))
     // COFF sections that look like string literal sections (i.e. no
     // relocations, in .rdata, leader symbol name matches the MSVC name mangling
@@ -366,7 +366,7 @@ Symbol *ObjFile::createRegular(COFFSymbolRef sym) {
     // everything should be fine. If something actually refers to the symbol
     // (e.g. the undefined weak alias), linking will fail due to undefined
     // references at the end.
-    if (config->mingw && name.startswith(".weak."))
+    if (ctx.config.mingw && name.startswith(".weak."))
       return nullptr;
     return ctx.symtab.addUndefined(name, this, false);
   }
@@ -400,7 +400,7 @@ void ObjFile::initializeSymbols() {
     } else if (std::optional<Symbol *> optSym =
                    createDefined(coffSym, comdatDefs, prevailingComdat)) {
       symbols[i] = *optSym;
-      if (config->mingw && prevailingComdat)
+      if (ctx.config.mingw && prevailingComdat)
         recordPrevailingSymbolForMingw(coffSym, prevailingSectionMap);
     } else {
       // createDefined() returns std::nullopt if a symbol belongs to a section
@@ -421,7 +421,7 @@ void ObjFile::initializeSymbols() {
     if (const coff_aux_section_definition *def = sym.getSectionDefinition()) {
       if (def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         readAssociativeDefinition(sym, def);
-      else if (config->mingw)
+      else if (ctx.config.mingw)
         maybeAssociateSEHForMingw(sym, def, prevailingSectionMap);
     }
     if (sparseChunks[sym.getSectionNumber()] == pendingComdat) {
@@ -436,7 +436,7 @@ void ObjFile::initializeSymbols() {
   for (auto &kv : weakAliases) {
     Symbol *sym = kv.first;
     uint32_t idx = kv.second;
-    checkAndSetWeakAlias(&ctx.symtab, this, sym, symbols[idx]);
+    checkAndSetWeakAlias(ctx, this, sym, symbols[idx]);
   }
 
   // Free the memory used by sparseChunks now that symbol loading is finished.
@@ -496,10 +496,10 @@ void ObjFile::handleComdatSelection(
   // Clang on the other hand picks "any". To be able to link two object files
   // with a __declspec(selectany) declaration, one compiled with gcc and the
   // other with clang, we merge them as proper "same size as"
-  if (config->mingw && ((selection == IMAGE_COMDAT_SELECT_ANY &&
-                         leaderSelection == IMAGE_COMDAT_SELECT_SAME_SIZE) ||
-                        (selection == IMAGE_COMDAT_SELECT_SAME_SIZE &&
-                         leaderSelection == IMAGE_COMDAT_SELECT_ANY))) {
+  if (ctx.config.mingw && ((selection == IMAGE_COMDAT_SELECT_ANY &&
+                            leaderSelection == IMAGE_COMDAT_SELECT_SAME_SIZE) ||
+                           (selection == IMAGE_COMDAT_SELECT_SAME_SIZE &&
+                            leaderSelection == IMAGE_COMDAT_SELECT_ANY))) {
     leaderSelection = selection = IMAGE_COMDAT_SELECT_SAME_SIZE;
   }
 
@@ -511,7 +511,7 @@ void ObjFile::handleComdatSelection(
   // seems better though.
   // (This behavior matches ModuleLinker::getComdatResult().)
   if (selection != leaderSelection) {
-    log(("conflicting comdat type for " + toString(*leader) + ": " +
+    log(("conflicting comdat type for " + toString(ctx, *leader) + ": " +
          Twine((int)leaderSelection) + " in " + toString(leader->getFile()) +
          " and " + Twine((int)selection) + " in " + toString(this))
             .str());
@@ -530,7 +530,7 @@ void ObjFile::handleComdatSelection(
 
   case IMAGE_COMDAT_SELECT_SAME_SIZE:
     if (leaderChunk->getSize() != getSection(sym)->SizeOfRawData) {
-      if (!config->mingw) {
+      if (!ctx.config.mingw) {
         ctx.symtab.reportDuplicate(leader, this);
       } else {
         const coff_aux_section_definition *leaderDef = nullptr;
@@ -607,7 +607,7 @@ std::optional<Symbol *> ObjFile::createDefined(
 
     if (sym.isExternal())
       return ctx.symtab.addAbsolute(name, sym);
-    return make<DefinedAbsolute>(name, sym);
+    return make<DefinedAbsolute>(ctx, name, sym);
   }
 
   int32_t sectionNumber = sym.getSectionNumber();
@@ -751,7 +751,7 @@ void ObjFile::initializeFlags() {
 // DebugTypes.h). Both cases only happen with cl.exe: clang-cl produces regular
 // output even with /Yc and /Yu and with /Zi.
 void ObjFile::initializeDependencies() {
-  if (!config->debug)
+  if (!ctx.config.debug)
     return;
 
   bool isPCH = false;
@@ -906,7 +906,7 @@ ObjFile::getVariableLocation(StringRef var) {
     if (!dwarf)
       return std::nullopt;
   }
-  if (config->machine == I386)
+  if (ctx.config.machine == I386)
     var.consume_front("_");
   std::optional<std::pair<std::string, unsigned>> ret =
       dwarf->getVariableLoc(var);
@@ -935,8 +935,11 @@ void ObjFile::enqueuePdbFile(StringRef path, ObjFile *fromFile) {
   auto it = ctx.pdbInputFileInstances.emplace(*p, nullptr);
   if (!it.second)
     return; // already scheduled for load
-  driver->enqueuePDB(*p);
+  ctx.driver.enqueuePDB(*p);
 }
+
+ImportFile::ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
+    : InputFile(ctx, ImportKind, m), live(!ctx.config.doGC), thunkLive(live) {}
 
 void ImportFile::parse() {
   const char *buf = mb.getBufferStart();
@@ -993,8 +996,10 @@ BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
                          bool lazy)
     : InputFile(ctx, BitcodeKind, mb, lazy) {
   std::string path = mb.getBufferIdentifier().str();
-  if (config->thinLTOIndexOnly)
-    path = replaceThinLTOSuffix(mb.getBufferIdentifier());
+  if (ctx.config.thinLTOIndexOnly)
+    path = replaceThinLTOSuffix(mb.getBufferIdentifier(),
+                                ctx.config.thinLTOObjectSuffixReplace.first,
+                                ctx.config.thinLTOObjectSuffixReplace.second);
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this
@@ -1014,36 +1019,9 @@ BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
 
 BitcodeFile::~BitcodeFile() = default;
 
-namespace {
-// Convenience class for initializing a coff_section with specific flags.
-class FakeSection {
-public:
-  FakeSection(int c) { section.Characteristics = c; }
-
-  coff_section section;
-};
-
-// Convenience class for initializing a SectionChunk with specific flags.
-class FakeSectionChunk {
-public:
-  FakeSectionChunk(const coff_section *section) : chunk(nullptr, section) {
-    // Comdats from LTO files can't be fully treated as regular comdats
-    // at this point; we don't know what size or contents they are going to
-    // have, so we can't do proper checking of such aspects of them.
-    chunk.selection = IMAGE_COMDAT_SELECT_ANY;
-  }
-
-  SectionChunk chunk;
-};
-
-FakeSection ltoTextSection(IMAGE_SCN_MEM_EXECUTE);
-FakeSection ltoDataSection(IMAGE_SCN_CNT_INITIALIZED_DATA);
-FakeSectionChunk ltoTextSectionChunk(&ltoTextSection.section);
-FakeSectionChunk ltoDataSectionChunk(&ltoDataSection.section);
-} // namespace
-
 void BitcodeFile::parse() {
   llvm::StringSaver &saver = lld::saver();
+
   std::vector<std::pair<Symbol *, bool>> comdat(obj->getComdatTable().size());
   for (size_t i = 0; i != obj->getComdatTable().size(); ++i)
     // FIXME: Check nodeduplicate
@@ -1055,9 +1033,9 @@ void BitcodeFile::parse() {
     Symbol *sym;
     SectionChunk *fakeSC = nullptr;
     if (objSym.isExecutable())
-      fakeSC = &ltoTextSectionChunk.chunk;
+      fakeSC = &ctx.ltoTextSectionChunk.chunk;
     else
-      fakeSC = &ltoDataSectionChunk.chunk;
+      fakeSC = &ctx.ltoDataSectionChunk.chunk;
     if (objSym.isUndefined()) {
       sym = ctx.symtab.addUndefined(symName, this, false);
     } else if (objSym.isCommon()) {
@@ -1067,7 +1045,7 @@ void BitcodeFile::parse() {
       sym = ctx.symtab.addUndefined(symName, this, true);
       std::string fallback = std::string(objSym.getCOFFWeakExternalFallback());
       Symbol *alias = ctx.symtab.addUndefined(saver.save(fallback));
-      checkAndSetWeakAlias(&ctx.symtab, this, sym, alias);
+      checkAndSetWeakAlias(ctx, this, sym, alias);
     } else if (comdatIndex != -1) {
       if (symName == obj->getComdatTable()[comdatIndex].first) {
         sym = comdat[comdatIndex].first;
@@ -1084,7 +1062,7 @@ void BitcodeFile::parse() {
     }
     symbols.push_back(sym);
     if (objSym.isUsed())
-      config->gcroot.push_back(sym);
+      ctx.config.gcroot.push_back(sym);
   }
   directives = obj->getCOFFLinkerOpts();
 }
@@ -1110,10 +1088,8 @@ MachineTypes BitcodeFile::getMachineType() {
   }
 }
 
-std::string lld::coff::replaceThinLTOSuffix(StringRef path) {
-  StringRef suffix = config->thinLTOObjectSuffixReplace.first;
-  StringRef repl = config->thinLTOObjectSuffixReplace.second;
-
+std::string lld::coff::replaceThinLTOSuffix(StringRef path, StringRef suffix,
+                                            StringRef repl) {
   if (path.consume_back(suffix))
     return (path + repl).str();
   return std::string(path);

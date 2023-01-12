@@ -35,7 +35,7 @@ define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP6]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x double>, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD]], shufflevector (<vscale x 8 x double> insertelement (<vscale x 8 x double> poison, double 1.000000e+00, i32 0), <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD]], shufflevector (<vscale x 8 x double> insertelement (<vscale x 8 x double> poison, double 1.000000e+00, i64 0), <vscale x 8 x double> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP15:%.*]] = shl i32 [[TMP14]], 3
@@ -127,7 +127,7 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP15]] to i64
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, ptr [[TMP17]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i32 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP18:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], shufflevector (<vscale x 8 x i64> insertelement (<vscale x 8 x i64> poison, i64 1, i64 0), <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP21:%.*]] = shl i32 [[TMP20]], 3

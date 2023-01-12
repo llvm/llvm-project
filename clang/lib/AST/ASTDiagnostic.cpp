@@ -227,7 +227,7 @@ break; \
           desugarForDiagnostic(Context, Ty->getBaseType(), ShouldAKA);
       QT = Context.getObjCObjectType(
           BaseType, Ty->getTypeArgsAsWritten(),
-          llvm::makeArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
+          llvm::ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
           Ty->isKindOfTypeAsWritten());
     }
   }

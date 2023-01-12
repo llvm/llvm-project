@@ -825,22 +825,35 @@ public:
   // architecture, path and object name (if any)). This centralizes code so
   // that everyone doesn't need to format their error and log messages on their
   // own and keeps the output a bit more consistent.
-  void LogMessage(Log *log, const char *format, ...)
-      __attribute__((format(printf, 3, 4)));
+  template <typename... Args>
+  void LogMessage(Log *log, const char *format, Args &&...args) {
+    LogMessage(log, llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
-  void LogMessageVerboseBacktrace(Log *log, const char *format, ...)
-      __attribute__((format(printf, 3, 4)));
+  template <typename... Args>
+  void LogMessageVerboseBacktrace(Log *log, const char *format,
+                                  Args &&...args) {
+    LogMessageVerboseBacktrace(
+        log, llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
-  void ReportWarning(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
+  template <typename... Args>
+  void ReportWarning(const char *format, Args &&...args) {
+    ReportWarning(llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
-  void ReportError(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
+  template <typename... Args>
+  void ReportError(const char *format, Args &&...args) {
+    ReportError(llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
   // Only report an error once when the module is first detected to be modified
   // so we don't spam the console with many messages.
-  void ReportErrorIfModifyDetected(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
+  template <typename... Args>
+  void ReportErrorIfModifyDetected(const char *format, Args &&...args) {
+    ReportErrorIfModifyDetected(
+        llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
   void ReportWarningOptimization(std::optional<lldb::user_id_t> debugger_id);
 
@@ -1155,6 +1168,13 @@ private:
 
   Module(const Module &) = delete;
   const Module &operator=(const Module &) = delete;
+
+  void LogMessage(Log *log, const llvm::formatv_object_base &payload);
+  void LogMessageVerboseBacktrace(Log *log,
+                                  const llvm::formatv_object_base &payload);
+  void ReportWarning(const llvm::formatv_object_base &payload);
+  void ReportError(const llvm::formatv_object_base &payload);
+  void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
 };
 
 } // namespace lldb_private

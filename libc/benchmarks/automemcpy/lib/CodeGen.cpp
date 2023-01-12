@@ -314,7 +314,7 @@ namespace descriptors {
 //     {"memcpy_0x8661D80472487AB5",{FunctionType::MEMCPY,Contiguous{{0,1}},std::nullopt,std::nullopt,std::nullopt,Accelerator{{1,kMaxSize}},ElementTypeClass::NATIVE}},
 //     ...
 //   };
-//   return makeArrayRef(kDescriptors);
+//   return ArrayRef(kDescriptors);
 // }
 
 static raw_ostream &operator<<(raw_ostream &Stream, const SizeSpan &SS) {
@@ -415,7 +415,7 @@ static void Serialize(raw_ostream &Stream,
     Stream << kIndent << kIndent << Descriptors[I] << ",\n";
   }
   Stream << R"(  };
-  return makeArrayRef(kDescriptors);
+  return ArrayRef(kDescriptors);
 }
 )";
 }
@@ -434,7 +434,7 @@ namespace configurations {
 //     {Wrap<memcpy_0x8661D80472487AB5>, "memcpy_0x8661D80472487AB5"},
 //     ...
 //   };
-//   return llvm::makeArrayRef(kConfigurations);
+//   return llvm::ArrayRef(kConfigurations);
 // }
 
 // The `Wrap` template function is provided in the `Main` function below.
@@ -509,7 +509,7 @@ static raw_ostream &operator<<(raw_ostream &Stream, const Configuration &C) {
            << " kConfigurations[] = {\n";
     Stream << C.Descriptors;
     Stream << kIndent << "};\n";
-    Stream << kIndent << "return llvm::makeArrayRef(kConfigurations);\n";
+    Stream << kIndent << "return llvm::ArrayRef(kConfigurations);\n";
   }
   Stream << "}\n";
   return Stream;

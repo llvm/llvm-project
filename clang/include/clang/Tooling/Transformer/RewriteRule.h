@@ -428,13 +428,13 @@ RewriteRuleWith<void> applyFirst(ArrayRef<RewriteRuleWith<void>> Rules);
 template <typename MetadataT>
 RewriteRuleWith<MetadataT>
 applyFirst(const std::vector<RewriteRuleWith<MetadataT>> &Rules) {
-  return applyFirst(llvm::makeArrayRef(Rules));
+  return applyFirst(llvm::ArrayRef(Rules));
 }
 
 template <typename MetadataT>
 RewriteRuleWith<MetadataT>
 applyFirst(std::initializer_list<RewriteRuleWith<MetadataT>> Rules) {
-  return applyFirst(llvm::makeArrayRef(Rules.begin(), Rules.end()));
+  return applyFirst(llvm::ArrayRef(Rules.begin(), Rules.end()));
 }
 /// @}
 

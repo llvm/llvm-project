@@ -362,9 +362,9 @@ mlir::affineParallelize(AffineForOp forOp,
       parallelReductions, [](const LoopReduction &red) { return red.kind; }));
   AffineParallelOp newPloop = outsideBuilder.create<AffineParallelOp>(
       loc, ValueRange(reducedValues).getTypes(), reductionKinds,
-      llvm::makeArrayRef(lowerBoundMap), lowerBoundOperands,
-      llvm::makeArrayRef(upperBoundMap), upperBoundOperands,
-      llvm::makeArrayRef(forOp.getStep()));
+      llvm::ArrayRef(lowerBoundMap), lowerBoundOperands,
+      llvm::ArrayRef(upperBoundMap), upperBoundOperands,
+      llvm::ArrayRef(forOp.getStep()));
   // Steal the body of the old affine for op.
   newPloop.getRegion().takeBody(forOp.getRegion());
   Operation *yieldOp = &newPloop.getBody()->back();
@@ -428,7 +428,7 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   // canonicalization is missing composition of affine.applys into it.
   assert(llvm::all_of(ifOp.getOperands(),
                       [](Value v) {
-                        return isTopLevelValue(v) || isForInductionVar(v);
+                        return isTopLevelValue(v) || isAffineForInductionVar(v);
                       }) &&
          "operands not composed");
 
@@ -636,6 +636,25 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op, bool promoteSingleIter) {
   Operation *newIV = opBuilder.create<AffineApplyOp>(loc, ivMap, lbOperands);
   op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0), newIV);
   return success();
+}
+
+/// Returns true if the memory operation of `destAccess` depends on `srcAccess`
+/// inside of the innermost common surrounding affine loop between the two
+/// accesses.
+static bool mustReachAtInnermost(const MemRefAccess &srcAccess,
+                                 const MemRefAccess &destAccess) {
+  // Affine dependence analysis is possible only if both ops in the same
+  // AffineScope.
+  if (getAffineScope(srcAccess.opInst) != getAffineScope(destAccess.opInst))
+    return false;
+
+  unsigned nsLoops =
+      getNumCommonSurroundingLoops(*srcAccess.opInst, *destAccess.opInst);
+  FlatAffineValueConstraints dependenceConstraints;
+  DependenceResult result = checkMemrefAccessDependence(
+      srcAccess, destAccess, nsLoops + 1, &dependenceConstraints,
+      /*dependenceComponents=*/nullptr);
+  return hasDependence(result);
 }
 
 /// Returns true if `srcMemOp` may have an effect on `destMemOp` within the
@@ -858,7 +877,14 @@ static LogicalResult forwardStoreToLoad(
     if (!domInfo.dominates(storeOp, loadOp))
       continue;
 
-    // 3. Ensure there is no intermediate operation which could replace the
+    // 3. The store must reach the load. Access function equivalence only
+    // guarantees this for accesses in the same block. The load could be in a
+    // nested block that is unreachable.
+    if (storeOp->getBlock() != loadOp->getBlock() &&
+        !mustReachAtInnermost(srcAccess, destAccess))
+      continue;
+
+    // 4. Ensure there is no intermediate operation which could replace the
     // value in memory.
     if (!mlir::hasNoInterveningEffect<MemoryEffects::Write>(storeOp, loadOp))
       continue;

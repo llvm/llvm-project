@@ -268,7 +268,7 @@ llvm::Constant *ConstantAggregateBuilderBase::finishArray(llvm::Type *eltTy) {
   assert((Begin < buffer.size() ||
           (Begin == buffer.size() && eltTy))
          && "didn't add any array elements without element type");
-  auto elts = llvm::makeArrayRef(buffer).slice(Begin);
+  auto elts = llvm::ArrayRef(buffer).slice(Begin);
   if (!eltTy) eltTy = elts[0]->getType();
   auto type = llvm::ArrayType::get(eltTy, elts.size());
   auto constant = llvm::ConstantArray::get(type, elts);
@@ -281,7 +281,7 @@ ConstantAggregateBuilderBase::finishStruct(llvm::StructType *ty) {
   markFinished();
 
   auto &buffer = getBuffer();
-  auto elts = llvm::makeArrayRef(buffer).slice(Begin);
+  auto elts = llvm::ArrayRef(buffer).slice(Begin);
 
   if (ty == nullptr && elts.empty())
     ty = llvm::StructType::get(Builder.CGM.getLLVMContext(), {}, Packed);

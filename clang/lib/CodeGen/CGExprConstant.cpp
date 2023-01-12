@@ -543,8 +543,8 @@ void ConstantAggregateBuilder::condense(CharUnits Offset,
   }
 
   llvm::Constant *Replacement = buildFrom(
-      CGM, makeArrayRef(Elems).slice(First, Length),
-      makeArrayRef(Offsets).slice(First, Length), Offset, getSize(DesiredTy),
+      CGM, ArrayRef(Elems).slice(First, Length),
+      ArrayRef(Offsets).slice(First, Length), Offset, getSize(DesiredTy),
       /*known to have natural layout=*/false, DesiredTy, false);
   replace(Elems, First, Last, {Replacement});
   replace(Offsets, First, Last, {Offset});
@@ -971,7 +971,7 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
     if (CommonElementType && NonzeroLength >= 8) {
       llvm::Constant *Initial = llvm::ConstantArray::get(
           llvm::ArrayType::get(CommonElementType, NonzeroLength),
-          makeArrayRef(Elements).take_front(NonzeroLength));
+          ArrayRef(Elements).take_front(NonzeroLength));
       Elements.resize(2);
       Elements[0] = Initial;
     } else {

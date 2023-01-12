@@ -211,4 +211,14 @@ endif()
 
 if(LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)
+
+  if (TARGET install-liblldb)
+    add_dependencies(install-liblldb
+      lldb-framework-cleanup)
+  endif()
+
+  if (TARGET install-liblldb-stripped)
+    add_dependencies(install-liblldb-stripped
+      lldb-framework-cleanup)
+  endif()
 endif()

@@ -275,7 +275,7 @@ public:
     auto integerSet = op.getIntegerSet();
     Value zeroConstant = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     SmallVector<Value, 8> operands(op.getOperands());
-    auto operandsRef = llvm::makeArrayRef(operands);
+    auto operandsRef = llvm::ArrayRef(operands);
 
     // Calculate cond as a conjunction without short-circuiting.
     Value cond = nullptr;
@@ -419,7 +419,7 @@ public:
   LogicalResult matchAndRewrite(AffineDmaStartOp op,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value, 8> operands(op.getOperands());
-    auto operandsRef = llvm::makeArrayRef(operands);
+    auto operandsRef = llvm::ArrayRef(operands);
 
     // Expand affine map for DMA source memref.
     auto maybeExpandedSrcMap = expandAffineMap(

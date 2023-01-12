@@ -46,6 +46,6 @@ void VETargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 ArrayRef<Builtin::Info> VETargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo,
-                            clang::VE::LastTSBuiltin - Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::VE::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }

@@ -620,7 +620,7 @@ static bool relax(InputSection &sec) {
   // Get st_value delta for symbols relative to this section from the previous
   // iteration.
   DenseMap<const Defined *, uint64_t> valueDelta;
-  ArrayRef<SymbolAnchor> sa = makeArrayRef(aux.anchors);
+  ArrayRef<SymbolAnchor> sa = ArrayRef(aux.anchors);
   uint32_t delta = 0;
   for (auto [i, r] : llvm::enumerate(sec.relocs())) {
     for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1))
@@ -631,7 +631,7 @@ static bool relax(InputSection &sec) {
   for (const SymbolAnchor &sa : sa)
     if (!sa.end)
       valueDelta[sa.d] = delta;
-  sa = makeArrayRef(aux.anchors);
+  sa = ArrayRef(aux.anchors);
   delta = 0;
 
   std::fill_n(aux.relocTypes.get(), sec.relocs().size(), R_RISCV_NONE);

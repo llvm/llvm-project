@@ -51,7 +51,7 @@ static constexpr OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-MachOOptTable::MachOOptTable() : OptTable(optInfo) {}
+MachOOptTable::MachOOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

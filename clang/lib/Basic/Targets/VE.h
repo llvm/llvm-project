@@ -83,7 +83,7 @@ public:
         "sx48", "sx49", "sx50", "sx51", "sx52", "sx53", "sx54", "sx55",
         "sx56", "sx57", "sx58", "sx59", "sx60", "sx61", "sx62", "sx63",
     };
-    return llvm::makeArrayRef(GCCRegNames);
+    return llvm::ArrayRef(GCCRegNames);
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
@@ -153,7 +153,7 @@ public:
         {{"s62"}, "sx62"},
         {{"s63"}, "sx63"},
     };
-    return llvm::makeArrayRef(GCCRegAliases);
+    return llvm::ArrayRef(GCCRegAliases);
   }
 
   bool validateAsmConstraint(const char *&Name,

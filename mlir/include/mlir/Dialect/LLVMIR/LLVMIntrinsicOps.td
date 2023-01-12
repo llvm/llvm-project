@@ -721,7 +721,8 @@ def LLVM_vector_extract
 //===--------------------------------------------------------------------===//
 // CallIntrinsicOp
 //===--------------------------------------------------------------------===//
-def LLVM_CallIntrinsicOp : LLVM_Op<"call_intrinsic", [Pure]> {
+
+def LLVM_CallIntrinsicOp : LLVM_Op<"call_intrinsic"> {
   let summary = "Call to an LLVM intrinsic function.";
   let description = [{
     Call the specified llvm intrinsic. If the intrinsic is overloaded, use

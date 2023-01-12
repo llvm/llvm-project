@@ -2799,6 +2799,14 @@ public:
   /// DW_OP_LLVM_arg op as its first operand, or if it contains none.
   bool isSingleLocationExpression() const;
 
+  /// Removes all elements from \p Expr that do not apply to an undef debug
+  /// value, which includes every operator that computes the value/location on
+  /// the DWARF stack, including any DW_OP_LLVM_arg elements (making the result
+  /// of this function always a single-location expression) while leaving
+  /// everything that defines what the computed value applies to, i.e. the
+  /// fragment information.
+  static const DIExpression *convertToUndefExpression(const DIExpression *Expr);
+
   /// If \p Expr is a non-variadic expression (i.e. one that does not contain
   /// DW_OP_LLVM_arg), returns \p Expr converted to variadic form by adding a
   /// leading [DW_OP_LLVM_arg, 0] to the expression; otherwise returns \p Expr.

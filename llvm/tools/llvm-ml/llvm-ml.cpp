@@ -79,9 +79,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class MLOptTable : public opt::OptTable {
+class MLOptTable : public opt::GenericOptTable {
 public:
-  MLOptTable() : OptTable(InfoTable, /*IgnoreCase=*/false) {}
+  MLOptTable() : opt::GenericOptTable(InfoTable, /*IgnoreCase=*/false) {}
 };
 } // namespace
 

@@ -7,8 +7,8 @@ define void @store_trunc_v8i16i8(ptr %ap, ptr %dest) #0 {
 ; CHECK-LABEL: store_trunc_v8i16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    str d0, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    st1b { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %ap
   %val = trunc <8 x i16> %a to <8 x i8>
@@ -20,9 +20,8 @@ define void @store_trunc_v4i32i8(ptr %ap, ptr %dest) #0 {
 ; CHECK-LABEL: store_trunc_v4i32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1b { z0.h }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    st1b { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %ap
   %val = trunc <4 x i32> %a to <4 x i8>
@@ -34,8 +33,8 @@ define void @store_trunc_v4i32i16(ptr %ap, ptr %dest) #0 {
 ; CHECK-LABEL: store_trunc_v4i32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    str d0, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %ap
   %val = trunc <4 x i32> %a to <4 x i16>

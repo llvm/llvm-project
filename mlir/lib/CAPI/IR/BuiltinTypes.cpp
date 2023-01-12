@@ -187,15 +187,14 @@ bool mlirTypeIsAVector(MlirType type) { return unwrap(type).isa<VectorType>(); }
 
 MlirType mlirVectorTypeGet(intptr_t rank, const int64_t *shape,
                            MlirType elementType) {
-  return wrap(
-      VectorType::get(llvm::makeArrayRef(shape, static_cast<size_t>(rank)),
-                      unwrap(elementType)));
+  return wrap(VectorType::get(llvm::ArrayRef(shape, static_cast<size_t>(rank)),
+                              unwrap(elementType)));
 }
 
 MlirType mlirVectorTypeGetChecked(MlirLocation loc, intptr_t rank,
                                   const int64_t *shape, MlirType elementType) {
   return wrap(VectorType::getChecked(
-      unwrap(loc), llvm::makeArrayRef(shape, static_cast<size_t>(rank)),
+      unwrap(loc), llvm::ArrayRef(shape, static_cast<size_t>(rank)),
       unwrap(elementType)));
 }
 
@@ -215,9 +214,9 @@ bool mlirTypeIsAUnrankedTensor(MlirType type) {
 
 MlirType mlirRankedTensorTypeGet(intptr_t rank, const int64_t *shape,
                                  MlirType elementType, MlirAttribute encoding) {
-  return wrap(RankedTensorType::get(
-      llvm::makeArrayRef(shape, static_cast<size_t>(rank)), unwrap(elementType),
-      unwrap(encoding)));
+  return wrap(
+      RankedTensorType::get(llvm::ArrayRef(shape, static_cast<size_t>(rank)),
+                            unwrap(elementType), unwrap(encoding)));
 }
 
 MlirType mlirRankedTensorTypeGetChecked(MlirLocation loc, intptr_t rank,
@@ -225,7 +224,7 @@ MlirType mlirRankedTensorTypeGetChecked(MlirLocation loc, intptr_t rank,
                                         MlirType elementType,
                                         MlirAttribute encoding) {
   return wrap(RankedTensorType::getChecked(
-      unwrap(loc), llvm::makeArrayRef(shape, static_cast<size_t>(rank)),
+      unwrap(loc), llvm::ArrayRef(shape, static_cast<size_t>(rank)),
       unwrap(elementType), unwrap(encoding)));
 }
 
@@ -252,7 +251,7 @@ MlirType mlirMemRefTypeGet(MlirType elementType, intptr_t rank,
                            const int64_t *shape, MlirAttribute layout,
                            MlirAttribute memorySpace) {
   return wrap(MemRefType::get(
-      llvm::makeArrayRef(shape, static_cast<size_t>(rank)), unwrap(elementType),
+      llvm::ArrayRef(shape, static_cast<size_t>(rank)), unwrap(elementType),
       mlirAttributeIsNull(layout)
           ? MemRefLayoutAttrInterface()
           : unwrap(layout).cast<MemRefLayoutAttrInterface>(),
@@ -264,7 +263,7 @@ MlirType mlirMemRefTypeGetChecked(MlirLocation loc, MlirType elementType,
                                   MlirAttribute layout,
                                   MlirAttribute memorySpace) {
   return wrap(MemRefType::getChecked(
-      unwrap(loc), llvm::makeArrayRef(shape, static_cast<size_t>(rank)),
+      unwrap(loc), llvm::ArrayRef(shape, static_cast<size_t>(rank)),
       unwrap(elementType),
       mlirAttributeIsNull(layout)
           ? MemRefLayoutAttrInterface()
@@ -275,9 +274,9 @@ MlirType mlirMemRefTypeGetChecked(MlirLocation loc, MlirType elementType,
 MlirType mlirMemRefTypeContiguousGet(MlirType elementType, intptr_t rank,
                                      const int64_t *shape,
                                      MlirAttribute memorySpace) {
-  return wrap(MemRefType::get(
-      llvm::makeArrayRef(shape, static_cast<size_t>(rank)), unwrap(elementType),
-      MemRefLayoutAttrInterface(), unwrap(memorySpace)));
+  return wrap(MemRefType::get(llvm::ArrayRef(shape, static_cast<size_t>(rank)),
+                              unwrap(elementType), MemRefLayoutAttrInterface(),
+                              unwrap(memorySpace)));
 }
 
 MlirType mlirMemRefTypeContiguousGetChecked(MlirLocation loc,
@@ -285,7 +284,7 @@ MlirType mlirMemRefTypeContiguousGetChecked(MlirLocation loc,
                                             const int64_t *shape,
                                             MlirAttribute memorySpace) {
   return wrap(MemRefType::getChecked(
-      unwrap(loc), llvm::makeArrayRef(shape, static_cast<size_t>(rank)),
+      unwrap(loc), llvm::ArrayRef(shape, static_cast<size_t>(rank)),
       unwrap(elementType), MemRefLayoutAttrInterface(), unwrap(memorySpace)));
 }
 

@@ -888,7 +888,7 @@ bool AVRExpandPseudo::expand<AVR::LPMWRdZPi>(Block &MBB, BlockIt MBBI) {
 
 template <>
 bool AVRExpandPseudo::expand<AVR::ELPMBRdZPi>(Block &MBB, BlockIt MBBI) {
-  llvm_unreachable("byte ELPMPi is unimplemented");
+  llvm_unreachable("8-bit ELPMPi is unimplemented");
 }
 
 template <>

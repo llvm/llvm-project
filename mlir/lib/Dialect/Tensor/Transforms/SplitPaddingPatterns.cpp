@@ -69,7 +69,7 @@ struct SplitPadding final : public OpRewritePattern<tensor::PadOp> {
             cstZero));
     }
     Value ifCond = eqZeroCmpVals.front();
-    for (Value cmp : llvm::makeArrayRef(eqZeroCmpVals).drop_front())
+    for (Value cmp : llvm::ArrayRef(eqZeroCmpVals).drop_front())
       ifCond = rewriter.create<arith::AndIOp>(loc, ifCond, cmp);
 
     // Build the scf.if op itself. For the "then" branch, we can elide the

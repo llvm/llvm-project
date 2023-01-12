@@ -6430,6 +6430,7 @@ cc_library(
         ":IR",
         ":InferIntRangeInterface",
         ":LoopLikeInterface",
+        ":Pass",
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",

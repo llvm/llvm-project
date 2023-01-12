@@ -756,6 +756,22 @@ add_object_library(
     common_constants.cpp
 )
 
+# TODO(lntue): Make log10 correctly rounded for non-FMA targets.
+add_entrypoint_object(
+  log10
+  SRCS
+    log10.cpp
+  HDRS
+    ../log10.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+  COMPILE_OPTIONS
+    -O3
+)
+
 add_entrypoint_object(
   log10f
   SRCS

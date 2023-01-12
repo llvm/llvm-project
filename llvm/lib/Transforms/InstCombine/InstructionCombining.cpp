@@ -2463,7 +2463,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     unsigned AS = GEP.getPointerAddressSpace();
     if (GEP.getOperand(1)->getType()->getScalarSizeInBits() ==
         DL.getIndexSizeInBits(AS)) {
-      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
+      uint64_t TyAllocSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
 
       bool Matched = false;
       uint64_t C;
@@ -2593,8 +2593,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       if (GEPEltType->isSized() && StrippedPtrEltTy->isSized()) {
         // Check that changing the type amounts to dividing the index by a scale
         // factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
-        uint64_t SrcSize = DL.getTypeAllocSize(StrippedPtrEltTy).getFixedSize();
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
+        uint64_t SrcSize =
+            DL.getTypeAllocSize(StrippedPtrEltTy).getFixedValue();
         if (ResSize && SrcSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -2630,10 +2631,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           StrippedPtrEltTy->isArrayTy()) {
         // Check that changing to the array element type amounts to dividing the
         // index by a scale factor.
-        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedSize();
+        uint64_t ResSize = DL.getTypeAllocSize(GEPEltType).getFixedValue();
         uint64_t ArrayEltSize =
             DL.getTypeAllocSize(StrippedPtrEltTy->getArrayElementType())
-                .getFixedSize();
+                .getFixedValue();
         if (ResSize && ArrayEltSize % ResSize == 0) {
           Value *Idx = GEP.getOperand(1);
           unsigned BitWidth = Idx->getType()->getPrimitiveSizeInBits();
@@ -2694,7 +2695,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           BasePtrOffset.isNonNegative()) {
         APInt AllocSize(
             IdxWidth,
-            DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinSize());
+            DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinValue());
         if (BasePtrOffset.ule(AllocSize)) {
           return GetElementPtrInst::CreateInBounds(
               GEP.getSourceElementType(), PtrOp, Indices, GEP.getName());
@@ -3315,6 +3316,12 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   // (usub LHS, RHS) overflows when LHS is unsigned-less-than RHS.
   if (OvID == Intrinsic::usub_with_overflow)
     return new ICmpInst(ICmpInst::ICMP_ULT, WO->getLHS(), WO->getRHS());
+
+  // smul with i1 types overflows when both sides are set: -1 * -1 == +1, but
+  // +1 is not possible because we assume signed values.
+  if (OvID == Intrinsic::smul_with_overflow &&
+      WO->getLHS()->getType()->isIntOrIntVectorTy(1))
+    return BinaryOperator::CreateAnd(WO->getLHS(), WO->getRHS());
 
   // If only the overflow result is used, and the right hand side is a
   // constant (or constant splat), we can remove the intrinsic by directly

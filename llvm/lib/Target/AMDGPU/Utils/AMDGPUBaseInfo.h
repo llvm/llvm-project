@@ -1168,7 +1168,7 @@ inline bool isKernel(CallingConv::ID CC) {
 bool hasXNACK(const MCSubtargetInfo &STI);
 bool hasSRAMECC(const MCSubtargetInfo &STI);
 bool hasMIMG_R128(const MCSubtargetInfo &STI);
-bool hasGFX10A16(const MCSubtargetInfo &STI);
+bool hasA16(const MCSubtargetInfo &STI);
 bool hasG16(const MCSubtargetInfo &STI);
 bool hasPackedD16(const MCSubtargetInfo &STI);
 
@@ -1343,9 +1343,10 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 /// For FLAT segment the offset must be positive;
 /// MSB is ignored and forced to zero.
 ///
-/// \return The number of bits available for the offset field in flat
-/// instructions.
-unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed);
+/// \return The number of bits available for the signed offset field in flat
+/// instructions. Note that some forms of the instruction disallow negative
+/// offsets.
+unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST);
 
 /// \returns true if this offset is small enough to fit in the SMRD
 /// offset field.  \p ByteOffset should be the offset in bytes and

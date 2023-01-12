@@ -1241,8 +1241,8 @@ void DebugAbbrevWriter::addUnitAbbreviations(DWARFUnit &Unit) {
 
       const DWARFUnitIndex::Entry::SectionContribution *DWOContrubution =
           DWOEntry->getContribution(DWARFSectionKind::DW_SECT_ABBREV);
-      AbbrevContents = AbbrevSectionContents.substr(DWOContrubution->Offset,
-                                                    DWOContrubution->Length);
+      AbbrevContents = AbbrevSectionContents.substr(
+          DWOContrubution->getOffset(), DWOContrubution->getLength());
     } else if (!Unit.isDWOUnit()) {
       const uint64_t StartOffset = Unit.getAbbreviationsOffset();
 

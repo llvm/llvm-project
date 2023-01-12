@@ -35,6 +35,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
@@ -160,19 +161,9 @@ hasDerivedTypeWithLengthParameters(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
-static mlir::Type unwrapElementType(mlir::Type type) {
-  if (mlir::Type ty = fir::dyn_cast_ptrOrBoxEleTy(type))
-    type = ty;
-  if (auto seqType = type.dyn_cast<fir::SequenceType>())
-    type = seqType.getEleTy();
-  return type;
-}
-
 fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::SomeExpr &addr) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    TODO(loc, "generate initializer address in HLFIR");
   Fortran::lower::SymMap globalOpSymMap;
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;
@@ -187,6 +178,10 @@ fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
     Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
                                         storeMap);
   }
+
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
+    return Fortran::lower::convertExprToAddress(loc, converter, addr,
+                                                globalOpSymMap, stmtCtx);
   return Fortran::lower::createInitializerAddress(loc, converter, addr,
                                                   globalOpSymMap, stmtCtx);
 }
@@ -196,8 +191,6 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     mlir::Type boxType, const Fortran::lower::SomeExpr &initialTarget,
     bool couldBeInEquivalence) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    TODO(loc, "initial data target in HLFIR");
   Fortran::lower::SymMap globalOpSymMap;
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;
@@ -254,63 +247,33 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     }
   }
 
-  mlir::Value box;
-  if (initialTarget.Rank() > 0) {
-    box = fir::getBase(Fortran::lower::createSomeArrayBox(
-        converter, initialTarget, globalOpSymMap, stmtCtx));
-  } else {
-    fir::ExtendedValue addr = Fortran::lower::createInitializerAddress(
+  mlir::Value targetBox;
+  mlir::Value targetShift;
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    auto target = Fortran::lower::convertExprToBox(
         loc, converter, initialTarget, globalOpSymMap, stmtCtx);
-    box = builder.createBox(loc, addr);
+    targetBox = fir::getBase(target);
+    targetShift = builder.createShape(loc, target);
+  } else {
+    if (initialTarget.Rank() > 0) {
+      auto target = Fortran::lower::createSomeArrayBox(converter, initialTarget,
+                                                       globalOpSymMap, stmtCtx);
+      targetBox = fir::getBase(target);
+      targetShift = builder.createShape(loc, target);
+    } else {
+      fir::ExtendedValue addr = Fortran::lower::createInitializerAddress(
+          loc, converter, initialTarget, globalOpSymMap, stmtCtx);
+      targetBox = builder.createBox(loc, addr);
+      // Nothing to do for targetShift, the target is a scalar.
+    }
   }
-  // box is a fir.box<T>, not a fir.box<fir.ptr<T>> as it should to be used
-  // for pointers. A fir.convert should not be used here, because it would
-  // not actually set the pointer attribute in the descriptor.
-  // In a normal context, fir.rebox would be used to set the pointer attribute
-  // while copying the projection from another fir.box. But fir.rebox cannot be
-  // used in initializer because its current codegen expects that the input
-  // fir.box is in memory, which is not the case in initializers.
-  // So, just replace the fir.embox that created addr with one with
-  // fir.box<fir.ptr<T>> result type.
-  // Note that the descriptor cannot have been created with fir.rebox because
-  // the initial-data-target cannot be a fir.box itself (it cannot be
-  // assumed-shape, deferred-shape, or polymorphic as per C765). However the
-  // case where the initial data target is a derived type with length parameters
-  // will most likely be a bit trickier, hence the TODO above.
-
-  mlir::Operation *op = box.getDefiningOp();
-  if (!op || !mlir::isa<fir::EmboxOp>(*op))
-    fir::emitFatalError(
-        loc, "fir.box must be created with embox in global initializers");
-  mlir::Type targetEleTy = unwrapElementType(box.getType());
-  if (!fir::isa_char(targetEleTy))
-    return builder.create<fir::EmboxOp>(loc, boxType, op->getOperands(),
-                                        op->getAttrs());
-
-  // Handle the character case length particularities: embox takes a length
-  // value argument when the result type has unknown length, but not when the
-  // result type has constant length. The type of the initial target must be
-  // constant length, but the one of the pointer may not be. In this case, a
-  // length operand must be added.
-  auto targetLen = targetEleTy.cast<fir::CharacterType>().getLen();
-  auto ptrLen = unwrapElementType(boxType).cast<fir::CharacterType>().getLen();
-  if (ptrLen == targetLen)
-    // Nothing to do
-    return builder.create<fir::EmboxOp>(loc, boxType, op->getOperands(),
-                                        op->getAttrs());
-  auto embox = mlir::cast<fir::EmboxOp>(*op);
-  auto ptrType = boxType.cast<fir::BoxType>().getEleTy();
-  mlir::Value memref = builder.createConvert(loc, ptrType, embox.getMemref());
-  if (targetLen == fir::CharacterType::unknownLen())
-    // Drop the length argument.
-    return builder.create<fir::EmboxOp>(loc, boxType, memref, embox.getShape(),
-                                        embox.getSlice());
-  // targetLen is constant and ptrLen is unknown. Add a length argument.
-  mlir::Value targetLenValue =
-      builder.createIntegerConstant(loc, builder.getIndexType(), targetLen);
-  return builder.create<fir::EmboxOp>(loc, boxType, memref, embox.getShape(),
-                                      embox.getSlice(),
-                                      mlir::ValueRange{targetLenValue});
+  // The targetBox is a fir.box<T>, not a fir.box<fir.ptr<T>> as it should for
+  // pointers (this matters to get the POINTER attribute correctly inside the
+  // initial value of the descriptor).
+  // Create a fir.rebox to set the attribute correctly, and use targetShift
+  // to preserve the target lower bounds if any.
+  return builder.create<fir::ReboxOp>(loc, boxType, targetBox, targetShift,
+                                      /*slice=*/mlir::Value{});
 }
 
 static mlir::Value genDefaultInitializerValue(
@@ -625,6 +588,11 @@ mustBeDefaultInitializedAtRuntime(const Fortran::lower::pft::Variable &var) {
     return false;
   if (Fortran::semantics::IsDummy(sym) && !Fortran::semantics::IsIntentOut(sym))
     return false;
+  // Polymorphic intent(out) dummy might need default initialization
+  // at runtime.
+  if (Fortran::semantics::IsPolymorphic(sym) &&
+      Fortran::semantics::IsDummy(sym) && Fortran::semantics::IsIntentOut(sym))
+    return true;
   // Local variables (including function results), and intent(out) dummies must
   // be default initialized at runtime if their type has default initialization.
   return hasDefaultInitialization(sym);
@@ -682,15 +650,37 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
           if (mlir::isa<fir::AllocaOp>(op))
             return;
         mlir::Location loc = converter.getCurrentLocation();
+        fir::FirOpBuilder &builder = converter.getFirOpBuilder();
         if (Fortran::semantics::IsOptional(sym)) {
-          fir::FirOpBuilder &builder = converter.getFirOpBuilder();
           auto isPresent = builder.create<fir::IsPresentOp>(
               loc, builder.getI1Type(), fir::getBase(extVal));
           builder.genIfThen(loc, isPresent)
               .genThen([&]() { genDeallocateBox(converter, *mutBox, loc); })
               .end();
         } else {
-          genDeallocateBox(converter, *mutBox, loc);
+          if (mutBox->isDerived() || mutBox->isPolymorphic() ||
+              mutBox->isUnlimitedPolymorphic()) {
+            mlir::Value isAlloc = fir::factory::genIsAllocatedOrAssociatedTest(
+                builder, loc, *mutBox);
+            builder.genIfThen(loc, isAlloc)
+                .genThen([&]() {
+                  if (mutBox->isPolymorphic()) {
+                    mlir::Value declaredTypeDesc;
+                    assert(sym.GetType());
+                    if (const Fortran::semantics::DerivedTypeSpec
+                            *derivedTypeSpec = sym.GetType()->AsDerived()) {
+                      declaredTypeDesc = Fortran::lower::getTypeDescAddr(
+                          builder, loc, *derivedTypeSpec);
+                    }
+                    genDeallocateBox(converter, *mutBox, loc, declaredTypeDesc);
+                  } else {
+                    genDeallocateBox(converter, *mutBox, loc);
+                  }
+                })
+                .end();
+          } else {
+            genDeallocateBox(converter, *mutBox, loc);
+          }
         }
       }
     }
@@ -1047,7 +1037,7 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
     auto commonTy = fir::SequenceType::get(shape, i8Ty);
     auto vecTy = mlir::VectorType::get(sz, i8Ty);
     mlir::Attribute zero = builder.getIntegerAttr(i8Ty, 0);
-    auto init = mlir::DenseElementsAttr::get(vecTy, llvm::makeArrayRef(zero));
+    auto init = mlir::DenseElementsAttr::get(vecTy, llvm::ArrayRef(zero));
     builder.createGlobal(loc, commonTy, commonName, linkage, init);
     // No need to add any initial value later.
     return std::nullopt;

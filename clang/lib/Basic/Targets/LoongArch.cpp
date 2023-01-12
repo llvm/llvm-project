@@ -32,7 +32,7 @@ ArrayRef<const char *> LoongArchTargetInfo::getGCCRegNames() const {
       "$f10", "$f11", "$f12", "$f13", "$f14", "$f15", "$f16", "$f17", "$f18",
       "$f19", "$f20", "$f21", "$f22", "$f23", "$f24", "$f25", "$f26", "$f27",
       "$f28", "$f29", "$f30", "$f31"};
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::GCCRegAlias>
@@ -60,7 +60,7 @@ LoongArchTargetInfo::getGCCRegAliases() const {
       {{"$fs2"}, "$f26"},       {{"$fs3"}, "$f27"},  {{"$fs4"}, "$f28"},
       {{"$fs5"}, "$f29"},       {{"$fs6"}, "$f30"},  {{"$fs7"}, "$f31"},
   };
-  return llvm::makeArrayRef(GCCRegAliases);
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool LoongArchTargetInfo::validateAsmConstraint(
@@ -198,8 +198,8 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
 }
 
 ArrayRef<Builtin::Info> LoongArchTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::LoongArch::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo, clang::LoongArch::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }
 
 bool LoongArchTargetInfo::handleTargetFeatures(

@@ -458,7 +458,7 @@ void CloneOp::getEffects(
                        SideEffects::DefaultResource::get());
 }
 
-OpFoldResult CloneOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult CloneOp::fold(FoldAdaptor adaptor) {
   return succeeded(memref::foldMemRefCast(*this)) ? getResult() : Value();
 }
 
@@ -560,7 +560,7 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
 // ToTensorOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ToTensorOp::fold(ArrayRef<Attribute>) {
+OpFoldResult ToTensorOp::fold(FoldAdaptor) {
   if (auto toMemref = getMemref().getDefiningOp<ToMemrefOp>())
     // Approximate alias analysis by conservatively folding only when no there
     // is no interleaved operation.
@@ -596,7 +596,7 @@ void ToTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ToMemrefOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ToMemrefOp::fold(ArrayRef<Attribute>) {
+OpFoldResult ToMemrefOp::fold(FoldAdaptor) {
   if (auto memrefToTensor = getTensor().getDefiningOp<ToTensorOp>())
     if (memrefToTensor.getMemref().getType() == getType())
       return memrefToTensor.getMemref();

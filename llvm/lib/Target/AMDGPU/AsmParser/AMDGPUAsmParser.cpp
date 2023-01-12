@@ -365,7 +365,7 @@ public:
   bool isUNorm() const { return isImmTy(ImmTyUNorm); }
   bool isDA() const { return isImmTy(ImmTyDA); }
   bool isR128A16() const { return isImmTy(ImmTyR128A16); }
-  bool isGFX10A16() const { return isImmTy(ImmTyA16); }
+  bool isA16() const { return isImmTy(ImmTyA16); }
   bool isLWE() const { return isImmTy(ImmTyLWE); }
   bool isNV() const { return isImmTy(ImmTyNV); }
   bool isOff() const { return isImmTy(ImmTyOff); }
@@ -1431,9 +1431,7 @@ public:
     return AMDGPU::hasPackedD16(getSTI());
   }
 
-  bool hasGFX10A16() const {
-    return AMDGPU::hasGFX10A16(getSTI());
-  }
+  bool hasA16() const { return AMDGPU::hasA16(getSTI()); }
 
   bool hasG16() const { return AMDGPU::hasG16(getSTI()); }
 
@@ -4245,20 +4243,15 @@ bool AMDGPUAsmParser::validateFlatOffset(const MCInst &Inst,
 
   // For FLAT segment the offset must be positive;
   // MSB is ignored and forced to zero.
-  if (TSFlags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch)) {
-    unsigned OffsetSize = AMDGPU::getNumFlatOffsetBits(getSTI(), true);
-    if (!isIntN(OffsetSize, Op.getImm())) {
-      Error(getFlatOffsetLoc(Operands),
-            Twine("expected a ") + Twine(OffsetSize) + "-bit signed offset");
-      return false;
-    }
-  } else {
-    unsigned OffsetSize = AMDGPU::getNumFlatOffsetBits(getSTI(), false);
-    if (!isUIntN(OffsetSize, Op.getImm())) {
-      Error(getFlatOffsetLoc(Operands),
-            Twine("expected a ") + Twine(OffsetSize) + "-bit unsigned offset");
-      return false;
-    }
+  unsigned OffsetSize = AMDGPU::getNumFlatOffsetBits(getSTI());
+  bool AllowNegative =
+      TSFlags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch);
+  if (!isIntN(OffsetSize, Op.getImm()) || (!AllowNegative && Op.getImm() < 0)) {
+    Error(getFlatOffsetLoc(Operands),
+          Twine("expected a ") +
+              (AllowNegative ? Twine(OffsetSize) + "-bit signed offset"
+                             : Twine(OffsetSize - 1) + "-bit unsigned offset"));
+    return false;
   }
 
   return true;
@@ -6201,7 +6194,7 @@ AMDGPUAsmParser::parseNamedBit(StringRef Name, OperandVector &Operands,
     Error(S, "r128 modifier is not supported on this GPU");
     return MatchOperand_ParseFail;
   }
-  if (Name == "a16" && !isGFX9() && !hasGFX10A16()) {
+  if (Name == "a16" && !hasA16()) {
     Error(S, "a16 modifier is not supported on this GPU");
     return MatchOperand_ParseFail;
   }
@@ -8256,8 +8249,19 @@ void AMDGPUAsmParser::cvtSMEMAtomic(MCInst &Inst, const OperandVector &Operands)
 
 void AMDGPUAsmParser::cvtIntersectRay(MCInst &Inst,
                                       const OperandVector &Operands) {
+  // vdata
+  static_cast<AMDGPUOperand &>(*Operands[1]).addRegOperands(Inst, 1);
+
+  // Add the ray origin and direction output operands.
+  unsigned NumDefs = MII.get(Inst.getOpcode()).getNumDefs();
+  if (NumDefs > 1) {
+    assert(isGFX12Plus());
+    for (unsigned I = 1; I < NumDefs; ++I)
+      static_cast<AMDGPUOperand &>(*Operands[3 + I]).addRegOperands(Inst, 1);
+  }
+
   bool HasNVBit = false;
-  for (unsigned I = 1; I < Operands.size(); ++I) {
+  for (unsigned I = 2; I < Operands.size(); ++I) {
     auto &Operand = (AMDGPUOperand &)*Operands[I];
     if (Operand.isReg())
       Operand.addRegOperands(Inst, 1);
@@ -9476,7 +9480,7 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
   case MCK_gds:
   case MCK_ImmGDS:
     return parseNamedBit("gds", Operands, AMDGPUOperand::ImmTyGDS);
-  case MCK_ImmGFX10A16:
+  case MCK_ImmA16:
     return parseNamedBit("a16", Operands, AMDGPUOperand::ImmTyA16);
   case MCK_ImmHigh:
     return parseNamedBit("high", Operands, AMDGPUOperand::ImmTyHigh);

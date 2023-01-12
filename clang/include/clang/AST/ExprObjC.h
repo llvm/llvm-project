@@ -1415,11 +1415,10 @@ public:
   SourceLocation getSelectorLoc(unsigned Index) const {
     assert(Index < getNumSelectorLocs() && "Index out of range!");
     if (hasStandardSelLocs())
-      return getStandardSelectorLoc(Index, getSelector(),
-                                   getSelLocsKind() == SelLoc_StandardWithSpace,
-                               llvm::makeArrayRef(const_cast<Expr**>(getArgs()),
-                                                  getNumArgs()),
-                                   RBracLoc);
+      return getStandardSelectorLoc(
+          Index, getSelector(), getSelLocsKind() == SelLoc_StandardWithSpace,
+          llvm::ArrayRef(const_cast<Expr **>(getArgs()), getNumArgs()),
+          RBracLoc);
     return getStoredSelLocs()[Index];
   }
 

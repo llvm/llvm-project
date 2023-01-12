@@ -28,7 +28,7 @@ static void testSplat(Type eltType, const EltTy &splatElt) {
   EXPECT_TRUE(splat.isSplat());
 
   auto detectedSplat =
-      DenseElementsAttr::get(shape, llvm::makeArrayRef({splatElt, splatElt}));
+      DenseElementsAttr::get(shape, llvm::ArrayRef({splatElt, splatElt}));
   EXPECT_EQ(detectedSplat, splat);
 
   for (auto newValue : detectedSplat.template getValues<EltTy>())
@@ -220,7 +220,7 @@ TEST(DenseScalarTest, ExtractZeroRankElement) {
   Attribute value = IntegerAttr::get(intTy, elementValue);
   RankedTensorType shape = RankedTensorType::get({}, intTy);
 
-  auto attr = DenseElementsAttr::get(shape, llvm::makeArrayRef({elementValue}));
+  auto attr = DenseElementsAttr::get(shape, llvm::ArrayRef({elementValue}));
   EXPECT_TRUE(attr.getValues<Attribute>()[0] == value);
 }
 
@@ -232,7 +232,7 @@ TEST(DenseSplatMapValuesTest, I32ToTrue) {
   RankedTensorType shape = RankedTensorType::get({4}, intTy);
 
   auto attr =
-      DenseElementsAttr::get(shape, llvm::makeArrayRef({elementValue}))
+      DenseElementsAttr::get(shape, llvm::ArrayRef({elementValue}))
           .mapValues(boolTy, [](const APInt &x) {
             return x.isZero() ? APInt::getZero(1) : APInt::getAllOnes(1);
           });
@@ -249,7 +249,7 @@ TEST(DenseSplatMapValuesTest, I32ToFalse) {
   RankedTensorType shape = RankedTensorType::get({4}, intTy);
 
   auto attr =
-      DenseElementsAttr::get(shape, llvm::makeArrayRef({elementValue}))
+      DenseElementsAttr::get(shape, llvm::ArrayRef({elementValue}))
           .mapValues(boolTy, [](const APInt &x) {
             return x.isZero() ? APInt::getZero(1) : APInt::getAllOnes(1);
           });
@@ -282,7 +282,7 @@ static void checkNativeAccess(MLIRContext *ctx, ArrayRef<T> data,
 template <typename AttrT, typename T>
 static void checkNativeIntAccess(Builder &builder, size_t intWidth) {
   T data[] = {0, 1, 2};
-  checkNativeAccess<AttrT, T>(builder.getContext(), llvm::makeArrayRef(data),
+  checkNativeAccess<AttrT, T>(builder.getContext(), llvm::ArrayRef(data),
                               builder.getIntegerType(intWidth));
 }
 
@@ -294,7 +294,7 @@ TEST(DenseResourceElementsAttrTest, CheckNativeAccess) {
   // Bool
   bool boolData[] = {true, false, true};
   checkNativeAccess<DenseBoolResourceElementsAttr>(
-      &context, llvm::makeArrayRef(boolData), builder.getI1Type());
+      &context, llvm::ArrayRef(boolData), builder.getI1Type());
 
   // Unsigned integers
   checkNativeIntAccess<DenseUI8ResourceElementsAttr, uint8_t>(builder, 8);
@@ -311,12 +311,12 @@ TEST(DenseResourceElementsAttrTest, CheckNativeAccess) {
   // Float
   float floatData[] = {0, 1, 2};
   checkNativeAccess<DenseF32ResourceElementsAttr>(
-      &context, llvm::makeArrayRef(floatData), builder.getF32Type());
+      &context, llvm::ArrayRef(floatData), builder.getF32Type());
 
   // Double
   double doubleData[] = {0, 1, 2};
   checkNativeAccess<DenseF64ResourceElementsAttr>(
-      &context, llvm::makeArrayRef(doubleData), builder.getF64Type());
+      &context, llvm::ArrayRef(doubleData), builder.getF64Type());
 }
 
 TEST(DenseResourceElementsAttrTest, CheckNoCast) {

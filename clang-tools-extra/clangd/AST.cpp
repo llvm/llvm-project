@@ -376,6 +376,38 @@ const ObjCImplDecl *getCorrespondingObjCImpl(const ObjCContainerDecl *D) {
   return nullptr;
 }
 
+Symbol::IncludeDirective
+preferredIncludeDirective(llvm::StringRef FileName, const LangOptions &LangOpts,
+                          ArrayRef<Inclusion> MainFileIncludes,
+                          ArrayRef<const Decl *> TopLevelDecls) {
+  // Always prefer #include for non-ObjC code.
+  if (!LangOpts.ObjC)
+    return Symbol::IncludeDirective::Include;
+  // If this is not a header file and has ObjC set as the language, prefer
+  // #import.
+  if (!isHeaderFile(FileName, LangOpts))
+    return Symbol::IncludeDirective::Import;
+
+  // Headers lack proper compile flags most of the time, so we might treat a
+  // header as ObjC accidentally. Perform some extra checks to make sure this
+  // works.
+
+  // Any file with a #import, should keep #import-ing.
+  for (auto &Inc : MainFileIncludes)
+    if (Inc.Directive == tok::pp_import)
+      return Symbol::IncludeDirective::Import;
+
+  // Any file declaring an ObjC decl should also be #import-ing.
+  // No need to look over the references, as the file doesn't have any #imports,
+  // it must be declaring interesting ObjC-like decls.
+  for (const Decl *D : TopLevelDecls)
+    if (isa<ObjCContainerDecl, ObjCIvarDecl, ObjCMethodDecl, ObjCPropertyDecl>(
+            D))
+      return Symbol::IncludeDirective::Import;
+
+  return Symbol::IncludeDirective::Include;
+}
+
 std::string printType(const QualType QT, const DeclContext &CurContext,
                       const llvm::StringRef Placeholder) {
   std::string Result;

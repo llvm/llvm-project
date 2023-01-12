@@ -1441,6 +1441,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::bitreverse: {
+    // bitrev (zext i1 X to ?) --> X ? SignBitC : 0
+    Value *X;
+    if (match(II->getArgOperand(0), m_ZExt(m_Value(X))) &&
+        X->getType()->isIntOrIntVectorTy(1)) {
+      Type *Ty = II->getType();
+      APInt SignBit = APInt::getSignMask(Ty->getScalarSizeInBits());
+      return SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
+                                ConstantInt::getNullValue(Ty));
+    }
+    break;
+  }
   case Intrinsic::bswap: {
     Value *IIOperand = II->getArgOperand(0);
 

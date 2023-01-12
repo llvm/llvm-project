@@ -242,7 +242,7 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
       if (Tok.kind() != Kind)
         continue;
       FoundAny = true;
-      auto Spelling = TokBuf.spelledForExpanded(llvm::makeArrayRef(Tok));
+      auto Spelling = TokBuf.spelledForExpanded(llvm::ArrayRef(Tok));
       if (!Spelling) {
         Errors = llvm::joinErrors(
             std::move(Errors),

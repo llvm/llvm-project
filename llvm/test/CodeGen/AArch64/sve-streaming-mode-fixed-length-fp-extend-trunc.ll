@@ -10,17 +10,10 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @fcvt_v2f16_v2f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v2f16_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr h0, [x0, #2]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #12]
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #8]
-; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
 ; CHECK-NEXT:    str d0, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %op1 = load <2 x half>, ptr %a
   %res = fpext <2 x half> %op1 to <2 x float>
@@ -31,23 +24,10 @@ define void @fcvt_v2f16_v2f32(ptr %a, ptr %b) #0 {
 define void @fcvt_v4f16_v4f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v4f16_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr h0, [x0, #6]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #12]
-; CHECK-NEXT:    ldr h0, [x0, #4]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #8]
-; CHECK-NEXT:    ldr h0, [x0, #2]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #4]
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp]
-; CHECK-NEXT:    ldr q0, [sp]
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
 ; CHECK-NEXT:    str q0, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %op1 = load <4 x half>, ptr %a
   %res = fpext <4 x half> %op1 to <4 x float>
@@ -58,35 +38,13 @@ define void @fcvt_v4f16_v4f32(ptr %a, ptr %b) #0 {
 define void @fcvt_v8f16_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v8f16_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldr h0, [x0, #14]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #28]
-; CHECK-NEXT:    ldr h0, [x0, #12]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #24]
-; CHECK-NEXT:    ldr h0, [x0, #10]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #20]
-; CHECK-NEXT:    ldr h0, [x0, #8]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #16]
-; CHECK-NEXT:    ldr h0, [x0, #6]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #12]
-; CHECK-NEXT:    ldr h0, [x0, #4]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #8]
-; CHECK-NEXT:    ldr h0, [x0, #2]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #4]
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp]
-; CHECK-NEXT:    ldp q0, q1, [sp]
-; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    fcvt z1.s, p0/m, z1.h
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x half>, ptr %a
   %res = fpext <8 x half> %op1 to <8 x float>
@@ -97,61 +55,22 @@ define void @fcvt_v8f16_v8f32(ptr %a, ptr %b) #0 {
 define void @fcvt_v16f16_v16f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v16f16_v16f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    ldr h0, [x0, #22]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #60]
-; CHECK-NEXT:    ldr h0, [x0, #20]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #56]
-; CHECK-NEXT:    ldr h0, [x0, #18]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #52]
-; CHECK-NEXT:    ldr h0, [x0, #16]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #48]
-; CHECK-NEXT:    ldr h0, [x0, #14]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #44]
-; CHECK-NEXT:    ldr h0, [x0, #12]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #40]
-; CHECK-NEXT:    ldr h0, [x0, #10]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #36]
-; CHECK-NEXT:    ldr h0, [x0, #8]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #32]
-; CHECK-NEXT:    ldr h0, [x0, #6]
-; CHECK-NEXT:    ldp q1, q3, [sp, #32]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #12]
-; CHECK-NEXT:    ldr h0, [x0, #4]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #8]
-; CHECK-NEXT:    ldr h0, [x0, #2]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #4]
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp]
-; CHECK-NEXT:    ldr h0, [x0, #30]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #28]
-; CHECK-NEXT:    ldr h0, [x0, #28]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #24]
-; CHECK-NEXT:    ldr h0, [x0, #26]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #20]
-; CHECK-NEXT:    ldr h0, [x0, #24]
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    str s0, [sp, #16]
-; CHECK-NEXT:    ldp q0, q2, [sp]
+; CHECK-NEXT:    mov x8, #8
+; CHECK-NEXT:    mov x9, #12
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    mov x10, #4
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0, x9, lsl #1]
+; CHECK-NEXT:    ld1h { z2.s }, p0/z, [x0, x10, lsl #1]
+; CHECK-NEXT:    ld1h { z3.s }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    fcvt z1.s, p0/m, z1.h
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    movprfx z0, z3
+; CHECK-NEXT:    fcvt z0.s, p0/m, z3.h
+; CHECK-NEXT:    movprfx z1, z2
+; CHECK-NEXT:    fcvt z1.s, p0/m, z2.h
 ; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    stp q3, q2, [x1, #32]
-; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %res = fpext <16 x half> %op1 to <16 x float>
@@ -179,17 +98,10 @@ define void @fcvt_v1f16_v1f64(ptr %a, ptr %b) #0 {
 define void @fcvt_v2f16_v2f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v2f16_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr h0, [x0, #2]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp]
-; CHECK-NEXT:    ldr q0, [sp]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
 ; CHECK-NEXT:    str q0, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %op1 = load <2 x half>, ptr %a
   %res = fpext <2 x half> %op1 to <2 x double>
@@ -200,23 +112,13 @@ define void @fcvt_v2f16_v2f64(ptr %a, ptr %b) #0 {
 define void @fcvt_v4f16_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v4f16_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldr h0, [x0, #6]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #24]
-; CHECK-NEXT:    ldr h0, [x0, #4]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #16]
-; CHECK-NEXT:    ldr h0, [x0, #2]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp]
-; CHECK-NEXT:    ldp q0, q1, [sp]
-; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    mov x8, #2
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x half>, ptr %a
   %res = fpext <4 x half> %op1 to <4 x double>
@@ -227,37 +129,22 @@ define void @fcvt_v4f16_v4f64(ptr %a, ptr %b) #0 {
 define void @fcvt_v8f16_v8f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v8f16_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    ldr h0, [x0, #10]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #56]
-; CHECK-NEXT:    ldr h0, [x0, #8]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #48]
-; CHECK-NEXT:    ldr h0, [x0, #6]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #40]
-; CHECK-NEXT:    ldr h0, [x0, #4]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #32]
-; CHECK-NEXT:    ldr h0, [x0, #2]
-; CHECK-NEXT:    ldp q1, q3, [sp, #32]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp]
-; CHECK-NEXT:    ldr h0, [x0, #14]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #24]
-; CHECK-NEXT:    ldr h0, [x0, #12]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #16]
-; CHECK-NEXT:    ldp q0, q2, [sp]
+; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    mov x9, #6
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov x10, #2
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0, x9, lsl #1]
+; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0, x10, lsl #1]
+; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    movprfx z0, z3
+; CHECK-NEXT:    fcvt z0.d, p0/m, z3.h
+; CHECK-NEXT:    movprfx z1, z2
+; CHECK-NEXT:    fcvt z1.d, p0/m, z2.h
 ; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    stp q3, q2, [x1, #32]
-; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   %op1 = load <8 x half>, ptr %a
   %res = fpext <8 x half> %op1 to <8 x double>
@@ -268,65 +155,40 @@ define void @fcvt_v8f16_v8f64(ptr %a, ptr %b) #0 {
 define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v16f16_v16f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #128
-; CHECK-NEXT:    .cfi_def_cfa_offset 128
-; CHECK-NEXT:    ldr h0, [x0, #26]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #24]
-; CHECK-NEXT:    ldr h0, [x0, #24]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #16]
-; CHECK-NEXT:    ldr h0, [x0, #6]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #88]
-; CHECK-NEXT:    ldr h0, [x0, #4]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #80]
-; CHECK-NEXT:    ldr h0, [x0, #2]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp]
-; CHECK-NEXT:    ldr h0, [x0, #14]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #72]
-; CHECK-NEXT:    ldr h0, [x0, #12]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #64]
-; CHECK-NEXT:    ldr h0, [x0, #10]
-; CHECK-NEXT:    ldp q3, q1, [sp, #64]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #104]
-; CHECK-NEXT:    ldr h0, [x0, #8]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #96]
-; CHECK-NEXT:    ldr h0, [x0, #22]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #56]
-; CHECK-NEXT:    ldr h0, [x0, #20]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #48]
-; CHECK-NEXT:    ldr h0, [x0, #18]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #120]
-; CHECK-NEXT:    ldr h0, [x0, #16]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #112]
-; CHECK-NEXT:    ldr h0, [x0, #30]
-; CHECK-NEXT:    ldp q6, q4, [sp, #96]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #40]
-; CHECK-NEXT:    ldr h0, [x0, #28]
-; CHECK-NEXT:    fcvt d0, h0
-; CHECK-NEXT:    str d0, [sp, #32]
-; CHECK-NEXT:    ldp q2, q0, [sp]
-; CHECK-NEXT:    ldp q7, q5, [sp, #32]
-; CHECK-NEXT:    stp q2, q1, [x1]
-; CHECK-NEXT:    stp q6, q3, [x1, #32]
-; CHECK-NEXT:    stp q0, q7, [x1, #96]
-; CHECK-NEXT:    stp q4, q5, [x1, #64]
-; CHECK-NEXT:    add sp, sp, #128
+; CHECK-NEXT:    mov x9, #14
+; CHECK-NEXT:    mov x10, #12
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov x8, #2
+; CHECK-NEXT:    mov x11, #6
+; CHECK-NEXT:    mov x12, #4
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x9, lsl #1]
+; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0, x10, lsl #1]
+; CHECK-NEXT:    mov x9, #8
+; CHECK-NEXT:    mov x10, #10
+; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x0, x11, lsl #1]
+; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x0, x12, lsl #1]
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
+; CHECK-NEXT:    ld1h { z4.d }, p0/z, [x0, x9, lsl #1]
+; CHECK-NEXT:    ld1h { z6.d }, p0/z, [x0, x10, lsl #1]
+; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0]
+; CHECK-NEXT:    stp q1, q0, [x1, #96]
+; CHECK-NEXT:    movprfx z1, z4
+; CHECK-NEXT:    fcvt z1.d, p0/m, z4.h
+; CHECK-NEXT:    movprfx z0, z6
+; CHECK-NEXT:    fcvt z0.d, p0/m, z6.h
+; CHECK-NEXT:    stp q1, q0, [x1, #64]
+; CHECK-NEXT:    movprfx z1, z5
+; CHECK-NEXT:    fcvt z1.d, p0/m, z5.h
+; CHECK-NEXT:    movprfx z0, z3
+; CHECK-NEXT:    fcvt z0.d, p0/m, z3.h
+; CHECK-NEXT:    stp q1, q0, [x1, #32]
+; CHECK-NEXT:    movprfx z1, z7
+; CHECK-NEXT:    fcvt z1.d, p0/m, z7.h
+; CHECK-NEXT:    movprfx z0, z2
+; CHECK-NEXT:    fcvt z0.d, p0/m, z2.h
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %res = fpext <16 x half> %op1 to <16 x double>
@@ -354,17 +216,10 @@ define void @fcvt_v1f32_v1f64(ptr %a, ptr %b) #0 {
 define void @fcvt_v2f32_v2f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v2f32_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr s0, [x0, #4]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp]
-; CHECK-NEXT:    ldr q0, [sp]
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
 ; CHECK-NEXT:    str q0, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %op1 = load <2 x float>, ptr %a
   %res = fpext <2 x float> %op1 to <2 x double>
@@ -375,23 +230,13 @@ define void @fcvt_v2f32_v2f64(ptr %a, ptr %b) #0 {
 define void @fcvt_v4f32_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v4f32_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldr s0, [x0, #12]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #24]
-; CHECK-NEXT:    ldr s0, [x0, #8]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #16]
-; CHECK-NEXT:    ldr s0, [x0, #4]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp]
-; CHECK-NEXT:    ldp q0, q1, [sp]
-; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    mov x8, #2
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.s
+; CHECK-NEXT:    stp q1, q0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x float>, ptr %a
   %res = fpext <4 x float> %op1 to <4 x double>
@@ -402,37 +247,22 @@ define void @fcvt_v4f32_v4f64(ptr %a, ptr %b) #0 {
 define void @fcvt_v8f32_v8f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fcvt_v8f32_v8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    ldr s0, [x0, #20]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #56]
-; CHECK-NEXT:    ldr s0, [x0, #16]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #48]
-; CHECK-NEXT:    ldr s0, [x0, #12]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #40]
-; CHECK-NEXT:    ldr s0, [x0, #8]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #32]
-; CHECK-NEXT:    ldr s0, [x0, #4]
-; CHECK-NEXT:    ldp q1, q3, [sp, #32]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp]
-; CHECK-NEXT:    ldr s0, [x0, #28]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #24]
-; CHECK-NEXT:    ldr s0, [x0, #24]
-; CHECK-NEXT:    fcvt d0, s0
-; CHECK-NEXT:    str d0, [sp, #16]
-; CHECK-NEXT:    ldp q0, q2, [sp]
+; CHECK-NEXT:    mov x8, #4
+; CHECK-NEXT:    mov x9, #6
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov x10, #2
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.d }, p0/z, [x0, x9, lsl #2]
+; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x0, x10, lsl #2]
+; CHECK-NEXT:    ld1w { z3.d }, p0/z, [x0]
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.s
+; CHECK-NEXT:    stp q0, q1, [x1, #32]
+; CHECK-NEXT:    movprfx z0, z3
+; CHECK-NEXT:    fcvt z0.d, p0/m, z3.s
+; CHECK-NEXT:    movprfx z1, z2
+; CHECK-NEXT:    fcvt z1.d, p0/m, z2.s
 ; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    stp q3, q2, [x1, #32]
-; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
   %res = fpext <8 x float> %op1 to <8 x double>

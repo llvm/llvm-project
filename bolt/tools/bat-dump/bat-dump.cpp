@@ -151,7 +151,7 @@ void dumpBATFor(llvm::object::ELFObjectFileBase *InputFile) {
 }
 
 int main(int argc, char **argv) {
-  cl::HideUnrelatedOptions(makeArrayRef(opts::BatDumpCategories));
+  cl::HideUnrelatedOptions(ArrayRef(opts::BatDumpCategories));
   cl::ParseCommandLineOptions(argc, argv, "");
 
   if (!sys::fs::exists(opts::InputFilename))

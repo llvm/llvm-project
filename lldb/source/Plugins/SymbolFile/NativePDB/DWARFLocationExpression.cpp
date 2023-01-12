@@ -249,7 +249,7 @@ DWARFExpression lldb_private::npdb::MakeConstantLocationExpression(
     Value.U = constant.getZExtValue();
   }
 
-  bytes = llvm::makeArrayRef(reinterpret_cast<const uint8_t *>(&Value), 8)
+  bytes = llvm::ArrayRef(reinterpret_cast<const uint8_t *>(&Value), 8)
               .take_front(size);
   buffer->CopyData(bytes.data(), size);
   DataExtractor extractor(buffer, lldb::eByteOrderLittle, address_size);

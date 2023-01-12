@@ -33,6 +33,6 @@ void XCoreTargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 ArrayRef<Builtin::Info> XCoreTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::XCore::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::XCore::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }

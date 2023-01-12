@@ -387,14 +387,14 @@ public:
   /// Return the `then` elements of the optional group. Drops the first
   /// `thenParseStart` whitespace elements if `parseable` is true.
   ArrayRef<FormatElement *> getThenElements(bool parseable = false) const {
-    return llvm::makeArrayRef(thenElements)
+    return llvm::ArrayRef(thenElements)
         .drop_front(parseable ? thenParseStart : 0);
   }
 
   /// Return the `else` elements of the optional group. Drops the first
   /// `elseParseStart` whitespace elements if `parseable` is true.
   ArrayRef<FormatElement *> getElseElements(bool parseable = false) const {
-    return llvm::makeArrayRef(elseElements)
+    return llvm::ArrayRef(elseElements)
         .drop_front(parseable ? elseParseStart : 0);
   }
 

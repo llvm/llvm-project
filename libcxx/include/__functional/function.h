@@ -262,7 +262,7 @@ class __base<_Rp(_ArgTypes...)>
     __base& operator=(const __base&);
 public:
     _LIBCPP_INLINE_VISIBILITY __base() {}
-    _LIBCPP_INLINE_VISIBILITY virtual ~__base() {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual ~__base() {}
     virtual __base* __clone() const = 0;
     virtual void __clone(__base*) const = 0;
     virtual void destroy() _NOEXCEPT = 0;

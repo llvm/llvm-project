@@ -3,9 +3,13 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IA %s
+; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-ztso -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV32IA %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64IA %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-ztso -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IA %s
 
 define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {

@@ -1627,7 +1627,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
   if (EVT(DestVT).bitsLT(NewVT)) {  // Value is expanded, e.g. i64 -> i16.
     TypeSize NewVTSize = NewVT.getSizeInBits();
     // Convert sizes such as i33 to i64.
-    if (!isPowerOf2_32(NewVTSize.getKnownMinSize()))
+    if (!isPowerOf2_32(NewVTSize.getKnownMinValue()))
       NewVTSize = NewVTSize.coefficientNextPowerOf2();
     return NumVectorRegs*(NewVTSize/DestVT.getSizeInBits());
   }

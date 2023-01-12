@@ -28,6 +28,8 @@ def ArmSVE_Dialect : Dialect {
     This dialect contains the definitions necessary to target specific Arm SVE
     scalable vector operations.
   }];
+
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 //===----------------------------------------------------------------------===//

@@ -264,7 +264,7 @@ ArrayRef<const FileEntry *> Module::getTopHeaders(FileManager &FileMgr) {
     TopHeaderNames.clear();
   }
 
-  return llvm::makeArrayRef(TopHeaders.begin(), TopHeaders.end());
+  return llvm::ArrayRef(TopHeaders.begin(), TopHeaders.end());
 }
 
 bool Module::directlyUses(const Module *Requested) {

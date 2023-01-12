@@ -133,11 +133,11 @@ def SPIRV_CLCeilOp : SPIRV_CLUnaryArithmeticOp<"ceil", 12, SPIRV_Float> {
                                  `vector<` integer-literal `x` float-type `>`
     ceil-op ::= ssa-id `=` `spirv.CL.ceil` ssa-use `:`
                float-scalar-vector-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %2 = spirv.CL.ceil %0 : f32
     %3 = spirv.CL.ceil %1 : vector<3xf16>
     ```
@@ -163,11 +163,11 @@ def SPIRV_CLCosOp : SPIRV_CLUnaryArithmeticOp<"cos", 14, SPIRV_Float> {
                                  `vector<` integer-literal `x` float-type `>`
     cos-op ::= ssa-id `=` `spirv.CL.cos` ssa-use `:`
                float-scalar-vector-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %2 = spirv.CL.cos %0 : f32
     %3 = spirv.CL.cos %1 : vector<3xf16>
     ```
@@ -195,11 +195,11 @@ def SPIRV_CLErfOp : SPIRV_CLUnaryArithmeticOp<"erf", 18, SPIRV_Float> {
                                  `vector<` integer-literal `x` float-type `>`
     erf-op ::= ssa-id `=` `spirv.CL.erf` ssa-use `:`
                float-scalar-vector-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %2 = spirv.CL.erf %0 : f32
     %3 = spirv.CL.erf %1 : vector<3xf16>
     ```
@@ -288,11 +288,11 @@ def SPIRV_CLFloorOp : SPIRV_CLUnaryArithmeticOp<"floor", 25, SPIRV_Float> {
                                  `vector<` integer-literal `x` float-type `>`
     floor-op ::= ssa-id `=` `spirv.CL.floor` ssa-use `:`
                float-scalar-vector-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %2 = spirv.CL.floor %0 : f32
     %3 = spirv.CL.ceifloorl %1 : vector<3xf16>
     ```
@@ -321,9 +321,11 @@ def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
     ```
     fma-op ::= ssa-id `=` `spirv.CL.fma` ssa-use, ssa-use, ssa-use `:`
                float-scalar-vector-type
-    ```mlir
-
     ```
+
+    #### Example:
+
+    ```mlir
     %0 = spirv.CL.fma %a, %b, %c : f32
     %1 = spirv.CL.fma %a, %b, %c : vector<3xf16>
     ```
@@ -410,11 +412,11 @@ def SPIRV_CLLogOp : SPIRV_CLUnaryArithmeticOp<"log", 37, SPIRV_Float> {
                                  `vector<` integer-literal `x` float-type `>`
     log-op ::= ssa-id `=` `spirv.CL.log` ssa-use `:`
                float-scalar-vector-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %2 = spirv.CL.log %0 : f32
     %3 = spirv.CL.log %1 : vector<3xf16>
     ```
@@ -536,11 +538,11 @@ def SPIRV_CLRsqrtOp : SPIRV_CLUnaryArithmeticOp<"rsqrt", 56, SPIRV_Float> {
                                  `vector<` integer-literal `x` float-type `>`
     rsqrt-op ::= ssa-id `=` `spirv.CL.rsqrt` ssa-use `:`
                float-scalar-vector-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %2 = spirv.CL.rsqrt %0 : f32
     %3 = spirv.CL.rsqrt %1 : vector<3xf16>
     ```
@@ -566,11 +568,11 @@ def SPIRV_CLSinOp : SPIRV_CLUnaryArithmeticOp<"sin", 57, SPIRV_Float> {
                                  `vector<` integer-literal `x` float-type `>`
     sin-op ::= ssa-id `=` `spirv.CL.sin` ssa-use `:`
                float-scalar-vector-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %2 = spirv.CL.sin %0 : f32
     %3 = spirv.CL.sin %1 : vector<3xf16>
     ```
@@ -596,11 +598,11 @@ def SPIRV_CLSqrtOp : SPIRV_CLUnaryArithmeticOp<"sqrt", 61, SPIRV_Float> {
                                  `vector<` integer-literal `x` float-type `>`
     sqrt-op ::= ssa-id `=` `spirv.CL.sqrt` ssa-use `:`
                float-scalar-vector-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %2 = spirv.CL.sqrt %0 : f32
     %3 = spirv.CL.sqrt %1 : vector<3xf16>
     ```
@@ -626,11 +628,11 @@ def SPIRV_CLTanhOp : SPIRV_CLUnaryArithmeticOp<"tanh", 63, SPIRV_Float> {
                                  `vector<` integer-literal `x` float-type `>`
     tanh-op ::= ssa-id `=` `spirv.CL.tanh` ssa-use `:`
                float-scalar-vector-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     %2 = spirv.CL.tanh %0 : f32
     %3 = spirv.CL.tanh %1 : vector<3xf16>
     ```

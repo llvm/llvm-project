@@ -610,6 +610,15 @@ typedef __char32_t char32_t;
 // Note that we use _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION to ensure that we don't depend
 // on _LIBCPP_HIDE_FROM_ABI methods of classes explicitly instantiated in the dynamic library.
 //
+// Also note that the _LIBCPP_HIDE_FROM_ABI_VIRTUAL macro should be used on virtual functions
+// instead of _LIBCPP_HIDE_FROM_ABI. That macro does not use an ABI tag. Indeed, the mangled
+// name of a virtual function is part of its ABI, since some architectures like arm64e can sign
+// the virtual function pointer in the vtable based on the mangled name of the function. Since
+// we use an ABI tag that changes with each released version, the mangled name of the virtual
+// function would change, which is incorrect. Note that it doesn't make much sense to change
+// the implementation of a virtual function in an ABI-incompatible way in the first place,
+// since that would be an ABI break anyway. Hence, the lack of ABI tag should not be noticeable.
+//
 // TODO: We provide a escape hatch with _LIBCPP_NO_ABI_TAG for folks who want to avoid increasing
 //       the length of symbols with an ABI tag. In practice, we should remove the escape hatch and
 //       use compression mangling instead, see https://github.com/itanium-cxx-abi/cxx-abi/issues/70.
@@ -620,6 +629,7 @@ typedef __char32_t char32_t;
 #  else
 #    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 #  endif
+#    define _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 
 #  ifdef _LIBCPP_BUILDING_LIBRARY
 #    if _LIBCPP_ABI_VERSION > 1
@@ -731,6 +741,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
          __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500)
 #      define _LIBCPP_HAS_NO_C11_ALIGNED_ALLOC
 #    endif
+#  elif defined(__ANDROID__) && __ANDROID_API__ < 28
+// Android only provides aligned_alloc when targeting API 28 or higher.
+#    define _LIBCPP_HAS_NO_C11_ALIGNED_ALLOC
 #  endif
 
 #  if defined(__APPLE__) || defined(__FreeBSD__)

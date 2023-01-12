@@ -1301,6 +1301,19 @@ multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_f
   } // end SubtargetPredicate = isGFX11Plus
 }
 
+class UniformUnaryFragOrOp<SDPatternOperator Op> {
+  SDPatternOperator ret = !if(!or(!isa<SDNode>(Op), !isa<PatFrags>(Op)),
+                              UniformUnaryFrag<Op>, Op);
+}
+
+multiclass VOP3PseudoScalarInst<string OpName, VOPProfile P,
+                                SDPatternOperator node = null_frag> {
+  def _e64 : VOP3_Pseudo<OpName, P, [(set P.DstVT:$vdst,
+      (UniformUnaryFragOrOp<node>.ret
+          (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp,
+                               i32:$omod))))]>;
+}
+
 //===----------------------------------------------------------------------===//
 // VOP3 DPP
 //===----------------------------------------------------------------------===//

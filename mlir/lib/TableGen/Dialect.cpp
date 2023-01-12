@@ -102,6 +102,16 @@ bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
 }
 
+Dialect::FolderAPI Dialect::getFolderAPI() const {
+  int64_t value = def->getValueAsInt("useFoldAPI");
+  if (value < static_cast<int64_t>(FolderAPI::RawAttributes) ||
+      value > static_cast<int64_t>(FolderAPI::FolderAdaptor))
+    llvm::PrintFatalError(def->getLoc(),
+                          "Invalid value for dialect field `useFoldAPI`");
+
+  return static_cast<FolderAPI>(value);
+}
+
 bool Dialect::operator==(const Dialect &other) const {
   return def == other.def;
 }

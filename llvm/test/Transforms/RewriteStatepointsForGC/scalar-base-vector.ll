@@ -14,8 +14,8 @@ define ptr addrspace(1) @test1(ptr addrspace(1) %base1, <2 x i64> %offsets, i1 %
 ; CHECK-NEXT:    br label [[SECOND]]
 ; CHECK:       second:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr addrspace(1) [ [[BASE1:%.*]], [[ENTRY:%.*]] ], [ [[BASE21]], [[FIRST]] ]
-; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[PHI]], i32 0, !is_base_value !0
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[PHI]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[PHI]], i64 0, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[PHI]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <2 x ptr addrspace(1)> undef, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x ptr addrspace(1)> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]
@@ -44,8 +44,8 @@ second:
 define ptr addrspace(1) @test2(ptr addrspace(1) %base, <2 x i64> %offsets) gc "statepoint-example" {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[BASE:%.*]], i32 0, !is_base_value !0
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[BASE]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[BASE:%.*]], i64 0, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[BASE]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <2 x ptr addrspace(1)> undef, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x ptr addrspace(1)> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]
@@ -86,8 +86,8 @@ entry:
 define ptr addrspace(1) @test4(ptr addrspace(1) %base, <2 x i64> %offsets) gc "statepoint-example" {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[BASE:%.*]], i32 0, !is_base_value !0
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[BASE]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[BASE:%.*]], i64 0, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[BASE]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <2 x ptr addrspace(1)> undef, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x ptr addrspace(1)> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]

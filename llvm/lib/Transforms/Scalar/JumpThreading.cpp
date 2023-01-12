@@ -2083,6 +2083,30 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
   // block, evaluate them to account for entry from PredBB.
   DenseMap<Instruction *, Value *> ValueMapping;
 
+  // Retargets llvm.dbg.value to any renamed variables.
+  auto RetargetDbgValueIfPossible = [&](Instruction *NewInst) -> bool {
+    auto DbgInstruction = dyn_cast<DbgValueInst>(NewInst);
+    if (!DbgInstruction)
+      return false;
+
+    SmallSet<std::pair<Value *, Value *>, 16> OperandsToRemap;
+    for (auto DbgOperand : DbgInstruction->location_ops()) {
+      auto DbgOperandInstruction = dyn_cast<Instruction>(DbgOperand);
+      if (!DbgOperandInstruction)
+        continue;
+
+      auto I = ValueMapping.find(DbgOperandInstruction);
+      if (I != ValueMapping.end()) {
+        OperandsToRemap.insert(
+            std::pair<Value *, Value *>(DbgOperand, I->second));
+      }
+    }
+
+    for (auto &[OldOp, MappedOp] : OperandsToRemap)
+      DbgInstruction->replaceVariableLocationOp(OldOp, MappedOp);
+    return true;
+  };
+
   // Clone the phi nodes of the source basic block into NewBB.  The resulting
   // phi nodes are trivial since NewBB only has one predecessor, but SSAUpdater
   // might need to rewrite the operand of the cloned phi.
@@ -2110,6 +2134,9 @@ JumpThreadingPass::cloneInstructions(BasicBlock::iterator BI,
     New->insertInto(NewBB, NewBB->end());
     ValueMapping[&*BI] = New;
     adaptNoAliasScopes(New, ClonedScopes, Context);
+
+    if (RetargetDbgValueIfPossible(New))
+      continue;
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)

@@ -711,7 +711,7 @@ Value spirv::getPushConstantValue(Operation *op, unsigned elementCount,
       loc, integerType, builder.getI32IntegerAttr(offset));
   auto addrOp = builder.create<spirv::AddressOfOp>(loc, varOp);
   auto acOp = builder.create<spirv::AccessChainOp>(
-      loc, addrOp, llvm::makeArrayRef({zeroOp, offsetOp}));
+      loc, addrOp, llvm::ArrayRef({zeroOp, offsetOp}));
   return builder.create<spirv::LoadOp>(loc, acOp);
 }
 

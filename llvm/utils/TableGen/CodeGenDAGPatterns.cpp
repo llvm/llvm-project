@@ -544,9 +544,9 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small, TypeSetByHwMode &Big,
     // Always treat non-scalable MVTs as smaller than scalable MVTs for the
     // purposes of ordering.
     auto ASize = std::make_tuple(A.isScalableVector(), A.getScalarSizeInBits(),
-                                 A.getSizeInBits().getKnownMinSize());
+                                 A.getSizeInBits().getKnownMinValue());
     auto BSize = std::make_tuple(B.isScalableVector(), B.getScalarSizeInBits(),
-                                 B.getSizeInBits().getKnownMinSize());
+                                 B.getSizeInBits().getKnownMinValue());
     return ASize < BSize;
   };
   auto SameKindLE = [](MVT A, MVT B) -> bool {
@@ -558,9 +558,9 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small, TypeSetByHwMode &Big,
       return false;
 
     return std::make_tuple(A.getScalarSizeInBits(),
-                           A.getSizeInBits().getKnownMinSize()) <=
+                           A.getSizeInBits().getKnownMinValue()) <=
            std::make_tuple(B.getScalarSizeInBits(),
-                           B.getSizeInBits().getKnownMinSize());
+                           B.getSizeInBits().getKnownMinValue());
   };
 
   for (unsigned M : Modes) {
@@ -740,7 +740,7 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
   auto NoLength = [](const SmallDenseSet<ElementCount> &Lengths,
                      MVT T) -> bool {
     return !Lengths.count(T.isVector() ? T.getVectorElementCount()
-                                       : ElementCount::getNull());
+                                       : ElementCount());
   };
 
   SmallVector<unsigned, 4> Modes;
@@ -751,11 +751,9 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
 
     SmallDenseSet<ElementCount> VN, WN;
     for (MVT T : VS)
-      VN.insert(T.isVector() ? T.getVectorElementCount()
-                             : ElementCount::getNull());
+      VN.insert(T.isVector() ? T.getVectorElementCount() : ElementCount());
     for (MVT T : WS)
-      WN.insert(T.isVector() ? T.getVectorElementCount()
-                             : ElementCount::getNull());
+      WN.insert(T.isVector() ? T.getVectorElementCount() : ElementCount());
 
     Changed |= berase_if(VS, std::bind(NoLength, WN, std::placeholders::_1));
     Changed |= berase_if(WS, std::bind(NoLength, VN, std::placeholders::_1));

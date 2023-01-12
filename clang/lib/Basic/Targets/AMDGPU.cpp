@@ -173,7 +173,7 @@ const char *const AMDGPUTargetInfo::GCCRegNames[] = {
 };
 
 ArrayRef<const char *> AMDGPUTargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 bool AMDGPUTargetInfo::initFeatureMap(
@@ -444,8 +444,8 @@ void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 }
 
 ArrayRef<Builtin::Info> AMDGPUTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::AMDGPU::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::AMDGPU::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
 void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,

@@ -188,6 +188,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
+      ImportInsertions(Opts.ImportInsertions),
       WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
                                           : TUScheduler::NoInvalidation),
@@ -261,6 +262,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   std::string ActualVersion = DraftMgr.addDraft(File, Version, Contents);
   ParseOptions Opts;
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
+  Opts.ImportInsertions = ImportInsertions;
 
   // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;

@@ -425,8 +425,8 @@ TokenBuffer::expandedForSpelled(llvm::ArrayRef<syntax::Token> Spelled) const {
   // Avoid returning empty ranges.
   if (ExpandedBegin == ExpandedEnd)
     return {};
-  return {llvm::makeArrayRef(ExpandedTokens.data() + ExpandedBegin,
-                             ExpandedTokens.data() + ExpandedEnd)};
+  return {llvm::ArrayRef(ExpandedTokens.data() + ExpandedBegin,
+                         ExpandedTokens.data() + ExpandedEnd)};
 }
 
 llvm::ArrayRef<syntax::Token> TokenBuffer::spelledTokens(FileID FID) const {
@@ -496,7 +496,7 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
     return std::nullopt;
   if (LastMapping && LastMapping->EndExpanded != LastExpanded)
     return std::nullopt;
-  return llvm::makeArrayRef(
+  return llvm::ArrayRef(
       FirstMapping ? File.SpelledTokens.data() + FirstMapping->BeginSpelled
                    : FirstSpelled,
       LastMapping ? File.SpelledTokens.data() + LastMapping->EndSpelled
@@ -506,10 +506,10 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
 TokenBuffer::Expansion TokenBuffer::makeExpansion(const MarkedFile &F,
                                                   const Mapping &M) const {
   Expansion E;
-  E.Spelled = llvm::makeArrayRef(F.SpelledTokens.data() + M.BeginSpelled,
-                                 F.SpelledTokens.data() + M.EndSpelled);
-  E.Expanded = llvm::makeArrayRef(ExpandedTokens.data() + M.BeginExpanded,
-                                  ExpandedTokens.data() + M.EndExpanded);
+  E.Spelled = llvm::ArrayRef(F.SpelledTokens.data() + M.BeginSpelled,
+                             F.SpelledTokens.data() + M.EndSpelled);
+  E.Expanded = llvm::ArrayRef(ExpandedTokens.data() + M.BeginExpanded,
+                              ExpandedTokens.data() + M.EndExpanded);
   return E;
 }
 
@@ -574,8 +574,8 @@ syntax::spelledTokensTouching(SourceLocation Loc,
   bool AcceptRight = Right != Tokens.end() && Right->location() <= Loc;
   bool AcceptLeft =
       Right != Tokens.begin() && (Right - 1)->endLocation() >= Loc;
-  return llvm::makeArrayRef(Right - (AcceptLeft ? 1 : 0),
-                            Right + (AcceptRight ? 1 : 0));
+  return llvm::ArrayRef(Right - (AcceptLeft ? 1 : 0),
+                        Right + (AcceptRight ? 1 : 0));
 }
 
 llvm::ArrayRef<syntax::Token>
@@ -982,7 +982,7 @@ std::string TokenBuffer::dumpForTests() const {
   OS << "expanded tokens:\n"
      << "  ";
   // (!) we do not show '<eof>'.
-  DumpTokens(OS, llvm::makeArrayRef(ExpandedTokens).drop_back());
+  DumpTokens(OS, llvm::ArrayRef(ExpandedTokens).drop_back());
   OS << "\n";
 
   std::vector<FileID> Keys;

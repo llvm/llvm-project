@@ -34,9 +34,10 @@ namespace clangd {
 class IncludeFixer {
 public:
   IncludeFixer(llvm::StringRef File, std::shared_ptr<IncludeInserter> Inserter,
-               const SymbolIndex &Index, unsigned IndexRequestLimit)
+               const SymbolIndex &Index, unsigned IndexRequestLimit,
+               Symbol::IncludeDirective Directive)
       : File(File), Inserter(std::move(Inserter)), Index(Index),
-        IndexRequestLimit(IndexRequestLimit) {}
+        IndexRequestLimit(IndexRequestLimit), Directive(Directive) {}
 
   /// Returns include insertions that can potentially recover the diagnostic.
   /// If Info is a note and fixes are returned, they should *replace* the note.
@@ -80,6 +81,7 @@ private:
   const SymbolIndex &Index;
   const unsigned IndexRequestLimit; // Make at most 5 index requests.
   mutable unsigned IndexRequestCount = 0;
+  const Symbol::IncludeDirective Directive;
 
   // These collect the last unresolved name so that we can associate it with the
   // diagnostic.

@@ -505,7 +505,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   }
   auto Mangler = CommandMangler::detect();
   Mangler.SystemIncludeExtractor =
-      getSystemIncludeExtractor(llvm::makeArrayRef(Opts.QueryDriverGlobs));
+      getSystemIncludeExtractor(llvm::ArrayRef(Opts.QueryDriverGlobs));
   if (Opts.ResourceDir)
     Mangler.ResourceDir = *Opts.ResourceDir;
   CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,

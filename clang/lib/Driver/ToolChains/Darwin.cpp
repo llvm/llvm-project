@@ -1809,7 +1809,7 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
   };
   static_assert(std::size(EnvVars) == Darwin::LastDarwinPlatform + 1,
                 "Missing platform");
-  for (const auto &I : llvm::enumerate(llvm::makeArrayRef(EnvVars))) {
+  for (const auto &I : llvm::enumerate(llvm::ArrayRef(EnvVars))) {
     if (char *Env = ::getenv(I.value()))
       Targets[I.index()] = Env;
   }
@@ -1840,7 +1840,7 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
     }
   }
 
-  for (const auto &Target : llvm::enumerate(llvm::makeArrayRef(Targets))) {
+  for (const auto &Target : llvm::enumerate(llvm::ArrayRef(Targets))) {
     if (!Target.value().empty())
       return DarwinPlatform::createDeploymentTargetEnv(
           (Darwin::DarwinPlatformKind)Target.index(), EnvVars[Target.index()],

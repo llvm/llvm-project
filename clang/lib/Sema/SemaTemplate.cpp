@@ -1799,8 +1799,7 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
 
   return TemplateParameterList::Create(
       Context, TemplateLoc, LAngleLoc,
-      llvm::makeArrayRef(Params.data(), Params.size()),
-      RAngleLoc, RequiresClause);
+      llvm::ArrayRef(Params.data(), Params.size()), RAngleLoc, RequiresClause);
 }
 
 static void SetNestedNameSpecifier(Sema &S, TagDecl *T,
@@ -2079,8 +2078,8 @@ DeclResult Sema::CheckClassTemplate(
   SetNestedNameSpecifier(*this, NewClass, SS);
   if (NumOuterTemplateParamLists > 0)
     NewClass->setTemplateParameterListsInfo(
-        Context, llvm::makeArrayRef(OuterTemplateParamLists,
-                                    NumOuterTemplateParamLists));
+        Context,
+        llvm::ArrayRef(OuterTemplateParamLists, NumOuterTemplateParamLists));
 
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.

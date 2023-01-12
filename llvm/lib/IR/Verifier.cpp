@@ -6061,9 +6061,12 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
     CheckDI(isa<DIAssignID>(DAI->getRawAssignID()),
             "invalid llvm.dbg.assign intrinsic DIAssignID", &DII,
             DAI->getRawAssignID());
-    CheckDI(isa<ValueAsMetadata>(DAI->getRawAddress()),
-            "invalid llvm.dbg.assign intrinsic address)", &DII,
-            DAI->getRawAddress());
+    const auto *RawAddr = DAI->getRawAddress();
+    CheckDI(
+        isa<ValueAsMetadata>(RawAddr) ||
+            (isa<MDNode>(RawAddr) && !cast<MDNode>(RawAddr)->getNumOperands()),
+        "invalid llvm.dbg.assign intrinsic address", &DII,
+        DAI->getRawAddress());
     CheckDI(isa<DIExpression>(DAI->getRawAddressExpression()),
             "invalid llvm.dbg.assign intrinsic address expression", &DII,
             DAI->getRawAddressExpression());

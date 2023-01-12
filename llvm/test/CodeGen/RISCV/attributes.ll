@@ -16,6 +16,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbc %s -o - | FileCheck --check-prefix=RV32ZBC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zbs %s -o - | FileCheck --check-prefix=RV32ZBS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+v %s -o - | FileCheck --check-prefix=RV32V %s
+; RUN: llc -mtriple=riscv32 -mattr=+h %s -o - | FileCheck --check-prefix=RV32H %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zbb,+zfh,+v,+f %s -o - | FileCheck --check-prefix=RV32COMBINED %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zbkb %s -o - | FileCheck --check-prefix=RV32ZBKB %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zbkc %s -o - | FileCheck --check-prefix=RV32ZBKC %s
@@ -57,6 +58,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbc %s -o - | FileCheck --check-prefix=RV64ZBC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zbs %s -o - | FileCheck --check-prefix=RV64ZBS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+v %s -o - | FileCheck --check-prefix=RV64V %s
+; RUN: llc -mtriple=riscv64 -mattr=+h %s -o - | FileCheck --check-prefix=RV64H %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb,+zfh,+v,+f %s -o - | FileCheck --check-prefix=RV64COMBINED %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zbkb %s -o - | FileCheck --check-prefix=RV64ZBKB %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zbkc %s -o - | FileCheck --check-prefix=RV64ZBKC %s
@@ -102,6 +104,7 @@
 ; RV32ZBC: .attribute 5, "rv32i2p0_zbc1p0"
 ; RV32ZBS: .attribute 5, "rv32i2p0_zbs1p0"
 ; RV32V: .attribute 5, "rv32i2p0_f2p0_d2p0_v1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0"
+; RV32H: .attribute 5, "rv32i2p0_h1p0"
 ; RV32COMBINED: .attribute 5, "rv32i2p0_f2p0_d2p0_v1p0_zfh1p0_zbb1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0"
 ; RV32ZBKB: .attribute 5, "rv32i2p0_zbkb1p0"
 ; RV32ZBKC: .attribute 5, "rv32i2p0_zbkc1p0"
@@ -143,6 +146,7 @@
 ; RV64ZBC: .attribute 5, "rv64i2p0_zbc1p0"
 ; RV64ZBS: .attribute 5, "rv64i2p0_zbs1p0"
 ; RV64V: .attribute 5, "rv64i2p0_f2p0_d2p0_v1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0"
+; RV64H: .attribute 5, "rv64i2p0_h1p0"
 ; RV64COMBINED: .attribute 5, "rv64i2p0_f2p0_d2p0_v1p0_zfh1p0_zbb1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0"
 ; RV64ZBKB: .attribute 5, "rv64i2p0_zbkb1p0"
 ; RV64ZBKC: .attribute 5, "rv64i2p0_zbkc1p0"

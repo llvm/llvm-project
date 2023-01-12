@@ -1599,19 +1599,19 @@ void X86TargetInfo::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) con
 }
 
 ArrayRef<const char *> X86TargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
-  return llvm::makeArrayRef(AddlRegNames);
+  return llvm::ArrayRef(AddlRegNames);
 }
 
 ArrayRef<Builtin::Info> X86_32TargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
-                                                Builtin::FirstTSBuiltin + 1);
+  return llvm::ArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
+                                            Builtin::FirstTSBuiltin + 1);
 }
 
 ArrayRef<Builtin::Info> X86_64TargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfoX86,
-                            X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfoX86,
+                        X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }

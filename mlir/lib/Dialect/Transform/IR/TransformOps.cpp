@@ -463,7 +463,7 @@ void transform::MergeHandlesOp::getEffects(
   // manipulation.
 }
 
-OpFoldResult transform::MergeHandlesOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult transform::MergeHandlesOp::fold(FoldAdaptor adaptor) {
   if (getDeduplicate() || getHandles().size() != 1)
     return {};
 

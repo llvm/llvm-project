@@ -517,7 +517,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   disablePass(&PostRASchedulerID);
   disablePass(&FuncletLayoutID);
   disablePass(&StackMapLivenessID);
-  disablePass(&LiveDebugValuesID);
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
 

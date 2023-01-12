@@ -2736,17 +2736,21 @@ TEST(CompletionTest, InsertIncludeOrImport) {
   Sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
   Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000,
                                   Symbol::Include | Symbol::Import);
-
-  auto Results = completions("Fun^", {Sym}).Completions;
+  CodeCompleteOptions Opts;
+  // Should only take effect in import contexts.
+  Opts.ImportInsertions = true;
+  auto Results = completions("Fun^", {Sym}, Opts).Completions;
   assert(!Results.empty());
   EXPECT_THAT(Results[0],
               AllOf(named("Func"), insertIncludeText("#include \"bar.h\"\n")));
 
-  Results = completions("Fun^", {Sym}, {}, "Foo.m").Completions;
+  ASTSignals Signals;
+  Signals.InsertionDirective = Symbol::IncludeDirective::Import;
+  Opts.MainFileSignals = &Signals;
+  Results = completions("Fun^", {Sym}, Opts, "Foo.m").Completions;
   assert(!Results.empty());
-  // TODO: Once #import integration support is done this should be #import.
   EXPECT_THAT(Results[0],
-              AllOf(named("Func"), insertIncludeText("#include \"bar.h\"\n")));
+              AllOf(named("Func"), insertIncludeText("#import \"bar.h\"\n")));
 
   Sym.IncludeHeaders[0].SupportedDirectives = Symbol::Import;
   Results = completions("Fun^", {Sym}).Completions;

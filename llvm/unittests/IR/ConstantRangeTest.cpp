@@ -51,16 +51,25 @@ static void EnumerateConstantRanges(unsigned Bits, Fn TestFn) {
   }
 }
 
-template<typename Fn>
-static void EnumerateTwoConstantRanges(unsigned Bits, Fn TestFn) {
-  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR1) {
-    EnumerateConstantRanges(Bits, [&](const ConstantRange &CR2) {
-      TestFn(CR1, CR2);
-    });
-  });
+template <typename Fn>
+static void EnumerateInterestingConstantRanges(Fn TestFn) {
+  // Check 1 bit ranges, because they may have special cases.
+  EnumerateConstantRanges(/* Bits */ 1, TestFn);
+  // Check 4 bit ranges to have decent coverage without being too slow.
+  EnumerateConstantRanges(/* Bits */ 4, TestFn);
 }
 
-template<typename Fn>
+template <typename Fn>
+static void EnumerateTwoInterestingConstantRanges(Fn TestFn) {
+  for (unsigned Bits : {1, 4}) {
+    EnumerateConstantRanges(Bits, [&](const ConstantRange &CR1) {
+      EnumerateConstantRanges(
+          Bits, [&](const ConstantRange &CR2) { TestFn(CR1, CR2); });
+    });
+  }
+}
+
+template <typename Fn>
 static void ForeachNumInConstantRange(const ConstantRange &CR, Fn TestFn) {
   if (!CR.isEmptySet()) {
     APInt N = CR.getLower();
@@ -179,9 +188,8 @@ using UnaryIntFn = llvm::function_ref<std::optional<APInt>(const APInt &)>;
 
 static void TestUnaryOpExhaustive(UnaryRangeFn RangeFn, UnaryIntFn IntFn,
                                   PreferFn PreferenceFn = PreferSmallest) {
-  unsigned Bits = 4;
-  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
-    SmallBitVector Elems(1 << Bits);
+  EnumerateInterestingConstantRanges([&](const ConstantRange &CR) {
+    SmallBitVector Elems(1 << CR.getBitWidth());
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
       if (std::optional<APInt> ResultN = IntFn(N))
         Elems.set(ResultN->getZExtValue());
@@ -227,10 +235,9 @@ static bool CheckNonWrappedOrSignWrappedOnly(const ConstantRange &CR1,
 static void TestBinaryOpExhaustive(BinaryRangeFn RangeFn, BinaryIntFn IntFn,
                                    PreferFn PreferenceFn = PreferSmallest,
                                    BinaryCheckFn CheckFn = CheckAll) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(
-      Bits, [&](const ConstantRange &CR1, const ConstantRange &CR2) {
-        SmallBitVector Elems(1 << Bits);
+  EnumerateTwoInterestingConstantRanges(
+      [&](const ConstantRange &CR1, const ConstantRange &CR2) {
+        SmallBitVector Elems(1 << CR1.getBitWidth());
         ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
           ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
             if (std::optional<APInt> ResultN = IntFn(N1, N2))
@@ -534,11 +541,11 @@ TEST_F(ConstantRangeTest, IntersectWith) {
   EXPECT_EQ(LHS.intersectWith(RHS), ConstantRange(APInt(32, 15), APInt(32, 0)));
 }
 
-template<typename Fn1, typename Fn2, typename Fn3>
+template <typename Fn1, typename Fn2, typename Fn3>
 void testBinarySetOperationExhaustive(Fn1 OpFn, Fn2 ExactOpFn, Fn3 InResultFn) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(Bits,
+  EnumerateTwoInterestingConstantRanges(
       [=](const ConstantRange &CR1, const ConstantRange &CR2) {
+        unsigned Bits = CR1.getBitWidth();
         SmallBitVector Elems(1 << Bits);
         APInt Num(Bits, 0);
         for (unsigned I = 0, Limit = 1 << Bits; I < Limit; ++I, ++Num)
@@ -629,8 +636,7 @@ TEST_F(ConstantRangeTest, SetDifference) {
 }
 
 TEST_F(ConstantRangeTest, getActiveBits) {
-  unsigned Bits = 4;
-  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+  EnumerateInterestingConstantRanges([&](const ConstantRange &CR) {
     unsigned Exact = 0;
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
       Exact = std::max(Exact, N.getActiveBits());
@@ -641,8 +647,8 @@ TEST_F(ConstantRangeTest, getActiveBits) {
   });
 }
 TEST_F(ConstantRangeTest, losslessUnsignedTruncationZeroext) {
-  unsigned Bits = 4;
-  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+  EnumerateInterestingConstantRanges([&](const ConstantRange &CR) {
+    unsigned Bits = CR.getBitWidth();
     unsigned MinBitWidth = CR.getActiveBits();
     if (MinBitWidth == 0) {
       EXPECT_TRUE(CR.isEmptySet() ||
@@ -656,8 +662,7 @@ TEST_F(ConstantRangeTest, losslessUnsignedTruncationZeroext) {
 }
 
 TEST_F(ConstantRangeTest, getMinSignedBits) {
-  unsigned Bits = 4;
-  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+  EnumerateInterestingConstantRanges([&](const ConstantRange &CR) {
     unsigned Exact = 0;
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
       Exact = std::max(Exact, N.getMinSignedBits());
@@ -668,8 +673,8 @@ TEST_F(ConstantRangeTest, getMinSignedBits) {
   });
 }
 TEST_F(ConstantRangeTest, losslessSignedTruncationSignext) {
-  unsigned Bits = 4;
-  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+  EnumerateInterestingConstantRanges([&](const ConstantRange &CR) {
+    unsigned Bits = CR.getBitWidth();
     unsigned MinBitWidth = CR.getMinSignedBits();
     if (MinBitWidth == 0) {
       EXPECT_TRUE(CR.isEmptySet());
@@ -1154,11 +1159,11 @@ TEST_F(ConstantRangeTest, SDiv) {
   ConstantRange OneBit = ConstantRange::getFull(1);
   EXPECT_EQ(OneBit.sdiv(OneBit), ConstantRange(APInt(1, 0)));
 
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(Bits, [&](const ConstantRange &CR1,
-                                       const ConstantRange &CR2) {
+  EnumerateTwoInterestingConstantRanges([&](const ConstantRange &CR1,
+                                            const ConstantRange &CR2) {
     // Collect possible results in a bit vector. We store the signed value plus
     // a bias to make it unsigned.
+    unsigned Bits = CR1.getBitWidth();
     int Bias = 1 << (Bits - 1);
     BitVector Results(1 << Bits);
     ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
@@ -1472,9 +1477,8 @@ TEST(ConstantRange, MakeSatisfyingICmpRegion) {
 }
 
 void ICmpTestImpl(CmpInst::Predicate Pred) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(
-      Bits, [&](const ConstantRange &CR1, const ConstantRange &CR2) {
+  EnumerateTwoInterestingConstantRanges(
+      [&](const ConstantRange &CR1, const ConstantRange &CR2) {
         bool Exhaustive = true;
         ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
           ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
@@ -1887,8 +1891,8 @@ TEST(ConstantRange, GetEquivalentICmp) {
   EXPECT_EQ(Pred, CmpInst::ICMP_NE);
   EXPECT_EQ(RHS, APInt(32, -1));
 
-  unsigned Bits = 4;
-  EnumerateConstantRanges(Bits, [Bits](const ConstantRange &CR) {
+  EnumerateInterestingConstantRanges([](const ConstantRange &CR) {
+    unsigned Bits = CR.getBitWidth();
     CmpInst::Predicate Pred;
     APInt RHS, Offset;
     CR.getEquivalentICmp(Pred, RHS, Offset);
@@ -2078,12 +2082,11 @@ TEST_F(ConstantRangeTest, SignedSubOverflow) {
   EXPECT_MAY_OVERFLOW(F.signedSubMayOverflow(F));
 }
 
-template<typename Fn1, typename Fn2>
+template <typename Fn1, typename Fn2>
 static void TestOverflowExhaustive(Fn1 OverflowFn, Fn2 MayOverflowFn) {
   // Constant range overflow checks are tested exhaustively on 4-bit numbers.
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(Bits, [=](const ConstantRange &CR1,
-                                       const ConstantRange &CR2) {
+  EnumerateTwoInterestingConstantRanges([=](const ConstantRange &CR1,
+                                            const ConstantRange &CR2) {
     // Loop over all N1 in CR1 and N2 in CR2 and check whether any of the
     // operations have overflow / have no overflow.
     bool RangeHasOverflowLow = false;
@@ -2258,10 +2261,9 @@ TEST_F(ConstantRangeTest, FromKnownBitsExhaustive) {
 }
 
 TEST_F(ConstantRangeTest, ToKnownBits) {
-  unsigned Bits = 4;
-  EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
+  EnumerateInterestingConstantRanges([&](const ConstantRange &CR) {
     KnownBits Known = CR.toKnownBits();
-    KnownBits ExpectedKnown(Bits);
+    KnownBits ExpectedKnown(CR.getBitWidth());
     ExpectedKnown.Zero.setAllBits();
     ExpectedKnown.One.setAllBits();
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
@@ -2284,8 +2286,7 @@ TEST_F(ConstantRangeTest, Negative) {
   EXPECT_FALSE(Full.isAllNegative());
   EXPECT_FALSE(Full.isAllNonNegative());
 
-  unsigned Bits = 4;
-  EnumerateConstantRanges(Bits, [](const ConstantRange &CR) {
+  EnumerateInterestingConstantRanges([](const ConstantRange &CR) {
     bool AllNegative = true;
     bool AllNonNegative = true;
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
@@ -2533,9 +2534,8 @@ TEST_F(ConstantRangeTest, binaryNot) {
 
 template <typename T>
 void testConstantRangeICmpPredEquivalence(ICmpInst::Predicate SrcPred, T Func) {
-  unsigned Bits = 4;
-  EnumerateTwoConstantRanges(
-      Bits, [&](const ConstantRange &CR1, const ConstantRange &CR2) {
+  EnumerateTwoInterestingConstantRanges(
+      [&](const ConstantRange &CR1, const ConstantRange &CR2) {
         ICmpInst::Predicate TgtPred;
         bool ExpectedEquivalent;
         std::tie(TgtPred, ExpectedEquivalent) = Func(CR1, CR2);

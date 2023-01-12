@@ -48,7 +48,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX908-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 2, implicit $exec
   ; PEI-GFX908-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 killed $vgpr0, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
   ; PEI-GFX908-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
-  ; PEI-GFX908-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit-def $vgpr0_vgpr1
+  ; PEI-GFX908-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit $vgpr0_vgpr1
   ; PEI-GFX908-NEXT:   GLOBAL_STORE_DWORDX2 undef renamable $vgpr0_vgpr1, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (volatile store (s64) into `ptr addrspace(1) undef`, addrspace 1)
   ; PEI-GFX908-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3, implicit $exec
   ; PEI-GFX908-NEXT:   GLOBAL_STORE_DWORDX4 undef renamable $vgpr0_vgpr1, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) undef`, addrspace 1)
@@ -92,7 +92,7 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX90A-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 2, implicit $exec
   ; PEI-GFX90A-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 killed $vgpr0, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
   ; PEI-GFX90A-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
-  ; PEI-GFX90A-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit-def $vgpr0_vgpr1
+  ; PEI-GFX90A-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit $vgpr0_vgpr1
   ; PEI-GFX90A-NEXT:   GLOBAL_STORE_DWORDX2 undef renamable $vgpr0_vgpr1, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (volatile store (s64) into `ptr addrspace(1) undef`, addrspace 1)
   ; PEI-GFX90A-NEXT:   GLOBAL_STORE_DWORDX4 undef renamable $vgpr0_vgpr1, killed renamable $agpr0_agpr1_agpr2_agpr3, 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) undef`, addrspace 1)
   ; PEI-GFX90A-NEXT:   S_ENDPGM 0

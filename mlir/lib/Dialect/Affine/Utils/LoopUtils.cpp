@@ -1882,7 +1882,7 @@ findHighestBlockForPlacement(const MemRefRegion &region, Block &block,
   cst->getValues(cst->getNumDimVars(), cst->getNumDimAndSymbolVars(), &symbols);
 
   SmallVector<AffineForOp, 4> enclosingFors;
-  getLoopIVs(*block.begin(), &enclosingFors);
+  getAffineForIVs(*block.begin(), &enclosingFors);
   // Walk up loop parents till we find an IV on which this region is
   // symbolic/variant.
   auto it = enclosingFors.rbegin();
@@ -2355,7 +2355,7 @@ static bool getFullMemRefAsRegion(Operation *op, unsigned numParamLoopIVs,
   // Just get the first numSymbols IVs, which the memref region is parametric
   // on.
   SmallVector<AffineForOp, 4> ivs;
-  getLoopIVs(*op, &ivs);
+  getAffineForIVs(*op, &ivs);
   ivs.resize(numParamLoopIVs);
   SmallVector<Value, 4> symbols;
   extractForInductionVars(ivs, &symbols);

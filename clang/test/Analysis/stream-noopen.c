@@ -33,9 +33,11 @@ void test_freopen(FILE *F) {
 
 void test_fread(FILE *F) {
   size_t Ret = fread(RBuf, 1, 10, F);
+  clang_analyzer_eval(F != NULL); // expected-warning {{TRUE}}
   if (Ret == 10) {
     if (errno) {} // expected-warning{{undefined}}
   } else {
+    clang_analyzer_eval(Ret < 10); // expected-warning {{TRUE}}
     clang_analyzer_eval(errno != 0); // expected-warning {{TRUE}}
   }
   clang_analyzer_eval(feof(F)); // expected-warning {{UNKNOWN}}
@@ -44,9 +46,11 @@ void test_fread(FILE *F) {
 
 void test_fwrite(FILE *F) {
   size_t Ret = fwrite(WBuf, 1, 10, F);
+  clang_analyzer_eval(F != NULL); // expected-warning {{TRUE}}
   if (Ret == 10) {
     if (errno) {} // expected-warning{{undefined}}
   } else {
+    clang_analyzer_eval(Ret < 10); // expected-warning {{TRUE}}
     clang_analyzer_eval(errno != 0); // expected-warning {{TRUE}}
   }
   clang_analyzer_eval(feof(F)); // expected-warning {{UNKNOWN}}
@@ -55,6 +59,7 @@ void test_fwrite(FILE *F) {
 
 void test_fclose(FILE *F) {
   int Ret = fclose(F);
+  clang_analyzer_eval(F != NULL); // expected-warning {{TRUE}}
   if (Ret == 0) {
     if (errno) {} // expected-warning{{undefined}}
   } else {
@@ -67,6 +72,7 @@ void test_fclose(FILE *F) {
 
 void test_fseek(FILE *F) {
   int Ret = fseek(F, SEEK_SET, 1);
+  clang_analyzer_eval(F != NULL); // expected-warning {{TRUE}}
   if (Ret == 0) {
     if (errno) {} // expected-warning{{undefined}}
   } else {
@@ -81,6 +87,7 @@ void check_fgetpos(FILE *F) {
   errno = 0;
   fpos_t Pos;
   int Ret = fgetpos(F, &Pos);
+  clang_analyzer_eval(F != NULL); // expected-warning {{TRUE}}
   if (Ret)
     clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
   else
@@ -95,6 +102,7 @@ void check_fsetpos(FILE *F) {
   errno = 0;
   fpos_t Pos;
   int Ret = fsetpos(F, &Pos);
+  clang_analyzer_eval(F != NULL); // expected-warning {{TRUE}}
   if (Ret)
     clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
   else
@@ -108,6 +116,7 @@ void check_fsetpos(FILE *F) {
 void check_ftell(FILE *F) {
   errno = 0;
   long Ret = ftell(F);
+  clang_analyzer_eval(F != NULL); // expected-warning {{TRUE}}
   if (Ret == -1) {
     clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
   } else {
@@ -118,6 +127,42 @@ void check_ftell(FILE *F) {
   if (errno) {} // no-warning
   clang_analyzer_eval(feof(F)); // expected-warning {{UNKNOWN}}
   clang_analyzer_eval(ferror(F)); // expected-warning {{UNKNOWN}}
+}
+
+void test_rewind(FILE *F) {
+  errno = 0;
+  rewind(F);
+  clang_analyzer_eval(F != NULL); // expected-warning{{TRUE}}
+  clang_analyzer_eval(errno == 0); // expected-warning{{TRUE}}
+                                   // expected-warning@-1{{FALSE}}
+  rewind(F);
+}
+
+void test_feof(FILE *F) {
+  errno = 0;
+  feof(F);
+  clang_analyzer_eval(F != NULL); // expected-warning{{TRUE}}
+  if (errno) {} // no-warning
+  clang_analyzer_eval(errno == 0); // expected-warning{{TRUE}}
+                                   // expected-warning@-1{{FALSE}}
+}
+
+void test_ferror(FILE *F) {
+  errno = 0;
+  ferror(F);
+  clang_analyzer_eval(F != NULL); // expected-warning{{TRUE}}
+  if (errno) {} // no-warning
+  clang_analyzer_eval(errno == 0); // expected-warning{{TRUE}}
+                                   // expected-warning@-1{{FALSE}}
+}
+
+void test_clearerr(FILE *F) {
+  errno = 0;
+  clearerr(F);
+  clang_analyzer_eval(F != NULL); // expected-warning{{TRUE}}
+  if (errno) {} // no-warning
+  clang_analyzer_eval(errno == 0); // expected-warning{{TRUE}}
+                                   // expected-warning@-1{{FALSE}}
 }
 
 void freadwrite_zerosize(FILE *F) {

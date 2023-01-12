@@ -122,22 +122,19 @@ static cl::opt<unsigned>
                   cl::desc("print statistics about basic block ordering"),
                   cl::init(0), cl::cat(BoltOptCategory));
 
-static cl::list<bolt::DynoStats::Category>
-PrintSortedBy("print-sorted-by",
-  cl::CommaSeparated,
-  cl::desc("print functions sorted by order of dyno stats"),
-  cl::value_desc("key1,key2,key3,..."),
-  cl::values(
+static cl::list<bolt::DynoStats::Category> PrintSortedBy(
+    "print-sorted-by", cl::CommaSeparated,
+    cl::desc("print functions sorted by order of dyno stats"),
+    cl::value_desc("key1,key2,key3,..."),
+    cl::values(
 #define D(name, ...)                                        \
     clEnumValN(bolt::DynoStats::name,                     \
                dynoStatsOptName(bolt::DynoStats::name),   \
                dynoStatsOptDesc(bolt::DynoStats::name)),
-    DYNO_STATS
+        DYNO_STATS
 #undef D
-    clEnumValN(0xffff, ".", ".")
-    ),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+            clEnumValN(bolt::DynoStats::LAST_DYNO_STAT, ".", ".")),
+    cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintUnknown("print-unknown",

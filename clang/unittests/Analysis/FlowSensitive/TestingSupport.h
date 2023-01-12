@@ -29,6 +29,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
@@ -134,6 +135,11 @@ template <typename AnalysisT> struct AnalysisInputs {
     ASTBuildVirtualMappedFiles = std::move(Arg);
     return std::move(*this);
   }
+  AnalysisInputs<AnalysisT> &&
+  withBuiltinOptions(DataflowAnalysisContext::Options Options) && {
+    BuiltinOptions = std::move(Options);
+    return std::move(*this);
+  }
 
   /// Required. Input code that is analyzed.
   llvm::StringRef Code;
@@ -159,6 +165,8 @@ template <typename AnalysisT> struct AnalysisInputs {
   ArrayRef<std::string> ASTBuildArgs = {};
   /// Optional. Options for building the AST context.
   tooling::FileContentMappings ASTBuildVirtualMappedFiles = {};
+  /// Configuration options for the built-in model.
+  DataflowAnalysisContext::Options BuiltinOptions;
 };
 
 /// Returns assertions based on annotations that are present after statements in
@@ -222,7 +230,8 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
   auto &CFCtx = *MaybeCFCtx;
 
   // Initialize states for running dataflow analysis.
-  DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());
+  DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>(),
+                                {/*Opts=*/AI.BuiltinOptions});
   Environment InitEnv(DACtx, *Target);
   auto Analysis = AI.MakeAnalysis(Context, InitEnv);
   std::function<void(const CFGElement &,

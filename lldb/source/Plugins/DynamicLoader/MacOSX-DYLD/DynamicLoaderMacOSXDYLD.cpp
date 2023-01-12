@@ -357,19 +357,19 @@ bool DynamicLoaderMacOSXDYLD::NotifyBreakpointHit(
     // Build up the value array to store the three arguments given above, then
     // get the values from the ABI:
 
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process->GetTarget());
-    if (!clang_ast_context)
+    if (!scratch_ts_sp)
       return false;
 
     ValueList argument_values;
     Value input_value;
 
     CompilerType clang_void_ptr_type =
-        clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
     CompilerType clang_uint32_type =
-        clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
-            lldb::eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint,
+                                                           32);
     input_value.SetValueType(Value::ValueType::Scalar);
     input_value.SetCompilerType(clang_uint32_type);
     //        input_value.SetContext (Value::eContextTypeClangType,

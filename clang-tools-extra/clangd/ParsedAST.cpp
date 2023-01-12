@@ -25,6 +25,7 @@
 #include "TidyProvider.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
+#include "index/Symbol.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
@@ -541,6 +542,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
             // NOLINT comments)?
             return DiagnosticsEngine::Ignored;
           }
+          if (!CTContext->getOptions().SystemHeaders.value_or(false) &&
+              Info.hasSourceManager() &&
+              Info.getSourceManager().isInSystemMacro(Info.getLocation()))
+            return DiagnosticsEngine::Ignored;
 
           // Check for warning-as-error.
           if (DiagLevel == DiagnosticsEngine::Warning &&
@@ -560,12 +565,21 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
       auto Inserter = std::make_shared<IncludeInserter>(
           Filename, Inputs.Contents, Style, BuildDir.get(),
           &Clang->getPreprocessor().getHeaderSearchInfo());
+      ArrayRef<Inclusion> MainFileIncludes;
       if (Preamble) {
+        MainFileIncludes = Preamble->Includes.MainFileIncludes;
         for (const auto &Inc : Preamble->Includes.MainFileIncludes)
           Inserter->addExisting(Inc);
       }
+      // FIXME: Consider piping through ASTSignals to fetch this to handle the
+      // case where a header file contains ObjC decls but no #imports.
+      Symbol::IncludeDirective Directive =
+          Inputs.Opts.ImportInsertions
+              ? preferredIncludeDirective(Filename, Clang->getLangOpts(),
+                                          MainFileIncludes, {})
+              : Symbol::Include;
       FixIncludes.emplace(Filename, Inserter, *Inputs.Index,
-                          /*IndexRequestLimit=*/5);
+                          /*IndexRequestLimit=*/5, Directive);
       ASTDiags.contributeFixes([&FixIncludes](DiagnosticsEngine::Level DiagLevl,
                                               const clang::Diagnostic &Info) {
         return FixIncludes->fix(DiagLevl, Info);
@@ -717,6 +731,10 @@ const Preprocessor &ParsedAST::getPreprocessor() const {
 }
 
 llvm::ArrayRef<Decl *> ParsedAST::getLocalTopLevelDecls() {
+  return LocalTopLevelDecls;
+}
+
+llvm::ArrayRef<const Decl *> ParsedAST::getLocalTopLevelDecls() const {
   return LocalTopLevelDecls;
 }
 

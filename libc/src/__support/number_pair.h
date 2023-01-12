@@ -18,8 +18,6 @@ namespace __llvm_libc {
 
 DEFINE_NAMED_PAIR_TEMPLATE(NumberPair, lo, hi);
 
-using DoubleDouble = NumberPair<double>;
-
 template <typename T>
 cpp::enable_if_t<cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, NumberPair<T>>
 split(T a) {

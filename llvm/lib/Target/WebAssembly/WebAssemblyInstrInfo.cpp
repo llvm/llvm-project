@@ -204,3 +204,30 @@ const MachineOperand &
 WebAssemblyInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
   return WebAssembly::getCalleeOp(MI);
 }
+
+// This returns true when the instruction defines a value of a TargetIndex
+// operand that can be tracked by offsets. For Wasm, this returns true for only
+// local.set/local.tees. This is currently used by LiveDebugValues analysis.
+//
+// These are not included:
+// - In theory we need to add global.set here too, but we don't have global
+//   indices at this point because they are relocatable and we address them by
+//   names until linking, so we don't have 'offsets' (which are used to store
+//   local/global indices) to deal with in LiveDebugValues. And we don't
+//   associate debug info in values in globals anyway.
+// - All other value-producing instructions, i.e. instructions with defs, can
+//   define values in the Wasm stack, which is represented by TI_OPERAND_STACK
+//   TargetIndex. But they don't have offset info within the instruction itself,
+//   and debug info analysis for them is handled separately in
+//   WebAssemblyDebugFixup pass, so we don't worry about them here.
+bool WebAssemblyInstrInfo::isExplicitTargetIndexDef(const MachineInstr &MI,
+                                                    int &Index,
+                                                    int64_t &Offset) const {
+  unsigned Opc = MI.getOpcode();
+  if (WebAssembly::isLocalSet(Opc) || WebAssembly::isLocalTee(Opc)) {
+    Index = WebAssembly::TI_LOCAL;
+    Offset = MI.explicit_uses().begin()->getImm();
+    return true;
+  }
+  return false;
+}

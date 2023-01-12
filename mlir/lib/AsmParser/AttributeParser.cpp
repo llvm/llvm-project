@@ -575,7 +575,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
       return nullptr;
     if (isComplex) {
       // If this is a complex, treat the parsed values as complex values.
-      auto complexData = llvm::makeArrayRef(
+      auto complexData = llvm::ArrayRef(
           reinterpret_cast<std::complex<APInt> *>(intValues.data()),
           intValues.size() / 2);
       return DenseElementsAttr::get(type, complexData);
@@ -589,7 +589,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
       return nullptr;
     if (isComplex) {
       // If this is a complex, treat the parsed values as complex values.
-      auto complexData = llvm::makeArrayRef(
+      auto complexData = llvm::ArrayRef(
           reinterpret_cast<std::complex<APFloat> *>(floatValues.data()),
           floatValues.size() / 2);
       return DenseElementsAttr::get(type, complexData);

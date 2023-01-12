@@ -21,9 +21,9 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
@@ -32,11 +32,12 @@ namespace clang {
 namespace dataflow {
 
 struct DataflowAnalysisOptions {
-  /// Options for the built-in transfer functions, or empty to not apply them.
+  /// Options for the built-in model, or empty to not apply them.
   // FIXME: Remove this option once the framework supports composing analyses
   // (at which point the built-in transfer functions can be simply a standalone
   // analysis).
-  llvm::Optional<TransferOptions> BuiltinTransferOpts = TransferOptions{};
+  std::optional<DataflowAnalysisContext::Options> BuiltinOpts =
+      DataflowAnalysisContext::Options{};
 };
 
 /// Type-erased lattice element container.
@@ -106,11 +107,11 @@ public:
   virtual void transferBranchTypeErased(bool Branch, const Stmt *,
                                         TypeErasedLattice &, Environment &) = 0;
 
-  /// If the built-in transfer functions (which model the heap and stack in the
-  /// `Environment`) are to be applied, returns the options to be passed to
+  /// If the built-in model is enabled, returns the options to be passed to
   /// them. Otherwise returns empty.
-  llvm::Optional<TransferOptions> builtinTransferOptions() const {
-    return Options.BuiltinTransferOpts;
+  const std::optional<DataflowAnalysisContext::Options> &
+  builtinOptions() const {
+    return Options.BuiltinOpts;
   }
 };
 

@@ -4234,7 +4234,7 @@ public:
   }
 
   ArrayRef<QualType> getParamTypes() const {
-    return llvm::makeArrayRef(param_type_begin(), param_type_end());
+    return llvm::ArrayRef(param_type_begin(), param_type_end());
   }
 
   ExtProtoInfo getExtProtoInfo() const {
@@ -4381,7 +4381,7 @@ public:
   using param_type_iterator = const QualType *;
 
   ArrayRef<QualType> param_types() const {
-    return llvm::makeArrayRef(param_type_begin(), param_type_end());
+    return llvm::ArrayRef(param_type_begin(), param_type_end());
   }
 
   param_type_iterator param_type_begin() const {
@@ -4395,7 +4395,7 @@ public:
   using exception_iterator = const QualType *;
 
   ArrayRef<QualType> exceptions() const {
-    return llvm::makeArrayRef(exception_begin(), exception_end());
+    return llvm::ArrayRef(exception_begin(), exception_end());
   }
 
   exception_iterator exception_begin() const {
@@ -6132,8 +6132,7 @@ public:
   /// Retrieve the type arguments of this object type as they were
   /// written.
   ArrayRef<QualType> getTypeArgsAsWritten() const {
-    return llvm::makeArrayRef(getTypeArgStorage(),
-                              ObjCObjectTypeBits.NumTypeArgs);
+    return llvm::ArrayRef(getTypeArgStorage(), ObjCObjectTypeBits.NumTypeArgs);
   }
 
   /// Whether this is a "__kindof" type as written.

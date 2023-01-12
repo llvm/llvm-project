@@ -542,10 +542,14 @@ bool ARMThunk::isCompatibleWith(const InputSection &isec,
   return rel.type != R_ARM_THM_JUMP19 && rel.type != R_ARM_THM_JUMP24;
 }
 
-// This function returns true if the target is Thumb and is within 2^25, and
-// it has not previously returned false (see comment for mayUseShortThunk).
+// This function returns true if:
+// the target is Thumb
+// && is within branch range
+// && this function has not previously returned false
+//    (see comment for mayUseShortThunk)
+// && the arch supports Thumb branch range extension.
 bool ThumbThunk::getMayUseShortThunk() {
-  if (!mayUseShortThunk)
+  if (!mayUseShortThunk || !config->armJ1J2BranchEncoding)
     return false;
   uint64_t s = getARMThunkDestVA(destination);
   if ((s & 1) == 0) {

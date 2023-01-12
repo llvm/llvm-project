@@ -382,6 +382,65 @@ define amdgpu_kernel void @v_mul_i64_and_hilo(ptr addrspace(1) %out, ptr addrspa
   ret void
 }
 
+; 64-bit multiplication where the parts of the high and low bytes of the first argument are masked.
+define amdgpu_kernel void @v_mul_i64_partially_masked_src0(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) {
+; GFX10-LABEL: v_mul_i64_partially_masked_src0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
+; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[6:7]
+; GFX10-NEXT:    global_load_dwordx2 v[2:3], v4, s[2:3]
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    v_and_b32_e32 v4, 0xfff00000, v0
+; GFX10-NEXT:    v_and_b32_e32 v5, 0xf00f, v1
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s0, v4, v2, 0
+; GFX10-NEXT:    v_mul_lo_u32 v3, v4, v3
+; GFX10-NEXT:    v_mul_lo_u32 v2, v5, v2
+; GFX10-NEXT:    v_add3_u32 v1, v1, v3, v2
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_mul_i64_partially_masked_src0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[6:7]
+; GFX11-NEXT:    global_load_b64 v[2:3], v2, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_and_b32_e32 v4, 0xfff00000, v0
+; GFX11-NEXT:    v_and_b32_e32 v5, 0xf00f, v1
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v2, 0
+; GFX11-NEXT:    v_mul_lo_u32 v3, v4, v3
+; GFX11-NEXT:    v_mul_lo_u32 v2, v5, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add3_u32 v1, v1, v3, v2
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.a = getelementptr inbounds i64, ptr addrspace(1) %aptr, i32 %tid
+  %gep.b = getelementptr inbounds i64, ptr addrspace(1) %bptr, i32 %tid
+  %a = load i64, ptr addrspace(1) %gep.a
+  %b = load i64, ptr addrspace(1) %gep.b
+  %a_and = and i64 %a, u0x0000F00FFFF00000
+  %mul = mul i64 %a_and, %b
+  store i64 %mul, ptr addrspace(1) %out
+  ret void
+}
+
 ; 64-bit multiplication, where the first argument is masked before a branch
 define amdgpu_kernel void @mul64_and_in_branch(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) {
 ; GFX10-LABEL: mul64_and_in_branch:

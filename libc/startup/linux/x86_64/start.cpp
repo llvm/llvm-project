@@ -151,8 +151,8 @@ extern "C" void _start() {
   // compilers can generate code assuming the alignment as required by the ABI.
   // If the stack pointers as setup by the OS are already aligned, then the
   // following code is a NOP.
-  __asm__ __volatile__("andq $0xfffffffffffffff0, %%rsp\n\t" ::: "%rsp");
-  __asm__ __volatile__("andq $0xfffffffffffffff0, %%rbp\n\t" ::: "%rbp");
+  __asm__ __volatile__("andq $0xfffffffffffffff0, %rsp\n\t");
+  __asm__ __volatile__("andq $0xfffffffffffffff0, %rbp\n\t");
 
   auto tid = __llvm_libc::syscall_impl(SYS_gettid);
   if (tid <= 0)

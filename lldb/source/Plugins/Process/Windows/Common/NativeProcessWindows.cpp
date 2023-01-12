@@ -295,11 +295,11 @@ NativeProcessWindows::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
-    return llvm::makeArrayRef(g_aarch64_opcode);
+    return llvm::ArrayRef(g_aarch64_opcode);
 
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
-    return llvm::makeArrayRef(g_thumb_opcode);
+    return llvm::ArrayRef(g_thumb_opcode);
 
   default:
     return NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_hint);

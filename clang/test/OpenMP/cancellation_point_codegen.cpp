@@ -301,16 +301,16 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1:       cancel.cont41:
 // CHECK1-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP0]])
 // CHECK1-NEXT:    [[TMP44:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i64 40, i64 1, ptr @.omp_task_entry.)
-// CHECK1-NEXT:    [[TMP46:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP44]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP47:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP44]])
-// CHECK1-NEXT:    [[TMP48:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i64 40, i64 1, ptr @.omp_task_entry..3)
-// CHECK1-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_1:%.*]], ptr [[TMP48]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP51:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP48]])
+// CHECK1-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP44]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP46:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP44]])
+// CHECK1-NEXT:    [[TMP47:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i64 40, i64 1, ptr @.omp_task_entry..3)
+// CHECK1-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_1:%.*]], ptr [[TMP47]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP49:%.*]] = call i32 @__kmpc_omp_task(ptr @[[GLOB1]], i32 [[TMP0]], ptr [[TMP47]])
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @.omp_outlined..4)
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @.omp_outlined..5)
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @.omp_outlined..6, ptr [[ARGC_ADDR]])
-// CHECK1-NEXT:    [[TMP52:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
-// CHECK1-NEXT:    ret i32 [[TMP52]]
+// CHECK1-NEXT:    [[TMP50:%.*]] = load i32, ptr [[ARGC_ADDR]], align 4
+// CHECK1-NEXT:    ret i32 [[TMP50]]
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
@@ -384,18 +384,18 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    store ptr null, ptr [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !14
 // CHECK1-NEXT:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I]], align 8, !noalias !14
 // CHECK1-NEXT:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !14
-// CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !14
-// CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !14
-// CHECK1-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_cancellationpoint(ptr @[[GLOB1]], i32 [[TMP11]], i32 4)
-// CHECK1-NEXT:    [[TMP13:%.*]] = icmp ne i32 [[TMP12]], 0
-// CHECK1-NEXT:    br i1 [[TMP13]], label [[DOTCANCEL_EXIT_I:%.*]], label [[DOTCANCEL_CONTINUE_I:%.*]]
+// CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !14
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !14
+// CHECK1-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancellationpoint(ptr @[[GLOB1]], i32 [[TMP9]], i32 4)
+// CHECK1-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0
+// CHECK1-NEXT:    br i1 [[TMP11]], label [[DOTCANCEL_EXIT_I:%.*]], label [[DOTCANCEL_CONTINUE_I:%.*]]
 // CHECK1:       .cancel.exit.i:
 // CHECK1-NEXT:    store i32 1, ptr [[CLEANUP_DEST_SLOT_I]], align 4, !noalias !14
 // CHECK1-NEXT:    br label [[DOTOMP_OUTLINED__1_EXIT:%.*]]
 // CHECK1:       .cancel.continue.i:
-// CHECK1-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_cancel(ptr @[[GLOB1]], i32 [[TMP11]], i32 4)
-// CHECK1-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
-// CHECK1-NEXT:    br i1 [[TMP15]], label [[DOTCANCEL_EXIT1_I:%.*]], label [[DOTCANCEL_CONTINUE2_I:%.*]]
+// CHECK1-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_cancel(ptr @[[GLOB1]], i32 [[TMP9]], i32 4)
+// CHECK1-NEXT:    [[TMP13:%.*]] = icmp ne i32 [[TMP12]], 0
+// CHECK1-NEXT:    br i1 [[TMP13]], label [[DOTCANCEL_EXIT1_I:%.*]], label [[DOTCANCEL_CONTINUE2_I:%.*]]
 // CHECK1:       .cancel.exit1.i:
 // CHECK1-NEXT:    store i32 1, ptr [[CLEANUP_DEST_SLOT_I]], align 4, !noalias !14
 // CHECK1-NEXT:    br label [[DOTOMP_OUTLINED__1_EXIT]]
@@ -437,11 +437,11 @@ for (int i = 0; i < argc; ++i) {
 // CHECK1-NEXT:    store ptr null, ptr [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !24
 // CHECK1-NEXT:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I]], align 8, !noalias !24
 // CHECK1-NEXT:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !24
-// CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !24
-// CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !24
-// CHECK1-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_cancellationpoint(ptr @[[GLOB1]], i32 [[TMP11]], i32 4)
-// CHECK1-NEXT:    [[TMP13:%.*]] = icmp ne i32 [[TMP12]], 0
-// CHECK1-NEXT:    br i1 [[TMP13]], label [[DOTCANCEL_EXIT_I:%.*]], label [[DOTCANCEL_CONTINUE_I:%.*]]
+// CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !24
+// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !24
+// CHECK1-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancellationpoint(ptr @[[GLOB1]], i32 [[TMP9]], i32 4)
+// CHECK1-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0
+// CHECK1-NEXT:    br i1 [[TMP11]], label [[DOTCANCEL_EXIT_I:%.*]], label [[DOTCANCEL_CONTINUE_I:%.*]]
 // CHECK1:       .cancel.exit.i:
 // CHECK1-NEXT:    store i32 1, ptr [[CLEANUP_DEST_SLOT_I]], align 4, !noalias !24
 // CHECK1-NEXT:    br label [[DOTOMP_OUTLINED__2_EXIT:%.*]]

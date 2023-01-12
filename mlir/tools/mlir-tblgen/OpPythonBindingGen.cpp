@@ -893,11 +893,9 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
 
   populateBuilderLinesOperand(op, operandArgNames, builderLines);
   populateBuilderLinesAttr(
-      op, llvm::makeArrayRef(builderArgs).drop_front(numResultArgs),
-      builderLines);
+      op, llvm::ArrayRef(builderArgs).drop_front(numResultArgs), builderLines);
   populateBuilderLinesResult(
-      op, llvm::makeArrayRef(builderArgs).take_front(numResultArgs),
-      builderLines);
+      op, llvm::ArrayRef(builderArgs).take_front(numResultArgs), builderLines);
   populateBuilderLinesSuccessors(op, successorArgNames, builderLines);
   populateBuilderRegions(op, builderArgs, builderLines);
 

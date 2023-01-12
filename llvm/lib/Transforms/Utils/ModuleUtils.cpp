@@ -150,7 +150,7 @@ void llvm::removeFromUsedLists(Module &M,
   removeFromUsedList(M, "llvm.compiler.used", ShouldRemove);
 }
 
-static void setKCFIType(Module &M, Function &F, StringRef MangledType) {
+void llvm::setKCFIType(Module &M, Function &F, StringRef MangledType) {
   if (!M.getModuleFlag("kcfi"))
     return;
   // Matches CodeGenModule::CreateKCFITypeId in Clang.
@@ -161,6 +161,13 @@ static void setKCFIType(Module &M, Function &F, StringRef MangledType) {
       MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
                            Type::getInt32Ty(Ctx),
                            static_cast<uint32_t>(xxHash64(MangledType))))));
+  // If the module was compiled with -fpatchable-function-entry, ensure
+  // we use the same patchable-function-prefix.
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("kcfi-offset"))) {
+    if (unsigned Offset = MD->getZExtValue())
+      F.addFnAttr("patchable-function-prefix", std::to_string(Offset));
+  }
 }
 
 FunctionCallee

@@ -1534,7 +1534,7 @@ static void fillInStridesForCollapsedMemDescriptor(
   for (auto &en : llvm::enumerate(reassociation)) {
     rewriter.setInsertionPoint(op);
     auto dstIndex = en.index();
-    ArrayRef<int64_t> ref = llvm::makeArrayRef(en.value());
+    ArrayRef<int64_t> ref = llvm::ArrayRef(en.value());
     while (srcShape[ref.back()] == 1 && ref.size() > 1)
       ref = ref.drop_back();
     if (!ShapedType::isDynamic(srcShape[ref.back()]) || ref.size() == 1) {

@@ -61,7 +61,8 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
   const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
   if (abbrevDecl == nullptr) {
     cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "{0x%8.8x}: invalid abbreviation code %u, please file a bug and "
+        "[{0:x16}]: invalid abbreviation code {1}, "
+        "please file a bug and "
         "attach the file at the start of this error message",
         m_offset, (unsigned)abbr_idx);
     // WE can't parse anymore if the DWARF is borked...
@@ -191,7 +192,8 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
 
         default:
           cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-              "{0x%8.8x}: Unsupported DW_FORM_0x%x, please file a bug and "
+              "[{0:x16}]: Unsupported DW_FORM_{1:x}, please file a bug "
+              "and "
               "attach the file at the start of this error message",
               m_offset, (unsigned)form);
           *offset_ptr = m_offset;
@@ -215,9 +217,10 @@ static DWARFRangeList GetRangesOrReportError(DWARFUnit &unit,
           : unit.FindRnglistFromOffset(value.Unsigned());
   if (expected_ranges)
     return std::move(*expected_ranges);
+
   unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-      "{0x%8.8x}: DIE has DW_AT_ranges(%s 0x%" PRIx64 ") attribute, but "
-      "range extraction failed (%s), please file a bug "
+      "[{0:x16}]: DIE has DW_AT_ranges({1} {2:x16}) attribute, but "
+      "range extraction failed ({3}), please file a bug "
       "and attach the file at the start of this error message",
       die.GetOffset(),
       llvm::dwarf::FormEncodingString(value.Form()).str().c_str(),

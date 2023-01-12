@@ -515,6 +515,24 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
               : TargetTransformInfo::SK_PermuteSingleSrc;
 }
 
+/// \returns True if Extract{Value,Element} instruction extracts element Idx.
+static std::optional<unsigned> getExtractIndex(Instruction *E) {
+  unsigned Opcode = E->getOpcode();
+  assert((Opcode == Instruction::ExtractElement ||
+          Opcode == Instruction::ExtractValue) &&
+         "Expected extractelement or extractvalue instruction.");
+  if (Opcode == Instruction::ExtractElement) {
+    auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
+    if (!CI)
+      return std::nullopt;
+    return CI->getZExtValue();
+  }
+  auto *EI = cast<ExtractValueInst>(E);
+  if (EI->getNumIndices() != 1)
+    return std::nullopt;
+  return *EI->idx_begin();
+}
+
 namespace {
 
 /// Main data required for vectorization of instructions.
@@ -762,24 +780,6 @@ static bool allSameType(ArrayRef<Value *> VL) {
   return true;
 }
 
-/// \returns True if Extract{Value,Element} instruction extracts element Idx.
-static std::optional<unsigned> getExtractIndex(Instruction *E) {
-  unsigned Opcode = E->getOpcode();
-  assert((Opcode == Instruction::ExtractElement ||
-          Opcode == Instruction::ExtractValue) &&
-         "Expected extractelement or extractvalue instruction.");
-  if (Opcode == Instruction::ExtractElement) {
-    auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
-    if (!CI)
-      return std::nullopt;
-    return CI->getZExtValue();
-  }
-  ExtractValueInst *EI = cast<ExtractValueInst>(E);
-  if (EI->getNumIndices() != 1)
-    return std::nullopt;
-  return *EI->idx_begin();
-}
-
 /// \returns True if in-tree use also needs extract. This refers to
 /// possible scalar operand in vectorized instruction.
 static bool InTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
@@ -991,7 +991,7 @@ public:
     else
       MaxVecRegSize =
           TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-              .getFixedSize();
+              .getFixedValue();
 
     if (MinVectorRegSizeOption.getNumOccurrences())
       MinVecRegSize = MinVectorRegSizeOption;
@@ -1035,6 +1035,12 @@ public:
   Instruction *getFirstNodeMainOp() const {
     assert(!VectorizableTree.empty() && "No tree to get the first node from");
     return VectorizableTree.front()->getMainOp();
+  }
+
+  /// Returns whether the root node has in-tree uses.
+  bool doesRootHaveInTreeUses() const {
+    return !VectorizableTree.empty() &&
+           !VectorizableTree.front()->UserTreeIndices.empty();
   }
 
   /// Builds external uses of the vectorized scalars, i.e. the list of
@@ -11487,7 +11493,9 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       if (R.isTreeTinyAndNotFullyVectorizable())
         continue;
       R.reorderTopToBottom();
-      R.reorderBottomToTop(!isa<InsertElementInst>(Ops.front()));
+      R.reorderBottomToTop(
+          /*IgnoreReorder=*/!isa<InsertElementInst>(Ops.front()) &&
+          !R.doesRootHaveInTreeUses());
       R.buildExternalUses();
 
       R.computeMinimumValueSizes();

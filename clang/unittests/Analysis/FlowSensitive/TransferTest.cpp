@@ -10,12 +10,14 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Error.h"
@@ -33,23 +35,33 @@ using ::testing::IsNull;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
 
+using BuiltinOptions = DataflowAnalysisContext::Options;
+
 template <typename Matcher>
 void runDataflow(llvm::StringRef Code, Matcher Match,
                  DataflowAnalysisOptions Options,
                  LangStandard::Kind Std = LangStandard::lang_cxx17,
                  llvm::StringRef TargetFun = "target") {
   using ast_matchers::hasName;
+  llvm::SmallVector<std::string, 3> ASTBuildArgs = {
+      "-fsyntax-only", "-fno-delayed-template-parsing",
+      "-std=" +
+          std::string(LangStandard::getLangStandardForKind(Std).getName())};
+  AnalysisInputs<NoopAnalysis> AI(
+      Code, hasName(TargetFun),
+      [UseBuiltinModel = Options.BuiltinOpts.has_value()](ASTContext &C,
+                                                          Environment &Env) {
+        return NoopAnalysis(
+            C, DataflowAnalysisOptions{UseBuiltinModel
+                                           ? Env.getAnalysisOptions()
+                                           : llvm::Optional<BuiltinOptions>()});
+      });
+  AI.ASTBuildArgs = ASTBuildArgs;
+  if (Options.BuiltinOpts)
+    AI.BuiltinOptions = *Options.BuiltinOpts;
   ASSERT_THAT_ERROR(
       checkDataflow<NoopAnalysis>(
-          AnalysisInputs<NoopAnalysis>(Code, hasName(TargetFun),
-                                       [Options](ASTContext &C, Environment &) {
-                                         return NoopAnalysis(C, Options);
-                                       })
-              .withASTBuildArgs(
-                  {"-fsyntax-only", "-fno-delayed-template-parsing",
-                   "-std=" +
-                       std::string(LangStandard::getLangStandardForKind(Std)
-                                       .getName())}),
+          std::move(AI),
           /*VerifyResults=*/
           [&Match](const llvm::StringMap<DataflowAnalysisState<NoopLattice>>
                        &Results,
@@ -63,8 +75,8 @@ void runDataflow(llvm::StringRef Code, Matcher Match,
                  bool ApplyBuiltinTransfer = true,
                  llvm::StringRef TargetFun = "target") {
   runDataflow(Code, std::move(Match),
-              {ApplyBuiltinTransfer ? TransferOptions{}
-                                    : llvm::Optional<TransferOptions>()},
+              {ApplyBuiltinTransfer ? BuiltinOptions{}
+                                    : std::optional<BuiltinOptions>()},
               Std, TargetFun);
 }
 
@@ -151,6 +163,7 @@ TEST(TransferTest, StructVarDecl) {
 
     void target() {
       A Foo;
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -198,6 +211,7 @@ TEST(TransferTest, StructVarDeclWithInit) {
 
     void target() {
       A Foo = Gen();
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -238,11 +252,13 @@ TEST(TransferTest, StructVarDeclWithInit) {
 TEST(TransferTest, ClassVarDecl) {
   std::string Code = R"(
     class A {
+     public:
       int Bar;
     };
 
     void target() {
       A Foo;
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -336,6 +352,10 @@ TEST(TransferTest, SelfReferentialReferenceVarDecl) {
 
     void target() {
       A &Foo = getA();
+      (void)Foo.Bar.FooRef;
+      (void)Foo.Bar.FooPtr;
+      (void)Foo.Bar.BazRef;
+      (void)Foo.Bar.BazPtr;
       // [[p]]
     }
   )";
@@ -478,6 +498,10 @@ TEST(TransferTest, SelfReferentialPointerVarDecl) {
 
     void target() {
       A *Foo = getA();
+      (void)Foo->Bar->FooRef;
+      (void)Foo->Bar->FooPtr;
+      (void)Foo->Bar->BazRef;
+      (void)Foo->Bar->BazPtr;
       // [[p]]
     }
   )";
@@ -891,7 +915,7 @@ TEST(TransferTest, StructParamDecl) {
     };
 
     void target(A Foo) {
-      (void)0;
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1042,6 +1066,28 @@ TEST(TransferTest, StructMember) {
       });
 }
 
+TEST(TransferTest, StructMemberEnum) {
+  std::string Code = R"(
+    struct A {
+      int Bar;
+      enum E { ONE, TWO };
+    };
+
+    void target(A Foo) {
+      A::E Baz = Foo.ONE;
+      // [[p]]
+    }
+  )";
+  // Minimal expectations -- we're just testing that it doesn't crash, since
+  // enums aren't interpreted.
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        EXPECT_THAT(Results.keys(), UnorderedElementsAre("p"));
+      });
+}
+
 TEST(TransferTest, DerivedBaseMemberClass) {
   std::string Code = R"(
     class A {
@@ -1052,6 +1098,9 @@ TEST(TransferTest, DerivedBaseMemberClass) {
       int APrivate;
     public:
       int APublic;
+
+    private:
+      friend void target();
     };
 
     class B : public A {
@@ -1060,10 +1109,20 @@ TEST(TransferTest, DerivedBaseMemberClass) {
       int BProtected;
     private:
       int BPrivate;
+
+    private:
+      friend void target();
     };
 
     void target() {
       B Foo;
+      (void)Foo.ADefault;
+      (void)Foo.AProtected;
+      (void)Foo.APrivate;
+      (void)Foo.APublic;
+      (void)Foo.BDefault;
+      (void)Foo.BProtected;
+      (void)Foo.BPrivate;
       // [[p]]
     }
   )";
@@ -1202,6 +1261,7 @@ TEST(TransferTest, DerivedBaseMemberStructDefault) {
 
     void target() {
       B Foo;
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1525,7 +1585,11 @@ TEST(TransferTest, UnionThisMember) {
       int Bar;
 
       void target() {
-        (void)0; // [[p]]
+        A a;
+        // Mention the fields to ensure they're included in the analysis.
+        (void)a.Foo;
+        (void)a.Bar;
+        // [[p]]
       }
     };
   )";
@@ -1777,6 +1841,7 @@ TEST(TransferTest, TemporaryObject) {
 
     void target() {
       A Foo = A();
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1814,6 +1879,7 @@ TEST(TransferTest, ElidableConstructor) {
 
     void target() {
       A Foo = A();
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1851,6 +1917,7 @@ TEST(TransferTest, AssignmentOperator) {
     void target() {
       A Foo;
       A Bar;
+      (void)Foo.Baz;
       // [[p1]]
       Foo = Bar;
       // [[p2]]
@@ -1913,6 +1980,7 @@ TEST(TransferTest, CopyConstructor) {
 
     void target() {
       A Foo;
+      (void)Foo.Baz;
       A Bar = Foo;
       // [[p]]
     }
@@ -1958,6 +2026,7 @@ TEST(TransferTest, CopyConstructorWithParens) {
 
     void target() {
       A Foo;
+      (void)Foo.Baz;
       A Bar((A(Foo)));
       // [[p]]
     }
@@ -2018,6 +2087,7 @@ TEST(TransferTest, MoveConstructor) {
     void target() {
       A Foo;
       A Bar;
+      (void)Foo.Baz;
       // [[p1]]
       Foo = std::move(Bar);
       // [[p2]]
@@ -4081,7 +4151,7 @@ TEST(TransferTest, ContextSensitiveOptionDisabled) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{/*.ContextSensitiveOpts=*/std::nullopt}});
+      {BuiltinOptions{/*.ContextSensitiveOpts=*/std::nullopt}});
 }
 
 // This test is a regression test, based on a real crash.
@@ -4110,7 +4180,7 @@ TEST(TransferTest, ContextSensitiveReturnReferenceFromNonReferenceLvalue) {
 
         EXPECT_THAT(Env.getValue(*Loc), IsNull());
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveDepthZero) {
@@ -4138,7 +4208,7 @@ TEST(TransferTest, ContextSensitiveDepthZero) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/0}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/0}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetTrue) {
@@ -4165,7 +4235,7 @@ TEST(TransferTest, ContextSensitiveSetTrue) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetFalse) {
@@ -4192,7 +4262,7 @@ TEST(TransferTest, ContextSensitiveSetFalse) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetBothTrueAndFalse) {
@@ -4229,7 +4299,7 @@ TEST(TransferTest, ContextSensitiveSetBothTrueAndFalse) {
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetTwoLayersDepthOne) {
@@ -4258,7 +4328,7 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthOne) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/1}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/1}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetTwoLayersDepthTwo) {
@@ -4286,7 +4356,7 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthTwo) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetThreeLayersDepthTwo) {
@@ -4316,7 +4386,7 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthTwo) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetThreeLayersDepthThree) {
@@ -4345,7 +4415,7 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthThree) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/3}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/3}}});
 }
 
 TEST(TransferTest, ContextSensitiveMutualRecursion) {
@@ -4389,7 +4459,7 @@ TEST(TransferTest, ContextSensitiveMutualRecursion) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/4}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/4}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetMultipleLines) {
@@ -4427,7 +4497,7 @@ TEST(TransferTest, ContextSensitiveSetMultipleLines) {
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetMultipleBlocks) {
@@ -4469,7 +4539,7 @@ TEST(TransferTest, ContextSensitiveSetMultipleBlocks) {
         EXPECT_TRUE(Env.flowConditionImplies(BazVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(BazVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnVoid) {
@@ -4488,7 +4558,7 @@ TEST(TransferTest, ContextSensitiveReturnVoid) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         // This just tests that the analysis doesn't crash.
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnTrue) {
@@ -4513,7 +4583,7 @@ TEST(TransferTest, ContextSensitiveReturnTrue) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnFalse) {
@@ -4538,7 +4608,7 @@ TEST(TransferTest, ContextSensitiveReturnFalse) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnArg) {
@@ -4566,7 +4636,7 @@ TEST(TransferTest, ContextSensitiveReturnArg) {
         auto &BazVal = *cast<BoolValue>(Env.getValue(*BazDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(BazVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnInt) {
@@ -4585,7 +4655,7 @@ TEST(TransferTest, ContextSensitiveReturnInt) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         // This just tests that the analysis doesn't crash.
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodLiteral) {
@@ -4614,7 +4684,7 @@ TEST(TransferTest, ContextSensitiveMethodLiteral) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodGetter) {
@@ -4646,7 +4716,7 @@ TEST(TransferTest, ContextSensitiveMethodGetter) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodSetter) {
@@ -4678,7 +4748,7 @@ TEST(TransferTest, ContextSensitiveMethodSetter) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
@@ -4712,7 +4782,7 @@ TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 
@@ -4737,7 +4807,8 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersVoid) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));;
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        ;
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -4746,7 +4817,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersVoid) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
@@ -4770,7 +4841,8 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));;
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        ;
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -4779,7 +4851,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveConstructorBody) {
@@ -4810,7 +4882,7 @@ TEST(TransferTest, ContextSensitiveConstructorBody) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveConstructorInitializer) {
@@ -4841,7 +4913,7 @@ TEST(TransferTest, ContextSensitiveConstructorInitializer) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveConstructorDefault) {
@@ -4872,7 +4944,7 @@ TEST(TransferTest, ContextSensitiveConstructorDefault) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 } // namespace

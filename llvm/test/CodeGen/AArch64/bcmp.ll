@@ -493,17 +493,16 @@ define i1 @bcmp_i16(i16 %a0, i16 %b0, i16 %a1, i16 %b1, i16 %a2, i16 %b2) {
 define i1 @bcmp_i128(i128 %a0, i128 %b0, i128 %a1, i128 %b1, i128 %a2, i128 %b2) {
 ; CHECK-LABEL: bcmp_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x9, x8, [sp]
-; CHECK-NEXT:    ldp x10, x11, [sp, #16]
-; CHECK-NEXT:    cmp x10, x9
-; CHECK-NEXT:    ccmp x11, x8, #0, eq
-; CHECK-NEXT:    cset w8, ne
 ; CHECK-NEXT:    cmp x2, x0
 ; CHECK-NEXT:    ccmp x3, x1, #0, eq
+; CHECK-NEXT:    ldp x9, x8, [sp]
 ; CHECK-NEXT:    ccmp x6, x4, #0, eq
+; CHECK-NEXT:    ldp x10, x11, [sp, #16]
 ; CHECK-NEXT:    ccmp x7, x5, #0, eq
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    cset w12, ne
+; CHECK-NEXT:    cmp x10, x9
+; CHECK-NEXT:    ccmp x11, x8, #0, eq
+; CHECK-NEXT:    csinc w0, w12, wzr, eq
 ; CHECK-NEXT:    ret
   %xor0 = xor i128 %b0, %a0
   %xor1 = xor i128 %b1, %a1

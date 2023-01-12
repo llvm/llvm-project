@@ -1363,7 +1363,7 @@ class SignlessIntElementsAttr<int width> : IntElementsAttrBase<
   let constBuilderCall = "::mlir::DenseElementsAttr::get("
     "::mlir::RankedTensorType::get({}, "
                                   "$_builder.getIntegerType(" # width # ")), "
-    "::llvm::makeArrayRef($0)).cast<::mlir::DenseIntElementsAttr>()";
+    "::llvm::ArrayRef($0)).cast<::mlir::DenseIntElementsAttr>()";
 }
 
 def I32ElementsAttr : SignlessIntElementsAttr<32>;
@@ -1384,7 +1384,7 @@ class RankedSignlessIntElementsAttr<int width, list<int> dims> :
 
   let constBuilderCall = "::mlir::DenseIntElementsAttr::get("
     "::mlir::RankedTensorType::get({" # !interleave(dims, ", ") #
-    "}, $_builder.getIntegerType(" # width # ")), ::llvm::makeArrayRef($0))";
+    "}, $_builder.getIntegerType(" # width # ")), ::llvm::ArrayRef($0))";
 }
 
 class RankedI32ElementsAttr<list<int> dims> :
@@ -1404,7 +1404,7 @@ class FloatElementsAttr<int width> : ElementsAttrBase<
   // Note that this is only constructing scalar elements attribute.
   let constBuilderCall = "::mlir::DenseElementsAttr::get("
     "::mlir::RankedTensorType::get({}, $_builder.getF" # width # "Type()),"
-    "::llvm::makeArrayRef($0))";
+    "::llvm::ArrayRef($0))";
   let convertFromStorage = "$_self";
 }
 
@@ -1429,7 +1429,7 @@ class RankedFloatElementsAttr<int width, list<int> dims> : ElementsAttrBase<
   let constBuilderCall = "::mlir::DenseElementsAttr::get("
     "::mlir::RankedTensorType::get({" # !interleave(dims, ", ") #
     "}, $_builder.getF" # width # "Type()), "
-    "::llvm::makeArrayRef($0)).cast<::mlir::DenseFPElementsAttr>()";
+    "::llvm::ArrayRef($0)).cast<::mlir::DenseFPElementsAttr>()";
   let convertFromStorage = "$_self";
 }
 

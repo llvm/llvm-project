@@ -481,13 +481,13 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     if (auto *VT = dyn_cast<llvm::VectorType>(A.getType()))
       LargestVectorWidth =
           std::max((uint64_t)LargestVectorWidth,
-                   VT->getPrimitiveSizeInBits().getKnownMinSize());
+                   VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   // Update vector width based on return type.
   if (auto *VT = dyn_cast<llvm::VectorType>(CurFn->getReturnType()))
     LargestVectorWidth =
         std::max((uint64_t)LargestVectorWidth,
-                 VT->getPrimitiveSizeInBits().getKnownMinSize());
+                 VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   if (CurFnInfo->getMaxVectorWidth() > LargestVectorWidth)
     LargestVectorWidth = CurFnInfo->getMaxVectorWidth();
@@ -848,8 +848,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
     auto FuncGroups = CGM.getCodeGenOpts().XRayTotalFunctionGroups;
     if (FuncGroups > 1) {
-      auto FuncName = llvm::makeArrayRef<uint8_t>(
-          CurFn->getName().bytes_begin(), CurFn->getName().bytes_end());
+      auto FuncName = llvm::ArrayRef<uint8_t>(CurFn->getName().bytes_begin(),
+                                              CurFn->getName().bytes_end());
       auto Group = crc32(FuncName) % FuncGroups;
       if (Group != CGM.getCodeGenOpts().XRaySelectedFunctionGroup &&
           !AlwaysXRayAttr)

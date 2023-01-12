@@ -46,11 +46,11 @@ const TargetInfo::AddlRegName GCCAddlRegNames[] = {
 };
 
 ArrayRef<const char *> SystemZTargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::AddlRegName> SystemZTargetInfo::getGCCAddlRegNames() const {
-  return llvm::makeArrayRef(GCCAddlRegNames);
+  return llvm::ArrayRef(GCCAddlRegNames);
 }
 
 bool SystemZTargetInfo::validateAsmConstraint(
@@ -161,6 +161,6 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 ArrayRef<Builtin::Info> SystemZTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::SystemZ::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo, clang::SystemZ::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }
