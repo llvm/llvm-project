@@ -681,8 +681,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // of f32.
       EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
       if (isTypeLegal(FloatVT)) {
-        setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
-                           Custom);
+        setOperationAction(
+            {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+            Custom);
       }
     }
 
@@ -912,8 +913,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // range of f32.
         EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
         if (isTypeLegal(FloatVT))
-          setOperationAction({ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
-                             Custom);
+          setOperationAction(
+              {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+              Custom);
       }
 
       for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
@@ -3599,7 +3601,13 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   // For leading zeros, we need to remove the bias and convert from log2 to
   // leading zeros. We can do this by subtracting from (Bias + (EltSize - 1)).
   unsigned Adjust = ExponentBias + (EltSize - 1);
-  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(Adjust, DL, VT), Exp);
+  SDValue Res =
+      DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(Adjust, DL, VT), Exp);
+  // The above result with zero input equals to Adjust which is greater than
+  // EltSize. Hence, we can do min(Res, EltSize) for CTLZ.
+  if (Op.getOpcode() == ISD::CTLZ)
+    Res = DAG.getNode(ISD::UMIN, DL, VT, Res, DAG.getConstant(EltSize, DL, VT));
+  return Res;
 }
 
 // While RVV has alignment restrictions, we should always be able to load as a
@@ -4218,6 +4226,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::ABS:
   case ISD::VP_ABS:
     return lowerABS(Op, DAG);
+  case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTTZ_ZERO_UNDEF:
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
