@@ -41,6 +41,25 @@ using namespace llvm;
 namespace cir {
 namespace direct {
 
+class CIRPtrStrideOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::PtrStrideOp> {
+public:
+  using mlir::OpConversionPattern<mlir::cir::PtrStrideOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::PtrStrideOp ptrStrideOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto *tc = getTypeConverter();
+    const auto resultTy = tc->convertType(ptrStrideOp.getType());
+    const auto elementTy = tc->convertType(ptrStrideOp.getElementTy());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(ptrStrideOp, resultTy,
+                                                   elementTy, adaptor.getBase(),
+                                                   adaptor.getStride());
+
+    return mlir::success();
+  }
+};
+
 class CIRLoopOpLowering : public mlir::OpConversionPattern<mlir::cir::LoopOp> {
 public:
   using mlir::OpConversionPattern<mlir::cir::LoopOp>::OpConversionPattern;
@@ -761,11 +780,11 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRBrOpLowering, CIRReturnLowering>(patterns.getContext());
   patterns.add<CIRCmpOpLowering, CIRLoopOpLowering, CIRBrCondOpLowering,
-               CIRCallLowering, CIRUnaryOpLowering, CIRBinOpLowering,
-               CIRLoadLowering, CIRConstantLowering, CIRStoreLowering,
-               CIRAllocaLowering, CIRFuncLowering, CIRScopeOpLowering,
-               CIRCastOpLowering, CIRIfLowering>(converter,
-                                                 patterns.getContext());
+               CIRPtrStrideOpLowering, CIRCallLowering, CIRUnaryOpLowering,
+               CIRBinOpLowering, CIRLoadLowering, CIRConstantLowering,
+               CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
+               CIRScopeOpLowering, CIRCastOpLowering, CIRIfLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {
