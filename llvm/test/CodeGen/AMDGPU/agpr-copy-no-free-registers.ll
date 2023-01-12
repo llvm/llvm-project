@@ -111,6 +111,10 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v39 ; Reload Reuse
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_write_b32 a11, v38 ; Reload Reuse
+; GFX908-NEXT:    v_accvgpr_write_b32 a12, v37 ; Reload Reuse
+; GFX908-NEXT:    v_accvgpr_write_b32 a13, v36 ; Reload Reuse
+; GFX908-NEXT:    v_accvgpr_write_b32 a14, v35 ; Reload Reuse
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v39 ; Reload Reuse
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
@@ -140,10 +144,6 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a10, v39 ; Reload Reuse
-; GFX908-NEXT:    v_accvgpr_write_b32 a11, v38 ; Reload Reuse
-; GFX908-NEXT:    v_accvgpr_write_b32 a12, v37 ; Reload Reuse
-; GFX908-NEXT:    v_accvgpr_write_b32 a13, v36 ; Reload Reuse
-; GFX908-NEXT:    v_accvgpr_write_b32 a14, v35 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a15, v34 ; Reload Reuse
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
@@ -208,28 +208,21 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-NEXT:    buffer_load_dword a0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a2, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a3, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a4, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a5, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a6, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a7, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a8, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a9, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    s_waitcnt vmcnt(9)
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a10, v39 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a11, v38 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a12, v37 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a13, v36 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a14, v35 ; Reload Reuse
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a15, v34 ; Reload Reuse
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; copy
@@ -1021,6 +1014,10 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v39 ; Reload Reuse
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_write_b32 a11, v38 ; Reload Reuse
+; GFX908-NEXT:    v_accvgpr_write_b32 a12, v37 ; Reload Reuse
+; GFX908-NEXT:    v_accvgpr_write_b32 a13, v36 ; Reload Reuse
+; GFX908-NEXT:    v_accvgpr_write_b32 a14, v35 ; Reload Reuse
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, v39 ; Reload Reuse
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
@@ -1050,10 +1047,6 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a10, v39 ; Reload Reuse
-; GFX908-NEXT:    v_accvgpr_write_b32 a11, v38 ; Reload Reuse
-; GFX908-NEXT:    v_accvgpr_write_b32 a12, v37 ; Reload Reuse
-; GFX908-NEXT:    v_accvgpr_write_b32 a13, v36 ; Reload Reuse
-; GFX908-NEXT:    v_accvgpr_write_b32 a14, v35 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a15, v34 ; Reload Reuse
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
@@ -1119,29 +1112,21 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-NEXT:    buffer_load_dword a0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a2, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a3, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a4, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a5, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a6, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a7, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a8, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a9, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    buffer_load_dword a10, off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
-; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    s_waitcnt vmcnt(10)
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a11, v39 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a12, v38 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a13, v37 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a14, v36 ; Reload Reuse
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a15, v35 ; Reload Reuse
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; copy

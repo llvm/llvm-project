@@ -27,8 +27,8 @@ body:             |
     ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr8_sgpr9
     ; GCN-NEXT: renamable $sgpr1 = COPY $sgpr2
     ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr1, 1, $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr2, 2, $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr1, 1, $vgpr0
+    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr2, 2, $vgpr0
     ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr3, 3, $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: renamable $sgpr8 = COPY killed renamable $sgpr1
     ; GCN-NEXT: $sgpr0_sgpr1 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
@@ -64,8 +64,8 @@ body:             |
     ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr8_sgpr9
     ; GCN-NEXT: renamable $sgpr1 = COPY $sgpr2
     ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr1, 1, $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr2, 2, $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr1, 1, $vgpr0
+    ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr2, 2, $vgpr0
     ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr3, 3, $vgpr0, implicit killed $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: $sgpr0_sgpr1 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
@@ -95,8 +95,8 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $vgpr1 = COPY $vgpr2
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 4, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0 + 4, addrspace 5)
-    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 8, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0 + 8, addrspace 5)
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 8, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 8, addrspace 5)
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 12, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0 + 12, addrspace 5)
     ; GCN-NEXT: renamable $vgpr8 = COPY killed renamable $vgpr1
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr8
@@ -125,8 +125,8 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $vgpr1 = COPY $vgpr2
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 4, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0 + 4, addrspace 5)
-    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 8, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0 + 8, addrspace 5)
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 4, addrspace 5)
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 8, 0, 0, implicit $exec :: (store (s32) into %stack.0 + 8, addrspace 5)
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: (store (s32) into %stack.0 + 12, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0
     renamable $vgpr1 = COPY $vgpr2
