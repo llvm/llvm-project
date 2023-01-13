@@ -12,7 +12,7 @@ define zeroext i16 @test_nomem16(i16 zeroext %a) {
 ; CHECK-LABEL: test_nomem16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    brh r3, r3
-; CHECK-NEXT:    clrldi r3, r3, 32
+; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    blr
 entry:
   %0 = tail call i16 @llvm.bswap.i16(i16 %a)
@@ -38,7 +38,7 @@ define zeroext i32 @test_bswap_shift16(i32 zeroext %a) {
 ; CHECK-LABEL: test_bswap_shift16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    brh r3, r3
-; CHECK-NEXT:    clrldi r3, r3, 32
+; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.bswap.i32(i32 %a)
@@ -59,6 +59,7 @@ define void @test_bswap_shift16_2() {
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl call_1@notoc
 ; CHECK-NEXT:    brh r3, r3
+; CHECK-NEXT:    rldicl r3, r3, 0, 48
 ; CHECK-NEXT:    sth r3, 0(r3)
 bb:
   switch i32 undef, label %bb1 [
