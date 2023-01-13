@@ -49,6 +49,7 @@ public:
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;
     LargeArrayAlign = 128;
+    SimdDefaultAlign = 128;
     SigAtomicType = SignedLong;
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();

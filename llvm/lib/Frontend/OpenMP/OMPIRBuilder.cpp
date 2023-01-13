@@ -255,50 +255,6 @@ static void redirectTo(BasicBlock *Source, BasicBlock *Target, DebugLoc DL) {
   NewBr->setDebugLoc(DL);
 }
 
-/// Create the TargetMachine object to query the backend for optimization
-/// preferences.
-///
-/// Ideally, this would be passed from the front-end to the OpenMPBuilder, but
-/// e.g. Clang does not pass it to its CodeGen layer and creates it only when
-/// needed for the LLVM pass pipline. We use some default options to avoid
-/// having to pass too many settings from the frontend that probably do not
-/// matter.
-///
-/// Currently, TargetMachine is only used sometimes by the unrollLoopPartial
-/// and getVectorTypeAlignment methods. If we are going to use TargetMachine
-/// for more purposes, especially those that are sensitive to TargetOptions,
-/// RelocModel and CodeModel, it might become be worth requiring front-ends to
-/// pass on their TargetMachine, or at least cache it between methods.
-/// Note that while fontends such as Clang have just a single main
-/// TargetMachine per translation unit, "target-cpu" and "target-features"
-/// that determine the TargetMachine are per-function and can be overrided
-/// using __attribute__((target("OPTIONS"))).
-static std::unique_ptr<TargetMachine>
-createTargetMachine(const std::string &Triple, StringRef CPU,
-                    StringRef Features, CodeGenOpt::Level OptLevel) {
-  std::string Error;
-  const llvm::Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
-  if (!TheTarget)
-    return {};
-
-  llvm::TargetOptions Options;
-  return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-      Triple, CPU, Features, Options, /*RelocModel=*/std::nullopt,
-      /*CodeModel=*/std::nullopt, OptLevel));
-}
-
-/// Create the TargetMachine object to query the backend for optimization
-/// preferences.
-static std::unique_ptr<TargetMachine>
-createTargetMachine(Function *F, CodeGenOpt::Level OptLevel) {
-  Module *M = F->getParent();
-
-  StringRef CPU = F->getFnAttribute("target-cpu").getValueAsString();
-  StringRef Features = F->getFnAttribute("target-features").getValueAsString();
-  const std::string &Triple = M->getTargetTriple();
-  return createTargetMachine(Triple, CPU, Features, OptLevel);
-}
-
 void llvm::spliceBB(IRBuilderBase::InsertPoint IP, BasicBlock *New,
                     bool CreateBranch) {
   assert(New->getFirstInsertionPt() == New->begin() &&
@@ -3083,18 +3039,6 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
   Builder.CreateBr(NewBlocks.front());
 }
 
-unsigned OpenMPIRBuilder::getSimdDefaultAlignment(const std::string &Triple,
-                                                  StringRef CPU,
-                                                  StringRef Features) {
-  std::unique_ptr<TargetMachine> TgtInfo(
-      createTargetMachine(Triple, CPU, Features, CodeGenOpt::Default));
-  if (!TgtInfo) {
-    return 0;
-  }
-
-  return TgtInfo->getSimdDefaultAlignment();
-}
-
 void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
                                 MapVector<Value *, Value *> AlignedVars,
                                 Value *IfCond, OrderKind Order,
@@ -3195,6 +3139,42 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   }
 
   addLoopMetadata(CanonicalLoop, LoopMDList);
+}
+
+/// Create the TargetMachine object to query the backend for optimization
+/// preferences.
+///
+/// Ideally, this would be passed from the front-end to the OpenMPBuilder, but
+/// e.g. Clang does not pass it to its CodeGen layer and creates it only when
+/// needed for the LLVM pass pipline. We use some default options to avoid
+/// having to pass too many settings from the frontend that probably do not
+/// matter.
+///
+/// Currently, TargetMachine is only used sometimes by the unrollLoopPartial
+/// method. If we are going to use TargetMachine for more purposes, especially
+/// those that are sensitive to TargetOptions, RelocModel and CodeModel, it
+/// might become be worth requiring front-ends to pass on their TargetMachine,
+/// or at least cache it between methods. Note that while fontends such as Clang
+/// have just a single main TargetMachine per translation unit, "target-cpu" and
+/// "target-features" that determine the TargetMachine are per-function and can
+/// be overrided using __attribute__((target("OPTIONS"))).
+static std::unique_ptr<TargetMachine>
+createTargetMachine(Function *F, CodeGenOpt::Level OptLevel) {
+  Module *M = F->getParent();
+
+  StringRef CPU = F->getFnAttribute("target-cpu").getValueAsString();
+  StringRef Features = F->getFnAttribute("target-features").getValueAsString();
+  const std::string &Triple = M->getTargetTriple();
+
+  std::string Error;
+  const llvm::Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
+  if (!TheTarget)
+    return {};
+
+  llvm::TargetOptions Options;
+  return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
+      Triple, CPU, Features, Options, /*RelocModel=*/std::nullopt,
+      /*CodeModel=*/std::nullopt, OptLevel));
 }
 
 /// Heuristically determine the best-performant unroll factor for \p CLI. This
