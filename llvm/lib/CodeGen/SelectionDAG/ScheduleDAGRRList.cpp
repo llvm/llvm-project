@@ -1433,7 +1433,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
       // of %noreg.  When the OptionalDef is set to a valid register, we need to
       // handle it in the same way as an ImplicitDef.
       for (unsigned i = 0; i < MCID.getNumDefs(); ++i)
-        if (MCID.OpInfo[i].isOptionalDef()) {
+        if (MCID.operands()[i].isOptionalDef()) {
           const SDValue &OptionalDef = Node->getOperand(i - Node->getNumValues());
           Register Reg = cast<RegisterSDNode>(OptionalDef)->getReg();
           CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);

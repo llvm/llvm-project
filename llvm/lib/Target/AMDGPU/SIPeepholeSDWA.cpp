@@ -1159,8 +1159,8 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
       continue;
 
     unsigned I = MI.getOperandNo(&Op);
-    if (Desc.OpInfo[I].RegClass == -1 ||
-        !TRI->isVSSuperClass(TRI->getRegClass(Desc.OpInfo[I].RegClass)))
+    if (Desc.operands()[I].RegClass == -1 ||
+        !TRI->isVSSuperClass(TRI->getRegClass(Desc.operands()[I].RegClass)))
       continue;
 
     if (ST.hasSDWAScalar() && ConstantBusCount == 0 && Op.isReg() &&

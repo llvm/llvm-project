@@ -480,7 +480,7 @@ bool HexagonMCChecker::checkNewValues() {
     MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, *ProducerInst);
     const unsigned ProducerOpIndex = std::get<1>(Producer);
 
-    if (Desc.OpInfo[ProducerOpIndex].RegClass ==
+    if (Desc.operands()[ProducerOpIndex].RegClass ==
         Hexagon::DoubleRegsRegClassID) {
       reportNote(ProducerInst->getLoc(),
                  "Double registers cannot be new-value producers");
