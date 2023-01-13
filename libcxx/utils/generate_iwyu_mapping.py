@@ -50,6 +50,11 @@ def generate_map(include):
         elif i == '__mbstate_t.h': continue
         elif i == '__mutex_base': continue
         elif i == '__node_handle': public = ['map', 'set', 'unordered_map', 'unordered_set']
+        elif i == '__pstl_algorithm': continue
+        elif i == '__pstl_config_site.in': continue
+        elif i == '__pstl_execution': continue
+        elif i == '__pstl_memory': continue
+        elif i == '__pstl_numeric': continue
         elif i == '__split_buffer': public = ['deque', 'vector']
         elif i == '__threading_support': public = ['atomic', 'mutex', 'semaphore', 'thread']
         elif i == '__tree': public = ['map', 'set']
