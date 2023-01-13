@@ -630,10 +630,10 @@ def Vector_FMAOp :
        Pure, AllTypesMatch<["lhs", "rhs", "acc", "result"]>,
        DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
      ] # ElementwiseMappable.traits>,
-    Arguments<(ins AnyVectorOfAnyRank:$lhs,
-                   AnyVectorOfAnyRank:$rhs,
-                   AnyVectorOfAnyRank:$acc)>,
-    Results<(outs AnyVectorOfAnyRank:$result)> {
+    Arguments<(ins VectorOfAnyRankOf<[AnyFloat]>:$lhs,
+                   VectorOfAnyRankOf<[AnyFloat]>:$rhs,
+                   VectorOfAnyRankOf<[AnyFloat]>:$acc)>,
+    Results<(outs VectorOfAnyRankOf<[AnyFloat]>:$result)> {
   let summary = "vector fused multiply-add";
   let description = [{
     Multiply-add expressions operate on n-D vectors and compute a fused
