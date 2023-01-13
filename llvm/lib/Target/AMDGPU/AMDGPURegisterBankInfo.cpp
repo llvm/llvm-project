@@ -459,7 +459,8 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
 
   InstructionMappings AltMappings;
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_CONSTANT: {
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_IMPLICIT_DEF: {
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
     if (Size == 1) {
       static const OpRegBankEntry<1> Table[3] = {
@@ -2117,7 +2118,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   unsigned Opc = MI.getOpcode();
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
   switch (Opc) {
-  case AMDGPU::G_CONSTANT: {
+  case AMDGPU::G_CONSTANT:
+  case AMDGPU::G_IMPLICIT_DEF: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
     if (DstTy != LLT::scalar(1))
@@ -2138,9 +2140,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     LLVMContext &Ctx = B.getMF().getFunction().getContext();
 
     MI.getOperand(0).setReg(NewDstReg);
-    uint64_t ConstVal = MI.getOperand(1).getCImm()->getZExtValue();
-    MI.getOperand(1).setCImm(
-        ConstantInt::get(IntegerType::getInt32Ty(Ctx), ConstVal));
+    if (Opc != AMDGPU::G_IMPLICIT_DEF) {
+      uint64_t ConstVal = MI.getOperand(1).getCImm()->getZExtValue();
+      MI.getOperand(1).setCImm(
+          ConstantInt::get(IntegerType::getInt32Ty(Ctx), ConstVal));
+    }
 
     MRI.setRegBank(NewDstReg, *DstBank);
     B.buildTrunc(DefRegs[0], NewDstReg);

@@ -558,7 +558,7 @@ def __lldb_init_module(debugger, dict):
     # interpreter.
     # Add any commands contained in this module to LLDB
     debugger.HandleCommand(
-        'command script add -c %s.VerifyDebugMapCommand %s' % (
+        'command script add -o -c %s.VerifyDebugMapCommand %s' % (
             __name__, VerifyDebugMapCommand.name))
     print('The "%s" command has been installed, type "help %s" for detailed '
           'help.' % (VerifyDebugMapCommand.name, VerifyDebugMapCommand.name))
