@@ -301,9 +301,8 @@ exit:
 
 define i16 @urem_elide(i16 %x) {
 ; CHECK-LABEL: @urem_elide(
-; CHECK-NEXT:    [[UREM:%.*]] = urem i16 [[X:%.*]], 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 42
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[UREM]], i16 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[X]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %urem = urem i16 %x, 42
@@ -314,7 +313,10 @@ define i16 @urem_elide(i16 %x) {
 
 define i16 @urem_expand(i16 %x) {
 ; CHECK-LABEL: @urem_expand(
-; CHECK-NEXT:    [[UREM:%.*]] = urem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[X_FROZEN:%.*]] = freeze i16 [[X:%.*]]
+; CHECK-NEXT:    [[UREM_UREM:%.*]] = sub nuw i16 [[X_FROZEN]], 42
+; CHECK-NEXT:    [[UREM_CMP:%.*]] = icmp ult i16 [[X_FROZEN]], 42
+; CHECK-NEXT:    [[UREM:%.*]] = select i1 [[UREM_CMP]], i16 [[X_FROZEN]], i16 [[UREM_UREM]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 84
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[UREM]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
