@@ -1149,7 +1149,7 @@ static Address CreateTempAllocaForCoercion(CodeGenFunction &CGF, llvm::Type *Ty,
                                            const Twine &Name = "tmp") {
   // Don't use an alignment that's worse than what LLVM would prefer.
   auto PrefAlign = CGF.CGM.getDataLayout().getPrefTypeAlign(Ty);
-  CharUnits Align = std::max(MinAlign, CharUnits::fromAlign(PrefAlign));
+  CharUnits Align = std::max(MinAlign, CharUnits::fromQuantity(PrefAlign));
 
   return CGF.CreateTempAlloca(Ty, Align, Name + ".coerce");
 }
@@ -5166,7 +5166,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // Materialize to a temporary.
         addr = CreateTempAlloca(
             RV.getScalarVal()->getType(),
-            CharUnits::fromAlign(std::max(layout->getAlignment(), scalarAlign)),
+            CharUnits::fromQuantity(std::max(layout->getAlignment(), scalarAlign)),
             "tmp",
             /*ArraySize=*/nullptr, &AllocaAddr);
         tempSize = EmitLifetimeStart(scalarSize, AllocaAddr.getPointer());
