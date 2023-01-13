@@ -441,7 +441,7 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
   // array.  We could theoretically do a store to an alloca or something, but
   // that doesn't seem worthwhile.
   Constant *C = dyn_cast<Constant>(V);
-  if (!C)
+  if (!C || isa<ConstantExpr>(C))
     return nullptr;
 
   // Only handle simple values that are a power of two bytes in size.
