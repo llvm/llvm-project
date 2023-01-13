@@ -51,6 +51,10 @@ extern void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                                  const char *Name);
 extern void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
                                const char *Name);
+extern void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
+                                const char *Name);
+extern void targetUnlockExplicit(void *HostPtr, int DeviceNum,
+                                 const char *Name);
 
 // This structure stores information of a mapped memory region.
 struct MapComponentInfoTy {

@@ -425,6 +425,80 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
   DP("omp_target_free deallocated device ptr\n");
 }
 
+void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
+                         const char *Name) {
+  TIMESCOPE();
+  DP("Call to %s for device %d locking %zu bytes\n", Name, DeviceNum, Size);
+
+  if (Size <= 0) {
+    DP("Call to %s with non-positive length\n", Name);
+    return NULL;
+  }
+
+  void *rc = NULL;
+
+  if (!deviceIsReady(DeviceNum)) {
+    DP("%s returns NULL ptr\n", Name);
+    return NULL;
+  }
+
+  DeviceTy *DevicePtr = nullptr;
+  {
+    std::lock_guard<decltype(PM->RTLsMtx)> LG(PM->RTLsMtx);
+
+    if (!PM->Devices[DeviceNum]) {
+      DP("%s returns, device %d not available\n", Name, DeviceNum);
+      return nullptr;
+    }
+
+    DevicePtr = PM->Devices[DeviceNum].get();
+  }
+
+  int32_t err = 0;
+  if (DevicePtr->RTL->data_lock) {
+    err = DevicePtr->RTL->data_lock(DeviceNum, HostPtr, Size, &rc);
+    if (err) {
+      DP("Could not lock ptr %p\n", HostPtr);
+      return nullptr;
+    }
+  }
+  DP("%s returns device ptr " DPxMOD "\n", Name, DPxPTR(rc));
+  return rc;
+}
+
+void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
+  TIMESCOPE();
+  DP("Call to %s for device %d unlocking\n", Name, DeviceNum);
+
+  DeviceTy *DevicePtr = nullptr;
+  {
+    std::lock_guard<decltype(PM->RTLsMtx)> LG(PM->RTLsMtx);
+
+    // Don't check deviceIsReady as it can initialize the device if needed.
+    // Just check if DeviceNum exists as targetUnlockExplicit can be called
+    // during process exit/free (and it may have been already destroyed) and
+    // targetAllocExplicit will have already checked deviceIsReady anyway.
+    size_t DevicesSize = PM->Devices.size();
+
+    if (DevicesSize <= (size_t)DeviceNum) {
+      DP("Device ID  %d does not have a matching RTL\n", DeviceNum);
+      return;
+    }
+
+    if (!PM->Devices[DeviceNum]) {
+      DP("%s returns, device %d not available\n", Name, DeviceNum);
+      return;
+    }
+
+    DevicePtr = PM->Devices[DeviceNum].get();
+  } // unlock RTLsMtx
+
+  if (DevicePtr->RTL->data_unlock)
+    DevicePtr->RTL->data_unlock(DeviceNum, HostPtr);
+
+  DP("%s returns\n", Name);
+}
+
 /// Call the user-defined mapper function followed by the appropriate
 // targetData* function (targetData{Begin,End,Update}).
 int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
