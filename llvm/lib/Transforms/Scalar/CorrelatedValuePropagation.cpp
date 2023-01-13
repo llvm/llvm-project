@@ -769,7 +769,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool expandURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   assert(Instr->getOpcode() == Instruction::URem);
   assert(!Instr->getType()->isVectorTy());
 
@@ -778,6 +778,14 @@ static bool expandURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 
   ConstantRange XCR = LVI->getConstantRange(X, Instr);
   ConstantRange YCR = LVI->getConstantRange(Y, Instr);
+
+  // X u% Y -> X  iff X u< Y
+  if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
+    Instr->replaceAllUsesWith(X);
+    Instr->eraseFromParent();
+    ++NumURemExpanded;
+    return true;
+  }
 
   // Given
   //   R  = X u% Y
@@ -807,7 +815,8 @@ static bool expandURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
                 YCR.umul_sat(APInt(YCR.getBitWidth(), 2))) &&
       !YCR.isAllNegative())
     return false;
-  IRBuilder<> B{Instr};
+
+  IRBuilder<> B(Instr);
   // NOTE: this transformation introduces two uses of X,
   //       but it may be undef so we must freeze it first.
   X = B.CreateFreeze(X, X->getName() + ".frozen");
@@ -819,30 +828,6 @@ static bool expandURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   Instr->eraseFromParent();
   ++NumURemExpanded;
   return true;
-}
-
-static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
-  assert(Instr->getOpcode() == Instruction::URem);
-  assert(!Instr->getType()->isVectorTy());
-
-  Value *X = Instr->getOperand(0);
-  Value *Y = Instr->getOperand(1);
-
-  ConstantRange XCR = LVI->getConstantRange(X, Instr);
-  ConstantRange YCR = LVI->getConstantRange(Y, Instr);
-
-  // X u% Y -> X  iff X u< Y
-  if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
-    Instr->replaceAllUsesWith(X);
-    Instr->eraseFromParent();
-    ++NumURemExpanded;
-    return true;
-  }
-
-  if (expandURem(Instr, LVI))
-    return true;
-
-  return false;
 }
 
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's
