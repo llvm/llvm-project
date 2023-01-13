@@ -38,6 +38,14 @@ using namespace lldb_private;
     testBZcondBranch(this, name, false, rj_val_continued);                     \
   }
 
+#define GEN_BCZCOND_TEST(bit, name, cj_val_branched, cj_val_continued)         \
+  TEST_F(LoongArch##bit##EmulatorTester, test##name##branched) {               \
+    testBCZcondBranch(this, name, true, cj_val_branched);                      \
+  }                                                                            \
+  TEST_F(LoongArch##bit##EmulatorTester, test##name##continued) {              \
+    testBCZcondBranch(this, name, false, cj_val_continued);                    \
+  }
+
 struct LoongArch64EmulatorTester : public EmulateInstructionLoongArch,
                                    testing::Test {
   RegisterInfoPOSIX_loongarch64::GPR gpr;
@@ -136,8 +144,26 @@ static uint32_t BNEZ(uint32_t rj, int32_t offs21) {
   return EncodeBZcondType(0b010001, rj, uint32_t(offs21));
 }
 
+// BCEQZ BCNEZ
+static uint32_t EncodeBCZcondType(uint32_t opcode, uint8_t cj,
+                                  uint32_t offs21) {
+  uint32_t offs20_16 = (offs21 & 0x001f0000) >> 16;
+  uint32_t offs15_0 = offs21 & 0x0000ffff;
+  return (opcode >> 2) << 26 | offs15_0 << 10 | (opcode & 0b11) << 8 | cj << 5 |
+         offs20_16;
+}
+
+static uint32_t BCEQZ(uint8_t cj, int32_t offs21) {
+  return EncodeBCZcondType(0b01001000, cj, uint32_t(offs21));
+}
+
+static uint32_t BCNEZ(uint8_t cj, int32_t offs21) {
+  return EncodeBCZcondType(0b01001001, cj, uint32_t(offs21));
+}
+
 using EncoderBcond = uint32_t (*)(uint32_t rj, uint32_t rd, int32_t offs16);
 using EncoderBZcond = uint32_t (*)(uint32_t rj, int32_t offs21);
+using EncoderBCZcond = uint32_t (*)(uint8_t cj, int32_t offs21);
 
 TEST_F(LoongArch64EmulatorTester, testJIRL) {
   bool success = false;
@@ -220,6 +246,21 @@ static void testBZcondBranch(LoongArch64EmulatorTester *tester,
   ASSERT_EQ(pc, old_pc + (branched ? (-256 * 4) : 4));
 }
 
+static void testBCZcondBranch(LoongArch64EmulatorTester *tester,
+                              EncoderBCZcond encoder, bool branched,
+                              uint32_t cj_val) {
+  bool success = false;
+  addr_t old_pc = 0x12000600;
+  tester->WritePC(old_pc);
+  tester->fpr.fcc = cj_val;
+  // bc<cmp>z fcc0, 256
+  uint32_t inst = encoder(0, 256);
+  ASSERT_TRUE(tester->TestExecute(inst));
+  auto pc = tester->ReadPC(&success);
+  ASSERT_TRUE(success);
+  ASSERT_EQ(pc, old_pc + (branched ? (256 * 4) : 4));
+}
+
 GEN_BCOND_TEST(64, BEQ, 1, 1, 0)
 GEN_BCOND_TEST(64, BNE, 1, 0, 1)
 GEN_BCOND_TEST(64, BLT, -2, 1, -3)
@@ -228,3 +269,5 @@ GEN_BCOND_TEST(64, BLTU, -2, -1, 1)
 GEN_BCOND_TEST(64, BGEU, -2, 1, -1)
 GEN_BZCOND_TEST(64, BEQZ, 0, 1)
 GEN_BZCOND_TEST(64, BNEZ, 1, 0)
+GEN_BCZCOND_TEST(64, BCEQZ, 0, 1)
+GEN_BCZCOND_TEST(64, BCNEZ, 1, 0)
