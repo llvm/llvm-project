@@ -964,15 +964,6 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
       else if (PolicyAttrs.isTAPolicy() && HasPassthruOp &&
                IsPrototypeDefaultTU)
         NewPrototype.erase(NewPrototype.begin() + 1);
-      if (DefaultScheme == PolicyScheme::HasPassthruOperandAtIdx1) {
-        if (PolicyAttrs.isTUPolicy() && !IsPrototypeDefaultTU) {
-          // Insert undisturbed output to index 1
-          NewPrototype.insert(NewPrototype.begin() + 2, NewPrototype[0]);
-        } else if (PolicyAttrs.isTAPolicy() && IsPrototypeDefaultTU) {
-          // Erase passthru for TA policy
-          NewPrototype.erase(NewPrototype.begin() + 2);
-        }
-      }
     } else if (PolicyAttrs.isTUPolicy() && HasPassthruOp) {
       // NF > 1 cases for segment load operations.
       // Convert
