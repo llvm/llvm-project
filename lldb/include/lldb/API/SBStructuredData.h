@@ -93,7 +93,6 @@ protected:
   friend class SBLaunchInfo;
   friend class SBDebugger;
   friend class SBTarget;
-  friend class SBPlatform;
   friend class SBProcess;
   friend class SBThread;
   friend class SBThreadPlan;
