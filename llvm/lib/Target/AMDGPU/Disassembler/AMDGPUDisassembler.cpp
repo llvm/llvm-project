@@ -662,7 +662,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       } else {
         for (unsigned i = 0; i < NSAArgs; ++i) {
           const unsigned VAddrIdx = VAddr0Idx + 1 + i;
-          auto VAddrRCID = MCII->get(MI.getOpcode()).OpInfo[VAddrIdx].RegClass;
+          auto VAddrRCID =
+              MCII->get(MI.getOpcode()).operands()[VAddrIdx].RegClass;
           MI.insert(MI.begin() + VAddrIdx,
                     createRegOperand(VAddrRCID, Bytes[i]));
         }
@@ -955,7 +956,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   // Widen the register to the correct number of enabled channels.
   unsigned NewVdata = AMDGPU::NoRegister;
   if (DstSize != Info->VDataDwords) {
-    auto DataRCID = MCII->get(NewOpcode).OpInfo[VDataIdx].RegClass;
+    auto DataRCID = MCII->get(NewOpcode).operands()[VDataIdx].RegClass;
 
     // Get first subregister of VData
     unsigned Vdata0 = MI.getOperand(VDataIdx).getReg();
@@ -978,7 +979,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     unsigned VAddrSub0 = MRI.getSubReg(VAddr0, AMDGPU::sub0);
     VAddr0 = (VAddrSub0 != 0) ? VAddrSub0 : VAddr0;
 
-    auto AddrRCID = MCII->get(NewOpcode).OpInfo[VAddr0Idx].RegClass;
+    auto AddrRCID = MCII->get(NewOpcode).operands()[VAddr0Idx].RegClass;
     NewVAddr0 = MRI.getMatchingSuperReg(VAddr0, AMDGPU::sub0,
                                         &MRI.getRegClass(AddrRCID));
     if (NewVAddr0 == AMDGPU::NoRegister)
@@ -1070,7 +1071,7 @@ DecodeStatus AMDGPUDisassembler::convertFMAanyK(MCInst &MI,
   assert(DescNumOps == MI.getNumOperands());
   for (unsigned I = 0; I < DescNumOps; ++I) {
     auto &Op = MI.getOperand(I);
-    auto OpType = Desc.OpInfo[I].OperandType;
+    auto OpType = Desc.operands()[I].OperandType;
     bool IsDeferredOp = (OpType == AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED ||
                          OpType == AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED);
     if (Op.isImm() && Op.getImm() == AMDGPU::EncValues::LITERAL_CONST &&
