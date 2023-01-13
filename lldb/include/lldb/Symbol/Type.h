@@ -21,6 +21,7 @@
 #include <set>
 
 namespace lldb_private {
+class SymbolFileCommon;
 
 /// CompilerContext allows an array of these items to be passed to perform
 /// detailed lookups in SymbolVendor and SymbolFile functions.
@@ -99,16 +100,6 @@ public:
     Layout = 2,
     Full = 3
   };
-
-  Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
-       llvm::Optional<uint64_t> byte_size, SymbolContextScope *context,
-       lldb::user_id_t encoding_uid, EncodingDataType encoding_uid_type,
-       const Declaration &decl, const CompilerType &compiler_qual_type,
-       ResolveState compiler_type_resolve_state, uint32_t opaque_payload = 0);
-
-  // This makes an invalid type.  Used for functions that return a Type when
-  // they get an error.
-  Type();
 
   void Dump(Stream *s, bool show_context,
             lldb::DescriptionLevel level = lldb::eDescriptionLevelFull);
@@ -239,6 +230,22 @@ protected:
   Type *GetEncodingType();
 
   bool ResolveCompilerType(ResolveState compiler_type_resolve_state);
+private:
+  /// Only allow Symbol File to create types, as they should own them by keeping
+  /// them in their TypeList. \see SymbolFile::MakeType() reference in the
+  /// header documentation here so users will know what function to use if the
+  /// get a compile error.
+  friend class lldb_private::SymbolFileCommon;
+
+  Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
+       llvm::Optional<uint64_t> byte_size, SymbolContextScope *context,
+       lldb::user_id_t encoding_uid, EncodingDataType encoding_uid_type,
+       const Declaration &decl, const CompilerType &compiler_qual_type,
+       ResolveState compiler_type_resolve_state, uint32_t opaque_payload = 0);
+
+  // This makes an invalid type.  Used for functions that return a Type when
+  // they get an error.
+  Type();
 };
 
 // the two classes here are used by the public API as a backend to the SBType
