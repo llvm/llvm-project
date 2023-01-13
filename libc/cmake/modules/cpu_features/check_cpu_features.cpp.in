@@ -1,5 +1,5 @@
-#include <cstdio>
-#include <cstdlib>
+#include <stdio.h>
+#include <stdlib.h>
 
 // This file is instantiated by CMake.
 // DEFINITIONS below is replaced with a set of lines like so:
