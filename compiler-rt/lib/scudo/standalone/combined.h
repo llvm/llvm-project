@@ -191,7 +191,6 @@ public:
         getFlags()->GWP_ASAN_MaxSimultaneousAllocations;
     Opt.SampleRate = getFlags()->GWP_ASAN_SampleRate;
     Opt.InstallSignalHandlers = getFlags()->GWP_ASAN_InstallSignalHandlers;
-    Opt.Recoverable = getFlags()->GWP_ASAN_Recoverable;
     // Embedded GWP-ASan is locked through the Scudo atfork handler (via
     // Allocator::disable calling GWPASan.disable). Disable GWP-ASan's atfork
     // handler.
@@ -203,8 +202,7 @@ public:
       gwp_asan::segv_handler::installSignalHandlers(
           &GuardedAlloc, Printf,
           gwp_asan::backtrace::getPrintBacktraceFunction(),
-          gwp_asan::backtrace::getSegvBacktraceFunction(),
-          Opt.Recoverable);
+          gwp_asan::backtrace::getSegvBacktraceFunction());
 
     GuardedAllocSlotSize =
         GuardedAlloc.getAllocatorState()->maximumAllocationSize();

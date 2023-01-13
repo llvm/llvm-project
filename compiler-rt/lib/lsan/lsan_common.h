@@ -105,9 +105,9 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches);
 void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg);
-
-void RunCallbackForEachThreadLocked(__sanitizer::ThreadRegistry::ThreadCallback cb,
-                                    void *arg);
+void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs);
+void ReportUnsuspendedThreadsLocked(InternalMmapVector<tid_t> *threads);
+void FinishThreadLocked(u32 tid);
 
 //// --------------------------------------------------------------------------
 //// Allocator prototypes.
@@ -145,8 +145,6 @@ void ForEachChunk(ForEachChunkCallback callback, void *arg);
 
 // Helper for __lsan_ignore_object().
 IgnoreObjectResult IgnoreObjectLocked(const void *p);
-
-void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs);
 
 // The rest of the LSan interface which is implemented by library.
 
@@ -269,6 +267,7 @@ void DoLeakCheck();
 void DoRecoverableLeakCheckVoid();
 void DisableCounterUnderflow();
 bool DisabledInThisThread();
+void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg);
 
 // Used to implement __lsan::ScopedDisabler.
 void DisableInThisThread();

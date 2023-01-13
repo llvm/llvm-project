@@ -14,11 +14,9 @@
 #if defined(__Fuchsia__)
 #include <zxtest/zxtest.h>
 using Test = ::zxtest::Test;
-template <typename T> using TestWithParam = ::zxtest::TestWithParam<T>;
 #else
 #include "gtest/gtest.h"
 using Test = ::testing::Test;
-template <typename T> using TestWithParam = ::testing::TestWithParam<T>;
 #endif
 
 #include "gwp_asan/guarded_pool_allocator.h"
@@ -83,8 +81,7 @@ protected:
       MaxSimultaneousAllocations;
 };
 
-class BacktraceGuardedPoolAllocator
-    : public TestWithParam</* Recoverable */ bool> {
+class BacktraceGuardedPoolAllocator : public Test {
 public:
   void SetUp() override {
     gwp_asan::options::Options Opts;
@@ -94,19 +91,10 @@ public:
     Opts.InstallForkHandlers = gwp_asan::test::OnlyOnce();
     GPA.init(Opts);
 
-    // In recoverable mode, capture GWP-ASan logs to an internal buffer so that
-    // we can search it in unit tests. For non-recoverable tests, the default
-    // buffer is fine, as any tests should be EXPECT_DEATH()'d.
-    Recoverable = GetParam();
-    gwp_asan::Printf_t PrintfFunction = PrintfToBuffer;
-    GetOutputBuffer().clear();
-    if (!Recoverable)
-      PrintfFunction = gwp_asan::test::getPrintfFunction();
-
     gwp_asan::segv_handler::installSignalHandlers(
-        &GPA, PrintfFunction, gwp_asan::backtrace::getPrintBacktraceFunction(),
-        gwp_asan::backtrace::getSegvBacktraceFunction(),
-        /* Recoverable */ Recoverable);
+        &GPA, gwp_asan::test::getPrintfFunction(),
+        gwp_asan::backtrace::getPrintBacktraceFunction(),
+        gwp_asan::backtrace::getSegvBacktraceFunction());
   }
 
   void TearDown() override {
@@ -115,23 +103,7 @@ public:
   }
 
 protected:
-  static std::string &GetOutputBuffer() {
-    static std::string Buffer;
-    return Buffer;
-  }
-
-  __attribute__((format(printf, 1, 2))) static void
-  PrintfToBuffer(const char *Format, ...) {
-    va_list AP;
-    va_start(AP, Format);
-    char Buffer[8192];
-    vsnprintf(Buffer, sizeof(Buffer), Format, AP);
-    GetOutputBuffer() += Buffer;
-    va_end(AP);
-  }
-
   gwp_asan::GuardedPoolAllocator GPA;
-  bool Recoverable;
 };
 
 // https://github.com/google/googletest/blob/master/docs/advanced.md#death-tests-and-threads
