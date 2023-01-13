@@ -183,6 +183,29 @@ static mlir::Value genRuntimeAllocate(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, callee, operands).getResult(0);
 }
 
+/// Generate a sequence of runtime calls to allocate memory and assign with the
+/// \p source.
+static mlir::Value genRuntimeAllocateSource(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            const fir::MutableBoxValue &box,
+                                            fir::ExtendedValue source,
+                                            ErrorManager &errorManager) {
+  mlir::func::FuncOp callee =
+      box.isPointer()
+          ? fir::runtime::getRuntimeFunc<mkRTKey(PointerAllocateSource)>(
+                loc, builder)
+          : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocateSource)>(
+                loc, builder);
+  llvm::SmallVector<mlir::Value> args{
+      box.getAddr(),           fir::getBase(source),
+      errorManager.hasStat,    errorManager.errMsgAddr,
+      errorManager.sourceFile, errorManager.sourceLine};
+  llvm::SmallVector<mlir::Value> operands;
+  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
+    operands.emplace_back(builder.createConvert(loc, snd, fst));
+  return builder.create<fir::CallOp>(loc, callee, operands).getResult(0);
+}
+
 /// Generate a runtime call to deallocate memory.
 static mlir::Value genRuntimeDeallocate(fir::FirOpBuilder &builder,
                                         mlir::Location loc,
@@ -255,8 +278,11 @@ public:
     visitAllocateOptions();
     lowerAllocateLengthParameters();
     errorManager.init(converter, loc, statExpr, errMsgExpr);
-    if (sourceExpr || moldExpr)
-      TODO(loc, "lower MOLD/SOURCE expr in allocate");
+    Fortran::lower::StatementContext stmtCtx;
+    if (sourceExpr)
+      sourceExv = converter.genExprBox(loc, *sourceExpr, stmtCtx);
+    if (moldExpr)
+      TODO(loc, "lower MOLD expr in allocate");
     mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
     for (const auto &allocation :
          std::get<std::list<Fortran::parser::Allocation>>(stmt.t))
@@ -393,45 +419,13 @@ private:
     }
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
-    if (box.isPointer()) {
-      // For pointers, the descriptor may still be uninitialized (see Fortran
-      // 2018 19.5.2.2). The allocation runtime needs to be given a descriptor
-      // with initialized rank, types and attributes. Initialize the descriptor
-      // here to ensure these constraints are fulfilled.
-      mlir::Value nullPointer = fir::factory::createUnallocatedBox(
-          builder, loc, box.getBoxTy(), box.nonDeferredLenParams());
-      builder.create<fir::StoreOp>(loc, nullPointer, box.getAddr());
-    } else {
-      assert(box.isAllocatable() && "must be an allocatable");
-      // For allocatables, sync the MutableBoxValue and descriptor before the
-      // calls in case it is tracked locally by a set of variables.
-      fir::factory::getMutableIRBox(builder, loc, box);
-    }
+    genAllocateObjectInit(box);
     if (alloc.hasCoarraySpec())
       TODO(loc, "coarray allocation");
     if (alloc.type.IsPolymorphic())
       genSetType(alloc, box, loc);
     genSetDeferredLengthParameters(alloc, box);
-    // Set bounds for arrays
-    mlir::Type idxTy = builder.getIndexType();
-    mlir::Type i32Ty = builder.getIntegerType(32);
-    Fortran::lower::StatementContext stmtCtx;
-    for (const auto &iter : llvm::enumerate(alloc.getShapeSpecs())) {
-      mlir::Value lb;
-      const auto &bounds = iter.value().t;
-      if (const std::optional<Fortran::parser::BoundExpr> &lbExpr =
-              std::get<0>(bounds))
-        lb = fir::getBase(converter.genExprValue(
-            loc, Fortran::semantics::GetExpr(*lbExpr), stmtCtx));
-      else
-        lb = builder.createIntegerConstant(loc, idxTy, 1);
-      mlir::Value ub = fir::getBase(converter.genExprValue(
-          loc, Fortran::semantics::GetExpr(std::get<1>(bounds)), stmtCtx));
-      mlir::Value dimIndex =
-          builder.createIntegerConstant(loc, i32Ty, iter.index());
-      // Runtime call
-      genRuntimeSetBounds(builder, loc, box, dimIndex, lb, ub);
-    }
+    genAllocateObjectBounds(alloc, box);
     mlir::Value stat = genRuntimeAllocate(builder, loc, box, errorManager);
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     errorManager.assignStat(builder, loc, stat);
@@ -478,8 +472,87 @@ private:
       TODO(loc, "derived type length parameters in allocate");
   }
 
-  void genSourceAllocation(const Allocation &, const fir::MutableBoxValue &) {
-    TODO(loc, "SOURCE allocation");
+  void genAllocateObjectInit(const fir::MutableBoxValue &box) {
+    if (box.isPointer()) {
+      // For pointers, the descriptor may still be uninitialized (see Fortran
+      // 2018 19.5.2.2). The allocation runtime needs to be given a descriptor
+      // with initialized rank, types and attributes. Initialize the descriptor
+      // here to ensure these constraints are fulfilled.
+      mlir::Value nullPointer = fir::factory::createUnallocatedBox(
+          builder, loc, box.getBoxTy(), box.nonDeferredLenParams());
+      builder.create<fir::StoreOp>(loc, nullPointer, box.getAddr());
+    } else {
+      assert(box.isAllocatable() && "must be an allocatable");
+      // For allocatables, sync the MutableBoxValue and descriptor before the
+      // calls in case it is tracked locally by a set of variables.
+      fir::factory::getMutableIRBox(builder, loc, box);
+    }
+  }
+
+  void genAllocateObjectBounds(const Allocation &alloc,
+                               const fir::MutableBoxValue &box) {
+    // Set bounds for arrays
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Type i32Ty = builder.getIntegerType(32);
+    Fortran::lower::StatementContext stmtCtx;
+    for (const auto &iter : llvm::enumerate(alloc.getShapeSpecs())) {
+      mlir::Value lb;
+      const auto &bounds = iter.value().t;
+      if (const std::optional<Fortran::parser::BoundExpr> &lbExpr =
+              std::get<0>(bounds))
+        lb = fir::getBase(converter.genExprValue(
+            loc, Fortran::semantics::GetExpr(*lbExpr), stmtCtx));
+      else
+        lb = builder.createIntegerConstant(loc, idxTy, 1);
+      mlir::Value ub = fir::getBase(converter.genExprValue(
+          loc, Fortran::semantics::GetExpr(std::get<1>(bounds)), stmtCtx));
+      mlir::Value dimIndex =
+          builder.createIntegerConstant(loc, i32Ty, iter.index());
+      // Runtime call
+      genRuntimeSetBounds(builder, loc, box, dimIndex, lb, ub);
+    }
+    if (sourceExpr && sourceExpr->Rank() > 0 &&
+        alloc.getShapeSpecs().size() == 0) {
+      // If the alloc object does not have shape list, get the bounds from the
+      // source expression.
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+      const auto *sourceBox = sourceExv.getBoxOf<fir::BoxValue>();
+      assert(sourceBox && "source expression should be lowered to one box");
+      for (int i = 0; i < sourceExpr->Rank(); ++i) {
+        auto dimVal = builder.createIntegerConstant(loc, idxTy, i);
+        auto dimInfo = builder.create<fir::BoxDimsOp>(
+            loc, idxTy, idxTy, idxTy, sourceBox->getAddr(), dimVal);
+        mlir::Value lb =
+            fir::factory::readLowerBound(builder, loc, sourceExv, i, one);
+        mlir::Value extent = dimInfo.getResult(1);
+        mlir::Value ub = builder.create<mlir::arith::SubIOp>(
+            loc, builder.create<mlir::arith::AddIOp>(loc, extent, lb), one);
+        mlir::Value dimIndex = builder.createIntegerConstant(loc, i32Ty, i);
+        genRuntimeSetBounds(builder, loc, box, dimIndex, lb, ub);
+      }
+    }
+  }
+
+  void genSourceAllocation(const Allocation &alloc,
+                           const fir::MutableBoxValue &box) {
+    // Generate a sequence of runtime calls.
+    errorManager.genStatCheck(builder, loc);
+    genAllocateObjectInit(box);
+    if (alloc.hasCoarraySpec())
+      TODO(loc, "coarray allocation");
+    if (alloc.type.IsPolymorphic())
+      TODO(loc, "polymorphic allocation with SOURCE specifier");
+    // Set length of the allocate object if it has. Otherwise, get the length
+    // from source for the deferred length parameter.
+    if (lenParams.empty() && box.isCharacter() &&
+        !box.hasNonDeferredLenParams())
+      lenParams.push_back(fir::factory::readCharLen(builder, loc, sourceExv));
+    genSetDeferredLengthParameters(alloc, box);
+    genAllocateObjectBounds(alloc, box);
+    mlir::Value stat =
+        genRuntimeAllocateSource(builder, loc, box, sourceExv, errorManager);
+    fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
+    errorManager.assignStat(builder, loc, stat);
   }
   void genMoldAllocation(const Allocation &, const fir::MutableBoxValue &) {
     TODO(loc, "MOLD allocation");
@@ -576,6 +649,8 @@ private:
   // value of the length parameters that were specified inside.
   llvm::SmallVector<mlir::Value> lenParams;
   ErrorManager errorManager;
+  // 9.7.1.2(7) The source-expr is evaluated exactly once for each AllocateStmt.
+  fir::ExtendedValue sourceExv;
 
   mlir::Location loc;
 };
