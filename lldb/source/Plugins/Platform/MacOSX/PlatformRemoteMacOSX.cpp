@@ -57,8 +57,10 @@ void PlatformRemoteMacOSX::Terminate() {
   PlatformDarwin::Terminate();
 }
 
-PlatformSP PlatformRemoteMacOSX::CreateInstance(bool force,
-                                                const ArchSpec *arch) {
+PlatformSP
+PlatformRemoteMacOSX::CreateInstance(bool force, const ArchSpec *arch,
+                                     const Debugger *debugger,
+                                     const ScriptedMetadata *metadata) {
   Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
