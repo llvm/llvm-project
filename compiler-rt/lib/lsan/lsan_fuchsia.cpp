@@ -68,7 +68,7 @@ void InitializeMainThread() {
 }
 
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {
-  GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+  RunCallbackForEachThreadLocked(
       [](ThreadContextBase *tctx, void *arg) {
         auto ctx = static_cast<ThreadContext *>(tctx);
         static_cast<decltype(caches)>(arg)->push_back(ctx->cache_begin());

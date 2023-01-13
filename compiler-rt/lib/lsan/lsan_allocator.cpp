@@ -319,7 +319,7 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
   }
 }
 
-void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
+void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs) {
   // This function can be used to treat memory reachable from `tctx` as live.
   // This is useful for threads that have been created but not yet started.
 
