@@ -26,9 +26,8 @@ public:
   PlatformRemoteAppleTV();
 
   // Class Functions
-  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch,
-                                         const Debugger *debugger,
-                                         const ScriptedMetadata *metadata);
+  static lldb::PlatformSP CreateInstance(bool force,
+                                         const lldb_private::ArchSpec *arch);
 
   static void Initialize();
 

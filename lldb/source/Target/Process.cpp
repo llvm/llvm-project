@@ -3073,8 +3073,7 @@ void Process::CompleteAttach() {
                                      ArchSpec::CompatibleMatch, nullptr)) {
       ArchSpec platform_arch;
       platform_sp = GetTarget().GetDebugger().GetPlatformList().GetOrCreate(
-          target_arch, process_host_arch, &platform_arch,
-          /*metadata = */ nullptr);
+          target_arch, process_host_arch, &platform_arch);
       if (platform_sp) {
         GetTarget().SetPlatform(platform_sp);
         GetTarget().SetArchitecture(platform_arch);

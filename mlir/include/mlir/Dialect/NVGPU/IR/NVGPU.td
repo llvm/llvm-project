@@ -37,6 +37,23 @@ def NVGPU_Dialect : Dialect {
 
   let useDefaultTypePrinterParser = 1;
   let useFoldAPI = kEmitFoldAdaptorFolder;
+
+  let extraClassDeclaration = [{
+    /// Return true if the given MemRefType has an integer address
+    /// space that matches the NVVM shared memory address space or
+    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
+    static bool hasSharedMemoryAddressSpace(MemRefType type);
+
+    /// Defines the MemRef memory space attribute numeric value that indicates
+    /// a memref is located in global memory. This should correspond to the
+    /// value used in NVVM.
+    static constexpr unsigned kGlobaldMemoryAddressSpace = 1;
+
+    /// Defines the MemRef memory space attribute numeric value that indicates
+    /// a memref is located in shared memory. This should correspond to the
+    /// value used in NVVM.
+    static constexpr unsigned kSharedMemoryAddressSpace = 3;
+  }];
 }
 
 //===----------------------------------------------------------------------===//

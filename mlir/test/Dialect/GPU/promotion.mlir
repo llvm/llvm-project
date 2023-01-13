@@ -5,7 +5,7 @@ gpu.module @foo {
   // Verify that the attribution was indeed introduced
   // CHECK-LABEL: @memref3d
   // CHECK-SAME: (%[[arg:.*]]: memref<5x4xf32>
-  // CHECK-SAME: workgroup(%[[promoted:.*]] : memref<5x4xf32, 3>)
+  // CHECK-SAME: workgroup(%[[promoted:.*]] : memref<5x4xf32, #gpu.address_space<workgroup>>)
   gpu.func @memref3d(%arg0: memref<5x4xf32> {gpu.test_promote_workgroup}) kernel {
     // Verify that loop bounds are emitted, the order does not matter.
     // CHECK-DAG: %[[c1:.*]] = arith.constant 1
@@ -30,7 +30,7 @@ gpu.module @foo {
     // CHECK:       store %[[v]], %[[promoted]][%[[i1]], %[[i2]]]
 
     // Verify that the use has been rewritten.
-    // CHECK: "use"(%[[promoted]]) : (memref<5x4xf32, 3>)
+    // CHECK: "use"(%[[promoted]]) : (memref<5x4xf32, #gpu.address_space<workgroup>>)
     "use"(%arg0) : (memref<5x4xf32>) -> ()
 
 
@@ -55,7 +55,7 @@ gpu.module @foo {
   // Verify that the attribution was indeed introduced
   // CHECK-LABEL: @memref5d
   // CHECK-SAME: (%[[arg:.*]]: memref<8x7x6x5x4xf32>
-  // CHECK-SAME: workgroup(%[[promoted:.*]] : memref<8x7x6x5x4xf32, 3>)
+  // CHECK-SAME: workgroup(%[[promoted:.*]] : memref<8x7x6x5x4xf32, #gpu.address_space<workgroup>>)
   gpu.func @memref5d(%arg0: memref<8x7x6x5x4xf32> {gpu.test_promote_workgroup}) kernel {
     // Verify that loop bounds are emitted, the order does not matter.
     // CHECK-DAG: %[[c0:.*]] = arith.constant 0
@@ -84,7 +84,7 @@ gpu.module @foo {
     // CHECK:           store %[[v]], %[[promoted]][%[[i0]], %[[i1]], %[[i2]], %[[i3]], %[[i4]]]
 
     // Verify that the use has been rewritten.
-    // CHECK: "use"(%[[promoted]]) : (memref<8x7x6x5x4xf32, 3>)
+    // CHECK: "use"(%[[promoted]]) : (memref<8x7x6x5x4xf32, #gpu.address_space<workgroup>>)
     "use"(%arg0) : (memref<8x7x6x5x4xf32>) -> ()
 
     // Verify that loop loops for the copy are emitted.
@@ -108,11 +108,11 @@ gpu.module @foo {
   // Check that attribution insertion works fine.
   // CHECK-LABEL: @insert
   // CHECK-SAME: (%{{.*}}: memref<4xf32>
-  // CHECK-SAME: workgroup(%{{.*}}: memref<1x1xf64, 3>
-  // CHECK-SAME: %[[wg2:.*]] : memref<4xf32, 3>)
+  // CHECK-SAME: workgroup(%{{.*}}: memref<1x1xf64, #gpu.address_space<workgroup>>
+  // CHECK-SAME: %[[wg2:.*]] : memref<4xf32, #gpu.address_space<workgroup>>)
   // CHECK-SAME: private(%{{.*}}: memref<1x1xi64, 5>)
   gpu.func @insert(%arg0: memref<4xf32> {gpu.test_promote_workgroup})
-      workgroup(%arg1: memref<1x1xf64, 3>)
+      workgroup(%arg1: memref<1x1xf64, #gpu.address_space<workgroup>>)
       private(%arg2: memref<1x1xi64, 5>)
       kernel {
     // CHECK: "use"(%[[wg2]])

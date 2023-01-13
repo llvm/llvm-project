@@ -1015,16 +1015,22 @@ LogicalResult GPUFuncOp::verifyType() {
 
 static LogicalResult verifyAttributions(Operation *op,
                                         ArrayRef<BlockArgument> attributions,
-                                        unsigned memorySpace) {
+                                        gpu::AddressSpace memorySpace) {
   for (Value v : attributions) {
     auto type = v.getType().dyn_cast<MemRefType>();
     if (!type)
       return op->emitOpError() << "expected memref type in attribution";
 
-    if (type.getMemorySpaceAsInt() != memorySpace) {
+    // We can only verify the address space if it hasn't already been lowered
+    // from the AddressSpaceAttr to a target-specific numeric value.
+    auto addressSpace =
+        type.getMemorySpace().dyn_cast_or_null<gpu::AddressSpaceAttr>();
+    if (!addressSpace)
+      continue;
+    if (addressSpace.getValue() != memorySpace)
       return op->emitOpError()
-             << "expected memory space " << memorySpace << " in attribution";
-    }
+             << "expected memory space " << stringifyAddressSpace(memorySpace)
+             << " in attribution";
   }
   return success();
 }
