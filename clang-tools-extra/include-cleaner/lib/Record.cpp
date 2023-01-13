@@ -18,6 +18,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 
 namespace clang::include_cleaner {
 namespace {
@@ -188,12 +189,20 @@ public:
                           SrcMgr::CharacteristicKind FileKind) override {
     FileID HashFID = SM.getFileID(HashLoc);
     int HashLine = SM.getLineNumber(HashFID, SM.getFileOffset(HashLoc));
-    checkForExport(HashFID, HashLine, File ? &File->getFileEntry() : nullptr);
+    std::optional<Header> IncludedHeader;
+    if (IsAngled)
+      if (auto StandardHeader =
+              tooling::stdlib::Header::named("<" + FileName.str() + ">")) {
+        IncludedHeader = *StandardHeader;
+      }
+    if (!IncludedHeader && File)
+      IncludedHeader = &File->getFileEntry();
+    checkForExport(HashFID, HashLine, std::move(IncludedHeader));
     checkForKeep(HashLine);
   }
 
   void checkForExport(FileID IncludingFile, int HashLine,
-                      const FileEntry *IncludedHeader) {
+                      std::optional<Header> IncludedHeader) {
     if (ExportStack.empty())
       return;
     auto &Top = ExportStack.back();
@@ -202,9 +211,20 @@ public:
     // Make sure current include is covered by the export pragma.
     if ((Top.Block && HashLine > Top.SeenAtLine) ||
         Top.SeenAtLine == HashLine) {
-      if (IncludedHeader)
-        Out->IWYUExportBy[IncludedHeader->getUniqueID()].push_back(
-            Top.Path);
+      if (IncludedHeader) {
+        switch (IncludedHeader->kind()) {
+        case Header::Physical:
+          Out->IWYUExportBy[IncludedHeader->physical()->getUniqueID()]
+              .push_back(Top.Path);
+          break;
+        case Header::Standard:
+          Out->StdIWYUExportBy[IncludedHeader->standard()].push_back(Top.Path);
+          break;
+        case Header::Verbatim:
+          assert(false && "unexpected Verbatim header");
+          break;
+        }
+      }
       // main-file #include with export pragma should never be removed.
       if (Top.SeenAtFile == SM.getMainFileID())
         Out->ShouldKeep.insert(HashLine);
@@ -329,19 +349,32 @@ llvm::StringRef PragmaIncludes::getPublic(const FileEntry *F) const {
   return It->getSecond();
 }
 
+static llvm::SmallVector<const FileEntry *>
+toFileEntries(llvm::ArrayRef<StringRef> FileNames, FileManager& FM) {
+    llvm::SmallVector<const FileEntry *> Results;
+
+  for (auto FName : FileNames) {
+    // FIMXE: log the failing cases?
+    if (auto FE = expectedToOptional(FM.getFileRef(FName)))
+      Results.push_back(*FE);
+  }
+  return Results;
+}
 llvm::SmallVector<const FileEntry *>
 PragmaIncludes::getExporters(const FileEntry *File, FileManager &FM) const {
   auto It = IWYUExportBy.find(File->getUniqueID());
   if (It == IWYUExportBy.end())
     return {};
 
-  llvm::SmallVector<const FileEntry *> Results;
-  for (auto Export : It->getSecond()) {
-    // FIMXE: log the failing cases?
-    if (auto FE = expectedToOptional(FM.getFileRef(Export)))
-      Results.push_back(*FE);
-  }
-  return Results;
+  return toFileEntries(It->getSecond(), FM);
+}
+llvm::SmallVector<const FileEntry *>
+PragmaIncludes::getExporters(tooling::stdlib::Header StdHeader,
+                             FileManager &FM) const {
+  auto It = StdIWYUExportBy.find(StdHeader);
+  if (It == StdIWYUExportBy.end())
+    return {};
+  return toFileEntries(It->getSecond(), FM);
 }
 
 bool PragmaIncludes::isSelfContained(const FileEntry *FE) const {
