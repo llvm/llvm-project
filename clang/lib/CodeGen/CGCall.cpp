@@ -1148,8 +1148,8 @@ static Address CreateTempAllocaForCoercion(CodeGenFunction &CGF, llvm::Type *Ty,
                                            CharUnits MinAlign,
                                            const Twine &Name = "tmp") {
   // Don't use an alignment that's worse than what LLVM would prefer.
-  auto PrefAlign = CGF.CGM.getDataLayout().getPrefTypeAlignment(Ty);
-  CharUnits Align = std::max(MinAlign, CharUnits::fromQuantity(PrefAlign));
+  auto PrefAlign = CGF.CGM.getDataLayout().getPrefTypeAlign(Ty);
+  CharUnits Align = std::max(MinAlign, CharUnits::fromAlign(PrefAlign));
 
   return CGF.CreateTempAlloca(Ty, Align, Name + ".coerce");
 }
@@ -5161,15 +5161,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
         llvm::Type *scalarType = RV.getScalarVal()->getType();
         auto scalarSize = CGM.getDataLayout().getTypeAllocSize(scalarType);
-        auto scalarAlign = CGM.getDataLayout().getPrefTypeAlignment(scalarType);
+        auto scalarAlign = CGM.getDataLayout().getPrefTypeAlign(scalarType);
 
         // Materialize to a temporary.
-        addr =
-            CreateTempAlloca(RV.getScalarVal()->getType(),
-                             CharUnits::fromQuantity(std::max(
-                                 layout->getAlignment().value(), scalarAlign)),
-                             "tmp",
-                             /*ArraySize=*/nullptr, &AllocaAddr);
+        addr = CreateTempAlloca(
+            RV.getScalarVal()->getType(),
+            CharUnits::fromAlign(std::max(layout->getAlignment(), scalarAlign)),
+            "tmp",
+            /*ArraySize=*/nullptr, &AllocaAddr);
         tempSize = EmitLifetimeStart(scalarSize, AllocaAddr.getPointer());
 
         Builder.CreateStore(RV.getScalarVal(), addr);
