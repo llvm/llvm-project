@@ -129,15 +129,19 @@ DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
 
 DISubroutineTypeAttr
 DebugImporter::translateImpl(llvm::DISubroutineType *node) {
-  // Separate the result type since it is null for void functions.
-  DITypeAttr resultType = translate(*node->getTypeArray().begin());
-  SmallVector<DITypeAttr> argumentTypes;
-  for (llvm::DIType *type : llvm::drop_begin(node->getTypeArray())) {
-    assert(type && "expected a non-null argument type");
-    argumentTypes.push_back(translate(type));
+  SmallVector<DITypeAttr> types;
+  for (llvm::DIType *type : node->getTypeArray()) {
+    if (!type) {
+      // A nullptr entry at the beginning of the subroutine types list models a
+      // void result type. Translate the nullptr to an explicit
+      // DIVoidResultTypeAttr since the attribute list cannot contain a nullptr
+      // entry.
+      types.push_back(DIVoidResultTypeAttr::get(context));
+      continue;
+    }
+    types.push_back(translate(type));
   }
-  return DISubroutineTypeAttr::get(context, node->getCC(), resultType,
-                                   argumentTypes);
+  return DISubroutineTypeAttr::get(context, node->getCC(), types);
 }
 
 DITypeAttr DebugImporter::translateImpl(llvm::DIType *node) {
