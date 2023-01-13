@@ -1731,7 +1731,7 @@ bool CombinerHelper::matchCombineUnmergeMergeToPlainValues(
   auto &Unmerge = cast<GUnmerge>(MI);
   Register SrcReg = peekThroughBitcast(Unmerge.getSourceReg(), MRI);
 
-  auto *SrcInstr = getOpcodeDef<GMergeLikeOp>(SrcReg, MRI);
+  auto *SrcInstr = getOpcodeDef<GMergeLikeInstr>(SrcReg, MRI);
   if (!SrcInstr)
     return false;
 
