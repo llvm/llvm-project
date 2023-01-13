@@ -140,6 +140,8 @@ struct TestSCFPipeliningPass
       auto attrCycle =
           op->getAttrOfType<IntegerAttr>(kTestPipeliningOpOrderMarker);
       if (attrCycle && attrStage) {
+        // TODO: Index can be out-of-bounds if ops of the loop body disappear
+        // due to folding.
         schedule[attrCycle.getInt()] =
             std::make_pair(op, unsigned(attrStage.getInt()));
       }
