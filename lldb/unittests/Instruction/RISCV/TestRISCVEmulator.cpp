@@ -287,8 +287,10 @@ TEST_F(RISCVEmulatorTester, TestCDecode) {
       {0x0010, RESERVED{0x0010}},
       // ADDI4SPN here, decode as ADDI
       {0x0024, ADDI{Rd{9}, Rs{2}, 8}},
+      {0x2084, FLD{Rd{9}, Rs{9}, 0}},
       {0x4488, LW{Rd{10}, Rs{9}, 8}},
       {0x6488, LD{Rd{10}, Rs{9}, 8}},
+      {0xA084, FSD{Rs{9}, Rs{9}, 0}},
       {0xC488, SW{Rs{9}, Rs{10}, 8}},
       {0xE488, SD{Rs{9}, Rs{10}, 8}},
       {0x1001, NOP{0x1001}},
@@ -315,6 +317,8 @@ TEST_F(RISCVEmulatorTester, TestCDecode) {
       {0x1002, HINT{0x1002}},
       // SLLI64 here, decoded as HINT if not in RV128
       {0x0082, HINT{0x0082}},
+      // FLDSP here, decoded as FLD
+      {0x2082, FLD{Rd{1}, Rs{2}, 0}},
       // LWSP here, decoded as LW
       {0x4082, LW{Rd{1}, Rs{2}, 0}},
       // LDSP here, decoded as LD
@@ -326,6 +330,8 @@ TEST_F(RISCVEmulatorTester, TestCDecode) {
       {0x9002, EBREAK{0x9002}},
       {0x9082, JALR{Rd{1}, Rs{1}, 0}},
       {0x9086, ADD{Rd{1}, Rs{1}, Rs{1}}},
+      // C.FSDSP here, decoded as FSD
+      {0xA006, FSD{Rs{2}, Rs{1}, 0}},
       // C.SWSP here, decoded as SW
       {0xC006, SW{Rs{2}, Rs{1}, 0}},
       // C.SDSP here, decoded as SD
@@ -350,6 +356,11 @@ TEST_F(RISCVEmulatorTester32, TestCDecodeRV32) {
       {0xE006, FSW{Rs{2}, Rs{1}, 0}},
       {0x6000, FLW{Rd{8}, Rs{8}, 0}},
       {0xE000, FSW{Rs{8}, Rs{8}, 0}},
+
+      {0x2084, FLD{Rd{9}, Rs{9}, 0}},
+      {0xA084, FSD{Rs{9}, Rs{9}, 0}},
+      {0x2082, FLD{Rd{1}, Rs{2}, 0}},
+      {0xA006, FSD{Rs{2}, Rs{1}, 0}},
   };
 
   for (auto i : tests) {

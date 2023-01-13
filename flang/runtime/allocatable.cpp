@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/allocatable.h"
+#include "assign.h"
 #include "derived.h"
 #include "stat.h"
 #include "terminator.h"
 #include "type-info.h"
-#include "flang/Runtime/assign.h"
 
 namespace Fortran::runtime {
 extern "C" {
@@ -88,6 +88,22 @@ int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
   return stat;
 }
 
+int RTNAME(AllocatableAllocateSource)(Descriptor &alloc,
+    const Descriptor &source, bool hasStat, const Descriptor *errMsg,
+    const char *sourceFile, int sourceLine) {
+  if (alloc.Elements() == 0) {
+    return StatOk;
+  }
+  int stat{RTNAME(AllocatableAllocate)(
+      alloc, hasStat, errMsg, sourceFile, sourceLine)};
+  if (stat == StatOk) {
+    Terminator terminator{sourceFile, sourceLine};
+    // 9.7.1.2(7)
+    Assign(alloc, source, terminator, /*skipRealloc=*/true);
+  }
+  return stat;
+}
+
 int RTNAME(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -125,6 +141,6 @@ void RTNAME(AllocatableDeallocateNoFinal)(
   }
 }
 
-// TODO: AllocatableCheckLengthParameter, AllocatableAllocateSource
+// TODO: AllocatableCheckLengthParameter
 }
 } // namespace Fortran::runtime

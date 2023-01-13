@@ -1534,9 +1534,15 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
       LHS.getOpcode() == ISD::AND && LHS.hasOneUse() &&
       isa<ConstantSDNode>(LHS.getOperand(1))) {
     uint64_t Mask = LHS.getConstantOperandVal(1);
-    if (isPowerOf2_64(Mask) && !isInt<12>(Mask)) {
-      CC = CC == ISD::SETEQ ? ISD::SETGE : ISD::SETLT;
-      unsigned ShAmt = LHS.getValueSizeInBits() - 1 - Log2_64(Mask);
+    if ((isPowerOf2_64(Mask) || isMask_64(Mask)) && !isInt<12>(Mask)) {
+      unsigned ShAmt = 0;
+      if (isPowerOf2_64(Mask)) {
+        CC = CC == ISD::SETEQ ? ISD::SETGE : ISD::SETLT;
+        ShAmt = LHS.getValueSizeInBits() - 1 - Log2_64(Mask);
+      } else {
+        ShAmt = LHS.getValueSizeInBits() - (64 - countLeadingZeros(Mask));
+      }
+
       LHS = LHS.getOperand(0);
       if (ShAmt != 0)
         LHS = DAG.getNode(ISD::SHL, DL, LHS.getValueType(), LHS,
