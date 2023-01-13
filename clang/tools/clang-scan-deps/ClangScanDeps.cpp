@@ -26,10 +26,162 @@
 #include <mutex>
 #include <thread>
 
+#include "Opts.inc"
+
 using namespace clang;
 using namespace tooling::dependencies;
 
 namespace {
+
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  OPT_##ID,
+#include "Opts.inc"
+#undef OPTION
+};
+
+#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#include "Opts.inc"
+#undef PREFIX
+
+const llvm::opt::OptTable::Info InfoTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {PREFIX,      NAME,      HELPTEXT,                                           \
+   METAVAR,     OPT_##ID,  llvm::opt::Option::KIND##Class,                     \
+   PARAM,       FLAGS,     OPT_##GROUP,                                        \
+   OPT_##ALIAS, ALIASARGS, VALUES},
+#include "Opts.inc"
+#undef OPTION
+};
+
+class ScanDepsOptTable : public llvm::opt::OptTable {
+public:
+  ScanDepsOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+};
+
+enum ResourceDirRecipeKind {
+  RDRK_ModifyCompilerPath,
+  RDRK_InvokeCompiler,
+};
+
+static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
+static ScanningOutputFormat Format = ScanningOutputFormat::Make;
+static std::string ModuleFilesDir;
+static bool OptimizeArgs;
+static bool EagerLoadModules;
+static unsigned NumThreads = 0;
+static std::string CompilationDB;
+static std::string ModuleName;
+static std::vector<std::string> ModuleDepTargets;
+static bool DeprecatedDriverCommand;
+static ResourceDirRecipeKind ResourceDirRecipe;
+static bool Verbose;
+
+static void ParseArgs(int argc, char **argv) {
+  ScanDepsOptTable Tbl;
+  llvm::StringRef ToolName = argv[0];
+  llvm::BumpPtrAllocator A;
+  llvm::StringSaver Saver{A};
+  llvm::opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+        llvm::errs() << Msg << '\n';
+        std::exit(1);
+      });
+
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(), "clang-scan-deps [options]", "clang-scan-deps");
+    std::exit(0);
+  }
+  if (Args.hasArg(OPT_version)) {
+    llvm::outs() << ToolName << '\n';
+    llvm::cl::PrintVersionMessage();
+    std::exit(0);
+  }
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_mode_EQ)) {
+    auto ModeType =
+        llvm::StringSwitch<std::optional<ScanningMode>>(A->getValue())
+            .Case("preprocess-dependency-directives",
+                  ScanningMode::DependencyDirectivesScan)
+            .Case("preprocess", ScanningMode::CanonicalPreprocessing)
+            .Default(std::nullopt);
+    if (!ModeType) {
+      llvm::errs() << ToolName
+                   << ": for the --mode option: Cannot find option named '"
+                   << A->getValue() << "'\n";
+      std::exit(1);
+    }
+    ScanMode = *ModeType;
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_format_EQ)) {
+    auto FormatType =
+        llvm::StringSwitch<std::optional<ScanningOutputFormat>>(A->getValue())
+            .Case("make", ScanningOutputFormat::Make)
+            .Case("experimental-full", ScanningOutputFormat::Full)
+            .Default(std::nullopt);
+    if (!FormatType) {
+      llvm::errs() << ToolName
+                   << ": for the --format option: Cannot find option named '"
+                   << A->getValue() << "'\n";
+      std::exit(1);
+    }
+    Format = *FormatType;
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_files_dir_EQ))
+    ModuleFilesDir = A->getValue();
+
+  OptimizeArgs = Args.hasArg(OPT_optimize_args);
+  EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
+    StringRef S{A->getValue()};
+    if (!llvm::to_integer(S, NumThreads, 0)) {
+      llvm::errs() << ToolName << ": for the -j option: '" << S
+                   << "' value invalid for uint argument!\n";
+      std::exit(1);
+    }
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ)) {
+    CompilationDB = A->getValue();
+  } else {
+    llvm::errs() << ToolName
+                 << ": for the --compiilation-database option: must be "
+                    "specified at least once!";
+    std::exit(1);
+  }
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_name_EQ))
+    ModuleName = A->getValue();
+
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_dependency_target_EQ))
+    ModuleDepTargets.emplace_back(A->getValue());
+
+  DeprecatedDriverCommand = Args.hasArg(OPT_deprecated_driver_command);
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_resource_dir_recipe_EQ)) {
+    auto Kind =
+        llvm::StringSwitch<std::optional<ResourceDirRecipeKind>>(A->getValue())
+            .Case("modify-compiler-path", RDRK_ModifyCompilerPath)
+            .Case("invoke-compiler", RDRK_InvokeCompiler)
+            .Default(std::nullopt);
+    if (!Kind) {
+      llvm::errs() << ToolName
+                   << ": for the --resource-dir-recipe option: Cannot find "
+                      "option named '"
+                   << A->getValue() << "'\n";
+      std::exit(1);
+    }
+    ResourceDirRecipe = *Kind;
+  }
+
+  Verbose = Args.hasArg(OPT_verbose);
+}
 
 class SharedStream {
 public:
@@ -107,104 +259,6 @@ private:
   std::map<std::string, std::string> Cache;
   std::mutex CacheLock;
 };
-
-llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"),
-                         llvm::cl::Hidden);
-
-llvm::cl::OptionCategory DependencyScannerCategory("Tool options");
-
-static llvm::cl::opt<ScanningMode> ScanMode(
-    "mode",
-    llvm::cl::desc("The preprocessing mode used to compute the dependencies"),
-    llvm::cl::values(
-        clEnumValN(ScanningMode::DependencyDirectivesScan,
-                   "preprocess-dependency-directives",
-                   "The set of dependencies is computed by preprocessing with "
-                   "special lexing after scanning the source files to get the "
-                   "directives that might affect the dependencies"),
-        clEnumValN(ScanningMode::CanonicalPreprocessing, "preprocess",
-                   "The set of dependencies is computed by preprocessing the "
-                   "source files")),
-    llvm::cl::init(ScanningMode::DependencyDirectivesScan),
-    llvm::cl::cat(DependencyScannerCategory));
-
-static llvm::cl::opt<ScanningOutputFormat> Format(
-    "format", llvm::cl::desc("The output format for the dependencies"),
-    llvm::cl::values(clEnumValN(ScanningOutputFormat::Make, "make",
-                                "Makefile compatible dep file"),
-                     clEnumValN(ScanningOutputFormat::Full, "experimental-full",
-                                "Full dependency graph suitable"
-                                " for explicitly building modules. This format "
-                                "is experimental and will change.")),
-    llvm::cl::init(ScanningOutputFormat::Make),
-    llvm::cl::cat(DependencyScannerCategory));
-
-static llvm::cl::opt<std::string> ModuleFilesDir(
-    "module-files-dir",
-    llvm::cl::desc(
-        "The build directory for modules. Defaults to the value of "
-        "'-fmodules-cache-path=' from command lines for implicit modules."),
-    llvm::cl::cat(DependencyScannerCategory));
-
-static llvm::cl::opt<bool> OptimizeArgs(
-    "optimize-args",
-    llvm::cl::desc("Whether to optimize command-line arguments of modules."),
-    llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
-
-static llvm::cl::opt<bool> EagerLoadModules(
-    "eager-load-pcm",
-    llvm::cl::desc("Load PCM files eagerly (instead of lazily on import)."),
-    llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::opt<unsigned>
-    NumThreads("j", llvm::cl::Optional,
-               llvm::cl::desc("Number of worker threads to use (default: use "
-                              "all concurrent threads)"),
-               llvm::cl::init(0), llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::opt<std::string>
-    CompilationDB("compilation-database",
-                  llvm::cl::desc("Compilation database"), llvm::cl::Required,
-                  llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::opt<std::string> ModuleName(
-    "module-name", llvm::cl::Optional,
-    llvm::cl::desc("the module of which the dependencies are to be computed"),
-    llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::list<std::string> ModuleDepTargets(
-    "dependency-target",
-    llvm::cl::desc("The names of dependency targets for the dependency file"),
-    llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::opt<bool> DeprecatedDriverCommand(
-    "deprecated-driver-command", llvm::cl::Optional,
-    llvm::cl::desc("use a single driver command to build the tu (deprecated)"),
-    llvm::cl::cat(DependencyScannerCategory));
-
-enum ResourceDirRecipeKind {
-  RDRK_ModifyCompilerPath,
-  RDRK_InvokeCompiler,
-};
-
-static llvm::cl::opt<ResourceDirRecipeKind> ResourceDirRecipe(
-    "resource-dir-recipe",
-    llvm::cl::desc("How to produce missing '-resource-dir' argument"),
-    llvm::cl::values(
-        clEnumValN(RDRK_ModifyCompilerPath, "modify-compiler-path",
-                   "Construct the resource directory from the compiler path in "
-                   "the compilation database. This assumes it's part of the "
-                   "same toolchain as this clang-scan-deps. (default)"),
-        clEnumValN(RDRK_InvokeCompiler, "invoke-compiler",
-                   "Invoke the compiler with '-print-resource-dir' and use the "
-                   "reported path as the resource directory. (deprecated)")),
-    llvm::cl::init(RDRK_ModifyCompilerPath),
-    llvm::cl::cat(DependencyScannerCategory));
-
-llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
-                            llvm::cl::desc("Use verbose output."),
-                            llvm::cl::init(false),
-                            llvm::cl::cat(DependencyScannerCategory));
 
 } // end anonymous namespace
 
@@ -439,9 +493,7 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
 
 int main(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
-  llvm::cl::HideUnrelatedOptions(DependencyScannerCategory);
-  if (!llvm::cl::ParseCommandLineOptions(argc, argv))
-    return 1;
+  ParseArgs(argc, const_cast<char **>(argv));
 
   std::string ErrorMessage;
   std::unique_ptr<tooling::JSONCompilationDatabase> Compilations =
