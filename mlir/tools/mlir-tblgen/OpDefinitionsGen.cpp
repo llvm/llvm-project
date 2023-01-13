@@ -22,6 +22,7 @@
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/SideEffects.h"
 #include "mlir/TableGen/Trait.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2518,67 +2519,57 @@ void OpEmitter::genTypeInterfaceMethods() {
 
   FmtContext fctx;
   fctx.withBuilder("odsBuilder");
+  fctx.addSubst("_ctxt", "context");
   body << "  ::mlir::Builder odsBuilder(context);\n";
 
-  // Preprocess the result types and build all of the types used during
-  // inferrence. This limits the amount of duplicated work when a type is used
-  // to infer multiple others.
-  llvm::DenseMap<Constraint, int> constraintsTypes;
-  llvm::DenseMap<int, int> argumentsTypes;
+  // Process the type inference graph in topological order, starting from types
+  // that are always fully-inferred: operands and results with constructible
+  // types. The type inference graph here will always be a DAG, so this gives
+  // us the correct order for generating the types. -1 is a placeholder to
+  // indicate the type for a result has not been generated.
+  SmallVector<int> constructedIndices(op.getNumResults(), -1);
   int inferredTypeIdx = 0;
-  for (int i = 0, e = op.getNumResults(); i != e; ++i) {
-    auto type = op.getSameTypeAsResult(i).front();
-
-    // If the type isn't an argument, it refers to a buildable type.
-    if (!type.isArg()) {
-      auto it = constraintsTypes.try_emplace(type.getType(), inferredTypeIdx);
-      if (!it.second)
+  for (int numResults = op.getNumResults(); inferredTypeIdx != numResults;) {
+    for (int i = 0, e = op.getNumResults(); i != e; ++i) {
+      if (constructedIndices[i] >= 0)
         continue;
+      const InferredResultType &infer = op.getInferredResultType(i);
+      std::string typeStr;
+      body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = ";
+      if (infer.isArg()) {
+        // If this is an operand, just index into operand list to access the
+        // type.
+        auto arg = op.getArgToOperandOrAttribute(infer.getIndex());
+        if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+          typeStr = ("operands[" + Twine(arg.operandOrAttributeIndex()) +
+                     "].getType()")
+                        .str();
 
-      // If we haven't seen this constraint, generate a variable for it.
-      body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = "
-           << tgfmt(*type.getType().getBuilderCall(), &fctx) << ";\n";
-      continue;
+          // If this is an attribute, index into the attribute dictionary.
+        } else {
+          auto *attr =
+              op.getArg(arg.operandOrAttributeIndex()).get<NamedAttribute *>();
+          typeStr = ("attributes.get(\"" + attr->name +
+                     "\").cast<::mlir::TypedAttr>().getType()")
+                        .str();
+        }
+      } else if (std::optional<StringRef> builder =
+                     op.getResult(infer.getResultIndex())
+                         .constraint.getBuilderCall()) {
+        typeStr = tgfmt(*builder, &fctx).str();
+      } else if (int index = constructedIndices[infer.getResultIndex()];
+                 index >= 0) {
+        typeStr = ("odsInferredType" + Twine(index)).str();
+      } else {
+        continue;
+      }
+      body << tgfmt(infer.getTransformer(), &fctx.withSelf(typeStr)) << ";\n";
+      constructedIndices[i] = inferredTypeIdx - 1;
     }
-
-    // Otherwise, this is an argument.
-    int argIndex = type.getArg();
-    auto it = argumentsTypes.try_emplace(argIndex, inferredTypeIdx);
-    if (!it.second)
-      continue;
-    body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = ";
-
-    // If this is an operand, just index into operand list to access the type.
-    auto arg = op.getArgToOperandOrAttribute(argIndex);
-    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
-      body << "operands[" << arg.operandOrAttributeIndex() << "].getType()";
-
-      // If this is an attribute, index into the attribute dictionary.
-    } else {
-      auto *attr =
-          op.getArg(arg.operandOrAttributeIndex()).get<NamedAttribute *>();
-      body << "attributes.get(\"" << attr->name
-           << "\").cast<::mlir::TypedAttr>().getType()";
-    }
-    body << ";\n";
   }
-
-  // Perform a second pass that handles assigning the inferred types to the
-  // results.
-  for (int i = 0, e = op.getNumResults(); i != e; ++i) {
-    auto types = op.getSameTypeAsResult(i);
-
-    // Append the inferred type.
-    auto type = types.front();
-    body << "  inferredReturnTypes[" << i << "] = odsInferredType"
-         << (type.isArg() ? argumentsTypes[type.getArg()]
-                          : constraintsTypes[type.getType()])
+  for (auto [i, index] : llvm::enumerate(constructedIndices))
+    body << "  inferredReturnTypes[" << i << "] = odsInferredType" << index
          << ";\n";
-
-    if (types.size() == 1)
-      continue;
-    // TODO: We could verify equality here, but skipping that for verification.
-  }
   body << "  return ::mlir::success();";
 }
 

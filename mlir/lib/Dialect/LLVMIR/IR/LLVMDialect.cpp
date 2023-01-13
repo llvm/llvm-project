@@ -101,16 +101,6 @@ static Type getI1SameShape(Type type) {
 // Printing, parsing and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 
-void ICmpOp::build(OpBuilder &builder, OperationState &result,
-                   ICmpPredicate predicate, Value lhs, Value rhs) {
-  build(builder, result, getI1SameShape(lhs.getType()), predicate, lhs, rhs);
-}
-
-void FCmpOp::build(OpBuilder &builder, OperationState &result,
-                   FCmpPredicate predicate, Value lhs, Value rhs) {
-  build(builder, result, getI1SameShape(lhs.getType()), predicate, lhs, rhs);
-}
-
 void ICmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyICmpPredicate(getPredicate()) << "\" " << getOperand(0)
     << ", " << getOperand(1);
@@ -1370,20 +1360,6 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// ExtractElementOp
-//===----------------------------------------------------------------------===//
-
-/// Expects vector to be an LLVM vector type and position to be an integer type.
-void LLVM::ExtractElementOp::build(OpBuilder &b, OperationState &result,
-                                   Value vector, Value position,
-                                   ArrayRef<NamedAttribute> attrs) {
-  auto vectorType = vector.getType();
-  auto llvmType = LLVM::getVectorElementType(vectorType);
-  build(b, result, llvmType, vector, position);
-  result.addAttributes(attrs);
 }
 
 //===----------------------------------------------------------------------===//
