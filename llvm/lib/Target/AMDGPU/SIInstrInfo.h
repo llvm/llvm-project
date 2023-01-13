@@ -268,7 +268,7 @@ public:
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx0,
                              unsigned &SrcOpIdx1) const override;
 
-  bool findCommutedOpIndices(MCInstrDesc Desc, unsigned &SrcOpIdx0,
+  bool findCommutedOpIndices(const MCInstrDesc &Desc, unsigned &SrcOpIdx0,
                              unsigned &SrcOpIdx1) const;
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
