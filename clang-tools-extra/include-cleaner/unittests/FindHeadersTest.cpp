@@ -15,6 +15,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -105,6 +106,23 @@ TEST_F(FindHeadersTest, IWYUExport) {
               UnorderedElementsAre(physicalHeader("normal.h")));
   EXPECT_THAT(findHeaders("exporter.h"),
               UnorderedElementsAre(physicalHeader("exporter.h")));
+}
+
+TEST_F(FindHeadersTest, IWYUExportForStandardHeaders) {
+  Inputs.Code = R"cpp(
+    #include "exporter.h"
+  )cpp";
+  Inputs.ExtraFiles["exporter.h"] = guard(R"cpp(
+    #include <string> // IWYU pragma: export
+  )cpp");
+  Inputs.ExtraFiles["string"] = guard("");
+  Inputs.ExtraArgs.push_back("-isystem.");
+  buildAST();
+  tooling::stdlib::Symbol StdString =
+      *tooling::stdlib::Symbol::named("std::", "string");
+  EXPECT_THAT(
+      include_cleaner::findHeaders(StdString, AST->sourceManager(), &PI),
+      UnorderedElementsAre(physicalHeader("exporter.h"), StdString.header()));
 }
 
 TEST_F(FindHeadersTest, SelfContained) {
