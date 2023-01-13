@@ -48,13 +48,15 @@ define i32 @test_pointer_phi_select_simp_non_local(ptr %a, ptr %b, ptr %c)  {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_I_I_I]], i32 [[L_1]], i32 [[L_2]]
 ; CHECK-NEXT:    [[MIN_SELECT:%.*]] = select i1 [[CMP_I_I_I]], ptr [[A]], ptr [[B]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[RES_2_PRE:%.*]] = load i32, ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[MIN_SELECT]], [[THEN]] ], [ [[C:%.*]], [[ELSE]] ]
-; CHECK-NEXT:    [[RES_2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[RES_2:%.*]] = phi i32 [ [[TMP0]], [[THEN]] ], [ [[RES_2_PRE]], [[ELSE]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[MIN_SELECT]], [[THEN]] ], [ [[C]], [[ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[RES_2]]
 ;
 entry:
