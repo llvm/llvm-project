@@ -1692,3 +1692,1621 @@ define void @bit_63_nz_branch_i64(i64 %0) {
 5:
   ret void
 }
+
+define signext i32 @bit_10_1_z_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; CHECK-LABEL: bit_10_1_z_select_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a3, a0, 1023
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    beqz a3, .LBB59_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB59_2:
+; CHECK-NEXT:    ret
+  %1 = and i32 %a, 1023
+  %2 = icmp eq i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_10_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; CHECK-LABEL: bit_10_1_nz_select_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a3, a0, 1023
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    bnez a3, .LBB60_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB60_2:
+; CHECK-NEXT:    ret
+  %1 = and i32 %a, 1023
+  %2 = icmp ne i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_11_1_z_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; CHECK-LABEL: bit_11_1_z_select_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a3, a0, 2047
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    beqz a3, .LBB61_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB61_2:
+; CHECK-NEXT:    ret
+  %1 = and i32 %a, 2047
+  %2 = icmp eq i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_11_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; CHECK-LABEL: bit_11_1_nz_select_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a3, a0, 2047
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    bnez a3, .LBB62_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB62_2:
+; CHECK-NEXT:    ret
+  %1 = and i32 %a, 2047
+  %2 = icmp ne i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_16_1_z_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; RV32-LABEL: bit_16_1_z_select_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a3, a0, 16
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    beqz a3, .LBB63_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB63_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_16_1_z_select_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 48
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB63_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB63_2:
+; RV64-NEXT:    ret
+  %1 = and i32 %a, 65535
+  %2 = icmp eq i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_16_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; RV32-LABEL: bit_16_1_nz_select_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a3, a0, 16
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    bnez a3, .LBB64_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB64_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_16_1_nz_select_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 48
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB64_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB64_2:
+; RV64-NEXT:    ret
+  %1 = and i32 %a, 65535
+  %2 = icmp ne i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_20_1_z_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; RV32-LABEL: bit_20_1_z_select_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a3, a0, 12
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    beqz a3, .LBB65_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB65_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_20_1_z_select_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 44
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB65_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB65_2:
+; RV64-NEXT:    ret
+  %1 = and i32 %a, 1048575
+  %2 = icmp eq i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_20_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; RV32-LABEL: bit_20_1_nz_select_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a3, a0, 12
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    bnez a3, .LBB66_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB66_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_20_1_nz_select_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 44
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB66_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB66_2:
+; RV64-NEXT:    ret
+  %1 = and i32 %a, 1048575
+  %2 = icmp ne i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_31_1_z_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; RV32-LABEL: bit_31_1_z_select_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a3, a0, 1
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    beqz a3, .LBB67_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB67_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_31_1_z_select_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 33
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB67_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB67_2:
+; RV64-NEXT:    ret
+  %1 = and i32 %a, 2147483647
+  %2 = icmp eq i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_31_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; RV32-LABEL: bit_31_1_nz_select_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a3, a0, 1
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    bnez a3, .LBB68_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB68_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_31_1_nz_select_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 33
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB68_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB68_2:
+; RV64-NEXT:    ret
+  %1 = and i32 %a, 2147483647
+  %2 = icmp ne i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_32_1_z_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; CHECK-LABEL: bit_32_1_z_select_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a0, .LBB69_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:  .LBB69_2:
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = and i32 %a, 4294967295
+  %2 = icmp eq i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define signext i32 @bit_32_1_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
+; CHECK-LABEL: bit_32_1_nz_select_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bnez a0, .LBB70_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a2
+; CHECK-NEXT:  .LBB70_2:
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = and i32 %a, 4294967295
+  %2 = icmp ne i32 %1, 0
+  %3 = select i1 %2, i32 %b, i32 %c
+  ret i32 %3
+}
+
+define i64 @bit_10_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_10_1_z_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    andi a6, a0, 1023
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    beqz a6, .LBB71_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB71_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_10_1_z_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a3, a0, 1023
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB71_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB71_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 1023
+  %2 = icmp eq i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_10_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_10_1_nz_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    andi a6, a0, 1023
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bnez a6, .LBB72_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB72_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_10_1_nz_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a3, a0, 1023
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB72_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB72_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 1023
+  %2 = icmp ne i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_11_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_11_1_z_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    andi a6, a0, 2047
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    beqz a6, .LBB73_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB73_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_11_1_z_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a3, a0, 2047
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB73_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB73_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 2047
+  %2 = icmp eq i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_11_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_11_1_nz_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    andi a6, a0, 2047
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bnez a6, .LBB74_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB74_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_11_1_nz_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a3, a0, 2047
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB74_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB74_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 2047
+  %2 = icmp ne i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_16_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_16_1_z_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a6, a0, 16
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    beqz a6, .LBB75_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB75_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_16_1_z_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 48
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB75_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB75_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 65535
+  %2 = icmp eq i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_16_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_16_1_nz_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    bnez a0, .LBB76_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a2, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB76_2:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_16_1_nz_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a3, a0
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB76_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB76_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 4294967295
+  %2 = icmp ne i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+
+define i64 @bit_20_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_20_1_z_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a6, a0, 12
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    beqz a6, .LBB77_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB77_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_20_1_z_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 44
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB77_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB77_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 1048575
+  %2 = icmp eq i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_20_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_20_1_nz_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a6, a0, 12
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bnez a6, .LBB78_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB78_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_20_1_nz_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 44
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB78_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB78_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 1048575
+  %2 = icmp ne i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_31_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_31_1_z_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a6, a0, 1
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    beqz a6, .LBB79_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB79_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_31_1_z_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 33
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB79_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB79_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 2147483647
+  %2 = icmp eq i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_31_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_31_1_nz_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a6, a0, 1
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bnez a6, .LBB80_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB80_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_31_1_nz_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 33
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB80_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB80_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 2147483647
+  %2 = icmp ne i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_32_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_32_1_z_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    beqz a0, .LBB81_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a2, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB81_2:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_32_1_z_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a3, a0
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB81_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB81_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 4294967295
+  %2 = icmp eq i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_32_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_32_1_nz_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    bnez a0, .LBB82_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a2, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB82_2:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_32_1_nz_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a3, a0
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB82_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB82_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 4294967295
+  %2 = icmp ne i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_55_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_55_1_z_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a1, a1, 9
+; RV32-NEXT:    srli a1, a1, 9
+; RV32-NEXT:    or a6, a0, a1
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    beqz a6, .LBB83_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB83_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_55_1_z_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 9
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB83_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB83_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 36028797018963967
+  %2 = icmp eq i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_55_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_55_1_nz_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a1, a1, 9
+; RV32-NEXT:    srli a1, a1, 9
+; RV32-NEXT:    or a6, a0, a1
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bnez a6, .LBB84_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB84_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_55_1_nz_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 9
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB84_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB84_2:
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 36028797018963967
+  %2 = icmp ne i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_63_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32I-LABEL: bit_63_1_z_select_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    or a6, a0, a1
+; RV32I-NEXT:    mv a1, a3
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    beqz a6, .LBB85_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a0, a4
+; RV32I-NEXT:    mv a1, a5
+; RV32I-NEXT:  .LBB85_2:
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: bit_63_1_z_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 1
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    beqz a3, .LBB85_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB85_2:
+; RV64-NEXT:    ret
+;
+; RV32ZBS-LABEL: bit_63_1_z_select_i64:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bclri a1, a1, 31
+; RV32ZBS-NEXT:    or a6, a0, a1
+; RV32ZBS-NEXT:    mv a1, a3
+; RV32ZBS-NEXT:    mv a0, a2
+; RV32ZBS-NEXT:    beqz a6, .LBB85_2
+; RV32ZBS-NEXT:  # %bb.1:
+; RV32ZBS-NEXT:    mv a0, a4
+; RV32ZBS-NEXT:    mv a1, a5
+; RV32ZBS-NEXT:  .LBB85_2:
+; RV32ZBS-NEXT:    ret
+  %1 = and i64 %a, 9223372036854775807
+  %2 = icmp eq i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_63_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32I-LABEL: bit_63_1_nz_select_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    or a6, a0, a1
+; RV32I-NEXT:    mv a1, a3
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bnez a6, .LBB86_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a0, a4
+; RV32I-NEXT:    mv a1, a5
+; RV32I-NEXT:  .LBB86_2:
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: bit_63_1_nz_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a3, a0, 1
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    bnez a3, .LBB86_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB86_2:
+; RV64-NEXT:    ret
+;
+; RV32ZBS-LABEL: bit_63_1_nz_select_i64:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bclri a1, a1, 31
+; RV32ZBS-NEXT:    or a6, a0, a1
+; RV32ZBS-NEXT:    mv a1, a3
+; RV32ZBS-NEXT:    mv a0, a2
+; RV32ZBS-NEXT:    bnez a6, .LBB86_2
+; RV32ZBS-NEXT:  # %bb.1:
+; RV32ZBS-NEXT:    mv a0, a4
+; RV32ZBS-NEXT:    mv a1, a5
+; RV32ZBS-NEXT:  .LBB86_2:
+; RV32ZBS-NEXT:    ret
+  %1 = and i64 %a, 9223372036854775807
+  %2 = icmp ne i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_64_1_z_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_64_1_z_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    or a6, a0, a1
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    beqz a6, .LBB87_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB87_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_64_1_z_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    beqz a0, .LBB87_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:  .LBB87_2:
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 18446744073709551615
+  %2 = icmp eq i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define i64 @bit_64_1_nz_select_i64(i64 %a, i64 %b, i64 %c) {
+; RV32-LABEL: bit_64_1_nz_select_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    or a6, a0, a1
+; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    bnez a6, .LBB88_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a4
+; RV32-NEXT:    mv a1, a5
+; RV32-NEXT:  .LBB88_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_64_1_nz_select_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    bnez a0, .LBB88_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:  .LBB88_2:
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    ret
+  %1 = and i64 %a, 18446744073709551615
+  %2 = icmp ne i64 %1, 0
+  %3 = select i1 %2, i64 %b, i64 %c
+  ret i64 %3
+}
+
+define void @bit_10_1_z_branch_i32(i32 signext %0) {
+; CHECK-LABEL: bit_10_1_z_branch_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1023
+; CHECK-NEXT:    beqz a0, .LBB89_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB89_2:
+; CHECK-NEXT:    tail bar@plt
+  %2 = and i32 %0, 1023
+  %3 = icmp eq i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_10_1_nz_branch_i32(i32 signext %0) {
+; CHECK-LABEL: bit_10_1_nz_branch_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1023
+; CHECK-NEXT:    beqz a0, .LBB90_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    tail bar@plt
+; CHECK-NEXT:  .LBB90_2:
+; CHECK-NEXT:    ret
+  %2 = and i32 %0, 1023
+  %3 = icmp ne i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_11_1_z_branch_i32(i32 signext %0) {
+; CHECK-LABEL: bit_11_1_z_branch_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 2047
+; CHECK-NEXT:    beqz a0, .LBB91_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB91_2:
+; CHECK-NEXT:    tail bar@plt
+  %2 = and i32 %0, 2047
+  %3 = icmp eq i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_11_1_nz_branch_i32(i32 signext %0) {
+; CHECK-LABEL: bit_11_1_nz_branch_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 2047
+; CHECK-NEXT:    beqz a0, .LBB92_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    tail bar@plt
+; CHECK-NEXT:  .LBB92_2:
+; CHECK-NEXT:    ret
+  %2 = and i32 %0, 2047
+  %3 = icmp ne i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_16_1_z_branch_i32(i32 signext %0) {
+; RV32-LABEL: bit_16_1_z_branch_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    beqz a0, .LBB93_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB93_2:
+; RV32-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_16_1_z_branch_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    beqz a0, .LBB93_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB93_2:
+; RV64-NEXT:    tail bar@plt
+  %2 = and i32 %0, 65535
+  %3 = icmp eq i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_16_1_nz_branch_i32(i32 signext %0) {
+; RV32-LABEL: bit_16_1_nz_branch_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    beqz a0, .LBB94_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    tail bar@plt
+; RV32-NEXT:  .LBB94_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_16_1_nz_branch_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    beqz a0, .LBB94_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB94_2:
+; RV64-NEXT:    ret
+  %2 = and i32 %0, 65535
+  %3 = icmp ne i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_24_1_z_branch_i32(i32 signext %0) {
+; RV32-LABEL: bit_24_1_z_branch_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 8
+; RV32-NEXT:    beqz a0, .LBB95_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB95_2:
+; RV32-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_24_1_z_branch_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 40
+; RV64-NEXT:    beqz a0, .LBB95_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB95_2:
+; RV64-NEXT:    tail bar@plt
+  %2 = and i32 %0, 16777215
+  %3 = icmp eq i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_24_1_nz_branch_i32(i32 signext %0) {
+; RV32-LABEL: bit_24_1_nz_branch_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 8
+; RV32-NEXT:    beqz a0, .LBB96_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    tail bar@plt
+; RV32-NEXT:  .LBB96_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_24_1_nz_branch_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 40
+; RV64-NEXT:    beqz a0, .LBB96_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB96_2:
+; RV64-NEXT:    ret
+  %2 = and i32 %0, 16777215
+  %3 = icmp ne i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_31_1_z_branch_i32(i32 signext %0) {
+; RV32-LABEL: bit_31_1_z_branch_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    beqz a0, .LBB97_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB97_2:
+; RV32-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_31_1_z_branch_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 33
+; RV64-NEXT:    beqz a0, .LBB97_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB97_2:
+; RV64-NEXT:    tail bar@plt
+  %2 = and i32 %0, 2147483647
+  %3 = icmp eq i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_31_1_nz_branch_i32(i32 signext %0) {
+; RV32-LABEL: bit_31_1_nz_branch_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    beqz a0, .LBB98_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    tail bar@plt
+; RV32-NEXT:  .LBB98_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_31_1_nz_branch_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 33
+; RV64-NEXT:    beqz a0, .LBB98_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB98_2:
+; RV64-NEXT:    ret
+  %2 = and i32 %0, 2147483647
+  %3 = icmp ne i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_32_1_z_branch_i32(i32 signext %0) {
+; CHECK-LABEL: bit_32_1_z_branch_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a0, .LBB99_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB99_2:
+; CHECK-NEXT:    tail bar@plt
+  %2 = and i32 %0, 4294967295
+  %3 = icmp eq i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_32_1_nz_branch_i32(i32 signext %0) {
+; CHECK-LABEL: bit_32_1_nz_branch_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a0, .LBB100_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    tail bar@plt
+; CHECK-NEXT:  .LBB100_2:
+; CHECK-NEXT:    ret
+  %2 = and i32 %0, 4294967295
+  %3 = icmp ne i32 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+
+define void @bit_10_1_z_branch_i64(i64 %0) {
+; CHECK-LABEL: bit_10_1_z_branch_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1023
+; CHECK-NEXT:    beqz a0, .LBB101_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB101_2:
+; CHECK-NEXT:    tail bar@plt
+  %2 = and i64 %0, 1023
+  %3 = icmp eq i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_10_1_nz_branch_i64(i64 %0) {
+; CHECK-LABEL: bit_10_1_nz_branch_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1023
+; CHECK-NEXT:    beqz a0, .LBB102_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    tail bar@plt
+; CHECK-NEXT:  .LBB102_2:
+; CHECK-NEXT:    ret
+  %2 = and i64 %0, 1023
+  %3 = icmp ne i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_11_1_z_branch_i64(i64 %0) {
+; CHECK-LABEL: bit_11_1_z_branch_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 2047
+; CHECK-NEXT:    beqz a0, .LBB103_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB103_2:
+; CHECK-NEXT:    tail bar@plt
+  %2 = and i64 %0, 2047
+  %3 = icmp eq i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_11_1_nz_branch_i64(i64 %0) {
+; CHECK-LABEL: bit_11_1_nz_branch_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 2047
+; CHECK-NEXT:    beqz a0, .LBB104_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    tail bar@plt
+; CHECK-NEXT:  .LBB104_2:
+; CHECK-NEXT:    ret
+  %2 = and i64 %0, 2047
+  %3 = icmp ne i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_16_1_z_branch_i64(i64 %0) {
+; RV32-LABEL: bit_16_1_z_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    beqz a0, .LBB105_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB105_2:
+; RV32-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_16_1_z_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    beqz a0, .LBB105_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB105_2:
+; RV64-NEXT:    tail bar@plt
+  %2 = and i64 %0, 65535
+  %3 = icmp eq i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_16_1_nz_branch_i64(i64 %0) {
+; RV32-LABEL: bit_16_1_nz_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    beqz a0, .LBB106_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    tail bar@plt
+; RV32-NEXT:  .LBB106_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_16_1_nz_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    beqz a0, .LBB106_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB106_2:
+; RV64-NEXT:    ret
+  %2 = and i64 %0, 65535
+  %3 = icmp ne i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_24_1_z_branch_i64(i64 %0) {
+; RV32-LABEL: bit_24_1_z_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 8
+; RV32-NEXT:    beqz a0, .LBB107_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB107_2:
+; RV32-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_24_1_z_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 40
+; RV64-NEXT:    beqz a0, .LBB107_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB107_2:
+; RV64-NEXT:    tail bar@plt
+  %2 = and i64 %0, 16777215
+  %3 = icmp eq i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_24_1_nz_branch_i64(i64 %0) {
+; RV32-LABEL: bit_24_1_nz_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 8
+; RV32-NEXT:    beqz a0, .LBB108_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    tail bar@plt
+; RV32-NEXT:  .LBB108_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_24_1_nz_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 40
+; RV64-NEXT:    beqz a0, .LBB108_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB108_2:
+; RV64-NEXT:    ret
+  %2 = and i64 %0, 16777215
+  %3 = icmp ne i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_31_1_z_branch_i64(i64 %0) {
+; RV32-LABEL: bit_31_1_z_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    beqz a0, .LBB109_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB109_2:
+; RV32-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_31_1_z_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 33
+; RV64-NEXT:    beqz a0, .LBB109_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB109_2:
+; RV64-NEXT:    tail bar@plt
+  %2 = and i64 %0, 2147483647
+  %3 = icmp eq i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_31_1_nz_branch_i64(i64 %0) {
+; RV32-LABEL: bit_31_1_nz_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    beqz a0, .LBB110_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    tail bar@plt
+; RV32-NEXT:  .LBB110_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_31_1_nz_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 33
+; RV64-NEXT:    beqz a0, .LBB110_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB110_2:
+; RV64-NEXT:    ret
+  %2 = and i64 %0, 2147483647
+  %3 = icmp ne i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_32_1_z_branch_i64(i64 %0) {
+; RV32-LABEL: bit_32_1_z_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    beqz a0, .LBB111_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB111_2:
+; RV32-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_32_1_z_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    beqz a0, .LBB111_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB111_2:
+; RV64-NEXT:    tail bar@plt
+  %2 = and i64 %0, 4294967295
+  %3 = icmp eq i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_32_1_nz_branch_i64(i64 %0) {
+; RV32-LABEL: bit_32_1_nz_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    beqz a0, .LBB112_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    tail bar@plt
+; RV32-NEXT:  .LBB112_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_32_1_nz_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    beqz a0, .LBB112_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB112_2:
+; RV64-NEXT:    ret
+  %2 = and i64 %0, 4294967295
+  %3 = icmp ne i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_62_1_z_branch_i64(i64 %0) {
+; RV32-LABEL: bit_62_1_z_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a1, a1, 2
+; RV32-NEXT:    srli a1, a1, 2
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    beqz a0, .LBB113_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB113_2:
+; RV32-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_62_1_z_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 2
+; RV64-NEXT:    beqz a0, .LBB113_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB113_2:
+; RV64-NEXT:    tail bar@plt
+  %2 = and i64 %0, 4611686018427387903
+  %3 = icmp eq i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_62_1_nz_branch_i64(i64 %0) {
+; RV32-LABEL: bit_62_1_nz_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a1, a1, 2
+; RV32-NEXT:    srli a1, a1, 2
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    beqz a0, .LBB114_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    tail bar@plt
+; RV32-NEXT:  .LBB114_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_62_1_nz_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 2
+; RV64-NEXT:    beqz a0, .LBB114_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB114_2:
+; RV64-NEXT:    ret
+  %2 = and i64 %0, 4611686018427387903
+  %3 = icmp ne i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_63_1_z_branch_i64(i64 %0) {
+; RV32I-LABEL: bit_63_1_z_branch_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    beqz a0, .LBB115_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB115_2:
+; RV32I-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_63_1_z_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    beqz a0, .LBB115_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB115_2:
+; RV64-NEXT:    tail bar@plt
+;
+; RV32ZBS-LABEL: bit_63_1_z_branch_i64:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bclri a1, a1, 31
+; RV32ZBS-NEXT:    or a0, a0, a1
+; RV32ZBS-NEXT:    beqz a0, .LBB115_2
+; RV32ZBS-NEXT:  # %bb.1:
+; RV32ZBS-NEXT:    ret
+; RV32ZBS-NEXT:  .LBB115_2:
+; RV32ZBS-NEXT:    tail bar@plt
+  %2 = and i64 %0, 9223372036854775807
+  %3 = icmp eq i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_63_1_nz_branch_i64(i64 %0) {
+; RV32I-LABEL: bit_63_1_nz_branch_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    beqz a0, .LBB116_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    tail bar@plt
+; RV32I-NEXT:  .LBB116_2:
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: bit_63_1_nz_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    beqz a0, .LBB116_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB116_2:
+; RV64-NEXT:    ret
+;
+; RV32ZBS-LABEL: bit_63_1_nz_branch_i64:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bclri a1, a1, 31
+; RV32ZBS-NEXT:    or a0, a0, a1
+; RV32ZBS-NEXT:    beqz a0, .LBB116_2
+; RV32ZBS-NEXT:  # %bb.1:
+; RV32ZBS-NEXT:    tail bar@plt
+; RV32ZBS-NEXT:  .LBB116_2:
+; RV32ZBS-NEXT:    ret
+  %2 = and i64 %0, 9223372036854775807
+  %3 = icmp ne i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_64_1_z_branch_i64(i64 %0) {
+; RV32-LABEL: bit_64_1_z_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    beqz a0, .LBB117_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB117_2:
+; RV32-NEXT:    tail bar@plt
+;
+; RV64-LABEL: bit_64_1_z_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    beqz a0, .LBB117_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB117_2:
+; RV64-NEXT:    tail bar@plt
+  %2 = and i64 %0, 18446744073709551615
+  %3 = icmp eq i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
+define void @bit_64_1_nz_branch_i64(i64 %0) {
+; RV32-LABEL: bit_64_1_nz_branch_i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    beqz a0, .LBB118_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    tail bar@plt
+; RV32-NEXT:  .LBB118_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: bit_64_1_nz_branch_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    beqz a0, .LBB118_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    tail bar@plt
+; RV64-NEXT:  .LBB118_2:
+; RV64-NEXT:    ret
+  %2 = and i64 %0, 18446744073709551615
+  %3 = icmp ne i64 %2, 0
+  br i1 %3, label %4, label %5
+
+4:
+  tail call void @bar()
+  br label %5
+
+5:
+  ret void
+}
+
