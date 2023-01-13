@@ -1,4 +1,4 @@
-//===--- ExpandAutoType.cpp --------------------------------------*- C++-*-===//
+//===--- ExpandDeducedType.cpp -----------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,8 +29,14 @@ namespace {
 /// After:
 ///    MyClass x = Something();
 ///    ^^^^^^^
-/// FIXME: Handle decltype as well
-class ExpandAutoType : public Tweak {
+/// Expand `decltype(expr)` to the deduced type
+/// Before:
+///   decltype(0) i;
+///   ^^^^^^^^^^^
+/// After:
+///   int i;
+///   ^^^
+class ExpandDeducedType : public Tweak {
 public:
   const char *id() const final;
   llvm::StringLiteral kind() const override {
@@ -41,12 +47,14 @@ public:
   std::string title() const override;
 
 private:
-  SourceRange AutoRange;
+  SourceRange Range;
 };
 
-REGISTER_TWEAK(ExpandAutoType)
+REGISTER_TWEAK(ExpandDeducedType)
 
-std::string ExpandAutoType::title() const { return "Expand auto type"; }
+std::string ExpandDeducedType::title() const {
+  return "Replace with deduced type";
+}
 
 // Structured bindings must use auto, e.g. `const auto& [a,b,c] = ...;`.
 // Return whether N (an AutoTypeLoc) is such an auto that must not be expanded.
@@ -56,6 +64,13 @@ bool isStructuredBindingType(const SelectionTree::Node *N) {
     N = N->Parent;
   // The relevant type is the only direct type child of a Decomposition.
   return N && N->ASTNode.get<DecompositionDecl>();
+}
+
+bool isLambda(QualType QT) {
+  if (!QT.isNull())
+    if (const auto *RD = QT->getAsRecordDecl())
+      return RD->isLambda();
+  return false;
 }
 
 // Returns true iff Node is a lambda, and thus should not be expanded. Loc is
@@ -68,10 +83,9 @@ bool isDeducedAsLambda(const SelectionTree::Node *Node, SourceLocation Loc) {
   for (const auto *It = Node; It; It = It->Parent) {
     if (const auto *DD = It->ASTNode.get<DeclaratorDecl>()) {
       if (DD->getTypeSourceInfo() &&
-          DD->getTypeSourceInfo()->getTypeLoc().getBeginLoc() == Loc) {
-        if (auto *RD = DD->getType()->getAsRecordDecl())
-          return RD->isLambda();
-      }
+          DD->getTypeSourceInfo()->getTypeLoc().getBeginLoc() == Loc &&
+          isLambda(DD->getType()))
+        return true;
     }
   }
   return false;
@@ -86,14 +100,14 @@ bool isTemplateParam(const SelectionTree::Node *Node) {
   return false;
 }
 
-bool ExpandAutoType::prepare(const Selection &Inputs) {
+bool ExpandDeducedType::prepare(const Selection &Inputs) {
   if (auto *Node = Inputs.ASTSelection.commonAncestor()) {
     if (auto *TypeNode = Node->ASTNode.get<TypeLoc>()) {
       if (const AutoTypeLoc Result = TypeNode->getAs<AutoTypeLoc>()) {
         if (!isStructuredBindingType(Node) &&
             !isDeducedAsLambda(Node, Result.getBeginLoc()) &&
             !isTemplateParam(Node))
-          AutoRange = Result.getSourceRange();
+          Range = Result.getSourceRange();
       }
       if (auto TTPAuto = TypeNode->getAs<TemplateTypeParmTypeLoc>()) {
         // We exclude concept constraints for now, as the SourceRange is wrong.
@@ -102,41 +116,53 @@ bool ExpandAutoType::prepare(const Selection &Inputs) {
         // TTPAuto->getSourceRange only covers "auto", not "C auto".
         if (TTPAuto.getDecl()->isImplicit() &&
             !TTPAuto.getDecl()->hasTypeConstraint())
-          AutoRange = TTPAuto.getSourceRange();
+          Range = TTPAuto.getSourceRange();
+      }
+
+      if (auto DTTL = TypeNode->getAs<DecltypeTypeLoc>()) {
+        if (!isLambda(cast<DecltypeType>(DTTL.getType())->getUnderlyingType()))
+          Range = DTTL.getSourceRange();
       }
     }
   }
 
-  return AutoRange.isValid();
+  return Range.isValid();
 }
 
-Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
+Expected<Tweak::Effect> ExpandDeducedType::apply(const Selection &Inputs) {
   auto &SrcMgr = Inputs.AST->getSourceManager();
 
   std::optional<clang::QualType> DeducedType =
-      getDeducedType(Inputs.AST->getASTContext(), AutoRange.getBegin());
+      getDeducedType(Inputs.AST->getASTContext(), Range.getBegin());
 
   // if we can't resolve the type, return an error message
   if (DeducedType == std::nullopt || (*DeducedType)->isUndeducedAutoType())
     return error("Could not deduce type for 'auto' type");
 
-  // if it's a lambda expression, return an error message
-  if (isa<RecordType>(*DeducedType) &&
-      cast<RecordType>(*DeducedType)->getDecl()->isLambda()) {
-    return error("Could not expand type of lambda expression");
-  }
+  // we shouldn't replace a dependent type which is likely not to print
+  // usefully, e.g.
+  //   template <class T>
+  //   struct Foobar {
+  //     decltype(T{}) foobar;
+  //     ^^^^^^^^^^^^^ would turn out to be `<dependent-type>`
+  //   };
+  if ((*DeducedType)->isDependentType())
+    return error("Could not expand a dependent type");
 
-  // if it's a function expression, return an error message
-  // naively replacing 'auto' with the type will break declarations.
-  // FIXME: there are other types that have similar problems
-  if (DeducedType->getTypePtr()->isFunctionPointerType()) {
-    return error("Could not expand type of function pointer");
-  }
+  // Some types aren't written as single chunks of text, e.g:
+  //   auto fptr = &func; // auto is void(*)()
+  // ==>
+  //   void (*fptr)() = &func;
+  // Replacing these requires examining the declarator, we don't support it yet.
+  std::string PrettyDeclarator = printType(
+      *DeducedType, Inputs.ASTSelection.commonAncestor()->getDeclContext(),
+      "DECLARATOR_ID");
+  llvm::StringRef PrettyTypeName = PrettyDeclarator;
+  if (!PrettyTypeName.consume_back("DECLARATOR_ID"))
+    return error("Could not expand type that isn't a simple string");
+  PrettyTypeName = PrettyTypeName.rtrim();
 
-  std::string PrettyTypeName = printType(*DeducedType,
-      Inputs.ASTSelection.commonAncestor()->getDeclContext());
-
-  tooling::Replacement Expansion(SrcMgr, CharSourceRange(AutoRange, true),
+  tooling::Replacement Expansion(SrcMgr, CharSourceRange(Range, true),
                                  PrettyTypeName);
 
   return Effect::mainFileEdit(SrcMgr, tooling::Replacements(Expansion));
