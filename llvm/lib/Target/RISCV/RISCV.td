@@ -331,7 +331,7 @@ def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
 def FeatureStdExtZvl32b : SubtargetFeature<"zvl32b", "ZvlLen", "32",
                                            "'Zvl' (Minimum Vector Length) 32">;
 
-foreach i = { 6-15 } in {
+foreach i = { 6-16 } in {
   defvar I = !shl(1, i);
   def FeatureStdExtZvl#I#b :
       SubtargetFeature<"zvl"#I#"b", "ZvlLen", !cast<string>(I),

@@ -416,17 +416,13 @@ fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
       return fir::CharArrayBoxValue{addr, len, extents, lbounds};
     return fir::CharBoxValue{addr, len};
   }
-  mlir::Value tdesc;
-  if (box.isPolymorphic()) {
-    auto loadedBox = builder.create<fir::LoadOp>(loc, box.getAddr());
-    mlir::Type tdescType =
-        fir::TypeDescType::get(mlir::NoneType::get(builder.getContext()));
-    tdesc = builder.create<fir::BoxTypeDescOp>(loc, tdescType, loadedBox);
-  }
-  if (rank)
-    return fir::ArrayBoxValue{addr, extents, lbounds, tdesc};
+  mlir::Value sourceBox;
   if (box.isPolymorphic())
-    return fir::PolymorphicValue(addr, tdesc);
+    sourceBox = builder.create<fir::LoadOp>(loc, box.getAddr());
+  if (rank)
+    return fir::ArrayBoxValue{addr, extents, lbounds, sourceBox};
+  if (box.isPolymorphic())
+    return fir::PolymorphicValue(addr, sourceBox);
   return addr;
 }
 
@@ -476,12 +472,12 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
   MutablePropertyWriter writer(builder, loc, box);
   source.match(
       [&](const fir::PolymorphicValue &p) {
-        mlir::Value tdesc;
+        mlir::Value sourceBox;
         if (auto polyBox = source.getBoxOf<fir::PolymorphicValue>())
-          tdesc = polyBox->getTdesc();
+          sourceBox = polyBox->getSourceBox();
         writer.updateMutableBox(p.getAddr(), /*lbounds=*/std::nullopt,
                                 /*extents=*/std::nullopt,
-                                /*lengths=*/std::nullopt, tdesc);
+                                /*lengths=*/std::nullopt, sourceBox);
       },
       [&](const fir::UnboxedValue &addr) {
         writer.updateMutableBox(addr, /*lbounds=*/std::nullopt,

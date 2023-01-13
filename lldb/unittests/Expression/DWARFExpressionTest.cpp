@@ -369,8 +369,9 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
 
   // Set up a mock process.
   ArchSpec arch("i386-pc-linux");
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  Platform::SetHostPlatform(platform_linux::PlatformLinux::CreateInstance(
+      true, &arch, /*debugger=*/nullptr,
+      /*metadata=*/nullptr));
   lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
   lldb::TargetSP target_sp;
@@ -409,7 +410,9 @@ TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
   // Set up a wasm target
   ArchSpec arch("wasm32-unknown-unknown-wasm");
   lldb::PlatformSP host_platform_sp =
-      platform_linux::PlatformLinux::CreateInstance(true, &arch);
+      platform_linux::PlatformLinux::CreateInstance(true, &arch,
+                                                    /*debugger=*/nullptr,
+                                                    /*metadata=*/nullptr);
   ASSERT_TRUE(host_platform_sp);
   Platform::SetHostPlatform(host_platform_sp);
   lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
@@ -488,7 +491,9 @@ DWARF:
   // Set up a wasm target
   ArchSpec arch("wasm32-unknown-unknown-wasm");
   lldb::PlatformSP host_platform_sp =
-      platform_linux::PlatformLinux::CreateInstance(true, &arch);
+      platform_linux::PlatformLinux::CreateInstance(true, &arch,
+                                                    /*debugger=*/nullptr,
+                                                    /*metadata=*/nullptr);
   ASSERT_TRUE(host_platform_sp);
   Platform::SetHostPlatform(host_platform_sp);
   lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();

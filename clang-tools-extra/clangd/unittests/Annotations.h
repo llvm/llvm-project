@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// A clangd-specific version of llvm/Testing/Support/Annotations.h, replaces
+// A clangd-specific version of llvm/Testing/Annotations/Annotations.h, replaces
 // offsets and offset-based ranges with types from the LSP protocol.
 //===---------------------------------------------------------------------===//
 
@@ -13,7 +13,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_ANNOTATIONS_H
 
 #include "Protocol.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 
 namespace clang {
 namespace clangd {

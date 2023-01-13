@@ -7,7 +7,9 @@ find_package(Clang 16)
 
 set(SOURCES
     robust_against_adl.cpp
-    libcpp_module.cpp)
+    libcpp_module.cpp
+    qualify_declval.cpp
+   )
 
 
 if(NOT Clang_FOUND)

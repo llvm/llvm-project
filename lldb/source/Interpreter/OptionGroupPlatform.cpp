@@ -10,6 +10,7 @@
 
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/Platform.h"
 
 using namespace lldb;
@@ -22,8 +23,10 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
 
   PlatformSP platform_sp;
 
+  const ScriptedMetadata metadata(m_class_options);
+
   if (!m_platform_name.empty()) {
-    platform_sp = platforms.Create(m_platform_name);
+    platform_sp = platforms.Create(m_platform_name, &metadata);
     if (!platform_sp) {
       error.SetErrorStringWithFormatv(
           "unable to find a plug-in for the platform named \"{0}\"",
@@ -41,7 +44,8 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
       }
     }
   } else if (arch.IsValid()) {
-    platform_sp = platforms.GetOrCreate(arch, {}, &platform_arch, error);
+    platform_sp =
+        platforms.GetOrCreate(arch, {}, &platform_arch, error, &metadata);
   }
 
   if (platform_sp) {

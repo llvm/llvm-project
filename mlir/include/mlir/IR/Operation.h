@@ -167,7 +167,7 @@ public:
   /// as top level function operations, is therefore always safe. Using the
   /// mapper, it is possible to avoid adding uses to outside operands by
   /// remapping them to 'Value's owned by the caller thread.
-  Operation *clone(BlockAndValueMapping &mapper,
+  Operation *clone(IRMapping &mapper,
                    CloneOptions options = CloneOptions::all());
   Operation *clone(CloneOptions options = CloneOptions::all());
 
@@ -176,7 +176,7 @@ public:
   /// original one, but they will be left empty.
   /// Operands are remapped using `mapper` (if present), and `mapper` is updated
   /// to contain the results.
-  Operation *cloneWithoutRegions(BlockAndValueMapping &mapper);
+  Operation *cloneWithoutRegions(IRMapping &mapper);
 
   /// Create a partial copy of this operation without traversing into attached
   /// regions. The new operation will have the same number of regions as the

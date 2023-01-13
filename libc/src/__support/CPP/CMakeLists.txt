@@ -99,4 +99,6 @@ add_object_library(
     new.cpp
   HDRS
     new.h
+  DEPENDS
+    libc.include.stdlib
 )

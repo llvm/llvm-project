@@ -1375,7 +1375,7 @@ struct __is_istreamable : false_type { };
 
 template <class _Stream, class _Tp>
 struct __is_istreamable<_Stream, _Tp, decltype(
-    declval<_Stream>() >> declval<_Tp>(), void()
+    std::declval<_Stream>() >> std::declval<_Tp>(), void()
 )> : true_type { };
 
 template <class _Stream, class _Tp, class = typename enable_if<

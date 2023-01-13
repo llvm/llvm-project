@@ -22,7 +22,9 @@ class PlatformRemoteAppleWatch : public PlatformRemoteDarwinDevice {
 public:
   PlatformRemoteAppleWatch();
 
-  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
+  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch,
+                                         const Debugger *debugger,
+                                         const ScriptedMetadata *metadata);
 
   static void Initialize();
 

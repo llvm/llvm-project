@@ -374,7 +374,12 @@ void setTags(clangd::Diag &D) {
   } else if (UnusedDiags->contains(D.ID)) {
     D.Tags.push_back(DiagnosticTag::Unnecessary);
   }
-  // FIXME: Set tags for tidy-based diagnostics too.
+  if (D.Source == Diag::ClangTidy) {
+    if (llvm::StringRef(D.Name).starts_with("misc-unused-"))
+      D.Tags.push_back(DiagnosticTag::Unnecessary);
+    if (llvm::StringRef(D.Name).starts_with("modernize-"))
+      D.Tags.push_back(DiagnosticTag::Deprecated);
+  }
 }
 } // namespace
 
@@ -566,7 +571,6 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
 
   // Fill in name/source now that we have all the context needed to map them.
   for (auto &Diag : Output) {
-    setTags(Diag);
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
       // Warnings controlled by -Wfoo are better recognized by that name.
       StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(Diag.ID);
@@ -580,9 +584,7 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
         Diag.Name = std::string(Name);
       }
       Diag.Source = Diag::Clang;
-      continue;
-    }
-    if (Tidy != nullptr) {
+    } else if (Tidy != nullptr) {
       std::string TidyDiag = Tidy->getCheckName(Diag.ID);
       if (!TidyDiag.empty()) {
         Diag.Name = std::move(TidyDiag);
@@ -600,9 +602,9 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
           CleanMessage(Note.Message);
         for (auto &Fix : Diag.Fixes)
           CleanMessage(Fix.Message);
-        continue;
       }
     }
+    setTags(Diag);
   }
   // Deduplicate clang-tidy diagnostics -- some clang-tidy checks may emit
   // duplicated messages due to various reasons (e.g. the check doesn't handle

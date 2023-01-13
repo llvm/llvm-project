@@ -7,6 +7,7 @@ load("//llvm:tblgen.bzl", "gentbl")
 
 package(
     default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
 )
 
 licenses(["notice"])
@@ -44,6 +45,7 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:config",
     ],
 )
 
@@ -94,8 +96,10 @@ cc_library(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Passes",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:TransformUtils",
+        "//llvm:config",
     ],
 )
 
@@ -128,10 +132,15 @@ cc_library(
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
         "//llvm:Analysis",
+        "//llvm:BinaryFormat",
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:Core",
+        "//llvm:DebugInfo",
+        "//llvm:DebugInfoCodeView",
+        "//llvm:DebugInfoMSF",
         "//llvm:DebugInfoPDB",
+        "//llvm:Demangle",
         "//llvm:IPO",
         "//llvm:LTO",
         "//llvm:LibDriver",
@@ -141,9 +150,11 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Symbolize",
+        "//llvm:Target",
         "//llvm:TransformUtils",
         "//llvm:WindowsDriver",
         "//llvm:WindowsManifest",
+        "//llvm:config",
     ],
 )
 
@@ -201,7 +212,19 @@ cc_library(
         ":Common",
         ":macho_options_inc_gen",
         "//libunwind:unwind_headers_only",
+        "//llvm:BinaryFormat",
+        "//llvm:BitReader",
+        "//llvm:Core",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
         "//llvm:LTO",
+        "//llvm:MC",
+        "//llvm:ObjCARC",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TextAPI",
+        "//llvm:config",
     ],
 )
 
@@ -234,10 +257,12 @@ cc_library(
         "//llvm:AllTargetsCodeGens",
         "//llvm:BinaryFormat",
         "//llvm:Core",
+        "//llvm:Demangle",
         "//llvm:LTO",
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:config",
     ],
 )
 

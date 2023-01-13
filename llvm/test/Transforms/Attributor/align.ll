@@ -264,7 +264,7 @@ define internal ptr @f2b(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; CGSCC-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
 ; CGSCC:       3:
-; CGSCC-NEXT:    [[TMP4:%.*]] = tail call ptr poison(ptr nonnull [[TMP0]])
+; CGSCC-NEXT:    [[TMP4:%.*]] = tail call ptr @f1b()
 ; CGSCC-NEXT:    br label [[TMP7:%.*]]
 ; CGSCC:       5:
 ; CGSCC-NEXT:    [[TMP6:%.*]] = tail call ptr @f3b()

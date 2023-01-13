@@ -4,7 +4,6 @@ module {
   llvm.metadata @__tbaa {
     llvm.tbaa_root @tbaa_root_0 {id = "Simple C/C++ TBAA"}
     llvm.tbaa_tag @tbaa_tag_1 {access_type = @tbaa_root_0, base_type = @tbaa_root_0, offset = 0 : i64}
-    llvm.return
   }
   llvm.func @tbaa(%arg0: !llvm.ptr) {
     %0 = llvm.mlir.constant(1 : i8) : i8
@@ -34,7 +33,6 @@ module {
   }
   llvm.metadata @metadata {
     llvm.access_group @group1
-    llvm.return
   }
 }
 
@@ -48,7 +46,6 @@ module {
     llvm.return
   }
   llvm.metadata @metadata {
-    llvm.return
   }
 }
 
@@ -74,7 +71,6 @@ llvm.func @tbaa() {
 module {
   llvm.metadata @__tbaa {
     llvm.tbaa_root @tbaa_root_0 {id = "Simple C/C++ TBAA"}
-    llvm.return
   }
 
   llvm.func @tbaa() {
@@ -89,7 +85,6 @@ module {
 module {
   llvm.metadata @__tbaa {
     llvm.tbaa_root @tbaa_root_0 {id = "Simple C/C++ TBAA"}
-    llvm.return
   }
 
   llvm.func @tbaa() {
@@ -105,7 +100,6 @@ module {
   llvm.metadata @__tbaa {
     // expected-error@below {{expected non-empty "identity"}}
     llvm.tbaa_root @tbaa_root_0 {id = ""}
-    llvm.return
   }
 }
 
@@ -117,7 +111,6 @@ module {
       "llvm.tbaa_type_desc"() {identity = "omnipotent char", members = [@tbaa_root_0], offsets = array<i64: 0>, sym_name = "tbaa_type_desc_1"} : () -> ()
     // expected-error@below {{expected the same number of elements in "members" and "offsets": 2 != 1}}
       "llvm.tbaa_type_desc"() {identity = "agg_t", members = [@tbaa_type_desc_1, @tbaa_type_desc_1], offsets = array<i64: 0>, sym_name = "tbaa_type_desc_2"} : () -> ()
-      "llvm.return"() : () -> ()
     }) {sym_name = "__tbaa"} : () -> ()
   }) : () -> ()
 
@@ -128,7 +121,6 @@ module {
     llvm.tbaa_root @tbaa_root_0 {id = "Simple C/C++ TBAA"}
     // expected-error@below {{expected "base_type" to reference a symbol from 'llvm.metadata @__tbaa' defined by either 'llvm.tbaa_root' or 'llvm.tbaa_type_desc' while it references '@tbaa_root_2'}}
     llvm.tbaa_tag @tbaa_tag_1 {access_type = @tbaa_root_0, base_type = @tbaa_root_2, offset = 0 : i64}
-    llvm.return
   }
 }
 
@@ -139,7 +131,6 @@ module {
     llvm.tbaa_root @tbaa_root_0 {id = "Simple C/C++ TBAA"}
     // expected-error@below {{expected "access_type" to reference a symbol from 'llvm.metadata @__tbaa' defined by either 'llvm.tbaa_root' or 'llvm.tbaa_type_desc' while it references '@tbaa_root_2'}}
     llvm.tbaa_tag @tbaa_tag_1 {access_type = @tbaa_root_2, base_type = @tbaa_root_0, offset = 0 : i64}
-    llvm.return
   }
 }
 
@@ -152,7 +143,6 @@ module {
     llvm.tbaa_type_desc @tbaa_type_desc_2 {id = "long long", members = {<@tbaa_type_desc_1, 0>}}
     // expected-error@below {{expected "members" to reference a symbol from 'llvm.metadata @__tbaa' defined by either 'llvm.tbaa_root' or 'llvm.tbaa_type_desc' while it references '@tbaa_type_desc_4'}}
     llvm.tbaa_type_desc @tbaa_type_desc_3 {id = "agg2_t", members = {<@tbaa_type_desc_2, 0>, <@tbaa_type_desc_4, 8>}}
-    llvm.return
   }
 }
 
@@ -164,7 +154,6 @@ module {
     llvm.tbaa_tag @tbaa_tag_1 {access_type = @tbaa_root_0, base_type = @tbaa_root_0, offset = 0 : i64}
     // expected-error@below {{expected "access_type" to reference a symbol from 'llvm.metadata @__tbaa' defined by either 'llvm.tbaa_root' or 'llvm.tbaa_type_desc' while it references '@tbaa_tag_1'}}
     llvm.tbaa_tag @tbaa_tag_2 {access_type = @tbaa_tag_1, base_type = @tbaa_root_0, offset = 0 : i64}
-    llvm.return
   }
 }
 
@@ -176,6 +165,5 @@ module {
     llvm.tbaa_root @tbaa_root_0 {id = "Simple C/C++ TBAA"}
     llvm.tbaa_type_desc @tbaa_type_desc_1 {id = "omnipotent char", members = {<@tbaa_type_desc_2, 0>}}
     llvm.tbaa_type_desc @tbaa_type_desc_2 {id = "long long", members = {<@tbaa_type_desc_1, 0>}}
-    llvm.return
   }
 }

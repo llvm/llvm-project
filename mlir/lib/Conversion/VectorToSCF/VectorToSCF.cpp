@@ -298,7 +298,7 @@ static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
     auto maskBuffer = b.create<memref::AllocaOp>(loc, maskType);
     b.setInsertionPoint(xferOp);
     b.create<memref::StoreOp>(loc, xferOp.getMask(), maskBuffer);
-    result.maskBuffer = b.create<memref::LoadOp>(loc, maskBuffer);
+    result.maskBuffer = b.create<memref::LoadOp>(loc, maskBuffer, ValueRange());
   }
 
   return result;

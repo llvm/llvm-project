@@ -12,8 +12,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
@@ -723,7 +723,7 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 }
 
 //===----------------------------------------------------------------------===//
-// Bufferization-specific BlockAndValueMapping support with debugging.
+// Bufferization-specific IRMapping support with debugging.
 //===----------------------------------------------------------------------===//
 
 bool bufferization::isFunctionArgument(Value value) {

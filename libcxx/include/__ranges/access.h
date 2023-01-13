@@ -105,7 +105,7 @@ inline namespace __cpo {
 
 namespace ranges {
   template <class _Tp>
-  using iterator_t = decltype(ranges::begin(declval<_Tp&>()));
+  using iterator_t = decltype(ranges::begin(std::declval<_Tp&>()));
 } // namespace ranges
 
 // [range.access.end]

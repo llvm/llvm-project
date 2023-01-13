@@ -54,8 +54,10 @@ void PlatformRemoteAppleWatch::Terminate() {
   PlatformDarwin::Terminate();
 }
 
-PlatformSP PlatformRemoteAppleWatch::CreateInstance(bool force,
-                                                    const ArchSpec *arch) {
+PlatformSP
+PlatformRemoteAppleWatch::CreateInstance(bool force, const ArchSpec *arch,
+                                         const Debugger *debugger,
+                                         const ScriptedMetadata *metadata) {
   Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;

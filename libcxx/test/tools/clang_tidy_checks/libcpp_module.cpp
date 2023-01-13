@@ -9,12 +9,14 @@
 #include "clang-tidy/ClangTidyModule.h"
 #include "clang-tidy/ClangTidyModuleRegistry.h"
 #include "robust_against_adl.hpp"
+#include "qualify_declval.hpp"
 
 namespace {
 class LibcxxTestModule : public clang::tidy::ClangTidyModule {
 public:
   void addCheckFactories(clang::tidy::ClangTidyCheckFactories& check_factories) override {
     check_factories.registerCheck<libcpp::robust_against_adl_check>("libcpp-robust-against-adl");
+    check_factories.registerCheck<libcpp::qualify_declval>("libcpp-qualify-declval");
   }
 };
 } // namespace

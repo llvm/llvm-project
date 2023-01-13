@@ -1,6 +1,6 @@
 ; RUN: llc --filetype=obj %s -o - | dxil-dis -o - | FileCheck %s
 
-; RUN: llc --filetype=obj %s --stop-after=dxil-write-bitcode -o %t | llvm-bcanalyzer --dump-blockinfo %t | FileCheck %s  --check-prefix=BLOCK_INFO
+; RUN: llc --filetype=obj %s --stop-after=dxil-write-bitcode -o %t && llvm-bcanalyzer --dump-blockinfo %t | FileCheck %s  --check-prefix=BLOCK_INFO
 
 ; CHECK: define i32 @foo(i32 %X, i32 %Y) {
 ; CHECK:   %Z = sub i32 %X, %Y

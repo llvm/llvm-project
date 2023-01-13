@@ -194,13 +194,11 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     // Don't allow inlining calls that are marked `noinline`.
     return !call->hasAttr("noinline");
   }
-  bool isLegalToInline(Region *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
     // Inlining into test dialect regions is legal.
     return true;
   }
-  bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
 

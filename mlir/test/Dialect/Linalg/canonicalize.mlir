@@ -312,20 +312,6 @@ func.func @fold_fill_reshape() -> tensor<6x4xf32> {
 
 // -----
 
-// CHECK-LABEL: func @fold_fill_extract_slice(
-//  CHECK-SAME:     %[[t:.*]]: tensor<1x1xf32>
-func.func @fold_fill_extract_slice(%t: tensor<1x1xf32>) -> (tensor<f32>) {
-  %cst = arith.constant 0.000000e+00 : f32
-  // CHECK: %[[e:.*]] = tensor.extract_slice %[[t]]
-  // CHECK: %[[f:.*]] = linalg.fill {{.*}} outs(%[[e]] : tensor<f32>)
-  %0 = linalg.fill ins(%cst : f32) outs(%t : tensor<1x1xf32>) -> tensor<1x1xf32>
-  %1 = tensor.extract_slice %0[0, 0] [1, 1] [1, 1] : tensor<1x1xf32> to tensor<f32>
-  // CHECK: return %[[f]]
-  return %1 : tensor<f32>
-}
-
-// -----
-
 //       CHECK: func @fold_fill_reshape_dynamic
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?x?x?xf32>
 func.func @fold_fill_reshape_dynamic(%arg0 : tensor<?x?x?x?x?xf32>) -> tensor<?x?xf32> {

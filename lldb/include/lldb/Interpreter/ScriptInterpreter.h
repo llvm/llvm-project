@@ -18,6 +18,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Interpreter/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/ScriptedProcessInterface.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
@@ -147,7 +148,9 @@ public:
   ScriptInterpreter(
       Debugger &debugger, lldb::ScriptLanguage script_lang,
       lldb::ScriptedProcessInterfaceUP scripted_process_interface_up =
-          std::make_unique<ScriptedProcessInterface>());
+          std::make_unique<ScriptedProcessInterface>(),
+      lldb::ScriptedPlatformInterfaceUP scripted_platform_interface_up =
+          std::make_unique<ScriptedPlatformInterface>());
 
   virtual StructuredData::DictionarySP GetInterpreterInfo();
 
@@ -571,6 +574,10 @@ public:
     return *m_scripted_process_interface_up;
   }
 
+  ScriptedPlatformInterface &GetScriptedPlatformInterface() {
+    return *m_scripted_platform_interface_up;
+  }
+
   lldb::DataExtractorSP
   GetDataExtractorFromSBData(const lldb::SBData &data) const;
 
@@ -583,6 +590,7 @@ protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;
   lldb::ScriptedProcessInterfaceUP m_scripted_process_interface_up;
+  lldb::ScriptedPlatformInterfaceUP m_scripted_platform_interface_up;
 };
 
 } // namespace lldb_private

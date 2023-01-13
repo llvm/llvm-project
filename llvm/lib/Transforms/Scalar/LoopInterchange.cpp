@@ -1240,7 +1240,6 @@ void LoopInterchangeTransform::restructureLoops(
 
   // Tell SE that we move the loops around.
   SE->forgetLoop(NewOuter);
-  SE->forgetLoop(NewInner);
 }
 
 bool LoopInterchangeTransform::transform() {
