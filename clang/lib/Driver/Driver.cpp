@@ -4212,6 +4212,18 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       I.second->claim();
   }
 
+  // Call validator for dxil when -Vd not in Args.
+  if (C.getDefaultToolChain().getTriple().isDXIL()) {
+    // Only add action when needValidation.
+    const auto &TC =
+        static_cast<const toolchains::HLSLToolChain &>(C.getDefaultToolChain());
+    if (TC.requiresValidation(Args)) {
+      Action *LastAction = Actions.back();
+      Actions.push_back(C.MakeAction<BinaryAnalyzeJobAction>(
+          LastAction, types::TY_DX_CONTAINER));
+    }
+  }
+
   // Claim ignored clang-cl options.
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
@@ -4680,6 +4692,7 @@ void Driver::BuildJobs(Compilation &C) const {
     unsigned NumIfsOutputs = 0;
     for (const Action *A : C.getActions()) {
       if (A->getType() != types::TY_Nothing &&
+          A->getType() != types::TY_DX_CONTAINER &&
           !(A->getKind() == Action::IfsMergeJobClass ||
             (A->getType() == clang::driver::types::TY_IFS_CPP &&
              A->getKind() == clang::driver::Action::CompileJobClass &&

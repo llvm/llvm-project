@@ -7116,3 +7116,7 @@ def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
                      Flags<[DXCOption, NoXarchOption]>,
                      HelpText<"Entry point name">;
+def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
+  HelpText<"DXIL validator installation path">;
+def dxc_disable_validation : DXCFlag<"Vd">,
+  HelpText<"Disable validation">;
