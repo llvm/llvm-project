@@ -15,21 +15,19 @@
 #include "execution_defs.h"
 #include "pstl_config.h"
 
-namespace std
-{
+namespace std {
 // Type trait
 using __pstl::execution::is_execution_policy;
 #if defined(_PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT)
-#    if defined(__INTEL_COMPILER)
+#  if defined(__INTEL_COMPILER)
 template <class T>
 constexpr bool is_execution_policy_v = is_execution_policy<T>::value;
-#    else
+#  else
 using __pstl::execution::is_execution_policy_v;
-#    endif
+#  endif
 #endif
 
-namespace execution
-{
+namespace execution {
 // Standard C++ policy classes
 using __pstl::execution::parallel_policy;
 using __pstl::execution::parallel_unsequenced_policy;
