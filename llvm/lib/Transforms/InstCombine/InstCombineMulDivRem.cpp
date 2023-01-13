@@ -661,6 +661,17 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
       }
     }
 
+    // pow(X, Y) * X --> pow(X, Y+1)
+    // X * pow(X, Y) --> pow(X, Y+1)
+    if (match(&I, m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::pow>(m_Value(X),
+                                                                m_Value(Y))),
+                           m_Deferred(X)))) {
+      Value *Y1 =
+          Builder.CreateFAddFMF(Y, ConstantFP::get(I.getType(), 1.0), &I);
+      Value *Pow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, Y1, &I);
+      return replaceInstUsesWith(I, Pow);
+    }
+
     if (I.isOnlyUserOfAnyOperand()) {
       // pow(X, Y) * pow(X, Z) -> pow(X, Y + Z)
       if (match(Op0, m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))) &&

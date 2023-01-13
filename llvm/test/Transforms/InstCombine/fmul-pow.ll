@@ -4,6 +4,9 @@
 declare double @llvm.pow.f64(double, double)
 declare void @use(double)
 
+; negative test for:
+; pow(a,b) * a --> pow(a, b+1) (requires reassoc)
+
 define double @pow_ab_a(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_a(
 ; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
@@ -15,10 +18,12 @@ define double @pow_ab_a(double %a, double %b)  {
   ret double %m
 }
 
+; pow(a,b) * a --> pow(a, b+1)
+
 define double @pow_ab_a_reassoc(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_a_reassoc(
-; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
-; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[P]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc double [[B:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[M:%.*]] = call reassoc double @llvm.pow.f64(double [[A:%.*]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[M]]
 ;
   %p = call double @llvm.pow.f64(double %a, double %b)
@@ -26,11 +31,13 @@ define double @pow_ab_a_reassoc(double %a, double %b)  {
   ret double %m
 }
 
+; a * pow(a,b) --> pow(a, b+1)
+
 define double @pow_ab_a_reassoc_commute(double %pa, double %b)  {
 ; CHECK-LABEL: @pow_ab_a_reassoc_commute(
 ; CHECK-NEXT:    [[A:%.*]] = fadd double [[PA:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A]], double [[B:%.*]])
-; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[A]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc double [[B:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[M:%.*]] = call reassoc double @llvm.pow.f64(double [[A]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[M]]
 ;
   %a = fadd double %pa, 42.0 ; thwart complexity-based canonicalization
@@ -38,6 +45,8 @@ define double @pow_ab_a_reassoc_commute(double %pa, double %b)  {
   %m = fmul reassoc double %a, %p
   ret double %m
 }
+
+; negative test - extra uses not allowed
 
 define double @pow_ab_a_reassoc_use(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_a_reassoc_use(
