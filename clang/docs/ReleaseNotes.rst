@@ -540,11 +540,6 @@ New Compiler Flags
       int b[0]; // NOT a flexible array member.
     };
 
-- Added ``-Rpass-analysis=stack-frame-layout`` which will emit new diagnostic
-  information about the layout of stack frames through the remarks
-  infrastructure. Since it uses remarks the diagnostic information is available
-  both on the CLI, and in a machine readable format.
-
 Deprecated Compiler Flags
 -------------------------
 - ``-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang``

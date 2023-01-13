@@ -8,9 +8,6 @@
 ; STOP-AFTER: Dominator Tree Construction
 ; STOP-AFTER: Loop Strength Reduction
 ; STOP-AFTER-NEXT: Verify generated machine code
-; STOP-AFTER-NEXT: Lazy Machine Block Frequency Analysis
-; STOP-AFTER-NEXT: Machine Optimization Remark Emitter
-; STOP-AFTER-NEXT: Stack Frame Layout Analysis
 ; STOP-AFTER-NEXT: MIR Printing Pass
 
 ; RUN: llc < %s -debug-pass=Structure -stop-before=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-BEFORE
