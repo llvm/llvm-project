@@ -44,6 +44,13 @@ func.func @broadcast_unknown(%arg0: memref<4x8xf32>) {
 
 // -----
 
+func.func @fma_vector_4xi32(%arg0: vector<4xi32>) {
+  // expected-error@+1 {{'vector.fma' op operand #0 must be vector of floating-point value}}
+  %1 = vector.fma %arg0, %arg0, %arg0 : vector<4xi32>
+}
+
+// -----
+
 func.func @shuffle_elt_type_mismatch(%arg0: vector<2xf32>, %arg1: vector<2xi32>) {
   // expected-error@+1 {{'vector.shuffle' op failed to verify that second operand v2 and result have same element type}}
   %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<2xf32>, vector<2xi32>
