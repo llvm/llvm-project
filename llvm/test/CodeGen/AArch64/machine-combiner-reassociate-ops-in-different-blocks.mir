@@ -44,8 +44,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   [[FADDv4f32_:%[0-9]+]]:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDv4f32 [[LDRQui]], [[LDRQui2]], implicit $fpcr
-  ; CHECK-NEXT:   [[FADDv4f32_1:%[0-9]+]]:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDv4f32 [[LDRQui1]], killed [[FADDv4f32_]], implicit $fpcr
-  ; CHECK-NEXT:   [[FADDv4f32_2:%[0-9]+]]:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDv4f32 [[LDRQui3]], killed [[FADDv4f32_1]], implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv4f32_1:%[0-9]+]]:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDv4f32 [[LDRQui3]], [[LDRQui1]], implicit $fpcr
+  ; CHECK-NEXT:   [[FADDv4f32_2:%[0-9]+]]:fpr128 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDv4f32 killed [[FADDv4f32_1]], killed [[FADDv4f32_]], implicit $fpcr
   ; CHECK-NEXT:   [[FADDPv4f32_:%[0-9]+]]:fpr128 = nofpexcept FADDPv4f32 [[FADDv4f32_2]], [[FADDv4f32_2]], implicit $fpcr
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64all = COPY [[FADDPv4f32_]].dsub
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr64 = COPY [[COPY2]]
