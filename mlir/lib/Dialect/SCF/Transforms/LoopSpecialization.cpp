@@ -21,7 +21,7 @@
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseMap.h"
@@ -59,7 +59,7 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
   }
 
   OpBuilder b(op);
-  BlockAndValueMapping map;
+  IRMapping map;
   Value cond;
   for (auto bound : llvm::zip(op.getUpperBound(), constantIndices)) {
     Value constant =
@@ -93,7 +93,7 @@ static void specializeForLoopForUnrolling(ForOp op) {
     return;
 
   OpBuilder b(op);
-  BlockAndValueMapping map;
+  IRMapping map;
   Value constant = b.create<arith::ConstantIndexOp>(op.getLoc(), minConstant);
   Value cond = b.create<arith::CmpIOp>(op.getLoc(), arith::CmpIPredicate::eq,
                                        bound, constant);

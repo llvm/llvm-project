@@ -8,9 +8,9 @@
 
 #include "mlir/Dialect/Async/IR/Async.h"
 
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 

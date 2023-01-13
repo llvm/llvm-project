@@ -2870,8 +2870,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
   /// Conservative allowlist-based inlining of operations supported so far.
-  bool isLegalToInline(Operation *op, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
     if (isPure(op))
       return true;
     return llvm::TypeSwitch<Operation *, bool>(op)

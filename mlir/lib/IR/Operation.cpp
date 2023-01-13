@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -541,12 +541,12 @@ Operation::CloneOptions &Operation::CloneOptions::cloneOperands(bool enable) {
 /// Operands are remapped using `mapper` (if present), and `mapper` is updated
 /// to contain the results. The `mapResults` flag specifies whether the results
 /// of the cloned operation should be added to the map.
-Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
+Operation *Operation::cloneWithoutRegions(IRMapping &mapper) {
   return clone(mapper, CloneOptions::all().cloneRegions(false));
 }
 
 Operation *Operation::cloneWithoutRegions() {
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   return cloneWithoutRegions(mapper);
 }
 
@@ -555,8 +555,7 @@ Operation *Operation::cloneWithoutRegions() {
 /// them alone if no entry is present).  Replaces references to cloned
 /// sub-operations to the corresponding operation that is copied, and adds
 /// those mappings to the map.
-Operation *Operation::clone(BlockAndValueMapping &mapper,
-                            CloneOptions options) {
+Operation *Operation::clone(IRMapping &mapper, CloneOptions options) {
   SmallVector<Value, 8> operands;
   SmallVector<Block *, 2> successors;
 
@@ -575,6 +574,7 @@ Operation *Operation::clone(BlockAndValueMapping &mapper,
   // Create the new operation.
   auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
                        successors, getNumRegions());
+  mapper.map(this, newOp);
 
   // Clone the regions.
   if (options.shouldCloneRegions()) {
@@ -590,7 +590,7 @@ Operation *Operation::clone(BlockAndValueMapping &mapper,
 }
 
 Operation *Operation::clone(CloneOptions options) {
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   return clone(mapper, options);
 }
 

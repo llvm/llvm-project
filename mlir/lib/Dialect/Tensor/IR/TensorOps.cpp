@@ -14,10 +14,10 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -1148,7 +1148,7 @@ struct ExtractFromTensorGenerate : public OpRewritePattern<tensor::ExtractOp> {
     if (!tensorFromElements || !wouldOpBeTriviallyDead(tensorFromElements))
       return failure();
 
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     Block *body = &tensorFromElements.getBody().front();
     mapping.map(body->getArguments(), extract.getIndices());
     for (auto &op : body->without_terminator())
@@ -2639,7 +2639,7 @@ struct FoldSourceTensorCast : public OpRewritePattern<PadOp> {
           padTensorOp.getLow(), padTensorOp.getHigh(),
           padTensorOp.getStaticLow(), padTensorOp.getStaticHigh(),
           padTensorOp.getNofold());
-      BlockAndValueMapping mapper;
+      IRMapping mapper;
       padTensorOp.getRegion().cloneInto(&newOp.getRegion(), mapper);
 
       rewriter.replaceOpWithNewOp<tensor::CastOp>(
@@ -3228,7 +3228,7 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
               return true;
             }
             return shape == constTileSize.value();
-           
+
           })) {
     return op->emitError("mismatch in inner tile sizes specified and shaped of "
                          "tiled dimension in the packed type");
