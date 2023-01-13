@@ -2006,10 +2006,10 @@ struct FormatStyle {
   /// \version 3.4
   bool Cpp11BracedListStyle;
 
-  /// \brief Analyze the formatted file for the most used line ending (``\r\n``
-  /// or ``\n``). ``UseCRLF`` is only used as a fallback if none can be derived.
+  /// This option is **deprecated**. See ``DeriveLF`` and ``DeriveCRLF`` of
+  /// ``LineEnding``.
   /// \version 10
-  bool DeriveLineEnding;
+  // bool DeriveLineEnding;
 
   /// If ``true``, analyze the formatted file for the most common
   /// alignment of ``&`` and ``*``.
@@ -2694,6 +2694,22 @@ struct FormatStyle {
   /// Language, this format style is targeted at.
   /// \version 3.5
   LanguageKind Language;
+
+  /// Line ending style.
+  enum LineEndingStyle : int8_t {
+    /// Use ``\n``.
+    LE_LF,
+    /// Use ``\r\n``.
+    LE_CRLF,
+    /// Use ``\n`` unless the input has more lines ending in ``\r\n``.
+    LE_DeriveLF,
+    /// Use ``\r\n`` unless the input has more lines ending in ``\n``.
+    LE_DeriveCRLF,
+  };
+
+  /// Line ending style (``\n`` or ``\r\n``) to use.
+  /// \version 16
+  LineEndingStyle LineEnding;
 
   /// A regular expression matching macros that start a block.
   /// \code
@@ -4051,10 +4067,9 @@ struct FormatStyle {
   /// \version 9
   std::vector<std::string> TypenameMacros;
 
-  /// \brief Use ``\r\n`` instead of ``\n`` for line breaks.
-  /// Also used as fallback if ``DeriveLineEnding`` is true.
+  /// This option is **deprecated**. See ``LF`` and ``CRLF`` of ``LineEnding``.
   /// \version 10
-  bool UseCRLF;
+  // bool UseCRLF;
 
   /// Different ways to use tab in formatting.
   enum UseTabStyle : int8_t {
@@ -4144,7 +4159,6 @@ struct FormatStyle {
                R.ConstructorInitializerIndentWidth &&
            ContinuationIndentWidth == R.ContinuationIndentWidth &&
            Cpp11BracedListStyle == R.Cpp11BracedListStyle &&
-           DeriveLineEnding == R.DeriveLineEnding &&
            DerivePointerAlignment == R.DerivePointerAlignment &&
            DisableFormat == R.DisableFormat &&
            EmptyLineAfterAccessModifier == R.EmptyLineAfterAccessModifier &&
@@ -4181,7 +4195,7 @@ struct FormatStyle {
                R.KeepEmptyLinesAtTheStartOfBlocks &&
            Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
-           MacroBlockBegin == R.MacroBlockBegin &&
+           LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
@@ -4248,8 +4262,7 @@ struct FormatStyle {
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
            StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
-           TypenameMacros == R.TypenameMacros && UseCRLF == R.UseCRLF &&
-           UseTab == R.UseTab &&
+           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
   }
 
