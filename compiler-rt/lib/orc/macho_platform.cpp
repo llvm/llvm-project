@@ -284,6 +284,9 @@ private:
   Expected<ExecutorAddr> lookupSymbolInJITDylib(void *DSOHandle,
                                                 std::string_view Symbol);
 
+  static Error registerEHFrames(span<const char> EHFrameSection);
+  static Error deregisterEHFrames(span<const char> EHFrameSection);
+
   static Error registerObjCSelectors(JITDylibState &JDS);
   static Error registerObjCClasses(JITDylibState &JDS);
   static Error registerSwift5Protocols(JITDylibState &JDS);
@@ -438,7 +441,10 @@ Error MachOPlatformRuntimeState::registerObjectPlatformSections(
 
   for (auto &KV : Secs) {
     // FIXME: Validate section ranges?
-    if (KV.first == "__DATA,__data") {
+    if (KV.first == "__TEXT,__eh_frame") {
+      if (auto Err = registerEHFrames(KV.second.toSpan<const char>()))
+        return Err;
+    } else if (KV.first == "__DATA,__data") {
       assert(!JDS->DataSectionContent.count(KV.second.Start.toPtr<char *>()) &&
              "Address already registered.");
       auto S = KV.second.toSpan<char>();
@@ -505,7 +511,10 @@ Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
 
   for (auto &KV : Secs) {
     // FIXME: Validate section ranges?
-    if (KV.first == "__DATA,__data") {
+    if (KV.first == "__TEXT,__eh_frame") {
+      if (auto Err = deregisterEHFrames(KV.second.toSpan<const char>()))
+        return Err;
+    } else if (KV.first == "__DATA,__data") {
       JDS->DataSectionContent.erase(KV.second.Start.toPtr<char *>());
     } else if (KV.first == "__DATA,__common") {
       JDS->ZeroInitRanges.erase(KV.second.Start.toPtr<char *>());
@@ -671,6 +680,45 @@ MachOPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
                                              Sym))
     return std::move(Err);
   return Result;
+}
+
+// eh-frame registration functions.
+// We expect these to be available for all processes.
+extern "C" void __register_frame(const void *);
+extern "C" void __deregister_frame(const void *);
+
+template <typename HandleFDEFn>
+void walkEHFrameSection(span<const char> EHFrameSection,
+                        HandleFDEFn HandleFDE) {
+  const char *CurCFIRecord = EHFrameSection.data();
+  uint64_t Size = *reinterpret_cast<const uint32_t *>(CurCFIRecord);
+
+  while (CurCFIRecord != EHFrameSection.end() && Size != 0) {
+    const char *OffsetField = CurCFIRecord + (Size == 0xffffffff ? 12 : 4);
+    if (Size == 0xffffffff)
+      Size = *reinterpret_cast<const uint64_t *>(CurCFIRecord + 4) + 12;
+    else
+      Size += 4;
+    uint32_t Offset = *reinterpret_cast<const uint32_t *>(OffsetField);
+
+    if (Offset != 0)
+      HandleFDE(CurCFIRecord);
+
+    CurCFIRecord += Size;
+    Size = *reinterpret_cast<const uint32_t *>(CurCFIRecord);
+  }
+}
+
+Error MachOPlatformRuntimeState::registerEHFrames(
+    span<const char> EHFrameSection) {
+  walkEHFrameSection(EHFrameSection, __register_frame);
+  return Error::success();
+}
+
+Error MachOPlatformRuntimeState::deregisterEHFrames(
+    span<const char> EHFrameSection) {
+  walkEHFrameSection(EHFrameSection, __deregister_frame);
+  return Error::success();
 }
 
 Error MachOPlatformRuntimeState::registerObjCSelectors(JITDylibState &JDS) {
@@ -1050,14 +1098,24 @@ Error runWrapperFunctionCalls(std::vector<WrapperFunctionCall> WFCs) {
 
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
 __orc_rt_macho_platform_bootstrap(char *ArgData, size_t ArgSize) {
-  MachOPlatformRuntimeState::initialize();
-  return WrapperFunctionResult().release();
+  return WrapperFunction<SPSError()>::handle(
+             ArgData, ArgSize,
+             []() -> Error {
+               MachOPlatformRuntimeState::initialize();
+               return Error::success();
+             })
+      .release();
 }
 
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
 __orc_rt_macho_platform_shutdown(char *ArgData, size_t ArgSize) {
-  MachOPlatformRuntimeState::destroy();
-  return WrapperFunctionResult().release();
+  return WrapperFunction<SPSError()>::handle(
+             ArgData, ArgSize,
+             []() -> Error {
+               MachOPlatformRuntimeState::destroy();
+               return Error::success();
+             })
+      .release();
 }
 
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
