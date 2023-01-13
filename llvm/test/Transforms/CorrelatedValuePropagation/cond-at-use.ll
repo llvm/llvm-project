@@ -3,6 +3,7 @@
 
 declare void @use.i16(i16)
 declare i16 @llvm.usub.sat.i16(i16, i16)
+declare i16 @llvm.uadd.sat.i16(i16, i16)
 declare i16 @llvm.umin.i16(i16, i16)
 declare i16 @llvm.abs.i16(i16, i1)
 
@@ -75,18 +76,50 @@ define i16 @sel_true_cond_extra_use(i16 %x) {
 
 ; TODO: We could handle this case by raising the limit on the number of
 ; instructions we look through.
-define i16 @sel_true_cond_longer_chain(i16 %x) {
-; CHECK-LABEL: @sel_true_cond_longer_chain(
-; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[X:%.*]], i16 10)
+define i16 @sel_true_cond_chain_speculatable(i16 %x) {
+; CHECK-LABEL: @sel_true_cond_chain_speculatable(
+; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[X:%.*]], i16 1)
 ; CHECK-NEXT:    [[EXTRA:%.*]] = mul i16 [[SUB]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i16 [[X]], 10
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[X]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[EXTRA]], i16 42
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
-  %sub = call i16 @llvm.usub.sat.i16(i16 %x, i16 10)
+  %sub = call i16 @llvm.uadd.sat.i16(i16 %x, i16 1)
   %extra = mul i16 %sub, 3
-  %cmp = icmp uge i16 %x, 10
+  %cmp = icmp ne i16 %x, -1
   %sel = select i1 %cmp, i16 %extra, i16 42
+  ret i16 %sel
+}
+
+define i16 @sel_true_cond_chain_non_speculatable(i16 %x) {
+; CHECK-LABEL: @sel_true_cond_chain_non_speculatable(
+; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[X:%.*]], i16 1)
+; CHECK-NEXT:    [[EXTRA:%.*]] = udiv i16 3, [[SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[X]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[EXTRA]], i16 42
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %sub = call i16 @llvm.uadd.sat.i16(i16 %x, i16 1)
+  %extra = udiv i16 3, %sub
+  %cmp = icmp ne i16 %x, -1
+  %sel = select i1 %cmp, i16 %extra, i16 42
+  ret i16 %sel
+}
+
+define i16 @sel_true_cond_longer_chain(i16 %x) {
+; CHECK-LABEL: @sel_true_cond_longer_chain(
+; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[X:%.*]], i16 1)
+; CHECK-NEXT:    [[EXTRA:%.*]] = mul i16 [[SUB]], 3
+; CHECK-NEXT:    [[EXTRA2:%.*]] = xor i16 [[SUB]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[X]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[EXTRA2]], i16 42
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %sub = call i16 @llvm.uadd.sat.i16(i16 %x, i16 1)
+  %extra = mul i16 %sub, 3
+  %extra2 = xor i16 %sub, 7
+  %cmp = icmp ne i16 %x, -1
+  %sel = select i1 %cmp, i16 %extra2, i16 42
   ret i16 %sel
 }
 
