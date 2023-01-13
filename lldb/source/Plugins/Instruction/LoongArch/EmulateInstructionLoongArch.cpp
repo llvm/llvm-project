@@ -68,6 +68,16 @@ EmulateInstructionLoongArch::GetOpcodeForInstruction(uint32_t inst) {
   return nullptr;
 }
 
+bool EmulateInstructionLoongArch::TestExecute(uint32_t inst) {
+  Opcode *opcode_data = GetOpcodeForInstruction(inst);
+  if (!opcode_data)
+    return false;
+  // Call the Emulate... function.
+  if (!(this->*opcode_data->callback)(inst))
+    return false;
+  return true;
+}
+
 bool EmulateInstructionLoongArch::EvaluateInstruction(uint32_t options) {
   uint32_t inst_size = m_opcode.GetByteSize();
   uint32_t inst = m_opcode.GetOpcode32();
