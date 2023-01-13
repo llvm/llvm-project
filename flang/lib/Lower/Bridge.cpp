@@ -489,35 +489,9 @@ public:
                Fortran::lower::StatementContext &context,
                mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
-    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
-      hlfir::EntityWithAttributes loweredExpr =
-          Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
-                                             context);
-      fir::ExtendedValue exv = Fortran::lower::translateToExtendedValue(
-          loc, getFirOpBuilder(), loweredExpr, context);
-      // Load scalar references to integer, logical, real, or complex value
-      // to an mlir value, dereference allocatable and pointers, and get rid
-      // of fir.box that are no needed or create a copy into contiguous memory.
-      return exv.match(
-          [&](const fir::UnboxedValue &box) -> fir::ExtendedValue {
-            if (mlir::Type elementType = fir::dyn_cast_ptrEleTy(box.getType()))
-              if (fir::isa_trivial(elementType))
-                return getFirOpBuilder().create<fir::LoadOp>(loc, box);
-            return box;
-          },
-          [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
-            return box;
-          },
-          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-            return box;
-          },
-          [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
-            return box;
-          },
-          [&](const auto &) -> fir::ExtendedValue {
-            TODO(loc, "lower descriptor designator to HLFIR value");
-          });
-    }
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR())
+      return Fortran::lower::convertExprToValue(loc, *this, expr, localSymbols,
+                                                context);
     return Fortran::lower::createSomeExtendedExpression(loc, *this, expr,
                                                         localSymbols, context);
   }
