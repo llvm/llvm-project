@@ -31,7 +31,15 @@ bool __gwp_asan_error_is_mine(const gwp_asan::AllocatorState *State,
 }
 
 uintptr_t
-__gwp_asan_get_internal_crash_address(const gwp_asan::AllocatorState *State) {
+__gwp_asan_get_internal_crash_address(const gwp_asan::AllocatorState *State,
+                                      uintptr_t ErrorPtr) {
+  // There can be a race between internally- and externally-raised faults. The
+  // fault address from the signal handler is used to discriminate whether it's
+  // internally- or externally-raised, and the pool maintains a special page at
+  // the end of the GuardedPagePool specifically for the internally-raised
+  // faults.
+  if (ErrorPtr != State->internallyDetectedErrorFaultAddress())
+    return 0u;
   return State->FailureAddress;
 }
 
