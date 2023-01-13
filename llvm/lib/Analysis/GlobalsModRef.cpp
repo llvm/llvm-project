@@ -592,7 +592,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
         // We handle calls specially because the graph-relevant aspects are
         // handled above.
-        if (auto *Call = dyn_cast<CallBase>(&I))
+        if (isa<CallBase>(&I))
           continue;
 
         // All non-call instructions we use the primary predicates for whether
