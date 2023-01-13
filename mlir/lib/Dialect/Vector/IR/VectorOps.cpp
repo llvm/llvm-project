@@ -5288,20 +5288,20 @@ void MaskOp::build(
 }
 
 void MaskOp::build(
-    OpBuilder &builder, OperationState &result, Type resultType, Value mask,
-    function_ref<void(OpBuilder &, Location)> maskRegionBuilder) {
-  build(builder, result, resultType, mask, /*passthru=*/Value(),
+    OpBuilder &builder, OperationState &result, TypeRange resultTypes,
+    Value mask, function_ref<void(OpBuilder &, Location)> maskRegionBuilder) {
+  build(builder, result, resultTypes, mask, /*passthru=*/Value(),
         maskRegionBuilder);
 }
 
 void MaskOp::build(
-    OpBuilder &builder, OperationState &result, Type resultType, Value mask,
-    Value passthru,
+    OpBuilder &builder, OperationState &result, TypeRange resultTypes,
+    Value mask, Value passthru,
     function_ref<void(OpBuilder &, Location)> maskRegionBuilder) {
   build(builder, result, mask, maskRegionBuilder);
   if (passthru)
     result.addOperands(passthru);
-  result.addTypes(resultType);
+  result.addTypes(resultTypes);
 }
 
 ParseResult MaskOp::parse(OpAsmParser &parser, OperationState &result) {
