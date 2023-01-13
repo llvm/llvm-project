@@ -4018,7 +4018,6 @@ bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
       if (ShiftAmt->getOpcode() == ISD::SUB && Add0C == nullptr)
         return false;
 
-      auto *ConstValOp = Add0C == nullptr ? Add1C : Add0C;
       EVT OpVT = ShiftAmt.getValueType();
 
       NewShiftAmt = CurDAG->getNOT(DL, Add0C == nullptr ? Add0 : Add1, OpVT);
