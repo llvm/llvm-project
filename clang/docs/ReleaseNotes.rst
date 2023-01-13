@@ -351,6 +351,9 @@ Bug Fixes
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Clang now supports implicit conversion warnings (``-Wsign-conversion``,
+  ``Wshorten-64-to-32``, etc) for compound assignment operators (like +=, -=, <<=, >>= etc) 
+  with integral operands.
 - Clang will now check compile-time determinable string literals as format strings.
   Fixes `Issue 55805: <https://github.com/llvm/llvm-project/issues/55805>`_.
 - ``-Wformat`` now recognizes ``%b`` for the ``printf``/``scanf`` family of
