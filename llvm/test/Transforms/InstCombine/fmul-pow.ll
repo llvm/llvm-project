@@ -6,36 +6,133 @@ declare void @use(double)
 
 define double @pow_ab_a(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_a(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP1]], [[A]]
-; CHECK-NEXT:    ret double [[MUL]]
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fmul double [[P]], [[A]]
+; CHECK-NEXT:    ret double [[M]]
 ;
-  %1 = call double @llvm.pow.f64(double %a, double %b)
-  %mul = fmul double %1, %a
-  ret double %mul
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul double %p, %a
+  ret double %m
 }
 
 define double @pow_ab_a_reassoc(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_a_reassoc(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[TMP1]], [[A]]
-; CHECK-NEXT:    ret double [[MUL]]
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[P]], [[A]]
+; CHECK-NEXT:    ret double [[M]]
 ;
-  %1 = call double @llvm.pow.f64(double %a, double %b)
-  %mul = fmul reassoc double %1, %a
-  ret double %mul
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul reassoc double %p, %a
+  ret double %m
 }
 
-define double @pow_ab_a_reassoc_commute(double %a, double %b)  {
+define double @pow_ab_a_reassoc_commute(double %pa, double %b)  {
 ; CHECK-LABEL: @pow_ab_a_reassoc_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fdiv reassoc double [[TMP1]], [[A]]
-; CHECK-NEXT:    ret double [[MUL]]
+; CHECK-NEXT:    [[A:%.*]] = fadd double [[PA:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[A]], [[P]]
+; CHECK-NEXT:    ret double [[M]]
 ;
-  %1 = fdiv double 1.0, %a
-  %2 = call double @llvm.pow.f64(double %a, double %b)
-  %mul = fmul reassoc double %1, %2
-  ret double %mul
+  %a = fadd double %pa, 42.0 ; thwart complexity-based canonicalization
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul reassoc double %a, %p
+  ret double %m
+}
+
+define double @pow_ab_a_reassoc_use(double %a, double %b)  {
+; CHECK-LABEL: @pow_ab_a_reassoc_use(
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[P]], [[A]]
+; CHECK-NEXT:    call void @use(double [[P]])
+; CHECK-NEXT:    ret double [[M]]
+;
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul reassoc double %p, %a
+  call void @use(double %p)
+  ret double %m
+}
+
+define double @pow_ab_recip_a(double %a, double %b)  {
+; CHECK-LABEL: @pow_ab_recip_a(
+; CHECK-NEXT:    [[R:%.*]] = fdiv double 1.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fmul double [[R]], [[P]]
+; CHECK-NEXT:    ret double [[M]]
+;
+  %r = fdiv double 1.0, %a
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul double %r, %p
+  ret double %m
+}
+
+define double @pow_ab_recip_a_reassoc(double %a, double %b)  {
+; CHECK-LABEL: @pow_ab_recip_a_reassoc(
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fdiv reassoc double [[P]], [[A]]
+; CHECK-NEXT:    ret double [[M]]
+;
+  %r = fdiv double 1.0, %a
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul reassoc double %r, %p
+  ret double %m
+}
+
+define double @pow_ab_recip_a_reassoc_commute(double %a, double %b)  {
+; CHECK-LABEL: @pow_ab_recip_a_reassoc_commute(
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fdiv reassoc double [[P]], [[A]]
+; CHECK-NEXT:    ret double [[M]]
+;
+  %r = fdiv double 1.0, %a
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul reassoc double %p, %r
+  ret double %m
+}
+
+define double @pow_ab_recip_a_reassoc_use1(double %a, double %b)  {
+; CHECK-LABEL: @pow_ab_recip_a_reassoc_use1(
+; CHECK-NEXT:    [[R:%.*]] = fdiv double 1.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[R]], [[P]]
+; CHECK-NEXT:    call void @use(double [[R]])
+; CHECK-NEXT:    ret double [[M]]
+;
+  %r = fdiv double 1.0, %a
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul reassoc double %r, %p
+  call void @use(double %r)
+  ret double %m
+}
+
+define double @pow_ab_recip_a_reassoc_use2(double %a, double %b)  {
+; CHECK-LABEL: @pow_ab_recip_a_reassoc_use2(
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fdiv reassoc double [[P]], [[A]]
+; CHECK-NEXT:    call void @use(double [[P]])
+; CHECK-NEXT:    ret double [[M]]
+;
+  %r = fdiv double 1.0, %a
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul reassoc double %r, %p
+  call void @use(double %p)
+  ret double %m
+}
+
+define double @pow_ab_recip_a_reassoc_use3(double %a, double %b)  {
+; CHECK-LABEL: @pow_ab_recip_a_reassoc_use3(
+; CHECK-NEXT:    [[R:%.*]] = fdiv double 1.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A]], double [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[R]], [[P]]
+; CHECK-NEXT:    call void @use(double [[R]])
+; CHECK-NEXT:    call void @use(double [[P]])
+; CHECK-NEXT:    ret double [[M]]
+;
+  %r = fdiv double 1.0, %a
+  %p = call double @llvm.pow.f64(double %a, double %b)
+  %m = fmul reassoc double %r, %p
+  call void @use(double %r)
+  call void @use(double %p)
+  ret double %m
 }
 
 ; negative test for:
