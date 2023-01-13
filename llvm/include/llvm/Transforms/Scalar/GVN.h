@@ -318,10 +318,9 @@ private:
   bool processAssumeIntrinsic(AssumeInst *II);
 
   /// Given a local dependency (Def or Clobber) determine if a value is
-  /// available for the load.  Returns true if an value is known to be
-  /// available and populates Res.  Returns false otherwise.
-  bool AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
-                               Value *Address, gvn::AvailableValue &Res);
+  /// available for the load.
+  std::optional<gvn::AvailableValue>
+  AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo, Value *Address);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
