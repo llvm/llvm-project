@@ -371,7 +371,7 @@ extern "C" SANITIZER_WEAK_ATTRIBUTE void __libc_iterate_dynamic_tls(
 
 static void ProcessThreadRegistry(Frontier *frontier) {
   InternalMmapVector<uptr> ptrs;
-  GetAdditionalThreadContextPtrsLocked(&ptrs);
+  RunCallbackForEachThreadLocked(GetAdditionalThreadContextPtrs, &ptrs);
 
   for (uptr i = 0; i < ptrs.size(); ++i) {
     void *ptr = reinterpret_cast<void *>(ptrs[i]);
@@ -668,7 +668,7 @@ void LeakSuppressionContext::PrintMatchedSuppressions() {
   Printf("%s\n\n", line);
 }
 
-void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
+static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
   const InternalMmapVector<tid_t> &suspended_threads =
       *(const InternalMmapVector<tid_t> *)arg;
   if (tctx->status == ThreadStatusRunning) {
@@ -695,7 +695,8 @@ static void ReportUnsuspendedThreads(
     threads[i] = suspended_threads.GetThreadID(i);
 
   Sort(threads.data(), threads.size());
-  ReportUnsuspendedThreadsLocked(&threads);
+
+  RunCallbackForEachThreadLocked(&ReportIfNotSuspended, &threads);
 }
 
 #  endif  // !SANITIZER_FUCHSIA
