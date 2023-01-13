@@ -42,7 +42,7 @@ needsplt:
         .section .text.07, "ax", %progbits
         .space (1024 * 1024)
 /// 0xd00040 = preemptible@plt
-// CHECK:      0070000c <__ARMv4PILongThunk_preemptible>:
+// CHECK:      0070000c <__ARMv4PILongBXThunk_preemptible>:
 // CHECK-NEXT:   70000c: b       0xd00040
 
         .section .text.08, "ax", %progbits
@@ -52,7 +52,7 @@ needsplt:
         .balign 2
         bl preemptible
         bl preemptible2
-// CHECK-CALL: 80000c: blx     0x70000c <__ARMv4PILongThunk_preemptible>
+// CHECK-CALL: 80000c: blx     0x70000c <__ARMv4PILongBXThunk_preemptible>
         .balign 2
         .globl preemptible
         .type preemptible, %function
