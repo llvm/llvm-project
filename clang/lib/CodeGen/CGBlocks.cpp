@@ -525,7 +525,7 @@ static void initializeForBlockHeader(CodeGenModule &CGM, CGBlockInfo &info,
       for (auto *I : Helper->getCustomFieldTypes()) /* custom fields */ {
         // TargetOpenCLBlockHelp needs to make sure the struct is packed.
         // If necessary, add padding fields to the custom fields.
-        unsigned Align = CGM.getDataLayout().getABITypeAlignment(I);
+        unsigned Align = CGM.getDataLayout().getABITypeAlign(I).value();
         if (BlockAlign < Align)
           BlockAlign = Align;
         assert(Offset % Align == 0);
@@ -2767,7 +2767,7 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
     size = varOffset;
 
   // Conversely, we might have to prevent LLVM from inserting padding.
-  } else if (CGM.getDataLayout().getABITypeAlignment(varTy) >
+  } else if (CGM.getDataLayout().getABITypeAlign(varTy) >
              uint64_t(varAlign.getQuantity())) {
     packed = true;
   }

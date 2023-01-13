@@ -2123,7 +2123,7 @@ MicrosoftCXXABI::getAddrOfVBTable(const VPtrInfo &VBT, const CXXRecordDecl *RD,
   CharUnits Alignment =
       CGM.getContext().getTypeAlignInChars(CGM.getContext().IntTy);
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
-      Name, VBTableType, Linkage, Alignment.getQuantity());
+      Name, VBTableType, Linkage, Alignment.getAsAlign());
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   if (RD->hasAttr<DLLImportAttr>())
