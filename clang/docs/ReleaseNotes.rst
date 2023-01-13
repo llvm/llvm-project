@@ -450,6 +450,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses overflow undefined behavior in a constant expression while
   evaluating a compound assignment with remainder as operand.
 - Add ``-Wreturn-local-addr``, a GCC alias for ``-Wreturn-stack-address``.
+- Clang now suppresses ``-Wlogical-op-parentheses`` on ``(x && a || b)`` and ``(a || b && x)``
+  only when ``x`` is a string literal.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
