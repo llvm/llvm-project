@@ -300,7 +300,7 @@ public:
         for (unsigned i = 0; i < NumSrcs; ++i)
           SrcRegs[i] = SrcMerge->getSourceReg(i);
 
-        Builder.buildMerge(DstReg, SrcRegs);
+        Builder.buildMergeLikeInstr(DstReg, SrcRegs);
         UpdatedDefs.push_back(DstReg);
       } else {
         // Unable to combine
@@ -932,7 +932,7 @@ public:
         }
 
         MIB.setInstrAndDebugLoc(MI);
-        MIB.buildMerge(Dst, ConcatSources);
+        MIB.buildMergeLikeInstr(Dst, ConcatSources);
         DeadInsts.push_back(&MI);
         return true;
       }
@@ -1099,7 +1099,7 @@ public:
           Regs.push_back(MergeI->getOperand(Idx).getReg());
 
         Register DefReg = MI.getReg(DefIdx);
-        Builder.buildMerge(DefReg, Regs);
+        Builder.buildMergeLikeInstr(DefReg, Regs);
         UpdatedDefs.push_back(DefReg);
       }
 

@@ -730,7 +730,7 @@ Register AMDGPURegisterBankInfo::buildReadFirstLane(MachineIRBuilder &B,
   if (Bits == 32)
     return DstParts[0];
 
-  Register Dst = B.buildMerge(Ty, DstParts).getReg(0);
+  Register Dst = B.buildMergeLikeInstr(Ty, DstParts).getReg(0);
   MRI.setRegBank(Dst, AMDGPU::SGPRRegBank);
   return Dst;
 }
@@ -1440,7 +1440,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
     if (Ty.isVector())
       B.buildConcatVectors(Dst, LoadParts);
     else
-      B.buildMerge(Dst, LoadParts);
+      B.buildMergeLikeInstr(Dst, LoadParts);
   }
 
   // We removed the instruction earlier with a waterfall loop.
@@ -1500,7 +1500,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(const OperandsMapper &OpdMapper,
                    : B.buildUbfx(S32, UnmergeSOffset.getReg(0), Zero, WidthReg);
         auto Extend =
             Signed ? B.buildAShr(S32, Extract, B.buildConstant(S32, 31)) : Zero;
-        B.buildMerge(DstReg, {Extract, Extend});
+        B.buildMergeLikeInstr(DstReg, {Extract, Extend});
       } else {
         // Use bitfield extract on upper 32-bit source, and combine with lower
         // 32-bit source.
@@ -1509,7 +1509,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(const OperandsMapper &OpdMapper,
             Signed
                 ? B.buildSbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth)
                 : B.buildUbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth);
-        B.buildMerge(DstReg, {UnmergeSOffset.getReg(0), Extract});
+        B.buildMergeLikeInstr(DstReg, {UnmergeSOffset.getReg(0), Extract});
       }
       MI.eraseFromParent();
       return true;
@@ -1696,7 +1696,7 @@ bool AMDGPURegisterBankInfo::applyMappingMAD_64_32(
     }
   }
 
-  B.buildMerge(Dst0, {DstLo, DstHi});
+  B.buildMergeLikeInstr(Dst0, {DstLo, DstHi});
 
   if (DstOnValu) {
     B.buildCopy(Dst1, Carry);
@@ -1783,7 +1783,8 @@ Register AMDGPURegisterBankInfo::handleD16VData(MachineIRBuilder &B,
   const LLT S32 = LLT::scalar(32);
   int NumElts = StoreVT.getNumElements();
 
-  return B.buildMerge(LLT::fixed_vector(NumElts, S32), WideRegs).getReg(0);
+  return B.buildMergeLikeInstr(LLT::fixed_vector(NumElts, S32), WideRegs)
+      .getReg(0);
 }
 
 static std::pair<Register, unsigned>

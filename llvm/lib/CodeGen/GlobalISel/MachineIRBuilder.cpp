@@ -243,7 +243,7 @@ MachineIRBuilder::buildPadVectorWithUndefElements(const DstOp &Res,
   unsigned NumberOfPadElts = ResTy.getNumElements() - Regs.size();
   for (unsigned i = 0; i < NumberOfPadElts; ++i)
     Regs.push_back(Undef);
-  return buildMerge(Res, Regs);
+  return buildMergeLikeInstr(Res, Regs);
 }
 
 MachineInstrBuilder
@@ -262,7 +262,7 @@ MachineIRBuilder::buildDeleteTrailingVectorElements(const DstOp &Res,
   auto Unmerge = buildUnmerge(Op0Ty.getElementType(), Op0);
   for (unsigned i = 0; i < ResTy.getNumElements(); ++i)
     Regs.push_back(Unmerge.getReg(i));
-  return buildMerge(Res, Regs);
+  return buildMergeLikeInstr(Res, Regs);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
@@ -597,8 +597,9 @@ MachineInstrBuilder MachineIRBuilder::buildUndef(const DstOp &Res) {
   return buildInstr(TargetOpcode::G_IMPLICIT_DEF, {Res}, {});
 }
 
-MachineInstrBuilder MachineIRBuilder::buildMerge(const DstOp &Res,
-                                                 ArrayRef<Register> Ops) {
+MachineInstrBuilder
+MachineIRBuilder::buildMergeLikeInstr(const DstOp &Res,
+                                      ArrayRef<Register> Ops) {
   // Unfortunately to convert from ArrayRef<LLT> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
@@ -608,8 +609,8 @@ MachineInstrBuilder MachineIRBuilder::buildMerge(const DstOp &Res,
 }
 
 MachineInstrBuilder
-MachineIRBuilder::buildMerge(const DstOp &Res,
-                             std::initializer_list<SrcOp> Ops) {
+MachineIRBuilder::buildMergeLikeInstr(const DstOp &Res,
+                                      std::initializer_list<SrcOp> Ops) {
   assert(Ops.size() > 1);
   return buildInstr(getOpcodeForMerge(Res, Ops), Res, Ops);
 }

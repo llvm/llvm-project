@@ -985,9 +985,10 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction. The
   ///         opcode of the new instruction will depend on the types of both
   ///         the destination and the sources.
-  MachineInstrBuilder buildMerge(const DstOp &Res, ArrayRef<Register> Ops);
-  MachineInstrBuilder buildMerge(const DstOp &Res,
-                                 std::initializer_list<SrcOp> Ops);
+  MachineInstrBuilder buildMergeLikeInstr(const DstOp &Res,
+                                          ArrayRef<Register> Ops);
+  MachineInstrBuilder buildMergeLikeInstr(const DstOp &Res,
+                                          std::initializer_list<SrcOp> Ops);
 
   /// Build and insert \p Res0, ... = G_UNMERGE_VALUES \p Op
   ///
