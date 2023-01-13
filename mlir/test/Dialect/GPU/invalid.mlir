@@ -350,7 +350,7 @@ module {
 
 module {
   gpu.module @gpu_funcs {
-    // expected-error @+1 {{expected memref type in attribution}}
+    // expected-error @below {{'gpu.func' op expected memref type in attribution}}
     gpu.func @kernel() workgroup(%0: i32) {
       gpu.return
     }
@@ -361,8 +361,8 @@ module {
 
 module {
   gpu.module @gpu_funcs {
-    // expected-error @+1 {{expected memory space 3 in attribution}}
-    gpu.func @kernel() workgroup(%0: memref<4xf32>) {
+    // expected-error @below {{'gpu.func' op expected memory space workgroup in attribution}}
+    gpu.func @kernel() workgroup(%0: memref<4xf32, #gpu.address_space<private>>) {
       gpu.return
     }
   }
@@ -372,19 +372,8 @@ module {
 
 module {
   gpu.module @gpu_funcs {
-    // expected-error @+1 {{expected memory space 5 in attribution}}
-    gpu.func @kernel() private(%0: memref<4xf32>) {
-      gpu.return
-    }
-  }
-}
-
-// -----
-
-module {
-  gpu.module @gpu_funcs {
-    // expected-error @+1 {{expected memory space 5 in attribution}}
-    gpu.func @kernel() private(%0: memref<4xf32>) {
+    // expected-error @below {{'gpu.func' op expected memory space private in attribution}}
+    gpu.func @kernel() private(%0: memref<4xf32, #gpu.address_space<workgroup>>) {
       gpu.return
     }
   }

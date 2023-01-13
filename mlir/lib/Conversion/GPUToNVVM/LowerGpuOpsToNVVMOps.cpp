@@ -175,30 +175,51 @@ struct LowerGpuOpsToNVVMOpsPass
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    // MemRef conversion for GPU to NVVM lowering. The GPU dialect uses memory
-    // space 5 for private memory attributions, but NVVM represents private
-    // memory allocations as local `alloca`s in the default address space. This
-    // converter drops the private memory space to support the use case above.
+    // Apply in-dialect lowering. In-dialect lowering will replace
+    // ops which need to be lowered further, which is not supported by a
+    // single conversion pass.
+    {
+      RewritePatternSet patterns(m.getContext());
+      populateGpuRewritePatterns(patterns);
+      if (failed(applyPatternsAndFoldGreedily(m, std::move(patterns))))
+        return signalPassFailure();
+    }
+
+    // MemRef conversion for GPU to NVVM lowering.
+    {
+      RewritePatternSet patterns(m.getContext());
+      TypeConverter typeConverter;
+      typeConverter.addConversion([](Type t) { return t; });
+      // NVVM uses alloca in the default address space to represent private
+      // memory allocations, so drop private annotations. NVVM uses address
+      // space 3 for shared memory. NVVM uses the default address space to
+      // represent global memory.
+      gpu::populateMemorySpaceAttributeTypeConversions(
+          typeConverter, [](gpu::AddressSpace space) -> unsigned {
+            switch (space) {
+            case gpu::AddressSpace::Global:
+              return static_cast<unsigned>(
+                  NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+            case gpu::AddressSpace::Workgroup:
+              return static_cast<unsigned>(
+                  NVVM::NVVMMemorySpace::kSharedMemorySpace);
+            case gpu::AddressSpace::Private:
+              return 0;
+            }
+          });
+      gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
+      ConversionTarget target(getContext());
+      gpu::populateLowerMemorySpaceOpLegality(target);
+      if (failed(applyFullConversion(m, target, std::move(patterns))))
+        return signalPassFailure();
+    }
+
     LLVMTypeConverter converter(m.getContext(), options);
-    converter.addConversion([&](MemRefType type) -> std::optional<Type> {
-      if (type.getMemorySpaceAsInt() !=
-          gpu::GPUDialect::getPrivateAddressSpace())
-        return std::nullopt;
-      return converter.convertType(MemRefType::Builder(type).setMemorySpace(
-          IntegerAttr::get(IntegerType::get(m.getContext(), 64), 0)));
-    });
     // Lowering for MMAMatrixType.
     converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
       return convertMMAToLLVMType(type);
     });
-    RewritePatternSet patterns(m.getContext());
     RewritePatternSet llvmPatterns(m.getContext());
-
-    // Apply in-dialect lowering first. In-dialect lowering will replace ops
-    // which need to be lowered further, which is not supported by a single
-    // conversion pass.
-    populateGpuRewritePatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
@@ -257,6 +278,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   // memory space and does not support `alloca`s with addrspace(5).
   patterns.add<GPUFuncOpLowering>(
       converter, /*allocaAddrSpace=*/0,
+      /*workgroupAddrSpace=*/
+      static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace),
       StringAttr::get(&converter.getContext(),
                       NVVM::NVVMDialect::getKernelFuncAttrName()));
 
