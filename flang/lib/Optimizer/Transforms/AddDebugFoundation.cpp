@@ -74,8 +74,8 @@ void AddDebugFoundationPass::runOnOperation() {
         /*encoding=*/1);
     mlir::LLVM::DISubroutineTypeAttr subTypeAttr =
         mlir::LLVM::DISubroutineTypeAttr::get(
-            context, llvm::dwarf::getCallingConvention("DW_CC_normal"), bT,
-            {bT});
+            context, llvm::dwarf::getCallingConvention("DW_CC_normal"),
+            {bT, bT});
     mlir::LLVM::DISubprogramAttr spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, cuAttr, fileAttr, funcName, funcName, fileAttr, /*line=*/1,
         /*scopeline=*/1, mlir::LLVM::DISubprogramFlags::Definition,
