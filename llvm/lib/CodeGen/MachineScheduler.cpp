@@ -95,6 +95,9 @@ cl::opt<bool> ViewMISchedDAGs(
     cl::desc("Pop up a window to show MISched dags after they are processed"));
 cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
                         cl::desc("Print schedule DAGs"));
+cl::opt<bool> MISchedDumpReservedCycles(
+    "misched-dump-reserved-cycles", cl::Hidden, cl::init(false),
+    cl::desc("Dump resource usage at schedule boundary."));
 #else
 const bool ViewMISchedDAGs = false;
 const bool PrintDAGs = false;
@@ -2589,6 +2592,28 @@ SUnit *SchedBoundary::pickOnlyChoice() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+
+/// Dump the content of the \ref ReservedCycles vector for the
+/// resources that are used in the basic block.
+///
+LLVM_DUMP_METHOD void SchedBoundary::dumpReservedCycles() const {
+  if (!SchedModel->hasInstrSchedModel())
+    return;
+
+  unsigned ResourceCount = SchedModel->getNumProcResourceKinds();
+  unsigned StartIdx = 0;
+
+  for (unsigned ResIdx = 0; ResIdx < ResourceCount; ++ResIdx) {
+    const unsigned NumUnits = SchedModel->getProcResource(ResIdx)->NumUnits;
+    std::string ResName = SchedModel->getResourceName(ResIdx);
+    for (unsigned UnitIdx = 0; UnitIdx < NumUnits; ++UnitIdx) {
+      dbgs() << ResName << "(" << UnitIdx
+             << ") = " << ReservedCycles[StartIdx + UnitIdx] << "\n";
+    }
+    StartIdx += NumUnits;
+  }
+}
+
 // This is useful information to dump after bumpNode.
 // Note that the Queue contents are more useful before pickNodeFromQueue.
 LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
@@ -2611,6 +2636,8 @@ LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
          << "\n  ExpectedLatency: " << ExpectedLatency << "c\n"
          << (IsResourceLimited ? "  - Resource" : "  - Latency")
          << " limited.\n";
+  if (MISchedDumpReservedCycles)
+    dumpReservedCycles();
 }
 #endif
 
