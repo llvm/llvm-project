@@ -6,7 +6,8 @@
 
 // Baseline to check we got expected outputs.
 // RUN: %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -MMD -MT dependencies -MF %t/t.d --serialize-diagnostics %t/t.dia
-// RUN: llvm-remote-cache-test -socket-path=%{remote-cache-dir}/%basename_t -cache-path=%t/cache -- env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// Adding `LLBUILD_TASK_ID` just to make sure there's no failure if that is set but `LLBUILD_CONTROL_FD` is not.
+// RUN: llvm-remote-cache-test -socket-path=%{remote-cache-dir}/%basename_t -cache-path=%t/cache -- env LLBUILD_TASK_ID=1 LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t1.o -MMD -MT dependencies -MF %t/t1.d --serialize-diagnostics %t/t1.dia -Rcompile-job-cache \
 // RUN:   2>&1 | FileCheck %s --check-prefix=CACHE-MISS
 // RUN: llvm-remote-cache-test -socket-path=%{remote-cache-dir}/%basename_t -cache-path=%t/cache -- env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \

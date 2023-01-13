@@ -1116,18 +1116,18 @@ void RemoteCachingOutputs::tryReleaseLLBuildExecutionLane() {
   if (TriedReleaseLLBuildExecutionLane)
     return;
   TriedReleaseLLBuildExecutionLane = true;
-  if (const char *LLTaskID = getenv("LLBUILD_TASK_ID")) {
+  if (auto LLTaskID = llvm::sys::Process::GetEnv("LLBUILD_TASK_ID")) {
     // Use the llbuild protocol to request to release the execution lane for
     // this task.
-    const char *LLControlFD = getenv("LLBUILD_CONTROL_FD");
+    auto LLControlFD = llvm::sys::Process::GetEnv("LLBUILD_CONTROL_FD");
     if (!LLControlFD)
-      llvm::report_fatal_error("'LLBUILD_CONTROL_FD' env var is not set!");
+      return; // LLBUILD_CONTROL_FD may not be set if a shell script is invoked.
     int LLCtrlFD;
-    bool HasErr = StringRef(LLControlFD).getAsInteger(10, LLCtrlFD);
+    bool HasErr = StringRef(*LLControlFD).getAsInteger(10, LLCtrlFD);
     if (HasErr)
       llvm::report_fatal_error(Twine("failed converting 'LLBUILD_CONTROL_FD' "
                                      "to an integer, it was: ") +
-                               LLControlFD);
+                               *LLControlFD);
     llvm::raw_fd_ostream FDOS(LLCtrlFD, /*shouldClose*/ false);
     FDOS << "llbuild.1\n" << LLTaskID << '\n';
     FDOS.flush();
