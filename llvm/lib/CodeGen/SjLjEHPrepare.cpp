@@ -183,7 +183,7 @@ Value *SjLjEHPrepare::setupFunctionContext(Function &F,
   // that needs to be restored on all exits from the function. This is an alloca
   // because the value needs to be added to the global context list.
   auto &DL = F.getParent()->getDataLayout();
-  const Align Alignment(DL.getPrefTypeAlignment(FunctionContextTy));
+  const Align Alignment = DL.getPrefTypeAlign(FunctionContextTy);
   FuncCtx = new AllocaInst(FunctionContextTy, DL.getAllocaAddrSpace(), nullptr,
                            Alignment, "fn_context", &EntryBB->front());
 
