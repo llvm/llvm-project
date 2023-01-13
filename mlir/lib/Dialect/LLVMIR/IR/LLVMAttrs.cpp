@@ -41,11 +41,11 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
-                   DILexicalBlockFileAttr, DILocalVariableAttr,
-                   DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
-      attr);
+  return llvm::isa<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
+                   DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+                   DILexicalBlockAttr, DILexicalBlockFileAttr,
+                   DILocalVariableAttr, DISubprogramAttr, DISubrangeAttr,
+                   DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -63,8 +63,25 @@ bool DIScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
-  return llvm::isa<DIBasicTypeAttr, DICompositeTypeAttr, DIDerivedTypeAttr,
-                   DISubroutineTypeAttr>(attr);
+  return llvm::isa<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
+                   DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
+// DISubroutineTypeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DISubroutineTypeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             unsigned int callingConventions,
+                             ArrayRef<DITypeAttr> types) {
+  ArrayRef<DITypeAttr> argumentTypes =
+      types.empty() ? types : types.drop_front();
+  if (llvm::any_of(argumentTypes, [](DITypeAttr type) {
+        return type.isa<DIVoidResultTypeAttr>();
+      }))
+    return emitError() << "expected subroutine to have non-void argument types";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
