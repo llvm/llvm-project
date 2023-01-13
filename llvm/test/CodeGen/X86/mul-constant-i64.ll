@@ -402,10 +402,9 @@ define i64 @test_mul_by_13(i64 %x) {
 define i64 @test_mul_by_14(i64 %x) {
 ; X86-LABEL: test_mul_by_14:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx), %eax
 ; X86-NEXT:    shll $4, %ecx
-; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl $14, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
@@ -1046,10 +1045,9 @@ define i64 @test_mul_by_29(i64 %x) {
 define i64 @test_mul_by_30(i64 %x) {
 ; X86-LABEL: test_mul_by_30:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx), %eax
 ; X86-NEXT:    shll $5, %ecx
-; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl $30, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
@@ -1232,10 +1230,9 @@ define i64 @test_mul_by_41(i64 %x) {
 define i64 @test_mul_by_62(i64 %x) {
 ; X86-LABEL: test_mul_by_62:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx), %eax
 ; X86-NEXT:    shll $6, %ecx
-; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl $62, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
@@ -1302,9 +1299,8 @@ define i64 @test_mul_by_66(i64 %x) {
 ;
 ; X64-SLM-LABEL: test_mul_by_66:
 ; X64-SLM:       # %bb.0:
-; X64-SLM-NEXT:    movq %rdi, %rax
-; X64-SLM-NEXT:    shlq $6, %rax
-; X64-SLM-NEXT:    addq %rdi, %rax
+; X64-SLM-NEXT:    leaq (%rdi,%rdi), %rax
+; X64-SLM-NEXT:    shlq $6, %rdi
 ; X64-SLM-NEXT:    addq %rdi, %rax
 ; X64-SLM-NEXT:    retq
 ;
