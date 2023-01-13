@@ -435,7 +435,7 @@ contains
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
   end subroutine
-  !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
+  !ERROR: Derived type 't' already has defined input/output procedure 'read(unformatted)'
   subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
     class(t),intent(inout) :: dtv
     integer,intent(in) :: unit
@@ -499,7 +499,7 @@ contains
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
   end subroutine
-  !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
+  !ERROR: Derived type 't' already has defined input/output procedure 'read(unformatted)'
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(4)),intent(inout) :: dtv
     integer,intent(in) :: unit
@@ -593,7 +593,7 @@ contains
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
   end subroutine
-  !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
+  !ERROR: Derived type 't' already has defined input/output procedure 'read(unformatted)'
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(*)),intent(inout) :: dtv
     integer,intent(in) :: unit
