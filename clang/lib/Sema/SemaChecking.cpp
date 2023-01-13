@@ -13508,13 +13508,8 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
   }
 }
 
-static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
-                                    SourceLocation CC,
-                                    bool *ICContext = nullptr,
-                                    bool IsListInit = false);
-
 /// Analyze the given compound assignment for the possible losing of
-/// floating-point precision and for implicit conversions for integral operands.
+/// floating-point precision.
 static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
   assert(isa<CompoundAssignOperator>(E) &&
          "Must be compound assignment operation");
@@ -13531,17 +13526,8 @@ static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
                         ->getComputationResultType()
                         ->getAs<BuiltinType>();
 
-  // Check for implicit conversions for compound assignment statements with
-  // intergral operands.
-  // FIXME: should this handle floating-point as well?
-  if (E->getLHS()->getType()->isIntegerType() &&
-      E->getRHS()->getType()->isIntegerType() && !E->isShiftAssignOp())
-    CheckImplicitConversion(S, E->getRHS(), E->getType(),
-                            E->getRHS()->getExprLoc());
-
   // The below checks assume source is floating point.
-  if (!ResultBT || !RBT || !RBT->isFloatingPoint())
-    return;
+  if (!ResultBT || !RBT || !RBT->isFloatingPoint()) return;
 
   // If source is floating point but target is an integer.
   if (ResultBT->isInteger())
@@ -13830,8 +13816,9 @@ static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
 }
 
 static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
-                                    SourceLocation CC, bool *ICContext,
-                                    bool IsListInit) {
+                                    SourceLocation CC,
+                                    bool *ICContext = nullptr,
+                                    bool IsListInit = false) {
   if (E->isTypeDependent() || E->isValueDependent()) return;
 
   const Type *Source = S.Context.getCanonicalType(E->getType()).getTypePtr();
