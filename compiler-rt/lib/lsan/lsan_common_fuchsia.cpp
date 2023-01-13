@@ -12,7 +12,6 @@
 //===---------------------------------------------------------------------===//
 
 #include "lsan_common.h"
-#include "lsan_thread.h"
 #include "sanitizer_common/sanitizer_platform.h"
 
 #if CAN_SANITIZE_LEAKS && SANITIZER_FUCHSIA
@@ -147,7 +146,7 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
         // just for the allocator cache, and to call ForEachExtraStackRange,
         // which ASan needs.
         if (flags()->use_stacks) {
-          GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+          RunCallbackForEachThreadLocked(
               [](ThreadContextBase *tctx, void *arg) {
                 ForEachExtraStackRange(tctx->os_id, ForEachExtraStackRangeCb,
                                        arg);
