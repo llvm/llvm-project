@@ -60,6 +60,7 @@ public:
   lldb::addr_t ReadPC(bool *success);
   bool WritePC(lldb::addr_t pc);
   bool IsLoongArch64() { return m_arch_subtype == llvm::Triple::loongarch64; }
+  bool TestExecute(uint32_t inst);
 
 private:
   struct Opcode {
