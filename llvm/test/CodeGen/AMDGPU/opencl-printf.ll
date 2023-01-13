@@ -43,6 +43,7 @@
 @format.str.v8 = private unnamed_addr addrspace(4) constant [35 x i8] c"%v8f %v8f %v8d %v8d %v8p %v8p %v8f\00", align 1
 @format.str.v16 = private unnamed_addr addrspace(4) constant [42 x i8] c"%v16f %v16f %v16d %v16d %v16p %v16p %v16f\00", align 1
 @format.str.u = private unnamed_addr addrspace(4) constant [30 x i8] c"%u %u %u %u %u %u %u %u %u %u\00", align 1
+@format.str.one.ptr = private unnamed_addr addrspace(4) constant [8 x i8] c"arst %p\00", align 1
 
 
 define amdgpu_kernel void @format_str_f(float %f32.0, double %f64, float %f32.1, i16 %i16, i32 %i32, i64 %i64, half %f16) {
@@ -1978,6 +1979,47 @@ define amdgpu_kernel void @test_print_string_indexed_oob(i32 %n) {
 ;
 entry:
   %printf = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(4) getelementptr ([32 x i8], ptr addrspace(4) @printed.str.size32, i64 0, i64 32), i32 %n)
+  ret void
+}
+
+declare void @func(ptr)
+
+define void @not_call_operand_printf() {
+; R600-LABEL: @not_call_operand_printf(
+; R600-NEXT:    call void @func(ptr @printf)
+; R600-NEXT:    ret void
+;
+; GCN-LABEL: @not_call_operand_printf(
+; GCN-NEXT:    call void @func(ptr @printf)
+; GCN-NEXT:    ret void
+;
+  call void @func(ptr @printf)
+  ret void
+}
+
+define void @printf_printf(i32 %n) {
+; R600-LABEL: @printf_printf(
+; R600-NEXT:    [[CALL:%.*]] = call i32 @printf(ptr addrspace(4) @format.str.one.ptr, ptr @printf)
+; R600-NEXT:    ret void
+;
+; GCN-LABEL: @printf_printf(
+; GCN-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 12)
+; GCN-NEXT:    br label [[DOTSPLIT:%.*]]
+; GCN:       .split:
+; GCN-NEXT:    [[TMP1:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+; GCN-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; GCN:       2:
+; GCN-NEXT:    [[PRINTBUFFID:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 0
+; GCN-NEXT:    [[PRINTBUFFIDCAST:%.*]] = bitcast ptr addrspace(1) [[PRINTBUFFID]] to ptr addrspace(1)
+; GCN-NEXT:    store i32 50, ptr addrspace(1) [[PRINTBUFFIDCAST]], align 4
+; GCN-NEXT:    [[PRINTBUFFGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+; GCN-NEXT:    [[PRINTBUFFPTRCAST:%.*]] = bitcast ptr addrspace(1) [[PRINTBUFFGEP]] to ptr addrspace(1)
+; GCN-NEXT:    store ptr @printf, ptr addrspace(1) [[PRINTBUFFPTRCAST]], align 8
+; GCN-NEXT:    br label [[TMP3]]
+; GCN:       3:
+; GCN-NEXT:    ret void
+;
+  %call = call i32 @printf(ptr addrspace(4) @format.str.one.ptr, ptr @printf)
   ret void
 }
 
