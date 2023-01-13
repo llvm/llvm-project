@@ -697,6 +697,9 @@ def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
+def warn_drv_dxc_missing_dxv : Warning<"dxv not found. "
+    "Resulting DXIL will not be validated or signed for use in release environments.">,
+    InGroup<DXILValidation>;
 
 def err_drv_invalid_range_dxil_validator_version : Error<
   "invalid validator version : %0\n"

@@ -1412,6 +1412,9 @@ def BranchProtection : DiagGroup<"branch-protection">;
 // Warnings for HLSL Clang extensions
 def HLSLExtension : DiagGroup<"hlsl-extensions">;
 
+// Warnings for DXIL validation
+def DXILValidation : DiagGroup<"dxil-validation">;
+
 // Warnings and notes related to const_var_decl_type attribute checks
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 

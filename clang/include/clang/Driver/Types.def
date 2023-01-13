@@ -107,4 +107,5 @@ TYPE("dependencies",             Dependencies, INVALID,         "d",      phases
 TYPE("cuda-fatbin",              CUDA_FATBIN,  INVALID,         "fatbin", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("hip-fatbin",               HIP_FATBIN,   INVALID,         "hipfb",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("api-information",          API_INFO,     INVALID,         "json",   phases::Precompile)
+TYPE("dx-container",             DX_CONTAINER, INVALID,         "dxo",    phases::Compile, phases::Backend)
 TYPE("none",                     Nothing,      INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
