@@ -64,6 +64,19 @@ async.func @async_func_passed_memref(%arg0 : !async.value<memref<f32>>) -> !asyn
   return
 }
 
+async.func @async_execute_in_async_func(%arg0 : !async.value<memref<f32>>) -> !async.token {
+  %token0 = async.execute {
+    %unwrapped = async.await %arg0 : !async.value<memref<f32>>
+    %0 = memref.load %unwrapped[] : memref<f32>
+    %1 = arith.addf %0, %0 : f32
+    memref.store %1, %unwrapped[] : memref<f32>
+    async.yield
+  }
+
+  async.await %token0 : !async.token
+  return
+}
+
 
 func.func @main() {
   %false = arith.constant 0 : i1
@@ -138,6 +151,17 @@ func.func @main() {
   // CHECK: Unranked Memref
   // CHECK-SAME: rank = 0 offset = 0 sizes = [] strides = []
   // CHECK-NEXT: [0.5]
+  call @printMemrefF32(%6) : (memref<*xf32>) -> ()
+
+  // ------------------------------------------------------------------------ //
+  // async.execute inside async.func
+  // ------------------------------------------------------------------------ //
+  %token4 = async.call @async_execute_in_async_func(%result1) : (!async.value<memref<f32>>) -> !async.token
+  async.await %token4 : !async.token
+
+  // CHECK: Unranked Memref
+  // CHECK-SAME: rank = 0 offset = 0 sizes = [] strides = []
+  // CHECK-NEXT: [1]
   call @printMemrefF32(%6) : (memref<*xf32>) -> ()
 
   memref.dealloc %5 : memref<f32>
