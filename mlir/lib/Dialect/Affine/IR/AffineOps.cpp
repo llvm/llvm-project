@@ -3255,7 +3255,6 @@ struct CanonicalizeAffineMinMaxOpExprAndTermOrder : public OpRewritePattern<T> {
     AffineMap map = affineOp.getAffineMap();
     if (failed(canonicalizeMapExprAndTermOrder(map)))
       return failure();
-
     rewriter.replaceOpWithNewOp<T>(affineOp, map, affineOp.getMapOperands());
     return success();
   }
