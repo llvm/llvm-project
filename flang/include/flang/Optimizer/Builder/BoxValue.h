@@ -101,19 +101,21 @@ protected:
 /// Polymorphic value associated with a dynamic type descriptor.
 class PolymorphicValue : public AbstractBox {
 public:
-  PolymorphicValue(mlir::Value addr, mlir::Value tdesc)
-      : AbstractBox{addr}, tdesc{tdesc} {}
+  PolymorphicValue(mlir::Value addr, mlir::Value sourceBox)
+      : AbstractBox{addr}, sourceBox{sourceBox} {}
 
-  PolymorphicValue clone(mlir::Value newBase) const { return {newBase, tdesc}; }
+  PolymorphicValue clone(mlir::Value newBase) const {
+    return {newBase, sourceBox};
+  }
 
-  mlir::Value getTdesc() const { return tdesc; }
+  mlir::Value getSourceBox() const { return sourceBox; }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const PolymorphicValue &);
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
 
 protected:
-  mlir::Value tdesc;
+  mlir::Value sourceBox;
 };
 
 /// Abstract base class.
@@ -153,8 +155,8 @@ class ArrayBoxValue : public PolymorphicValue, public AbstractArrayBox {
 public:
   ArrayBoxValue(mlir::Value addr, llvm::ArrayRef<mlir::Value> extents,
                 llvm::ArrayRef<mlir::Value> lbounds = {},
-                mlir::Value tdesc = {})
-      : PolymorphicValue{addr, tdesc}, AbstractArrayBox{extents, lbounds} {}
+                mlir::Value sourceBox = {})
+      : PolymorphicValue{addr, sourceBox}, AbstractArrayBox{extents, lbounds} {}
 
   ArrayBoxValue clone(mlir::Value newBase) const {
     return {newBase, extents, lbounds};
@@ -520,7 +522,7 @@ public:
   bool isPolymorphic() const {
     return match([](const fir::PolymorphicValue &box) -> bool { return true; },
                  [](const fir::ArrayBoxValue &box) -> bool {
-                   return box.getTdesc() ? true : false;
+                   return box.getSourceBox() ? true : false;
                  },
                  [](const auto &box) -> bool { return false; });
   }

@@ -324,7 +324,7 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
     Region &region = newOp.getRegion();
     Block *block = new Block();
     region.push_back(block);
-    BlockAndValueMapping mapper;
+    IRMapping mapper;
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(block);
     for (auto bbarg : genericOp.getRegionInputArgs())

@@ -281,13 +281,21 @@ class LLVM_DbgIntrOp<string name, string argName> : LLVM_IntrOp<name, [], [], []
       });
   }];
   let mlirBuilder = [{
-    // Drop all debug intrinsics with a non-empty debug expression.
-    // TODO: Stop dropping debug intrinsics once debug expressions are
-    // convertible to MLIR.
+    // Drop debug intrinsics with a non-empty debug expression.
+    // TODO: Support debug intrinsics that evaluate a debug expression.
     auto *dbgIntr = cast<llvm::DbgVariableIntrinsic>(inst);
-    if (dbgIntr->getExpression()->getNumElements() == 0)
-      $_op = $_builder.create<$_qualCppClassName>($_location,
-        $}] # argName # [{, $_var_attr($varInfo));
+    if (dbgIntr->hasArgList() || dbgIntr->getExpression()->getNumElements() != 0)
+      return success();
+    // Convert the value/address operand late since it cannot be a debug
+    // metadata argument list at this stage. Generating the conversion using an
+    // argument variable would not work here, since the builder variables are
+    // converted before entering the builder, which would result in an error
+    // when attempting to convert an argument list.
+    FailureOr<Value> argOperand = moduleImport.convertValue(llvmOperands[0]);
+    if (failed(argOperand))
+      return failure();
+    $_op = $_builder.create<$_qualCppClassName>($_location,
+        *argOperand, $_var_attr($varInfo));
   }];
   let assemblyFormat = [{
     qualified($varInfo) `=` $}] # argName #

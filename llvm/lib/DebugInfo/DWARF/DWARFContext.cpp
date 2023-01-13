@@ -779,14 +779,82 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpOptions DumpOpts) {
   return Success;
 }
 
+void fixupIndex(const DWARFObject &DObj, DWARFContext &C,
+                DWARFUnitIndex &Index) {
+  using EntryType = DWARFUnitIndex::Entry::SectionContribution;
+  using EntryMap = DenseMap<uint32_t, EntryType>;
+  EntryMap Map;
+  if (DObj.getCUIndexSection().empty())
+    return;
+
+  uint64_t Offset = 0;
+  uint32_t TruncOffset = 0;
+  DObj.forEachInfoDWOSections([&](const DWARFSection &S) {
+    if (!(C.getParseCUTUIndexManually() ||
+          S.Data.size() >= std::numeric_limits<uint32_t>::max()))
+      return;
+
+    DWARFDataExtractor Data(DObj, S, C.isLittleEndian(), 0);
+    while (Data.isValidOffset(Offset)) {
+      DWARFUnitHeader Header;
+      if (!Header.extract(C, Data, &Offset, DWARFSectionKind::DW_SECT_INFO)) {
+        logAllUnhandledErrors(
+            createError("Failed to parse CU header in DWP file"), errs());
+        Map.clear();
+        break;
+      }
+
+      auto Iter = Map.insert({TruncOffset,
+                              {Header.getOffset(), Header.getNextUnitOffset() -
+                                                       Header.getOffset()}});
+      if (!Iter.second) {
+        logAllUnhandledErrors(
+            createError("Collision occured between for truncated offset 0x" +
+                        Twine::utohexstr(TruncOffset)),
+            errs());
+        Map.clear();
+        return;
+      }
+
+      Offset = Header.getNextUnitOffset();
+      TruncOffset = Offset;
+    }
+  });
+
+  if (Map.empty())
+    return;
+
+  for (DWARFUnitIndex::Entry &E : Index.getMutableRows()) {
+    if (!E.isValid())
+      continue;
+    DWARFUnitIndex::Entry::SectionContribution &CUOff = E.getContribution();
+    auto Iter = Map.find(CUOff.getOffset());
+    if (Iter == Map.end()) {
+      logAllUnhandledErrors(createError("Could not find CU offset 0x" +
+                                        Twine::utohexstr(CUOff.getOffset()) +
+                                        " in the Map"),
+                            errs());
+      break;
+    }
+    CUOff.setOffset(Iter->second.getOffset());
+    if (CUOff.getOffset() != Iter->second.getOffset())
+      logAllUnhandledErrors(createError("Length of CU in CU index doesn't "
+                                        "match calculated length at offset 0x" +
+                                        Twine::utohexstr(CUOff.getOffset())),
+                            errs());
+  }
+
+  return;
+}
+
 const DWARFUnitIndex &DWARFContext::getCUIndex() {
   if (CUIndex)
     return *CUIndex;
 
   DataExtractor CUIndexData(DObj->getCUIndexSection(), isLittleEndian(), 0);
-
   CUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_INFO);
   CUIndex->parse(CUIndexData);
+  fixupIndex(*DObj, *this, *CUIndex.get());
   return *CUIndex;
 }
 
@@ -795,9 +863,12 @@ const DWARFUnitIndex &DWARFContext::getTUIndex() {
     return *TUIndex;
 
   DataExtractor TUIndexData(DObj->getTUIndexSection(), isLittleEndian(), 0);
-
   TUIndex = std::make_unique<DWARFUnitIndex>(DW_SECT_EXT_TYPES);
-  TUIndex->parse(TUIndexData);
+  bool isParseSuccessful = TUIndex->parse(TUIndexData);
+  // If we are parsing TU-index and for .debug_types section we don't need
+  // to do anything.
+  if (isParseSuccessful && TUIndex->getVersion() != 2)
+    fixupIndex(*DObj, *this, *TUIndex.get());
   return *TUIndex;
 }
 

@@ -3859,6 +3859,16 @@ public:
     return getSema().BuildEmptyCXXFoldExpr(EllipsisLoc, Operator);
   }
 
+  ExprResult RebuildCXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
+                                         unsigned NumUserSpecifiedExprs,
+                                         SourceLocation InitLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation RParenLoc) {
+    return CXXParenListInitExpr::Create(getSema().Context, Args, T,
+                                        NumUserSpecifiedExprs, InitLoc,
+                                        LParenLoc, RParenLoc);
+  }
+
   /// Build a new atomic operation expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -14031,6 +14041,20 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
                                                 E->getOperator());
 
   return Result;
+}
+
+template <typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformCXXParenListInitExpr(CXXParenListInitExpr *E) {
+  SmallVector<Expr *, 4> TransformedInits;
+  ArrayRef<Expr *> InitExprs = E->getInitExprs();
+  if (TransformExprs(InitExprs.data(), InitExprs.size(), true,
+                     TransformedInits))
+    return ExprError();
+
+  return getDerived().RebuildCXXParenListInitExpr(
+      TransformedInits, E->getType(), E->getUserSpecifiedInitExprs().size(),
+      E->getInitLoc(), E->getBeginLoc(), E->getEndLoc());
 }
 
 template<typename Derived>

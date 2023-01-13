@@ -18,6 +18,7 @@
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -58,12 +59,11 @@ lldb::ProcessSP ScriptedProcess::CreateInstance(lldb::TargetSP target_sp,
       !IsScriptLanguageSupported(target_sp->GetDebugger().GetScriptLanguage()))
     return nullptr;
 
-  Status error;
-  ScriptedProcess::ScriptedProcessInfo scripted_process_info(
-      target_sp->GetProcessLaunchInfo());
+  ScriptedMetadata scripted_metadata(target_sp->GetProcessLaunchInfo());
 
-  auto process_sp = std::shared_ptr<ScriptedProcess>(new ScriptedProcess(
-      target_sp, listener_sp, scripted_process_info, error));
+  Status error;
+  auto process_sp = std::shared_ptr<ScriptedProcess>(
+      new ScriptedProcess(target_sp, listener_sp, scripted_metadata, error));
 
   if (error.Fail() || !process_sp || !process_sp->m_script_object_sp ||
       !process_sp->m_script_object_sp->IsValid()) {
@@ -79,12 +79,11 @@ bool ScriptedProcess::CanDebug(lldb::TargetSP target_sp,
   return true;
 }
 
-ScriptedProcess::ScriptedProcess(
-    lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-    const ScriptedProcess::ScriptedProcessInfo &scripted_process_info,
-    Status &error)
-    : Process(target_sp, listener_sp),
-      m_scripted_process_info(scripted_process_info) {
+ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
+                                 lldb::ListenerSP listener_sp,
+                                 const ScriptedMetadata &scripted_metadata,
+                                 Status &error)
+    : Process(target_sp, listener_sp), m_scripted_metadata(scripted_metadata) {
 
   if (!target_sp) {
     error.SetErrorStringWithFormat("ScriptedProcess::%s () - ERROR: %s",
@@ -104,8 +103,8 @@ ScriptedProcess::ScriptedProcess(
   ExecutionContext exe_ctx(target_sp, /*get_process=*/false);
 
   StructuredData::GenericSP object_sp = GetInterface().CreatePluginObject(
-      m_scripted_process_info.GetClassName().c_str(), exe_ctx,
-      m_scripted_process_info.GetArgsSP());
+      m_scripted_metadata.GetClassName(), exe_ctx,
+      m_scripted_metadata.GetArgsSP());
 
   if (!object_sp || !object_sp->IsValid()) {
     error.SetErrorStringWithFormat("ScriptedProcess::%s () - ERROR: %s",

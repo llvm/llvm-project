@@ -58,14 +58,14 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     Variadic<AnyCoordinateType>:$subcomponent,
     Variadic<AnyIntegerType>:$substr,
     Variadic<AnyIntegerType>:$lenParams,
-    Optional<fir_TypeDescType>:$tdesc
+    Optional<fir_ClassType>:$sourceBox
   );
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
     $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
       (`path` $subcomponent^)? (`substr` $substr^)? (`typeparams` $lenParams^)?
-      (`tdesc` $tdesc^)? attr-dict `:` functional-type(operands, results)
+      (`source_box` $sourceBox^)? attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
@@ -84,7 +84,7 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
       return subcomponentOffset() + getSubcomponent().size();
     }
     unsigned lenParamOffset() { return substrOffset() + getSubstr().size(); }
-    unsigned getTdescOffset() {
+    unsigned getSourceBoxOffset() {
       return lenParamOffset() + getLenParams().size();
     }
   }];

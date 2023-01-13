@@ -47,12 +47,10 @@
   elements = #llvm.di_subrange<count = 4>
 >
 
-// CHECK-DAG: #[[COMP2:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array2", file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT0]], elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
+// CHECK-DAG: #[[COMP2:.*]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #[[FILE]], scope = #[[FILE]], flags = "TypePassByReference|NonTrivial">
 #comp2 = #llvm.di_composite_type<
-  tag = DW_TAG_array_type, name = "array2", file = #file,
-  scope = #file, baseType = #int0,
-  // Specify the subrange bounds.
-  elements = #llvm.di_subrange<lowerBound = 0, upperBound = 4, stride = 1>
+  tag = DW_TAG_class_type, name = "class_name", file = #file, scope = #file,
+  flags = "TypePassByReference|NonTrivial"
 >
 
 // CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, argumentTypes = #[[INT0]], #[[PTR0]], #[[PTR1]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
@@ -72,10 +70,10 @@
   file = #file, line = 3, scopeLine = 3, subprogramFlags = "Definition|Optimized", type = #spType0
 >
 
-// CHECK-DAG: #[[SP1:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE1]]>
+// CHECK-DAG: #[[SP1:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[COMP2]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE1]]>
 #sp1 = #llvm.di_subprogram<
   // Omit the optional linkageName parameter.
-  compileUnit = #cu, scope = #file, name = "value",
+  compileUnit = #cu, scope = #comp2, name = "value",
   file = #file, subprogramFlags = "Definition", type = #spType1
 >
 

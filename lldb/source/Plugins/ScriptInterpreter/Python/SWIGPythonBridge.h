@@ -96,14 +96,10 @@ void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 // Although these are scripting-language specific, their definition depends on
 // the public API.
 
-python::PythonObject LLDBSwigPythonCreateScriptedProcess(
+python::PythonObject LLDBSwigPythonCreateScriptedObject(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::TargetSP &target_sp, const StructuredDataImpl &args_impl,
-    std::string &error_string);
-
-python::PythonObject LLDBSwigPythonCreateScriptedThread(
-    const char *python_class_name, const char *session_dictionary_name,
-    const lldb::ProcessSP &process_sp, const StructuredDataImpl &args_impl,
+    lldb::ExecutionContextRefSP exe_ctx_sp,
+    const lldb_private::StructuredDataImpl &args_impl,
     std::string &error_string);
 
 llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(

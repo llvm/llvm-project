@@ -2112,7 +2112,7 @@ public:
           mlir::ValueRange emptyRange;
           auto boxTy = fir::ClassType::get(value.getType());
           return builder.create<fir::EmboxOp>(loc, boxTy, temp, empty, empty,
-                                              emptyRange, p.getTdesc());
+                                              emptyRange, p.getSourceBox());
         },
         [&](const auto &) -> ExtValue {
           fir::emitFatalError(loc, "expr is not a scalar value");
@@ -4650,13 +4650,9 @@ private:
         if (fir::isPolymorphicType(argTy)) {
           if (isArray(*expr)) {
             ExtValue exv = asScalarRef(*expr);
-            mlir::Value tdesc;
-            if (fir::isPolymorphicType(fir::getBase(exv).getType())) {
-              mlir::Type tdescType = fir::TypeDescType::get(
-                  mlir::NoneType::get(builder.getContext()));
-              tdesc = builder.create<fir::BoxTypeDescOp>(loc, tdescType,
-                                                         fir::getBase(exv));
-            }
+            mlir::Value sourceBox;
+            if (fir::isPolymorphicType(fir::getBase(exv).getType()))
+              sourceBox = fir::getBase(exv);
             mlir::Type baseTy =
                 fir::dyn_cast_ptrOrBoxEleTy(fir::getBase(exv).getType());
             mlir::Type innerTy = fir::unwrapSequenceType(baseTy);
@@ -4668,7 +4664,7 @@ private:
               mlir::ValueRange emptyRange;
               return builder.create<fir::EmboxOp>(
                   loc, fir::ClassType::get(innerTy), coord, empty, empty,
-                  emptyRange, tdesc);
+                  emptyRange, sourceBox);
             });
           } else {
             ExtValue exv = asScalarRef(*expr);

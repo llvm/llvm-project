@@ -294,6 +294,7 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                    "__nv_sqrt");
   populateOpPatterns<math::TanhOp>(converter, patterns, "__nv_tanhf",
                                    "__nv_tanh");
+  populateOpPatterns<math::TanOp>(converter, patterns, "__nv_tanf", "__nv_tan");
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

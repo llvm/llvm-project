@@ -1608,7 +1608,8 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                                       const Function &Fn,
                                       bool RequireAllCallSites,
                                       const AbstractAttribute *QueryingAA,
-                                      bool &UsedAssumedInformation) {
+                                      bool &UsedAssumedInformation,
+                                      bool CheckPotentiallyDead) {
   if (RequireAllCallSites && !Fn.hasLocalLinkage()) {
     LLVM_DEBUG(
         dbgs()
@@ -1632,7 +1633,8 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
         dbgs() << "[Attributor] Check use: " << *U << " in " << *U.getUser()
                << "\n";
     });
-    if (isAssumedDead(U, QueryingAA, nullptr, UsedAssumedInformation,
+    if (!CheckPotentiallyDead &&
+        isAssumedDead(U, QueryingAA, nullptr, UsedAssumedInformation,
                       /* CheckBBLivenessOnly */ true)) {
       DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
                       dbgs() << "[Attributor] Dead use, skip!\n");
@@ -2865,7 +2867,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     // Use the CallSiteReplacementCreator to create replacement call sites.
     bool UsedAssumedInformation = false;
     bool Success = checkForAllCallSites(CallSiteReplacementCreator, *OldFn,
-                                        true, nullptr, UsedAssumedInformation);
+                                        true, nullptr, UsedAssumedInformation,
+                                        /* CheckPotentiallyDead */ true);
     (void)Success;
     assert(Success && "Assumed call site replacement to succeed!");
 

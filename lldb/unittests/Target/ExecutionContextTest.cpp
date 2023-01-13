@@ -72,8 +72,9 @@ TEST_F(ExecutionContextTest, GetByteOrder) {
 TEST_F(ExecutionContextTest, GetByteOrderTarget) {
   ArchSpec arch("powerpc64-pc-linux");
 
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  Platform::SetHostPlatform(platform_linux::PlatformLinux::CreateInstance(
+      true, &arch, /*debugger=*/nullptr,
+      /*metadata=*/nullptr));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
@@ -94,8 +95,9 @@ TEST_F(ExecutionContextTest, GetByteOrderTarget) {
 TEST_F(ExecutionContextTest, GetByteOrderProcess) {
   ArchSpec arch("powerpc64-pc-linux");
 
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  Platform::SetHostPlatform(platform_linux::PlatformLinux::CreateInstance(
+      true, &arch, /*debugger=*/nullptr,
+      /*metadata=*/nullptr));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);

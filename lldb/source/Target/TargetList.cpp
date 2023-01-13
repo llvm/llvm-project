@@ -184,8 +184,9 @@ Status TargetList::CreateTargetInternal(
         std::vector<ArchSpec> archs;
         for (const ModuleSpec &spec : module_specs.ModuleSpecs())
           archs.push_back(spec.GetArchitecture());
-        if (PlatformSP platform_for_archs_sp =
-                platform_list.GetOrCreate(archs, {}, candidates)) {
+        if (PlatformSP platform_for_archs_sp = platform_list.GetOrCreate(
+                archs, /*process_host_arch = */ {}, candidates,
+                /*metadata = */ nullptr)) {
           platform_sp = platform_for_archs_sp;
         } else if (candidates.empty()) {
           error.SetErrorString("no matching platforms found for this file");
@@ -218,7 +219,9 @@ Status TargetList::CreateTargetInternal(
   if (!prefer_platform_arch && arch.IsValid()) {
     if (!platform_sp->IsCompatibleArchitecture(
             arch, {}, ArchSpec::CompatibleMatch, nullptr)) {
-      platform_sp = platform_list.GetOrCreate(arch, {}, &platform_arch);
+      platform_sp =
+          platform_list.GetOrCreate(arch, /*process_host_arch = */ {},
+                                    &platform_arch, /*metadata = */ nullptr);
       if (platform_sp)
         platform_list.SetSelectedPlatform(platform_sp);
     }
@@ -228,8 +231,9 @@ Status TargetList::CreateTargetInternal(
     ArchSpec fixed_platform_arch;
     if (!platform_sp->IsCompatibleArchitecture(
             platform_arch, {}, ArchSpec::CompatibleMatch, nullptr)) {
-      platform_sp =
-          platform_list.GetOrCreate(platform_arch, {}, &fixed_platform_arch);
+      platform_sp = platform_list.GetOrCreate(
+          platform_arch, /*process_host_arch = */ {}, &fixed_platform_arch,
+          /*metadata = */ nullptr);
       if (platform_sp)
         platform_list.SetSelectedPlatform(platform_sp);
     }
@@ -260,8 +264,9 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
   if (arch.IsValid()) {
     if (!platform_sp || !platform_sp->IsCompatibleArchitecture(
                             arch, {}, ArchSpec::CompatibleMatch, nullptr))
-      platform_sp =
-          debugger.GetPlatformList().GetOrCreate(specified_arch, {}, &arch);
+      platform_sp = debugger.GetPlatformList().GetOrCreate(
+          specified_arch, /*process_host_arch = */ {}, &arch,
+          /*metadata = */ nullptr);
   }
 
   if (!platform_sp)

@@ -1889,7 +1889,6 @@ module {
   llvm.metadata @metadata {
     llvm.access_group @group1
     llvm.access_group @group2
-    llvm.return
   }
 }
 
@@ -1920,7 +1919,6 @@ module {
     llvm.alias_scope @scope1 { domain = @domain, description = "The first scope" }
     llvm.alias_scope @scope2 { domain = @domain }
     llvm.alias_scope @scope3 { domain = @domain }
-    llvm.return
   }
 }
 

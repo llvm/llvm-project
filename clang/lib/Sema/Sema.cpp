@@ -2035,6 +2035,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       if (D)
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
+
+    // Don't allow SVE types in functions without a SVE target.
+    if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {
+      llvm::StringMap<bool> CallerFeatureMap;
+      Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+      if (!Builtin::evaluateRequiredTargetFeatures(
+          "sve", CallerFeatureMap))
+        Diag(D->getLocation(), diag::err_sve_vector_in_non_sve_target) << Ty;
+    }
   };
 
   CheckType(Ty);

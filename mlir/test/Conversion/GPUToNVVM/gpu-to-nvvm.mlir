@@ -344,6 +344,25 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK: llvm.func @__nv_tanf(f32) -> f32
+  // CHECK: llvm.func @__nv_tan(f64) -> f64
+  // CHECK-LABEL: func @gpu_tan
+  func.func @gpu_tan(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.tan %arg_f16 : f16
+    // CHECK: llvm.fpext %{{.*}} : f16 to f32
+    // CHECK-NEXT: llvm.call @__nv_tanf(%{{.*}}) : (f32) -> f32
+    // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
+    %result32 = math.tan %arg_f32 : f32
+    // CHECK: llvm.call @__nv_tanf(%{{.*}}) : (f32) -> f32
+    %result64 = math.tan %arg_f64 : f64
+    // CHECK: llvm.call @__nv_tan(%{{.*}}) : (f64) -> f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK: llvm.func @__nv_tanhf(f32) -> f32
   // CHECK: llvm.func @__nv_tanh(f64) -> f64
   // CHECK-LABEL: func @gpu_tanh

@@ -13,8 +13,8 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -31,7 +31,7 @@ static LogicalResult createBackwardSliceFunction(Operation *op,
   std::string clonedFuncOpName = parentFuncOp.getName().str() + suffix.str();
   func::FuncOp clonedFuncOp = builder.create<func::FuncOp>(
       loc, clonedFuncOpName, parentFuncOp.getFunctionType());
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   builder.setInsertionPointToEnd(clonedFuncOp.addEntryBlock());
   for (const auto &arg : enumerate(parentFuncOp.getArguments()))
     mapper.map(arg.value(), clonedFuncOp.getArgument(arg.index()));
