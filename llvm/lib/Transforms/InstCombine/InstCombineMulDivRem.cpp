@@ -1666,6 +1666,16 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   if (Instruction *Mul = foldFDivPowDivisor(I, Builder))
     return Mul;
 
+  // pow(X, Y) / X --> pow(X, Y-1)
+  if (I.hasAllowReassoc() &&
+      match(Op0, m_OneUse(m_Intrinsic<Intrinsic::pow>(m_Specific(Op1),
+                                                      m_Value(Y))))) {
+    Value *Y1 =
+        Builder.CreateFAddFMF(Y, ConstantFP::get(I.getType(), -1.0), &I);
+    Value *Pow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, Op1, Y1, &I);
+    return replaceInstUsesWith(I, Pow);
+  }
+
   return nullptr;
 }
 
