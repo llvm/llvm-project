@@ -11,6 +11,7 @@ unittest("SemaTests") {
     "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

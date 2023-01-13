@@ -12,7 +12,6 @@ unittest("SupportTests") {
     "AlignOfTest.cpp",
     "AlignmentTest.cpp",
     "AllocatorTest.cpp",
-    "AnnotationsTest.cpp",
     "ArrayRecyclerTest.cpp",
     "BLAKE3Test.cpp",
     "Base64Test.cpp",
