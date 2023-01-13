@@ -21,12 +21,12 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -981,7 +981,7 @@ struct CanonicalizeContractAdd : public OpRewritePattern<AddOpType> {
               contractionOp.getAcc().getDefiningOp())) {
         if (maybeZero.getValue() ==
             rewriter.getZeroAttr(contractionOp.getAcc().getType())) {
-          BlockAndValueMapping bvm;
+          IRMapping bvm;
           bvm.map(contractionOp.getAcc(), otherOperand);
           auto newContraction =
               cast<vector::ContractionOp>(rewriter.clone(*contractionOp, bvm));
@@ -1012,12 +1012,6 @@ void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
                                      Value source) {
   result.addOperands({source});
-  result.addTypes(source.getType().cast<VectorType>().getElementType());
-}
-
-void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
-                                     Value source, Value position) {
-  result.addOperands({source, position});
   result.addTypes(source.getType().cast<VectorType>().getElementType());
 }
 

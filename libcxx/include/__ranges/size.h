@@ -21,6 +21,7 @@
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/auto_cast.h>
+#include <__utility/declval.h>
 #include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -70,7 +71,7 @@ concept __difference =
   __class_or_enum<remove_cvref_t<_Tp>> &&
   requires(_Tp&& __t) {
     { ranges::begin(__t) } -> forward_iterator;
-    { ranges::end(__t) } -> sized_sentinel_for<decltype(ranges::begin(declval<_Tp>()))>;
+    { ranges::end(__t) } -> sized_sentinel_for<decltype(ranges::begin(std::declval<_Tp>()))>;
   };
 
 struct __fn {

@@ -47,7 +47,7 @@ static SmallVector<Value> getIndicesForAccess(OpBuilder &b, Location loc,
 static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
                                    ValueRange ivs, ValueRange argValues) {
   Block *body = linalgOp.getBlock();
-  BlockAndValueMapping map;
+  IRMapping map;
   map.map(body->getArguments(), argValues);
   for (auto &op : body->without_terminator()) {
     if (auto indexOp = dyn_cast<IndexOp>(&op)) {
@@ -345,7 +345,7 @@ struct LinalgOpPartialReductionInterface
     auto genericOp =
         b.create<GenericOp>(loc, TypeRange({out.getType()}), tiledOperands,
                             ValueRange({out}), newMaps, newIteratorTypes);
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     op->getRegion(0).cloneInto(&genericOp.getRegion(),
                                genericOp.getRegion().begin(), mapping);
     return genericOp.getOperation();

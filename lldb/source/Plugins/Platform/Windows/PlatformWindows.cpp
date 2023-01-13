@@ -41,8 +41,9 @@ LLDB_PLUGIN_DEFINE(PlatformWindows)
 
 static uint32_t g_initialize_count = 0;
 
-PlatformSP PlatformWindows::CreateInstance(bool force,
-                                           const lldb_private::ArchSpec *arch) {
+PlatformSP PlatformWindows::CreateInstance(bool force, const ArchSpec *arch,
+                                           const Debugger *debugger,
+                                           const ScriptedMetadata *metadata) {
   // The only time we create an instance is when we are creating a remote
   // windows platform
   const bool is_host = false;
@@ -137,10 +138,12 @@ Status PlatformWindows::ConnectRemote(Args &args) {
         "can't connect to the host platform '{0}', always connected",
         GetPluginName());
   } else {
-    if (!m_remote_platform_sp)
+    if (!m_remote_platform_sp) {
       m_remote_platform_sp =
           platform_gdb_server::PlatformRemoteGDBServer::CreateInstance(
-              /*force=*/true, nullptr);
+              /*force=*/true, /*arch=*/nullptr, /*debugger=*/nullptr,
+              /*metadata=*/nullptr);
+    }
 
     if (m_remote_platform_sp) {
       if (error.Success()) {

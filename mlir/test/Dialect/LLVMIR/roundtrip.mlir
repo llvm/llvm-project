@@ -504,7 +504,6 @@ module {
   llvm.metadata @metadata attributes {test_attribute} {
     // CHECK: llvm.access_group @group1
     llvm.access_group @group1
-    llvm.return
   }
 }
 

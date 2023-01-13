@@ -349,10 +349,8 @@ MachOPlatform::MachOPlatform(
   // Force linking of eh-frame registration functions.
   if (auto Err2 = lookupAndRecordAddrs(
           ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
-          {{ES.intern("___orc_rt_macho_register_ehframe_section"),
-            &orc_rt_macho_register_ehframe_section},
-           {ES.intern("___orc_rt_macho_deregister_ehframe_section"),
-            &orc_rt_macho_deregister_ehframe_section}})) {
+          {{RegisterEHFrameSection.Name, &RegisterEHFrameSection.Addr},
+           {DeregisterEHFrameSection.Name, &DeregisterEHFrameSection.Addr}})) {
     Err = std::move(Err2);
     return;
   }
@@ -574,27 +572,22 @@ void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
 Error MachOPlatform::bootstrapMachORuntime(JITDylib &PlatformJD) {
   if (auto Err = lookupAndRecordAddrs(
           ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
-          {{ES.intern("___orc_rt_macho_platform_bootstrap"),
-            &orc_rt_macho_platform_bootstrap},
-           {ES.intern("___orc_rt_macho_platform_shutdown"),
-            &orc_rt_macho_platform_shutdown},
-           {ES.intern("___orc_rt_macho_register_jitdylib"),
-            &orc_rt_macho_register_jitdylib},
-           {ES.intern("___orc_rt_macho_deregister_jitdylib"),
-            &orc_rt_macho_deregister_jitdylib},
-           {ES.intern("___orc_rt_macho_register_object_platform_sections"),
-            &orc_rt_macho_register_object_platform_sections},
-           {ES.intern("___orc_rt_macho_deregister_object_platform_sections"),
-            &orc_rt_macho_deregister_object_platform_sections},
-           {ES.intern("___orc_rt_macho_create_pthread_key"),
-            &orc_rt_macho_create_pthread_key}}))
+          {{PlatformBootstrap.Name, &PlatformBootstrap.Addr},
+           {PlatformShutdown.Name, &PlatformShutdown.Addr},
+           {RegisterJITDylib.Name, &RegisterJITDylib.Addr},
+           {DeregisterJITDylib.Name, &DeregisterJITDylib.Addr},
+           {RegisterObjectPlatformSections.Name,
+            &RegisterObjectPlatformSections.Addr},
+           {DeregisterObjectPlatformSections.Name,
+            &DeregisterObjectPlatformSections.Addr},
+           {CreatePThreadKey.Name, &CreatePThreadKey.Addr}}))
     return Err;
 
-  return ES.callSPSWrapper<void()>(orc_rt_macho_platform_bootstrap);
+  return ES.callSPSWrapper<void()>(PlatformBootstrap.Addr);
 }
 
 Expected<uint64_t> MachOPlatform::createPThreadKey() {
-  if (!orc_rt_macho_create_pthread_key)
+  if (!CreatePThreadKey.Addr)
     return make_error<StringError>(
         "Attempting to create pthread key in target, but runtime support has "
         "not been loaded yet",
@@ -602,7 +595,7 @@ Expected<uint64_t> MachOPlatform::createPThreadKey() {
 
   Expected<uint64_t> Result(0);
   if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
-          orc_rt_macho_create_pthread_key, Result))
+          CreatePThreadKey.Addr, Result))
     return std::move(Err);
   return Result;
 }
@@ -688,9 +681,9 @@ Error MachOPlatform::MachOPlatformPlugin::associateJITDylibHeaderSymbol(
   G.allocActions().push_back(
       {cantFail(
            WrapperFunctionCall::Create<SPSArgList<SPSString, SPSExecutorAddr>>(
-               MP.orc_rt_macho_register_jitdylib, JD.getName(), HeaderAddr)),
+               MP.RegisterJITDylib.Addr, JD.getName(), HeaderAddr)),
        cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddr>>(
-           MP.orc_rt_macho_deregister_jitdylib, HeaderAddr))});
+           MP.DeregisterJITDylib.Addr, HeaderAddr))});
   return Error::success();
 }
 
@@ -875,10 +868,10 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
       G.allocActions().push_back(
           {cantFail(
                WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange>>(
-                   MP.orc_rt_macho_register_ehframe_section, R.getRange())),
+                   MP.RegisterEHFrameSection.Addr, R.getRange())),
            cantFail(
                WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange>>(
-                   MP.orc_rt_macho_deregister_ehframe_section, R.getRange()))});
+                   MP.DeregisterEHFrameSection.Addr, R.getRange()))});
   }
 
   // Get a pointer to the thread data section if there is one. It will be used
@@ -978,12 +971,12 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     G.allocActions().push_back(
         {cantFail(
              WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
-                 MP.orc_rt_macho_register_object_platform_sections, *HeaderAddr,
+                 MP.RegisterObjectPlatformSections.Addr, *HeaderAddr,
                  MachOPlatformSecs)),
          cantFail(
              WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
-                 MP.orc_rt_macho_deregister_object_platform_sections,
-                 *HeaderAddr, MachOPlatformSecs))});
+                 MP.DeregisterObjectPlatformSections.Addr, *HeaderAddr,
+                 MachOPlatformSecs))});
   }
 
   return Error::success();

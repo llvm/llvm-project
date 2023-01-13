@@ -28,33 +28,34 @@ class BinaryFunction;
 /// Class encapsulating runtime statistics about an execution unit.
 class DynoStats {
 
-#define DYNO_STATS\
-  D(FIRST_DYNO_STAT,              "<reserved>", Fn)\
-  D(FORWARD_COND_BRANCHES,        "executed forward branches", Fn)\
-  D(FORWARD_COND_BRANCHES_TAKEN,  "taken forward branches", Fn)\
-  D(BACKWARD_COND_BRANCHES,       "executed backward branches", Fn)\
-  D(BACKWARD_COND_BRANCHES_TAKEN, "taken backward branches", Fn)\
-  D(UNCOND_BRANCHES,              "executed unconditional branches", Fn)\
-  D(FUNCTION_CALLS,               "all function calls", Fn)\
-  D(INDIRECT_CALLS,               "indirect calls", Fn)\
-  D(PLT_CALLS,                    "PLT calls", Fn)\
-  D(INSTRUCTIONS,                 "executed instructions", Fn)\
-  D(LOADS,                        "executed load instructions", Fn)\
-  D(STORES,                       "executed store instructions", Fn)\
-  D(JUMP_TABLE_BRANCHES,          "taken jump table branches", Fn)\
-  D(UNKNOWN_INDIRECT_BRANCHES,    "taken unknown indirect branches", Fn)\
-  D(ALL_BRANCHES,                 "total branches",\
-      Fadd(ALL_CONDITIONAL, UNCOND_BRANCHES))\
-  D(ALL_TAKEN,                    "taken branches",\
-      Fadd(TAKEN_CONDITIONAL, UNCOND_BRANCHES))\
-  D(NONTAKEN_CONDITIONAL,         "non-taken conditional branches",\
-      Fsub(ALL_CONDITIONAL, TAKEN_CONDITIONAL))\
-  D(TAKEN_CONDITIONAL,            "taken conditional branches",\
-      Fadd(FORWARD_COND_BRANCHES_TAKEN, BACKWARD_COND_BRANCHES_TAKEN))\
-  D(ALL_CONDITIONAL,              "all conditional branches",\
-      Fadd(FORWARD_COND_BRANCHES, BACKWARD_COND_BRANCHES))\
-  D(VENEER_CALLS_AARCH64,         "linker-inserted veneer calls", Fn)\
-  D(LAST_DYNO_STAT,               "<reserved>", 0)
+#define REAL_DYNO_STATS                                                        \
+  D(FORWARD_COND_BRANCHES, "executed forward branches", Fn)                    \
+  D(FORWARD_COND_BRANCHES_TAKEN, "taken forward branches", Fn)                 \
+  D(BACKWARD_COND_BRANCHES, "executed backward branches", Fn)                  \
+  D(BACKWARD_COND_BRANCHES_TAKEN, "taken backward branches", Fn)               \
+  D(UNCOND_BRANCHES, "executed unconditional branches", Fn)                    \
+  D(FUNCTION_CALLS, "all function calls", Fn)                                  \
+  D(INDIRECT_CALLS, "indirect calls", Fn)                                      \
+  D(PLT_CALLS, "PLT calls", Fn)                                                \
+  D(INSTRUCTIONS, "executed instructions", Fn)                                 \
+  D(LOADS, "executed load instructions", Fn)                                   \
+  D(STORES, "executed store instructions", Fn)                                 \
+  D(JUMP_TABLE_BRANCHES, "taken jump table branches", Fn)                      \
+  D(UNKNOWN_INDIRECT_BRANCHES, "taken unknown indirect branches", Fn)          \
+  D(ALL_BRANCHES, "total branches", Fadd(ALL_CONDITIONAL, UNCOND_BRANCHES))    \
+  D(ALL_TAKEN, "taken branches", Fadd(TAKEN_CONDITIONAL, UNCOND_BRANCHES))     \
+  D(NONTAKEN_CONDITIONAL, "non-taken conditional branches",                    \
+    Fsub(ALL_CONDITIONAL, TAKEN_CONDITIONAL))                                  \
+  D(TAKEN_CONDITIONAL, "taken conditional branches",                           \
+    Fadd(FORWARD_COND_BRANCHES_TAKEN, BACKWARD_COND_BRANCHES_TAKEN))           \
+  D(ALL_CONDITIONAL, "all conditional branches",                               \
+    Fadd(FORWARD_COND_BRANCHES, BACKWARD_COND_BRANCHES))                       \
+  D(VENEER_CALLS_AARCH64, "linker-inserted veneer calls", Fn)
+
+#define DYNO_STATS                                                             \
+  D(FIRST_DYNO_STAT, "<reserved>", 0)                                          \
+  REAL_DYNO_STATS                                                              \
+  D(LAST_DYNO_STAT, "<reserved>", 0)
 
 public:
 #define D(name, ...) name,

@@ -2137,7 +2137,8 @@ public:
   bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                             const Function &Fn, bool RequireAllCallSites,
                             const AbstractAttribute *QueryingAA,
-                            bool &UsedAssumedInformation);
+                            bool &UsedAssumedInformation,
+                            bool CheckPotentiallyDead = false);
 
   /// Check \p Pred on all values potentially returned by \p F.
   ///

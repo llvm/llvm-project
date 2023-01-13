@@ -511,10 +511,10 @@ using CustomVectorizationPrecondition =
     std::function<LogicalResult(Operation *, bool)>;
 
 // Custom vectorization function type. Produce a vector form of Operation*
-// assuming all its vectorized operands are already in the BlockAndValueMapping.
+// assuming all its vectorized operands are already in the IRMapping.
 // Return nullptr if the Operation cannot be vectorized.
-using CustomVectorizationHook = std::function<VectorizationResult(
-    Operation *, const BlockAndValueMapping &)>;
+using CustomVectorizationHook =
+    std::function<VectorizationResult(Operation *, const IRMapping &)>;
 
 /// Helper function to vectorize the terminator of a `linalgOp`. New result
 /// vector values are appended to `newResults`. Return
@@ -525,7 +525,7 @@ using CustomVectorizationHook = std::function<VectorizationResult(
 /// CustomVectorizationHook.
 static VectorizationResult
 vectorizeLinalgYield(RewriterBase &rewriter, Operation *op,
-                     const BlockAndValueMapping &bvm, VectorizationState &state,
+                     const IRMapping &bvm, VectorizationState &state,
                      LinalgOp linalgOp, SmallVectorImpl<Value> &newResults) {
   auto yieldOp = dyn_cast<linalg::YieldOp>(op);
   if (!yieldOp)
@@ -615,7 +615,7 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
 ///  offset = ( ( 1 ) * 80 +  2 ) * 15  + 3
 static Value
 calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
-                      const BlockAndValueMapping &bvm,
+                      const IRMapping &bvm,
                       const SmallVectorImpl<int64_t> &targetShape) {
   // The vector of indices for GatherOp should be shaped as the output vector
   auto indexVecType = VectorType::get(targetShape, b.getIndexType());
@@ -626,23 +626,19 @@ calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
 
   const size_t numIndices = extractOp.getIndices().size();
   for (size_t i = 1; i < numIndices; i++) {
-    auto dimSizeBcast = b.create<vector::BroadcastOp>(
-        loc, indexVecType,
+    auto dimSize = broadcastIfNeeded(
+        b,
         b.create<arith::ConstantIndexOp>(
             loc,
-            extractOp.getTensor().getType().cast<ShapedType>().getDimSize(i)));
-    offset = b.create<arith::MulIOp>(loc, offset, dimSizeBcast);
+            extractOp.getTensor().getType().cast<ShapedType>().getDimSize(i)),
+        indexVecType.getShape());
 
-    auto originalIndexBcast = bvm.lookup(extractOp.getIndices()[i]);
-    if (i == numIndices - 1) {
-      // We only need an additional broadcast for the trailing index. All other
-      // indices have already been broadcast by `vectorizeLinalgIndex` to match
-      // the output size.
-      originalIndexBcast = b.create<vector::BroadcastOp>(
-          loc, indexVecType, bvm.lookup(extractOp.getIndices()[i]));
-    }
+    offset = b.create<arith::MulIOp>(loc, offset, dimSize);
 
-    offset = b.create<arith::AddIOp>(loc, originalIndexBcast, offset);
+    auto extractOpIndex = broadcastIfNeeded(
+        b, bvm.lookup(extractOp.getIndices()[i]), indexVecType.getShape());
+
+    offset = b.create<arith::AddIOp>(loc, extractOpIndex, offset);
   }
 
   return offset;
@@ -652,9 +648,10 @@ calculateGatherOffset(OpBuilder &b, tensor::ExtractOp extractOp,
 /// VectorizationStatus::NewOp to signal the vectorization algorithm that it
 /// should map the produced operations. This function is meant to be used as a
 /// CustomVectorizationHook.
-static VectorizationResult
-vectorizeTensorExtract(RewriterBase &rewriter, Operation *op, LinalgOp linalgOp,
-                       const BlockAndValueMapping &bvm) {
+static VectorizationResult vectorizeTensorExtract(RewriterBase &rewriter,
+                                                  Operation *op,
+                                                  LinalgOp linalgOp,
+                                                  const IRMapping &bvm) {
   tensor::ExtractOp extractOp = dyn_cast<tensor::ExtractOp>(op);
   if (!extractOp)
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
@@ -692,10 +689,9 @@ vectorizeTensorExtract(RewriterBase &rewriter, Operation *op, LinalgOp linalgOp,
 /// that the result shape.
 // Note: this is a true builder that notifies the OpBuilder listener.
 // TODO: Consider moving as a static helper on the ReduceOp.
-static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp,
-                                 Operation *op, Value reduceValue,
-                                 Value initialValue,
-                                 const BlockAndValueMapping &bvm) {
+static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp, Operation *op,
+                                 Value reduceValue, Value initialValue,
+                                 const IRMapping &bvm) {
   Value reduceVec = bvm.lookup(reduceValue);
   Value outputVec = bvm.lookup(initialValue);
   auto reduceType = reduceVec.getType().dyn_cast<VectorType>();
@@ -730,7 +726,7 @@ static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp,
 /// instructs the caller what `bvm` update needs to occur.
 static VectorizationResult
 vectorizeOneOp(RewriterBase &rewriter, LinalgOp linalgOp, Operation *op,
-               const BlockAndValueMapping &bvm,
+               const IRMapping &bvm,
                ArrayRef<CustomVectorizationHook> customVectorizationHooks) {
   LDBG("vectorize op " << *op << "\n");
 
@@ -837,7 +833,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
   // 2. Values defined above the region can only be broadcast for now. Make them
   // map to themselves.
-  BlockAndValueMapping bvm;
+  IRMapping bvm;
   SetVector<Value> valuesSet;
   mlir::getUsedValuesDefinedAbove(linalgOp->getRegion(0), valuesSet);
   bvm.map(valuesSet.getArrayRef(), valuesSet.getArrayRef());
@@ -915,24 +911,21 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   SmallVector<CustomVectorizationHook> hooks;
   // 4a. Register CustomVectorizationHook for yieldOp.
   CustomVectorizationHook vectorizeYield =
-      [&](Operation *op,
-          const BlockAndValueMapping &bvm) -> VectorizationResult {
+      [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
     return vectorizeLinalgYield(rewriter, op, bvm, state, linalgOp, newResults);
   };
   hooks.push_back(vectorizeYield);
 
   // 4b. Register CustomVectorizationHook for indexOp.
   CustomVectorizationHook vectorizeIndex =
-      [&](Operation *op,
-          const BlockAndValueMapping &bvm) -> VectorizationResult {
+      [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
     return vectorizeLinalgIndex(rewriter, op, linalgOp);
   };
   hooks.push_back(vectorizeIndex);
 
   // 4c. Register CustomVectorizationHook for extractOp.
   CustomVectorizationHook vectorizeExtract =
-      [&](Operation *op,
-          const BlockAndValueMapping &bvm) -> VectorizationResult {
+      [&](Operation *op, const IRMapping &bvm) -> VectorizationResult {
     return vectorizeTensorExtract(rewriter, op, linalgOp, bvm);
   };
   hooks.push_back(vectorizeExtract);

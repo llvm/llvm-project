@@ -867,7 +867,6 @@ module {
       llvm.return
   }
   llvm.metadata @metadata {
-    llvm.return
   }
 }
 
@@ -936,7 +935,6 @@ module {
       llvm.return
   }
   llvm.metadata @metadata {
-    llvm.return
   }
 }
 
@@ -949,7 +947,6 @@ module {
       llvm.return
   }
   llvm.metadata @metadata {
-    llvm.return
   }
 }
 
@@ -964,7 +961,6 @@ module {
   llvm.metadata @metadata {
     llvm.alias_scope_domain @domain
     llvm.alias_scope @scope { domain = @domain }
-    llvm.return
   }
 }
 
@@ -998,7 +994,6 @@ module {
   }
   llvm.metadata @metadata {
     llvm.access_group @group
-    llvm.return
   }
 }
 
@@ -1012,7 +1007,6 @@ module {
   }
   llvm.metadata @metadata {
     llvm.access_group @group
-    llvm.return
   }
 }
 

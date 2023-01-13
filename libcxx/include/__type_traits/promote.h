@@ -40,7 +40,7 @@ struct __numeric_type
    static double __test(double);
    static long double __test(long double);
 
-   typedef decltype(__test(declval<_Tp>())) type;
+   typedef decltype(__test(std::declval<_Tp>())) type;
    static const bool value = _IsNotSame<type, void>::value;
 };
 

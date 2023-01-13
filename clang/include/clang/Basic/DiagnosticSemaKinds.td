@@ -2164,6 +2164,9 @@ def err_init_list_bad_dest_type : Error<
 def warn_cxx20_compat_aggregate_init_with_ctors : Warning<
   "aggregate initialization of type %0 with user-declared constructors "
   "is incompatible with C++20">, DefaultIgnore, InGroup<CXX20Compat>;
+def warn_cxx17_compat_aggregate_init_paren_list : Warning<
+  "aggregate initialization of type %0 from a parenthesized list of values "
+  "is a C++20 extension">, DefaultIgnore, InGroup<CXX20>;
 
 def err_reference_bind_to_bitfield : Error<
   "%select{non-const|volatile}0 reference cannot bind to "
@@ -3045,6 +3048,8 @@ def err_attribute_bad_sve_vector_size : Error<
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
   "value of 128, 256, 512, 1024 or 2048.">;
+def err_sve_vector_in_non_sve_target : Error<
+  "SVE vector type %0 cannot be used in a target without sve">;
 def err_attribute_requires_positive_integer : Error<
   "%0 attribute requires a %select{positive|non-negative}1 "
   "integral compile time constant expression">;
@@ -11274,8 +11279,8 @@ def err_implied_coroutine_type_not_found : Error<
   "a coroutine; include <experimental/coroutine> if your version "
   "of libcxx is less than 14.0">;
 def warn_deprecated_coroutine_namespace : Warning<
-  "support for std::experimental::%0 will be removed in LLVM 17; "
-  "use std::%0 instead">,
+  "support for 'std::experimental::%0' will be removed in Clang 17; "
+  "use 'std::%0' instead">,
   InGroup<DeprecatedExperimentalCoroutine>;
 def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
   "conflicting mixed use of std and std::experimental namespaces for "

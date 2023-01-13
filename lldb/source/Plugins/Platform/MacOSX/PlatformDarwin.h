@@ -48,7 +48,9 @@ public:
 
   ~PlatformDarwin() override;
 
-  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
+  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch,
+                                         const Debugger *debugger,
+                                         const ScriptedMetadata *metadata);
 
   static void DebuggerInitialize(lldb_private::Debugger &debugger);
   

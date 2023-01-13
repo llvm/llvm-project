@@ -91,8 +91,9 @@ TargetSP CreateTarget(DebuggerSP &debugger_sp, ArchSpec &arch) {
 TEST_F(ThreadTest, SetStopInfo) {
   ArchSpec arch("powerpc64-pc-linux");
 
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  Platform::SetHostPlatform(platform_linux::PlatformLinux::CreateInstance(
+      true, &arch, /*debugger=*/nullptr,
+      /*metadata=*/nullptr));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
@@ -126,8 +127,9 @@ TEST_F(ThreadTest, SetStopInfo) {
 TEST_F(ThreadTest, GetPrivateStopInfo) {
   ArchSpec arch("powerpc64-pc-linux");
 
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  Platform::SetHostPlatform(platform_linux::PlatformLinux::CreateInstance(
+      true, &arch, /*debugger=*/nullptr,
+      /*metadata=*/nullptr));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);

@@ -35,7 +35,6 @@ StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
   if (class_name.empty() && !script_obj)
     return {};
 
-  ProcessSP process_sp = exe_ctx.GetProcessSP();
   StructuredDataImpl args_impl(args_sp);
   std::string error_string;
 
@@ -44,11 +43,13 @@ StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
 
   PythonObject ret_val;
 
-  if (!script_obj)
-    ret_val = LLDBSwigPythonCreateScriptedThread(
-        class_name.str().c_str(), m_interpreter.GetDictionaryName(), process_sp,
-        args_impl, error_string);
-  else
+  if (!script_obj) {
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp =
+        std::make_shared<ExecutionContextRef>(exe_ctx);
+    ret_val = LLDBSwigPythonCreateScriptedObject(
+        class_name.str().c_str(), m_interpreter.GetDictionaryName(),
+        exe_ctx_ref_sp, args_impl, error_string);
+  } else
     ret_val = PythonObject(PyRefType::Borrowed,
                            static_cast<PyObject *>(script_obj->GetValue()));
 

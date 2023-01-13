@@ -18,6 +18,7 @@
 #include "PythonReadline.h"
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
+#include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
 
 #include "lldb/API/SBError.h"
@@ -413,6 +414,8 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_command_thread_state(nullptr) {
   m_scripted_process_interface_up =
       std::make_unique<ScriptedProcessPythonInterface>(*this);
+  m_scripted_platform_interface_up =
+      std::make_unique<ScriptedPlatformPythonInterface>(*this);
 
   m_dictionary_name.append("_dict");
   StreamString run_string;

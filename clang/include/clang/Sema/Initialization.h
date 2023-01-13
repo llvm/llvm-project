@@ -923,7 +923,11 @@ public:
     SK_OCLSamplerInit,
 
     /// Initialize an opaque OpenCL type (event_t, queue_t, etc.) with zero
-    SK_OCLZeroOpaqueType
+    SK_OCLZeroOpaqueType,
+
+    /// Initialize an aggreagate with parenthesized list of values.
+    /// This is a C++20 feature.
+    SK_ParenthesizedListInit
   };
 
   /// A single step in the initialization sequence.
@@ -1099,6 +1103,10 @@ public:
 
     /// List-copy-initialization chose an explicit constructor.
     FK_ExplicitConstructor,
+
+    /// Parenthesized list initialization failed at some point.
+    /// This is a C++20 feature.
+    FK_ParenthesizedListInitFailed,
   };
 
 private:
@@ -1356,6 +1364,8 @@ public:
   /// Add a step to initialzie an OpenCL opaque type (event_t, queue_t, etc.)
   /// from a zero constant.
   void AddOCLZeroOpaqueTypeStep(QualType T);
+
+  void AddParenthesizedListInitStep(QualType T);
 
   /// Add steps to unwrap a initializer list for a reference around a
   /// single element and rewrap it at the end.

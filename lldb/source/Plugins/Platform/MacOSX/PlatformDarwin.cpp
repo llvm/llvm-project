@@ -106,9 +106,11 @@ llvm::StringRef PlatformDarwin::GetDescriptionStatic() {
   return "Darwin platform plug-in.";
 }
 
-PlatformSP PlatformDarwin::CreateInstance(bool force, const ArchSpec *arch) {
-   // We only create subclasses of the PlatformDarwin plugin.
-   return PlatformSP();
+PlatformSP PlatformDarwin::CreateInstance(bool force, const ArchSpec *arch,
+                                          const Debugger *debugger,
+                                          const ScriptedMetadata *metadata) {
+  // We only create subclasses of the PlatformDarwin plugin.
+  return PlatformSP();
 }
 
 #define LLDB_PROPERTIES_platformdarwin

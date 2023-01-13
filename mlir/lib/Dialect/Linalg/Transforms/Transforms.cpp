@@ -381,7 +381,7 @@ Value GeneralizePadOpPattern::createFillOrGenerateOp(
   auto generateOp = rewriter.create<tensor::GenerateOp>(
       padOp.getLoc(), padOp.getResultType(), dynSizes);
   // Copy region to new op.
-  BlockAndValueMapping bvm;
+  IRMapping bvm;
   padOp.getRegion().cloneInto(&generateOp.getRegion(), bvm);
   return generateOp;
 }

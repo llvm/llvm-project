@@ -57,7 +57,7 @@ concept __has_integral_minus =
 template<__has_integral_minus _Tp>
 requires (!__has_member_difference_type<_Tp>)
 struct incrementable_traits<_Tp> {
-  using difference_type = make_signed_t<decltype(declval<_Tp>() - declval<_Tp>())>;
+  using difference_type = make_signed_t<decltype(std::declval<_Tp>() - std::declval<_Tp>())>;
 };
 
 template <class>

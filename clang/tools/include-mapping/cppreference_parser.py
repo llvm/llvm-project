@@ -145,6 +145,9 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
       if os.path.isfile(path):
         results.append((symbol_name,
                       pool.apply_async(_ReadSymbolPage, (path, symbol_name))))
+      else:
+        sys.stderr.write("Discarding information for symbol: %s. Page %s does not exist.\n" 
+          % (symbol_name, path))                
 
     # Build map from symbol name to a set of headers.
     symbol_headers = collections.defaultdict(set)

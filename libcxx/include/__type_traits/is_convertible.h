@@ -40,7 +40,7 @@ struct __is_convertible_test : public false_type {};
 
 template <class _From, class _To>
 struct __is_convertible_test<_From, _To,
-    decltype(__is_convertible_imp::__test_convert<_To>(declval<_From>()))> : public true_type
+    decltype(__is_convertible_imp::__test_convert<_To>(std::declval<_From>()))> : public true_type
 {};
 
 template <class _Tp, bool _IsArray =    is_array<_Tp>::value,

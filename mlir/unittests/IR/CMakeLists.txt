@@ -1,9 +1,9 @@
 add_mlir_unittest(MLIRIRTests
   AdaptorTest.cpp
   AttributeTest.cpp
-  BlockAndValueMapping.cpp
   DialectTest.cpp
   InterfaceTest.cpp
+  IRMapping.cpp
   InterfaceAttachmentTest.cpp
   OperationSupportTest.cpp
   PatternMatchTest.cpp

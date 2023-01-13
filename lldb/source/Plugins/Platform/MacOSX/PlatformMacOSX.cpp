@@ -90,7 +90,9 @@ llvm::StringRef PlatformMacOSX::GetDescriptionStatic() {
   return "Local Mac OS X user platform plug-in.";
 }
 
-PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch) {
+PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch,
+                                          const Debugger *debugger,
+                                          const ScriptedMetadata *metadata) {
   // The only time we create an instance is when we are creating a remote
   // macosx platform which is handled by PlatformRemoteMacOSX.
   return PlatformSP();

@@ -29,10 +29,8 @@ using namespace bolt;
 namespace {
 
 const char *dynoStatsOptName(const bolt::DynoStats::Category C) {
-  if (C == bolt::DynoStats::FIRST_DYNO_STAT)
-    return "none";
-  else if (C == bolt::DynoStats::LAST_DYNO_STAT)
-    return "all";
+  assert(C > bolt::DynoStats::FIRST_DYNO_STAT &&
+         C < DynoStats::LAST_DYNO_STAT && "Unexpected dyno stat category.");
 
   static std::string OptNames[bolt::DynoStats::LAST_DYNO_STAT + 1];
 
@@ -42,16 +40,6 @@ const char *dynoStatsOptName(const bolt::DynoStats::Category C) {
 
   return OptNames[C].c_str();
 }
-
-const char *dynoStatsOptDesc(const bolt::DynoStats::Category C) {
-  if (C == bolt::DynoStats::FIRST_DYNO_STAT)
-    return "unsorted";
-  else if (C == bolt::DynoStats::LAST_DYNO_STAT)
-    return "sorted by all stats";
-
-  return bolt::DynoStats::Description(C);
-}
-
 }
 
 namespace opts {
@@ -122,19 +110,19 @@ static cl::opt<unsigned>
                   cl::desc("print statistics about basic block ordering"),
                   cl::init(0), cl::cat(BoltOptCategory));
 
-static cl::list<bolt::DynoStats::Category> PrintSortedBy(
-    "print-sorted-by", cl::CommaSeparated,
-    cl::desc("print functions sorted by order of dyno stats"),
-    cl::value_desc("key1,key2,key3,..."),
-    cl::values(
-#define D(name, ...)                                        \
-    clEnumValN(bolt::DynoStats::name,                     \
-               dynoStatsOptName(bolt::DynoStats::name),   \
-               dynoStatsOptDesc(bolt::DynoStats::name)),
-        DYNO_STATS
+static cl::list<bolt::DynoStats::Category>
+    PrintSortedBy("print-sorted-by", cl::CommaSeparated,
+                  cl::desc("print functions sorted by order of dyno stats"),
+                  cl::value_desc("key1,key2,key3,..."),
+                  cl::values(
+#define D(name, description, ...)                                              \
+  clEnumValN(bolt::DynoStats::name, dynoStatsOptName(bolt::DynoStats::name),   \
+             description),
+                      REAL_DYNO_STATS
 #undef D
-            clEnumValN(bolt::DynoStats::LAST_DYNO_STAT, ".", ".")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+                          clEnumValN(bolt::DynoStats::LAST_DYNO_STAT, "all",
+                                     "sorted by all names")),
+                  cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintUnknown("print-unknown",
@@ -1448,9 +1436,7 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
   }
 
-  if (!opts::PrintSortedBy.empty() &&
-      !llvm::is_contained(opts::PrintSortedBy, DynoStats::FIRST_DYNO_STAT)) {
-
+  if (!opts::PrintSortedBy.empty()) {
     std::vector<BinaryFunction *> Functions;
     std::map<const BinaryFunction *, DynoStats> Stats;
 

@@ -7,8 +7,8 @@ from lldb.plugins.scripted_process import ScriptedProcess
 from lldb.plugins.scripted_process import ScriptedThread
 
 class DummyScriptedProcess(ScriptedProcess):
-    def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
-        super().__init__(target, args)
+    def __init__(self, exe_ctx: lldb.SBExecutionContext, args : lldb.SBStructuredData):
+        super().__init__(exe_ctx, args)
         self.threads[0] = DummyScriptedThread(self, None)
 
     def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:

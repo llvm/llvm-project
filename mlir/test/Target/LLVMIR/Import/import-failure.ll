@@ -14,8 +14,8 @@ bb2:
 
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: error: unhandled value: ptr asm "bswap $0", "=r,r"
-define i32 @unhandled_value(i32 %arg0) {
-  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg0)
+define i32 @unhandled_value(i32 %arg1) {
+  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1)
   ret i32 %1
 }
 
@@ -45,12 +45,12 @@ bb1:
 
 ; // -----
 
-declare void @llvm.gcroot(ptr %arg0, ptr %arg1)
+declare void @llvm.gcroot(ptr %arg1, ptr %arg2)
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled intrinsic: call void @llvm.gcroot(ptr %arg0, ptr %arg1)
-define void @unhandled_intrinsic(ptr %arg0, ptr %arg1) {
-  call void @llvm.gcroot(ptr %arg0, ptr %arg1)
+; CHECK-SAME: error: unhandled intrinsic: call void @llvm.gcroot(ptr %arg1, ptr %arg2)
+define void @unhandled_intrinsic(ptr %arg1, ptr %arg2) {
+  call void @llvm.gcroot(ptr %arg1, ptr %arg2)
   ret void
 }
 
@@ -85,8 +85,11 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; CHECK:      import-failure.ll
 ; CHECK-SAME: warning: dropped instruction: call void @llvm.dbg.value(metadata i64 %arg1, metadata !3, metadata !DIExpression(DW_OP_plus_uconst, 42, DW_OP_stack_value)), !dbg !5
+; CHECK:      import-failure.ll
+; CHECK-SAME: warning: dropped instruction: call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !5
 define void @dropped_instruction(i64 %arg1) {
   call void @llvm.dbg.value(metadata i64 %arg1, metadata !3, metadata !DIExpression(DW_OP_plus_uconst, 42, DW_OP_stack_value)), !dbg !5
+  call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 1, DW_OP_mul, DW_OP_plus, DW_OP_stack_value)), !dbg !5
   ret void
 }
 
@@ -95,7 +98,7 @@ define void @dropped_instruction(i64 %arg1) {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "import-failure.ll", directory: "/")
-!3 = !DILocalVariable(scope: !4, name: "arg", file: !2, line: 1, arg: 1, align: 32);
+!3 = !DILocalVariable(scope: !4, name: "arg1", file: !2, line: 1, arg: 1, align: 64);
 !4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
 !5 = !DILocation(line: 1, column: 2, scope: !4)
 

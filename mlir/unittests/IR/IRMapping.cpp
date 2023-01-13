@@ -1,4 +1,4 @@
-//===- BlockAndValueMapping.h -----------------------------------*- C++ -*-===//
+//===- IRMapping.cpp --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Builders.h"
 #include "gtest/gtest.h"
 
@@ -14,7 +14,7 @@
 
 using namespace mlir;
 
-TEST(BlockAndValueMapping, TypedValue) {
+TEST(IRMapping, TypedValue) {
   MLIRContext context;
 
   context.loadDialect<test::TestDialect>();
@@ -30,8 +30,27 @@ TEST(BlockAndValueMapping, TypedValue) {
   Value f64Val = builder.create<test::TestOpConstant>(
       loc, builder.getF64Type(), builder.getF64FloatAttr(0.0));
 
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   mapping.map(i64Val, f64Val);
   TypedValue<IntegerType> typedI64Val = i64Val;
-  mapping.lookup(typedI64Val);
+  EXPECT_EQ(mapping.lookup(typedI64Val), f64Val);
+}
+
+TEST(IRMapping, OperationClone) {
+  MLIRContext ctx;
+  ctx.allowUnregisteredDialects();
+
+  OperationState state(UnknownLoc::get(&ctx), "no_results");
+  Operation *noResultsOp = Operation::create(state);
+
+  OperationState owner(UnknownLoc::get(&ctx), "owner");
+  owner.addRegion()->emplaceBlock().push_back(noResultsOp);
+  OwningOpRef<Operation *> ownerOp = Operation::create(owner);
+
+  IRMapping irMap;
+  OwningOpRef<Operation *> clonedOwnerOp = (*ownerOp)->clone(irMap);
+
+  EXPECT_EQ(irMap.lookupOrNull(*ownerOp), *clonedOwnerOp);
+  EXPECT_EQ(irMap.lookupOrNull(noResultsOp),
+            &(*clonedOwnerOp)->getRegion(0).front().front());
 }
