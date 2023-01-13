@@ -3,7 +3,8 @@
 
 declare void @use.i16(i16)
 declare i16 @llvm.usub.sat.i16(i16, i16)
-declare {i16, i1} @llvm.usub.with.overflow.i16(i16, i16)
+declare i16 @llvm.umin.i16(i16, i16)
+declare i16 @llvm.abs.i16(i16, i1)
 
 define i16 @sel_true_cond(i16 %x) {
 ; CHECK-LABEL: @sel_true_cond(
@@ -296,4 +297,203 @@ loop:
 
 exit:
   ret i16 %count
+}
+
+define i16 @urem_elide(i16 %x) {
+; CHECK-LABEL: @urem_elide(
+; CHECK-NEXT:    [[UREM:%.*]] = urem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 42
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[UREM]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %urem = urem i16 %x, 42
+  %cmp = icmp ult i16 %x, 42
+  %sel = select i1 %cmp, i16 %urem, i16 24
+  ret i16 %sel
+}
+
+define i16 @urem_expand(i16 %x) {
+; CHECK-LABEL: @urem_expand(
+; CHECK-NEXT:    [[UREM:%.*]] = urem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 84
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[UREM]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %urem = urem i16 %x, 42
+  %cmp = icmp ult i16 %x, 84
+  %sel = select i1 %cmp, i16 %urem, i16 24
+  ret i16 %sel
+}
+
+define i16 @urem_narrow(i16 %x) {
+; CHECK-LABEL: @urem_narrow(
+; CHECK-NEXT:    [[UREM:%.*]] = urem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 85
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[UREM]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %urem = urem i16 %x, 42
+  %cmp = icmp ult i16 %x, 85
+  %sel = select i1 %cmp, i16 %urem, i16 24
+  ret i16 %sel
+}
+
+define i16 @urem_insufficient(i16 %x) {
+; CHECK-LABEL: @urem_insufficient(
+; CHECK-NEXT:    [[UREM:%.*]] = urem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 257
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[UREM]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %urem = urem i16 %x, 42
+  %cmp = icmp ult i16 %x, 257
+  %sel = select i1 %cmp, i16 %urem, i16 24
+  ret i16 %sel
+}
+
+define i16 @srem_elide(i16 %x) {
+; CHECK-LABEL: @srem_elide(
+; CHECK-NEXT:    [[SREM:%.*]] = srem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i16 [[X]], 42
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i16 [[X]], -42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], i16 [[SREM]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %srem = srem i16 %x, 42
+  %cmp1 = icmp slt i16 %x, 42
+  %cmp2 = icmp sgt i16 %x, -42
+  %and = and i1 %cmp1, %cmp2
+  %sel = select i1 %and, i16 %srem, i16 24
+  ret i16 %sel
+}
+
+define i16 @srem_convert(i16 %x) {
+; CHECK-LABEL: @srem_convert(
+; CHECK-NEXT:    [[SREM:%.*]] = srem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %srem = srem i16 %x, 42
+  %cmp = icmp slt i16 %x, 0
+  %sel = select i1 %cmp, i16 %srem, i16 24
+  ret i16 %sel
+}
+
+define i16 @sdiv_convert(i16 %x) {
+; CHECK-LABEL: @sdiv_convert(
+; CHECK-NEXT:    [[SREM:%.*]] = sdiv i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %srem = sdiv i16 %x, 42
+  %cmp = icmp slt i16 %x, 0
+  %sel = select i1 %cmp, i16 %srem, i16 24
+  ret i16 %sel
+}
+
+define i16 @abs_elide(i16 %x) {
+; CHECK-LABEL: @abs_elide(
+; CHECK-NEXT:    [[ABS:%.*]] = call i16 @llvm.abs.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i16 [[X]], -32768
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[ABS]], i16 42
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %abs = call i16 @llvm.abs.i16(i16 %x, i1 false)
+  %cmp = icmp ule i16 %x, 32768
+  %sel = select i1 %cmp, i16 %abs, i16 42
+  ret i16 %sel
+}
+
+define i16 @abs_elide2(i16 %x) {
+; CHECK-LABEL: @abs_elide2(
+; CHECK-NEXT:    [[ABS:%.*]] = call i16 @llvm.abs.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i16 [[X]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[ABS]], i16 42
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %abs = call i16 @llvm.abs.i16(i16 %x, i1 false)
+  %cmp = icmp sle i16 %x, 0
+  %sel = select i1 %cmp, i16 %abs, i16 42
+  ret i16 %sel
+}
+
+define i16 @abs_not_int_min(i16 %x) {
+; CHECK-LABEL: @abs_not_int_min(
+; CHECK-NEXT:    [[ABS:%.*]] = call i16 @llvm.abs.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[X]], -32768
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[ABS]], i16 42
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %abs = call i16 @llvm.abs.i16(i16 %x, i1 false)
+  %cmp = icmp ne i16 %x, 32768
+  %sel = select i1 %cmp, i16 %abs, i16 42
+  ret i16 %sel
+}
+
+define i16 @umin_elide(i16 %x) {
+; CHECK-LABEL: @umin_elide(
+; CHECK-NEXT:    [[MIN:%.*]] = call i16 @llvm.umin.i16(i16 [[X:%.*]], i16 10)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i16 [[X]], 10
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[MIN]], i16 42
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %min = call i16 @llvm.umin.i16(i16 %x, i16 10)
+  %cmp = icmp ule i16 %x, 10
+  %sel = select i1 %cmp, i16 %min, i16 42
+  ret i16 %sel
+}
+
+define i16 @ashr_convert(i16 %x, i16 %y) {
+; CHECK-LABEL: @ashr_convert(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[X]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[ASHR]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %ashr = ashr i16 %x, %y
+  %cmp = icmp sge i16 %x, 0
+  %sel = select i1 %cmp, i16 %ashr, i16 24
+  ret i16 %sel
+}
+
+define i32 @sext_convert(i16 %x) {
+; CHECK-LABEL: @sext_convert(
+; CHECK-NEXT:    [[EXT:%.*]] = sext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[X]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[EXT]], i32 24
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ext = sext i16 %x to i32
+  %cmp = icmp sge i16 %x, 0
+  %sel = select i1 %cmp, i32 %ext, i32 24
+  ret i32 %sel
+}
+
+define i16 @infer_flags(i16 %x) {
+; CHECK-LABEL: @infer_flags(
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 100
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[ADD]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %add = add i16 %x, 42
+  %cmp = icmp ult i16 %x, 100
+  %sel = select i1 %cmp, i16 %add, i16 24
+  ret i16 %sel
+}
+
+define i16 @and_elide(i16 %x) {
+; CHECK-LABEL: @and_elide(
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 8
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[AND]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %and = and i16 %x, 7
+  %cmp = icmp ult i16 %x, 8
+  %sel = select i1 %cmp, i16 %and, i16 24
+  ret i16 %sel
 }
