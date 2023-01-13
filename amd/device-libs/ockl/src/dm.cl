@@ -981,7 +981,7 @@ __ockl_dm_alloc(ulong sz)
 // Initialize the heap
 //   This is intended to be called by a kernel launched by the language runtime
 //   at device initialization time, having one workgroup consisting of 256 workitems.
-void
+__attribute__((weak)) void
 __ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
 {
     uint lid = __ockl_get_local_id(0);
