@@ -1583,7 +1583,7 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   }
 
   // Create the alloca.  If we have DataLayout, use nice alignment.
-  Align Alignment(DL.getPrefTypeAlignment(ByValType));
+  Align Alignment = DL.getPrefTypeAlign(ByValType);
 
   // If the byval had an alignment specified, we *must* use at least that
   // alignment, as it is required by the byval argument (and uses of the
