@@ -41,9 +41,8 @@ LLDB_PLUGIN_DEFINE(PlatformLinux)
 
 static uint32_t g_initialize_count = 0;
 
-PlatformSP PlatformLinux::CreateInstance(bool force, const ArchSpec *arch,
-                                         const Debugger *debugger,
-                                         const ScriptedMetadata *metadata) {
+
+PlatformSP PlatformLinux::CreateInstance(bool force, const ArchSpec *arch) {
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log, "force = {0}, arch=({1}, {2})", force,
            arch ? arch->GetArchitectureName() : "<null>",

@@ -21,7 +21,6 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
@@ -100,8 +99,7 @@ public:
 
   static void SetHostPlatform(const lldb::PlatformSP &platform_sp);
 
-  static lldb::PlatformSP Create(llvm::StringRef name, const Debugger *debugger,
-                                 const ScriptedMetadata *metadata);
+  static lldb::PlatformSP Create(llvm::StringRef name);
 
   /// Augments the triple either with information from platform or the host
   /// system (if platform is null).
@@ -976,7 +974,7 @@ private:
 
 class PlatformList {
 public:
-  PlatformList(Debugger &debugger) : m_debugger(debugger) {}
+  PlatformList() = default;
 
   ~PlatformList() = default;
 
@@ -1031,16 +1029,13 @@ public:
     }
   }
 
-  lldb::PlatformSP GetOrCreate(llvm::StringRef name,
-                               const ScriptedMetadata *metadata);
+  lldb::PlatformSP GetOrCreate(llvm::StringRef name);
   lldb::PlatformSP GetOrCreate(const ArchSpec &arch,
                                const ArchSpec &process_host_arch,
-                               ArchSpec *platform_arch_ptr, Status &error,
-                               const ScriptedMetadata *metadata);
+                               ArchSpec *platform_arch_ptr, Status &error);
   lldb::PlatformSP GetOrCreate(const ArchSpec &arch,
                                const ArchSpec &process_host_arch,
-                               ArchSpec *platform_arch_ptr,
-                               const ScriptedMetadata *metadata);
+                               ArchSpec *platform_arch_ptr);
 
   /// Get the platform for the given list of architectures.
   ///
@@ -1056,11 +1051,9 @@ public:
   /// given architecture.
   lldb::PlatformSP GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
                                const ArchSpec &process_host_arch,
-                               std::vector<lldb::PlatformSP> &candidates,
-                               const ScriptedMetadata *metadata);
+                               std::vector<lldb::PlatformSP> &candidates);
 
-  lldb::PlatformSP Create(llvm::StringRef name,
-                          const ScriptedMetadata *metadata);
+  lldb::PlatformSP Create(llvm::StringRef name);
 
   /// Detect a binary in memory that will determine which Platform and
   /// DynamicLoader should be used in this target/process, and update
@@ -1097,7 +1090,6 @@ protected:
 private:
   PlatformList(const PlatformList &) = delete;
   const PlatformList &operator=(const PlatformList &) = delete;
-  Debugger &m_debugger;
 };
 
 class OptionGroupPlatformRSync : public lldb_private::OptionGroup {

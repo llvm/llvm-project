@@ -39,9 +39,8 @@ LLDB_PLUGIN_DEFINE(PlatformOpenBSD)
 
 static uint32_t g_initialize_count = 0;
 
-PlatformSP PlatformOpenBSD::CreateInstance(bool force, const ArchSpec *arch,
-                                           const Debugger *debugger,
-                                           const ScriptedMetadata *metadata) {
+
+PlatformSP PlatformOpenBSD::CreateInstance(bool force, const ArchSpec *arch) {
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log, "force = {0}, arch=({1}, {2})", force,
            arch ? arch->GetArchitectureName() : "<null>",
