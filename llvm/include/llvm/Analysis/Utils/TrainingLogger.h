@@ -11,7 +11,6 @@
 
 #include "llvm/Config/llvm-config.h"
 
-#ifdef LLVM_HAVE_TFLITE
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/IR/LLVMContext.h"
@@ -23,8 +22,7 @@
 namespace llvm {
 
 /// Logging utility - given an ordered specification of features, and assuming
-/// a scalar reward, allow logging feature values and rewards, and then print
-/// as tf.train.SequenceExample text protobuf.
+/// a scalar reward, allow logging feature values and rewards.
 /// The assumption is that, for an event to be logged (i.e. a set of feature
 /// values and a reward), the user calls the log* API for each feature exactly
 /// once, providing the index matching the position in the feature spec list
@@ -42,7 +40,7 @@ namespace llvm {
 ///   ...
 ///   logFloatReward(...)
 ///
-/// At the end, call print to generate the protobuf.
+/// At the end, call print to generate the log.
 /// Alternatively, don't call logReward at the end of each event, just
 /// log{Float|Int32|Int64}FinalReward at the end.
 class LoggerDataImpl;
@@ -86,7 +84,7 @@ public:
   void flush(raw_ostream &OS);
 
   // Flush a set of logs that are produced from the same module, e.g.
-  // per-function regalloc traces, as a google::protobuf::Struct message.
+  // per-function regalloc traces.
   static void flushLogs(raw_ostream &OS,
                         const StringMap<std::unique_ptr<Logger>> &Loggers);
 
@@ -98,6 +96,4 @@ private:
 };
 
 } // namespace llvm
-
-#endif // LLVM_HAVE_TFLITE
 #endif // LLVM_ANALYSIS_UTILS_TRAININGLOGGER_H
