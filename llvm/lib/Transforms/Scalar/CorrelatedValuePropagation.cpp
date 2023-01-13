@@ -773,11 +773,11 @@ static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   assert(Instr->getOpcode() == Instruction::URem);
   assert(!Instr->getType()->isVectorTy());
 
-  Value *X = Instr->getOperand(0);
-  Value *Y = Instr->getOperand(1);
+  const Use &X = Instr->getOperandUse(0);
+  const Use &Y = Instr->getOperandUse(1);
 
-  ConstantRange XCR = LVI->getConstantRange(X, Instr);
-  ConstantRange YCR = LVI->getConstantRange(Y, Instr);
+  ConstantRange XCR = LVI->getConstantRangeAtUse(X);
+  ConstantRange YCR = LVI->getConstantRangeAtUse(Y);
 
   // X u% Y -> X  iff X u< Y
   if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
@@ -819,10 +819,11 @@ static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   IRBuilder<> B(Instr);
   // NOTE: this transformation introduces two uses of X,
   //       but it may be undef so we must freeze it first.
-  X = B.CreateFreeze(X, X->getName() + ".frozen");
-  auto *AdjX = B.CreateNUWSub(X, Y, Instr->getName() + ".urem");
-  auto *Cmp = B.CreateICmp(ICmpInst::ICMP_ULT, X, Y, Instr->getName() + ".cmp");
-  auto *ExpandedURem = B.CreateSelect(Cmp, X, AdjX);
+  Value *FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
+  auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
+  auto *Cmp =
+      B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
+  auto *ExpandedURem = B.CreateSelect(Cmp, FrozenX, AdjX);
   ExpandedURem->takeName(Instr);
   Instr->replaceAllUsesWith(ExpandedURem);
   Instr->eraseFromParent();
