@@ -29,6 +29,7 @@ unittest("ClangdTests") {
     "//clang/lib/Tooling/Syntax",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
   include_dirs = [

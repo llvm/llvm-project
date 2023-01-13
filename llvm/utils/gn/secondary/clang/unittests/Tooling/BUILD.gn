@@ -22,6 +22,7 @@ unittest("ToolingTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
     "//llvm/lib/TargetParser",
+    "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
