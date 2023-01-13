@@ -200,16 +200,9 @@ lldb_private::LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
   return python::PythonObject();
 }
 
-python::PythonObject lldb_private::LLDBSwigPythonCreateScriptedProcess(
+python::PythonObject lldb_private::LLDBSwigPythonCreateScriptedObject(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::TargetSP &target_sp, const StructuredDataImpl &args_impl,
-    std::string &error_string) {
-  return python::PythonObject();
-}
-
-python::PythonObject lldb_private::LLDBSwigPythonCreateScriptedThread(
-    const char *python_class_name, const char *session_dictionary_name,
-    const lldb::ProcessSP &process_sp, const StructuredDataImpl &args_impl,
+    lldb::ExecutionContextRefSP exe_ctx_sp, const StructuredDataImpl &args_impl,
     std::string &error_string) {
   return python::PythonObject();
 }

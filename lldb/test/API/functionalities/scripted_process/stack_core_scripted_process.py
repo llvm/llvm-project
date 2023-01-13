@@ -13,8 +13,8 @@ class StackCoreScriptedProcess(ScriptedProcess):
                 return module
         return None
 
-    def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
-        super().__init__(target, args)
+    def __init__(self, exe_ctx: lldb.SBExecutionContext, args : lldb.SBStructuredData):
+        super().__init__(exe_ctx, args)
 
         self.corefile_target = None
         self.corefile_process = None
@@ -25,7 +25,7 @@ class StackCoreScriptedProcess(ScriptedProcess):
                 idx = self.backing_target_idx.GetIntegerValue(42)
             if self.backing_target_idx.GetType() == lldb.eStructuredDataTypeString:
                 idx = int(self.backing_target_idx.GetStringValue(100))
-            self.corefile_target = target.GetDebugger().GetTargetAtIndex(idx)
+            self.corefile_target = self.target.GetDebugger().GetTargetAtIndex(idx)
             self.corefile_process = self.corefile_target.GetProcess()
             for corefile_thread in self.corefile_process:
                 structured_data = lldb.SBStructuredData()
