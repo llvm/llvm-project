@@ -1,11 +1,6 @@
 ; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-code -disable-output %s
 
-; XFAIL: *
-
-; REQUIRES: pollyacc,nvptx
-
-; This fails today with "LowerFormalArguments didn't emit the correct number of
-;                        values!"
+; REQUIRES: pollyacc, target=nvptx{{.*}}
 
 ;    void foo(i128 A[], i128 b) {
 ;      for (long i = 0; i < 1024; i++)
