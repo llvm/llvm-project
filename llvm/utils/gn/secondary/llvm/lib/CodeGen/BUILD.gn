@@ -212,7 +212,6 @@ static_library("CodeGen") {
     "SpillPlacement.cpp",
     "SplitKit.cpp",
     "StackColoring.cpp",
-    "StackFrameLayoutAnalysisPass.cpp",
     "StackMapLivenessAnalysis.cpp",
     "StackMaps.cpp",
     "StackProtector.cpp",
