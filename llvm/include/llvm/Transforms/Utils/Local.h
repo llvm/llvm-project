@@ -360,12 +360,7 @@ BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
 ///
 /// \param BB  Block whose terminator will be replaced.  Its terminator must
 ///            have an unwind successor.
-/// \param WouldUnwindBeUB  What is the behaviour should the call actually
-///                         unwind? For example, if the original landing pad
-///                         unconditionally ended with `unreachable`,
-///                         then the unwind would be UB.
-void removeUnwindEdge(BasicBlock *BB, bool WouldUnwindBeUB = false,
-                      DomTreeUpdater *DTU = nullptr);
+void removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 
 /// Remove all blocks that can not be reached from the function's entry.
 ///

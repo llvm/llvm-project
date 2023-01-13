@@ -20,7 +20,7 @@ F:
 define void @test2() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @test2() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @test2()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -570,5 +570,4 @@ attributes #0 = { null_pointer_is_valid }
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { null_pointer_is_valid }
-; CHECK: attributes #[[ATTR3]] = { nounwind }
 ;.

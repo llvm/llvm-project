@@ -40,7 +40,7 @@ exit:
 define void @test2() personality ptr @ProcessCLRException {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @f() #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    invoke void @f()
 ; CHECK-NEXT:    to label [[VIA_CATCHSWITCH:%.*]] unwind label [[CLEANUP_INNER:%.*]]
 ; CHECK:       cleanup.inner:
@@ -155,5 +155,5 @@ exit:
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nounwind }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }
 ;.
