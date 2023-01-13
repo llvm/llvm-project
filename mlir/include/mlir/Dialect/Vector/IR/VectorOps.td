@@ -340,6 +340,7 @@ def Vector_MultiDimReductionOp :
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      DeclareOpInterfaceMethods<InferTypeOpInterface>,
+     DeclareOpInterfaceMethods<MaskableOpInterface>,
      DeclareOpInterfaceMethods<VectorUnrollOpInterface,
                                ["getShapeForUnroll"]>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
@@ -2338,16 +2339,13 @@ def Vector_MaskOp : Vector_Op<"mask", [
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilder<(ins "Value":$mask,
-                   CArg<"function_ref<void(OpBuilder &, Location)>",
-                        "buildTerminatedBody">:$maskRegion)>,
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$mask,
-                   CArg<"function_ref<void(OpBuilder &, Location)>",
-                        "buildTerminatedBody">:$maskRegion)>,
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$mask,
-                   "Value":$passthru,
-                   CArg<"function_ref<void(OpBuilder &, Location)>",
-                        "buildTerminatedBody">:$maskRegion)>
+    OpBuilder<(ins "Value":$mask, "Operation *":$maskableOp,
+                   CArg<"function_ref<void(OpBuilder &, Operation *)>">:$maskRegion)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$mask, "Operation *":$maskableOp,
+                   CArg<"function_ref<void(OpBuilder &, Operation *)>">:$maskRegion)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$mask, "Value":$passthru,
+                   "Operation *":$maskableOp,
+                   CArg<"function_ref<void(OpBuilder &, Operation *)>">:$maskRegion)>
   ];
 
   let extraClassDeclaration = [{
