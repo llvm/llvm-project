@@ -840,8 +840,9 @@ void mlir::populateAsyncFuncToAsyncRuntimeConversionPatterns(
 
   target.addDynamicallyLegalOp<AwaitOp, AwaitAllOp, YieldOp, cf::AssertOp>(
       [coros](Operation *op) {
+        auto exec = op->getParentOfType<ExecuteOp>();
         auto func = op->getParentOfType<func::FuncOp>();
-        return coros->find(func) == coros->end();
+        return exec || coros->find(func) == coros->end();
       });
 }
 
