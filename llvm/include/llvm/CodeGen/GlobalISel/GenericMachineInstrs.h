@@ -153,7 +153,7 @@ public:
 /// Represents G_BUILD_VECTOR, G_CONCAT_VECTORS or G_MERGE_VALUES.
 /// All these have the common property of generating a single value from
 /// multiple sources.
-class GMergeLikeOp : public GenericMachineInstr {
+class GMergeLikeInstr : public GenericMachineInstr {
 public:
   /// Returns the number of source registers.
   unsigned getNumSources() const { return getNumOperands() - 1; }
@@ -173,7 +173,7 @@ public:
 };
 
 /// Represents a G_MERGE_VALUES.
-class GMerge : public GMergeLikeOp {
+class GMerge : public GMergeLikeInstr {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_MERGE_VALUES;
@@ -181,7 +181,7 @@ public:
 };
 
 /// Represents a G_CONCAT_VECTORS.
-class GConcatVectors : public GMergeLikeOp {
+class GConcatVectors : public GMergeLikeInstr {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_CONCAT_VECTORS;
@@ -189,7 +189,7 @@ public:
 };
 
 /// Represents a G_BUILD_VECTOR.
-class GBuildVector : public GMergeLikeOp {
+class GBuildVector : public GMergeLikeInstr {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_BUILD_VECTOR;

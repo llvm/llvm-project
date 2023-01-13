@@ -112,12 +112,14 @@ public:
       return false;
     if (isMutableBox())
       return true;
-    if (auto varIface = getIfVariableInterface())
+    if (auto varIface = getIfVariableInterface()) {
       if (auto shape = varIface.getShape()) {
         auto shapeTy = shape.getType();
         return shapeTy.isa<fir::ShiftType>() ||
                shapeTy.isa<fir::ShapeShiftType>();
       }
+      return false;
+    }
     return true;
   }
 

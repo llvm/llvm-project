@@ -668,6 +668,9 @@ C2x Feature Support
       va_start(list); // Invalid in C17 and earlier, valid in C2x and later.
       va_end(list);
     }
+    
+- Reject type definitions in the ``type`` argument of ``__builtin_offsetof`` 
+  according to `WG14 N2350 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2350.htm>`_.
 
 C++ Language Changes in Clang
 -----------------------------

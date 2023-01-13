@@ -1989,7 +1989,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
     // TODO: Should we allow mismatched types but matching sizes in merges to
     // avoid the ptrtoint?
-    auto BuildPtr = B.buildMerge(DstTy, {SrcAsInt, ApertureReg});
+    auto BuildPtr = B.buildMergeLikeInstr(DstTy, {SrcAsInt, ApertureReg});
 
     if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
       B.buildCopy(Dst, BuildPtr);
@@ -2023,7 +2023,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     uint32_t AddrHiVal = Info->get32BitAddressHighBits();
     auto PtrLo = B.buildPtrToInt(S32, Src);
     auto HighAddr = B.buildConstant(S32, AddrHiVal);
-    B.buildMerge(Dst, {PtrLo, HighAddr});
+    B.buildMergeLikeInstr(Dst, {PtrLo, HighAddr});
     MI.eraseFromParent();
     return true;
   }
@@ -2156,7 +2156,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
   const auto Zero32 = B.buildConstant(S32, 0);
 
   // Extend back to 64-bits.
-  auto SignBit64 = B.buildMerge(S64, {Zero32, SignBit});
+  auto SignBit64 = B.buildMergeLikeInstr(S64, {Zero32, SignBit});
 
   auto Shr = B.buildAShr(S64, FractMask, Exp);
   auto Not = B.buildNot(S64, Shr);
@@ -2292,11 +2292,12 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(MachineInstr &MI,
 
   if (Signed && SrcLT == S32) {
     // Flip the result based on the signedness, which is either all 0s or 1s.
-    Sign = B.buildMerge(S64, {Sign, Sign});
+    Sign = B.buildMergeLikeInstr(S64, {Sign, Sign});
     // r := xor({lo, hi}, sign) - sign;
-    B.buildSub(Dst, B.buildXor(S64, B.buildMerge(S64, {Lo, Hi}), Sign), Sign);
+    B.buildSub(Dst, B.buildXor(S64, B.buildMergeLikeInstr(S64, {Lo, Hi}), Sign),
+               Sign);
   } else
-    B.buildMerge(Dst, {Lo, Hi});
+    B.buildMergeLikeInstr(Dst, {Lo, Hi});
   MI.eraseFromParent();
 
   return true;
@@ -2388,7 +2389,7 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
     B.buildUnmerge(SrcRegs, Vec);
 
     SrcRegs[IdxVal] = MI.getOperand(2).getReg();
-    B.buildMerge(Dst, SrcRegs);
+    B.buildMergeLikeInstr(Dst, SrcRegs);
   } else {
     B.buildUndef(Dst);
   }
@@ -2873,7 +2874,7 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
     Src1 = B.buildTrunc(S16, MI.getOperand(2).getReg()).getReg(0);
   }
 
-  auto Merge = B.buildMerge(S32, {Src0, Src1});
+  auto Merge = B.buildMergeLikeInstr(S32, {Src0, Src1});
   B.buildBitcast(Dst, Merge);
 
   MI.eraseFromParent();
@@ -3007,7 +3008,7 @@ void AMDGPULegalizerInfo::buildMultiply(
               Tmp = B.buildAnyExt(S64, LocalAccum[0]).getReg(0);
               HaveSmallAccum = true;
             } else if (LocalAccum[1]) {
-              Tmp = B.buildMerge(S64, LocalAccum).getReg(0);
+              Tmp = B.buildMergeLikeInstr(S64, LocalAccum).getReg(0);
               HaveSmallAccum = false;
             } else {
               Tmp = B.buildZExt(S64, LocalAccum[0]).getReg(0);
@@ -3166,7 +3167,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   buildMultiply(Helper, AccumRegs, Src0Parts, Src1Parts, UsePartialMad64_32,
                 SeparateOddAlignedProducts);
 
-  B.buildMerge(DstReg, AccumRegs);
+  B.buildMergeLikeInstr(DstReg, AccumRegs);
   MI.eraseFromParent();
   return true;
 
@@ -3515,7 +3516,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
 
   std::tie(RcpLo, RcpHi) = emitReciprocalU64(B, Denom);
 
-  auto Rcp = B.buildMerge(S64, {RcpLo, RcpHi});
+  auto Rcp = B.buildMergeLikeInstr(S64, {RcpLo, RcpHi});
 
   auto Zero64 = B.buildConstant(S64, 0);
   auto NegDenom = B.buildSub(S64, Zero64, Denom);
@@ -3529,7 +3530,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
 
   auto Add1_Lo = B.buildUAddo(S32, S1, RcpLo, MulHi1_Lo);
   auto Add1_Hi = B.buildUAdde(S32, S1, RcpHi, MulHi1_Hi, Add1_Lo.getReg(1));
-  auto Add1 = B.buildMerge(S64, {Add1_Lo, Add1_Hi});
+  auto Add1 = B.buildMergeLikeInstr(S64, {Add1_Lo, Add1_Hi});
 
   auto MulLo2 = B.buildMul(S64, NegDenom, Add1);
   auto MulHi2 = B.buildUMulH(S64, Add1, MulLo2);
@@ -3540,7 +3541,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
   auto Zero32 = B.buildConstant(S32, 0);
   auto Add2_Lo = B.buildUAddo(S32, S1, Add1_Lo, MulHi2_Lo);
   auto Add2_Hi = B.buildUAdde(S32, S1, Add1_Hi, MulHi2_Hi, Add2_Lo.getReg(1));
-  auto Add2 = B.buildMerge(S64, {Add2_Lo, Add2_Hi});
+  auto Add2 = B.buildMergeLikeInstr(S64, {Add2_Lo, Add2_Hi});
 
   auto UnmergeNumer = B.buildUnmerge(S32, Numer);
   Register NumerLo = UnmergeNumer.getReg(0);
@@ -3554,7 +3555,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
   auto Sub1_Lo = B.buildUSubo(S32, S1, NumerLo, Mul3_Lo);
   auto Sub1_Hi = B.buildUSube(S32, S1, NumerHi, Mul3_Hi, Sub1_Lo.getReg(1));
   auto Sub1_Mi = B.buildSub(S32, NumerHi, Mul3_Hi);
-  auto Sub1 = B.buildMerge(S64, {Sub1_Lo, Sub1_Hi});
+  auto Sub1 = B.buildMergeLikeInstr(S64, {Sub1_Lo, Sub1_Hi});
 
   auto UnmergeDenom = B.buildUnmerge(S32, Denom);
   Register DenomLo = UnmergeDenom.getReg(0);
@@ -3577,7 +3578,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
   auto Sub2_Lo = B.buildUSubo(S32, S1, Sub1_Lo, DenomLo);
   auto Sub2_Mi = B.buildUSube(S32, S1, Sub1_Mi, DenomHi, Sub1_Lo.getReg(1));
   auto Sub2_Hi = B.buildUSube(S32, S1, Sub2_Mi, Zero32, Sub2_Lo.getReg(1));
-  auto Sub2 = B.buildMerge(S64, {Sub2_Lo, Sub2_Hi});
+  auto Sub2 = B.buildMergeLikeInstr(S64, {Sub2_Lo, Sub2_Hi});
 
   auto One64 = B.buildConstant(S64, 1);
   auto Add3 = B.buildAdd(S64, MulHi3, One64);
@@ -3595,7 +3596,7 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
 
   auto Sub3_Mi = B.buildUSube(S32, S1, Sub2_Mi, DenomHi, Sub2_Lo.getReg(1));
   auto Sub3_Hi = B.buildUSube(S32, S1, Sub3_Mi, Zero32, Sub3_Lo.getReg(1));
-  auto Sub3 = B.buildMerge(S64, {Sub3_Lo, Sub3_Hi});
+  auto Sub3 = B.buildMergeLikeInstr(S64, {Sub3_Lo, Sub3_Hi});
 
   // endif C6
   // endif C3
@@ -4593,7 +4594,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
       LoadElts.push_back(StatusDst);
       B.buildUnmerge(LoadElts, LoadDstReg);
       LoadElts.truncate(NumValueDWords);
-      B.buildMerge(Dst, LoadElts);
+      B.buildMergeLikeInstr(Dst, LoadElts);
     }
   } else if ((!IsD16 && MemTy.getSizeInBits() < 32) ||
              (IsD16 && !Ty.isVector())) {
@@ -4613,7 +4614,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     SmallVector<Register, 4> Repack;
     for (unsigned I = 0, N = Unmerge->getNumOperands() - 1; I != N; ++I)
       Repack.push_back(B.buildTrunc(EltTy, Unmerge.getReg(I)).getReg(0));
-    B.buildMerge(Dst, Repack);
+    B.buildMergeLikeInstr(Dst, Repack);
   } else {
     buildBufferLoad(Opc, Dst, RSrc, VIndex, VOffset, SOffset, ImmOffset, Format,
                     AuxiliaryData, MMO, IsTyped, HasVIndex, B);
@@ -5446,7 +5447,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   if (UseNSA && IsGFX11Plus) {
     auto packLanes = [&Ops, &S32, &V3S32, &B](Register Src) {
       auto Unmerge = B.buildUnmerge({S32, S32, S32}, Src);
-      auto Merged = B.buildMerge(
+      auto Merged = B.buildMergeLikeInstr(
           V3S32, {Unmerge.getReg(0), Unmerge.getReg(1), Unmerge.getReg(2)});
       Ops.push_back(Merged.getReg(0));
     };
@@ -5458,16 +5459,19 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     if (IsA16) {
       auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16}, RayDir);
       auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16}, RayInvDir);
-      auto MergedDir = B.buildMerge(
+      auto MergedDir = B.buildMergeLikeInstr(
           V3S32,
-          {B.buildBitcast(S32, B.buildMerge(V2S16, {UnmergeRayInvDir.getReg(0),
-                                                    UnmergeRayDir.getReg(0)}))
+          {B.buildBitcast(
+                S32, B.buildMergeLikeInstr(V2S16, {UnmergeRayInvDir.getReg(0),
+                                                   UnmergeRayDir.getReg(0)}))
                .getReg(0),
-           B.buildBitcast(S32, B.buildMerge(V2S16, {UnmergeRayInvDir.getReg(1),
-                                                    UnmergeRayDir.getReg(1)}))
+           B.buildBitcast(
+                S32, B.buildMergeLikeInstr(V2S16, {UnmergeRayInvDir.getReg(1),
+                                                   UnmergeRayDir.getReg(1)}))
                .getReg(0),
-           B.buildBitcast(S32, B.buildMerge(V2S16, {UnmergeRayInvDir.getReg(2),
-                                                    UnmergeRayDir.getReg(2)}))
+           B.buildBitcast(
+                S32, B.buildMergeLikeInstr(V2S16, {UnmergeRayInvDir.getReg(2),
+                                                   UnmergeRayDir.getReg(2)}))
                .getReg(0)});
       Ops.push_back(MergedDir.getReg(0));
     } else {
@@ -5498,10 +5502,12 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
       Register R1 = MRI.createGenericVirtualRegister(S32);
       Register R2 = MRI.createGenericVirtualRegister(S32);
       Register R3 = MRI.createGenericVirtualRegister(S32);
-      B.buildMerge(R1, {UnmergeRayDir.getReg(0), UnmergeRayDir.getReg(1)});
-      B.buildMerge(R2, {UnmergeRayDir.getReg(2), UnmergeRayInvDir.getReg(0)});
-      B.buildMerge(R3,
-                   {UnmergeRayInvDir.getReg(1), UnmergeRayInvDir.getReg(2)});
+      B.buildMergeLikeInstr(R1,
+                            {UnmergeRayDir.getReg(0), UnmergeRayDir.getReg(1)});
+      B.buildMergeLikeInstr(
+          R2, {UnmergeRayDir.getReg(2), UnmergeRayInvDir.getReg(0)});
+      B.buildMergeLikeInstr(
+          R3, {UnmergeRayInvDir.getReg(1), UnmergeRayInvDir.getReg(2)});
       Ops.push_back(R1);
       Ops.push_back(R2);
       Ops.push_back(R3);
@@ -5514,7 +5520,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   if (!UseNSA) {
     // Build a single vector containing all the operands so far prepared.
     LLT OpTy = LLT::fixed_vector(Ops.size(), 32);
-    Register MergedOps = B.buildMerge(OpTy, Ops).getReg(0);
+    Register MergedOps = B.buildMergeLikeInstr(OpTy, Ops).getReg(0);
     Ops.clear();
     Ops.push_back(MergedOps);
   }
