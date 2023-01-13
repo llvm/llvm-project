@@ -770,7 +770,7 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
     return llvm::createStringError(std::error_code(),
                                    "No AMD GPU detected in the system");
 
-  return GPUArchs;
+  return std::move(GPUArchs);
 }
 
 void ROCMToolChain::addClangTargetOptions(
