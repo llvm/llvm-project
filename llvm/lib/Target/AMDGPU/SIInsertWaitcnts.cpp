@@ -1177,6 +1177,11 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         MachineOperand &Op = MI.getOperand(I);
         if (!Op.isReg())
           continue;
+
+        // If the instruction does not read tied source, skip the operand.
+        if (Op.isTied() && Op.isUse() && TII->doesNotReadTiedSource(MI))
+          continue;
+
         RegInterval Interval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I);
 

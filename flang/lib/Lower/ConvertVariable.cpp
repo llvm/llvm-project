@@ -649,15 +649,24 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
           if (mlir::isa<fir::AllocaOp>(op))
             return;
         mlir::Location loc = converter.getCurrentLocation();
+        fir::FirOpBuilder &builder = converter.getFirOpBuilder();
         if (Fortran::semantics::IsOptional(sym)) {
-          fir::FirOpBuilder &builder = converter.getFirOpBuilder();
           auto isPresent = builder.create<fir::IsPresentOp>(
               loc, builder.getI1Type(), fir::getBase(extVal));
           builder.genIfThen(loc, isPresent)
               .genThen([&]() { genDeallocateBox(converter, *mutBox, loc); })
               .end();
         } else {
-          genDeallocateBox(converter, *mutBox, loc);
+          if (mutBox->isDerived() || mutBox->isPolymorphic() ||
+              mutBox->isUnlimitedPolymorphic()) {
+            mlir::Value isAlloc = fir::factory::genIsAllocatedOrAssociatedTest(
+                builder, loc, *mutBox);
+            builder.genIfThen(loc, isAlloc)
+                .genThen([&]() { genDeallocateBox(converter, *mutBox, loc); })
+                .end();
+          } else {
+            genDeallocateBox(converter, *mutBox, loc);
+          }
         }
       }
     }

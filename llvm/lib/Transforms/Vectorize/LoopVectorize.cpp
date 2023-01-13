@@ -10633,6 +10633,9 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
     Changed |= formLCSSARecursively(*L, *DT, LI, SE);
 
     Changed |= CFGChanged |= processLoop(L);
+
+    if (Changed)
+      LAIs->clear();
   }
 
   // Process each loop nest in the function.

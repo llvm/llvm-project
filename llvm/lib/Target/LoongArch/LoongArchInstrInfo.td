@@ -48,10 +48,10 @@ def SDT_LoongArchCsrxchg : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                                 SDTCisVT<3, GRLenVT>]>;
 def SDT_LoongArchIocsrwr : SDTypeProfile<0, 2, [SDTCisInt<0>,
                                                 SDTCisSameAs<0, 1>]>;
-def SDT_LoongArchMovgr2fcsr : SDTypeProfile<0, 2, [SDTCisVT<0, i32>,
-    SDTCisVT<1, GRLenVT>]>;
+def SDT_LoongArchMovgr2fcsr : SDTypeProfile<0, 2, [SDTCisVT<0, GRLenVT>,
+                                                   SDTCisSameAs<0, 1>]>;
 def SDT_LoongArchMovfcsr2gr : SDTypeProfile<1, 1, [SDTCisVT<0, GRLenVT>,
-    SDTCisVT<1, i32>]>;
+                                                   SDTCisSameAs<0, 1>]>;
 
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
@@ -180,7 +180,7 @@ def imm32 : Operand<GRLenVT> {
   let ParserMatchClass = ImmAsmOperand<"", 32, "">;
 }
 
-def uimm2 : Operand<GRLenVT> {
+def uimm2 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<2>;
 }
 
@@ -1647,11 +1647,11 @@ def PseudoLI_D : Pseudo<(outs GPR:$rd), (ins grlenimm:$imm), [],
 include "LoongArchFloat32InstrInfo.td"
 include "LoongArchFloat64InstrInfo.td"
 
-let Predicates = [HasBasicF] in {
-def : Pat<(loongarch_movfcsr2gr i32:$fcsr),
-          (MOVFCSR2GR FCSR:$fcsr)>;
-def : Pat<(loongarch_movgr2fcsr i32:$fcsr, GRLenVT:$rj),
-          (MOVGR2FCSR FCSR:$fcsr, GPR:$rj)>;
+let Predicates = [HasBasicF], usesCustomInserter = 1 in {
+  def WRFCSR : Pseudo<(outs), (ins uimm2:$fcsr, GPR:$src),
+               [(loongarch_movgr2fcsr uimm2:$fcsr, GRLenVT:$src)]>;
+  def RDFCSR : Pseudo<(outs GPR:$rd), (ins uimm2:$fcsr),
+               [(set GPR:$rd, (loongarch_movfcsr2gr uimm2:$fcsr))]>;
 }
 
 //===----------------------------------------------------------------------===//

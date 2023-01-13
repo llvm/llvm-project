@@ -12359,6 +12359,16 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::SIGN_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND)
     return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N0.getOperand(0));
 
+  // fold (sext (sext_inreg x)) -> (sext (trunc x))
+  if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
+    SDValue N00 = N0.getOperand(0);
+    EVT ExtVT = cast<VTSDNode>(N0->getOperand(1))->getVT();
+    if (N00.getOpcode() == ISD::TRUNCATE && (!LegalOperations || TLI.isTypeLegal(ExtVT))) {
+      SDValue T = DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N00.getOperand(0));
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, T);
+    }
+  }
+
   if (N0.getOpcode() == ISD::TRUNCATE) {
     // fold (sext (truncate (load x))) -> (sext (smaller load x))
     // fold (sext (truncate (srl (load x), c))) -> (sext (smaller load (x+c/n)))

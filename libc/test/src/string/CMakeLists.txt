@@ -105,6 +105,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strcasecmp_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strcasecmp_test.cpp
+  DEPENDS
+    libc.src.string.strcasecmp
+)
+
+add_libc_unittest(
   strcoll_test
   SUITE
     libc_string_unittests
@@ -216,6 +226,16 @@ add_libc_unittest(
     strncmp_test.cpp
   DEPENDS
     libc.src.string.strncmp
+)
+
+add_libc_unittest(
+  strncasecmp_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strncasecmp_test.cpp
+  DEPENDS
+    libc.src.string.strncasecmp
 )
 
 add_libc_unittest(

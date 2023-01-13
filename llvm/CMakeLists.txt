@@ -434,6 +434,7 @@ set(LLVM_ALL_TARGETS
   BPF
   Hexagon
   Lanai
+  LoongArch
   Mips
   MSP430
   NVPTX

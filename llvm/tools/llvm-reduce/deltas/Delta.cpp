@@ -65,7 +65,8 @@ void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream);
 void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
                  StringRef ToolName);
 
-bool isReduced(ReducerWorkItem &M, const TestRunner &Test) {
+bool isReduced(ReducerWorkItem &M, const TestRunner &Test,
+               const std::atomic<bool> &Killed) {
   const bool UseBitcode = Test.inputIsBitcode() || TmpFilesAsBitcode;
 
   SmallString<128> CurrentFilepath;
@@ -96,7 +97,7 @@ bool isReduced(ReducerWorkItem &M, const TestRunner &Test) {
   }
 
   // Current Chunks aren't interesting
-  return Test.run(CurrentFilepath);
+  return Test.run(CurrentFilepath, Killed);
 }
 
 /// Splits Chunks in half and prints them.
@@ -138,7 +139,8 @@ CheckChunk(const Chunk &ChunkToCheckForUninterestingness,
            std::unique_ptr<ReducerWorkItem> Clone, const TestRunner &Test,
            ReductionFunc ExtractChunksFromModule,
            const DenseSet<Chunk> &UninterestingChunks,
-           const std::vector<Chunk> &ChunksStillConsideredInteresting) {
+           const std::vector<Chunk> &ChunksStillConsideredInteresting,
+           const std::atomic<bool> &Killed) {
   // Take all of ChunksStillConsideredInteresting chunks, except those we've
   // already deemed uninteresting (UninterestingChunks) but didn't remove
   // from ChunksStillConsideredInteresting yet, and additionally ignore
@@ -178,7 +180,7 @@ CheckChunk(const Chunk &ChunkToCheckForUninterestingness,
     errs() << "\n";
   }
 
-  if (!isReduced(*Clone, Test)) {
+  if (!isReduced(*Clone, Test, Killed)) {
     // Program became non-reduced, so this chunk appears to be interesting.
     if (Verbose)
       errs() << "\n";
@@ -191,7 +193,8 @@ static SmallString<0> ProcessChunkFromSerializedBitcode(
     Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
     ReductionFunc ExtractChunksFromModule, DenseSet<Chunk> &UninterestingChunks,
     std::vector<Chunk> &ChunksStillConsideredInteresting,
-    SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced) {
+    SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced,
+    const std::atomic<bool> &Killed) {
   LLVMContext Ctx;
   auto CloneMMM = std::make_unique<ReducerWorkItem>();
   MemoryBufferRef Data(StringRef(OriginalBC), "<bc file>");
@@ -201,7 +204,7 @@ static SmallString<0> ProcessChunkFromSerializedBitcode(
   if (std::unique_ptr<ReducerWorkItem> ChunkResult =
           CheckChunk(ChunkToCheckForUninterestingness, std::move(CloneMMM),
                      Test, ExtractChunksFromModule, UninterestingChunks,
-                     ChunksStillConsideredInteresting)) {
+                     ChunksStillConsideredInteresting, Killed)) {
     raw_svector_ostream BCOS(Result);
     writeBitcode(*ChunkResult, BCOS);
     // Communicate that the task reduced a chunk.
@@ -242,7 +245,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
 
     assert(!verifyReducerWorkItem(Test.getProgram(), &errs()) &&
            "input module is broken after counting chunks");
-    assert(isReduced(Test.getProgram(), Test) &&
+    assert(isReduced(Test.getProgram(), Test, std::atomic<bool>()) &&
            "input module no longer interesting after counting chunks");
 
 #ifndef NDEBUG
@@ -290,6 +293,11 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
       writeBitcode(Test.getProgram(), BCOS);
     }
 
+    // If doing parallel reduction, signal to running workitem threads that we
+    // no longer care about their results. They should try to kill the reducer
+    // workitem process and exit.
+    std::atomic<bool> Killed = false;
+
     SharedTaskQueue TaskQueue;
     for (auto I = ChunksStillConsideredInteresting.rbegin(),
               E = ChunksStillConsideredInteresting.rend();
@@ -316,11 +324,12 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
         for (unsigned J = 0; J < NumInitialTasks; ++J) {
           TaskQueue.emplace_back(ChunkThreadPool.async(
               [J, I, &Test, &ExtractChunksFromModule, &UninterestingChunks,
-               &ChunksStillConsideredInteresting, &OriginalBC, &AnyReduced]() {
+               &ChunksStillConsideredInteresting, &OriginalBC, &AnyReduced,
+               &Killed]() {
                 return ProcessChunkFromSerializedBitcode(
                     *(I + J), Test, ExtractChunksFromModule,
                     UninterestingChunks, ChunksStillConsideredInteresting,
-                    OriginalBC, AnyReduced);
+                    OriginalBC, AnyReduced, Killed);
               }));
         }
 
@@ -344,11 +353,11 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
               TaskQueue.emplace_back(ChunkThreadPool.async(
                   [&Test, &ExtractChunksFromModule, &UninterestingChunks,
                    &ChunksStillConsideredInteresting, &OriginalBC,
-                   &ChunkToCheck, &AnyReduced]() {
+                   &ChunkToCheck, &AnyReduced, &Killed]() {
                     return ProcessChunkFromSerializedBitcode(
                         ChunkToCheck, Test, ExtractChunksFromModule,
                         UninterestingChunks, ChunksStillConsideredInteresting,
-                        OriginalBC, AnyReduced);
+                        OriginalBC, AnyReduced, Killed);
                   }));
             }
             continue;
@@ -360,6 +369,8 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
                       Test.getToolName());
           break;
         }
+
+        Killed = true;
 
         // If we broke out of the loop, we still need to wait for everything to
         // avoid race access to the chunk set.
@@ -375,7 +386,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
             *I,
             cloneReducerWorkItem(Test.getProgram(), Test.getTargetMachine()),
             Test, ExtractChunksFromModule, UninterestingChunks,
-            ChunksStillConsideredInteresting);
+            ChunksStillConsideredInteresting, Killed);
       }
 
       if (!Result)

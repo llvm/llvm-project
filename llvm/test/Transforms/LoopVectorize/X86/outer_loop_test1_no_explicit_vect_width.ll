@@ -19,7 +19,7 @@
 ;
 
 ; CHECK-LABEL: vector.ph:
-; CHECK: %[[SplatVal:.*]] = insertelement <4 x i32> poison, i32 %n, i32 0
+; CHECK: %[[SplatVal:.*]] = insertelement <4 x i32> poison, i32 %n, i64 0
 ; CHECK: %[[Splat:.*]] = shufflevector <4 x i32> %[[SplatVal]], <4 x i32> poison, <4 x i32> zeroinitializer
 
 ; CHECK-LABEL: vector.body:
@@ -48,7 +48,7 @@
 ; CHECK: br i1 %[[Cmp]], label %middle.block, label %vector.body
 
 ; AVX-LABEL: vector.ph:
-; AVX: %[[SplatVal:.*]] = insertelement <8 x i32> poison, i32 %n, i32 0
+; AVX: %[[SplatVal:.*]] = insertelement <8 x i32> poison, i32 %n, i64 0
 ; AVX: %[[Splat:.*]] = shufflevector <8 x i32> %[[SplatVal]], <8 x i32> poison, <8 x i32> zeroinitializer
 
 ; AVX-LABEL: vector.body:

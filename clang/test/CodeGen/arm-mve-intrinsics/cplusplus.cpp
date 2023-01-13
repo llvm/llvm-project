@@ -80,7 +80,7 @@ mve_pred16_t test_vcmpeqq_f16(float16x8_t a, float16x8_t b)
 
 // CHECK-LABEL: @_Z18test_vcmpeqq_n_f1619__simd128_float16_tDh(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> poison, half [[B:%.*]], i32 0
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x half> poison, half [[B:%.*]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x half> [[DOTSPLATINSERT]], <8 x half> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq <8 x half> [[A:%.*]], [[DOTSPLAT]]
 // CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1> [[TMP0]])
@@ -98,8 +98,8 @@ mve_pred16_t test_vcmpeqq_n_f16(float16x8_t a, float16_t b)
 
 // CHECK-LABEL: @_Z14test_vld1q_u16PKt(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[BASE:%.*]], align 2
-// CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[BASE:%.*]], align 2
+// CHECK-NEXT:    ret <8 x i16> [[TMP0]]
 //
 uint16x8_t test_vld1q_u16(const uint16_t *base)
 {
@@ -112,9 +112,9 @@ uint16x8_t test_vld1q_u16(const uint16_t *base)
 
 // CHECK-LABEL: @_Z16test_vst1q_p_s32Pi17__simd128_int32_tt(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_s32(int32_t *base, int32x4_t value, mve_pred16_t p)

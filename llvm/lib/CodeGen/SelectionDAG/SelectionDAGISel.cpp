@@ -2245,6 +2245,11 @@ void SelectionDAGISel::Select_ARITH_FENCE(SDNode *N) {
                        N->getOperand(0));
 }
 
+void SelectionDAGISel::Select_MEMBARRIER(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::MEMBARRIER, N->getValueType(0),
+                       N->getOperand(0));
+}
+
 void SelectionDAGISel::pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops,
                                                 SDValue OpVal, SDLoc DL) {
   SDNode *OpNode = OpVal.getNode();
@@ -2898,6 +2903,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::ARITH_FENCE:
     Select_ARITH_FENCE(NodeToMatch);
+    return;
+  case ISD::MEMBARRIER:
+    Select_MEMBARRIER(NodeToMatch);
     return;
   case ISD::STACKMAP:
     Select_STACKMAP(NodeToMatch);

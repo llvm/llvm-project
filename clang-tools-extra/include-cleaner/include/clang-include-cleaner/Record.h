@@ -90,12 +90,15 @@ private:
       IWYUPublic;
 
   /// A reverse map from the underlying header to its exporter headers.
-  //
-  //  There's no way to get a FileEntry from a UniqueID, especially when it
-  //  hasn't been opened before. So store the full path and convert it to a
-  //  FileEntry by opening the file again through a FileManager.
+  ///
+  /// There's no way to get a FileEntry from a UniqueID, especially when it
+  /// hasn't been opened before. So store the path and convert it to a
+  /// FileEntry by opening the file again through a FileManager.
+  ///
+  /// We don't use RealPathName, as opening the file through a different name
+  /// changes its preferred name. Clearly this is fragile!
   llvm::DenseMap<llvm::sys::fs::UniqueID,
-                 llvm::SmallVector</*RealPathNames*/ llvm::StringRef>>
+                 llvm::SmallVector</*FileEntry::getName()*/ llvm::StringRef>>
       IWYUExportBy;
 
   /// Contains all non self-contained files detected during the parsing.

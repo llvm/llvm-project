@@ -175,6 +175,13 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
            getValueMapping(PMI_GPR64)});
     break;
   }
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
+    // FIXME: We have to check every operand in this MI and compute value
+    // mapping accordingly.
+    SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
+    OperandsMapping = getOperandsMapping(OpdsMapping);
+    break;
+  }
   default:
     return getInvalidInstructionMapping();
   }

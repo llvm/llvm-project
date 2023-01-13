@@ -810,6 +810,7 @@ defm BUFFER_STORE_FORMAT_XYZW : MUBUF_Pseudo_Stores <
 >;
 
 let SubtargetPredicate = HasUnpackedD16VMem, D16Buf = 1 in {
+let TiedSourceNotRead = 1 in {
   defm BUFFER_LOAD_FORMAT_D16_X_gfx80 : MUBUF_Pseudo_Loads <
     "buffer_load_format_d16_x", i32
   >;
@@ -822,6 +823,7 @@ let SubtargetPredicate = HasUnpackedD16VMem, D16Buf = 1 in {
   defm BUFFER_LOAD_FORMAT_D16_XYZW_gfx80 : MUBUF_Pseudo_Loads <
    "buffer_load_format_d16_xyzw", v4i32
   >;
+}
   defm BUFFER_STORE_FORMAT_D16_X_gfx80 : MUBUF_Pseudo_Stores <
     "buffer_store_format_d16_x", i32
   >;
@@ -837,6 +839,7 @@ let SubtargetPredicate = HasUnpackedD16VMem, D16Buf = 1 in {
 } // End HasUnpackedD16VMem.
 
 let SubtargetPredicate = HasPackedD16VMem, D16Buf = 1 in {
+let TiedSourceNotRead = 1 in {
   defm BUFFER_LOAD_FORMAT_D16_X : MUBUF_Pseudo_Loads <
     "buffer_load_format_d16_x", f16
   >;
@@ -849,6 +852,7 @@ let SubtargetPredicate = HasPackedD16VMem, D16Buf = 1 in {
   defm BUFFER_LOAD_FORMAT_D16_XYZW : MUBUF_Pseudo_Loads <
     "buffer_load_format_d16_xyzw", v4f16
   >;
+}
   defm BUFFER_STORE_FORMAT_D16_X : MUBUF_Pseudo_Stores <
     "buffer_store_format_d16_x", f16
   >;
@@ -1067,6 +1071,7 @@ defm BUFFER_ATOMIC_FMAX_X2 : MUBUF_Pseudo_Atomics <
 }
 
 let SubtargetPredicate = HasD16LoadStore in {
+let TiedSourceNotRead = 1 in {
 
 defm BUFFER_LOAD_UBYTE_D16 : MUBUF_Pseudo_Loads <
   "buffer_load_ubyte_d16", i32, 1
@@ -1092,6 +1097,11 @@ defm BUFFER_LOAD_SHORT_D16_HI : MUBUF_Pseudo_Loads <
   "buffer_load_short_d16_hi", i32, 1
 >;
 
+defm BUFFER_LOAD_FORMAT_D16_HI_X : MUBUF_Pseudo_Loads <
+  "buffer_load_format_d16_hi_x", i32
+>;
+} // End TiedSourceNotRead
+
 defm BUFFER_STORE_BYTE_D16_HI : MUBUF_Pseudo_Stores <
   "buffer_store_byte_d16_hi", i32
 >;
@@ -1100,9 +1110,6 @@ defm BUFFER_STORE_SHORT_D16_HI : MUBUF_Pseudo_Stores <
   "buffer_store_short_d16_hi", i32
 >;
 
-defm BUFFER_LOAD_FORMAT_D16_HI_X : MUBUF_Pseudo_Loads <
-  "buffer_load_format_d16_hi_x", i32
->;
 defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
   "buffer_store_format_d16_hi_x", i32
 >;
@@ -1146,10 +1153,12 @@ defm TBUFFER_STORE_FORMAT_XYZ  : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyz"
 defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyzw", VReg_128, 4>;
 
 let SubtargetPredicate = HasUnpackedD16VMem, D16Buf = 1 in {
+let TiedSourceNotRead = 1 in {
   defm TBUFFER_LOAD_FORMAT_D16_X_gfx80     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_x",     VGPR_32,  1>;
   defm TBUFFER_LOAD_FORMAT_D16_XY_gfx80    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xy",    VReg_64,  2>;
   defm TBUFFER_LOAD_FORMAT_D16_XYZ_gfx80   : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyz",   VReg_96,  3>;
   defm TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80  : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyzw",  VReg_128, 4>;
+}
   defm TBUFFER_STORE_FORMAT_D16_X_gfx80    : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_x",    VGPR_32,  1>;
   defm TBUFFER_STORE_FORMAT_D16_XY_gfx80   : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xy",   VReg_64,  2>;
   defm TBUFFER_STORE_FORMAT_D16_XYZ_gfx80  : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyz",  VReg_96,  3>;
@@ -1157,10 +1166,12 @@ let SubtargetPredicate = HasUnpackedD16VMem, D16Buf = 1 in {
 } // End HasUnpackedD16VMem.
 
 let SubtargetPredicate = HasPackedD16VMem, D16Buf = 1 in {
+let TiedSourceNotRead = 1 in {
   defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_x",     VGPR_32, 1>;
   defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xy",    VGPR_32, 2>;
   defm TBUFFER_LOAD_FORMAT_D16_XYZ   : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyz",   VReg_64, 3>;
   defm TBUFFER_LOAD_FORMAT_D16_XYZW  : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyzw",  VReg_64, 4>;
+}
   defm TBUFFER_STORE_FORMAT_D16_X    : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_x",    VGPR_32, 1>;
   defm TBUFFER_STORE_FORMAT_D16_XY   : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xy",   VGPR_32, 2>;
   defm TBUFFER_STORE_FORMAT_D16_XYZ  : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyz",  VReg_64, 3>;

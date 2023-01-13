@@ -2537,7 +2537,7 @@ define void @shuffle_v4i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1,
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v0, v[0:1], off
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    global_load_short_d16_hi v0, v[2:3], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dword v[4:5], v0, off
@@ -2549,7 +2549,6 @@ define void @shuffle_v4i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1,
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_short_d16_hi v0, v[2:3], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_dword v[4:5], v0, off
@@ -2561,7 +2560,6 @@ define void @shuffle_v4i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1,
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_d16_hi_b16 v0, v[2:3], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v[4:5], v0, off

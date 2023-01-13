@@ -469,9 +469,9 @@ void arith::MinUIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 static ConstantIntRanges extUIRange(const ConstantIntRanges &range,
                                     Type destType) {
   unsigned destWidth = ConstantIntRanges::getStorageBitwidth(destType);
-  APInt smin = range.umin().zext(destWidth);
-  APInt smax = range.umax().zext(destWidth);
-  return ConstantIntRanges::fromSigned(smin, smax);
+  APInt umin = range.umin().zext(destWidth);
+  APInt umax = range.umax().zext(destWidth);
+  return ConstantIntRanges::fromUnsigned(umin, umax);
 }
 
 void arith::ExtUIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,

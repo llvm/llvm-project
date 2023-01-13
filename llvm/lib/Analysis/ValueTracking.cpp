@@ -940,6 +940,14 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
           Known.Zero.setHighBits(RHSKnown.countMinLeadingZeros());
       }
       break;
+    case ICmpInst::ICMP_NE: {
+      // assume (v & b != 0) where b is a power of 2
+      const APInt *BPow2;
+      if (match(Cmp, m_ICmp(Pred, m_c_And(m_V, m_Power2(BPow2)), m_Zero())) &&
+          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+        Known.One |= BPow2->zextOrTrunc(BitWidth);
+      }
+    } break;
     }
   }
 

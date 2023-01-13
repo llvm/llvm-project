@@ -171,7 +171,6 @@ static_library("Support") {
     "Process.cpp",
     "Program.cpp",
     "Signals.cpp",
-    "ThreadLocal.cpp",
     "Threading.cpp",
     "Valgrind.cpp",
     "VirtualFileSystem.cpp",

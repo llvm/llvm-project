@@ -119,6 +119,7 @@ Changes to the AArch64 Backend
 
 * Added support for the Cortex-A715 CPU.
 * Added support for the Cortex-X3 CPU.
+* Added support for the Neoverse V2 CPU.
 * Added support for assembly for RME MEC (Memory Encryption Contexts).
 
 Changes to the AMDGPU Backend

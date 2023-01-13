@@ -1372,18 +1372,16 @@ createInvariantCond(const Loop *L, BasicBlock *ExitingBB,
 }
 
 static std::optional<Value *>
-createReplacement(Value *V, const Loop *L, BasicBlock *ExitingBB,
-                  const SCEV *MaxIter, bool SkipLastIter, ScalarEvolution *SE,
-                  SCEVExpander &Rewriter) {
-  ICmpInst::Predicate Pred;
-  Value *LHS, *RHS;
-  if (!match(V, m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
-    return std::nullopt;
+createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
+                  const SCEV *MaxIter, bool Inverted, bool SkipLastIter,
+                  ScalarEvolution *SE, SCEVExpander &Rewriter) {
+  ICmpInst::Predicate Pred = ICmp->getPredicate();
+  Value *LHS = ICmp->getOperand(0);
+  Value *RHS = ICmp->getOperand(1);
 
   // 'LHS pred RHS' should now mean that we stay in loop.
   auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-  BasicBlock *FalseSucc = BI->getSuccessor(1);
-  if (L->contains(FalseSucc))
+  if (Inverted)
     Pred = CmpInst::getInversePredicate(Pred);
 
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
@@ -1429,12 +1427,62 @@ static bool optimizeLoopExitWithUnknownExitCount(
   assert(
       (L->contains(BI->getSuccessor(0)) != L->contains(BI->getSuccessor(1))) &&
       "Not a loop exit!");
-  auto NewCond = createReplacement(BI->getCondition(), L, ExitingBB, MaxIter,
-                                   SkipLastIter, SE, Rewriter);
-  if (!NewCond)
-    return false;
-  replaceExitCond(BI, *NewCond, DeadInsts);
-  return true;
+
+  // For branch that stays in loop by TRUE condition, go through AND. For branch
+  // that stays in loop by FALSE condition, go through OR. Both gives the
+  // similar logic: "stay in loop iff all conditions are true(false)".
+  bool Inverted = L->contains(BI->getSuccessor(1));
+  SmallVector<ICmpInst *, 4> LeafConditions;
+  SmallVector<Value *, 4> Worklist;
+  SmallPtrSet<Value *, 4> Visited;
+  Value *OldCond = BI->getCondition();
+  Visited.insert(OldCond);
+  Worklist.push_back(OldCond);
+
+  auto GoThrough = [&](Value *V) {
+    Value *LHS = nullptr, *RHS = nullptr;
+    if (Inverted) {
+      if (!match(V, m_LogicalOr(m_Value(LHS), m_Value(RHS))))
+        return false;
+    } else {
+      if (!match(V, m_LogicalAnd(m_Value(LHS), m_Value(RHS))))
+        return false;
+    }
+    if (Visited.insert(LHS).second)
+      Worklist.push_back(LHS);
+    if (Visited.insert(RHS).second)
+      Worklist.push_back(RHS);
+    return true;
+  };
+
+  do {
+    Value *Curr = Worklist.pop_back_val();
+    // Go through AND/OR conditions. Collect leaf ICMPs. We only care about
+    // those with one use, to avoid instruction duplication.
+    if (Curr->hasOneUse())
+      if (!GoThrough(Curr))
+        if (auto *ICmp = dyn_cast<ICmpInst>(Curr))
+          LeafConditions.push_back(ICmp);
+  } while (!Worklist.empty());
+
+  bool Changed = false;
+  for (auto *OldCond : LeafConditions)
+    if (auto Replaced =
+            createReplacement(OldCond, L, ExitingBB, MaxIter, Inverted,
+                              SkipLastIter, SE, Rewriter)) {
+      Changed = true;
+      auto *NewCond = *Replaced;
+      if (auto *NCI = dyn_cast<Instruction>(NewCond)) {
+        NCI->setName(OldCond->getName() + ".first_iter");
+        NCI->moveBefore(cast<Instruction>(OldCond));
+      }
+      LLVM_DEBUG(dbgs() << "Unknown exit count: Replacing " << *OldCond
+                        << " with " << *NewCond << "\n");
+      assert(OldCond->hasOneUse() && "Must be!");
+      OldCond->replaceAllUsesWith(NewCond);
+      DeadInsts.push_back(OldCond);
+    }
+  return Changed;
 }
 
 bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {

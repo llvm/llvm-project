@@ -143,9 +143,8 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
 
       clearAssumptionsOfUsers(&I, DB);
 
-      // FIXME: In theory we could substitute undef here instead of zero.
-      // This should be reconsidered once we settle on the semantics of
-      // undef, poison, etc.
+      // Substitute all uses with zero. In theory we could use `freeze poison`
+      // instead, but that seems unlikely to be profitable.
       U.set(ConstantInt::get(U->getType(), 0));
       ++NumSimplified;
       Changed = true;

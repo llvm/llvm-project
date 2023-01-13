@@ -722,7 +722,7 @@ LoongArchTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
     }
     return DAG.getMergeValues(
         {DAG.getNode(LoongArchISD::MOVFCSR2GR, DL, Op.getValueType(),
-                     DAG.getRegister(LoongArch::FCSR0 + Imm, MVT::i32)),
+                     DAG.getConstant(Imm, DL, GRLenVT)),
          Op.getOperand(0)},
         DL);
   }
@@ -812,7 +812,7 @@ SDValue LoongArchTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
 
     return DAG.getNode(
         LoongArchISD::MOVGR2FCSR, DL, MVT::Other, Op0,
-        DAG.getRegister(LoongArch::FCSR0 + Imm, MVT::i32),
+        DAG.getConstant(Imm, DL, GRLenVT),
         DAG.getNode(ISD::ANY_EXTEND, DL, GRLenVT, Op.getOperand(3)));
   }
   case Intrinsic::loongarch_syscall: {
@@ -1145,6 +1145,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     SDValue Op0 = N->getOperand(0);
     EVT VT = N->getValueType(0);
     uint64_t Op1 = N->getConstantOperandVal(1);
+    MVT GRLenVT = Subtarget.getGRLenVT();
     if (Op1 == Intrinsic::loongarch_movfcsr2gr) {
       if (!Subtarget.hasBasicF()) {
         DAG.getContext()->emitError(
@@ -1163,15 +1164,14 @@ void LoongArchTargetLowering::ReplaceNodeResults(
         Results.push_back(N->getOperand(0));
         return;
       }
-      Results.push_back(DAG.getNode(
-          ISD::TRUNCATE, DL, VT,
-          DAG.getNode(LoongArchISD::MOVFCSR2GR, SDLoc(N), MVT::i64,
-                      DAG.getRegister(LoongArch::FCSR0 + Imm, MVT::i32))));
+      Results.push_back(
+          DAG.getNode(ISD::TRUNCATE, DL, VT,
+                      DAG.getNode(LoongArchISD::MOVFCSR2GR, SDLoc(N), MVT::i64,
+                                  DAG.getConstant(Imm, DL, GRLenVT))));
       Results.push_back(N->getOperand(0));
       return;
     }
     SDValue Op2 = N->getOperand(2);
-    MVT GRLenVT = Subtarget.getGRLenVT();
     std::string Name = N->getOperationName(0);
 
     switch (Op1) {
@@ -1729,6 +1729,8 @@ static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
 
 MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
 
   switch (MI.getOpcode()) {
   default:
@@ -1743,6 +1745,22 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
   case LoongArch::MOD_DU:
     return insertDivByZeroTrap(MI, BB);
     break;
+  case LoongArch::WRFCSR: {
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::MOVGR2FCSR),
+            LoongArch::FCSR0 + MI.getOperand(0).getImm())
+        .addReg(MI.getOperand(1).getReg());
+    MI.eraseFromParent();
+    return BB;
+  }
+  case LoongArch::RDFCSR: {
+    MachineInstr *ReadFCSR =
+        BuildMI(*BB, MI, DL, TII->get(LoongArch::MOVFCSR2GR),
+                MI.getOperand(0).getReg())
+            .addReg(LoongArch::FCSR0 + MI.getOperand(1).getImm());
+    ReadFCSR->getOperand(1).setIsUndef();
+    MI.eraseFromParent();
+    return BB;
+  }
   }
 }
 

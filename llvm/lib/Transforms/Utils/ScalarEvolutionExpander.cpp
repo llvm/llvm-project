@@ -1026,8 +1026,25 @@ void SCEVExpander::fixupInsertPoints(Instruction *I) {
 /// until we reach a value that dominates InsertPos.
 bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
                               bool RecomputePoisonFlags) {
-  if (SE.DT.dominates(IncV, InsertPos))
-      return true;
+  auto FixupPoisonFlags = [this](Instruction *I) {
+    // Drop flags that are potentially inferred from old context and infer flags
+    // in new context.
+    I->dropPoisonGeneratingFlags();
+    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
+      if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+        auto *BO = cast<BinaryOperator>(I);
+        BO->setHasNoUnsignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+        BO->setHasNoSignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+      }
+  };
+
+  if (SE.DT.dominates(IncV, InsertPos)) {
+    if (RecomputePoisonFlags)
+      FixupPoisonFlags(IncV);
+    return true;
+  }
 
   // InsertPos must itself dominate IncV so that IncV's new position satisfies
   // its existing users.
@@ -1053,19 +1070,8 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
   for (Instruction *I : llvm::reverse(IVIncs)) {
     fixupInsertPoints(I);
     I->moveBefore(InsertPos);
-    if (!RecomputePoisonFlags)
-      continue;
-    // Drop flags that are potentially inferred from old context and infer flags
-    // in new context.
-    I->dropPoisonGeneratingFlags();
-    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
-      if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
-        auto *BO = cast<BinaryOperator>(I);
-        BO->setHasNoUnsignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
-        BO->setHasNoSignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
-      }
+    if (RecomputePoisonFlags)
+      FixupPoisonFlags(I);
   }
   return true;
 }

@@ -681,11 +681,6 @@ def OR32mi8Locked  : Ii8<0x83, MRM1m, (outs), (ins i32mem:$dst, i32i8imm:$zero),
                          Requires<[Not64BitMode]>, OpSize32, LOCK,
                          Sched<[WriteALURMW]>;
 
-let hasSideEffects = 1, isMeta = 1 in
-def Int_MemBarrier : I<0, Pseudo, (outs), (ins),
-                     "#MEMBARRIER",
-                     [(membarrier)]>, Sched<[WriteLoad]>;
-
 // RegOpc corresponds to the mr version of the instruction
 // ImmOpc corresponds to the mi version of the instruction
 // ImmOpc8 corresponds to the mi8 version of the instruction

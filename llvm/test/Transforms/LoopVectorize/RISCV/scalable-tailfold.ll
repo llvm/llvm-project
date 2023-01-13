@@ -19,7 +19,7 @@ define void @vector_add(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[V:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -84,7 +84,7 @@ define void @indexed_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[V:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -218,7 +218,7 @@ define void @splat_int(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[V:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -275,7 +275,7 @@ define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[V:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

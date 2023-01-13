@@ -2018,10 +2018,6 @@ def GETSTACKTOP : Pseudo<(outs I64:$dst), (ins),
                          "# GET STACK TOP",
                          [(set iPTR:$dst, (GetStackTop))]>;
 
-// MEMBARRIER
-let hasSideEffects = 1 in
-def MEMBARRIER : Pseudo<(outs), (ins), "# MEMBARRIER", [(membarrier)] >;
-
 //===----------------------------------------------------------------------===//
 // Other patterns
 //===----------------------------------------------------------------------===//

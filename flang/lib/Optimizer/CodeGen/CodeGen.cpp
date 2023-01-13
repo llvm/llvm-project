@@ -3013,12 +3013,11 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
       auto inputBoxStorage = adaptor.getOperands()[0];
       mlir::Location loc = load.getLoc();
       fir::SequenceType seqTy = fir::unwrapUntilSeqType(boxTy);
-      mlir::Type eleTy = fir::unwrapPassByRefType(boxTy);
-      // fir.box of assumed rank and polymorphic entities do not have a storage
+      // fir.box of assumed rank do not have a storage
       // size that is know at compile time. The copy needs to be runtime driven
       // depending on the actual dynamic rank or type.
-      if (eleTy.isa<mlir::NoneType>() || (seqTy && seqTy.hasUnknownShape()))
-        TODO(loc, "loading polymorphic or assumed rank fir.box");
+      if (seqTy && seqTy.hasUnknownShape())
+        TODO(loc, "loading or assumed rank fir.box");
       mlir::Type boxPtrTy = inputBoxStorage.getType();
       auto boxValue = rewriter.create<mlir::LLVM::LoadOp>(
           loc, boxPtrTy.cast<mlir::LLVM::LLVMPointerType>().getElementType(),

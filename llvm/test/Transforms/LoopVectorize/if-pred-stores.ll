@@ -357,7 +357,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
 ; VEC-NEXT:    [[IND_END:%.*]] = add i64 [[V_1]], [[N_VEC]]
 ; VEC-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[V_2:%.*]], i32 0
-; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[COND_2:%.*]], i32 0
+; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[COND_2:%.*]], i64 0
 ; VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
@@ -558,7 +558,7 @@ define void @minimal_bit_widths(i1 %c) {
 ;
 ; VEC-LABEL: @minimal_bit_widths(
 ; VEC-NEXT:  entry:
-; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i32 0
+; VEC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C:%.*]], i64 0
 ; VEC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
