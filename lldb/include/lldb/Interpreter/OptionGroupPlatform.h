@@ -9,22 +9,19 @@
 #ifndef LLDB_INTERPRETER_OPTIONGROUPPLATFORM_H
 #define LLDB_INTERPRETER_OPTIONGROUPPLATFORM_H
 
-#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/ConstString.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
 
-class CommandObjectPlatformSelect;
 // PlatformOptionGroup
 //
 // Make platform options available to any commands that need the settings.
 class OptionGroupPlatform : public OptionGroup {
 public:
   OptionGroupPlatform(bool include_platform_option)
-      : m_include_platform_option(include_platform_option),
-        m_class_options("scripted platform", true, 'C', 'K', 'V', 0) {}
+      : m_include_platform_option(include_platform_option) {}
 
   ~OptionGroupPlatform() override = default;
 
@@ -63,14 +60,11 @@ public:
   bool PlatformMatches(const lldb::PlatformSP &platform_sp) const;
 
 protected:
-  friend class CommandObjectPlatformSelect;
-
   std::string m_platform_name;
   ConstString m_sdk_sysroot;
   ConstString m_sdk_build;
   llvm::VersionTuple m_os_version;
   bool m_include_platform_option;
-  OptionGroupPythonClassWithDict m_class_options;
 };
 
 } // namespace lldb_private

@@ -64,10 +64,8 @@ void PlatformRemoteGDBServer::Terminate() {
   Platform::Terminate();
 }
 
-PlatformSP
-PlatformRemoteGDBServer::CreateInstance(bool force, const ArchSpec *arch,
-                                        const Debugger *debugger,
-                                        const ScriptedMetadata *metadata) {
+PlatformSP PlatformRemoteGDBServer::CreateInstance(bool force,
+                                                   const ArchSpec *arch) {
   bool create = force;
   if (!create) {
     create = !arch->TripleVendorWasSpecified() && !arch->TripleOSWasSpecified();

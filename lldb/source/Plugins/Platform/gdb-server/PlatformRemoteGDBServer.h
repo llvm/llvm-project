@@ -26,9 +26,7 @@ public:
 
   static void Terminate();
 
-  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch,
-                                         const Debugger *debugger,
-                                         const ScriptedMetadata *metadata);
+  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
   static llvm::StringRef GetPluginNameStatic() { return "remote-gdb-server"; }
 
