@@ -506,7 +506,6 @@ set(files
   __pstl/internal/execution_impl.h
   __pstl/internal/glue_algorithm_defs.h
   __pstl/internal/glue_algorithm_impl.h
-  __pstl/internal/glue_execution_defs.h
   __pstl/internal/glue_memory_defs.h
   __pstl/internal/glue_memory_impl.h
   __pstl/internal/glue_numeric_defs.h
@@ -534,7 +533,6 @@ set(files
   __pstl/internal/unseq_backend_simd.h
   __pstl/internal/utils.h
   __pstl_algorithm
-  __pstl_execution
   __pstl_memory
   __pstl_numeric
   __random/bernoulli_distribution.h
