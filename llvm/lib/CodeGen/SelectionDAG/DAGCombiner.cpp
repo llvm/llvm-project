@@ -14384,6 +14384,10 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     }
   }
 
+  // The whole node may have been updated, so the value we were holding
+  // may no longer be valid. Re-fetch the operand we're `freeze`ing.
+  N0 = N->getOperand(0);
+
   // Finally, recreate the node, it's operands were updated to use
   // frozen operands, so we just need to use it's "original" operands.
   SmallVector<SDValue> Ops(N0->op_begin(), N0->op_end());
