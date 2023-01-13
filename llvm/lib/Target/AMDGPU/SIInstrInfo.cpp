@@ -2452,7 +2452,8 @@ bool SIInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   return findCommutedOpIndices(MI.getDesc(), SrcOpIdx0, SrcOpIdx1);
 }
 
-bool SIInstrInfo::findCommutedOpIndices(MCInstrDesc Desc, unsigned &SrcOpIdx0,
+bool SIInstrInfo::findCommutedOpIndices(const MCInstrDesc &Desc,
+                                        unsigned &SrcOpIdx0,
                                         unsigned &SrcOpIdx1) const {
   if (!Desc.isCommutable())
     return false;
