@@ -14,34 +14,6 @@
  * Data
  */
 
-bool is_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
-  bool is_locked = false;
-  hsa_status_t err = HSA_STATUS_SUCCESS;
-  hsa_amd_pointer_info_t info;
-  info.size = sizeof(hsa_amd_pointer_info_t);
-  err = hsa_amd_pointer_info(ptr, &info, nullptr, nullptr, nullptr);
-
-  if (err_p)
-    *err_p = err;
-
-  if (err != HSA_STATUS_SUCCESS){
-    DP("Error when getting pointer info\n");
-    return is_locked;
-  } else
-    is_locked = (info.type == HSA_EXT_POINTER_TYPE_LOCKED);
-
-  if (is_locked && agentBaseAddress != nullptr) {
-    // When user passes in a basePtr+offset we need to fix the
-    // locked pointer to include the offset: ROCr always returns
-    // the base locked address, not the shifted one.
-    *agentBaseAddress =
-        (void *)((uint64_t)info.agentBaseAddress + (uint64_t)ptr -
-                 (uint64_t)info.hostBaseAddress);
-  }
-
-  return is_locked;
-}
-
 template <const uint64_t active_timeout = 0>
 hsa_status_t active_wait_for_signal(hsa_signal_t signal,
                                     hsa_signal_value_t init,
@@ -60,6 +32,36 @@ hsa_status_t active_wait_for_signal(hsa_signal_t signal,
                                     UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
   if (got != success)
     return HSA_STATUS_ERROR;
+
+  return HSA_STATUS_SUCCESS;
+}
+
+hsa_status_t is_locked(void *ptr, void **agentBaseAddress) {
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+  hsa_amd_pointer_info_t info;
+  info.size = sizeof(hsa_amd_pointer_info_t);
+  err = hsa_amd_pointer_info(ptr, &info, /*alloc=*/nullptr,
+                             /*num_agents_accessible=*/nullptr,
+                             /*accessible=*/nullptr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error when getting pointer info\n");
+    return err;
+  }
+
+  if (info.type == HSA_EXT_POINTER_TYPE_LOCKED) {
+    // When user passes in a basePtr+offset we need to fix the
+    // locked pointer to include the offset: ROCr always returns
+    // the base locked address, not the shifted one.
+    if ((char *)info.hostBaseAddress <= (char *)ptr &&
+        (char *)ptr < (char *)info.hostBaseAddress + info.sizeInBytes)
+      *agentBaseAddress =
+          (void *)((uint64_t)info.agentBaseAddress + (uint64_t)ptr -
+                   (uint64_t)info.hostBaseAddress);
+    else // address is already device-agent accessible, no need to compute
+         // offset
+      *agentBaseAddress = ptr;
+  } else
+    *agentBaseAddress = nullptr;
 
   return HSA_STATUS_SUCCESS;
 }
@@ -114,22 +116,23 @@ static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
                                          hsa_agent_t agent, void *src,
                                          void *lockingPtr, size_t size,
                                          bool *user_locked) {
-  hsa_status_t err;
-
   void *lockedPtr = nullptr;
-  if (!is_locked(lockingPtr, &err, &lockedPtr)) {
-    if (err != HSA_STATUS_SUCCESS)
-      return err;
-    *user_locked = false;
+  hsa_status_t err = is_locked(lockingPtr, &lockedPtr);
+  bool HostPtrIsLocked = true;
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+  if (!lockedPtr) { // not locked
+    HostPtrIsLocked = false;
     hsa_agent_t agents[1] = {agent};
-    err =
-      hsa_amd_memory_lock(lockingPtr, size, agents, 1, (void **)&lockedPtr);
+    err = hsa_amd_memory_lock(lockingPtr, size, agents, /*num_agent=*/1,
+                              (void **)&lockedPtr);
     if (err != HSA_STATUS_SUCCESS)
       return err;
     DP("locking_async_memcpy: lockingPtr=%p lockedPtr=%p Size = %lu\n",
        lockingPtr, lockedPtr, size);
-  } else
+  } else {
     *user_locked = true;
+  }
 
   switch (direction) {
   case H2D:
@@ -140,8 +143,9 @@ static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
     break;
   }
 
-  if (err != HSA_STATUS_SUCCESS) {
+  if (err != HSA_STATUS_SUCCESS && !HostPtrIsLocked) {
     // do not leak locked host pointers, but discard potential error message
+    // because the initial error was in the copy function
     hsa_amd_memory_unlock(lockingPtr);
     return err;
   }

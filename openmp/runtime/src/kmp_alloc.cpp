@@ -1380,7 +1380,6 @@ void __kmp_init_target_mem() {
       kmp_target_alloc_host && kmp_target_alloc_shared &&
       kmp_target_alloc_device && kmp_target_free_host &&
       kmp_target_free_shared && kmp_target_free_device;
-
 }
 
 omp_memspace_handle_t
@@ -1413,6 +1412,10 @@ void __kmpc_destroy_memory_space(omp_memspace_handle_t ms) {
   kmp_memspace_t *ms_t = RCAST(kmp_memspace_t *, ms);
   __kmp_free(ms_t->devids);
   __kmp_free(ms_t);
+
+  // lock/pin and unlock/unpin target calls
+  *(void **)(&kmp_target_lock_mem) = KMP_DLSYM("llvm_omp_target_lock_mem");
+  *(void **)(&kmp_target_unlock_mem) = KMP_DLSYM("llvm_omp_target_unlock_mem");
 }
 
 omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,

@@ -44,8 +44,7 @@ struct RTLInfoTy {
   typedef int32_t(number_of_team_procs_ty)(int32_t);
   typedef __tgt_target_table *(load_binary_ty)(int32_t, void *);
   typedef void *(data_alloc_ty)(int32_t, int64_t, void *, int32_t);
-  typedef void *(data_lock_ty)(int32_t, void *, int64_t);
-  typedef void *(data_unlock_ty)(int32_t, void *);
+
   typedef int32_t(data_submit_ty)(int32_t, void *, void *, int64_t);
   typedef int32_t(data_submit_async_ty)(int32_t, void *, void *, int64_t,
                                         __tgt_async_info *);
@@ -85,6 +84,8 @@ struct RTLInfoTy {
   typedef int32_t(init_async_info_ty)(int32_t, __tgt_async_info **);
   typedef int64_t(init_device_into_ty)(int64_t, __tgt_device_info *,
                                        const char **);
+  typedef int32_t(data_lock_ty)(int32_t, void *, int64_t, void **);
+  typedef int32_t(data_unlock_ty)(int32_t, void *);
 
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
