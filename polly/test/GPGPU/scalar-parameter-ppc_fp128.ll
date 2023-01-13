@@ -2,9 +2,9 @@
 
 ; XFAIL: *
 
-; REQUIRES: pollyacc,nvptx
+; REQUIRES: pollyacc, target=nvptx{{.*}}
 
-; This fails today with "type mismatch between callee prototype and arguments"
+; This fails today with "LowerFormalArguments didn't emit the correct number of values!"
 
 ;    void foo(fp128 A[], fp128 b) {
 ;      for (long i = 0; i < 1024; i++)
