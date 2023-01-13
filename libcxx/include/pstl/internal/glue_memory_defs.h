@@ -15,8 +15,7 @@
 
 _PSTL_HIDE_FROM_ABI_PUSH
 
-namespace std
-{
+namespace std {
 
 // [uninitialized.copy]
 

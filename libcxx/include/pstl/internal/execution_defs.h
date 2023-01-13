@@ -16,31 +16,20 @@
 
 _PSTL_HIDE_FROM_ABI_PUSH
 
-namespace __pstl
-{
-namespace execution
-{
-inline namespace v1
-{
+namespace __pstl {
+namespace execution {
+inline namespace v1 {
 
 // 2.4, Sequential execution policy
-class sequenced_policy
-{
-};
+class sequenced_policy {};
 
 // 2.5, Parallel execution policy
-class parallel_policy
-{
-};
+class parallel_policy {};
 
 // 2.6, Parallel+Vector execution policy
-class parallel_unsequenced_policy
-{
-};
+class parallel_unsequenced_policy {};
 
-class unsequenced_policy
-{
-};
+class unsequenced_policy {};
 
 // 2.8, Execution policy objects
 constexpr sequenced_policy seq{};
@@ -50,26 +39,16 @@ constexpr unsequenced_policy unseq{};
 
 // 2.3, Execution policy type trait
 template <class T>
-struct is_execution_policy : std::false_type
-{
-};
+struct is_execution_policy : std::false_type {};
 
 template <>
-struct is_execution_policy<__pstl::execution::sequenced_policy> : std::true_type
-{
-};
+struct is_execution_policy<__pstl::execution::sequenced_policy> : std::true_type {};
 template <>
-struct is_execution_policy<__pstl::execution::parallel_policy> : std::true_type
-{
-};
+struct is_execution_policy<__pstl::execution::parallel_policy> : std::true_type {};
 template <>
-struct is_execution_policy<__pstl::execution::parallel_unsequenced_policy> : std::true_type
-{
-};
+struct is_execution_policy<__pstl::execution::parallel_unsequenced_policy> : std::true_type {};
 template <>
-struct is_execution_policy<__pstl::execution::unsequenced_policy> : std::true_type
-{
-};
+struct is_execution_policy<__pstl::execution::unsequenced_policy> : std::true_type {};
 
 #if defined(_PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT)
 template <class T>
@@ -79,8 +58,7 @@ constexpr bool is_execution_policy_v = __pstl::execution::is_execution_policy<T>
 } // namespace v1
 } // namespace execution
 
-namespace __internal
-{
+namespace __internal {
 template <class ExecPolicy, class T>
 using __enable_if_execution_policy =
     typename std::enable_if<__pstl::execution::is_execution_policy<typename std::decay<ExecPolicy>::type>::value,
