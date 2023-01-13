@@ -146,6 +146,8 @@ struct LowerGpuOpsToROCDLOpsPass
             case gpu::AddressSpace::Private:
               return 5;
             }
+            llvm_unreachable("unknown address space enum value");
+            return 0;
           });
       ConversionTarget target(getContext());
       gpu::populateLowerMemorySpaceOpLegality(target);
