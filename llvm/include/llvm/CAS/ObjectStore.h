@@ -155,9 +155,6 @@ public:
   virtual Error validate(const CASID &ID) = 0;
 
 protected:
-  /// Get a Ref from Handle.
-  virtual ObjectRef getReference(ObjectHandle Handle) const = 0;
-
   /// Load the object referenced by \p Ref.
   ///
   /// Errors if the object cannot be loaded.
@@ -198,8 +195,6 @@ protected:
   /// Read all the refs from object in a SmallVector.
   virtual void readRefs(ObjectHandle Node,
                         SmallVectorImpl<ObjectRef> &Refs) const;
-
-  Expected<ObjectProxy> getProxy(Expected<ObjectHandle> Ref);
 
   /// Allow ObjectStore implementations to create internal handles.
 #define MAKE_CAS_HANDLE_CONSTRUCTOR(HandleKind)                                \
@@ -280,7 +275,7 @@ public:
   const ObjectStore &getCAS() const { return *CAS; }
   ObjectStore &getCAS() { return *CAS; }
   CASID getID() const { return CAS->getID(H); }
-  ObjectRef getRef() const { return CAS->getReference(H); }
+  ObjectRef getRef() const { return Ref; }
   size_t getNumReferences() const { return CAS->getNumRefs(H); }
   ObjectRef getReference(size_t I) const { return CAS->readRef(H, I); }
 
@@ -321,14 +316,16 @@ public:
 public:
   ObjectProxy() = delete;
 
-  static ObjectProxy load(ObjectStore &CAS, ObjectHandle Node) {
-    return ObjectProxy(CAS, Node);
+  static ObjectProxy load(ObjectStore &CAS, ObjectRef Ref, ObjectHandle Node) {
+    return ObjectProxy(CAS, Ref, Node);
   }
 
 private:
-  ObjectProxy(ObjectStore &CAS, ObjectHandle H) : CAS(&CAS), H(H) {}
+  ObjectProxy(ObjectStore &CAS, ObjectRef Ref, ObjectHandle H)
+      : CAS(&CAS), Ref(Ref), H(H) {}
 
   ObjectStore *CAS;
+  ObjectRef Ref;
   ObjectHandle H;
 };
 

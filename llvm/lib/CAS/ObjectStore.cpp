@@ -80,21 +80,15 @@ Expected<ObjectProxy> ObjectStore::getProxy(const CASID &ID) {
   if (!Ref)
     return createUnknownObjectError(ID);
 
-  Optional<ObjectHandle> H;
-  if (Error E = load(*Ref).moveInto(H))
-    return std::move(E);
-
-  return ObjectProxy::load(*this, *H);
+  return getProxy(*Ref);
 }
 
 Expected<ObjectProxy> ObjectStore::getProxy(ObjectRef Ref) {
-  return getProxy(load(Ref));
-}
+  Optional<ObjectHandle> H;
+  if (Error E = load(Ref).moveInto(H))
+    return std::move(E);
 
-Expected<ObjectProxy> ObjectStore::getProxy(Expected<ObjectHandle> H) {
-  if (!H)
-    return H.takeError();
-  return ObjectProxy::load(*this, *H);
+  return ObjectProxy::load(*this, Ref, *H);
 }
 
 Error ObjectStore::createUnknownObjectError(const CASID &ID) {

@@ -823,9 +823,6 @@ public:
   }
 
   Optional<ObjectRef> getReference(const CASID &ID) const final;
-  ObjectRef getReference(ObjectHandle Handle) const final {
-    return getExternalReference(getInternalHandle(Handle).getRef());
-  }
 
   OnDiskHashMappedTrie::const_pointer
   getInternalIndexPointer(InternalRef Ref) const;

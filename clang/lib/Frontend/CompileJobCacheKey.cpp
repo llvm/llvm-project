@@ -188,15 +188,11 @@ clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
   return createCompileJobCacheKeyImpl(CAS, Diags, std::move(CI));
 }
 
-static Error printFileSystem(ObjectStore &CAS, ObjectRef Ref, raw_ostream &OS) {
-  Expected<ObjectProxy> Root = CAS.getProxy(Ref);
-  if (!Root)
-    return Root.takeError();
-
+static Error printFileSystem(ObjectStore &CAS, ObjectRef Root,
+                             raw_ostream &OS) {
   TreeSchema Schema(CAS);
   return Schema.walkFileTreeRecursively(
-      CAS, *Root,
-      [&](const NamedTreeEntry &Entry, Optional<TreeProxy> Tree) {
+      CAS, Root, [&](const NamedTreeEntry &Entry, Optional<TreeProxy> Tree) {
         if (Entry.getKind() != TreeEntry::Tree || Tree->empty()) {
           OS << "\n  ";
           Entry.print(OS, CAS);
