@@ -74,12 +74,10 @@ define i16 @sel_true_cond_extra_use(i16 %x) {
   ret i16 %sel
 }
 
-; TODO: We could handle this case by raising the limit on the number of
-; instructions we look through.
 define i16 @sel_true_cond_chain_speculatable(i16 %x) {
 ; CHECK-LABEL: @sel_true_cond_chain_speculatable(
-; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[X:%.*]], i16 1)
-; CHECK-NEXT:    [[EXTRA:%.*]] = mul i16 [[SUB]], 3
+; CHECK-NEXT:    [[SUB1:%.*]] = add nuw i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[EXTRA:%.*]] = mul i16 [[SUB1]], 3
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[X]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[EXTRA]], i16 42
 ; CHECK-NEXT:    ret i16 [[SEL]]
@@ -106,6 +104,8 @@ define i16 @sel_true_cond_chain_non_speculatable(i16 %x) {
   ret i16 %sel
 }
 
+; TODO: We could handle this case by raising the limit on the number of
+; instructions we look through.
 define i16 @sel_true_cond_longer_chain(i16 %x) {
 ; CHECK-LABEL: @sel_true_cond_longer_chain(
 ; CHECK-NEXT:    [[SUB:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[X:%.*]], i16 1)
