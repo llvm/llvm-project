@@ -300,7 +300,7 @@ public:
         for (unsigned i = 0; i < NumSrcs; ++i)
           SrcRegs[i] = SrcMerge->getSourceReg(i);
 
-        Builder.buildMergeLikeInstr(DstReg, SrcRegs);
+        Builder.buildMergeValues(DstReg, SrcRegs);
         UpdatedDefs.push_back(DstReg);
       } else {
         // Unable to combine
