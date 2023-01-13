@@ -720,8 +720,8 @@ define i64 @abs_i64(i64 %x) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    snez a2, a0
 ; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    add a1, a1, a2
-; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    sub a1, a2, a1
 ; CHECK-NEXT:  .LBB19_2:
 ; CHECK-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)

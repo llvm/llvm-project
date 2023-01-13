@@ -712,8 +712,8 @@ bool TargetInstrInfo::hasReassociableOperands(
   if (Op2.isReg() && Register::isVirtualRegister(Op2.getReg()))
     MI2 = MRI.getUniqueVRegDef(Op2.getReg());
 
-  // And they need to be in the trace (otherwise, they won't have a depth).
-  return MI1 && MI2 && MI1->getParent() == MBB && MI2->getParent() == MBB;
+  // And at least one operand must be defined in MBB.
+  return MI1 && MI2 && (MI1->getParent() == MBB || MI2->getParent() == MBB);
 }
 
 bool TargetInstrInfo::areOpcodesEqualOrInverse(unsigned Opcode1,
@@ -1041,6 +1041,10 @@ void TargetInstrInfo::genAlternativeCodeSequence(
   default:
     break;
   }
+
+  // Don't reassociate if Prev and Root are in different blocks.
+  if (Prev->getParent() != Root.getParent())
+    return;
 
   assert(Prev && "Unknown pattern for machine combiner");
 
