@@ -188,11 +188,6 @@ Type *Argument::getPointeeInMemoryValueType() const {
   return getMemoryParamAllocType(ParamAttrs);
 }
 
-uint64_t Argument::getParamAlignment() const {
-  assert(getType()->isPointerTy() && "Only pointers have alignments");
-  return getParent()->getParamAlignment(getArgNo());
-}
-
 MaybeAlign Argument::getParamAlign() const {
   assert(getType()->isPointerTy() && "Only pointers have alignments");
   return getParent()->getParamAlign(getArgNo());

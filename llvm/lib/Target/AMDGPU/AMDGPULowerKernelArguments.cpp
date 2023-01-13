@@ -200,13 +200,11 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
                                                           DerefOrNullBytes))));
       }
 
-      unsigned ParamAlign = Arg.getParamAlignment();
-      if (ParamAlign != 0) {
+      if (MaybeAlign ParamAlign = Arg.getParamAlign()) {
         Load->setMetadata(
-          LLVMContext::MD_align,
-          MDNode::get(Ctx,
-                      MDB.createConstant(ConstantInt::get(Builder.getInt64Ty(),
-                                                          ParamAlign))));
+            LLVMContext::MD_align,
+            MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                 Builder.getInt64Ty(), ParamAlign->value()))));
       }
     }
 
