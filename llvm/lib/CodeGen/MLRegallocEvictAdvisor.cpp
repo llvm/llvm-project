@@ -610,7 +610,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       return false;
     InterferingIntervals.append(IFIntervals.begin(), IFIntervals.end());
     for (const LiveInterval *Intf : reverse(IFIntervals)) {
-      assert(Register::isVirtualRegister(Intf->reg()) &&
+      assert(Intf->reg().isVirtual() &&
              "Only expecting virtual register interference from query");
       // This is the same set of legality checks as in the default case: don't
       // try to evict fixed regs or 'done' ones. Also don't break cascades,

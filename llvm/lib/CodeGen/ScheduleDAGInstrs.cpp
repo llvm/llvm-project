@@ -205,9 +205,9 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
     for (const MachineOperand &MO : ExitMI->operands()) {
       if (!MO.isReg() || MO.isDef()) continue;
       Register Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg)) {
+      if (Reg.isPhysical()) {
         Uses.insert(PhysRegSUOper(&ExitSU, -1, Reg));
-      } else if (Register::isVirtualRegister(Reg) && MO.readsReg()) {
+      } else if (Reg.isVirtual() && MO.readsReg()) {
         addVRegUseDeps(&ExitSU, ExitMI->getOperandNo(&MO));
       }
     }
@@ -839,9 +839,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (!MO.isReg() || !MO.isDef())
         continue;
       Register Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg)) {
+      if (Reg.isPhysical()) {
         addPhysRegDeps(SU, j);
-      } else if (Register::isVirtualRegister(Reg)) {
+      } else if (Reg.isVirtual()) {
         HasVRegDef = true;
         addVRegDefDeps(SU, j);
       }
@@ -856,9 +856,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       if (!MO.isReg() || !MO.isUse())
         continue;
       Register Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg)) {
+      if (Reg.isPhysical()) {
         addPhysRegDeps(SU, j);
-      } else if (Register::isVirtualRegister(Reg) && MO.readsReg()) {
+      } else if (Reg.isVirtual() && MO.readsReg()) {
         addVRegUseDeps(SU, j);
       }
     }
