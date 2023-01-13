@@ -681,7 +681,7 @@ void LazyInitialize(ThreadState *thr) {
   // If we can use .preinit_array, assume that __tsan_init
   // called from .preinit_array initializes runtime before
   // any instrumented code except ANDROID.
-#if (!SANITIZER_CAN_USE_PREINIT_ARRAY || defined(__ANDROID__))
+#if (!SANITIZER_CAN_USE_PREINIT_ARRAY || defined(SANITIZER_SHARED))
   if (UNLIKELY(!is_initialized))
     Initialize(thr);
 #endif
