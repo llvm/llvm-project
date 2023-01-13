@@ -7,7 +7,7 @@ declare void @bar()
 define i32 @foo() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    call void @bar() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -24,3 +24,6 @@ lpad:
 }
 
 declare i32 @__gxx_personality_v0(i32, i64, ptr, ptr)
+;.
+; CHECK: attributes #[[ATTR0]] = { nounwind }
+;.

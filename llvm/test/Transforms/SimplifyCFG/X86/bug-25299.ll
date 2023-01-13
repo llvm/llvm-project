@@ -9,10 +9,10 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @f(i1 %B) personality i1 undef {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    call void @g() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[CONTINUE:%.*]]
 ; CHECK:       continue:
-; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    call void @g() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[CONTINUE]]
 ;
 entry:
@@ -42,3 +42,6 @@ cleanup2:                                         ; preds = %continue
 }
 
 declare void @g()
+;.
+; CHECK: attributes #[[ATTR0]] = { nounwind }
+;.
