@@ -42,7 +42,9 @@ public:
   /// Simplify the operations within the given regions.
   bool simplify(MutableArrayRef<Region> regions);
 
-  /// Add the given operation to the worklist.
+  /// Add the given operation to the worklist. Parent ops may or may not be
+  /// added to the worklist, depending on the type of rewrite driver. By
+  /// default, parent ops are added.
   virtual void addToWorklist(Operation *op);
 
   /// Pop the next operation from the worklist.
@@ -56,6 +58,9 @@ public:
   void finalizeRootUpdate(Operation *op) override;
 
 protected:
+  /// Add the given operation to the worklist.
+  void addSingleOpToWorklist(Operation *op);
+
   // Implement the hook for inserting operations, and make sure that newly
   // inserted ops are added to the worklist for processing.
   void notifyOperationInserted(Operation *op) override;
@@ -101,6 +106,10 @@ protected:
   GreedyRewriteConfig config;
 
 private:
+  /// Only ops within this scope are simplified. This is set at the beginning
+  /// of `simplify()` to the current scope the rewriter operates on.
+  DenseSet<Region *> scope;
+
 #ifndef NDEBUG
   /// A logger used to emit information during the application process.
   llvm::ScopedPrinter logger{llvm::dbgs()};
@@ -119,6 +128,9 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
 }
 
 bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
+  for (Region &r : regions)
+    scope.insert(&r);
+
 #ifndef NDEBUG
   const char *logLineComment =
       "//===-------------------------------------------===//\n";
@@ -306,6 +318,24 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
 }
 
 void GreedyPatternRewriteDriver::addToWorklist(Operation *op) {
+  // Gather potential ancestors while looking for a "scope" parent region.
+  SmallVector<Operation *, 8> ancestors;
+  ancestors.push_back(op);
+  while (Region *region = op->getParentRegion()) {
+    if (scope.contains(region)) {
+      // All gathered ops are in fact ancestors.
+      for (Operation *op : ancestors)
+        addSingleOpToWorklist(op);
+      break;
+    }
+    op = region->getParentOp();
+    if (!op)
+      break;
+    ancestors.push_back(op);
+  }
+}
+
+void GreedyPatternRewriteDriver::addSingleOpToWorklist(Operation *op) {
   // Check to see if the worklist already contains this op.
   if (worklistMap.count(op))
     return;
@@ -540,7 +570,8 @@ namespace {
 /// This is a specialized GreedyPatternRewriteDriver to apply patterns and
 /// perform folding for a supplied set of ops. It repeatedly simplifies while
 /// restricting the rewrites to only the provided set of ops or optionally
-/// to those directly affected by it (result users or operand providers).
+/// to those directly affected by it (result users or operand providers). Parent
+/// ops are not considered.
 class MultiOpPatternRewriteDriver : public GreedyPatternRewriteDriver {
 public:
   explicit MultiOpPatternRewriteDriver(MLIRContext *ctx,
@@ -553,7 +584,7 @@ public:
 
   void addToWorklist(Operation *op) override {
     if (!strictMode || strictModeFilteredOps.contains(op))
-      GreedyPatternRewriteDriver::addToWorklist(op);
+      GreedyPatternRewriteDriver::addSingleOpToWorklist(op);
   }
 
 private:

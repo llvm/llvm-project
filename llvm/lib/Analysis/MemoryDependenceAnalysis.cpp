@@ -76,9 +76,9 @@ static cl::opt<unsigned> BlockScanLimit(
              "dependency analysis (default = 100)"));
 
 static cl::opt<unsigned>
-    BlockNumberLimit("memdep-block-number-limit", cl::Hidden, cl::init(1000),
+    BlockNumberLimit("memdep-block-number-limit", cl::Hidden, cl::init(200),
                      cl::desc("The number of blocks to scan during memory "
-                              "dependency analysis (default = 1000)"));
+                              "dependency analysis (default = 200)"));
 
 // Limit on the number of memdep results to process.
 static const unsigned int NumResultsLimit = 100;

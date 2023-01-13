@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -test-patterns="max-iterations=1" | FileCheck %s
+// RUN: mlir-opt %s -test-patterns="max-iterations=1" \
+// RUN:     -allow-unregistered-dialect --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @add_to_worklist_after_inplace_update()
 func.func @add_to_worklist_after_inplace_update() {
@@ -8,5 +9,18 @@ func.func @add_to_worklist_after_inplace_update() {
 
   // CHECK: "test.any_attr_of_i32_str"() {attr = 3 : i32} : () -> ()
   "test.any_attr_of_i32_str"() {attr = 0 : i32} : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @add_ancestors_to_worklist()
+func.func @add_ancestors_to_worklist() {
+       // CHECK: "foo.maybe_eligible_op"() {eligible} : () -> index
+  // CHECK-NEXT: "test.one_region_op"()
+  "test.one_region_op"() ({
+    %0 = "foo.maybe_eligible_op" () : () -> (index)
+    "foo.yield"(%0) : (index) -> ()
+  }) {hoist_eligible_ops}: () -> ()
   return
 }

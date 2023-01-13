@@ -167,6 +167,38 @@ struct IncrementIntAttribute : public OpRewritePattern<AnyAttrOfOp> {
   }
 };
 
+/// This patterns adds an "eligible" attribute to "foo.maybe_eligible_op".
+struct MakeOpEligible : public RewritePattern {
+  MakeOpEligible(MLIRContext *context)
+      : RewritePattern("foo.maybe_eligible_op", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (op->hasAttr("eligible"))
+      return failure();
+    rewriter.updateRootInPlace(
+        op, [&]() { op->setAttr("eligible", rewriter.getUnitAttr()); });
+    return success();
+  }
+};
+
+/// This pattern hoists eligible ops out of a "test.one_region_op".
+struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
+  using OpRewritePattern<test::OneRegionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(test::OneRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *terminator = op.getRegion().front().getTerminator();
+    Operation *toBeHoisted = terminator->getOperands()[0].getDefiningOp();
+    if (toBeHoisted->getParentOp() != op)
+      return failure();
+    if (!toBeHoisted->hasAttr("eligible"))
+      return failure();
+    toBeHoisted->moveBefore(op);
+    return success();
+  }
+};
+
 struct TestPatternDriver
     : public PassWrapper<TestPatternDriver, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
@@ -183,7 +215,8 @@ struct TestPatternDriver
     // Verify named pattern is generated with expected name.
     patterns.add<FoldingPattern, TestNamedPatternRule,
                  FolderInsertBeforePreviouslyFoldedConstantPattern,
-                 FolderCommutativeOp2WithConstant>(&getContext());
+                 FolderCommutativeOp2WithConstant, HoistEligibleOps,
+                 MakeOpEligible>(&getContext());
 
     // Additional patterns for testing the GreedyPatternRewriteDriver.
     patterns.insert<IncrementIntAttribute<3>>(&getContext());

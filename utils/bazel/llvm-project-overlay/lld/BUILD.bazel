@@ -214,6 +214,7 @@ cc_library(
         "//libunwind:unwind_headers_only",
         "//llvm:BinaryFormat",
         "//llvm:BitReader",
+        "//llvm:BitWriter",
         "//llvm:Core",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
