@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
 ; Check that invariant loads from the global addrspace are lowered to
 ; ld.global.nc.
