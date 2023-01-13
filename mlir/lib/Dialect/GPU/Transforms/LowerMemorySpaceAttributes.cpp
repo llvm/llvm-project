@@ -172,6 +172,8 @@ public:
           case AddressSpace::Private:
             return privateAddrSpace;
           }
+          llvm_unreachable("unknown address space enum value");
+          return 0;
         });
     RewritePatternSet patterns(context);
     populateMemorySpaceLoweringPatterns(typeConverter, patterns);
