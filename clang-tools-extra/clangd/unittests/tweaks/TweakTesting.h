@@ -25,9 +25,9 @@ namespace clangd {
 // Fixture base for testing tweaks. Intended to be subclassed for each tweak.
 //
 // Usage:
-// TWEAK_TEST(ExpandAutoType);
+// TWEAK_TEST(ExpandDeducedType);
 //
-// TEST_F(ExpandAutoTypeTest, ShortensTypes) {
+// TEST_F(ExpandDeducedTypeTest, ShortensTypes) {
 //   Header = R"cpp(
 //     namespace foo { template<typename> class X{}; }
 //     using namespace foo;

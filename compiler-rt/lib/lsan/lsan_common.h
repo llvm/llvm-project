@@ -106,8 +106,7 @@ void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches);
 void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg);
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs);
-void ReportUnsuspendedThreadsLocked(InternalMmapVector<tid_t> *threads);
-void FinishThreadLocked(u32 tid);
+void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads);
 
 //// --------------------------------------------------------------------------
 //// Allocator prototypes.
@@ -267,7 +266,6 @@ void DoLeakCheck();
 void DoRecoverableLeakCheckVoid();
 void DisableCounterUnderflow();
 bool DisabledInThisThread();
-void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg);
 
 // Used to implement __lsan::ScopedDisabler.
 void DisableInThisThread();

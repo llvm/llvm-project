@@ -1906,46 +1906,46 @@ to execute in a 64-bit process address space, then the 64-bit process address
 space register definitions are used. The ``amdgcn`` target only supports the
 64-bit process address space.
 
-.. _amdgpu-dwarf-address-class-identifier:
+.. _amdgpu-dwarf-memory-space-identifier:
 
-Address Class Identifier
-------------------------
+Memory Space Identifier
+-----------------------
 
-The DWARF address class represents the source language memory space. See DWARF
+The DWARF memory space represents the source language memory space. See DWARF
 Version 5 section 2.12 which is updated by the *DWARF Extensions For
-Heterogeneous Debugging* section :ref:`amdgpu-dwarf-segment_addresses`.
+Heterogeneous Debugging* section :ref:`amdgpu-dwarf-memory-spaces`.
 
-The DWARF address class mapping used for AMDGPU is defined in
-:ref:`amdgpu-dwarf-address-class-mapping-table`.
+The DWARF memory space mapping used for AMDGPU is defined in
+:ref:`amdgpu-dwarf-memory-space-mapping-table`.
 
-.. table:: AMDGPU DWARF Address Class Mapping
-   :name: amdgpu-dwarf-address-class-mapping-table
+.. table:: AMDGPU DWARF Memory Space Mapping
+   :name: amdgpu-dwarf-memory-space-mapping-table
 
-   ========================= ====== =================
-   DWARF                            AMDGPU
-   -------------------------------- -----------------
-   Address Class Name        Value  Address Space
-   ========================= ====== =================
-   ``DW_ADDR_none``          0x0000 Generic (Flat)
-   ``DW_ADDR_LLVM_global``   0x0001 Global
-   ``DW_ADDR_LLVM_constant`` 0x0002 Global
-   ``DW_ADDR_LLVM_group``    0x0003 Local (group/LDS)
-   ``DW_ADDR_LLVM_private``  0x0004 Private (Scratch)
-   ``DW_ADDR_AMDGPU_region`` 0x8000 Region (GDS)
-   ========================= ====== =================
+   =========================== ====== =================
+   DWARF                              AMDGPU
+   ---------------------------------- -----------------
+   Memory Space Name           Value  Memory Space
+   =========================== ====== =================
+   ``DW_MSPACE_LLVM_none``     0x0000 Generic (Flat)
+   ``DW_MSPACE_LLVM_global``   0x0001 Global
+   ``DW_MSPACE_LLVM_constant`` 0x0002 Global
+   ``DW_MSPACE_LLVM_group``    0x0003 Local (group/LDS)
+   ``DW_MSPACE_LLVM_private``  0x0004 Private (Scratch)
+   ``DW_MSPACE_AMDGPU_region`` 0x8000 Region (GDS)
+   =========================== ====== =================
 
-The DWARF address class values defined in the *DWARF Extensions For
-Heterogeneous Debugging* section :ref:`amdgpu-dwarf-segment_addresses` are used.
+The DWARF memory space values defined in the *DWARF Extensions For Heterogeneous
+Debugging* section :ref:`amdgpu-dwarf-memory-spaces` are used.
 
 In addition, ``DW_ADDR_AMDGPU_region`` is encoded as a vendor extension. This is
 available for use for the AMD extension for access to the hardware GDS memory
 which is scratchpad memory allocated per device.
 
-For AMDGPU if no ``DW_AT_address_class`` attribute is present, then the default
-address class of ``DW_ADDR_none`` is used.
+For AMDGPU if no ``DW_AT_LLVM_memory_space`` attribute is present, then the
+default memory space of ``DW_MSPACE_LLVM_none`` is used.
 
 See :ref:`amdgpu-dwarf-address-space-identifier` for information on the AMDGPU
-mapping of DWARF address classes to DWARF address spaces, including address size
+mapping of DWARF memory spaces to DWARF address spaces, including address size
 and NULL value.
 
 .. _amdgpu-dwarf-address-space-identifier:
@@ -1955,7 +1955,7 @@ Address Space Identifier
 
 DWARF address spaces correspond to target architecture specific linear
 addressable memory areas. See DWARF Version 5 section 2.12 and *DWARF Extensions
-For Heterogeneous Debugging* section :ref:`amdgpu-dwarf-segment_addresses`.
+For Heterogeneous Debugging* section :ref:`amdgpu-dwarf-address-spaces`.
 
 The DWARF address space mapping used for AMDGPU is defined in
 :ref:`amdgpu-dwarf-address-space-mapping-table`.
@@ -1963,30 +1963,30 @@ The DWARF address space mapping used for AMDGPU is defined in
 .. table:: AMDGPU DWARF Address Space Mapping
    :name: amdgpu-dwarf-address-space-mapping-table
 
-   ======================================= ===== ======= ======== ================= =======================
-   DWARF                                                          AMDGPU            Notes
-   --------------------------------------- ----- ---------------- ----------------- -----------------------
-   Address Space Name                      Value Address Bit Size Address Space
-   --------------------------------------- ----- ------- -------- ----------------- -----------------------
+   ======================================= ===== ======= ======== ===================== =======================
+   DWARF                                                          AMDGPU                Notes
+   --------------------------------------- ----- ---------------- --------------------- -----------------------
+   Address Space Name                      Value Address Bit Size LLVM IR Address Space
+   --------------------------------------- ----- ------- -------- --------------------- -----------------------
    ..                                            64-bit  32-bit
                                                  process process
                                                  address address
                                                  space   space
-   ======================================= ===== ======= ======== ================= =======================
-   ``DW_ASPACE_none``                      0x00  64      32       Global            *default address space*
+   ======================================= ===== ======= ======== ===================== =======================
+   ``DW_ASPACE_LLVM_none``                 0x00  64      32       Global                *default address space*
    ``DW_ASPACE_AMDGPU_generic``            0x01  64      32       Generic (Flat)
    ``DW_ASPACE_AMDGPU_region``             0x02  32      32       Region (GDS)
    ``DW_ASPACE_AMDGPU_local``              0x03  32      32       Local (group/LDS)
    *Reserved*                              0x04
-   ``DW_ASPACE_AMDGPU_private_lane``       0x05  32      32       Private (Scratch) *focused lane*
-   ``DW_ASPACE_AMDGPU_private_wave``       0x06  32      32       Private (Scratch) *unswizzled wavefront*
-   ======================================= ===== ======= ======== ================= =======================
+   ``DW_ASPACE_AMDGPU_private_lane``       0x05  32      32       Private (Scratch)     *focused lane*
+   ``DW_ASPACE_AMDGPU_private_wave``       0x06  32      32       Private (Scratch)     *unswizzled wavefront*
+   ======================================= ===== ======= ======== ===================== =======================
 
-See :ref:`amdgpu-address-spaces` for information on the AMDGPU address spaces
-including address size and NULL value.
+See :ref:`amdgpu-address-spaces` for information on the AMDGPU LLVM IR address
+spaces including address size and NULL value.
 
-The ``DW_ASPACE_none`` address space is the default target architecture address
-space used in DWARF operations that do not specify an address space. It
+The ``DW_ASPACE_LLVM_none`` address space is the default target architecture
+address space used in DWARF operations that do not specify an address space. It
 therefore has to map to the global address space so that the ``DW_OP_addr*`` and
 related operations can refer to addresses in the program code.
 

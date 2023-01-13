@@ -22,6 +22,7 @@ unittest("ClangTidyTests") {
     "//clang/lib/Tooling/Core",
     "//clang/lib/Tooling/Transformer",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Annotations",
     "//llvm/lib/Testing/Support",
   ]
   include_dirs = [ "//clang-tools-extra/clang-tidy" ]

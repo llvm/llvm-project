@@ -668,18 +668,6 @@ void LeakSuppressionContext::PrintMatchedSuppressions() {
   Printf("%s\n\n", line);
 }
 
-void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
-  const InternalMmapVector<tid_t> &suspended_threads =
-      *(const InternalMmapVector<tid_t> *)arg;
-  if (tctx->status == ThreadStatusRunning) {
-    uptr i = InternalLowerBound(suspended_threads, tctx->os_id);
-    if (i >= suspended_threads.size() || suspended_threads[i] != tctx->os_id)
-      Report(
-          "Running thread %llu was not suspended. False leaks are possible.\n",
-          tctx->os_id);
-  }
-}
-
 #  if SANITIZER_FUCHSIA
 
 // Fuchsia provides a libc interface that guarantees all threads are
@@ -695,7 +683,17 @@ static void ReportUnsuspendedThreads(
     threads[i] = suspended_threads.GetThreadID(i);
 
   Sort(threads.data(), threads.size());
-  ReportUnsuspendedThreadsLocked(&threads);
+
+  InternalMmapVector<tid_t> unsuspended;
+  GetRunningThreadsLocked(&unsuspended);
+
+  for (auto os_id : unsuspended) {
+    uptr i = InternalLowerBound(threads, os_id);
+    if (i >= threads.size() || threads[i] != os_id)
+      Report(
+          "Running thread %zu was not suspended. False leaks are possible.\n",
+          os_id);
+  }
 }
 
 #  endif  // !SANITIZER_FUCHSIA
