@@ -434,6 +434,12 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::x),
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::y),
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::z)};
+  // Replace ids of dimension size 1 by zero to simplify the IR.
+  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  for (size_t i : llvm::seq(size_t(0), globalBlockDims.size())) {
+    if (globalBlockDims[i] == 1)
+      threadOps[i] = zero;
+  }
   IRMapping bvm;
   for (auto [blockIdx, blockDim] :
        llvm::zip(foreachThreadOp.getThreadIndices(), threadMapping)) {
