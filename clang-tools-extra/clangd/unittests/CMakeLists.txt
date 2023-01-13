@@ -5,7 +5,12 @@ set(LLVM_LINK_COMPONENTS
   )
 
 if(CLANG_BUILT_STANDALONE)
-  # LLVMTestingSupport library is needed for clangd tests.
+  # LLVMTestingSupport and LLVMTestingAnnotations are needed for clangd tests.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Annotations
+      AND NOT TARGET LLVMTestingAnnotations)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Annotations
+      lib/Testing/Annotations)
+  endif()
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
       AND NOT TARGET LLVMTestingSupport)
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
@@ -162,6 +167,7 @@ target_link_libraries(ClangdTests
   clangDaemon
   clangdSupport
   clangTidy
+  LLVMTestingAnnotations
   LLVMTestingSupport
   )
 
