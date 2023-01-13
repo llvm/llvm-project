@@ -46,6 +46,7 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackFrameRecognizer.h"
@@ -2356,6 +2357,14 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 
   return m_scratch_type_system_map.GetTypeSystemForLanguage(language, this,
                                                             create_on_demand);
+}
+
+CompilerType Target::GetRegisterType(const std::string &name,
+                                     const lldb_private::RegisterFlags &flags,
+                                     uint32_t byte_size) {
+  RegisterTypeBuilderSP provider = PluginManager::GetRegisterTypeBuilder(*this);
+  assert(provider);
+  return provider->GetRegisterType(name, flags, byte_size);
 }
 
 std::vector<lldb::TypeSystemSP>
