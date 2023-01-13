@@ -38,6 +38,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
