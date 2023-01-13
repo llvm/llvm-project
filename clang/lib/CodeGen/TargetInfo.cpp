@@ -3592,7 +3592,7 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
   // (e.g. i32 and i32) then the resultant struct type ({i32,i32}) won't have
   // the second element at offset 8.  Check for this:
   unsigned LoSize = (unsigned)TD.getTypeAllocSize(Lo);
-  unsigned HiAlign = TD.getABITypeAlignment(Hi);
+  llvm::Align HiAlign = TD.getABITypeAlign(Hi);
   unsigned HiStart = llvm::alignTo(LoSize, HiAlign);
   assert(HiStart != 0 && HiStart <= 8 && "Invalid x86-64 argument pair!");
 
@@ -4169,13 +4169,13 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     // FIXME: Our choice of alignment here and below is probably pessimistic.
     llvm::Value *V = CGF.Builder.CreateAlignedLoad(
         TyLo, CGF.Builder.CreateBitCast(RegLoAddr, PTyLo),
-        CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyLo)));
+        CharUnits::fromQuantity(getDataLayout().getABITypeAlign(TyLo)));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 0));
 
     // Copy the second element.
     V = CGF.Builder.CreateAlignedLoad(
         TyHi, CGF.Builder.CreateBitCast(RegHiAddr, PTyHi),
-        CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyHi)));
+        CharUnits::fromQuantity(getDataLayout().getABITypeAlign(TyHi)));
     CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
     RegAddr = CGF.Builder.CreateElementBitCast(Tmp, LTy);
@@ -11204,7 +11204,7 @@ ABIArgInfo RISCVABIInfo::coerceAndExpandFPCCEligibleStruct(
   }
 
   CharUnits Field2Align =
-      CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(Field2Ty));
+      CharUnits::fromQuantity(getDataLayout().getABITypeAlign(Field2Ty));
   CharUnits Field1End = Field1Off +
       CharUnits::fromQuantity(getDataLayout().getTypeStoreSize(Field1Ty));
   CharUnits Field2OffNoPadNoPack = Field1End.alignTo(Field2Align);
@@ -11967,7 +11967,7 @@ ABIArgInfo LoongArchABIInfo::coerceAndExpandFARsEligibleStruct(
   }
 
   CharUnits Field2Align =
-      CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(Field2Ty));
+      CharUnits::fromQuantity(getDataLayout().getABITypeAlign(Field2Ty));
   CharUnits Field1End =
       Field1Off +
       CharUnits::fromQuantity(getDataLayout().getTypeStoreSize(Field1Ty));

@@ -6208,8 +6208,7 @@ void CGObjCNonFragileABIMac::AddModuleClassList(
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
       CGM.getModule(), Init->getType(), false,
       llvm::GlobalValue::PrivateLinkage, Init, SymbolName);
-  GV->setAlignment(
-      llvm::Align(CGM.getDataLayout().getABITypeAlignment(Init->getType())));
+  GV->setAlignment(CGM.getDataLayout().getABITypeAlign(Init->getType()));
   GV->setSection(SectionName);
   CGM.addCompilerUsedGlobal(GV);
 }
@@ -6441,8 +6440,7 @@ CGObjCNonFragileABIMac::BuildClassObject(const ObjCInterfaceDecl *CI,
 
   if (CGM.getTriple().isOSBinFormatMachO())
     GV->setSection("__DATA, __objc_data");
-  GV->setAlignment(llvm::Align(
-      CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ClassnfABITy)));
+  GV->setAlignment(CGM.getDataLayout().getABITypeAlign(ObjCTypes.ClassnfABITy));
   if (!CGM.getTriple().isOSBinFormatCOFF())
     if (HiddenVisibility)
       GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
@@ -6903,8 +6901,8 @@ CGObjCNonFragileABIMac::EmitIvarOffsetVar(const ObjCInterfaceDecl *ID,
   llvm::GlobalVariable *IvarOffsetGV = ObjCIvarOffsetVariable(ID, Ivar);
   IvarOffsetGV->setInitializer(
       llvm::ConstantInt::get(ObjCTypes.IvarOffsetVarTy, Offset));
-  IvarOffsetGV->setAlignment(llvm::Align(
-      CGM.getDataLayout().getABITypeAlignment(ObjCTypes.IvarOffsetVarTy)));
+  IvarOffsetGV->setAlignment(
+      CGM.getDataLayout().getABITypeAlign(ObjCTypes.IvarOffsetVarTy));
 
   if (!CGM.getTriple().isOSBinFormatCOFF()) {
     // FIXME: This matches gcc, but shouldn't the visibility be set on the use
@@ -7132,8 +7130,8 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
                              ProtocolRef);
   if (!CGM.getTriple().isOSBinFormatMachO())
     PTGV->setComdat(CGM.getModule().getOrInsertComdat(ProtocolRef));
-  PTGV->setAlignment(llvm::Align(
-      CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ProtocolnfABIPtrTy)));
+  PTGV->setAlignment(
+      CGM.getDataLayout().getABITypeAlign(ObjCTypes.ProtocolnfABIPtrTy));
   PTGV->setSection(GetSectionName("__objc_protolist",
                                   "coalesced,no_dead_strip"));
   PTGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
