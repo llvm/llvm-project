@@ -1347,9 +1347,6 @@ void CheckHelper::CheckGeneric(
 void CheckHelper::CheckSpecificsAreDistinguishable(
     const Symbol &generic, const GenericDetails &details) {
   GenericKind kind{details.kind()};
-  if (!kind.IsName()) {
-    return;
-  }
   DistinguishabilityHelper helper{context_};
   for (const Symbol &specific : details.specificProcs()) {
     if (const Procedure *procedure{Characterize(specific)}) {
@@ -2206,8 +2203,7 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
       SayWithDeclaration(proc, definedIoType.proc.name(),
           "Derived type '%s' already has defined input/output procedure"
           " '%s'"_err_en_US,
-          derivedType.name(),
-          parser::ToUpperCaseLetters(GenericKind::EnumToString(ioKind)));
+          derivedType.name(), GenericKind::AsFortran(ioKind));
       return;
     }
   }
