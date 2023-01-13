@@ -70,14 +70,10 @@ Expected<ObjectProxy> HierarchicalTreeBuilder::create(ObjectStore &CAS) {
   // use a more efficient algorithm to merge contents.
   TreeSchema Schema(CAS);
   for (const auto &TreeContent : TreeContents) {
-    Optional<ObjectProxy> LoadedTree;
-    if (Error E = CAS.getProxy(*TreeContent.getRef()).moveInto(LoadedTree))
-      return std::move(E);
     StringRef Path = TreeContent.getPath();
     Error E = Schema.walkFileTreeRecursively(
-        CAS, *LoadedTree,
-        [&](const NamedTreeEntry &Entry,
-            Optional<TreeProxy> Tree) -> Error {
+        CAS, *TreeContent.getRef(),
+        [&](const NamedTreeEntry &Entry, Optional<TreeProxy> Tree) -> Error {
           if (Entry.getKind() != TreeEntry::Tree) {
             pushImpl(Entry.getRef(), Entry.getKind(), Path + Entry.getName());
             return Error::success();
