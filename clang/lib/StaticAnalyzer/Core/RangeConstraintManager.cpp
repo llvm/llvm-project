@@ -1362,11 +1362,7 @@ private:
 
   template <BinaryOperator::Opcode Op>
   RangeSet VisitBinaryOperator(RangeSet LHS, RangeSet RHS, QualType T) {
-    // We should propagate information about unfeasbility of one of the
-    // operands to the resulting range.
-    if (LHS.isEmpty() || RHS.isEmpty()) {
-      return RangeFactory.getEmptySet();
-    }
+    assert(!LHS.isEmpty() && !RHS.isEmpty());
 
     Range CoarseLHS = fillGaps(LHS);
     Range CoarseRHS = fillGaps(RHS);
@@ -1617,8 +1613,7 @@ template <>
 RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_NE>(RangeSet LHS,
                                                            RangeSet RHS,
                                                            QualType T) {
-
-  assert(!LHS.isEmpty() && !RHS.isEmpty() && "Both ranges should be non-empty");
+  assert(!LHS.isEmpty() && !RHS.isEmpty());
 
   if (LHS.getAPSIntType() == RHS.getAPSIntType()) {
     if (intersect(RangeFactory, LHS, RHS).isEmpty())
@@ -1802,6 +1797,12 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
 RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
                                                     BinaryOperator::Opcode Op,
                                                     RangeSet RHS, QualType T) {
+  // We should propagate information about unfeasbility of one of the
+  // operands to the resulting range.
+  if (LHS.isEmpty() || RHS.isEmpty()) {
+    return RangeFactory.getEmptySet();
+  }
+
   switch (Op) {
   case BO_NE:
     return VisitBinaryOperator<BO_NE>(LHS, RHS, T);
