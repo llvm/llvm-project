@@ -61,6 +61,9 @@ define double @pow_ab_a_reassoc_use(double %a, double %b)  {
   ret double %m
 }
 
+; negative test for:
+; pow(a,b) * 1.0/a --> pow(a, b-1) (requires reassoc)
+
 define double @pow_ab_recip_a(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_recip_a(
 ; CHECK-NEXT:    [[R:%.*]] = fdiv double 1.000000e+00, [[A:%.*]]
@@ -74,10 +77,12 @@ define double @pow_ab_recip_a(double %a, double %b)  {
   ret double %m
 }
 
+; pow(a,b) / a --> pow(a, b-1) (requires reassoc)
+
 define double @pow_ab_recip_a_reassoc(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_recip_a_reassoc(
-; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
-; CHECK-NEXT:    [[M:%.*]] = fdiv reassoc double [[P]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc double [[B:%.*]], -1.000000e+00
+; CHECK-NEXT:    [[M:%.*]] = call reassoc double @llvm.pow.f64(double [[A:%.*]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[M]]
 ;
   %r = fdiv double 1.0, %a
@@ -86,10 +91,12 @@ define double @pow_ab_recip_a_reassoc(double %a, double %b)  {
   ret double %m
 }
 
+; pow(a,b) / a --> pow(a, b-1) (requires reassoc)
+
 define double @pow_ab_recip_a_reassoc_commute(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_recip_a_reassoc_commute(
-; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
-; CHECK-NEXT:    [[M:%.*]] = fdiv reassoc double [[P]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc double [[B:%.*]], -1.000000e+00
+; CHECK-NEXT:    [[M:%.*]] = call reassoc double @llvm.pow.f64(double [[A:%.*]], double [[TMP1]])
 ; CHECK-NEXT:    ret double [[M]]
 ;
   %r = fdiv double 1.0, %a
@@ -97,6 +104,8 @@ define double @pow_ab_recip_a_reassoc_commute(double %a, double %b)  {
   %m = fmul reassoc double %p, %r
   ret double %m
 }
+
+; TODO: extra use prevents conversion to fmul, so this needs a different pattern match.
 
 define double @pow_ab_recip_a_reassoc_use1(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_recip_a_reassoc_use1(
@@ -113,6 +122,8 @@ define double @pow_ab_recip_a_reassoc_use1(double %a, double %b)  {
   ret double %m
 }
 
+; negative test - extra pow uses not allowed
+
 define double @pow_ab_recip_a_reassoc_use2(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_recip_a_reassoc_use2(
 ; CHECK-NEXT:    [[P:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
@@ -126,6 +137,8 @@ define double @pow_ab_recip_a_reassoc_use2(double %a, double %b)  {
   call void @use(double %p)
   ret double %m
 }
+
+; negative test - extra pow uses not allowed
 
 define double @pow_ab_recip_a_reassoc_use3(double %a, double %b)  {
 ; CHECK-LABEL: @pow_ab_recip_a_reassoc_use3(
