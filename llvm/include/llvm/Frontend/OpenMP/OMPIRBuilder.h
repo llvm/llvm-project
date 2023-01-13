@@ -776,7 +776,7 @@ public:
                            InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                            bool Tied = true, Value *Final = nullptr,
                            Value *IfCondition = nullptr,
-                           ArrayRef<DependData *> Dependencies = {});
+                           SmallVector<DependData> Dependencies = {});
 
   /// Generator for the taskgroup construct
   ///
