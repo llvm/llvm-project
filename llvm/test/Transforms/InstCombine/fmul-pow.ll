@@ -38,6 +38,9 @@ define double @pow_ab_a_reassoc_commute(double %a, double %b)  {
   ret double %mul
 }
 
+; negative test for:
+; (a**b) * (c**b) --> (a*c) ** b (if mul is reassoc)
+
 define double @pow_ab_pow_cb(double %a, double %b, double %c) {
 ; CHECK-LABEL: @pow_ab_pow_cb(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
@@ -51,11 +54,12 @@ define double @pow_ab_pow_cb(double %a, double %b, double %c) {
   ret double %mul
 }
 
+; (a**b) * (c**b) --> (a*c) ** b
+
 define double @pow_ab_pow_cb_reassoc(double %a, double %b, double %c) {
 ; CHECK-LABEL: @pow_ab_pow_cb_reassoc(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.pow.f64(double [[C:%.*]], double [[B]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc double [[C:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.pow.f64(double [[TMP1]], double [[B:%.*]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
   %1 = call double @llvm.pow.f64(double %a, double %b)
@@ -64,11 +68,13 @@ define double @pow_ab_pow_cb_reassoc(double %a, double %b, double %c) {
   ret double %mul
 }
 
+; (a**b) * (c**b) --> (a*c) ** b
+
 define double @pow_ab_pow_cb_reassoc_use1(double %a, double %b, double %c) {
 ; CHECK-LABEL: @pow_ab_pow_cb_reassoc_use1(
 ; CHECK-NEXT:    [[AB:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
-; CHECK-NEXT:    [[CB:%.*]] = call double @llvm.pow.f64(double [[C:%.*]], double [[B]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[AB]], [[CB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc double [[A]], [[C:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.pow.f64(double [[TMP1]], double [[B]])
 ; CHECK-NEXT:    call void @use(double [[AB]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
@@ -79,11 +85,13 @@ define double @pow_ab_pow_cb_reassoc_use1(double %a, double %b, double %c) {
   ret double %mul
 }
 
+; (a**b) * (c**b) --> (a*c) ** b
+
 define double @pow_ab_pow_cb_reassoc_use2(double %a, double %b, double %c) {
 ; CHECK-LABEL: @pow_ab_pow_cb_reassoc_use2(
-; CHECK-NEXT:    [[AB:%.*]] = call double @llvm.pow.f64(double [[A:%.*]], double [[B:%.*]])
-; CHECK-NEXT:    [[CB:%.*]] = call double @llvm.pow.f64(double [[C:%.*]], double [[B]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc double [[AB]], [[CB]]
+; CHECK-NEXT:    [[CB:%.*]] = call double @llvm.pow.f64(double [[C:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc double [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[MUL:%.*]] = call reassoc double @llvm.pow.f64(double [[TMP1]], double [[B]])
 ; CHECK-NEXT:    call void @use(double [[CB]])
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
@@ -93,6 +101,8 @@ define double @pow_ab_pow_cb_reassoc_use2(double %a, double %b, double %c) {
   call void @use(double %cb)
   ret double %mul
 }
+
+; negative test - too many extra uses
 
 define double @pow_ab_pow_cb_reassoc_use3(double %a, double %b, double %c) {
 ; CHECK-LABEL: @pow_ab_pow_cb_reassoc_use3(
