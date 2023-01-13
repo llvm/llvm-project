@@ -1401,9 +1401,12 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         if (!Expr || !Expr->isEntryValue()) {
           if (TTracker)
             TTracker->recoverAsEntryValue(V, Properties, RegId);
-          else
-            const_cast<MachineInstr *>(&MI)->getOperand(3).setMetadata(
-                DIExpression::prepend(Expr, DIExpression::EntryValue));
+          else {
+            const_cast<MachineInstr *>(&MI)
+                ->getOperand(MI.isDebugValueList() ? 1 : 3)
+                .setMetadata(
+                    DIExpression::prepend(Expr, DIExpression::EntryValue));
+          }
         }
       }
     }
