@@ -32,8 +32,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
+
+#define DEBUG_TYPE "clang-dataflow"
 
 namespace clang {
 namespace dataflow {
@@ -431,6 +433,8 @@ runTypeErasedDataflowAnalysis(
       std::min(RelativeMaxIterations, AbsoluteMaxIterations);
   uint32_t Iterations = 0;
   while (const CFGBlock *Block = Worklist.dequeue()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "Processing Block " << Block->getBlockID() << "\n");
     if (++Iterations > MaxIterations) {
       return llvm::createStringError(std::errc::timed_out,
                                      "maximum number of iterations reached");
@@ -440,8 +444,16 @@ runTypeErasedDataflowAnalysis(
         BlockStates[Block->getBlockID()];
     TypeErasedDataflowAnalysisState NewBlockState =
         transferCFGBlock(*Block, AC);
+    LLVM_DEBUG({
+      llvm::errs() << "New Env:\n";
+      NewBlockState.Env.dump();
+    });
 
     if (OldBlockState) {
+      LLVM_DEBUG({
+        llvm::errs() << "Old Env:\n";
+        OldBlockState->Env.dump();
+      });
       if (isLoopHead(*Block)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
             NewBlockState.Lattice, OldBlockState->Lattice);
