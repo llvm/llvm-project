@@ -14,6 +14,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/Statistic.h"
+#include <optional>
 
 namespace mlir {
 namespace detail {

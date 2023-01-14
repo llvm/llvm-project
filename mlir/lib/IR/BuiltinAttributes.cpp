@@ -21,6 +21,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Endian.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;

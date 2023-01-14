@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
+#include <optional>
 
 namespace mlir {
 namespace func {

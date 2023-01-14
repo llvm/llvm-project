@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;

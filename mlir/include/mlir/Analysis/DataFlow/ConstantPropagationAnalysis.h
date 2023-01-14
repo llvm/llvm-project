@@ -17,6 +17,7 @@
 #define MLIR_ANALYSIS_DATAFLOW_CONSTANTPROPAGATIONANALYSIS_H
 
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include <optional>
 
 namespace mlir {
 namespace dataflow {

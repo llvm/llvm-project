@@ -21,6 +21,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/SMLoc.h"
+#include <optional>
 
 namespace mlir {
 //===----------------------------------------------------------------------===//

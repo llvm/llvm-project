@@ -11,6 +11,7 @@
 #include "PybindUtils.h"
 
 #include <vector>
+#include <optional>
 
 #include "mlir-c/Bindings/Python/Interop.h"
 

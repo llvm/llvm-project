@@ -21,6 +21,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include <gtest/gtest.h>
+#include <optional>
 
 namespace mlir {
 namespace presburger {

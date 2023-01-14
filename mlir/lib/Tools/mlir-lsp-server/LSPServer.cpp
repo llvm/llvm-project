@@ -13,6 +13,7 @@
 #include "Protocol.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 
 #define DEBUG_TYPE "mlir-lsp-server"
 

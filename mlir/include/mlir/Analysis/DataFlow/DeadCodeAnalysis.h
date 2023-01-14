@@ -18,6 +18,7 @@
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include <optional>
 
 namespace mlir {
 

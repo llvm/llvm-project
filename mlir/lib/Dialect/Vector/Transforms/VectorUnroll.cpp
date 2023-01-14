@@ -19,6 +19,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include <numeric>
+#include <optional>
 
 #define DEBUG_TYPE "vector-unrolling"
 

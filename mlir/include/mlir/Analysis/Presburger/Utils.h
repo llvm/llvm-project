@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include <optional>
 
 namespace mlir {
 namespace presburger {

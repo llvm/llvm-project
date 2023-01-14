@@ -17,6 +17,7 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;

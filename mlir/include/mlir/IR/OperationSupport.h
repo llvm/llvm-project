@@ -27,6 +27,7 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <memory>
+#include <optional>
 
 namespace llvm {
 class BitVector;

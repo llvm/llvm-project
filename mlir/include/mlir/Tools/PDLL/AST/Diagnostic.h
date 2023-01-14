@@ -10,6 +10,7 @@
 #define MLIR_TOOLS_PDLL_AST_DIAGNOSTIC_H
 
 #include <string>
+#include <optional>
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"

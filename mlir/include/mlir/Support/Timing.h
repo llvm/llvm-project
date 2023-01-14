@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace mlir {
 

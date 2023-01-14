@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <type_traits>
+#include <optional>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"

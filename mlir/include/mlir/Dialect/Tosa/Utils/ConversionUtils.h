@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/PatternMatch.h"
+#include <optional>
 
 namespace mlir {
 namespace tosa {

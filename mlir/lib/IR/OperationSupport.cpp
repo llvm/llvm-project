@@ -18,6 +18,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Support/SHA1.h"
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 

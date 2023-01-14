@@ -10,6 +10,7 @@
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::scf;

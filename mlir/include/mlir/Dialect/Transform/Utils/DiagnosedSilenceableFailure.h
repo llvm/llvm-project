@@ -14,6 +14,7 @@
 
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
+#include <optional>
 
 #ifndef MLIR_DIALECT_TRANSFORM_UTILS_DIAGNOSEDSILENCEABLEFAILURE_H
 #define MLIR_DIALECT_TRANSFORM_UTILS_DIAGNOSEDSILENCEABLEFAILURE_H

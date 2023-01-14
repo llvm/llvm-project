@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
+#include <optional>
 
 namespace mlir {
 class OperationName;

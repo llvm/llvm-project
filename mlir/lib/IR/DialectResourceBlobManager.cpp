@@ -8,6 +8,7 @@
 
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "llvm/ADT/SmallString.h"
+#include <optional>
 
 using namespace mlir;
 

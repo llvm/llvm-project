@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <utility>
+#include <optional>
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 

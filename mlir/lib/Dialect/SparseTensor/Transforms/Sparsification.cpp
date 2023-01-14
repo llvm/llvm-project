@@ -33,6 +33,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;

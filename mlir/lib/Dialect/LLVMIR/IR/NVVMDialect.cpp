@@ -31,6 +31,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 using namespace mlir;
 using namespace NVVM;

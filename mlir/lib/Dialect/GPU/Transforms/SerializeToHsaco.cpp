@@ -55,6 +55,7 @@
 #include "llvm/Transforms/IPO/Internalize.h"
 
 #include <mutex>
+#include <optional>
 
 using namespace mlir;
 

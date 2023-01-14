@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 
 namespace mlir {
 class DialectRegistry;

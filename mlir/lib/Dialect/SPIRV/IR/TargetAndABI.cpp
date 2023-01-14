@@ -13,6 +13,7 @@
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include <optional>
 
 using namespace mlir;
 

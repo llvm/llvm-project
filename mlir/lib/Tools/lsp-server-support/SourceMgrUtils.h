@@ -16,6 +16,7 @@
 
 #include "Protocol.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 namespace mlir {
 namespace lsp {

@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_AFFINELOOPUNROLL

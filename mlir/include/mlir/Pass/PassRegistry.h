@@ -18,6 +18,7 @@
 #include "mlir/Support/TypeID.h"
 #include <functional>
 #include <utility>
+#include <optional>
 
 namespace mlir {
 class OpPassManager;

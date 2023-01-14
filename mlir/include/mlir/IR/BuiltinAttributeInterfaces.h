@@ -17,6 +17,7 @@
 #include "llvm/ADT/Any.h"
 #include "llvm/Support/raw_ostream.h"
 #include <complex>
+#include <optional>
 
 namespace mlir {
 

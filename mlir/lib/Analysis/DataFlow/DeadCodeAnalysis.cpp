@@ -10,6 +10,7 @@
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::dataflow;

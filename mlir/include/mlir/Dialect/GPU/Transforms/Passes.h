@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 namespace llvm {
 class TargetMachine;

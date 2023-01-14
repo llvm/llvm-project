@@ -15,6 +15,7 @@
 #define MLIR_TESTTYPES_H
 
 #include <tuple>
+#include <optional>
 
 #include "TestTraits.h"
 #include "mlir/IR/Diagnostics.h"

@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 namespace mlir {
 /// Performs constant folding `calculate` with element-wise behavior on the two

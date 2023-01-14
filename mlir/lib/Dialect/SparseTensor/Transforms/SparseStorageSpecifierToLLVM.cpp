@@ -10,6 +10,7 @@
 #include "SparseTensorStorageLayout.h"
 
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
+#include <optional>
 
 using namespace mlir;
 using namespace sparse_tensor;

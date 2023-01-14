@@ -41,6 +41,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
 #include <random>
+#include <optional>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"

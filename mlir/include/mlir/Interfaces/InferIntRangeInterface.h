@@ -15,6 +15,7 @@
 #define MLIR_INTERFACES_INFERINTRANGEINTERFACE_H
 
 #include "mlir/IR/OpDefinition.h"
+#include <optional>
 
 namespace mlir {
 /// A set of arbitrary-precision integers representing bounds on a given integer

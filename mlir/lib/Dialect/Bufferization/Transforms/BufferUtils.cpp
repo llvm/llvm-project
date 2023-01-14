@@ -20,6 +20,7 @@
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallString.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::bufferization;

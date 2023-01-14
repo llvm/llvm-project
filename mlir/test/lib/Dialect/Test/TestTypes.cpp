@@ -21,6 +21,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 using namespace mlir;
 using namespace test;

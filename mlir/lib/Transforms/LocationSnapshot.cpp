@@ -14,6 +14,7 @@
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_LOCATIONSNAPSHOT

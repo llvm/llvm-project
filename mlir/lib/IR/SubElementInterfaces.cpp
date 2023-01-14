@@ -10,6 +10,7 @@
 #include "mlir/IR/Operation.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include <optional>
 
 using namespace mlir;
 

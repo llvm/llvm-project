@@ -16,6 +16,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/FoldUtils.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::dataflow;

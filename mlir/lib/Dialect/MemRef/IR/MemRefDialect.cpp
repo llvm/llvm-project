@@ -10,6 +10,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::memref;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <utility>
+#include <optional>
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenEnv.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;

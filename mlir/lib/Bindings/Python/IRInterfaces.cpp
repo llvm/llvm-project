@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <utility>
+#include <optional>
 
 #include "IRModule.h"
 #include "mlir-c/BuiltinAttributes.h"

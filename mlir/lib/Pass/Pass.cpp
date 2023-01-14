@@ -26,6 +26,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
