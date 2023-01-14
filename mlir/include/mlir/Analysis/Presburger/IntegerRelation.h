@@ -20,6 +20,7 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/LogicalResult.h"
+#include <optional>
 
 namespace mlir {
 namespace presburger {

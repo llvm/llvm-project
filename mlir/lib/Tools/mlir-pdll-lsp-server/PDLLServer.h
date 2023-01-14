@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <memory>
 #include <string>
+#include <optional>
 
 namespace mlir {
 namespace lsp {

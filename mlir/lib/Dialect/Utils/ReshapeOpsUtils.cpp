@@ -12,6 +12,7 @@
 #include "mlir/IR/Builders.h"
 
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 

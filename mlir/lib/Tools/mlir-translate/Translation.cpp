@@ -18,6 +18,7 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Tools/ParseUtilities.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 using namespace mlir;
 

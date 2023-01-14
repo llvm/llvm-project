@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/TableGen/Parser.h"
 #include "llvm/TableGen/Record.h"
+#include <optional>
 
 using namespace mlir;
 

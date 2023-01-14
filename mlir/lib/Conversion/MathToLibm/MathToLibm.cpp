@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLIBM

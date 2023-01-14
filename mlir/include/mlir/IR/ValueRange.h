@@ -18,6 +18,7 @@
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/Sequence.h"
+#include <optional>
 
 namespace mlir {
 class ValueRange;

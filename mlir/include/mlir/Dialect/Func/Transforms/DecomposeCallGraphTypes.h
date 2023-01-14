@@ -19,6 +19,7 @@
 #define MLIR_DIALECT_FUNC_TRANSFORMS_DECOMPOSECALLGRAPHTYPES_H
 
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 namespace mlir {
 

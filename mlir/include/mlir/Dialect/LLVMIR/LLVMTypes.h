@@ -17,6 +17,7 @@
 #include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include <optional>
 
 namespace llvm {
 class ElementCount;

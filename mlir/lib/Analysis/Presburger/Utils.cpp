@@ -18,6 +18,7 @@
 #include <numeric>
 
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace presburger;

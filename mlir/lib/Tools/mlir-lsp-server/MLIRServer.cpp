@@ -19,6 +19,7 @@
 #include "mlir/Parser/Parser.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 using namespace mlir;
 

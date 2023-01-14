@@ -21,6 +21,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Support/LLVM.h"
+#include <optional>
 
 using namespace mlir;
 using namespace linalg;

@@ -24,6 +24,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <limits>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::amdgpu;

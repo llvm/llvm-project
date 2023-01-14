@@ -23,6 +23,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <numeric>
+#include <optional>
 
 #define DEBUG_TYPE "pdl-bytecode"
 

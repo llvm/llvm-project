@@ -22,6 +22,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 #include <string>
+#include <optional>
 
 #define DEBUG_TYPE "serialize-to-blob"
 

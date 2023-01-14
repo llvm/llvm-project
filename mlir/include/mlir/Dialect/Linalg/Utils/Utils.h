@@ -14,6 +14,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
+#include <optional>
 
 namespace mlir {
 class AffineExpr;

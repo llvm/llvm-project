@@ -11,6 +11,7 @@
 
 #include <utility>
 #include <vector>
+#include <optional>
 
 #include "PybindUtils.h"
 

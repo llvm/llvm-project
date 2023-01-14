@@ -46,6 +46,7 @@
 #include "llvm/Support/Threading.h"
 
 #include <tuple>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;

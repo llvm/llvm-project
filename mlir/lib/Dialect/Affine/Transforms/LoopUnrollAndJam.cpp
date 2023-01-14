@@ -46,6 +46,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_AFFINELOOPUNROLLANDJAM

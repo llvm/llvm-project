@@ -36,6 +36,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
 #include <atomic>
+#include <optional>
 
 using namespace mlir;
 

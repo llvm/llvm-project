@@ -18,6 +18,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
+#include <optional>
 
 namespace mlir {
 class AsmParsedResourceEntry;

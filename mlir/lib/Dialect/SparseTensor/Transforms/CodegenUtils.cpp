@@ -18,6 +18,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;

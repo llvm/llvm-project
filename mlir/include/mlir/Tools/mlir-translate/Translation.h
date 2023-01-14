@@ -15,6 +15,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 namespace mlir {
 template <typename OpTy>

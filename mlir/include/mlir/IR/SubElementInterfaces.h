@@ -17,6 +17,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Visitors.h"
+#include <optional>
 
 namespace mlir {
 //===----------------------------------------------------------------------===//

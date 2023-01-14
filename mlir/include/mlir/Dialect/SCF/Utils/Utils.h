@@ -18,6 +18,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 namespace mlir {
 class Location;

@@ -13,6 +13,7 @@
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 using namespace mlir;
 

@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
+#include <optional>
 
 using namespace mlir;
 using namespace presburger;

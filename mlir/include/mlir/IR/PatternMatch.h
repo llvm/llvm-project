@@ -13,6 +13,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/TypeName.h"
+#include <optional>
 
 namespace mlir {
 

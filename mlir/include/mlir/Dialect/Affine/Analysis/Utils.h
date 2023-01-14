@@ -23,6 +23,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
+#include <optional>
 
 namespace mlir {
 

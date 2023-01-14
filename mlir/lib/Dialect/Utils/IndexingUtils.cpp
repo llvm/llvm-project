@@ -13,6 +13,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 

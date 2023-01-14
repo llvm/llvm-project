@@ -8,6 +8,7 @@
 
 #include "SourceMgrUtils.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::lsp;

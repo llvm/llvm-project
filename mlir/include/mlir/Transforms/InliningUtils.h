@@ -16,6 +16,7 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Region.h"
+#include <optional>
 
 namespace mlir {
 

@@ -12,6 +12,7 @@
 
 #include "Token.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace mlir;
 

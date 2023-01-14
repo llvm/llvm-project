@@ -14,6 +14,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace mlir {
 namespace sparse_tensor {

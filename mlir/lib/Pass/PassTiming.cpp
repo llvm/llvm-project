@@ -12,6 +12,7 @@
 #include "llvm/Support/Threading.h"
 
 #include <chrono>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
