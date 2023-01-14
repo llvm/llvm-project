@@ -1363,7 +1363,7 @@ namespace {
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
-      auto TransReq = inherited::TransformRequiresExpr(E);
+      ExprResult TransReq = inherited::TransformRequiresExpr(E);
       if (TransReq.isInvalid())
         return TransReq;
       assert(TransReq.get() != E &&
