@@ -26,13 +26,19 @@ namespace {
 /// Private implementations for ModuleDependencyCollector
 class ModuleDependencyListener : public ASTReaderListener {
   ModuleDependencyCollector &Collector;
+  FileManager &FileMgr;
 public:
-  ModuleDependencyListener(ModuleDependencyCollector &Collector)
-      : Collector(Collector) {}
+  ModuleDependencyListener(ModuleDependencyCollector &Collector,
+                           FileManager &FileMgr)
+      : Collector(Collector), FileMgr(FileMgr) {}
   bool needsInputFileVisitation() override { return true; }
   bool needsSystemInputFileVisitation() override { return true; }
   bool visitInputFile(StringRef Filename, bool IsSystem, bool IsOverridden,
                       bool IsExplicitModule) override {
+    // Run this through the FileManager in order to respect 'use-external-name'
+    // in case we have a VFS overlay.
+    if (auto FE = FileMgr.getOptionalFileRef(Filename))
+      Filename = FE->getName();
     Collector.addFile(Filename);
     return true;
   }
@@ -99,7 +105,8 @@ struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
 }
 
 void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
-  R.addListener(std::make_unique<ModuleDependencyListener>(*this));
+  R.addListener(
+      std::make_unique<ModuleDependencyListener>(*this, R.getFileManager()));
 }
 
 void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
