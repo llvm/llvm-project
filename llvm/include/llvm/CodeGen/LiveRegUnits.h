@@ -166,8 +166,8 @@ inline iterator_range<filter_iterator<
 phys_regs_and_masks(const MachineInstr &MI) {
   std::function<bool(const MachineOperand &)> Pred =
       [](const MachineOperand &MOP) {
-        return MOP.isRegMask() || (MOP.isReg() && !MOP.isDebug() &&
-                                   Register::isPhysicalRegister(MOP.getReg()));
+        return MOP.isRegMask() ||
+               (MOP.isReg() && !MOP.isDebug() && MOP.getReg().isPhysical());
       };
   return make_filter_range(const_mi_bundle_ops(MI), Pred);
 }
