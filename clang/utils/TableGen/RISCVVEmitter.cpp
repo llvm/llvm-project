@@ -528,8 +528,10 @@ void RVVEmitter::createRVVIntrinsics(
     StringRef MaskedIRName = R->getValueAsString("MaskedIRName");
     unsigned NF = R->getValueAsInt("NF");
 
+    const Policy DefaultPolicy(HasTailPolicy, HasMaskPolicy);
     SmallVector<Policy> SupportedUnMaskedPolicies =
-        RVVIntrinsic::getSupportedUnMaskedPolicies();
+        RVVIntrinsic::getSupportedUnMaskedPolicies(HasTailPolicy,
+                                                   HasMaskPolicy);
     SmallVector<Policy> SupportedMaskedPolicies =
         RVVIntrinsic::getSupportedMaskedPolicies(HasTailPolicy, HasMaskPolicy);
 
@@ -543,13 +545,13 @@ void RVVEmitter::createRVVIntrinsics(
         parsePrototypes(OverloadedSuffixProto);
 
     // Compute Builtin types
-    auto Prototype =
-        RVVIntrinsic::computeBuiltinTypes(BasicPrototype, /*IsMasked=*/false,
-                                          /*HasMaskedOffOperand=*/false, HasVL,
-                                          NF, UnMaskedPolicyScheme, Policy());
+    auto Prototype = RVVIntrinsic::computeBuiltinTypes(
+        BasicPrototype, /*IsMasked=*/false,
+        /*HasMaskedOffOperand=*/false, HasVL, NF, UnMaskedPolicyScheme,
+        DefaultPolicy);
     auto MaskedPrototype = RVVIntrinsic::computeBuiltinTypes(
         BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL, NF,
-        MaskedPolicyScheme, Policy());
+        MaskedPolicyScheme, DefaultPolicy);
 
     // Create Intrinsics for each type and LMUL.
     for (char I : TypeRange) {
@@ -571,7 +573,7 @@ void RVVEmitter::createRVVIntrinsics(
             /*IsMasked=*/false, /*HasMaskedOffOperand=*/false, HasVL,
             UnMaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
             ManualCodegen, *Types, IntrinsicTypes, RequiredFeatures, NF,
-            Policy()));
+            DefaultPolicy));
         if (UnMaskedPolicyScheme != PolicyScheme::SchemeNone)
           for (auto P : SupportedUnMaskedPolicies) {
             SmallVector<PrototypeDescriptor> PolicyPrototype =
@@ -597,7 +599,7 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
             SupportOverloading, HasBuiltinAlias, ManualCodegen, *MaskTypes,
-            IntrinsicTypes, RequiredFeatures, NF, Policy()));
+            IntrinsicTypes, RequiredFeatures, NF, DefaultPolicy));
         if (MaskedPolicyScheme == PolicyScheme::SchemeNone)
           continue;
         for (auto P : SupportedMaskedPolicies) {
