@@ -128,11 +128,11 @@ public:
 
   /// Return the operation name that this pass manager operates on, or
   /// std::nullopt if this is an op-agnostic pass manager.
-  Optional<OperationName> getOpName(MLIRContext &context) const;
+  std::optional<OperationName> getOpName(MLIRContext &context) const;
 
   /// Return the operation name that this pass manager operates on, or
   /// std::nullopt if this is an op-agnostic pass manager.
-  Optional<StringRef> getOpName() const;
+  std::optional<StringRef> getOpName() const;
 
   /// Return the name used to anchor this pass manager. This is either the name
   /// of an operation, or the result of `getAnyOpAnchorName()` in the case of an
@@ -429,7 +429,7 @@ private:
   MLIRContext *context;
 
   /// Flag that specifies if pass statistics should be dumped.
-  Optional<PassDisplayMode> passStatisticsMode;
+  std::optional<PassDisplayMode> passStatisticsMode;
 
   /// A manager for pass instrumentations.
   std::unique_ptr<PassInstrumentor> instrumentor;

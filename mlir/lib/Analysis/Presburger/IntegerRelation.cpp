@@ -764,7 +764,8 @@ bool IntegerRelation::isIntegerEmpty() const { return !findIntegerSample(); }
 ///
 /// Concatenating the samples from B and C gives a sample v in S*T, so the
 /// returned sample T*v is a sample in S.
-Optional<SmallVector<MPInt, 8>> IntegerRelation::findIntegerSample() const {
+std::optional<SmallVector<MPInt, 8>>
+IntegerRelation::findIntegerSample() const {
   // First, try the GCD test heuristic.
   if (isEmptyByGCDTest())
     return {};
@@ -803,7 +804,7 @@ Optional<SmallVector<MPInt, 8>> IntegerRelation::findIntegerSample() const {
   boundedSet.removeVarRange(numBoundedDims, boundedSet.getNumVars());
 
   // 3) Try to obtain a sample from the bounded set.
-  Optional<SmallVector<MPInt, 8>> boundedSample =
+  std::optional<SmallVector<MPInt, 8>> boundedSample =
       Simplex(boundedSet).findIntegerSample();
   if (!boundedSample)
     return {};
@@ -902,7 +903,7 @@ bool IntegerRelation::containsPoint(ArrayRef<MPInt> point) const {
 /// compute the values of the locals that have division representations and
 /// only use the integer emptiness check for the locals that don't have this.
 /// Handling this correctly requires ordering the divs, though.
-Optional<SmallVector<MPInt, 8>>
+std::optional<SmallVector<MPInt, 8>>
 IntegerRelation::containsPointNoLocal(ArrayRef<MPInt> point) const {
   assert(point.size() == getNumVars() - getNumLocalVars() &&
          "Point should contain all vars except locals!");
@@ -1081,7 +1082,7 @@ void IntegerRelation::removeRedundantConstraints() {
   equalities.resizeVertically(pos);
 }
 
-Optional<MPInt> IntegerRelation::computeVolume() const {
+std::optional<MPInt> IntegerRelation::computeVolume() const {
   assert(getNumSymbolVars() == 0 && "Symbols are not yet supported!");
 
   Simplex simplex(*this);
@@ -1391,7 +1392,7 @@ void IntegerRelation::constantFoldVarRange(unsigned pos, unsigned num) {
 //       s0 + s1 + 16 <= d0 <= s0 + s1 + 31, returns 16.
 //       s0 - 7 <= 8*j <= s0 returns 1 with lb = s0, lbDivisor = 8 (since lb =
 //       ceil(s0 - 7 / 8) = floor(s0 / 8)).
-Optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
+std::optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
     unsigned pos, SmallVectorImpl<MPInt> *lb, MPInt *boundFloorDivisor,
     SmallVectorImpl<MPInt> *ub, unsigned *minLbPos, unsigned *minUbPos) const {
   assert(pos < getNumDimVars() && "Invalid variable position");
@@ -1456,7 +1457,7 @@ Optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
                                /*eqIndices=*/nullptr, /*offset=*/0,
                                /*num=*/getNumDimVars());
 
-  Optional<MPInt> minDiff;
+  std::optional<MPInt> minDiff;
   unsigned minLbPosition = 0, minUbPosition = 0;
   for (auto ubPos : ubIndices) {
     for (auto lbPos : lbIndices) {
@@ -1517,7 +1518,7 @@ Optional<MPInt> IntegerRelation::getConstantBoundOnDimSize(
 }
 
 template <bool isLower>
-Optional<MPInt>
+std::optional<MPInt>
 IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   assert(pos < getNumVars() && "invalid position");
   // Project to 'pos'.
@@ -1539,7 +1540,7 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
     // If it doesn't, there isn't a bound on it.
     return std::nullopt;
 
-  Optional<MPInt> minOrMaxConst;
+  std::optional<MPInt> minOrMaxConst;
 
   // Take the max across all const lower bounds (or min across all constant
   // upper bounds).
@@ -1574,8 +1575,8 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
   return minOrMaxConst;
 }
 
-Optional<MPInt> IntegerRelation::getConstantBound(BoundType type,
-                                                  unsigned pos) const {
+std::optional<MPInt> IntegerRelation::getConstantBound(BoundType type,
+                                                       unsigned pos) const {
   if (type == BoundType::LB)
     return IntegerRelation(*this)
         .computeConstantLowerOrUpperBound</*isLower=*/true>(pos);
@@ -1584,13 +1585,13 @@ Optional<MPInt> IntegerRelation::getConstantBound(BoundType type,
         .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
 
   assert(type == BoundType::EQ && "expected EQ");
-  Optional<MPInt> lb =
+  std::optional<MPInt> lb =
       IntegerRelation(*this).computeConstantLowerOrUpperBound</*isLower=*/true>(
           pos);
-  Optional<MPInt> ub =
+  std::optional<MPInt> ub =
       IntegerRelation(*this)
           .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
-  return (lb && ub && *lb == *ub) ? Optional<MPInt>(*ub) : std::nullopt;
+  return (lb && ub && *lb == *ub) ? std::optional<MPInt>(*ub) : std::nullopt;
 }
 
 // A simple (naive and conservative) check for hyper-rectangularity.

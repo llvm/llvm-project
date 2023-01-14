@@ -67,7 +67,7 @@ private:
     lexer.consume(tok_return);
 
     // return takes an optional argument
-    llvm::Optional<std::unique_ptr<ExprAST>> expr;
+    std::optional<std::unique_ptr<ExprAST>> expr;
     if (lexer.getCurToken() != ';') {
       expr = parseExpression();
       if (!expr)

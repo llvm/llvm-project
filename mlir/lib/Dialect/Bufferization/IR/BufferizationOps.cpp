@@ -485,12 +485,12 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
                canonicalSource.getDefiningOp()))
       canonicalSource = iface.getViewSource();
 
-    llvm::Optional<Operation *> maybeCloneDeallocOp =
+    std::optional<Operation *> maybeCloneDeallocOp =
         memref::findDealloc(cloneOp.getOutput());
     // Skip if either of them has > 1 deallocate operations.
     if (!maybeCloneDeallocOp.has_value())
       return failure();
-    llvm::Optional<Operation *> maybeSourceDeallocOp =
+    std::optional<Operation *> maybeSourceDeallocOp =
         memref::findDealloc(canonicalSource);
     if (!maybeSourceDeallocOp.has_value())
       return failure();

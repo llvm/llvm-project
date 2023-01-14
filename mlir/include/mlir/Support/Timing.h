@@ -141,7 +141,7 @@ protected:
   /// collection of timing samples is disabled. This will cause the timers
   /// constructed from the manager to be tombstones which can be skipped
   /// quickly.
-  virtual Optional<void *> rootTimer() = 0;
+  virtual std::optional<void *> rootTimer() = 0;
 
   /// Start the timer with the given handle.
   virtual void startTimer(void *handle) = 0;
@@ -399,7 +399,7 @@ public:
 
 protected:
   // `TimingManager` callbacks
-  Optional<void *> rootTimer() override;
+  std::optional<void *> rootTimer() override;
   void startTimer(void *handle) override;
   void stopTimer(void *handle) override;
   void *nestTimer(void *handle, const void *id,

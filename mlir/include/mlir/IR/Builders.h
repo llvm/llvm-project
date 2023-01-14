@@ -440,7 +440,7 @@ private:
   /// Helper for sanity checking preconditions for create* methods below.
   template <typename OpT>
   RegisteredOperationName getCheckRegisteredInfo(MLIRContext *ctx) {
-    Optional<RegisteredOperationName> opName =
+    std::optional<RegisteredOperationName> opName =
         RegisteredOperationName::lookup(OpT::getOperationName(), ctx);
     if (LLVM_UNLIKELY(!opName)) {
       llvm::report_fatal_error(

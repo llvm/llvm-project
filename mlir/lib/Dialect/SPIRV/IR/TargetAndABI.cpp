@@ -48,7 +48,7 @@ bool spirv::TargetEnv::allows(spirv::Capability capability) const {
   return givenCapabilities.count(capability);
 }
 
-Optional<spirv::Capability>
+std::optional<spirv::Capability>
 spirv::TargetEnv::allows(ArrayRef<spirv::Capability> caps) const {
   const auto *chosen = llvm::find_if(caps, [this](spirv::Capability cap) {
     return givenCapabilities.count(cap);
@@ -62,7 +62,7 @@ bool spirv::TargetEnv::allows(spirv::Extension extension) const {
   return givenExtensions.count(extension);
 }
 
-Optional<spirv::Extension>
+std::optional<spirv::Extension>
 spirv::TargetEnv::allows(ArrayRef<spirv::Extension> exts) const {
   const auto *chosen = llvm::find_if(exts, [this](spirv::Extension ext) {
     return givenExtensions.count(ext);

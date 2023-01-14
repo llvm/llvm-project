@@ -956,7 +956,7 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
   StringAttr innerOpName = parseOpNameInfo->getIdentifier();
 
   FunctionType opFntype;
-  Optional<Location> explicitLoc;
+  std::optional<Location> explicitLoc;
   if (parser.parseKeyword("end") || parser.parseColon() ||
       parser.parseType(opFntype) ||
       parser.parseOptionalLocationSpecifier(explicitLoc))
@@ -1059,7 +1059,7 @@ void PolyForOp::getAsmBlockArgumentNames(Region &region,
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseOptionalLoc(OpAsmParser &p, Attribute &loc) {
-  Optional<Location> result;
+  std::optional<Location> result;
   SMLoc sourceLoc = p.getCurrentLocation();
   if (p.parseOptionalLocationSpecifier(result))
     return failure();

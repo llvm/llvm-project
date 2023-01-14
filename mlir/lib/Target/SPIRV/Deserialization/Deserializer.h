@@ -186,11 +186,11 @@ private:
   LogicalResult processFunctionEnd(ArrayRef<uint32_t> operands);
 
   /// Gets the constant's attribute and type associated with the given <id>.
-  Optional<std::pair<Attribute, Type>> getConstant(uint32_t id);
+  std::optional<std::pair<Attribute, Type>> getConstant(uint32_t id);
 
   /// Gets the info needed to materialize the spec constant operation op
   /// associated with the given <id>.
-  Optional<SpecConstOperationMaterializationInfo>
+  std::optional<SpecConstOperationMaterializationInfo>
   getSpecConstantOperation(uint32_t id);
 
   /// Gets the constant's integer attribute with the given <id>. Returns a
@@ -422,7 +422,7 @@ private:
   /// compose the error message) or the next instruction is malformed.
   LogicalResult
   sliceInstruction(spirv::Opcode &opcode, ArrayRef<uint32_t> &operands,
-                   Optional<spirv::Opcode> expectedOpcode = std::nullopt);
+                   std::optional<spirv::Opcode> expectedOpcode = std::nullopt);
 
   /// Processes a SPIR-V instruction with the given `opcode` and `operands`.
   /// This method is the main entrance for handling SPIR-V instruction; it
@@ -483,7 +483,7 @@ private:
 
   /// Contains the data of the OpLine instruction which precedes the current
   /// processing instruction.
-  llvm::Optional<DebugLine> debugLine;
+  std::optional<DebugLine> debugLine;
 
   /// The current word offset into the binary module.
   unsigned curOffset = 0;
@@ -498,7 +498,7 @@ private:
   OwningOpRef<spirv::ModuleOp> module;
 
   /// The current function under construction.
-  Optional<spirv::FuncOp> curFunction;
+  std::optional<spirv::FuncOp> curFunction;
 
   /// The current block under construction.
   Block *curBlock = nullptr;

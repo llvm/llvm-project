@@ -204,9 +204,9 @@ struct BufferizationOptions {
   bool isOpAllowed(Operation *op) const;
 
   /// Helper functions for allocation, deallocation, memory copying.
-  Optional<AllocationFn> allocationFn;
-  Optional<DeallocationFn> deallocationFn;
-  Optional<MemCpyFn> memCpyFn;
+  std::optional<AllocationFn> allocationFn;
+  std::optional<DeallocationFn> deallocationFn;
+  std::optional<MemCpyFn> memCpyFn;
 
   /// Create a memref allocation with the given type and dynamic extents.
   FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
@@ -233,7 +233,7 @@ struct BufferizationOptions {
   /// The default memory space that should be used when it cannot be inferred
   /// from the context. If case of std::nullopt, bufferization fails when the
   /// memory space cannot be inferred at any point.
-  Optional<Attribute> defaultMemorySpace = Attribute();
+  std::optional<Attribute> defaultMemorySpace = Attribute();
 
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced

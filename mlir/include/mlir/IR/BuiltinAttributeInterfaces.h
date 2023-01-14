@@ -300,7 +300,7 @@ auto ElementsAttrRange<IteratorT>::operator[](ArrayRef<uint64_t> index) const
 /// Return the elements of this attribute as a value of type 'T'.
 template <typename T>
 auto ElementsAttr::value_begin() const -> DefaultValueCheckT<T, iterator<T>> {
-  if (Optional<iterator<T>> iterator = try_value_begin<T>())
+  if (std::optional<iterator<T>> iterator = try_value_begin<T>())
     return std::move(*iterator);
   llvm::errs()
       << "ElementsAttr does not provide iteration facilities for type `"
@@ -309,7 +309,7 @@ auto ElementsAttr::value_begin() const -> DefaultValueCheckT<T, iterator<T>> {
 }
 template <typename T>
 auto ElementsAttr::try_value_begin() const
-    -> DefaultValueCheckT<T, Optional<iterator<T>>> {
+    -> DefaultValueCheckT<T, std::optional<iterator<T>>> {
   FailureOr<detail::ElementsAttrIndexer> indexer =
       getValuesImpl(TypeID::get<T>());
   if (failed(indexer))

@@ -45,7 +45,7 @@ public:
 
   /// Attach a note to this diagnostic.
   Diagnostic &attachNote(const Twine &msg,
-                         Optional<SMRange> noteLoc = std::nullopt) {
+                         std::optional<SMRange> noteLoc = std::nullopt) {
     assert(getSeverity() != Severity::DK_Note &&
            "cannot attach a Note to a Note");
     notes.emplace_back(
@@ -129,7 +129,7 @@ private:
   DiagnosticEngine *owner = nullptr;
 
   /// The raw diagnostic that is inflight to be reported.
-  Optional<Diagnostic> impl;
+  std::optional<Diagnostic> impl;
 };
 
 //===----------------------------------------------------------------------===//

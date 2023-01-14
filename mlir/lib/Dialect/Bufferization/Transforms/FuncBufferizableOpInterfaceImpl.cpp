@@ -127,9 +127,9 @@ static FuncOpAnalysisState getFuncOpAnalysisState(const AnalysisState &state,
 
 /// Return the index of the bbArg in the given FuncOp that is equivalent to the
 /// specified return value (if any).
-static Optional<int64_t> getEquivalentFuncArgIdx(FuncOp funcOp,
-                                                 const FuncAnalysisState &state,
-                                                 int64_t returnValIdx) {
+static std::optional<int64_t>
+getEquivalentFuncArgIdx(FuncOp funcOp, const FuncAnalysisState &state,
+                        int64_t returnValIdx) {
   auto funcOpIt = state.equivalentFuncArgs.find(funcOp);
   if (funcOpIt == state.equivalentFuncArgs.end())
     // No equivalence info stores for funcOp.
@@ -240,7 +240,7 @@ struct CallOpInterface
     }
 
     const FuncAnalysisState &funcState = getFuncAnalysisState(state);
-    Optional<int64_t> maybeEquiv =
+    std::optional<int64_t> maybeEquiv =
         getEquivalentFuncArgIdx(funcOp, funcState, opResult.getResultNumber());
     if (maybeEquiv) {
 #ifndef NDEBUG
@@ -274,7 +274,8 @@ struct CallOpInterface
     SmallVector<Value> replacementValues(numResults, Value());
     // For non-tensor results: A mapping from return val indices of the old
     // CallOp to return val indices of the bufferized CallOp.
-    SmallVector<Optional<unsigned>> retValMapping(numResults, std::nullopt);
+    SmallVector<std::optional<unsigned>> retValMapping(numResults,
+                                                       std::nullopt);
     // Operands of the bufferized CallOp.
     SmallVector<Value> newOperands(numOperands, Value());
 

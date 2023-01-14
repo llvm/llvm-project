@@ -272,7 +272,7 @@ static void checkNativeAccess(MLIRContext *ctx, ArrayRef<T> data,
                          UnmanagedAsmResourceBlob::allocateInferAlign(data));
 
   // Check that we can access and iterate the data properly.
-  Optional<ArrayRef<T>> attrData = attr.tryGetAsArrayRef();
+  std::optional<ArrayRef<T>> attrData = attr.tryGetAsArrayRef();
   EXPECT_TRUE(attrData.has_value());
   EXPECT_EQ(*attrData, data);
 

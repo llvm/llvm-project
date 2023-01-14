@@ -95,7 +95,7 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
 /// The body of the operation is filled using `regionBuilder`. All ods-gen
 /// created structured operations use the method to implement their builders.
 static void buildStructuredOp(OpBuilder &b, OperationState &state,
-                              llvm::Optional<TypeRange> resultTensorTypes,
+                              std::optional<TypeRange> resultTensorTypes,
                               ValueRange inputs, ValueRange outputs,
                               ArrayRef<NamedAttribute> attributes,
                               RegionBuilderFn regionBuilder) {
@@ -1767,7 +1767,7 @@ LogicalResult IndexOp::verify() {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
 
-AffineMap mlir::linalg::extractOrIdentityMap(Optional<AffineMap> maybeMap,
+AffineMap mlir::linalg::extractOrIdentityMap(std::optional<AffineMap> maybeMap,
                                              unsigned rank,
                                              MLIRContext *context) {
   if (maybeMap)

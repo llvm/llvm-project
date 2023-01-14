@@ -24,10 +24,10 @@
 namespace mlir {
 /// Performs constant folding `calculate` with element-wise behavior on the two
 /// attributes in `operands` and returns the result if possible.
-template <
-    class AttrElementT, class ElementValueT = typename AttrElementT::ValueType,
-    class CalculationT =
-        function_ref<Optional<ElementValueT>(ElementValueT, ElementValueT)>>
+template <class AttrElementT,
+          class ElementValueT = typename AttrElementT::ValueType,
+          class CalculationT = function_ref<
+              std::optional<ElementValueT>(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
                                        const CalculationT &calculate) {
   assert(operands.size() == 2 && "binary op takes two operands");
@@ -96,16 +96,17 @@ Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
                             const CalculationT &calculate) {
   return constFoldBinaryOpConditional<AttrElementT>(
       operands,
-      [&](ElementValueT a, ElementValueT b) -> Optional<ElementValueT> {
+      [&](ElementValueT a, ElementValueT b) -> std::optional<ElementValueT> {
         return calculate(a, b);
       });
 }
 
 /// Performs constant folding `calculate` with element-wise behavior on the one
 /// attributes in `operands` and returns the result if possible.
-template <
-    class AttrElementT, class ElementValueT = typename AttrElementT::ValueType,
-    class CalculationT = function_ref<Optional<ElementValueT>(ElementValueT)>>
+template <class AttrElementT,
+          class ElementValueT = typename AttrElementT::ValueType,
+          class CalculationT =
+              function_ref<std::optional<ElementValueT>(ElementValueT)>>
 Attribute constFoldUnaryOpConditional(ArrayRef<Attribute> operands,
                                       const CalculationT &&calculate) {
   assert(operands.size() == 1 && "unary op takes one operands");
@@ -154,8 +155,9 @@ template <class AttrElementT,
 Attribute constFoldUnaryOp(ArrayRef<Attribute> operands,
                            const CalculationT &&calculate) {
   return constFoldUnaryOpConditional<AttrElementT>(
-      operands,
-      [&](ElementValueT a) -> Optional<ElementValueT> { return calculate(a); });
+      operands, [&](ElementValueT a) -> std::optional<ElementValueT> {
+        return calculate(a);
+      });
 }
 
 template <

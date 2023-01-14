@@ -102,7 +102,7 @@ public:
 
   /// Get the last modifications of a value. Returns none if the last
   /// modifications are not known.
-  Optional<ArrayRef<Operation *>> getLastModifiers(Value value) const {
+  std::optional<ArrayRef<Operation *>> getLastModifiers(Value value) const {
     auto it = lastMods.find(value);
     if (it == lastMods.end())
       return {};
@@ -260,7 +260,7 @@ struct TestLastModifiedPass
           return solver.lookupState<UnderlyingValueLattice>(value);
         });
         assert(value && "expected an underlying value");
-        if (Optional<ArrayRef<Operation *>> lastMod =
+        if (std::optional<ArrayRef<Operation *>> lastMod =
                 lastMods->getLastModifiers(value)) {
           for (Operation *lastModifier : *lastMod) {
             if (auto tagName =

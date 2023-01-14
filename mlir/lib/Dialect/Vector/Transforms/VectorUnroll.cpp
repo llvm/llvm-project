@@ -135,7 +135,7 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
 
 /// Return the target shape for unrolling for the given `op`. Return
 /// std::nullopt if the op shouldn't be or cannot be unrolled.
-static Optional<SmallVector<int64_t>>
+static std::optional<SmallVector<int64_t>>
 getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   if (options.filterConstraint && failed(options.filterConstraint(op)))
     return std::nullopt;
@@ -148,7 +148,7 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
   auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
   if (!maybeUnrollShape)
     return std::nullopt;
-  Optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
+  std::optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
   if (!targetShape)
     return std::nullopt;
   auto maybeShapeRatio = computeShapeRatio(*maybeUnrollShape, *targetShape);
@@ -164,7 +164,8 @@ getUnrollOrder(unsigned numLoops, Operation *op,
   SmallVector<int64_t> loopOrder =
       llvm::to_vector(llvm::seq<int64_t>(0, static_cast<int64_t>(numLoops)));
   if (options.traversalOrderCallback != nullptr) {
-    Optional<SmallVector<int64_t>> order = options.traversalOrderCallback(op);
+    std::optional<SmallVector<int64_t>> order =
+        options.traversalOrderCallback(op);
     if (order) {
       loopOrder = std::move(*order);
     }
@@ -414,7 +415,7 @@ struct UnrollMultiReductionPattern
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
-    Optional<SmallVector<int64_t>> targetShape =
+    std::optional<SmallVector<int64_t>> targetShape =
         getTargetShape(options, reductionOp);
     if (!targetShape)
       return failure();
@@ -549,7 +550,7 @@ struct UnrollReductionPattern : public OpRewritePattern<vector::ReductionOp> {
 
   LogicalResult matchAndRewrite(vector::ReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
-    Optional<SmallVector<int64_t>> targetShape =
+    std::optional<SmallVector<int64_t>> targetShape =
         getTargetShape(options, reductionOp);
     if (!targetShape)
       return failure();

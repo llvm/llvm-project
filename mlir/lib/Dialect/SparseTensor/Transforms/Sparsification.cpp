@@ -346,8 +346,8 @@ static bool topSortOptimal(CodegenEnv &env, unsigned n,
 /// tidx < a = (i0 + i1) => tidx < i0, tidx < i1.
 static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
                                std::vector<unsigned> &inDegree, AffineExpr a,
-                               AffineExpr b, Optional<unsigned> fidx,
-                               Optional<unsigned> tidx) {
+                               AffineExpr b, std::optional<unsigned> fidx,
+                               std::optional<unsigned> tidx) {
   if (!a && !b) {
     // Recursion leaf.
     assert(fidx && tidx);
@@ -387,9 +387,9 @@ static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
 }
 
 static void tryLoosenAffineDenseConstraints(linalg::GenericOp op,
-                                            Optional<unsigned> &fldx,
+                                            std::optional<unsigned> &fldx,
                                             AffineExpr &fa,
-                                            Optional<unsigned> &tldx,
+                                            std::optional<unsigned> &tldx,
                                             AffineExpr &ta) {
   // We use a heuristic here to only pick one dim expression from each
   // compound affine expression to establish the order between two dense
@@ -449,7 +449,7 @@ static bool computeIterationGraph(CodegenEnv &env, unsigned mask,
     // on the loop indices if no explicit dimension ordering is given.
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       AffineExpr ta = map.getResult(toOrigDim(enc, d));
-      Optional<unsigned> tldx =
+      std::optional<unsigned> tldx =
           env.merger().getLoopIdx(t.getOperandNumber(), d);
 
       // Filter loops should be constructed after all the dependent loops,
@@ -473,7 +473,7 @@ static bool computeIterationGraph(CodegenEnv &env, unsigned mask,
 
       if (d > 0) {
         AffineExpr fa = map.getResult(toOrigDim(enc, d - 1));
-        Optional<unsigned> fldx =
+        std::optional<unsigned> fldx =
             env.merger().getLoopIdx(t.getOperandNumber(), d - 1);
 
         // Applying order constraints on every pair of dimExpr between two
@@ -916,7 +916,7 @@ static void genInvariants(CodegenEnv &env, OpBuilder &builder, unsigned exp,
     auto enc = getSparseTensorEncoding(t.get().getType());
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       AffineExpr a = map.getResult(toOrigDim(enc, d));
-      Optional<unsigned> sldx =
+      std::optional<unsigned> sldx =
           env.merger().getLoopIdx(t.getOperandNumber(), d);
       if (sldx && env.merger().isFilterLoop(*sldx)) {
         if (!env.getLoopIdxValue(*sldx))
@@ -1202,8 +1202,8 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, unsigned exp,
   SmallVector<size_t> tids;
   SmallVector<size_t> dims;
   env.merger().foreachTidDimPairInBits(
-      env.lat(l0).bits,
-      [&](unsigned b, unsigned tid, Optional<unsigned> dim, DimLevelType dlt) {
+      env.lat(l0).bits, [&](unsigned b, unsigned tid,
+                            std::optional<unsigned> dim, DimLevelType dlt) {
         assert(env.merger().index(b) == idx);
         if (isDenseDLT(dlt) || isUndefDLT(dlt)) {
           needsUniv = true;
@@ -1271,9 +1271,10 @@ static bool translateBitsToTidDimPairs(
 
   unsigned numloopCond = 0;
   // Converts bits to array + dim pair
-  env.merger().foreachTidDimPairInBits(all, [&, idx](unsigned b, unsigned tid,
-                                                     Optional<unsigned> dim,
-                                                     DimLevelType dlt) {
+  env.merger().foreachTidDimPairInBits(all, [&,
+                                             idx](unsigned b, unsigned tid,
+                                                  std::optional<unsigned> dim,
+                                                  DimLevelType dlt) {
     if (simple.test(b)) {
       if (isUndefDLT(dlt)) {
         // An undefined dlt in the lattices, we probably mean to iterate based
@@ -1528,7 +1529,7 @@ public:
       return failure();
 
     // Builds the tensor expression for the Linalg operation in SSA form.
-    Optional<unsigned> optExp = env.merger().buildTensorExpFromLinalg(op);
+    std::optional<unsigned> optExp = env.merger().buildTensorExpFromLinalg(op);
     if (!optExp)
       return failure();
     unsigned exp = *optExp;

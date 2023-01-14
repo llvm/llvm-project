@@ -277,7 +277,7 @@ struct OneShotBufferizePass
   }
 
 private:
-  llvm::Optional<OneShotBufferizationOptions> options;
+  std::optional<OneShotBufferizationOptions> options;
 };
 } // namespace
 

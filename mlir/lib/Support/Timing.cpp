@@ -509,7 +509,7 @@ void DefaultTimingManager::dumpAsTree(raw_ostream &os) {
   impl->rootTimer->print(os, DisplayMode::Tree);
 }
 
-Optional<void *> DefaultTimingManager::rootTimer() {
+std::optional<void *> DefaultTimingManager::rootTimer() {
   if (impl->enabled)
     return impl->rootTimer.get();
   return std::nullopt;

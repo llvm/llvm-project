@@ -53,7 +53,7 @@ public:
   bool isUnbounded() const { return kind == OptimumKind::Unbounded; }
   bool isEmpty() const { return kind == OptimumKind::Empty; }
 
-  Optional<T> getOptimumIfBounded() const { return optimum; }
+  std::optional<T> getOptimumIfBounded() const { return optimum; }
   const T &getBoundedOptimum() const {
     assert(kind == OptimumKind::Bounded &&
            "This should be called only for bounded optima");
@@ -143,7 +143,7 @@ public:
   // For a given point containing values for each variable other than the
   // division variables, try to find the values for each division variable from
   // their division representation.
-  SmallVector<Optional<MPInt>, 4> divValuesAt(ArrayRef<MPInt> point) const;
+  SmallVector<std::optional<MPInt>, 4> divValuesAt(ArrayRef<MPInt> point) const;
 
   // Get the `i^th` denominator.
   MPInt &getDenom(unsigned i) { return denoms[i]; }

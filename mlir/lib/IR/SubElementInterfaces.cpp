@@ -215,7 +215,7 @@ T AttrTypeReplacer::replaceImpl(T element, ReplaceFns &replaceFns,
   T result = element;
   WalkResult walkResult = WalkResult::advance();
   for (auto &replaceFn : llvm::reverse(replaceFns)) {
-    if (Optional<std::pair<T, WalkResult>> newRes = replaceFn(element)) {
+    if (std::optional<std::pair<T, WalkResult>> newRes = replaceFn(element)) {
       std::tie(result, walkResult) = *newRes;
       break;
     }

@@ -169,7 +169,7 @@ public:
 
   /// Get a cached analysis instance if one exists, otherwise return null.
   template <typename AnalysisT>
-  Optional<std::reference_wrapper<AnalysisT>> getCachedAnalysis() const {
+  std::optional<std::reference_wrapper<AnalysisT>> getCachedAnalysis() const {
     auto res = analyses.find(TypeID::get<AnalysisT>());
     if (res == analyses.end())
       return std::nullopt;
@@ -302,7 +302,7 @@ public:
   /// Query for a cached analysis on the given parent operation. The analysis
   /// may not exist and if it does it may be out-of-date.
   template <typename AnalysisT>
-  Optional<std::reference_wrapper<AnalysisT>>
+  std::optional<std::reference_wrapper<AnalysisT>>
   getCachedParentAnalysis(Operation *parentOp) const {
     const detail::NestedAnalysisMap *curParent = impl;
     while (auto *parentAM = curParent->getParent()) {
@@ -329,7 +329,7 @@ public:
 
   /// Query for a cached entry of the given analysis on the current operation.
   template <typename AnalysisT>
-  Optional<std::reference_wrapper<AnalysisT>> getCachedAnalysis() const {
+  std::optional<std::reference_wrapper<AnalysisT>> getCachedAnalysis() const {
     return impl->analyses.getCachedAnalysis<AnalysisT>();
   }
 
@@ -348,7 +348,7 @@ public:
 
   /// Query for a cached analysis of a child operation, or return null.
   template <typename AnalysisT>
-  Optional<std::reference_wrapper<AnalysisT>>
+  std::optional<std::reference_wrapper<AnalysisT>>
   getCachedChildAnalysis(Operation *op) const {
     assert(op->getParentOp() == impl->getOperation());
     auto it = impl->childAnalyses.find(op);

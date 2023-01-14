@@ -57,8 +57,8 @@ SmallVector<int64_t> computeElementwiseMul(ArrayRef<int64_t> v1,
 ///     derived as {42(leading shape dim), 2/2, 10/5, 32/2}.
 ///   - shapeRatio({42, 2, 11, 32}, {2, 5, 2}) returns std::nullopt  which is
 ///     derived as {42(leading shape dim), 2/2, 11/5(not divisible), 32/2}.
-Optional<SmallVector<int64_t>> computeShapeRatio(ArrayRef<int64_t> shape,
-                                                 ArrayRef<int64_t> subShape);
+std::optional<SmallVector<int64_t>>
+computeShapeRatio(ArrayRef<int64_t> shape, ArrayRef<int64_t> subShape);
 
 /// Return the number of elements of basis (i.e. the max linear index).
 /// Return `0` if `basis` is empty.

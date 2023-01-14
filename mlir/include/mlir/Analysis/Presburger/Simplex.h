@@ -264,7 +264,7 @@ protected:
   /// Returns an empty optional if no pivot is possible, which happens only when
   /// the column unknown is a variable and no constraint has a non-zero
   /// coefficient for it.
-  Optional<unsigned> findAnyPivotRow(unsigned col);
+  std::optional<unsigned> findAnyPivotRow(unsigned col);
 
   /// Swap the row with the column in the tableau's data structures but not the
   /// tableau itself. This is used by pivot.
@@ -523,11 +523,11 @@ private:
 
   /// Get a constraint row that is violated, if one exists.
   /// Otherwise, return an empty optional.
-  Optional<unsigned> maybeGetViolatedRow() const;
+  std::optional<unsigned> maybeGetViolatedRow() const;
 
   /// Get a row corresponding to a var that has a non-integral sample value, if
   /// one exists. Otherwise, return an empty optional.
-  Optional<unsigned> maybeGetNonIntegralVarRow() const;
+  std::optional<unsigned> maybeGetNonIntegralVarRow() const;
 };
 
 /// Represents the result of a symbolic lexicographic minimization computation.
@@ -634,11 +634,11 @@ private:
   LogicalResult doNonBranchingPivots();
 
   /// Get a row that is always violated in the current domain, if one exists.
-  Optional<unsigned> maybeGetAlwaysViolatedRow();
+  std::optional<unsigned> maybeGetAlwaysViolatedRow();
 
   /// Get a row corresponding to a variable with non-integral sample value, if
   /// one exists.
-  Optional<unsigned> maybeGetNonIntegralVarRow();
+  std::optional<unsigned> maybeGetNonIntegralVarRow();
 
   /// Given a row that has a non-integer sample value, cut away this fractional
   /// sample value witahout removing any integer points, i.e., the integer
@@ -782,7 +782,7 @@ public:
 
   /// Returns an integer sample point if one exists, or std::nullopt
   /// otherwise. This should only be called for bounded sets.
-  Optional<SmallVector<MPInt, 8>> findIntegerSample();
+  std::optional<SmallVector<MPInt, 8>> findIntegerSample();
 
   enum class IneqType { Redundant, Cut, Separate };
 
@@ -806,11 +806,11 @@ public:
 
   /// Returns the current sample point if it is integral. Otherwise, returns
   /// std::nullopt.
-  Optional<SmallVector<MPInt, 8>> getSamplePointIfIntegral() const;
+  std::optional<SmallVector<MPInt, 8>> getSamplePointIfIntegral() const;
 
   /// Returns the current sample point, which may contain non-integer (rational)
   /// coordinates. Returns an empty optional when the tableau is empty.
-  Optional<SmallVector<Fraction, 8>> getRationalSample() const;
+  std::optional<SmallVector<Fraction, 8>> getRationalSample() const;
 
 private:
   friend class GBRSimplex;
@@ -829,7 +829,7 @@ private:
   ///
   /// Returns a (row, col) pair denoting a pivot, or an empty Optional if
   /// no valid pivot exists.
-  Optional<Pivot> findPivot(int row, Direction direction) const;
+  std::optional<Pivot> findPivot(int row, Direction direction) const;
 
   /// Find a row that can be used to pivot the column in the specified
   /// direction. If skipRow is not null, then this row is excluded
@@ -839,8 +839,8 @@ private:
   ///
   /// Returns the row to pivot to, or an empty Optional if the column
   /// is unbounded in the specified direction.
-  Optional<unsigned> findPivotRow(Optional<unsigned> skipRow,
-                                  Direction direction, unsigned col) const;
+  std::optional<unsigned> findPivotRow(std::optional<unsigned> skipRow,
+                                       Direction direction, unsigned col) const;
 
   /// Undo the addition of the last constraint while preserving tableau
   /// consistency.

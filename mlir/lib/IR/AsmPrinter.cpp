@@ -252,7 +252,7 @@ bool OpPrintingFlags::shouldElideElementsAttr(ElementsAttr attr) const {
 }
 
 /// Return the size limit for printing large ElementsAttr.
-Optional<int64_t> OpPrintingFlags::getLargeElementsAttrLimit() const {
+std::optional<int64_t> OpPrintingFlags::getLargeElementsAttrLimit() const {
   return elementsAttrElementLimit;
 }
 
@@ -532,7 +532,7 @@ private:
 
     /// The alias for the attribute or type, or std::nullopt if the value has no
     /// alias.
-    Optional<StringRef> alias;
+    std::optional<StringRef> alias;
     /// The alias depth of this attribute or type, i.e. an indication of the
     /// relative ordering of when to print this alias.
     unsigned aliasDepth : 30;
@@ -1214,7 +1214,7 @@ private:
   /// 'lookupResultNo'. 'lookupResultNo' is only filled in if the result group
   /// has more than 1 result.
   void getResultIDAndNumber(OpResult result, Value &lookupValue,
-                            Optional<int> &lookupResultNo) const;
+                            std::optional<int> &lookupResultNo) const;
 
   /// Set a special value name for the given value.
   void setValueName(Value value, StringRef name);
@@ -1326,7 +1326,7 @@ void SSANameState::printValueID(Value value, bool printResultNo,
     return;
   }
 
-  Optional<int> resultNo;
+  std::optional<int> resultNo;
   auto lookupValue = value;
 
   // If this is an operation result, collect the head lookup value of the result
@@ -1514,8 +1514,9 @@ void SSANameState::numberValuesInOp(Operation &op) {
   }
 }
 
-void SSANameState::getResultIDAndNumber(OpResult result, Value &lookupValue,
-                                        Optional<int> &lookupResultNo) const {
+void SSANameState::getResultIDAndNumber(
+    OpResult result, Value &lookupValue,
+    std::optional<int> &lookupResultNo) const {
   Operation *owner = result.getOwner();
   if (owner->getNumResults() == 1)
     return;

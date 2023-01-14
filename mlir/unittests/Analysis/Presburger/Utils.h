@@ -41,7 +41,8 @@ inline Matrix makeMatrix(unsigned numRow, unsigned numColumns,
 
 /// lhs and rhs represent non-negative integers or positive infinity. The
 /// infinity case corresponds to when the Optional is empty.
-inline bool infinityOrUInt64LE(Optional<MPInt> lhs, Optional<MPInt> rhs) {
+inline bool infinityOrUInt64LE(std::optional<MPInt> lhs,
+                               std::optional<MPInt> rhs) {
   // No constraint.
   if (!rhs)
     return true;
@@ -54,20 +55,19 @@ inline bool infinityOrUInt64LE(Optional<MPInt> lhs, Optional<MPInt> rhs) {
 /// Expect that the computed volume is a valid overapproximation of
 /// the true volume `trueVolume`, while also being at least as good an
 /// approximation as `resultBound`.
-inline void
-expectComputedVolumeIsValidOverapprox(const Optional<MPInt> &computedVolume,
-                                      const Optional<MPInt> &trueVolume,
-                                      const Optional<MPInt> &resultBound) {
+inline void expectComputedVolumeIsValidOverapprox(
+    const std::optional<MPInt> &computedVolume,
+    const std::optional<MPInt> &trueVolume,
+    const std::optional<MPInt> &resultBound) {
   assert(infinityOrUInt64LE(trueVolume, resultBound) &&
          "can't expect result to be less than the true volume");
   EXPECT_TRUE(infinityOrUInt64LE(trueVolume, computedVolume));
   EXPECT_TRUE(infinityOrUInt64LE(computedVolume, resultBound));
 }
 
-inline void
-expectComputedVolumeIsValidOverapprox(const Optional<MPInt> &computedVolume,
-                                      Optional<int64_t> trueVolume,
-                                      Optional<int64_t> resultBound) {
+inline void expectComputedVolumeIsValidOverapprox(
+    const std::optional<MPInt> &computedVolume,
+    std::optional<int64_t> trueVolume, std::optional<int64_t> resultBound) {
   expectComputedVolumeIsValidOverapprox(
       computedVolume, llvm::transformOptional(trueVolume, mpintFromInt64),
       llvm::transformOptional(resultBound, mpintFromInt64));

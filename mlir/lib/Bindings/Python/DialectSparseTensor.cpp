@@ -34,8 +34,8 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           "get",
           [](py::object cls,
              std::vector<MlirSparseTensorDimLevelType> dimLevelTypes,
-             llvm::Optional<MlirAffineMap> dimOrdering,
-             llvm::Optional<MlirAffineMap> higherOrdering, int pointerBitWidth,
+             std::optional<MlirAffineMap> dimOrdering,
+             std::optional<MlirAffineMap> higherOrdering, int pointerBitWidth,
              int indexBitWidth, MlirContext context) {
             return cls(mlirSparseTensorEncodingAttrGet(
                 context, dimLevelTypes.size(), dimLevelTypes.data(),
@@ -60,7 +60,7 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           })
       .def_property_readonly(
           "dim_ordering",
-          [](MlirAttribute self) -> llvm::Optional<MlirAffineMap> {
+          [](MlirAttribute self) -> std::optional<MlirAffineMap> {
             MlirAffineMap ret =
                 mlirSparseTensorEncodingAttrGetDimOrdering(self);
             if (mlirAffineMapIsNull(ret))
@@ -69,7 +69,7 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
           })
       .def_property_readonly(
           "higher_ordering",
-          [](MlirAttribute self) -> llvm::Optional<MlirAffineMap> {
+          [](MlirAttribute self) -> std::optional<MlirAffineMap> {
             MlirAffineMap ret =
                 mlirSparseTensorEncodingAttrGetHigherOrdering(self);
             if (mlirAffineMapIsNull(ret))

@@ -141,9 +141,9 @@ struct DependenceComponent {
   // The AffineForOp Operation associated with this dependence component.
   Operation *op = nullptr;
   // The lower bound of the dependence distance.
-  Optional<int64_t> lb;
+  std::optional<int64_t> lb;
   // The upper bound of the dependence distance (inclusive).
-  Optional<int64_t> ub;
+  std::optional<int64_t> ub;
   DependenceComponent() : lb(std::nullopt), ub(std::nullopt) {}
 };
 

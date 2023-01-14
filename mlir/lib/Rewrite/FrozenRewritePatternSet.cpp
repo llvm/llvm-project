@@ -106,13 +106,13 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
       impl->nativeOpSpecificPatternList.push_back(std::move(pat));
       continue;
     }
-    if (Optional<TypeID> interfaceID = pat->getRootInterfaceID()) {
+    if (std::optional<TypeID> interfaceID = pat->getRootInterfaceID()) {
       addToOpsWhen(pat, [&](RegisteredOperationName info) {
         return info.hasInterface(*interfaceID);
       });
       continue;
     }
-    if (Optional<TypeID> traitID = pat->getRootTraitID()) {
+    if (std::optional<TypeID> traitID = pat->getRootTraitID()) {
       addToOpsWhen(pat, [&](RegisteredOperationName info) {
         return info.hasTrait(*traitID);
       });

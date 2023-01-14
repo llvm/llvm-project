@@ -134,7 +134,7 @@ def SPIRV_BranchConditionalOp : SPIRV_Op<"BranchConditional", [
     OpBuilder<(ins "Value":$condition, "Block *":$trueBlock,
       "ValueRange":$trueArguments, "Block *":$falseBlock,
       "ValueRange":$falseArguments,
-      CArg<"Optional<std::pair<uint32_t, uint32_t>>", "{}">:$weights),
+      CArg<"std::optional<std::pair<uint32_t, uint32_t>>", "{}">:$weights),
     [{
       ArrayAttr weightsAttr;
       if (weights) {

@@ -37,7 +37,7 @@ static void generateLocationsFromIR(raw_ostream &os, StringRef fileName,
   op->print(os, state);
 
   Builder builder(op->getContext());
-  Optional<StringAttr> tagIdentifier;
+  std::optional<StringAttr> tagIdentifier;
   if (!tag.empty())
     tagIdentifier = builder.getStringAttr(tag);
 

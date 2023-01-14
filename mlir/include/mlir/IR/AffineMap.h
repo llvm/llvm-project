@@ -174,7 +174,7 @@ public:
   /// Extracts the first result position where `input` dimension resides.
   /// Returns `std::nullopt` if `input` is not a dimension expression or cannot
   /// be found in results.
-  Optional<unsigned> getResultPosition(AffineExpr input) const;
+  std::optional<unsigned> getResultPosition(AffineExpr input) const;
 
   /// Return true if any affine expression involves AffineDimExpr `position`.
   bool isFunctionOfDim(unsigned position) const {

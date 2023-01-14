@@ -88,7 +88,7 @@ struct CoroMachinery {
   //     %0 = arith.constant ... : T
   //     async.yield %0 : T
   //   }
-  Optional<Value> asyncToken;               // returned completion token
+  std::optional<Value> asyncToken;          // returned completion token
   llvm::SmallVector<Value, 4> returnValues; // returned async values
 
   Value coroHandle; // coroutine handle (!async.coro.getHandle value)
@@ -163,7 +163,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   // async computations
   bool isStateful = func.getCallableResults().front().isa<TokenType>();
 
-  Optional<Value> retToken;
+  std::optional<Value> retToken;
   if (isStateful)
     retToken.emplace(builder.create<RuntimeCreateOp>(TokenType::get(ctx)));
 

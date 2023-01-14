@@ -78,7 +78,7 @@ public:
     }
     // Return the indexing map of the operand/result in `opView` specified in
     // the owning LinalgOp. If the owner is not a LinalgOp returns std::nullopt.
-    static Optional<AffineMap> getIndexingMap(OpView opView) {
+    static std::optional<AffineMap> getIndexingMap(OpView opView) {
       auto owner = dyn_cast<LinalgOp>(getOwner(opView));
       if (!owner)
         return std::nullopt;
@@ -89,14 +89,14 @@ public:
     }
     // Return the operand number if the `opView` is an OpOperand *. Otherwise
     // return std::nullopt.
-    static Optional<unsigned> getOperandNumber(OpView opView) {
+    static std::optional<unsigned> getOperandNumber(OpView opView) {
       if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
         return operand->getOperandNumber();
       return std::nullopt;
     }
     // Return the result number if the `opView` is an OpResult. Otherwise return
     // std::nullopt.
-    static Optional<unsigned> getResultNumber(OpView opView) {
+    static std::optional<unsigned> getResultNumber(OpView opView) {
       if (OpResult result = opView.dyn_cast<Value>().cast<OpResult>())
         return result.getResultNumber();
       return std::nullopt;
@@ -116,37 +116,37 @@ public:
 
     // If the dependent OpView is an operand, return operand number. Return
     // std::nullopt otherwise.
-    Optional<unsigned> getDependentOpViewOperandNum() const {
+    std::optional<unsigned> getDependentOpViewOperandNum() const {
       return getOperandNumber(dependentOpView);
     }
 
     // If the indexing OpView is an operand, return operand number. Return
     // std::nullopt otherwise.
-    Optional<unsigned> getIndexingOpViewOperandNum() const {
+    std::optional<unsigned> getIndexingOpViewOperandNum() const {
       return getOperandNumber(indexingOpView);
     }
 
     // If the dependent OpView is a result value, return the result
     // number. Return std::nullopt otherwise.
-    Optional<unsigned> getDependentOpViewResultNum() const {
+    std::optional<unsigned> getDependentOpViewResultNum() const {
       return getResultNumber(dependentOpView);
     }
 
     // If the dependent OpView is a result value, return the result
     // number. Return std::nullopt otherwise.
-    Optional<unsigned> getIndexingOpViewResultNum() const {
+    std::optional<unsigned> getIndexingOpViewResultNum() const {
       return getResultNumber(indexingOpView);
     }
 
     // Return the indexing map of the operand/result in the dependent OpView as
     // specified in the owner of the OpView.
-    Optional<AffineMap> getDependentOpViewIndexingMap() const {
+    std::optional<AffineMap> getDependentOpViewIndexingMap() const {
       return getIndexingMap(dependentOpView);
     }
 
     // Return the indexing map of the operand/result in the indexing OpView as
     // specified in the owner of the OpView.
-    Optional<AffineMap> getIndexingOpViewIndexingMap() const {
+    std::optional<AffineMap> getIndexingOpViewIndexingMap() const {
       return getIndexingMap(indexingOpView);
     }
   };

@@ -40,8 +40,8 @@ template <typename ConcreteType>
 class FoldConstantBase : public OpRewritePattern<GenericOp> {
 public:
   struct APIntOrFloat {
-    Optional<APInt> apInt;
-    Optional<APFloat> apFloat;
+    std::optional<APInt> apInt;
+    std::optional<APFloat> apFloat;
   };
   struct APIntOrFloatArray {
     SmallVector<APInt> apInts;

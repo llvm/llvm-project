@@ -145,8 +145,8 @@ static LogicalResult
 inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
                  Block::iterator inlinePoint, IRMapping &mapper,
                  ValueRange resultsToReplace, TypeRange regionResultTypes,
-                 Optional<Location> inlineLoc, bool shouldCloneInlinedRegion,
-                 Operation *call = nullptr) {
+                 std::optional<Location> inlineLoc,
+                 bool shouldCloneInlinedRegion, Operation *call = nullptr) {
   assert(resultsToReplace.size() == regionResultTypes.size());
   // We expect the region to have at least one block.
   if (src->empty())
@@ -233,7 +233,7 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
 static LogicalResult
 inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
                  Block::iterator inlinePoint, ValueRange inlinedOperands,
-                 ValueRange resultsToReplace, Optional<Location> inlineLoc,
+                 ValueRange resultsToReplace, std::optional<Location> inlineLoc,
                  bool shouldCloneInlinedRegion, Operation *call = nullptr) {
   // We expect the region to have at least one block.
   if (src->empty())
@@ -264,7 +264,7 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
                                  Operation *inlinePoint, IRMapping &mapper,
                                  ValueRange resultsToReplace,
                                  TypeRange regionResultTypes,
-                                 Optional<Location> inlineLoc,
+                                 std::optional<Location> inlineLoc,
                                  bool shouldCloneInlinedRegion) {
   return inlineRegion(interface, src, inlinePoint->getBlock(),
                       ++inlinePoint->getIterator(), mapper, resultsToReplace,
@@ -275,7 +275,7 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
                                  Block::iterator inlinePoint, IRMapping &mapper,
                                  ValueRange resultsToReplace,
                                  TypeRange regionResultTypes,
-                                 Optional<Location> inlineLoc,
+                                 std::optional<Location> inlineLoc,
                                  bool shouldCloneInlinedRegion) {
   return inlineRegionImpl(interface, src, inlineBlock, inlinePoint, mapper,
                           resultsToReplace, regionResultTypes, inlineLoc,
@@ -286,17 +286,19 @@ LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
                                  Operation *inlinePoint,
                                  ValueRange inlinedOperands,
                                  ValueRange resultsToReplace,
-                                 Optional<Location> inlineLoc,
+                                 std::optional<Location> inlineLoc,
                                  bool shouldCloneInlinedRegion) {
   return inlineRegion(interface, src, inlinePoint->getBlock(),
                       ++inlinePoint->getIterator(), inlinedOperands,
                       resultsToReplace, inlineLoc, shouldCloneInlinedRegion);
 }
-LogicalResult
-mlir::inlineRegion(InlinerInterface &interface, Region *src, Block *inlineBlock,
-                   Block::iterator inlinePoint, ValueRange inlinedOperands,
-                   ValueRange resultsToReplace, Optional<Location> inlineLoc,
-                   bool shouldCloneInlinedRegion) {
+LogicalResult mlir::inlineRegion(InlinerInterface &interface, Region *src,
+                                 Block *inlineBlock,
+                                 Block::iterator inlinePoint,
+                                 ValueRange inlinedOperands,
+                                 ValueRange resultsToReplace,
+                                 std::optional<Location> inlineLoc,
+                                 bool shouldCloneInlinedRegion) {
   return inlineRegionImpl(interface, src, inlineBlock, inlinePoint,
                           inlinedOperands, resultsToReplace, inlineLoc,
                           shouldCloneInlinedRegion);

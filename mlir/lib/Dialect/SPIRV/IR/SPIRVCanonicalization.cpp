@@ -29,7 +29,7 @@ using namespace mlir;
 
 /// Returns the boolean value under the hood if the given `boolAttr` is a scalar
 /// or splat vector bool constant.
-static Optional<bool> getScalarOrSplatBoolAttr(Attribute attr) {
+static std::optional<bool> getScalarOrSplatBoolAttr(Attribute attr) {
   if (!attr)
     return std::nullopt;
 
@@ -237,7 +237,8 @@ OpFoldResult spirv::ISubOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::LogicalAndOp::fold(FoldAdaptor adaptor) {
-  if (Optional<bool> rhs = getScalarOrSplatBoolAttr(adaptor.getOperand2())) {
+  if (std::optional<bool> rhs =
+          getScalarOrSplatBoolAttr(adaptor.getOperand2())) {
     // x && true = x
     if (*rhs)
       return getOperand1();
@@ -255,7 +256,8 @@ OpFoldResult spirv::LogicalAndOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::LogicalNotEqualOp::fold(FoldAdaptor adaptor) {
-  if (Optional<bool> rhs = getScalarOrSplatBoolAttr(adaptor.getOperand2())) {
+  if (std::optional<bool> rhs =
+          getScalarOrSplatBoolAttr(adaptor.getOperand2())) {
     // x && false = x
     if (!rhs.value())
       return getOperand1();

@@ -1046,7 +1046,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
       predecessors.emplace_back(spirvPredecessor, branchOp.getOperands());
     } else if (auto branchCondOp =
                    dyn_cast<spirv::BranchConditionalOp>(terminator)) {
-      Optional<OperandRange> blockOperands;
+      std::optional<OperandRange> blockOperands;
       if (branchCondOp.getTrueTarget() == block) {
         blockOperands = branchCondOp.getTrueTargetOperands();
       } else {

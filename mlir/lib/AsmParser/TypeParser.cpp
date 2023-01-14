@@ -281,7 +281,7 @@ Type Parser::parseNonFunctionType() {
     }
 
     IntegerType::SignednessSemantics signSemantics = IntegerType::Signless;
-    if (Optional<bool> signedness = getToken().getIntTypeSignedness())
+    if (std::optional<bool> signedness = getToken().getIntTypeSignedness())
       signSemantics = *signedness ? IntegerType::Signed : IntegerType::Unsigned;
 
     consumeToken(Token::inttype);
@@ -561,7 +561,7 @@ ParseResult Parser::parseIntegerInDimensionList(int64_t &value) {
     consumeToken();
   } else {
     // Make sure this integer value is in bound and valid.
-    Optional<uint64_t> dimension = getToken().getUInt64IntegerValue();
+    std::optional<uint64_t> dimension = getToken().getUInt64IntegerValue();
     if (!dimension ||
         *dimension > (uint64_t)std::numeric_limits<int64_t>::max())
       return emitError("invalid dimension");

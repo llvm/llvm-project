@@ -245,7 +245,7 @@ public:
   /// Attaches a note to this diagnostic. A new location may be optionally
   /// provided, if not, then the location defaults to the one specified for this
   /// diagnostic. Notes may not be attached to other notes.
-  Diagnostic &attachNote(Optional<Location> noteLoc = std::nullopt);
+  Diagnostic &attachNote(std::optional<Location> noteLoc = std::nullopt);
 
   using note_iterator = llvm::pointee_iterator<NoteVector::iterator>;
   using const_note_iterator =
@@ -343,7 +343,7 @@ public:
   }
 
   /// Attaches a note to this diagnostic.
-  Diagnostic &attachNote(Optional<Location> noteLoc = std::nullopt) {
+  Diagnostic &attachNote(std::optional<Location> noteLoc = std::nullopt) {
     assert(isActive() && "diagnostic not active");
     return impl->attachNote(noteLoc);
   }
@@ -394,7 +394,7 @@ private:
   DiagnosticEngine *owner = nullptr;
 
   /// The raw diagnostic that is inflight to be reported.
-  Optional<Diagnostic> impl;
+  std::optional<Diagnostic> impl;
 };
 
 //===----------------------------------------------------------------------===//
@@ -596,7 +596,7 @@ private:
 
   /// Given a location, returns the first nested location (including 'loc') that
   /// can be shown to the user.
-  Optional<Location> findLocToShow(Location loc);
+  std::optional<Location> findLocToShow(Location loc);
 
   /// The maximum depth that a call stack will be printed.
   /// TODO: This should be a tunable flag.

@@ -41,8 +41,8 @@ buildDefaultRegistryFn(const PassAllocatorFunction &allocator) {
     std::unique_ptr<Pass> pass = allocator();
     LogicalResult result = pass->initializeOptions(options);
 
-    Optional<StringRef> pmOpName = pm.getOpName();
-    Optional<StringRef> passOpName = pass->getOpName();
+    std::optional<StringRef> pmOpName = pm.getOpName();
+    std::optional<StringRef> passOpName = pass->getOpName();
     if ((pm.getNesting() == OpPassManager::Nesting::Explicit) && pmOpName &&
         passOpName && *pmOpName != *passOpName) {
       return errorHandler(llvm::Twine("Can't add pass '") + pass->getName() +

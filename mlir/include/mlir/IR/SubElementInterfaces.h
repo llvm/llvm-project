@@ -61,7 +61,7 @@ public:
   /// signal the element wasn't handled), or a pair of the replacement element
   /// and a WalkResult.
   template <typename T>
-  using ReplaceFnResult = Optional<std::pair<T, WalkResult>>;
+  using ReplaceFnResult = std::optional<std::pair<T, WalkResult>>;
   template <typename T>
   using ReplaceFn = std::function<ReplaceFnResult<T>(T)>;
 
@@ -70,13 +70,13 @@ public:
   /// forms(where `T` is a class derived from `Type` or `Attribute`, and `BaseT`
   /// is either `Type` or `Attribute` respectively):
   ///
-  ///   * Optional<BaseT>(T)
+  ///   * std::optional<BaseT>(T)
   ///     - This either returns a valid Attribute/Type in the case of success,
   ///       nullptr in the case of failure, or `std::nullopt` to signify that
   ///       additional replacement functions may be applied (i.e. this function
   ///       doesn't handle that instance).
   ///
-  ///   * Optional<std::pair<BaseT, WalkResult>>(T)
+  ///   * std::optional<std::pair<BaseT, WalkResult>>(T)
   ///     - Similar to the above, but also allows specifying a WalkResult to
   ///       control the replacement of sub elements of a given attribute or
   ///       type. Returning a `skip` result, for example, will not recursively
@@ -106,8 +106,8 @@ public:
     addReplacement([callback = std::forward<FnT>(callback)](
                        BaseT base) -> ReplaceFnResult<BaseT> {
       if (auto derived = dyn_cast<T>(base)) {
-        if constexpr (std::is_convertible_v<ResultT, Optional<BaseT>>) {
-          Optional<BaseT> result = callback(derived);
+        if constexpr (std::is_convertible_v<ResultT, std::optional<BaseT>>) {
+          std::optional<BaseT> result = callback(derived);
           return result ? std::make_pair(*result, WalkResult::advance())
                         : ReplaceFnResult<BaseT>();
         } else {

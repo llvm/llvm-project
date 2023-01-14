@@ -63,11 +63,11 @@ MultiAffineFunction::valueAt(ArrayRef<MPInt> point) const {
 
   SmallVector<MPInt, 8> pointHomogenous{llvm::to_vector(point)};
   // Get the division values at this point.
-  SmallVector<Optional<MPInt>, 8> divValues = divs.divValuesAt(point);
+  SmallVector<std::optional<MPInt>, 8> divValues = divs.divValuesAt(point);
   // The given point didn't include the values of the divs which the output is a
   // function of; we have computed one possible set of values and use them here.
   pointHomogenous.reserve(pointHomogenous.size() + divValues.size());
-  for (const Optional<MPInt> &divVal : divValues)
+  for (const std::optional<MPInt> &divVal : divValues)
     pointHomogenous.push_back(*divVal);
   // The matrix `output` has an affine expression in the ith row, corresponding
   // to the expression for the ith value in the output vector. The last column
@@ -424,7 +424,7 @@ void PWMAFunction::removeOutputs(unsigned start, unsigned end) {
     piece.output.removeOutputs(start, end);
 }
 
-Optional<SmallVector<MPInt, 8>>
+std::optional<SmallVector<MPInt, 8>>
 PWMAFunction::valueAt(ArrayRef<MPInt> point) const {
   assert(point.size() == getNumDomainVars() + getNumSymbolVars());
 

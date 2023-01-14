@@ -153,7 +153,8 @@ namespace {
 // Helper structure that holds common state of the loop to GPU kernel
 // conversion.
 struct AffineLoopToGpuConverter {
-  Optional<AffineForOp> collectBounds(AffineForOp forOp, unsigned numLoops);
+  std::optional<AffineForOp> collectBounds(AffineForOp forOp,
+                                           unsigned numLoops);
 
   void createLaunch(AffineForOp rootForOp, AffineForOp innermostForOp,
                     unsigned numBlockDims, unsigned numThreadDims);
@@ -181,7 +182,7 @@ static bool isConstantOne(Value value) {
 // This may fail if the IR for computing loop bounds cannot be constructed, for
 // example if an affine loop uses semi-affine maps. Return the last loop to be
 // mapped on success, std::nullopt on failure.
-Optional<AffineForOp>
+std::optional<AffineForOp>
 AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
   OpBuilder builder(forOp.getOperation());
   dims.reserve(numLoops);

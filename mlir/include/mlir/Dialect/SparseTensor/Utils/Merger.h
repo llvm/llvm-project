@@ -296,19 +296,19 @@ public:
     return getDimLevelType(tensor(b), index(b));
   }
 
-  Optional<unsigned> getLoopIdx(unsigned t, unsigned dim) const {
+  std::optional<unsigned> getLoopIdx(unsigned t, unsigned dim) const {
     assert(t < numTensors && dim < numLoops);
     return dimToLoopIdx[t][dim];
   }
 
   /// Gets the dimension number of the the `t`th tensor on `i`th loop.
-  Optional<unsigned> getDimNum(unsigned t, unsigned i) const {
+  std::optional<unsigned> getDimNum(unsigned t, unsigned i) const {
     assert(t < numTensors && i < numLoops);
     return loopIdxToDim[t][i];
   }
 
   /// Gets the dimension number of `b`.
-  Optional<unsigned> getDimNum(unsigned b) const {
+  std::optional<unsigned> getDimNum(unsigned b) const {
     return getDimNum(tensor(b), index(b));
   }
 
@@ -327,7 +327,7 @@ public:
   // corresponding tensor dimension and invokes the callback.
   void foreachTidDimPairInBits(
       const BitVector &bits,
-      function_ref<void(unsigned b, unsigned tid, Optional<unsigned> dim,
+      function_ref<void(unsigned b, unsigned tid, std::optional<unsigned> dim,
                         DimLevelType dlt)>
           cb) {
     for (unsigned b : bits.set_bits())
@@ -360,7 +360,7 @@ public:
 
   /// Builds a tensor expression from the given Linalg operation.
   /// Returns index of the root expression on success.
-  Optional<unsigned> buildTensorExpFromLinalg(linalg::GenericOp op);
+  std::optional<unsigned> buildTensorExpFromLinalg(linalg::GenericOp op);
 
   /// Rebuilds SSA format from a tensor expression.
   Value buildExp(RewriterBase &rewriter, Location loc, unsigned e, Value v0,
@@ -373,7 +373,7 @@ private:
   Type inferType(unsigned e, Value src);
 
   /// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
-  Optional<unsigned> buildTensorExp(linalg::GenericOp op, Value v);
+  std::optional<unsigned> buildTensorExp(linalg::GenericOp op, Value v);
 
   /// Merger data structures.
   const unsigned outTensor;
@@ -389,10 +389,10 @@ private:
 
   // Map that converts pair<tensor id, loop id> to the corresponding
   // dimension.
-  std::vector<std::vector<Optional<unsigned>>> loopIdxToDim;
+  std::vector<std::vector<std::optional<unsigned>>> loopIdxToDim;
 
   // Map that converts pair<tensor id, dim> to the corresponding loop id.
-  std::vector<std::vector<Optional<unsigned>>> dimToLoopIdx;
+  std::vector<std::vector<std::optional<unsigned>>> dimToLoopIdx;
 
   llvm::SmallVector<TensorExp> tensorExps;
   llvm::SmallVector<LatPoint> latPoints;

@@ -286,7 +286,8 @@ enum class PtrDLEntryPos { Size = 0, Abi = 1, Preferred = 2, Index = 3 };
 /// Returns `std::nullopt` if `pos` is not present in the entry.
 /// Currently only `PtrDLEntryPos::Index` is optional, and all other positions
 /// may be assumed to be present.
-Optional<unsigned> extractPointerSpecValue(Attribute attr, PtrDLEntryPos pos);
+std::optional<unsigned> extractPointerSpecValue(Attribute attr,
+                                                PtrDLEntryPos pos);
 
 } // namespace LLVM
 } // namespace mlir

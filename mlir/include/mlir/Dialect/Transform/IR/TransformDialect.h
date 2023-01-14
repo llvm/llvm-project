@@ -190,7 +190,7 @@ private:
 template <typename OpTy>
 void TransformDialect::addOperationIfNotRegistered() {
   StringRef name = OpTy::getOperationName();
-  Optional<RegisteredOperationName> opName =
+  std::optional<RegisteredOperationName> opName =
       RegisteredOperationName::lookup(name, getContext());
   if (!opName) {
     addOperations<OpTy>();

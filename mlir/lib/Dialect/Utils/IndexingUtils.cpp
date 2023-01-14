@@ -32,7 +32,7 @@ SmallVector<int64_t> mlir::computeElementwiseMul(ArrayRef<int64_t> v1,
   return result;
 }
 
-Optional<SmallVector<int64_t>>
+std::optional<SmallVector<int64_t>>
 mlir::computeShapeRatio(ArrayRef<int64_t> shape, ArrayRef<int64_t> subShape) {
   if (shape.size() < subShape.size())
     return std::nullopt;

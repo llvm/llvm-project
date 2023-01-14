@@ -148,8 +148,8 @@ static inline Error makeStringError(const Twine &message) {
                                              llvm::inconvertibleErrorCode());
 }
 
-static Optional<unsigned> getCommandLineOptLevel(Options &options) {
-  Optional<unsigned> optLevel;
+static std::optional<unsigned> getCommandLineOptLevel(Options &options) {
+  std::optional<unsigned> optLevel;
   SmallVector<std::reference_wrapper<llvm::cl::opt<bool>>, 4> optFlags{
       options.optO0, options.optO1, options.optO2, options.optO3};
 
@@ -168,7 +168,7 @@ static Optional<unsigned> getCommandLineOptLevel(Options &options) {
 static Error compileAndExecute(Options &options, Operation *module,
                                StringRef entryPoint,
                                CompileAndExecuteConfig config, void **args) {
-  Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel;
+  std::optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel;
   if (auto clOptLevel = getCommandLineOptLevel(options))
     jitCodeGenOptLevel = static_cast<llvm::CodeGenOpt::Level>(*clOptLevel);
 
@@ -352,7 +352,7 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
     return 0;
   }
 
-  Optional<unsigned> optLevel = getCommandLineOptLevel(options);
+  std::optional<unsigned> optLevel = getCommandLineOptLevel(options);
   SmallVector<std::reference_wrapper<llvm::cl::opt<bool>>, 4> optFlags{
       options.optO0, options.optO1, options.optO2, options.optO3};
 

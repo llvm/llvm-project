@@ -260,7 +260,7 @@ private:
   std::unique_ptr<detail::PassPipelineCLParserImpl> impl;
 
   llvm::cl::opt<std::string> passPipeline;
-  Optional<llvm::cl::alias> passPipelineAlias;
+  std::optional<llvm::cl::alias> passPipelineAlias;
 };
 
 /// This class implements a command-line parser specifically for MLIR pass
@@ -296,9 +296,9 @@ struct PassReproducerOptions {
   LogicalResult apply(PassManager &pm) const;
 
 private:
-  Optional<std::string> pipeline;
-  Optional<bool> verifyEach;
-  Optional<bool> disableThreading;
+  std::optional<std::string> pipeline;
+  std::optional<bool> verifyEach;
+  std::optional<bool> disableThreading;
 };
 
 } // namespace mlir

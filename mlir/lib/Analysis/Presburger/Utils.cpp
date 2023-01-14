@@ -378,11 +378,11 @@ SmallVector<MPInt, 8> presburger::getComplementIneq(ArrayRef<MPInt> ineq) {
   return coeffs;
 }
 
-SmallVector<Optional<MPInt>, 4>
+SmallVector<std::optional<MPInt>, 4>
 DivisionRepr::divValuesAt(ArrayRef<MPInt> point) const {
   assert(point.size() == getNumNonDivs() && "Incorrect point size");
 
-  SmallVector<Optional<MPInt>, 4> divValues(getNumDivs(), std::nullopt);
+  SmallVector<std::optional<MPInt>, 4> divValues(getNumDivs(), std::nullopt);
   bool changed = true;
   while (changed) {
     changed = false;

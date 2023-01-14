@@ -121,7 +121,7 @@ public:
   /// This currently just sums up the overapproximations of the volumes of the
   /// disjuncts, so the approximation might be far from the true volume in the
   /// case when there is a lot of overlap between disjuncts.
-  Optional<MPInt> computeVolume() const;
+  std::optional<MPInt> computeVolume() const;
 
   /// Simplifies the representation of a PresburgerRelation.
   ///

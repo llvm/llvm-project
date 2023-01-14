@@ -393,7 +393,7 @@ static std::string interleaveToString(Container &container,
   return result;
 }
 
-static Optional<int>
+static std::optional<int>
 findTensorDefArgIndex(StringRef name, SmallVectorImpl<LinalgOperandDef> &args) {
   for (const auto &it : llvm::enumerate(args)) {
     if (it.value().name == name)
@@ -403,7 +403,7 @@ findTensorDefArgIndex(StringRef name, SmallVectorImpl<LinalgOperandDef> &args) {
 }
 
 // Try to map the TypeVar to a predefined or an argument type.
-static Optional<std::string>
+static std::optional<std::string>
 findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgOperandDef> &args) {
   // Handle all predefined types.
   if (typeVar == "I32")
@@ -1056,12 +1056,13 @@ if ({1}Iter != attrs.end()) {{
       ++generatedAssignmentCount;
 
       // Recursively generate the expression.
-      std::function<Optional<std::string>(ScalarExpression &)>
+      std::function<std::optional<std::string>(ScalarExpression &)>
           generateExpression =
-              [&](ScalarExpression &expression) -> Optional<std::string> {
+              [&](ScalarExpression &expression) -> std::optional<std::string> {
         if (expression.arg) {
           // Argument reference.
-          Optional<int> argIndex = findTensorDefArgIndex(*expression.arg, args);
+          std::optional<int> argIndex =
+              findTensorDefArgIndex(*expression.arg, args);
           if (!argIndex) {
             emitError(genContext.getLoc())
                 << "scalar argument not defined on the op: " << *expression.arg;
@@ -1111,7 +1112,7 @@ if ({1}Iter != attrs.end()) {{
           SmallVector<std::string> operandCppValues;
           if (expression.scalarFn->kind == ScalarFnKind::Type) {
             assert(expression.scalarFn->typeVar.has_value());
-            Optional<std::string> typeCppValue =
+            std::optional<std::string> typeCppValue =
                 findTypeValue(*expression.scalarFn->typeVar, args);
             if (!typeCppValue) {
               emitError(genContext.getLoc())
@@ -1141,7 +1142,8 @@ if ({1}Iter != attrs.end()) {{
         emitError(genContext.getLoc()) << "unknown ScalarExpression type";
         return std::nullopt;
       };
-      Optional<std::string> cppValue = generateExpression(assignment->value);
+      std::optional<std::string> cppValue =
+          generateExpression(assignment->value);
       if (!cppValue)
         return failure();
       stmts.push_back(llvm::formatv("yields.push_back({0});", *cppValue));

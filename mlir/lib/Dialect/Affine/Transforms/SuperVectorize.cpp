@@ -582,7 +582,7 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
 /// Up to 3-D patterns are supported.
 /// If the command line argument requests a pattern of higher order, returns an
 /// empty pattern list which will conservatively result in no vectorization.
-static Optional<NestedPattern>
+static std::optional<NestedPattern>
 makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
             ArrayRef<int64_t> fastestVaryingPattern) {
   using matcher::For;
@@ -1666,7 +1666,7 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
          "Vectorizing reductions is supported only for 1-D vectors");
 
   // Compute 1-D, 2-D or 3-D loop pattern to be matched on the target loops.
-  Optional<NestedPattern> pattern =
+  std::optional<NestedPattern> pattern =
       makePattern(loops, vectorSizes.size(), fastestVaryingPattern);
   if (!pattern) {
     LLVM_DEBUG(dbgs() << "\n[early-vect] pattern couldn't be computed\n");

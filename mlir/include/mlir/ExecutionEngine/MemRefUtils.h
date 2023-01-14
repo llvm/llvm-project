@@ -102,7 +102,7 @@ makeStridedMemRefDescriptor(T *ptr, T *alignedPtr, ArrayRef<int64_t> shape = {},
 template <typename T>
 std::pair<T *, T *>
 allocAligned(size_t nElements, AllocFunType allocFun = &::malloc,
-             llvm::Optional<uint64_t> alignment = llvm::Optional<uint64_t>()) {
+             std::optional<uint64_t> alignment = std::optional<uint64_t>()) {
   assert(sizeof(T) <= UINT_MAX && "Elemental type overflows");
   auto size = nElements * sizeof(T);
   auto desiredAlignment = alignment.value_or(nextPowerOf2(sizeof(T)));
@@ -147,7 +147,7 @@ public:
   OwningMemRef(
       ArrayRef<int64_t> shape, ArrayRef<int64_t> shapeAlloc = {},
       ElementWiseVisitor<T> init = {},
-      llvm::Optional<uint64_t> alignment = llvm::Optional<uint64_t>(),
+      std::optional<uint64_t> alignment = std::optional<uint64_t>(),
       AllocFunType allocFun = &::malloc,
       std::function<void(StridedMemRefType<T, Rank>)> freeFun =
           [](StridedMemRefType<T, Rank> descriptor) {
