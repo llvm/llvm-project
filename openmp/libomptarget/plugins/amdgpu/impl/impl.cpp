@@ -12,6 +12,36 @@
  * Data
  */
 
+hsa_status_t is_locked(void *ptr, void **agentBaseAddress) {
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+  hsa_amd_pointer_info_t info;
+  info.size = sizeof(hsa_amd_pointer_info_t);
+  err = hsa_amd_pointer_info(ptr, &info, /*alloc=*/nullptr,
+                             /*num_agents_accessible=*/nullptr,
+                             /*accessible=*/nullptr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error when getting pointer info\n");
+    return err;
+  }
+
+  if (info.type == HSA_EXT_POINTER_TYPE_LOCKED) {
+    // When user passes in a basePtr+offset we need to fix the
+    // locked pointer to include the offset: ROCr always returns
+    // the base locked address, not the shifted one.
+    if ((char *)info.hostBaseAddress <= (char *)ptr &&
+        (char *)ptr < (char *)info.hostBaseAddress + info.sizeInBytes)
+      *agentBaseAddress =
+          (void *)((uint64_t)info.agentBaseAddress + (uint64_t)ptr -
+                   (uint64_t)info.hostBaseAddress);
+    else // address is already device-agent accessible, no need to compute
+         // offset
+      *agentBaseAddress = ptr;
+  } else
+    *agentBaseAddress = nullptr;
+
+  return HSA_STATUS_SUCCESS;
+}
+
 // host pointer (either src or dest) must be locked via hsa_amd_memory_lock
 static hsa_status_t invoke_hsa_copy(hsa_signal_t signal, void *dest,
                                     hsa_agent_t agent, const void *src,
@@ -49,12 +79,21 @@ static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
                                          hsa_signal_t signal, void *dest,
                                          hsa_agent_t agent, void *src,
                                          void *lockingPtr, size_t size) {
-  hsa_status_t err;
-
   void *lockedPtr = nullptr;
-  err = hsa_amd_memory_lock(lockingPtr, size, nullptr, 0, (void **)&lockedPtr);
+  hsa_status_t err = is_locked(lockingPtr, &lockedPtr);
+  bool HostPtrIsLocked = true;
   if (err != HSA_STATUS_SUCCESS)
     return err;
+  if (!lockedPtr) { // not locked
+    HostPtrIsLocked = false;
+    hsa_agent_t agents[1] = {agent};
+    err = hsa_amd_memory_lock(lockingPtr, size, agents, /*num_agent=*/1,
+                              (void **)&lockedPtr);
+    if (err != HSA_STATUS_SUCCESS)
+      return err;
+    DP("locking_async_memcpy: lockingPtr=%p lockedPtr=%p Size = %lu\n",
+       lockingPtr, lockedPtr, size);
+  }
 
   switch (direction) {
   case H2D:
@@ -65,13 +104,16 @@ static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
     break;
   }
 
-  if (err != HSA_STATUS_SUCCESS) {
+  if (err != HSA_STATUS_SUCCESS && !HostPtrIsLocked) {
     // do not leak locked host pointers, but discard potential error message
+    // because the initial error was in the copy function
     hsa_amd_memory_unlock(lockingPtr);
     return err;
   }
 
-  err = hsa_amd_memory_unlock(lockingPtr);
+  // unlock only if not user locked
+  if (!HostPtrIsLocked)
+    err = hsa_amd_memory_unlock(lockingPtr);
   if (err != HSA_STATUS_SUCCESS)
     return err;
 
