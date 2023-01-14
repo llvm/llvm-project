@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace presburger;

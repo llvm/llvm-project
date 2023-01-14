@@ -9,6 +9,7 @@
 #define MLIR_CONVERSION_MATHTOLIBM_MATHTOLIBM_H_
 
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 namespace mlir {
 template <typename T>

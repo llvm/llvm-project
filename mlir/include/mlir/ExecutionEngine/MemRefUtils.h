@@ -29,6 +29,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 
 #ifndef MLIR_EXECUTIONENGINE_MEMREFUTILS_H_
 #define MLIR_EXECUTIONENGINE_MEMREFUTILS_H_

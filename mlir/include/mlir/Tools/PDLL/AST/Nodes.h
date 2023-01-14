@@ -16,6 +16,7 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TrailingObjects.h"
+#include <optional>
 
 namespace mlir {
 namespace pdll {

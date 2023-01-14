@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Debug.h"
 #include <numeric>
+#include <optional>
 
 #define DEBUG_TYPE "presburger"
 

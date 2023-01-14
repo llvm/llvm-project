@@ -18,6 +18,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
+#include <optional>
 
 namespace mlir {
 namespace presburger {

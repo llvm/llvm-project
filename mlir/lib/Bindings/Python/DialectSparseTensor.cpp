@@ -9,6 +9,7 @@
 #include "mlir-c/Dialect/SparseTensor.h"
 #include "mlir-c/IR.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
+#include <optional>
 
 namespace py = pybind11;
 using namespace llvm;

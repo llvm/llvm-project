@@ -37,6 +37,7 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 
 #define DEBUG_TYPE "mlircontext"
 

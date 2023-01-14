@@ -10,6 +10,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
 using namespace mlir;
 

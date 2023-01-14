@@ -17,6 +17,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include <utility>
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_VIEWOPGRAPH

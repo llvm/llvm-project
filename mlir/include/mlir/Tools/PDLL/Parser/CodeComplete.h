@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 namespace mlir {
 namespace pdll {

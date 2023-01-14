@@ -25,6 +25,7 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <optional>
 
 namespace toy {
 

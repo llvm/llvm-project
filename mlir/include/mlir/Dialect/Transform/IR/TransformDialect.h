@@ -14,6 +14,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 
 namespace mlir {
 namespace transform {

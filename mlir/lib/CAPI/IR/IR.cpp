@@ -25,6 +25,7 @@
 #include "mlir/Parser/Parser.h"
 
 #include <cstddef>
+#include <optional>
 
 using namespace mlir;
 

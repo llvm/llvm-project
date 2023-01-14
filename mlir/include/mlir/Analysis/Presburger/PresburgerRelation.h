@@ -14,6 +14,7 @@
 #define MLIR_ANALYSIS_PRESBURGER_PRESBURGERRELATION_H
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include <optional>
 
 namespace mlir {
 namespace presburger {

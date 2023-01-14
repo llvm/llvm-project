@@ -31,6 +31,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "loops-to-gpu"
 

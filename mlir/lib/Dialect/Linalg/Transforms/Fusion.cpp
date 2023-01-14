@@ -31,6 +31,7 @@
 #include "llvm/Support/Debug.h"
 
 #include <set>
+#include <optional>
 
 #define DEBUG_TYPE "linalg-fusion"
 

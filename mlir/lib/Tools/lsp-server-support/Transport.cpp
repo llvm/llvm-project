@@ -14,6 +14,7 @@
 #include "llvm/Support/Error.h"
 #include <system_error>
 #include <utility>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::lsp;

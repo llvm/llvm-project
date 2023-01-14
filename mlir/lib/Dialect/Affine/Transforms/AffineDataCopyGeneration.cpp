@@ -32,6 +32,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_AFFINEDATACOPYGENERATION

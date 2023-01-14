@@ -16,6 +16,7 @@
 #include "mlir/Pass/Pass.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTAMDGPUTOROCDL

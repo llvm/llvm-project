@@ -10,6 +10,7 @@
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll::ast;

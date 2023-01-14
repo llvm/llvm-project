@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <cstdint>
+#include <optional>
 
 namespace mlir {
 namespace spirv {

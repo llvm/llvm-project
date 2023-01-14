@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallSet.h"
+#include <optional>
 
 namespace mlir {
 class Operation;

@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TensorEncoding.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;

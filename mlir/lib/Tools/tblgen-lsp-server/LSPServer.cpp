@@ -14,6 +14,7 @@
 #include "TableGenServer.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::lsp;

@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/StorageUniquer.h"
+#include <optional>
 
 namespace mlir {
 namespace pdll {

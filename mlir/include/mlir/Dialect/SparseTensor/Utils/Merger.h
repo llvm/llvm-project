@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/BitVector.h"
+#include <optional>
 
 namespace mlir {
 namespace sparse_tensor {

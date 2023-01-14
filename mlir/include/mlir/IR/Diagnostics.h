@@ -15,6 +15,7 @@
 
 #include "mlir/IR/Location.h"
 #include <functional>
+#include <optional>
 
 namespace llvm {
 class MemoryBuffer;

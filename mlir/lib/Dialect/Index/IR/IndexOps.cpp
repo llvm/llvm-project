@@ -12,6 +12,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/SmallString.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::index;

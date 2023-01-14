@@ -26,6 +26,7 @@
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
+#include <optional>
 
 using namespace mlir::toy;
 using namespace toy;

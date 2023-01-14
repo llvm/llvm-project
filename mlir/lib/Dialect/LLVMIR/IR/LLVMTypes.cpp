@@ -22,6 +22,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/TypeSize.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;

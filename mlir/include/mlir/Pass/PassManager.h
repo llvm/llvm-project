@@ -20,6 +20,7 @@
 
 #include <functional>
 #include <vector>
+#include <optional>
 
 namespace llvm {
 class Any;

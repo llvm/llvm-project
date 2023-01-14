@@ -25,6 +25,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include <optional>
 
 namespace mlir {
 namespace linalg {

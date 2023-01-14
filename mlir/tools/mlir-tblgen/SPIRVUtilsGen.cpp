@@ -29,6 +29,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 
 #include <list>
+#include <optional>
 
 using llvm::ArrayRef;
 using llvm::formatv;

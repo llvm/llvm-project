@@ -24,6 +24,7 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 #include <type_traits>
+#include <optional>
 
 namespace mlir {
 class Builder;

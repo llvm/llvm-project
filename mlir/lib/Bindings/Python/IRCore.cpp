@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include <utility>
+#include <optional>
 
 namespace py = pybind11;
 using namespace mlir;

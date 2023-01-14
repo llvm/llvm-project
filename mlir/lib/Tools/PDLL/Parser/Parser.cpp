@@ -32,6 +32,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Parser.h"
 #include <string>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll;

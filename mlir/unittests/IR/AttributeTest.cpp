@@ -11,6 +11,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;

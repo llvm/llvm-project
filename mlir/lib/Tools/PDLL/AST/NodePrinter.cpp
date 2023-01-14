@@ -12,6 +12,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll::ast;

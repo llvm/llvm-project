@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::linalg;

@@ -25,6 +25,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
+#include <optional>
 
 #define DEBUG_TYPE "spirv-serialization"
 

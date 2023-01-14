@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Shape/Analysis/ShapeMappingAnalysis.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 using namespace mlir;
 

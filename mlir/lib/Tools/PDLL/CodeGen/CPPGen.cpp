@@ -24,6 +24,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll;

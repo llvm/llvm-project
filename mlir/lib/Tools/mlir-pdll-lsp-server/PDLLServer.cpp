@@ -30,6 +30,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll;

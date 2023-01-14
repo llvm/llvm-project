@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <type_traits>
+#include <optional>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 

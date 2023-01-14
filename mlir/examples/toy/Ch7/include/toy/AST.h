@@ -22,6 +22,7 @@
 #include "llvm/Support/Casting.h"
 #include <utility>
 #include <vector>
+#include <optional>
 
 namespace toy {
 

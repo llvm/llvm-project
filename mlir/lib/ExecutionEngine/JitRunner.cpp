@@ -39,6 +39,7 @@
 #include <cstdint>
 #include <numeric>
 #include <utility>
+#include <optional>
 
 using namespace mlir;
 using llvm::Error;

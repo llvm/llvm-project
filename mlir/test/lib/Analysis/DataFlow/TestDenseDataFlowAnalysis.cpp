@@ -12,6 +12,7 @@
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::dataflow;

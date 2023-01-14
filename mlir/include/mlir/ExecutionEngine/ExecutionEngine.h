@@ -22,6 +22,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 template <typename T>

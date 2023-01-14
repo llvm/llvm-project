@@ -21,6 +21,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+#include <optional>
 
 namespace mlir {
 namespace bufferization {

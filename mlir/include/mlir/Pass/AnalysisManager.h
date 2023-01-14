@@ -16,6 +16,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/TypeName.h"
+#include <optional>
 
 namespace mlir {
 class AnalysisManager;
