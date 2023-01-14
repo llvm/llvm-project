@@ -25,8 +25,7 @@
 #include "UnnecessaryCopyInitialization.h"
 #include "UnnecessaryValueParamCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace performance {
 
 class PerformanceModule : public ClangTidyModule {
@@ -74,5 +73,4 @@ static ClangTidyModuleRegistry::Add<PerformanceModule>
 // and thus register the PerformanceModule.
 volatile int PerformanceModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

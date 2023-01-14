@@ -12,8 +12,7 @@
 #include <algorithm>
 #include <optional>
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace utils {
 
 namespace {
@@ -233,5 +232,4 @@ OptionEnumMapping<utils::IncludeSorter::IncludeStyle>::getEnumMapping() {
                    {utils::IncludeSorter::IS_Google_ObjC, "google-objc"}};
   return ArrayRef(Mapping);
 }
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

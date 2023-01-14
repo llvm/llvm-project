@@ -55,8 +55,7 @@ using namespace llvm;
 
 LLVM_INSTANTIATE_REGISTRY(clang::tidy::ClangTidyModuleRegistry)
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 namespace {
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
@@ -658,5 +657,4 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
 
   return Result;
 }
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

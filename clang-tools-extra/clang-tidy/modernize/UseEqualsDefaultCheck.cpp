@@ -16,9 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 static const char SpecialFunction[] = "SpecialFunction";
 
@@ -355,6 +353,4 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

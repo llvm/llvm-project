@@ -18,9 +18,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 namespace {
 bool isOverrideMethod(const FunctionDecl *Function) {
@@ -198,6 +196,4 @@ void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

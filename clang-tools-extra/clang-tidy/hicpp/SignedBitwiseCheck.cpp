@@ -13,9 +13,7 @@
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
 
-namespace clang {
-namespace tidy {
-namespace hicpp {
+namespace clang::tidy::hicpp {
 
 SignedBitwiseCheck::SignedBitwiseCheck(StringRef Name,
                                        ClangTidyContext *Context)
@@ -100,6 +98,4 @@ void SignedBitwiseCheck::check(const MatchFinder::MatchResult &Result) {
       << IsUnary << SignedOperand->getSourceRange() << OperatorLoc;
 }
 
-} // namespace hicpp
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::hicpp

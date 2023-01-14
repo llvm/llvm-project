@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 namespace {
 
 AST_MATCHER(FieldDecl, isMemberOfLambda) {
@@ -44,6 +42,4 @@ void AvoidConstOrRefDataMembersCheck::check(
         << MatchedDecl << MatchedDecl->getType();
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

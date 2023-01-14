@@ -15,9 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 namespace {
 
@@ -93,6 +91,4 @@ void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
       << PredefinedExpr::getIdentKindName(E->getIdentKind());
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
