@@ -265,7 +265,8 @@ void ScanRangeForPointers(uptr begin, uptr end,
                           Frontier *frontier,
                           const char *region_type, ChunkTag tag);
 void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier);
-void ScanExtraStackRanges(tid_t os_id, Frontier *frontier);
+void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
+                          Frontier *frontier);
 
 // Functions called from the parent tool.
 const char *MaybeCallLsanDefaultOptions();
