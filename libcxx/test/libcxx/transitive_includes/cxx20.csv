@@ -49,6 +49,7 @@ atomic cmath
 atomic compare
 atomic cstddef
 atomic cstdint
+atomic cstdlib
 atomic cstring
 atomic ctime
 atomic iosfwd

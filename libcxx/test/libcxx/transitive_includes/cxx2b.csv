@@ -29,6 +29,7 @@ array type_traits
 array version
 atomic cstddef
 atomic cstdint
+atomic cstdlib
 atomic cstring
 atomic ctime
 atomic iosfwd
