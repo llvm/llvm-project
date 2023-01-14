@@ -510,7 +510,7 @@ public:
                                ArrayRef<NamedAttributeDecl *> attributes);
 
   /// Return the name of the operation, or std::nullopt if there isn't one.
-  Optional<StringRef> getName() const;
+  std::optional<StringRef> getName() const;
 
   /// Return the declaration of the operation name.
   const OpNameDecl *getNameDecl() const { return nameDecl; }
@@ -670,7 +670,7 @@ public:
 
   /// Return the documentation comment attached to this decl if it has been set.
   /// Otherwise, returns std::nullopt.
-  Optional<StringRef> getDocComment() const { return docComment; }
+  std::optional<StringRef> getDocComment() const { return docComment; }
 
 protected:
   Decl(TypeID typeID, SMRange loc, const Name *name = nullptr)
@@ -683,7 +683,7 @@ private:
 
   /// The documentation comment attached to this decl. Defaults to None if
   /// the comment is unset/unknown.
-  Optional<StringRef> docComment;
+  std::optional<StringRef> docComment;
 };
 
 //===----------------------------------------------------------------------===//
@@ -766,7 +766,7 @@ public:
                                   const OpNameDecl *nameDecl = nullptr);
 
   /// Return the name of the operation, or std::nullopt if there isn't one.
-  Optional<StringRef> getName() const;
+  std::optional<StringRef> getName() const;
 
   /// Return the declaration of the operation name.
   const OpNameDecl *getNameDecl() const { return nameDecl; }
@@ -875,8 +875,9 @@ public:
   /// Create a native constraint with the given optional code block.
   static UserConstraintDecl *
   createNative(Context &ctx, const Name &name, ArrayRef<VariableDecl *> inputs,
-               ArrayRef<VariableDecl *> results, Optional<StringRef> codeBlock,
-               Type resultType, ArrayRef<StringRef> nativeInputTypes = {}) {
+               ArrayRef<VariableDecl *> results,
+               std::optional<StringRef> codeBlock, Type resultType,
+               ArrayRef<StringRef> nativeInputTypes = {}) {
     return createImpl(ctx, name, inputs, nativeInputTypes, results, codeBlock,
                       /*body=*/nullptr, resultType);
   }
@@ -904,7 +905,7 @@ public:
 
   /// Return the explicit native type to use for the given input. Returns
   /// std::nullopt if no explicit type was set.
-  Optional<StringRef> getNativeInputType(unsigned index) const;
+  std::optional<StringRef> getNativeInputType(unsigned index) const;
 
   /// Return the explicit results of the constraint declaration. May be empty,
   /// even if the constraint has results (e.g. in the case of inferred results).
@@ -917,7 +918,7 @@ public:
 
   /// Return the optional code block of this constraint, if this is a native
   /// constraint with a provided implementation.
-  Optional<StringRef> getCodeBlock() const { return codeBlock; }
+  std::optional<StringRef> getCodeBlock() const { return codeBlock; }
 
   /// Return the body of this constraint if this constraint is a PDLL
   /// constraint, otherwise returns nullptr.
@@ -932,16 +933,18 @@ public:
 private:
   /// Create either a PDLL constraint or a native constraint with the given
   /// components.
-  static UserConstraintDecl *
-  createImpl(Context &ctx, const Name &name, ArrayRef<VariableDecl *> inputs,
-             ArrayRef<StringRef> nativeInputTypes,
-             ArrayRef<VariableDecl *> results, Optional<StringRef> codeBlock,
-             const CompoundStmt *body, Type resultType);
+  static UserConstraintDecl *createImpl(Context &ctx, const Name &name,
+                                        ArrayRef<VariableDecl *> inputs,
+                                        ArrayRef<StringRef> nativeInputTypes,
+                                        ArrayRef<VariableDecl *> results,
+                                        std::optional<StringRef> codeBlock,
+                                        const CompoundStmt *body,
+                                        Type resultType);
 
   UserConstraintDecl(const Name &name, unsigned numInputs,
                      bool hasNativeInputTypes, unsigned numResults,
-                     Optional<StringRef> codeBlock, const CompoundStmt *body,
-                     Type resultType)
+                     std::optional<StringRef> codeBlock,
+                     const CompoundStmt *body, Type resultType)
       : Base(name.getLoc(), &name), numInputs(numInputs),
         numResults(numResults), codeBlock(codeBlock), constraintBody(body),
         resultType(resultType), hasNativeInputTypes(hasNativeInputTypes) {}
@@ -953,7 +956,7 @@ private:
   unsigned numResults;
 
   /// The optional code block of this constraint.
-  Optional<StringRef> codeBlock;
+  std::optional<StringRef> codeBlock;
 
   /// The optional body of this constraint.
   const CompoundStmt *constraintBody;
@@ -1007,9 +1010,9 @@ public:
   static OpNameDecl *create(Context &ctx, SMRange loc);
 
   /// Return the name of this operation, or none if the name is unknown.
-  Optional<StringRef> getName() const {
+  std::optional<StringRef> getName() const {
     const Name *name = Decl::getName();
-    return name ? Optional<StringRef>(name->getName()) : std::nullopt;
+    return name ? std::optional<StringRef>(name->getName()) : std::nullopt;
   }
 
 private:
@@ -1025,12 +1028,12 @@ private:
 class PatternDecl : public Node::NodeBase<PatternDecl, Decl> {
 public:
   static PatternDecl *create(Context &ctx, SMRange location, const Name *name,
-                             Optional<uint16_t> benefit,
+                             std::optional<uint16_t> benefit,
                              bool hasBoundedRecursion,
                              const CompoundStmt *body);
 
   /// Return the benefit of this pattern if specified, or std::nullopt.
-  Optional<uint16_t> getBenefit() const { return benefit; }
+  std::optional<uint16_t> getBenefit() const { return benefit; }
 
   /// Return if this pattern has bounded rewrite recursion.
   bool hasBoundedRewriteRecursion() const { return hasBoundedRecursion; }
@@ -1044,13 +1047,13 @@ public:
   }
 
 private:
-  PatternDecl(SMRange loc, const Name *name, Optional<uint16_t> benefit,
+  PatternDecl(SMRange loc, const Name *name, std::optional<uint16_t> benefit,
               bool hasBoundedRecursion, const CompoundStmt *body)
       : Base(loc, name), benefit(benefit),
         hasBoundedRecursion(hasBoundedRecursion), patternBody(body) {}
 
   /// The benefit of the pattern if it was explicitly specified, None otherwise.
-  Optional<uint16_t> benefit;
+  std::optional<uint16_t> benefit;
 
   /// If the pattern has properly bounded rewrite recursion or not.
   bool hasBoundedRecursion;
@@ -1082,7 +1085,7 @@ public:
   static UserRewriteDecl *createNative(Context &ctx, const Name &name,
                                        ArrayRef<VariableDecl *> inputs,
                                        ArrayRef<VariableDecl *> results,
-                                       Optional<StringRef> codeBlock,
+                                       std::optional<StringRef> codeBlock,
                                        Type resultType) {
     return createImpl(ctx, name, inputs, results, codeBlock, /*body=*/nullptr,
                       resultType);
@@ -1120,7 +1123,7 @@ public:
 
   /// Return the optional code block of this rewrite, if this is a native
   /// rewrite with a provided implementation.
-  Optional<StringRef> getCodeBlock() const { return codeBlock; }
+  std::optional<StringRef> getCodeBlock() const { return codeBlock; }
 
   /// Return the body of this rewrite if this rewrite is a PDLL rewrite,
   /// otherwise returns nullptr.
@@ -1138,11 +1141,11 @@ private:
   static UserRewriteDecl *createImpl(Context &ctx, const Name &name,
                                      ArrayRef<VariableDecl *> inputs,
                                      ArrayRef<VariableDecl *> results,
-                                     Optional<StringRef> codeBlock,
+                                     std::optional<StringRef> codeBlock,
                                      const CompoundStmt *body, Type resultType);
 
   UserRewriteDecl(const Name &name, unsigned numInputs, unsigned numResults,
-                  Optional<StringRef> codeBlock, const CompoundStmt *body,
+                  std::optional<StringRef> codeBlock, const CompoundStmt *body,
                   Type resultType)
       : Base(name.getLoc(), &name), numInputs(numInputs),
         numResults(numResults), codeBlock(codeBlock), rewriteBody(body),
@@ -1155,7 +1158,7 @@ private:
   unsigned numResults;
 
   /// The optional code block of this rewrite.
-  Optional<StringRef> codeBlock;
+  std::optional<StringRef> codeBlock;
 
   /// The optional body of this rewrite.
   const CompoundStmt *rewriteBody;
@@ -1207,7 +1210,7 @@ public:
 
   /// Return the optional code block of this callable, if this is a native
   /// callable with a provided implementation.
-  Optional<StringRef> getCodeBlock() const {
+  std::optional<StringRef> getCodeBlock() const {
     if (const auto *cst = dyn_cast<UserConstraintDecl>(this))
       return cst->getCodeBlock();
     return cast<UserRewriteDecl>(this)->getCodeBlock();

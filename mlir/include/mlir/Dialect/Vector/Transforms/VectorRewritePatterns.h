@@ -112,7 +112,7 @@ struct UnrollVectorOptions {
   }
 
   using NativeShapeFnType =
-      std::function<Optional<SmallVector<int64_t>>(Operation *op)>;
+      std::function<std::optional<SmallVector<int64_t>>(Operation *op)>;
   /// Function that returns the shape of the vector to unroll to for a given
   /// operation. The unrolling is aborted if the function returns
   /// `std::nullopt`.
@@ -125,7 +125,7 @@ struct UnrollVectorOptions {
   /// Set the native shape to use for unrolling.
   UnrollVectorOptions &setNativeShape(ArrayRef<int64_t> shape) {
     SmallVector<int64_t> tsShape(shape.begin(), shape.end());
-    nativeShape = [=](Operation *) -> Optional<SmallVector<int64_t>> {
+    nativeShape = [=](Operation *) -> std::optional<SmallVector<int64_t>> {
       return tsShape;
     };
     return *this;
@@ -136,7 +136,7 @@ struct UnrollVectorOptions {
   /// be used when unrolling the given operation into units of the native vector
   /// size.
   using UnrollTraversalOrderFnType =
-      std::function<Optional<SmallVector<int64_t>>(Operation *op)>;
+      std::function<std::optional<SmallVector<int64_t>>(Operation *op)>;
   UnrollTraversalOrderFnType traversalOrderCallback = nullptr;
   UnrollVectorOptions &
   setUnrollTraversalOrderFn(UnrollTraversalOrderFnType traversalOrderFn) {

@@ -785,7 +785,7 @@ OperationName::UnregisteredOpModel::verifyRegionInvariants(Operation *) {
 // RegisteredOperationName
 //===----------------------------------------------------------------------===//
 
-Optional<RegisteredOperationName>
+std::optional<RegisteredOperationName>
 RegisteredOperationName::lookup(StringRef name, MLIRContext *ctx) {
   auto &impl = ctx->getImpl();
   auto it = impl.registeredOperations.find(name);

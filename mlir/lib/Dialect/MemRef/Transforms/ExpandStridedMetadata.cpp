@@ -174,7 +174,7 @@ getExpandedSizes(memref::ExpandShapeOp expandShape, OpBuilder &builder,
   SmallVector<OpFoldResult> expandedSizes(groupSize);
 
   uint64_t productOfAllStaticSizes = 1;
-  Optional<unsigned> dynSizeIdx;
+  std::optional<unsigned> dynSizeIdx;
   MemRefType expandShapeType = expandShape.getResultType();
 
   // Fill up all the statically known sizes.
@@ -239,7 +239,7 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
   unsigned groupSize = reassocGroup.size();
   MemRefType expandShapeType = expandShape.getResultType();
 
-  Optional<int64_t> dynSizeIdx;
+  std::optional<int64_t> dynSizeIdx;
 
   // Fill up the expanded strides, with the information we can deduce from the
   // resulting shape.

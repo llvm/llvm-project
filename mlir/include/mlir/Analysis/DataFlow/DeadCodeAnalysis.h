@@ -221,7 +221,7 @@ private:
 
   /// Get the constant values of the operands of the operation. Returns none if
   /// any of the operand lattices are uninitialized.
-  Optional<SmallVector<Attribute>> getOperandValues(Operation *op);
+  std::optional<SmallVector<Attribute>> getOperandValues(Operation *op);
 
   /// The top-level operation the analysis is running on. This is used to detect
   /// if a callable is outside the scope of the analysis and thus must be

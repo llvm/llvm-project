@@ -651,7 +651,7 @@ static bool canRemoveSrcNodeAfterFusion(
   // escaping memref, we can only remove it if the fusion slice is maximal so
   // that all the dependences are preserved.
   if (hasOutDepsAfterFusion || !escapingMemRefs.empty()) {
-    Optional<bool> isMaximal = fusionSlice.isMaximal();
+    std::optional<bool> isMaximal = fusionSlice.isMaximal();
     if (!isMaximal) {
       LLVM_DEBUG(llvm::dbgs() << "Src loop can't be removed: can't determine "
                                  "if fusion is maximal\n");
@@ -926,7 +926,7 @@ static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
 // this one.
 static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
                                  unsigned dstLoopDepth,
-                                 Optional<unsigned> fastMemorySpace,
+                                 std::optional<unsigned> fastMemorySpace,
                                  uint64_t localBufSizeThreshold) {
   Operation *forInst = forOp.getOperation();
 
@@ -950,7 +950,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   lbs.reserve(rank);
   // Query 'region' for 'newShape' and lower bounds of MemRefRegion accessed
   // by 'srcStoreOpInst' at depth 'dstLoopDepth'.
-  Optional<int64_t> numElements =
+  std::optional<int64_t> numElements =
       region.getConstantBoundingSizeAndShape(&newShape, &lbs, &lbDivisors);
   assert(numElements && "non-constant number of elts in local buffer");
 
@@ -1176,7 +1176,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
     return false;
   }
 
-  Optional<int64_t> maybeSrcWriteRegionSizeBytes =
+  std::optional<int64_t> maybeSrcWriteRegionSizeBytes =
       srcWriteRegion.getRegionSize();
   if (!maybeSrcWriteRegionSizeBytes.has_value())
     return false;
@@ -1218,7 +1218,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
       continue;
     }
 
-    Optional<int64_t> maybeSliceWriteRegionSizeBytes =
+    std::optional<int64_t> maybeSliceWriteRegionSizeBytes =
         sliceWriteRegion.getRegionSize();
     if (!maybeSliceWriteRegionSizeBytes.has_value() ||
         *maybeSliceWriteRegionSizeBytes == 0) {
@@ -1398,7 +1398,7 @@ public:
   // Parameter for local buffer size threshold.
   unsigned localBufSizeThreshold;
   // Parameter for fast memory space.
-  Optional<unsigned> fastMemorySpace;
+  std::optional<unsigned> fastMemorySpace;
   // If true, ignore any additional (redundant) computation tolerance threshold
   // that would have prevented fusion.
   bool maximalFusion;
@@ -1409,7 +1409,7 @@ public:
   using Node = MemRefDependenceGraph::Node;
 
   GreedyFusion(MemRefDependenceGraph *mdg, unsigned localBufSizeThreshold,
-               Optional<unsigned> fastMemorySpace, bool maximalFusion,
+               std::optional<unsigned> fastMemorySpace, bool maximalFusion,
                double computeToleranceThreshold)
       : mdg(mdg), localBufSizeThreshold(localBufSizeThreshold),
         fastMemorySpace(fastMemorySpace), maximalFusion(maximalFusion),
@@ -2016,7 +2016,7 @@ void LoopFusion::runOnBlock(Block *block) {
   if (!g.init(block))
     return;
 
-  Optional<unsigned> fastMemorySpaceOpt;
+  std::optional<unsigned> fastMemorySpaceOpt;
   if (fastMemorySpace.hasValue())
     fastMemorySpaceOpt = fastMemorySpace;
   unsigned localBufSizeThresholdBytes = localBufSizeThreshold * 1024;

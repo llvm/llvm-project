@@ -62,7 +62,7 @@ public:
 
 private:
   /// An optional integer value.
-  Optional<uint64_t> state;
+  std::optional<uint64_t> state;
 };
 
 /// This analysis computes `FooState` across operations and control-flow edges.

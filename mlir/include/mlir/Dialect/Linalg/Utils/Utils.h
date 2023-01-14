@@ -135,12 +135,12 @@ GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
 /// and offset is 0. Strictly speaking the offset 0 is not required in general,
 /// but non-zero offsets are not handled by SPIR-V backend at this point (and
 /// potentially cannot be handled).
-Optional<SmallVector<ReassociationIndices>>
+std::optional<SmallVector<ReassociationIndices>>
 getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 
 /// Return the identity numeric value associated to the give op. Return
 /// std::nullopt if there is no known neutral element.
-Optional<Attribute> getNeutralElement(Operation *op);
+std::optional<Attribute> getNeutralElement(Operation *op);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
@@ -224,7 +224,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
 ///
 /// Some of the `valuesToTile` won't be affected by tiling. For these values,
 /// std::nullopt will be returned.
-SmallVector<Optional<SliceParameters>>
+SmallVector<std::optional<SliceParameters>>
 computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
                           ValueRange valuesToTile, ArrayRef<OpFoldResult> ivs,
                           ArrayRef<OpFoldResult> tileSizes,
@@ -397,7 +397,7 @@ public:
   LogicalResult
   tileRootOp(OpBuilder &b, ArrayRef<int64_t> tileSizes,
              ArrayRef<int64_t> tileInterchange,
-             Optional<LinalgLoopDistributionOptions> tileDistribution);
+             std::optional<LinalgLoopDistributionOptions> tileDistribution);
 
   /// Fuse the producer of `consumerOpOperand` into the tile loop nest. Returns
   /// the fused producer or fails if fusion is not possible.
@@ -467,7 +467,7 @@ struct RegionMatcher {
   ///     linalg.yield %0: <scalar-type>
   /// }
   /// ```
-  static Optional<BinaryOpKind> matchAsScalarBinaryOp(GenericOp op);
+  static std::optional<BinaryOpKind> matchAsScalarBinaryOp(GenericOp op);
 };
 
 //===----------------------------------------------------------------------===//

@@ -501,7 +501,7 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
   return success();
 }
 
-Optional<std::pair<Attribute, Type>>
+std::optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
   if (constIt == constantMap.end())
@@ -509,7 +509,7 @@ spirv::Deserializer::getConstant(uint32_t id) {
   return constIt->getSecond();
 }
 
-Optional<spirv::SpecConstOperationMaterializationInfo>
+std::optional<spirv::SpecConstOperationMaterializationInfo>
 spirv::Deserializer::getSpecConstantOperation(uint32_t id) {
   auto constIt = specConstOperationMap.find(id);
   if (constIt == specConstOperationMap.end())
@@ -1513,7 +1513,7 @@ spirv::Deserializer::processBranchConditional(ArrayRef<uint32_t> operands) {
   auto *trueBlock = getOrCreateBlock(operands[1]);
   auto *falseBlock = getOrCreateBlock(operands[2]);
 
-  Optional<std::pair<uint32_t, uint32_t>> weights;
+  std::optional<std::pair<uint32_t, uint32_t>> weights;
   if (operands.size() == 5) {
     weights = std::make_pair(operands[3], operands[4]);
   }

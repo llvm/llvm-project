@@ -134,7 +134,7 @@ void NodePrinter::print(Type type) {
       .Case([&](ConstraintType) { os << "Constraint"; })
       .Case([&](OperationType type) {
         os << "Op";
-        if (Optional<StringRef> name = type.getName())
+        if (std::optional<StringRef> name = type.getName())
           os << "<" << *name << ">";
       })
       .Case([&](RangeType type) {
@@ -298,7 +298,7 @@ void NodePrinter::printImpl(const TypeRangeConstraintDecl *decl) {
 void NodePrinter::printImpl(const UserConstraintDecl *decl) {
   os << "UserConstraintDecl " << decl << " Name<" << decl->getName().getName()
      << "> ResultType<" << decl->getResultType() << ">";
-  if (Optional<StringRef> codeBlock = decl->getCodeBlock()) {
+  if (std::optional<StringRef> codeBlock = decl->getCodeBlock()) {
     os << " Code<";
     llvm::printEscapedString(*codeBlock, os);
     os << ">";
@@ -330,7 +330,7 @@ void NodePrinter::printImpl(const NamedAttributeDecl *decl) {
 
 void NodePrinter::printImpl(const OpNameDecl *decl) {
   os << "OpNameDecl " << decl;
-  if (Optional<StringRef> name = decl->getName())
+  if (std::optional<StringRef> name = decl->getName())
     os << " Name<" << *name << ">";
   os << "\n";
 }
@@ -339,7 +339,7 @@ void NodePrinter::printImpl(const PatternDecl *decl) {
   os << "PatternDecl " << decl;
   if (const Name *name = decl->getName())
     os << " Name<" << name->getName() << ">";
-  if (Optional<uint16_t> benefit = decl->getBenefit())
+  if (std::optional<uint16_t> benefit = decl->getBenefit())
     os << " Benefit<" << *benefit << ">";
   if (decl->hasBoundedRewriteRecursion())
     os << " Recursion";
@@ -351,7 +351,7 @@ void NodePrinter::printImpl(const PatternDecl *decl) {
 void NodePrinter::printImpl(const UserRewriteDecl *decl) {
   os << "UserRewriteDecl " << decl << " Name<" << decl->getName().getName()
      << "> ResultType<" << decl->getResultType() << ">";
-  if (Optional<StringRef> codeBlock = decl->getCodeBlock()) {
+  if (std::optional<StringRef> codeBlock = decl->getCodeBlock()) {
     os << " Code<";
     llvm::printEscapedString(*codeBlock, os);
     os << ">";

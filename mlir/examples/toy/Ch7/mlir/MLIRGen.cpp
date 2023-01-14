@@ -271,7 +271,7 @@ private:
   }
 
   /// Return the numeric member index of the given struct access expression.
-  llvm::Optional<size_t> getMemberIndex(BinaryExprAST &accessOp) {
+  std::optional<size_t> getMemberIndex(BinaryExprAST &accessOp) {
     assert(accessOp.getOp() == '.' && "expected access operation");
 
     // Lookup the struct node for the LHS.
@@ -313,7 +313,7 @@ private:
 
     // If this is an access operation, handle it immediately.
     if (binop.getOp() == '.') {
-      llvm::Optional<size_t> accessIndex = getMemberIndex(binop);
+      std::optional<size_t> accessIndex = getMemberIndex(binop);
       if (!accessIndex) {
         emitError(location, "invalid access into struct expression");
         return nullptr;

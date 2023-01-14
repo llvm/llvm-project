@@ -31,7 +31,7 @@ void DialectResourceBlobManager::update(StringRef name,
 }
 
 auto DialectResourceBlobManager::insert(StringRef name,
-                                        Optional<AsmResourceBlob> blob)
+                                        std::optional<AsmResourceBlob> blob)
     -> BlobEntry & {
   llvm::sys::SmartScopedWriter<true> writer(blobMapLock);
 

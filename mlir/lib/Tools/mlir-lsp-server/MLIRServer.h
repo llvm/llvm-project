@@ -49,7 +49,7 @@ public:
   /// Remove the document with the given uri. Returns the version of the removed
   /// document, or std::nullopt if the uri did not have a corresponding document
   /// within the server.
-  Optional<int64_t> removeDocument(const URIForFile &uri);
+  std::optional<int64_t> removeDocument(const URIForFile &uri);
 
   /// Return the locations of the object pointed at by the given position.
   void getLocationsOf(const URIForFile &uri, const Position &defPos,

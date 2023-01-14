@@ -267,8 +267,8 @@ LLVMPointerType::verify(function_ref<InFlightDiagnostic()> emitError,
 constexpr const static unsigned kDefaultPointerSizeBits = 64;
 constexpr const static unsigned kDefaultPointerAlignment = 8;
 
-Optional<unsigned> mlir::LLVM::extractPointerSpecValue(Attribute attr,
-                                                       PtrDLEntryPos pos) {
+std::optional<unsigned> mlir::LLVM::extractPointerSpecValue(Attribute attr,
+                                                            PtrDLEntryPos pos) {
   auto spec = attr.cast<DenseIntElementsAttr>();
   auto idx = static_cast<unsigned>(pos);
   if (idx >= spec.size())
@@ -280,7 +280,7 @@ Optional<unsigned> mlir::LLVM::extractPointerSpecValue(Attribute attr,
 /// given `type` by interpreting the list of entries `params`. For the pointer
 /// type in the default address space, returns the default value if the entries
 /// do not provide a custom one, for other address spaces returns std::nullopt.
-static Optional<unsigned>
+static std::optional<unsigned>
 getPointerDataLayoutEntry(DataLayoutEntryListRef params, LLVMPointerType type,
                           PtrDLEntryPos pos) {
   // First, look for the entry for the pointer in the current address space.
@@ -312,7 +312,7 @@ getPointerDataLayoutEntry(DataLayoutEntryListRef params, LLVMPointerType type,
 unsigned
 LLVMPointerType::getTypeSizeInBits(const DataLayout &dataLayout,
                                    DataLayoutEntryListRef params) const {
-  if (Optional<unsigned> size =
+  if (std::optional<unsigned> size =
           getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Size))
     return *size;
 
@@ -325,7 +325,7 @@ LLVMPointerType::getTypeSizeInBits(const DataLayout &dataLayout,
 
 unsigned LLVMPointerType::getABIAlignment(const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) const {
-  if (Optional<unsigned> alignment =
+  if (std::optional<unsigned> alignment =
           getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Abi))
     return *alignment;
 
@@ -337,7 +337,7 @@ unsigned LLVMPointerType::getABIAlignment(const DataLayout &dataLayout,
 unsigned
 LLVMPointerType::getPreferredAlignment(const DataLayout &dataLayout,
                                        DataLayoutEntryListRef params) const {
-  if (Optional<unsigned> alignment =
+  if (std::optional<unsigned> alignment =
           getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Preferred))
     return *alignment;
 
@@ -531,7 +531,7 @@ namespace {
 enum class StructDLEntryPos { Abi = 0, Preferred = 1 };
 } // namespace
 
-static Optional<unsigned>
+static std::optional<unsigned>
 getStructDataLayoutEntry(DataLayoutEntryListRef params, LLVMStructType type,
                          StructDLEntryPos pos) {
   const auto *currentEntry =
@@ -568,7 +568,7 @@ static unsigned calculateStructAlignment(const DataLayout &dataLayout,
   }
 
   // Entries are only allowed to be stricter than the required alignment
-  if (Optional<unsigned> entryResult =
+  if (std::optional<unsigned> entryResult =
           getStructDataLayoutEntry(params, type, pos))
     return std::max(*entryResult / kBitsInByte, structAlignment);
 

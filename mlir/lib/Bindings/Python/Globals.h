@@ -84,12 +84,12 @@ public:
 
   /// Looks up a registered dialect class by namespace. Note that this may
   /// trigger loading of the defining module and can arbitrarily re-enter.
-  llvm::Optional<pybind11::object>
+  std::optional<pybind11::object>
   lookupDialectClass(const std::string &dialectNamespace);
 
   /// Looks up a registered raw OpView class by operation name. Note that this
   /// may trigger a load of the dialect, which can arbitrarily re-enter.
-  llvm::Optional<pybind11::object>
+  std::optional<pybind11::object>
   lookupRawOpViewClass(llvm::StringRef operationName);
 
 private:

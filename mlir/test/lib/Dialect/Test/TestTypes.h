@@ -74,9 +74,9 @@ inline mlir::AsmPrinter &operator<<(mlir::AsmPrinter &printer,
 
 /// Overload the attribute parameter parser for optional integers.
 template <>
-struct FieldParser<Optional<int>> {
-  static FailureOr<Optional<int>> parse(AsmParser &parser) {
-    Optional<int> value;
+struct FieldParser<std::optional<int>> {
+  static FailureOr<std::optional<int>> parse(AsmParser &parser) {
+    std::optional<int> value;
     value.emplace();
     OptionalParseResult result = parser.parseOptionalInteger(*value);
     if (result.has_value()) {

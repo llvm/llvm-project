@@ -36,7 +36,7 @@ gpu::SerializeToBlobPass::SerializeToBlobPass(TypeID passID)
 gpu::SerializeToBlobPass::SerializeToBlobPass(const SerializeToBlobPass &other)
     : OperationPass<gpu::GPUModuleOp>(other) {}
 
-Optional<std::string>
+std::optional<std::string>
 gpu::SerializeToBlobPass::translateToISA(llvm::Module &llvmModule,
                                          llvm::TargetMachine &targetMachine) {
   llvmModule.setDataLayout(targetMachine.createDataLayout());
@@ -73,7 +73,7 @@ void gpu::SerializeToBlobPass::runOnOperation() {
   if (!targetMachine)
     return signalPassFailure();
 
-  Optional<std::string> maybeTargetISA =
+  std::optional<std::string> maybeTargetISA =
       translateToISA(*llvmModule, *targetMachine);
 
   if (!maybeTargetISA.has_value())

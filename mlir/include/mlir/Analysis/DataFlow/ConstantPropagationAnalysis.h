@@ -83,7 +83,7 @@ public:
 
 private:
   /// The constant value.
-  Optional<Attribute> constant;
+  std::optional<Attribute> constant;
   /// A dialect instance that can be used to materialize the constant.
   Dialect *dialect = nullptr;
 };

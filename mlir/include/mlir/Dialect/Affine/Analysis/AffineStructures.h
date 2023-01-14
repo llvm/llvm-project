@@ -48,7 +48,7 @@ public:
                              unsigned numReservedEqualities,
                              unsigned numReservedCols, unsigned numDims,
                              unsigned numSymbols, unsigned numLocals,
-                             ArrayRef<Optional<Value>> valArgs = {})
+                             ArrayRef<std::optional<Value>> valArgs = {})
       : IntegerPolyhedron(numReservedInequalities, numReservedEqualities,
                           numReservedCols,
                           presburger::PresburgerSpace::getSetSpace(
@@ -66,7 +66,7 @@ public:
   /// dimensions and symbols.
   FlatAffineValueConstraints(unsigned numDims = 0, unsigned numSymbols = 0,
                              unsigned numLocals = 0,
-                             ArrayRef<Optional<Value>> valArgs = {})
+                             ArrayRef<std::optional<Value>> valArgs = {})
       : FlatAffineValueConstraints(/*numReservedInequalities=*/0,
                                    /*numReservedEqualities=*/0,
                                    /*numReservedCols=*/numDims + numSymbols +
@@ -74,7 +74,7 @@ public:
                                    numDims, numSymbols, numLocals, valArgs) {}
 
   FlatAffineValueConstraints(const IntegerPolyhedron &fac,
-                             ArrayRef<Optional<Value>> valArgs = {})
+                             ArrayRef<std::optional<Value>> valArgs = {})
       : IntegerPolyhedron(fac) {
     assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
     if (valArgs.empty())
@@ -437,11 +437,11 @@ public:
     getValues(0, getNumDimAndSymbolVars(), values);
   }
 
-  inline ArrayRef<Optional<Value>> getMaybeValues() const {
+  inline ArrayRef<std::optional<Value>> getMaybeValues() const {
     return {values.data(), values.size()};
   }
 
-  inline ArrayRef<Optional<Value>>
+  inline ArrayRef<std::optional<Value>>
   getMaybeValues(presburger::VarKind kind) const {
     assert(kind != VarKind::Local &&
            "Local variables do not have any value attached to them.");
@@ -511,7 +511,7 @@ protected:
   /// constraint system appearing in the order the variables correspond to
   /// columns. Variables that aren't associated with any Value are set to
   /// None.
-  SmallVector<Optional<Value>, 8> values;
+  SmallVector<std::optional<Value>, 8> values;
 };
 
 /// A FlatAffineRelation represents a set of ordered pairs (domain -> range)
@@ -525,7 +525,7 @@ public:
                      unsigned numReservedEqualities, unsigned numReservedCols,
                      unsigned numDomainDims, unsigned numRangeDims,
                      unsigned numSymbols, unsigned numLocals,
-                     ArrayRef<Optional<Value>> valArgs = {})
+                     ArrayRef<std::optional<Value>> valArgs = {})
       : FlatAffineValueConstraints(
             numReservedInequalities, numReservedEqualities, numReservedCols,
             numDomainDims + numRangeDims, numSymbols, numLocals, valArgs),

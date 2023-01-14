@@ -53,9 +53,10 @@ public:
 
   /// Generates loop boundary statements (entering/exiting loops). The function
   /// passes and updates the passed-in parameters.
-  Optional<Operation *> genLoopBoundary(
-      function_ref<Optional<Operation *>(MutableArrayRef<Value> parameters)>
-          callback);
+  std::optional<Operation *>
+  genLoopBoundary(function_ref<
+                  std::optional<Operation *>(MutableArrayRef<Value> parameters)>
+                      callback);
 
   //
   // Merger delegates.

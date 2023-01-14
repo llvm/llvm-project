@@ -52,7 +52,7 @@ public:
   ParseResult operator*() const { return value(); }
 
 private:
-  Optional<ParseResult> impl;
+  std::optional<ParseResult> impl;
 };
 
 // These functions are out-of-line utilities, which avoids them being template
@@ -1673,8 +1673,9 @@ public:
   /// interfaces for the concrete operation.
   template <typename... Models>
   static void attachInterface(MLIRContext &context) {
-    Optional<RegisteredOperationName> info = RegisteredOperationName::lookup(
-        ConcreteType::getOperationName(), &context);
+    std::optional<RegisteredOperationName> info =
+        RegisteredOperationName::lookup(ConcreteType::getOperationName(),
+                                        &context);
     if (!info)
       llvm::report_fatal_error(
           "Attempting to attach an interface to an unregistered operation " +
@@ -1907,7 +1908,8 @@ protected:
     OperationName name = op->getName();
 
     // Access the raw interface from the operation info.
-    if (Optional<RegisteredOperationName> rInfo = name.getRegisteredInfo()) {
+    if (std::optional<RegisteredOperationName> rInfo =
+            name.getRegisteredInfo()) {
       if (auto *opIface = rInfo->getInterface<ConcreteType>())
         return opIface;
       // Fallback to the dialect to provide it with a chance to implement this

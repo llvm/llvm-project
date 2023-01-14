@@ -115,7 +115,7 @@ struct ComputationSliceState {
   /// cannot determine if the slice is maximal or not.
   // TODO: Cache 'isMaximal' so that we don't recompute it when the slice
   // information hasn't changed.
-  Optional<bool> isMaximal() const;
+  std::optional<bool> isMaximal() const;
 
   /// Checks the validity of the slice computed. This is done using the
   /// following steps:
@@ -131,7 +131,7 @@ struct ComputationSliceState {
   /// return false as it implies that the effective fusion results in at least
   /// one iteration of the slice that was not originally in the source's domain.
   /// If the validity cannot be determined, returns std::nullopt.
-  Optional<bool> isSliceValid();
+  std::optional<bool> isSliceValid();
 
   void dump() const;
 
@@ -141,7 +141,7 @@ private:
   /// and the dst loops for those dimensions have the same bounds. Returns false
   /// if both the src and the dst loops don't have the same bounds. Returns
   /// std::nullopt if none of the above can be proven.
-  Optional<bool> isSliceMaximalFastCheck() const;
+  std::optional<bool> isSliceMaximalFastCheck() const;
 };
 
 /// Computes the computation slice loop bounds for one loop nest as affine maps
@@ -303,7 +303,7 @@ struct MemRefRegion {
   /// int64_t. `lbs` are set to the lower bounds for each of the rank
   /// dimensions, and lbDivisors contains the corresponding denominators for
   /// floorDivs.
-  Optional<int64_t> getConstantBoundingSizeAndShape(
+  std::optional<int64_t> getConstantBoundingSizeAndShape(
       SmallVectorImpl<int64_t> *shape = nullptr,
       std::vector<SmallVector<int64_t, 4>> *lbs = nullptr,
       SmallVectorImpl<int64_t> *lbDivisors = nullptr) const;
@@ -317,7 +317,7 @@ struct MemRefRegion {
   /// 'pos' corresponds to the position of the memref shape's dimension (major
   /// to minor) which matches 1:1 with the dimensional variable positions in
   /// 'cst'.
-  Optional<int64_t>
+  std::optional<int64_t>
   getConstantBoundOnDimSize(unsigned pos,
                             SmallVectorImpl<int64_t> *lb = nullptr,
                             int64_t *lbFloorDivisor = nullptr) const {
@@ -326,7 +326,7 @@ struct MemRefRegion {
   }
 
   /// Returns the size of this MemRefRegion in bytes.
-  Optional<int64_t> getRegionSize();
+  std::optional<int64_t> getRegionSize();
 
   // Wrapper around FlatAffineValueConstraints::unionBoundingBox.
   LogicalResult unionBoundingBox(const MemRefRegion &other);
@@ -357,7 +357,7 @@ struct MemRefRegion {
 
 /// Returns the size of memref data in bytes if it's statically shaped,
 /// std::nullopt otherwise.
-Optional<uint64_t> getMemRefSizeInBytes(MemRefType memRefType);
+std::optional<uint64_t> getMemRefSizeInBytes(MemRefType memRefType);
 
 /// Checks a load or store op for an out of bound access; returns failure if the
 /// access is out of bounds along any of the dimensions, success otherwise.
@@ -371,8 +371,8 @@ unsigned getNumCommonSurroundingLoops(Operation &a, Operation &b);
 
 /// Gets the memory footprint of all data touched in the specified memory space
 /// in bytes; if the memory space is unspecified, considers all memory spaces.
-Optional<int64_t> getMemoryFootprintBytes(AffineForOp forOp,
-                                          int memorySpace = -1);
+std::optional<int64_t> getMemoryFootprintBytes(AffineForOp forOp,
+                                               int memorySpace = -1);
 
 /// Simplify the integer set by simplifying the underlying affine expressions by
 /// flattening and some simple inference. Also, drop any duplicate constraints.

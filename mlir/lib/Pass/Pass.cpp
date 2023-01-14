@@ -128,13 +128,14 @@ struct OpPassManagerImpl {
   LogicalResult finalizePassList(MLIRContext *ctx);
 
   /// Return the operation name of this pass manager.
-  Optional<OperationName> getOpName(MLIRContext &context) {
+  std::optional<OperationName> getOpName(MLIRContext &context) {
     if (!name.empty() && !opName)
       opName = OperationName(name, &context);
     return opName;
   }
-  Optional<StringRef> getOpName() const {
-    return name.empty() ? Optional<StringRef>() : Optional<StringRef>(name);
+  std::optional<StringRef> getOpName() const {
+    return name.empty() ? std::optional<StringRef>()
+                        : std::optional<StringRef>(name);
   }
 
   /// Return the name used to anchor this pass manager. This is either the name
@@ -153,7 +154,7 @@ struct OpPassManagerImpl {
 
   /// The cached OperationName (internalized in the context) for the name of the
   /// operation that passes of this pass manager operate on.
-  Optional<OperationName> opName;
+  std::optional<OperationName> opName;
 
   /// The set of passes to run as part of this pass manager.
   std::vector<std::unique_ptr<Pass>> passes;
@@ -185,8 +186,8 @@ OpPassManager &OpPassManagerImpl::nest(OpPassManager &&nested) {
 void OpPassManagerImpl::addPass(std::unique_ptr<Pass> pass) {
   // If this pass runs on a different operation than this pass manager, then
   // implicitly nest a pass manager for this operation if enabled.
-  Optional<StringRef> pmOpName = getOpName();
-  Optional<StringRef> passOpName = pass->getOpName();
+  std::optional<StringRef> pmOpName = getOpName();
+  std::optional<StringRef> passOpName = pass->getOpName();
   if (pmOpName && passOpName && *pmOpName != *passOpName) {
     if (nesting == OpPassManager::Nesting::Implicit)
       return nest(*passOpName).addPass(std::move(pass));
@@ -244,13 +245,14 @@ LogicalResult OpPassManagerImpl::finalizePassList(MLIRContext *ctx) {
   llvm::erase_if(passes, std::logical_not<std::unique_ptr<Pass>>());
 
   // If this is a op-agnostic pass manager, there is nothing left to do.
-  Optional<OperationName> rawOpName = getOpName(*ctx);
+  std::optional<OperationName> rawOpName = getOpName(*ctx);
   if (!rawOpName)
     return success();
 
   // Otherwise, verify that all of the passes are valid for the current
   // operation anchor.
-  Optional<RegisteredOperationName> opName = rawOpName->getRegisteredInfo();
+  std::optional<RegisteredOperationName> opName =
+      rawOpName->getRegisteredInfo();
   for (std::unique_ptr<Pass> &pass : passes) {
     if (opName && !pass->canScheduleOn(*opName)) {
       return emitError(UnknownLoc::get(ctx))
@@ -266,13 +268,14 @@ bool OpPassManagerImpl::canScheduleOn(MLIRContext &context,
                                       OperationName opName) {
   // If this pass manager is op-specific, we simply check if the provided
   // operation name is the same as this one.
-  Optional<OperationName> pmOpName = getOpName(context);
+  std::optional<OperationName> pmOpName = getOpName(context);
   if (pmOpName)
     return pmOpName == opName;
 
   // Otherwise, this is an op-agnostic pass manager. Check that the operation
   // can be scheduled on all passes within the manager.
-  Optional<RegisteredOperationName> registeredInfo = opName.getRegisteredInfo();
+  std::optional<RegisteredOperationName> registeredInfo =
+      opName.getRegisteredInfo();
   if (!registeredInfo ||
       !registeredInfo->hasTrait<OpTrait::IsIsolatedFromAbove>())
     return false;
@@ -343,12 +346,13 @@ size_t OpPassManager::size() const { return impl->passes.size(); }
 OpPassManagerImpl &OpPassManager::getImpl() { return *impl; }
 
 /// Return the operation name that this pass manager operates on.
-Optional<StringRef> OpPassManager::getOpName() const {
+std::optional<StringRef> OpPassManager::getOpName() const {
   return impl->getOpName();
 }
 
 /// Return the operation name that this pass manager operates on.
-Optional<OperationName> OpPassManager::getOpName(MLIRContext &context) const {
+std::optional<OperationName>
+OpPassManager::getOpName(MLIRContext &context) const {
   return impl->getOpName(context);
 }
 
@@ -418,7 +422,7 @@ LogicalResult OpPassManager::initialize(MLIRContext *context,
 LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
                                      AnalysisManager am, bool verifyPasses,
                                      unsigned parentInitGeneration) {
-  Optional<RegisteredOperationName> opInfo = op->getRegisteredInfo();
+  std::optional<RegisteredOperationName> opInfo = op->getRegisteredInfo();
   if (!opInfo)
     return op->emitOpError()
            << "trying to schedule a pass on an unregistered operation";
@@ -579,7 +583,7 @@ LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
       // If this is a non-generic pass manager, a conflict will arise if a
       // non-generic pass manager's operation name can be scheduled on the
       // generic passmanager.
-      if (Optional<OperationName> pmOpName = pm.getOpName(*ctx))
+      if (std::optional<OperationName> pmOpName = pm.getOpName(*ctx))
         return genericPM.getImpl().canScheduleOn(*ctx, *pmOpName);
       // Otherwise, this is a generic pass manager. We current can't determine
       // when generic pass managers can be merged, so conservatively assume they
@@ -618,8 +622,8 @@ LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
   // After coalescing, sort the pass managers within rhs by name.
   auto compareFn = [](const OpPassManager *lhs, const OpPassManager *rhs) {
     // Order op-specific pass managers first and op-agnostic pass managers last.
-    if (Optional<StringRef> lhsName = lhs->getOpName()) {
-      if (Optional<StringRef> rhsName = rhs->getOpName())
+    if (std::optional<StringRef> lhsName = lhs->getOpName()) {
+      if (std::optional<StringRef> rhsName = rhs->getOpName())
         return lhsName->compare(*rhsName);
       return -1; // lhs(op-specific) < rhs(op-agnostic)
     }
@@ -713,7 +717,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   // execute over. This ensures that an analysis manager exists for each
   // operation, as well as providing a queue of operations to execute over.
   std::vector<OpPMInfo> opInfos;
-  DenseMap<OperationName, Optional<unsigned>> knownOpPMIdx;
+  DenseMap<OperationName, std::optional<unsigned>> knownOpPMIdx;
   for (auto &region : getOperation()->getRegions()) {
     for (Operation &op : region.getOps()) {
       // Get the pass manager index for this operation type.
@@ -778,7 +782,7 @@ void PassManager::enableVerifier(bool enabled) { verifyPasses = enabled; }
 /// Run the passes within this manager on the provided operation.
 LogicalResult PassManager::run(Operation *op) {
   MLIRContext *context = getContext();
-  Optional<OperationName> anchorOp = getOpName(*context);
+  std::optional<OperationName> anchorOp = getOpName(*context);
   if (anchorOp && anchorOp != op->getName())
     return emitError(op->getLoc())
            << "can't run '" << getOpAnchorName() << "' pass manager on '"
@@ -913,10 +917,10 @@ void detail::NestedAnalysisMap::invalidate(
 PassInstrumentation::~PassInstrumentation() = default;
 
 void PassInstrumentation::runBeforePipeline(
-    Optional<OperationName> name, const PipelineParentInfo &parentInfo) {}
+    std::optional<OperationName> name, const PipelineParentInfo &parentInfo) {}
 
 void PassInstrumentation::runAfterPipeline(
-    Optional<OperationName> name, const PipelineParentInfo &parentInfo) {}
+    std::optional<OperationName> name, const PipelineParentInfo &parentInfo) {}
 
 //===----------------------------------------------------------------------===//
 // PassInstrumentor
@@ -939,7 +943,7 @@ PassInstrumentor::~PassInstrumentor() = default;
 
 /// See PassInstrumentation::runBeforePipeline for details.
 void PassInstrumentor::runBeforePipeline(
-    Optional<OperationName> name,
+    std::optional<OperationName> name,
     const PassInstrumentation::PipelineParentInfo &parentInfo) {
   llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
   for (auto &instr : impl->instrumentations)
@@ -948,7 +952,7 @@ void PassInstrumentor::runBeforePipeline(
 
 /// See PassInstrumentation::runAfterPipeline for details.
 void PassInstrumentor::runAfterPipeline(
-    Optional<OperationName> name,
+    std::optional<OperationName> name,
     const PassInstrumentation::PipelineParentInfo &parentInfo) {
   llvm::sys::SmartScopedLock<true> instrumentationLock(impl->mutex);
   for (auto &instr : llvm::reverse(impl->instrumentations))

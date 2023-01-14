@@ -80,7 +80,7 @@ IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 void mlir::gpu::populateMemorySpaceAttributeTypeConversions(
     TypeConverter &typeConverter, const MemorySpaceMapping &mapping) {
-  typeConverter.addConversion([mapping](Type type) -> Optional<Type> {
+  typeConverter.addConversion([mapping](Type type) -> std::optional<Type> {
     auto subElementType = type.dyn_cast_or_null<SubElementTypeInterface>();
     if (!subElementType)
       return type;

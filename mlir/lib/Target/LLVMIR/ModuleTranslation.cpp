@@ -57,7 +57,7 @@ using namespace mlir::LLVM::detail;
 static FailureOr<llvm::DataLayout>
 translateDataLayout(DataLayoutSpecInterface attribute,
                     const DataLayout &dataLayout,
-                    Optional<Location> loc = std::nullopt) {
+                    std::optional<Location> loc = std::nullopt) {
   if (!loc)
     loc = UnknownLoc::get(attribute.getContext());
 
@@ -120,7 +120,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
               unsigned preferred =
                   dataLayout.getTypePreferredAlignment(type) * 8u;
               layoutStream << size << ":" << abi << ":" << preferred;
-              if (Optional<unsigned> index = extractPointerSpecValue(
+              if (std::optional<unsigned> index = extractPointerSpecValue(
                       entry.getValue(), PtrDLEntryPos::Index))
                 layoutStream << ":" << *index;
               return success();

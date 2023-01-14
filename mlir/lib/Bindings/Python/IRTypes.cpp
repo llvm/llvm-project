@@ -401,8 +401,7 @@ public:
     c.def_static(
         "get",
         [](std::vector<int64_t> shape, PyType &elementType,
-           llvm::Optional<PyAttribute> &encodingAttr,
-           DefaultingPyLocation loc) {
+           std::optional<PyAttribute> &encodingAttr, DefaultingPyLocation loc) {
           MlirType t = mlirRankedTensorTypeGetChecked(
               loc, shape.size(), shape.data(), elementType,
               encodingAttr ? encodingAttr->get() : mlirAttributeGetNull());
@@ -423,8 +422,7 @@ public:
         py::arg("encoding") = py::none(), py::arg("loc") = py::none(),
         "Create a ranked tensor type");
     c.def_property_readonly(
-        "encoding",
-        [](PyRankedTensorType &self) -> llvm::Optional<PyAttribute> {
+        "encoding", [](PyRankedTensorType &self) -> std::optional<PyAttribute> {
           MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
           if (mlirAttributeIsNull(encoding))
             return std::nullopt;

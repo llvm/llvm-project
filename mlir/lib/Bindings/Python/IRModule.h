@@ -347,7 +347,7 @@ public:
 private:
   MlirContext context;
   pybind11::object callback;
-  llvm::Optional<MlirDiagnosticHandlerID> registeredID;
+  std::optional<MlirDiagnosticHandlerID> registeredID;
   bool hadError = false;
   friend class PyMlirContext;
 };
@@ -504,11 +504,11 @@ public:
   virtual ~PyOperationBase() = default;
   /// Implements the bound 'print' method and helps with others.
   void print(pybind11::object fileObject, bool binary,
-             llvm::Optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+             std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
              bool assumeVerified);
   pybind11::object getAsm(bool binary,
-                          llvm::Optional<int64_t> largeElementsLimit,
+                          std::optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,
                           bool printGenericOpForm, bool useLocalScope,
                           bool assumeVerified);
@@ -586,7 +586,7 @@ public:
 
   /// Gets the parent operation or raises an exception if the operation has
   /// no parent.
-  llvm::Optional<PyOperationRef> getParentOperation();
+  std::optional<PyOperationRef> getParentOperation();
 
   /// Gets a capsule wrapping the void* within the MlirOperation.
   pybind11::object getCapsule();
@@ -598,10 +598,10 @@ public:
 
   /// Creates an operation. See corresponding python docstring.
   static pybind11::object
-  create(const std::string &name, llvm::Optional<std::vector<PyType *>> results,
-         llvm::Optional<std::vector<PyValue *>> operands,
-         llvm::Optional<pybind11::dict> attributes,
-         llvm::Optional<std::vector<PyBlock *>> successors, int regions,
+  create(const std::string &name, std::optional<std::vector<PyType *>> results,
+         std::optional<std::vector<PyValue *>> operands,
+         std::optional<pybind11::dict> attributes,
+         std::optional<std::vector<PyBlock *>> successors, int regions,
          DefaultingPyLocation location, const pybind11::object &ip);
 
   /// Creates an OpView suitable for this operation.
@@ -656,9 +656,9 @@ public:
   static pybind11::object
   buildGeneric(const pybind11::object &cls, pybind11::list resultTypeList,
                pybind11::list operandList,
-               llvm::Optional<pybind11::dict> attributes,
-               llvm::Optional<std::vector<PyBlock *>> successors,
-               llvm::Optional<int> regions, DefaultingPyLocation location,
+               std::optional<pybind11::dict> attributes,
+               std::optional<std::vector<PyBlock *>> successors,
+               std::optional<int> regions, DefaultingPyLocation location,
                const pybind11::object &maybeIp);
 
 private:
@@ -738,10 +738,10 @@ public:
 private:
   // Trampoline constructor that avoids null initializing members while
   // looking up parents.
-  PyInsertionPoint(PyBlock block, llvm::Optional<PyOperationRef> refOperation)
+  PyInsertionPoint(PyBlock block, std::optional<PyOperationRef> refOperation)
       : refOperation(std::move(refOperation)), block(std::move(block)) {}
 
-  llvm::Optional<PyOperationRef> refOperation;
+  std::optional<PyOperationRef> refOperation;
   PyBlock block;
 };
 /// Wrapper around the generic MlirType.

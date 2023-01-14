@@ -362,12 +362,12 @@ public:
   ///
   /// Returns an integer sample point if one exists, or an empty Optional
   /// otherwise. The returned value also includes values of local ids.
-  Optional<SmallVector<MPInt, 8>> findIntegerSample() const;
+  std::optional<SmallVector<MPInt, 8>> findIntegerSample() const;
 
   /// Compute an overapproximation of the number of integer points in the
   /// relation. Symbol vars currently not supported. If the computed
   /// overapproximation is infinite, an empty optional is returned.
-  Optional<MPInt> computeVolume() const;
+  std::optional<MPInt> computeVolume() const;
 
   /// Returns true if the given point satisfies the constraints, or false
   /// otherwise. Takes the values of all vars including locals.
@@ -377,9 +377,9 @@ public:
   }
   /// Given the values of non-local vars, return a satisfying assignment to the
   /// local if one exists, or an empty optional otherwise.
-  Optional<SmallVector<MPInt, 8>>
+  std::optional<SmallVector<MPInt, 8>>
   containsPointNoLocal(ArrayRef<MPInt> point) const;
-  Optional<SmallVector<MPInt, 8>>
+  std::optional<SmallVector<MPInt, 8>>
   containsPointNoLocal(ArrayRef<int64_t> point) const {
     return containsPointNoLocal(getMPIntVec(point));
   }
@@ -473,20 +473,20 @@ public:
   /// equality). Ex: if the lower bound is [(s0 + s2 - 1) floordiv 32] for a
   /// system with three symbolic variables, *lb = [1, 0, 1], lbDivisor = 32. See
   /// comments at function definition for examples.
-  Optional<MPInt> getConstantBoundOnDimSize(
+  std::optional<MPInt> getConstantBoundOnDimSize(
       unsigned pos, SmallVectorImpl<MPInt> *lb = nullptr,
       MPInt *boundFloorDivisor = nullptr, SmallVectorImpl<MPInt> *ub = nullptr,
       unsigned *minLbPos = nullptr, unsigned *minUbPos = nullptr) const;
   /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
   /// value does not fit in an int64_t.
-  Optional<int64_t> getConstantBoundOnDimSize64(
+  std::optional<int64_t> getConstantBoundOnDimSize64(
       unsigned pos, SmallVectorImpl<int64_t> *lb = nullptr,
       int64_t *boundFloorDivisor = nullptr,
       SmallVectorImpl<int64_t> *ub = nullptr, unsigned *minLbPos = nullptr,
       unsigned *minUbPos = nullptr) const {
     SmallVector<MPInt, 8> ubMPInt, lbMPInt;
     MPInt boundFloorDivisorMPInt;
-    Optional<MPInt> result = getConstantBoundOnDimSize(
+    std::optional<MPInt> result = getConstantBoundOnDimSize(
         pos, &lbMPInt, &boundFloorDivisorMPInt, &ubMPInt, minLbPos, minUbPos);
     if (lb)
       *lb = getInt64Vec(lbMPInt);
@@ -499,10 +499,11 @@ public:
 
   /// Returns the constant bound for the pos^th variable if there is one;
   /// std::nullopt otherwise.
-  Optional<MPInt> getConstantBound(BoundType type, unsigned pos) const;
+  std::optional<MPInt> getConstantBound(BoundType type, unsigned pos) const;
   /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
   /// value does not fit in an int64_t.
-  Optional<int64_t> getConstantBound64(BoundType type, unsigned pos) const {
+  std::optional<int64_t> getConstantBound64(BoundType type,
+                                            unsigned pos) const {
     return llvm::transformOptional(getConstantBound(type, pos), int64FromMPInt);
   }
 
@@ -683,11 +684,11 @@ protected:
   /// Returns the constant lower bound bound if isLower is true, and the upper
   /// bound if isLower is false.
   template <bool isLower>
-  Optional<MPInt> computeConstantLowerOrUpperBound(unsigned pos);
+  std::optional<MPInt> computeConstantLowerOrUpperBound(unsigned pos);
   /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
   /// value does not fit in an int64_t.
   template <bool isLower>
-  Optional<int64_t> computeConstantLowerOrUpperBound64(unsigned pos) {
+  std::optional<int64_t> computeConstantLowerOrUpperBound64(unsigned pos) {
     return computeConstantLowerOrUpperBound<isLower>(pos).map(int64FromMPInt);
   }
 

@@ -93,8 +93,8 @@ LoopOptionsAttrBuilder::LoopOptionsAttrBuilder(LoopOptionsAttr attr)
     : options(attr.getOptions().begin(), attr.getOptions().end()) {}
 
 template <typename T>
-LoopOptionsAttrBuilder &LoopOptionsAttrBuilder::setOption(LoopOptionCase tag,
-                                                          Optional<T> value) {
+LoopOptionsAttrBuilder &
+LoopOptionsAttrBuilder::setOption(LoopOptionCase tag, std::optional<T> value) {
   auto option = llvm::find_if(
       options, [tag](auto option) { return option.first == tag; });
   if (option != options.end()) {
@@ -109,35 +109,35 @@ LoopOptionsAttrBuilder &LoopOptionsAttrBuilder::setOption(LoopOptionCase tag,
 }
 
 LoopOptionsAttrBuilder &
-LoopOptionsAttrBuilder::setDisableLICM(Optional<bool> value) {
+LoopOptionsAttrBuilder::setDisableLICM(std::optional<bool> value) {
   return setOption(LoopOptionCase::disable_licm, value);
 }
 
 /// Set the `interleave_count` option to the provided value. If no value
 /// is provided the option is deleted.
 LoopOptionsAttrBuilder &
-LoopOptionsAttrBuilder::setInterleaveCount(Optional<uint64_t> count) {
+LoopOptionsAttrBuilder::setInterleaveCount(std::optional<uint64_t> count) {
   return setOption(LoopOptionCase::interleave_count, count);
 }
 
 /// Set the `disable_unroll` option to the provided value. If no value
 /// is provided the option is deleted.
 LoopOptionsAttrBuilder &
-LoopOptionsAttrBuilder::setDisableUnroll(Optional<bool> value) {
+LoopOptionsAttrBuilder::setDisableUnroll(std::optional<bool> value) {
   return setOption(LoopOptionCase::disable_unroll, value);
 }
 
 /// Set the `disable_pipeline` option to the provided value. If no value
 /// is provided the option is deleted.
 LoopOptionsAttrBuilder &
-LoopOptionsAttrBuilder::setDisablePipeline(Optional<bool> value) {
+LoopOptionsAttrBuilder::setDisablePipeline(std::optional<bool> value) {
   return setOption(LoopOptionCase::disable_pipeline, value);
 }
 
 /// Set the `pipeline_initiation_interval` option to the provided value.
 /// If no value is provided the option is deleted.
 LoopOptionsAttrBuilder &LoopOptionsAttrBuilder::setPipelineInitiationInterval(
-    Optional<uint64_t> count) {
+    std::optional<uint64_t> count) {
   return setOption(LoopOptionCase::pipeline_initiation_interval, count);
 }
 
@@ -146,7 +146,7 @@ LoopOptionsAttrBuilder &LoopOptionsAttrBuilder::setPipelineInitiationInterval(
 //===----------------------------------------------------------------------===//
 
 template <typename T>
-static Optional<T>
+static std::optional<T>
 getOption(ArrayRef<std::pair<LoopOptionCase, int64_t>> options,
           LoopOptionCase option) {
   auto it =
@@ -158,15 +158,15 @@ getOption(ArrayRef<std::pair<LoopOptionCase, int64_t>> options,
   return static_cast<T>(it->second);
 }
 
-Optional<bool> LoopOptionsAttr::disableUnroll() {
+std::optional<bool> LoopOptionsAttr::disableUnroll() {
   return getOption<bool>(getOptions(), LoopOptionCase::disable_unroll);
 }
 
-Optional<bool> LoopOptionsAttr::disableLICM() {
+std::optional<bool> LoopOptionsAttr::disableLICM() {
   return getOption<bool>(getOptions(), LoopOptionCase::disable_licm);
 }
 
-Optional<int64_t> LoopOptionsAttr::interleaveCount() {
+std::optional<int64_t> LoopOptionsAttr::interleaveCount() {
   return getOption<int64_t>(getOptions(), LoopOptionCase::interleave_count);
 }
 

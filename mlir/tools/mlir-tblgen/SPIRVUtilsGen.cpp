@@ -925,7 +925,7 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(loc, "SPIR-V ops can have Variadic<..> or "
-                               "Optional<...> arguments only if "
+                               "std::optional<...> arguments only if "
                                "it's the last argument");
         }
         os << tabs

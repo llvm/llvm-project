@@ -16,7 +16,7 @@
 
 using namespace mlir;
 
-Optional<SmallVector<ReassociationIndices>>
+std::optional<SmallVector<ReassociationIndices>>
 mlir::getReassociationIndicesForReshape(ShapedType sourceType,
                                         ShapedType targetType) {
   if (sourceType.getRank() > targetType.getRank())
@@ -28,7 +28,7 @@ mlir::getReassociationIndicesForReshape(ShapedType sourceType,
   return std::nullopt;
 }
 
-Optional<SmallVector<ReassociationIndices>>
+std::optional<SmallVector<ReassociationIndices>>
 mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
                                          ArrayRef<int64_t> targetShape) {
   if (sourceShape.size() <= targetShape.size())
@@ -93,7 +93,8 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   return reassociationMap;
 }
 
-Optional<SmallVector<ReassociationIndices>> mlir::composeReassociationIndices(
+std::optional<SmallVector<ReassociationIndices>>
+mlir::composeReassociationIndices(
     ArrayRef<ReassociationIndices> producerReassociations,
     ArrayRef<ReassociationIndices> consumerReassociations,
     MLIRContext *context) {
@@ -356,10 +357,10 @@ SliceFromCollapseHelper::getInsertSliceParams(MLIRContext *ctx,
 /// Returns the index of the only non-unit dimension among `indices` of `shape`,
 /// if such a dimension exists and `indices` has more than one element.
 /// Otherwise, return none.
-static Optional<int64_t> getUniqueNonUnitDim(ArrayRef<int64_t> indices,
-                                             ArrayRef<int64_t> shape) {
+static std::optional<int64_t> getUniqueNonUnitDim(ArrayRef<int64_t> indices,
+                                                  ArrayRef<int64_t> shape) {
   // Return false if more than one of the dimensions in this group are not 1.
-  Optional<int64_t> dimIndex = std::nullopt;
+  std::optional<int64_t> dimIndex = std::nullopt;
   if (indices.size() < 2)
     return std::nullopt;
   for (int64_t idx : indices) {
@@ -375,10 +376,10 @@ static Optional<int64_t> getUniqueNonUnitDim(ArrayRef<int64_t> indices,
 // For each segment in the reassociation indices, check whether we can
 // simplify that segment with a rank-reducing extract slice. We can do this if
 // all but (exactly) one of the corresponding source dims is 1.
-static SmallVector<Optional<int64_t>> getCollapseShapeTrivialSegments(
+static SmallVector<std::optional<int64_t>> getCollapseShapeTrivialSegments(
     RankedTensorType sourceType,
     ArrayRef<ReassociationIndices> reassociationIndices) {
-  SmallVector<Optional<int64_t>> trivialSegments;
+  SmallVector<std::optional<int64_t>> trivialSegments;
   for (const auto &indices : reassociationIndices)
     trivialSegments.push_back(
         getUniqueNonUnitDim(indices, sourceType.getShape()));
@@ -387,13 +388,13 @@ static SmallVector<Optional<int64_t>> getCollapseShapeTrivialSegments(
 
 /// Returns true if any of the segments of the reassociation indices for a
 /// collapsing reshape can be simplified using a rank-reducing slice.
-static FailureOr<SmallVector<Optional<int64_t>>>
+static FailureOr<SmallVector<std::optional<int64_t>>>
 canCollapseShapeBeSimplifiedByRankReducingSlice(
     RankedTensorType sourceType,
     ArrayRef<ReassociationIndices> reassociationIndices) {
-  SmallVector<Optional<int64_t>> trivialSegments =
+  SmallVector<std::optional<int64_t>> trivialSegments =
       getCollapseShapeTrivialSegments(sourceType, reassociationIndices);
-  if (!llvm::any_of(trivialSegments, [](const Optional<int64_t> &idx) {
+  if (!llvm::any_of(trivialSegments, [](const std::optional<int64_t> &idx) {
         return idx.has_value();
       }))
     return failure();
@@ -404,7 +405,7 @@ FailureOr<CollapseShapeRankReducingSliceSimplificationInfo>
 mlir::getSimplifyCollapseShapeWithRankReducingSliceInfo(
     RankedTensorType sourceType,
     ArrayRef<ReassociationIndices> reassociationIndices) {
-  FailureOr<SmallVector<Optional<int64_t>>> trivialSegments =
+  FailureOr<SmallVector<std::optional<int64_t>>> trivialSegments =
       canCollapseShapeBeSimplifiedByRankReducingSlice(sourceType,
                                                       reassociationIndices);
   if (failed(trivialSegments))

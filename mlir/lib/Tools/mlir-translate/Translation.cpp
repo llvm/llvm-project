@@ -50,7 +50,7 @@ static llvm::StringMap<Translation> &getTranslationRegistry() {
 
 /// Register the given translation.
 static void registerTranslation(StringRef name, StringRef description,
-                                Optional<llvm::Align> inputAlignment,
+                                std::optional<llvm::Align> inputAlignment,
                                 const TranslateFunction &function) {
   auto &registry = getTranslationRegistry();
   if (registry.count(name))
@@ -76,7 +76,7 @@ TranslateRegistration::TranslateRegistration(
 static void registerTranslateToMLIRFunction(
     StringRef name, StringRef description,
     const DialectRegistrationFunction &dialectRegistration,
-    Optional<llvm::Align> inputAlignment,
+    std::optional<llvm::Align> inputAlignment,
     const TranslateSourceMgrToMLIRFunction &function) {
   auto wrappedFn = [function, dialectRegistration](
                        const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
@@ -97,7 +97,7 @@ TranslateToMLIRRegistration::TranslateToMLIRRegistration(
     StringRef name, StringRef description,
     const TranslateSourceMgrToMLIRFunction &function,
     const DialectRegistrationFunction &dialectRegistration,
-    Optional<llvm::Align> inputAlignment) {
+    std::optional<llvm::Align> inputAlignment) {
   registerTranslateToMLIRFunction(name, description, dialectRegistration,
                                   inputAlignment, function);
 }
@@ -105,7 +105,7 @@ TranslateToMLIRRegistration::TranslateToMLIRRegistration(
     StringRef name, StringRef description,
     const TranslateRawSourceMgrToMLIRFunction &function,
     const DialectRegistrationFunction &dialectRegistration,
-    Optional<llvm::Align> inputAlignment) {
+    std::optional<llvm::Align> inputAlignment) {
   registerTranslateToMLIRFunction(
       name, description, dialectRegistration, inputAlignment,
       [function](const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
@@ -117,7 +117,7 @@ TranslateToMLIRRegistration::TranslateToMLIRRegistration(
     StringRef name, StringRef description,
     const TranslateStringRefToMLIRFunction &function,
     const DialectRegistrationFunction &dialectRegistration,
-    Optional<llvm::Align> inputAlignment) {
+    std::optional<llvm::Align> inputAlignment) {
   registerTranslateToMLIRFunction(
       name, description, dialectRegistration, inputAlignment,
       [function](const std::shared_ptr<llvm::SourceMgr> &sourceMgr,

@@ -207,7 +207,7 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     std::optional<StringRef> rawOpName = op.getOpName();
     if (!rawOpName)
       return success();
-    Optional<RegisteredOperationName> opName =
+    std::optional<RegisteredOperationName> opName =
         RegisteredOperationName::lookup(*rawOpName, op.getContext());
     if (!opName)
       return success();
@@ -382,7 +382,8 @@ LogicalResult PatternOp::verifyRegions() {
 }
 
 void PatternOp::build(OpBuilder &builder, OperationState &state,
-                      Optional<uint16_t> benefit, Optional<StringRef> name) {
+                      std::optional<uint16_t> benefit,
+                      std::optional<StringRef> name) {
   build(builder, state, builder.getI16IntegerAttr(benefit ? *benefit : 0),
         name ? builder.getStringAttr(*name) : StringAttr());
   state.regions[0]->emplaceBlock();

@@ -112,7 +112,7 @@ PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
   return std::nullopt;
 }
 
-llvm::Optional<py::object>
+std::optional<py::object>
 PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   loadDialectModule(dialectNamespace);
   // Fast match against the class map first (common case).
@@ -129,7 +129,7 @@ PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   return std::nullopt;
 }
 
-llvm::Optional<pybind11::object>
+std::optional<pybind11::object>
 PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
   {
     auto foundIt = rawOpViewClassMapCache.find(operationName);

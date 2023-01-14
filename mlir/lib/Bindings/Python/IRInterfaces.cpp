@@ -185,9 +185,9 @@ public:
   /// Given the arguments required to build an operation, attempts to infer its
   /// return types. Throws value_error on faliure.
   std::vector<PyType>
-  inferReturnTypes(llvm::Optional<std::vector<PyValue>> operands,
-                   llvm::Optional<PyAttribute> attributes,
-                   llvm::Optional<std::vector<PyRegion>> regions,
+  inferReturnTypes(std::optional<std::vector<PyValue>> operands,
+                   std::optional<PyAttribute> attributes,
+                   std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
                    DefaultingPyLocation location) {
     llvm::SmallVector<MlirValue> mlirOperands;

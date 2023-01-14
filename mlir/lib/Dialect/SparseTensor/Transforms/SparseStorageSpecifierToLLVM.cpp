@@ -140,7 +140,7 @@ public:
     } else {
       auto enc = op.getSpecifier().getType().getEncoding();
       StorageLayout layout(enc);
-      Optional<unsigned> dim = std::nullopt;
+      std::optional<unsigned> dim = std::nullopt;
       if (op.getDim())
         dim = op.getDim().value().getZExtValue();
       unsigned idx = layout.getMemRefFieldIndex(op.getSpecifierKind(), dim);

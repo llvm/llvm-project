@@ -25,8 +25,8 @@ using namespace mlir;
 
 /// Returns a language server location from the given MLIR file location.
 /// `uriScheme` is the scheme to use when building new uris.
-static Optional<lsp::Location> getLocationFromLoc(StringRef uriScheme,
-                                                  FileLineColLoc loc) {
+static std::optional<lsp::Location> getLocationFromLoc(StringRef uriScheme,
+                                                       FileLineColLoc loc) {
   llvm::Expected<lsp::URIForFile> sourceURI =
       lsp::URIForFile::fromFile(loc.getFilename(), uriScheme);
   if (!sourceURI) {
@@ -46,16 +46,17 @@ static Optional<lsp::Location> getLocationFromLoc(StringRef uriScheme,
 /// std::nullopt if one couldn't be created. `uriScheme` is the scheme to use
 /// when building new uris. `uri` is an optional additional filter that, when
 /// present, is used to filter sub locations that do not share the same uri.
-static Optional<lsp::Location>
+static std::optional<lsp::Location>
 getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
                    StringRef uriScheme, const lsp::URIForFile *uri = nullptr) {
-  Optional<lsp::Location> location;
+  std::optional<lsp::Location> location;
   loc->walk([&](Location nestedLoc) {
     FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
     if (!fileLoc)
       return WalkResult::advance();
 
-    Optional<lsp::Location> sourceLoc = getLocationFromLoc(uriScheme, fileLoc);
+    std::optional<lsp::Location> sourceLoc =
+        getLocationFromLoc(uriScheme, fileLoc);
     if (sourceLoc && (!uri || sourceLoc->uri == *uri)) {
       location = *sourceLoc;
       SMLoc loc = sourceMgr.FindLocForLineAndColumn(
@@ -64,7 +65,7 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
       // Use range of potential identifier starting at location, else length 1
       // range.
       location->range.end.character += 1;
-      if (Optional<SMRange> range = lsp::convertTokenLocToRange(loc)) {
+      if (std::optional<SMRange> range = lsp::convertTokenLocToRange(loc)) {
         auto lineCol = sourceMgr.getLineAndColumn(range->End);
         location->range.end.character =
             std::max(fileLoc.getColumn() + 1, lineCol.second - 1);
@@ -87,7 +88,7 @@ static void collectLocationsFromLoc(Location loc,
     if (!fileLoc || !visitedLocs.insert(nestedLoc))
       return WalkResult::advance();
 
-    Optional<lsp::Location> sourceLoc =
+    std::optional<lsp::Location> sourceLoc =
         getLocationFromLoc(uri.scheme(), fileLoc);
     if (sourceLoc && sourceLoc->uri != uri)
       locations.push_back(*sourceLoc);
@@ -128,7 +129,7 @@ static bool isDefOrUse(const AsmParserState::SMDefinition &def, SMLoc loc,
 
 /// Given a location pointing to a result, return the result number it refers
 /// to or std::nullopt if it refers to all of the results.
-static Optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
+static std::optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
   // Skip all of the identifier characters.
   auto isIdentifierChar = [](char c) {
     return isalnum(c) || c == '%' || c == '$' || c == '.' || c == '_' ||
@@ -149,13 +150,13 @@ static Optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
     ++curPtr;
   StringRef numberStr(numberStart, curPtr - numberStart);
   unsigned resultNumber = 0;
-  return numberStr.consumeInteger(10, resultNumber) ? Optional<unsigned>()
+  return numberStr.consumeInteger(10, resultNumber) ? std::optional<unsigned>()
                                                     : resultNumber;
 }
 
 /// Given a source location range, return the text covered by the given range.
 /// If the range is invalid, returns std::nullopt.
-static Optional<StringRef> getTextFromRange(SMRange range) {
+static std::optional<StringRef> getTextFromRange(SMRange range) {
   if (!range.isValid())
     return std::nullopt;
   const char *startPtr = range.Start.getPointer();
@@ -171,7 +172,7 @@ static unsigned getBlockNumber(Block *block) {
 /// given output stream.
 static void printDefBlockName(raw_ostream &os, Block *block, SMRange loc = {}) {
   // Try to extract a name from the source location.
-  Optional<StringRef> text = getTextFromRange(loc);
+  std::optional<StringRef> text = getTextFromRange(loc);
   if (text && text->startswith("^")) {
     os << *text;
     return;
@@ -200,7 +201,7 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
   // TODO: For simplicity, we just grab the first one. It may be likely that we
   // will need a more interesting heuristic here.'
   StringRef uriScheme = uri.scheme();
-  Optional<lsp::Location> lspLocation =
+  std::optional<lsp::Location> lspLocation =
       getLocationFromLoc(sourceMgr, diag.getLocation(), uriScheme, &uri);
   if (lspLocation)
     lspDiag.range = lspLocation->range;
@@ -225,7 +226,7 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
   std::vector<lsp::DiagnosticRelatedInformation> relatedDiags;
   for (Diagnostic &note : diag.getNotes()) {
     lsp::Location noteLoc;
-    if (Optional<lsp::Location> loc =
+    if (std::optional<lsp::Location> loc =
             getLocationFromLoc(sourceMgr, note.getLocation(), uriScheme))
       noteLoc = *loc;
     else
@@ -541,7 +542,7 @@ lsp::Hover MLIRDocument::buildHoverForOperationResult(SMRange hoverRange,
 
   // Check to see if the location points to a specific result within the
   // group.
-  if (Optional<unsigned> resultNumber = getResultNumberFromLoc(posLoc)) {
+  if (std::optional<unsigned> resultNumber = getResultNumberFromLoc(posLoc)) {
     if ((resultStart + *resultNumber) < resultEnd) {
       resultStart += *resultNumber;
       resultEnd = resultStart + 1;
@@ -1226,7 +1227,7 @@ void lsp::MLIRServer::addOrUpdateDocument(
       uri, contents, version, impl->registry, diagnostics);
 }
 
-Optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
+std::optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
   auto it = impl->files.find(uri.file());
   if (it == impl->files.end())
     return std::nullopt;

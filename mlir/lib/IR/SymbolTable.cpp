@@ -77,13 +77,13 @@ collectValidReferencesFor(Operation *symbol, StringAttr symbolName,
 /// Walk all of the operations within the given set of regions, without
 /// traversing into any nested symbol tables. Stops walking if the result of the
 /// callback is anything other than `WalkResult::advance`.
-static Optional<WalkResult>
+static std::optional<WalkResult>
 walkSymbolTable(MutableArrayRef<Region> regions,
-                function_ref<Optional<WalkResult>(Operation *)> callback) {
+                function_ref<std::optional<WalkResult>(Operation *)> callback) {
   SmallVector<Region *, 1> worklist(llvm::make_pointer_range(regions));
   while (!worklist.empty()) {
     for (Operation &op : worklist.pop_back_val()->getOps()) {
-      Optional<WalkResult> result = callback(&op);
+      std::optional<WalkResult> result = callback(&op);
       if (result != WalkResult::advance())
         return result;
 
@@ -101,10 +101,10 @@ walkSymbolTable(MutableArrayRef<Region> regions,
 /// Walk all of the operations nested under, and including, the given operation,
 /// without traversing into any nested symbol tables. Stops walking if the
 /// result of the callback is anything other than `WalkResult::advance`.
-static Optional<WalkResult>
+static std::optional<WalkResult>
 walkSymbolTable(Operation *op,
-                function_ref<Optional<WalkResult>(Operation *)> callback) {
-  Optional<WalkResult> result = callback(op);
+                function_ref<std::optional<WalkResult>(Operation *)> callback) {
+  std::optional<WalkResult> result = callback(op);
   if (result != WalkResult::advance() || op->hasTrait<OpTrait::SymbolTable>())
     return result;
   return walkSymbolTable(op->getRegions(), callback);
@@ -440,13 +440,13 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
 
   // Verify any nested symbol user operations.
   SymbolTableCollection symbolTable;
-  auto verifySymbolUserFn = [&](Operation *op) -> Optional<WalkResult> {
+  auto verifySymbolUserFn = [&](Operation *op) -> std::optional<WalkResult> {
     if (SymbolUserOpInterface user = dyn_cast<SymbolUserOpInterface>(op))
       return WalkResult(user.verifySymbolUses(symbolTable));
     return WalkResult::advance();
   };
 
-  Optional<WalkResult> result =
+  std::optional<WalkResult> result =
       walkSymbolTable(op->getRegions(), verifySymbolUserFn);
   return success(result && !result->wasInterrupted());
 }
@@ -550,21 +550,23 @@ walkSymbolRefs(Operation *op,
 /// Walk all of the uses, for any symbol, that are nested within the given
 /// regions, invoking the provided callback for each. This does not traverse
 /// into any nested symbol tables.
-static Optional<WalkResult>
+static std::optional<WalkResult>
 walkSymbolUses(MutableArrayRef<Region> regions,
                function_ref<WalkResult(SymbolTable::SymbolUse)> callback) {
-  return walkSymbolTable(regions, [&](Operation *op) -> Optional<WalkResult> {
-    // Check that this isn't a potentially unknown symbol table.
-    if (isPotentiallyUnknownSymbolTable(op))
-      return std::nullopt;
+  return walkSymbolTable(regions,
+                         [&](Operation *op) -> std::optional<WalkResult> {
+                           // Check that this isn't a potentially unknown symbol
+                           // table.
+                           if (isPotentiallyUnknownSymbolTable(op))
+                             return std::nullopt;
 
-    return walkSymbolRefs(op, callback);
-  });
+                           return walkSymbolRefs(op, callback);
+                         });
 }
 /// Walk all of the uses, for any symbol, that are nested within the given
 /// operation 'from', invoking the provided callback for each. This does not
 /// traverse into any nested symbol tables.
-static Optional<WalkResult>
+static std::optional<WalkResult>
 walkSymbolUses(Operation *from,
                function_ref<WalkResult(SymbolTable::SymbolUse)> callback) {
   // If this operation has regions, and it, as well as its dialect, isn't
@@ -600,7 +602,7 @@ struct SymbolScope {
             std::enable_if_t<!std::is_same<
                 typename llvm::function_traits<CallbackT>::result_t,
                 void>::value> * = nullptr>
-  Optional<WalkResult> walk(CallbackT cback) {
+  std::optional<WalkResult> walk(CallbackT cback) {
     if (Region *region = limit.dyn_cast<Region *>())
       return walkSymbolUses(*region, cback);
     return walkSymbolUses(limit.get<Operation *>(), cback);
@@ -611,7 +613,7 @@ struct SymbolScope {
             std::enable_if_t<std::is_same<
                 typename llvm::function_traits<CallbackT>::result_t,
                 void>::value> * = nullptr>
-  Optional<WalkResult> walk(CallbackT cback) {
+  std::optional<WalkResult> walk(CallbackT cback) {
     return walk([=](SymbolTable::SymbolUse use) {
       return cback(use), WalkResult::advance();
     });
@@ -620,7 +622,7 @@ struct SymbolScope {
   /// Walk all of the operations nested under the current scope without
   /// traversing into any nested symbol tables.
   template <typename CallbackT>
-  Optional<WalkResult> walkSymbolTable(CallbackT &&cback) {
+  std::optional<WalkResult> walkSymbolTable(CallbackT &&cback) {
     if (Region *region = limit.dyn_cast<Region *>())
       return ::walkSymbolTable(*region, cback);
     return ::walkSymbolTable(limit.get<Operation *>(), cback);
@@ -878,7 +880,7 @@ replaceAllSymbolUsesImpl(SymbolT symbol, StringAttr newSymbol, IRUnitT *limit) {
           return {attr, WalkResult::skip()};
         });
 
-    auto walkFn = [&](Operation *op) -> Optional<WalkResult> {
+    auto walkFn = [&](Operation *op) -> std::optional<WalkResult> {
       replacer.replaceElementsIn(op);
       return WalkResult::advance();
     };

@@ -94,7 +94,7 @@ public:
   /// If either the signed or unsigned interpretations of the range
   /// indicate that the value it bounds is a constant, return that constant
   /// value.
-  Optional<APInt> getConstantValue() const;
+  std::optional<APInt> getConstantValue() const;
 
   friend raw_ostream &operator<<(raw_ostream &os,
                                  const ConstantIntRanges &range);

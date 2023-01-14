@@ -31,8 +31,8 @@ SMRange convertTokenLocToRange(SMLoc loc);
 
 /// Extract a documentation comment for the given location within the source
 /// manager. Returns std::nullopt if no comment could be computed.
-Optional<std::string> extractSourceDocComment(llvm::SourceMgr &sourceMgr,
-                                              SMLoc loc);
+std::optional<std::string> extractSourceDocComment(llvm::SourceMgr &sourceMgr,
+                                                   SMLoc loc);
 
 /// Returns true if the given range contains the given source location. Note
 /// that this has different behavior than SMRange because it is inclusive of the

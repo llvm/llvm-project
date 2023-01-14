@@ -287,7 +287,7 @@ public:
 
     // Check for a hexadecimal float value.
     if (curTok.is(Token::integer)) {
-      Optional<APFloat> apResult;
+      std::optional<APFloat> apResult;
       if (failed(parser.parseFloatFromIntegerLiteral(
               apResult, curTok, isNegative, APFloat::IEEEdouble(),
               /*typeSizeInBits=*/64)))

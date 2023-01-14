@@ -65,7 +65,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     return b.notifyMatchFailure(op, "Cannot match the reduction pattern");
 
   Operation *reductionOp = combinerOps[0];
-  Optional<Attribute> identity = getNeutralElement(reductionOp);
+  std::optional<Attribute> identity = getNeutralElement(reductionOp);
   if (!identity.has_value())
     return b.notifyMatchFailure(op, "Unknown identity value for the reduction");
 
@@ -269,7 +269,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
 
   SmallVector<Attribute> neutralElements;
   for (Operation *reductionOp : combinerOps) {
-    Optional<Attribute> neutralElement = getNeutralElement(reductionOp);
+    std::optional<Attribute> neutralElement = getNeutralElement(reductionOp);
     if (!neutralElement.has_value())
       return b.notifyMatchFailure(op, "cannot find neutral element.");
     neutralElements.push_back(*neutralElement);

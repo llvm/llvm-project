@@ -129,7 +129,7 @@ public:
   /// Slice this range into a sub range, with the additional operand segment.
   MutableOperandRange
   slice(unsigned subStart, unsigned subLen,
-        Optional<OperandSegment> segment = std::nullopt) const;
+        std::optional<OperandSegment> segment = std::nullopt) const;
 
   /// Append the given values to the range.
   void append(ValueRange values);
