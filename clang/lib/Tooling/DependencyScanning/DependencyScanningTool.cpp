@@ -195,6 +195,10 @@ private:
 
   void handleHasIncludeCheck(Preprocessor &PP, bool Result) override;
 
+  const DepscanPrefixMapping &getPrefixMapping() override {
+    return PrefixMapping;
+  }
+
   Error finalize(CompilerInstance &CI) override;
 
   Expected<cas::ObjectRef> getObjectForFile(Preprocessor &PP, FileID FID);

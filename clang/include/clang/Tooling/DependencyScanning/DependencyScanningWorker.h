@@ -28,6 +28,7 @@ namespace tooling {
 namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
+struct DepscanPrefixMapping;
 
 /// A command-line tool invocation that is part of building a TU.
 ///
@@ -80,6 +81,12 @@ public:
                              FileID Include, SourceLocation ExitLoc) = 0;
 
   virtual void handleHasIncludeCheck(Preprocessor &PP, bool Result) = 0;
+
+  /// FIXME: This is temporary until we eliminate the split between consumers in
+  /// \p DependencyScanningTool and collectors in \p DependencyScanningWorker
+  /// and have them both in the same file. see FIXME in \p
+  /// DependencyScanningAction::runInvocation.
+  virtual const DepscanPrefixMapping &getPrefixMapping() = 0;
 
 protected:
   void handleBuildCommand(Command) override {}

@@ -9,7 +9,8 @@
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out \
-// RUN:       -emit-llvm %t/src/main.c -o %t/out/output.ll -include %t/src/prefix.h -I %t/src/inc
+// RUN:       -emit-llvm %t/src/main.c -o %t/out/output.ll -include %t/src/prefix.h -I %t/src/inc \
+// RUN:       -MT deps -dependency-file %t/t1.d
 // RUN: %clang @%t/t1.rsp 2> %t/output.txt
 
 // RUN: cat %t/output.txt | sed \
@@ -46,7 +47,8 @@
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out2 \
-// RUN:       -emit-llvm %t/src2/main.c -o %t/out2/output.ll -include %t/src2/prefix.h -I %t/src2/inc
+// RUN:       -emit-llvm %t/src2/main.c -o %t/out2/output.ll -include %t/src2/prefix.h -I %t/src2/inc \
+// RUN:       -MT deps -dependency-file %t/t2.d
 // RUN: %clang @%t/t2.rsp 2> %t/output2.txt
 
 // RUN: cat %t/output2.txt | sed \
@@ -54,6 +56,23 @@
 // RUN:   -e "s/' .*$//" > %t/cache-key2
 
 // RUN: diff -u %t/cache-key %t/cache-key2
+
+// Check dependencies.
+
+// Baseline for comparison.
+// RUN: %clang_cc1 -triple x86_64-apple-macos11 \
+// RUN:   -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
+// RUN:   -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
+// RUN:   -emit-obj %t/src/main.c -o %t/out/main.o -include %t/src/prefix.h -I %t/src/inc \
+// RUN:   -MT deps -dependency-file %t/regular1.d
+// RUN: %clang_cc1 -triple x86_64-apple-macos11 \
+// RUN:   -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
+// RUN:   -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
+// RUN:   -emit-obj %t/src2/main.c -o %t/out2/main.o -include %t/src2/prefix.h -I %t/src2/inc \
+// RUN:   -MT deps -dependency-file %t/regular2.d
+
+// RUN: FileCheck %s -input-file %t/t1.d -check-prefix=CHECK-DEPS
+// CHECK-DEPS-NOT: ^src
 
 // Check with PCH.
 
@@ -87,7 +106,8 @@
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out \
-// RUN:       -emit-obj %t/src/main.c -o %t/out/main.o -include-pch %t/out/prefix.h.pch -I %t/src/inc
+// RUN:       -emit-obj %t/src/main.c -o %t/out/main.o -include-pch %t/out/prefix.h.pch -I %t/src/inc \
+// RUN:       -MT deps -dependency-file %t/t1.pch.d
 // RUN: %clang @%t/t3.rsp 2> %t/output3.txt
 
 // RUN: cat %t/output3.txt | sed \
@@ -101,7 +121,8 @@
 // RUN:       -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
 // RUN:       -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
 // RUN:       -debug-info-kind=standalone -dwarf-version=4 -debugger-tuning=lldb -fdebug-compilation-dir=%t/out2 \
-// RUN:       -emit-obj %t/src2/main.c -o %t/out2/main.o -include-pch %t/out2/prefix.h.pch -I %t/src2/inc
+// RUN:       -emit-obj %t/src2/main.c -o %t/out2/main.o -include-pch %t/out2/prefix.h.pch -I %t/src2/inc \
+// RUN:       -MT deps -dependency-file %t/t2.pch.d
 // RUN: %clang @%t/t4.rsp 2> %t/output4.txt
 
 // RUN: cat %t/output4.txt | sed \
@@ -110,6 +131,31 @@
 
 // RUN: diff -u %t/cache-key3 %t/cache-key4
 // RUN: diff %t/out/main.o %t/out2/main.o
+
+// Check dependencies.
+
+// Baseline for comparison.
+// RUN: %clang_cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN:   -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
+// RUN:   -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
+// RUN:   -emit-pch -x c-header %t/src/prefix.h -o %t/out/reg-prefix.h.pch -include %t/src/prefix.h -I %t/src/inc
+// RUN: %clang_cc1 -triple x86_64-apple-macos11 \
+// RUN:   -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
+// RUN:   -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
+// RUN:   -emit-obj %t/src/main.c -o %t/out/main.o -include-pch %t/out/reg-prefix.h.pch -I %t/src/inc \
+// RUN:   -MT deps -dependency-file %t/regular1.pch.d
+// RUN: %clang_cc1 -triple x86_64-apple-macos11 -fcas-path %t/cas -faction-cache-path %t/cache -Rcompile-job-cache \
+// RUN:   -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
+// RUN:   -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
+// RUN:   -emit-pch -x c-header %t/src2/prefix.h -o %t/out2/reg-prefix.h.pch -include %t/src2/prefix.h -I %t/src2/inc
+// RUN: %clang_cc1 -triple x86_64-apple-macos11 \
+// RUN:   -resource-dir %S/Inputs/toolchain_dir/lib/clang/1000 -internal-isystem %S/Inputs/toolchain_dir/lib/clang/1000/include \
+// RUN:   -isysroot %S/Inputs/SDK -internal-externc-isystem %S/Inputs/SDK/usr/include \
+// RUN:   -emit-obj %t/src2/main.c -o %t/out2/main.o -include-pch %t/out2/reg-prefix.h.pch -I %t/src2/inc \
+// RUN:   -MT deps -dependency-file %t/regular2.pch.d
+
+// RUN: FileCheck %s -input-file %t/t1.d -check-prefix=CHECK-DEPS-PCH
+// CHECK-DEPS-PCH-NOT: ^src
 
 //--- main.c
 #include "t.h"
