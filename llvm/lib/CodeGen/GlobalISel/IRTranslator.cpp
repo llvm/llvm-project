@@ -1306,18 +1306,13 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   auto &TLI = *MF->getSubtarget().getTargetLowering();
-  MachineMemOperand::Flags Flags = TLI.getLoadMemOperandFlags(LI, *DL);
+  MachineMemOperand::Flags Flags =
+      TLI.getLoadMemOperandFlags(LI, *DL, AC, LibInfo);
   if (AA && !(Flags & MachineMemOperand::MOInvariant)) {
     if (AA->pointsToConstantMemory(
             MemoryLocation(Ptr, LocationSize::precise(StoreSize), AAInfo))) {
       Flags |= MachineMemOperand::MOInvariant;
     }
-  }
-
-  if (!(Flags & MachineMemOperand::MODereferenceable)) {
-    if (isDereferenceableAndAlignedPointer(Ptr, LI.getType(), LI.getAlign(),
-                                           *DL, &LI, AC, nullptr, LibInfo))
-      Flags |= MachineMemOperand::MODereferenceable;
   }
 
   const MDNode *Ranges =
