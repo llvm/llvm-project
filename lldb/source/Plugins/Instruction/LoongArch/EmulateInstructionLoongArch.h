@@ -75,6 +75,8 @@ private:
 
   bool EmulateBEQZ(uint32_t inst);
   bool EmulateBNEZ(uint32_t inst);
+  bool EmulateBCEQZ(uint32_t inst);
+  bool EmulateBCNEZ(uint32_t inst);
   bool EmulateJIRL(uint32_t inst);
   bool EmulateB(uint32_t inst);
   bool EmulateBL(uint32_t inst);
@@ -88,6 +90,8 @@ private:
 
   bool EmulateBEQZ64(uint32_t inst);
   bool EmulateBNEZ64(uint32_t inst);
+  bool EmulateBCEQZ64(uint32_t inst);
+  bool EmulateBCNEZ64(uint32_t inst);
   bool EmulateJIRL64(uint32_t inst);
   bool EmulateB64(uint32_t inst);
   bool EmulateBL64(uint32_t inst);
