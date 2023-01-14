@@ -101,7 +101,7 @@ static cl::opt<int>
 
 static codegen::RegisterCodeGenFlags CGF;
 
-bool isReduced(ReducerWorkItem &M, const TestRunner &Test);
+bool isReduced(const ReducerWorkItem &M, const TestRunner &Test);
 
 /// Turn off crash debugging features
 ///

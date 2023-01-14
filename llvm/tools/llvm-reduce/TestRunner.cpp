@@ -69,7 +69,7 @@ void TestRunner::setProgram(std::unique_ptr<ReducerWorkItem> P) {
   Program = std::move(P);
 }
 
-void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream) {
+void writeBitcode(const ReducerWorkItem &M, raw_ostream &OutStream) {
   if (M.LTOInfo && M.LTOInfo->IsThinLTO && M.LTOInfo->EnableSplitLTOUnit) {
     PassBuilder PB;
     LoopAnalysisManager LAM;
