@@ -117,7 +117,6 @@ public:
   CASID getID(ObjectRef Ref) const final;
   CASID getID(ObjectHandle Handle) const final;
   Optional<ObjectRef> getReference(const CASID &ID) const final;
-  ObjectRef getReference(ObjectHandle Handle) const final;
   Expected<ObjectHandle> load(ObjectRef Ref) final;
   Error validate(const CASID &ID) final {
     // Not supported yet. Always return success.
@@ -305,10 +304,6 @@ Optional<ObjectRef> GRPCRelayCAS::getReference(const CASID &ID) const {
          "Expected ID from same hash schema");
   auto &I = indexHash(ID.getHash());
   return toReference(I);
-}
-
-ObjectRef GRPCRelayCAS::getReference(ObjectHandle Handle) const {
-  return toReference(asInMemoryCASData(Handle));
 }
 
 Expected<ObjectHandle> GRPCRelayCAS::load(ObjectRef Ref) {

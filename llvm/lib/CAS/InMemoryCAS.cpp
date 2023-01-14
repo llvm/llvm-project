@@ -252,9 +252,6 @@ public:
       return toReference(*Object);
     return None;
   }
-  ObjectRef getReference(ObjectHandle Handle) const final {
-    return toReference(asInMemoryObject(Handle));
-  }
 
   ArrayRef<char> getDataConst(ObjectHandle Node) const final {
     return cast<InMemoryObject>(asInMemoryObject(Node)).getData();
