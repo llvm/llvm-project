@@ -635,7 +635,7 @@ StringRef DiagnosticIDs::getWarningOptionForGroup(diag::Group Group) {
   return OptionTable[static_cast<int>(Group)].getName();
 }
 
-llvm::Optional<diag::Group>
+std::optional<diag::Group>
 DiagnosticIDs::getGroupForWarningOption(StringRef Name) {
   const auto *Found = llvm::partition_point(
       OptionTable, [=](const WarningOption &O) { return O.getName() < Name; });
@@ -644,7 +644,7 @@ DiagnosticIDs::getGroupForWarningOption(StringRef Name) {
   return static_cast<diag::Group>(Found - OptionTable);
 }
 
-llvm::Optional<diag::Group> DiagnosticIDs::getGroupForDiag(unsigned DiagID) {
+std::optional<diag::Group> DiagnosticIDs::getGroupForDiag(unsigned DiagID) {
   if (const StaticDiagInfoRec *Info = GetDiagInfo(DiagID))
     return static_cast<diag::Group>(Info->getOptionGroupIndex());
   return std::nullopt;
@@ -704,7 +704,7 @@ static bool getDiagnosticsInGroup(diag::Flavor Flavor,
 bool
 DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
                                      SmallVectorImpl<diag::kind> &Diags) const {
-  if (llvm::Optional<diag::Group> G = getGroupForWarningOption(Group))
+  if (std::optional<diag::Group> G = getGroupForWarningOption(Group))
     return ::getDiagnosticsInGroup(
         Flavor, &OptionTable[static_cast<unsigned>(*G)], Diags);
   return true;

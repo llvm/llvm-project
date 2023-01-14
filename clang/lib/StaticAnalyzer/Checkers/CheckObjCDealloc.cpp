@@ -283,7 +283,7 @@ void ObjCDeallocChecker::checkBeginFunction(
       continue;
 
     SVal LVal = State->getLValue(PropImpl->getPropertyIvarDecl(), SelfVal);
-    Optional<Loc> LValLoc = LVal.getAs<Loc>();
+    std::optional<Loc> LValLoc = LVal.getAs<Loc>();
     if (!LValLoc)
       continue;
 
@@ -954,7 +954,7 @@ ObjCDeallocChecker::getValueReleasedByNillingOut(const ObjCMethodCall &M,
   ProgramStateRef State = C.getState();
 
   SVal LVal = State->getLValue(PropIvarDecl, ReceiverVal);
-  Optional<Loc> LValLoc = LVal.getAs<Loc>();
+  std::optional<Loc> LValLoc = LVal.getAs<Loc>();
   if (!LValLoc)
     return nullptr;
 

@@ -62,7 +62,7 @@ public:
 
 private:
   // Used to store the parser when the executor is initialized with parser.
-  llvm::Optional<CommonOptionsParser> OptionsParser;
+  std::optional<CommonOptionsParser> OptionsParser;
   const CompilationDatabase &Compilations;
   std::unique_ptr<ToolResults> Results;
   ExecutionContext Context;

@@ -21,7 +21,7 @@
 
 using namespace clang;
 
-Optional<ComparisonCategoryType>
+std::optional<ComparisonCategoryType>
 clang::getComparisonCategoryForBuiltinCmp(QualType T) {
   using CCT = ComparisonCategoryType;
 

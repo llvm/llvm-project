@@ -4267,7 +4267,7 @@ struct FormatStyle {
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
   }
 
-  llvm::Optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;
+  std::optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;
 
   // Stores per-language styles. A FormatStyle instance inside has an empty
   // StyleSet. A FormatStyle instance returned by the Get method has its
@@ -4279,7 +4279,7 @@ struct FormatStyle {
   struct FormatStyleSet {
     typedef std::map<FormatStyle::LanguageKind, FormatStyle> MapType;
 
-    llvm::Optional<FormatStyle> Get(FormatStyle::LanguageKind Language) const;
+    std::optional<FormatStyle> Get(FormatStyle::LanguageKind Language) const;
 
     // Adds \p Style to this FormatStyleSet. Style must not have an associated
     // FormatStyleSet.

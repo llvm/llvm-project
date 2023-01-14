@@ -847,7 +847,7 @@ void DynamicTypePropagation::checkPreObjCMessage(const ObjCMethodCall &M,
       return;
   }
 
-  Optional<ArrayRef<QualType>> TypeArgs =
+  std::optional<ArrayRef<QualType>> TypeArgs =
       (*TrackedType)->getObjCSubstitutions(Method->getDeclContext());
   // This case might happen when there is an unspecialized override of a
   // specialized method.
@@ -980,7 +980,7 @@ void DynamicTypePropagation::checkPostObjCMessage(const ObjCMethodCall &M,
   if (!Method)
     return;
 
-  Optional<ArrayRef<QualType>> TypeArgs =
+  std::optional<ArrayRef<QualType>> TypeArgs =
       (*TrackedType)->getObjCSubstitutions(Method->getDeclContext());
   if (!TypeArgs)
     return;

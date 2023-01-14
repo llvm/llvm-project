@@ -483,8 +483,8 @@ public:
 
   /// Bind the specified \p ID to the matcher.
   /// \return A new matcher with the \p ID bound to it if this matcher supports
-  ///   binding. Otherwise, returns an empty \c Optional<>.
-  llvm::Optional<DynTypedMatcher> tryBind(StringRef ID) const;
+  ///   binding. Otherwise, returns an empty \c std::optional<>.
+  std::optional<DynTypedMatcher> tryBind(StringRef ID) const;
 
   /// Returns a unique \p ID for the matcher.
   ///
@@ -1974,13 +1974,13 @@ struct GetBodyMatcher<
 };
 
 template <typename NodeType>
-inline Optional<BinaryOperatorKind>
+inline std::optional<BinaryOperatorKind>
 equivalentBinaryOperator(const NodeType &Node) {
   return Node.getOpcode();
 }
 
 template <>
-inline Optional<BinaryOperatorKind>
+inline std::optional<BinaryOperatorKind>
 equivalentBinaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
   if (Node.getNumArgs() != 2)
     return std::nullopt;
@@ -2055,13 +2055,13 @@ equivalentBinaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
 }
 
 template <typename NodeType>
-inline Optional<UnaryOperatorKind>
+inline std::optional<UnaryOperatorKind>
 equivalentUnaryOperator(const NodeType &Node) {
   return Node.getOpcode();
 }
 
 template <>
-inline Optional<UnaryOperatorKind>
+inline std::optional<UnaryOperatorKind>
 equivalentUnaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
   if (Node.getNumArgs() != 1 && Node.getOperator() != OO_PlusPlus &&
       Node.getOperator() != OO_MinusMinus)
@@ -2173,20 +2173,20 @@ CompoundStmtMatcher<StmtExpr>::get(const StmtExpr &Node) {
 /// location (in the chain of expansions) at which \p MacroName was
 /// expanded. Since the macro may have been expanded inside a series of
 /// expansions, that location may itself be a MacroID.
-llvm::Optional<SourceLocation>
-getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
-                       const ASTContext &Context);
+std::optional<SourceLocation> getExpansionLocOfMacro(StringRef MacroName,
+                                                     SourceLocation Loc,
+                                                     const ASTContext &Context);
 
-inline Optional<StringRef> getOpName(const UnaryOperator &Node) {
+inline std::optional<StringRef> getOpName(const UnaryOperator &Node) {
   return Node.getOpcodeStr(Node.getOpcode());
 }
-inline Optional<StringRef> getOpName(const BinaryOperator &Node) {
+inline std::optional<StringRef> getOpName(const BinaryOperator &Node) {
   return Node.getOpcodeStr();
 }
 inline StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
   return Node.getOpcodeStr();
 }
-inline Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
+inline std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
   auto optBinaryOpcode = equivalentBinaryOperator(Node);
   if (!optBinaryOpcode) {
     auto optUnaryOpcode = equivalentUnaryOperator(Node);
@@ -2217,21 +2217,21 @@ public:
       : SingleNodeMatcherInterface<T>(), Names(std::move(Names)) {}
 
   bool matchesNode(const T &Node) const override {
-    Optional<StringRef> OptOpName = getOpName(Node);
+    std::optional<StringRef> OptOpName = getOpName(Node);
     return OptOpName && llvm::is_contained(Names, *OptOpName);
   }
 
 private:
-  static Optional<StringRef> getOpName(const UnaryOperator &Node) {
+  static std::optional<StringRef> getOpName(const UnaryOperator &Node) {
     return Node.getOpcodeStr(Node.getOpcode());
   }
-  static Optional<StringRef> getOpName(const BinaryOperator &Node) {
+  static std::optional<StringRef> getOpName(const BinaryOperator &Node) {
     return Node.getOpcodeStr();
   }
   static StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
     return Node.getOpcodeStr();
   }
-  static Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
+  static std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
     auto optBinaryOpcode = equivalentBinaryOperator(Node);
     if (!optBinaryOpcode) {
       auto optUnaryOpcode = equivalentUnaryOperator(Node);

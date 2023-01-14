@@ -37,7 +37,7 @@ class ExprEngine;
 class SymbolReaper;
 
 class ConditionTruthVal {
-  Optional<bool> Val;
+  std::optional<bool> Val;
 
 public:
   /// Construct a ConditionTruthVal indicating the constraint is constrained

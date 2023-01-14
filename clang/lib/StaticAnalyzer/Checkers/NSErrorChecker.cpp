@@ -198,7 +198,7 @@ static void setFlag(ProgramStateRef state, SVal val, CheckerContext &C) {
 
 static QualType parameterTypeFromSVal(SVal val, CheckerContext &C) {
   const StackFrameContext * SFC = C.getStackFrame();
-  if (Optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>()) {
+  if (std::optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>()) {
     const MemRegion* R = X->getRegion();
     if (const VarRegion *VR = R->getAs<VarRegion>())
       if (const StackArgumentsSpaceRegion *

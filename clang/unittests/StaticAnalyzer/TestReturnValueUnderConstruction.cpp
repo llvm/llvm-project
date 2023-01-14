@@ -33,7 +33,7 @@ public:
     // in an object of type `C` constructed into variable `c`. Thus the
     // return value of `CallEvent::getReturnValueUnderConstruction()` must
     // be non-empty and has to be a `MemRegion`.
-    Optional<SVal> RetVal = Call.getReturnValueUnderConstruction();
+    std::optional<SVal> RetVal = Call.getReturnValueUnderConstruction();
     ASSERT_TRUE(RetVal);
     ASSERT_TRUE(RetVal->getAsRegion());
 

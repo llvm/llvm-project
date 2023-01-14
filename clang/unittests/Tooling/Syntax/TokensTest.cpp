@@ -115,7 +115,7 @@ public:
 
     private:
       TokenBuffer &Result;
-      llvm::Optional<TokenCollector> Collector;
+      std::optional<TokenCollector> Collector;
     };
 
     constexpr const char *FileName = "./input.cpp";

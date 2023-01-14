@@ -1512,7 +1512,7 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 
 inline const StreamingDiagnostic &
 operator<<(const StreamingDiagnostic &DB,
-           const llvm::Optional<SourceRange> &Opt) {
+           const std::optional<SourceRange> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
@@ -1520,15 +1520,14 @@ operator<<(const StreamingDiagnostic &DB,
 
 inline const StreamingDiagnostic &
 operator<<(const StreamingDiagnostic &DB,
-           const llvm::Optional<CharSourceRange> &Opt) {
+           const std::optional<CharSourceRange> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;
 }
 
 inline const StreamingDiagnostic &
-operator<<(const StreamingDiagnostic &DB,
-           const llvm::Optional<FixItHint> &Opt) {
+operator<<(const StreamingDiagnostic &DB, const std::optional<FixItHint> &Opt) {
   if (Opt)
     DB << *Opt;
   return DB;

@@ -73,7 +73,7 @@ class SarifArtifactLocation {
 private:
   friend class clang::SarifDocumentWriter;
 
-  llvm::Optional<uint32_t> Index;
+  std::optional<uint32_t> Index;
   std::string URI;
 
   SarifArtifactLocation() = delete;
@@ -106,8 +106,8 @@ class SarifArtifact {
 private:
   friend class clang::SarifDocumentWriter;
 
-  llvm::Optional<uint32_t> Offset;
-  llvm::Optional<size_t> Length;
+  std::optional<uint32_t> Offset;
+  std::optional<size_t> Length;
   std::string MimeType;
   SarifArtifactLocation Location;
   llvm::SmallVector<std::string, 4> Roles;
@@ -325,7 +325,7 @@ class SarifResult {
   std::string DiagnosticMessage;
   llvm::SmallVector<CharSourceRange, 8> Locations;
   llvm::SmallVector<ThreadFlow, 8> ThreadFlows;
-  llvm::Optional<SarifResultLevel> LevelOverride;
+  std::optional<SarifResultLevel> LevelOverride;
 
   SarifResult() = delete;
   explicit SarifResult(uint32_t RuleIdx) : RuleIdx(RuleIdx) {}

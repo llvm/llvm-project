@@ -649,8 +649,9 @@ public:
     IdentityOrZero
   };
 
-  Optional<BehaviorSummary> canEval(const CallExpr *CE, const FunctionDecl *FD,
-                                    bool &hasTrustedImplementationAnnotation);
+  std::optional<BehaviorSummary>
+  canEval(const CallExpr *CE, const FunctionDecl *FD,
+          bool &hasTrustedImplementationAnnotation);
 
   /// \return Whether the type corresponds to a known smart pointer
   /// implementation (that is, everything about it is inlineable).
@@ -687,8 +688,8 @@ private:
                                                 Selector S, QualType RetTy);
 
   /// Determine if there is a special return effect for this function or method.
-  Optional<RetEffect> getRetEffectFromAnnotations(QualType RetTy,
-                                                  const Decl *D);
+  std::optional<RetEffect> getRetEffectFromAnnotations(QualType RetTy,
+                                                       const Decl *D);
 
   void updateSummaryFromAnnotations(const RetainSummary *&Summ,
                                     const ObjCMethodDecl *MD);
@@ -724,10 +725,10 @@ private:
   /// std::nullopt, if none of the specified attributes are present.
   /// Crashes if passed an attribute which is not explicitly handled.
   template <class T>
-  Optional<ObjKind> hasAnyEnabledAttrOf(const Decl *D, QualType QT);
+  std::optional<ObjKind> hasAnyEnabledAttrOf(const Decl *D, QualType QT);
 
   template <class T1, class T2, class... Others>
-  Optional<ObjKind> hasAnyEnabledAttrOf(const Decl *D, QualType QT);
+  std::optional<ObjKind> hasAnyEnabledAttrOf(const Decl *D, QualType QT);
 
   friend class RetainSummaryTemplate;
 };

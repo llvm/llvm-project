@@ -219,9 +219,9 @@ namespace clang {
       return Importer.Import(From);
     }
 
-    // Import an Optional<T> by importing the contained T, if any.
-    template<typename T>
-    Expected<Optional<T>> import(Optional<T> From) {
+    // Import an std::optional<T> by importing the contained T, if any.
+    template <typename T>
+    Expected<std::optional<T>> import(std::optional<T> From) {
       if (!From)
         return std::nullopt;
       return import(*From);
@@ -3272,7 +3272,7 @@ namespace {
 /// solution no visit function is needed if the type has only a desugared type
 /// as data.
 class IsTypeDeclaredInsideVisitor
-    : public TypeVisitor<IsTypeDeclaredInsideVisitor, Optional<bool>> {
+    : public TypeVisitor<IsTypeDeclaredInsideVisitor, std::optional<bool>> {
 public:
   IsTypeDeclaredInsideVisitor(const FunctionDecl *ParentDC)
       : ParentDC(ParentDC) {}
@@ -3281,12 +3281,12 @@ public:
     // Check the chain of "sugar" types.
     // The "sugar" types are typedef or similar types that have the same
     // canonical type.
-    if (Optional<bool> Res = Visit(T.getTypePtr()))
+    if (std::optional<bool> Res = Visit(T.getTypePtr()))
       return *Res;
     QualType DsT =
         T.getSingleStepDesugaredType(ParentDC->getParentASTContext());
     while (DsT != T) {
-      if (Optional<bool> Res = Visit(DsT.getTypePtr()))
+      if (std::optional<bool> Res = Visit(DsT.getTypePtr()))
         return *Res;
       T = DsT;
       DsT = T.getSingleStepDesugaredType(ParentDC->getParentASTContext());
@@ -3294,7 +3294,7 @@ public:
     return false;
   }
 
-  Optional<bool> VisitTagType(const TagType *T) {
+  std::optional<bool> VisitTagType(const TagType *T) {
     if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl()))
       for (const auto &Arg : Spec->getTemplateArgs().asArray())
         if (checkTemplateArgument(Arg))
@@ -3302,21 +3302,21 @@ public:
     return isAncestorDeclContextOf(ParentDC, T->getDecl());
   }
 
-  Optional<bool> VisitPointerType(const PointerType *T) {
+  std::optional<bool> VisitPointerType(const PointerType *T) {
     return CheckType(T->getPointeeType());
   }
 
-  Optional<bool> VisitReferenceType(const ReferenceType *T) {
+  std::optional<bool> VisitReferenceType(const ReferenceType *T) {
     return CheckType(T->getPointeeTypeAsWritten());
   }
 
-  Optional<bool> VisitTypedefType(const TypedefType *T) {
+  std::optional<bool> VisitTypedefType(const TypedefType *T) {
     const TypedefNameDecl *TD = T->getDecl();
     assert(TD);
     return isAncestorDeclContextOf(ParentDC, TD);
   }
 
-  Optional<bool> VisitUsingType(const UsingType *T) {
+  std::optional<bool> VisitUsingType(const UsingType *T) {
     if (T->getFoundDecl() &&
         isAncestorDeclContextOf(ParentDC, T->getFoundDecl()))
       return true;
@@ -3324,7 +3324,7 @@ public:
     return {};
   }
 
-  Optional<bool>
+  std::optional<bool>
   VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
     for (const auto &Arg : T->template_arguments())
       if (checkTemplateArgument(Arg))
@@ -3333,24 +3333,24 @@ public:
     return {};
   }
 
-  Optional<bool> VisitConstantArrayType(const ConstantArrayType *T) {
+  std::optional<bool> VisitConstantArrayType(const ConstantArrayType *T) {
     if (T->getSizeExpr() && isAncestorDeclContextOf(ParentDC, T->getSizeExpr()))
       return true;
 
     return CheckType(T->getElementType());
   }
 
-  Optional<bool> VisitVariableArrayType(const VariableArrayType *T) {
+  std::optional<bool> VisitVariableArrayType(const VariableArrayType *T) {
     llvm_unreachable(
         "Variable array should not occur in deduced return type of a function");
   }
 
-  Optional<bool> VisitIncompleteArrayType(const IncompleteArrayType *T) {
+  std::optional<bool> VisitIncompleteArrayType(const IncompleteArrayType *T) {
     llvm_unreachable("Incomplete array should not occur in deduced return type "
                      "of a function");
   }
 
-  Optional<bool> VisitDependentArrayType(const IncompleteArrayType *T) {
+  std::optional<bool> VisitDependentArrayType(const IncompleteArrayType *T) {
     llvm_unreachable("Dependent array should not occur in deduced return type "
                      "of a function");
   }
@@ -7681,7 +7681,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   // see VisitParmVarDecl).
   ParmVarDecl *ToParam = *ToParamOrErr;
   if (!ToParam->getDefaultArg()) {
-    Optional<ParmVarDecl *> FromParam = Importer.getImportedFromDecl(ToParam);
+    std::optional<ParmVarDecl *> FromParam =
+        Importer.getImportedFromDecl(ToParam);
     assert(FromParam && "ParmVarDecl was not imported?");
 
     if (Error Err = ImportDefaultArgOfParmVarDecl(*FromParam, ToParam))
@@ -7814,7 +7815,7 @@ ExpectedStmt ASTNodeImporter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
   if (Err)
     return std::move(Err);
 
-  Optional<unsigned> Length;
+  std::optional<unsigned> Length;
   if (!E->isValueDependent())
     Length = E->getPackLength();
 
@@ -8553,7 +8554,7 @@ ASTImporter::ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
 
 ASTImporter::~ASTImporter() = default;
 
-Optional<unsigned> ASTImporter::getFieldIndex(Decl *F) {
+std::optional<unsigned> ASTImporter::getFieldIndex(Decl *F) {
   assert(F && (isa<FieldDecl>(*F) || isa<IndirectFieldDecl>(*F)) &&
       "Try to get field index for non-field.");
 
@@ -9564,7 +9565,7 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
 
     if (ToID.isInvalid() || IsBuiltin) {
       // FIXME: We want to re-use the existing MemoryBuffer!
-      llvm::Optional<llvm::MemoryBufferRef> FromBuf =
+      std::optional<llvm::MemoryBufferRef> FromBuf =
           Cache->getBufferOrNone(FromContext.getDiagnostics(),
                                  FromSM.getFileManager(), SourceLocation{});
       if (!FromBuf)
@@ -10033,7 +10034,7 @@ Decl *ASTImporter::MapImported(Decl *From, Decl *To) {
   return To;
 }
 
-llvm::Optional<ASTImportError>
+std::optional<ASTImportError>
 ASTImporter::getImportDeclErrorIfAny(Decl *FromD) const {
   auto Pos = ImportDeclErrors.find(FromD);
   if (Pos != ImportDeclErrors.end())

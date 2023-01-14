@@ -821,7 +821,7 @@ static void findBlockLocations(CFG *CFGraph,
       for (CFGBlock::const_reverse_iterator BI = CurrBlock->rbegin(),
            BE = CurrBlock->rend(); BI != BE; ++BI) {
         // FIXME: Handle other CFGElement kinds.
-        if (Optional<CFGStmt> CS = BI->getAs<CFGStmt>()) {
+        if (std::optional<CFGStmt> CS = BI->getAs<CFGStmt>()) {
           CurrBlockInfo->ExitLoc = CS->getStmt()->getBeginLoc();
           break;
         }
@@ -833,7 +833,7 @@ static void findBlockLocations(CFG *CFGraph,
       // of the first statement in the block.
       for (const auto &BI : *CurrBlock) {
         // FIXME: Handle other CFGElement kinds.
-        if (Optional<CFGStmt> CS = BI.getAs<CFGStmt>()) {
+        if (std::optional<CFGStmt> CS = BI.getAs<CFGStmt>()) {
           CurrBlockInfo->EntryLoc = CS->getStmt()->getBeginLoc();
           break;
         }
@@ -2217,7 +2217,7 @@ static bool neverReturns(const CFGBlock *B) {
     return false;
 
   CFGElement Last = B->back();
-  if (Optional<CFGStmt> S = Last.getAs<CFGStmt>()) {
+  if (std::optional<CFGStmt> S = Last.getAs<CFGStmt>()) {
     if (isa<CXXThrowExpr>(S->getStmt()))
       return true;
   }

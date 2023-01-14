@@ -59,7 +59,8 @@ inline ComparisonCategoryType commonComparisonType(ComparisonCategoryType A,
 
 /// Get the comparison category that should be used when comparing values of
 /// type \c T.
-Optional<ComparisonCategoryType> getComparisonCategoryForBuiltinCmp(QualType T);
+std::optional<ComparisonCategoryType>
+getComparisonCategoryForBuiltinCmp(QualType T);
 
 /// An enumeration representing the possible results of a three-way
 /// comparison. These values map onto instances of comparison category types

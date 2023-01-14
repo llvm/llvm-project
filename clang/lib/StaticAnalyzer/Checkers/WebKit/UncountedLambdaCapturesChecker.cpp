@@ -60,10 +60,10 @@ public:
       if (C.capturesVariable()) {
         ValueDecl *CapturedVar = C.getCapturedVar();
         if (auto *CapturedVarType = CapturedVar->getType().getTypePtrOrNull()) {
-          Optional<bool> IsUncountedPtr = isUncountedPtr(CapturedVarType);
-          if (IsUncountedPtr && *IsUncountedPtr) {
-            reportBug(C, CapturedVar, CapturedVarType);
-          }
+            std::optional<bool> IsUncountedPtr = isUncountedPtr(CapturedVarType);
+            if (IsUncountedPtr && *IsUncountedPtr) {
+                reportBug(C, CapturedVar, CapturedVarType);
+            }
         }
       }
     }

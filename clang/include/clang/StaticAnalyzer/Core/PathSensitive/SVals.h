@@ -101,7 +101,7 @@ public:
 
   /// Convert to the specified SVal type, returning std::nullopt if this SVal is
   /// not of the desired type.
-  template <typename T> Optional<T> getAs() const {
+  template <typename T> std::optional<T> getAs() const {
     return llvm::dyn_cast<T>(*this);
   }
 
@@ -568,11 +568,11 @@ struct CastInfo<
   static bool isPossible(const From &V) {
     return To::classof(*static_cast<const ::clang::ento::SVal *>(&V));
   }
-  static Optional<To> castFailed() { return Optional<To>{}; }
+  static std::optional<To> castFailed() { return std::optional<To>{}; }
   static To doCast(const From &f) {
     return *static_cast<const To *>(cast<::clang::ento::SVal>(&f));
   }
-  static Optional<To> doCastIfPossible(const From &f) {
+  static std::optional<To> doCastIfPossible(const From &f) {
     if (!Self::isPossible(f))
       return Self::castFailed();
     return doCast(f);

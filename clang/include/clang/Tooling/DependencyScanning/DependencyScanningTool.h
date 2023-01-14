@@ -85,7 +85,7 @@ public:
   /// occurred, dependency file contents otherwise.
   llvm::Expected<std::string>
   getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD,
-                    llvm::Optional<StringRef> ModuleName = std::nullopt);
+                    std::optional<StringRef> ModuleName = std::nullopt);
 
   /// Collect the full module dependency graph for the input, ignoring any
   /// modules which have already been seen. If \p ModuleName isn't empty, this
@@ -106,13 +106,13 @@ public:
   getFullDependencies(const std::vector<std::string> &CommandLine,
                       StringRef CWD, const llvm::StringSet<> &AlreadySeen,
                       LookupModuleOutputCallback LookupModuleOutput,
-                      llvm::Optional<StringRef> ModuleName = std::nullopt);
+                      std::optional<StringRef> ModuleName = std::nullopt);
 
   llvm::Expected<FullDependenciesResult> getFullDependenciesLegacyDriverCommand(
       const std::vector<std::string> &CommandLine, StringRef CWD,
       const llvm::StringSet<> &AlreadySeen,
       LookupModuleOutputCallback LookupModuleOutput,
-      llvm::Optional<StringRef> ModuleName = std::nullopt);
+      std::optional<StringRef> ModuleName = std::nullopt);
 
 private:
   DependencyScanningWorker Worker;

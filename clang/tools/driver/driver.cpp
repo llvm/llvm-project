@@ -533,12 +533,13 @@ int clang_main(int Argc, char **Argv) {
 
   Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
   if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {
-    auto Level = llvm::StringSwitch<Optional<Driver::ReproLevel>>(A->getValue())
-                     .Case("off", Driver::ReproLevel::Off)
-                     .Case("crash", Driver::ReproLevel::OnCrash)
-                     .Case("error", Driver::ReproLevel::OnError)
-                     .Case("always", Driver::ReproLevel::Always)
-                     .Default(std::nullopt);
+    auto Level =
+        llvm::StringSwitch<std::optional<Driver::ReproLevel>>(A->getValue())
+            .Case("off", Driver::ReproLevel::Off)
+            .Case("crash", Driver::ReproLevel::OnCrash)
+            .Case("error", Driver::ReproLevel::OnError)
+            .Case("always", Driver::ReproLevel::Always)
+            .Default(std::nullopt);
     if (!Level) {
       llvm::errs() << "Unknown value for " << A->getSpelling() << ": '"
                    << A->getValue() << "'\n";

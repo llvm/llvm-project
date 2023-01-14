@@ -24,7 +24,7 @@
 using namespace llvm;
 using namespace clang;
 
-using MaybeCount = Optional<unsigned>;
+using MaybeCount = std::optional<unsigned>;
 
 // A constructor helper.
 static MaybeCount readRequiredParams(MaybeCount RequiredArgs,

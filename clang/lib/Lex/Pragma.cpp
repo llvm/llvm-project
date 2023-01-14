@@ -1185,7 +1185,7 @@ struct PragmaDebugHandler : public PragmaHandler {
     } else if (II->isStr("sloc_usage")) {
       // An optional integer literal argument specifies the number of files to
       // specifically report information about.
-      Optional<unsigned> MaxNotes;
+      std::optional<unsigned> MaxNotes;
       Token ArgToken;
       PP.Lex(ArgToken);
       uint64_t Value;

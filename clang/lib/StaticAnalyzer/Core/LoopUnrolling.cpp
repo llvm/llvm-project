@@ -287,7 +287,7 @@ bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
       return true;
 
     ProgramPoint P = N->getLocation();
-    if (Optional<BlockEntrance> BE = P.getAs<BlockEntrance>())
+    if (std::optional<BlockEntrance> BE = P.getAs<BlockEntrance>())
       S = BE->getBlock()->getTerminatorStmt();
 
     if (S == LoopStmt)

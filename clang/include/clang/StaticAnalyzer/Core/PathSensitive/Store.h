@@ -84,7 +84,8 @@ public:
   /// \param[in] R The region to find the default binding for.
   /// \return The default value bound to the region in the store, if a default
   /// binding exists.
-  virtual Optional<SVal> getDefaultBinding(Store store, const MemRegion *R) = 0;
+  virtual std::optional<SVal> getDefaultBinding(Store store,
+                                                const MemRegion *R) = 0;
 
   /// Return the default value bound to a LazyCompoundVal. The default binding
   /// is used to represent the value of any fields or elements within the
@@ -94,7 +95,7 @@ public:
   /// \param[in] lcv The lazy compound value.
   /// \return The default value bound to the LazyCompoundVal \c lcv, if a
   /// default binding exists.
-  Optional<SVal> getDefaultBinding(nonloc::LazyCompoundVal lcv) {
+  std::optional<SVal> getDefaultBinding(nonloc::LazyCompoundVal lcv) {
     return getDefaultBinding(lcv.getStore(), lcv.getRegion());
   }
 
@@ -175,15 +176,15 @@ public:
   ///    enough info to determine if the cast will succeed at run time).
   /// The function returns an optional with SVal representing the derived class
   /// in case of a successful cast and `std::nullopt` otherwise.
-  Optional<SVal> evalBaseToDerived(SVal Base, QualType DerivedPtrType);
+  std::optional<SVal> evalBaseToDerived(SVal Base, QualType DerivedPtrType);
 
   const ElementRegion *GetElementZeroRegion(const SubRegion *R, QualType T);
 
   /// castRegion - Used by ExprEngine::VisitCast to handle casts from
   ///  a MemRegion* to a specific location type.  'R' is the region being
   ///  casted and 'CastToTy' the result type of the cast.
-  Optional<const MemRegion *> castRegion(const MemRegion *region,
-                                         QualType CastToTy);
+  std::optional<const MemRegion *> castRegion(const MemRegion *region,
+                                              QualType CastToTy);
 
   virtual StoreRef removeDeadBindings(Store store, const StackFrameContext *LCtx,
                                       SymbolReaper &SymReaper) = 0;

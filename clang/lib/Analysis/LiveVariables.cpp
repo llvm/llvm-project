@@ -491,7 +491,7 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
        ei = block->rend(); it != ei; ++it) {
     const CFGElement &elem = *it;
 
-    if (Optional<CFGAutomaticObjDtor> Dtor =
+    if (std::optional<CFGAutomaticObjDtor> Dtor =
             elem.getAs<CFGAutomaticObjDtor>()) {
       val.liveDecls = DSetFact.add(val.liveDecls, Dtor->getVarDecl());
       continue;

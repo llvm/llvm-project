@@ -274,10 +274,10 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
     const ReturnStmt *RS = nullptr;
     if (!L.getSrc()->empty()) {
       CFGElement LastElement = L.getSrc()->back();
-      if (Optional<CFGStmt> LastStmt = LastElement.getAs<CFGStmt>()) {
+      if (std::optional<CFGStmt> LastStmt = LastElement.getAs<CFGStmt>()) {
         RS = dyn_cast<ReturnStmt>(LastStmt->getStmt());
-      } else if (Optional<CFGAutomaticObjDtor> AutoDtor =
-                 LastElement.getAs<CFGAutomaticObjDtor>()) {
+      } else if (std::optional<CFGAutomaticObjDtor> AutoDtor =
+                     LastElement.getAs<CFGAutomaticObjDtor>()) {
         RS = dyn_cast<ReturnStmt>(AutoDtor->getTriggerStmt());
       }
     }
@@ -315,11 +315,10 @@ void CoreEngine::HandleBlockEntrance(const BlockEntrance &L,
   setBlockCounter(Counter);
 
   // Process the entrance of the block.
-  if (Optional<CFGElement> E = L.getFirstElement()) {
+  if (std::optional<CFGElement> E = L.getFirstElement()) {
     NodeBuilderContext Ctx(*this, L.getBlock(), Pred);
     ExprEng.processCFGElement(*E, Pred, 0, &Ctx);
-  }
-  else
+  } else
     HandleBlockExit(L.getBlock(), Pred);
 }
 

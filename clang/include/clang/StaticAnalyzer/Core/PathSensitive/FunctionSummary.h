@@ -86,7 +86,7 @@ public:
     markShouldNotInline(D);
   }
 
-  Optional<bool> mayInline(const Decl *D) {
+  std::optional<bool> mayInline(const Decl *D) {
     MapTy::const_iterator I = Map.find(D);
     if (I != Map.end() && I->second.InlineChecked)
       return I->second.MayInline;

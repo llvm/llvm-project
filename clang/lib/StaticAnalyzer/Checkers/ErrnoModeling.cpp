@@ -208,7 +208,7 @@ namespace clang {
 namespace ento {
 namespace errno_modeling {
 
-Optional<SVal> getErrnoValue(ProgramStateRef State) {
+std::optional<SVal> getErrnoValue(ProgramStateRef State) {
   const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return {};
@@ -240,7 +240,7 @@ ProgramStateRef setErrnoValue(ProgramStateRef State, CheckerContext &C,
   return State->set<ErrnoState>(EState);
 }
 
-Optional<Loc> getErrnoLoc(ProgramStateRef State) {
+std::optional<Loc> getErrnoLoc(ProgramStateRef State) {
   const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return {};

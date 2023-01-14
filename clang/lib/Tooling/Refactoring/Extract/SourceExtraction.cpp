@@ -101,7 +101,7 @@ ExtractionSemicolonPolicy::compute(const Stmt *S, SourceRange &ExtractedRange,
 
   /// Other statements should generally have a trailing ';'. We can try to find
   /// it and move it together it with the extracted code.
-  Optional<Token> NextToken = Lexer::findNextToken(End, SM, LangOpts);
+  std::optional<Token> NextToken = Lexer::findNextToken(End, SM, LangOpts);
   if (NextToken && NextToken->is(tok::semi) &&
       areOnSameLine(NextToken->getLocation(), End, SM)) {
     ExtractedRange.setEnd(NextToken->getLocation());

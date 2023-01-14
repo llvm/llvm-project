@@ -1005,7 +1005,7 @@ NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
   if (Satisfied)
     return nullptr;
 
-  Optional<StmtPoint> Point = Succ->getLocation().getAs<StmtPoint>();
+  std::optional<StmtPoint> Point = Succ->getLocation().getAs<StmtPoint>();
   if (!Point)
     return nullptr;
 
@@ -1142,7 +1142,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
     SE = Mgr.getSourceManager().getSLocEntry(SLInfo.first);
   }
 
-  llvm::Optional<llvm::MemoryBufferRef> BF =
+  std::optional<llvm::MemoryBufferRef> BF =
       Mgr.getSourceManager().getBufferOrNone(SLInfo.first, SL);
   if (!BF)
     return;

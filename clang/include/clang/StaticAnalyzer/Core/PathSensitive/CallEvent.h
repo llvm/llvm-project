@@ -154,7 +154,7 @@ private:
   ProgramStateRef State;
   const LocationContext *LCtx;
   llvm::PointerUnion<const Expr *, const Decl *> Origin;
-  mutable Optional<bool> Foreign; // Set by CTU analysis.
+  mutable std::optional<bool> Foreign; // Set by CTU analysis.
 
 protected:
   // This is user data for subclasses.
@@ -423,7 +423,7 @@ public:
   /// This function converts an argument index to the corresponding
   /// parameter index. Returns std::nullopt is the argument doesn't correspond
   /// to any parameter variable.
-  virtual Optional<unsigned>
+  virtual std::optional<unsigned>
   getAdjustedParameterIndex(unsigned ASTArgumentIndex) const {
     return ASTArgumentIndex;
   }
@@ -442,7 +442,7 @@ public:
 
   /// If the call returns a C++ record type then the region of its return value
   /// can be retrieved from its construction context.
-  Optional<SVal> getReturnValueUnderConstruction() const;
+  std::optional<SVal> getReturnValueUnderConstruction() const;
 
   // Iterator access to formal parameters and their types.
 private:
@@ -771,12 +771,13 @@ public:
     return CA->getKind() == CE_CXXMemberOperator;
   }
 
-  Optional<unsigned>
+  std::optional<unsigned>
   getAdjustedParameterIndex(unsigned ASTArgumentIndex) const override {
     // For member operator calls argument 0 on the expression corresponds
     // to implicit this-parameter on the declaration.
-    return (ASTArgumentIndex > 0) ? Optional<unsigned>(ASTArgumentIndex - 1)
-                                  : std::nullopt;
+    return (ASTArgumentIndex > 0)
+               ? std::optional<unsigned>(ASTArgumentIndex - 1)
+               : std::nullopt;
   }
 
   unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const override {
@@ -1035,7 +1036,7 @@ public:
 
   bool isArray() const { return getOriginExpr()->isArray(); }
 
-  Optional<const clang::Expr *> getArraySizeExpr() const {
+  std::optional<const clang::Expr *> getArraySizeExpr() const {
     return getOriginExpr()->getArraySize();
   }
 

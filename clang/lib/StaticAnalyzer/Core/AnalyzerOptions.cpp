@@ -65,7 +65,7 @@ void AnalyzerOptions::printFormattedEntry(
 ExplorationStrategyKind
 AnalyzerOptions::getExplorationStrategy() const {
   auto K =
-      llvm::StringSwitch<llvm::Optional<ExplorationStrategyKind>>(
+      llvm::StringSwitch<std::optional<ExplorationStrategyKind>>(
           ExplorationStrategy)
           .Case("dfs", ExplorationStrategyKind::DFS)
           .Case("bfs", ExplorationStrategyKind::BFS)
@@ -82,7 +82,7 @@ AnalyzerOptions::getExplorationStrategy() const {
 }
 
 CTUPhase1InliningKind AnalyzerOptions::getCTUPhase1Inlining() const {
-  auto K = llvm::StringSwitch<llvm::Optional<CTUPhase1InliningKind>>(
+  auto K = llvm::StringSwitch<std::optional<CTUPhase1InliningKind>>(
                CTUPhase1InliningMode)
                .Case("none", CTUPhase1InliningKind::None)
                .Case("small", CTUPhase1InliningKind::Small)
@@ -93,7 +93,7 @@ CTUPhase1InliningKind AnalyzerOptions::getCTUPhase1Inlining() const {
 }
 
 IPAKind AnalyzerOptions::getIPAMode() const {
-  auto K = llvm::StringSwitch<llvm::Optional<IPAKind>>(IPAMode)
+  auto K = llvm::StringSwitch<std::optional<IPAKind>>(IPAMode)
                .Case("none", IPAK_None)
                .Case("basic-inlining", IPAK_BasicInlining)
                .Case("inlining", IPAK_Inlining)
@@ -111,7 +111,7 @@ AnalyzerOptions::mayInlineCXXMemberFunction(
   if (getIPAMode() < IPAK_Inlining)
     return false;
 
-  auto K = llvm::StringSwitch<llvm::Optional<CXXInlineableMemberKind>>(
+  auto K = llvm::StringSwitch<std::optional<CXXInlineableMemberKind>>(
                CXXMemberInliningMode)
                .Case("constructors", CIMK_Constructors)
                .Case("destructors", CIMK_Destructors)
@@ -162,7 +162,7 @@ bool AnalyzerOptions::getCheckerBooleanOption(StringRef CheckerName,
                                               StringRef OptionName,
                                               bool SearchInParents) const {
   auto Ret =
-      llvm::StringSwitch<llvm::Optional<bool>>(
+      llvm::StringSwitch<std::optional<bool>>(
           getCheckerStringOption(CheckerName, OptionName, SearchInParents))
           .Case("true", true)
           .Case("false", false)

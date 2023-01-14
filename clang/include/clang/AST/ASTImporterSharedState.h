@@ -66,7 +66,7 @@ public:
         LookupTable->remove(ND);
   }
 
-  llvm::Optional<ASTImportError> getImportDeclErrorIfAny(Decl *ToD) const {
+  std::optional<ASTImportError> getImportDeclErrorIfAny(Decl *ToD) const {
     auto Pos = ImportErrors.find(ToD);
     if (Pos != ImportErrors.end())
       return Pos->second;

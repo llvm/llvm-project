@@ -687,7 +687,7 @@ ASTNodeKind Node::getType() const { return ASTNode.getNodeKind(); }
 
 StringRef Node::getTypeLabel() const { return getType().asStringRef(); }
 
-llvm::Optional<std::string> Node::getQualifiedIdentifier() const {
+std::optional<std::string> Node::getQualifiedIdentifier() const {
   if (auto *ND = ASTNode.get<NamedDecl>()) {
     if (ND->getDeclName().isIdentifier())
       return ND->getQualifiedNameAsString();
@@ -695,7 +695,7 @@ llvm::Optional<std::string> Node::getQualifiedIdentifier() const {
   return std::nullopt;
 }
 
-llvm::Optional<StringRef> Node::getIdentifier() const {
+std::optional<StringRef> Node::getIdentifier() const {
   if (auto *ND = ASTNode.get<NamedDecl>()) {
     if (ND->getDeclName().isIdentifier())
       return ND->getName();

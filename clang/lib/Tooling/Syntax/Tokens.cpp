@@ -806,7 +806,7 @@ private:
   // In the simplest case, skips spelled tokens until finding one that produced
   // the NextExpanded token, and creates an empty mapping for them.
   // If Drain is provided, skips remaining tokens from that file instead.
-  void discard(llvm::Optional<FileID> Drain = std::nullopt) {
+  void discard(std::optional<FileID> Drain = std::nullopt) {
     SourceLocation Target =
         Drain ? SM.getLocForEndOfFile(*Drain)
               : SM.getExpansionLoc(

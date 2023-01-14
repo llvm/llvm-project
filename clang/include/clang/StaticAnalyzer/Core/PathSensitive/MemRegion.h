@@ -103,7 +103,7 @@ public:
 
 private:
   const Kind kind;
-  mutable Optional<RegionOffset> cachedOffset;
+  mutable std::optional<RegionOffset> cachedOffset;
 
 protected:
   MemRegion(Kind k) : kind(k) {}

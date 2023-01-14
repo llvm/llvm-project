@@ -318,10 +318,10 @@ AST_POLYMORPHIC_MATCHER_P(isExpandedFromMacro,
   // Verifies that the statement' beginning and ending are both expanded from
   // the same instance of the given macro.
   auto& Context = Finder->getASTContext();
-  llvm::Optional<SourceLocation> B =
+  std::optional<SourceLocation> B =
       internal::getExpansionLocOfMacro(MacroName, Node.getBeginLoc(), Context);
   if (!B) return false;
-  llvm::Optional<SourceLocation> E =
+  std::optional<SourceLocation> E =
       internal::getExpansionLocOfMacro(MacroName, Node.getEndLoc(), Context);
   if (!E) return false;
   return *B == *E;
@@ -5629,7 +5629,7 @@ AST_POLYMORPHIC_MATCHER_P(
     AST_POLYMORPHIC_SUPPORTED_TYPES(BinaryOperator, CXXOperatorCallExpr,
                                     CXXRewrittenBinaryOperator, UnaryOperator),
     std::string, Name) {
-  if (Optional<StringRef> OpName = internal::getOpName(Node))
+  if (std::optional<StringRef> OpName = internal::getOpName(Node))
     return *OpName == Name;
   return false;
 }

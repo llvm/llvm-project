@@ -43,7 +43,7 @@ class StmtToEnvMapImpl : public StmtToEnvMap {
 public:
   StmtToEnvMapImpl(
       const ControlFlowContext &CFCtx,
-      llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>>
+      llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
           BlockToState)
       : CFCtx(CFCtx), BlockToState(BlockToState) {}
 
@@ -57,7 +57,7 @@ public:
 
 private:
   const ControlFlowContext &CFCtx;
-  llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockToState;
+  llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockToState;
 };
 
 /// Returns the index of `Block` in the successors of `Pred`.
@@ -182,11 +182,11 @@ private:
 
 /// Holds data structures required for running dataflow analysis.
 struct AnalysisContext {
-  AnalysisContext(
-      const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
-      const Environment &InitEnv,
-      llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>>
-          BlockStates)
+  AnalysisContext(const ControlFlowContext &CFCtx,
+                  TypeErasedDataflowAnalysis &Analysis,
+                  const Environment &InitEnv,
+                  llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
+                      BlockStates)
       : CFCtx(CFCtx), Analysis(Analysis), InitEnv(InitEnv),
         BlockStates(BlockStates) {}
 
@@ -198,7 +198,7 @@ struct AnalysisContext {
   const Environment &InitEnv;
   /// Stores the state of a CFG block if it has been evaluated by the analysis.
   /// The indices correspond to the block IDs.
-  llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates;
+  llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates;
 };
 
 /// Computes the input state for a given basic block by joining the output
@@ -244,7 +244,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     }
   }
 
-  llvm::Optional<TypeErasedDataflowAnalysisState> MaybeState;
+  std::optional<TypeErasedDataflowAnalysisState> MaybeState;
 
   auto &Analysis = AC.Analysis;
   for (const CFGBlock *Pred : Preds) {
@@ -254,7 +254,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
 
     // Skip if `Pred` was not evaluated yet. This could happen if `Pred` has a
     // loop back edge to `Block`.
-    const llvm::Optional<TypeErasedDataflowAnalysisState> &MaybePredState =
+    const std::optional<TypeErasedDataflowAnalysisState> &MaybePredState =
         AC.BlockStates[Pred->getBlockID()];
     if (!MaybePredState)
       continue;
@@ -385,7 +385,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
 
 TypeErasedDataflowAnalysisState transferBlock(
     const ControlFlowContext &CFCtx,
-    llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,
+    llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis,
     std::function<void(const CFGElement &,
@@ -395,7 +395,7 @@ TypeErasedDataflowAnalysisState transferBlock(
   return transferCFGBlock(Block, AC, PostVisitCFG);
 }
 
-llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
+llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,
@@ -405,7 +405,7 @@ runTypeErasedDataflowAnalysis(
   PostOrderCFGView POV(&CFCtx.getCFG());
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
-  std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates(
+  std::vector<std::optional<TypeErasedDataflowAnalysisState>> BlockStates(
       CFCtx.getCFG().size(), std::nullopt);
 
   // The entry basic block doesn't contain statements so it can be skipped.
@@ -437,7 +437,7 @@ runTypeErasedDataflowAnalysis(
                                      "maximum number of iterations reached");
     }
 
-    const llvm::Optional<TypeErasedDataflowAnalysisState> &OldBlockState =
+    const std::optional<TypeErasedDataflowAnalysisState> &OldBlockState =
         BlockStates[Block->getBlockID()];
     TypeErasedDataflowAnalysisState NewBlockState =
         transferCFGBlock(*Block, AC);

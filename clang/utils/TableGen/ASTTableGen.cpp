@@ -82,7 +82,7 @@ void PropertyType::emitCXXValueTypeName(bool forRead, raw_ostream &out) const {
     elementType.emitCXXValueTypeName(forRead, out);
     out << ">";
   } else if (auto valueType = getOptionalElementType()) {
-    out << "llvm::Optional<";
+    out << "std::optional<";
     valueType.emitCXXValueTypeName(forRead, out);
     out << ">";
   } else {

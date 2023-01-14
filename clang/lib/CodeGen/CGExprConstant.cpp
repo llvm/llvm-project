@@ -95,7 +95,7 @@ class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
   bool NaturalLayout = true;
 
   bool split(size_t Index, CharUnits Hint);
-  Optional<size_t> splitAt(CharUnits Pos);
+  std::optional<size_t> splitAt(CharUnits Pos);
 
   static llvm::Constant *buildFrom(CodeGenModule &CGM,
                                    ArrayRef<llvm::Constant *> Elems,
@@ -159,12 +159,12 @@ bool ConstantAggregateBuilder::add(llvm::Constant *C, CharUnits Offset,
   }
 
   // Uncommon case: constant overlaps what we've already created.
-  llvm::Optional<size_t> FirstElemToReplace = splitAt(Offset);
+  std::optional<size_t> FirstElemToReplace = splitAt(Offset);
   if (!FirstElemToReplace)
     return false;
 
   CharUnits CSize = getSize(C);
-  llvm::Optional<size_t> LastElemToReplace = splitAt(Offset + CSize);
+  std::optional<size_t> LastElemToReplace = splitAt(Offset + CSize);
   if (!LastElemToReplace)
     return false;
 
@@ -223,10 +223,10 @@ bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
       // Partial byte: update the existing integer if there is one. If we
       // can't split out a 1-CharUnit range to update, then we can't add
       // these bits and fail the entire constant emission.
-      llvm::Optional<size_t> FirstElemToUpdate = splitAt(OffsetInChars);
+      std::optional<size_t> FirstElemToUpdate = splitAt(OffsetInChars);
       if (!FirstElemToUpdate)
         return false;
-      llvm::Optional<size_t> LastElemToUpdate =
+      std::optional<size_t> LastElemToUpdate =
           splitAt(OffsetInChars + CharUnits::One());
       if (!LastElemToUpdate)
         return false;
@@ -285,7 +285,7 @@ bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
 /// before the returned index end before Pos and all elements at or after
 /// the returned index begin at or after Pos. Splits elements as necessary
 /// to ensure this. Returns std::nullopt if we find something we can't split.
-Optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
+std::optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
   if (Pos >= Size)
     return Offsets.size();
 
@@ -518,12 +518,12 @@ void ConstantAggregateBuilder::condense(CharUnits Offset,
                                         llvm::Type *DesiredTy) {
   CharUnits Size = getSize(DesiredTy);
 
-  llvm::Optional<size_t> FirstElemToReplace = splitAt(Offset);
+  std::optional<size_t> FirstElemToReplace = splitAt(Offset);
   if (!FirstElemToReplace)
     return;
   size_t First = *FirstElemToReplace;
 
-  llvm::Optional<size_t> LastElemToReplace = splitAt(Offset + Size);
+  std::optional<size_t> LastElemToReplace = splitAt(Offset + Size);
   if (!LastElemToReplace)
     return;
   size_t Last = *LastElemToReplace;

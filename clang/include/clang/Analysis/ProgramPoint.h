@@ -147,8 +147,7 @@ public:
 
   /// Convert to the specified ProgramPoint type, returning std::nullopt if this
   /// ProgramPoint is not of the desired type.
-  template<typename T>
-  Optional<T> getAs() const {
+  template <typename T> std::optional<T> getAs() const {
     if (!T::isKind(*this))
       return std::nullopt;
     T t;
@@ -234,9 +233,9 @@ public:
     return reinterpret_cast<const CFGBlock*>(getData1());
   }
 
-  Optional<CFGElement> getFirstElement() const {
+  std::optional<CFGElement> getFirstElement() const {
     const CFGBlock *B = getBlock();
-    return B->empty() ? Optional<CFGElement>() : B->front();
+    return B->empty() ? std::optional<CFGElement>() : B->front();
   }
 
 private:

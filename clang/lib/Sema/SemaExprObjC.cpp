@@ -244,7 +244,7 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(Sema &S, SourceLocation Loc,
                                                 QualType NumberType,
                                                 bool isLiteral = false,
                                                 SourceRange R = SourceRange()) {
-  Optional<NSAPI::NSNumberLiteralMethodKind> Kind =
+  std::optional<NSAPI::NSNumberLiteralMethodKind> Kind =
       S.NSAPIObj->getNSNumberFactoryMethodKind(NumberType);
 
   if (!Kind) {
@@ -592,7 +592,7 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       BoxingMethod = StringWithUTF8StringMethod;
       BoxedType = NSStringPointer;
       // Transfer the nullability from method's return type.
-      Optional<NullabilityKind> Nullability =
+      std::optional<NullabilityKind> Nullability =
           BoxingMethod->getReturnType()->getNullability();
       if (Nullability)
         BoxedType = Context.getAttributedType(
@@ -1561,14 +1561,16 @@ QualType Sema::getMessageSendResultType(const Expr *Receiver,
 
   // Map the nullability of the result into a table index.
   unsigned receiverNullabilityIdx = 0;
-  if (Optional<NullabilityKind> nullability = ReceiverType->getNullability()) {
+  if (std::optional<NullabilityKind> nullability =
+          ReceiverType->getNullability()) {
     if (*nullability == NullabilityKind::NullableResult)
       nullability = NullabilityKind::Nullable;
     receiverNullabilityIdx = 1 + static_cast<unsigned>(*nullability);
   }
 
   unsigned resultNullabilityIdx = 0;
-  if (Optional<NullabilityKind> nullability = resultType->getNullability()) {
+  if (std::optional<NullabilityKind> nullability =
+          resultType->getNullability()) {
     if (*nullability == NullabilityKind::NullableResult)
       nullability = NullabilityKind::Nullable;
     resultNullabilityIdx = 1 + static_cast<unsigned>(*nullability);
@@ -1804,8 +1806,8 @@ bool Sema::CheckMessageArgumentTypes(
 
   // Compute the set of type arguments to be substituted into each parameter
   // type.
-  Optional<ArrayRef<QualType>> typeArgs
-    = ReceiverType->getObjCSubstitutions(Method->getDeclContext());
+  std::optional<ArrayRef<QualType>> typeArgs =
+      ReceiverType->getObjCSubstitutions(Method->getDeclContext());
   bool IsError = false;
   for (unsigned i = 0; i < NumNamedArgs; i++) {
     // We can't do any type-checking on a type-dependent argument.

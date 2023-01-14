@@ -170,7 +170,7 @@ public:
     if (!ArgType)
       return;
 
-    Optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
+    std::optional<bool> IsUncountedPtr = isUncountedPtr(ArgType);
     if (IsUncountedPtr && *IsUncountedPtr) {
       const Expr *const InitExpr = V->getInit();
       if (!InitExpr)

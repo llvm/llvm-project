@@ -45,7 +45,7 @@ using namespace ento;
 //===----------------------------------------------------------------------===//
 
 const FunctionDecl *SVal::getAsFunctionDecl() const {
-  if (Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>()) {
+  if (std::optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>()) {
     const MemRegion* R = X->getRegion();
     if (const FunctionCodeRegion *CTR = R->getAs<FunctionCodeRegion>())
       if (const auto *FD = dyn_cast<FunctionDecl>(CTR->getDecl()))
@@ -79,7 +79,7 @@ SymbolRef SVal::getAsLocSymbol(bool IncludeBaseRegions) const {
 
 /// Get the symbol in the SVal or its base region.
 SymbolRef SVal::getLocSymbolInBase() const {
-  Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>();
+  std::optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>();
 
   if (!X)
     return nullptr;
@@ -104,7 +104,7 @@ SymbolRef SVal::getLocSymbolInBase() const {
 /// should continue to the base regions if the region is not symbolic.
 SymbolRef SVal::getAsSymbol(bool IncludeBaseRegions) const {
   // FIXME: should we consider SymbolRef wrapped in CodeTextRegion?
-  if (Optional<nonloc::SymbolVal> X = getAs<nonloc::SymbolVal>())
+  if (std::optional<nonloc::SymbolVal> X = getAs<nonloc::SymbolVal>())
     return X->getSymbol();
 
   return getAsLocSymbol(IncludeBaseRegions);
@@ -119,10 +119,10 @@ const llvm::APSInt *SVal::getAsInteger() const {
 }
 
 const MemRegion *SVal::getAsRegion() const {
-  if (Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>())
+  if (std::optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>())
     return X->getRegion();
 
-  if (Optional<nonloc::LocAsInteger> X = getAs<nonloc::LocAsInteger>())
+  if (std::optional<nonloc::LocAsInteger> X = getAs<nonloc::LocAsInteger>())
     return X->getLoc().getAsRegion();
 
   return nullptr;
@@ -252,9 +252,9 @@ bool SVal::isConstant() const {
 }
 
 bool SVal::isConstant(int I) const {
-  if (Optional<loc::ConcreteInt> LV = getAs<loc::ConcreteInt>())
+  if (std::optional<loc::ConcreteInt> LV = getAs<loc::ConcreteInt>())
     return LV->getValue() == I;
-  if (Optional<nonloc::ConcreteInt> NV = getAs<nonloc::ConcreteInt>())
+  if (std::optional<nonloc::ConcreteInt> NV = getAs<nonloc::ConcreteInt>())
     return NV->getValue() == I;
   return false;
 }

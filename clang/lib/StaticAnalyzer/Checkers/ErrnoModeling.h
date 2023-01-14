@@ -43,7 +43,7 @@ enum ErrnoCheckState : unsigned {
 };
 
 /// Returns the value of 'errno', if 'errno' was found in the AST.
-llvm::Optional<SVal> getErrnoValue(ProgramStateRef State);
+std::optional<SVal> getErrnoValue(ProgramStateRef State);
 
 /// Returns the errno check state, \c Errno_Irrelevant if 'errno' was not found
 /// (this is not the only case for that value).
@@ -52,7 +52,7 @@ ErrnoCheckState getErrnoState(ProgramStateRef State);
 /// Returns the location that points to the \c MemoryRegion where the 'errno'
 /// value is stored. Returns \c std::nullopt if 'errno' was not found. Otherwise
 /// it always returns a valid memory region in the system global memory space.
-llvm::Optional<Loc> getErrnoLoc(ProgramStateRef State);
+std::optional<Loc> getErrnoLoc(ProgramStateRef State);
 
 /// Set value of 'errno' to any SVal, if possible.
 /// The errno check state is set always when the 'errno' value is set.

@@ -90,7 +90,7 @@ public:
   Selector getNSArraySelector(NSArrayMethodKind MK) const;
 
   /// Return NSArrayMethodKind if \p Sel is such a selector.
-  Optional<NSArrayMethodKind> getNSArrayMethodKind(Selector Sel);
+  std::optional<NSArrayMethodKind> getNSArrayMethodKind(Selector Sel);
 
   /// Enumerates the NSDictionary/NSMutableDictionary methods used
   /// to generate literals and to apply some checks.
@@ -115,7 +115,7 @@ public:
   Selector getNSDictionarySelector(NSDictionaryMethodKind MK) const;
 
   /// Return NSDictionaryMethodKind if \p Sel is such a selector.
-  Optional<NSDictionaryMethodKind> getNSDictionaryMethodKind(Selector Sel);
+  std::optional<NSDictionaryMethodKind> getNSDictionaryMethodKind(Selector Sel);
 
   /// Enumerates the NSMutableSet/NSOrderedSet methods used
   /// to apply some checks.
@@ -132,7 +132,7 @@ public:
   Selector getNSSetSelector(NSSetMethodKind MK) const;
 
   /// Return NSSetMethodKind if \p Sel is such a selector.
-  Optional<NSSetMethodKind> getNSSetMethodKind(Selector Sel);
+  std::optional<NSSetMethodKind> getNSSetMethodKind(Selector Sel);
 
   /// Returns selector for "objectForKeyedSubscript:".
   Selector getObjectForKeyedSubscriptSelector() const {
@@ -204,13 +204,13 @@ public:
   }
 
   /// Return NSNumberLiteralMethodKind if \p Sel is such a selector.
-  Optional<NSNumberLiteralMethodKind>
-      getNSNumberLiteralMethodKind(Selector Sel) const;
+  std::optional<NSNumberLiteralMethodKind>
+  getNSNumberLiteralMethodKind(Selector Sel) const;
 
   /// Determine the appropriate NSNumber factory method kind for a
   /// literal of the given type.
-  Optional<NSNumberLiteralMethodKind>
-      getNSNumberFactoryMethodKind(QualType T) const;
+  std::optional<NSNumberLiteralMethodKind>
+  getNSNumberFactoryMethodKind(QualType T) const;
 
   /// Returns true if \param T is a typedef of "BOOL" in objective-c.
   bool isObjCBOOLType(QualType T) const;

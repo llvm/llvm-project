@@ -536,7 +536,7 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
           for (ASTUnit::top_level_iterator TL = CXXUnit->top_level_begin(),
                                            TLEnd = CXXUnit->top_level_end();
                TL != TLEnd; ++TL) {
-            const Optional<bool> V = handleDeclForVisitation(*TL);
+            const std::optional<bool> V = handleDeclForVisitation(*TL);
             if (!V)
               continue;
             return *V;
@@ -601,7 +601,7 @@ bool CursorVisitor::VisitBlockDecl(BlockDecl *B) {
   return false;
 }
 
-Optional<bool> CursorVisitor::shouldVisitCursor(CXCursor Cursor) {
+std::optional<bool> CursorVisitor::shouldVisitCursor(CXCursor Cursor) {
   if (RegionOfInterest.isValid()) {
     SourceRange Range = getFullCursorExtent(Cursor, AU->getSourceManager());
     if (Range.isInvalid())
@@ -641,7 +641,7 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
       if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
         if (OMD->isSynthesizedAccessorStub())
           continue;
-    const Optional<bool> V = handleDeclForVisitation(D);
+    const std::optional<bool> V = handleDeclForVisitation(D);
     if (!V)
       continue;
     return *V;
@@ -649,7 +649,7 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
   return false;
 }
 
-Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
+std::optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
   CXCursor Cursor = MakeCXCursor(D, TU, RegionOfInterest);
 
   // Ignore synthesized ivars here, otherwise if we have something like:
@@ -675,7 +675,7 @@ Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
       Cursor = MakeCursorObjCProtocolRef(PD, PD->getLocation(), TU);
   }
 
-  const Optional<bool> V = shouldVisitCursor(Cursor);
+  const std::optional<bool> V = shouldVisitCursor(Cursor);
   if (!V)
     return std::nullopt;
   if (!*V)
@@ -1074,7 +1074,7 @@ bool CursorVisitor::VisitObjCContainerDecl(ObjCContainerDecl *D) {
                                          E = DeclsInContainer.end();
        I != E; ++I) {
     CXCursor Cursor = MakeCXCursor(*I, TU, RegionOfInterest);
-    const Optional<bool> &V = shouldVisitCursor(Cursor);
+    const std::optional<bool> &V = shouldVisitCursor(Cursor);
     if (!V)
       continue;
     if (!*V)
@@ -4627,7 +4627,7 @@ const char *clang_getFileContents(CXTranslationUnit TU, CXFile file,
 
   const SourceManager &SM = cxtu::getASTUnit(TU)->getSourceManager();
   FileID fid = SM.translateFile(static_cast<FileEntry *>(file));
-  llvm::Optional<llvm::MemoryBufferRef> buf = SM.getBufferOrNone(fid);
+  std::optional<llvm::MemoryBufferRef> buf = SM.getBufferOrNone(fid);
   if (!buf) {
     if (size)
       *size = 0;
