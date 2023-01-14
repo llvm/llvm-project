@@ -9,19 +9,12 @@
 #ifndef _LIBCPP___ALGORITHM_COPY_BACKWARD_H
 #define _LIBCPP___ALGORITHM_COPY_BACKWARD_H
 
-#include <__algorithm/copy.h>
+#include <__algorithm/copy_move_common.h>
 #include <__algorithm/iterator_operations.h>
-#include <__algorithm/ranges_copy.h>
-#include <__algorithm/unwrap_iter.h>
-#include <__concepts/same_as.h>
 #include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/reverse_iterator.h>
-#include <__ranges/subrange.h>
+#include <__type_traits/is_copy_constructible.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstring>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,32 +22,51 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _AlgPolicy, class _InputIterator, class _OutputIterator,
-          __enable_if_t<is_same<_AlgPolicy, _ClassicAlgPolicy>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InputIterator, _OutputIterator>
-__copy_backward(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
-  auto __ret = std::__copy(
-      __unconstrained_reverse_iterator<_InputIterator>(__last),
-      __unconstrained_reverse_iterator<_InputIterator>(__first),
-      __unconstrained_reverse_iterator<_OutputIterator>(__result));
-  return pair<_InputIterator, _OutputIterator>(__ret.first.base(), __ret.second.base());
-}
+template <class _AlgPolicy>
+struct __copy_backward_loop {
+  template <class _InIter, class _Sent, class _OutIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
+  operator()(_InIter __first, _Sent __last, _OutIter __result) const {
+    auto __last_iter          = _IterOps<_AlgPolicy>::next(__first, __last);
+    auto __original_last_iter = __last_iter;
 
-#if _LIBCPP_STD_VER > 17
-template <class _AlgPolicy, class _Iter1, class _Sent1, class _Iter2,
-          __enable_if_t<is_same<_AlgPolicy, _RangeAlgPolicy>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter1, _Iter2> __copy_backward(_Iter1 __first, _Sent1 __last, _Iter2 __result) {
-  auto __last_iter     = _IterOps<_AlgPolicy>::next(__first, std::move(__last));
-  auto __reverse_range = std::__reverse_range(std::ranges::subrange(std::move(__first), __last_iter));
-  auto __ret           = ranges::copy(std::move(__reverse_range), std::make_reverse_iterator(__result));
-  return std::make_pair(__last_iter, __ret.out.base());
+    while (__first != __last_iter) {
+      *--__result = *--__last_iter;
+    }
+
+    return std::make_pair(std::move(__original_last_iter), std::move(__result));
+  }
+};
+
+struct __copy_backward_trivial {
+  // At this point, the iterators have been unwrapped so any `contiguous_iterator` has been unwrapped to a pointer.
+  template <class _In, class _Out,
+            __enable_if_t<__can_lower_copy_assignment_to_memmove<_In, _Out>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_In*, _Out*>
+  operator()(_In* __first, _In* __last, _Out* __result) const {
+    return std::__copy_backward_trivial_impl(__first, __last, __result);
+  }
+};
+
+template <class _AlgPolicy, class _BidirectionalIterator1, class _Sentinel, class _BidirectionalIterator2>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+pair<_BidirectionalIterator1, _BidirectionalIterator2>
+__copy_backward(_BidirectionalIterator1 __first, _Sentinel __last, _BidirectionalIterator2 __result) {
+  return std::__dispatch_copy_or_move<_AlgPolicy, __copy_backward_loop<_AlgPolicy>, __copy_backward_trivial>(
+      std::move(__first), std::move(__last), std::move(__result));
 }
-#endif // _LIBCPP_STD_VER > 17
 
 template <class _BidirectionalIterator1, class _BidirectionalIterator2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _BidirectionalIterator2
-copy_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last, _BidirectionalIterator2 __result) {
-  return std::__copy_backward<_ClassicAlgPolicy>(__first, __last, __result).second;
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+_BidirectionalIterator2
+copy_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last,
+              _BidirectionalIterator2 __result)
+{
+  static_assert(std::is_copy_constructible<_BidirectionalIterator1>::value &&
+                std::is_copy_constructible<_BidirectionalIterator1>::value, "Iterators must be copy constructible.");
+
+  return std::__copy_backward<_ClassicAlgPolicy>(
+      std::move(__first), std::move(__last), std::move(__result)).second;
 }
 
 _LIBCPP_END_NAMESPACE_STD
