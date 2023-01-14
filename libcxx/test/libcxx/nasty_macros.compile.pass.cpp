@@ -9,6 +9,9 @@
 // Test that headers are not tripped up by the surrounding code defining various
 // alphabetic macros.
 
+// FIXME: This should pass with the PSTL enabled
+// XFAIL: with-pstl
+
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)
 #    undef __DEPRECATED

@@ -1555,6 +1555,7 @@ module std [system] {
       private header "__type_traits/is_equality_comparable.h"
       export integral_constant
     }
+    module is_execution_policy                 { private header "__type_traits/is_execution_policy.h" }
     module is_final                            { private header "__type_traits/is_final.h" }
     module is_floating_point                   { private header "__type_traits/is_floating_point.h" }
     module is_function                         { private header "__type_traits/is_function.h" }
@@ -1672,29 +1673,30 @@ module std [system] {
     export *
 
     module __utility {
-      module as_const            { private header "__utility/as_const.h" }
-      module auto_cast           {
+      module as_const               { private header "__utility/as_const.h" }
+      module auto_cast              {
         private header "__utility/auto_cast.h"
         export type_traits.decay
       }
-      module cmp                 { private header "__utility/cmp.h" }
-      module convert_to_integral { private header "__utility/convert_to_integral.h" }
-      module declval             { private header "__utility/declval.h" }
-      module exception_guard     { private header "__utility/exception_guard.h" }
-      module exchange            { private header "__utility/exchange.h" }
-      module forward             { private header "__utility/forward.h" }
-      module forward_like        { private header "__utility/forward_like.h" }
-      module in_place            { private header "__utility/in_place.h" }
-      module integer_sequence    { private header "__utility/integer_sequence.h" }
-      module move                { private header "__utility/move.h" }
-      module pair                { private header "__utility/pair.h" }
-      module pair_fwd            { private header "__fwd/pair.h" }
-      module piecewise_construct { private header "__utility/piecewise_construct.h" }
-      module priority_tag        { private header "__utility/priority_tag.h" }
-      module rel_ops             { private header "__utility/rel_ops.h" }
-      module swap                { private header "__utility/swap.h" }
-      module to_underlying       { private header "__utility/to_underlying.h" }
-      module unreachable         { private header "__utility/unreachable.h" }
+      module cmp                    { private header "__utility/cmp.h" }
+      module convert_to_integral    { private header "__utility/convert_to_integral.h" }
+      module declval                { private header "__utility/declval.h" }
+      module exception_guard        { private header "__utility/exception_guard.h" }
+      module exchange               { private header "__utility/exchange.h" }
+      module forward                { private header "__utility/forward.h" }
+      module forward_like           { private header "__utility/forward_like.h" }
+      module in_place               { private header "__utility/in_place.h" }
+      module integer_sequence       { private header "__utility/integer_sequence.h" }
+      module move                   { private header "__utility/move.h" }
+      module pair                   { private header "__utility/pair.h" }
+      module pair_fwd               { private header "__fwd/pair.h" }
+      module piecewise_construct    { private header "__utility/piecewise_construct.h" }
+      module priority_tag           { private header "__utility/priority_tag.h" }
+      module rel_ops                { private header "__utility/rel_ops.h" }
+      module swap                   { private header "__utility/swap.h" }
+      module terminate_on_exception { private header "__utility/terminate_on_exception.h" }
+      module to_underlying          { private header "__utility/to_underlying.h" }
+      module unreachable            { private header "__utility/unreachable.h" }
     }
   }
   module valarray {

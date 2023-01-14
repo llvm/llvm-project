@@ -10,6 +10,7 @@
 #ifndef _PSTL_UNSEQ_BACKEND_SIMD_H
 #define _PSTL_UNSEQ_BACKEND_SIMD_H
 
+#include <__functional/operations.h>
 #include <type_traits>
 
 #include "pstl_config.h"
