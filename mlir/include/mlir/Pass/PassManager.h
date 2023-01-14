@@ -13,7 +13,6 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/Timing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/raw_ostream.h"
