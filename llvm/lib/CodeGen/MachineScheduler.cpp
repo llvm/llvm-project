@@ -101,6 +101,7 @@ cl::opt<bool> MISchedDumpReservedCycles(
 #else
 const bool ViewMISchedDAGs = false;
 const bool PrintDAGs = false;
+const bool MISchedDumpReservedCycles = false;
 #endif // NDEBUG
 
 } // end namespace llvm
