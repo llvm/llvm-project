@@ -108,13 +108,13 @@ private:
 /// it is out of date.
 struct CacheSignature {
   /// UUID of object file or module.
-  std::optional<UUID> m_uuid = std::nullopt;
+  std::optional<UUID> m_uuid;
   /// Modification time of file on disk.
-  std::optional<std::time_t> m_mod_time = std::nullopt;
+  std::optional<std::time_t> m_mod_time;
   /// If this describes a .o file with a BSD archive, the BSD archive's
   /// modification time will be in m_mod_time, and the .o file's modification
   /// time will be in this m_obj_mod_time.
-  std::optional<std::time_t> m_obj_mod_time = std::nullopt;
+  std::optional<std::time_t> m_obj_mod_time;
 
   CacheSignature() = default;
 

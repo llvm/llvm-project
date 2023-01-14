@@ -541,7 +541,7 @@ Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
 
 Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
                                         std::optional<APInt> dim) const {
-  std::optional<unsigned> intDim = std::nullopt;
+  std::optional<unsigned> intDim;
   if (dim)
     intDim = dim.value().getZExtValue();
   return getFieldType(kind, intDim);
