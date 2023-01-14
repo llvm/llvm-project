@@ -263,8 +263,7 @@ option is recognized.
 )"),
                                   cl::init(false), cl::cat(ClangTidyCategory));
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 static void printStats(const ClangTidyStats &Stats) {
   if (Stats.errorsIgnored()) {
@@ -660,5 +659,4 @@ int clangTidyMain(int argc, const char **argv) {
   return 0;
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

@@ -12,10 +12,7 @@
 #include "clang/AST/Type.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
-namespace fixit {
+namespace clang::tidy::utils::fixit {
 
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
@@ -224,7 +221,4 @@ std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
 
   return std::nullopt;
 }
-} // namespace fixit
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils::fixit

@@ -14,9 +14,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -88,6 +86,4 @@ void ReplaceDisallowCopyAndAssignMacroCheck::storeOptions(
   Options.store(Opts, "MacroName", MacroName);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

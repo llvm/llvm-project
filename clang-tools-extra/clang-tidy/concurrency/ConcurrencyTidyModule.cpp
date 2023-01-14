@@ -12,8 +12,7 @@
 #include "MtUnsafeCheck.h"
 #include "ThreadCanceltypeAsynchronousCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace concurrency {
 
 class ConcurrencyModule : public ClangTidyModule {
@@ -36,5 +35,4 @@ static ClangTidyModuleRegistry::Add<concurrency::ConcurrencyModule>
 // and thus register the ConcurrencyModule.
 volatile int ConcurrencyModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

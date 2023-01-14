@@ -90,8 +90,7 @@ AST_MATCHER(QualType, isIntegralType) {
   return Node->isIntegralType(Finder->getASTContext());
 }
 } // namespace ast_matchers
-namespace tidy {
-namespace readability {
+namespace tidy::readability {
 
 using utils::isBinaryOrTernary;
 
@@ -328,6 +327,5 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
       << Container;
 }
 
-} // namespace readability
-} // namespace tidy
+} // namespace tidy::readability
 } // namespace clang

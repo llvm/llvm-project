@@ -17,9 +17,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace portability {
+namespace clang::tidy::portability {
 
 namespace {
 
@@ -146,6 +144,4 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace portability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::portability
