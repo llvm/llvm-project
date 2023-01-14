@@ -56,6 +56,7 @@ group("unittests") {
     "tools/llvm-cfi-verify:CFIVerifyTests",
     "tools/llvm-exegesis:LLVMExegesisTests",
     "tools/llvm-mca:LLVMMCATests",
+    "tools/llvm-profdata:LLVMProfdataTests",
     "tools/llvm-profgen:LLVMProfgenTests",
     "//llvm/lib/TargetParser",
   ]

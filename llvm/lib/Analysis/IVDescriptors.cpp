@@ -1585,7 +1585,7 @@ bool InductionDescriptor::isInductionPHI(
   if (TySize.isZero() || TySize.isScalable())
     return false;
 
-  int64_t Size = static_cast<int64_t>(TySize.getFixedSize());
+  int64_t Size = static_cast<int64_t>(TySize.getFixedValue());
   int64_t CVSize = CV->getSExtValue();
   if (CVSize % Size)
     return false;

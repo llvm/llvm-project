@@ -247,3 +247,4 @@
 "","","","","",""
 "`3631 <https://wg21.link/LWG3631>`__","``basic_format_arg(T&&)`` should use ``remove_cvref_t<T>`` throughout","Not voted in","|Complete|","15.0",""
 "`3645 <https://wg21.link/LWG3645>`__","``resize_and_overwrite`` is overspecified to call its callback with lvalues","Not voted in","|Complete|","14.0",""
+"`3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","Not Yet Adopted","|Complete|","16.0",""

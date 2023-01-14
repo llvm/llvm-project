@@ -255,6 +255,8 @@ TEST_MACROS();
 #   include <shared_mutex>
 TEST_MACROS();
 #endif
+#include <source_location>
+TEST_MACROS();
 #include <span>
 TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)

@@ -2704,8 +2704,9 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     uint64_t LargestVectorWidth = 0;
     for (auto *I : NewArgumentTypes)
       if (auto *VT = dyn_cast<llvm::VectorType>(I))
-        LargestVectorWidth = std::max(
-            LargestVectorWidth, VT->getPrimitiveSizeInBits().getKnownMinSize());
+        LargestVectorWidth =
+            std::max(LargestVectorWidth,
+                     VT->getPrimitiveSizeInBits().getKnownMinValue());
 
     FunctionType *OldFnTy = OldFn->getFunctionType();
     Type *RetTy = OldFnTy->getReturnType();

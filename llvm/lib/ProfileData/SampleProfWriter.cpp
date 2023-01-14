@@ -30,6 +30,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <set>
@@ -37,8 +38,98 @@
 #include <utility>
 #include <vector>
 
+#define DEBUG_TYPE "llvm-profdata"
+
 using namespace llvm;
 using namespace sampleprof;
+
+namespace llvm {
+namespace support {
+namespace endian {
+namespace {
+
+// Adapter class to llvm::support::endian::Writer for pwrite().
+struct SeekableWriter {
+  raw_pwrite_stream &OS;
+  endianness Endian;
+  SeekableWriter(raw_pwrite_stream &OS, endianness Endian)
+      : OS(OS), Endian(Endian) {}
+
+  template <typename ValueType>
+  void pwrite(ValueType Val, size_t Offset) {
+    std::string StringBuf;
+    raw_string_ostream SStream(StringBuf);
+    Writer(SStream, Endian).write(Val);
+    OS.pwrite(StringBuf.data(), StringBuf.size(), Offset);
+  }
+};
+
+} // namespace
+} // namespace endian
+} // namespace support
+} // namespace llvm
+
+DefaultFunctionPruningStrategy::DefaultFunctionPruningStrategy(
+    SampleProfileMap &ProfileMap, size_t OutputSizeLimit)
+    : FunctionPruningStrategy(ProfileMap, OutputSizeLimit) {
+  sortFuncProfiles(ProfileMap, SortedFunctions);
+}
+
+void DefaultFunctionPruningStrategy::Erase(size_t CurrentOutputSize) {
+  double D = (double)OutputSizeLimit / CurrentOutputSize;
+  size_t NewSize = (size_t)round(ProfileMap.size() * D * D);
+  size_t NumToRemove = ProfileMap.size() - NewSize;
+  if (NumToRemove < 1)
+    NumToRemove = 1;
+
+  assert(NumToRemove <= SortedFunctions.size());
+  llvm::for_each(
+      llvm::make_range(SortedFunctions.begin() + SortedFunctions.size() -
+                           NumToRemove,
+                       SortedFunctions.end()),
+      [&](const NameFunctionSamples &E) { ProfileMap.erase(E.first); });
+  SortedFunctions.resize(SortedFunctions.size() - NumToRemove);
+}
+
+std::error_code SampleProfileWriter::writeWithSizeLimitInternal(
+    SampleProfileMap &ProfileMap, size_t OutputSizeLimit,
+    FunctionPruningStrategy *Strategy) {
+  if (OutputSizeLimit == 0)
+    return write(ProfileMap);
+
+  size_t OriginalFunctionCount = ProfileMap.size();
+
+  SmallVector<char> StringBuffer;
+  std::unique_ptr<raw_ostream> BufferStream(
+      new raw_svector_ostream(StringBuffer));
+  OutputStream.swap(BufferStream);
+
+  if (std::error_code EC = write(ProfileMap))
+    return EC;
+  size_t IterationCount = 0;
+  while (StringBuffer.size() > OutputSizeLimit) {
+    Strategy->Erase(StringBuffer.size());
+
+    if (ProfileMap.size() == 0)
+      return sampleprof_error::too_large;
+
+    StringBuffer.clear();
+    OutputStream.reset(new raw_svector_ostream(StringBuffer));
+    if (std::error_code EC = write(ProfileMap))
+      return EC;
+    IterationCount++;
+  }
+
+  OutputStream.swap(BufferStream);
+  OutputStream->write(StringBuffer.data(), StringBuffer.size());
+  LLVM_DEBUG(dbgs() << "Profile originally has " << OriginalFunctionCount
+                    << " functions, reduced to " << ProfileMap.size() << " in "
+                    << IterationCount << " iterations\n");
+  // Silence warning on Release build.
+  (void)OriginalFunctionCount;
+  (void)IterationCount;
+  return sampleprof_error::success;
+}
 
 std::error_code
 SampleProfileWriter::writeFuncProfiles(const SampleProfileMap &ProfileMap) {
@@ -116,6 +207,12 @@ std::error_code SampleProfileWriterExtBinaryBase::addNewSection(
 
 std::error_code
 SampleProfileWriterExtBinaryBase::write(const SampleProfileMap &ProfileMap) {
+  // When calling write on a different profile map, existing states should be
+  // cleared.
+  NameTable.clear();
+  CSNameTable.clear();
+  SecHdrTable.clear();
+
   if (std::error_code EC = writeHeader(ProfileMap))
     return EC;
 
@@ -605,14 +702,10 @@ std::error_code SampleProfileWriterCompactBinary::writeFuncOffsetTable() {
   auto &OS = *OutputStream;
 
   // Fill the slot remembered by TableOffset with the offset of FuncOffsetTable.
-  auto &OFS = static_cast<raw_fd_ostream &>(OS);
   uint64_t FuncOffsetTableStart = OS.tell();
-  if (OFS.seek(TableOffset) == (uint64_t)-1)
-    return sampleprof_error::ostream_seek_unsupported;
-  support::endian::Writer Writer(*OutputStream, support::little);
-  Writer.write(FuncOffsetTableStart);
-  if (OFS.seek(FuncOffsetTableStart) == (uint64_t)-1)
-    return sampleprof_error::ostream_seek_unsupported;
+  support::endian::SeekableWriter Writer(static_cast<raw_pwrite_stream &>(OS),
+                                         support::little);
+  Writer.pwrite(FuncOffsetTableStart, TableOffset);
 
   // Write out the table size.
   encodeULEB128(FuncOffsetTable.size(), OS);
@@ -650,6 +743,10 @@ SampleProfileWriterBinary::writeMagicIdent(SampleProfileFormat Format) {
 
 std::error_code
 SampleProfileWriterBinary::writeHeader(const SampleProfileMap &ProfileMap) {
+  // When calling write on a different profile map, existing names should be
+  // cleared.
+  NameTable.clear();
+
   writeMagicIdent(Format);
 
   computeSummary(ProfileMap);
@@ -690,14 +787,6 @@ void SampleProfileWriterExtBinaryBase::allocSecHdrTable() {
 }
 
 std::error_code SampleProfileWriterExtBinaryBase::writeSecHdrTable() {
-  auto &OFS = static_cast<raw_fd_ostream &>(*OutputStream);
-  uint64_t Saved = OutputStream->tell();
-
-  // Set OutputStream to the location saved in SecHdrTableOffset.
-  if (OFS.seek(SecHdrTableOffset) == (uint64_t)-1)
-    return sampleprof_error::ostream_seek_unsupported;
-  support::endian::Writer Writer(*OutputStream, support::little);
-
   assert(SecHdrTable.size() == SectionHdrLayout.size() &&
          "SecHdrTable entries doesn't match SectionHdrLayout");
   SmallVector<uint32_t, 16> IndexMap(SecHdrTable.size(), -1);
@@ -714,20 +803,22 @@ std::error_code SampleProfileWriterExtBinaryBase::writeSecHdrTable() {
   // needs to be computed after SecLBRProfile (the order in SecHdrTable),
   // but it needs to be read before SecLBRProfile (the order in
   // SectionHdrLayout). So we use IndexMap above to switch the order.
+  support::endian::SeekableWriter Writer(
+      static_cast<raw_pwrite_stream &>(*OutputStream), support::little);
   for (uint32_t LayoutIdx = 0; LayoutIdx < SectionHdrLayout.size();
        LayoutIdx++) {
     assert(IndexMap[LayoutIdx] < SecHdrTable.size() &&
            "Incorrect LayoutIdx in SecHdrTable");
     auto Entry = SecHdrTable[IndexMap[LayoutIdx]];
-    Writer.write(static_cast<uint64_t>(Entry.Type));
-    Writer.write(static_cast<uint64_t>(Entry.Flags));
-    Writer.write(static_cast<uint64_t>(Entry.Offset));
-    Writer.write(static_cast<uint64_t>(Entry.Size));
+    Writer.pwrite(static_cast<uint64_t>(Entry.Type),
+                  SecHdrTableOffset + 4 * LayoutIdx * sizeof(uint64_t));
+    Writer.pwrite(static_cast<uint64_t>(Entry.Flags),
+                  SecHdrTableOffset + (4 * LayoutIdx + 1) * sizeof(uint64_t));
+    Writer.pwrite(static_cast<uint64_t>(Entry.Offset),
+                  SecHdrTableOffset + (4 * LayoutIdx + 2) * sizeof(uint64_t));
+    Writer.pwrite(static_cast<uint64_t>(Entry.Size),
+                  SecHdrTableOffset + (4 * LayoutIdx + 3) * sizeof(uint64_t));
   }
-
-  // Reset OutputStream.
-  if (OFS.seek(Saved) == (uint64_t)-1)
-    return sampleprof_error::ostream_seek_unsupported;
 
   return sampleprof_error::success;
 }

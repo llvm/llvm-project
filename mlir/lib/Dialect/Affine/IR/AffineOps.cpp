@@ -562,7 +562,7 @@ bool AffineApplyOp::isValidSymbol(Region *region) {
   });
 }
 
-OpFoldResult AffineApplyOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult AffineApplyOp::fold(FoldAdaptor adaptor) {
   auto map = getAffineMap();
 
   // Fold dims and symbols to existing values.
@@ -574,7 +574,7 @@ OpFoldResult AffineApplyOp::fold(ArrayRef<Attribute> operands) {
 
   // Otherwise, default to folding the map.
   SmallVector<Attribute, 1> result;
-  if (failed(map.constantFold(operands, result)))
+  if (failed(map.constantFold(adaptor.getMapOperands(), result)))
     return {};
   return result[0];
 }
@@ -2135,7 +2135,7 @@ static bool hasTrivialZeroTripCount(AffineForOp op) {
   return tripCount && *tripCount == 0;
 }
 
-LogicalResult AffineForOp::fold(ArrayRef<Attribute> operands,
+LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
                                 SmallVectorImpl<OpFoldResult> &results) {
   bool folded = succeeded(foldLoopBounds(*this));
   folded |= succeeded(canonicalizeLoopBounds(*this));
@@ -2723,7 +2723,7 @@ static void composeSetAndOperands(IntegerSet &set,
 }
 
 /// Canonicalize an affine if op's conditional (integer set + operands).
-LogicalResult AffineIfOp::fold(ArrayRef<Attribute>,
+LogicalResult AffineIfOp::fold(FoldAdaptor,
                                SmallVectorImpl<OpFoldResult> &) {
   auto set = getIntegerSet();
   SmallVector<Value, 4> operands(getOperands());
@@ -2858,7 +2858,7 @@ void AffineLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyAffineOp<AffineLoadOp>>(context);
 }
 
-OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
+OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
   /// load(memrefcast) -> load
   if (succeeded(memref::foldMemRefCast(*this)))
     return getResult();
@@ -2975,7 +2975,7 @@ void AffineStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyAffineOp<AffineStoreOp>>(context);
 }
 
-LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
+LogicalResult AffineStoreOp::fold(FoldAdaptor adaptor,
                                   SmallVectorImpl<OpFoldResult> &results) {
   /// store(memrefcast) -> store
   return memref::foldMemRefCast(*this, getValueToStore());
@@ -3282,8 +3282,8 @@ struct CanonicalizeSingleResultAffineMinMaxOp : public OpRewritePattern<T> {
 //   %0 = affine.min (d0) -> (1000, d0 + 512) (%i0)
 //
 
-OpFoldResult AffineMinOp::fold(ArrayRef<Attribute> operands) {
-  return foldMinMaxOp(*this, operands);
+OpFoldResult AffineMinOp::fold(FoldAdaptor adaptor) {
+  return foldMinMaxOp(*this, adaptor.getOperands());
 }
 
 void AffineMinOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -3310,8 +3310,8 @@ void AffineMinOp::print(OpAsmPrinter &p) { printAffineMinMaxOp(p, *this); }
 //   %0 = affine.max (d0) -> (1000, d0 + 512) (%i0)
 //
 
-OpFoldResult AffineMaxOp::fold(ArrayRef<Attribute> operands) {
-  return foldMinMaxOp(*this, operands);
+OpFoldResult AffineMaxOp::fold(FoldAdaptor adaptor) {
+  return foldMinMaxOp(*this, adaptor.getOperands());
 }
 
 void AffineMaxOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -3431,7 +3431,7 @@ void AffinePrefetchOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyAffineOp<AffinePrefetchOp>>(context);
 }
 
-LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
+LogicalResult AffinePrefetchOp::fold(FoldAdaptor adaptor,
                                      SmallVectorImpl<OpFoldResult> &results) {
   /// prefetch(memrefcast) -> prefetch
   return memref::foldMemRefCast(*this);
@@ -3705,7 +3705,7 @@ static LogicalResult canonicalizeLoopBounds(AffineParallelOp op) {
   return success();
 }
 
-LogicalResult AffineParallelOp::fold(ArrayRef<Attribute> operands,
+LogicalResult AffineParallelOp::fold(FoldAdaptor adaptor,
                                      SmallVectorImpl<OpFoldResult> &results) {
   return canonicalizeLoopBounds(*this);
 }

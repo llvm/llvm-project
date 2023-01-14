@@ -252,8 +252,8 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
                        Contrib.getOffset() + Contrib.getLength());
         else
           OS << format("[0x%08" PRIx32 ", 0x%08" PRIx32 ") ",
-                       Contrib.getOffset(),
-                       Contrib.getOffset() + Contrib.getLength());
+                       Contrib.getOffset32(),
+                       Contrib.getOffset32() + Contrib.getLength32());
       }
       OS << '\n';
     }

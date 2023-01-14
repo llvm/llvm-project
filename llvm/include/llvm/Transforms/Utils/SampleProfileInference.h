@@ -48,9 +48,9 @@ struct FlowJump;
 struct FlowBlock {
   uint64_t Index;
   uint64_t Weight{0};
-  bool HasUnknownWeight{false};
+  bool HasUnknownWeight{true};
+  bool IsUnlikely{false};
   uint64_t Flow{0};
-  bool HasSelfEdge{false};
   std::vector<FlowJump *> SuccJumps;
   std::vector<FlowJump *> PredJumps;
 
@@ -65,13 +65,17 @@ struct FlowBlock {
 struct FlowJump {
   uint64_t Source;
   uint64_t Target;
-  uint64_t Flow{0};
+  uint64_t Weight{0};
+  bool HasUnknownWeight{true};
   bool IsUnlikely{false};
+  uint64_t Flow{0};
 };
 
 /// A wrapper of binary function with basic blocks and jumps.
 struct FlowFunction {
+  /// Basic blocks in the function.
   std::vector<FlowBlock> Blocks;
+  /// Jumps between the basic blocks.
   std::vector<FlowJump> Jumps;
   /// The index of the entry block.
   uint64_t Entry{0};
@@ -108,6 +112,24 @@ struct ProfiParams {
   /// The cost of increasing an unknown block's count by one.
   unsigned CostBlockUnknownInc{0};
 
+  /// The cost of increasing a jump's count by one.
+  unsigned CostJumpInc{0};
+
+  /// The cost of increasing a fall-through jump's count by one.
+  unsigned CostJumpFTInc{0};
+
+  /// The cost of decreasing a jump's count by one.
+  unsigned CostJumpDec{0};
+
+  /// The cost of decreasing a fall-through jump's count by one.
+  unsigned CostJumpFTDec{0};
+
+  /// The cost of increasing an unknown jump's count by one.
+  unsigned CostJumpUnknownInc{0};
+
+  /// The cost of increasing an unknown fall-through jump's count by one.
+  unsigned CostJumpUnknownFTInc{0};
+
   /// The cost of taking an unlikely block/jump.
   const int64_t CostUnlikely = ((int64_t)1) << 30;
 };
@@ -134,6 +156,11 @@ public:
   void apply(BlockWeightMap &BlockWeights, EdgeWeightMap &EdgeWeights);
 
 private:
+  /// Initialize flow function blocks, jumps and misc metadata.
+  void initFunction(FlowFunction &Func,
+                    const std::vector<const BasicBlockT *> &BasicBlocks,
+                    DenseMap<const BasicBlockT *, uint64_t> &BlockIndex);
+
   /// Try to infer branch probabilities mimicking implementation of
   /// BranchProbabilityInfo. Unlikely taken branches are marked so that the
   /// inference algorithm can avoid sending flow along corresponding edges.
@@ -202,49 +229,7 @@ void SampleProfileInference<BT>::apply(BlockWeightMap &BlockWeights,
 
   // Create necessary objects
   FlowFunction Func;
-  Func.Blocks.reserve(BasicBlocks.size());
-  // Create FlowBlocks
-  for (const auto *BB : BasicBlocks) {
-    FlowBlock Block;
-    if (SampleBlockWeights.find(BB) != SampleBlockWeights.end()) {
-      Block.HasUnknownWeight = false;
-      Block.Weight = SampleBlockWeights[BB];
-    } else {
-      Block.HasUnknownWeight = true;
-      Block.Weight = 0;
-    }
-    Block.Index = Func.Blocks.size();
-    Func.Blocks.push_back(Block);
-  }
-  // Create FlowEdges
-  for (const auto *BB : BasicBlocks) {
-    for (auto *Succ : Successors[BB]) {
-      if (!BlockIndex.count(Succ))
-        continue;
-      FlowJump Jump;
-      Jump.Source = BlockIndex[BB];
-      Jump.Target = BlockIndex[Succ];
-      Func.Jumps.push_back(Jump);
-      if (BB == Succ) {
-        Func.Blocks[BlockIndex[BB]].HasSelfEdge = true;
-      }
-    }
-  }
-  for (auto &Jump : Func.Jumps) {
-    Func.Blocks[Jump.Source].SuccJumps.push_back(&Jump);
-    Func.Blocks[Jump.Target].PredJumps.push_back(&Jump);
-  }
-
-  // Try to infer probabilities of jumps based on the content of basic block
-  findUnlikelyJumps(BasicBlocks, Successors, Func);
-
-  // Find the entry block
-  for (size_t I = 0; I < Func.Blocks.size(); I++) {
-    if (Func.Blocks[I].isEntry()) {
-      Func.Entry = I;
-      break;
-    }
-  }
+  initFunction(Func, BasicBlocks, BlockIndex);
 
   // Create and apply the inference network model.
   applyFlowInference(Func);
@@ -273,6 +258,62 @@ void SampleProfileInference<BT>::apply(BlockWeightMap &BlockWeights,
            InverseReachable.contains(I.first.second));
   }
 #endif
+}
+
+template <typename BT>
+void SampleProfileInference<BT>::initFunction(
+    FlowFunction &Func, const std::vector<const BasicBlockT *> &BasicBlocks,
+    DenseMap<const BasicBlockT *, uint64_t> &BlockIndex) {
+  Func.Blocks.reserve(BasicBlocks.size());
+  // Create FlowBlocks
+  for (const auto *BB : BasicBlocks) {
+    FlowBlock Block;
+    if (SampleBlockWeights.find(BB) != SampleBlockWeights.end()) {
+      Block.HasUnknownWeight = false;
+      Block.Weight = SampleBlockWeights[BB];
+    } else {
+      Block.HasUnknownWeight = true;
+      Block.Weight = 0;
+    }
+    Block.Index = Func.Blocks.size();
+    Func.Blocks.push_back(Block);
+  }
+  // Create FlowEdges
+  for (const auto *BB : BasicBlocks) {
+    for (auto *Succ : Successors[BB]) {
+      if (!BlockIndex.count(Succ))
+        continue;
+      FlowJump Jump;
+      Jump.Source = BlockIndex[BB];
+      Jump.Target = BlockIndex[Succ];
+      Func.Jumps.push_back(Jump);
+    }
+  }
+  for (auto &Jump : Func.Jumps) {
+    uint64_t Src = Jump.Source;
+    uint64_t Dst = Jump.Target;
+    Func.Blocks[Src].SuccJumps.push_back(&Jump);
+    Func.Blocks[Dst].PredJumps.push_back(&Jump);
+  }
+
+  // Try to infer probabilities of jumps based on the content of basic block
+  findUnlikelyJumps(BasicBlocks, Successors, Func);
+
+  // Find the entry block
+  for (size_t I = 0; I < Func.Blocks.size(); I++) {
+    if (Func.Blocks[I].isEntry()) {
+      Func.Entry = I;
+      break;
+    }
+  }
+  assert(Func.Entry == 0 && "incorrect index of the entry block");
+
+  // Pre-process data: make sure the entry weight is at least 1
+  auto &EntryBlock = Func.Blocks[Func.Entry];
+  if (EntryBlock.Weight == 0 && !EntryBlock.HasUnknownWeight) {
+    EntryBlock.Weight = 1;
+    EntryBlock.HasUnknownWeight = false;
+  }
 }
 
 template <typename BT>

@@ -101,6 +101,52 @@ llvm::Value *packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF,
     return Builder.CreatePointerCast(Alloca, llvm::Type::getInt8PtrTy(Ctx));
   }
 }
+#if 0//<<<<<<< HEAD
+
+bool containsNonScalarVarargs(CodeGenFunction *CGF, CallArgList Args) {
+  return llvm::any_of(llvm::drop_begin(Args), [&](const CallArg &A) {
+    return !A.getRValue(*CGF).isScalar();
+  });
+}
+
+RValue EmitDevicePrintfCallExpr(const CallExpr *E, CodeGenFunction *CGF,
+                                llvm::Function *Decl, bool WithSizeArg) {
+  CodeGenModule &CGM = CGF->CGM;
+  CGBuilderTy &Builder = CGF->Builder;
+  assert(E->getBuiltinCallee() == Builtin::BIprintf);
+  assert(E->getNumArgs() >= 1); // printf always has at least one arg.
+
+  // Uses the same format as nvptx for the argument packing, but also passes
+  // an i32 for the total size of the passed pointer
+  CallArgList Args;
+  CGF->EmitCallArgs(Args,
+                    E->getDirectCallee()->getType()->getAs<FunctionProtoType>(),
+                    E->arguments(), E->getDirectCallee(),
+                    /* ParamsToSkip = */ 0);
+
+  // We don't know how to emit non-scalar varargs.
+  if (containsNonScalarVarargs(CGF, Args)) {
+    CGM.ErrorUnsupported(E, "non-scalar arg to printf");
+    return RValue::get(llvm::ConstantInt::get(CGF->IntTy, 0));
+  }
+
+  auto r = packArgsIntoNVPTXFormatBuffer(CGF, Args);
+  llvm::Value *BufferPtr = r.first;
+
+  llvm::SmallVector<llvm::Value *, 3> Vec = {
+      Args[0].getRValue(*CGF).getScalarVal(), BufferPtr};
+  if (WithSizeArg) {
+    // Passing > 32bit of data as a local alloca doesn't work for nvptx or
+    // amdgpu
+    llvm::Constant *Size =
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(CGM.getLLVMContext()),
+                               static_cast<uint32_t>(r.second.getFixedValue()));
+
+    Vec.push_back(Size);
+  }
+  return RValue::get(Builder.CreateCall(Decl, Vec));
+}
+#endif//>>>>>>> cdddfac5
 } // namespace
 
 RValue

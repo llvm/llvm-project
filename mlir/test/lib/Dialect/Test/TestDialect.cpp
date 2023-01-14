@@ -1099,32 +1099,31 @@ void TestOpWithRegionPattern::getCanonicalizationPatterns(
   results.add<TestRemoveOpWithInnerOps>(context);
 }
 
-OpFoldResult TestOpWithRegionFold::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TestOpWithRegionFold::fold(FoldAdaptor adaptor) {
   return getOperand();
 }
 
-OpFoldResult TestOpConstant::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TestOpConstant::fold(FoldAdaptor adaptor) {
   return getValue();
 }
 
 LogicalResult TestOpWithVariadicResultsAndFolder::fold(
-    ArrayRef<Attribute> operands, SmallVectorImpl<OpFoldResult> &results) {
+    FoldAdaptor adaptor, SmallVectorImpl<OpFoldResult> &results) {
   for (Value input : this->getOperands()) {
     results.push_back(input);
   }
   return success();
 }
 
-OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 1);
-  if (operands.front()) {
-    (*this)->setAttr("attr", operands.front());
+OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
+  if (adaptor.getOp()) {
+    (*this)->setAttr("attr", adaptor.getOp());
     return getResult();
   }
   return {};
 }
 
-OpFoldResult TestPassthroughFold::fold(ArrayRef<Attribute> operands) {
+OpFoldResult TestPassthroughFold::fold(FoldAdaptor adaptor) {
   return getOperand();
 }
 

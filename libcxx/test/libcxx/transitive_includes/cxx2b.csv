@@ -569,6 +569,8 @@ shared_mutex ratio
 shared_mutex system_error
 shared_mutex type_traits
 shared_mutex version
+source_location cstdint
+source_location version
 span array
 span cstddef
 span initializer_list

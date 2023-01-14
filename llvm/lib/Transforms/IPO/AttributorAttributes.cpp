@@ -1346,7 +1346,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
     const DataLayout &DL = A.getDataLayout();
     TypeSize AccessSize = DL.getTypeStoreSize(&Ty);
     if (!AccessSize.isScalable())
-      Size = AccessSize.getFixedSize();
+      Size = AccessSize.getFixedValue();
 
     // Make a strictly ascending list of offsets as required by addAccess()
     llvm::sort(Offsets);

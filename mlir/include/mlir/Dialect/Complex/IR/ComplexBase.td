@@ -22,6 +22,7 @@ def Complex_Dialect : Dialect {
   let dependentDialects = ["arith::ArithDialect"];
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 #endif // COMPLEX_BASE

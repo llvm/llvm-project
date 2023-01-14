@@ -111,7 +111,7 @@ OpenMP 5.0 Implementation Details
 
 The following table provides a quick overview over various OpenMP 5.0 features
 and their implementation status. Please post on the
-`Discourse forums (Runtimes - OpenMP category)`_ for more 
+`Discourse forums (Runtimes - OpenMP category)`_ for more
 information or if you want to help with the
 implementation.
 
@@ -257,8 +257,8 @@ OpenMP 5.1 Implementation Details
 
 The following table provides a quick overview over various OpenMP 5.1 features
 and their implementation status, as defined in the technical report 8 (TR8).
-Please post on the 
-`Discourse forums (Runtimes - OpenMP category)`_ for more 
+Please post on the
+`Discourse forums (Runtimes - OpenMP category)`_ for more
 information or if you want to help with the
 implementation.
 
@@ -283,7 +283,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | omp_target_is_accessible routine                             | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device                       | omp_get_mapped_ptr routine                                   | :none:`unclaimed`        |                                                                       |
+| device                       | omp_get_mapped_ptr routine                                   | :none:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | new async target memory copy routines                        | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -365,12 +365,12 @@ implementation.
 OpenMP Extensions
 =================
 
-The following table provides a quick overview over various OpenMP 
+The following table provides a quick overview over various OpenMP
 extensions and their implementation status.  These extensions are not
 currently defined by any standard, so links to associated LLVM
 documentation are provided.  As these extensions mature, they will be
 considered for standardization. Please post on the
-`Discourse forums (Runtimes - OpenMP category)`_ to provide feedback. 
+`Discourse forums (Runtimes - OpenMP category)`_ to provide feedback.
 
 +------------------------------+-----------------------------------------------------------------------------------+--------------------------+--------------------------------------------------------+
 |Category                      | Feature                                                                           | Status                   | Reviews                                                |

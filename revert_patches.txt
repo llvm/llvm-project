@@ -6,3 +6,7 @@ Reverts: e1b88c8a [clang] Only use major version in resource dir
 Revert "[ELF] Enable --no-undefined-version by default"
 Reapply: Revert "[-Wunsafe-buffer-usage] Initial commit - Transition away from raw buffers."
 Revert "[AMDGPU] Enable OMod on more VOP3 instructions"   # rocrand assert fails
+a17ab7aa3be0 [OpenMP] Add support for '--offload-arch=native' to OpenMP offloading
+fada90286008 [CUDA][HIP] Support '--offload-arch=native' for the new driver
+56ebfca4bcc0 [CUDA][HIP] Add support for `--offload-arch=native` to CUDA and refactor
+
