@@ -1413,7 +1413,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
     if (!this->emitDupPtr(Initializer))
       return false;
 
-    return this->VisitCallExpr(CE);
+    return this->visit(CE);
   } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
     return this->visitInitializer(DIE->getExpr());
   } else if (const auto *CE = dyn_cast<CastExpr>(Initializer)) {
