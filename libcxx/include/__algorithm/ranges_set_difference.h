@@ -10,6 +10,7 @@
 #define _LIBCPP___ALGORITHM_RANGES_SET_DIFFERENCE_H
 
 #include <__algorithm/in_out_result.h>
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/make_projected.h>
 #include <__algorithm/set_difference.h>
 #include <__config>
@@ -60,7 +61,7 @@ struct __fn {
       _Comp __comp   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_difference(
+    auto __ret = std::__set_difference<_RangeAlgPolicy>(
         __first1, __last1, __first2, __last2, __result, ranges::__make_projected_comp(__comp, __proj1, __proj2));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
@@ -81,7 +82,7 @@ struct __fn {
         _Comp __comp   = {},
         _Proj1 __proj1 = {},
         _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_difference(
+    auto __ret = std::__set_difference<_RangeAlgPolicy>(
         ranges::begin(__range1),
         ranges::end(__range1),
         ranges::begin(__range2),
