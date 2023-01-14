@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/FuzzMutate/IRMutator.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -28,6 +27,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <optional>
 
 using namespace llvm;
 
