@@ -2160,8 +2160,7 @@ define <2 x i1> @icmp_shl_1_V_ult_2147483648_vec(<2 x i32> %V) {
 
 define i1 @icmp_shl_1_V_sle_0(i32 %V) {
 ; CHECK-LABEL: @icmp_shl_1_V_sle_0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[V:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[SHL]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V:%.*]], 31
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl i32 1, %V
@@ -2171,8 +2170,7 @@ define i1 @icmp_shl_1_V_sle_0(i32 %V) {
 
 define <2 x i1> @icmp_shl_1_V_sle_0_vec(<2 x i32> %V) {
 ; CHECK-LABEL: @icmp_shl_1_V_sle_0_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[V:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[SHL]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[V:%.*]], <i32 31, i32 31>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl <2 x i32> <i32 1, i32 1>, %V
