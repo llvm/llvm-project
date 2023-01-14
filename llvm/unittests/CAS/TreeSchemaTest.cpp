@@ -253,7 +253,7 @@ TEST(TreeSchemaTest, walkFileTreeRecursively) {
 
   TreeSchema Schema(*CAS);
   Error E = Schema.walkFileTreeRecursively(
-      *CAS, *Root,
+      *CAS, Root->getRef(),
       [&](const NamedTreeEntry &Entry, Optional<TreeProxy> Tree) -> Error {
         if (RemainingEntries.empty())
           return createStringError(inconvertibleErrorCode(),

@@ -201,7 +201,7 @@ int listTreeRecursively(ObjectStore &CAS, const CASID &ID) {
   ExitOnError ExitOnErr("llvm-cas: ls-tree-recursively: ");
   TreeSchema Schema(CAS);
   ExitOnErr(Schema.walkFileTreeRecursively(
-      CAS, ExitOnErr(CAS.getProxy(ID)),
+      CAS, *CAS.getReference(ID),
       [&](const NamedTreeEntry &Entry, Optional<TreeProxy> Tree) -> Error {
         if (Entry.getKind() != TreeEntry::Tree) {
           Entry.print(llvm::outs(), CAS);

@@ -45,7 +45,7 @@ public:
   /// Passes the \p TreeNodeProxy if the entry is a \p TreeEntry::Tree,
   /// otherwise passes \p None.
   Error walkFileTreeRecursively(
-      ObjectStore &CAS, const ObjectProxy &Root,
+      ObjectStore &CAS, ObjectRef Root,
       function_ref<Error(const NamedTreeEntry &, Optional<TreeProxy>)>
           Callback);
 
