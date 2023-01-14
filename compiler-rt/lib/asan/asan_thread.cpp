@@ -519,7 +519,7 @@ void GetThreadExtraStackRangesLocked(tid_t os_id,
   fake_stack->ForEachFakeFrame(
       [](uptr begin, uptr end, void *arg) {
         reinterpret_cast<InternalMmapVector<Range> *>(arg)->push_back(
-            {begin : begin, end : end});
+            {begin, end});
       },
       ranges);
 }
