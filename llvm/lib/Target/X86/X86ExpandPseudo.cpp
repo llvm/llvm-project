@@ -676,8 +676,7 @@ void X86ExpandPseudo::ExpandVastartSaveXmmRegs(
         NewMI.add(VAStartPseudoInstr->getOperand(i + 1));
     }
     NewMI.addReg(VAStartPseudoInstr->getOperand(OpndIdx).getReg());
-    assert(Register::isPhysicalRegister(
-        VAStartPseudoInstr->getOperand(OpndIdx).getReg()));
+    assert(VAStartPseudoInstr->getOperand(OpndIdx).getReg().isPhysical());
   }
 
   // The original block will now fall through to the GuardedRegsBlk.
