@@ -507,15 +507,30 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
 
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {}
 
-void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
-                            void *arg) {
+void GetThreadExtraStackRangesLocked(tid_t os_id,
+                                     InternalMmapVector<Range> *ranges) {
   __asan::AsanThread *t = __asan::GetAsanThreadByOsIDLocked(os_id);
   if (!t)
     return;
   __asan::FakeStack *fake_stack = t->get_fake_stack();
   if (!fake_stack)
     return;
-  fake_stack->ForEachFakeFrame(callback, arg);
+
+  fake_stack->ForEachFakeFrame(
+      [](uptr begin, uptr end, void *arg) {
+        reinterpret_cast<InternalMmapVector<Range> *>(arg)->push_back(
+            {begin : begin, end : end});
+      },
+      ranges);
+}
+
+void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {
+  GetAsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+      [](ThreadContextBase *tctx, void *arg) {
+        GetThreadExtraStackRangesLocked(
+            tctx->os_id, reinterpret_cast<InternalMmapVector<Range> *>(arg));
+      },
+      ranges);
 }
 
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
