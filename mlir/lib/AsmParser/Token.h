@@ -10,7 +10,6 @@
 #define MLIR_LIB_PARSER_TOKEN_H
 
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include <optional>

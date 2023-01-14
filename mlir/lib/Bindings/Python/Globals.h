@@ -15,7 +15,6 @@
 
 #include "PybindUtils.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 

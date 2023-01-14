@@ -24,7 +24,6 @@
 #define LIB_MLIR_TOOLS_LSPSERVERSUPPORT_PROTOCOL_H_
 
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
