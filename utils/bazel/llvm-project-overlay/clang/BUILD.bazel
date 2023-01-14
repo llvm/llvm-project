@@ -7,6 +7,14 @@ load("//llvm:tblgen.bzl", "gentbl")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
 
+load(
+    "//:vars.bzl",
+    "LLVM_VERSION",
+    "LLVM_VERSION_MAJOR",
+    "LLVM_VERSION_MINOR",
+    "LLVM_VERSION_PATCH",
+)
+
 package(
     default_visibility = ["//visibility:public"],
     features = ["layering_check"],
@@ -360,12 +368,17 @@ genrule(
     name = "basic_version_gen",
     outs = ["include/clang/Basic/Version.inc"],
     cmd = (
-        "echo '#define CLANG_VERSION 16.0.0' >> $@\n" +
-        "echo '#define CLANG_VERSION_MAJOR 16' >> $@\n" +
-        "echo '#define CLANG_VERSION_MAJOR_STRING \"16\"' >> $@\n" +
-        "echo '#define CLANG_VERSION_MINOR 0' >> $@\n" +
-        "echo '#define CLANG_VERSION_PATCHLEVEL 0' >> $@\n" +
-        "echo '#define CLANG_VERSION_STRING \"16.0.0\"' >> $@\n"
+        "echo '#define CLANG_VERSION {vers}' >> $@\n" +
+        "echo '#define CLANG_VERSION_MAJOR {major}' >> $@\n" +
+        "echo '#define CLANG_VERSION_MAJOR_STRING \"{major}\"' >> $@\n" +
+        "echo '#define CLANG_VERSION_MINOR {minor}' >> $@\n" +
+        "echo '#define CLANG_VERSION_PATCHLEVEL {patch}' >> $@\n" +
+        "echo '#define CLANG_VERSION_STRING \"{vers}\"' >> $@\n"
+    ).format(
+        vers=LLVM_VERSION,
+        major=LLVM_VERSION_MAJOR,
+        minor=LLVM_VERSION_MINOR,
+        patch=LLVM_VERSION_PATCH,
     ),
 )
 
