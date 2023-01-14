@@ -18,9 +18,9 @@
 #ifndef LLVM_FUZZMUTATE_IRMUTATOR_H
 #define LLVM_FUZZMUTATE_IRMUTATOR_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/FuzzMutate/OpDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 namespace llvm {
 class BasicBlock;
