@@ -20222,7 +20222,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     // possible vector indices, and FP insertion has less gpr->simd traffic.
     if (!(Subtarget.hasBWI() ||
           (Subtarget.hasAVX512() && EltSizeInBits >= 32) ||
-          (Subtarget.hasSSE41() && VT.isFloatingPoint())))
+          (Subtarget.hasSSE41() && (EltVT == MVT::f32 || EltVT == MVT::f64))))
       return SDValue();
 
     MVT IdxSVT = MVT::getIntegerVT(EltSizeInBits);
