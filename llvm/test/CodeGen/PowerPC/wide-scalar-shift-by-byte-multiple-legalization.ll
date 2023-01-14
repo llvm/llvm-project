@@ -226,93 +226,33 @@ define void @lshr_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ;
 ; LE-32BIT-LABEL: lshr_16bytes:
 ; LE-32BIT:       # %bb.0:
-; LE-32BIT-NEXT:    stwu 1, -32(1)
+; LE-32BIT-NEXT:    stwu 1, -48(1)
+; LE-32BIT-NEXT:    lwz 7, 0(3)
+; LE-32BIT-NEXT:    li 6, 0
+; LE-32BIT-NEXT:    lwz 8, 4(3)
+; LE-32BIT-NEXT:    lwz 9, 8(3)
+; LE-32BIT-NEXT:    lwz 3, 12(3)
 ; LE-32BIT-NEXT:    lwz 4, 12(4)
-; LE-32BIT-NEXT:    li 8, 0
-; LE-32BIT-NEXT:    lwz 6, 8(3)
-; LE-32BIT-NEXT:    lwz 7, 12(3)
-; LE-32BIT-NEXT:    rlwinm. 4, 4, 3, 0, 28
-; LE-32BIT-NEXT:    lwz 9, 4(3)
-; LE-32BIT-NEXT:    subfic 10, 4, 96
-; LE-32BIT-NEXT:    lwz 3, 0(3)
-; LE-32BIT-NEXT:    addi 11, 4, -64
-; LE-32BIT-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    cmplwi 1, 4, 64
-; LE-32BIT-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 28, 3, 4
-; LE-32BIT-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    subfic 30, 4, 32
-; LE-32BIT-NEXT:    slw 10, 3, 10
-; LE-32BIT-NEXT:    srw 27, 9, 11
-; LE-32BIT-NEXT:    addi 12, 4, -96
-; LE-32BIT-NEXT:    srw 0, 7, 4
-; LE-32BIT-NEXT:    or 10, 27, 10
-; LE-32BIT-NEXT:    slw 27, 6, 30
-; LE-32BIT-NEXT:    bc 12, 4, .LBB6_2
-; LE-32BIT-NEXT:  # %bb.1:
-; LE-32BIT-NEXT:    ori 28, 8, 0
-; LE-32BIT-NEXT:    b .LBB6_2
-; LE-32BIT-NEXT:  .LBB6_2:
-; LE-32BIT-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 29, 9, 4
-; LE-32BIT-NEXT:    or 0, 0, 27
-; LE-32BIT-NEXT:    slw 27, 3, 30
-; LE-32BIT-NEXT:    stw 28, 0(5)
-; LE-32BIT-NEXT:    subfic 28, 4, 64
-; LE-32BIT-NEXT:    srw 12, 3, 12
-; LE-32BIT-NEXT:    or 29, 29, 27
-; LE-32BIT-NEXT:    addi 27, 4, -32
-; LE-32BIT-NEXT:    or 10, 10, 12
-; LE-32BIT-NEXT:    subfic 12, 28, 32
-; LE-32BIT-NEXT:    slw 30, 9, 30
-; LE-32BIT-NEXT:    srw 12, 9, 12
-; LE-32BIT-NEXT:    slw 9, 9, 28
-; LE-32BIT-NEXT:    slw 28, 3, 28
-; LE-32BIT-NEXT:    srw 11, 3, 11
-; LE-32BIT-NEXT:    srw 3, 3, 27
-; LE-32BIT-NEXT:    srw 27, 6, 27
-; LE-32BIT-NEXT:    or 0, 0, 27
-; LE-32BIT-NEXT:    or 12, 28, 12
-; LE-32BIT-NEXT:    srw 4, 6, 4
-; LE-32BIT-NEXT:    or 3, 29, 3
-; LE-32BIT-NEXT:    or 9, 0, 9
-; LE-32BIT-NEXT:    or 12, 12, 30
-; LE-32BIT-NEXT:    bc 12, 4, .LBB6_4
-; LE-32BIT-NEXT:  # %bb.3:
-; LE-32BIT-NEXT:    ori 3, 8, 0
-; LE-32BIT-NEXT:    ori 8, 10, 0
-; LE-32BIT-NEXT:    b .LBB6_5
-; LE-32BIT-NEXT:  .LBB6_4:
-; LE-32BIT-NEXT:    addi 8, 9, 0
-; LE-32BIT-NEXT:  .LBB6_5:
-; LE-32BIT-NEXT:    or 4, 4, 12
-; LE-32BIT-NEXT:    stw 3, 4(5)
-; LE-32BIT-NEXT:    bc 12, 2, .LBB6_7
-; LE-32BIT-NEXT:  # %bb.6:
-; LE-32BIT-NEXT:    ori 3, 8, 0
-; LE-32BIT-NEXT:    b .LBB6_8
-; LE-32BIT-NEXT:  .LBB6_7:
-; LE-32BIT-NEXT:    addi 3, 7, 0
-; LE-32BIT-NEXT:  .LBB6_8:
-; LE-32BIT-NEXT:    bc 12, 4, .LBB6_10
-; LE-32BIT-NEXT:  # %bb.9:
-; LE-32BIT-NEXT:    ori 4, 11, 0
-; LE-32BIT-NEXT:    b .LBB6_10
-; LE-32BIT-NEXT:  .LBB6_10:
+; LE-32BIT-NEXT:    stw 3, 44(1)
+; LE-32BIT-NEXT:    addi 3, 1, 32
+; LE-32BIT-NEXT:    clrlwi 4, 4, 28
+; LE-32BIT-NEXT:    stw 6, 28(1)
+; LE-32BIT-NEXT:    sub 3, 3, 4
+; LE-32BIT-NEXT:    stw 6, 24(1)
+; LE-32BIT-NEXT:    stw 6, 20(1)
+; LE-32BIT-NEXT:    stw 6, 16(1)
+; LE-32BIT-NEXT:    stw 9, 40(1)
+; LE-32BIT-NEXT:    stw 8, 36(1)
+; LE-32BIT-NEXT:    stw 7, 32(1)
+; LE-32BIT-NEXT:    lwz 4, 4(3)
+; LE-32BIT-NEXT:    lwz 6, 0(3)
+; LE-32BIT-NEXT:    lwz 7, 8(3)
+; LE-32BIT-NEXT:    lwz 3, 12(3)
+; LE-32BIT-NEXT:    stw 7, 8(5)
 ; LE-32BIT-NEXT:    stw 3, 12(5)
-; LE-32BIT-NEXT:    bc 12, 2, .LBB6_12
-; LE-32BIT-NEXT:  # %bb.11:
-; LE-32BIT-NEXT:    ori 3, 4, 0
-; LE-32BIT-NEXT:    b .LBB6_13
-; LE-32BIT-NEXT:  .LBB6_12:
-; LE-32BIT-NEXT:    addi 3, 6, 0
-; LE-32BIT-NEXT:  .LBB6_13:
-; LE-32BIT-NEXT:    stw 3, 8(5)
-; LE-32BIT-NEXT:    lwz 30, 24(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 29, 20(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 28, 16(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 27, 12(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    addi 1, 1, 32
+; LE-32BIT-NEXT:    stw 6, 0(5)
+; LE-32BIT-NEXT:    stw 4, 4(5)
+; LE-32BIT-NEXT:    addi 1, 1, 48
 ; LE-32BIT-NEXT:    blr
   %src = load i128, ptr %src.ptr, align 1
   %byteOff = load i128, ptr %byteOff.ptr, align 1
@@ -360,93 +300,32 @@ define void @shl_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ;
 ; LE-32BIT-LABEL: shl_16bytes:
 ; LE-32BIT:       # %bb.0:
-; LE-32BIT-NEXT:    stwu 1, -32(1)
-; LE-32BIT-NEXT:    lwz 4, 12(4)
-; LE-32BIT-NEXT:    li 8, 0
-; LE-32BIT-NEXT:    lwz 6, 4(3)
+; LE-32BIT-NEXT:    stwu 1, -48(1)
 ; LE-32BIT-NEXT:    lwz 7, 0(3)
-; LE-32BIT-NEXT:    rlwinm. 4, 4, 3, 0, 28
+; LE-32BIT-NEXT:    li 6, 0
+; LE-32BIT-NEXT:    lwz 8, 4(3)
 ; LE-32BIT-NEXT:    lwz 9, 8(3)
-; LE-32BIT-NEXT:    subfic 10, 4, 96
 ; LE-32BIT-NEXT:    lwz 3, 12(3)
-; LE-32BIT-NEXT:    addi 11, 4, -64
-; LE-32BIT-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    cmplwi 1, 4, 64
-; LE-32BIT-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    slw 28, 3, 4
-; LE-32BIT-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    subfic 30, 4, 32
-; LE-32BIT-NEXT:    srw 10, 3, 10
-; LE-32BIT-NEXT:    slw 27, 9, 11
-; LE-32BIT-NEXT:    addi 12, 4, -96
-; LE-32BIT-NEXT:    slw 0, 7, 4
-; LE-32BIT-NEXT:    or 10, 27, 10
-; LE-32BIT-NEXT:    srw 27, 6, 30
-; LE-32BIT-NEXT:    bc 12, 4, .LBB7_2
-; LE-32BIT-NEXT:  # %bb.1:
-; LE-32BIT-NEXT:    ori 28, 8, 0
-; LE-32BIT-NEXT:    b .LBB7_2
-; LE-32BIT-NEXT:  .LBB7_2:
-; LE-32BIT-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    slw 29, 9, 4
-; LE-32BIT-NEXT:    or 0, 0, 27
-; LE-32BIT-NEXT:    srw 27, 3, 30
-; LE-32BIT-NEXT:    stw 28, 12(5)
-; LE-32BIT-NEXT:    subfic 28, 4, 64
-; LE-32BIT-NEXT:    slw 12, 3, 12
-; LE-32BIT-NEXT:    or 29, 29, 27
-; LE-32BIT-NEXT:    addi 27, 4, -32
-; LE-32BIT-NEXT:    or 10, 10, 12
-; LE-32BIT-NEXT:    subfic 12, 28, 32
-; LE-32BIT-NEXT:    srw 30, 9, 30
-; LE-32BIT-NEXT:    slw 12, 9, 12
-; LE-32BIT-NEXT:    srw 9, 9, 28
-; LE-32BIT-NEXT:    srw 28, 3, 28
-; LE-32BIT-NEXT:    slw 11, 3, 11
-; LE-32BIT-NEXT:    slw 3, 3, 27
-; LE-32BIT-NEXT:    slw 27, 6, 27
-; LE-32BIT-NEXT:    or 0, 0, 27
-; LE-32BIT-NEXT:    or 12, 28, 12
-; LE-32BIT-NEXT:    slw 4, 6, 4
-; LE-32BIT-NEXT:    or 3, 29, 3
-; LE-32BIT-NEXT:    or 9, 0, 9
-; LE-32BIT-NEXT:    or 12, 12, 30
-; LE-32BIT-NEXT:    bc 12, 4, .LBB7_4
-; LE-32BIT-NEXT:  # %bb.3:
-; LE-32BIT-NEXT:    ori 3, 8, 0
-; LE-32BIT-NEXT:    ori 8, 10, 0
-; LE-32BIT-NEXT:    b .LBB7_5
-; LE-32BIT-NEXT:  .LBB7_4:
-; LE-32BIT-NEXT:    addi 8, 9, 0
-; LE-32BIT-NEXT:  .LBB7_5:
-; LE-32BIT-NEXT:    or 4, 4, 12
-; LE-32BIT-NEXT:    stw 3, 8(5)
-; LE-32BIT-NEXT:    bc 12, 2, .LBB7_7
-; LE-32BIT-NEXT:  # %bb.6:
-; LE-32BIT-NEXT:    ori 3, 8, 0
-; LE-32BIT-NEXT:    b .LBB7_8
-; LE-32BIT-NEXT:  .LBB7_7:
-; LE-32BIT-NEXT:    addi 3, 7, 0
-; LE-32BIT-NEXT:  .LBB7_8:
-; LE-32BIT-NEXT:    bc 12, 4, .LBB7_10
-; LE-32BIT-NEXT:  # %bb.9:
-; LE-32BIT-NEXT:    ori 4, 11, 0
-; LE-32BIT-NEXT:    b .LBB7_10
-; LE-32BIT-NEXT:  .LBB7_10:
+; LE-32BIT-NEXT:    lwz 4, 12(4)
+; LE-32BIT-NEXT:    stw 6, 44(1)
+; LE-32BIT-NEXT:    stw 6, 40(1)
+; LE-32BIT-NEXT:    clrlwi 4, 4, 28
+; LE-32BIT-NEXT:    stw 6, 36(1)
+; LE-32BIT-NEXT:    stw 6, 32(1)
+; LE-32BIT-NEXT:    stw 3, 28(1)
+; LE-32BIT-NEXT:    addi 3, 1, 16
+; LE-32BIT-NEXT:    stw 9, 24(1)
+; LE-32BIT-NEXT:    stw 8, 20(1)
+; LE-32BIT-NEXT:    stw 7, 16(1)
+; LE-32BIT-NEXT:    lwzux 3, 4, 3
+; LE-32BIT-NEXT:    lwz 6, 4(4)
+; LE-32BIT-NEXT:    lwz 7, 12(4)
+; LE-32BIT-NEXT:    lwz 4, 8(4)
 ; LE-32BIT-NEXT:    stw 3, 0(5)
-; LE-32BIT-NEXT:    bc 12, 2, .LBB7_12
-; LE-32BIT-NEXT:  # %bb.11:
-; LE-32BIT-NEXT:    ori 3, 4, 0
-; LE-32BIT-NEXT:    b .LBB7_13
-; LE-32BIT-NEXT:  .LBB7_12:
-; LE-32BIT-NEXT:    addi 3, 6, 0
-; LE-32BIT-NEXT:  .LBB7_13:
-; LE-32BIT-NEXT:    stw 3, 4(5)
-; LE-32BIT-NEXT:    lwz 30, 24(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 29, 20(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 28, 16(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 27, 12(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    addi 1, 1, 32
+; LE-32BIT-NEXT:    stw 4, 8(5)
+; LE-32BIT-NEXT:    stw 7, 12(5)
+; LE-32BIT-NEXT:    stw 6, 4(5)
+; LE-32BIT-NEXT:    addi 1, 1, 48
 ; LE-32BIT-NEXT:    blr
   %src = load i128, ptr %src.ptr, align 1
   %byteOff = load i128, ptr %byteOff.ptr, align 1
@@ -500,95 +379,33 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ;
 ; LE-32BIT-LABEL: ashr_16bytes:
 ; LE-32BIT:       # %bb.0:
-; LE-32BIT-NEXT:    stwu 1, -32(1)
+; LE-32BIT-NEXT:    stwu 1, -48(1)
+; LE-32BIT-NEXT:    lwz 7, 0(3)
+; LE-32BIT-NEXT:    addi 6, 1, 32
+; LE-32BIT-NEXT:    lwz 8, 4(3)
+; LE-32BIT-NEXT:    lwz 9, 8(3)
+; LE-32BIT-NEXT:    lwz 3, 12(3)
 ; LE-32BIT-NEXT:    lwz 4, 12(4)
-; LE-32BIT-NEXT:    lwz 8, 0(3)
-; LE-32BIT-NEXT:    lwz 9, 4(3)
-; LE-32BIT-NEXT:    lwz 6, 8(3)
-; LE-32BIT-NEXT:    lwz 7, 12(3)
-; LE-32BIT-NEXT:    rlwinm. 3, 4, 3, 0, 28
-; LE-32BIT-NEXT:    subfic 10, 3, 96
-; LE-32BIT-NEXT:    addi 11, 3, -64
-; LE-32BIT-NEXT:    stw 27, 12(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    addi 12, 3, -96
-; LE-32BIT-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    subfic 30, 3, 32
-; LE-32BIT-NEXT:    slw 10, 8, 10
-; LE-32BIT-NEXT:    srw 27, 9, 11
-; LE-32BIT-NEXT:    stw 26, 8(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    sraw 26, 8, 12
-; LE-32BIT-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 28, 9, 3
-; LE-32BIT-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    addi 29, 3, -32
-; LE-32BIT-NEXT:    cmpwi 1, 12, 1
-; LE-32BIT-NEXT:    slw 12, 8, 30
-; LE-32BIT-NEXT:    or 10, 27, 10
-; LE-32BIT-NEXT:    srw 0, 7, 3
-; LE-32BIT-NEXT:    sraw 27, 8, 29
-; LE-32BIT-NEXT:    bc 12, 4, .LBB8_2
-; LE-32BIT-NEXT:  # %bb.1:
-; LE-32BIT-NEXT:    ori 10, 26, 0
-; LE-32BIT-NEXT:    b .LBB8_2
-; LE-32BIT-NEXT:  .LBB8_2:
-; LE-32BIT-NEXT:    cmpwi 1, 29, 1
-; LE-32BIT-NEXT:    or 12, 28, 12
-; LE-32BIT-NEXT:    subfic 28, 3, 64
-; LE-32BIT-NEXT:    slw 26, 6, 30
-; LE-32BIT-NEXT:    srawi 4, 8, 31
-; LE-32BIT-NEXT:    bc 12, 4, .LBB8_4
-; LE-32BIT-NEXT:  # %bb.3:
-; LE-32BIT-NEXT:    ori 12, 27, 0
-; LE-32BIT-NEXT:    b .LBB8_4
-; LE-32BIT-NEXT:  .LBB8_4:
-; LE-32BIT-NEXT:    sraw 27, 8, 3
-; LE-32BIT-NEXT:    or 0, 0, 26
-; LE-32BIT-NEXT:    slw 26, 9, 28
-; LE-32BIT-NEXT:    sraw 11, 8, 11
-; LE-32BIT-NEXT:    slw 8, 8, 28
-; LE-32BIT-NEXT:    subfic 28, 28, 32
-; LE-32BIT-NEXT:    slw 30, 9, 30
-; LE-32BIT-NEXT:    srw 9, 9, 28
-; LE-32BIT-NEXT:    srw 29, 6, 29
-; LE-32BIT-NEXT:    or 8, 8, 9
-; LE-32BIT-NEXT:    cmplwi 1, 3, 64
-; LE-32BIT-NEXT:    or 0, 0, 29
-; LE-32BIT-NEXT:    srw 3, 6, 3
-; LE-32BIT-NEXT:    or 8, 8, 30
-; LE-32BIT-NEXT:    or 9, 0, 26
-; LE-32BIT-NEXT:    or 3, 3, 8
-; LE-32BIT-NEXT:    bc 12, 4, .LBB8_6
-; LE-32BIT-NEXT:  # %bb.5:
-; LE-32BIT-NEXT:    ori 28, 4, 0
-; LE-32BIT-NEXT:    ori 9, 10, 0
-; LE-32BIT-NEXT:    ori 3, 11, 0
-; LE-32BIT-NEXT:    b .LBB8_7
-; LE-32BIT-NEXT:  .LBB8_6:
-; LE-32BIT-NEXT:    addi 28, 27, 0
-; LE-32BIT-NEXT:    addi 4, 12, 0
-; LE-32BIT-NEXT:  .LBB8_7:
-; LE-32BIT-NEXT:    lwz 30, 24(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 2, .LBB8_8
-; LE-32BIT-NEXT:    b .LBB8_9
-; LE-32BIT-NEXT:  .LBB8_8:
-; LE-32BIT-NEXT:    addi 3, 6, 0
-; LE-32BIT-NEXT:  .LBB8_9:
+; LE-32BIT-NEXT:    stw 3, 44(1)
+; LE-32BIT-NEXT:    srawi 3, 7, 31
+; LE-32BIT-NEXT:    clrlwi 4, 4, 28
+; LE-32BIT-NEXT:    stw 9, 40(1)
+; LE-32BIT-NEXT:    stw 8, 36(1)
+; LE-32BIT-NEXT:    stw 7, 32(1)
+; LE-32BIT-NEXT:    stw 3, 28(1)
+; LE-32BIT-NEXT:    stw 3, 24(1)
+; LE-32BIT-NEXT:    stw 3, 20(1)
+; LE-32BIT-NEXT:    stw 3, 16(1)
+; LE-32BIT-NEXT:    sub 3, 6, 4
+; LE-32BIT-NEXT:    lwz 4, 4(3)
+; LE-32BIT-NEXT:    lwz 6, 0(3)
+; LE-32BIT-NEXT:    lwz 7, 8(3)
+; LE-32BIT-NEXT:    lwz 3, 12(3)
+; LE-32BIT-NEXT:    stw 7, 8(5)
+; LE-32BIT-NEXT:    stw 3, 12(5)
+; LE-32BIT-NEXT:    stw 6, 0(5)
 ; LE-32BIT-NEXT:    stw 4, 4(5)
-; LE-32BIT-NEXT:    bc 12, 2, .LBB8_11
-; LE-32BIT-NEXT:  # %bb.10:
-; LE-32BIT-NEXT:    ori 4, 9, 0
-; LE-32BIT-NEXT:    b .LBB8_12
-; LE-32BIT-NEXT:  .LBB8_11:
-; LE-32BIT-NEXT:    addi 4, 7, 0
-; LE-32BIT-NEXT:  .LBB8_12:
-; LE-32BIT-NEXT:    stw 28, 0(5)
-; LE-32BIT-NEXT:    stw 4, 12(5)
-; LE-32BIT-NEXT:    stw 3, 8(5)
-; LE-32BIT-NEXT:    lwz 29, 20(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 28, 16(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 27, 12(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 26, 8(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    addi 1, 1, 32
+; LE-32BIT-NEXT:    addi 1, 1, 48
 ; LE-32BIT-NEXT:    blr
   %src = load i128, ptr %src.ptr, align 1
   %byteOff = load i128, ptr %byteOff.ptr, align 1
@@ -601,583 +418,106 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: lshr_32bytes:
 ; LE-64BIT:       # %bb.0:
-; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    ld 7, 0(3)
-; LE-64BIT-NEXT:    ld 8, 8(3)
-; LE-64BIT-NEXT:    ld 9, 16(3)
-; LE-64BIT-NEXT:    li 6, 0
-; LE-64BIT-NEXT:    ld 3, 24(3)
-; LE-64BIT-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 21, -88(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 24, -64(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    rlwinm. 4, 4, 3, 0, 28
-; LE-64BIT-NEXT:    std 25, -56(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    subfic 28, 4, 64
-; LE-64BIT-NEXT:    subfic 11, 4, 192
-; LE-64BIT-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    addi 0, 4, -128
-; LE-64BIT-NEXT:    srd 29, 9, 4
-; LE-64BIT-NEXT:    addi 27, 4, -64
-; LE-64BIT-NEXT:    subfic 25, 4, 128
-; LE-64BIT-NEXT:    sld 24, 8, 28
-; LE-64BIT-NEXT:    std 22, -80(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 26, -48(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    sld 21, 9, 28
-; LE-64BIT-NEXT:    sld 28, 3, 28
-; LE-64BIT-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    srd 10, 7, 4
-; LE-64BIT-NEXT:    addi 30, 4, -192
-; LE-64BIT-NEXT:    subfic 22, 25, 64
-; LE-64BIT-NEXT:    sld 11, 3, 11
-; LE-64BIT-NEXT:    srd 26, 9, 0
-; LE-64BIT-NEXT:    or 29, 29, 28
-; LE-64BIT-NEXT:    std 23, -72(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    or 10, 10, 24
-; LE-64BIT-NEXT:    srd 28, 3, 27
-; LE-64BIT-NEXT:    srd 30, 3, 30
-; LE-64BIT-NEXT:    or 11, 26, 11
-; LE-64BIT-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    srd 23, 8, 27
-; LE-64BIT-NEXT:    srd 27, 9, 22
-; LE-64BIT-NEXT:    or 29, 29, 28
-; LE-64BIT-NEXT:    or 11, 11, 30
-; LE-64BIT-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    sld 28, 3, 25
-; LE-64BIT-NEXT:    or 10, 10, 23
-; LE-64BIT-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    sld 9, 9, 25
-; LE-64BIT-NEXT:    or 30, 28, 27
-; LE-64BIT-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    cmplwi 1, 4, 128
-; LE-64BIT-NEXT:    srd 12, 8, 4
-; LE-64BIT-NEXT:    or 9, 10, 9
-; LE-64BIT-NEXT:    or 30, 30, 21
-; LE-64BIT-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    srd 10, 3, 0
-; LE-64BIT-NEXT:    isel 9, 9, 11, 4
-; LE-64BIT-NEXT:    or 11, 12, 30
-; LE-64BIT-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    iseleq 7, 7, 9
-; LE-64BIT-NEXT:    srd 3, 3, 4
-; LE-64BIT-NEXT:    isel 9, 11, 10, 4
-; LE-64BIT-NEXT:    std 7, 0(5)
-; LE-64BIT-NEXT:    isel 0, 29, 6, 4
-; LE-64BIT-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    iseleq 4, 8, 9
-; LE-64BIT-NEXT:    std 0, 16(5)
-; LE-64BIT-NEXT:    isel 3, 3, 6, 4
-; LE-64BIT-NEXT:    std 4, 8(5)
-; LE-64BIT-NEXT:    std 3, 24(5)
+; LE-64BIT-NEXT:    li 6, 16
+; LE-64BIT-NEXT:    lxvd2x 1, 0, 3
+; LE-64BIT-NEXT:    xxlxor 2, 2, 2
+; LE-64BIT-NEXT:    addi 7, 1, -64
+; LE-64BIT-NEXT:    li 8, 32
+; LE-64BIT-NEXT:    lxvd2x 0, 3, 6
+; LE-64BIT-NEXT:    lwz 3, 0(4)
+; LE-64BIT-NEXT:    li 4, 48
+; LE-64BIT-NEXT:    stxvd2x 2, 7, 4
+; LE-64BIT-NEXT:    stxvd2x 2, 7, 8
+; LE-64BIT-NEXT:    clrldi 3, 3, 59
+; LE-64BIT-NEXT:    stxvd2x 0, 7, 6
+; LE-64BIT-NEXT:    stxvd2x 1, 0, 7
+; LE-64BIT-NEXT:    add 4, 7, 3
+; LE-64BIT-NEXT:    lxvd2x 0, 7, 3
+; LE-64BIT-NEXT:    lxvd2x 1, 4, 6
+; LE-64BIT-NEXT:    stxvd2x 1, 5, 6
+; LE-64BIT-NEXT:    stxvd2x 0, 0, 5
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: lshr_32bytes:
 ; BE:       # %bb.0:
+; BE-NEXT:    ld 6, 0(3)
+; BE-NEXT:    ld 7, 8(3)
+; BE-NEXT:    ld 8, 16(3)
+; BE-NEXT:    ld 3, 24(3)
 ; BE-NEXT:    lwz 4, 28(4)
-; BE-NEXT:    ld 7, 16(3)
-; BE-NEXT:    ld 8, 24(3)
-; BE-NEXT:    ld 9, 8(3)
-; BE-NEXT:    ld 3, 0(3)
-; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; BE-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; BE-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; BE-NEXT:    li 6, 0
-; BE-NEXT:    rlwinm. 4, 4, 3, 0, 28
-; BE-NEXT:    subfic 10, 4, 192
-; BE-NEXT:    addi 11, 4, -128
-; BE-NEXT:    addi 12, 4, -192
-; BE-NEXT:    subfic 30, 4, 64
-; BE-NEXT:    sld 10, 3, 10
-; BE-NEXT:    srd 27, 9, 11
-; BE-NEXT:    srd 0, 8, 4
-; BE-NEXT:    addi 29, 4, -64
-; BE-NEXT:    subfic 28, 4, 128
-; BE-NEXT:    srd 12, 3, 12
-; BE-NEXT:    or 10, 27, 10
-; BE-NEXT:    sld 27, 7, 30
-; BE-NEXT:    or 10, 10, 12
-; BE-NEXT:    or 0, 0, 27
-; BE-NEXT:    srd 27, 7, 29
-; BE-NEXT:    subfic 12, 28, 64
-; BE-NEXT:    or 0, 0, 27
-; BE-NEXT:    sld 27, 3, 28
-; BE-NEXT:    srd 12, 9, 12
-; BE-NEXT:    sld 28, 9, 28
-; BE-NEXT:    cmplwi 1, 4, 128
-; BE-NEXT:    or 12, 27, 12
-; BE-NEXT:    or 28, 0, 28
-; BE-NEXT:    sld 0, 9, 30
-; BE-NEXT:    srd 9, 9, 4
-; BE-NEXT:    srd 11, 3, 11
-; BE-NEXT:    bc 12, 4, .LBB9_1
-; BE-NEXT:    b .LBB9_2
-; BE-NEXT:  .LBB9_1:
-; BE-NEXT:    addi 10, 28, 0
-; BE-NEXT:  .LBB9_2:
-; BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; BE-NEXT:    or 12, 12, 0
-; BE-NEXT:    srd 0, 7, 4
-; BE-NEXT:    or 12, 0, 12
-; BE-NEXT:    sld 0, 3, 30
-; BE-NEXT:    srd 30, 3, 29
-; BE-NEXT:    bc 12, 4, .LBB9_3
-; BE-NEXT:    b .LBB9_4
-; BE-NEXT:  .LBB9_3:
-; BE-NEXT:    addi 11, 12, 0
-; BE-NEXT:  .LBB9_4:
-; BE-NEXT:    srd 3, 3, 4
-; BE-NEXT:    bc 12, 2, .LBB9_6
-; BE-NEXT:  # %bb.5:
-; BE-NEXT:    ori 4, 10, 0
-; BE-NEXT:    b .LBB9_7
-; BE-NEXT:  .LBB9_6:
-; BE-NEXT:    addi 4, 8, 0
-; BE-NEXT:  .LBB9_7:
-; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; BE-NEXT:    or 9, 9, 0
-; BE-NEXT:    or 9, 9, 30
-; BE-NEXT:    bc 12, 2, .LBB9_9
-; BE-NEXT:  # %bb.8:
-; BE-NEXT:    ori 7, 11, 0
-; BE-NEXT:    b .LBB9_9
-; BE-NEXT:  .LBB9_9:
-; BE-NEXT:    bc 12, 4, .LBB9_11
-; BE-NEXT:  # %bb.10:
-; BE-NEXT:    ori 8, 6, 0
-; BE-NEXT:    ori 3, 6, 0
-; BE-NEXT:    b .LBB9_12
-; BE-NEXT:  .LBB9_11:
-; BE-NEXT:    addi 8, 9, 0
-; BE-NEXT:  .LBB9_12:
-; BE-NEXT:    std 4, 24(5)
-; BE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; BE-NEXT:    addi 9, 1, -64
+; BE-NEXT:    li 10, 0
+; BE-NEXT:    std 10, 24(9)
+; BE-NEXT:    std 10, 16(9)
+; BE-NEXT:    std 10, 8(9)
+; BE-NEXT:    std 10, -64(1)
+; BE-NEXT:    std 3, 56(9)
+; BE-NEXT:    clrlwi 3, 4, 27
+; BE-NEXT:    neg 3, 3
+; BE-NEXT:    std 8, 48(9)
+; BE-NEXT:    std 7, 40(9)
+; BE-NEXT:    std 6, 32(9)
+; BE-NEXT:    extsw 3, 3
+; BE-NEXT:    addi 4, 1, -32
+; BE-NEXT:    ldux 3, 4, 3
+; BE-NEXT:    ld 6, 8(4)
+; BE-NEXT:    ld 7, 24(4)
+; BE-NEXT:    ld 4, 16(4)
 ; BE-NEXT:    std 3, 0(5)
-; BE-NEXT:    std 8, 8(5)
-; BE-NEXT:    std 7, 16(5)
+; BE-NEXT:    std 4, 16(5)
+; BE-NEXT:    std 7, 24(5)
+; BE-NEXT:    std 6, 8(5)
 ; BE-NEXT:    blr
 ;
 ; LE-32BIT-LABEL: lshr_32bytes:
 ; LE-32BIT:       # %bb.0:
-; LE-32BIT-NEXT:    stwu 1, -144(1)
-; LE-32BIT-NEXT:    mfcr 12
-; LE-32BIT-NEXT:    stw 14, 72(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 15, 76(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 16, 80(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 17, 84(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 18, 88(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 19, 92(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 20, 96(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 21, 100(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 22, 104(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 23, 108(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 24, 112(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 25, 116(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 26, 120(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 27, 124(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 28, 128(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 29, 132(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 30, 136(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 31, 140(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 12, 68(1)
-; LE-32BIT-NEXT:    lwz 0, 28(4)
-; LE-32BIT-NEXT:    lwz 11, 4(3)
-; LE-32BIT-NEXT:    lwz 6, 0(3)
-; LE-32BIT-NEXT:    rlwinm. 30, 0, 3, 0, 28
-; LE-32BIT-NEXT:    stw 5, 64(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    subfic 21, 30, 224
-; LE-32BIT-NEXT:    lwz 5, 24(3)
-; LE-32BIT-NEXT:    subfic 4, 30, 160
-; LE-32BIT-NEXT:    lwz 7, 28(3)
-; LE-32BIT-NEXT:    addi 0, 30, -128
-; LE-32BIT-NEXT:    lwz 10, 20(3)
-; LE-32BIT-NEXT:    subfic 28, 30, 96
-; LE-32BIT-NEXT:    lwz 8, 16(3)
-; LE-32BIT-NEXT:    addi 29, 30, -64
-; LE-32BIT-NEXT:    lwz 27, 12(3)
-; LE-32BIT-NEXT:    subfic 12, 30, 32
+; LE-32BIT-NEXT:    stwu 1, -80(1)
+; LE-32BIT-NEXT:    lwz 7, 0(3)
+; LE-32BIT-NEXT:    li 6, 0
+; LE-32BIT-NEXT:    lwz 8, 4(3)
 ; LE-32BIT-NEXT:    lwz 9, 8(3)
-; LE-32BIT-NEXT:    addi 3, 30, -192
-; LE-32BIT-NEXT:    slw 21, 6, 21
-; LE-32BIT-NEXT:    srw 16, 11, 3
-; LE-32BIT-NEXT:    stw 3, 56(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 20, 7, 30
-; LE-32BIT-NEXT:    slw 15, 9, 4
-; LE-32BIT-NEXT:    srw 14, 27, 0
-; LE-32BIT-NEXT:    slw 31, 8, 28
-; LE-32BIT-NEXT:    srw 3, 10, 29
-; LE-32BIT-NEXT:    or 21, 16, 21
-; LE-32BIT-NEXT:    slw 16, 5, 12
-; LE-32BIT-NEXT:    srw 19, 10, 30
-; LE-32BIT-NEXT:    or 15, 14, 15
-; LE-32BIT-NEXT:    slw 14, 8, 12
-; LE-32BIT-NEXT:    or 3, 3, 31
-; LE-32BIT-NEXT:    slw 31, 6, 4
-; LE-32BIT-NEXT:    or 20, 20, 16
-; LE-32BIT-NEXT:    srw 16, 11, 0
-; LE-32BIT-NEXT:    stw 7, 60(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    addi 26, 30, -224
-; LE-32BIT-NEXT:    mr 7, 10
-; LE-32BIT-NEXT:    mr 10, 12
-; LE-32BIT-NEXT:    or 19, 19, 14
-; LE-32BIT-NEXT:    slw 14, 6, 28
-; LE-32BIT-NEXT:    or 16, 16, 31
-; LE-32BIT-NEXT:    srw 31, 11, 29
-; LE-32BIT-NEXT:    addi 23, 30, -160
-; LE-32BIT-NEXT:    srw 18, 27, 30
-; LE-32BIT-NEXT:    stw 0, 40(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    mr 12, 28
-; LE-32BIT-NEXT:    or 14, 31, 14
-; LE-32BIT-NEXT:    mr 28, 9
-; LE-32BIT-NEXT:    slw 31, 9, 10
-; LE-32BIT-NEXT:    srw 0, 6, 26
-; LE-32BIT-NEXT:    addi 25, 30, -96
-; LE-32BIT-NEXT:    srw 17, 11, 30
-; LE-32BIT-NEXT:    stw 4, 36(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 18, 18, 31
-; LE-32BIT-NEXT:    slw 31, 6, 10
-; LE-32BIT-NEXT:    or 4, 21, 0
-; LE-32BIT-NEXT:    srw 0, 28, 23
-; LE-32BIT-NEXT:    or 17, 17, 31
-; LE-32BIT-NEXT:    addi 31, 30, -32
-; LE-32BIT-NEXT:    or 0, 15, 0
-; LE-32BIT-NEXT:    srw 15, 8, 25
-; LE-32BIT-NEXT:    or 3, 3, 15
-; LE-32BIT-NEXT:    srw 15, 5, 31
-; LE-32BIT-NEXT:    or 20, 20, 15
-; LE-32BIT-NEXT:    srw 15, 8, 31
-; LE-32BIT-NEXT:    stw 3, 24(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 3, 19, 15
-; LE-32BIT-NEXT:    srw 23, 6, 23
-; LE-32BIT-NEXT:    stw 3, 48(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    subfic 15, 30, 64
-; LE-32BIT-NEXT:    or 3, 16, 23
-; LE-32BIT-NEXT:    stw 3, 44(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    subfic 3, 15, 32
-; LE-32BIT-NEXT:    slw 16, 28, 15
-; LE-32BIT-NEXT:    srw 22, 27, 3
-; LE-32BIT-NEXT:    stw 4, 32(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 4, 16, 22
-; LE-32BIT-NEXT:    subfic 16, 30, 128
-; LE-32BIT-NEXT:    stw 5, 28(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    subfic 5, 16, 32
-; LE-32BIT-NEXT:    stw 4, 20(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    slw 4, 6, 16
-; LE-32BIT-NEXT:    srw 24, 11, 5
-; LE-32BIT-NEXT:    stw 29, 52(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    mr 29, 27
-; LE-32BIT-NEXT:    or 22, 4, 24
-; LE-32BIT-NEXT:    slw 24, 28, 16
-; LE-32BIT-NEXT:    srw 27, 27, 5
-; LE-32BIT-NEXT:    or 27, 24, 27
-; LE-32BIT-NEXT:    slw 24, 8, 15
-; LE-32BIT-NEXT:    srw 26, 7, 3
-; LE-32BIT-NEXT:    or 26, 24, 26
-; LE-32BIT-NEXT:    subfic 24, 30, 192
-; LE-32BIT-NEXT:    mr 9, 10
-; LE-32BIT-NEXT:    mr 10, 28
-; LE-32BIT-NEXT:    subfic 28, 24, 32
-; LE-32BIT-NEXT:    srw 28, 11, 28
-; LE-32BIT-NEXT:    slw 19, 6, 24
-; LE-32BIT-NEXT:    or 28, 19, 28
-; LE-32BIT-NEXT:    srw 19, 6, 25
-; LE-32BIT-NEXT:    or 19, 14, 19
-; LE-32BIT-NEXT:    srw 14, 10, 31
-; LE-32BIT-NEXT:    lwz 4, 64(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 18, 18, 14
-; LE-32BIT-NEXT:    srw 3, 11, 3
-; LE-32BIT-NEXT:    slw 14, 6, 15
-; LE-32BIT-NEXT:    cmplwi 5, 30, 64
-; LE-32BIT-NEXT:    cmplwi 1, 30, 128
-; LE-32BIT-NEXT:    slw 24, 11, 24
-; LE-32BIT-NEXT:    mr 21, 8
-; LE-32BIT-NEXT:    or 8, 14, 3
-; LE-32BIT-NEXT:    srw 14, 6, 31
-; LE-32BIT-NEXT:    crnand 21, 4, 20
-; LE-32BIT-NEXT:    srw 31, 6, 30
-; LE-32BIT-NEXT:    or 24, 0, 24
-; LE-32BIT-NEXT:    slw 0, 7, 15
-; LE-32BIT-NEXT:    mr 23, 7
-; LE-32BIT-NEXT:    or 17, 17, 14
-; LE-32BIT-NEXT:    bc 12, 21, .LBB9_2
-; LE-32BIT-NEXT:  # %bb.1:
-; LE-32BIT-NEXT:    ori 14, 31, 0
-; LE-32BIT-NEXT:    b .LBB9_3
-; LE-32BIT-NEXT:  .LBB9_2:
-; LE-32BIT-NEXT:    li 14, 0
-; LE-32BIT-NEXT:  .LBB9_3:
-; LE-32BIT-NEXT:    or 20, 20, 0
-; LE-32BIT-NEXT:    subfic 0, 16, 64
-; LE-32BIT-NEXT:    lwz 7, 20(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    srw 31, 29, 0
-; LE-32BIT-NEXT:    stw 14, 0(4)
-; LE-32BIT-NEXT:    subfic 14, 0, 32
-; LE-32BIT-NEXT:    slw 14, 10, 14
-; LE-32BIT-NEXT:    or 14, 31, 14
-; LE-32BIT-NEXT:    slw 31, 29, 9
-; LE-32BIT-NEXT:    lwz 3, 36(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 7, 7, 31
-; LE-32BIT-NEXT:    slw 31, 11, 12
-; LE-32BIT-NEXT:    stw 7, 20(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 7, 22, 31
-; LE-32BIT-NEXT:    slw 31, 29, 12
-; LE-32BIT-NEXT:    or 27, 27, 31
-; LE-32BIT-NEXT:    slw 31, 23, 9
-; LE-32BIT-NEXT:    or 26, 26, 31
-; LE-32BIT-NEXT:    slw 31, 11, 3
-; LE-32BIT-NEXT:    or 28, 28, 31
-; LE-32BIT-NEXT:    slw 31, 11, 15
-; LE-32BIT-NEXT:    lwz 22, 28(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 18, 18, 31
-; LE-32BIT-NEXT:    lwz 31, 40(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    srw 0, 10, 0
-; LE-32BIT-NEXT:    or 7, 7, 0
-; LE-32BIT-NEXT:    srw 0, 22, 30
-; LE-32BIT-NEXT:    slw 25, 11, 9
-; LE-32BIT-NEXT:    or 26, 0, 26
-; LE-32BIT-NEXT:    srw 0, 10, 31
-; LE-32BIT-NEXT:    or 3, 8, 25
-; LE-32BIT-NEXT:    or 28, 0, 28
-; LE-32BIT-NEXT:    srw 0, 10, 30
-; LE-32BIT-NEXT:    srw 5, 10, 5
-; LE-32BIT-NEXT:    or 3, 0, 3
-; LE-32BIT-NEXT:    bc 12, 21, .LBB9_5
-; LE-32BIT-NEXT:  # %bb.4:
-; LE-32BIT-NEXT:    ori 0, 17, 0
-; LE-32BIT-NEXT:    b .LBB9_6
-; LE-32BIT-NEXT:  .LBB9_5:
-; LE-32BIT-NEXT:    li 0, 0
-; LE-32BIT-NEXT:  .LBB9_6:
-; LE-32BIT-NEXT:    lwz 8, 32(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 5, 14, 5
-; LE-32BIT-NEXT:    mr 14, 4
-; LE-32BIT-NEXT:    stw 0, 4(4)
-; LE-32BIT-NEXT:    slw 0, 11, 16
-; LE-32BIT-NEXT:    lwz 4, 52(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    cmplwi 6, 31, 64
-; LE-32BIT-NEXT:    mr 9, 21
-; LE-32BIT-NEXT:    or 5, 0, 5
-; LE-32BIT-NEXT:    lwz 0, 56(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 24, .LBB9_8
-; LE-32BIT-NEXT:  # %bb.7:
-; LE-32BIT-NEXT:    ori 25, 8, 0
-; LE-32BIT-NEXT:    b .LBB9_9
-; LE-32BIT-NEXT:  .LBB9_8:
-; LE-32BIT-NEXT:    addi 25, 24, 0
-; LE-32BIT-NEXT:  .LBB9_9:
-; LE-32BIT-NEXT:    bc 12, 20, .LBB9_11
-; LE-32BIT-NEXT:  # %bb.10:
-; LE-32BIT-NEXT:    ori 24, 19, 0
-; LE-32BIT-NEXT:    b .LBB9_12
-; LE-32BIT-NEXT:  .LBB9_11:
-; LE-32BIT-NEXT:    addi 24, 18, 0
-; LE-32BIT-NEXT:  .LBB9_12:
-; LE-32BIT-NEXT:    srw 19, 9, 4
-; LE-32BIT-NEXT:    srw 17, 6, 4
-; LE-32BIT-NEXT:    lwz 4, 20(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    srw 30, 21, 30
-; LE-32BIT-NEXT:    lwz 8, 24(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    slw 21, 29, 16
-; LE-32BIT-NEXT:    cmplwi 2, 16, 64
-; LE-32BIT-NEXT:    cmplwi 3, 16, 0
-; LE-32BIT-NEXT:    li 16, 0
-; LE-32BIT-NEXT:    srw 18, 6, 0
-; LE-32BIT-NEXT:    bc 12, 8, .LBB9_14
-; LE-32BIT-NEXT:  # %bb.13:
-; LE-32BIT-NEXT:    ori 0, 16, 0
-; LE-32BIT-NEXT:    b .LBB9_15
-; LE-32BIT-NEXT:  .LBB9_14:
-; LE-32BIT-NEXT:    addi 0, 21, 0
-; LE-32BIT-NEXT:  .LBB9_15:
-; LE-32BIT-NEXT:    lwz 21, 60(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 8, .LBB9_16
-; LE-32BIT-NEXT:    b .LBB9_17
-; LE-32BIT-NEXT:  .LBB9_16:
-; LE-32BIT-NEXT:    addi 4, 7, 0
-; LE-32BIT-NEXT:  .LBB9_17:
-; LE-32BIT-NEXT:    bc 12, 20, .LBB9_18
-; LE-32BIT-NEXT:    b .LBB9_19
-; LE-32BIT-NEXT:  .LBB9_18:
-; LE-32BIT-NEXT:    addi 8, 20, 0
-; LE-32BIT-NEXT:  .LBB9_19:
-; LE-32BIT-NEXT:    mr 12, 29
-; LE-32BIT-NEXT:    lwz 7, 48(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    slw 20, 29, 15
-; LE-32BIT-NEXT:    srw 29, 6, 31
-; LE-32BIT-NEXT:    bc 12, 2, .LBB9_20
-; LE-32BIT-NEXT:    b .LBB9_21
-; LE-32BIT-NEXT:  .LBB9_20:
-; LE-32BIT-NEXT:    addi 8, 21, 0
-; LE-32BIT-NEXT:  .LBB9_21:
-; LE-32BIT-NEXT:    cmplwi 7, 31, 0
-; LE-32BIT-NEXT:    bc 12, 20, .LBB9_23
-; LE-32BIT-NEXT:  # %bb.22:
-; LE-32BIT-NEXT:    ori 26, 19, 0
-; LE-32BIT-NEXT:    ori 3, 17, 0
-; LE-32BIT-NEXT:    b .LBB9_23
-; LE-32BIT-NEXT:  .LBB9_23:
-; LE-32BIT-NEXT:    or 8, 8, 0
-; LE-32BIT-NEXT:    bc 12, 20, .LBB9_25
-; LE-32BIT-NEXT:  # %bb.24:
-; LE-32BIT-NEXT:    ori 0, 16, 0
-; LE-32BIT-NEXT:    b .LBB9_26
-; LE-32BIT-NEXT:  .LBB9_25:
-; LE-32BIT-NEXT:    addi 0, 30, 0
-; LE-32BIT-NEXT:  .LBB9_26:
-; LE-32BIT-NEXT:    bc 12, 24, .LBB9_28
-; LE-32BIT-NEXT:  # %bb.27:
-; LE-32BIT-NEXT:    ori 30, 16, 0
-; LE-32BIT-NEXT:    b .LBB9_29
-; LE-32BIT-NEXT:  .LBB9_28:
-; LE-32BIT-NEXT:    addi 30, 29, 0
-; LE-32BIT-NEXT:  .LBB9_29:
-; LE-32BIT-NEXT:    bc 12, 20, .LBB9_31
-; LE-32BIT-NEXT:  # %bb.30:
-; LE-32BIT-NEXT:    ori 29, 16, 0
-; LE-32BIT-NEXT:    b .LBB9_32
-; LE-32BIT-NEXT:  .LBB9_31:
-; LE-32BIT-NEXT:    addi 29, 7, 0
-; LE-32BIT-NEXT:  .LBB9_32:
-; LE-32BIT-NEXT:    lwz 7, 44(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 30, .LBB9_33
-; LE-32BIT-NEXT:    b .LBB9_34
-; LE-32BIT-NEXT:  .LBB9_33:
-; LE-32BIT-NEXT:    addi 25, 12, 0
-; LE-32BIT-NEXT:  .LBB9_34:
-; LE-32BIT-NEXT:    bc 12, 14, .LBB9_35
-; LE-32BIT-NEXT:    b .LBB9_36
-; LE-32BIT-NEXT:  .LBB9_35:
-; LE-32BIT-NEXT:    addi 4, 6, 0
-; LE-32BIT-NEXT:  .LBB9_36:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB9_38
-; LE-32BIT-NEXT:  # %bb.37:
-; LE-32BIT-NEXT:    ori 6, 26, 0
-; LE-32BIT-NEXT:    b .LBB9_39
-; LE-32BIT-NEXT:  .LBB9_38:
-; LE-32BIT-NEXT:    addi 6, 22, 0
-; LE-32BIT-NEXT:  .LBB9_39:
-; LE-32BIT-NEXT:    li 26, 0
-; LE-32BIT-NEXT:    bc 12, 2, .LBB9_40
-; LE-32BIT-NEXT:    b .LBB9_41
-; LE-32BIT-NEXT:  .LBB9_40:
-; LE-32BIT-NEXT:    addi 3, 10, 0
-; LE-32BIT-NEXT:  .LBB9_41:
-; LE-32BIT-NEXT:    bc 12, 8, .LBB9_43
-; LE-32BIT-NEXT:  # %bb.42:
-; LE-32BIT-NEXT:    ori 5, 20, 0
-; LE-32BIT-NEXT:    b .LBB9_43
-; LE-32BIT-NEXT:  .LBB9_43:
-; LE-32BIT-NEXT:    bc 12, 4, .LBB9_45
-; LE-32BIT-NEXT:  # %bb.44:
-; LE-32BIT-NEXT:    ori 8, 25, 0
-; LE-32BIT-NEXT:    b .LBB9_45
-; LE-32BIT-NEXT:  .LBB9_45:
-; LE-32BIT-NEXT:    bc 12, 24, .LBB9_47
-; LE-32BIT-NEXT:  # %bb.46:
-; LE-32BIT-NEXT:    ori 28, 18, 0
-; LE-32BIT-NEXT:    b .LBB9_47
-; LE-32BIT-NEXT:  .LBB9_47:
-; LE-32BIT-NEXT:    bc 12, 8, .LBB9_49
-; LE-32BIT-NEXT:  # %bb.48:
-; LE-32BIT-NEXT:    ori 27, 16, 0
-; LE-32BIT-NEXT:    b .LBB9_49
-; LE-32BIT-NEXT:  .LBB9_49:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB9_51
-; LE-32BIT-NEXT:  # %bb.50:
-; LE-32BIT-NEXT:    ori 12, 24, 0
-; LE-32BIT-NEXT:    b .LBB9_51
-; LE-32BIT-NEXT:  .LBB9_51:
-; LE-32BIT-NEXT:    bc 12, 4, .LBB9_53
-; LE-32BIT-NEXT:  # %bb.52:
-; LE-32BIT-NEXT:    ori 3, 26, 0
-; LE-32BIT-NEXT:    b .LBB9_53
-; LE-32BIT-NEXT:  .LBB9_53:
-; LE-32BIT-NEXT:    bc 12, 14, .LBB9_54
-; LE-32BIT-NEXT:    b .LBB9_55
-; LE-32BIT-NEXT:  .LBB9_54:
-; LE-32BIT-NEXT:    addi 5, 11, 0
-; LE-32BIT-NEXT:  .LBB9_55:
-; LE-32BIT-NEXT:    bc 12, 30, .LBB9_56
-; LE-32BIT-NEXT:    b .LBB9_57
-; LE-32BIT-NEXT:  .LBB9_56:
-; LE-32BIT-NEXT:    addi 28, 10, 0
-; LE-32BIT-NEXT:  .LBB9_57:
-; LE-32BIT-NEXT:    or 6, 6, 27
-; LE-32BIT-NEXT:    stw 3, 8(14)
-; LE-32BIT-NEXT:    or 3, 0, 4
-; LE-32BIT-NEXT:    bc 12, 2, .LBB9_59
-; LE-32BIT-NEXT:  # %bb.58:
-; LE-32BIT-NEXT:    ori 4, 8, 0
-; LE-32BIT-NEXT:    b .LBB9_60
-; LE-32BIT-NEXT:  .LBB9_59:
-; LE-32BIT-NEXT:    addi 4, 21, 0
-; LE-32BIT-NEXT:  .LBB9_60:
-; LE-32BIT-NEXT:    bc 12, 24, .LBB9_62
-; LE-32BIT-NEXT:  # %bb.61:
-; LE-32BIT-NEXT:    ori 24, 16, 0
-; LE-32BIT-NEXT:    b .LBB9_63
-; LE-32BIT-NEXT:  .LBB9_62:
-; LE-32BIT-NEXT:    addi 24, 7, 0
-; LE-32BIT-NEXT:  .LBB9_63:
-; LE-32BIT-NEXT:    bc 12, 4, .LBB9_65
-; LE-32BIT-NEXT:  # %bb.64:
-; LE-32BIT-NEXT:    ori 3, 30, 0
-; LE-32BIT-NEXT:    ori 6, 28, 0
-; LE-32BIT-NEXT:    ori 12, 16, 0
-; LE-32BIT-NEXT:    b .LBB9_65
-; LE-32BIT-NEXT:  .LBB9_65:
-; LE-32BIT-NEXT:    stw 4, 28(14)
-; LE-32BIT-NEXT:    or 4, 29, 5
-; LE-32BIT-NEXT:    bc 12, 4, .LBB9_67
-; LE-32BIT-NEXT:  # %bb.66:
-; LE-32BIT-NEXT:    ori 4, 24, 0
-; LE-32BIT-NEXT:    b .LBB9_67
-; LE-32BIT-NEXT:  .LBB9_67:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB9_69
-; LE-32BIT-NEXT:  # %bb.68:
-; LE-32BIT-NEXT:    ori 5, 6, 0
-; LE-32BIT-NEXT:    b .LBB9_70
-; LE-32BIT-NEXT:  .LBB9_69:
-; LE-32BIT-NEXT:    addi 3, 9, 0
-; LE-32BIT-NEXT:    addi 5, 22, 0
-; LE-32BIT-NEXT:  .LBB9_70:
-; LE-32BIT-NEXT:    stw 12, 12(14)
-; LE-32BIT-NEXT:    stw 3, 16(14)
-; LE-32BIT-NEXT:    bc 12, 2, .LBB9_72
-; LE-32BIT-NEXT:  # %bb.71:
-; LE-32BIT-NEXT:    ori 3, 4, 0
-; LE-32BIT-NEXT:    b .LBB9_73
-; LE-32BIT-NEXT:  .LBB9_72:
-; LE-32BIT-NEXT:    addi 3, 23, 0
-; LE-32BIT-NEXT:  .LBB9_73:
-; LE-32BIT-NEXT:    stw 5, 24(14)
-; LE-32BIT-NEXT:    stw 3, 20(14)
-; LE-32BIT-NEXT:    lwz 12, 68(1)
-; LE-32BIT-NEXT:    lwz 31, 140(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    mtcrf 32, 12 # cr2
-; LE-32BIT-NEXT:    mtcrf 16, 12 # cr3
-; LE-32BIT-NEXT:    lwz 30, 136(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 29, 132(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 28, 128(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 27, 124(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 26, 120(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 25, 116(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 24, 112(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 23, 108(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 22, 104(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 21, 100(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 20, 96(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 19, 92(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 18, 88(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 17, 84(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 16, 80(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 15, 76(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 14, 72(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    addi 1, 1, 144
+; LE-32BIT-NEXT:    lwz 10, 12(3)
+; LE-32BIT-NEXT:    lwz 11, 16(3)
+; LE-32BIT-NEXT:    lwz 12, 20(3)
+; LE-32BIT-NEXT:    lwz 0, 24(3)
+; LE-32BIT-NEXT:    lwz 3, 28(3)
+; LE-32BIT-NEXT:    lwz 4, 28(4)
+; LE-32BIT-NEXT:    stw 3, 76(1)
+; LE-32BIT-NEXT:    addi 3, 1, 48
+; LE-32BIT-NEXT:    clrlwi 4, 4, 27
+; LE-32BIT-NEXT:    stw 6, 44(1)
+; LE-32BIT-NEXT:    sub 3, 3, 4
+; LE-32BIT-NEXT:    stw 6, 40(1)
+; LE-32BIT-NEXT:    stw 6, 36(1)
+; LE-32BIT-NEXT:    stw 6, 32(1)
+; LE-32BIT-NEXT:    stw 6, 28(1)
+; LE-32BIT-NEXT:    stw 6, 24(1)
+; LE-32BIT-NEXT:    stw 6, 20(1)
+; LE-32BIT-NEXT:    stw 6, 16(1)
+; LE-32BIT-NEXT:    stw 0, 72(1)
+; LE-32BIT-NEXT:    stw 12, 68(1)
+; LE-32BIT-NEXT:    stw 11, 64(1)
+; LE-32BIT-NEXT:    stw 10, 60(1)
+; LE-32BIT-NEXT:    stw 9, 56(1)
+; LE-32BIT-NEXT:    stw 8, 52(1)
+; LE-32BIT-NEXT:    stw 7, 48(1)
+; LE-32BIT-NEXT:    lwz 4, 4(3)
+; LE-32BIT-NEXT:    lwz 6, 0(3)
+; LE-32BIT-NEXT:    lwz 7, 12(3)
+; LE-32BIT-NEXT:    lwz 8, 8(3)
+; LE-32BIT-NEXT:    lwz 9, 20(3)
+; LE-32BIT-NEXT:    lwz 10, 16(3)
+; LE-32BIT-NEXT:    lwz 11, 24(3)
+; LE-32BIT-NEXT:    lwz 3, 28(3)
+; LE-32BIT-NEXT:    stw 11, 24(5)
+; LE-32BIT-NEXT:    stw 3, 28(5)
+; LE-32BIT-NEXT:    stw 10, 16(5)
+; LE-32BIT-NEXT:    stw 9, 20(5)
+; LE-32BIT-NEXT:    stw 8, 8(5)
+; LE-32BIT-NEXT:    stw 7, 12(5)
+; LE-32BIT-NEXT:    stw 6, 0(5)
+; LE-32BIT-NEXT:    stw 4, 4(5)
+; LE-32BIT-NEXT:    addi 1, 1, 80
 ; LE-32BIT-NEXT:    blr
   %src = load i256, ptr %src.ptr, align 1
   %byteOff = load i256, ptr %byteOff.ptr, align 1
@@ -1189,582 +529,105 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: shl_32bytes:
 ; LE-64BIT:       # %bb.0:
+; LE-64BIT-NEXT:    li 6, 16
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    ld 7, 24(3)
-; LE-64BIT-NEXT:    ld 8, 16(3)
-; LE-64BIT-NEXT:    ld 9, 8(3)
-; LE-64BIT-NEXT:    li 6, 0
-; LE-64BIT-NEXT:    ld 3, 0(3)
-; LE-64BIT-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 21, -88(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 24, -64(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    rlwinm. 4, 4, 3, 0, 28
-; LE-64BIT-NEXT:    std 25, -56(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    subfic 28, 4, 64
-; LE-64BIT-NEXT:    subfic 11, 4, 192
-; LE-64BIT-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    addi 0, 4, -128
-; LE-64BIT-NEXT:    sld 29, 9, 4
-; LE-64BIT-NEXT:    addi 27, 4, -64
-; LE-64BIT-NEXT:    subfic 25, 4, 128
-; LE-64BIT-NEXT:    srd 24, 8, 28
-; LE-64BIT-NEXT:    std 22, -80(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 26, -48(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    srd 21, 9, 28
-; LE-64BIT-NEXT:    srd 28, 3, 28
-; LE-64BIT-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    sld 10, 7, 4
-; LE-64BIT-NEXT:    addi 30, 4, -192
-; LE-64BIT-NEXT:    subfic 22, 25, 64
-; LE-64BIT-NEXT:    srd 11, 3, 11
-; LE-64BIT-NEXT:    sld 26, 9, 0
-; LE-64BIT-NEXT:    or 29, 29, 28
-; LE-64BIT-NEXT:    std 23, -72(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    or 10, 10, 24
-; LE-64BIT-NEXT:    sld 28, 3, 27
-; LE-64BIT-NEXT:    sld 30, 3, 30
-; LE-64BIT-NEXT:    or 11, 26, 11
-; LE-64BIT-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    sld 23, 8, 27
-; LE-64BIT-NEXT:    sld 27, 9, 22
-; LE-64BIT-NEXT:    or 29, 29, 28
-; LE-64BIT-NEXT:    or 11, 11, 30
-; LE-64BIT-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    srd 28, 3, 25
-; LE-64BIT-NEXT:    or 10, 10, 23
-; LE-64BIT-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    srd 9, 9, 25
-; LE-64BIT-NEXT:    or 30, 28, 27
-; LE-64BIT-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    cmplwi 1, 4, 128
-; LE-64BIT-NEXT:    sld 12, 8, 4
-; LE-64BIT-NEXT:    or 9, 10, 9
-; LE-64BIT-NEXT:    or 30, 30, 21
-; LE-64BIT-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    sld 10, 3, 0
-; LE-64BIT-NEXT:    isel 9, 9, 11, 4
-; LE-64BIT-NEXT:    or 11, 12, 30
-; LE-64BIT-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    iseleq 7, 7, 9
-; LE-64BIT-NEXT:    sld 3, 3, 4
-; LE-64BIT-NEXT:    isel 9, 11, 10, 4
-; LE-64BIT-NEXT:    std 7, 24(5)
-; LE-64BIT-NEXT:    isel 0, 29, 6, 4
-; LE-64BIT-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    iseleq 4, 8, 9
-; LE-64BIT-NEXT:    std 0, 8(5)
-; LE-64BIT-NEXT:    isel 3, 3, 6, 4
-; LE-64BIT-NEXT:    std 4, 16(5)
-; LE-64BIT-NEXT:    std 3, 0(5)
+; LE-64BIT-NEXT:    xxlxor 1, 1, 1
+; LE-64BIT-NEXT:    lxvd2x 2, 0, 3
+; LE-64BIT-NEXT:    li 7, 48
+; LE-64BIT-NEXT:    addi 8, 1, -32
+; LE-64BIT-NEXT:    lxvd2x 0, 3, 6
+; LE-64BIT-NEXT:    addi 3, 1, -64
+; LE-64BIT-NEXT:    clrlwi 4, 4, 27
+; LE-64BIT-NEXT:    stxvd2x 1, 3, 6
+; LE-64BIT-NEXT:    neg 4, 4
+; LE-64BIT-NEXT:    stxvd2x 0, 3, 7
+; LE-64BIT-NEXT:    li 7, 32
+; LE-64BIT-NEXT:    extsw 4, 4
+; LE-64BIT-NEXT:    stxvd2x 2, 3, 7
+; LE-64BIT-NEXT:    stxvd2x 1, 0, 3
+; LE-64BIT-NEXT:    add 3, 8, 4
+; LE-64BIT-NEXT:    lxvd2x 0, 8, 4
+; LE-64BIT-NEXT:    lxvd2x 1, 3, 6
+; LE-64BIT-NEXT:    stxvd2x 1, 5, 6
+; LE-64BIT-NEXT:    stxvd2x 0, 0, 5
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: shl_32bytes:
 ; BE:       # %bb.0:
-; BE-NEXT:    lwz 4, 28(4)
+; BE-NEXT:    ld 6, 0(3)
 ; BE-NEXT:    ld 7, 8(3)
-; BE-NEXT:    ld 8, 0(3)
-; BE-NEXT:    ld 9, 16(3)
+; BE-NEXT:    ld 8, 16(3)
 ; BE-NEXT:    ld 3, 24(3)
-; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; BE-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; BE-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; BE-NEXT:    li 6, 0
-; BE-NEXT:    rlwinm. 4, 4, 3, 0, 28
-; BE-NEXT:    subfic 10, 4, 192
-; BE-NEXT:    addi 11, 4, -128
-; BE-NEXT:    addi 12, 4, -192
-; BE-NEXT:    subfic 30, 4, 64
-; BE-NEXT:    srd 10, 3, 10
-; BE-NEXT:    sld 27, 9, 11
-; BE-NEXT:    sld 0, 8, 4
-; BE-NEXT:    addi 29, 4, -64
-; BE-NEXT:    subfic 28, 4, 128
-; BE-NEXT:    sld 12, 3, 12
-; BE-NEXT:    or 10, 27, 10
-; BE-NEXT:    srd 27, 7, 30
-; BE-NEXT:    or 10, 10, 12
-; BE-NEXT:    or 0, 0, 27
-; BE-NEXT:    sld 27, 7, 29
-; BE-NEXT:    subfic 12, 28, 64
-; BE-NEXT:    or 0, 0, 27
-; BE-NEXT:    srd 27, 3, 28
-; BE-NEXT:    sld 12, 9, 12
-; BE-NEXT:    srd 28, 9, 28
-; BE-NEXT:    cmplwi 1, 4, 128
-; BE-NEXT:    or 12, 27, 12
-; BE-NEXT:    or 28, 0, 28
-; BE-NEXT:    srd 0, 9, 30
-; BE-NEXT:    sld 9, 9, 4
-; BE-NEXT:    sld 11, 3, 11
-; BE-NEXT:    bc 12, 4, .LBB10_1
-; BE-NEXT:    b .LBB10_2
-; BE-NEXT:  .LBB10_1:
-; BE-NEXT:    addi 10, 28, 0
-; BE-NEXT:  .LBB10_2:
-; BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; BE-NEXT:    or 12, 12, 0
-; BE-NEXT:    sld 0, 7, 4
-; BE-NEXT:    or 12, 0, 12
-; BE-NEXT:    srd 0, 3, 30
-; BE-NEXT:    sld 30, 3, 29
-; BE-NEXT:    bc 12, 4, .LBB10_3
-; BE-NEXT:    b .LBB10_4
-; BE-NEXT:  .LBB10_3:
-; BE-NEXT:    addi 11, 12, 0
-; BE-NEXT:  .LBB10_4:
-; BE-NEXT:    sld 3, 3, 4
-; BE-NEXT:    bc 12, 2, .LBB10_6
-; BE-NEXT:  # %bb.5:
-; BE-NEXT:    ori 4, 10, 0
-; BE-NEXT:    b .LBB10_7
-; BE-NEXT:  .LBB10_6:
-; BE-NEXT:    addi 4, 8, 0
-; BE-NEXT:  .LBB10_7:
-; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; BE-NEXT:    or 9, 9, 0
-; BE-NEXT:    or 9, 9, 30
-; BE-NEXT:    bc 12, 2, .LBB10_9
-; BE-NEXT:  # %bb.8:
-; BE-NEXT:    ori 7, 11, 0
-; BE-NEXT:    b .LBB10_9
-; BE-NEXT:  .LBB10_9:
-; BE-NEXT:    bc 12, 4, .LBB10_11
-; BE-NEXT:  # %bb.10:
-; BE-NEXT:    ori 8, 6, 0
-; BE-NEXT:    ori 3, 6, 0
-; BE-NEXT:    b .LBB10_12
-; BE-NEXT:  .LBB10_11:
-; BE-NEXT:    addi 8, 9, 0
-; BE-NEXT:  .LBB10_12:
+; BE-NEXT:    lwz 4, 28(4)
+; BE-NEXT:    addi 9, 1, -64
+; BE-NEXT:    li 10, 0
+; BE-NEXT:    std 10, 56(9)
+; BE-NEXT:    std 10, 48(9)
+; BE-NEXT:    std 10, 40(9)
+; BE-NEXT:    std 10, 32(9)
+; BE-NEXT:    std 3, 24(9)
+; BE-NEXT:    std 8, 16(9)
+; BE-NEXT:    std 7, 8(9)
+; BE-NEXT:    std 6, -64(1)
+; BE-NEXT:    clrldi 3, 4, 59
+; BE-NEXT:    ldux 4, 3, 9
+; BE-NEXT:    ld 6, 8(3)
+; BE-NEXT:    ld 7, 24(3)
+; BE-NEXT:    ld 3, 16(3)
 ; BE-NEXT:    std 4, 0(5)
-; BE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; BE-NEXT:    std 3, 24(5)
-; BE-NEXT:    std 8, 16(5)
-; BE-NEXT:    std 7, 8(5)
+; BE-NEXT:    std 3, 16(5)
+; BE-NEXT:    std 7, 24(5)
+; BE-NEXT:    std 6, 8(5)
 ; BE-NEXT:    blr
 ;
 ; LE-32BIT-LABEL: shl_32bytes:
 ; LE-32BIT:       # %bb.0:
-; LE-32BIT-NEXT:    stwu 1, -144(1)
-; LE-32BIT-NEXT:    mfcr 12
-; LE-32BIT-NEXT:    stw 14, 72(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 15, 76(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 16, 80(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 17, 84(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 18, 88(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 19, 92(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 20, 96(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 21, 100(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 22, 104(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 23, 108(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 24, 112(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 25, 116(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 26, 120(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 27, 124(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 28, 128(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 29, 132(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 30, 136(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 31, 140(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 12, 68(1)
-; LE-32BIT-NEXT:    lwz 0, 28(4)
-; LE-32BIT-NEXT:    stw 5, 64(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    lwz 6, 24(3)
-; LE-32BIT-NEXT:    rlwinm. 30, 0, 3, 0, 28
-; LE-32BIT-NEXT:    lwz 5, 28(3)
-; LE-32BIT-NEXT:    subfic 21, 30, 224
-; LE-32BIT-NEXT:    lwz 7, 4(3)
-; LE-32BIT-NEXT:    subfic 0, 30, 160
-; LE-32BIT-NEXT:    lwz 9, 0(3)
-; LE-32BIT-NEXT:    addi 4, 30, -128
-; LE-32BIT-NEXT:    lwz 10, 8(3)
-; LE-32BIT-NEXT:    subfic 28, 30, 96
-; LE-32BIT-NEXT:    lwz 8, 12(3)
-; LE-32BIT-NEXT:    addi 29, 30, -64
-; LE-32BIT-NEXT:    lwz 12, 16(3)
-; LE-32BIT-NEXT:    subfic 25, 30, 32
-; LE-32BIT-NEXT:    lwz 11, 20(3)
-; LE-32BIT-NEXT:    addi 3, 30, -192
-; LE-32BIT-NEXT:    srw 21, 5, 21
-; LE-32BIT-NEXT:    slw 16, 6, 3
-; LE-32BIT-NEXT:    stw 3, 56(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    slw 20, 9, 30
-; LE-32BIT-NEXT:    srw 15, 11, 0
-; LE-32BIT-NEXT:    slw 14, 12, 4
-; LE-32BIT-NEXT:    srw 31, 8, 28
-; LE-32BIT-NEXT:    slw 3, 10, 29
-; LE-32BIT-NEXT:    or 21, 16, 21
-; LE-32BIT-NEXT:    srw 16, 7, 25
-; LE-32BIT-NEXT:    slw 19, 10, 30
-; LE-32BIT-NEXT:    or 15, 14, 15
-; LE-32BIT-NEXT:    srw 14, 8, 25
-; LE-32BIT-NEXT:    or 3, 3, 31
-; LE-32BIT-NEXT:    srw 31, 5, 0
-; LE-32BIT-NEXT:    or 20, 20, 16
-; LE-32BIT-NEXT:    slw 16, 6, 4
-; LE-32BIT-NEXT:    addi 27, 30, -224
-; LE-32BIT-NEXT:    or 19, 19, 14
-; LE-32BIT-NEXT:    srw 14, 5, 28
-; LE-32BIT-NEXT:    or 16, 16, 31
-; LE-32BIT-NEXT:    slw 31, 6, 29
-; LE-32BIT-NEXT:    addi 23, 30, -160
-; LE-32BIT-NEXT:    slw 18, 12, 30
-; LE-32BIT-NEXT:    stw 0, 40(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 14, 31, 14
-; LE-32BIT-NEXT:    srw 31, 11, 25
-; LE-32BIT-NEXT:    slw 0, 5, 27
-; LE-32BIT-NEXT:    addi 26, 30, -96
-; LE-32BIT-NEXT:    slw 17, 6, 30
-; LE-32BIT-NEXT:    or 18, 18, 31
-; LE-32BIT-NEXT:    srw 31, 5, 25
-; LE-32BIT-NEXT:    or 21, 21, 0
-; LE-32BIT-NEXT:    slw 0, 11, 23
-; LE-32BIT-NEXT:    or 17, 17, 31
-; LE-32BIT-NEXT:    addi 31, 30, -32
-; LE-32BIT-NEXT:    or 0, 15, 0
-; LE-32BIT-NEXT:    slw 15, 8, 26
-; LE-32BIT-NEXT:    stw 29, 52(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 29, 3, 15
-; LE-32BIT-NEXT:    slw 15, 7, 31
-; LE-32BIT-NEXT:    or 20, 20, 15
-; LE-32BIT-NEXT:    slw 15, 8, 31
-; LE-32BIT-NEXT:    or 3, 19, 15
-; LE-32BIT-NEXT:    subfic 15, 30, 128
-; LE-32BIT-NEXT:    slw 23, 5, 23
-; LE-32BIT-NEXT:    stw 3, 48(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 3, 16, 23
-; LE-32BIT-NEXT:    subfic 16, 15, 32
-; LE-32BIT-NEXT:    stw 3, 44(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 3, 11, 15
-; LE-32BIT-NEXT:    slw 22, 12, 16
-; LE-32BIT-NEXT:    or 23, 3, 22
-; LE-32BIT-NEXT:    subfic 22, 30, 64
-; LE-32BIT-NEXT:    stw 9, 60(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    mr 9, 10
-; LE-32BIT-NEXT:    subfic 3, 22, 32
-; LE-32BIT-NEXT:    stw 4, 36(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 4, 8, 22
-; LE-32BIT-NEXT:    slw 24, 9, 3
-; LE-32BIT-NEXT:    or 4, 4, 24
-; LE-32BIT-NEXT:    subfic 24, 30, 192
-; LE-32BIT-NEXT:    subfic 27, 24, 32
-; LE-32BIT-NEXT:    mr 10, 26
-; LE-32BIT-NEXT:    slw 27, 6, 27
-; LE-32BIT-NEXT:    srw 26, 5, 24
-; LE-32BIT-NEXT:    stw 28, 24(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 27, 26, 27
-; LE-32BIT-NEXT:    srw 26, 11, 22
-; LE-32BIT-NEXT:    slw 28, 12, 3
-; LE-32BIT-NEXT:    or 28, 26, 28
-; LE-32BIT-NEXT:    srw 26, 5, 15
-; LE-32BIT-NEXT:    slw 19, 6, 16
-; LE-32BIT-NEXT:    or 26, 26, 19
-; LE-32BIT-NEXT:    slw 19, 5, 10
-; LE-32BIT-NEXT:    stw 7, 32(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    mr 7, 9
-; LE-32BIT-NEXT:    or 19, 14, 19
-; LE-32BIT-NEXT:    slw 14, 11, 31
-; LE-32BIT-NEXT:    lwz 9, 64(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 18, 18, 14
-; LE-32BIT-NEXT:    slw 3, 6, 3
-; LE-32BIT-NEXT:    srw 14, 5, 22
-; LE-32BIT-NEXT:    cmplwi 5, 30, 64
-; LE-32BIT-NEXT:    cmplwi 1, 30, 128
-; LE-32BIT-NEXT:    srw 24, 6, 24
-; LE-32BIT-NEXT:    or 10, 14, 3
-; LE-32BIT-NEXT:    slw 14, 5, 31
-; LE-32BIT-NEXT:    crnand 21, 4, 20
-; LE-32BIT-NEXT:    slw 31, 5, 30
-; LE-32BIT-NEXT:    or 24, 0, 24
-; LE-32BIT-NEXT:    mr 3, 7
-; LE-32BIT-NEXT:    stw 7, 28(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 0, 7, 22
-; LE-32BIT-NEXT:    lwz 7, 24(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 17, 17, 14
-; LE-32BIT-NEXT:    bc 12, 21, .LBB10_2
-; LE-32BIT-NEXT:  # %bb.1:
-; LE-32BIT-NEXT:    ori 14, 31, 0
-; LE-32BIT-NEXT:    b .LBB10_3
-; LE-32BIT-NEXT:  .LBB10_2:
-; LE-32BIT-NEXT:    li 14, 0
-; LE-32BIT-NEXT:  .LBB10_3:
-; LE-32BIT-NEXT:    or 20, 20, 0
-; LE-32BIT-NEXT:    subfic 0, 15, 64
-; LE-32BIT-NEXT:    stw 14, 28(9)
-; LE-32BIT-NEXT:    subfic 14, 0, 32
-; LE-32BIT-NEXT:    srw 14, 11, 14
-; LE-32BIT-NEXT:    slw 31, 12, 0
-; LE-32BIT-NEXT:    or 14, 31, 14
-; LE-32BIT-NEXT:    srw 31, 12, 7
-; LE-32BIT-NEXT:    or 23, 23, 31
-; LE-32BIT-NEXT:    srw 31, 3, 25
-; LE-32BIT-NEXT:    lwz 3, 40(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 4, 4, 31
-; LE-32BIT-NEXT:    slw 0, 11, 0
-; LE-32BIT-NEXT:    cmplwi 2, 15, 64
-; LE-32BIT-NEXT:    srw 31, 6, 3
-; LE-32BIT-NEXT:    or 27, 27, 31
-; LE-32BIT-NEXT:    srw 31, 12, 25
-; LE-32BIT-NEXT:    or 28, 28, 31
-; LE-32BIT-NEXT:    srw 31, 6, 7
-; LE-32BIT-NEXT:    or 26, 26, 31
-; LE-32BIT-NEXT:    srw 31, 6, 22
-; LE-32BIT-NEXT:    or 18, 18, 31
-; LE-32BIT-NEXT:    lwz 31, 36(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    srw 25, 6, 25
-; LE-32BIT-NEXT:    or 3, 10, 25
-; LE-32BIT-NEXT:    or 26, 26, 0
-; LE-32BIT-NEXT:    cmplwi 6, 31, 64
-; LE-32BIT-NEXT:    slw 0, 11, 30
-; LE-32BIT-NEXT:    bc 12, 24, .LBB10_5
-; LE-32BIT-NEXT:  # %bb.4:
-; LE-32BIT-NEXT:    ori 25, 21, 0
-; LE-32BIT-NEXT:    b .LBB10_6
-; LE-32BIT-NEXT:  .LBB10_5:
-; LE-32BIT-NEXT:    addi 25, 24, 0
-; LE-32BIT-NEXT:  .LBB10_6:
-; LE-32BIT-NEXT:    slw 24, 11, 16
-; LE-32BIT-NEXT:    lwz 10, 32(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 3, 0, 3
-; LE-32BIT-NEXT:    bc 12, 21, .LBB10_8
-; LE-32BIT-NEXT:  # %bb.7:
-; LE-32BIT-NEXT:    ori 0, 17, 0
-; LE-32BIT-NEXT:    b .LBB10_9
-; LE-32BIT-NEXT:  .LBB10_8:
-; LE-32BIT-NEXT:    li 0, 0
-; LE-32BIT-NEXT:  .LBB10_9:
-; LE-32BIT-NEXT:    or 24, 14, 24
-; LE-32BIT-NEXT:    stw 0, 24(9)
-; LE-32BIT-NEXT:    srw 0, 6, 15
-; LE-32BIT-NEXT:    or 24, 0, 24
-; LE-32BIT-NEXT:    lwz 0, 56(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    slw 21, 10, 30
-; LE-32BIT-NEXT:    bc 12, 20, .LBB10_11
-; LE-32BIT-NEXT:  # %bb.10:
-; LE-32BIT-NEXT:    ori 7, 29, 0
-; LE-32BIT-NEXT:    b .LBB10_12
-; LE-32BIT-NEXT:  .LBB10_11:
-; LE-32BIT-NEXT:    addi 7, 20, 0
-; LE-32BIT-NEXT:  .LBB10_12:
-; LE-32BIT-NEXT:    or 4, 21, 4
-; LE-32BIT-NEXT:    slw 21, 11, 31
-; LE-32BIT-NEXT:    srw 20, 12, 15
-; LE-32BIT-NEXT:    cmplwi 3, 15, 0
-; LE-32BIT-NEXT:    li 15, 0
-; LE-32BIT-NEXT:    or 27, 21, 27
-; LE-32BIT-NEXT:    bc 12, 20, .LBB10_14
-; LE-32BIT-NEXT:  # %bb.13:
-; LE-32BIT-NEXT:    ori 21, 19, 0
-; LE-32BIT-NEXT:    b .LBB10_15
-; LE-32BIT-NEXT:  .LBB10_14:
-; LE-32BIT-NEXT:    addi 21, 18, 0
-; LE-32BIT-NEXT:  .LBB10_15:
-; LE-32BIT-NEXT:    mr 16, 9
-; LE-32BIT-NEXT:    lwz 9, 52(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    slw 18, 5, 0
-; LE-32BIT-NEXT:    bc 12, 8, .LBB10_17
-; LE-32BIT-NEXT:  # %bb.16:
-; LE-32BIT-NEXT:    ori 0, 15, 0
-; LE-32BIT-NEXT:    b .LBB10_18
-; LE-32BIT-NEXT:  .LBB10_17:
-; LE-32BIT-NEXT:    addi 0, 20, 0
-; LE-32BIT-NEXT:  .LBB10_18:
-; LE-32BIT-NEXT:    lwz 20, 60(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    slw 30, 8, 30
-; LE-32BIT-NEXT:    slw 19, 8, 9
-; LE-32BIT-NEXT:    slw 17, 5, 9
-; LE-32BIT-NEXT:    bc 12, 2, .LBB10_20
-; LE-32BIT-NEXT:  # %bb.19:
-; LE-32BIT-NEXT:    ori 9, 7, 0
-; LE-32BIT-NEXT:    b .LBB10_21
-; LE-32BIT-NEXT:  .LBB10_20:
-; LE-32BIT-NEXT:    addi 9, 20, 0
-; LE-32BIT-NEXT:  .LBB10_21:
-; LE-32BIT-NEXT:    lwz 7, 48(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    slw 29, 5, 31
-; LE-32BIT-NEXT:    or 9, 9, 0
-; LE-32BIT-NEXT:    bc 12, 20, .LBB10_23
-; LE-32BIT-NEXT:  # %bb.22:
-; LE-32BIT-NEXT:    ori 0, 15, 0
-; LE-32BIT-NEXT:    b .LBB10_24
-; LE-32BIT-NEXT:  .LBB10_23:
-; LE-32BIT-NEXT:    addi 0, 30, 0
-; LE-32BIT-NEXT:  .LBB10_24:
-; LE-32BIT-NEXT:    bc 12, 24, .LBB10_26
-; LE-32BIT-NEXT:  # %bb.25:
-; LE-32BIT-NEXT:    ori 30, 15, 0
-; LE-32BIT-NEXT:    b .LBB10_27
-; LE-32BIT-NEXT:  .LBB10_26:
-; LE-32BIT-NEXT:    addi 30, 29, 0
-; LE-32BIT-NEXT:  .LBB10_27:
-; LE-32BIT-NEXT:    bc 12, 8, .LBB10_28
-; LE-32BIT-NEXT:    b .LBB10_29
-; LE-32BIT-NEXT:  .LBB10_28:
-; LE-32BIT-NEXT:    addi 28, 26, 0
-; LE-32BIT-NEXT:  .LBB10_29:
-; LE-32BIT-NEXT:    bc 12, 20, .LBB10_31
-; LE-32BIT-NEXT:  # %bb.30:
-; LE-32BIT-NEXT:    ori 3, 17, 0
-; LE-32BIT-NEXT:    b .LBB10_31
-; LE-32BIT-NEXT:  .LBB10_31:
-; LE-32BIT-NEXT:    srw 22, 12, 22
-; LE-32BIT-NEXT:    bc 12, 20, .LBB10_33
-; LE-32BIT-NEXT:  # %bb.32:
-; LE-32BIT-NEXT:    ori 29, 15, 0
-; LE-32BIT-NEXT:    b .LBB10_34
-; LE-32BIT-NEXT:  .LBB10_33:
-; LE-32BIT-NEXT:    addi 29, 7, 0
-; LE-32BIT-NEXT:  .LBB10_34:
-; LE-32BIT-NEXT:    lwz 7, 44(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 20, .LBB10_36
-; LE-32BIT-NEXT:  # %bb.35:
-; LE-32BIT-NEXT:    ori 4, 19, 0
-; LE-32BIT-NEXT:    b .LBB10_36
-; LE-32BIT-NEXT:  .LBB10_36:
-; LE-32BIT-NEXT:    bc 12, 14, .LBB10_38
-; LE-32BIT-NEXT:  # %bb.37:
-; LE-32BIT-NEXT:    ori 5, 28, 0
-; LE-32BIT-NEXT:    b .LBB10_38
-; LE-32BIT-NEXT:  .LBB10_38:
-; LE-32BIT-NEXT:    li 28, 0
-; LE-32BIT-NEXT:    bc 12, 2, .LBB10_39
-; LE-32BIT-NEXT:    b .LBB10_40
-; LE-32BIT-NEXT:  .LBB10_39:
-; LE-32BIT-NEXT:    addi 3, 11, 0
-; LE-32BIT-NEXT:  .LBB10_40:
-; LE-32BIT-NEXT:    cmplwi 7, 31, 0
-; LE-32BIT-NEXT:    bc 12, 24, .LBB10_42
-; LE-32BIT-NEXT:  # %bb.41:
-; LE-32BIT-NEXT:    ori 27, 18, 0
-; LE-32BIT-NEXT:    b .LBB10_42
-; LE-32BIT-NEXT:  .LBB10_42:
-; LE-32BIT-NEXT:    bc 12, 8, .LBB10_44
-; LE-32BIT-NEXT:  # %bb.43:
-; LE-32BIT-NEXT:    ori 26, 22, 0
-; LE-32BIT-NEXT:    b .LBB10_45
-; LE-32BIT-NEXT:  .LBB10_44:
-; LE-32BIT-NEXT:    addi 26, 24, 0
-; LE-32BIT-NEXT:  .LBB10_45:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB10_46
-; LE-32BIT-NEXT:    b .LBB10_47
-; LE-32BIT-NEXT:  .LBB10_46:
-; LE-32BIT-NEXT:    addi 4, 10, 0
-; LE-32BIT-NEXT:  .LBB10_47:
-; LE-32BIT-NEXT:    bc 12, 4, .LBB10_49
-; LE-32BIT-NEXT:  # %bb.48:
-; LE-32BIT-NEXT:    ori 3, 28, 0
-; LE-32BIT-NEXT:    b .LBB10_49
-; LE-32BIT-NEXT:  .LBB10_49:
-; LE-32BIT-NEXT:    bc 12, 30, .LBB10_50
-; LE-32BIT-NEXT:    b .LBB10_51
-; LE-32BIT-NEXT:  .LBB10_50:
-; LE-32BIT-NEXT:    addi 25, 12, 0
-; LE-32BIT-NEXT:  .LBB10_51:
-; LE-32BIT-NEXT:    or 5, 0, 5
-; LE-32BIT-NEXT:    bc 12, 24, .LBB10_53
-; LE-32BIT-NEXT:  # %bb.52:
-; LE-32BIT-NEXT:    ori 24, 15, 0
-; LE-32BIT-NEXT:    b .LBB10_54
-; LE-32BIT-NEXT:  .LBB10_53:
-; LE-32BIT-NEXT:    addi 24, 7, 0
-; LE-32BIT-NEXT:  .LBB10_54:
-; LE-32BIT-NEXT:    bc 12, 8, .LBB10_56
-; LE-32BIT-NEXT:  # %bb.55:
-; LE-32BIT-NEXT:    ori 7, 15, 0
-; LE-32BIT-NEXT:    b .LBB10_57
-; LE-32BIT-NEXT:  .LBB10_56:
-; LE-32BIT-NEXT:    addi 7, 23, 0
-; LE-32BIT-NEXT:  .LBB10_57:
-; LE-32BIT-NEXT:    bc 12, 30, .LBB10_58
-; LE-32BIT-NEXT:    b .LBB10_59
-; LE-32BIT-NEXT:  .LBB10_58:
-; LE-32BIT-NEXT:    addi 27, 11, 0
-; LE-32BIT-NEXT:  .LBB10_59:
-; LE-32BIT-NEXT:    stw 3, 20(16)
-; LE-32BIT-NEXT:    or 3, 4, 7
-; LE-32BIT-NEXT:    bc 12, 4, .LBB10_61
-; LE-32BIT-NEXT:  # %bb.60:
-; LE-32BIT-NEXT:    ori 3, 27, 0
-; LE-32BIT-NEXT:    ori 9, 25, 0
-; LE-32BIT-NEXT:    b .LBB10_61
-; LE-32BIT-NEXT:  .LBB10_61:
-; LE-32BIT-NEXT:    bc 12, 14, .LBB10_63
-; LE-32BIT-NEXT:  # %bb.62:
-; LE-32BIT-NEXT:    ori 6, 26, 0
-; LE-32BIT-NEXT:    b .LBB10_63
-; LE-32BIT-NEXT:  .LBB10_63:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB10_65
-; LE-32BIT-NEXT:  # %bb.64:
-; LE-32BIT-NEXT:    ori 12, 21, 0
-; LE-32BIT-NEXT:    b .LBB10_65
-; LE-32BIT-NEXT:  .LBB10_65:
-; LE-32BIT-NEXT:    bc 12, 4, .LBB10_67
-; LE-32BIT-NEXT:  # %bb.66:
-; LE-32BIT-NEXT:    ori 5, 30, 0
-; LE-32BIT-NEXT:    b .LBB10_67
-; LE-32BIT-NEXT:  .LBB10_67:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB10_69
-; LE-32BIT-NEXT:  # %bb.68:
-; LE-32BIT-NEXT:    ori 4, 9, 0
-; LE-32BIT-NEXT:    b .LBB10_70
-; LE-32BIT-NEXT:  .LBB10_69:
-; LE-32BIT-NEXT:    addi 3, 10, 0
-; LE-32BIT-NEXT:    addi 4, 20, 0
-; LE-32BIT-NEXT:  .LBB10_70:
-; LE-32BIT-NEXT:    bc 12, 4, .LBB10_72
-; LE-32BIT-NEXT:  # %bb.71:
-; LE-32BIT-NEXT:    ori 12, 15, 0
-; LE-32BIT-NEXT:    b .LBB10_72
-; LE-32BIT-NEXT:  .LBB10_72:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB10_73
-; LE-32BIT-NEXT:    b .LBB10_74
-; LE-32BIT-NEXT:  .LBB10_73:
-; LE-32BIT-NEXT:    addi 5, 8, 0
-; LE-32BIT-NEXT:  .LBB10_74:
-; LE-32BIT-NEXT:    stw 3, 4(16)
-; LE-32BIT-NEXT:    lwz 3, 28(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    stw 4, 0(16)
-; LE-32BIT-NEXT:    or 4, 29, 6
-; LE-32BIT-NEXT:    bc 12, 4, .LBB10_76
-; LE-32BIT-NEXT:  # %bb.75:
-; LE-32BIT-NEXT:    ori 4, 24, 0
-; LE-32BIT-NEXT:    b .LBB10_76
-; LE-32BIT-NEXT:  .LBB10_76:
-; LE-32BIT-NEXT:    stw 12, 16(16)
-; LE-32BIT-NEXT:    bc 12, 2, .LBB10_78
-; LE-32BIT-NEXT:  # %bb.77:
-; LE-32BIT-NEXT:    ori 3, 4, 0
-; LE-32BIT-NEXT:    b .LBB10_78
-; LE-32BIT-NEXT:  .LBB10_78:
-; LE-32BIT-NEXT:    stw 5, 12(16)
-; LE-32BIT-NEXT:    stw 3, 8(16)
-; LE-32BIT-NEXT:    lwz 12, 68(1)
-; LE-32BIT-NEXT:    lwz 31, 140(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    mtcrf 32, 12 # cr2
-; LE-32BIT-NEXT:    mtcrf 16, 12 # cr3
-; LE-32BIT-NEXT:    lwz 30, 136(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 29, 132(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 28, 128(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 27, 124(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 26, 120(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 25, 116(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 24, 112(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 23, 108(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 22, 104(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 21, 100(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 20, 96(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 19, 92(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 18, 88(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 17, 84(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 16, 80(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 15, 76(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 14, 72(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    addi 1, 1, 144
+; LE-32BIT-NEXT:    stwu 1, -80(1)
+; LE-32BIT-NEXT:    lwz 7, 0(3)
+; LE-32BIT-NEXT:    li 6, 0
+; LE-32BIT-NEXT:    lwz 8, 4(3)
+; LE-32BIT-NEXT:    lwz 9, 8(3)
+; LE-32BIT-NEXT:    lwz 10, 12(3)
+; LE-32BIT-NEXT:    lwz 11, 16(3)
+; LE-32BIT-NEXT:    lwz 12, 20(3)
+; LE-32BIT-NEXT:    lwz 0, 24(3)
+; LE-32BIT-NEXT:    lwz 3, 28(3)
+; LE-32BIT-NEXT:    lwz 4, 28(4)
+; LE-32BIT-NEXT:    stw 6, 76(1)
+; LE-32BIT-NEXT:    stw 6, 72(1)
+; LE-32BIT-NEXT:    clrlwi 4, 4, 27
+; LE-32BIT-NEXT:    stw 6, 68(1)
+; LE-32BIT-NEXT:    stw 6, 64(1)
+; LE-32BIT-NEXT:    stw 6, 60(1)
+; LE-32BIT-NEXT:    stw 6, 56(1)
+; LE-32BIT-NEXT:    stw 6, 52(1)
+; LE-32BIT-NEXT:    stw 6, 48(1)
+; LE-32BIT-NEXT:    stw 3, 44(1)
+; LE-32BIT-NEXT:    addi 3, 1, 16
+; LE-32BIT-NEXT:    stw 0, 40(1)
+; LE-32BIT-NEXT:    stw 12, 36(1)
+; LE-32BIT-NEXT:    stw 11, 32(1)
+; LE-32BIT-NEXT:    stw 10, 28(1)
+; LE-32BIT-NEXT:    stw 9, 24(1)
+; LE-32BIT-NEXT:    stw 8, 20(1)
+; LE-32BIT-NEXT:    stw 7, 16(1)
+; LE-32BIT-NEXT:    lwzux 3, 4, 3
+; LE-32BIT-NEXT:    lwz 6, 4(4)
+; LE-32BIT-NEXT:    lwz 7, 12(4)
+; LE-32BIT-NEXT:    lwz 8, 8(4)
+; LE-32BIT-NEXT:    lwz 9, 20(4)
+; LE-32BIT-NEXT:    lwz 10, 16(4)
+; LE-32BIT-NEXT:    lwz 11, 28(4)
+; LE-32BIT-NEXT:    lwz 4, 24(4)
+; LE-32BIT-NEXT:    stw 3, 0(5)
+; LE-32BIT-NEXT:    stw 4, 24(5)
+; LE-32BIT-NEXT:    stw 11, 28(5)
+; LE-32BIT-NEXT:    stw 10, 16(5)
+; LE-32BIT-NEXT:    stw 9, 20(5)
+; LE-32BIT-NEXT:    stw 8, 8(5)
+; LE-32BIT-NEXT:    stw 7, 12(5)
+; LE-32BIT-NEXT:    stw 6, 4(5)
+; LE-32BIT-NEXT:    addi 1, 1, 80
 ; LE-32BIT-NEXT:    blr
   %src = load i256, ptr %src.ptr, align 1
   %byteOff = load i256, ptr %byteOff.ptr, align 1
@@ -1776,603 +639,108 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: ashr_32bytes:
 ; LE-64BIT:       # %bb.0:
+; LE-64BIT-NEXT:    ld 7, 16(3)
+; LE-64BIT-NEXT:    ld 8, 24(3)
+; LE-64BIT-NEXT:    lxvd2x 0, 0, 3
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    ld 6, 24(3)
-; LE-64BIT-NEXT:    ld 8, 16(3)
-; LE-64BIT-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    std 26, -48(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    rlwinm. 4, 4, 3, 0, 28
-; LE-64BIT-NEXT:    sradi 9, 6, 63
-; LE-64BIT-NEXT:    subfic 10, 4, 192
-; LE-64BIT-NEXT:    addi 11, 4, -128
-; LE-64BIT-NEXT:    addi 30, 4, -192
-; LE-64BIT-NEXT:    sld 10, 6, 10
-; LE-64BIT-NEXT:    srd 29, 8, 11
-; LE-64BIT-NEXT:    subfic 28, 4, 64
-; LE-64BIT-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    ld 7, 0(3)
-; LE-64BIT-NEXT:    ld 3, 8(3)
-; LE-64BIT-NEXT:    srd 0, 8, 4
-; LE-64BIT-NEXT:    srad 27, 6, 30
-; LE-64BIT-NEXT:    or 10, 29, 10
-; LE-64BIT-NEXT:    std 25, -56(1) # 8-byte Folded Spill
-; LE-64BIT-NEXT:    cmpwi 1, 30, 1
-; LE-64BIT-NEXT:    sld 26, 6, 28
-; LE-64BIT-NEXT:    addi 30, 4, -64
-; LE-64BIT-NEXT:    isel 10, 10, 27, 4
-; LE-64BIT-NEXT:    or 27, 0, 26
-; LE-64BIT-NEXT:    subfic 0, 4, 128
-; LE-64BIT-NEXT:    srd 12, 7, 4
-; LE-64BIT-NEXT:    sld 26, 3, 28
-; LE-64BIT-NEXT:    subfic 25, 0, 64
-; LE-64BIT-NEXT:    srad 29, 6, 30
-; LE-64BIT-NEXT:    cmpwi 1, 30, 1
-; LE-64BIT-NEXT:    or 12, 12, 26
-; LE-64BIT-NEXT:    srd 30, 3, 30
-; LE-64BIT-NEXT:    sld 28, 8, 28
-; LE-64BIT-NEXT:    srd 26, 8, 25
-; LE-64BIT-NEXT:    sld 8, 8, 0
-; LE-64BIT-NEXT:    or 12, 12, 30
-; LE-64BIT-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    sld 0, 6, 0
-; LE-64BIT-NEXT:    isel 29, 27, 29, 4
-; LE-64BIT-NEXT:    or 8, 12, 8
-; LE-64BIT-NEXT:    or 0, 0, 26
-; LE-64BIT-NEXT:    cmplwi 1, 4, 128
-; LE-64BIT-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    srd 27, 3, 4
-; LE-64BIT-NEXT:    or 0, 0, 28
-; LE-64BIT-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    srad 11, 6, 11
-; LE-64BIT-NEXT:    isel 8, 8, 10, 4
-; LE-64BIT-NEXT:    or 10, 27, 0
-; LE-64BIT-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    iseleq 7, 7, 8
-; LE-64BIT-NEXT:    srad 4, 6, 4
-; LE-64BIT-NEXT:    isel 8, 10, 11, 4
-; LE-64BIT-NEXT:    std 7, 0(5)
-; LE-64BIT-NEXT:    isel 12, 29, 9, 4
-; LE-64BIT-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; LE-64BIT-NEXT:    iseleq 3, 3, 8
-; LE-64BIT-NEXT:    std 12, 16(5)
-; LE-64BIT-NEXT:    isel 4, 4, 9, 4
-; LE-64BIT-NEXT:    std 3, 8(5)
-; LE-64BIT-NEXT:    std 4, 24(5)
+; LE-64BIT-NEXT:    addi 6, 1, -64
+; LE-64BIT-NEXT:    sradi 3, 8, 63
+; LE-64BIT-NEXT:    clrldi 4, 4, 59
+; LE-64BIT-NEXT:    std 8, 24(6)
+; LE-64BIT-NEXT:    std 7, 16(6)
+; LE-64BIT-NEXT:    std 3, 56(6)
+; LE-64BIT-NEXT:    std 3, 48(6)
+; LE-64BIT-NEXT:    li 7, 16
+; LE-64BIT-NEXT:    std 3, 40(6)
+; LE-64BIT-NEXT:    std 3, 32(6)
+; LE-64BIT-NEXT:    add 3, 6, 4
+; LE-64BIT-NEXT:    stxvd2x 0, 0, 6
+; LE-64BIT-NEXT:    lxvd2x 0, 6, 4
+; LE-64BIT-NEXT:    lxvd2x 1, 3, 7
+; LE-64BIT-NEXT:    stxvd2x 1, 5, 7
+; LE-64BIT-NEXT:    stxvd2x 0, 0, 5
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: ashr_32bytes:
 ; BE:       # %bb.0:
-; BE-NEXT:    lwz 4, 28(4)
-; BE-NEXT:    ld 6, 16(3)
-; BE-NEXT:    ld 7, 24(3)
+; BE-NEXT:    ld 7, 0(3)
 ; BE-NEXT:    ld 8, 8(3)
-; BE-NEXT:    ld 3, 0(3)
-; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; BE-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; BE-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; BE-NEXT:    rlwinm. 4, 4, 3, 0, 28
-; BE-NEXT:    subfic 9, 4, 192
-; BE-NEXT:    addi 10, 4, -128
-; BE-NEXT:    addi 11, 4, -192
-; BE-NEXT:    subfic 0, 4, 64
-; BE-NEXT:    sld 9, 3, 9
-; BE-NEXT:    srd 27, 8, 10
-; BE-NEXT:    srd 12, 7, 4
-; BE-NEXT:    subfic 29, 4, 128
-; BE-NEXT:    cmpwi 1, 11, 1
-; BE-NEXT:    srad 11, 3, 11
-; BE-NEXT:    or 9, 27, 9
-; BE-NEXT:    sld 27, 6, 0
-; BE-NEXT:    addi 30, 4, -64
-; BE-NEXT:    srd 28, 8, 4
-; BE-NEXT:    or 12, 12, 27
-; BE-NEXT:    sld 27, 3, 0
-; BE-NEXT:    bc 12, 4, .LBB11_2
-; BE-NEXT:  # %bb.1:
-; BE-NEXT:    ori 9, 11, 0
-; BE-NEXT:    b .LBB11_2
-; BE-NEXT:  .LBB11_2:
-; BE-NEXT:    subfic 11, 29, 64
-; BE-NEXT:    or 28, 28, 27
-; BE-NEXT:    srd 27, 6, 30
-; BE-NEXT:    sld 0, 8, 0
-; BE-NEXT:    srd 11, 8, 11
-; BE-NEXT:    sld 8, 8, 29
-; BE-NEXT:    sld 29, 3, 29
-; BE-NEXT:    cmplwi 1, 4, 128
-; BE-NEXT:    or 12, 12, 27
-; BE-NEXT:    or 11, 29, 11
-; BE-NEXT:    or 8, 12, 8
-; BE-NEXT:    srd 12, 6, 4
-; BE-NEXT:    or 11, 11, 0
-; BE-NEXT:    srad 10, 3, 10
-; BE-NEXT:    srad 29, 3, 30
-; BE-NEXT:    or 11, 12, 11
-; BE-NEXT:    cmpwi 5, 30, 1
-; BE-NEXT:    bc 12, 20, .LBB11_4
-; BE-NEXT:  # %bb.3:
-; BE-NEXT:    ori 12, 29, 0
-; BE-NEXT:    b .LBB11_5
-; BE-NEXT:  .LBB11_4:
-; BE-NEXT:    addi 12, 28, 0
-; BE-NEXT:  .LBB11_5:
-; BE-NEXT:    bc 12, 4, .LBB11_7
-; BE-NEXT:  # %bb.6:
-; BE-NEXT:    ori 8, 9, 0
-; BE-NEXT:    ori 9, 10, 0
-; BE-NEXT:    b .LBB11_8
-; BE-NEXT:  .LBB11_7:
-; BE-NEXT:    addi 9, 11, 0
-; BE-NEXT:  .LBB11_8:
-; BE-NEXT:    sradi 10, 3, 63
-; BE-NEXT:    srad 3, 3, 4
-; BE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; BE-NEXT:    bc 12, 2, .LBB11_10
-; BE-NEXT:  # %bb.9:
-; BE-NEXT:    ori 4, 8, 0
-; BE-NEXT:    ori 6, 9, 0
-; BE-NEXT:    b .LBB11_11
-; BE-NEXT:  .LBB11_10:
-; BE-NEXT:    addi 4, 7, 0
-; BE-NEXT:  .LBB11_11:
-; BE-NEXT:    bc 12, 4, .LBB11_13
-; BE-NEXT:  # %bb.12:
-; BE-NEXT:    ori 7, 10, 0
-; BE-NEXT:    ori 3, 10, 0
-; BE-NEXT:    b .LBB11_14
-; BE-NEXT:  .LBB11_13:
-; BE-NEXT:    addi 7, 12, 0
-; BE-NEXT:  .LBB11_14:
+; BE-NEXT:    ld 9, 16(3)
+; BE-NEXT:    ld 3, 24(3)
+; BE-NEXT:    lwz 4, 28(4)
+; BE-NEXT:    addi 6, 1, -64
+; BE-NEXT:    std 3, 56(6)
+; BE-NEXT:    sradi 3, 7, 63
+; BE-NEXT:    clrlwi 4, 4, 27
+; BE-NEXT:    std 3, 24(6)
+; BE-NEXT:    std 3, 16(6)
+; BE-NEXT:    std 3, 8(6)
+; BE-NEXT:    std 3, -64(1)
+; BE-NEXT:    neg 3, 4
+; BE-NEXT:    std 9, 48(6)
+; BE-NEXT:    std 8, 40(6)
+; BE-NEXT:    std 7, 32(6)
+; BE-NEXT:    extsw 3, 3
+; BE-NEXT:    addi 4, 1, -32
+; BE-NEXT:    ldux 3, 4, 3
+; BE-NEXT:    ld 6, 8(4)
+; BE-NEXT:    ld 7, 24(4)
+; BE-NEXT:    ld 4, 16(4)
 ; BE-NEXT:    std 3, 0(5)
-; BE-NEXT:    std 7, 8(5)
-; BE-NEXT:    std 4, 24(5)
-; BE-NEXT:    std 6, 16(5)
+; BE-NEXT:    std 4, 16(5)
+; BE-NEXT:    std 7, 24(5)
+; BE-NEXT:    std 6, 8(5)
 ; BE-NEXT:    blr
 ;
 ; LE-32BIT-LABEL: ashr_32bytes:
 ; LE-32BIT:       # %bb.0:
-; LE-32BIT-NEXT:    stwu 1, -144(1)
-; LE-32BIT-NEXT:    mfcr 12
-; LE-32BIT-NEXT:    stw 14, 72(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 15, 76(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 16, 80(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 17, 84(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 18, 88(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 19, 92(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 20, 96(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 21, 100(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 22, 104(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 23, 108(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 24, 112(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 25, 116(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 26, 120(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 27, 124(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 28, 128(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 29, 132(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 30, 136(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 31, 140(1) # 4-byte Folded Spill
+; LE-32BIT-NEXT:    stwu 1, -80(1)
+; LE-32BIT-NEXT:    lwz 7, 0(3)
+; LE-32BIT-NEXT:    addi 6, 1, 48
+; LE-32BIT-NEXT:    lwz 8, 4(3)
+; LE-32BIT-NEXT:    lwz 9, 8(3)
+; LE-32BIT-NEXT:    lwz 10, 12(3)
+; LE-32BIT-NEXT:    lwz 11, 16(3)
+; LE-32BIT-NEXT:    lwz 12, 20(3)
+; LE-32BIT-NEXT:    lwz 0, 24(3)
+; LE-32BIT-NEXT:    lwz 3, 28(3)
+; LE-32BIT-NEXT:    lwz 4, 28(4)
+; LE-32BIT-NEXT:    stw 3, 76(1)
+; LE-32BIT-NEXT:    srawi 3, 7, 31
+; LE-32BIT-NEXT:    clrlwi 4, 4, 27
+; LE-32BIT-NEXT:    stw 0, 72(1)
 ; LE-32BIT-NEXT:    stw 12, 68(1)
-; LE-32BIT-NEXT:    lwz 0, 28(4)
-; LE-32BIT-NEXT:    lwz 29, 4(3)
-; LE-32BIT-NEXT:    lwz 12, 0(3)
-; LE-32BIT-NEXT:    rlwinm. 30, 0, 3, 0, 28
-; LE-32BIT-NEXT:    stw 5, 64(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    subfic 23, 30, 224
-; LE-32BIT-NEXT:    lwz 5, 24(3)
-; LE-32BIT-NEXT:    addi 21, 30, -224
-; LE-32BIT-NEXT:    lwz 8, 28(3)
-; LE-32BIT-NEXT:    subfic 4, 30, 160
-; LE-32BIT-NEXT:    lwz 10, 20(3)
-; LE-32BIT-NEXT:    addi 11, 30, -128
-; LE-32BIT-NEXT:    lwz 9, 16(3)
-; LE-32BIT-NEXT:    subfic 25, 30, 96
-; LE-32BIT-NEXT:    lwz 26, 12(3)
-; LE-32BIT-NEXT:    addi 0, 30, -64
-; LE-32BIT-NEXT:    lwz 7, 8(3)
-; LE-32BIT-NEXT:    addi 3, 30, -192
-; LE-32BIT-NEXT:    subfic 27, 30, 32
-; LE-32BIT-NEXT:    slw 23, 12, 23
-; LE-32BIT-NEXT:    srw 16, 29, 3
-; LE-32BIT-NEXT:    stw 3, 56(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 20, 8, 30
-; LE-32BIT-NEXT:    sraw 15, 12, 21
-; LE-32BIT-NEXT:    cmpwi 1, 21, 1
-; LE-32BIT-NEXT:    slw 21, 7, 4
-; LE-32BIT-NEXT:    srw 14, 26, 11
-; LE-32BIT-NEXT:    slw 31, 9, 25
-; LE-32BIT-NEXT:    srw 3, 10, 0
-; LE-32BIT-NEXT:    or 23, 16, 23
-; LE-32BIT-NEXT:    slw 16, 5, 27
-; LE-32BIT-NEXT:    srw 19, 10, 30
-; LE-32BIT-NEXT:    or 21, 14, 21
-; LE-32BIT-NEXT:    slw 14, 9, 27
-; LE-32BIT-NEXT:    or 3, 3, 31
-; LE-32BIT-NEXT:    slw 31, 12, 4
-; LE-32BIT-NEXT:    or 20, 20, 16
-; LE-32BIT-NEXT:    srw 16, 29, 11
-; LE-32BIT-NEXT:    or 19, 19, 14
-; LE-32BIT-NEXT:    slw 14, 12, 25
-; LE-32BIT-NEXT:    or 16, 16, 31
-; LE-32BIT-NEXT:    srw 31, 29, 0
-; LE-32BIT-NEXT:    addi 24, 30, -160
-; LE-32BIT-NEXT:    srw 18, 26, 30
-; LE-32BIT-NEXT:    or 14, 31, 14
-; LE-32BIT-NEXT:    slw 31, 7, 27
-; LE-32BIT-NEXT:    addi 28, 30, -96
-; LE-32BIT-NEXT:    srw 17, 29, 30
-; LE-32BIT-NEXT:    stw 4, 32(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 18, 18, 31
-; LE-32BIT-NEXT:    slw 31, 12, 27
-; LE-32BIT-NEXT:    bc 12, 4, .LBB11_2
-; LE-32BIT-NEXT:  # %bb.1:
-; LE-32BIT-NEXT:    ori 4, 15, 0
-; LE-32BIT-NEXT:    b .LBB11_3
-; LE-32BIT-NEXT:  .LBB11_2:
-; LE-32BIT-NEXT:    addi 4, 23, 0
-; LE-32BIT-NEXT:  .LBB11_3:
-; LE-32BIT-NEXT:    srw 15, 7, 24
-; LE-32BIT-NEXT:    or 17, 17, 31
-; LE-32BIT-NEXT:    addi 31, 30, -32
-; LE-32BIT-NEXT:    or 21, 21, 15
-; LE-32BIT-NEXT:    srw 15, 9, 28
-; LE-32BIT-NEXT:    or 3, 3, 15
-; LE-32BIT-NEXT:    srw 15, 5, 31
-; LE-32BIT-NEXT:    or 20, 20, 15
-; LE-32BIT-NEXT:    srw 15, 9, 31
-; LE-32BIT-NEXT:    stw 3, 28(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    or 3, 19, 15
-; LE-32BIT-NEXT:    subfic 15, 30, 64
-; LE-32BIT-NEXT:    stw 4, 24(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    cmpwi 1, 24, 1
-; LE-32BIT-NEXT:    sraw 24, 12, 24
-; LE-32BIT-NEXT:    subfic 4, 15, 32
-; LE-32BIT-NEXT:    stw 0, 52(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 0, 26, 4
-; LE-32BIT-NEXT:    stw 3, 48(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    bc 12, 4, .LBB11_5
-; LE-32BIT-NEXT:  # %bb.4:
-; LE-32BIT-NEXT:    ori 3, 24, 0
-; LE-32BIT-NEXT:    b .LBB11_6
-; LE-32BIT-NEXT:  .LBB11_5:
-; LE-32BIT-NEXT:    addi 3, 16, 0
-; LE-32BIT-NEXT:  .LBB11_6:
-; LE-32BIT-NEXT:    slw 16, 7, 15
-; LE-32BIT-NEXT:    or 0, 16, 0
-; LE-32BIT-NEXT:    subfic 16, 30, 128
-; LE-32BIT-NEXT:    stw 5, 36(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    subfic 5, 16, 32
-; LE-32BIT-NEXT:    stw 3, 44(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    slw 3, 12, 16
-; LE-32BIT-NEXT:    srw 22, 29, 5
-; LE-32BIT-NEXT:    stw 8, 60(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    mr 8, 10
-; LE-32BIT-NEXT:    mr 10, 27
-; LE-32BIT-NEXT:    or 23, 3, 22
-; LE-32BIT-NEXT:    slw 22, 7, 16
-; LE-32BIT-NEXT:    srw 27, 26, 5
-; LE-32BIT-NEXT:    stw 11, 40(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    mr 6, 26
-; LE-32BIT-NEXT:    or 11, 22, 27
-; LE-32BIT-NEXT:    slw 22, 9, 15
-; LE-32BIT-NEXT:    srw 26, 8, 4
-; LE-32BIT-NEXT:    subfic 3, 30, 192
-; LE-32BIT-NEXT:    or 26, 22, 26
-; LE-32BIT-NEXT:    cmpwi 1, 28, 1
-; LE-32BIT-NEXT:    sraw 22, 12, 28
-; LE-32BIT-NEXT:    subfic 19, 3, 32
-; LE-32BIT-NEXT:    srw 4, 29, 4
-; LE-32BIT-NEXT:    slw 28, 12, 15
-; LE-32BIT-NEXT:    stw 9, 20(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    srw 19, 29, 19
-; LE-32BIT-NEXT:    slw 24, 12, 3
-; LE-32BIT-NEXT:    or 9, 28, 4
-; LE-32BIT-NEXT:    lwz 4, 64(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 24, 24, 19
-; LE-32BIT-NEXT:    bc 12, 4, .LBB11_7
-; LE-32BIT-NEXT:    b .LBB11_8
-; LE-32BIT-NEXT:  .LBB11_7:
-; LE-32BIT-NEXT:    addi 22, 14, 0
-; LE-32BIT-NEXT:  .LBB11_8:
-; LE-32BIT-NEXT:    srw 19, 7, 31
-; LE-32BIT-NEXT:    cmplwi 5, 30, 64
-; LE-32BIT-NEXT:    cmplwi 1, 30, 128
-; LE-32BIT-NEXT:    slw 3, 29, 3
-; LE-32BIT-NEXT:    or 19, 18, 19
-; LE-32BIT-NEXT:    cmpwi 6, 31, 1
-; LE-32BIT-NEXT:    sraw 18, 12, 31
-; LE-32BIT-NEXT:    crand 21, 4, 20
-; LE-32BIT-NEXT:    srawi 14, 12, 31
-; LE-32BIT-NEXT:    sraw 31, 12, 30
-; LE-32BIT-NEXT:    or 3, 21, 3
-; LE-32BIT-NEXT:    slw 21, 8, 15
-; LE-32BIT-NEXT:    bc 12, 24, .LBB11_10
-; LE-32BIT-NEXT:  # %bb.9:
-; LE-32BIT-NEXT:    ori 28, 18, 0
-; LE-32BIT-NEXT:    b .LBB11_11
-; LE-32BIT-NEXT:  .LBB11_10:
-; LE-32BIT-NEXT:    addi 28, 17, 0
-; LE-32BIT-NEXT:  .LBB11_11:
-; LE-32BIT-NEXT:    bc 12, 21, .LBB11_13
-; LE-32BIT-NEXT:  # %bb.12:
-; LE-32BIT-NEXT:    ori 18, 14, 0
-; LE-32BIT-NEXT:    b .LBB11_14
-; LE-32BIT-NEXT:  .LBB11_13:
-; LE-32BIT-NEXT:    addi 18, 31, 0
-; LE-32BIT-NEXT:  .LBB11_14:
-; LE-32BIT-NEXT:    or 21, 20, 21
-; LE-32BIT-NEXT:    subfic 20, 16, 64
-; LE-32BIT-NEXT:    stw 18, 0(4)
-; LE-32BIT-NEXT:    subfic 18, 20, 32
-; LE-32BIT-NEXT:    slw 18, 7, 18
-; LE-32BIT-NEXT:    srw 17, 6, 20
-; LE-32BIT-NEXT:    or 18, 17, 18
-; LE-32BIT-NEXT:    slw 17, 6, 10
-; LE-32BIT-NEXT:    or 27, 0, 17
-; LE-32BIT-NEXT:    slw 0, 29, 25
-; LE-32BIT-NEXT:    mr 31, 8
-; LE-32BIT-NEXT:    or 8, 23, 0
-; LE-32BIT-NEXT:    slw 0, 6, 25
-; LE-32BIT-NEXT:    or 11, 11, 0
-; LE-32BIT-NEXT:    stw 11, 16(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    slw 0, 31, 10
-; LE-32BIT-NEXT:    lwz 11, 32(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 0, 26, 0
-; LE-32BIT-NEXT:    slw 25, 29, 10
-; LE-32BIT-NEXT:    or 23, 9, 25
-; LE-32BIT-NEXT:    slw 26, 29, 11
-; LE-32BIT-NEXT:    or 26, 24, 26
-; LE-32BIT-NEXT:    slw 24, 29, 15
-; LE-32BIT-NEXT:    or 24, 19, 24
-; LE-32BIT-NEXT:    lwz 19, 40(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    srw 25, 7, 20
-; LE-32BIT-NEXT:    lwz 9, 24(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 8, 8, 25
-; LE-32BIT-NEXT:    cmplwi 6, 19, 64
-; LE-32BIT-NEXT:    srw 5, 7, 5
-; LE-32BIT-NEXT:    bc 12, 24, .LBB11_16
-; LE-32BIT-NEXT:  # %bb.15:
-; LE-32BIT-NEXT:    ori 3, 9, 0
-; LE-32BIT-NEXT:    b .LBB11_16
-; LE-32BIT-NEXT:  .LBB11_16:
-; LE-32BIT-NEXT:    lwz 9, 28(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 5, 18, 5
-; LE-32BIT-NEXT:    lwz 17, 20(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    mr 18, 4
-; LE-32BIT-NEXT:    bc 12, 20, .LBB11_18
-; LE-32BIT-NEXT:  # %bb.17:
-; LE-32BIT-NEXT:    ori 10, 9, 0
-; LE-32BIT-NEXT:    b .LBB11_19
-; LE-32BIT-NEXT:  .LBB11_18:
-; LE-32BIT-NEXT:    addi 10, 21, 0
-; LE-32BIT-NEXT:  .LBB11_19:
-; LE-32BIT-NEXT:    lwz 9, 36(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 20, .LBB11_21
-; LE-32BIT-NEXT:  # %bb.20:
-; LE-32BIT-NEXT:    ori 24, 22, 0
-; LE-32BIT-NEXT:    b .LBB11_21
-; LE-32BIT-NEXT:  .LBB11_21:
-; LE-32BIT-NEXT:    cmplwi 7, 19, 0
-; LE-32BIT-NEXT:    cmplwi 2, 16, 64
-; LE-32BIT-NEXT:    bc 12, 30, .LBB11_22
-; LE-32BIT-NEXT:    b .LBB11_23
-; LE-32BIT-NEXT:  .LBB11_22:
-; LE-32BIT-NEXT:    addi 3, 6, 0
-; LE-32BIT-NEXT:  .LBB11_23:
-; LE-32BIT-NEXT:    cmplwi 3, 16, 0
-; LE-32BIT-NEXT:    srw 25, 9, 30
-; LE-32BIT-NEXT:    or 25, 25, 0
-; LE-32BIT-NEXT:    srw 0, 7, 19
-; LE-32BIT-NEXT:    or 26, 0, 26
-; LE-32BIT-NEXT:    srw 0, 7, 30
-; LE-32BIT-NEXT:    or 11, 0, 23
-; LE-32BIT-NEXT:    bc 12, 21, .LBB11_25
-; LE-32BIT-NEXT:  # %bb.24:
-; LE-32BIT-NEXT:    ori 0, 14, 0
-; LE-32BIT-NEXT:    b .LBB11_26
-; LE-32BIT-NEXT:  .LBB11_25:
-; LE-32BIT-NEXT:    addi 0, 28, 0
-; LE-32BIT-NEXT:  .LBB11_26:
-; LE-32BIT-NEXT:    slw 28, 6, 16
-; LE-32BIT-NEXT:    stw 0, 4(4)
-; LE-32BIT-NEXT:    slw 0, 29, 16
-; LE-32BIT-NEXT:    lwz 4, 52(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    or 5, 0, 5
-; LE-32BIT-NEXT:    lwz 0, 56(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    slw 23, 6, 15
-; LE-32BIT-NEXT:    srw 22, 17, 4
-; LE-32BIT-NEXT:    li 15, 0
-; LE-32BIT-NEXT:    sraw 21, 12, 0
-; LE-32BIT-NEXT:    bc 12, 8, .LBB11_28
-; LE-32BIT-NEXT:  # %bb.27:
-; LE-32BIT-NEXT:    ori 0, 15, 0
-; LE-32BIT-NEXT:    b .LBB11_29
-; LE-32BIT-NEXT:  .LBB11_28:
-; LE-32BIT-NEXT:    addi 0, 28, 0
-; LE-32BIT-NEXT:  .LBB11_29:
-; LE-32BIT-NEXT:    bc 12, 20, .LBB11_31
-; LE-32BIT-NEXT:  # %bb.30:
-; LE-32BIT-NEXT:    ori 28, 22, 0
-; LE-32BIT-NEXT:    b .LBB11_32
-; LE-32BIT-NEXT:  .LBB11_31:
-; LE-32BIT-NEXT:    addi 28, 25, 0
-; LE-32BIT-NEXT:  .LBB11_32:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB11_34
-; LE-32BIT-NEXT:  # %bb.33:
-; LE-32BIT-NEXT:    ori 22, 24, 0
-; LE-32BIT-NEXT:    b .LBB11_35
-; LE-32BIT-NEXT:  .LBB11_34:
-; LE-32BIT-NEXT:    addi 22, 6, 0
-; LE-32BIT-NEXT:  .LBB11_35:
-; LE-32BIT-NEXT:    lwz 6, 48(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    sraw 20, 12, 4
-; LE-32BIT-NEXT:    lwz 16, 60(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 20, .LBB11_37
-; LE-32BIT-NEXT:  # %bb.36:
-; LE-32BIT-NEXT:    ori 4, 20, 0
-; LE-32BIT-NEXT:    b .LBB11_38
-; LE-32BIT-NEXT:  .LBB11_37:
-; LE-32BIT-NEXT:    addi 4, 11, 0
-; LE-32BIT-NEXT:  .LBB11_38:
-; LE-32BIT-NEXT:    srw 30, 17, 30
-; LE-32BIT-NEXT:    bc 12, 20, .LBB11_40
-; LE-32BIT-NEXT:  # %bb.39:
-; LE-32BIT-NEXT:    ori 25, 15, 0
-; LE-32BIT-NEXT:    b .LBB11_41
-; LE-32BIT-NEXT:  .LBB11_40:
-; LE-32BIT-NEXT:    addi 25, 6, 0
-; LE-32BIT-NEXT:  .LBB11_41:
-; LE-32BIT-NEXT:    lwz 6, 44(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 8, .LBB11_43
-; LE-32BIT-NEXT:  # %bb.42:
-; LE-32BIT-NEXT:    ori 8, 27, 0
-; LE-32BIT-NEXT:    ori 5, 23, 0
-; LE-32BIT-NEXT:    b .LBB11_43
-; LE-32BIT-NEXT:  .LBB11_43:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB11_44
-; LE-32BIT-NEXT:    b .LBB11_45
-; LE-32BIT-NEXT:  .LBB11_44:
-; LE-32BIT-NEXT:    addi 4, 7, 0
-; LE-32BIT-NEXT:  .LBB11_45:
-; LE-32BIT-NEXT:    sraw 19, 12, 19
-; LE-32BIT-NEXT:    bc 12, 2, .LBB11_46
-; LE-32BIT-NEXT:    b .LBB11_47
-; LE-32BIT-NEXT:  .LBB11_46:
-; LE-32BIT-NEXT:    addi 10, 16, 0
-; LE-32BIT-NEXT:  .LBB11_47:
-; LE-32BIT-NEXT:    bc 12, 24, .LBB11_49
-; LE-32BIT-NEXT:  # %bb.48:
-; LE-32BIT-NEXT:    ori 26, 21, 0
-; LE-32BIT-NEXT:    b .LBB11_49
-; LE-32BIT-NEXT:  .LBB11_49:
-; LE-32BIT-NEXT:    bc 12, 14, .LBB11_50
-; LE-32BIT-NEXT:    b .LBB11_51
-; LE-32BIT-NEXT:  .LBB11_50:
-; LE-32BIT-NEXT:    addi 5, 29, 0
-; LE-32BIT-NEXT:  .LBB11_51:
-; LE-32BIT-NEXT:    bc 12, 4, .LBB11_53
-; LE-32BIT-NEXT:  # %bb.52:
-; LE-32BIT-NEXT:    ori 4, 14, 0
-; LE-32BIT-NEXT:    b .LBB11_53
-; LE-32BIT-NEXT:  .LBB11_53:
-; LE-32BIT-NEXT:    or 10, 10, 0
-; LE-32BIT-NEXT:    bc 12, 24, .LBB11_55
-; LE-32BIT-NEXT:  # %bb.54:
-; LE-32BIT-NEXT:    ori 24, 14, 0
-; LE-32BIT-NEXT:    b .LBB11_56
-; LE-32BIT-NEXT:  .LBB11_55:
-; LE-32BIT-NEXT:    addi 24, 6, 0
-; LE-32BIT-NEXT:  .LBB11_56:
-; LE-32BIT-NEXT:    lwz 6, 16(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    bc 12, 4, .LBB11_57
-; LE-32BIT-NEXT:    b .LBB11_58
-; LE-32BIT-NEXT:  .LBB11_57:
-; LE-32BIT-NEXT:    addi 3, 10, 0
-; LE-32BIT-NEXT:  .LBB11_58:
-; LE-32BIT-NEXT:    bc 12, 20, .LBB11_60
-; LE-32BIT-NEXT:  # %bb.59:
-; LE-32BIT-NEXT:    ori 0, 15, 0
-; LE-32BIT-NEXT:    b .LBB11_61
-; LE-32BIT-NEXT:  .LBB11_60:
-; LE-32BIT-NEXT:    addi 0, 30, 0
-; LE-32BIT-NEXT:  .LBB11_61:
-; LE-32BIT-NEXT:    bc 12, 24, .LBB11_63
-; LE-32BIT-NEXT:  # %bb.62:
-; LE-32BIT-NEXT:    ori 30, 14, 0
-; LE-32BIT-NEXT:    b .LBB11_64
-; LE-32BIT-NEXT:  .LBB11_63:
-; LE-32BIT-NEXT:    addi 30, 19, 0
-; LE-32BIT-NEXT:  .LBB11_64:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB11_65
-; LE-32BIT-NEXT:    b .LBB11_66
-; LE-32BIT-NEXT:  .LBB11_65:
-; LE-32BIT-NEXT:    addi 3, 16, 0
-; LE-32BIT-NEXT:  .LBB11_66:
-; LE-32BIT-NEXT:    stw 4, 8(18)
-; LE-32BIT-NEXT:    bc 12, 8, .LBB11_68
-; LE-32BIT-NEXT:  # %bb.67:
-; LE-32BIT-NEXT:    ori 27, 15, 0
-; LE-32BIT-NEXT:    b .LBB11_69
-; LE-32BIT-NEXT:  .LBB11_68:
-; LE-32BIT-NEXT:    addi 27, 6, 0
-; LE-32BIT-NEXT:  .LBB11_69:
-; LE-32BIT-NEXT:    bc 12, 14, .LBB11_71
-; LE-32BIT-NEXT:  # %bb.70:
-; LE-32BIT-NEXT:    ori 6, 8, 0
-; LE-32BIT-NEXT:    b .LBB11_72
-; LE-32BIT-NEXT:  .LBB11_71:
-; LE-32BIT-NEXT:    addi 6, 12, 0
-; LE-32BIT-NEXT:  .LBB11_72:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB11_74
-; LE-32BIT-NEXT:  # %bb.73:
-; LE-32BIT-NEXT:    ori 8, 28, 0
-; LE-32BIT-NEXT:    b .LBB11_75
-; LE-32BIT-NEXT:  .LBB11_74:
-; LE-32BIT-NEXT:    addi 8, 9, 0
-; LE-32BIT-NEXT:  .LBB11_75:
-; LE-32BIT-NEXT:    bc 12, 30, .LBB11_77
-; LE-32BIT-NEXT:  # %bb.76:
-; LE-32BIT-NEXT:    ori 28, 26, 0
-; LE-32BIT-NEXT:    b .LBB11_78
-; LE-32BIT-NEXT:  .LBB11_77:
-; LE-32BIT-NEXT:    addi 28, 7, 0
-; LE-32BIT-NEXT:  .LBB11_78:
-; LE-32BIT-NEXT:    stw 3, 28(18)
-; LE-32BIT-NEXT:    or 7, 8, 27
-; LE-32BIT-NEXT:    or 4, 0, 6
-; LE-32BIT-NEXT:    or 3, 25, 5
-; LE-32BIT-NEXT:    bc 12, 4, .LBB11_80
-; LE-32BIT-NEXT:  # %bb.79:
-; LE-32BIT-NEXT:    ori 6, 28, 0
-; LE-32BIT-NEXT:    ori 4, 30, 0
-; LE-32BIT-NEXT:    ori 3, 24, 0
-; LE-32BIT-NEXT:    ori 12, 14, 0
-; LE-32BIT-NEXT:    b .LBB11_81
-; LE-32BIT-NEXT:  .LBB11_80:
-; LE-32BIT-NEXT:    addi 6, 7, 0
-; LE-32BIT-NEXT:    addi 12, 22, 0
-; LE-32BIT-NEXT:  .LBB11_81:
-; LE-32BIT-NEXT:    bc 12, 2, .LBB11_83
-; LE-32BIT-NEXT:  # %bb.82:
-; LE-32BIT-NEXT:    ori 5, 6, 0
-; LE-32BIT-NEXT:    b .LBB11_84
-; LE-32BIT-NEXT:  .LBB11_83:
-; LE-32BIT-NEXT:    addi 5, 9, 0
-; LE-32BIT-NEXT:    addi 4, 17, 0
-; LE-32BIT-NEXT:    addi 3, 31, 0
-; LE-32BIT-NEXT:  .LBB11_84:
-; LE-32BIT-NEXT:    stw 12, 12(18)
-; LE-32BIT-NEXT:    stw 5, 24(18)
-; LE-32BIT-NEXT:    stw 4, 16(18)
-; LE-32BIT-NEXT:    stw 3, 20(18)
-; LE-32BIT-NEXT:    lwz 12, 68(1)
-; LE-32BIT-NEXT:    lwz 31, 140(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    mtcrf 32, 12 # cr2
-; LE-32BIT-NEXT:    mtcrf 16, 12 # cr3
-; LE-32BIT-NEXT:    lwz 30, 136(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 29, 132(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 28, 128(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 27, 124(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 26, 120(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 25, 116(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 24, 112(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 23, 108(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 22, 104(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 21, 100(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 20, 96(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 19, 92(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 18, 88(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 17, 84(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 16, 80(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 15, 76(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    lwz 14, 72(1) # 4-byte Folded Reload
-; LE-32BIT-NEXT:    addi 1, 1, 144
+; LE-32BIT-NEXT:    stw 11, 64(1)
+; LE-32BIT-NEXT:    stw 10, 60(1)
+; LE-32BIT-NEXT:    stw 9, 56(1)
+; LE-32BIT-NEXT:    stw 8, 52(1)
+; LE-32BIT-NEXT:    stw 7, 48(1)
+; LE-32BIT-NEXT:    stw 3, 44(1)
+; LE-32BIT-NEXT:    stw 3, 40(1)
+; LE-32BIT-NEXT:    stw 3, 36(1)
+; LE-32BIT-NEXT:    stw 3, 32(1)
+; LE-32BIT-NEXT:    stw 3, 28(1)
+; LE-32BIT-NEXT:    stw 3, 24(1)
+; LE-32BIT-NEXT:    stw 3, 20(1)
+; LE-32BIT-NEXT:    stw 3, 16(1)
+; LE-32BIT-NEXT:    sub 3, 6, 4
+; LE-32BIT-NEXT:    lwz 4, 4(3)
+; LE-32BIT-NEXT:    lwz 6, 0(3)
+; LE-32BIT-NEXT:    lwz 7, 12(3)
+; LE-32BIT-NEXT:    lwz 8, 8(3)
+; LE-32BIT-NEXT:    lwz 9, 20(3)
+; LE-32BIT-NEXT:    lwz 10, 16(3)
+; LE-32BIT-NEXT:    lwz 11, 24(3)
+; LE-32BIT-NEXT:    lwz 3, 28(3)
+; LE-32BIT-NEXT:    stw 11, 24(5)
+; LE-32BIT-NEXT:    stw 3, 28(5)
+; LE-32BIT-NEXT:    stw 10, 16(5)
+; LE-32BIT-NEXT:    stw 9, 20(5)
+; LE-32BIT-NEXT:    stw 8, 8(5)
+; LE-32BIT-NEXT:    stw 7, 12(5)
+; LE-32BIT-NEXT:    stw 6, 0(5)
+; LE-32BIT-NEXT:    stw 4, 4(5)
+; LE-32BIT-NEXT:    addi 1, 1, 80
 ; LE-32BIT-NEXT:    blr
   %src = load i256, ptr %src.ptr, align 1
   %byteOff = load i256, ptr %byteOff.ptr, align 1
