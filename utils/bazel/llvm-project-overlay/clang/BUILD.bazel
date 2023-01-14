@@ -2197,24 +2197,11 @@ cc_binary(
     ],
 )
 
-gentbl(
-    name = "ScanDepsTableGen",
-    strip_include_prefix = "include/clang/tools/clang-scan-deps",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "include/clang/tools/clang-scan-deps/Opts.inc",
-    )],
-    tblgen = "//llvm:llvm-tblgen",
-    td_file = "tools/clang-scan-deps/Opts.td",
-    td_srcs = [ "//llvm:include/llvm/Option/OptParser.td" ],
-)
-
 cc_binary(
     name = "clang-scan-deps",
     srcs = glob(["tools/clang-scan-deps/*.cpp"]),
     stamp = 0,
     deps = [
-        ":ScanDepsTableGen",
         ":driver",
         ":frontend",
         ":tooling",
