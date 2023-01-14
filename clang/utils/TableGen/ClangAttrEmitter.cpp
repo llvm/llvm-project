@@ -978,13 +978,14 @@ namespace {
 
       OS << "bool " << getAttrName() << "Attr::ConvertStrTo" << type
          << "(StringRef Val, " << type << " &Out) {\n";
-      OS << "  Optional<" << type << "> R = llvm::StringSwitch<Optional<";
+      OS << "  std::optional<" << type
+         << "> R = llvm::StringSwitch<std::optional<";
       OS << type << ">>(Val)\n";
       for (size_t I = 0; I < enums.size(); ++I) {
         OS << "    .Case(\"" << values[I] << "\", ";
         OS << getAttrName() << "Attr::" << enums[I] << ")\n";
       }
-      OS << "    .Default(Optional<" << type << ">());\n";
+      OS << "    .Default(std::optional<" << type << ">());\n";
       OS << "  if (R) {\n";
       OS << "    Out = *R;\n      return true;\n    }\n";
       OS << "  return false;\n";
@@ -1099,13 +1100,14 @@ namespace {
       OS << "bool " << getAttrName() << "Attr::ConvertStrTo" << type
          << "(StringRef Val, ";
       OS << type << " &Out) {\n";
-      OS << "  Optional<" << type << "> R = llvm::StringSwitch<Optional<";
+      OS << "  std::optional<" << type
+         << "> R = llvm::StringSwitch<std::optional<";
       OS << type << ">>(Val)\n";
       for (size_t I = 0; I < enums.size(); ++I) {
         OS << "    .Case(\"" << values[I] << "\", ";
         OS << getAttrName() << "Attr::" << enums[I] << ")\n";
       }
-      OS << "    .Default(Optional<" << type << ">());\n";
+      OS << "    .Default(std::optional<" << type << ">());\n";
       OS << "  if (R) {\n";
       OS << "    Out = *R;\n      return true;\n    }\n";
       OS << "  return false;\n";
@@ -2115,7 +2117,7 @@ PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
 
 void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
   // Generate routines that check the names of sub-rules.
-  OS << "Optional<attr::SubjectMatchRule> "
+  OS << "std::optional<attr::SubjectMatchRule> "
         "defaultIsAttributeSubjectMatchSubRuleFor(StringRef, bool) {\n";
   OS << "  return std::nullopt;\n";
   OS << "}\n\n";
@@ -2129,12 +2131,13 @@ void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
   }
 
   for (const auto &SubMatchRule : SubMatchRules) {
-    OS << "Optional<attr::SubjectMatchRule> isAttributeSubjectMatchSubRuleFor_"
+    OS << "std::optional<attr::SubjectMatchRule> "
+          "isAttributeSubjectMatchSubRuleFor_"
        << SubMatchRule.first->getValueAsString("Name")
        << "(StringRef Name, bool IsUnless) {\n";
     OS << "  if (IsUnless)\n";
     OS << "    return "
-          "llvm::StringSwitch<Optional<attr::SubjectMatchRule>>(Name).\n";
+          "llvm::StringSwitch<std::optional<attr::SubjectMatchRule>>(Name).\n";
     for (const auto &Rule : SubMatchRule.second) {
       if (Rule.isNegatedSubRule())
         OS << "    Case(\"" << Rule.getName() << "\", " << Rule.getEnumValue()
@@ -2142,7 +2145,7 @@ void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
     }
     OS << "    Default(std::nullopt);\n";
     OS << "  return "
-          "llvm::StringSwitch<Optional<attr::SubjectMatchRule>>(Name).\n";
+          "llvm::StringSwitch<std::optional<attr::SubjectMatchRule>>(Name).\n";
     for (const auto &Rule : SubMatchRule.second) {
       if (!Rule.isNegatedSubRule())
         OS << "  Case(\"" << Rule.getName() << "\", " << Rule.getEnumValue()
@@ -2153,12 +2156,12 @@ void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
   }
 
   // Generate the function that checks for the top-level rules.
-  OS << "std::pair<Optional<attr::SubjectMatchRule>, "
-        "Optional<attr::SubjectMatchRule> (*)(StringRef, "
+  OS << "std::pair<std::optional<attr::SubjectMatchRule>, "
+        "std::optional<attr::SubjectMatchRule> (*)(StringRef, "
         "bool)> isAttributeSubjectMatchRule(StringRef Name) {\n";
   OS << "  return "
-        "llvm::StringSwitch<std::pair<Optional<attr::SubjectMatchRule>, "
-        "Optional<attr::SubjectMatchRule> (*) (StringRef, "
+        "llvm::StringSwitch<std::pair<std::optional<attr::SubjectMatchRule>, "
+        "std::optional<attr::SubjectMatchRule> (*) (StringRef, "
         "bool)>>(Name).\n";
   for (const auto &Rule : Rules) {
     if (Rule.isSubRule())

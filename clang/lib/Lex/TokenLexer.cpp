@@ -249,7 +249,7 @@ void TokenLexer::ExpandFunctionArguments() {
   // we install the newly expanded sequence as the new 'Tokens' list.
   bool MadeChange = false;
 
-  Optional<bool> CalledWithVariadicArguments;
+  std::optional<bool> CalledWithVariadicArguments;
 
   VAOptExpansionContext VCtx(PP);
 

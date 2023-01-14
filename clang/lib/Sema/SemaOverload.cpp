@@ -359,7 +359,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       if (Initializer->isValueDependent())
         return NK_Dependent_Narrowing;
 
-      if (Optional<llvm::APSInt> IntConstantValue =
+      if (std::optional<llvm::APSInt> IntConstantValue =
               Initializer->getIntegerConstantExpr(Ctx)) {
         // Convert the integer to the floating type.
         llvm::APFloat Result(Ctx.getFloatTypeSemantics(ToType));
@@ -442,7 +442,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       if (Initializer->isValueDependent())
         return NK_Dependent_Narrowing;
 
-      Optional<llvm::APSInt> OptInitializerValue;
+      std::optional<llvm::APSInt> OptInitializerValue;
       if (!(OptInitializerValue = Initializer->getIntegerConstantExpr(Ctx))) {
         // Such conversions on variables are always narrowing.
         return NK_Variable_Narrowing;
@@ -884,7 +884,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   return nullptr;
 }
 
-llvm::Optional<unsigned> DeductionFailureInfo::getCallArgIndex() {
+std::optional<unsigned> DeductionFailureInfo::getCallArgIndex() {
   switch (static_cast<Sema::TemplateDeductionResult>(Result)) {
   case Sema::TDK_DeducedMismatch:
   case Sema::TDK_DeducedMismatchNested:
@@ -2294,7 +2294,7 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
   // compatibility.
   if (From) {
     if (FieldDecl *MemberDecl = From->getSourceBitField()) {
-      Optional<llvm::APSInt> BitWidth;
+      std::optional<llvm::APSInt> BitWidth;
       if (FromType->isIntegralType(Context) &&
           (BitWidth =
                MemberDecl->getBitWidth()->getIntegerConstantExpr(Context))) {
@@ -9745,8 +9745,8 @@ isBetterMultiversionCandidate(const OverloadCandidate &Cand1,
 /// Compute the type of the implicit object parameter for the given function,
 /// if any. Returns std::nullopt if there is no implicit object parameter, and a
 /// null QualType if there is a 'matches anything' implicit object parameter.
-static Optional<QualType> getImplicitObjectParamType(ASTContext &Context,
-                                                     const FunctionDecl *F) {
+static std::optional<QualType>
+getImplicitObjectParamType(ASTContext &Context, const FunctionDecl *F) {
   if (!isa<CXXMethodDecl>(F) || isa<CXXConstructorDecl>(F))
     return std::nullopt;
 
@@ -9768,7 +9768,7 @@ static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
 
   auto NextParam = [&](const FunctionDecl *F, unsigned &I, bool First) {
     if (First) {
-      if (Optional<QualType> T = getImplicitObjectParamType(Context, F))
+      if (std::optional<QualType> T = getImplicitObjectParamType(Context, F))
         return *T;
     }
     assert(I < F->getNumParams());
@@ -12650,7 +12650,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
   SmallVector<FunctionDecl *, 2> AmbiguousDecls;
 
   auto CheckMoreConstrained = [&](FunctionDecl *FD1,
-                                  FunctionDecl *FD2) -> Optional<bool> {
+                                  FunctionDecl *FD2) -> std::optional<bool> {
     if (FunctionDecl *MF = FD1->getInstantiatedFromMemberFunction())
       FD1 = MF;
     if (FunctionDecl *MF = FD2->getInstantiatedFromMemberFunction())
@@ -12682,8 +12682,8 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
     // We have more than one result - see if it is more constrained than the
     // previous one.
     if (Result) {
-      Optional<bool> MoreConstrainedThanPrevious = CheckMoreConstrained(FD,
-                                                                        Result);
+      std::optional<bool> MoreConstrainedThanPrevious =
+          CheckMoreConstrained(FD, Result);
       if (!MoreConstrainedThanPrevious) {
         IsResultAmbiguous = true;
         AmbiguousDecls.push_back(FD);
@@ -13341,7 +13341,7 @@ bool Sema::buildOverloadedCallSet(Scope *S, Expr *Fn,
 // Guess at what the return type for an unresolvable overload should be.
 static QualType chooseRecoveryType(OverloadCandidateSet &CS,
                                    OverloadCandidateSet::iterator *Best) {
-  llvm::Optional<QualType> Result;
+  std::optional<QualType> Result;
   // Adjust Type after seeing a candidate.
   auto ConsiderCandidate = [&](const OverloadCandidate &Candidate) {
     if (!Candidate.Function)

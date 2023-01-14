@@ -42,7 +42,7 @@ DependencyScanningTool::DependencyScanningTool(
 
 llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     const std::vector<std::string> &CommandLine, StringRef CWD,
-    llvm::Optional<StringRef> ModuleName) {
+    std::optional<StringRef> ModuleName) {
   /// Prints out all of the gathered dependencies into a string.
   class MakeDependencyPrinterConsumer : public DependencyConsumer {
   public:
@@ -116,7 +116,7 @@ DependencyScanningTool::getFullDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::StringSet<> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput,
-    llvm::Optional<StringRef> ModuleName) {
+    std::optional<StringRef> ModuleName) {
   FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
                                   Worker.shouldEagerLoadModules());
   llvm::Error Result =
@@ -131,7 +131,7 @@ DependencyScanningTool::getFullDependenciesLegacyDriverCommand(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::StringSet<> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput,
-    llvm::Optional<StringRef> ModuleName) {
+    std::optional<StringRef> ModuleName) {
   FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
                                   Worker.shouldEagerLoadModules());
   llvm::Error Result =

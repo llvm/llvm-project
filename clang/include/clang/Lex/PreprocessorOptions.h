@@ -211,7 +211,7 @@ public:
   /// Enables a client to cache the directives for a file and provide them
   /// across multiple compiler invocations.
   /// FIXME: Allow returning an error.
-  std::function<Optional<ArrayRef<dependency_directives_scan::Directive>>(
+  std::function<std::optional<ArrayRef<dependency_directives_scan::Directive>>(
       FileEntryRef)>
       DependencyDirectivesForFile;
 
@@ -222,7 +222,7 @@ public:
   bool DisablePragmaDebugCrash = false;
 
   /// If set, the UNIX timestamp specified by SOURCE_DATE_EPOCH.
-  Optional<uint64_t> SourceDateEpoch;
+  std::optional<uint64_t> SourceDateEpoch;
 
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}

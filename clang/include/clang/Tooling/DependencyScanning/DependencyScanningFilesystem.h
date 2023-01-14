@@ -40,7 +40,7 @@ struct CachedFileContents {
   SmallVector<dependency_directives_scan::Token, 10> DepDirectiveTokens;
   /// Accessor to the directive tokens that's atomic to avoid data races.
   /// \p CachedFileContents has ownership of the pointer.
-  std::atomic<const Optional<DependencyDirectivesTy> *> DepDirectives;
+  std::atomic<const std::optional<DependencyDirectivesTy> *> DepDirectives;
 
   ~CachedFileContents() { delete DepDirectives.load(); }
 };
@@ -89,7 +89,7 @@ public:
 
   /// \returns The scanned preprocessor directive tokens of the file that are
   /// used to speed up preprocessing, if available.
-  Optional<ArrayRef<dependency_directives_scan::Directive>>
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
   getDirectiveTokens() const {
     assert(!isError() && "error");
     assert(!isDirectory() && "not a file");
@@ -263,7 +263,7 @@ public:
 
   StringRef getContents() const { return Entry.getOriginalContents(); }
 
-  Optional<ArrayRef<dependency_directives_scan::Directive>>
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
   getDirectiveTokens() const {
     return Entry.getDirectiveTokens();
   }

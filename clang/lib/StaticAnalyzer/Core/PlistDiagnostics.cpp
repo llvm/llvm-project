@@ -166,7 +166,7 @@ static void printCoverage(const PathDiagnostic *D,
                           FIDMap &FM,
                           llvm::raw_fd_ostream &o);
 
-static Optional<StringRef> getExpandedMacro(
+static std::optional<StringRef> getExpandedMacro(
     SourceLocation MacroLoc, const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions, const SourceManager &SM);
 
@@ -385,9 +385,9 @@ void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
     SourceLocation MacroExpansionLoc =
         P->getLocation().asLocation().getExpansionLoc();
 
-    const Optional<StringRef> MacroName =
+    const std::optional<StringRef> MacroName =
         MacroExpansions.getOriginalText(MacroExpansionLoc);
-    const Optional<StringRef> ExpansionText =
+    const std::optional<StringRef> ExpansionText =
         getExpandedMacro(MacroExpansionLoc, CTU, MacroExpansions, SM);
 
     if (!MacroName || !ExpansionText)
@@ -826,7 +826,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
 // Definitions of helper functions and methods for expanding macros.
 //===----------------------------------------------------------------------===//
 
-static Optional<StringRef>
+static std::optional<StringRef>
 getExpandedMacro(SourceLocation MacroExpansionLoc,
                  const cross_tu::CrossTranslationUnitContext &CTU,
                  const MacroExpansionContext &MacroExpansions,

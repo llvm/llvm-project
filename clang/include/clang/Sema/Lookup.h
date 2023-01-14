@@ -508,7 +508,7 @@ public:
         Paths = nullptr;
       }
     } else {
-      llvm::Optional<AmbiguityKind> SavedAK;
+      std::optional<AmbiguityKind> SavedAK;
       bool WasAmbiguous = false;
       if (ResultKind == Ambiguous) {
         SavedAK = Ambiguity;

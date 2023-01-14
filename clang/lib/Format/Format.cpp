@@ -1915,7 +1915,7 @@ std::string configurationAsText(const FormatStyle &Style) {
   return Stream.str();
 }
 
-llvm::Optional<FormatStyle>
+std::optional<FormatStyle>
 FormatStyle::FormatStyleSet::Get(FormatStyle::LanguageKind Language) const {
   if (!Styles)
     return std::nullopt;
@@ -1940,7 +1940,7 @@ void FormatStyle::FormatStyleSet::Add(FormatStyle Style) {
 
 void FormatStyle::FormatStyleSet::Clear() { Styles.reset(); }
 
-llvm::Optional<FormatStyle>
+std::optional<FormatStyle>
 FormatStyle::GetLanguageStyle(FormatStyle::LanguageKind Language) const {
   return StyleSet.Get(Language);
 }

@@ -90,7 +90,7 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override;
 
-  Optional<std::pair<unsigned, unsigned>>
+  std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;
 
   bool hasFeature(StringRef Feature) const override;

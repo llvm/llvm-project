@@ -27,7 +27,7 @@ static StringRef getNameFromID(StringRef Name) {
   return StringRef();
 }
 
-static Optional<DiagnosticRecord>
+static std::optional<DiagnosticRecord>
 findDiagnostic(ArrayRef<DiagnosticRecord> Diagnostics, StringRef Name) {
   for (const auto &Diag : Diagnostics) {
     StringRef DiagName = Diag.getName();
@@ -56,7 +56,7 @@ int FindDiagnosticID::run(unsigned int argc, char **argv,
                                     "Diagnostic ID mapping utility");
 
   ArrayRef<DiagnosticRecord> AllDiagnostics = getBuiltinDiagnosticsByName();
-  Optional<DiagnosticRecord> Diag =
+  std::optional<DiagnosticRecord> Diag =
       findDiagnostic(AllDiagnostics, DiagnosticName);
   if (!Diag) {
     // Name to id failed, so try id to name.

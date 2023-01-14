@@ -75,7 +75,7 @@ class OMPLexicalScope : public CodeGenFunction::LexicalScope {
 public:
   OMPLexicalScope(
       CodeGenFunction &CGF, const OMPExecutableDirective &S,
-      const llvm::Optional<OpenMPDirectiveKind> CapturedRegion = std::nullopt,
+      const std::optional<OpenMPDirectiveKind> CapturedRegion = std::nullopt,
       const bool EmitPreInitStmt = true)
       : CodeGenFunction::LexicalScope(CGF, S.getSourceRange()),
         InlinedShareds(CGF) {

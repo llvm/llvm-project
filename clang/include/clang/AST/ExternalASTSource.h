@@ -161,7 +161,7 @@ public:
   virtual Module *getModule(unsigned ID) { return nullptr; }
 
   /// Return a descriptor for the corresponding module, if one exists.
-  virtual llvm::Optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID);
+  virtual std::optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID);
 
   enum ExtKind { EK_Always, EK_Never, EK_ReplyHazy };
 

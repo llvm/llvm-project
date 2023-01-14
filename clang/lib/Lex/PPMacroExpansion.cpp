@@ -1302,7 +1302,7 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
 
   unsigned ParenDepth = 1;
   SourceLocation LParenLoc = Tok.getLocation();
-  llvm::Optional<int> Result;
+  std::optional<int> Result;
 
   Token ResultTok;
   bool SuppressDiagnostic = false;

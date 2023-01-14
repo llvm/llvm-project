@@ -2149,8 +2149,8 @@ public:
 
   /// If this is an 'if constexpr', determine which substatement will be taken.
   /// Otherwise, or if the condition is value-dependent, returns std::nullopt.
-  Optional<const Stmt*> getNondiscardedCase(const ASTContext &Ctx) const;
-  Optional<Stmt *> getNondiscardedCase(const ASTContext &Ctx);
+  std::optional<const Stmt *> getNondiscardedCase(const ASTContext &Ctx) const;
+  std::optional<Stmt *> getNondiscardedCase(const ASTContext &Ctx);
 
   bool isObjCAvailabilityCheck() const;
 

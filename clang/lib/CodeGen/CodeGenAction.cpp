@@ -423,7 +423,8 @@ namespace clang {
                                 bool &BadDebugInfo, StringRef &Filename,
                                 unsigned &Line, unsigned &Column) const;
 
-    Optional<FullSourceLoc> getFunctionSourceLocation(const Function &F) const;
+    std::optional<FullSourceLoc>
+    getFunctionSourceLocation(const Function &F) const;
 
     void DiagnosticHandlerImpl(const llvm::DiagnosticInfo &DI);
     /// Specialized handler for InlineAsm diagnostic.
@@ -692,7 +693,7 @@ const FullSourceLoc BackendConsumer::getBestLocationFromDebugLoc(
   return Loc;
 }
 
-Optional<FullSourceLoc>
+std::optional<FullSourceLoc>
 BackendConsumer::getFunctionSourceLocation(const Function &F) const {
   auto Hash = llvm::hash_value(F.getName());
   for (const auto &Pair : ManglingFullSourceLocs) {
@@ -1183,7 +1184,7 @@ void CodeGenAction::ExecuteAction() {
 
   SourceManager &SM = CI.getSourceManager();
   FileID FID = SM.getMainFileID();
-  Optional<MemoryBufferRef> MainFile = SM.getBufferOrNone(FID);
+  std::optional<MemoryBufferRef> MainFile = SM.getBufferOrNone(FID);
   if (!MainFile)
     return;
 

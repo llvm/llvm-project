@@ -291,8 +291,8 @@ class Token;
 
     /// Optionally returns true or false if the preallocated preprocessed
     /// entity with index \p Index came from file \p FID.
-    virtual Optional<bool> isPreprocessedEntityInFileID(unsigned Index,
-                                                        FileID FID) {
+    virtual std::optional<bool> isPreprocessedEntityInFileID(unsigned Index,
+                                                             FileID FID) {
       return std::nullopt;
     }
 

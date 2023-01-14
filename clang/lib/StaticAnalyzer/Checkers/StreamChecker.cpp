@@ -284,7 +284,7 @@ private:
         0}},
   };
 
-  mutable Optional<int> EofVal;
+  mutable std::optional<int> EofVal;
 
   void evalFopen(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C) const;
@@ -435,7 +435,7 @@ private:
     if (EofVal)
       return;
 
-    if (const llvm::Optional<int> OptInt =
+    if (const std::optional<int> OptInt =
             tryExpandAsInteger("EOF", C.getPreprocessor()))
       EofVal = *OptInt;
     else
@@ -558,7 +558,7 @@ void StreamChecker::evalFreopen(const FnDescription *Desc,
   if (!CE)
     return;
 
-  Optional<DefinedSVal> StreamVal =
+  std::optional<DefinedSVal> StreamVal =
       getStreamArg(Desc, Call).getAs<DefinedSVal>();
   if (!StreamVal)
     return;
@@ -684,10 +684,10 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   if (!CE)
     return;
 
-  Optional<NonLoc> SizeVal = Call.getArgSVal(1).getAs<NonLoc>();
+  std::optional<NonLoc> SizeVal = Call.getArgSVal(1).getAs<NonLoc>();
   if (!SizeVal)
     return;
-  Optional<NonLoc> NMembVal = Call.getArgSVal(2).getAs<NonLoc>();
+  std::optional<NonLoc> NMembVal = Call.getArgSVal(2).getAs<NonLoc>();
   if (!NMembVal)
     return;
 
@@ -1144,7 +1144,8 @@ ProgramStateRef StreamChecker::ensureNoFilePositionIndeterminate(
 ProgramStateRef
 StreamChecker::ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
                                         ProgramStateRef State) const {
-  Optional<nonloc::ConcreteInt> CI = WhenceVal.getAs<nonloc::ConcreteInt>();
+  std::optional<nonloc::ConcreteInt> CI =
+      WhenceVal.getAs<nonloc::ConcreteInt>();
   if (!CI)
     return State;
 

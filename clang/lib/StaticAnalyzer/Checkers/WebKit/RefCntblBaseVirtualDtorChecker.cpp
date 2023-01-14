@@ -77,8 +77,7 @@ public:
               (AccSpec == AS_none && RD->isClass()))
             return false;
 
-          llvm::Optional<const CXXRecordDecl *> RefCntblBaseRD =
-              isRefCountable(Base);
+          std::optional<const CXXRecordDecl*> RefCntblBaseRD = isRefCountable(Base);
           if (!RefCntblBaseRD || !(*RefCntblBaseRD))
             return false;
 

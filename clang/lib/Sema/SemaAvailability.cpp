@@ -247,7 +247,7 @@ struct AttributeInsertion {
 /// of unsuccessful parsing can contain invalid data.
 /// \returns A number of method parameters if parsing was successful,
 /// std::nullopt otherwise.
-static Optional<unsigned>
+static std::optional<unsigned>
 tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
                        const LangOptions &LangOpts) {
   // Accept replacements starting with - or + as valid ObjC method names.
@@ -280,7 +280,7 @@ tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
 
 /// Returns a source location in which it's appropriate to insert a new
 /// attribute for the given declaration \D.
-static Optional<AttributeInsertion>
+static std::optional<AttributeInsertion>
 createAttributeInsertion(const NamedDecl *D, const SourceManager &SM,
                          const LangOptions &LangOpts) {
   if (isa<ObjCPropertyDecl>(D))
@@ -401,7 +401,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
         return;
       if (!S.getPreprocessor().isMacroDefined("API_AVAILABLE"))
         return;
-      Optional<AttributeInsertion> Insertion = createAttributeInsertion(
+      std::optional<AttributeInsertion> Insertion = createAttributeInsertion(
           Enclosing, S.getSourceManager(), S.getLangOpts());
       if (!Insertion)
         return;
@@ -503,7 +503,7 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
       if (const auto *MethodDecl = dyn_cast<ObjCMethodDecl>(ReferringDecl)) {
         Selector Sel = MethodDecl->getSelector();
         SmallVector<StringRef, 12> SelectorSlotNames;
-        Optional<unsigned> NumParams = tryParseObjCMethodName(
+        std::optional<unsigned> NumParams = tryParseObjCMethodName(
             Replacement, SelectorSlotNames, S.getLangOpts());
         if (NumParams && *NumParams == Sel.getNumArgs()) {
           assert(SelectorSlotNames.size() == Locs.size());

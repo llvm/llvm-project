@@ -89,7 +89,7 @@ private:
     return FS;
   }
 
-  llvm::Optional<Driver> DriverInstance;
+  std::optional<Driver> DriverInstance;
   std::unique_ptr<driver::Compilation> CompilationJob;
 };
 

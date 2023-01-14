@@ -495,7 +495,7 @@ struct Clarification {
 /// of basic blocks.
 class NotCalledClarifier
     : public ConstStmtVisitor<NotCalledClarifier,
-                              llvm::Optional<Clarification>> {
+                              std::optional<Clarification>> {
 public:
   /// The main entrypoint for the class, the function that tries to find the
   /// clarification of how to explain which sub-path starts with a CFG edge
@@ -509,24 +509,24 @@ public:
   /// results only for such cases.  For this very reason, the parent basic
   /// block, Conditional, is named that way, so it is clear what kind of
   /// block is expected.
-  static llvm::Optional<Clarification>
-  clarify(const CFGBlock *Conditional, const CFGBlock *SuccWithoutCall) {
+  static std::optional<Clarification> clarify(const CFGBlock *Conditional,
+                                              const CFGBlock *SuccWithoutCall) {
     if (const Stmt *Terminator = Conditional->getTerminatorStmt()) {
       return NotCalledClarifier{Conditional, SuccWithoutCall}.Visit(Terminator);
     }
     return std::nullopt;
   }
 
-  llvm::Optional<Clarification> VisitIfStmt(const IfStmt *If) {
+  std::optional<Clarification> VisitIfStmt(const IfStmt *If) {
     return VisitBranchingBlock(If, NeverCalledReason::IfThen);
   }
 
-  llvm::Optional<Clarification>
+  std::optional<Clarification>
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *Ternary) {
     return VisitBranchingBlock(Ternary, NeverCalledReason::IfThen);
   }
 
-  llvm::Optional<Clarification> VisitSwitchStmt(const SwitchStmt *Switch) {
+  std::optional<Clarification> VisitSwitchStmt(const SwitchStmt *Switch) {
     const Stmt *CaseToBlame = SuccInQuestion->getLabel();
     if (!CaseToBlame) {
       // If interesting basic block is not labeled, it means that this
@@ -544,15 +544,15 @@ public:
     llvm_unreachable("Found unexpected switch structure");
   }
 
-  llvm::Optional<Clarification> VisitForStmt(const ForStmt *For) {
+  std::optional<Clarification> VisitForStmt(const ForStmt *For) {
     return VisitBranchingBlock(For, NeverCalledReason::LoopEntered);
   }
 
-  llvm::Optional<Clarification> VisitWhileStmt(const WhileStmt *While) {
+  std::optional<Clarification> VisitWhileStmt(const WhileStmt *While) {
     return VisitBranchingBlock(While, NeverCalledReason::LoopEntered);
   }
 
-  llvm::Optional<Clarification>
+  std::optional<Clarification>
   VisitBranchingBlock(const Stmt *Terminator, NeverCalledReason DefaultReason) {
     assert(Parent->succ_size() == 2 &&
            "Branching block should have exactly two successors");
@@ -562,12 +562,12 @@ public:
     return Clarification{ActualReason, Terminator};
   }
 
-  llvm::Optional<Clarification> VisitBinaryOperator(const BinaryOperator *) {
+  std::optional<Clarification> VisitBinaryOperator(const BinaryOperator *) {
     // We don't want to report on short-curcuit logical operations.
     return std::nullopt;
   }
 
-  llvm::Optional<Clarification> VisitStmt(const Stmt *Terminator) {
+  std::optional<Clarification> VisitStmt(const Stmt *Terminator) {
     // If we got here, we didn't have a visit function for more derived
     // classes of statement that this terminator actually belongs to.
     //
@@ -754,7 +754,7 @@ private:
     // We use a backward dataflow propagation and for this reason we
     // should traverse basic blocks bottom-up.
     for (const CFGElement &Element : llvm::reverse(*BB)) {
-      if (Optional<CFGStmt> S = Element.getAs<CFGStmt>()) {
+      if (std::optional<CFGStmt> S = Element.getAs<CFGStmt>()) {
         check(S->getStmt());
       }
     }
@@ -1000,8 +1000,8 @@ private:
   /// parameter is conventionally called once.
   /// Return std::nullopt if the given declaration doesn't have 'swift_async'
   /// attribute.
-  static llvm::Optional<bool> isConventionalSwiftAsync(const Decl *D,
-                                                       unsigned ParamIndex) {
+  static std::optional<bool> isConventionalSwiftAsync(const Decl *D,
+                                                      unsigned ParamIndex) {
     if (const SwiftAsyncAttr *A = D->getAttr<SwiftAsyncAttr>()) {
       if (A->getKind() == SwiftAsyncAttr::None) {
         return false;
@@ -1266,7 +1266,7 @@ private:
           llvm::reverse(*BB), // we should start with return statements, if we
                               // have any, i.e. from the bottom of the block
           [&ReturnChildren](const CFGElement &Element) {
-            if (Optional<CFGStmt> S = Element.getAs<CFGStmt>()) {
+            if (std::optional<CFGStmt> S = Element.getAs<CFGStmt>()) {
               const Stmt *SuspiciousStmt = S->getStmt();
 
               if (isa<ReturnStmt>(SuspiciousStmt)) {
@@ -1636,11 +1636,11 @@ public:
 private:
   unsigned size() const { return TrackedParams.size(); }
 
-  llvm::Optional<unsigned> getIndexOfCallee(const CallExpr *Call) const {
+  std::optional<unsigned> getIndexOfCallee(const CallExpr *Call) const {
     return getIndexOfExpression(Call->getCallee());
   }
 
-  llvm::Optional<unsigned> getIndexOfExpression(const Expr *E) const {
+  std::optional<unsigned> getIndexOfExpression(const Expr *E) const {
     if (const ParmVarDecl *Parameter = findReferencedParmVarDecl(E)) {
       return getIndex(*Parameter);
     }
@@ -1648,7 +1648,7 @@ private:
     return std::nullopt;
   }
 
-  llvm::Optional<unsigned> getIndex(const ParmVarDecl &Parameter) const {
+  std::optional<unsigned> getIndex(const ParmVarDecl &Parameter) const {
     // Expected number of parameters that we actually track is 1.
     //
     // Also, the maximum number of declared parameters could not be on a scale

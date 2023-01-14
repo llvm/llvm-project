@@ -359,7 +359,7 @@ private:
 
   /// The scope specifier that comes before the completion token e.g.
   /// "a::b::"
-  llvm::Optional<CXXScopeSpec> ScopeSpecifier;
+  std::optional<CXXScopeSpec> ScopeSpecifier;
 
   /// A set of declaration contexts visited by Sema when doing lookup for
   /// code completion.
@@ -422,7 +422,7 @@ public:
     return VisitedContexts;
   }
 
-  llvm::Optional<const CXXScopeSpec *> getCXXScopeSpecifier() {
+  std::optional<const CXXScopeSpec *> getCXXScopeSpecifier() {
     if (ScopeSpecifier)
       return &*ScopeSpecifier;
     return std::nullopt;

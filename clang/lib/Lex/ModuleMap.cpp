@@ -1213,7 +1213,7 @@ void ModuleMap::resolveHeaderDirectives(const FileEntry *File) const {
 }
 
 void ModuleMap::resolveHeaderDirectives(
-    Module *Mod, llvm::Optional<const FileEntry *> File) const {
+    Module *Mod, std::optional<const FileEntry *> File) const {
   bool NeedsFramework = false;
   SmallVector<Module::UnresolvedHeaderDirective, 1> NewHeaders;
   const auto Size = File ? (*File)->getSize() : 0;
@@ -3067,7 +3067,7 @@ bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
   }
 
   assert(Target && "Missing target information");
-  llvm::Optional<llvm::MemoryBufferRef> Buffer = SourceMgr.getBufferOrNone(ID);
+  std::optional<llvm::MemoryBufferRef> Buffer = SourceMgr.getBufferOrNone(ID);
   if (!Buffer)
     return ParsedModuleMap[File] = true;
   assert((!Offset || *Offset <= Buffer->getBufferSize()) &&

@@ -41,7 +41,7 @@ class RefPropertyType<string className> : PropertyType<className # "*"> {
   let PackOptional =
     "value ? *value : nullptr";
   let UnpackOptional =
-    "value ? llvm::Optional<" # CXXName # ">(value) : std::nullopt";
+    "value ? std::optional<" # CXXName # ">(value) : std::nullopt";
 }
 
 /// Property types that correspond to a specific subclass of another type.
@@ -58,7 +58,7 @@ class DefaultValuePropertyType<string typeName = ""> : PropertyType<typeName> {
   let PackOptional =
     "value ? *value : " # CXXName # "()";
   let UnpackOptional =
-    "value.isNull() ? std::nullopt : llvm::Optional<" # CXXName # ">(value)";
+    "value.isNull() ? std::nullopt : std::optional<" # CXXName # ">(value)";
 }
 
 /// Property types that correspond to integer types and support optional
@@ -67,7 +67,7 @@ class CountPropertyType<string typeName = ""> : PropertyType<typeName> {
   let PackOptional =
     "value ? *value + 1 : 0";
   let UnpackOptional =
-    "value ? llvm::Optional<" # CXXName # ">(value - 1) : std::nullopt";
+    "value ? std::optional<" # CXXName # ">(value - 1) : std::nullopt";
 }
 
 def APInt : PropertyType<"llvm::APInt"> { let PassByReference = 1; }
@@ -155,7 +155,7 @@ class Array<PropertyType element> : PropertyType {
   let BufferElementTypes = [ element ];
 }
 
-/// llvm::Optional<T>.  The corresponding C++ type is generally just the
+/// std::optional<T>.  The corresponding C++ type is generally just the
 /// corresponding C++ type of the element.
 ///
 /// Optional<Unsigned> may restrict the range of the operand for some

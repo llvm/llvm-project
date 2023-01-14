@@ -42,7 +42,7 @@ public:
   BodyFarm(const BodyFarm &other) = delete;
 
 private:
-  typedef llvm::DenseMap<const Decl *, Optional<Stmt *>> BodyMap;
+  typedef llvm::DenseMap<const Decl *, std::optional<Stmt *>> BodyMap;
 
   ASTContext &C;
   BodyMap Bodies;

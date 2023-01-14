@@ -3706,7 +3706,7 @@ static bool CheckAvailabilitySpecList(Parser &P,
 ///  availability-spec:
 ///     '*'
 ///     identifier version-tuple
-Optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
+std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
   if (Tok.is(tok::star)) {
     return AvailabilitySpec(ConsumeToken());
   } else {
@@ -3758,7 +3758,7 @@ ExprResult Parser::ParseAvailabilityCheckExpr(SourceLocation BeginLoc) {
   SmallVector<AvailabilitySpec, 4> AvailSpecs;
   bool HasError = false;
   while (true) {
-    Optional<AvailabilitySpec> Spec = ParseAvailabilitySpec();
+    std::optional<AvailabilitySpec> Spec = ParseAvailabilitySpec();
     if (!Spec)
       HasError = true;
     else

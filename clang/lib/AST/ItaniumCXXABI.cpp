@@ -85,8 +85,8 @@ template<typename T> bool isDenseMapKeyTombstone(T V) {
       V, llvm::DenseMapInfo<T>::getTombstoneKey());
 }
 
-template<typename T>
-Optional<bool> areDenseMapKeysEqualSpecialValues(T LHS, T RHS) {
+template <typename T>
+std::optional<bool> areDenseMapKeysEqualSpecialValues(T LHS, T RHS) {
   bool LHSEmpty = isDenseMapKeyEmpty(LHS);
   bool RHSEmpty = isDenseMapKeyEmpty(RHS);
   if (LHSEmpty || RHSEmpty)
@@ -114,8 +114,8 @@ struct DenseMapInfo<DecompositionDeclName> {
     return llvm::hash_combine_range(Key.begin(), Key.end());
   }
   static bool isEqual(DecompositionDeclName LHS, DecompositionDeclName RHS) {
-    if (Optional<bool> Result = areDenseMapKeysEqualSpecialValues(
-            LHS.Bindings, RHS.Bindings))
+    if (std::optional<bool> Result =
+            areDenseMapKeysEqualSpecialValues(LHS.Bindings, RHS.Bindings))
       return *Result;
 
     return LHS.Bindings.size() == RHS.Bindings.size() &&

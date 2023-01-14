@@ -174,11 +174,11 @@ public:
 
   static char ID;
 
-  const llvm::Optional<Replacement> &getNewReplacement() const {
+  const std::optional<Replacement> &getNewReplacement() const {
     return NewReplacement;
   }
 
-  const llvm::Optional<Replacement> &getExistingReplacement() const {
+  const std::optional<Replacement> &getExistingReplacement() const {
     return ExistingReplacement;
   }
 
@@ -192,10 +192,10 @@ private:
 
   // A new replacement, which is to expected be added into a set of
   // replacements, that is causing problem.
-  llvm::Optional<Replacement> NewReplacement;
+  std::optional<Replacement> NewReplacement;
 
   // An existing replacement in a replacements set that is causing problem.
-  llvm::Optional<Replacement> ExistingReplacement;
+  std::optional<Replacement> ExistingReplacement;
 };
 
 /// Less-than operator between two Replacements.

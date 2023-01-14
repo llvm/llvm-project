@@ -961,10 +961,10 @@ public:
   [[nodiscard]] inline ClassSet
   getDisequalClasses(DisequalityMapTy Map, ClassSet::Factory &Factory) const;
 
-  [[nodiscard]] static inline Optional<bool> areEqual(ProgramStateRef State,
-                                                      EquivalenceClass First,
-                                                      EquivalenceClass Second);
-  [[nodiscard]] static inline Optional<bool>
+  [[nodiscard]] static inline std::optional<bool>
+  areEqual(ProgramStateRef State, EquivalenceClass First,
+           EquivalenceClass Second);
+  [[nodiscard]] static inline std::optional<bool>
   areEqual(ProgramStateRef State, SymbolRef First, SymbolRef Second);
 
   /// Remove one member from the class.
@@ -1084,7 +1084,7 @@ areFeasible(ConstraintRangeTy Constraints) {
 /// \returns true if assuming this Sym to be true means equality of operands
 ///          false if it means disequality of operands
 ///          None otherwise
-Optional<bool> meansEquality(const SymSymExpr *Sym) {
+std::optional<bool> meansEquality(const SymSymExpr *Sym) {
   switch (Sym->getOpcode()) {
   case BO_Sub:
     // This case is: A - B != 0 -> disequality check.
@@ -1118,7 +1118,7 @@ template <class... TailTy> struct IntersectionTraits<RangeSet, TailTy...> {
 template <> struct IntersectionTraits<> {
   // We ran out of types, and we didn't find any RangeSet, so the result should
   // be optional.
-  using Type = Optional<RangeSet>;
+  using Type = std::optional<RangeSet>;
 };
 
 template <class OptionalOrPointer, class... TailTy>
@@ -1129,14 +1129,15 @@ struct IntersectionTraits<OptionalOrPointer, TailTy...> {
 
 template <class EndTy>
 [[nodiscard]] inline EndTy intersect(RangeSet::Factory &F, EndTy End) {
-  // If the list contains only RangeSet or Optional<RangeSet>, simply return
-  // that range set.
+  // If the list contains only RangeSet or std::optional<RangeSet>, simply
+  // return that range set.
   return End;
 }
 
-[[nodiscard]] LLVM_ATTRIBUTE_UNUSED inline Optional<RangeSet>
+[[nodiscard]] LLVM_ATTRIBUTE_UNUSED inline std::optional<RangeSet>
 intersect(RangeSet::Factory &F, const RangeSet *End) {
-  // This is an extraneous conversion from a raw pointer into Optional<RangeSet>
+  // This is an extraneous conversion from a raw pointer into
+  // std::optional<RangeSet>
   if (End) {
     return *End;
   }
@@ -1170,7 +1171,7 @@ template <class SecondTy, class... RestTy>
 ///
 /// Available representations for the arguments are:
 ///   * RangeSet
-///   * Optional<RangeSet>
+///   * std::optional<RangeSet>
 ///   * RangeSet *
 /// Pointer to a RangeSet is automatically assumed to be nullable and will get
 /// checked as well as the optional version.  If this behaviour is undesired,
@@ -1178,11 +1179,12 @@ template <class SecondTy, class... RestTy>
 ///
 /// Return type depends on the arguments' types.  If we can be sure in compile
 /// time that there will be a range set as a result, the returning type is
-/// simply RangeSet, in other cases we have to back off to Optional<RangeSet>.
+/// simply RangeSet, in other cases we have to back off to
+/// std::optional<RangeSet>.
 ///
 /// Please, prefer optional range sets to raw pointers.  If the last argument is
 /// a raw pointer and all previous arguments are std::nullopt, it will cost one
-/// additional check to convert RangeSet * into Optional<RangeSet>.
+/// additional check to convert RangeSet * into std::optional<RangeSet>.
 template <class HeadTy, class SecondTy, class... RestTy>
 [[nodiscard]] inline
     typename IntersectionTraits<HeadTy, SecondTy, RestTy...>::Type
@@ -1214,7 +1216,7 @@ public:
   }
 
   RangeSet VisitSymExpr(SymbolRef Sym) {
-    if (Optional<RangeSet> RS = getRangeForNegatedSym(Sym))
+    if (std::optional<RangeSet> RS = getRangeForNegatedSym(Sym))
       return *RS;
     // If we've reached this line, the actual type of the symbolic
     // expression is not supported for advanced inference.
@@ -1224,7 +1226,7 @@ public:
   }
 
   RangeSet VisitUnarySymExpr(const UnarySymExpr *USE) {
-    if (Optional<RangeSet> RS = getRangeForNegatedUnarySym(USE))
+    if (std::optional<RangeSet> RS = getRangeForNegatedUnarySym(USE))
       return *RS;
     return infer(USE->getType());
   }
@@ -1353,7 +1355,7 @@ private:
   /// Try to convert given range into the given type.
   ///
   /// It will return std::nullopt only when the trivial conversion is possible.
-  llvm::Optional<Range> convert(const Range &Origin, APSIntType To) {
+  std::optional<Range> convert(const Range &Origin, APSIntType To) {
     if (To.testInRange(Origin.From(), false) != APSIntType::RTR_Within ||
         To.testInRange(Origin.To(), false) != APSIntType::RTR_Within) {
       return std::nullopt;
@@ -1437,8 +1439,8 @@ private:
   }
 
   template <typename ProduceNegatedSymFunc>
-  Optional<RangeSet> getRangeForNegatedExpr(ProduceNegatedSymFunc F,
-                                            QualType T) {
+  std::optional<RangeSet> getRangeForNegatedExpr(ProduceNegatedSymFunc F,
+                                                 QualType T) {
     // Do not negate if the type cannot be meaningfully negated.
     if (!T->isUnsignedIntegerOrEnumerationType() &&
         !T->isSignedIntegerOrEnumerationType())
@@ -1451,7 +1453,7 @@ private:
     return std::nullopt;
   }
 
-  Optional<RangeSet> getRangeForNegatedUnarySym(const UnarySymExpr *USE) {
+  std::optional<RangeSet> getRangeForNegatedUnarySym(const UnarySymExpr *USE) {
     // Just get the operand when we negate a symbol that is already negated.
     // -(-a) == a
     return getRangeForNegatedExpr(
@@ -1463,7 +1465,7 @@ private:
         USE->getType());
   }
 
-  Optional<RangeSet> getRangeForNegatedSymSym(const SymSymExpr *SSE) {
+  std::optional<RangeSet> getRangeForNegatedSymSym(const SymSymExpr *SSE) {
     return getRangeForNegatedExpr(
         [SSE, State = this->State]() -> SymbolRef {
           if (SSE->getOpcode() == BO_Sub)
@@ -1474,7 +1476,7 @@ private:
         SSE->getType());
   }
 
-  Optional<RangeSet> getRangeForNegatedSym(SymbolRef Sym) {
+  std::optional<RangeSet> getRangeForNegatedSym(SymbolRef Sym) {
     return getRangeForNegatedExpr(
         [Sym, State = this->State]() {
           return State->getSymbolManager().getUnarySymExpr(Sym, UO_Minus,
@@ -1493,7 +1495,7 @@ private:
   // It covers all possible combinations (see CmpOpTable description).
   // Note that `x` and `y` can also stand for subexpressions,
   // not only for actual symbols.
-  Optional<RangeSet> getRangeForComparisonSymbol(const SymSymExpr *SSE) {
+  std::optional<RangeSet> getRangeForComparisonSymbol(const SymSymExpr *SSE) {
     const BinaryOperatorKind CurrentOP = SSE->getOpcode();
 
     // We currently do not support <=> (C++20).
@@ -1571,13 +1573,13 @@ private:
     return std::nullopt;
   }
 
-  Optional<RangeSet> getRangeForEqualities(const SymSymExpr *Sym) {
-    Optional<bool> Equality = meansEquality(Sym);
+  std::optional<RangeSet> getRangeForEqualities(const SymSymExpr *Sym) {
+    std::optional<bool> Equality = meansEquality(Sym);
 
     if (!Equality)
       return std::nullopt;
 
-    if (Optional<bool> AreEqual =
+    if (std::optional<bool> AreEqual =
             EquivalenceClass::areEqual(State, Sym->getLHS(), Sym->getRHS())) {
       // Here we cover two cases at once:
       //   * if Sym is equality and its operands are known to be equal -> true
@@ -2132,7 +2134,7 @@ private:
     return EquivalenceClass::merge(RangeFactory, State, LHS, RHS);
   }
 
-  [[nodiscard]] Optional<bool> interpreteAsBool(RangeSet Constraint) {
+  [[nodiscard]] std::optional<bool> interpreteAsBool(RangeSet Constraint) {
     assert(!Constraint.isEmpty() && "Empty ranges shouldn't get here");
 
     if (Constraint.getConcreteValue())
@@ -2196,12 +2198,12 @@ bool ConstraintAssignor::assignSymSymExprToRangeSet(const SymSymExpr *Sym,
   if (!handleRemainderOp(Sym, Constraint))
     return false;
 
-  Optional<bool> ConstraintAsBool = interpreteAsBool(Constraint);
+  std::optional<bool> ConstraintAsBool = interpreteAsBool(Constraint);
 
   if (!ConstraintAsBool)
     return true;
 
-  if (Optional<bool> Equality = meansEquality(Sym)) {
+  if (std::optional<bool> Equality = meansEquality(Sym)) {
     // Here we cover two cases:
     //   * if Sym is equality and the new constraint is true -> Sym's operands
     //     should be marked as equal
@@ -2339,7 +2341,7 @@ EquivalenceClass::mergeImpl(RangeSet::Factory &RangeFactory,
   //
   // Intersection here makes perfect sense because both of these constraints
   // must hold for the whole new class.
-  if (Optional<RangeSet> NewClassConstraint =
+  if (std::optional<RangeSet> NewClassConstraint =
           intersect(RangeFactory, getConstraint(State, *this),
                     getConstraint(State, Other))) {
     // NOTE: Essentially, NewClassConstraint should NEVER be infeasible because
@@ -2537,16 +2539,16 @@ inline bool EquivalenceClass::addToDisequalityInfo(
   return true;
 }
 
-inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
-                                                 SymbolRef FirstSym,
-                                                 SymbolRef SecondSym) {
+inline std::optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
+                                                      SymbolRef FirstSym,
+                                                      SymbolRef SecondSym) {
   return EquivalenceClass::areEqual(State, find(State, FirstSym),
                                     find(State, SecondSym));
 }
 
-inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
-                                                 EquivalenceClass First,
-                                                 EquivalenceClass Second) {
+inline std::optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
+                                                      EquivalenceClass First,
+                                                      EquivalenceClass Second) {
   // The same equivalence class => symbols are equal.
   if (First == Second)
     return true;
@@ -2750,7 +2752,7 @@ bool EquivalenceClass::isClassDataConsistent(ProgramStateRef State) {
 //===----------------------------------------------------------------------===//
 
 bool RangeConstraintManager::canReasonAbout(SVal X) const {
-  Optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
+  std::optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
   if (SymVal && SymVal->isExpression()) {
     const SymExpr *SE = SymVal->getSymbol();
 

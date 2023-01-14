@@ -958,7 +958,7 @@ public:
 
 private:
   SExpr* Rec;
-  mutable llvm::Optional<std::string> SlotName;
+  mutable std::optional<std::string> SlotName;
   const ValueDecl *Cvdecl;
 };
 

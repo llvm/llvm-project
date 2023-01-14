@@ -747,7 +747,7 @@ ProgramState::assumeInclusiveRange(DefinedOrUnknownSVal Val,
 }
 
 inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V, const LocationContext *LCtx) const {
-  if (Optional<Loc> L = LV.getAs<Loc>())
+  if (std::optional<Loc> L = LV.getAs<Loc>())
     return bindLoc(*L, V, LCtx);
   return this;
 }
@@ -797,7 +797,7 @@ inline SVal ProgramState::getLValue(const IndirectFieldDecl *D,
 }
 
 inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) const{
-  if (Optional<NonLoc> N = Idx.getAs<NonLoc>())
+  if (std::optional<NonLoc> N = Idx.getAs<NonLoc>())
     return getStateManager().StoreMgr->getLValueElement(ElementType, *N, Base);
   return UnknownVal();
 }

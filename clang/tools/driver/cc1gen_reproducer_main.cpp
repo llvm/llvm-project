@@ -109,7 +109,7 @@ static std::string generateReproducerMetaInfo(const ClangInvocationInfo &Info) {
 }
 
 /// Generates a reproducer for a set of arguments from a specific invocation.
-static llvm::Optional<driver::Driver::CompilationDiagnosticReport>
+static std::optional<driver::Driver::CompilationDiagnosticReport>
 generateReproducerForInvocationArguments(ArrayRef<const char *> Argv,
                                          const ClangInvocationInfo &Info) {
   using namespace driver;
@@ -181,7 +181,7 @@ int cc1gen_reproducer_main(ArrayRef<const char *> Argv, const char *Argv0,
     DriverArgs.push_back(Arg.c_str());
   std::string Path = GetExecutablePath(Argv0, /*CanonicalPrefixes=*/true);
   DriverArgs[0] = Path.c_str();
-  llvm::Optional<driver::Driver::CompilationDiagnosticReport> Report =
+  std::optional<driver::Driver::CompilationDiagnosticReport> Report =
       generateReproducerForInvocationArguments(DriverArgs, InvocationInfo);
 
   // Emit the information about the reproduce files to stdout.

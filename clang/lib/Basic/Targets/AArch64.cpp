@@ -581,7 +581,7 @@ ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
                                          Builtin::FirstTSBuiltin);
 }
 
-Optional<std::pair<unsigned, unsigned>>
+std::optional<std::pair<unsigned, unsigned>>
 AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
   if (LangOpts.VScaleMin || LangOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(

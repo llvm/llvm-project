@@ -193,7 +193,7 @@ ProgramStateRef VLASizeChecker::checkVLAIndexSize(CheckerContext &C,
   DefinedOrUnknownSVal Zero = SVB.makeZeroVal(SizeTy);
 
   SVal LessThanZeroVal = SVB.evalBinOp(State, BO_LT, SizeD, Zero, SizeTy);
-  if (Optional<DefinedSVal> LessThanZeroDVal =
+  if (std::optional<DefinedSVal> LessThanZeroDVal =
           LessThanZeroVal.getAs<DefinedSVal>()) {
     ConstraintManager &CM = C.getConstraintManager();
     ProgramStateRef StatePos, StateNeg;

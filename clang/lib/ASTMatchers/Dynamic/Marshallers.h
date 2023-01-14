@@ -71,7 +71,7 @@ template <> struct ArgTypeTraits<std::string> {
     return ArgKind(ArgKind::AK_String);
   }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+  static std::optional<std::string> getBestGuess(const VariantValue &) {
     return std::nullopt;
   }
 };
@@ -96,7 +96,7 @@ template <class T> struct ArgTypeTraits<ast_matchers::internal::Matcher<T>> {
     return ArgKind::MakeMatcherArg(ASTNodeKind::getFromNodeKind<T>());
   }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+  static std::optional<std::string> getBestGuess(const VariantValue &) {
     return std::nullopt;
   }
 };
@@ -115,7 +115,7 @@ template <> struct ArgTypeTraits<bool> {
     return ArgKind(ArgKind::AK_Boolean);
   }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+  static std::optional<std::string> getBestGuess(const VariantValue &) {
     return std::nullopt;
   }
 };
@@ -134,7 +134,7 @@ template <> struct ArgTypeTraits<double> {
     return ArgKind(ArgKind::AK_Double);
   }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+  static std::optional<std::string> getBestGuess(const VariantValue &) {
     return std::nullopt;
   }
 };
@@ -153,17 +153,17 @@ template <> struct ArgTypeTraits<unsigned> {
     return ArgKind(ArgKind::AK_Unsigned);
   }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &) {
+  static std::optional<std::string> getBestGuess(const VariantValue &) {
     return std::nullopt;
   }
 };
 
 template <> struct ArgTypeTraits<attr::Kind> {
 private:
-  static Optional<attr::Kind> getAttrKind(llvm::StringRef AttrKind) {
+  static std::optional<attr::Kind> getAttrKind(llvm::StringRef AttrKind) {
     if (!AttrKind.consume_front("attr::"))
       return std::nullopt;
-    return llvm::StringSwitch<Optional<attr::Kind>>(AttrKind)
+    return llvm::StringSwitch<std::optional<attr::Kind>>(AttrKind)
 #define ATTR(X) .Case(#X, attr::X)
 #include "clang/Basic/AttrList.inc"
         .Default(std::nullopt);
@@ -185,15 +185,15 @@ public:
     return ArgKind(ArgKind::AK_String);
   }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
+  static std::optional<std::string> getBestGuess(const VariantValue &Value);
 };
 
 template <> struct ArgTypeTraits<CastKind> {
 private:
-  static Optional<CastKind> getCastKind(llvm::StringRef AttrKind) {
+  static std::optional<CastKind> getCastKind(llvm::StringRef AttrKind) {
     if (!AttrKind.consume_front("CK_"))
       return std::nullopt;
-    return llvm::StringSwitch<Optional<CastKind>>(AttrKind)
+    return llvm::StringSwitch<std::optional<CastKind>>(AttrKind)
 #define CAST_OPERATION(Name) .Case(#Name, CK_##Name)
 #include "clang/AST/OperationKinds.def"
         .Default(std::nullopt);
@@ -215,12 +215,12 @@ public:
     return ArgKind(ArgKind::AK_String);
   }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
+  static std::optional<std::string> getBestGuess(const VariantValue &Value);
 };
 
 template <> struct ArgTypeTraits<llvm::Regex::RegexFlags> {
 private:
-  static Optional<llvm::Regex::RegexFlags> getFlags(llvm::StringRef Flags);
+  static std::optional<llvm::Regex::RegexFlags> getFlags(llvm::StringRef Flags);
 
 public:
   static bool hasCorrectType(const VariantValue &Value) {
@@ -236,13 +236,14 @@ public:
 
   static ArgKind getKind() { return ArgKind(ArgKind::AK_String); }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
+  static std::optional<std::string> getBestGuess(const VariantValue &Value);
 };
 
 template <> struct ArgTypeTraits<OpenMPClauseKind> {
 private:
-  static Optional<OpenMPClauseKind> getClauseKind(llvm::StringRef ClauseKind) {
-    return llvm::StringSwitch<Optional<OpenMPClauseKind>>(ClauseKind)
+  static std::optional<OpenMPClauseKind>
+  getClauseKind(llvm::StringRef ClauseKind) {
+    return llvm::StringSwitch<std::optional<OpenMPClauseKind>>(ClauseKind)
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class) .Case(#Enum, llvm::omp::Clause::Enum)
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -263,16 +264,16 @@ public:
 
   static ArgKind getKind() { return ArgKind(ArgKind::AK_String); }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
+  static std::optional<std::string> getBestGuess(const VariantValue &Value);
 };
 
 template <> struct ArgTypeTraits<UnaryExprOrTypeTrait> {
 private:
-  static Optional<UnaryExprOrTypeTrait>
+  static std::optional<UnaryExprOrTypeTrait>
   getUnaryOrTypeTraitKind(llvm::StringRef ClauseKind) {
     if (!ClauseKind.consume_front("UETT_"))
       return std::nullopt;
-    return llvm::StringSwitch<Optional<UnaryExprOrTypeTrait>>(ClauseKind)
+    return llvm::StringSwitch<std::optional<UnaryExprOrTypeTrait>>(ClauseKind)
 #define UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key) .Case(#Name, UETT_##Name)
 #define CXX11_UNARY_EXPR_OR_TYPE_TRAIT(Spelling, Name, Key)                    \
   .Case(#Name, UETT_##Name)
@@ -294,7 +295,7 @@ public:
 
   static ArgKind getKind() { return ArgKind(ArgKind::AK_String); }
 
-  static llvm::Optional<std::string> getBestGuess(const VariantValue &Value);
+  static std::optional<std::string> getBestGuess(const VariantValue &Value);
 };
 
 /// Matcher descriptor interface.
@@ -508,7 +509,7 @@ variadicMatcherDescriptor(StringRef MatcherName, SourceRange NameRange,
       return {};
     }
     if (!ArgTraits::hasCorrectValue(Value)) {
-      if (llvm::Optional<std::string> BestGuess =
+      if (std::optional<std::string> BestGuess =
               ArgTraits::getBestGuess(Value)) {
         Error->addError(Arg.Range, Error->ET_RegistryUnknownEnumWithReplace)
             << i + 1 << Value.getString() << *BestGuess;
@@ -635,7 +636,7 @@ private:
     return VariantMatcher();                                                   \
   }                                                                            \
   if (!ArgTypeTraits<type>::hasCorrectValue(Args[index].Value)) {              \
-    if (llvm::Optional<std::string> BestGuess =                                \
+    if (std::optional<std::string> BestGuess =                                 \
             ArgTypeTraits<type>::getBestGuess(Args[index].Value)) {            \
       Error->addError(Args[index].Range,                                       \
                       Error->ET_RegistryUnknownEnumWithReplace)                \
@@ -845,7 +846,7 @@ public:
     }
     if (!ArgTypeTraits<llvm::Regex::RegexFlags>::hasCorrectValue(
             Args[1].Value)) {
-      if (llvm::Optional<std::string> BestGuess =
+      if (std::optional<std::string> BestGuess =
               ArgTypeTraits<llvm::Regex::RegexFlags>::getBestGuess(
                   Args[1].Value)) {
         Error->addError(Args[1].Range, Error->ET_RegistryUnknownEnumWithReplace)

@@ -146,7 +146,7 @@ HMapBucket HeaderMapImpl::getBucket(unsigned BucketNo) const {
   return Result;
 }
 
-Optional<StringRef> HeaderMapImpl::getString(unsigned StrTabIdx) const {
+std::optional<StringRef> HeaderMapImpl::getString(unsigned StrTabIdx) const {
   // Add the start of the string table to the idx.
   StrTabIdx += getEndianAdjustedWord(getHeader().StringsOffset);
 
@@ -178,7 +178,7 @@ LLVM_DUMP_METHOD void HeaderMapImpl::dump() const {
                << ", " << getEndianAdjustedWord(Hdr.NumEntries) << "\n";
 
   auto getStringOrInvalid = [this](unsigned Id) -> StringRef {
-    if (Optional<StringRef> S = getString(Id))
+    if (std::optional<StringRef> S = getString(Id))
       return *S;
     return "<invalid>";
   };
@@ -209,7 +209,7 @@ StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
     if (B.Key == HMAP_EmptyBucketKey) return StringRef(); // Hash miss.
 
     // See if the key matches.  If not, probe on.
-    Optional<StringRef> Key = getString(B.Key);
+    std::optional<StringRef> Key = getString(B.Key);
     if (LLVM_UNLIKELY(!Key))
       continue;
     if (!Filename.equals_insensitive(*Key))
@@ -217,8 +217,8 @@ StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
 
     // If so, we have a match in the hash table.  Construct the destination
     // path.
-    Optional<StringRef> Prefix = getString(B.Prefix);
-    Optional<StringRef> Suffix = getString(B.Suffix);
+    std::optional<StringRef> Prefix = getString(B.Prefix);
+    std::optional<StringRef> Suffix = getString(B.Suffix);
 
     DestPath.clear();
     if (LLVM_LIKELY(Prefix && Suffix)) {
@@ -241,9 +241,9 @@ StringRef HeaderMapImpl::reverseLookupFilename(StringRef DestPath) const {
     if (B.Key == HMAP_EmptyBucketKey)
       continue;
 
-    Optional<StringRef> Key = getString(B.Key);
-    Optional<StringRef> Prefix = getString(B.Prefix);
-    Optional<StringRef> Suffix = getString(B.Suffix);
+    std::optional<StringRef> Key = getString(B.Key);
+    std::optional<StringRef> Prefix = getString(B.Prefix);
+    std::optional<StringRef> Suffix = getString(B.Suffix);
     if (LLVM_LIKELY(Key && Prefix && Suffix)) {
       SmallVector<char, 1024> Buf;
       Buf.append(Prefix->begin(), Prefix->end());

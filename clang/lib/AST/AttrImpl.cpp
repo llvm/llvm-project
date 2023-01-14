@@ -149,7 +149,7 @@ void OMPDeclareTargetDeclAttr::printPrettyPragma(
   }
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr *>
+std::optional<OMPDeclareTargetDeclAttr *>
 OMPDeclareTargetDeclAttr::getActiveAttr(const ValueDecl *VD) {
   if (!VD->hasAttrs())
     return std::nullopt;
@@ -166,25 +166,25 @@ OMPDeclareTargetDeclAttr::getActiveAttr(const ValueDecl *VD) {
   return std::nullopt;
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
+std::optional<OMPDeclareTargetDeclAttr::MapTypeTy>
 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(const ValueDecl *VD) {
-  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
   if (ActiveAttr)
     return (*ActiveAttr)->getMapType();
   return std::nullopt;
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr::DevTypeTy>
+std::optional<OMPDeclareTargetDeclAttr::DevTypeTy>
 OMPDeclareTargetDeclAttr::getDeviceType(const ValueDecl *VD) {
-  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
   if (ActiveAttr)
     return (*ActiveAttr)->getDevType();
   return std::nullopt;
 }
 
-llvm::Optional<SourceLocation>
+std::optional<SourceLocation>
 OMPDeclareTargetDeclAttr::getLocation(const ValueDecl *VD) {
-  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
   if (ActiveAttr)
     return (*ActiveAttr)->getRange().getBegin();
   return std::nullopt;

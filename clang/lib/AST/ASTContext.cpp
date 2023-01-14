@@ -802,7 +802,7 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
           TTP->getDepth(), TTP->getIndex(), nullptr, false,
           TTP->isParameterPack(), TTP->hasTypeConstraint(),
           TTP->isExpandedParameterPack()
-              ? llvm::Optional<unsigned>(TTP->getNumExpansionParameters())
+              ? std::optional<unsigned>(TTP->getNumExpansionParameters())
               : std::nullopt);
       if (const auto *TC = TTP->getTypeConstraint()) {
         QualType ParamAsArgument(NewTTP->getTypeForDecl(), 0);
@@ -2693,11 +2693,11 @@ static int64_t getSubobjectOffset(const CXXRecordDecl *RD,
   return Context.toBits(Layout.getBaseClassOffset(RD));
 }
 
-static llvm::Optional<int64_t>
+static std::optional<int64_t>
 structHasUniqueObjectRepresentations(const ASTContext &Context,
                                      const RecordDecl *RD);
 
-static llvm::Optional<int64_t>
+static std::optional<int64_t>
 getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context) {
   if (Field->getType()->isRecordType()) {
     const RecordDecl *RD = Field->getType()->getAsRecordDecl();
@@ -2731,17 +2731,17 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context) {
   return FieldSizeInBits;
 }
 
-static llvm::Optional<int64_t>
+static std::optional<int64_t>
 getSubobjectSizeInBits(const CXXRecordDecl *RD, const ASTContext &Context) {
   return structHasUniqueObjectRepresentations(Context, RD);
 }
 
 template <typename RangeT>
-static llvm::Optional<int64_t> structSubobjectsHaveUniqueObjectRepresentations(
+static std::optional<int64_t> structSubobjectsHaveUniqueObjectRepresentations(
     const RangeT &Subobjects, int64_t CurOffsetInBits,
     const ASTContext &Context, const clang::ASTRecordLayout &Layout) {
   for (const auto *Subobject : Subobjects) {
-    llvm::Optional<int64_t> SizeInBits =
+    std::optional<int64_t> SizeInBits =
         getSubobjectSizeInBits(Subobject, Context);
     if (!SizeInBits)
       return std::nullopt;
@@ -2755,7 +2755,7 @@ static llvm::Optional<int64_t> structSubobjectsHaveUniqueObjectRepresentations(
   return CurOffsetInBits;
 }
 
-static llvm::Optional<int64_t>
+static std::optional<int64_t>
 structHasUniqueObjectRepresentations(const ASTContext &Context,
                                      const RecordDecl *RD) {
   assert(!RD->isUnion() && "Must be struct/class type");
@@ -2777,7 +2777,7 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
       return Layout.getBaseClassOffset(L) < Layout.getBaseClassOffset(R);
     });
 
-    llvm::Optional<int64_t> OffsetAfterBases =
+    std::optional<int64_t> OffsetAfterBases =
         structSubobjectsHaveUniqueObjectRepresentations(Bases, CurOffsetInBits,
                                                         Context, Layout);
     if (!OffsetAfterBases)
@@ -2785,7 +2785,7 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
     CurOffsetInBits = *OffsetAfterBases;
   }
 
-  llvm::Optional<int64_t> OffsetAfterFields =
+  std::optional<int64_t> OffsetAfterFields =
       structSubobjectsHaveUniqueObjectRepresentations(
           RD->fields(), CurOffsetInBits, Context, Layout);
   if (!OffsetAfterFields)
@@ -2850,7 +2850,7 @@ bool ASTContext::hasUniqueObjectRepresentations(QualType Ty) const {
     if (Record->isUnion())
       return unionHasUniqueObjectRepresentations(*this, Record);
 
-    Optional<int64_t> StructSize =
+    std::optional<int64_t> StructSize =
         structHasUniqueObjectRepresentations(*this, Record);
 
     return StructSize && *StructSize == static_cast<int64_t>(getTypeSize(Ty));
@@ -4806,10 +4806,9 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
 }
 
 /// Retrieve a substitution-result type.
-QualType
-ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
-                                         Decl *AssociatedDecl, unsigned Index,
-                                         Optional<unsigned> PackIndex) const {
+QualType ASTContext::getSubstTemplateTypeParmType(
+    QualType Replacement, Decl *AssociatedDecl, unsigned Index,
+    std::optional<unsigned> PackIndex) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTypeParmType::Profile(ID, Replacement, AssociatedDecl, Index,
                                      PackIndex);
@@ -5208,7 +5207,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
   } else {
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
     if (TTP->isParameterPack())
-      Arg = TemplateArgument(TemplateName(TTP), Optional<unsigned>());
+      Arg = TemplateArgument(TemplateName(TTP), std::optional<unsigned>());
     else
       Arg = TemplateArgument(TemplateName(TTP));
   }
@@ -5229,7 +5228,7 @@ ASTContext::getInjectedTemplateArgs(const TemplateParameterList *Params,
 }
 
 QualType ASTContext::getPackExpansionType(QualType Pattern,
-                                          Optional<unsigned> NumExpansions,
+                                          std::optional<unsigned> NumExpansions,
                                           bool ExpectPackInType) {
   assert((!ExpectPackInType || Pattern->containsUnexpandedParameterPack()) &&
          "Pack expansions must expand one or more parameter packs");
@@ -9268,10 +9267,9 @@ ASTContext::getDependentTemplateName(NestedNameSpecifier *NNS,
   return TemplateName(QTN);
 }
 
-TemplateName
-ASTContext::getSubstTemplateTemplateParm(TemplateName Replacement,
-                                         Decl *AssociatedDecl, unsigned Index,
-                                         Optional<unsigned> PackIndex) const {
+TemplateName ASTContext::getSubstTemplateTemplateParm(
+    TemplateName Replacement, Decl *AssociatedDecl, unsigned Index,
+    std::optional<unsigned> PackIndex) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTemplateParmStorage::Profile(ID, Replacement, AssociatedDecl,
                                             Index, PackIndex);
@@ -10650,7 +10648,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
           const ConstantArrayType* CAT)
           -> std::pair<bool,llvm::APInt> {
         if (VAT) {
-          Optional<llvm::APSInt> TheInt;
+          std::optional<llvm::APSInt> TheInt;
           Expr *E = VAT->getSizeExpr();
           if (E && (TheInt = E->getIntegerConstantExpr(*this)))
             return std::make_pair(true, *TheInt);
@@ -11922,7 +11920,7 @@ MangleContext *ASTContext::createDeviceMangleContext(const TargetInfo &T) {
   case TargetCXXABI::XL:
     return ItaniumMangleContext::create(
         *this, getDiagnostics(),
-        [](ASTContext &, const NamedDecl *ND) -> llvm::Optional<unsigned> {
+        [](ASTContext &, const NamedDecl *ND) -> std::optional<unsigned> {
           if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
             return RD->getDeviceLambdaManglingNumber();
           return std::nullopt;

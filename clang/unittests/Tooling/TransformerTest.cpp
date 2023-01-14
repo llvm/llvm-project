@@ -84,7 +84,7 @@ static std::string format(StringRef Code) {
 }
 
 static void compareSnippets(StringRef Expected,
-                            const llvm::Optional<std::string> &MaybeActual) {
+                            const std::optional<std::string> &MaybeActual) {
   ASSERT_TRUE(MaybeActual) << "Rewrite failed. Expecting: " << Expected;
   auto Actual = *MaybeActual;
   std::string HL = "#include \"header.h\"\n";
@@ -103,7 +103,7 @@ protected:
     FileContents.emplace_back(std::string(Filename), std::string(Content));
   }
 
-  llvm::Optional<std::string> rewrite(StringRef Input) {
+  std::optional<std::string> rewrite(StringRef Input) {
     std::string Code = ("#include \"header.h\"\n" + Input).str();
     auto Factory = newFrontendActionFactory(&MatchFinder);
     if (!runToolOnCodeWithArgs(

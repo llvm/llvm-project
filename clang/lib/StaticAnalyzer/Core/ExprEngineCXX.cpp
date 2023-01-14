@@ -76,7 +76,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
 
   // If the value being copied is not unknown, load from its location to get
   // an aggregate rvalue.
-  if (Optional<Loc> L = V.getAs<Loc>())
+  if (std::optional<Loc> L = V.getAs<Loc>())
     V = Pred->getState()->getSVal(*L);
   else
     assert(V.isUnknownOrUndef());
@@ -328,7 +328,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
       unsigned Idx = ACC->getIndex();
 
       CallEventManager &CEMgr = getStateManager().getCallEventManager();
-      auto getArgLoc = [&](CallEventRef<> Caller) -> Optional<SVal> {
+      auto getArgLoc = [&](CallEventRef<> Caller) -> std::optional<SVal> {
         const LocationContext *FutureSFC =
             Caller->getCalleeStackFrame(BldrCtx->blockCount());
         // Return early if we are unable to reliably foresee
@@ -358,7 +358,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
 
       if (const auto *CE = dyn_cast<CallExpr>(E)) {
         CallEventRef<> Caller = CEMgr.getSimpleCall(CE, State, LCtx);
-        if (Optional<SVal> V = getArgLoc(Caller))
+        if (std::optional<SVal> V = getArgLoc(Caller))
           return *V;
         else
           break;
@@ -367,13 +367,13 @@ SVal ExprEngine::computeObjectUnderConstruction(
         // constructor because we won't need it.
         CallEventRef<> Caller =
             CEMgr.getCXXConstructorCall(CCE, /*Target=*/nullptr, State, LCtx);
-        if (Optional<SVal> V = getArgLoc(Caller))
+        if (std::optional<SVal> V = getArgLoc(Caller))
           return *V;
         else
           break;
       } else if (const auto *ME = dyn_cast<ObjCMessageExpr>(E)) {
         CallEventRef<> Caller = CEMgr.getObjCMethodCall(ME, State, LCtx);
-        if (Optional<SVal> V = getArgLoc(Caller))
+        if (std::optional<SVal> V = getArgLoc(Caller))
           return *V;
         else
           break;
@@ -584,18 +584,18 @@ void ExprEngine::handleConstructor(const Expr *E,
   SVal Target = UnknownVal();
 
   if (CE) {
-    if (Optional<SVal> ElidedTarget =
+    if (std::optional<SVal> ElidedTarget =
             getObjectUnderConstruction(State, CE, LCtx)) {
-      // We've previously modeled an elidable constructor by pretending that it
-      // in fact constructs into the correct target. This constructor can
-      // therefore be skipped.
-      Target = *ElidedTarget;
-      StmtNodeBuilder Bldr(Pred, destNodes, *currBldrCtx);
-      State = finishObjectConstruction(State, CE, LCtx);
-      if (auto L = Target.getAs<Loc>())
-        State = State->BindExpr(CE, LCtx, State->getSVal(*L, CE->getType()));
-      Bldr.generateNode(CE, Pred, State);
-      return;
+        // We've previously modeled an elidable constructor by pretending that
+        // it in fact constructs into the correct target. This constructor can
+        // therefore be skipped.
+        Target = *ElidedTarget;
+        StmtNodeBuilder Bldr(Pred, destNodes, *currBldrCtx);
+        State = finishObjectConstruction(State, CE, LCtx);
+        if (auto L = Target.getAs<Loc>())
+          State = State->BindExpr(CE, LCtx, State->getSVal(*L, CE->getType()));
+        Bldr.generateNode(CE, Pred, State);
+        return;
     }
   }
 

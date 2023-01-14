@@ -460,7 +460,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
              << Info.getConstraintStr();
   }
 
-  Optional<SourceLocation> UnwindClobberLoc;
+  std::optional<SourceLocation> UnwindClobberLoc;
 
   // Check that the clobbers are valid.
   for (unsigned i = 0; i != NumClobbers; i++) {

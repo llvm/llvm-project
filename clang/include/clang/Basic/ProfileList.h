@@ -42,8 +42,8 @@ private:
   std::unique_ptr<ProfileSpecialCaseList> SCL;
   const bool Empty;
   SourceManager &SM;
-  llvm::Optional<ExclusionType> inSection(StringRef Section, StringRef Prefix,
-                                          StringRef Query) const;
+  std::optional<ExclusionType> inSection(StringRef Section, StringRef Prefix,
+                                         StringRef Query) const;
 
 public:
   ProfileList(ArrayRef<std::string> Paths, SourceManager &SM);
@@ -52,13 +52,13 @@ public:
   bool isEmpty() const { return Empty; }
   ExclusionType getDefault(CodeGenOptions::ProfileInstrKind Kind) const;
 
-  llvm::Optional<ExclusionType>
+  std::optional<ExclusionType>
   isFunctionExcluded(StringRef FunctionName,
                      CodeGenOptions::ProfileInstrKind Kind) const;
-  llvm::Optional<ExclusionType>
+  std::optional<ExclusionType>
   isLocationExcluded(SourceLocation Loc,
                      CodeGenOptions::ProfileInstrKind Kind) const;
-  llvm::Optional<ExclusionType>
+  std::optional<ExclusionType>
   isFileExcluded(StringRef FileName,
                  CodeGenOptions::ProfileInstrKind Kind) const;
 };

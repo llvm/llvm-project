@@ -59,7 +59,7 @@ unsigned getOffsetAfterTokenSequence(
 // (second) raw_identifier name is checked.
 bool checkAndConsumeDirectiveWithName(
     Lexer &Lex, StringRef Name, Token &Tok,
-    llvm::Optional<StringRef> RawIDName = std::nullopt) {
+    std::optional<StringRef> RawIDName = std::nullopt) {
   bool Matched = Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
                  Tok.is(tok::raw_identifier) &&
                  Tok.getRawIdentifier() == Name && !Lex.LexFromRawLexer(Tok) &&
@@ -344,7 +344,7 @@ void HeaderIncludes::addExistingInclude(Include IncludeToAdd,
   }
 }
 
-llvm::Optional<tooling::Replacement>
+std::optional<tooling::Replacement>
 HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
                        IncludeDirective Directive) const {
   assert(IncludeName == trimInclude(IncludeName));

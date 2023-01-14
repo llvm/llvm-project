@@ -155,8 +155,8 @@ void VforkChecker::checkPostCall(const CallEvent &Call,
 
   // Get return value of vfork.
   SVal VforkRetVal = Call.getReturnValue();
-  Optional<DefinedOrUnknownSVal> DVal =
-    VforkRetVal.getAs<DefinedOrUnknownSVal>();
+  std::optional<DefinedOrUnknownSVal> DVal =
+      VforkRetVal.getAs<DefinedOrUnknownSVal>();
   if (!DVal)
     return;
 

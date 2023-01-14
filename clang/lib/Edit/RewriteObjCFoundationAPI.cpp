@@ -692,7 +692,7 @@ static bool getLiteralInfo(SourceRange literalRange,
   if (text.empty())
     return false;
 
-  Optional<bool> UpperU, UpperL;
+  std::optional<bool> UpperU, UpperL;
   bool UpperF = false;
 
   struct Suff {
@@ -776,8 +776,8 @@ static bool rewriteToNumberLiteral(const ObjCMessageExpr *Msg,
 
   ASTContext &Ctx = NS.getASTContext();
   Selector Sel = Msg->getSelector();
-  Optional<NSAPI::NSNumberLiteralMethodKind>
-    MKOpt = NS.getNSNumberLiteralMethodKind(Sel);
+  std::optional<NSAPI::NSNumberLiteralMethodKind> MKOpt =
+      NS.getNSNumberLiteralMethodKind(Sel);
   if (!MKOpt)
     return false;
   NSAPI::NSNumberLiteralMethodKind MK = *MKOpt;
@@ -984,8 +984,8 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
 
   ASTContext &Ctx = NS.getASTContext();
   Selector Sel = Msg->getSelector();
-  Optional<NSAPI::NSNumberLiteralMethodKind>
-    MKOpt = NS.getNSNumberLiteralMethodKind(Sel);
+  std::optional<NSAPI::NSNumberLiteralMethodKind> MKOpt =
+      NS.getNSNumberLiteralMethodKind(Sel);
   if (!MKOpt)
     return false;
   NSAPI::NSNumberLiteralMethodKind MK = *MKOpt;

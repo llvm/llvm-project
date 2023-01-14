@@ -117,7 +117,7 @@ TEST(DiagnosticTest, diagnosticError) {
                             << "error");
   ASSERT_TRUE(!Value);
   llvm::Error Err = Value.takeError();
-  Optional<PartialDiagnosticAt> ErrDiag = DiagnosticError::take(Err);
+  std::optional<PartialDiagnosticAt> ErrDiag = DiagnosticError::take(Err);
   llvm::cantFail(std::move(Err));
   ASSERT_FALSE(!ErrDiag);
   EXPECT_EQ(ErrDiag->first, SourceLocation());

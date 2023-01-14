@@ -299,8 +299,9 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
   if (matchesAny(Call, StdMakeUniqueCall, StdMakeUniqueForOverwriteCall)) {
     if (!ModelSmartPtrDereference)
       return false;
-    
-    const Optional<SVal> ThisRegionOpt = Call.getReturnValueUnderConstruction();
+
+    const std::optional<SVal> ThisRegionOpt =
+        Call.getReturnValueUnderConstruction();
     if (!ThisRegionOpt)
       return false;
 

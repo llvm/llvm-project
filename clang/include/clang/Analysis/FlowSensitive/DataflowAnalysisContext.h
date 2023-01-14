@@ -66,7 +66,7 @@ public:
     /// unit, or empty to disable context-sensitive analysis. Note that this is
     /// fundamentally limited: some constructs, such as recursion, are
     /// explicitly unsupported.
-    llvm::Optional<ContextSensitiveOptions> ContextSensitiveOpts;
+    std::optional<ContextSensitiveOptions> ContextSensitiveOpts;
   };
 
   /// Constructs a dataflow analysis context.

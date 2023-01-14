@@ -1509,7 +1509,7 @@ void MicrosoftCXXNameMangler::mangleIntegerLiteral(
 void MicrosoftCXXNameMangler::mangleExpression(
     const Expr *E, const NonTypeTemplateParmDecl *PD) {
   // See if this is a constant expression.
-  if (Optional<llvm::APSInt> Value =
+  if (std::optional<llvm::APSInt> Value =
           E->getIntegerConstantExpr(Context.getASTContext())) {
     mangleIntegerLiteral(*Value, PD, E->getType());
     return;

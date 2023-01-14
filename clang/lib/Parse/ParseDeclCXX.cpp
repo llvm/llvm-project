@@ -4072,7 +4072,7 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
 
   Actions.ActOnStartTrailingRequiresClause(getCurScope(), D);
 
-  llvm::Optional<Sema::CXXThisScopeRAII> ThisScope;
+  std::optional<Sema::CXXThisScopeRAII> ThisScope;
   InitCXXThisScopeForDeclaratorIfRelevant(D, D.getDeclSpec(), ThisScope);
 
   TrailingRequiresClause =

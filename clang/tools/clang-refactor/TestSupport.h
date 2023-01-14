@@ -96,7 +96,8 @@ struct TestSelectionRangesInFile {
 ///
 /// \returns std::nullopt on failure (errors are emitted to stderr), or a set of
 /// grouped source ranges in the given file otherwise.
-Optional<TestSelectionRangesInFile> findTestSelectionRanges(StringRef Filename);
+std::optional<TestSelectionRangesInFile>
+findTestSelectionRanges(StringRef Filename);
 
 } // end namespace refactor
 } // end namespace clang

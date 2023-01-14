@@ -467,7 +467,7 @@ public:
   /// provided, only headers with same size and modtime are resolved. If File
   /// is not set, all headers are resolved.
   void resolveHeaderDirectives(Module *Mod,
-                               llvm::Optional<const FileEntry *> File) const;
+                               std::optional<const FileEntry *> File) const;
 
   /// Reports errors if a module must not include a specific file.
   ///
@@ -733,7 +733,7 @@ public:
   }
 
   /// Return a cached module load.
-  llvm::Optional<Module *> getCachedModuleLoad(const IdentifierInfo &II) {
+  std::optional<Module *> getCachedModuleLoad(const IdentifierInfo &II) {
     auto I = CachedModuleLoads.find(&II);
     if (I == CachedModuleLoads.end())
       return std::nullopt;

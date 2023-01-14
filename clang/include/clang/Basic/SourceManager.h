@@ -212,7 +212,7 @@ public:
   ///
   /// \param Loc If specified, is the location that invalid file diagnostics
   ///   will be emitted at.
-  llvm::Optional<llvm::MemoryBufferRef>
+  std::optional<llvm::MemoryBufferRef>
   getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
                   SourceLocation Loc = SourceLocation()) const;
 
@@ -235,7 +235,7 @@ public:
   llvm::MemoryBuffer::BufferKind getMemoryBufferKind() const;
 
   /// Return the buffer, only if it has been loaded.
-  llvm::Optional<llvm::MemoryBufferRef> getBufferIfLoaded() const {
+  std::optional<llvm::MemoryBufferRef> getBufferIfLoaded() const {
     if (Buffer)
       return Buffer->getMemBufferRef();
     return std::nullopt;
@@ -243,7 +243,7 @@ public:
 
   /// Return a StringRef to the source buffer data, only if it has already
   /// been loaded.
-  llvm::Optional<StringRef> getBufferDataIfLoaded() const {
+  std::optional<StringRef> getBufferDataIfLoaded() const {
     if (Buffer)
       return Buffer->getBuffer();
     return std::nullopt;
@@ -258,7 +258,7 @@ public:
   /// Set the buffer to one that's not owned (or to nullptr).
   ///
   /// \pre Buffer cannot already be set.
-  void setUnownedBuffer(llvm::Optional<llvm::MemoryBufferRef> B) {
+  void setUnownedBuffer(std::optional<llvm::MemoryBufferRef> B) {
     assert(!Buffer && "Expected to be called right after construction");
     if (B)
       setBuffer(llvm::MemoryBuffer::getMemBuffer(*B));
@@ -941,7 +941,7 @@ public:
   /// Retrieve the memory buffer associated with the given file.
   ///
   /// Returns std::nullopt if the buffer is not valid.
-  llvm::Optional<llvm::MemoryBufferRef>
+  std::optional<llvm::MemoryBufferRef>
   getMemoryBufferForFileOrNone(const FileEntry *File);
 
   /// Retrieve the memory buffer associated with the given file.
@@ -1023,7 +1023,7 @@ public:
   ///
   /// If there is an error opening this buffer the first time, return
   /// std::nullopt.
-  llvm::Optional<llvm::MemoryBufferRef>
+  std::optional<llvm::MemoryBufferRef>
   getBufferOrNone(FileID FID, SourceLocation Loc = SourceLocation()) const {
     if (auto *Entry = getSLocEntryForFile(FID))
       return Entry->getFile().getContentCache().getBufferOrNone(
@@ -1060,7 +1060,7 @@ public:
   /// buffer that's not represented by a filename.
   ///
   /// Returns std::nullopt for non-files and built-in files.
-  Optional<StringRef> getNonBuiltinFilenameForID(FileID FID) const;
+  std::optional<StringRef> getNonBuiltinFilenameForID(FileID FID) const;
 
   /// Returns the FileEntry record for the provided SLocEntry.
   const FileEntry *getFileEntryForSLocEntry(const SrcMgr::SLocEntry &sloc) const
@@ -1079,13 +1079,13 @@ public:
   /// specified FileID, returning std::nullopt if invalid.
   ///
   /// \param FID The file ID whose contents will be returned.
-  llvm::Optional<StringRef> getBufferDataOrNone(FileID FID) const;
+  std::optional<StringRef> getBufferDataOrNone(FileID FID) const;
 
   /// Return a StringRef to the source buffer data for the
   /// specified FileID, returning std::nullopt if it's not yet loaded.
   ///
   /// \param FID The file ID whose contents will be returned.
-  llvm::Optional<StringRef> getBufferDataIfLoaded(FileID FID) const;
+  std::optional<StringRef> getBufferDataIfLoaded(FileID FID) const;
 
   /// Get the number of FileIDs (files and macros) that were created
   /// during preprocessing of \p FID, including it.
@@ -1696,7 +1696,7 @@ public:
 
   // Produce notes describing the current source location address space usage.
   void noteSLocAddressSpaceUsage(DiagnosticsEngine &Diag,
-                                 Optional<unsigned> MaxNotes = 32) const;
+                                 std::optional<unsigned> MaxNotes = 32) const;
 
   /// Get the number of local SLocEntries we have.
   unsigned local_sloc_entry_size() const { return LocalSLocEntryTable.size(); }

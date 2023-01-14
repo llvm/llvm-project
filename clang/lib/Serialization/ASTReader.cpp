@@ -2410,8 +2410,8 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       Content,
       None,
     } Kind;
-    llvm::Optional<int64_t> Old = std::nullopt;
-    llvm::Optional<int64_t> New = std::nullopt;
+    std::optional<int64_t> Old = std::nullopt;
+    std::optional<int64_t> New = std::nullopt;
   };
   auto HasInputFileChanged = [&]() {
     if (StoredSize != File->getSize())
@@ -3404,7 +3404,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       if (!Record.empty()) {
         unsigned Idx = 0, End = Record.size() - 1;
         bool ReachedEOFWhileSkipping = Record[Idx++];
-        llvm::Optional<Preprocessor::PreambleSkipInfo> SkipInfo;
+        std::optional<Preprocessor::PreambleSkipInfo> SkipInfo;
         if (ReachedEOFWhileSkipping) {
           SourceLocation HashToken = ReadSourceLocation(F, Record, Idx);
           SourceLocation IfTokenLoc = ReadSourceLocation(F, Record, Idx);
@@ -4258,7 +4258,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
   llvm::TimeTraceScope scope("ReadAST", FileName);
 
   llvm::SaveAndRestore SetCurImportLocRAII(CurrentImportLoc, ImportLoc);
-  llvm::SaveAndRestore<Optional<ModuleKind>> SetCurModuleKindRAII(
+  llvm::SaveAndRestore<std::optional<ModuleKind>> SetCurModuleKindRAII(
       CurrentDeserializingModuleKind, Type);
 
   // Defer any pending actions until we get to the end of reading the AST file.
@@ -6266,8 +6266,8 @@ std::pair<unsigned, unsigned>
 
 /// Optionally returns true or false if the preallocated preprocessed
 /// entity with index \arg Index came from file \arg FID.
-Optional<bool> ASTReader::isPreprocessedEntityInFileID(unsigned Index,
-                                                             FileID FID) {
+std::optional<bool> ASTReader::isPreprocessedEntityInFileID(unsigned Index,
+                                                            FileID FID) {
   if (FID.isInvalid())
     return false;
 
@@ -6291,7 +6291,7 @@ namespace {
   /// Visitor used to search for information about a header file.
   class HeaderFileInfoVisitor {
     const FileEntry *FE;
-    Optional<HeaderFileInfo> HFI;
+    std::optional<HeaderFileInfo> HFI;
 
   public:
     explicit HeaderFileInfoVisitor(const FileEntry *FE) : FE(FE) {}
@@ -6311,7 +6311,7 @@ namespace {
       return true;
     }
 
-    Optional<HeaderFileInfo> getHeaderFileInfo() const { return HFI; }
+    std::optional<HeaderFileInfo> getHeaderFileInfo() const { return HFI; }
   };
 
 } // namespace
@@ -6319,8 +6319,8 @@ namespace {
 HeaderFileInfo ASTReader::GetHeaderFileInfo(const FileEntry *FE) {
   HeaderFileInfoVisitor Visitor(FE);
   ModuleMgr.visit(Visitor);
-  if (Optional<HeaderFileInfo> HFI = Visitor.getHeaderFileInfo())
-    return *HFI;
+  if (std::optional<HeaderFileInfo> HFI = Visitor.getHeaderFileInfo())
+      return *HFI;
 
   return HeaderFileInfo();
 }
@@ -6475,7 +6475,7 @@ ASTReader::RecordLocation ASTReader::TypeCursorForIndex(unsigned Index) {
              M->DeclsBlockStartOffset);
 }
 
-static llvm::Optional<Type::TypeClass> getTypeClassForCode(TypeCode code) {
+static std::optional<Type::TypeClass> getTypeClassForCode(TypeCode code) {
   switch (code) {
 #define TYPE_BIT_CODE(CLASS_ID, CODE_ID, CODE_VALUE) \
   case TYPE_##CODE_ID: return Type::CLASS_ID;
@@ -8764,8 +8764,7 @@ unsigned ASTReader::getModuleFileID(ModuleFile *F) {
   return (I - PCHModules.end()) << 1;
 }
 
-llvm::Optional<ASTSourceDescriptor>
-ASTReader::getSourceDescriptor(unsigned ID) {
+std::optional<ASTSourceDescriptor> ASTReader::getSourceDescriptor(unsigned ID) {
   if (Module *M = getSubmodule(ID))
     return ASTSourceDescriptor(*M);
 

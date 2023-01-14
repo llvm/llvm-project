@@ -92,7 +92,7 @@ void ErrnoTesterChecker::evalGetErrno(CheckerContext &C,
                                       const CallEvent &Call) {
   ProgramStateRef State = C.getState();
 
-  Optional<SVal> ErrnoVal = getErrnoValue(State);
+  std::optional<SVal> ErrnoVal = getErrnoValue(State);
   assert(ErrnoVal && "Errno value should be available.");
   State =
       State->BindExpr(Call.getOriginExpr(), C.getLocationContext(), *ErrnoVal);

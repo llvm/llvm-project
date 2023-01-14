@@ -138,7 +138,7 @@ public:
     /// Enables per-check timers.
     ///
     /// It prints a report after match.
-    llvm::Optional<Profiling> CheckProfiling;
+    std::optional<Profiling> CheckProfiling;
   };
 
   MatchFinder(MatchFinderOptions Options = MatchFinderOptions());

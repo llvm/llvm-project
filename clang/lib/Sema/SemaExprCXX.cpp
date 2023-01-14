@@ -1850,7 +1850,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
                   SourceLocation PlacementLParen, MultiExprArg PlacementArgs,
                   SourceLocation PlacementRParen, SourceRange TypeIdParens,
                   Declarator &D, Expr *Initializer) {
-  Optional<Expr *> ArraySize;
+  std::optional<Expr *> ArraySize;
   // If the specified type is an array, unwrap it and save the expression.
   if (D.getNumTypeObjects() > 0 &&
       D.getTypeObject(0).Kind == DeclaratorChunk::Array) {
@@ -1942,7 +1942,7 @@ Sema::isUnavailableAlignedAllocationFunction(const FunctionDecl &FD) const {
     return false;
   if (FD.isDefined())
     return false;
-  Optional<unsigned> AlignmentParam;
+  std::optional<unsigned> AlignmentParam;
   if (FD.isReplaceableGlobalAllocationFunction(&AlignmentParam) &&
       AlignmentParam)
     return true;
@@ -1968,17 +1968,14 @@ void Sema::diagnoseUnavailableAlignedAllocation(const FunctionDecl &FD,
   }
 }
 
-ExprResult
-Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
-                  SourceLocation PlacementLParen,
-                  MultiExprArg PlacementArgs,
-                  SourceLocation PlacementRParen,
-                  SourceRange TypeIdParens,
-                  QualType AllocType,
-                  TypeSourceInfo *AllocTypeInfo,
-                  Optional<Expr *> ArraySize,
-                  SourceRange DirectInitRange,
-                  Expr *Initializer) {
+ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
+                             SourceLocation PlacementLParen,
+                             MultiExprArg PlacementArgs,
+                             SourceLocation PlacementRParen,
+                             SourceRange TypeIdParens, QualType AllocType,
+                             TypeSourceInfo *AllocTypeInfo,
+                             std::optional<Expr *> ArraySize,
+                             SourceRange DirectInitRange, Expr *Initializer) {
   SourceRange TypeRange = AllocTypeInfo->getTypeLoc().getSourceRange();
   SourceLocation StartLoc = Range.getBegin();
 
@@ -2121,7 +2118,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   //   conversion function to integral or unscoped enumeration type exists.
   // C++1y [expr.new]p6: The expression [...] is implicitly converted to
   //   std::size_t.
-  llvm::Optional<uint64_t> KnownArraySize;
+  std::optional<uint64_t> KnownArraySize;
   if (ArraySize && *ArraySize && !(*ArraySize)->isTypeDependent()) {
     ExprResult ConvertedSize;
     if (getLangOpts().CPlusPlus14) {
@@ -2215,7 +2212,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     // FIXME: Per CWG1464, we are required to check the value prior to
     // converting to size_t. This will never find a negative array size in
     // C++14 onwards, because Value is always unsigned here!
-    if (Optional<llvm::APSInt> Value =
+    if (std::optional<llvm::APSInt> Value =
             (*ArraySize)->getIntegerConstantExpr(Context)) {
       if (Value->isSigned() && Value->isNegative()) {
         return ExprError(Diag((*ArraySize)->getBeginLoc(),
@@ -2302,7 +2299,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         SizeTyWidth, Context.getTypeSizeInChars(AllocType).getQuantity());
 
     // How many bytes do we want to allocate here?
-    llvm::Optional<llvm::APInt> AllocationSize;
+    std::optional<llvm::APInt> AllocationSize;
     if (!ArraySize && !AllocType->isDependentType()) {
       // For non-array operator new, we only want to allocate one element.
       AllocationSize = SingleEltSize;
@@ -8306,7 +8303,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
 
     // If we have a capture-capable lambda for the variable, go ahead and
     // capture the variable in that lambda (and all its enclosing lambdas).
-    if (const Optional<unsigned> Index =
+    if (const std::optional<unsigned> Index =
             getStackIndexOfNearestEnclosingCaptureCapableLambda(
                 S.FunctionScopes, Var, S))
       S.MarkCaptureUsedInEnclosingContext(Var, VarExpr->getExprLoc(), *Index);
@@ -8339,7 +8336,7 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
   if (CurrentLSI->hasPotentialThisCapture()) {
     // If we have a capture-capable lambda for 'this', go ahead and capture
     // 'this' in that lambda (and all its enclosing lambdas).
-    if (const Optional<unsigned> Index =
+    if (const std::optional<unsigned> Index =
             getStackIndexOfNearestEnclosingCaptureCapableLambda(
                 S.FunctionScopes, /*0 is 'this'*/ nullptr, S)) {
       const unsigned FunctionScopeIndexOfCapturableLambda = *Index;

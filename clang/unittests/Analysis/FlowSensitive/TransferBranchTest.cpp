@@ -27,7 +27,7 @@ namespace {
 using namespace ast_matchers;
 
 struct TestLattice {
-  llvm::Optional<bool> Branch;
+  std::optional<bool> Branch;
   static TestLattice bottom() { return {}; }
 
   // Does not matter for this test, but we must provide some definition of join.

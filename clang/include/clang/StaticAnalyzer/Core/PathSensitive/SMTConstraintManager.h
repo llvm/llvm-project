@@ -247,7 +247,7 @@ public:
   bool canReasonAbout(SVal X) const override {
     const TargetInfo &TI = getBasicVals().getContext().getTargetInfo();
 
-    Optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
+    std::optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
     if (!SymVal)
       return true;
 

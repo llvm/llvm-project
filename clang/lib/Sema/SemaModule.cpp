@@ -827,7 +827,7 @@ enum class UnnamedDeclKind {
 };
 }
 
-static llvm::Optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
+static std::optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
   if (isa<EmptyDecl>(D))
     return UnnamedDeclKind::Empty;
   if (isa<StaticAssertDecl>(D))
