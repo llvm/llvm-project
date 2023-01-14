@@ -21,7 +21,6 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 
 namespace mlir {
 namespace python {
