@@ -10,6 +10,7 @@
 #include "DiagnosticNames.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 DEF_DIAGTOOL("find-diagnostic-id", "Print the id of the given diagnostic",
              FindDiagnosticID)

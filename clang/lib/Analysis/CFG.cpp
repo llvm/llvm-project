@@ -56,6 +56,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>

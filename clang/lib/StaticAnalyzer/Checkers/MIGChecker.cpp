@@ -30,6 +30,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

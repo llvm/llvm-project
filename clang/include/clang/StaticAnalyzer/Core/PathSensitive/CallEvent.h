@@ -45,6 +45,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <limits>
+#include <optional>
 #include <utility>
 
 namespace clang {

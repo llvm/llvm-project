@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace ento {

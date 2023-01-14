@@ -9,6 +9,7 @@
 #include "../ASTMatchersTest.h"
 #include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <vector>
 
 namespace clang {

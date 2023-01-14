@@ -18,6 +18,7 @@
 #include "clang/AST/ASTImporterLookupTable.h"
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/DenseMap.h"
+#include <optional>
 
 namespace clang {
 

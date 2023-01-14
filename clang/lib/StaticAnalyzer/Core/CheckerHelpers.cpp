@@ -14,6 +14,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 namespace clang {
 

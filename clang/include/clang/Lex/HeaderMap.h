@@ -21,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 

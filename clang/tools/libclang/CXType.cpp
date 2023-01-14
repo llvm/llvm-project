@@ -22,6 +22,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Frontend/ASTUnit.h"
+#include <optional>
 
 using namespace clang;
 

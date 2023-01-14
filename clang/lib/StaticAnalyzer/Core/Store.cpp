@@ -35,6 +35,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 using namespace clang;
 using namespace ento;

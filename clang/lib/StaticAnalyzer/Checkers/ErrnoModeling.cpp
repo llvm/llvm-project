@@ -28,6 +28,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

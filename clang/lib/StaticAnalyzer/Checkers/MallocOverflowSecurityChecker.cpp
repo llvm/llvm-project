@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 #include <utility>
 
 using namespace clang;

@@ -16,6 +16,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 #include <string>
 #include <vector>
 

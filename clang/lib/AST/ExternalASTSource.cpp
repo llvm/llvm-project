@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
+#include <optional>
 
 using namespace clang;
 

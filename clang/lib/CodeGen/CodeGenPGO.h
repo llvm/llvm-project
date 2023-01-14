@@ -19,6 +19,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include <array>
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace CodeGen {

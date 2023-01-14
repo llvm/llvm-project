@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <utility>
 
 using namespace clang;

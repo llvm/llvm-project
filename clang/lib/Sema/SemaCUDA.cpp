@@ -24,6 +24,7 @@
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 using namespace clang;
 
 template <typename AttrT> static bool hasExplicitAttr(const VarDecl *D) {

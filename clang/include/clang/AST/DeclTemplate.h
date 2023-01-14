@@ -39,6 +39,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <utility>
 
 namespace clang {

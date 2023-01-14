@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 #include <vector>
 
 namespace clang {

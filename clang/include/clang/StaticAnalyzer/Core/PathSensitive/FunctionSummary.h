@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include <cassert>
 #include <deque>
+#include <optional>
 #include <utility>
 
 namespace clang {

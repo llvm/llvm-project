@@ -9,6 +9,7 @@
 #include "TestVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Refactoring/ASTSelection.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;

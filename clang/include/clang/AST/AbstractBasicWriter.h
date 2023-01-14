@@ -11,6 +11,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
+#include <optional>
 
 namespace clang {
 namespace serialization {

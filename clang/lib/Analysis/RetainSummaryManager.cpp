@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

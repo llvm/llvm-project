@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;

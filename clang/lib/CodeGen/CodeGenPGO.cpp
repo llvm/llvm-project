@@ -21,6 +21,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
+#include <optional>
 
 static llvm::cl::opt<bool>
     EnableValueProfiling("enable-value-profiling",

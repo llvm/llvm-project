@@ -36,6 +36,7 @@
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;

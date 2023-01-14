@@ -35,6 +35,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/xxhash.h"
+#include <optional>
 
 using namespace clang;
 

@@ -27,6 +27,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;

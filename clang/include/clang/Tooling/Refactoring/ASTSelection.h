@@ -14,6 +14,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <vector>
 
 namespace clang {

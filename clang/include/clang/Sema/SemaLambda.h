@@ -16,6 +16,7 @@
 #define LLVM_CLANG_SEMA_SEMALAMBDA_H
 
 #include "clang/AST/ASTLambda.h"
+#include <optional>
 
 namespace clang {
 namespace sema {

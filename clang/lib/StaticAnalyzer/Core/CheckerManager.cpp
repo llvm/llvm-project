@@ -28,6 +28,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
+#include <optional>
 #include <vector>
 
 using namespace clang;

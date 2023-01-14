@@ -11,6 +11,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <optional>
 
 using namespace clang;
 

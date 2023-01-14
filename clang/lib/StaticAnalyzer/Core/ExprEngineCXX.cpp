@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

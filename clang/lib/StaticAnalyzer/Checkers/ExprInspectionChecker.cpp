@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

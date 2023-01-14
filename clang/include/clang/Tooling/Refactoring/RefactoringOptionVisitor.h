@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGOPTIONVISITOR_H
 
 #include "clang/Basic/LLVM.h"
+#include <optional>
 #include <type_traits>
 
 namespace clang {

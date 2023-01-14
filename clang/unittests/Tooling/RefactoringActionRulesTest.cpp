@@ -16,6 +16,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Errc.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;

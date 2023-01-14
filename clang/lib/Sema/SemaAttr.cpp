@@ -18,6 +18,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/SemaInternal.h"
+#include <optional>
 using namespace clang;
 
 //===----------------------------------------------------------------------===//

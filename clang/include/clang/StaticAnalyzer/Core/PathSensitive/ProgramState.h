@@ -23,6 +23,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/Support/Allocator.h"
+#include <optional>
 #include <utility>
 
 namespace llvm {

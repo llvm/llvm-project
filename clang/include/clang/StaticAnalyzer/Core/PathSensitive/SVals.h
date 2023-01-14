@@ -25,6 +25,7 @@
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 //==------------------------------------------------------------------------==//

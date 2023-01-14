@@ -24,6 +24,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "body-farm"
 

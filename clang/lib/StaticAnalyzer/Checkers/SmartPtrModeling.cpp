@@ -33,6 +33,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 #include <string>
 
 using namespace clang;

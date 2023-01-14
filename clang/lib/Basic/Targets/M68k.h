@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace clang {
 namespace targets {

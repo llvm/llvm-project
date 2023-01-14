@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace llvm {

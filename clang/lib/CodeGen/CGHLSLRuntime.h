@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 
+#include <optional>
 #include <vector>
 
 namespace llvm {

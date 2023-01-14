@@ -25,6 +25,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

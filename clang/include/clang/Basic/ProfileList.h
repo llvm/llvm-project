@@ -20,6 +20,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 

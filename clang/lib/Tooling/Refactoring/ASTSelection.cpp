@@ -10,6 +10,7 @@
 #include "clang/AST/LexicallyOrderedRecursiveASTVisitor.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;

@@ -26,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::frontend;

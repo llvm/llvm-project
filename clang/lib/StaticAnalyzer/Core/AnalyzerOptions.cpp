@@ -23,6 +23,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <utility>
 #include <vector>
 

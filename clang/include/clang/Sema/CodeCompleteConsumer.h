@@ -29,6 +29,7 @@
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 

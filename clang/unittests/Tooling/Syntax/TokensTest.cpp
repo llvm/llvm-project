@@ -44,6 +44,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 

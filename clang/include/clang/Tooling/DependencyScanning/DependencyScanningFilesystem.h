@@ -17,6 +17,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
+#include <optional>
 
 namespace clang {
 namespace tooling {

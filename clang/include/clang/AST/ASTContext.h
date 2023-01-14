@@ -46,6 +46,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/TypeSize.h"
+#include <optional>
 
 namespace llvm {
 

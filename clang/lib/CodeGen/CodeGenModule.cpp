@@ -69,6 +69,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/X86TargetParser.h"
 #include "llvm/Support/xxhash.h"
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;

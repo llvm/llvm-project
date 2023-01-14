@@ -15,6 +15,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include <list>
+#include <optional>
 #include <unordered_map>
 
 namespace clang {

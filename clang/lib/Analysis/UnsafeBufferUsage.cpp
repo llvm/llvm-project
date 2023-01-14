@@ -10,6 +10,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;

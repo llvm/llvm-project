@@ -38,6 +38,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
+#include <optional>
 
 using namespace clang;
 

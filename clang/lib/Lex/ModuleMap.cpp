@@ -46,6 +46,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>

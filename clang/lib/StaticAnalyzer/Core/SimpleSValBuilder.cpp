@@ -15,6 +15,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

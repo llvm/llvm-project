@@ -29,6 +29,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 #include <utility>
 
 namespace clang {

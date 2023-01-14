@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <system_error>
 #include <utility>
 #include <vector>

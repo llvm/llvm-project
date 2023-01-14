@@ -24,6 +24,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
+#include <optional>
 #include <string>
 #include <utility>
 
