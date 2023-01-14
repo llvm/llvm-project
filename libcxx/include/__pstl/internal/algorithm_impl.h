@@ -29,52 +29,6 @@ _PSTL_HIDE_FROM_ABI_PUSH
 namespace __pstl {
 namespace __internal {
 
-//------------------------------------------------------------------------
-// any_of
-//------------------------------------------------------------------------
-
-template <class _ForwardIterator, class _Pred>
-bool __brick_any_of(const _ForwardIterator __first,
-                    const _ForwardIterator __last,
-                    _Pred __pred,
-                    /*__is_vector=*/std::false_type) noexcept {
-  return std::any_of(__first, __last, __pred);
-};
-
-template <class _RandomAccessIterator, class _Pred>
-bool __brick_any_of(const _RandomAccessIterator __first,
-                    const _RandomAccessIterator __last,
-                    _Pred __pred,
-                    /*__is_vector=*/std::true_type) noexcept {
-  return __unseq_backend::__simd_or(__first, __last - __first, __pred);
-};
-
-template <class _Tag, class _ExecutionPolicy, class _ForwardIterator, class _Pred>
-bool __pattern_any_of(
-    _Tag, _ExecutionPolicy&&, _ForwardIterator __first, _ForwardIterator __last, _Pred __pred) noexcept {
-  return __internal::__brick_any_of(__first, __last, __pred, typename _Tag::__is_vector{});
-}
-
-template <class _IsVector, class _ExecutionPolicy, class _RandomAccessIterator, class _Pred>
-bool __pattern_any_of(__parallel_tag<_IsVector> __tag,
-                      _ExecutionPolicy&& __exec,
-                      _RandomAccessIterator __first,
-                      _RandomAccessIterator __last,
-                      _Pred __pred) {
-  using __backend_tag = typename decltype(__tag)::__backend_tag;
-
-  return __internal::__except_handler([&]() {
-    return __internal::__parallel_or(
-        __backend_tag{},
-        std::forward<_ExecutionPolicy>(__exec),
-        __first,
-        __last,
-        [__pred](_RandomAccessIterator __i, _RandomAccessIterator __j) {
-          return __internal::__brick_any_of(__i, __j, __pred, _IsVector{});
-        });
-  });
-}
-
 // [alg.foreach]
 // for_each_n with no policy
 

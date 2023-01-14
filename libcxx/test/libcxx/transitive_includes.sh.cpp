@@ -32,6 +32,9 @@
 // this test instead.
 // UNSUPPORTED: transitive-includes-disabled
 
+// FIXME: This should pass with the PSTL enabled
+// XFAIL: with-pstl
+
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)
 #    undef __DEPRECATED

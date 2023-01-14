@@ -34,7 +34,9 @@ namespace std {
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <__type_traits/integral_constant.h>
+#include <__type_traits/is_execution_policy.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/remove_cvref.h>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -74,6 +76,14 @@ struct parallel_unsequenced_policy {
 
 inline constexpr parallel_unsequenced_policy par_unseq{__disable_user_instantiations_tag{}};
 
+struct __unsequenced_policy {
+  constexpr explicit __unsequenced_policy(__disable_user_instantiations_tag) {}
+  __unsequenced_policy(const __unsequenced_policy&)            = delete;
+  __unsequenced_policy& operator=(const __unsequenced_policy&) = delete;
+};
+
+constexpr __unsequenced_policy __unseq{__disable_user_instantiations_tag{}};
+
 #  if _LIBCPP_STD_VER >= 20
 
 struct unsequenced_policy {
@@ -88,9 +98,6 @@ inline constexpr unsequenced_policy unseq{__disable_user_instantiations_tag{}};
 
 } // namespace execution
 
-template <class>
-inline constexpr bool is_execution_policy_v = false;
-
 template <>
 inline constexpr bool is_execution_policy_v<execution::sequenced_policy> = true;
 
@@ -100,13 +107,42 @@ inline constexpr bool is_execution_policy_v<execution::parallel_policy> = true;
 template <>
 inline constexpr bool is_execution_policy_v<execution::parallel_unsequenced_policy> = true;
 
+template <>
+inline constexpr bool is_execution_policy_v<execution::__unsequenced_policy> = true;
+
+template <>
+inline constexpr bool __is_parallel_execution_policy_impl<execution::parallel_policy> = true;
+
+template <>
+inline constexpr bool __is_parallel_execution_policy_impl<execution::parallel_unsequenced_policy> = true;
+
+template <>
+inline constexpr bool __is_unsequenced_execution_policy_impl<execution::__unsequenced_policy> = true;
+
+template <>
+inline constexpr bool __is_unsequenced_execution_policy_impl<execution::parallel_unsequenced_policy> = true;
+
 #  if _LIBCPP_STD_VER >= 20
 template <>
 inline constexpr bool is_execution_policy_v<execution::unsequenced_policy> = true;
+
+template <>
+inline constexpr bool __is_unsequenced_execution_policy_impl<execution::unsequenced_policy> = true;
+
 #  endif
 
 template <class _Tp>
 struct is_execution_policy : bool_constant<is_execution_policy_v<_Tp>> {};
+
+template <class _ExecutionPolicy>
+const auto& __remove_parallel_policy(_ExecutionPolicy&&) {
+  using _ExecPol = __remove_cvref_t<_ExecutionPolicy>;
+  if constexpr (is_same_v<_ExecPol, execution::parallel_policy>) {
+    return execution::seq;
+  } else if constexpr (is_same_v<_ExecPol, execution::parallel_unsequenced_policy>) {
+    return execution::__unseq;
+  }
+}
 
 _LIBCPP_END_NAMESPACE_STD
 

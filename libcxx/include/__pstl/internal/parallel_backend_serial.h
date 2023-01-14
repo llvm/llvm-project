@@ -10,11 +10,9 @@
 #ifndef _PSTL_PARALLEL_BACKEND_SERIAL_H
 #define _PSTL_PARALLEL_BACKEND_SERIAL_H
 
-#include <algorithm>
-#include <cstddef>
-#include <memory>
-#include <numeric>
-#include <utility>
+#include <__memory/allocator.h>
+#include <__pstl/internal/execution_impl.h>
+#include <__utility/forward.h>
 
 #include "pstl_config.h"
 

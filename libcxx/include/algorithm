@@ -1908,6 +1908,10 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/upper_bound.h>
 
+#ifdef _LIBCPP_HAS_PARALLEL_ALGORITHMS
+#  include <__algorithm/pstl_any_all_none_of.h>
+#endif
+
 // standard-mandated includes
 
 // [algorithm.syn]
