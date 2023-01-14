@@ -1382,7 +1382,7 @@ void FlatAffineValueConstraints::swapVar(unsigned posA, unsigned posB) {
       getVarKindAt(posB) == VarKind::Local)
     return;
 
-  // Treat value of a local variable as None.
+  // Treat value of a local variable as std::nullopt.
   if (getVarKindAt(posA) == VarKind::Local)
     values[posB] = std::nullopt;
   else if (getVarKindAt(posB) == VarKind::Local)

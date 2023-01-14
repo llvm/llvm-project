@@ -264,7 +264,8 @@ using CopyCallbackFn =
     std::function<LogicalResult(OpBuilder &b, Value src, Value dst)>;
 
 struct LinalgPromotionOptions {
-  /// Indices of subViews to promote. If `None`, try to promote all operands.
+  /// Indices of subViews to promote. If `std::nullopt`, try to promote all
+  /// operands.
   std::optional<DenseSet<unsigned>> operandsToPromote = std::nullopt;
   LinalgPromotionOptions &setOperandsToPromote(ArrayRef<int64_t> operands) {
     operandsToPromote = DenseSet<unsigned>();
@@ -292,7 +293,7 @@ struct LinalgPromotionOptions {
     useFullTileBuffersDefault = use;
     return *this;
   }
-  /// Alignment of promoted buffer. If `None` do not specify alignment.
+  /// Alignment of promoted buffer. If `std::nullopt` do not specify alignment.
   std::optional<unsigned> alignment = std::nullopt;
   LinalgPromotionOptions &setAlignment(unsigned align) {
     alignment = align;
@@ -304,9 +305,9 @@ struct LinalgPromotionOptions {
     useAlloca = use;
     return *this;
   }
-  /// Callback function to do the allocation of the promoted buffer. If None,
-  /// then the default allocation scheme of allocating a memref<?xi8> buffer
-  /// followed by a view operation is used.
+  /// Callback function to do the allocation of the promoted buffer. If
+  /// std::nullopt, then the default allocation scheme of allocating a
+  /// memref<?xi8> buffer followed by a view operation is used.
   std::optional<AllocBufferCallbackFn> allocationFn = std::nullopt;
   std::optional<DeallocBufferCallbackFn> deallocationFn = std::nullopt;
   LinalgPromotionOptions &
@@ -317,7 +318,7 @@ struct LinalgPromotionOptions {
     return *this;
   }
   /// Callback function to do the copy of data to and from the promoted
-  /// subview. If None then a memref.copy is used.
+  /// subview. If std::nullopt then a memref.copy is used.
   std::optional<CopyCallbackFn> copyInFn = std::nullopt;
   std::optional<CopyCallbackFn> copyOutFn = std::nullopt;
   LinalgPromotionOptions &setCopyInOutFns(CopyCallbackFn const &copyIn,
