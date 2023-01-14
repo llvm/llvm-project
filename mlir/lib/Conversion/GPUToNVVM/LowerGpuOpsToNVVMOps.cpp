@@ -206,6 +206,8 @@ struct LowerGpuOpsToNVVMOpsPass
             case gpu::AddressSpace::Private:
               return 0;
             }
+            llvm_unreachable("unknown address space enum value");
+            return 0;
           });
       gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
       ConversionTarget target(getContext());
