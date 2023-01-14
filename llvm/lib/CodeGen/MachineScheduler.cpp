@@ -959,7 +959,7 @@ void ScheduleDAGMILive::collectVRegUses(SUnit &SU) {
       continue;
 
     Register Reg = MO.getReg();
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
 
     // Ignore re-defs.
@@ -1120,7 +1120,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
   for (const RegisterMaskPair &P : LiveUses) {
     Register Reg = P.RegUnit;
     /// FIXME: Currently assuming single-use physregs.
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
 
     if (ShouldTrackLaneMasks) {
@@ -1344,7 +1344,7 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
   // Visit each live out vreg def to find def/use pairs that cross iterations.
   for (const RegisterMaskPair &P : RPTracker.getPressure().LiveOutRegs) {
     Register Reg = P.RegUnit;
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
     const LiveInterval &LI = LIS->getInterval(Reg);
     const VNInfo *DefVNI = LI.getVNInfoBefore(LIS->getMBBEndIdx(BB));
@@ -1827,12 +1827,12 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
   // Check for pure vreg copies.
   const MachineOperand &SrcOp = Copy->getOperand(1);
   Register SrcReg = SrcOp.getReg();
-  if (!Register::isVirtualRegister(SrcReg) || !SrcOp.readsReg())
+  if (!SrcReg.isVirtual() || !SrcOp.readsReg())
     return;
 
   const MachineOperand &DstOp = Copy->getOperand(0);
   Register DstReg = DstOp.getReg();
-  if (!Register::isVirtualRegister(DstReg) || DstOp.isDead())
+  if (!DstReg.isVirtual() || DstOp.isDead())
     return;
 
   // Check if either the dest or source is local. If it's live across a back
@@ -3130,12 +3130,12 @@ int biasPhysReg(const SUnit *SU, bool isTop) {
     unsigned UnscheduledOper = isTop ? 0 : 1;
     // If we have already scheduled the physreg produce/consumer, immediately
     // schedule the copy.
-    if (Register::isPhysicalRegister(MI->getOperand(ScheduledOper).getReg()))
+    if (MI->getOperand(ScheduledOper).getReg().isPhysical())
       return 1;
     // If the physreg is at the boundary, defer it. Otherwise schedule it
     // immediately to free the dependent. We can hoist the copy later.
     bool AtBoundary = isTop ? !SU->NumSuccsLeft : !SU->NumPredsLeft;
-    if (Register::isPhysicalRegister(MI->getOperand(UnscheduledOper).getReg()))
+    if (MI->getOperand(UnscheduledOper).getReg().isPhysical())
       return AtBoundary ? -1 : 1;
   }
 
@@ -3145,7 +3145,7 @@ int biasPhysReg(const SUnit *SU, bool isTop) {
     // physical registers.
     bool DoBias = true;
     for (const MachineOperand &Op : MI->defs()) {
-      if (Op.isReg() && !Register::isPhysicalRegister(Op.getReg())) {
+      if (Op.isReg() && !Op.getReg().isPhysical()) {
         DoBias = false;
         break;
       }

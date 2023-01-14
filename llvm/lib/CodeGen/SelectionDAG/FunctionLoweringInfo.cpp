@@ -445,7 +445,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   Register DestReg = It->second;
   if (DestReg == 0)
     return;
-  assert(Register::isVirtualRegister(DestReg) && "Expected a virtual reg");
+  assert(DestReg.isVirtual() && "Expected a virtual reg");
   LiveOutRegInfo.grow(DestReg);
   LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
 
@@ -468,7 +468,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
     assert(ValueMap.count(V) && "V should have been placed in ValueMap when its"
                                 "CopyToReg node was created.");
     Register SrcReg = ValueMap[V];
-    if (!Register::isVirtualRegister(SrcReg)) {
+    if (!SrcReg.isVirtual()) {
       DestLOI.IsValid = false;
       return;
     }

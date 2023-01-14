@@ -194,12 +194,10 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   bool Reg2IsInternal = MI.getOperand(Idx2).isInternalRead();
   // Avoid calling isRenamable for virtual registers since we assert that
   // renamable property is only queried/set for physical registers.
-  bool Reg1IsRenamable = Register::isPhysicalRegister(Reg1)
-                             ? MI.getOperand(Idx1).isRenamable()
-                             : false;
-  bool Reg2IsRenamable = Register::isPhysicalRegister(Reg2)
-                             ? MI.getOperand(Idx2).isRenamable()
-                             : false;
+  bool Reg1IsRenamable =
+      Reg1.isPhysical() ? MI.getOperand(Idx1).isRenamable() : false;
+  bool Reg2IsRenamable =
+      Reg2.isPhysical() ? MI.getOperand(Idx2).isRenamable() : false;
   // If destination is tied to either of the commuted source register, then
   // it must be updated.
   if (HasDef && Reg0 == Reg1 &&
@@ -239,9 +237,9 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   CommutedMI->getOperand(Idx1).setIsInternalRead(Reg2IsInternal);
   // Avoid calling setIsRenamable for virtual registers since we assert that
   // renamable property is only queried/set for physical registers.
-  if (Register::isPhysicalRegister(Reg1))
+  if (Reg1.isPhysical())
     CommutedMI->getOperand(Idx2).setIsRenamable(Reg1IsRenamable);
-  if (Register::isPhysicalRegister(Reg2))
+  if (Reg2.isPhysical())
     CommutedMI->getOperand(Idx1).setIsRenamable(Reg2IsRenamable);
   return CommutedMI;
 }
@@ -456,12 +454,12 @@ static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
   Register FoldReg = FoldOp.getReg();
   Register LiveReg = LiveOp.getReg();
 
-  assert(Register::isVirtualRegister(FoldReg) && "Cannot fold physregs");
+  assert(FoldReg.isVirtual() && "Cannot fold physregs");
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const TargetRegisterClass *RC = MRI.getRegClass(FoldReg);
 
-  if (Register::isPhysicalRegister(LiveOp.getReg()))
+  if (LiveOp.getReg().isPhysical())
     return RC->contains(LiveOp.getReg()) ? RC : nullptr;
 
   if (RC->hasSubClassEq(MRI.getRegClass(LiveReg)))
@@ -707,9 +705,9 @@ bool TargetInstrInfo::hasReassociableOperands(
   // reassociate.
   MachineInstr *MI1 = nullptr;
   MachineInstr *MI2 = nullptr;
-  if (Op1.isReg() && Register::isVirtualRegister(Op1.getReg()))
+  if (Op1.isReg() && Op1.getReg().isVirtual())
     MI1 = MRI.getUniqueVRegDef(Op1.getReg());
-  if (Op2.isReg() && Register::isVirtualRegister(Op2.getReg()))
+  if (Op2.isReg() && Op2.getReg().isVirtual())
     MI2 = MRI.getUniqueVRegDef(Op2.getReg());
 
   // And at least one operand must be defined in MBB.
@@ -963,15 +961,15 @@ void TargetInstrInfo::reassociateOps(
   Register RegY = OpY.getReg();
   Register RegC = OpC.getReg();
 
-  if (Register::isVirtualRegister(RegA))
+  if (RegA.isVirtual())
     MRI.constrainRegClass(RegA, RC);
-  if (Register::isVirtualRegister(RegB))
+  if (RegB.isVirtual())
     MRI.constrainRegClass(RegB, RC);
-  if (Register::isVirtualRegister(RegX))
+  if (RegX.isVirtual())
     MRI.constrainRegClass(RegX, RC);
-  if (Register::isVirtualRegister(RegY))
+  if (RegY.isVirtual())
     MRI.constrainRegClass(RegY, RC);
-  if (Register::isVirtualRegister(RegC))
+  if (RegC.isVirtual())
     MRI.constrainRegClass(RegC, RC);
 
   // Create a new virtual register for the result of (X op Y) instead of
@@ -1065,7 +1063,7 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
   // doesn't read the other parts of the register.  Otherwise it is really a
   // read-modify-write operation on the full virtual register which cannot be
   // moved safely.
-  if (Register::isVirtualRegister(DefReg) && MI.getOperand(0).getSubReg() &&
+  if (DefReg.isVirtual() && MI.getOperand(0).getSubReg() &&
       MI.readsVirtualRegister(DefReg))
     return false;
 
@@ -1100,7 +1098,7 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
       continue;
 
     // Check for a well-behaved physical register.
-    if (Register::isPhysicalRegister(Reg)) {
+    if (Reg.isPhysical()) {
       if (MO.isUse()) {
         // If the physreg has no defs anywhere, it's just an ambient register
         // and we can freely move its uses. Alternatively, if it's allocatable,
