@@ -2,10 +2,9 @@
 
 ; XFAIL: *
 
-; REQUIRES: pollyacc,nvptx
+; REQUIRES: pollyacc, target=nvptx{{.*}}
 
-; This fails today with "LowerFormalArguments didn't emit the correct number of
-;                        values!"
+; This fails today with "Promotion is not suitable for scalars of size larger than 64-bits"
 
 ;    void foo(i3000 A[], i3000 b) {
 ;      for (long i = 0; i < 1024; i++)
