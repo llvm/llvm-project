@@ -11,10 +11,7 @@
 #include "clang/Basic/SourceManager.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
-namespace lexer {
+namespace clang::tidy::utils::lexer {
 
 Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
                        const LangOptions &LangOpts, bool SkipComments) {
@@ -215,7 +212,4 @@ SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
   return S.getEndLoc();
 }
 
-} // namespace lexer
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils::lexer

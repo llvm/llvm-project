@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace altera {
+namespace clang::tidy::altera {
 
 void StructPackAlignCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(recordDecl(isStruct(), isDefinition(),
@@ -143,6 +141,4 @@ void StructPackAlignCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MaxConfiguredAlignment", MaxConfiguredAlignment);
 }
 
-} // namespace altera
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::altera

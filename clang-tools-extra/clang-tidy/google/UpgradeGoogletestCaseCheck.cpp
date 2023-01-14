@@ -15,9 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
+namespace clang::tidy::google {
 
 static const llvm::StringRef RenameCaseToSuiteMessage =
     "Google Test APIs named with 'case' are deprecated; use equivalent APIs "
@@ -350,6 +348,4 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << FixItHint::CreateReplacement(ReplacementRange, ReplacementText);
 }
 
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google
