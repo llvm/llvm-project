@@ -189,6 +189,8 @@ private:
       Addend = *(const support::ulittle32_t *)FixupContent;
       break;
     }
+    default:
+      break;
     }
 
     Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
