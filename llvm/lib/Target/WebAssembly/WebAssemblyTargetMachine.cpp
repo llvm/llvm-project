@@ -139,7 +139,6 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.FunctionSections = true;
   this->Options.DataSections = true;
   this->Options.UniqueSectionNames = true;
-  SimdDefaultAlignment = 128;
 
   initAsmInfo();
 
