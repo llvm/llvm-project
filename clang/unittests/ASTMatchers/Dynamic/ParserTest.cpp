@@ -9,7 +9,6 @@
 #include "../ASTMatchersTest.h"
 #include "clang/ASTMatchers/Dynamic/Parser.h"
 #include "clang/ASTMatchers/Dynamic/Registry.h"
-#include "llvm/ADT/Optional.h"
 #include "gtest/gtest.h"
 #include <optional>
 #include <string>

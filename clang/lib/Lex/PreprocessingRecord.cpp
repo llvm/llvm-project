@@ -20,7 +20,6 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Capacity.h"

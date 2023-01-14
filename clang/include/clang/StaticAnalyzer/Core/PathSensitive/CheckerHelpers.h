@@ -16,7 +16,6 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OperatorKinds.h"
-#include "llvm/ADT/Optional.h"
 #include <optional>
 #include <tuple>
 

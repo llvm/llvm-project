@@ -26,7 +26,6 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "llvm/ADT/Any.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {

@@ -31,7 +31,6 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"

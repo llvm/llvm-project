@@ -17,7 +17,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <memory>
 #include <optional>

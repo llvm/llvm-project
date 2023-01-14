@@ -19,7 +19,6 @@
 
 #include "clang/Basic/HLSLRuntime.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
