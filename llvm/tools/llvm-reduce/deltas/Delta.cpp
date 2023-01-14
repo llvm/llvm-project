@@ -190,11 +190,11 @@ CheckChunk(const Chunk &ChunkToCheckForUninterestingness,
 static SmallString<0> ProcessChunkFromSerializedBitcode(
   const Chunk &ChunkToCheckForUninterestingness, const TestRunner &Test,
     ReductionFunc ExtractChunksFromModule, const DenseSet<Chunk> &UninterestingChunks,
-    const std::vector<Chunk> &ChunksStillConsideredInteresting,
-    const SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced) {
+    ArrayRef<Chunk> ChunksStillConsideredInteresting,
+    StringRef OriginalBC, std::atomic<bool> &AnyReduced) {
   LLVMContext Ctx;
   auto CloneMMM = std::make_unique<ReducerWorkItem>();
-  MemoryBufferRef Data(StringRef(OriginalBC), "<bc file>");
+  MemoryBufferRef Data(OriginalBC, "<bc file>");
   readBitcode(*CloneMMM, Data, Ctx, Test.getToolName());
 
   SmallString<0> Result;
