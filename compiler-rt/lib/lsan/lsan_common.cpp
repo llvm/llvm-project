@@ -353,9 +353,12 @@ void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier) {
   }
 }
 
-void ForEachExtraStackRangeCb(uptr begin, uptr end, void *arg) {
-  Frontier *frontier = reinterpret_cast<Frontier *>(arg);
-  ScanRangeForPointers(begin, end, frontier, "FAKE STACK", kReachable);
+void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
+                          Frontier *frontier) {
+  for (uptr i = 0; i < ranges.size(); i++) {
+    ScanRangeForPointers(ranges[i].begin, ranges[i].end, frontier, "FAKE STACK",
+                         kReachable);
+  }
 }
 
 #  if SANITIZER_FUCHSIA
@@ -397,6 +400,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier, tid_t caller_tid,
                            uptr caller_sp) {
   InternalMmapVector<uptr> registers;
+  InternalMmapVector<Range> extra_ranges;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
     LOG_THREADS("Processing thread %llu.\n", os_id);
@@ -457,7 +461,9 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       }
       ScanRangeForPointers(stack_begin, stack_end, frontier, "STACK",
                            kReachable);
-      ForEachExtraStackRange(os_id, ForEachExtraStackRangeCb, frontier);
+      extra_ranges.clear();
+      GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
+      ScanExtraStackRanges(extra_ranges, frontier);
     }
 
     if (flags()->use_tls) {
