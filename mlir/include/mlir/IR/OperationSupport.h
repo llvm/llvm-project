@@ -172,7 +172,7 @@ public:
 
   /// If this operation is registered, returns the registered information,
   /// std::nullopt otherwise.
-  Optional<RegisteredOperationName> getRegisteredInfo() const;
+  std::optional<RegisteredOperationName> getRegisteredInfo() const;
 
   /// This hook implements a generalized folder for this operation. Operations
   /// can implement this to provide simplifications rules that are applied by
@@ -412,8 +412,8 @@ public:
 
   /// Lookup the registered operation information for the given operation.
   /// Returns std::nullopt if the operation isn't registered.
-  static Optional<RegisteredOperationName> lookup(StringRef name,
-                                                  MLIRContext *ctx);
+  static std::optional<RegisteredOperationName> lookup(StringRef name,
+                                                       MLIRContext *ctx);
 
   /// Register a new operation in a Dialect object.
   /// This constructor is used by Dialect objects when they register the list
@@ -446,10 +446,10 @@ private:
   friend OperationName;
 };
 
-inline Optional<RegisteredOperationName>
+inline std::optional<RegisteredOperationName>
 OperationName::getRegisteredInfo() const {
   return isRegistered() ? RegisteredOperationName(impl)
-                        : Optional<RegisteredOperationName>();
+                        : std::optional<RegisteredOperationName>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -518,10 +518,10 @@ Attribute getAttrFromSortedRange(IteratorT first, IteratorT last, NameT name) {
 /// Get an attribute from a sorted range of named attributes. Returns
 /// std::nullopt if the attribute was not found.
 template <typename IteratorT, typename NameT>
-Optional<NamedAttribute>
+std::optional<NamedAttribute>
 getNamedAttrFromSortedRange(IteratorT first, IteratorT last, NameT name) {
   std::pair<IteratorT, bool> result = findAttrSorted(first, last, name);
-  return result.second ? *result.first : Optional<NamedAttribute>();
+  return result.second ? *result.first : std::optional<NamedAttribute>();
 }
 
 } // namespace impl
@@ -606,7 +606,7 @@ public:
 
   /// Returns an entry with a duplicate name the list, if it exists, else
   /// returns std::nullopt.
-  Optional<NamedAttribute> findDuplicate() const;
+  std::optional<NamedAttribute> findDuplicate() const;
 
   /// Return a dictionary attribute for the underlying dictionary. This will
   /// return an empty dictionary attribute if empty rather than null.
@@ -620,8 +620,8 @@ public:
   Attribute get(StringRef name) const;
 
   /// Return the specified named attribute if present, std::nullopt otherwise.
-  Optional<NamedAttribute> getNamed(StringRef name) const;
-  Optional<NamedAttribute> getNamed(StringAttr name) const;
+  std::optional<NamedAttribute> getNamed(StringRef name) const;
+  std::optional<NamedAttribute> getNamed(StringAttr name) const;
 
   /// If the an attribute exists with the specified name, change it to the new
   /// value. Otherwise, add a new attribute with the specified name/value.
@@ -844,7 +844,7 @@ public:
   bool shouldElideElementsAttr(ElementsAttr attr) const;
 
   /// Return the size limit for printing large ElementsAttr.
-  Optional<int64_t> getLargeElementsAttrLimit() const;
+  std::optional<int64_t> getLargeElementsAttrLimit() const;
 
   /// Return if debug information should be printed.
   bool shouldPrintDebugInfo() const;
@@ -867,7 +867,7 @@ public:
 private:
   /// Elide large elements attributes if the number of elements is larger than
   /// the upper limit.
-  Optional<int64_t> elementsAttrElementLimit;
+  std::optional<int64_t> elementsAttrElementLimit;
 
   /// Print debug information.
   bool printDebugInfoFlag : 1;

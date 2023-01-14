@@ -162,7 +162,7 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
     // If the result is yielded by the original op, use the operand, indexing
     // map and result type that correspond to the yielded value.
 
-    Optional<unsigned> resultNumber;
+    std::optional<unsigned> resultNumber;
     for (auto *user : scalarOpResult.getUsers()) {
       if (auto yieldOp = dyn_cast<YieldOp>(user)) {
         // Find the first use of the `scalarOpResult` in the yield op.

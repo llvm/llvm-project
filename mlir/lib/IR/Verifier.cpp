@@ -183,7 +183,8 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
 
   // If we can get operation info for this, check the custom hook.
   OperationName opName = op.getName();
-  Optional<RegisteredOperationName> registeredInfo = opName.getRegisteredInfo();
+  std::optional<RegisteredOperationName> registeredInfo =
+      opName.getRegisteredInfo();
   if (registeredInfo && failed(registeredInfo->verifyInvariants(&op)))
     return failure();
 

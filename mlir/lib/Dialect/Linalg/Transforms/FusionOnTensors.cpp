@@ -275,7 +275,7 @@ bool TileLoopNest::hasOtherUses(BlockArgument bbArg,
 LogicalResult TileLoopNest::tileRootOp(
     OpBuilder &b, ArrayRef<int64_t> tileSizes,
     ArrayRef<int64_t> tileInterchange,
-    Optional<LinalgLoopDistributionOptions> tileDistribution) {
+    std::optional<LinalgLoopDistributionOptions> tileDistribution) {
   // Exit if all tile sizes are zero.
   if (tileSizes.size() == static_cast<size_t>(count(tileSizes, 0)))
     return success();

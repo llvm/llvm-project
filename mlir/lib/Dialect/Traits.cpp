@@ -32,7 +32,7 @@ bool OpTrait::util::staticallyKnownBroadcastable(
   // We look backwards through every column of `shapes`.
   for (size_t i = 0; i != maxRank; ++i) {
     bool seenDynamic = false;
-    Optional<int64_t> nonOneDim;
+    std::optional<int64_t> nonOneDim;
     for (ArrayRef<int64_t> extent : shapes) {
       int64_t dim = i >= extent.size() ? 1 : extent[extent.size() - i - 1];
 
@@ -150,16 +150,16 @@ Type OpTrait::util::getBroadcastedType(Type type1, Type type2,
 
   // Returns the type kind if the given type is a vector or ranked tensor type.
   // Returns std::nullopt otherwise.
-  auto getCompositeTypeKind = [](Type type) -> Optional<TypeID> {
+  auto getCompositeTypeKind = [](Type type) -> std::optional<TypeID> {
     if (type.isa<VectorType, RankedTensorType>())
       return type.getTypeID();
     return std::nullopt;
   };
 
   // Make sure the composite type, if has, is consistent.
-  Optional<TypeID> compositeKind1 = getCompositeTypeKind(type1);
-  Optional<TypeID> compositeKind2 = getCompositeTypeKind(type2);
-  Optional<TypeID> resultCompositeKind;
+  std::optional<TypeID> compositeKind1 = getCompositeTypeKind(type1);
+  std::optional<TypeID> compositeKind2 = getCompositeTypeKind(type2);
+  std::optional<TypeID> resultCompositeKind;
 
   if (compositeKind1 && compositeKind2) {
     // Disallow mixing vector and tensor.

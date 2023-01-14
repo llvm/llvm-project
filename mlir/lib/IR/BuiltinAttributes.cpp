@@ -94,9 +94,9 @@ static bool dictionaryAttrSort(ArrayRef<NamedAttribute> value,
 
 /// Returns an entry with a duplicate name from the given sorted array of named
 /// attributes. Returns std::nullopt if all elements have unique names.
-static Optional<NamedAttribute>
+static std::optional<NamedAttribute>
 findDuplicateElement(ArrayRef<NamedAttribute> value) {
-  const Optional<NamedAttribute> none{std::nullopt};
+  const std::optional<NamedAttribute> none{std::nullopt};
   if (value.size() < 2)
     return none;
 
@@ -125,7 +125,7 @@ bool DictionaryAttr::sortInPlace(SmallVectorImpl<NamedAttribute> &array) {
   return isSorted;
 }
 
-Optional<NamedAttribute>
+std::optional<NamedAttribute>
 DictionaryAttr::findDuplicate(SmallVectorImpl<NamedAttribute> &array,
                               bool isSorted) {
   if (!isSorted)
@@ -172,13 +172,13 @@ Attribute DictionaryAttr::get(StringAttr name) const {
 }
 
 /// Return the specified named attribute if present, std::nullopt otherwise.
-Optional<NamedAttribute> DictionaryAttr::getNamed(StringRef name) const {
+std::optional<NamedAttribute> DictionaryAttr::getNamed(StringRef name) const {
   auto it = impl::findAttrSorted(begin(), end(), name);
-  return it.second ? *it.first : Optional<NamedAttribute>();
+  return it.second ? *it.first : std::optional<NamedAttribute>();
 }
-Optional<NamedAttribute> DictionaryAttr::getNamed(StringAttr name) const {
+std::optional<NamedAttribute> DictionaryAttr::getNamed(StringAttr name) const {
   auto it = impl::findAttrSorted(begin(), end(), name);
-  return it.second ? *it.first : Optional<NamedAttribute>();
+  return it.second ? *it.first : std::optional<NamedAttribute>();
 }
 
 /// Return whether the specified attribute is present.
@@ -1552,7 +1552,7 @@ DenseResourceElementsAttrBase<T>::get(ShapedType type, StringRef blobName,
 }
 
 template <typename T>
-Optional<ArrayRef<T>>
+std::optional<ArrayRef<T>>
 DenseResourceElementsAttrBase<T>::tryGetAsArrayRef() const {
   if (AsmResourceBlob *blob = this->getRawHandle().getBlob())
     return blob->template getDataAs<T>();

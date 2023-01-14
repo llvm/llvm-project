@@ -64,14 +64,15 @@ Operation *IndexDialect::materializeConstant(OpBuilder &b, Attribute value,
 /// the integer result, which in turn must satisfy the above property.
 static OpFoldResult foldBinaryOpUnchecked(
     ArrayRef<Attribute> operands,
-    function_ref<Optional<APInt>(const APInt &, const APInt &)> calculate) {
+    function_ref<std::optional<APInt>(const APInt &, const APInt &)>
+        calculate) {
   assert(operands.size() == 2 && "binary operation expected 2 operands");
   auto lhs = dyn_cast_if_present<IntegerAttr>(operands[0]);
   auto rhs = dyn_cast_if_present<IntegerAttr>(operands[1]);
   if (!lhs || !rhs)
     return {};
 
-  Optional<APInt> result = calculate(lhs.getValue(), rhs.getValue());
+  std::optional<APInt> result = calculate(lhs.getValue(), rhs.getValue());
   if (!result)
     return {};
   assert(result->trunc(32) ==
@@ -89,7 +90,8 @@ static OpFoldResult foldBinaryOpUnchecked(
 /// not folded.
 static OpFoldResult foldBinaryOpChecked(
     ArrayRef<Attribute> operands,
-    function_ref<Optional<APInt>(const APInt &, const APInt &lhs)> calculate) {
+    function_ref<std::optional<APInt>(const APInt &, const APInt &lhs)>
+        calculate) {
   assert(operands.size() == 2 && "binary operation expected 2 operands");
   auto lhs = dyn_cast_if_present<IntegerAttr>(operands[0]);
   auto rhs = dyn_cast_if_present<IntegerAttr>(operands[1]);
@@ -98,10 +100,10 @@ static OpFoldResult foldBinaryOpChecked(
     return {};
 
   // Compute the 64-bit result and the 32-bit result.
-  Optional<APInt> result64 = calculate(lhs.getValue(), rhs.getValue());
+  std::optional<APInt> result64 = calculate(lhs.getValue(), rhs.getValue());
   if (!result64)
     return {};
-  Optional<APInt> result32 =
+  std::optional<APInt> result32 =
       calculate(lhs.getValue().trunc(32), rhs.getValue().trunc(32));
   if (!result32)
     return {};
@@ -149,7 +151,7 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
 OpFoldResult DivSOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpChecked(
       adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
+      [](const APInt &lhs, const APInt &rhs) -> std::optional<APInt> {
         // Don't fold division by zero.
         if (rhs.isZero())
           return std::nullopt;
@@ -164,7 +166,7 @@ OpFoldResult DivSOp::fold(FoldAdaptor adaptor) {
 OpFoldResult DivUOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpChecked(
       adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
+      [](const APInt &lhs, const APInt &rhs) -> std::optional<APInt> {
         // Don't fold division by zero.
         if (rhs.isZero())
           return std::nullopt;
@@ -178,7 +180,7 @@ OpFoldResult DivUOp::fold(FoldAdaptor adaptor) {
 
 /// Compute `ceildivs(n, m)` as `x = m > 0 ? -1 : 1` and then
 /// `n*m > 0 ? (n+x)/m + 1 : -(-n/m)`.
-static Optional<APInt> calculateCeilDivS(const APInt &n, const APInt &m) {
+static std::optional<APInt> calculateCeilDivS(const APInt &n, const APInt &m) {
   // Don't fold division by zero.
   if (m.isZero())
     return std::nullopt;
@@ -211,7 +213,7 @@ OpFoldResult CeilDivUOp::fold(FoldAdaptor adaptor) {
   // Compute `ceildivu(n, m)` as `n == 0 ? 0 : (n-1)/m + 1`.
   return foldBinaryOpChecked(
       adaptor.getOperands(),
-      [](const APInt &n, const APInt &m) -> Optional<APInt> {
+      [](const APInt &n, const APInt &m) -> std::optional<APInt> {
         // Don't fold division by zero.
         if (m.isZero())
           return std::nullopt;
@@ -229,7 +231,7 @@ OpFoldResult CeilDivUOp::fold(FoldAdaptor adaptor) {
 
 /// Compute `floordivs(n, m)` as `x = m < 0 ? 1 : -1` and then
 /// `n*m < 0 ? -1 - (x-n)/m : n/m`.
-static Optional<APInt> calculateFloorDivS(const APInt &n, const APInt &m) {
+static std::optional<APInt> calculateFloorDivS(const APInt &n, const APInt &m) {
   // Don't fold division by zero.
   if (m.isZero())
     return std::nullopt;
@@ -322,7 +324,7 @@ OpFoldResult MinUOp::fold(FoldAdaptor adaptor) {
 OpFoldResult ShlOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpUnchecked(
       adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
+      [](const APInt &lhs, const APInt &rhs) -> std::optional<APInt> {
         // We cannot fold if the RHS is greater than or equal to 32 because
         // this would be UB in 32-bit systems but not on 64-bit systems. RHS is
         // already treated as unsigned.
@@ -339,7 +341,7 @@ OpFoldResult ShlOp::fold(FoldAdaptor adaptor) {
 OpFoldResult ShrSOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpChecked(
       adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
+      [](const APInt &lhs, const APInt &rhs) -> std::optional<APInt> {
         // Don't fold if RHS is greater than or equal to 32.
         if (rhs.uge(32))
           return {};
@@ -354,7 +356,7 @@ OpFoldResult ShrSOp::fold(FoldAdaptor adaptor) {
 OpFoldResult ShrUOp::fold(FoldAdaptor adaptor) {
   return foldBinaryOpChecked(
       adaptor.getOperands(),
-      [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
+      [](const APInt &lhs, const APInt &rhs) -> std::optional<APInt> {
         // Don't fold if RHS is greater than or equal to 32.
         if (rhs.uge(32))
           return {};

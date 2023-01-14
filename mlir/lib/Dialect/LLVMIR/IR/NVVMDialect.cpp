@@ -314,7 +314,7 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
                                  "multiplicandBPtxType"};
   for (unsigned idx = 0; idx < names.size(); idx++) {
     const auto &frag = frags[idx];
-    Optional<NamedAttribute> attr = namedAttributes.getNamed(names[idx]);
+    std::optional<NamedAttribute> attr = namedAttributes.getNamed(names[idx]);
     if (!frag.elemtype.has_value() && !attr.has_value()) {
       return parser.emitError(
           parser.getNameLoc(),

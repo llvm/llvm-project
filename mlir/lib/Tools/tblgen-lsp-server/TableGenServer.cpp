@@ -55,7 +55,7 @@ static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMLoc loc,
 }
 
 /// Convert the given TableGen diagnostic to the LSP form.
-static Optional<lsp::Diagnostic>
+static std::optional<lsp::Diagnostic>
 getLspDiagnoticFromDiag(const llvm::SMDiagnostic &diag,
                         const lsp::URIForFile &uri) {
   auto *sourceMgr = const_cast<llvm::SourceMgr *>(diag.getSourceMgr());
@@ -583,7 +583,7 @@ lsp::Hover TableGenTextFile::buildHoverForRecord(const llvm::Record *record,
     printAndFormatField("description");
 
     // Check for documentation in the source file.
-    if (Optional<std::string> doc =
+    if (std::optional<std::string> doc =
             lsp::extractSourceDocComment(sourceMgr, record->getLoc().front())) {
       hoverOS << "\n" << *doc << "\n";
     }
@@ -618,7 +618,7 @@ lsp::Hover TableGenTextFile::buildHoverForField(const llvm::Record *record,
     hoverOS << "`\n***\n";
 
     // Check for documentation in the source file.
-    if (Optional<std::string> doc =
+    if (std::optional<std::string> doc =
             lsp::extractSourceDocComment(sourceMgr, value->getLoc())) {
       hoverOS << "\n" << *doc << "\n";
       hoverOS << "\n***\n";
@@ -628,7 +628,7 @@ lsp::Hover TableGenTextFile::buildHoverForField(const llvm::Record *record,
     // documentation.
     auto [baseRecord, baseValue] = getBaseValue(record, value);
     if (baseValue) {
-      if (Optional<std::string> doc =
+      if (std::optional<std::string> doc =
               lsp::extractSourceDocComment(sourceMgr, baseValue->getLoc())) {
         hoverOS << "\n *From `" << baseRecord->getName() << "`*:\n\n"
                 << *doc << "\n";
@@ -691,7 +691,8 @@ void lsp::TableGenServer::updateDocument(
     impl->files.erase(it);
 }
 
-Optional<int64_t> lsp::TableGenServer::removeDocument(const URIForFile &uri) {
+std::optional<int64_t>
+lsp::TableGenServer::removeDocument(const URIForFile &uri) {
   auto it = impl->files.find(uri.file());
   if (it == impl->files.end())
     return std::nullopt;

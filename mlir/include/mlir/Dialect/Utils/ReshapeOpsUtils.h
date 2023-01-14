@@ -42,7 +42,7 @@ constexpr StringRef getReassociationAttrName() { return "reassociation"; }
 /// is folded into
 ///
 ///   result = [[0, 1, 2], [3, 4]].
-Optional<SmallVector<ReassociationIndices>> composeReassociationIndices(
+std::optional<SmallVector<ReassociationIndices>> composeReassociationIndices(
     ArrayRef<ReassociationIndices> producerReassociations,
     ArrayRef<ReassociationIndices> consumerReassociations,
     MLIRContext *context);
@@ -67,12 +67,12 @@ SmallVector<ReassociationIndices, 2> convertReassociationMapsToIndices(
 /// Return the reassociations maps to use to reshape given the source type and
 /// the target type when possible. Return std::nullopt when this computation
 /// failed.
-Optional<SmallVector<ReassociationIndices>>
+std::optional<SmallVector<ReassociationIndices>>
 getReassociationIndicesForReshape(ShapedType sourceType, ShapedType targetType);
 
 /// Returns the reassociation maps to collapse `sourceShape` to `targetShape` if
 /// possible.
-Optional<SmallVector<ReassociationIndices>>
+std::optional<SmallVector<ReassociationIndices>>
 getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
                                    ArrayRef<int64_t> targetShape);
 
@@ -186,7 +186,7 @@ struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
         hasNonIdentityLayout(reshapeOp.getResult().getType()))
       return failure();
 
-    Optional<SmallVector<ReassociationIndices>> reassociationIndices =
+    std::optional<SmallVector<ReassociationIndices>> reassociationIndices =
         composeReassociationIndices(srcReshapeOp.getReassociationIndices(),
                                     reshapeOp.getReassociationIndices(),
                                     rewriter.getContext());
@@ -341,7 +341,7 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
 private:
   // Attempts to find a way to collapse `srcShape` to `resultShape` by
   // collapsing subshapes defined by the reassociation indices.
-  Optional<SmallVector<ReassociationIndices>> findCollapsingReassociation(
+  std::optional<SmallVector<ReassociationIndices>> findCollapsingReassociation(
       ArrayRef<ReassociationIndices> srcReassociation,
       ArrayRef<ReassociationIndices> resultReassociation,
       ArrayRef<int64_t> srcShape, ArrayRef<int64_t> resultShape) const {
@@ -476,7 +476,7 @@ struct CollapseShapeRankReducingSliceSimplificationInfo {
   RankedTensorType sliceResultType;
   /// The reassociation indices for the new collapse shape op, if required. If
   /// `None`, the slice should replace the collapse shape op.
-  Optional<SmallVector<ReassociationIndices>> newReassociationIndices;
+  std::optional<SmallVector<ReassociationIndices>> newReassociationIndices;
 };
 
 /// A collapsing reshape operation can sometimes be simplified or eliminated by

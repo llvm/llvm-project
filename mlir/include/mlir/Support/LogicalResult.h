@@ -76,7 +76,7 @@ inline bool failed(LogicalResult result) { return result.failed(); }
 /// value of type `T`. This allows for integrating with LogicalResult, while
 /// also providing a value on the success path.
 template <typename T>
-class [[nodiscard]] FailureOr : public Optional<T> {
+class [[nodiscard]] FailureOr : public std::optional<T> {
 public:
   /// Allow constructing from a LogicalResult. The result *must* be a failure.
   /// Success results should use a proper instance of type `T`.
@@ -85,19 +85,20 @@ public:
            "success should be constructed with an instance of 'T'");
   }
   FailureOr() : FailureOr(failure()) {}
-  FailureOr(T &&y) : Optional<T>(std::forward<T>(y)) {}
-  FailureOr(const T &y) : Optional<T>(y) {}
+  FailureOr(T &&y) : std::optional<T>(std::forward<T>(y)) {}
+  FailureOr(const T &y) : std::optional<T>(y) {}
   template <typename U,
             std::enable_if_t<std::is_constructible<T, U>::value> * = nullptr>
   FailureOr(const FailureOr<U> &other)
-      : Optional<T>(failed(other) ? Optional<T>() : Optional<T>(*other)) {}
+      : std::optional<T>(failed(other) ? std::optional<T>()
+                                       : std::optional<T>(*other)) {}
 
   operator LogicalResult() const { return success(this->has_value()); }
 
 private:
   /// Hide the bool conversion as it easily creates confusion.
-  using Optional<T>::operator bool;
-  using Optional<T>::has_value;
+  using std::optional<T>::operator bool;
+  using std::optional<T>::has_value;
 };
 
 /// Wrap a value on the success path in a FailureOr of the same value type.

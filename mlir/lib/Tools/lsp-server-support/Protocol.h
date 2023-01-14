@@ -528,7 +528,7 @@ struct Hover {
 
   /// An optional range is a range inside a text document that is used to
   /// visualize a hover, e.g. by changing the background color.
-  Optional<Range> range;
+  std::optional<Range> range;
 };
 
 /// Add support for JSON serialization.
@@ -931,7 +931,7 @@ struct ParameterInformation {
 
   /// Inclusive start and exclusive end offsets withing the containing signature
   /// label.
-  Optional<std::pair<unsigned, unsigned>> labelOffsets;
+  std::optional<std::pair<unsigned, unsigned>> labelOffsets;
 
   /// The documentation of this parameter. Optional.
   std::string documentation;
@@ -1184,13 +1184,13 @@ struct CodeAction {
 
   /// The kind of the code action.
   /// Used to filter code actions.
-  Optional<std::string> kind;
+  std::optional<std::string> kind;
   const static llvm::StringLiteral kQuickFix;
   const static llvm::StringLiteral kRefactor;
   const static llvm::StringLiteral kInfo;
 
   /// The diagnostics that this code action resolves.
-  Optional<std::vector<Diagnostic>> diagnostics;
+  std::optional<std::vector<Diagnostic>> diagnostics;
 
   /// Marks this as a preferred action. Preferred actions are used by the
   /// `auto fix` command and can be targeted by keybindings.
@@ -1200,7 +1200,7 @@ struct CodeAction {
   bool isPreferred = false;
 
   /// The workspace edit this code action performs.
-  Optional<WorkspaceEdit> edit;
+  std::optional<WorkspaceEdit> edit;
 };
 
 /// Add support for JSON serialization.

@@ -51,8 +51,8 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
     return nullptr;
 
   Operation *combinerOp = combinerOps.back();
-  Optional<arith::AtomicRMWKind> maybeKind =
-      TypeSwitch<Operation *, Optional<arith::AtomicRMWKind>>(combinerOp)
+  std::optional<arith::AtomicRMWKind> maybeKind =
+      TypeSwitch<Operation *, std::optional<arith::AtomicRMWKind>>(combinerOp)
           .Case([](arith::AddFOp) { return arith::AtomicRMWKind::addf; })
           .Case([](arith::MulFOp) { return arith::AtomicRMWKind::mulf; })
           .Case([](arith::AddIOp) { return arith::AtomicRMWKind::addi; })
@@ -65,7 +65,7 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
           .Case([](arith::MaxSIOp) { return arith::AtomicRMWKind::maxs; })
           .Case([](arith::MinUIOp) { return arith::AtomicRMWKind::minu; })
           .Case([](arith::MaxUIOp) { return arith::AtomicRMWKind::maxu; })
-          .Default([](Operation *) -> Optional<arith::AtomicRMWKind> {
+          .Default([](Operation *) -> std::optional<arith::AtomicRMWKind> {
             // TODO: AtomicRMW supports other kinds of reductions this is
             // currently not detecting, add those when the need arises.
             return std::nullopt;

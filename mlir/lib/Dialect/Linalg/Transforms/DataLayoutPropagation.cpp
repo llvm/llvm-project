@@ -44,13 +44,13 @@ struct PackInfo {
   llvm::DenseMap<int64_t, int64_t> tileToPointMapping;
   // The permutation of outer dims (on domain).
   SmallVector<int64_t> outerDimsOnDomainPerm;
-  Optional<Value> paddingValue;
+  std::optional<Value> paddingValue;
 };
 
 static PackInfo getPackingInfoFromConsumer(
     AffineMap indexingMap, ArrayRef<OpFoldResult> innerTileSizes,
     ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm,
-    Optional<Value> paddingValue = std::nullopt) {
+    std::optional<Value> paddingValue = std::nullopt) {
   LLVM_DEBUG(
       { llvm::dbgs() << "--- Construct PackInfo From A Consumer ---\n"; });
   PackInfo packInfo;

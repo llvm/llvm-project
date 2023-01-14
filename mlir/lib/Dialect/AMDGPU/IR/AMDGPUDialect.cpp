@@ -68,7 +68,7 @@ LogicalResult RawBufferAtomicFaddOp::verify() {
   return verifyRawBufferOp(*this);
 }
 
-static Optional<uint32_t> getConstantUint32(Value v) {
+static std::optional<uint32_t> getConstantUint32(Value v) {
   APInt cst;
   if (!v.getType().isInteger(32))
     return std::nullopt;
@@ -90,7 +90,7 @@ static bool staticallyOutOfBounds(OpType op) {
     return false;
   int64_t result = offset + op.getIndexOffset().value_or(0);
   if (op.getSgprOffset()) {
-    Optional<uint32_t> sgprOffset = getConstantUint32(op.getSgprOffset());
+    std::optional<uint32_t> sgprOffset = getConstantUint32(op.getSgprOffset());
     if (!sgprOffset)
       return false;
     result += *sgprOffset;
@@ -101,7 +101,7 @@ static bool staticallyOutOfBounds(OpType op) {
   for (auto pair : llvm::zip(strides, op.getIndices())) {
     int64_t stride = std::get<0>(pair);
     Value idx = std::get<1>(pair);
-    Optional<uint32_t> idxVal = getConstantUint32(idx);
+    std::optional<uint32_t> idxVal = getConstantUint32(idx);
     if (!idxVal)
       return false;
     indexVal += stride * *idxVal;

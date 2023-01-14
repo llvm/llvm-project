@@ -76,7 +76,7 @@ static void adjustToDivisorsOfTripCounts(ArrayRef<AffineForOp> band,
   assert(band.size() == tileSizes->size() && "invalid tile size count");
   for (unsigned i = 0, e = band.size(); i < e; i++) {
     unsigned &tSizeAdjusted = (*tileSizes)[i];
-    Optional<uint64_t> mayConst = getConstantTripCount(band[i]);
+    std::optional<uint64_t> mayConst = getConstantTripCount(band[i]);
     if (!mayConst)
       continue;
     // Adjust the tile size to largest factor of the trip count less than
@@ -122,7 +122,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   // the cache size. This is an approximation with the assumption that the
   // footprint increases with the tile size linearly in that dimension (i.e.,
   // assumes one-to-one access function).
-  Optional<int64_t> fp = getMemoryFootprintBytes(band[0], 0);
+  std::optional<int64_t> fp = getMemoryFootprintBytes(band[0], 0);
   if (!fp) {
     // Fill with default tile sizes if footprint is unknown.
     std::fill(tileSizes->begin(), tileSizes->end(),

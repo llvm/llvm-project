@@ -20,7 +20,7 @@ using namespace mlir::arith;
 /// Function that evaluates the result of doing something on arithmetic
 /// constants and returns std::nullopt on overflow.
 using ConstArithFn =
-    function_ref<Optional<APInt>(const APInt &, const APInt &)>;
+    function_ref<std::optional<APInt>(const APInt &, const APInt &)>;
 
 /// Return the maxmially wide signed or unsigned range for a given bitwidth.
 
@@ -30,8 +30,8 @@ static ConstantIntRanges computeBoundsBy(ConstArithFn op, const APInt &minLeft,
                                          const APInt &minRight,
                                          const APInt &maxLeft,
                                          const APInt &maxRight, bool isSigned) {
-  Optional<APInt> maybeMin = op(minLeft, minRight);
-  Optional<APInt> maybeMax = op(maxLeft, maxRight);
+  std::optional<APInt> maybeMin = op(minLeft, minRight);
+  std::optional<APInt> maybeMax = op(maxLeft, maxRight);
   if (maybeMin && maybeMax)
     return ConstantIntRanges::range(*maybeMin, *maybeMax, isSigned);
   return ConstantIntRanges::maxRange(minLeft.getBitWidth());
@@ -48,7 +48,7 @@ static ConstantIntRanges minMaxBy(ConstArithFn op, ArrayRef<APInt> lhs,
       isSigned ? APInt::getSignedMinValue(width) : APInt::getZero(width);
   for (const APInt &left : lhs) {
     for (const APInt &right : rhs) {
-      Optional<APInt> maybeThisResult = op(left, right);
+      std::optional<APInt> maybeThisResult = op(left, right);
       if (!maybeThisResult)
         return ConstantIntRanges::maxRange(width);
       APInt result = std::move(*maybeThisResult);
@@ -79,15 +79,17 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 void arith::AddIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
-  ConstArithFn uadd = [](const APInt &a, const APInt &b) -> Optional<APInt> {
+  ConstArithFn uadd = [](const APInt &a,
+                         const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = a.uadd_ov(b, overflowed);
-    return overflowed ? Optional<APInt>() : result;
+    return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithFn sadd = [](const APInt &a, const APInt &b) -> Optional<APInt> {
+  ConstArithFn sadd = [](const APInt &a,
+                         const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = a.sadd_ov(b, overflowed);
-    return overflowed ? Optional<APInt>() : result;
+    return overflowed ? std::optional<APInt>() : result;
   };
 
   ConstantIntRanges urange = computeBoundsBy(
@@ -105,15 +107,17 @@ void arith::SubIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn usub = [](const APInt &a, const APInt &b) -> Optional<APInt> {
+  ConstArithFn usub = [](const APInt &a,
+                         const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = a.usub_ov(b, overflowed);
-    return overflowed ? Optional<APInt>() : result;
+    return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithFn ssub = [](const APInt &a, const APInt &b) -> Optional<APInt> {
+  ConstArithFn ssub = [](const APInt &a,
+                         const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = a.ssub_ov(b, overflowed);
-    return overflowed ? Optional<APInt>() : result;
+    return overflowed ? std::optional<APInt>() : result;
   };
   ConstantIntRanges urange = computeBoundsBy(
       usub, lhs.umin(), rhs.umax(), lhs.umax(), rhs.umin(), /*isSigned=*/false);
@@ -130,15 +134,17 @@ void arith::MulIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn umul = [](const APInt &a, const APInt &b) -> Optional<APInt> {
+  ConstArithFn umul = [](const APInt &a,
+                         const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = a.umul_ov(b, overflowed);
-    return overflowed ? Optional<APInt>() : result;
+    return overflowed ? std::optional<APInt>() : result;
   };
-  ConstArithFn smul = [](const APInt &a, const APInt &b) -> Optional<APInt> {
+  ConstArithFn smul = [](const APInt &a,
+                         const APInt &b) -> std::optional<APInt> {
     bool overflowed = false;
     APInt result = a.smul_ov(b, overflowed);
-    return overflowed ? Optional<APInt>() : result;
+    return overflowed ? std::optional<APInt>() : result;
   };
 
   ConstantIntRanges urange =
@@ -157,7 +163,7 @@ void arith::MulIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 /// Fix up division results (ex. for ceiling and floor), returning an APInt
 /// if there has been no overflow
-using DivisionFixupFn = function_ref<Optional<APInt>(
+using DivisionFixupFn = function_ref<std::optional<APInt>(
     const APInt &lhs, const APInt &rhs, const APInt &result)>;
 
 static ConstantIntRanges inferDivUIRange(const ConstantIntRanges &lhs,
@@ -167,7 +173,8 @@ static ConstantIntRanges inferDivUIRange(const ConstantIntRanges &lhs,
               &rhsMax = rhs.umax();
 
   if (!rhsMin.isZero()) {
-    auto udiv = [&fixup](const APInt &a, const APInt &b) -> Optional<APInt> {
+    auto udiv = [&fixup](const APInt &a,
+                         const APInt &b) -> std::optional<APInt> {
       return fixup(a, b, a.udiv(b));
     };
     return minMaxBy(udiv, {lhsMin, lhsMax}, {rhsMin, rhsMax},
@@ -197,10 +204,11 @@ static ConstantIntRanges inferDivSIRange(const ConstantIntRanges &lhs,
   bool canDivide = rhsMin.isStrictlyPositive() || rhsMax.isNegative();
 
   if (canDivide) {
-    auto sdiv = [&fixup](const APInt &a, const APInt &b) -> Optional<APInt> {
+    auto sdiv = [&fixup](const APInt &a,
+                         const APInt &b) -> std::optional<APInt> {
       bool overflowed = false;
       APInt result = a.sdiv_ov(b, overflowed);
-      return overflowed ? Optional<APInt>() : fixup(a, b, result);
+      return overflowed ? std::optional<APInt>() : fixup(a, b, result);
     };
     return minMaxBy(sdiv, {lhsMin, lhsMax}, {rhsMin, rhsMax},
                     /*isSigned=*/true);
@@ -224,13 +232,14 @@ void arith::CeilDivUIOp::inferResultRanges(
     ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn ceilDivUIFix = [](const APInt &lhs, const APInt &rhs,
-                                    const APInt &result) -> Optional<APInt> {
+  DivisionFixupFn ceilDivUIFix =
+      [](const APInt &lhs, const APInt &rhs,
+         const APInt &result) -> std::optional<APInt> {
     if (!lhs.urem(rhs).isZero()) {
       bool overflowed = false;
       APInt corrected =
           result.uadd_ov(APInt(result.getBitWidth(), 1), overflowed);
-      return overflowed ? Optional<APInt>() : corrected;
+      return overflowed ? std::optional<APInt>() : corrected;
     }
     return result;
   };
@@ -245,13 +254,14 @@ void arith::CeilDivSIOp::inferResultRanges(
     ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn ceilDivSIFix = [](const APInt &lhs, const APInt &rhs,
-                                    const APInt &result) -> Optional<APInt> {
+  DivisionFixupFn ceilDivSIFix =
+      [](const APInt &lhs, const APInt &rhs,
+         const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() == rhs.isNonNegative()) {
       bool overflowed = false;
       APInt corrected =
           result.sadd_ov(APInt(result.getBitWidth(), 1), overflowed);
-      return overflowed ? Optional<APInt>() : corrected;
+      return overflowed ? std::optional<APInt>() : corrected;
     }
     return result;
   };
@@ -266,13 +276,14 @@ void arith::FloorDivSIOp::inferResultRanges(
     ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn floorDivSIFix = [](const APInt &lhs, const APInt &rhs,
-                                     const APInt &result) -> Optional<APInt> {
+  DivisionFixupFn floorDivSIFix =
+      [](const APInt &lhs, const APInt &rhs,
+         const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() != rhs.isNonNegative()) {
       bool overflowed = false;
       APInt corrected =
           result.ssub_ov(APInt(result.getBitWidth(), 1), overflowed);
-      return overflowed ? Optional<APInt>() : corrected;
+      return overflowed ? std::optional<APInt>() : corrected;
     }
     return result;
   };
@@ -371,7 +382,7 @@ void arith::AndIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
   auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
   auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
-  auto andi = [](const APInt &a, const APInt &b) -> Optional<APInt> {
+  auto andi = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a & b;
   };
   setResultRange(getResult(),
@@ -387,7 +398,7 @@ void arith::OrIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                      SetIntRangeFn setResultRange) {
   auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
   auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
-  auto ori = [](const APInt &a, const APInt &b) -> Optional<APInt> {
+  auto ori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a | b;
   };
   setResultRange(getResult(),
@@ -403,7 +414,7 @@ void arith::XOrIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
   auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
   auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
-  auto xori = [](const APInt &a, const APInt &b) -> Optional<APInt> {
+  auto xori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a ^ b;
   };
   setResultRange(getResult(),
@@ -604,8 +615,8 @@ bool isStaticallyTrue(arith::CmpIPredicate pred, const ConstantIntRanges &lhs,
   case arith::CmpIPredicate::ugt:
     return applyCmpPredicate(pred, lhs.umin(), rhs.umax());
   case arith::CmpIPredicate::eq: {
-    Optional<APInt> lhsConst = lhs.getConstantValue();
-    Optional<APInt> rhsConst = rhs.getConstantValue();
+    std::optional<APInt> lhsConst = lhs.getConstantValue();
+    std::optional<APInt> rhsConst = rhs.getConstantValue();
     return lhsConst && rhsConst && lhsConst == rhsConst;
   }
   case arith::CmpIPredicate::ne: {
@@ -644,7 +655,7 @@ void arith::CmpIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void arith::SelectOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                         SetIntRangeFn setResultRange) {
-  Optional<APInt> mbCondVal = argRanges[0].getConstantValue();
+  std::optional<APInt> mbCondVal = argRanges[0].getConstantValue();
 
   if (mbCondVal) {
     if (mbCondVal->isZero())
@@ -663,8 +674,9 @@ void arith::SelectOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 void arith::ShLIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
-  ConstArithFn shl = [](const APInt &l, const APInt &r) -> Optional<APInt> {
-    return r.uge(r.getBitWidth()) ? Optional<APInt>() : l.shl(r);
+  ConstArithFn shl = [](const APInt &l,
+                        const APInt &r) -> std::optional<APInt> {
+    return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.shl(r);
   };
   ConstantIntRanges urange =
       minMaxBy(shl, {lhs.umin(), lhs.umax()}, {rhs.umin(), rhs.umax()},
@@ -683,8 +695,9 @@ void arith::ShRUIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn lshr = [](const APInt &l, const APInt &r) -> Optional<APInt> {
-    return r.uge(r.getBitWidth()) ? Optional<APInt>() : l.lshr(r);
+  ConstArithFn lshr = [](const APInt &l,
+                         const APInt &r) -> std::optional<APInt> {
+    return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.lshr(r);
   };
   setResultRange(getResult(), minMaxBy(lshr, {lhs.umin(), lhs.umax()},
                                        {rhs.umin(), rhs.umax()},
@@ -699,8 +712,9 @@ void arith::ShRSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                        SetIntRangeFn setResultRange) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn ashr = [](const APInt &l, const APInt &r) -> Optional<APInt> {
-    return r.uge(r.getBitWidth()) ? Optional<APInt>() : l.ashr(r);
+  ConstArithFn ashr = [](const APInt &l,
+                         const APInt &r) -> std::optional<APInt> {
+    return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.ashr(r);
   };
 
   setResultRange(getResult(),

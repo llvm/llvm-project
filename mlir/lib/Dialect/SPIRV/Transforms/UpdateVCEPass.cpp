@@ -54,7 +54,7 @@ static LogicalResult checkAndUpdateExtensionRequirements(
     const spirv::SPIRVType::ExtensionArrayRefVector &candidates,
     SetVector<spirv::Extension> &deducedExtensions) {
   for (const auto &ors : candidates) {
-    if (Optional<spirv::Extension> chosen = targetEnv.allows(ors)) {
+    if (std::optional<spirv::Extension> chosen = targetEnv.allows(ors)) {
       deducedExtensions.insert(*chosen);
     } else {
       SmallVector<StringRef, 4> extStrings;
@@ -82,7 +82,7 @@ static LogicalResult checkAndUpdateCapabilityRequirements(
     const spirv::SPIRVType::CapabilityArrayRefVector &candidates,
     SetVector<spirv::Capability> &deducedCapabilities) {
   for (const auto &ors : candidates) {
-    if (Optional<spirv::Capability> chosen = targetEnv.allows(ors)) {
+    if (std::optional<spirv::Capability> chosen = targetEnv.allows(ors)) {
       deducedCapabilities.insert(*chosen);
     } else {
       SmallVector<StringRef, 4> capStrings;

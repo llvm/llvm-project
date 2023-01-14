@@ -154,7 +154,7 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
 
 void mlir::populateMathToLibmConversionPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit,
-    llvm::Optional<PatternBenefit> log1pBenefit) {
+    std::optional<PatternBenefit> log1pBenefit) {
   patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::CbrtOp>,
                VecOpToScalarOp<math::ExpM1Op>, VecOpToScalarOp<math::TanhOp>,
                VecOpToScalarOp<math::CosOp>, VecOpToScalarOp<math::SinOp>,

@@ -62,7 +62,7 @@ class Translation {
 public:
   Translation() = default;
   Translation(TranslateFunction function, StringRef description,
-              Optional<llvm::Align> inputAlignment)
+              std::optional<llvm::Align> inputAlignment)
       : function(std::move(function)), description(description),
         inputAlignment(inputAlignment) {}
 
@@ -70,7 +70,9 @@ public:
   StringRef getDescription() const { return description; }
 
   /// Return the optional alignment desired for the input of the translation.
-  Optional<llvm::Align> getInputAlignment() const { return inputAlignment; }
+  std::optional<llvm::Align> getInputAlignment() const {
+    return inputAlignment;
+  }
 
   /// Invoke the translation function with the given input and output streams.
   LogicalResult operator()(const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
@@ -87,7 +89,7 @@ private:
   StringRef description;
 
   /// An optional alignment desired for the input of the translation.
-  Optional<llvm::Align> inputAlignment;
+  std::optional<llvm::Align> inputAlignment;
 };
 
 /// Use Translate[ToMLIR|FromMLIR]Registration as an initializer that
@@ -111,19 +113,19 @@ struct TranslateToMLIRRegistration {
       const TranslateSourceMgrToMLIRFunction &function,
       const DialectRegistrationFunction &dialectRegistration =
           [](DialectRegistry &) {},
-      Optional<llvm::Align> inputAlignment = std::nullopt);
+      std::optional<llvm::Align> inputAlignment = std::nullopt);
   TranslateToMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description,
       const TranslateRawSourceMgrToMLIRFunction &function,
       const DialectRegistrationFunction &dialectRegistration =
           [](DialectRegistry &) {},
-      Optional<llvm::Align> inputAlignment = std::nullopt);
+      std::optional<llvm::Align> inputAlignment = std::nullopt);
   TranslateToMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description,
       const TranslateStringRefToMLIRFunction &function,
       const DialectRegistrationFunction &dialectRegistration =
           [](DialectRegistry &) {},
-      Optional<llvm::Align> inputAlignment = std::nullopt);
+      std::optional<llvm::Align> inputAlignment = std::nullopt);
 };
 
 struct TranslateFromMLIRRegistration {

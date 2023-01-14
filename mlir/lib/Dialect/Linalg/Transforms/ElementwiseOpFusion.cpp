@@ -713,7 +713,7 @@ static void updateExpandedGenericOpRegion(PatternRewriter &rewriter,
 /// Implements the fusion of a tensor.collapse_shape or a tensor.expand_shape op
 /// and a generic op as explained in `isFusableWithReshapeByExpansion`. Assumes
 /// that those conditions have been satisfied.
-static Optional<SmallVector<Value>>
+static std::optional<SmallVector<Value>>
 fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
                            OpOperand *fusableOpOperand,
                            PatternRewriter &rewriter) {
@@ -876,7 +876,7 @@ public:
           (!controlFoldingReshapes(opOperand)))
         continue;
 
-      Optional<SmallVector<Value>> replacementValues =
+      std::optional<SmallVector<Value>> replacementValues =
           fuseWithReshapeByExpansion(genericOp, reshapeOp, opOperand, rewriter);
       if (!replacementValues)
         return failure();
@@ -928,9 +928,11 @@ struct FoldReshapeWithGenericOpByExpansion
                                          "fusion blocked by control function");
     }
 
-    Optional<SmallVector<Value>> replacementValues = fuseWithReshapeByExpansion(
-        producer, reshapeOp,
-        producer.getDpsInitOperand(producerResult.getResultNumber()), rewriter);
+    std::optional<SmallVector<Value>> replacementValues =
+        fuseWithReshapeByExpansion(
+            producer, reshapeOp,
+            producer.getDpsInitOperand(producerResult.getResultNumber()),
+            rewriter);
     if (!replacementValues) {
       return rewriter.notifyMatchFailure(reshapeOp,
                                          "fusion by expansion failed");
@@ -1539,7 +1541,7 @@ public:
         continue;
       }
 
-      Optional<SmallVector<Value>> replacements =
+      std::optional<SmallVector<Value>> replacements =
           collapseGenericOpIterationDims(genericOp, collapsableIterationDims,
                                          rewriter);
       if (!replacements) {
@@ -1573,8 +1575,9 @@ public:
     if (collapsableIterationDims.empty())
       return failure();
 
-    Optional<SmallVector<Value>> replacements = collapseGenericOpIterationDims(
-        genericOp, collapsableIterationDims, rewriter);
+    std::optional<SmallVector<Value>> replacements =
+        collapseGenericOpIterationDims(genericOp, collapsableIterationDims,
+                                       rewriter);
     if (!replacements) {
       return rewriter.notifyMatchFailure(genericOp,
                                          "failed to collapse dimensions");

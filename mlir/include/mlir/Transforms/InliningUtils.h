@@ -209,13 +209,13 @@ LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Operation *inlinePoint, IRMapping &mapper,
                            ValueRange resultsToReplace,
                            TypeRange regionResultTypes,
-                           Optional<Location> inlineLoc = std::nullopt,
+                           std::optional<Location> inlineLoc = std::nullopt,
                            bool shouldCloneInlinedRegion = true);
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Block *inlineBlock, Block::iterator inlinePoint,
                            IRMapping &mapper, ValueRange resultsToReplace,
                            TypeRange regionResultTypes,
-                           Optional<Location> inlineLoc = std::nullopt,
+                           std::optional<Location> inlineLoc = std::nullopt,
                            bool shouldCloneInlinedRegion = true);
 
 /// This function is an overload of the above 'inlineRegion' that allows for
@@ -224,13 +224,13 @@ LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Operation *inlinePoint, ValueRange inlinedOperands,
                            ValueRange resultsToReplace,
-                           Optional<Location> inlineLoc = std::nullopt,
+                           std::optional<Location> inlineLoc = std::nullopt,
                            bool shouldCloneInlinedRegion = true);
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Block *inlineBlock, Block::iterator inlinePoint,
                            ValueRange inlinedOperands,
                            ValueRange resultsToReplace,
-                           Optional<Location> inlineLoc = std::nullopt,
+                           std::optional<Location> inlineLoc = std::nullopt,
                            bool shouldCloneInlinedRegion = true);
 
 /// This function inlines a given region, 'src', of a callable operation,

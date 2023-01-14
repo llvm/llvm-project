@@ -25,7 +25,7 @@ using namespace mlir::sparse_tensor;
 
 /// If the tensor is a sparse constant, generates and returns the pair of
 /// the constants for the indices and the values.
-static Optional<std::pair<Value, Value>>
+static std::optional<std::pair<Value, Value>>
 genSplitSparseConstant(OpBuilder &builder, Location loc, Value tensor) {
   if (auto constOp = tensor.getDefiningOp<arith::ConstantOp>()) {
     if (auto attr = constOp.getValue().dyn_cast<SparseElementsAttr>()) {

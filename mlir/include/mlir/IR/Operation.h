@@ -95,7 +95,7 @@ public:
 
   /// If this operation has a registered operation description, return it.
   /// Otherwise return std::nullopt.
-  Optional<RegisteredOperationName> getRegisteredInfo() {
+  std::optional<RegisteredOperationName> getRegisteredInfo() {
     return getName().getRegisteredInfo();
   }
 

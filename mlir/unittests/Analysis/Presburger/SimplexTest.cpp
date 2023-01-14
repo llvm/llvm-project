@@ -572,7 +572,7 @@ TEST(SimplexTest, addDivisionVariable) {
   simplex.addDivisionVariable(getMPIntVec({1, 0}), MPInt(2));
   addInequality(simplex, {1, 0, -3}); // x >= 3.
   addInequality(simplex, {-1, 0, 9}); // x <= 9.
-  Optional<SmallVector<MPInt, 8>> sample = simplex.findIntegerSample();
+  std::optional<SmallVector<MPInt, 8>> sample = simplex.findIntegerSample();
   ASSERT_TRUE(sample.has_value());
   EXPECT_EQ((*sample)[0] / 2, (*sample)[1]);
 }

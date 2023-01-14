@@ -113,7 +113,7 @@ bool getInnermostParallelLoops(Operation *rootOp,
 /// from scf.for or scf.parallel loop.
 /// if `loopFilter` is passed, the filter determines which loop to consider.
 /// Other induction variables are ignored.
-Optional<std::pair<AffineExpr, AffineExpr>>
+std::optional<std::pair<AffineExpr, AffineExpr>>
 getSCFMinMaxExpr(Value value, SmallVectorImpl<Value> &dims,
                  SmallVectorImpl<Value> &symbols,
                  llvm::function_ref<bool(Operation *)> loopFilter = nullptr);

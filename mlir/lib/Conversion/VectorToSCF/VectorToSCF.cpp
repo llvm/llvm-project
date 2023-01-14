@@ -55,7 +55,7 @@ struct VectorToSCFPattern : public OpRewritePattern<OpTy> {
 /// memref should be unpacked in the next application of TransferOpConversion.
 /// A return value of std::nullopt indicates a broadcast.
 template <typename OpTy>
-static Optional<int64_t> unpackedDim(OpTy xferOp) {
+static std::optional<int64_t> unpackedDim(OpTy xferOp) {
   // TODO: support 0-d corner case.
   assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.getPermutationMap();
@@ -159,7 +159,7 @@ static Value generateMaskCheck(OpBuilder &b, OpTy xferOp, Value iv) {
 /// `resultTypes`.
 template <typename OpTy>
 static Value generateInBoundsCheck(
-    OpBuilder &b, OpTy xferOp, Value iv, Optional<int64_t> dim,
+    OpBuilder &b, OpTy xferOp, Value iv, std::optional<int64_t> dim,
     TypeRange resultTypes,
     function_ref<Value(OpBuilder &, Location)> inBoundsCase,
     function_ref<Value(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
@@ -217,7 +217,7 @@ static Value generateInBoundsCheck(
 /// a return value. Consequently, this function does not have a return value.
 template <typename OpTy>
 static void generateInBoundsCheck(
-    OpBuilder &b, OpTy xferOp, Value iv, Optional<int64_t> dim,
+    OpBuilder &b, OpTy xferOp, Value iv, std::optional<int64_t> dim,
     function_ref<void(OpBuilder &, Location)> inBoundsCase,
     function_ref<void(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
   generateInBoundsCheck(
@@ -1093,7 +1093,7 @@ namespace lowering_1_d {
 /// the transfer is operating. A return value of std::nullopt indicates a
 /// broadcast.
 template <typename OpTy>
-static Optional<int64_t>
+static std::optional<int64_t>
 get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
                    SmallVector<Value, 8> &memrefIndices) {
   auto indices = xferOp.getIndices();

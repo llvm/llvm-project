@@ -66,8 +66,8 @@ SMRange lsp::convertTokenLocToRange(SMLoc loc) {
   return SMRange(loc, SMLoc::getFromPointer(curPtr));
 }
 
-Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
-                                                   SMLoc loc) {
+std::optional<std::string>
+lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr, SMLoc loc) {
   // This is a heuristic, and isn't intended to cover every case, but should
   // cover the most common. We essentially look for a comment preceding the
   // line, and if we find one, use that as the documentation.
@@ -81,7 +81,7 @@ Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
   StringRef buffer(bufferStart, loc.getPointer() - bufferStart);
 
   // Pop the last line from the buffer string.
-  auto popLastLine = [&]() -> Optional<StringRef> {
+  auto popLastLine = [&]() -> std::optional<StringRef> {
     size_t newlineOffset = buffer.find_last_of("\n");
     if (newlineOffset == StringRef::npos)
       return std::nullopt;
@@ -96,7 +96,7 @@ Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
 
   // Try to parse a comment string from the source file.
   SmallVector<StringRef> commentLines;
-  while (Optional<StringRef> line = popLastLine()) {
+  while (std::optional<StringRef> line = popLastLine()) {
     // Check for a comment at the beginning of the line.
     if (!line->startswith("//"))
       break;

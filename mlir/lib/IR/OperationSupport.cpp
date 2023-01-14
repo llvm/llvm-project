@@ -42,8 +42,8 @@ NamedAttrList::NamedAttrList(const_iterator inStart, const_iterator inEnd) {
 
 ArrayRef<NamedAttribute> NamedAttrList::getAttrs() const { return attrs; }
 
-Optional<NamedAttribute> NamedAttrList::findDuplicate() const {
-  Optional<NamedAttribute> duplicate =
+std::optional<NamedAttribute> NamedAttrList::findDuplicate() const {
+  std::optional<NamedAttribute> duplicate =
       DictionaryAttr::findDuplicate(attrs, isSorted());
   // DictionaryAttr::findDuplicate will sort the list, so reset the sorted
   // state.
@@ -91,13 +91,13 @@ Attribute NamedAttrList::get(StringAttr name) const {
 }
 
 /// Return the specified named attribute if present, std::nullopt otherwise.
-Optional<NamedAttribute> NamedAttrList::getNamed(StringRef name) const {
+std::optional<NamedAttribute> NamedAttrList::getNamed(StringRef name) const {
   auto it = findAttr(*this, name);
-  return it.second ? *it.first : Optional<NamedAttribute>();
+  return it.second ? *it.first : std::optional<NamedAttribute>();
 }
-Optional<NamedAttribute> NamedAttrList::getNamed(StringAttr name) const {
+std::optional<NamedAttribute> NamedAttrList::getNamed(StringAttr name) const {
   auto it = findAttr(*this, name);
-  return it.second ? *it.first : Optional<NamedAttribute>();
+  return it.second ? *it.first : std::optional<NamedAttribute>();
 }
 
 /// If the an attribute exists with the specified name, change it to the new
@@ -423,7 +423,7 @@ MutableOperandRange::MutableOperandRange(Operation *owner)
 /// Slice this range into a sub range, with the additional operand segment.
 MutableOperandRange
 MutableOperandRange::slice(unsigned subStart, unsigned subLen,
-                           Optional<OperandSegment> segment) const {
+                           std::optional<OperandSegment> segment) const {
   assert((subStart + subLen) <= length && "invalid sub-range");
   MutableOperandRange subSlice(owner, start + subStart, subLen,
                                operandSegments);

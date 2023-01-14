@@ -48,7 +48,7 @@ public:
   // actual conversion. It should return std::nullopt upon conversion failure
   // and return the converted operation upon success.
   //
-  // Optional<SourceOp> convertSourceOp(SourceOp op, OpAdaptor adaptor,
+  // std::optional<SourceOp> convertSourceOp(SourceOp op, OpAdaptor adaptor,
   //                                    ConversionPatternRewriter &rewriter,
   //                                    TypeRange dstTypes) const;
 
@@ -66,7 +66,7 @@ public:
     }
 
     // Calls the actual converter implementation to convert the operation.
-    Optional<SourceOp> newOp =
+    std::optional<SourceOp> newOp =
         static_cast<const ConcretePattern *>(this)->convertSourceOp(
             op, adaptor, rewriter, dstTypes);
 
@@ -106,9 +106,9 @@ public:
   using Structural1ToNConversionPattern::Structural1ToNConversionPattern;
 
   // The callback required by CRTP.
-  Optional<ForOp> convertSourceOp(ForOp op, OpAdaptor adaptor,
-                                  ConversionPatternRewriter &rewriter,
-                                  TypeRange dstTypes) const {
+  std::optional<ForOp> convertSourceOp(ForOp op, OpAdaptor adaptor,
+                                       ConversionPatternRewriter &rewriter,
+                                       TypeRange dstTypes) const {
     // Create a empty new op and inline the regions from the old op.
     //
     // This is a little bit tricky. We have two concerns here:
@@ -161,9 +161,9 @@ class ConvertIfOpTypes
 public:
   using Structural1ToNConversionPattern::Structural1ToNConversionPattern;
 
-  Optional<IfOp> convertSourceOp(IfOp op, OpAdaptor adaptor,
-                                 ConversionPatternRewriter &rewriter,
-                                 TypeRange dstTypes) const {
+  std::optional<IfOp> convertSourceOp(IfOp op, OpAdaptor adaptor,
+                                      ConversionPatternRewriter &rewriter,
+                                      TypeRange dstTypes) const {
 
     IfOp newOp = rewriter.create<IfOp>(op.getLoc(), dstTypes,
                                        adaptor.getCondition(), true);
@@ -190,9 +190,9 @@ class ConvertWhileOpTypes
 public:
   using Structural1ToNConversionPattern::Structural1ToNConversionPattern;
 
-  Optional<WhileOp> convertSourceOp(WhileOp op, OpAdaptor adaptor,
-                                    ConversionPatternRewriter &rewriter,
-                                    TypeRange dstTypes) const {
+  std::optional<WhileOp> convertSourceOp(WhileOp op, OpAdaptor adaptor,
+                                         ConversionPatternRewriter &rewriter,
+                                         TypeRange dstTypes) const {
     // Unpacked the iteration arguments.
     SmallVector<Value> flatArgs;
     for (Value arg : adaptor.getOperands())

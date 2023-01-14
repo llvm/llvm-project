@@ -191,7 +191,7 @@ StringRef CodeGen::getNativeTypeName(ast::VariableDecl *decl) {
   // Try to extract a type name from the variable's constraints.
   for (ast::ConstraintRef &cst : decl->getConstraints()) {
     if (auto *userCst = dyn_cast<ast::UserConstraintDecl>(cst.constraint)) {
-      if (Optional<StringRef> name = userCst->getNativeInputType(0))
+      if (std::optional<StringRef> name = userCst->getNativeInputType(0))
         return *name;
       return getNativeTypeName(userCst->getInputs()[0]);
     }

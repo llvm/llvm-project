@@ -45,14 +45,14 @@ public:
   /// the name of the operation type being operated on, or std::nullopt if the
   /// pipeline is op-agnostic, and information related to the parent that
   /// spawned this pipeline.
-  virtual void runBeforePipeline(Optional<OperationName> name,
+  virtual void runBeforePipeline(std::optional<OperationName> name,
                                  const PipelineParentInfo &parentInfo);
 
   /// A callback to run after a pass pipeline has executed. This function takes
   /// the name of the operation type being operated on, or std::nullopt if the
   /// pipeline is op-agnostic, and information related to the parent that
   /// spawned this pipeline.
-  virtual void runAfterPipeline(Optional<OperationName> name,
+  virtual void runAfterPipeline(std::optional<OperationName> name,
                                 const PipelineParentInfo &parentInfo);
 
   /// A callback to run before a pass is executed. This function takes a pointer
@@ -93,12 +93,12 @@ public:
 
   /// See PassInstrumentation::runBeforePipeline for details.
   void
-  runBeforePipeline(Optional<OperationName> name,
+  runBeforePipeline(std::optional<OperationName> name,
                     const PassInstrumentation::PipelineParentInfo &parentInfo);
 
   /// See PassInstrumentation::runAfterPipeline for details.
   void
-  runAfterPipeline(Optional<OperationName> name,
+  runAfterPipeline(std::optional<OperationName> name,
                    const PassInstrumentation::PipelineParentInfo &parentInfo);
 
   /// See PassInstrumentation::runBeforePass for details.
