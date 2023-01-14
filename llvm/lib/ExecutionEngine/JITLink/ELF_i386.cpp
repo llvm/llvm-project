@@ -11,13 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/ELF_i386.h"
+#include "DefineExternalSectionStartAndEndSymbols.h"
 #include "ELFLinkGraphBuilder.h"
 #include "JITLinkGeneric.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/Object/ELFObjectFile.h"
-
-#include "DefineExternalSectionStartAndEndSymbols.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -180,9 +179,18 @@ private:
     if (!Kind)
       return Kind.takeError();
 
+    auto FixupAddress = orc::ExecutorAddr(FixupSection.sh_addr) + Rel.r_offset;
     int64_t Addend = 0;
 
-    auto FixupAddress = orc::ExecutorAddr(FixupSection.sh_addr) + Rel.r_offset;
+    switch (*Kind) {
+    case i386::EdgeKind_i386::Delta32: {
+      const char *FixupContent = BlockToFix.getContent().data() +
+                                 (FixupAddress - BlockToFix.getAddress());
+      Addend = *(const support::ulittle32_t *)FixupContent;
+      break;
+    }
+    }
+
     Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
     Edge GE(*Kind, Offset, *GraphSymbol, Addend);
     LLVM_DEBUG({
