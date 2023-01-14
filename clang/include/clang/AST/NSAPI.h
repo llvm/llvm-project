@@ -12,6 +12,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace clang {
   class ASTContext;

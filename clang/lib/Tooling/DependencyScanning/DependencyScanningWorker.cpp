@@ -23,6 +23,7 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Host.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;

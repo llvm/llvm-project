@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>

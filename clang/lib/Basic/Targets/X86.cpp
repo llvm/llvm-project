@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/X86TargetParser.h"
+#include <optional>
 
 namespace clang {
 namespace targets {

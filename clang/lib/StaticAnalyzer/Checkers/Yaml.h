@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 
 namespace clang {
 namespace ento {

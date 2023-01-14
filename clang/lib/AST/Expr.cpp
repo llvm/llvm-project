@@ -37,6 +37,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
+#include <optional>
 using namespace clang;
 
 const Expr *Expr::getBestDynamicClassTypeExpr() const {

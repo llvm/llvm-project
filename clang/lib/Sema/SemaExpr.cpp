@@ -56,6 +56,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TypeSize.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;

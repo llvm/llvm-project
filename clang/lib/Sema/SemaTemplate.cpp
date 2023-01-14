@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringExtras.h"
 
 #include <iterator>
+#include <optional>
 using namespace clang;
 using namespace sema;
 

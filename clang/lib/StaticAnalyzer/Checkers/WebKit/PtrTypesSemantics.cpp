@@ -13,6 +13,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/Optional.h"
+#include <optional>
 
 using llvm::Optional;
 using namespace clang;

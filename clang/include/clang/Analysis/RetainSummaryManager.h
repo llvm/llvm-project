@@ -25,6 +25,7 @@
 #include "clang/Analysis/AnyCall.h"
 #include "clang/Analysis/SelectorExtras.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 using namespace clang;
 

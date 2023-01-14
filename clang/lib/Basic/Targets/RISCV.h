@@ -18,6 +18,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/RISCVISAInfo.h"
+#include <optional>
 
 namespace clang {
 namespace targets {

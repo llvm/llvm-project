@@ -11,6 +11,7 @@
 
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRules.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {

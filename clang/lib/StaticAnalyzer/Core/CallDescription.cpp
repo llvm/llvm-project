@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include <iterator>
+#include <optional>
 
 using namespace llvm;
 using namespace clang;

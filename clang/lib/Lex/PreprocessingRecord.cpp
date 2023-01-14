@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <cstring>
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <vector>
 

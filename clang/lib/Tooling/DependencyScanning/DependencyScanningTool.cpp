@@ -8,6 +8,7 @@
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Frontend/Utils.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;

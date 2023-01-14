@@ -14,6 +14,7 @@
 #include "Index_Internal.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include <optional>
 
 namespace clang {
 class PreprocessingRecord;

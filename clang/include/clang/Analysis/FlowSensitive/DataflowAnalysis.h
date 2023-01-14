@@ -15,6 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_DATAFLOWANALYSIS_H
 
 #include <iterator>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>

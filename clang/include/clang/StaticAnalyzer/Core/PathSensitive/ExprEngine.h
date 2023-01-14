@@ -36,6 +36,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 namespace clang {

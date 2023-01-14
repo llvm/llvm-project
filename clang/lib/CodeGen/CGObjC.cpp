@@ -29,6 +29,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
+#include <optional>
 using namespace clang;
 using namespace CodeGen;
 

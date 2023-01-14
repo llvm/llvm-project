@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include <array>
 #include <cassert>
+#include <optional>
 #include <vector>
 
 namespace llvm {

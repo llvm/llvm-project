@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 class CompilerInstance;

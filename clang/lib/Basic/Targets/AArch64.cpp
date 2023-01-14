@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/ARMTargetParserCommon.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::targets;

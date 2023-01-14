@@ -48,6 +48,7 @@
 #include <algorithm>
 #include <deque>
 #include <iterator>
+#include <optional>
 
 using namespace clang;
 

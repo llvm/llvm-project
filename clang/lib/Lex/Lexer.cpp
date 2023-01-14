@@ -43,6 +43,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>

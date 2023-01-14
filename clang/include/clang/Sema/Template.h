@@ -23,6 +23,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 namespace clang {

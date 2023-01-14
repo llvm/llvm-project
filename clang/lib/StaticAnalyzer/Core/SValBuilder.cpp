@@ -38,6 +38,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
+#include <optional>
 #include <tuple>
 
 using namespace clang;

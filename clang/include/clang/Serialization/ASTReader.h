@@ -57,6 +57,7 @@
 #include <ctime>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>

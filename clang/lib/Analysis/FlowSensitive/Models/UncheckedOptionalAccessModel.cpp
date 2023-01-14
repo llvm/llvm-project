@@ -30,6 +30,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 

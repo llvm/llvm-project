@@ -26,6 +26,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
+#include <optional>
 #include <type_traits>
 
 using namespace clang;

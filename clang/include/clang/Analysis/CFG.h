@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {

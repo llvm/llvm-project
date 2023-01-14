@@ -31,6 +31,7 @@
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace ento;

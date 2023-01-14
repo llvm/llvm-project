@@ -34,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <utility>
 
 // TODO: Adjust states of args to constructors in the same way that arguments to

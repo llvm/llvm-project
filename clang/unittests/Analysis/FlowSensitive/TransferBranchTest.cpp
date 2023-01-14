@@ -19,6 +19,7 @@
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang::dataflow::test {
 namespace {

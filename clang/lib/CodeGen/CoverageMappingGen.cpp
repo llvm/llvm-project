@@ -26,6 +26,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 // This selects the coverage mapping format defined when `InstrProfData.inc`
 // is textually included.

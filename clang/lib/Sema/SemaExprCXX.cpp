@@ -44,6 +44,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
+#include <optional>
 using namespace clang;
 using namespace sema;
 

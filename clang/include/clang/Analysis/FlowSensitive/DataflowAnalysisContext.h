@@ -27,6 +27,7 @@
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>

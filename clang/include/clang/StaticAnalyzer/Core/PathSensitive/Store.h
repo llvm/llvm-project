@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 namespace clang {
 

@@ -19,6 +19,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/Refactoring/Extract/SourceExtraction.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {

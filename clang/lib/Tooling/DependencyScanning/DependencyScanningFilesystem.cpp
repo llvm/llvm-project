@@ -10,6 +10,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;

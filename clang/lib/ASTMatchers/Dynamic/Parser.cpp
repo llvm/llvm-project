@@ -25,6 +25,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstdlib>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>

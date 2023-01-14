@@ -14,6 +14,7 @@
 #include "RetainCountChecker.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

@@ -18,6 +18,7 @@
 #include "gtest/gtest.h"
 
 #include "ASTImporterFixtures.h"
+#include <optional>
 
 namespace clang {
 namespace ast_matchers {

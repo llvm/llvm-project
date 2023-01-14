@@ -20,6 +20,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 #include <string>
 #include <vector>
 

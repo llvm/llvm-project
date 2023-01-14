@@ -17,6 +17,7 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include <optional>
 #include <string>
 
 namespace clang {

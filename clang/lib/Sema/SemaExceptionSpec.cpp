@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include <optional>
 
 namespace clang {
 

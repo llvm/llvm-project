@@ -9,6 +9,7 @@
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "llvm/Support/JSON.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;

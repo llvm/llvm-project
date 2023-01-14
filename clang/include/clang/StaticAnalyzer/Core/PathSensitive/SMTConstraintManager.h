@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
+#include <optional>
 
 typedef llvm::ImmutableSet<
     std::pair<clang::ento::SymbolRef, const llvm::SMTExpr *>>

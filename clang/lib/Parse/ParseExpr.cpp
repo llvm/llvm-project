@@ -30,6 +30,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 using namespace clang;
 
 /// Simple precedence-based parser for binary/ternary operators.

@@ -14,6 +14,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include <optional>
 using namespace clang;
 
 void LoopHintAttr::printPrettyPragma(raw_ostream &OS,

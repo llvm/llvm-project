@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

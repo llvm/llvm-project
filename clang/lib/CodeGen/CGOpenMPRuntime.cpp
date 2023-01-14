@@ -42,6 +42,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <numeric>
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;

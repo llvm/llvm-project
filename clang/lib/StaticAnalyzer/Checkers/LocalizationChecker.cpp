@@ -29,6 +29,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/Support/Unicode.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
