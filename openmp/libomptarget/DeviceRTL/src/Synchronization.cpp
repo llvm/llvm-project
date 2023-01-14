@@ -486,7 +486,7 @@ __attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
 
 int32_t __kmpc_master(IdentTy *Loc, int32_t TId) {
   FunctionTracingRAII();
-  return omp_get_team_num() == 0;
+  return omp_get_thread_num() == 0;
 }
 
 void __kmpc_end_master(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
