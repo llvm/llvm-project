@@ -12,6 +12,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 
+using namespace llvm;
+
 static void removeVolatileInFunction(Oracle &O, Function &F) {
   LLVMContext &Ctx = F.getContext();
   for (Instruction &I : instructions(F)) {

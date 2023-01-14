@@ -9,14 +9,16 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_REDUCERWORKITEM_H
 #define LLVM_TOOLS_LLVM_REDUCE_REDUCERWORKITEM_H
 
-#include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
-#include "llvm/Target/TargetMachine.h"
+#include <memory>
 
-using namespace llvm;
+namespace llvm {
+class LLVMContext;
+class MachineModuleInfo;
+class raw_ostream;
+class TargetMachine;
+class TestRunner;
+struct BitcodeLTOInfo;
 
 class ReducerWorkItem {
 public:
@@ -41,18 +43,27 @@ public:
     return isMIR() ? computeMIRComplexityScore() : computeIRComplexityScore();
   }
 
+  ReducerWorkItem();
+  ~ReducerWorkItem();
+  ReducerWorkItem(ReducerWorkItem &) = delete;
+  ReducerWorkItem(ReducerWorkItem &&) = default;
+
 private:
   uint64_t computeIRComplexityScore() const;
   uint64_t computeMIRComplexityScore() const;
 };
+} // namespace llvm
 
-std::pair<std::unique_ptr<ReducerWorkItem>, bool>
-parseReducerWorkItem(StringRef ToolName, StringRef Filename, LLVMContext &Ctxt,
-                     std::unique_ptr<TargetMachine> &TM, bool IsMIR);
+std::pair<std::unique_ptr<llvm::ReducerWorkItem>, bool>
+parseReducerWorkItem(llvm::StringRef ToolName, llvm::StringRef Filename,
+                     llvm::LLVMContext &Ctxt,
+                     std::unique_ptr<llvm::TargetMachine> &TM, bool IsMIR);
 
-std::unique_ptr<ReducerWorkItem>
-cloneReducerWorkItem(const ReducerWorkItem &MMM, const TargetMachine *TM);
+std::unique_ptr<llvm::ReducerWorkItem>
+cloneReducerWorkItem(const llvm::ReducerWorkItem &MMM,
+                     const llvm::TargetMachine *TM);
 
-bool verifyReducerWorkItem(const ReducerWorkItem &MMM, raw_fd_ostream *OS);
+bool verifyReducerWorkItem(const llvm::ReducerWorkItem &MMM,
+                           llvm::raw_fd_ostream *OS);
 
 #endif

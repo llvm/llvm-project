@@ -34,6 +34,11 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <optional>
 
+using namespace llvm;
+
+ReducerWorkItem::ReducerWorkItem() = default;
+ReducerWorkItem::~ReducerWorkItem() = default;
+
 extern cl::OptionCategory LLVMReduceOptions;
 static cl::opt<std::string> TargetTriple("mtriple",
                                          cl::desc("Set the target triple"),
