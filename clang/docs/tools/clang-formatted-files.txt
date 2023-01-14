@@ -1611,7 +1611,7 @@ clang-tools-extra/clangd/unittests/tweaks/DefineOutlineTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpASTTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpRecordLayoutTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpSymbolTests.cpp
-clang-tools-extra/clangd/unittests/tweaks/ExpandAutoTypeTests.cpp
+clang-tools-extra/clangd/unittests/tweaks/ExpandDeducedTypeTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExpandMacroTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExtractFunctionTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExtractVariableTests.cpp

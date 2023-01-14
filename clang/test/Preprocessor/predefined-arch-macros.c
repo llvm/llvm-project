@@ -1,4 +1,3 @@
-// REQUIRES: amdgpu-registered-target
 // Begin X86/GCC/Linux tests ----------------
 
 // RUN: %clang -march=i386 -m32 -E -dM %s -o - 2>&1 \
@@ -4319,6 +4318,22 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600_FP64
 // CHECK_R600_FP64-DAG: #define __R600__ 1
 // CHECK_R600_FP64-DAG: #define __HAS_FMAF__ 1
+
+// Begin avr tests ----------------
+
+// RUN: %clang --target=avr -mmcu=atmega328 -E -dM %s -o - 2>&1 \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK-AVR0
+// CHECK-AVR0: #define __AVR_ARCH__ 5
+// CHECK-AVR0: #define __AVR_ATmega328__ 1
+// CHECK-AVR0: #define __flash __attribute__((__address_space__(1)))
+// RUN: %clang --target=avr -mmcu=atmega2560 -E -dM %s -o - 2>&1 \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK-AVR1
+// CHECK-AVR1: #define __AVR_ARCH__ 6
+// CHECK-AVR1: #define __AVR_ATmega2560__ 1
+// CHECK-AVR1: #define __flash  __attribute__((__address_space__(1)))
+// CHECK-AVR1: #define __flash1 __attribute__((__address_space__(2)))
+// CHECK-AVR1: #define __flash2 __attribute__((__address_space__(3)))
+// CHECK-AVR1: #define __flash3 __attribute__((__address_space__(4)))
 
 // Begin M68k tests ----------------
 

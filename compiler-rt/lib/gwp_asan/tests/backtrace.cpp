@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <regex>
 #include <string>
 
 #include "gwp_asan/common.h"
@@ -15,47 +14,38 @@
 
 // Optnone to ensure that the calls to these functions are not optimized away,
 // as we're looking for them in the backtraces.
-__attribute__((optnone)) static void *
+__attribute((optnone)) void *
 AllocateMemory(gwp_asan::GuardedPoolAllocator &GPA) {
   return GPA.allocate(1);
 }
-__attribute__((optnone)) static void
+__attribute((optnone)) void
 DeallocateMemory(gwp_asan::GuardedPoolAllocator &GPA, void *Ptr) {
   GPA.deallocate(Ptr);
 }
-__attribute__((optnone)) static void
+__attribute((optnone)) void
 DeallocateMemory2(gwp_asan::GuardedPoolAllocator &GPA, void *Ptr) {
   GPA.deallocate(Ptr);
 }
-__attribute__((optnone)) static void TouchMemory(void *Ptr) {
+__attribute__((optnone)) void TouchMemory(void *Ptr) {
   *(reinterpret_cast<volatile char *>(Ptr)) = 7;
 }
 
-TEST_P(BacktraceGuardedPoolAllocatorDeathTest, DoubleFree) {
+TEST_F(BacktraceGuardedPoolAllocatorDeathTest, DoubleFree) {
   void *Ptr = AllocateMemory(GPA);
   DeallocateMemory(GPA, Ptr);
 
-  std::string DeathRegex = "Double Free.*DeallocateMemory2.*";
-  DeathRegex.append("was deallocated.*DeallocateMemory[^2].*");
-  DeathRegex.append("was allocated.*AllocateMemory");
-  if (!Recoverable) {
-    ASSERT_DEATH(DeallocateMemory2(GPA, Ptr), DeathRegex);
-    return;
-  }
+  std::string DeathRegex = "Double Free.*";
+  DeathRegex.append("DeallocateMemory2.*");
 
-  // For recoverable, assert that DeallocateMemory2() doesn't crash.
-  DeallocateMemory2(GPA, Ptr);
-  // Fuchsia's zxtest doesn't have an EXPECT_THAT(testing::MatchesRegex(), ...),
-  // so check the regex manually.
-  EXPECT_TRUE(std::regex_search(
-      GetOutputBuffer(),
-      std::basic_regex(DeathRegex, std::regex_constants::extended)))
-      << "Regex \"" << DeathRegex
-      << "\" was not found in input:\n============\n"
-      << GetOutputBuffer() << "\n============";
+  DeathRegex.append("was deallocated.*");
+  DeathRegex.append("DeallocateMemory.*");
+
+  DeathRegex.append("was allocated.*");
+  DeathRegex.append("AllocateMemory.*");
+  ASSERT_DEATH(DeallocateMemory2(GPA, Ptr), DeathRegex);
 }
 
-TEST_P(BacktraceGuardedPoolAllocatorDeathTest, UseAfterFree) {
+TEST_F(BacktraceGuardedPoolAllocatorDeathTest, UseAfterFree) {
 #if defined(__linux__) && __ARM_ARCH == 7
   // Incomplete backtrace on Armv7 Linux
   GTEST_SKIP();
@@ -64,31 +54,16 @@ TEST_P(BacktraceGuardedPoolAllocatorDeathTest, UseAfterFree) {
   void *Ptr = AllocateMemory(GPA);
   DeallocateMemory(GPA, Ptr);
 
-  std::string DeathRegex = "Use After Free.*TouchMemory.*";
-  DeathRegex.append("was deallocated.*DeallocateMemory[^2].*");
-  DeathRegex.append("was allocated.*AllocateMemory");
+  std::string DeathRegex = "Use After Free.*";
+  DeathRegex.append("TouchMemory.*");
 
-  if (!Recoverable) {
-    ASSERT_DEATH(TouchMemory(Ptr), DeathRegex);
-    return;
-  }
+  DeathRegex.append("was deallocated.*");
+  DeathRegex.append("DeallocateMemory.*");
 
-  // For recoverable, assert that TouchMemory() doesn't crash.
-  TouchMemory(Ptr);
-  // Fuchsia's zxtest doesn't have an EXPECT_THAT(testing::MatchesRegex(), ...),
-  // so check the regex manually.
-  EXPECT_TRUE(std::regex_search(
-      GetOutputBuffer(),
-      std::basic_regex(DeathRegex, std::regex_constants::extended)))
-      << "Regex \"" << DeathRegex
-      << "\" was not found in input:\n============\n"
-      << GetOutputBuffer() << "\n============";
-  ;
+  DeathRegex.append("was allocated.*");
+  DeathRegex.append("AllocateMemory.*");
+  ASSERT_DEATH(TouchMemory(Ptr), DeathRegex);
 }
-
-INSTANTIATE_TEST_SUITE_P(RecoverableSignalDeathTest,
-                         BacktraceGuardedPoolAllocatorDeathTest,
-                         /* Recoverable */ testing::Bool());
 
 TEST(Backtrace, Short) {
   gwp_asan::AllocationMetadata Meta;

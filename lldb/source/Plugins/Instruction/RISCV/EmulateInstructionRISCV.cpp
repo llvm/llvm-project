@@ -541,6 +541,11 @@ static const InstrPattern PATTERNS[] = {
     {"FSW", 0xE003, 0xE000, DecodeC_FSW, RV32},
     {"FLWSP", 0xE003, 0x6002, DecodeC_FLWSP, RV32},
     {"FSWSP", 0xE003, 0xE002, DecodeC_FSWSP, RV32},
+    // RVDC //
+    {"FLDSP", 0xE003, 0x2002, DecodeC_FLDSP, RV32 | RV64},
+    {"FSDSP", 0xE003, 0xA002, DecodeC_FSDSP, RV32 | RV64},
+    {"FLD", 0xE003, 0x2000, DecodeC_FLD, RV32 | RV64},
+    {"FSD", 0xE003, 0xA000, DecodeC_FSD, RV32 | RV64},
 
     // RV32F (Extension for Single-Precision Floating-Point) //
     {"FLW", 0x707F, 0x2007, DecodeIType<FLW>},

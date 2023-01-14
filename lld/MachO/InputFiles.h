@@ -357,6 +357,7 @@ std::vector<const CommandType *> findCommands(const void *anyHdr,
   return detail::findCommands<CommandType>(anyHdr, 0, types...);
 }
 
+std::string replaceThinLTOSuffix(StringRef path);
 } // namespace macho
 
 std::string toString(const macho::InputFile *file);

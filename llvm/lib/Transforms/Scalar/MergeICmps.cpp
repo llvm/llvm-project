@@ -330,10 +330,10 @@ std::optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
 
 // Visit the given comparison block. If this is a comparison between two valid
 // BCE atoms, returns the comparison.
-std::optional<BCECmpBlock>
-visitCmpBlock(Value *const Baseline, ICmpInst::Predicate &Predicate,
-              Value *const Val, BasicBlock *const Block,
-              const BasicBlock *const PhiBlock, BaseIdentifier &BaseId) {
+std::optional<BCECmpBlock> visitCmpBlock(Value *const Val,
+                                         BasicBlock *const Block,
+                                         const BasicBlock *const PhiBlock,
+                                         BaseIdentifier &BaseId) {
   if (Block->empty())
     return std::nullopt;
   auto *const BranchI = dyn_cast<BranchInst>(Block->getTerminator());
@@ -348,27 +348,15 @@ visitCmpBlock(Value *const Baseline, ICmpInst::Predicate &Predicate,
     // that this does not mean that this is the last incoming value, blocks
     // can be reordered).
     Cond = Val;
-    const auto *const ConstBase = cast<ConstantInt>(Baseline);
-    assert(ConstBase->getType()->isIntegerTy(1) &&
-           "Select condition is not an i1?");
-    ExpectedPredicate =
-        ConstBase->isOne() ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
-
-    // Remember the correct predicate.
-    Predicate = ExpectedPredicate;
+    ExpectedPredicate = ICmpInst::ICMP_EQ;
   } else {
-    // All the incoming values must be consistent.
-    if (Baseline != Val)
-      return std::nullopt;
     // In this case, we expect a constant incoming value (the comparison is
     // chained).
     const auto *const Const = cast<ConstantInt>(Val);
-    assert(Const->getType()->isIntegerTy(1) &&
-           "Incoming value is not an i1?");
     LLVM_DEBUG(dbgs() << "const\n");
-    if (!Const->isZero() && !Const->isOne())
+    if (!Const->isZero())
       return std::nullopt;
-    LLVM_DEBUG(dbgs() << *Const << "\n");
+    LLVM_DEBUG(dbgs() << "false\n");
     assert(BranchI->getNumSuccessors() == 2 && "expecting a cond branch");
     BasicBlock *const FalseBlock = BranchI->getSuccessor(1);
     Cond = BranchI->getCondition();
@@ -429,8 +417,6 @@ private:
   std::vector<ContiguousBlocks> MergedBlocks_;
   // The original entry block (before sorting);
   BasicBlock *EntryBlock_;
-  // Remember the predicate type of the chain.
-  ICmpInst::Predicate Predicate_;
 };
 
 static bool areContiguous(const BCECmpBlock &First, const BCECmpBlock &Second) {
@@ -489,13 +475,10 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   // Now look inside blocks to check for BCE comparisons.
   std::vector<BCECmpBlock> Comparisons;
   BaseIdentifier BaseId;
-  Value *const Baseline = Phi.getIncomingValueForBlock(Blocks[0]);
-  Predicate_ = CmpInst::BAD_ICMP_PREDICATE;
   for (BasicBlock *const Block : Blocks) {
     assert(Block && "invalid block");
-    std::optional<BCECmpBlock> Comparison =
-        visitCmpBlock(Baseline, Predicate_, Phi.getIncomingValueForBlock(Block),
-                      Block, Phi.getParent(), BaseId);
+    std::optional<BCECmpBlock> Comparison = visitCmpBlock(
+        Phi.getIncomingValueForBlock(Block), Block, Phi.getParent(), BaseId);
     if (!Comparison) {
       LLVM_DEBUG(dbgs() << "chain with invalid BCECmpBlock, no merge.\n");
       return;
@@ -619,8 +602,7 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
                                     BasicBlock *const InsertBefore,
                                     BasicBlock *const NextCmpBlock,
                                     PHINode &Phi, const TargetLibraryInfo &TLI,
-                                    AliasAnalysis &AA, DomTreeUpdater &DTU,
-                                    ICmpInst::Predicate Predicate) {
+                                    AliasAnalysis &AA, DomTreeUpdater &DTU) {
   assert(!Comparisons.empty() && "merging zero comparisons");
   LLVMContext &Context = NextCmpBlock->getContext();
   const BCECmpBlock &FirstCmp = Comparisons[0];
@@ -641,7 +623,7 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
   else
     Rhs = FirstCmp.Rhs().LoadI->getPointerOperand();
 
-  Value *ICmpValue = nullptr;
+  Value *IsEqual = nullptr;
   LLVM_DEBUG(dbgs() << "Merging " << Comparisons.size() << " comparisons -> "
                     << BB->getName() << "\n");
 
@@ -662,7 +644,7 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
     Value *const RhsLoad =
         Builder.CreateLoad(FirstCmp.Rhs().LoadI->getType(), Rhs);
     // There are no blocks to merge, just do the comparison.
-    ICmpValue = Builder.CreateICmp(Predicate, LhsLoad, RhsLoad);
+    IsEqual = Builder.CreateICmpEQ(LhsLoad, RhsLoad);
   } else {
     const unsigned TotalSizeBits = std::accumulate(
         Comparisons.begin(), Comparisons.end(), 0u,
@@ -678,8 +660,8 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
         Lhs, Rhs,
         ConstantInt::get(Builder.getIntNTy(SizeTBits), TotalSizeBits / 8),
         Builder, DL, &TLI);
-    ICmpValue = Builder.CreateICmp(
-        Predicate, MemCmpCall, ConstantInt::get(Builder.getIntNTy(IntBits), 0));
+    IsEqual = Builder.CreateICmpEQ(
+        MemCmpCall, ConstantInt::get(Builder.getIntNTy(IntBits), 0));
   }
 
   BasicBlock *const PhiBB = Phi.getParent();
@@ -687,11 +669,11 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
   if (NextCmpBlock == PhiBB) {
     // Continue to phi, passing it the comparison result.
     Builder.CreateBr(PhiBB);
-    Phi.addIncoming(ICmpValue, BB);
+    Phi.addIncoming(IsEqual, BB);
     DTU.applyUpdates({{DominatorTree::Insert, BB, PhiBB}});
   } else {
     // Continue to next block if equal, exit to phi else.
-    Builder.CreateCondBr(ICmpValue, NextCmpBlock, PhiBB);
+    Builder.CreateCondBr(IsEqual, NextCmpBlock, PhiBB);
     Phi.addIncoming(ConstantInt::getFalse(Context), BB);
     DTU.applyUpdates({{DominatorTree::Insert, BB, NextCmpBlock},
                       {DominatorTree::Insert, BB, PhiBB}});
@@ -709,11 +691,9 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
   // so that the next block is always available to branch to.
   BasicBlock *InsertBefore = EntryBlock_;
   BasicBlock *NextCmpBlock = Phi_.getParent();
-  assert(Predicate_ != CmpInst::BAD_ICMP_PREDICATE &&
-         "Got the chain of comparisons");
   for (const auto &Blocks : reverse(MergedBlocks_)) {
     InsertBefore = NextCmpBlock = mergeComparisons(
-        Blocks, InsertBefore, NextCmpBlock, Phi_, TLI, AA, DTU, Predicate_);
+        Blocks, InsertBefore, NextCmpBlock, Phi_, TLI, AA, DTU);
   }
 
   // Replace the original cmp chain with the new cmp chain by pointing all

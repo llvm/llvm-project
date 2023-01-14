@@ -300,7 +300,7 @@ public:
         for (unsigned i = 0; i < NumSrcs; ++i)
           SrcRegs[i] = SrcMerge->getSourceReg(i);
 
-        Builder.buildMerge(DstReg, SrcRegs);
+        Builder.buildMergeValues(DstReg, SrcRegs);
         UpdatedDefs.push_back(DstReg);
       } else {
         // Unable to combine
@@ -826,7 +826,7 @@ public:
     // Check if sequence of elements from merge-like instruction is defined by
     // another sequence of elements defined by unmerge. Most often this is the
     // same sequence. Search for elements using findValueFromDefImpl.
-    bool isSequenceFromUnmerge(GMergeLikeOp &MI, unsigned MergeStartIdx,
+    bool isSequenceFromUnmerge(GMergeLikeInstr &MI, unsigned MergeStartIdx,
                                GUnmerge *Unmerge, unsigned UnmergeIdxStart,
                                unsigned NumElts, unsigned EltSize) {
       assert(MergeStartIdx + NumElts <= MI.getNumSources());
@@ -844,7 +844,7 @@ public:
       return true;
     }
 
-    bool tryCombineMergeLike(GMergeLikeOp &MI,
+    bool tryCombineMergeLike(GMergeLikeInstr &MI,
                              SmallVectorImpl<MachineInstr *> &DeadInsts,
                              SmallVectorImpl<Register> &UpdatedDefs,
                              GISelChangeObserver &Observer) {
@@ -932,7 +932,7 @@ public:
         }
 
         MIB.setInstrAndDebugLoc(MI);
-        MIB.buildMerge(Dst, ConcatSources);
+        MIB.buildMergeLikeInstr(Dst, ConcatSources);
         DeadInsts.push_back(&MI);
         return true;
       }
@@ -1099,7 +1099,7 @@ public:
           Regs.push_back(MergeI->getOperand(Idx).getReg());
 
         Register DefReg = MI.getReg(DefIdx);
-        Builder.buildMerge(DefReg, Regs);
+        Builder.buildMergeLikeInstr(DefReg, Regs);
         UpdatedDefs.push_back(DefReg);
       }
 
@@ -1162,7 +1162,7 @@ public:
 
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
     MachineInstr *MergeI = MRI.getVRegDef(SrcReg);
-    if (!MergeI || !isa<GMergeLikeOp>(MergeI))
+    if (!MergeI || !isa<GMergeLikeInstr>(MergeI))
       return false;
 
     Register DstReg = MI.getOperand(0).getReg();
@@ -1241,7 +1241,7 @@ public:
           break;
         }
       }
-      Changed = Finder.tryCombineMergeLike(cast<GMergeLikeOp>(MI), DeadInsts,
+      Changed = Finder.tryCombineMergeLike(cast<GMergeLikeInstr>(MI), DeadInsts,
                                            UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_EXTRACT:

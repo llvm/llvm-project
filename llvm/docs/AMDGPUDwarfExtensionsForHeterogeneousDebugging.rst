@@ -54,7 +54,7 @@ vendor or architecture specific. That is followed by appendix
 textual changes for the extensions relative to the DWARF Version 5 standard.
 There are a number of notes included that raise open questions, or provide
 alternative approaches that may be worth considering. Then appendix
-:ref:`amdgpu-dwarf-examples` links to the AMD GPU specific usage of the
+:ref:`amdgpu-dwarf-further-examples` links to the AMD GPU specific usage of the
 extensions that includes an example. Finally, appendix
 :ref:`amdgpu-dwarf-references` provides references to further information.
 
@@ -448,7 +448,7 @@ masked select is required. In addition, an operation that creates a composite
 location description that is a vector on another location description is needed.
 
 An example that uses these operations is referenced in the
-:ref:`amdgpu-dwarf-examples` appendix.
+:ref:`amdgpu-dwarf-further-examples` appendix.
 
 See ``DW_OP_LLVM_select_bit_piece`` and ``DW_OP_LLVM_extend`` in
 :ref:`amdgpu-dwarf-composite-location-description-operations`.
@@ -509,23 +509,22 @@ lane mask. This can have an expression that may evaluate to the SIMT active lane
 mask register or to a saved mask when in whole wavefront execution mode.
 
 An example that uses these attributes is referenced in the
-:ref:`amdgpu-dwarf-examples` appendix.
+:ref:`amdgpu-dwarf-further-examples` appendix.
 
 See ``DW_AT_LLVM_lane_pc`` and ``DW_AT_LLVM_active_lane`` in
 :ref:`amdgpu-dwarf-composite-location-description-operations`.
 
-2.14 Define Source Language Address Classes
+2.14 Define Source Language Memory Classes
 -------------------------------------------
 
 AMDGPU supports languages, such as OpenCL [:ref:`OpenCL <amdgpu-dwarf-OpenCL>`],
-that define source language address classes. Support is added to define language
-specific address classes so they can be used in a consistent way by consumers.
+that define source language memory classes. Support is added to define language
+specific memory spaces so they can be used in a consistent way by consumers.
 
-It would also be desirable to add support for using address classes in defining
-source language types. DWARF Version 5 only supports using target architecture
-specific address spaces.
+Support for using memory spaces in defining source language types and data
+object allocation is also added.
 
-See :ref:`amdgpu-dwarf-segment_addresses`.
+See :ref:`amdgpu-dwarf-memory-spaces`.
 
 2.15 Define Augmentation Strings to Support Multiple Extensions
 ---------------------------------------------------------------
@@ -730,16 +729,19 @@ The following table provides the additional attributes.
 .. table:: Attribute names
    :name: amdgpu-dwarf-attribute-names-table
 
-   =========================== ====================================
-   Attribute                   Usage
-   =========================== ====================================
-   ``DW_AT_LLVM_active_lane``  SIMT active lanes (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_augmentation`` Compilation unit augmentation string (see :ref:`amdgpu-dwarf-full-and-partial-compilation-unit-entries`)
-   ``DW_AT_LLVM_lane_pc``      SIMT lane program location (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_lanes``        SIMT lane count (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_iterations``   Concurrent iteration count (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_vector_size``  Base type vector size (see :ref:`amdgpu-dwarf-base-type-entries`)
-   =========================== ====================================
+   ============================ ====================================
+   Attribute                    Usage
+   ============================ ====================================
+   ``DW_AT_LLVM_active_lane``   SIMT active lanes (see :ref:`amdgpu-dwarf-low-level-information`)
+   ``DW_AT_LLVM_augmentation``  Compilation unit augmentation string (see :ref:`amdgpu-dwarf-full-and-partial-compilation-unit-entries`)
+   ``DW_AT_LLVM_lane_pc``       SIMT lane program location (see :ref:`amdgpu-dwarf-low-level-information`)
+   ``DW_AT_LLVM_lanes``         SIMT lane count (see :ref:`amdgpu-dwarf-low-level-information`)
+   ``DW_AT_LLVM_iterations``    Concurrent iteration count (see :ref:`amdgpu-dwarf-low-level-information`)
+   ``DW_AT_LLVM_vector_size``   Base type vector size (see :ref:`amdgpu-dwarf-base-type-entries`)
+   ``DW_AT_LLVM_address_space`` Architecture specific address space (see :ref:`amdgpu-dwarf-address-spaces`)
+   ``DW_AT_LLVM_memory_space``  Pointer or reference types (see 5.3 "Type Modifier Entries")
+                                Data objects (see 4.1 "Data Object Entries")
+   ============================ ====================================
 
 .. _amdgpu-dwarf-expressions:
 
@@ -803,7 +805,7 @@ A.2.5.1 DWARF Expression Evaluation Context
 +++++++++++++++++++++++++++++++++++++++++++
 
 A DWARF expression is evaluated in a context that can include a number of
-context elements.  If multiple context elements are specified then they must be
+context elements. If multiple context elements are specified then they must be
 self consistent or the result of the evaluation is undefined. The context
 elements that can be specified are:
 
@@ -1017,9 +1019,9 @@ For example, the location of a global variable may be able to be evaluated
 without such context. If the expression evaluates with an error then it may
 indicate the variable has been optimized and so requires more context.*
 
-*The DWARF expression for call frame information (see
-:ref:`amdgpu-dwarf-call-frame-information`) operations are restricted to those
-that do not require the compilation unit context to be specified.*
+*The DWARF expression for call frame information (see*
+:ref:`amdgpu-dwarf-call-frame-information`\ *) operations are restricted to
+those that do not require the compilation unit context to be specified.*
 
 The DWARF is ill-formed if all the ``address_size`` fields in the headers of all
 the entries in the ``.debug_info``, ``.debug_addr``, ``.debug_line``,
@@ -1360,6 +1362,9 @@ expression is ill-formed.
     ``DW_OP_rot`` rotates the first three stack entries. The entry at the top of
     the stack becomes the third stack entry, the second entry becomes the top of
     the stack, and the third entry becomes the second entry.
+
+*Examples illustrating many of these stack operations are found in Appendix
+D.1.2 on page 289.*
 
 .. _amdgpu-dwarf-control-flow-operations:
 
@@ -2170,8 +2175,8 @@ description SL is defined to be a memory byte address location description. It
 has a byte address equal to A and an address space equal to AS of the
 corresponding SL.
 
-``DW_ASPACE_none`` is defined as the target architecture default address space.
-See :ref:`amdgpu-dwarf-segment_addresses`.
+``DW_ASPACE_LLVM_none`` is defined as the target architecture default address
+space. See :ref:`amdgpu-dwarf-address-spaces`.
 
 If a stack entry is required to be a location description, but it is a value V
 with the generic type, then it is implicitly converted to a location description
@@ -2281,7 +2286,7 @@ type.
     with the current context of the access operation.*
 
     The DWARF expression is ill-formed if AS is not one of the values defined by
-    the target architecture specific ``DW_ASPACE_*`` values.
+    the target architecture specific ``DW_ASPACE_LLVM_*`` values.
 
     See :ref:`amdgpu-dwarf-implicit-location-description-operations` for special
     rules concerning implicit pointer values produced by dereferencing implicit
@@ -2396,7 +2401,7 @@ type.
     the address space identifier.
 
     The DWARF expression is ill-formed if AS is not one of the values defined by
-    the target architecture specific ``DW_ASPACE_*`` values.
+    the target architecture specific ``DW_ASPACE_LLVM_*`` values.
 
     .. note::
 
@@ -2495,7 +2500,7 @@ implicit storage value starting at the bit offset.
     ``DW_OP_stack_value`` pops one stack entry that must be a value V.
 
     An implicit location storage LS is created with the literal value V using
-    the size, encoding, and enianity specified by V's base type.
+    the size, encoding, and endianity specified by V's base type.
 
     It pushes a location description L with one implicit location description SL
     on the stack. SL specifies LS with a bit offset of 0.
@@ -2510,11 +2515,9 @@ implicit storage value starting at the bit offset.
     descriptions created by the ``DW_OP_implicit_pointer`` and
     ``DW_OP_LLVM_aspace_implicit_pointer`` operations.
 
-    .. note::
-
-      Since location descriptions are allowed on the stack, the
-      ``DW_OP_stack_value`` operation no longer terminates the DWARF operation
-      expression execution as in DWARF Version 5.
+    Note: Since location descriptions are allowed on the stack, the
+    ``DW_OP_stack_value`` operation no longer terminates the DWARF operation
+    expression execution as in DWARF Version 5.
 
 3.  ``DW_OP_implicit_pointer``
 
@@ -2635,7 +2638,7 @@ implicit storage value starting at the bit offset.
     AS.
 
     The DWARF expression is ill-formed if AS is not one of the values defined by
-    the target architecture specific ``DW_ASPACE_*`` values.
+    the target architecture specific ``DW_ASPACE_LLVM_*`` values.
 
     .. note::
 
@@ -2884,6 +2887,13 @@ compatible with the definitions in DWARF Version 5.*
     The DWARF expression is ill-formed if S or C are 0, or if the bit size of M
     is less than C.
 
+    .. note::
+
+      Should the count operand for DW_OP_extend and DW_OP_select_bit_piece be
+      changed to get the count value off the stack? This would allow support for
+      architectures that have variable length vector instructions such as ARM
+      and RISC-V.
+
 6.  ``DW_OP_LLVM_overlay`` *New*
 
     ``DW_OP_LLVM_overlay`` pops four stack entries. The first must be an
@@ -3054,47 +3064,14 @@ previously needed for location list expressions.*
 
   The rest of this section is the same as DWARF Version 5 section 2.6.2.
 
-.. _amdgpu-dwarf-segment_addresses:
+.. _amdgpu-dwarf-address-spaces:
 
-A.2.12 Segmented Addresses
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+A.2.13 Address Spaces
+~~~~~~~~~~~~~~~~~~~~~
 
 .. note::
 
-  This augments DWARF Version 5 section 2.12.
-
-DWARF address classes are used for source languages that have the concept of
-memory spaces. They are used in the ``DW_AT_address_class`` attribute for
-pointer type, reference type, subprogram, and subprogram type debugger
-information entries.
-
-Each DWARF address class is conceptually a separate source language memory space
-with its own lifetime and aliasing rules. DWARF address classes are used to
-specify the source language memory spaces that pointer type and reference type
-values refer, and to specify the source language memory space in which variables
-are allocated.
-
-The set of currently defined source language DWARF address classes, together
-with source language mappings, is given in
-:ref:`amdgpu-dwarf-address-class-table`.
-
-Vendor defined source language address classes may be defined using codes in the
-range ``DW_ADDR_LLVM_lo_user`` to ``DW_ADDR_LLVM_hi_user``.
-
-.. table:: Address class
-   :name: amdgpu-dwarf-address-class-table
-
-   ========================= ============ ========= ========= =========
-   Address Class Name        Meaning      C/C++     OpenCL    CUDA/HIP
-   ========================= ============ ========= ========= =========
-   ``DW_ADDR_none``          generic      *default* generic   *default*
-   ``DW_ADDR_LLVM_global``   global                 global
-   ``DW_ADDR_LLVM_constant`` constant               constant  constant
-   ``DW_ADDR_LLVM_group``    thread-group           local     shared
-   ``DW_ADDR_LLVM_private``  thread                 private
-   ``DW_ADDR_LLVM_lo_user``
-   ``DW_ADDR_LLVM_hi_user``
-   ========================= ============ ========= ========= =========
+  This is a new section after DWARF Version 5 section 2.12 Segmented Addresses.
 
 DWARF address spaces correspond to target architecture specific linear
 addressable memory areas. They are used in DWARF expression location
@@ -3110,153 +3087,104 @@ these reasons they may have properties that do not allow them to be viewed as
 part of the unified global virtual address space accessible by all threads.*
 
 *It is target architecture specific whether multiple DWARF address spaces are
-supported and how source language DWARF address classes map to target
-architecture specific DWARF address spaces. A target architecture may map
-multiple source language DWARF address classes to the same target architecture
-specific DWARF address class. Optimization may determine that variable lifetime
-and access pattern allows them to be allocated in faster scratchpad memory
-represented by a different DWARF address space.*
+supported and how source language memory spaces map to target architecture
+specific DWARF address spaces. A target architecture may map multiple source
+language memory spaces to the same target architecture specific DWARF address
+class. Optimization may determine that variable lifetime and access pattern
+allows them to be allocated in faster scratchpad memory represented by a
+different DWARF address space than the default for the source language memory
+space.*
 
 Although DWARF address space identifiers are target architecture specific,
-``DW_ASPACE_none`` is a common address space supported by all target
-architectures.
+``DW_ASPACE_LLVM_none`` is a common address space supported by all target
+architectures, and defined as the target architecture default address space.
 
 DWARF address space identifiers are used by:
 
-* The DWARF expression operations: ``DW_OP_LLVM_aspace_bregx``,
-  ``DW_OP_LLVM_form_aspace_address``, ``DW_OP_LLVM_aspace_implicit_pointer``,
-  and ``DW_OP_xderef*``.
+* The ``DW_AT_LLVM_address_space`` attribute.
 
-* The CFI instructions: ``DW_CFA_LLVM_def_aspace_cfa`` and
-  ``DW_CFA_LLVM_def_aspace_cfa_sf``.
+* The DWARF expression operations: ``DW_OP_aspace_bregx``,
+  ``DW_OP_form_aspace_address``, ``DW_OP_aspace_implicit_pointer``, and
+  ``DW_OP_xderef*``.
 
-.. note::
-
-  With the definition of DWARF address classes and DWARF address spaces in these
-  extensions, DWARF Version 5 table 2.7 needs to be updated. It seems it is an
-  example of DWARF address spaces and not DWARF address classes.
-
-.. note::
-
-  With the expanded support for DWARF address spaces in these extensions, it may
-  be worth examining if DWARF segments can be eliminated and DWARF address
-  spaces used instead.
-
-  That may involve extending DWARF address spaces to also be used to specify
-  code locations. In target architectures that use different memory areas for
-  code and data this would seem a natural use for DWARF address spaces. This
-  would allow DWARF expression location descriptions to be used to describe the
-  location of subprograms and entry points that are used in expressions
-  involving subprogram pointer type values.
-
-  Currently, DWARF expressions assume data and code resides in the same default
-  DWARF address space, and only the address ranges in DWARF location list
-  entries and in the ``.debug_aranges`` section for accelerated access for
-  addresses allow DWARF segments to be used to distinguish.
+* The CFI instructions: ``DW_CFA_def_aspace_cfa`` and
+  ``DW_CFA_def_aspace_cfa_sf``.
 
 .. note::
 
   Currently, DWARF defines address class values as being target architecture
-  specific. It is unclear how language specific memory spaces are intended to be
-  represented in DWARF using these.
+  specific, and defines a DW_AT_address_class attribute. With the removal of
+  DW_AT_segment in DWARF 6, it is unclear how the address class is intended to
+  be used as the term is not used elsewhere. Should these be replaced by this
+  proposal's more complete address space? Or are they intended to represent
+  source language memory spaces such as in OpenCL?
 
-  For example, OpenCL defines memory spaces (called address spaces in OpenCL)
-  for ``global``, ``local``, ``constant``, and ``private``. These are part of
-  the type system and are modifiers to pointer types. In addition, OpenCL
-  defines ``generic`` pointers that can reference either the ``global``,
-  ``local``, or ``private`` memory spaces. To support the OpenCL language the
-  debugger would want to support casting pointers between the ``generic`` and
-  other memory spaces, querying what memory space a ``generic`` pointer value is
-  currently referencing, and possibly using pointer casting to form an address
-  for a specific memory space out of an integral value.
+.. _amdgpu-dwarf-memory-spaces:
 
-  The method to use to dereference a pointer type or reference type value is
-  defined in DWARF expressions using ``DW_OP_xderef*`` which uses a target
-  architecture specific address space.
+A.2.14 Memory Spaces
+~~~~~~~~~~~~~~~~~~~~
 
-  DWARF defines the ``DW_AT_address_class`` attribute on pointer type and
-  reference type debugger information entries. It specifies the method to use to
-  dereference them. Why is the value of this not the same as the address space
-  value used in ``DW_OP_xderef*``? In both cases it is target architecture
-  specific and the architecture presumably will use the same set of methods to
-  dereference pointers in both cases.
+.. note::
 
-  Since ``DW_AT_address_class`` uses a target architecture specific value, it
-  cannot in general capture the source language memory space type modifier
-  concept. On some architectures all source language memory space modifiers may
-  actually use the same method for dereferencing pointers.
+  This is a new section after DWARF Version 5 section 2.12 Segmented Addresses.
 
-  One possibility is for DWARF to add an ``DW_TAG_LLVM_address_class_type``
-  debugger information entry type modifier that can be applied to a pointer type
-  and reference type. The ``DW_AT_address_class`` attribute could be re-defined
-  to not be target architecture specific and instead define generalized language
-  values (as presented above for DWARF address classes in the table
-  :ref:`amdgpu-dwarf-address-class-table`) that will support OpenCL and other
-  languages using memory spaces. The ``DW_AT_address_class`` attribute could be
-  defined to not be applied to pointer types or reference types, but instead
-  only to the new ``DW_TAG_LLVM_address_class_type`` type modifier debugger
-  information entry.
+DWARF memory spaces are used for source languages that have the concept of
+memory spaces. They are used in the ``DW_AT_LLVM_memory_space`` attribute for
+pointer type, reference type, variable, formal parameter, and constant debugger
+information entries.
 
-  If a pointer type or reference type is not modified by
-  ``DW_TAG_LLVM_address_class_type`` or if ``DW_TAG_LLVM_address_class_type``
-  has no ``DW_AT_address_class`` attribute, then the pointer type or reference
-  type would be defined to use the ``DW_ADDR_none`` address class as currently.
-  Since modifiers can be chained, it would need to be defined if multiple
-  ``DW_TAG_LLVM_address_class_type`` modifiers were legal, and if so if the
-  outermost one is the one that takes precedence.
+Each DWARF memory space is conceptually a separate source language memory space
+with its own lifetime and aliasing rules. DWARF memory spaces are used to
+specify the source language memory spaces that pointer type and reference type
+values refer, and to specify the source language memory space in which variables
+are allocated.
 
-  A target architecture implementation that supports multiple address spaces
-  would need to map ``DW_ADDR_none`` appropriately to support CUDA-like
-  languages that have no address classes in the type system but do support
-  variable allocation in address classes. Such variable allocation would result
-  in the variable's location description needing an address space.
+Although DWARF memory space identifiers are source language specific,
+``DW_MSPACE_LLVM_none`` is a common memory space supported by all source
+languages, and defined as the source language default memory space.
 
-  The approach presented in :ref:`amdgpu-dwarf-address-class-table` is to define
-  the default ``DW_ADDR_none`` to be the generic address class and not the
+The set of currently defined DWARF memory spaces, together with source language
+mappings, is given in :ref:`amdgpu-dwarf-source-language-memory-spaces-table`.
+
+Vendor defined source language memory spaces may be defined using codes in the
+range ``DW_MSPACE_LLVM_lo_user`` to ``DW_MSPACE_LLVM_hi_user``.
+
+.. table:: Source language memory spaces
+   :name: amdgpu-dwarf-source-language-memory-spaces-table
+
+   =========================== ============ ============== ============== ==============
+   Memory Space Name           Meaning      C/C++          OpenCL         CUDA/HIP
+   =========================== ============ ============== ============== ==============
+   ``DW_MSPACE_LLVM_none``     generic      *default*      generic        *default*
+   ``DW_MSPACE_LLVM_global``   global                      global
+   ``DW_MSPACE_LLVM_constant`` constant                    constant       constant
+   ``DW_MSPACE_LLVM_group``    thread-group                local          shared
+   ``DW_MSPACE_LLVM_private``  thread                      private
+   ``DW_MSPACE_LLVM_lo_user``
+   ``DW_MSPACE_LLVM_hi_user``
+   =========================== ============ ============== ============== ==============
+
+.. note::
+
+  The approach presented in
+  :ref:`amdgpu-dwarf-source-language-memory-spaces-table` is to define the
+  default ``DW_MSPACE_LLVM_none`` to be the generic address class and not the
   global address class. This matches how CLANG and LLVM have added support for
   CUDA-like languages on top of existing C++ language support. This allows all
   addresses to be generic by default which matches CUDA-like languages.
 
-  An alternative approach is to define ``DW_ADDR_none`` as being the global
-  address class and then change ``DW_ADDR_LLVM_global`` to
-  ``DW_ADDR_LLVM_generic``. This would match the reality that languages that do
-  not support multiple memory spaces only have one default global memory space.
-  Generally, in these languages if they expose that the target architecture
-  supports multiple address spaces, the default one is still the global memory
-  space. Then a language that does support multiple memory spaces has to
-  explicitly indicate which pointers have the added ability to reference more
-  than the global memory space. However, compilers generating DWARF for
+  An alternative approach is to define ``DW_MSPACE_LLVM_none`` as being the
+  global memory space and then change ``DW_MSPACE_LLVM_global`` to
+  ``DW_MSPACE_LLVM_generic``. This would match the reality that languages that
+  do not support multiple memory spaces only have one default global memory
+  space. Generally, in these languages if they expose that the target
+  architecture supports multiple memory spaces, the default one is still the
+  global memory space. Then a language that does support multiple memory spaces
+  has to explicitly indicate which pointers have the added ability to reference
+  more than the global memory space. However, compilers generating DWARF for
   CUDA-like languages would then have to define every CUDA-like language pointer
-  type or reference type using ``DW_TAG_LLVM_address_class_type`` with a
-  ``DW_AT_address_class`` attribute of ``DW_ADDR_LLVM_generic`` to match the
-  language semantics.
-
-  A new ``DW_AT_LLVM_address_space`` attribute could be defined that can be
-  applied to pointer type, reference type, subprogram, and subprogram type to
-  describe how objects having the given type are dereferenced or called (the
-  role that ``DW_AT_address_class`` currently provides). The values of
-  ``DW_AT_LLVM_address_space`` would be target architecture specific and the
-  same as used in ``DW_OP_xderef*``.
-
-.. note::
-
-  Some additional changes will be made to support languages such as OpenCL/SyCL
-  that allow address class pointer casting and queries.
-
-  This requires the compiler to provide the mapping from address space to
-  address class which may be runtime and not target architecture dependent. Some
-  implementations may have a one-to-one mapping from source language address
-  class to target architecture address space, and some may have a many-to-one
-  mapping which requires knowledge of the address class when determining if
-  pointer address class casts are allowed.
-
-  The changes will likely add an attribute that has an expression provided by
-  the compiler to map from address class to address space. The
-  ``DW_OP_implicit_pointer`` and ``DW_OP_LLVM_aspace_implicit_pointer``
-  operations may be changed as the current IPV definition may not provide enough
-  information when used to cast between address classes. Other attributes and
-  operations may be needed. The legal casts between address classes may need to
-  be defined on a per language address class basis.
+  type or reference type with a ``DW_AT_LLVM_memory_space`` attribute of
+  ``DW_MSPACE_LLVM_generic`` to match the language semantics.
 
 A.3 Program Scope Entries
 -------------------------
@@ -3394,6 +3322,23 @@ A.3.3.5 Low-Level Information
     *Typically, E will use the* ``DW_OP_call_frame_cfa`` *operation or be a
     stack pointer register plus or minus some offset.*
 
+    *The frame base for a subprogram is typically an address relative to the
+    first unit of storage allocated for the subprogram's stack frame. The*
+    ``DW_AT_frame_base`` *attribute can be used in several ways:*
+
+    1.  *In subprograms that need location lists to locate local variables, the*
+        ``DW_AT_frame_base`` *can hold the needed location list, while all
+        variables' location descriptions can be simpler ones involving the frame
+        base.*
+
+    2.  *It can be used in resolving "up-level" addressing within
+        nested routines. (See also* ``DW_AT_static_link``\ *, below)*
+
+    *Some languages support nested subroutines. In such languages, it is
+    possible to reference the local variables of an outer subroutine from within
+    an inner subroutine. The* ``DW_AT_static_link`` *and* ``DW_AT_frame_base``
+    *attributes allow debuggers to support this same kind of referencing.*
+
 3.  If a ``DW_TAG_subprogram`` or ``DW_TAG_entry_point`` debugger information
     entry is lexically nested, it may have a ``DW_AT_static_link`` attribute,
     whose value is a DWARF expression E.
@@ -3410,6 +3355,23 @@ A.3.3.5 Low-Level Information
 
     The DWARF is ill-formed if L is not comprised of one memory location
     description for one of the target architecture specific address spaces.
+
+    In the context of supporting nested subroutines, the DW_AT_frame_base
+    attribute value obeys the following constraints:
+
+    1.  It computes a value that does not change during the life of the
+        subprogram, and
+
+    2.  The computed value is unique among instances of the same subroutine.
+
+    *For typical DW_AT_frame_base use, this means that a recursive subroutine's
+    stack frame must have non-zero size.*
+
+    *If a debugger is attempting to resolve an up-level reference to a variable,
+    it uses the nesting structure of DWARF to determine which subroutine is the
+    lexical parent and the* ``DW_AT_static_link`` *value to identify the
+    appropriate active frame of the parent. It can then attempt to find the
+    reference within the context of the parent.*
 
     .. note::
 
@@ -3532,7 +3494,15 @@ A.3.4 Call Site Entries and Parameters
 A.3.4.2 Call Site Parameters
 ++++++++++++++++++++++++++++
 
-1.  A ``DW_TAG_call_site_parameter`` debugger information entry may have a
+1.  The call site entry may own ``DW_TAG_call_site_parameter`` debugging
+    information entries representing the parameters passed to the call. Call
+    site parameter entries occur in the same order as the corresponding
+    parameters in the source. Each such entry has a ``DW_AT_location`` attribute
+    which is a location description. This location description describes where
+    the parameter is passed (usually either some register, or a memory location
+    expressible as the contents of the stack register plus some offset).
+
+2.  A ``DW_TAG_call_site_parameter`` debugger information entry may have a
     ``DW_AT_call_value`` attribute, whose value is a DWARF operation expression
     E\ :sub:`1`\ .
 
@@ -3563,10 +3533,10 @@ A.3.4.2 Call Site Parameters
 
     .. note::
 
-      The DWARF Version 5 implies that `DW_OP_push_object_address` may be used
+      The DWARF Version 5 implies that ``DW_OP_push_object_address`` may be used
       but does not state what object must be specified in the context. Either
-      `DW_OP_push_object_address` cannot be used, or the object to be passed in
-      the context must be defined.
+      ``DW_OP_push_object_address`` cannot be used, or the object to be passed
+      in the context must be defined.
 
     The value of the ``DW_AT_call_data_value`` attribute is obtained by
     evaluating E\ :sub:`3` with a context that has a result kind of a value, an
@@ -3601,6 +3571,14 @@ A.3.4.2 Call Site Parameters
     registers that have been clobbered, and clobbered memory will no longer have
     the value at the time of the call.*
 
+3.  Each call site parameter entry may also have a ``DW_AT_call_parameter``
+    attribute which contains a reference to a ``DW_TAG_formal_parameter`` entry,
+    ``DW_AT_type attribute`` referencing the type of the parameter or
+    ``DW_AT_name`` attribute describing the parameter's name.
+
+*Examples using call site entries and related attributes are found in Appendix
+D.15.*
+
 .. _amdgpu-dwarf-lexical-block-entries:
 
 A.3.5 Lexical Block Entries
@@ -3622,9 +3600,17 @@ A.4 Data Object and Object List Entries
 A.4.1 Data Object Entries
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1.  Any debugging information entry describing a data object (which includes
-    variables and parameters) or common blocks may have a ``DW_AT_location``
-    attribute, whose value is a DWARF expression E.
+Program variables, formal parameters and constants are represented by debugging
+information entries with the tags ``DW_TAG_variable``,
+``DW_TAG_formal_parameter`` and ``DW_TAG_constant``, respectively.
+
+*The tag DW_TAG_constant is used for languages that have true named constants.*
+
+The debugging information entry for a program variable, formal parameter or
+constant may have the following attributes:
+
+1.  A ``DW_AT_location`` attribute, whose value is a DWARF expression E that
+    describes the location of a variable or parameter at run-time.
 
     The result of the attribute is obtained by evaluating E with a context that
     has a result kind of a location description, an unspecified object, the
@@ -3669,6 +3655,19 @@ A.4.1 Data Object Entries
       to be used to push the location description of any variable regardless of
       how it is optimized.
 
+A.4.2 Common Block Entries
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A common block entry also has a ``DW_AT_location`` attribute whose value is a
+DWARF expression E that describes the location of the common block at run-time.
+The result of the attribute is obtained by evaluating E with a context that has
+a result kind of a location description, an unspecified object, the compilation
+unit that contains E, an empty initial stack, and other context elements
+corresponding to the source language thread of execution upon which the user is
+focused, if any. The result of the evaluation is the location description of the
+base of the common block. See :ref:`amdgpu-dwarf-control-flow-operations` for
+special evaluation rules used by the ``DW_OP_call*`` operations.
+
 A.5 Type Entries
 ----------------
 
@@ -3708,6 +3707,56 @@ A.5.1 Base Type Entries
       would not be suitable as the type of a stack value entry. But perhaps that
       could be replaced by using this attribute.
 
+    .. note::
+
+      Compare this with the ``DW_AT_GNU_vector`` extension supported by GNU. Is
+      it better to add an attribute to the existing ``DW_TAG_base_type`` debug
+      entry, or allow some forms of ``DW_TAG_array_type`` (those that have the
+      ``DW_AT_GNU_vector`` attribute) to be used as stack entry value types?
+
+A.5.3 Type Modifier Entries
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+  This section augments DWARF Version 5 section 5.3.
+
+A modified type entry describing a pointer or reference type (using
+``DW_TAG_pointer_type``, ``DW_TAG_reference_type`` or
+``DW_TAG_rvalue_reference_type``\ ) may have a ``DW_AT_LLVM_memory_space``
+attribute with a constant value representing a source language specific DWARF
+memory space (see :ref:`amdgpu-dwarf-memory-spaces`). If omitted, defaults to
+DW_MSPACE_LLVM_none.
+
+A modified type entry describing a pointer or reference type (using
+``DW_TAG_pointer_type``, ``DW_TAG_reference_type`` or
+``DW_TAG_rvalue_reference_type``\ ) may have a ``DW_AT_LLVM_address_space``
+attribute with a constant value AS representing an architecture specific DWARF
+address space (see :ref:`amdgpu-dwarf-address-spaces`). If omitted, defaults to
+``DW_ASPACE_LLVM_none``. DR is the offset of a hypothetical debug information
+entry D in the current compilation unit for an integral base type matching the
+address size of AS. An object P having the given pointer or reference type are
+dereferenced as if the ``DW_OP_push_object_address; DW_OP_deref_type DR;
+DW_OP_constu AS; DW_OP_form_aspace_address`` operation expression was evaluated
+with the current context except: the result kind is location description; the
+initial stack is empty; and the object is the location description of P.
+
+.. note::
+
+  What if the current context does not have a current target architecture
+  defined?
+
+.. note::
+
+  With the expanded support for DWARF address spaces, it may be worth examining
+  if they can be used for what was formerly supported by DWARF 5 segments. That
+  would include specifying the address space of all code addresses (compilation
+  units, subprograms, subprogram entries, labels, subprogram types, etc.).
+  Either the code address attributes could be extended to allow a exprloc form
+  (so that ``DW_OP_form_aspace_address`` can be used) or the
+  ``DW_AT_LLVM_address_space`` attribute be allowed on all DIEs that allow
+  ``DW_AT_segment``.
+
 A.5.7 Structure, Union, Class and Interface Type Entries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3721,7 +3770,7 @@ A.5.7.3 Derived or Extended Structures, Classes and Interfaces
 
         The result of the attribute is obtained by evaluating a
         ``DW_OP_LLVM_offset B`` operation with an initial stack comprising the
-        location description of the beginning of the containing entity.  The
+        location description of the beginning of the containing entity. The
         result of the evaluation is the location description of the base of the
         member entry.
 
@@ -3794,6 +3843,10 @@ A.5.18 Dynamic Properties of Types
 
 A.5.18.1 Data Location
 ++++++++++++++++++++++
+
+*Some languages may represent objects using descriptors to hold information,
+including a location and/or run-time parameters, about the data that represents
+the value for that object.*
 
 1.  The ``DW_AT_data_location`` attribute may be used with any type that
     provides one or more levels of hidden indirection and/or run-time parameters
@@ -4072,8 +4125,9 @@ The register rules are:
   (see :ref:`amdgpu-dwarf-operation-expressions`).
 
 *val_expression(E)*
-  The previous value of this register is the value produced by evaluating the
-  DWARF operation expression E (see :ref:`amdgpu-dwarf-operation-expressions`).
+  The previous value of this register is located at the implicit location
+  description created from the value produced by evaluating the DWARF operation
+  expression E (see :ref:`amdgpu-dwarf-operation-expressions`).
 
   E is evaluated with the current context, except the result kind is a value,
   the compilation unit is unspecified, the object is unspecified, and an initial
@@ -4095,6 +4149,20 @@ The register rules are:
 *architectural*
   The rule is defined externally to this specification by the augmenter.
 
+*This table would be extremely large if actually constructed as described. Most
+of the entries at any point in the table are identical to the ones above them.
+The whole table can be represented quite compactly by recording just the
+differences starting at the beginning address of each subroutine in the
+program.*
+
+The virtual unwind information is encoded in a self-contained section called
+``.debug_frame``. Entries in a ``.debug_frame`` section are aligned on a
+multiple of the address size relative to the start of the section and come in
+two forms: a Common Information Entry (CIE) and a Frame Description Entry (FDE).
+
+*If the range of code addresses for a function is not contiguous, there may be
+multiple CIEs and FDEs corresponding to the parts of that function.*
+
 A Common Information Entry (CIE) holds information that is shared among many
 Frame Description Entries (FDE). There is at least one CIE in every non-empty
 ``.debug_frame`` section. A CIE contains the following fields, in order:
@@ -4102,9 +4170,9 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
 1.  ``length`` (initial length)
 
     A constant that gives the number of bytes of the CIE structure, not
-    including the length field itself. The size of the length field plus the
-    value of length must be an integral multiple of the address size specified
-    in the ``address_size`` field.
+    including the length field itself (see Section 7.2.2 Initial Length Values).
+    The size of the length field plus the value of length must be an integral
+    multiple of the address size specified in the ``address_size`` field.
 
 2.  ``CIE_id`` (4 or 8 bytes, see
     :ref:`amdgpu-dwarf-32-bit-and-64-bit-dwarf-formats`)
@@ -4116,8 +4184,9 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
 
 3.  ``version`` (ubyte)
 
-    A version number. This number is specific to the call frame information and
-    is independent of the DWARF version number.
+    A version number (see Section 7.24 Call Frame Information). This number is
+    specific to the call frame information and is independent of the DWARF
+    version number.
 
     The value of the CIE version number is 4.
 
@@ -4216,9 +4285,9 @@ An FDE contains the following fields, in order:
 1.  ``length`` (initial length)
 
     A constant that gives the number of bytes of the header and instruction
-    stream for this subprogram, not including the length field itself. The size
-    of the length field plus the value of length must be an integral multiple of
-    the address size.
+    stream for this subprogram, not including the length field itself (see
+    Section 7.2.2 Initial Length Values). The size of the length field plus the
+    value of length must be an integral multiple of the address size.
 
 2.  ``CIE_pointer`` (4 or 8 bytes, see
     :ref:`amdgpu-dwarf-32-bit-and-64-bit-dwarf-formats`)
@@ -4250,6 +4319,11 @@ An FDE contains the following fields, in order:
 
 A.6.4.2 Call Frame Instructions
 +++++++++++++++++++++++++++++++
+
+Each call frame instruction is defined to take 0 or more operands. Some of the
+operands may be encoded as part of the opcode (see
+:ref:`amdgpu-dwarf-call-frame-information-encoding`). The instructions are
+defined in the following sections.
 
 Some call frame instructions have operands that are encoded as DWARF operation
 expressions E (see :ref:`amdgpu-dwarf-operation-expressions`). The DWARF
@@ -4304,8 +4378,8 @@ A.6.4.2.2 CFA Definition Instructions
     The ``DW_CFA_def_cfa`` instruction takes two unsigned LEB128 operands
     representing a register number R and a (non-factored) byte displacement B.
     AS is set to the target architecture default address space identifier. The
-    required action is to define the current CFA rule to be the result of
-    evaluating the DWARF operation expression ``DW_OP_constu AS;
+    required action is to define the current CFA rule to be equivalent to the
+    result of evaluating the DWARF operation expression ``DW_OP_constu AS;
     DW_OP_LLVM_aspace_bregx R, B`` as a location description.
 
 2.  ``DW_CFA_def_cfa_sf``
@@ -4313,10 +4387,10 @@ A.6.4.2.2 CFA Definition Instructions
     The ``DW_CFA_def_cfa_sf`` instruction takes two operands: an unsigned LEB128
     value representing a register number R and a signed LEB128 factored byte
     displacement B. AS is set to the target architecture default address space
-    identifier. The required action is to define the current CFA rule to be the
-    result of evaluating the DWARF operation expression ``DW_OP_constu AS;
-    DW_OP_LLVM_aspace_bregx R, B * data_alignment_factor`` as a location
-    description.
+    identifier. The required action is to define the current CFA rule to be
+    equivalent to the result of evaluating the DWARF operation expression
+    ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B * data_alignment_factor`` as
+    a location description.
 
     *The action is the same as* ``DW_CFA_def_cfa``\ *, except that the second
     operand is signed and factored.*
@@ -4326,12 +4400,12 @@ A.6.4.2.2 CFA Definition Instructions
     The ``DW_CFA_LLVM_def_aspace_cfa`` instruction takes three unsigned LEB128
     operands representing a register number R, a (non-factored) byte
     displacement B, and a target architecture specific address space identifier
-    AS. The required action is to define the current CFA rule to be the result
-    of evaluating the DWARF operation expression ``DW_OP_constu AS;
-    DW_OP_LLVM_aspace_bregx R, B`` as a location description.
+    AS. The required action is to define the current CFA rule to be equivalent
+    to the result of evaluating the DWARF operation expression ``DW_OP_constu
+    AS; DW_OP_LLVM_aspace_bregx R, B`` as a location description.
 
     If AS is not one of the values defined by the target architecture specific
-    ``DW_ASPACE_*`` values then the DWARF expression is ill-formed.
+    ``DW_ASPACE_LLVM_*`` values then the DWARF expression is ill-formed.
 
 4.  ``DW_CFA_LLVM_def_aspace_cfa_sf`` *New*
 
@@ -4339,12 +4413,13 @@ A.6.4.2.2 CFA Definition Instructions
     unsigned LEB128 value representing a register number R, a signed LEB128
     factored byte displacement B, and an unsigned LEB128 value representing a
     target architecture specific address space identifier AS. The required
-    action is to define the current CFA rule to be the result of evaluating the
-    DWARF operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B *
-    data_alignment_factor`` as a location description.
+    action is to define the current CFA rule to be equivalent to the result of
+    evaluating the DWARF operation expression ``DW_OP_constu AS;
+    DW_OP_LLVM_aspace_bregx R, B * data_alignment_factor`` as a location
+    description.
 
     If AS is not one of the values defined by the target architecture specific
-    ``DW_ASPACE_*`` values, then the DWARF expression is ill-formed.
+    ``DW_ASPACE_LLVM_*`` values, then the DWARF expression is ill-formed.
 
     *The action is the same as* ``DW_CFA_aspace_def_cfa``\ *, except that the
     second operand is signed and factored.*
@@ -4353,10 +4428,10 @@ A.6.4.2.2 CFA Definition Instructions
 
     The ``DW_CFA_def_cfa_register`` instruction takes a single unsigned LEB128
     operand representing a register number R. The required action is to define
-    the current CFA rule to be the result of evaluating the DWARF operation
-    expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B`` as a location
-    description. B and AS are the old CFA byte displacement and address space
-    respectively.
+    the current CFA rule to be equivalent to the result of evaluating the DWARF
+    operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B`` as a
+    location description. B and AS are the old CFA byte displacement and address
+    space respectively.
 
     If the subprogram has no current CFA rule, or the rule was defined by a
     ``DW_CFA_def_cfa_expression`` instruction, then the DWARF is ill-formed.
@@ -4365,10 +4440,10 @@ A.6.4.2.2 CFA Definition Instructions
 
     The ``DW_CFA_def_cfa_offset`` instruction takes a single unsigned LEB128
     operand representing a (non-factored) byte displacement B. The required
-    action is to define the current CFA rule to be the result of evaluating the
-    DWARF operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B``
-    as a location description. R and AS are the old CFA register number and
-    address space respectively.
+    action is to define the current CFA rule to be equivalent to the result of
+    evaluating the DWARF operation expression ``DW_OP_constu AS;
+    DW_OP_LLVM_aspace_bregx R, B`` as a location description. R and AS are the
+    old CFA register number and address space respectively.
 
     If the subprogram has no current CFA rule, or the rule was defined by a
     ``DW_CFA_def_cfa_expression`` instruction, then the DWARF is ill-formed.
@@ -4377,8 +4452,8 @@ A.6.4.2.2 CFA Definition Instructions
 
     The ``DW_CFA_def_cfa_offset_sf`` instruction takes a signed LEB128 operand
     representing a factored byte displacement B. The required action is to
-    define the current CFA rule to be the result of evaluating the DWARF
-    operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B *
+    define the current CFA rule to be equivalent to the result of evaluating the
+    DWARF operation expression ``DW_OP_constu AS; DW_OP_LLVM_aspace_bregx R, B *
     data_alignment_factor`` as a location description. R and AS are the old CFA
     register number and address space respectively.
 
@@ -4392,10 +4467,10 @@ A.6.4.2.2 CFA Definition Instructions
 
     The ``DW_CFA_def_cfa_expression`` instruction takes a single operand encoded
     as a ``DW_FORM_exprloc`` value representing a DWARF operation expression E.
-    The required action is to define the current CFA rule to be the result of
-    evaluating E with the current context, except the result kind is a location
-    description, the compilation unit is unspecified, the object is unspecified,
-    and an empty initial stack.
+    The required action is to define the current CFA rule to be equivalent to
+    the result of evaluating E with the current context, except the result kind
+    is a location description, the compilation unit is unspecified, the object
+    is unspecified, and an empty initial stack.
 
     *See* :ref:`amdgpu-dwarf-call-frame-instructions` *regarding restrictions on
     the DWARF expression operations that can be used in E.*
@@ -4602,12 +4677,14 @@ entry attributes.
    ================================== ====== ===================================
    Attribute Name                     Value  Classes
    ================================== ====== ===================================
-   DW_AT_LLVM_active_lane             0x3e08 exprloc, loclist
-   DW_AT_LLVM_augmentation            0x3e09 string
-   DW_AT_LLVM_lanes                   0x3e0a constant
-   DW_AT_LLVM_lane_pc                 0x3e0b exprloc, loclist
-   DW_AT_LLVM_vector_size             0x3e0c constant
-   DW_AT_LLVM_iterations              0x3e0a constant, exprloc, loclist
+   ``DW_AT_LLVM_active_lane``         0x3e08 exprloc, loclist
+   ``DW_AT_LLVM_augmentation``        0x3e09 string
+   ``DW_AT_LLVM_lanes``               0x3e0a constant
+   ``DW_AT_LLVM_lane_pc``             0x3e0b exprloc, loclist
+   ``DW_AT_LLVM_vector_size``         0x3e0c constant
+   ``DW_AT_LLVM_iterations``          0x3e0a constant, exprloc, loclist
+   ``DW_AT_LLVM_address_space``       TBA    constant
+   ``DW_AT_LLVM_memory_space``        TBA    constant
    ================================== ====== ===================================
 
 .. _amdgpu-dwarf-classes-and-forms:
@@ -4617,7 +4694,36 @@ A.7.5.5 Classes and Forms
 
 .. note::
 
-  The same as in DWARF Version 5 section 7.5.5.
+  The following modifies the matching text in DWARF Version 5 section 7.5.5.
+
+* reference
+    There are four types of reference.
+
+      - The first type of reference...
+
+      - The second type of reference can identify any debugging information
+        entry within a .debug_info section; in particular, it may refer to an
+        entry in a different compilation unit from the unit containing the
+        reference, and may refer to an entry in a different shared object file.
+        This type of reference (DW_FORM_ref_addr) is an offset from the
+        beginning of the .debug_info section of the target executable or shared
+        object file, or, for references within a supplementary object file, an
+        offset from the beginning of the local .debug_info section; it is
+        relocatable in a relocatable object file and frequently relocated in an
+        executable or shared object file. In the 32-bit DWARF format, this
+        offset is a 4-byte unsigned value; in the 64-bit DWARF format, it is an
+        8-byte unsigned value (see
+        :ref:`amdgpu-dwarf-32-bit-and-64-bit-dwarf-formats`).
+
+        *A debugging information entry that may be referenced by another
+        compilation unit using DW_FORM_ref_addr must have a global symbolic
+        name.*
+
+        *For a reference from one executable or shared object file to another,
+        the reference is resolved by the debugger to identify the executable or
+        shared object file and the offset into that file's* ``.debug_info``
+        *section in the same fashion as the run time loader, either when the
+        debug information is first read, or when the reference is used.*
 
 A.7.7 DWARF Expressions
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -4637,37 +4743,40 @@ A.7.7.1 Operation Expressions
 
   This augments DWARF Version 5 section 7.7.1 and Table 7.9.
 
-The following table gives the encoding of the additional DWARF expression
-operations.
+A DWARF operation expression is stored in a block of contiguous bytes. The bytes
+form a sequence of operations. Each operation is a 1-byte code that identifies
+that operation, followed by zero or more bytes of additional data. The encodings
+for the operations are described in
+:ref:`amdgpu-dwarf-operation-encodings-table`.
 
 .. table:: DWARF Operation Encodings
    :name: amdgpu-dwarf-operation-encodings-table
 
-   ================================== ===== ======== ===============================
-   Operation                          Code  Number   Notes
-                                            of
-                                            Operands
-   ================================== ===== ======== ===============================
-   DW_OP_LLVM_form_aspace_address     0xe1     0
-   DW_OP_LLVM_push_lane               0xe2     0
-   DW_OP_LLVM_offset                  0xe3     0
-   DW_OP_LLVM_offset_uconst           0xe4     1     ULEB128 byte displacement
-   DW_OP_LLVM_bit_offset              0xe5     0
-   DW_OP_LLVM_call_frame_entry_reg    0xe6     1     ULEB128 register number
-   DW_OP_LLVM_undefined               0xe7     0
-   DW_OP_LLVM_aspace_bregx            0xe8     2     ULEB128 register number,
-                                                     ULEB128 byte displacement
-   DW_OP_LLVM_aspace_implicit_pointer 0xe9     2     4-byte or 8-byte offset of DIE,
-                                                     SLEB128 byte displacement
-   DW_OP_LLVM_piece_end               0xea     0
-   DW_OP_LLVM_extend                  0xeb     2     ULEB128 bit size,
-                                                     ULEB128 count
-   DW_OP_LLVM_select_bit_piece        0xec     2     ULEB128 bit size,
-                                                     ULEB128 count
-   DW_OP_LLVM_push_iteration          TBA      0
-   DW_OP_LLVM_overlay                 TBA      0
-   DW_OP_LLVM_bit_overlay             TBA      0
-   ================================== ===== ======== ===============================
+   ====================================== ===== ======== ===============================
+   Operation                              Code  Number   Notes
+                                                of
+                                                Operands
+   ====================================== ===== ======== ===============================
+   ``DW_OP_LLVM_form_aspace_address``     0xe1     0
+   ``DW_OP_LLVM_push_lane``               0xe2     0
+   ``DW_OP_LLVM_offset``                  0xe3     0
+   ``DW_OP_LLVM_offset_uconst``           0xe4     1     ULEB128 byte displacement
+   ``DW_OP_LLVM_bit_offset``              0xe5     0
+   ``DW_OP_LLVM_call_frame_entry_reg``    0xe6     1     ULEB128 register number
+   ``DW_OP_LLVM_undefined``               0xe7     0
+   ``DW_OP_LLVM_aspace_bregx``            0xe8     2     ULEB128 register number,
+                                                         ULEB128 byte displacement
+   ``DW_OP_LLVM_aspace_implicit_pointer`` 0xe9     2     4-byte or 8-byte offset of DIE,
+                                                         SLEB128 byte displacement
+   ``DW_OP_LLVM_piece_end``               0xea     0
+   ``DW_OP_LLVM_extend``                  0xeb     2     ULEB128 bit size,
+                                                         ULEB128 count
+   ``DW_OP_LLVM_select_bit_piece``        0xec     2     ULEB128 bit size,
+                                                         ULEB128 count
+   ``DW_OP_LLVM_push_iteration``          TBA      0
+   ``DW_OP_LLVM_overlay``                 TBA      0
+   ``DW_OP_LLVM_bit_overlay``             TBA      0
+   ====================================== ===== ======== ===============================
 
 A.7.7.3 Location List Expressions
 +++++++++++++++++++++++++++++++++
@@ -4695,30 +4804,41 @@ The following table gives the encoding of the additional DWARF languages.
    ``DW_LANG_LLVM_HIP`` 0x8100 0
    ==================== ====== ===================
 
-A.7.13 Address Class and Address Space Encodings
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A.7.14 Address Space Encodings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. note::
 
-  This replaces DWARF Version 5 section 7.13.
+  This is a new section after DWARF Version 5 section 7.13 "Address Class and
+  Address Space Encodings".
 
-The encodings of the constants used for the currently defined address classes
-are given in :ref:`amdgpu-dwarf-address-class-encodings-table`.
+The value of the common address space encoding ``DW_ASPACE_LLVM_none`` is 0.
 
-.. table:: Address class encodings
-   :name: amdgpu-dwarf-address-class-encodings-table
+A.7.15 Memory Space Encodings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   ========================== ======
-   Address Class Name         Value
-   ========================== ======
-   ``DW_ADDR_none``           0x0000
-   ``DW_ADDR_LLVM_global``    0x0001
-   ``DW_ADDR_LLVM_constant``  0x0002
-   ``DW_ADDR_LLVM_group``     0x0003
-   ``DW_ADDR_LLVM_private``   0x0004
-   ``DW_ADDR_LLVM_lo_user``   0x8000
-   ``DW_ADDR_LLVM_hi_user``   0xffff
-   ========================== ======
+.. note::
+
+  This is a new section after DWARF Version 5 section 7.13 "Address Class and
+  Address Space Encodings".
+
+The encodings of the constants used for the currently defined memory spaces
+are given in :ref:`amdgpu-dwarf-memory-space-encodings-table`.
+
+.. table:: Memory space encodings
+   :name: amdgpu-dwarf-memory-space-encodings-table
+
+   =========================== ======
+   Memory Space Name           Value
+   =========================== ======
+   ``DW_MSPACE_LLVM_none``     0x0000
+   ``DW_MSPACE_LLVM_global``   0x0001
+   ``DW_MSPACE_LLVM_constant`` 0x0002
+   ``DW_MSPACE_LLVM_group``    0x0003
+   ``DW_MSPACE_LLVM_private``  0x0004
+   ``DW_MSPACE_LLVM_lo_user``  0x8000
+   ``DW_MSPACE_LLVM_hi_user``  0xffff
+   =========================== ======
 
 A.7.22 Line Number Information
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -4740,6 +4860,8 @@ entry formats.
   ``DW_LNCT_LLVM_is_MD5``               0x2002
   ====================================  ====================
 
+.. _amdgpu-dwarf-call-frame-information-encoding:
+
 A.7.24 Call Frame Information
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -4753,13 +4875,30 @@ instructions.
 .. table:: Call frame instruction encodings
    :name: amdgpu-dwarf-call-frame-instruction-encodings-table
 
-   ============================= ====== ====== ================ ================ =====================
-   Instruction                   High 2 Low 6  Operand 1        Operand 2        Operand 3
-                                 Bits   Bits
-   ============================= ====== ====== ================ ================ =====================
-   DW_CFA_LLVM_def_aspace_cfa    0      0x30   ULEB128 register ULEB128 offset   ULEB128 address space
-   DW_CFA_LLVM_def_aspace_cfa_sf 0      0x31   ULEB128 register SLEB128 offset   ULEB128 address space
-   ============================= ====== ====== ================ ================ =====================
+   ================================= ====== ====== ================ ================ =====================
+   Instruction                       High 2 Low 6  Operand 1        Operand 2        Operand 3
+                                     Bits   Bits
+   ================================= ====== ====== ================ ================ =====================
+   ``DW_CFA_LLVM_def_aspace_cfa``    0      0x30   ULEB128 register ULEB128 offset   ULEB128 address space
+   ``DW_CFA_LLVM_def_aspace_cfa_sf`` 0      0x31   ULEB128 register SLEB128 offset   ULEB128 address space
+   ================================= ====== ====== ================ ================ =====================
+
+A.7.32 Type Signature Computation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+  This augments (in alphebetical order) DWARF Version 5 section 7.32, Table
+  7.32.
+
+.. table:: Attributes used in type signature computation
+   :name: amdgpu-dwarf-attributes-used-in-type-signature-computation-table
+
+   ================================== =======
+   ``DW_AT_LLVM_address_space``
+   ``DW_AT_LLVM_memory_space``
+   ``DW_AT_LLVM_vector_size``
+   ================================== =======
 
 A. Attributes by Tag Value (Informative)
 ----------------------------------------
@@ -4774,29 +4913,279 @@ debugger information entries.
 .. table:: Attributes by tag value
    :name: amdgpu-dwarf-attributes-by-tag-value-table
 
-   ============================= =============================
-   Tag Name                      Applicable Attributes
-   ============================= =============================
-   ``DW_TAG_base_type``          * ``DW_AT_LLVM_vector_size``
-   ``DW_TAG_compile_unit``       * ``DW_AT_LLVM_augmentation``
-   ``DW_TAG_entry_point``        * ``DW_AT_LLVM_active_lane``
-                                 * ``DW_AT_LLVM_lane_pc``
-                                 * ``DW_AT_LLVM_lanes``
-                                 * ``DW_AT_LLVM_iterations``
-   ``DW_TAG_inlined_subroutine`` * ``DW_AT_LLVM_active_lane``
-                                 * ``DW_AT_LLVM_lane_pc``
-                                 * ``DW_AT_LLVM_lanes``
-                                 * ``DW_AT_LLVM_iterations``
-   ``DW_TAG_subprogram``         * ``DW_AT_LLVM_active_lane``
-                                 * ``DW_AT_LLVM_lane_pc``
-                                 * ``DW_AT_LLVM_lanes``
-                                 * ``DW_AT_LLVM_iterations``
-   ============================= =============================
+   ================================== =============================
+   Tag Name                           Applicable Attributes
+   ================================== =============================
+   ``DW_TAG_base_type``               * ``DW_AT_LLVM_vector_size``
+   ``DW_TAG_pointer_type``            * ``DW_AT_LLVM_address_space``
+                                      * ``DW_AT_LLVM_memory_space``
+   ``DW_TAG_reference_type``          * ``DW_AT_LLVM_address_space``
+                                      * ``DW_AT_LLVM_memory_space``
+   ``DW_TAG_rvalue_reference_type``   * ``DW_AT_LLVM_address_space``
+                                      * ``DW_AT_LLVM_memory_space``
+   ``DW_TAG_variable``                * ``DW_AT_LLVM_memory_space``
+   ``DW_TAG_formal_parameter``        * ``DW_AT_LLVM_memory_space``
+   ``DW_TAG_constant``                * ``DW_AT_LLVM_memory_space``
+   ``DW_TAG_compile_unit``            * ``DW_AT_LLVM_augmentation``
+   ``DW_TAG_entry_point``             * ``DW_AT_LLVM_active_lane``
+                                      * ``DW_AT_LLVM_lane_pc``
+                                      * ``DW_AT_LLVM_lanes``
+                                      * ``DW_AT_LLVM_iterations``
+   ``DW_TAG_inlined_subroutine``      * ``DW_AT_LLVM_active_lane``
+                                      * ``DW_AT_LLVM_lane_pc``
+                                      * ``DW_AT_LLVM_lanes``
+                                      * ``DW_AT_LLVM_iterations``
+   ``DW_TAG_subprogram``              * ``DW_AT_LLVM_active_lane``
+                                      * ``DW_AT_LLVM_lane_pc``
+                                      * ``DW_AT_LLVM_lanes``
+                                      * ``DW_AT_LLVM_iterations``
+   ================================== =============================
 
-.. _amdgpu-dwarf-examples:
+D. Examples (Informative)
+-------------------------
 
-B. Examples
-===========
+.. note::
+
+  This modifies the corresponding DWARF Version 5 Appendix D examples.
+
+D.1 General Description Examples
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+D.1.3 DWARF Location Description Examples
++++++++++++++++++++++++++++++++++++++++++
+
+``DW_OP_offset_uconst 4``
+  A structure member is four bytes from the start of the structure instance. The
+  location description of the base of the structure instance is assumed to be
+  already on the stack.
+
+``DW_OP_entry_value 1 DW_OP_reg5 DW_OP_offset_uconst 16``
+  The address of the memory location is calculated by adding 16 to the value
+  contained in register 5 upon entering the current subprogram.
+
+D.2 Aggregate Examples
+~~~~~~~~~~~~~~~~~~~~~~
+
+D.2.1 Fortran Simple Array Example
+++++++++++++++++++++++++++++++++++
+
+Figure D.4: Fortran array example: DWARF description
+
+.. code::
+  :number-lines:
+
+  -------------------------------------------------------------------------------
+  ! Description for type of 'ap'
+  !
+  1$: DW_TAG_array_type
+          ! No name, default (Fortran) ordering, default stride
+          DW_AT_type(reference to REAL)
+          DW_AT_associated(expression=    ! Test 'ptr_assoc' flag
+              DW_OP_push_object_address
+              DW_OP_lit<n>                ! where n == offset(ptr_assoc)
+              DW_OP_offset
+              DW_OP_deref
+              DW_OP_lit1                  ! mask for 'ptr_assoc' flag
+              DW_OP_and)
+          DW_AT_data_location(expression= ! Get raw data address
+              DW_OP_push_object_address
+              DW_OP_lit<n>                ! where n == offset(base)
+              DW_OP_offset
+              DW_OP_deref)                ! Type of index of array 'ap'
+  2$:     DW_TAG_subrange_type
+              ! No name, default stride
+              DW_AT_type(reference to INTEGER)
+              DW_AT_lower_bound(expression=
+                  DW_OP_push_object_address
+                  DW_OP_lit<n>            ! where n ==
+                                          !   offset(desc, dims) +
+                                          !   offset(dims_str, lower_bound)
+                  DW_OP_offset
+                  DW_OP_deref)
+              DW_AT_upper_bound(expression=
+                  DW_OP_push_object_address
+                  DW_OP_lit<n>            ! where n ==
+                                          !   offset(desc, dims) +
+                                          !   offset(dims_str, upper_bound)
+                  DW_OP_offset
+                  DW_OP_deref)
+  !  Note: for the m'th dimension, the second operator becomes
+  !  DW_OP_lit<n> where
+  !       n == offset(desc, dims)          +
+  !                (m-1)*sizeof(dims_str)  +
+  !                 offset(dims_str, [lower|upper]_bound)
+  !  That is, the expression does not get longer for each successive
+  !  dimension (other than to express the larger offsets involved).
+  3$: DW_TAG_structure_type
+          DW_AT_name("array_ptr")
+          DW_AT_byte_size(constant sizeof(REAL) + sizeof(desc<1>))
+  4$:     DW_TAG_member
+              DW_AT_name("myvar")
+              DW_AT_type(reference to REAL)
+              DW_AT_data_member_location(constant 0)
+  5$:     DW_TAG_member
+              DW_AT_name("ap");
+              DW_AT_type(reference to 1$)
+              DW_AT_data_member_location(constant sizeof(REAL))
+  6$: DW_TAG_array_type
+          ! No name, default (Fortran) ordering, default stride
+          DW_AT_type(reference to 3$)
+          DW_AT_allocated(expression=       ! Test 'ptr_alloc' flag
+              DW_OP_push_object_address
+              DW_OP_lit<n>                  ! where n == offset(ptr_alloc)
+              DW_OP_offset
+              DW_OP_deref
+              DW_OP_lit2                    ! Mask for 'ptr_alloc' flag
+              DW_OP_and)
+          DW_AT_data_location(expression=   ! Get raw data address
+              DW_OP_push_object_address
+              DW_OP_lit<n>                  ! where n == offset(base)
+              DW_OP_offset
+              DW_OP_deref)
+  7$:     DW_TAG_subrange_type
+              ! No name, default stride
+              DW_AT_type(reference to INTEGER)
+              DW_AT_lower_bound(expression=
+                  DW_OP_push_object_address
+                  DW_OP_lit<n>              ! where n == ...
+                  DW_OP_offset
+                  DW_OP_deref)
+              DW_AT_upper_bound(expression=
+                  DW_OP_push_object_address
+                  DW_OP_lit<n>              ! where n == ...
+                  DW_OP_offset
+                  DW_OP_deref)
+  8$: DW_TAG_variable
+          DW_AT_name("arrayvar")
+          DW_AT_type(reference to 6$)
+          DW_AT_location(expression=
+              ...as appropriate...)         ! Assume static allocation
+  -------------------------------------------------------------------------------
+
+D.2.3 Fortran 2008 Assumed-rank Array Example
++++++++++++++++++++++++++++++++++++++++++++++
+
+Figure D.13: Sample DWARF for the array descriptor in Figure D.12
+
+.. code::
+  :number-lines:
+
+  ----------------------------------------------------------------------------
+  10$:  DW_TAG_array_type
+          DW_AT_type(reference to real)
+          DW_AT_rank(expression=
+              DW_OP_push_object_address
+              DW_OP_lit<n>
+              DW_OP_offset
+              DW_OP_deref)
+          DW_AT_data_location(expression=
+              DW_OP_push_object_address
+              DW_OP_lit<n>
+              DW_OP_offset
+              DW_OP_deref)
+  11$:     DW_TAG_generic_subrange
+              DW_AT_type(reference to integer)
+              !   offset of rank in descriptor
+              !   offset of data in descriptor
+              DW_AT_lower_bound(expression=
+              !   Looks up the lower bound of dimension i.
+              !   Operation                       ! Stack effect
+              !   (implicit)                      ! i
+                  DW_OP_lit<n>                    ! i sizeof(dim)
+                  DW_OP_mul                       ! dim[i]
+                  DW_OP_lit<n>                    ! dim[i] offsetof(dim)
+                  DW_OP_plus                      ! dim[i]+offset
+                  DW_OP_push_object_address       ! dim[i]+offsetof(dim) objptr
+                  DW_OP_swap                      ! objptr dim[i]+offsetof(dim)
+                  DW_OP_offset                    ! objptr.dim[i]
+                  DW_OP_lit<n>                    ! objptr.dim[i] offsetof(lb)
+                  DW_OP_offset                    ! objptr.dim[i].lowerbound
+                  DW_OP_deref)                    ! *objptr.dim[i].lowerbound
+              DW_AT_upper_bound(expression=
+              !   Looks up the upper bound of dimension i.
+                  DW_OP_lit<n>                    ! sizeof(dim)
+                  DW_OP_mul
+                  DW_OP_lit<n>                    ! offsetof(dim)
+                  DW_OP_plus
+                  DW_OP_push_object_address
+                  DW_OP_swap
+                  DW_OP_offset
+                  DW_OP_lit<n>                    ! offset of upperbound in dim
+                  DW_OP_offset
+                  DW_OP_deref)
+              DW_AT_byte_stride(expression=
+              !   Looks up the byte stride of dimension i.
+                  ...
+              !   (analogous to DW_AT_upper_bound)
+                  )
+  ----------------------------------------------------------------------------
+
+.. note::
+
+  This example suggests that ``DW_AT_lower_bound`` and ``DW_AT_upper_bound``
+  evaluate an exprloc with an initial stack containing the rank value. The
+  attribute definition should be updated to state this.
+
+D.2.6 Ada Example
++++++++++++++++++
+
+Figure D.20: Ada example: DWARF description
+
+.. code::
+  :number-lines:
+
+  ----------------------------------------------------------------------------
+  11$:  DW_TAG_variable
+            DW_AT_name("M")
+            DW_AT_type(reference to INTEGER)
+  12$:  DW_TAG_array_type
+            ! No name, default (Ada) order, default stride
+            DW_AT_type(reference to INTEGER)
+  13$:      DW_TAG_subrange_type
+                DW_AT_type(reference to INTEGER)
+                DW_AT_lower_bound(constant 1)
+                DW_AT_upper_bound(reference to variable M at 11$)
+  14$:  DW_TAG_variable
+            DW_AT_name("VEC1")
+            DW_AT_type(reference to array type at 12$)
+        ...
+  21$:  DW_TAG_subrange_type
+            DW_AT_name("TEENY")
+            DW_AT_type(reference to INTEGER)
+            DW_AT_lower_bound(constant 1)
+            DW_AT_upper_bound(constant 100)
+        ...
+  26$:  DW_TAG_structure_type
+            DW_AT_name("REC2")
+  27$:      DW_TAG_member
+                DW_AT_name("N")
+                DW_AT_type(reference to subtype TEENY at 21$)
+                DW_AT_data_member_location(constant 0)
+  28$:      DW_TAG_array_type
+                ! No name, default (Ada) order, default stride
+                ! Default data location
+                DW_AT_type(reference to INTEGER)
+  29$:          DW_TAG_subrange_type
+                    DW_AT_type(reference to subrange TEENY at 21$)
+                    DW_AT_lower_bound(constant 1)
+                    DW_AT_upper_bound(reference to member N at 27$)
+  30$:      DW_TAG_member
+                DW_AT_name("VEC2")
+                DW_AT_type(reference to array "subtype" at 28$)
+                DW_AT_data_member_location(machine=
+                    DW_OP_lit<n>                ! where n == offset(REC2, VEC2)
+                    DW_OP_offset)
+        ...
+  41$:  DW_TAG_variable
+            DW_AT_name("OBJ2B")
+            DW_AT_type(reference to REC2 at 26$)
+            DW_AT_location(...as appropriate...)
+  ----------------------------------------------------------------------------
+
+.. _amdgpu-dwarf-further-examples:
+
+C. Further Examples
+===================
 
 The AMD GPU specific usage of the features in these extensions, including
 examples, is available at *User Guide for AMDGPU Backend* section
@@ -4811,7 +5200,7 @@ examples, is available at *User Guide for AMDGPU Backend* section
 
 .. _amdgpu-dwarf-references:
 
-C. References
+D. References
 =============
 
     .. _amdgpu-dwarf-AMD:
