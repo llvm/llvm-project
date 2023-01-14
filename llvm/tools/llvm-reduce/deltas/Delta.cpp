@@ -60,12 +60,12 @@ static cl::opt<unsigned> NumJobs(
 unsigned NumJobs = 1;
 #endif
 
-void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream);
+void writeBitcode(const ReducerWorkItem &M, raw_ostream &OutStream);
 
 void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
                  StringRef ToolName);
 
-bool isReduced(ReducerWorkItem &M, const TestRunner &Test) {
+bool isReduced(const ReducerWorkItem &M, const TestRunner &Test) {
   const bool UseBitcode = Test.inputIsBitcode() || TmpFilesAsBitcode;
 
   SmallString<128> CurrentFilepath;
@@ -188,10 +188,10 @@ CheckChunk(const Chunk &ChunkToCheckForUninterestingness,
 }
 
 static SmallString<0> ProcessChunkFromSerializedBitcode(
-    Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
-    ReductionFunc ExtractChunksFromModule, DenseSet<Chunk> &UninterestingChunks,
-    std::vector<Chunk> &ChunksStillConsideredInteresting,
-    SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced) {
+  const Chunk &ChunkToCheckForUninterestingness, const TestRunner &Test,
+    ReductionFunc ExtractChunksFromModule, const DenseSet<Chunk> &UninterestingChunks,
+    const std::vector<Chunk> &ChunksStillConsideredInteresting,
+    const SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced) {
   LLVMContext Ctx;
   auto CloneMMM = std::make_unique<ReducerWorkItem>();
   MemoryBufferRef Data(StringRef(OriginalBC), "<bc file>");
