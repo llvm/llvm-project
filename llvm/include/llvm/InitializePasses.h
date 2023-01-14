@@ -379,6 +379,7 @@ void initializeSoftPointerAuthLegacyPassPass(PassRegistry&);
 void initializeSpeculativeExecutionLegacyPassPass(PassRegistry&);
 void initializeSpillPlacementPass(PassRegistry&);
 void initializeStackColoringPass(PassRegistry&);
+void initializeStackFrameLayoutAnalysisPassPass(PassRegistry &);
 void initializeStackMapLivenessPass(PassRegistry&);
 void initializeStackProtectorPass(PassRegistry&);
 void initializeStackSafetyGlobalInfoWrapperPassPass(PassRegistry &);
