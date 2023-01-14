@@ -23,10 +23,12 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
+#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/PrefixMapper.h"
 
 using namespace clang;
 using namespace tooling;
@@ -192,6 +194,7 @@ class IncludeTreeCollector : public DependencyFileGenerator {
   PPIncludeActionsConsumer &Consumer;
   std::unique_ptr<DependencyOutputOptions> Opts;
   bool EmitDependencyFile = false;
+  llvm::PrefixMapper ReverseMapper;
 
 public:
   IncludeTreeCollector(PPIncludeActionsConsumer &Consumer,
@@ -200,9 +203,36 @@ public:
       : DependencyFileGenerator(*Opts), Consumer(Consumer),
         Opts(std::move(Opts)), EmitDependencyFile(EmitDependencyFile) {}
 
+  Error initialize(const CompilerInvocation &CI,
+                   const DepscanPrefixMapping &PrefixMapping) {
+    llvm::PrefixMapper Mapper;
+    if (Error E = PrefixMapping.configurePrefixMapper(CI, Mapper))
+      return E;
+    if (Mapper.empty())
+      return Error::success();
+
+    ReverseMapper.addInverseRange(Mapper.getMappings());
+    ReverseMapper.sort();
+    return Error::success();
+  }
+
   void attachToPreprocessor(Preprocessor &PP) override {
     PP.addPPCallbacks(std::make_unique<IncludeTreePPCallbacks>(Consumer, PP));
     DependencyFileGenerator::attachToPreprocessor(PP);
+  }
+
+  void maybeAddDependency(StringRef Filename, bool FromModule, bool IsSystem,
+                          bool IsModuleFile, bool IsMissing) override {
+    if (ReverseMapper.empty())
+      return DependencyFileGenerator::maybeAddDependency(
+          Filename, FromModule, IsSystem, IsModuleFile, IsMissing);
+
+    // We may get canonicalized paths if prefix headers/PCH are used, so make
+    // sure to remap them back to original source paths.
+    SmallString<256> New{Filename};
+    ReverseMapper.mapInPlace(New);
+    return DependencyFileGenerator::maybeAddDependency(
+        New, FromModule, IsSystem, IsModuleFile, IsMissing);
   }
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
@@ -420,6 +450,20 @@ public:
                           ScanInstance.getFrontendOpts().Inputs)};
     Opts->IncludeSystemHeaders = true;
 
+    auto reportError = [&ScanInstance](Error &&E) -> bool {
+      ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
+          << std::move(E);
+      return false;
+    };
+
+    // FIXME: The caller APIs in \p DependencyScanningTool expect a specific
+    // DependencyCollector to get attached to the preprocessor in order to
+    // function properly (e.g. \p FullDependencyConsumer needs \p
+    // ModuleDepCollector) but this association is very indirect via the value
+    // of the \p ScanningOutputFormat. We should remove \p Format field from
+    // \p DependencyScanningAction, and have the callers pass in a
+    // “DependencyCollector factory” so the connection of collector<->consumer
+    // is explicit in each \p DependencyScanningTool function.
     switch (Format) {
     case ScanningOutputFormat::Make:
     case ScanningOutputFormat::Tree:
@@ -428,10 +472,13 @@ public:
               std::move(Opts), WorkingDirectory, Consumer, EmitDependencyFile));
       break;
     case ScanningOutputFormat::IncludeTree: {
-      ScanInstance.addDependencyCollector(
-          std::make_shared<IncludeTreeCollector>(
-              static_cast<PPIncludeActionsConsumer &>(Consumer),
-              std::move(Opts), EmitDependencyFile));
+      auto &IncConsumer = static_cast<PPIncludeActionsConsumer &>(Consumer);
+      auto IncTreeCollector = std::make_shared<IncludeTreeCollector>(
+          IncConsumer, std::move(Opts), EmitDependencyFile);
+      if (Error E = IncTreeCollector->initialize(
+              ScanInstance.getInvocation(), IncConsumer.getPrefixMapping()))
+        return reportError(std::move(E));
+      ScanInstance.addDependencyCollector(std::move(IncTreeCollector));
       break;
     }
     case ScanningOutputFormat::Full:
@@ -464,12 +511,6 @@ public:
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
-
-    auto reportError = [&ScanInstance](Error &&E) -> bool {
-      ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
-          << std::move(E);
-      return false;
-    };
 
     if (Error E = Consumer.initialize(ScanInstance))
       return reportError(std::move(E));
