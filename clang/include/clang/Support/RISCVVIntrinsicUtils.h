@@ -126,13 +126,9 @@ struct Policy {
     return TailPolicy == Undisturbed && MaskPolicy == Undisturbed;
   }
 
-  bool isTAPolicy() const {
-    return TailPolicy == Agnostic && MaskPolicy == Omit;
-  }
+  bool isTAPolicy() const { return TailPolicy == Agnostic; }
 
-  bool isTUPolicy() const {
-    return TailPolicy == Undisturbed && MaskPolicy == Omit;
-  }
+  bool isTUPolicy() const { return TailPolicy == Undisturbed; }
 
   bool isMAPolicy() const { return MaskPolicy == Agnostic; }
 
