@@ -14,7 +14,6 @@
 #include "clang/AST/ExprCXX.h"
 #include <optional>
 
-using llvm::Optional;
 namespace clang {
 
 std::pair<const Expr *, bool>

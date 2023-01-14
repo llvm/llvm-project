@@ -13,7 +13,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include <list>
 #include <optional>
 

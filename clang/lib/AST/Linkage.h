@@ -19,7 +19,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include <optional>
 
