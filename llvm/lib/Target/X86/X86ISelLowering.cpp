@@ -6045,12 +6045,14 @@ bool X86TargetLowering::shouldFoldMaskToVariableShiftPair(SDValue Y) const {
   return true;
 }
 
-bool X86TargetLowering::shouldExpandShift(SelectionDAG &DAG,
-                                          SDNode *N) const {
+TargetLowering::ShiftLegalizationStrategy
+X86TargetLowering::preferredShiftLegalizationStrategy(
+    SelectionDAG &DAG, SDNode *N, unsigned ExpansionFactor) const {
   if (DAG.getMachineFunction().getFunction().hasMinSize() &&
       !Subtarget.isOSWindows())
-    return false;
-  return true;
+    return ShiftLegalizationStrategy::LowerToLibcall;
+  return TargetLowering::preferredShiftLegalizationStrategy(DAG, N,
+                                                            ExpansionFactor);
 }
 
 bool X86TargetLowering::shouldSplatInsEltVarIndex(EVT VT) const {
