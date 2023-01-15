@@ -618,10 +618,11 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
   "/// for the specified register.\n"
   "const char *" << Target.getName() << ClassName << "::";
   if (hasAltNames)
-    O << "\ngetRegisterName(unsigned RegNo, unsigned AltIdx) {\n";
+    O << "\ngetRegisterName(MCRegister Reg, unsigned AltIdx) {\n";
   else
-    O << "getRegisterName(unsigned RegNo) {\n";
-  O << "  assert(RegNo && RegNo < " << (Registers.size()+1)
+    O << "getRegisterName(MCRegister Reg) {\n";
+  O << "  unsigned RegNo = Reg.id();\n"
+    << "  assert(RegNo && RegNo < " << (Registers.size() + 1)
     << " && \"Invalid register number!\");\n"
     << "\n";
 
