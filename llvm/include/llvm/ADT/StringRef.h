@@ -171,17 +171,11 @@ namespace llvm {
       return Length == RHS.Length && compare_insensitive(RHS) == 0;
     }
 
-    /// compare - Compare two strings; the result is -1, 0, or 1 if this string
-    /// is lexicographically less than, equal to, or greater than the \p RHS.
+    /// compare - Compare two strings; the result is negative, zero, or positive
+    /// if this string is lexicographically less than, equal to, or greater than
+    /// the \p RHS.
     [[nodiscard]] int compare(StringRef RHS) const {
-      // Check the prefix for a mismatch.
-      if (int Res = compareMemory(Data, RHS.Data, std::min(Length, RHS.Length)))
-        return Res < 0 ? -1 : 1;
-
-      // Otherwise the prefixes match, so we only need to check the lengths.
-      if (Length == RHS.Length)
-        return 0;
-      return Length < RHS.Length ? -1 : 1;
+      return std::string_view(*this).compare(RHS);
     }
 
     /// Compare two strings, ignoring case.
@@ -878,19 +872,19 @@ namespace llvm {
   inline bool operator!=(StringRef LHS, StringRef RHS) { return !(LHS == RHS); }
 
   inline bool operator<(StringRef LHS, StringRef RHS) {
-    return LHS.compare(RHS) == -1;
+    return LHS.compare(RHS) < 0;
   }
 
   inline bool operator<=(StringRef LHS, StringRef RHS) {
-    return LHS.compare(RHS) != 1;
+    return LHS.compare(RHS) <= 0;
   }
 
   inline bool operator>(StringRef LHS, StringRef RHS) {
-    return LHS.compare(RHS) == 1;
+    return LHS.compare(RHS) > 0;
   }
 
   inline bool operator>=(StringRef LHS, StringRef RHS) {
-    return LHS.compare(RHS) != -1;
+    return LHS.compare(RHS) >= 0;
   }
 
   inline std::string &operator+=(std::string &buffer, StringRef string) {

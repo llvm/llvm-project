@@ -215,7 +215,7 @@ private:
       if (LHS.getHash() != RHS.getHash())
         return LHS.getHash() < RHS.getHash();
       FunctionComparator FCmp(LHS.getFunc(), RHS.getFunc(), GlobalNumbers);
-      return FCmp.compare() == -1;
+      return FCmp.compare() < 0;
     }
   };
   using FnTreeType = std::set<FunctionNode, FunctionNodeCmp>;

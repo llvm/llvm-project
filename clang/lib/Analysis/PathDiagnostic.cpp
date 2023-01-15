@@ -342,7 +342,7 @@ static bool compareCrossTUSourceLocs(FullSourceLoc XL, FullSourceLoc YL) {
     return XFE && !YFE;
   int NameCmp = XFE->getName().compare(YFE->getName());
   if (NameCmp != 0)
-    return NameCmp == -1;
+    return NameCmp < 0;
   // Last resort: Compare raw file IDs that are possibly expansions.
   return XL.getFileID() < YL.getFileID();
 }
