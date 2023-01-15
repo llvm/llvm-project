@@ -2293,13 +2293,13 @@ static inline APInt::WordType highHalf(APInt::WordType part) {
 /// Returns the bit number of the most significant set bit of a part.
 /// If the input number has no bits set -1U is returned.
 static unsigned partMSB(APInt::WordType value) {
-  return findLastSet(value, ZB_Max);
+  return findLastSet(value);
 }
 
 /// Returns the bit number of the least significant set bit of a part.  If the
 /// input number has no bits set -1U is returned.
 static unsigned partLSB(APInt::WordType value) {
-  return findFirstSet(value, ZB_Max);
+  return findFirstSet(value);
 }
 
 /// Sets the least significant part of a bignum to the input value, and zeroes
