@@ -13,14 +13,13 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SPECULATEANALYSES_H
 #define LLVM_EXECUTIONENGINE_ORC_SPECULATEANALYSES_H
 
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
 
 #include <vector>
 
 namespace llvm {
-
-class BranchProbabilityInfo;
 
 namespace orc {
 
