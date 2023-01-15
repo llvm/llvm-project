@@ -1112,7 +1112,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   if (MaybeAlign A = GVar->getAlign())
     O << " .align " << A->value();
   else
-    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
+    O << " .align " << (int)DL.getPrefTypeAlign(ETy).value();
 
   if (ETy->isFloatingPointTy() || ETy->isPointerTy() ||
       (ETy->isIntegerTy() && ETy->getScalarSizeInBits() <= 64)) {
@@ -1400,7 +1400,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   if (MaybeAlign A = GVar->getAlign())
     O << " .align " << A->value();
   else
-    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
+    O << " .align " << (int)DL.getPrefTypeAlign(ETy).value();
 
   // Special case for i128
   if (ETy->isIntegerTy(128)) {

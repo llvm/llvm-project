@@ -706,8 +706,7 @@ static void interpretValues(const MachineInstr *CurMI,
       return;
 
     for (const MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && MO.isDef() &&
-          Register::isPhysicalRegister(MO.getReg())) {
+      if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical()) {
         for (auto &FwdReg : ForwardedRegWorklist)
           if (TRI.regsOverlap(FwdReg.first, MO.getReg()))
             Defs.insert(FwdReg.first);
@@ -929,8 +928,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       // the callee.
       const MachineOperand &CalleeOp = TII->getCalleeOperand(MI);
       if (!CalleeOp.isGlobal() &&
-          (!CalleeOp.isReg() ||
-           !Register::isPhysicalRegister(CalleeOp.getReg())))
+          (!CalleeOp.isReg() || !CalleeOp.getReg().isPhysical()))
         continue;
 
       unsigned CallReg = 0;

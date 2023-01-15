@@ -4565,7 +4565,7 @@ CodeGenModule::GetAddrOfGlobal(GlobalDecl GD, ForDefinition_t IsForDefinition) {
 
 llvm::GlobalVariable *CodeGenModule::CreateOrReplaceCXXRuntimeVariable(
     StringRef Name, llvm::Type *Ty, llvm::GlobalValue::LinkageTypes Linkage,
-    unsigned Alignment) {
+    llvm::Align Alignment) {
   llvm::GlobalVariable *GV = getModule().getNamedGlobal(Name);
   llvm::GlobalVariable *OldGV = nullptr;
 
@@ -4601,7 +4601,7 @@ llvm::GlobalVariable *CodeGenModule::CreateOrReplaceCXXRuntimeVariable(
       !GV->hasAvailableExternallyLinkage())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
 
-  GV->setAlignment(llvm::MaybeAlign(Alignment));
+  GV->setAlignment(Alignment);
 
   return GV;
 }

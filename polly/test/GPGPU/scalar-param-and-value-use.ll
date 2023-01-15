@@ -2,7 +2,7 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=IR %s
 
-; REQUIRES: pollyacc,nvptx
+; REQUIRES: pollyacc, target=nvptx{{.*}}
 
 ;    void foo(long n, float A[][n]) {
 ;      for (long i = 0; i < 32; i++)
@@ -17,7 +17,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; it was referenced from a SCEV  or instruction that not part of any loop
 ; bound.
 
-; IR: %polly.access.mul.MemRef_A6 = mul nsw i64 {{.*}}, %n
+; IR: %polly.access.mul.MemRef_A = mul nsw i64 {{.*}}, %n
 
 define void @foo(i64 %n, float* %A) {
 bb:

@@ -202,6 +202,13 @@ int32_t __tgt_rtl_init_async_info(int32_t ID, __tgt_async_info **AsyncInfoPtr);
 int32_t __tgt_rtl_init_device_info(int32_t ID, __tgt_device_info *DeviceInfoPtr,
                                    const char **ErrStr);
 
+// lock/pin host memory
+int32_t __tgt_rtl_data_lock(int32_t ID, void *HstPtr, int64_t Size,
+                            void **LockedPtr);
+
+// unlock/unpin host memory
+int32_t __tgt_rtl_data_unlock(int32_t ID, void *HstPtr);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1475,7 +1475,7 @@ static Value *optimizeMemCmpConstantSize(CallInst *CI, Value *LHS, Value *RHS,
   // to legal integers or equality comparison. See block below this.
   if (DL.isLegalInteger(Len * 8) && isOnlyUsedInZeroEqualityComparison(CI)) {
     IntegerType *IntType = IntegerType::get(CI->getContext(), Len * 8);
-    unsigned PrefAlignment = DL.getPrefTypeAlignment(IntType);
+    Align PrefAlignment = DL.getPrefTypeAlign(IntType);
 
     // First, see if we can fold either argument to a constant.
     Value *LHSV = nullptr;

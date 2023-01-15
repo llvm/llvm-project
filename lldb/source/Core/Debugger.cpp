@@ -764,7 +764,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_error_stream_sp(std::make_shared<StreamFile>(stderr, false)),
       m_input_recorder(nullptr),
       m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
-      m_terminal_state(), m_target_list(*this), m_platform_list(*this),
+      m_terminal_state(), m_target_list(*this), m_platform_list(),
       m_listener_sp(Listener::MakeListener("lldb.Debugger")),
       m_source_manager_up(), m_source_file_cache(),
       m_command_interpreter_up(

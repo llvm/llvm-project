@@ -661,12 +661,30 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
       }
     }
 
+    // pow(X, Y) * X --> pow(X, Y+1)
+    // X * pow(X, Y) --> pow(X, Y+1)
+    if (match(&I, m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::pow>(m_Value(X),
+                                                                m_Value(Y))),
+                           m_Deferred(X)))) {
+      Value *Y1 =
+          Builder.CreateFAddFMF(Y, ConstantFP::get(I.getType(), 1.0), &I);
+      Value *Pow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, Y1, &I);
+      return replaceInstUsesWith(I, Pow);
+    }
+
     if (I.isOnlyUserOfAnyOperand()) {
-      // pow(x, y) * pow(x, z) -> pow(x, y + z)
+      // pow(X, Y) * pow(X, Z) -> pow(X, Y + Z)
       if (match(Op0, m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))) &&
           match(Op1, m_Intrinsic<Intrinsic::pow>(m_Specific(X), m_Value(Z)))) {
         auto *YZ = Builder.CreateFAddFMF(Y, Z, &I);
         auto *NewPow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, YZ, &I);
+        return replaceInstUsesWith(I, NewPow);
+      }
+      // pow(X, Y) * pow(Z, Y) -> pow(X * Z, Y)
+      if (match(Op0, m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))) &&
+          match(Op1, m_Intrinsic<Intrinsic::pow>(m_Value(Z), m_Specific(Y)))) {
+        auto *XZ = Builder.CreateFMulFMF(X, Z, &I);
+        auto *NewPow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, XZ, Y, &I);
         return replaceInstUsesWith(I, NewPow);
       }
 
@@ -1647,6 +1665,16 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
 
   if (Instruction *Mul = foldFDivPowDivisor(I, Builder))
     return Mul;
+
+  // pow(X, Y) / X --> pow(X, Y-1)
+  if (I.hasAllowReassoc() &&
+      match(Op0, m_OneUse(m_Intrinsic<Intrinsic::pow>(m_Specific(Op1),
+                                                      m_Value(Y))))) {
+    Value *Y1 =
+        Builder.CreateFAddFMF(Y, ConstantFP::get(I.getType(), -1.0), &I);
+    Value *Pow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, Op1, Y1, &I);
+    return replaceInstUsesWith(I, Pow);
+  }
 
   return nullptr;
 }

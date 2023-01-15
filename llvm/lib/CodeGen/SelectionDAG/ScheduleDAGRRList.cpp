@@ -1386,7 +1386,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
             Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
-            if (Register::isPhysicalRegister(Reg))
+            if (Reg.isPhysical())
               CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
           }
         } else
@@ -2391,7 +2391,7 @@ static bool hasOnlyLiveInOpers(const SUnit *SU) {
         PredSU->getNode()->getOpcode() == ISD::CopyFromReg) {
       Register Reg =
           cast<RegisterSDNode>(PredSU->getNode()->getOperand(1))->getReg();
-      if (Register::isVirtualRegister(Reg)) {
+      if (Reg.isVirtual()) {
         RetVal = true;
         continue;
       }
@@ -2412,7 +2412,7 @@ static bool hasOnlyLiveOutUses(const SUnit *SU) {
     if (SuccSU->getNode() && SuccSU->getNode()->getOpcode() == ISD::CopyToReg) {
       Register Reg =
           cast<RegisterSDNode>(SuccSU->getNode()->getOperand(1))->getReg();
-      if (Register::isVirtualRegister(Reg)) {
+      if (Reg.isVirtual()) {
         RetVal = true;
         continue;
       }
@@ -2981,8 +2981,7 @@ void RegReductionPQBase::PrescheduleNodesWithMultipleUses() {
     // like other nodes from the perspective of scheduling heuristics.
     if (SDNode *N = SU.getNode())
       if (N->getOpcode() == ISD::CopyToReg &&
-          Register::isVirtualRegister(
-              cast<RegisterSDNode>(N->getOperand(1))->getReg()))
+          cast<RegisterSDNode>(N->getOperand(1))->getReg().isVirtual())
         continue;
 
     SDNode *PredFrameSetup = nullptr;
@@ -3028,8 +3027,7 @@ void RegReductionPQBase::PrescheduleNodesWithMultipleUses() {
     // like other nodes from the perspective of scheduling heuristics.
     if (SDNode *N = SU.getNode())
       if (N->getOpcode() == ISD::CopyFromReg &&
-          Register::isVirtualRegister(
-              cast<RegisterSDNode>(N->getOperand(1))->getReg()))
+          cast<RegisterSDNode>(N->getOperand(1))->getReg().isVirtual())
         continue;
 
     // Perform checks on the successors of PredSU.

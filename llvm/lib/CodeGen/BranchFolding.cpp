@@ -1875,7 +1875,7 @@ MachineBasicBlock::iterator findHoistingInsertPosAndDeps(MachineBasicBlock *MBB,
       addRegAndItsAliases(Reg, TRI, Uses);
     } else {
       if (Uses.erase(Reg)) {
-        if (Register::isPhysicalRegister(Reg)) {
+        if (Reg.isPhysical()) {
           for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs)
             Uses.erase(*SubRegs); // Use sub-registers to be conservative
         }

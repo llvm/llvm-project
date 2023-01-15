@@ -36,6 +36,13 @@ def ROCDL_Dialect : Dialect {
     static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
       return ::llvm::StringLiteral("rocdl.reqd_work_group_size");
     }
+
+    /// The address space value that represents global memory.
+    static constexpr unsigned kGlobalMemoryAddressSpace = 1;
+    /// The address space value that represents shared memory.
+    static constexpr unsigned kSharedMemoryAddressSpace = 3;
+    /// The address space value that represents private memory.
+    static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];
 }
 

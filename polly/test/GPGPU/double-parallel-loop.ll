@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-outout < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-schedule \
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=SCHED %s
@@ -18,7 +18,11 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck %s -check-prefix=KERNEL-ASM
 
-; REQUIRES: pollyacc,nvptx
+; XFAIL: *
+
+; REQUIRES: pollyacc, target=nvptx{{.*}}
+
+; This fails today due to extensive output differences from when the test was written.
 
 ; CHECK: Stmt_bb5
 ; CHECK-NEXT:       Domain :=

@@ -624,8 +624,7 @@ void ModuloScheduleExpander::generatePhis(
        BBI != BBE; ++BBI) {
     for (unsigned i = 0, e = BBI->getNumOperands(); i != e; ++i) {
       MachineOperand &MO = BBI->getOperand(i);
-      if (!MO.isReg() || !MO.isDef() ||
-          !Register::isVirtualRegister(MO.getReg()))
+      if (!MO.isReg() || !MO.isDef() || !MO.getReg().isVirtual())
         continue;
 
       int StageScheduled = Schedule.getStage(&*BBI);
@@ -749,7 +748,7 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
           continue;
         Register reg = MO.getReg();
         // Assume physical registers are used, unless they are marked dead.
-        if (Register::isPhysicalRegister(reg)) {
+        if (reg.isPhysical()) {
           used = !MO.isDead();
           if (used)
             break;
@@ -1032,7 +1031,7 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
                                                unsigned InstrStageNum,
                                                ValueMapTy *VRMap) {
   for (MachineOperand &MO : NewMI->operands()) {
-    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
     Register reg = MO.getReg();
     if (MO.isDef()) {

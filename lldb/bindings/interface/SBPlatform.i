@@ -126,18 +126,6 @@ public:
 
     SBPlatform (const char *);
 
-    %feature("docstring", "
-    Create a platform instance using a specific platform plugin name, debugger,
-    script name and user-provided dictionary.
-
-    :param platform_name: name of the platform plugin to use to create the platform
-    :param debugger: debugger instance owning the platform
-    :param script_name: name of the script class and module to use to create the platform
-    :param dict: user-provided dictionary that can be used when instanciating a platform
-    ")
-    SBPlatform (const char *, const SBDebugger&,
-                const char *, const SBStructuredData&);
-
     ~SBPlatform();
 
     static SBPlatform GetHostPlatform();

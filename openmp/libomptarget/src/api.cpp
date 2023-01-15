@@ -82,6 +82,15 @@ EXTERN void llvm_omp_target_free_shared(void *Ptre, int DeviceNum) {
 EXTERN void *llvm_omp_target_dynamic_shared_alloc() { return nullptr; }
 EXTERN void *llvm_omp_get_dynamic_shared() { return nullptr; }
 
+EXTERN [[nodiscard]] void *llvm_omp_target_lock_mem(void *Ptr, size_t Size,
+                                                    int DeviceNum) {
+  return targetLockExplicit(Ptr, Size, DeviceNum, __func__);
+}
+
+EXTERN void llvm_omp_target_unlock_mem(void *Ptr, int DeviceNum) {
+  targetUnlockExplicit(Ptr, DeviceNum, __func__);
+}
+
 EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   TIMESCOPE();
   DP("Call to omp_target_is_present for device %d and address " DPxMOD "\n",

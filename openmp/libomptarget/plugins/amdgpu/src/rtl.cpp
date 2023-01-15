@@ -1816,6 +1816,35 @@ bool imageContainsSymbol(void *Data, size_t Size, const char *Sym) {
   return (Rc == 0) && (SI.Addr != nullptr);
 }
 
+hsa_status_t lock_memory(void *HostPtr, size_t Size, hsa_agent_t Agent,
+                         void **LockedHostPtr) {
+  hsa_status_t err = is_locked(HostPtr, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // HostPtr is already locked, just return it
+  if (*LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  hsa_agent_t Agents[1] = {Agent};
+  return hsa_amd_memory_lock(HostPtr, Size, Agents, /*num_agent=*/1,
+                             LockedHostPtr);
+}
+
+hsa_status_t unlock_memory(void *HostPtr) {
+  void *LockedHostPtr = nullptr;
+  hsa_status_t err = is_locked(HostPtr, &LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // if LockedHostPtr is nullptr, then HostPtr was not locked
+  if (!LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  err = hsa_amd_memory_unlock(HostPtr);
+  return err;
+}
+
 } // namespace
 
 namespace core {
@@ -2587,6 +2616,34 @@ void __tgt_rtl_print_device_info(int32_t DeviceId) {
   // NOTE: We don't need to set context for print device info.
 
   DeviceInfo().printDeviceInfo(DeviceId, DeviceInfo().HSAAgents[DeviceId]);
+}
+
+int32_t __tgt_rtl_data_lock(int32_t DeviceId, void *HostPtr, int64_t Size,
+                            void **LockedHostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+
+  hsa_agent_t Agent = DeviceInfo().HSAAgents[DeviceId];
+  hsa_status_t err = lock_memory(HostPtr, Size, Agent, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_lock\n");
+    return OFFLOAD_FAIL;
+  }
+  DP("Tgt lock host data %ld bytes, (HostPtr:%016llx).\n", Size,
+     (long long unsigned)(Elf64_Addr)*LockedHostPtr);
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_data_unlock(int DeviceId, void *HostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+  hsa_status_t err = unlock_memory(HostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_unlock\n");
+    return OFFLOAD_FAIL;
+  }
+
+  DP("Tgt unlock data (tgt:%016llx).\n",
+     (long long unsigned)(Elf64_Addr)HostPtr);
+  return OFFLOAD_SUCCESS;
 }
 
 } // extern "C"

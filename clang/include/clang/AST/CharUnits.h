@@ -64,9 +64,9 @@ namespace clang {
         return CharUnits(Quantity);
       }
 
-      /// fromAlign - Construct a CharUnits quantity from an llvm::Align
+      /// fromQuantity - Construct a CharUnits quantity from an llvm::Align
       /// quantity.
-      static CharUnits fromAlign(llvm::Align Quantity) {
+      static CharUnits fromQuantity(llvm::Align Quantity) {
         return CharUnits(Quantity.value());
       }
 

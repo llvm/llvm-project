@@ -274,7 +274,12 @@ void LowerABIAttributesPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
   MLIRContext *context = &getContext();
 
-  spirv::TargetEnv targetEnv(spirv::lookupTargetEnv(module));
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(module);
+  if (!targetEnvAttr) {
+    module->emitOpError("missing SPIR-V target env attribute");
+    return signalPassFailure();
+  }
+  spirv::TargetEnv targetEnv(targetEnvAttr);
 
   SPIRVTypeConverter typeConverter(targetEnv);
 
