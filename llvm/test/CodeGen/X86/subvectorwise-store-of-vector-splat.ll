@@ -10,38 +10,32 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512vl | FileCheck %s --check-prefixes=ALL,SSE,AVX,AVX2,AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=ALL,SSE,AVX,AVX2,AVX512,AVX512BW
 
-define void @vec32_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec32_v2i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec32_v2i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb (%rdi), %cl
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movb %al, 1(%rsi)
-; SCALAR-NEXT:    movb %cl, (%rsi)
-; SCALAR-NEXT:    movb %al, 3(%rsi)
-; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %ecx
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movb %al, (%rsi)
+; SCALAR-NEXT:    movb %cl, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %cl, 3(%rdx)
+; SCALAR-NEXT:    movb %al, 2(%rdx)
 ; SCALAR-NEXT:    retq
 ;
-; SSE2-LABEL: vec32_v2i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubb (%rdi), %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    movw %ax, (%rsi)
-; SSE2-NEXT:    movw %ax, 2(%rsi)
-; SSE2-NEXT:    retq
-;
-; AVX-LABEL: vec32_v2i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    movw %ax, (%rsi)
-; AVX-NEXT:    movw %ax, 2(%rsi)
-; AVX-NEXT:    retq
-  %in.subvec.neg = load <2 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i8> zeroinitializer, %in.subvec.neg
+; SSE-LABEL: vec32_v2i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl (%rdi), %eax
+; SSE-NEXT:    notl %eax
+; SSE-NEXT:    movw %ax, (%rsi)
+; SSE-NEXT:    movw %ax, (%rdx)
+; SSE-NEXT:    movw %ax, 2(%rdx)
+; SSE-NEXT:    retq
+  %in.subvec.not = load <2 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i8> %in.subvec.not, <i8 -1, i8 -1>
+  store <2 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 0
   store <2 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 1
@@ -49,46 +43,38 @@ define void @vec32_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec64_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec64_v2i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec64_v2i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb (%rdi), %cl
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movb %al, 1(%rsi)
-; SCALAR-NEXT:    movb %cl, (%rsi)
-; SCALAR-NEXT:    movb %al, 3(%rsi)
-; SCALAR-NEXT:    movb %cl, 2(%rsi)
-; SCALAR-NEXT:    movb %al, 5(%rsi)
-; SCALAR-NEXT:    movb %cl, 4(%rsi)
-; SCALAR-NEXT:    movb %al, 7(%rsi)
-; SCALAR-NEXT:    movb %cl, 6(%rsi)
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %ecx
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movb %al, (%rsi)
+; SCALAR-NEXT:    movb %cl, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %cl, 3(%rdx)
+; SCALAR-NEXT:    movb %al, 2(%rdx)
+; SCALAR-NEXT:    movb %cl, 5(%rdx)
+; SCALAR-NEXT:    movb %al, 4(%rdx)
+; SCALAR-NEXT:    movb %cl, 7(%rdx)
+; SCALAR-NEXT:    movb %al, 6(%rdx)
 ; SCALAR-NEXT:    retq
 ;
-; SSE2-LABEL: vec64_v2i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubb (%rdi), %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    movw %ax, (%rsi)
-; SSE2-NEXT:    movw %ax, 2(%rsi)
-; SSE2-NEXT:    movw %ax, 4(%rsi)
-; SSE2-NEXT:    movw %ax, 6(%rsi)
-; SSE2-NEXT:    retq
-;
-; AVX-LABEL: vec64_v2i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    movw %ax, (%rsi)
-; AVX-NEXT:    movw %ax, 2(%rsi)
-; AVX-NEXT:    movw %ax, 4(%rsi)
-; AVX-NEXT:    movw %ax, 6(%rsi)
-; AVX-NEXT:    retq
-  %in.subvec.neg = load <2 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i8> zeroinitializer, %in.subvec.neg
+; SSE-LABEL: vec64_v2i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl (%rdi), %eax
+; SSE-NEXT:    notl %eax
+; SSE-NEXT:    movw %ax, (%rsi)
+; SSE-NEXT:    movw %ax, (%rdx)
+; SSE-NEXT:    movw %ax, 2(%rdx)
+; SSE-NEXT:    movw %ax, 4(%rdx)
+; SSE-NEXT:    movw %ax, 6(%rdx)
+; SSE-NEXT:    retq
+  %in.subvec.not = load <2 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i8> %in.subvec.not, <i8 -1, i8 -1>
+  store <2 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 0
   store <2 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 1
@@ -100,36 +86,32 @@ define void @vec64_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec64_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec64_v2i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec64_v2i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw (%rdi), %cx
-; SCALAR-NEXT:    subw 2(%rdi), %ax
+; SCALAR-NEXT:    movzwl 2(%rdi), %eax
+; SCALAR-NEXT:    movl (%rdi), %ecx
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movw %ax, 2(%rsi)
 ; SCALAR-NEXT:    movw %cx, (%rsi)
-; SCALAR-NEXT:    movw %ax, 6(%rsi)
-; SCALAR-NEXT:    movw %cx, 4(%rsi)
+; SCALAR-NEXT:    movw %ax, 2(%rdx)
+; SCALAR-NEXT:    movw %cx, (%rdx)
+; SCALAR-NEXT:    movw %ax, 6(%rdx)
+; SCALAR-NEXT:    movw %cx, 4(%rdx)
 ; SCALAR-NEXT:    retq
 ;
-; SSE2-LABEL: vec64_v2i16:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubw (%rdi), %xmm0
-; SSE2-NEXT:    movd %xmm0, (%rsi)
-; SSE2-NEXT:    movd %xmm0, 4(%rsi)
-; SSE2-NEXT:    retq
-;
-; AVX-LABEL: vec64_v2i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, (%rsi)
-; AVX-NEXT:    vmovd %xmm0, 4(%rsi)
-; AVX-NEXT:    retq
-  %in.subvec.neg = load <2 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i16> zeroinitializer, %in.subvec.neg
+; SSE-LABEL: vec64_v2i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl (%rdi), %eax
+; SSE-NEXT:    notl %eax
+; SSE-NEXT:    movl %eax, (%rsi)
+; SSE-NEXT:    movl %eax, (%rdx)
+; SSE-NEXT:    movl %eax, 4(%rdx)
+; SSE-NEXT:    retq
+  %in.subvec.not = load <2 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i16> %in.subvec.not, <i16 -1, i16 -1>
+  store <2 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 0
   store <2 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 1
@@ -137,44 +119,42 @@ define void @vec64_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec64_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec64_v4i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec64_v4i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb (%rdi), %cl
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subb 1(%rdi), %dl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 2(%rdi), %r8b
-; SCALAR-NEXT:    subb 3(%rdi), %al
+; SCALAR-NEXT:    movzbl 3(%rdi), %eax
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %r8d
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    notb %al
 ; SCALAR-NEXT:    movb %al, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movb %dl, 1(%rsi)
-; SCALAR-NEXT:    movb %cl, (%rsi)
-; SCALAR-NEXT:    movb %al, 7(%rsi)
-; SCALAR-NEXT:    movb %r8b, 6(%rsi)
-; SCALAR-NEXT:    movb %dl, 5(%rsi)
-; SCALAR-NEXT:    movb %cl, 4(%rsi)
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %dil, 1(%rsi)
+; SCALAR-NEXT:    movb %r8b, (%rsi)
+; SCALAR-NEXT:    movb %al, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %dil, 1(%rdx)
+; SCALAR-NEXT:    movb %r8b, (%rdx)
+; SCALAR-NEXT:    movb %al, 7(%rdx)
+; SCALAR-NEXT:    movb %cl, 6(%rdx)
+; SCALAR-NEXT:    movb %dil, 5(%rdx)
+; SCALAR-NEXT:    movb %r8b, 4(%rdx)
 ; SCALAR-NEXT:    retq
 ;
-; SSE2-LABEL: vec64_v4i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubb (%rdi), %xmm0
-; SSE2-NEXT:    movd %xmm0, (%rsi)
-; SSE2-NEXT:    movd %xmm0, 4(%rsi)
-; SSE2-NEXT:    retq
-;
-; AVX-LABEL: vec64_v4i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, (%rsi)
-; AVX-NEXT:    vmovd %xmm0, 4(%rsi)
-; AVX-NEXT:    retq
-  %in.subvec.neg = load <4 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i8> zeroinitializer, %in.subvec.neg
+; SSE-LABEL: vec64_v4i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl (%rdi), %eax
+; SSE-NEXT:    notl %eax
+; SSE-NEXT:    movl %eax, (%rsi)
+; SSE-NEXT:    movl %eax, (%rdx)
+; SSE-NEXT:    movl %eax, 4(%rdx)
+; SSE-NEXT:    retq
+  %in.subvec.not = load <4 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1>
+  store <4 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 0
   store <4 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 1
@@ -182,58 +162,107 @@ define void @vec64_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec128_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec128_v2i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec128_v2i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb (%rdi), %cl
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movb %al, 1(%rsi)
-; SCALAR-NEXT:    movb %cl, (%rsi)
-; SCALAR-NEXT:    movb %al, 3(%rsi)
-; SCALAR-NEXT:    movb %cl, 2(%rsi)
-; SCALAR-NEXT:    movb %al, 5(%rsi)
-; SCALAR-NEXT:    movb %cl, 4(%rsi)
-; SCALAR-NEXT:    movb %al, 7(%rsi)
-; SCALAR-NEXT:    movb %cl, 6(%rsi)
-; SCALAR-NEXT:    movb %al, 9(%rsi)
-; SCALAR-NEXT:    movb %cl, 8(%rsi)
-; SCALAR-NEXT:    movb %al, 11(%rsi)
-; SCALAR-NEXT:    movb %cl, 10(%rsi)
-; SCALAR-NEXT:    movb %al, 13(%rsi)
-; SCALAR-NEXT:    movb %cl, 12(%rsi)
-; SCALAR-NEXT:    movb %al, 15(%rsi)
-; SCALAR-NEXT:    movb %cl, 14(%rsi)
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %ecx
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movb %al, (%rsi)
+; SCALAR-NEXT:    movb %cl, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %cl, 3(%rdx)
+; SCALAR-NEXT:    movb %al, 2(%rdx)
+; SCALAR-NEXT:    movb %cl, 5(%rdx)
+; SCALAR-NEXT:    movb %al, 4(%rdx)
+; SCALAR-NEXT:    movb %cl, 7(%rdx)
+; SCALAR-NEXT:    movb %al, 6(%rdx)
+; SCALAR-NEXT:    movb %cl, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %cl, 11(%rdx)
+; SCALAR-NEXT:    movb %al, 10(%rdx)
+; SCALAR-NEXT:    movb %cl, 13(%rdx)
+; SCALAR-NEXT:    movb %al, 12(%rdx)
+; SCALAR-NEXT:    movb %cl, 15(%rdx)
+; SCALAR-NEXT:    movb %al, 14(%rdx)
 ; SCALAR-NEXT:    retq
 ;
-; SSE2-LABEL: vec128_v2i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    retq
+; SSE2-ONLY-LABEL: vec128_v2i8:
+; SSE2-ONLY:       # %bb.0:
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-ONLY-NEXT:    pxor (%rdi), %xmm0
+; SSE2-ONLY-NEXT:    movd %xmm0, %eax
+; SSE2-ONLY-NEXT:    movw %ax, (%rsi)
+; SSE2-ONLY-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-ONLY-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-ONLY-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-ONLY-NEXT:    retq
+;
+; SSE3-LABEL: vec128_v2i8:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE3-NEXT:    pxor (%rdi), %xmm0
+; SSE3-NEXT:    movd %xmm0, %eax
+; SSE3-NEXT:    movw %ax, (%rsi)
+; SSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE3-NEXT:    movdqa %xmm0, (%rdx)
+; SSE3-NEXT:    retq
+;
+; SSSE3-ONLY-LABEL: vec128_v2i8:
+; SSSE3-ONLY:       # %bb.0:
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSSE3-ONLY-NEXT:    pxor (%rdi), %xmm0
+; SSSE3-ONLY-NEXT:    movd %xmm0, %eax
+; SSSE3-ONLY-NEXT:    movw %ax, (%rsi)
+; SSSE3-ONLY-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSSE3-ONLY-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, (%rdx)
+; SSSE3-ONLY-NEXT:    retq
+;
+; SSE41-LABEL: vec128_v2i8:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor (%rdi), %xmm0
+; SSE41-NEXT:    pextrw $0, %xmm0, (%rsi)
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE41-NEXT:    movdqa %xmm0, (%rdx)
+; SSE41-NEXT:    retq
+;
+; SSE42-LABEL: vec128_v2i8:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE42-NEXT:    pxor (%rdi), %xmm0
+; SSE42-NEXT:    pextrw $0, %xmm0, (%rsi)
+; SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE42-NEXT:    movdqa %xmm0, (%rdx)
+; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_v2i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = mem[0,0,0,0,4,5,6,7]
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpextrw $0, %xmm0, (%rsi)
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec128_v2i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastw (%rdi), %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpextrw $0, %xmm0, (%rsi)
+; AVX2-NEXT:    vpbroadcastw %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i8> %in.subvec.not, <i8 -1, i8 -1>
+  store <2 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 0
   store <2 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 1
@@ -253,48 +282,54 @@ define void @vec128_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec128_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec128_v2i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec128_v2i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw (%rdi), %cx
-; SCALAR-NEXT:    subw 2(%rdi), %ax
+; SCALAR-NEXT:    movzwl 2(%rdi), %eax
+; SCALAR-NEXT:    movl (%rdi), %ecx
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movw %ax, 2(%rsi)
 ; SCALAR-NEXT:    movw %cx, (%rsi)
-; SCALAR-NEXT:    movw %ax, 6(%rsi)
-; SCALAR-NEXT:    movw %cx, 4(%rsi)
-; SCALAR-NEXT:    movw %ax, 10(%rsi)
-; SCALAR-NEXT:    movw %cx, 8(%rsi)
-; SCALAR-NEXT:    movw %ax, 14(%rsi)
-; SCALAR-NEXT:    movw %cx, 12(%rsi)
+; SCALAR-NEXT:    movw %ax, 2(%rdx)
+; SCALAR-NEXT:    movw %cx, (%rdx)
+; SCALAR-NEXT:    movw %ax, 6(%rdx)
+; SCALAR-NEXT:    movw %cx, 4(%rdx)
+; SCALAR-NEXT:    movw %ax, 10(%rdx)
+; SCALAR-NEXT:    movw %cx, 8(%rdx)
+; SCALAR-NEXT:    movw %ax, 14(%rdx)
+; SCALAR-NEXT:    movw %cx, 12(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec128_v2i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_v2i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec128_v2i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd (%rdi), %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, (%rsi)
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i16> %in.subvec.not, <i16 -1, i16 -1>
+  store <2 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 0
   store <2 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 1
@@ -306,45 +341,62 @@ define void @vec128_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec128_v2i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec128_v2i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec128_v2i32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    subl 4(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %ecx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl %ecx, 4(%rsi)
+; SCALAR-NEXT:    movl %eax, (%rsi)
+; SCALAR-NEXT:    movl %ecx, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ecx, 12(%rdx)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec128_v2i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_v2i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec128_v2i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i32> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec128_v2i32:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec128_v2i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <2 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i32> %in.subvec.not, <i32 -1, i32 -1>
+  store <2 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i32>, ptr %out.vec.ptr, i64 0
   store <2 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i32>, ptr %out.vec.ptr, i64 1
@@ -352,46 +404,63 @@ define void @vec128_v2i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec128_v2f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec128_v2f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec128_v2f32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    subl 4(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %ecx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl %ecx, 4(%rsi)
+; SCALAR-NEXT:    movl %eax, (%rsi)
+; SCALAR-NEXT:    movl %ecx, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ecx, 12(%rdx)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec128_v2f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_v2f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec128_v2f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <2 x i32> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec128_v2f32:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec128_v2f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <2 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <2 x i32> %in.subvec.not, <i32 -1, i32 -1>
   %in.subvec = bitcast <2 x i32> %in.subvec.int to <2 x float>
+  store <2 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x float>, ptr %out.vec.ptr, i64 0
   store <2 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x float>, ptr %out.vec.ptr, i64 1
@@ -399,60 +468,68 @@ define void @vec128_v2f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec128_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec128_v4i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec128_v4i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb (%rdi), %cl
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subb 1(%rdi), %dl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 2(%rdi), %r8b
-; SCALAR-NEXT:    subb 3(%rdi), %al
+; SCALAR-NEXT:    movzbl 3(%rdi), %eax
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %r8d
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    notb %al
 ; SCALAR-NEXT:    movb %al, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movb %dl, 1(%rsi)
-; SCALAR-NEXT:    movb %cl, (%rsi)
-; SCALAR-NEXT:    movb %al, 7(%rsi)
-; SCALAR-NEXT:    movb %r8b, 6(%rsi)
-; SCALAR-NEXT:    movb %dl, 5(%rsi)
-; SCALAR-NEXT:    movb %cl, 4(%rsi)
-; SCALAR-NEXT:    movb %al, 11(%rsi)
-; SCALAR-NEXT:    movb %r8b, 10(%rsi)
-; SCALAR-NEXT:    movb %dl, 9(%rsi)
-; SCALAR-NEXT:    movb %cl, 8(%rsi)
-; SCALAR-NEXT:    movb %al, 15(%rsi)
-; SCALAR-NEXT:    movb %r8b, 14(%rsi)
-; SCALAR-NEXT:    movb %dl, 13(%rsi)
-; SCALAR-NEXT:    movb %cl, 12(%rsi)
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %dil, 1(%rsi)
+; SCALAR-NEXT:    movb %r8b, (%rsi)
+; SCALAR-NEXT:    movb %al, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %dil, 1(%rdx)
+; SCALAR-NEXT:    movb %r8b, (%rdx)
+; SCALAR-NEXT:    movb %al, 7(%rdx)
+; SCALAR-NEXT:    movb %cl, 6(%rdx)
+; SCALAR-NEXT:    movb %dil, 5(%rdx)
+; SCALAR-NEXT:    movb %r8b, 4(%rdx)
+; SCALAR-NEXT:    movb %al, 11(%rdx)
+; SCALAR-NEXT:    movb %cl, 10(%rdx)
+; SCALAR-NEXT:    movb %dil, 9(%rdx)
+; SCALAR-NEXT:    movb %r8b, 8(%rdx)
+; SCALAR-NEXT:    movb %al, 15(%rdx)
+; SCALAR-NEXT:    movb %cl, 14(%rdx)
+; SCALAR-NEXT:    movb %dil, 13(%rdx)
+; SCALAR-NEXT:    movb %r8b, 12(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec128_v4i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_v4i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec128_v4i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd (%rdi), %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, (%rsi)
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <4 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1>
+  store <4 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 0
   store <4 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 1
@@ -464,53 +541,72 @@ define void @vec128_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec128_v4i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec128_v4i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec128_v4i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw (%rdi), %cx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subw 2(%rdi), %dx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subw 4(%rdi), %r8w
-; SCALAR-NEXT:    subw 6(%rdi), %ax
+; SCALAR-NEXT:    movzwl 6(%rdi), %eax
+; SCALAR-NEXT:    movzwl 2(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %r8d
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movw %ax, 6(%rsi)
-; SCALAR-NEXT:    movw %r8w, 4(%rsi)
-; SCALAR-NEXT:    movw %dx, 2(%rsi)
-; SCALAR-NEXT:    movw %cx, (%rsi)
-; SCALAR-NEXT:    movw %ax, 14(%rsi)
-; SCALAR-NEXT:    movw %r8w, 12(%rsi)
-; SCALAR-NEXT:    movw %dx, 10(%rsi)
-; SCALAR-NEXT:    movw %cx, 8(%rsi)
+; SCALAR-NEXT:    movw %di, 4(%rsi)
+; SCALAR-NEXT:    movw %cx, 2(%rsi)
+; SCALAR-NEXT:    movw %r8w, (%rsi)
+; SCALAR-NEXT:    movw %ax, 6(%rdx)
+; SCALAR-NEXT:    movw %di, 4(%rdx)
+; SCALAR-NEXT:    movw %cx, 2(%rdx)
+; SCALAR-NEXT:    movw %r8w, (%rdx)
+; SCALAR-NEXT:    movw %ax, 14(%rdx)
+; SCALAR-NEXT:    movw %di, 12(%rdx)
+; SCALAR-NEXT:    movw %cx, 10(%rdx)
+; SCALAR-NEXT:    movw %r8w, 8(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec128_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_v4i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec128_v4i16:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <4 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i16> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec128_v4i16:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec128_v4i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <4 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1>
+  store <4 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i16>, ptr %out.vec.ptr, i64 0
   store <4 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i16>, ptr %out.vec.ptr, i64 1
@@ -518,71 +614,94 @@ define void @vec128_v4i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec128_v8i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec128_v8i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec128_v8i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subb 1(%rdi), %dl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 2(%rdi), %r8b
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subb 3(%rdi), %r9b
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subb 4(%rdi), %r10b
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subb 5(%rdi), %r11b
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subb 6(%rdi), %bl
-; SCALAR-NEXT:    subb 7(%rdi), %cl
-; SCALAR-NEXT:    movb %cl, 7(%rsi)
-; SCALAR-NEXT:    movb %bl, 6(%rsi)
-; SCALAR-NEXT:    movb %r11b, 5(%rsi)
-; SCALAR-NEXT:    movb %r10b, 4(%rsi)
-; SCALAR-NEXT:    movb %r9b, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movb %dl, 1(%rsi)
+; SCALAR-NEXT:    movzbl 7(%rdi), %ebx
+; SCALAR-NEXT:    movzbl 6(%rdi), %r11d
+; SCALAR-NEXT:    movzbl 5(%rdi), %r10d
+; SCALAR-NEXT:    movzbl 4(%rdi), %r9d
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    notb %bl
+; SCALAR-NEXT:    movb %bl, 7(%rsi)
+; SCALAR-NEXT:    movb %r11b, 6(%rsi)
+; SCALAR-NEXT:    movb %r10b, 5(%rsi)
+; SCALAR-NEXT:    movb %r9b, 4(%rsi)
+; SCALAR-NEXT:    movb %r8b, 3(%rsi)
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %dil, 1(%rsi)
 ; SCALAR-NEXT:    movb %al, (%rsi)
-; SCALAR-NEXT:    movb %cl, 15(%rsi)
-; SCALAR-NEXT:    movb %bl, 14(%rsi)
-; SCALAR-NEXT:    movb %r11b, 13(%rsi)
-; SCALAR-NEXT:    movb %r10b, 12(%rsi)
-; SCALAR-NEXT:    movb %r9b, 11(%rsi)
-; SCALAR-NEXT:    movb %r8b, 10(%rsi)
-; SCALAR-NEXT:    movb %dl, 9(%rsi)
-; SCALAR-NEXT:    movb %al, 8(%rsi)
+; SCALAR-NEXT:    movb %bl, 7(%rdx)
+; SCALAR-NEXT:    movb %r11b, 6(%rdx)
+; SCALAR-NEXT:    movb %r10b, 5(%rdx)
+; SCALAR-NEXT:    movb %r9b, 4(%rdx)
+; SCALAR-NEXT:    movb %r8b, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %dil, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %bl, 15(%rdx)
+; SCALAR-NEXT:    movb %r11b, 14(%rdx)
+; SCALAR-NEXT:    movb %r10b, 13(%rdx)
+; SCALAR-NEXT:    movb %r9b, 12(%rdx)
+; SCALAR-NEXT:    movb %r8b, 11(%rdx)
+; SCALAR-NEXT:    movb %cl, 10(%rdx)
+; SCALAR-NEXT:    movb %dil, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec128_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec128_v8i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec128_v8i8:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq (%rdi), %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <8 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <8 x i8> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec128_v8i8:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec128_v8i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <8 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <8 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <8 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <8 x i8>, ptr %out.vec.ptr, i64 0
   store <8 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <8 x i8>, ptr %out.vec.ptr, i64 1
@@ -590,78 +709,131 @@ define void @vec128_v8i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v2i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v2i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb (%rdi), %cl
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movb %al, 1(%rsi)
-; SCALAR-NEXT:    movb %cl, (%rsi)
-; SCALAR-NEXT:    movb %al, 3(%rsi)
-; SCALAR-NEXT:    movb %cl, 2(%rsi)
-; SCALAR-NEXT:    movb %al, 5(%rsi)
-; SCALAR-NEXT:    movb %cl, 4(%rsi)
-; SCALAR-NEXT:    movb %al, 7(%rsi)
-; SCALAR-NEXT:    movb %cl, 6(%rsi)
-; SCALAR-NEXT:    movb %al, 9(%rsi)
-; SCALAR-NEXT:    movb %cl, 8(%rsi)
-; SCALAR-NEXT:    movb %al, 11(%rsi)
-; SCALAR-NEXT:    movb %cl, 10(%rsi)
-; SCALAR-NEXT:    movb %al, 13(%rsi)
-; SCALAR-NEXT:    movb %cl, 12(%rsi)
-; SCALAR-NEXT:    movb %al, 15(%rsi)
-; SCALAR-NEXT:    movb %cl, 14(%rsi)
-; SCALAR-NEXT:    movb %al, 17(%rsi)
-; SCALAR-NEXT:    movb %cl, 16(%rsi)
-; SCALAR-NEXT:    movb %al, 19(%rsi)
-; SCALAR-NEXT:    movb %cl, 18(%rsi)
-; SCALAR-NEXT:    movb %al, 21(%rsi)
-; SCALAR-NEXT:    movb %cl, 20(%rsi)
-; SCALAR-NEXT:    movb %al, 23(%rsi)
-; SCALAR-NEXT:    movb %cl, 22(%rsi)
-; SCALAR-NEXT:    movb %al, 25(%rsi)
-; SCALAR-NEXT:    movb %cl, 24(%rsi)
-; SCALAR-NEXT:    movb %al, 27(%rsi)
-; SCALAR-NEXT:    movb %cl, 26(%rsi)
-; SCALAR-NEXT:    movb %al, 29(%rsi)
-; SCALAR-NEXT:    movb %cl, 28(%rsi)
-; SCALAR-NEXT:    movb %al, 31(%rsi)
-; SCALAR-NEXT:    movb %cl, 30(%rsi)
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %ecx
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movb %al, (%rsi)
+; SCALAR-NEXT:    movb %cl, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %cl, 3(%rdx)
+; SCALAR-NEXT:    movb %al, 2(%rdx)
+; SCALAR-NEXT:    movb %cl, 5(%rdx)
+; SCALAR-NEXT:    movb %al, 4(%rdx)
+; SCALAR-NEXT:    movb %cl, 7(%rdx)
+; SCALAR-NEXT:    movb %al, 6(%rdx)
+; SCALAR-NEXT:    movb %cl, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %cl, 11(%rdx)
+; SCALAR-NEXT:    movb %al, 10(%rdx)
+; SCALAR-NEXT:    movb %cl, 13(%rdx)
+; SCALAR-NEXT:    movb %al, 12(%rdx)
+; SCALAR-NEXT:    movb %cl, 15(%rdx)
+; SCALAR-NEXT:    movb %al, 14(%rdx)
+; SCALAR-NEXT:    movb %cl, 17(%rdx)
+; SCALAR-NEXT:    movb %al, 16(%rdx)
+; SCALAR-NEXT:    movb %cl, 19(%rdx)
+; SCALAR-NEXT:    movb %al, 18(%rdx)
+; SCALAR-NEXT:    movb %cl, 21(%rdx)
+; SCALAR-NEXT:    movb %al, 20(%rdx)
+; SCALAR-NEXT:    movb %cl, 23(%rdx)
+; SCALAR-NEXT:    movb %al, 22(%rdx)
+; SCALAR-NEXT:    movb %cl, 25(%rdx)
+; SCALAR-NEXT:    movb %al, 24(%rdx)
+; SCALAR-NEXT:    movb %cl, 27(%rdx)
+; SCALAR-NEXT:    movb %al, 26(%rdx)
+; SCALAR-NEXT:    movb %cl, 29(%rdx)
+; SCALAR-NEXT:    movb %al, 28(%rdx)
+; SCALAR-NEXT:    movb %cl, 31(%rdx)
+; SCALAR-NEXT:    movb %al, 30(%rdx)
 ; SCALAR-NEXT:    retq
 ;
-; SSE2-LABEL: vec256_v2i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    retq
+; SSE2-ONLY-LABEL: vec256_v2i8:
+; SSE2-ONLY:       # %bb.0:
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-ONLY-NEXT:    pxor (%rdi), %xmm0
+; SSE2-ONLY-NEXT:    movd %xmm0, %eax
+; SSE2-ONLY-NEXT:    movw %ax, (%rsi)
+; SSE2-ONLY-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-ONLY-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-ONLY-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-ONLY-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-ONLY-NEXT:    retq
+;
+; SSE3-LABEL: vec256_v2i8:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE3-NEXT:    pxor (%rdi), %xmm0
+; SSE3-NEXT:    movd %xmm0, %eax
+; SSE3-NEXT:    movw %ax, (%rsi)
+; SSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE3-NEXT:    movdqa %xmm0, (%rdx)
+; SSE3-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE3-NEXT:    retq
+;
+; SSSE3-ONLY-LABEL: vec256_v2i8:
+; SSSE3-ONLY:       # %bb.0:
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSSE3-ONLY-NEXT:    pxor (%rdi), %xmm0
+; SSSE3-ONLY-NEXT:    movd %xmm0, %eax
+; SSSE3-ONLY-NEXT:    movw %ax, (%rsi)
+; SSSE3-ONLY-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSSE3-ONLY-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, (%rdx)
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSSE3-ONLY-NEXT:    retq
+;
+; SSE41-LABEL: vec256_v2i8:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor (%rdi), %xmm0
+; SSE41-NEXT:    pextrw $0, %xmm0, (%rsi)
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE41-NEXT:    movdqa %xmm0, (%rdx)
+; SSE41-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE41-NEXT:    retq
+;
+; SSE42-LABEL: vec256_v2i8:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE42-NEXT:    pxor (%rdi), %xmm0
+; SSE42-NEXT:    pextrw $0, %xmm0, (%rsi)
+; SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE42-NEXT:    movdqa %xmm0, (%rdx)
+; SSE42-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: vec256_v2i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = mem[0,0,0,0,4,5,6,7]
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpextrw $0, %xmm0, (%rsi)
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec256_v2i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX2-NEXT:    vpbroadcastw %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i8> %in.subvec.not, <i8 -1, i8 -1>
+  store <2 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 0
   store <2 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 1
@@ -697,60 +869,65 @@ define void @vec256_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v2i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v2i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw (%rdi), %cx
-; SCALAR-NEXT:    subw 2(%rdi), %ax
+; SCALAR-NEXT:    movzwl 2(%rdi), %eax
+; SCALAR-NEXT:    movl (%rdi), %ecx
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movw %ax, 2(%rsi)
 ; SCALAR-NEXT:    movw %cx, (%rsi)
-; SCALAR-NEXT:    movw %ax, 6(%rsi)
-; SCALAR-NEXT:    movw %cx, 4(%rsi)
-; SCALAR-NEXT:    movw %ax, 10(%rsi)
-; SCALAR-NEXT:    movw %cx, 8(%rsi)
-; SCALAR-NEXT:    movw %ax, 14(%rsi)
-; SCALAR-NEXT:    movw %cx, 12(%rsi)
-; SCALAR-NEXT:    movw %ax, 18(%rsi)
-; SCALAR-NEXT:    movw %cx, 16(%rsi)
-; SCALAR-NEXT:    movw %ax, 22(%rsi)
-; SCALAR-NEXT:    movw %cx, 20(%rsi)
-; SCALAR-NEXT:    movw %ax, 26(%rsi)
-; SCALAR-NEXT:    movw %cx, 24(%rsi)
-; SCALAR-NEXT:    movw %ax, 30(%rsi)
-; SCALAR-NEXT:    movw %cx, 28(%rsi)
+; SCALAR-NEXT:    movw %ax, 2(%rdx)
+; SCALAR-NEXT:    movw %cx, (%rdx)
+; SCALAR-NEXT:    movw %ax, 6(%rdx)
+; SCALAR-NEXT:    movw %cx, 4(%rdx)
+; SCALAR-NEXT:    movw %ax, 10(%rdx)
+; SCALAR-NEXT:    movw %cx, 8(%rdx)
+; SCALAR-NEXT:    movw %ax, 14(%rdx)
+; SCALAR-NEXT:    movw %cx, 12(%rdx)
+; SCALAR-NEXT:    movw %ax, 18(%rdx)
+; SCALAR-NEXT:    movw %cx, 16(%rdx)
+; SCALAR-NEXT:    movw %ax, 22(%rdx)
+; SCALAR-NEXT:    movw %cx, 20(%rdx)
+; SCALAR-NEXT:    movw %ax, 26(%rdx)
+; SCALAR-NEXT:    movw %cx, 24(%rdx)
+; SCALAR-NEXT:    movw %ax, 30(%rdx)
+; SCALAR-NEXT:    movw %cx, 28(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v2i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec256_v2i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec256_v2i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i16> %in.subvec.not, <i16 -1, i16 -1>
+  store <2 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 0
   store <2 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 1
@@ -770,54 +947,71 @@ define void @vec256_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v2i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v2i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v2i32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    subl 4(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
-; SCALAR-NEXT:    movl %eax, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %ecx, 24(%rsi)
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %ecx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl %ecx, 4(%rsi)
+; SCALAR-NEXT:    movl %eax, (%rsi)
+; SCALAR-NEXT:    movl %ecx, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ecx, 12(%rdx)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movl %ecx, 20(%rdx)
+; SCALAR-NEXT:    movl %eax, 16(%rdx)
+; SCALAR-NEXT:    movl %ecx, 28(%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v2i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec256_v2i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec256_v2i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i32> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec256_v2i32:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vzeroupper
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec256_v2i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <2 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i32> %in.subvec.not, <i32 -1, i32 -1>
+  store <2 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i32>, ptr %out.vec.ptr, i64 0
   store <2 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i32>, ptr %out.vec.ptr, i64 1
@@ -829,55 +1023,72 @@ define void @vec256_v2i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v2f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v2f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v2f32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    subl 4(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
-; SCALAR-NEXT:    movl %eax, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %ecx, 24(%rsi)
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %ecx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl %ecx, 4(%rsi)
+; SCALAR-NEXT:    movl %eax, (%rsi)
+; SCALAR-NEXT:    movl %ecx, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ecx, 12(%rdx)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movl %ecx, 20(%rdx)
+; SCALAR-NEXT:    movl %eax, 16(%rdx)
+; SCALAR-NEXT:    movl %ecx, 28(%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v2f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec256_v2f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec256_v2f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <2 x i32> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec256_v2f32:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vzeroupper
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec256_v2f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <2 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <2 x i32> %in.subvec.not, <i32 -1, i32 -1>
   %in.subvec = bitcast <2 x i32> %in.subvec.int to <2 x float>
+  store <2 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x float>, ptr %out.vec.ptr, i64 0
   store <2 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x float>, ptr %out.vec.ptr, i64 1
@@ -889,36 +1100,41 @@ define void @vec256_v2f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v2i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v2i64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v2i64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq (%rdi), %rcx
-; SCALAR-NEXT:    subq 8(%rdi), %rax
-; SCALAR-NEXT:    movq %rax, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, (%rsi)
-; SCALAR-NEXT:    movq %rax, 24(%rsi)
-; SCALAR-NEXT:    movq %rcx, 16(%rsi)
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 24(%rdx)
+; SCALAR-NEXT:    movq %rax, 16(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubq (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec256_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <2 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i64> %in.subvec.not, <i64 -1, i64 -1>
+  store <2 x i64> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i64>, ptr %out.vec.ptr, i64 0
   store <2 x i64> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i64>, ptr %out.vec.ptr, i64 1
@@ -926,37 +1142,42 @@ define void @vec256_v2i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v2f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v2f64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v2f64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq (%rdi), %rcx
-; SCALAR-NEXT:    subq 8(%rdi), %rax
-; SCALAR-NEXT:    movq %rax, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, (%rsi)
-; SCALAR-NEXT:    movq %rax, 24(%rsi)
-; SCALAR-NEXT:    movq %rcx, 16(%rsi)
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 24(%rdx)
+; SCALAR-NEXT:    movq %rax, 16(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v2f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubq (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec256_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <2 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <2 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <2 x i64> %in.subvec.not, <i64 -1, i64 -1>
   %in.subvec = bitcast <2 x i64> %in.subvec.int to <2 x double>
+  store <2 x double> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x double>, ptr %out.vec.ptr, i64 0
   store <2 x double> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x double>, ptr %out.vec.ptr, i64 1
@@ -964,80 +1185,87 @@ define void @vec256_v2f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v4i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v4i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subb 1(%rdi), %dl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 2(%rdi), %r8b
-; SCALAR-NEXT:    subb 3(%rdi), %cl
-; SCALAR-NEXT:    movb %cl, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movb %dl, 1(%rsi)
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movb %r8b, 3(%rsi)
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %dil, 1(%rsi)
 ; SCALAR-NEXT:    movb %al, (%rsi)
-; SCALAR-NEXT:    movb %cl, 7(%rsi)
-; SCALAR-NEXT:    movb %r8b, 6(%rsi)
-; SCALAR-NEXT:    movb %dl, 5(%rsi)
-; SCALAR-NEXT:    movb %al, 4(%rsi)
-; SCALAR-NEXT:    movb %cl, 11(%rsi)
-; SCALAR-NEXT:    movb %r8b, 10(%rsi)
-; SCALAR-NEXT:    movb %dl, 9(%rsi)
-; SCALAR-NEXT:    movb %al, 8(%rsi)
-; SCALAR-NEXT:    movb %cl, 15(%rsi)
-; SCALAR-NEXT:    movb %r8b, 14(%rsi)
-; SCALAR-NEXT:    movb %dl, 13(%rsi)
-; SCALAR-NEXT:    movb %al, 12(%rsi)
-; SCALAR-NEXT:    movb %cl, 19(%rsi)
-; SCALAR-NEXT:    movb %r8b, 18(%rsi)
-; SCALAR-NEXT:    movb %dl, 17(%rsi)
-; SCALAR-NEXT:    movb %al, 16(%rsi)
-; SCALAR-NEXT:    movb %cl, 23(%rsi)
-; SCALAR-NEXT:    movb %r8b, 22(%rsi)
-; SCALAR-NEXT:    movb %dl, 21(%rsi)
-; SCALAR-NEXT:    movb %al, 20(%rsi)
-; SCALAR-NEXT:    movb %cl, 27(%rsi)
-; SCALAR-NEXT:    movb %r8b, 26(%rsi)
-; SCALAR-NEXT:    movb %dl, 25(%rsi)
-; SCALAR-NEXT:    movb %al, 24(%rsi)
-; SCALAR-NEXT:    movb %cl, 31(%rsi)
-; SCALAR-NEXT:    movb %r8b, 30(%rsi)
-; SCALAR-NEXT:    movb %dl, 29(%rsi)
-; SCALAR-NEXT:    movb %al, 28(%rsi)
+; SCALAR-NEXT:    movb %r8b, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %dil, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %r8b, 7(%rdx)
+; SCALAR-NEXT:    movb %cl, 6(%rdx)
+; SCALAR-NEXT:    movb %dil, 5(%rdx)
+; SCALAR-NEXT:    movb %al, 4(%rdx)
+; SCALAR-NEXT:    movb %r8b, 11(%rdx)
+; SCALAR-NEXT:    movb %cl, 10(%rdx)
+; SCALAR-NEXT:    movb %dil, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %r8b, 15(%rdx)
+; SCALAR-NEXT:    movb %cl, 14(%rdx)
+; SCALAR-NEXT:    movb %dil, 13(%rdx)
+; SCALAR-NEXT:    movb %al, 12(%rdx)
+; SCALAR-NEXT:    movb %r8b, 19(%rdx)
+; SCALAR-NEXT:    movb %cl, 18(%rdx)
+; SCALAR-NEXT:    movb %dil, 17(%rdx)
+; SCALAR-NEXT:    movb %al, 16(%rdx)
+; SCALAR-NEXT:    movb %r8b, 23(%rdx)
+; SCALAR-NEXT:    movb %cl, 22(%rdx)
+; SCALAR-NEXT:    movb %dil, 21(%rdx)
+; SCALAR-NEXT:    movb %al, 20(%rdx)
+; SCALAR-NEXT:    movb %r8b, 27(%rdx)
+; SCALAR-NEXT:    movb %cl, 26(%rdx)
+; SCALAR-NEXT:    movb %dil, 25(%rdx)
+; SCALAR-NEXT:    movb %al, 24(%rdx)
+; SCALAR-NEXT:    movb %r8b, 31(%rdx)
+; SCALAR-NEXT:    movb %cl, 30(%rdx)
+; SCALAR-NEXT:    movb %dil, 29(%rdx)
+; SCALAR-NEXT:    movb %al, 28(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v4i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec256_v4i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec256_v4i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <4 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1>
+  store <4 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 0
   store <4 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 1
@@ -1057,66 +1285,85 @@ define void @vec256_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v4i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v4i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v4i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw (%rdi), %cx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subw 2(%rdi), %dx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subw 4(%rdi), %r8w
-; SCALAR-NEXT:    subw 6(%rdi), %ax
-; SCALAR-NEXT:    movw %ax, 6(%rsi)
-; SCALAR-NEXT:    movw %r8w, 4(%rsi)
-; SCALAR-NEXT:    movw %dx, 2(%rsi)
-; SCALAR-NEXT:    movw %cx, (%rsi)
-; SCALAR-NEXT:    movw %ax, 14(%rsi)
-; SCALAR-NEXT:    movw %r8w, 12(%rsi)
-; SCALAR-NEXT:    movw %dx, 10(%rsi)
-; SCALAR-NEXT:    movw %cx, 8(%rsi)
-; SCALAR-NEXT:    movw %ax, 22(%rsi)
-; SCALAR-NEXT:    movw %r8w, 20(%rsi)
-; SCALAR-NEXT:    movw %dx, 18(%rsi)
-; SCALAR-NEXT:    movw %cx, 16(%rsi)
-; SCALAR-NEXT:    movw %ax, 30(%rsi)
-; SCALAR-NEXT:    movw %r8w, 28(%rsi)
-; SCALAR-NEXT:    movw %dx, 26(%rsi)
-; SCALAR-NEXT:    movw %cx, 24(%rsi)
+; SCALAR-NEXT:    movzwl 6(%rdi), %r8d
+; SCALAR-NEXT:    movzwl 2(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    movw %r8w, 6(%rsi)
+; SCALAR-NEXT:    movw %di, 4(%rsi)
+; SCALAR-NEXT:    movw %cx, 2(%rsi)
+; SCALAR-NEXT:    movw %ax, (%rsi)
+; SCALAR-NEXT:    movw %r8w, 6(%rdx)
+; SCALAR-NEXT:    movw %di, 4(%rdx)
+; SCALAR-NEXT:    movw %cx, 2(%rdx)
+; SCALAR-NEXT:    movw %ax, (%rdx)
+; SCALAR-NEXT:    movw %r8w, 14(%rdx)
+; SCALAR-NEXT:    movw %di, 12(%rdx)
+; SCALAR-NEXT:    movw %cx, 10(%rdx)
+; SCALAR-NEXT:    movw %ax, 8(%rdx)
+; SCALAR-NEXT:    movw %r8w, 22(%rdx)
+; SCALAR-NEXT:    movw %di, 20(%rdx)
+; SCALAR-NEXT:    movw %cx, 18(%rdx)
+; SCALAR-NEXT:    movw %ax, 16(%rdx)
+; SCALAR-NEXT:    movw %r8w, 30(%rdx)
+; SCALAR-NEXT:    movw %di, 28(%rdx)
+; SCALAR-NEXT:    movw %cx, 26(%rdx)
+; SCALAR-NEXT:    movw %ax, 24(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec256_v4i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec256_v4i16:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <4 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i16> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec256_v4i16:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vzeroupper
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec256_v4i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <4 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1>
+  store <4 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i16>, ptr %out.vec.ptr, i64 0
   store <4 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i16>, ptr %out.vec.ptr, i64 1
@@ -1128,44 +1375,36 @@ define void @vec256_v4i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v4i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v4i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v4i32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subl 4(%rdi), %edx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subl 8(%rdi), %r8d
-; SCALAR-NEXT:    subl 12(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %r8d, 8(%rsi)
-; SCALAR-NEXT:    movl %edx, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %r8d, 24(%rsi)
-; SCALAR-NEXT:    movl %edx, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
+; SCALAR-NEXT:    movaps (%rdi), %xmm0
+; SCALAR-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SCALAR-NEXT:    movaps %xmm0, (%rsi)
+; SCALAR-NEXT:    movaps %xmm0, (%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 16(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v4i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec256_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <4 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1>
+  store <4 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i32>, ptr %out.vec.ptr, i64 0
   store <4 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i32>, ptr %out.vec.ptr, i64 1
@@ -1173,45 +1412,37 @@ define void @vec256_v4i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v4f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v4f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v4f32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subl 4(%rdi), %edx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subl 8(%rdi), %r8d
-; SCALAR-NEXT:    subl 12(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %r8d, 8(%rsi)
-; SCALAR-NEXT:    movl %edx, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %r8d, 24(%rsi)
-; SCALAR-NEXT:    movl %edx, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
+; SCALAR-NEXT:    movaps (%rdi), %xmm0
+; SCALAR-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SCALAR-NEXT:    movaps %xmm0, (%rsi)
+; SCALAR-NEXT:    movaps %xmm0, (%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 16(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v4f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec256_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <4 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <4 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <4 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1>
   %in.subvec = bitcast <4 x i32> %in.subvec.int to <4 x float>
+  store <4 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x float>, ptr %out.vec.ptr, i64 0
   store <4 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x float>, ptr %out.vec.ptr, i64 1
@@ -1219,92 +1450,115 @@ define void @vec256_v4f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v8i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v8i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v8i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb 1(%rdi), %cl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 2(%rdi), %r8b
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subb 3(%rdi), %r9b
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subb 4(%rdi), %r10b
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subb 5(%rdi), %r11b
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subb 6(%rdi), %bl
-; SCALAR-NEXT:    subb 7(%rdi), %dl
-; SCALAR-NEXT:    movb %dl, 7(%rsi)
-; SCALAR-NEXT:    movb %bl, 6(%rsi)
-; SCALAR-NEXT:    movb %r11b, 5(%rsi)
-; SCALAR-NEXT:    movb %r10b, 4(%rsi)
-; SCALAR-NEXT:    movb %r9b, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movzbl 7(%rdi), %ebx
+; SCALAR-NEXT:    movzbl 6(%rdi), %r11d
+; SCALAR-NEXT:    movzbl 5(%rdi), %r10d
+; SCALAR-NEXT:    movzbl 4(%rdi), %r9d
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    notb %bl
+; SCALAR-NEXT:    movb %bl, 7(%rsi)
+; SCALAR-NEXT:    movb %r11b, 6(%rsi)
+; SCALAR-NEXT:    movb %r10b, 5(%rsi)
+; SCALAR-NEXT:    movb %r9b, 4(%rsi)
+; SCALAR-NEXT:    movb %r8b, 3(%rsi)
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %dil, 1(%rsi)
 ; SCALAR-NEXT:    movb %al, (%rsi)
-; SCALAR-NEXT:    movb %dl, 15(%rsi)
-; SCALAR-NEXT:    movb %bl, 14(%rsi)
-; SCALAR-NEXT:    movb %r11b, 13(%rsi)
-; SCALAR-NEXT:    movb %r10b, 12(%rsi)
-; SCALAR-NEXT:    movb %r9b, 11(%rsi)
-; SCALAR-NEXT:    movb %r8b, 10(%rsi)
-; SCALAR-NEXT:    movb %cl, 9(%rsi)
-; SCALAR-NEXT:    movb %al, 8(%rsi)
-; SCALAR-NEXT:    movb %dl, 23(%rsi)
-; SCALAR-NEXT:    movb %bl, 22(%rsi)
-; SCALAR-NEXT:    movb %r11b, 21(%rsi)
-; SCALAR-NEXT:    movb %r10b, 20(%rsi)
-; SCALAR-NEXT:    movb %r9b, 19(%rsi)
-; SCALAR-NEXT:    movb %r8b, 18(%rsi)
-; SCALAR-NEXT:    movb %cl, 17(%rsi)
-; SCALAR-NEXT:    movb %al, 16(%rsi)
-; SCALAR-NEXT:    movb %dl, 31(%rsi)
-; SCALAR-NEXT:    movb %bl, 30(%rsi)
-; SCALAR-NEXT:    movb %r11b, 29(%rsi)
-; SCALAR-NEXT:    movb %r10b, 28(%rsi)
-; SCALAR-NEXT:    movb %r9b, 27(%rsi)
-; SCALAR-NEXT:    movb %r8b, 26(%rsi)
-; SCALAR-NEXT:    movb %cl, 25(%rsi)
-; SCALAR-NEXT:    movb %al, 24(%rsi)
+; SCALAR-NEXT:    movb %bl, 7(%rdx)
+; SCALAR-NEXT:    movb %r11b, 6(%rdx)
+; SCALAR-NEXT:    movb %r10b, 5(%rdx)
+; SCALAR-NEXT:    movb %r9b, 4(%rdx)
+; SCALAR-NEXT:    movb %r8b, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %dil, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %bl, 15(%rdx)
+; SCALAR-NEXT:    movb %r11b, 14(%rdx)
+; SCALAR-NEXT:    movb %r10b, 13(%rdx)
+; SCALAR-NEXT:    movb %r9b, 12(%rdx)
+; SCALAR-NEXT:    movb %r8b, 11(%rdx)
+; SCALAR-NEXT:    movb %cl, 10(%rdx)
+; SCALAR-NEXT:    movb %dil, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %bl, 23(%rdx)
+; SCALAR-NEXT:    movb %r11b, 22(%rdx)
+; SCALAR-NEXT:    movb %r10b, 21(%rdx)
+; SCALAR-NEXT:    movb %r9b, 20(%rdx)
+; SCALAR-NEXT:    movb %r8b, 19(%rdx)
+; SCALAR-NEXT:    movb %cl, 18(%rdx)
+; SCALAR-NEXT:    movb %dil, 17(%rdx)
+; SCALAR-NEXT:    movb %al, 16(%rdx)
+; SCALAR-NEXT:    movb %bl, 31(%rdx)
+; SCALAR-NEXT:    movb %r11b, 30(%rdx)
+; SCALAR-NEXT:    movb %r10b, 29(%rdx)
+; SCALAR-NEXT:    movb %r9b, 28(%rdx)
+; SCALAR-NEXT:    movb %r8b, 27(%rdx)
+; SCALAR-NEXT:    movb %cl, 26(%rdx)
+; SCALAR-NEXT:    movb %dil, 25(%rdx)
+; SCALAR-NEXT:    movb %al, 24(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec256_v8i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec256_v8i8:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <8 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <8 x i8> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec256_v8i8:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vzeroupper
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec256_v8i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <8 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <8 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <8 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <8 x i8>, ptr %out.vec.ptr, i64 0
   store <8 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <8 x i8>, ptr %out.vec.ptr, i64 1
@@ -1316,62 +1570,73 @@ define void @vec256_v8i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v8i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v8i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v8i16:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw (%rdi), %ax
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subw 2(%rdi), %dx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subw 4(%rdi), %r8w
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subw 6(%rdi), %r9w
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subw 8(%rdi), %r10w
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subw 10(%rdi), %r11w
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subw 12(%rdi), %bx
-; SCALAR-NEXT:    subw 14(%rdi), %cx
-; SCALAR-NEXT:    movw %cx, 14(%rsi)
-; SCALAR-NEXT:    movw %bx, 12(%rsi)
-; SCALAR-NEXT:    movw %r11w, 10(%rsi)
-; SCALAR-NEXT:    movw %r10w, 8(%rsi)
-; SCALAR-NEXT:    movw %r9w, 6(%rsi)
-; SCALAR-NEXT:    movw %r8w, 4(%rsi)
-; SCALAR-NEXT:    movw %dx, 2(%rsi)
+; SCALAR-NEXT:    movzwl 14(%rdi), %ebx
+; SCALAR-NEXT:    movl 12(%rdi), %r11d
+; SCALAR-NEXT:    movzwl 10(%rdi), %r10d
+; SCALAR-NEXT:    movl 8(%rdi), %r9d
+; SCALAR-NEXT:    movzwl 6(%rdi), %r8d
+; SCALAR-NEXT:    movzwl 2(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    notl %r9d
+; SCALAR-NEXT:    notl %r10d
+; SCALAR-NEXT:    notl %r11d
+; SCALAR-NEXT:    notl %ebx
+; SCALAR-NEXT:    movw %bx, 14(%rsi)
+; SCALAR-NEXT:    movw %r11w, 12(%rsi)
+; SCALAR-NEXT:    movw %r10w, 10(%rsi)
+; SCALAR-NEXT:    movw %r9w, 8(%rsi)
+; SCALAR-NEXT:    movw %r8w, 6(%rsi)
+; SCALAR-NEXT:    movw %di, 4(%rsi)
+; SCALAR-NEXT:    movw %cx, 2(%rsi)
 ; SCALAR-NEXT:    movw %ax, (%rsi)
-; SCALAR-NEXT:    movw %cx, 30(%rsi)
-; SCALAR-NEXT:    movw %bx, 28(%rsi)
-; SCALAR-NEXT:    movw %r11w, 26(%rsi)
-; SCALAR-NEXT:    movw %r10w, 24(%rsi)
-; SCALAR-NEXT:    movw %r9w, 22(%rsi)
-; SCALAR-NEXT:    movw %r8w, 20(%rsi)
-; SCALAR-NEXT:    movw %dx, 18(%rsi)
-; SCALAR-NEXT:    movw %ax, 16(%rsi)
+; SCALAR-NEXT:    movw %bx, 14(%rdx)
+; SCALAR-NEXT:    movw %r11w, 12(%rdx)
+; SCALAR-NEXT:    movw %r10w, 10(%rdx)
+; SCALAR-NEXT:    movw %r9w, 8(%rdx)
+; SCALAR-NEXT:    movw %r8w, 6(%rdx)
+; SCALAR-NEXT:    movw %di, 4(%rdx)
+; SCALAR-NEXT:    movw %cx, 2(%rdx)
+; SCALAR-NEXT:    movw %ax, (%rdx)
+; SCALAR-NEXT:    movw %bx, 30(%rdx)
+; SCALAR-NEXT:    movw %r11w, 28(%rdx)
+; SCALAR-NEXT:    movw %r10w, 26(%rdx)
+; SCALAR-NEXT:    movw %r9w, 24(%rdx)
+; SCALAR-NEXT:    movw %r8w, 22(%rdx)
+; SCALAR-NEXT:    movw %di, 20(%rdx)
+; SCALAR-NEXT:    movw %cx, 18(%rdx)
+; SCALAR-NEXT:    movw %ax, 16(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec256_v8i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubw (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec256_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <8 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <8 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <8 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <8 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  store <8 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <8 x i16>, ptr %out.vec.ptr, i64 0
   store <8 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <8 x i16>, ptr %out.vec.ptr, i64 1
@@ -1379,7 +1644,7 @@ define void @vec256_v8i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec256_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec256_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec256_v16i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbp
@@ -1388,82 +1653,129 @@ define void @vec256_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-NEXT:    pushq %r13
 ; SCALAR-NEXT:    pushq %r12
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 2(%rdi), %al
-; SCALAR-NEXT:    movl %eax, %r8d
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 3(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 4(%rdi), %al
-; SCALAR-NEXT:    movl %eax, %r9d
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subb 5(%rdi), %r10b
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subb 6(%rdi), %r11b
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subb 7(%rdi), %bl
-; SCALAR-NEXT:    xorl %ebp, %ebp
-; SCALAR-NEXT:    subb 8(%rdi), %bpl
-; SCALAR-NEXT:    xorl %r14d, %r14d
-; SCALAR-NEXT:    subb 9(%rdi), %r14b
-; SCALAR-NEXT:    xorl %r15d, %r15d
-; SCALAR-NEXT:    subb 10(%rdi), %r15b
-; SCALAR-NEXT:    xorl %r12d, %r12d
-; SCALAR-NEXT:    subb 11(%rdi), %r12b
-; SCALAR-NEXT:    xorl %r13d, %r13d
-; SCALAR-NEXT:    subb 12(%rdi), %r13b
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subb 13(%rdi), %dl
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb 14(%rdi), %cl
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 15(%rdi), %al
-; SCALAR-NEXT:    movb %al, 15(%rsi)
-; SCALAR-NEXT:    movb %cl, 14(%rsi)
-; SCALAR-NEXT:    movb %dl, 13(%rsi)
-; SCALAR-NEXT:    movb %r13b, 12(%rsi)
-; SCALAR-NEXT:    movb %r12b, 11(%rsi)
-; SCALAR-NEXT:    movb %r15b, 10(%rsi)
-; SCALAR-NEXT:    movb %r14b, 9(%rsi)
-; SCALAR-NEXT:    movb %bpl, 8(%rsi)
-; SCALAR-NEXT:    movb %bl, 7(%rsi)
-; SCALAR-NEXT:    movb %r11b, 6(%rsi)
-; SCALAR-NEXT:    movb %r10b, 5(%rsi)
-; SCALAR-NEXT:    movb %r9b, 4(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 4-byte Reload
-; SCALAR-NEXT:    movb %r9b, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
-; SCALAR-NEXT:    movb %r8b, 1(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, (%rsi)
-; SCALAR-NEXT:    movb %al, 31(%rsi)
-; SCALAR-NEXT:    movb %cl, 30(%rsi)
-; SCALAR-NEXT:    movb %dl, 29(%rsi)
-; SCALAR-NEXT:    movb %r13b, 28(%rsi)
-; SCALAR-NEXT:    movb %r12b, 27(%rsi)
-; SCALAR-NEXT:    movb %r15b, 26(%rsi)
-; SCALAR-NEXT:    movb %r14b, 25(%rsi)
-; SCALAR-NEXT:    movb %bpl, 24(%rsi)
-; SCALAR-NEXT:    movb %bl, 23(%rsi)
-; SCALAR-NEXT:    movb %r11b, 22(%rsi)
-; SCALAR-NEXT:    movb %r10b, 21(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 20(%rsi)
-; SCALAR-NEXT:    movb %r9b, 19(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 18(%rsi)
-; SCALAR-NEXT:    movb %r8b, 17(%rsi)
-; SCALAR-NEXT:    movb %dil, 16(%rsi)
+; SCALAR-NEXT:    movzbl 15(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 14(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 13(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 12(%rdi), %r15d
+; SCALAR-NEXT:    movzbl 11(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 10(%rdi), %ebp
+; SCALAR-NEXT:    movzbl 9(%rdi), %r14d
+; SCALAR-NEXT:    movzbl 8(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 7(%rdi), %r12d
+; SCALAR-NEXT:    movzbl 6(%rdi), %r10d
+; SCALAR-NEXT:    movzbl 5(%rdi), %r9d
+; SCALAR-NEXT:    movzbl 4(%rdi), %ebx
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %r13d
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r13b
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %bl
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    movb %r10b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r12b
+; SCALAR-NEXT:    movb %r12b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movl %r14d, %r10d
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    notb %bpl
+; SCALAR-NEXT:    movl %ebp, %r14d
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movl %r15d, %edi
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    movb %dil, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebp # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %bpl
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r15d # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %r15b
+; SCALAR-NEXT:    movb %r15b, 15(%rsi)
+; SCALAR-NEXT:    movb %bpl, 14(%rsi)
+; SCALAR-NEXT:    movb %bpl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movl %r9d, %eax
+; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %r9b, 13(%rsi)
+; SCALAR-NEXT:    movb %dil, 12(%rsi)
+; SCALAR-NEXT:    movb %r8b, 11(%rsi)
+; SCALAR-NEXT:    movb %r14b, 10(%rsi)
+; SCALAR-NEXT:    movb %r10b, 9(%rsi)
+; SCALAR-NEXT:    movl %r10d, %r8d
+; SCALAR-NEXT:    movb %r11b, 8(%rsi)
+; SCALAR-NEXT:    movl %r11d, %r9d
+; SCALAR-NEXT:    movb %r11b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %r12b, 7(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %cl, 6(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %dil, 5(%rsi)
+; SCALAR-NEXT:    movb %bl, 4(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %cl, 3(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %r13b, 1(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r10b, (%rsi)
+; SCALAR-NEXT:    movb %r15b, 15(%rdx)
+; SCALAR-NEXT:    movl %r15d, %r11d
+; SCALAR-NEXT:    movb %bpl, 14(%rdx)
+; SCALAR-NEXT:    movb %al, 13(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r12d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r12b, 12(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r15d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r15b, 11(%rdx)
+; SCALAR-NEXT:    movb %r14b, 10(%rdx)
+; SCALAR-NEXT:    movb %r8b, 9(%rdx)
+; SCALAR-NEXT:    movb %r9b, 8(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r9b, 7(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 6(%rdx)
+; SCALAR-NEXT:    movb %dil, 5(%rdx)
+; SCALAR-NEXT:    movb %bl, 4(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %r13b, 1(%rdx)
+; SCALAR-NEXT:    movl %r10d, %edi
+; SCALAR-NEXT:    movb %r10b, (%rdx)
+; SCALAR-NEXT:    movb %r11b, 31(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r10b, 30(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r10b, 29(%rdx)
+; SCALAR-NEXT:    movb %r12b, 28(%rdx)
+; SCALAR-NEXT:    movb %r15b, 27(%rdx)
+; SCALAR-NEXT:    movb %r14b, 26(%rdx)
+; SCALAR-NEXT:    movb %r8b, 25(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r10b, 24(%rdx)
+; SCALAR-NEXT:    movb %r9b, 23(%rdx)
+; SCALAR-NEXT:    movb %al, 22(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 21(%rdx)
+; SCALAR-NEXT:    movb %bl, 20(%rdx)
+; SCALAR-NEXT:    movb %sil, 19(%rdx)
+; SCALAR-NEXT:    movb %cl, 18(%rdx)
+; SCALAR-NEXT:    movb %r13b, 17(%rdx)
+; SCALAR-NEXT:    movb %dil, 16(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    popq %r12
 ; SCALAR-NEXT:    popq %r13
@@ -1474,21 +1786,24 @@ define void @vec256_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; SSE2-LABEL: vec256_v16i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubb (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec256_v16i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <16 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <16 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <16 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <16 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <16 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <16 x i8>, ptr %out.vec.ptr, i64 0
   store <16 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <16 x i8>, ptr %out.vec.ptr, i64 1
@@ -1496,97 +1811,154 @@ define void @vec256_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v2i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v2i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb (%rdi), %cl
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movb %al, 1(%rsi)
-; SCALAR-NEXT:    movb %cl, (%rsi)
-; SCALAR-NEXT:    movb %al, 3(%rsi)
-; SCALAR-NEXT:    movb %cl, 2(%rsi)
-; SCALAR-NEXT:    movb %al, 5(%rsi)
-; SCALAR-NEXT:    movb %cl, 4(%rsi)
-; SCALAR-NEXT:    movb %al, 7(%rsi)
-; SCALAR-NEXT:    movb %cl, 6(%rsi)
-; SCALAR-NEXT:    movb %al, 9(%rsi)
-; SCALAR-NEXT:    movb %cl, 8(%rsi)
-; SCALAR-NEXT:    movb %al, 11(%rsi)
-; SCALAR-NEXT:    movb %cl, 10(%rsi)
-; SCALAR-NEXT:    movb %al, 13(%rsi)
-; SCALAR-NEXT:    movb %cl, 12(%rsi)
-; SCALAR-NEXT:    movb %al, 15(%rsi)
-; SCALAR-NEXT:    movb %cl, 14(%rsi)
-; SCALAR-NEXT:    movb %al, 17(%rsi)
-; SCALAR-NEXT:    movb %cl, 16(%rsi)
-; SCALAR-NEXT:    movb %al, 19(%rsi)
-; SCALAR-NEXT:    movb %cl, 18(%rsi)
-; SCALAR-NEXT:    movb %al, 21(%rsi)
-; SCALAR-NEXT:    movb %cl, 20(%rsi)
-; SCALAR-NEXT:    movb %al, 23(%rsi)
-; SCALAR-NEXT:    movb %cl, 22(%rsi)
-; SCALAR-NEXT:    movb %al, 25(%rsi)
-; SCALAR-NEXT:    movb %cl, 24(%rsi)
-; SCALAR-NEXT:    movb %al, 27(%rsi)
-; SCALAR-NEXT:    movb %cl, 26(%rsi)
-; SCALAR-NEXT:    movb %al, 29(%rsi)
-; SCALAR-NEXT:    movb %cl, 28(%rsi)
-; SCALAR-NEXT:    movb %al, 31(%rsi)
-; SCALAR-NEXT:    movb %cl, 30(%rsi)
-; SCALAR-NEXT:    movb %al, 33(%rsi)
-; SCALAR-NEXT:    movb %cl, 32(%rsi)
-; SCALAR-NEXT:    movb %al, 35(%rsi)
-; SCALAR-NEXT:    movb %cl, 34(%rsi)
-; SCALAR-NEXT:    movb %al, 37(%rsi)
-; SCALAR-NEXT:    movb %cl, 36(%rsi)
-; SCALAR-NEXT:    movb %al, 39(%rsi)
-; SCALAR-NEXT:    movb %cl, 38(%rsi)
-; SCALAR-NEXT:    movb %al, 41(%rsi)
-; SCALAR-NEXT:    movb %cl, 40(%rsi)
-; SCALAR-NEXT:    movb %al, 43(%rsi)
-; SCALAR-NEXT:    movb %cl, 42(%rsi)
-; SCALAR-NEXT:    movb %al, 45(%rsi)
-; SCALAR-NEXT:    movb %cl, 44(%rsi)
-; SCALAR-NEXT:    movb %al, 47(%rsi)
-; SCALAR-NEXT:    movb %cl, 46(%rsi)
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %ecx
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movb %al, (%rsi)
+; SCALAR-NEXT:    movb %cl, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %cl, 3(%rdx)
+; SCALAR-NEXT:    movb %al, 2(%rdx)
+; SCALAR-NEXT:    movb %cl, 5(%rdx)
+; SCALAR-NEXT:    movb %al, 4(%rdx)
+; SCALAR-NEXT:    movb %cl, 7(%rdx)
+; SCALAR-NEXT:    movb %al, 6(%rdx)
+; SCALAR-NEXT:    movb %cl, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %cl, 11(%rdx)
+; SCALAR-NEXT:    movb %al, 10(%rdx)
+; SCALAR-NEXT:    movb %cl, 13(%rdx)
+; SCALAR-NEXT:    movb %al, 12(%rdx)
+; SCALAR-NEXT:    movb %cl, 15(%rdx)
+; SCALAR-NEXT:    movb %al, 14(%rdx)
+; SCALAR-NEXT:    movb %cl, 17(%rdx)
+; SCALAR-NEXT:    movb %al, 16(%rdx)
+; SCALAR-NEXT:    movb %cl, 19(%rdx)
+; SCALAR-NEXT:    movb %al, 18(%rdx)
+; SCALAR-NEXT:    movb %cl, 21(%rdx)
+; SCALAR-NEXT:    movb %al, 20(%rdx)
+; SCALAR-NEXT:    movb %cl, 23(%rdx)
+; SCALAR-NEXT:    movb %al, 22(%rdx)
+; SCALAR-NEXT:    movb %cl, 25(%rdx)
+; SCALAR-NEXT:    movb %al, 24(%rdx)
+; SCALAR-NEXT:    movb %cl, 27(%rdx)
+; SCALAR-NEXT:    movb %al, 26(%rdx)
+; SCALAR-NEXT:    movb %cl, 29(%rdx)
+; SCALAR-NEXT:    movb %al, 28(%rdx)
+; SCALAR-NEXT:    movb %cl, 31(%rdx)
+; SCALAR-NEXT:    movb %al, 30(%rdx)
+; SCALAR-NEXT:    movb %cl, 33(%rdx)
+; SCALAR-NEXT:    movb %al, 32(%rdx)
+; SCALAR-NEXT:    movb %cl, 35(%rdx)
+; SCALAR-NEXT:    movb %al, 34(%rdx)
+; SCALAR-NEXT:    movb %cl, 37(%rdx)
+; SCALAR-NEXT:    movb %al, 36(%rdx)
+; SCALAR-NEXT:    movb %cl, 39(%rdx)
+; SCALAR-NEXT:    movb %al, 38(%rdx)
+; SCALAR-NEXT:    movb %cl, 41(%rdx)
+; SCALAR-NEXT:    movb %al, 40(%rdx)
+; SCALAR-NEXT:    movb %cl, 43(%rdx)
+; SCALAR-NEXT:    movb %al, 42(%rdx)
+; SCALAR-NEXT:    movb %cl, 45(%rdx)
+; SCALAR-NEXT:    movb %al, 44(%rdx)
+; SCALAR-NEXT:    movb %cl, 47(%rdx)
+; SCALAR-NEXT:    movb %al, 46(%rdx)
 ; SCALAR-NEXT:    retq
 ;
-; SSE2-LABEL: vec384_v2i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
-; SSE2-NEXT:    retq
+; SSE2-ONLY-LABEL: vec384_v2i8:
+; SSE2-ONLY:       # %bb.0:
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-ONLY-NEXT:    pxor (%rdi), %xmm0
+; SSE2-ONLY-NEXT:    movd %xmm0, %eax
+; SSE2-ONLY-NEXT:    movw %ax, (%rsi)
+; SSE2-ONLY-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-ONLY-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-ONLY-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-ONLY-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-ONLY-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-ONLY-NEXT:    retq
+;
+; SSE3-LABEL: vec384_v2i8:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE3-NEXT:    pxor (%rdi), %xmm0
+; SSE3-NEXT:    movd %xmm0, %eax
+; SSE3-NEXT:    movw %ax, (%rsi)
+; SSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE3-NEXT:    movdqa %xmm0, (%rdx)
+; SSE3-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE3-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE3-NEXT:    retq
+;
+; SSSE3-ONLY-LABEL: vec384_v2i8:
+; SSSE3-ONLY:       # %bb.0:
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSSE3-ONLY-NEXT:    pxor (%rdi), %xmm0
+; SSSE3-ONLY-NEXT:    movd %xmm0, %eax
+; SSSE3-ONLY-NEXT:    movw %ax, (%rsi)
+; SSSE3-ONLY-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSSE3-ONLY-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, (%rdx)
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSSE3-ONLY-NEXT:    retq
+;
+; SSE41-LABEL: vec384_v2i8:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor (%rdi), %xmm0
+; SSE41-NEXT:    pextrw $0, %xmm0, (%rsi)
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE41-NEXT:    movdqa %xmm0, (%rdx)
+; SSE41-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE41-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE41-NEXT:    retq
+;
+; SSE42-LABEL: vec384_v2i8:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE42-NEXT:    pxor (%rdi), %xmm0
+; SSE42-NEXT:    pextrw $0, %xmm0, (%rsi)
+; SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE42-NEXT:    movdqa %xmm0, (%rdx)
+; SSE42-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE42-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v2i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = mem[0,0,0,0,4,5,6,7]
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpextrw $0, %xmm0, (%rsi)
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX1-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v2i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX2-NEXT:    vpbroadcastw %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i8> %in.subvec.not, <i8 -1, i8 -1>
+  store <2 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 0
   store <2 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 1
@@ -1638,71 +2010,76 @@ define void @vec384_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v2i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v2i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw (%rdi), %cx
-; SCALAR-NEXT:    subw 2(%rdi), %ax
-; SCALAR-NEXT:    movw %ax, 2(%rsi)
-; SCALAR-NEXT:    movw %cx, (%rsi)
-; SCALAR-NEXT:    movw %ax, 6(%rsi)
-; SCALAR-NEXT:    movw %cx, 4(%rsi)
-; SCALAR-NEXT:    movw %ax, 10(%rsi)
-; SCALAR-NEXT:    movw %cx, 8(%rsi)
-; SCALAR-NEXT:    movw %ax, 14(%rsi)
-; SCALAR-NEXT:    movw %cx, 12(%rsi)
-; SCALAR-NEXT:    movw %ax, 18(%rsi)
-; SCALAR-NEXT:    movw %cx, 16(%rsi)
-; SCALAR-NEXT:    movw %ax, 22(%rsi)
-; SCALAR-NEXT:    movw %cx, 20(%rsi)
-; SCALAR-NEXT:    movw %ax, 26(%rsi)
-; SCALAR-NEXT:    movw %cx, 24(%rsi)
-; SCALAR-NEXT:    movw %ax, 30(%rsi)
-; SCALAR-NEXT:    movw %cx, 28(%rsi)
-; SCALAR-NEXT:    movw %ax, 34(%rsi)
-; SCALAR-NEXT:    movw %cx, 32(%rsi)
-; SCALAR-NEXT:    movw %ax, 38(%rsi)
-; SCALAR-NEXT:    movw %cx, 36(%rsi)
-; SCALAR-NEXT:    movw %ax, 42(%rsi)
-; SCALAR-NEXT:    movw %cx, 40(%rsi)
-; SCALAR-NEXT:    movw %ax, 46(%rsi)
-; SCALAR-NEXT:    movw %cx, 44(%rsi)
+; SCALAR-NEXT:    movzwl 2(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movw %cx, 2(%rsi)
+; SCALAR-NEXT:    movw %ax, (%rsi)
+; SCALAR-NEXT:    movw %cx, 2(%rdx)
+; SCALAR-NEXT:    movw %ax, (%rdx)
+; SCALAR-NEXT:    movw %cx, 6(%rdx)
+; SCALAR-NEXT:    movw %ax, 4(%rdx)
+; SCALAR-NEXT:    movw %cx, 10(%rdx)
+; SCALAR-NEXT:    movw %ax, 8(%rdx)
+; SCALAR-NEXT:    movw %cx, 14(%rdx)
+; SCALAR-NEXT:    movw %ax, 12(%rdx)
+; SCALAR-NEXT:    movw %cx, 18(%rdx)
+; SCALAR-NEXT:    movw %ax, 16(%rdx)
+; SCALAR-NEXT:    movw %cx, 22(%rdx)
+; SCALAR-NEXT:    movw %ax, 20(%rdx)
+; SCALAR-NEXT:    movw %cx, 26(%rdx)
+; SCALAR-NEXT:    movw %ax, 24(%rdx)
+; SCALAR-NEXT:    movw %cx, 30(%rdx)
+; SCALAR-NEXT:    movw %ax, 28(%rdx)
+; SCALAR-NEXT:    movw %cx, 34(%rdx)
+; SCALAR-NEXT:    movw %ax, 32(%rdx)
+; SCALAR-NEXT:    movw %cx, 38(%rdx)
+; SCALAR-NEXT:    movw %ax, 36(%rdx)
+; SCALAR-NEXT:    movw %cx, 42(%rdx)
+; SCALAR-NEXT:    movw %ax, 40(%rdx)
+; SCALAR-NEXT:    movw %cx, 46(%rdx)
+; SCALAR-NEXT:    movw %ax, 44(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v2i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v2i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX1-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v2i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i16> %in.subvec.not, <i16 -1, i16 -1>
+  store <2 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 0
   store <2 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 1
@@ -1730,61 +2107,79 @@ define void @vec384_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v2i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v2i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v2i32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    subl 4(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
-; SCALAR-NEXT:    movl %eax, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %ecx, 24(%rsi)
-; SCALAR-NEXT:    movl %eax, 36(%rsi)
-; SCALAR-NEXT:    movl %ecx, 32(%rsi)
-; SCALAR-NEXT:    movl %eax, 44(%rsi)
-; SCALAR-NEXT:    movl %ecx, 40(%rsi)
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %ecx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl %ecx, 4(%rsi)
+; SCALAR-NEXT:    movl %eax, (%rsi)
+; SCALAR-NEXT:    movl %ecx, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ecx, 12(%rdx)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movl %ecx, 20(%rdx)
+; SCALAR-NEXT:    movl %eax, 16(%rdx)
+; SCALAR-NEXT:    movl %ecx, 28(%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
+; SCALAR-NEXT:    movl %ecx, 36(%rdx)
+; SCALAR-NEXT:    movl %eax, 32(%rdx)
+; SCALAR-NEXT:    movl %ecx, 44(%rdx)
+; SCALAR-NEXT:    movl %eax, 40(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v2i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v2i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX1-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec384_v2i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i32> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec384_v2i32:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX2-ONLY-NEXT:    vzeroupper
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec384_v2i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <2 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i32> %in.subvec.not, <i32 -1, i32 -1>
+  store <2 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i32>, ptr %out.vec.ptr, i64 0
   store <2 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i32>, ptr %out.vec.ptr, i64 1
@@ -1800,62 +2195,80 @@ define void @vec384_v2i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v2f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v2f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v2f32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    subl 4(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
-; SCALAR-NEXT:    movl %eax, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %ecx, 24(%rsi)
-; SCALAR-NEXT:    movl %eax, 36(%rsi)
-; SCALAR-NEXT:    movl %ecx, 32(%rsi)
-; SCALAR-NEXT:    movl %eax, 44(%rsi)
-; SCALAR-NEXT:    movl %ecx, 40(%rsi)
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %ecx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl %ecx, 4(%rsi)
+; SCALAR-NEXT:    movl %eax, (%rsi)
+; SCALAR-NEXT:    movl %ecx, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ecx, 12(%rdx)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movl %ecx, 20(%rdx)
+; SCALAR-NEXT:    movl %eax, 16(%rdx)
+; SCALAR-NEXT:    movl %ecx, 28(%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
+; SCALAR-NEXT:    movl %ecx, 36(%rdx)
+; SCALAR-NEXT:    movl %eax, 32(%rdx)
+; SCALAR-NEXT:    movl %ecx, 44(%rdx)
+; SCALAR-NEXT:    movl %eax, 40(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v2f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v2f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX1-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec384_v2f32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <2 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <2 x i32> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec384_v2f32:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX2-ONLY-NEXT:    vzeroupper
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec384_v2f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <2 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <2 x i32> %in.subvec.not, <i32 -1, i32 -1>
   %in.subvec = bitcast <2 x i32> %in.subvec.int to <2 x float>
+  store <2 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x float>, ptr %out.vec.ptr, i64 0
   store <2 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x float>, ptr %out.vec.ptr, i64 1
@@ -1871,40 +2284,45 @@ define void @vec384_v2f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v2i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v2i64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v2i64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq (%rdi), %rcx
-; SCALAR-NEXT:    subq 8(%rdi), %rax
-; SCALAR-NEXT:    movq %rax, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, (%rsi)
-; SCALAR-NEXT:    movq %rax, 24(%rsi)
-; SCALAR-NEXT:    movq %rcx, 16(%rsi)
-; SCALAR-NEXT:    movq %rax, 40(%rsi)
-; SCALAR-NEXT:    movq %rcx, 32(%rsi)
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 24(%rdx)
+; SCALAR-NEXT:    movq %rax, 16(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubq (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <2 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i64> %in.subvec.not, <i64 -1, i64 -1>
+  store <2 x i64> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i64>, ptr %out.vec.ptr, i64 0
   store <2 x i64> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i64>, ptr %out.vec.ptr, i64 1
@@ -1914,41 +2332,46 @@ define void @vec384_v2i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v2f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v2f64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v2f64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq (%rdi), %rcx
-; SCALAR-NEXT:    subq 8(%rdi), %rax
-; SCALAR-NEXT:    movq %rax, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, (%rsi)
-; SCALAR-NEXT:    movq %rax, 24(%rsi)
-; SCALAR-NEXT:    movq %rcx, 16(%rsi)
-; SCALAR-NEXT:    movq %rax, 40(%rsi)
-; SCALAR-NEXT:    movq %rcx, 32(%rsi)
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 24(%rdx)
+; SCALAR-NEXT:    movq %rax, 16(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v2f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubq (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <2 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <2 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <2 x i64> %in.subvec.not, <i64 -1, i64 -1>
   %in.subvec = bitcast <2 x i64> %in.subvec.int to <2 x double>
+  store <2 x double> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x double>, ptr %out.vec.ptr, i64 0
   store <2 x double> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x double>, ptr %out.vec.ptr, i64 1
@@ -1958,302 +2381,400 @@ define void @vec384_v2f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v3i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v3i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v3i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movl (%rdi), %ecx
 ; SCALAR-NEXT:    movl %ecx, %eax
 ; SCALAR-NEXT:    shrl $16, %eax
-; SCALAR-NEXT:    movl %ecx, %edx
-; SCALAR-NEXT:    shrl $8, %edx
-; SCALAR-NEXT:    negb %cl
-; SCALAR-NEXT:    movzbl %cl, %edi
-; SCALAR-NEXT:    negb %dl
-; SCALAR-NEXT:    movzbl %dl, %ecx
+; SCALAR-NEXT:    movl %ecx, %edi
+; SCALAR-NEXT:    shrl $8, %edi
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movzbl %cl, %r8d
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    movzbl %dil, %ecx
 ; SCALAR-NEXT:    shll $8, %ecx
-; SCALAR-NEXT:    orl %edi, %ecx
-; SCALAR-NEXT:    negb %al
+; SCALAR-NEXT:    orl %r8d, %ecx
+; SCALAR-NEXT:    notb %al
 ; SCALAR-NEXT:    movb %al, 2(%rsi)
 ; SCALAR-NEXT:    movw %cx, (%rsi)
-; SCALAR-NEXT:    movb %al, 6(%rsi)
-; SCALAR-NEXT:    movw %cx, 4(%rsi)
-; SCALAR-NEXT:    movb %al, 10(%rsi)
-; SCALAR-NEXT:    movw %cx, 8(%rsi)
-; SCALAR-NEXT:    movb %al, 14(%rsi)
-; SCALAR-NEXT:    movw %cx, 12(%rsi)
-; SCALAR-NEXT:    movb %al, 18(%rsi)
-; SCALAR-NEXT:    movw %cx, 16(%rsi)
-; SCALAR-NEXT:    movb %al, 22(%rsi)
-; SCALAR-NEXT:    movw %cx, 20(%rsi)
-; SCALAR-NEXT:    movb %al, 26(%rsi)
-; SCALAR-NEXT:    movw %cx, 24(%rsi)
-; SCALAR-NEXT:    movb %al, 30(%rsi)
-; SCALAR-NEXT:    movw %cx, 28(%rsi)
-; SCALAR-NEXT:    movb %al, 34(%rsi)
-; SCALAR-NEXT:    movw %cx, 32(%rsi)
-; SCALAR-NEXT:    movb %al, 38(%rsi)
-; SCALAR-NEXT:    movw %cx, 36(%rsi)
-; SCALAR-NEXT:    movb %al, 42(%rsi)
-; SCALAR-NEXT:    movw %cx, 40(%rsi)
-; SCALAR-NEXT:    movb %al, 46(%rsi)
-; SCALAR-NEXT:    movw %cx, 44(%rsi)
-; SCALAR-NEXT:    movb %al, 50(%rsi)
-; SCALAR-NEXT:    movw %cx, 48(%rsi)
-; SCALAR-NEXT:    movb %al, 54(%rsi)
-; SCALAR-NEXT:    movw %cx, 52(%rsi)
-; SCALAR-NEXT:    movb %al, 58(%rsi)
-; SCALAR-NEXT:    movw %cx, 56(%rsi)
-; SCALAR-NEXT:    movb %al, 62(%rsi)
-; SCALAR-NEXT:    movw %cx, 60(%rsi)
+; SCALAR-NEXT:    movb %al, 2(%rdx)
+; SCALAR-NEXT:    movw %cx, (%rdx)
+; SCALAR-NEXT:    movb %al, 6(%rdx)
+; SCALAR-NEXT:    movw %cx, 4(%rdx)
+; SCALAR-NEXT:    movb %al, 10(%rdx)
+; SCALAR-NEXT:    movw %cx, 8(%rdx)
+; SCALAR-NEXT:    movb %al, 14(%rdx)
+; SCALAR-NEXT:    movw %cx, 12(%rdx)
+; SCALAR-NEXT:    movb %al, 18(%rdx)
+; SCALAR-NEXT:    movw %cx, 16(%rdx)
+; SCALAR-NEXT:    movb %al, 22(%rdx)
+; SCALAR-NEXT:    movw %cx, 20(%rdx)
+; SCALAR-NEXT:    movb %al, 26(%rdx)
+; SCALAR-NEXT:    movw %cx, 24(%rdx)
+; SCALAR-NEXT:    movb %al, 30(%rdx)
+; SCALAR-NEXT:    movw %cx, 28(%rdx)
+; SCALAR-NEXT:    movb %al, 34(%rdx)
+; SCALAR-NEXT:    movw %cx, 32(%rdx)
+; SCALAR-NEXT:    movb %al, 38(%rdx)
+; SCALAR-NEXT:    movw %cx, 36(%rdx)
+; SCALAR-NEXT:    movb %al, 42(%rdx)
+; SCALAR-NEXT:    movw %cx, 40(%rdx)
+; SCALAR-NEXT:    movb %al, 46(%rdx)
+; SCALAR-NEXT:    movw %cx, 44(%rdx)
+; SCALAR-NEXT:    movb %al, 50(%rdx)
+; SCALAR-NEXT:    movw %cx, 48(%rdx)
+; SCALAR-NEXT:    movb %al, 54(%rdx)
+; SCALAR-NEXT:    movw %cx, 52(%rdx)
+; SCALAR-NEXT:    movb %al, 58(%rdx)
+; SCALAR-NEXT:    movw %cx, 56(%rdx)
+; SCALAR-NEXT:    movb %al, 62(%rdx)
+; SCALAR-NEXT:    movw %cx, 60(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-ONLY-LABEL: vec384_v3i8:
 ; SSE2-ONLY:       # %bb.0:
 ; SSE2-ONLY-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-ONLY-NEXT:    pxor %xmm1, %xmm1
-; SSE2-ONLY-NEXT:    psubb %xmm0, %xmm1
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-ONLY-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-ONLY-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-ONLY-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-ONLY-NEXT:    movb %al, 2(%rsi)
 ; SSE2-ONLY-NEXT:    movd %xmm1, %ecx
 ; SSE2-ONLY-NEXT:    movw %cx, (%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 6(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 4(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 10(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 8(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 14(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 12(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 18(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 16(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 22(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 20(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 26(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 24(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 30(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 28(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 34(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 32(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 38(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 36(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 42(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 40(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 46(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 44(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 50(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 48(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 54(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 52(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 58(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 56(%rsi)
-; SSE2-ONLY-NEXT:    movb %al, 62(%rsi)
-; SSE2-ONLY-NEXT:    movw %cx, 60(%rsi)
+; SSE2-ONLY-NEXT:    movb %al, 2(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, (%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 6(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 4(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 10(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 8(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 14(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 12(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 18(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 16(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 22(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 20(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 26(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 24(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 30(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 28(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 34(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 32(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 38(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 36(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 42(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 40(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 46(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 44(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 50(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 48(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 54(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 52(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 58(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 56(%rdx)
+; SSE2-ONLY-NEXT:    movb %al, 62(%rdx)
+; SSE2-ONLY-NEXT:    movw %cx, 60(%rdx)
 ; SSE2-ONLY-NEXT:    retq
 ;
 ; SSE3-LABEL: vec384_v3i8:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE3-NEXT:    pxor %xmm1, %xmm1
-; SSE3-NEXT:    psubb %xmm0, %xmm1
+; SSE3-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE3-NEXT:    pxor %xmm0, %xmm1
 ; SSE3-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE3-NEXT:    movb %al, 2(%rsi)
 ; SSE3-NEXT:    movd %xmm1, %ecx
 ; SSE3-NEXT:    movw %cx, (%rsi)
-; SSE3-NEXT:    movb %al, 6(%rsi)
-; SSE3-NEXT:    movw %cx, 4(%rsi)
-; SSE3-NEXT:    movb %al, 10(%rsi)
-; SSE3-NEXT:    movw %cx, 8(%rsi)
-; SSE3-NEXT:    movb %al, 14(%rsi)
-; SSE3-NEXT:    movw %cx, 12(%rsi)
-; SSE3-NEXT:    movb %al, 18(%rsi)
-; SSE3-NEXT:    movw %cx, 16(%rsi)
-; SSE3-NEXT:    movb %al, 22(%rsi)
-; SSE3-NEXT:    movw %cx, 20(%rsi)
-; SSE3-NEXT:    movb %al, 26(%rsi)
-; SSE3-NEXT:    movw %cx, 24(%rsi)
-; SSE3-NEXT:    movb %al, 30(%rsi)
-; SSE3-NEXT:    movw %cx, 28(%rsi)
-; SSE3-NEXT:    movb %al, 34(%rsi)
-; SSE3-NEXT:    movw %cx, 32(%rsi)
-; SSE3-NEXT:    movb %al, 38(%rsi)
-; SSE3-NEXT:    movw %cx, 36(%rsi)
-; SSE3-NEXT:    movb %al, 42(%rsi)
-; SSE3-NEXT:    movw %cx, 40(%rsi)
-; SSE3-NEXT:    movb %al, 46(%rsi)
-; SSE3-NEXT:    movw %cx, 44(%rsi)
-; SSE3-NEXT:    movb %al, 50(%rsi)
-; SSE3-NEXT:    movw %cx, 48(%rsi)
-; SSE3-NEXT:    movb %al, 54(%rsi)
-; SSE3-NEXT:    movw %cx, 52(%rsi)
-; SSE3-NEXT:    movb %al, 58(%rsi)
-; SSE3-NEXT:    movw %cx, 56(%rsi)
-; SSE3-NEXT:    movb %al, 62(%rsi)
-; SSE3-NEXT:    movw %cx, 60(%rsi)
+; SSE3-NEXT:    movb %al, 2(%rdx)
+; SSE3-NEXT:    movw %cx, (%rdx)
+; SSE3-NEXT:    movb %al, 6(%rdx)
+; SSE3-NEXT:    movw %cx, 4(%rdx)
+; SSE3-NEXT:    movb %al, 10(%rdx)
+; SSE3-NEXT:    movw %cx, 8(%rdx)
+; SSE3-NEXT:    movb %al, 14(%rdx)
+; SSE3-NEXT:    movw %cx, 12(%rdx)
+; SSE3-NEXT:    movb %al, 18(%rdx)
+; SSE3-NEXT:    movw %cx, 16(%rdx)
+; SSE3-NEXT:    movb %al, 22(%rdx)
+; SSE3-NEXT:    movw %cx, 20(%rdx)
+; SSE3-NEXT:    movb %al, 26(%rdx)
+; SSE3-NEXT:    movw %cx, 24(%rdx)
+; SSE3-NEXT:    movb %al, 30(%rdx)
+; SSE3-NEXT:    movw %cx, 28(%rdx)
+; SSE3-NEXT:    movb %al, 34(%rdx)
+; SSE3-NEXT:    movw %cx, 32(%rdx)
+; SSE3-NEXT:    movb %al, 38(%rdx)
+; SSE3-NEXT:    movw %cx, 36(%rdx)
+; SSE3-NEXT:    movb %al, 42(%rdx)
+; SSE3-NEXT:    movw %cx, 40(%rdx)
+; SSE3-NEXT:    movb %al, 46(%rdx)
+; SSE3-NEXT:    movw %cx, 44(%rdx)
+; SSE3-NEXT:    movb %al, 50(%rdx)
+; SSE3-NEXT:    movw %cx, 48(%rdx)
+; SSE3-NEXT:    movb %al, 54(%rdx)
+; SSE3-NEXT:    movw %cx, 52(%rdx)
+; SSE3-NEXT:    movb %al, 58(%rdx)
+; SSE3-NEXT:    movw %cx, 56(%rdx)
+; SSE3-NEXT:    movb %al, 62(%rdx)
+; SSE3-NEXT:    movw %cx, 60(%rdx)
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-ONLY-LABEL: vec384_v3i8:
 ; SSSE3-ONLY:       # %bb.0:
 ; SSSE3-ONLY-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSSE3-ONLY-NEXT:    pxor %xmm1, %xmm1
-; SSSE3-ONLY-NEXT:    psubb %xmm0, %xmm1
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSSE3-ONLY-NEXT:    pxor %xmm0, %xmm1
 ; SSSE3-ONLY-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; SSSE3-ONLY-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSSE3-ONLY-NEXT:    movb %al, 2(%rsi)
 ; SSSE3-ONLY-NEXT:    movd %xmm1, %ecx
 ; SSSE3-ONLY-NEXT:    movw %cx, (%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 6(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 4(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 10(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 8(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 14(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 12(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 18(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 16(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 22(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 20(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 26(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 24(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 30(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 28(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 34(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 32(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 38(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 36(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 42(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 40(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 46(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 44(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 50(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 48(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 54(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 52(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 58(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 56(%rsi)
-; SSSE3-ONLY-NEXT:    movb %al, 62(%rsi)
-; SSSE3-ONLY-NEXT:    movw %cx, 60(%rsi)
+; SSSE3-ONLY-NEXT:    movb %al, 2(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, (%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 6(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 4(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 10(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 8(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 14(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 12(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 18(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 16(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 22(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 20(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 26(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 24(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 30(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 28(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 34(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 32(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 38(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 36(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 42(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 40(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 46(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 44(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 50(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 48(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 54(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 52(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 58(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 56(%rdx)
+; SSSE3-ONLY-NEXT:    movb %al, 62(%rdx)
+; SSSE3-ONLY-NEXT:    movw %cx, 60(%rdx)
 ; SSSE3-ONLY-NEXT:    retq
 ;
 ; SSE41-LABEL: vec384_v3i8:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    psubb %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    pextrb $2, %xmm0, 2(%rsi)
 ; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    movw %ax, (%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 6(%rsi)
-; SSE41-NEXT:    movw %ax, 4(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 10(%rsi)
-; SSE41-NEXT:    movw %ax, 8(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 14(%rsi)
-; SSE41-NEXT:    movw %ax, 12(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 18(%rsi)
-; SSE41-NEXT:    movw %ax, 16(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 22(%rsi)
-; SSE41-NEXT:    movw %ax, 20(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 26(%rsi)
-; SSE41-NEXT:    movw %ax, 24(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 30(%rsi)
-; SSE41-NEXT:    movw %ax, 28(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 34(%rsi)
-; SSE41-NEXT:    movw %ax, 32(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 38(%rsi)
-; SSE41-NEXT:    movw %ax, 36(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 42(%rsi)
-; SSE41-NEXT:    movw %ax, 40(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 46(%rsi)
-; SSE41-NEXT:    movw %ax, 44(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 50(%rsi)
-; SSE41-NEXT:    movw %ax, 48(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 54(%rsi)
-; SSE41-NEXT:    movw %ax, 52(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 58(%rsi)
-; SSE41-NEXT:    movw %ax, 56(%rsi)
-; SSE41-NEXT:    pextrb $2, %xmm0, 62(%rsi)
-; SSE41-NEXT:    movw %ax, 60(%rsi)
+; SSE41-NEXT:    pextrb $2, %xmm0, 2(%rdx)
+; SSE41-NEXT:    movw %ax, (%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 6(%rdx)
+; SSE41-NEXT:    movw %ax, 4(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 10(%rdx)
+; SSE41-NEXT:    movw %ax, 8(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 14(%rdx)
+; SSE41-NEXT:    movw %ax, 12(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 18(%rdx)
+; SSE41-NEXT:    movw %ax, 16(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 22(%rdx)
+; SSE41-NEXT:    movw %ax, 20(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 26(%rdx)
+; SSE41-NEXT:    movw %ax, 24(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 30(%rdx)
+; SSE41-NEXT:    movw %ax, 28(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 34(%rdx)
+; SSE41-NEXT:    movw %ax, 32(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 38(%rdx)
+; SSE41-NEXT:    movw %ax, 36(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 42(%rdx)
+; SSE41-NEXT:    movw %ax, 40(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 46(%rdx)
+; SSE41-NEXT:    movw %ax, 44(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 50(%rdx)
+; SSE41-NEXT:    movw %ax, 48(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 54(%rdx)
+; SSE41-NEXT:    movw %ax, 52(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 58(%rdx)
+; SSE41-NEXT:    movw %ax, 56(%rdx)
+; SSE41-NEXT:    pextrb $2, %xmm0, 62(%rdx)
+; SSE41-NEXT:    movw %ax, 60(%rdx)
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_v3i8:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE42-NEXT:    pxor %xmm0, %xmm0
-; SSE42-NEXT:    psubb %xmm1, %xmm0
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE42-NEXT:    pxor %xmm1, %xmm0
 ; SSE42-NEXT:    pextrb $2, %xmm0, 2(%rsi)
 ; SSE42-NEXT:    movd %xmm0, %eax
 ; SSE42-NEXT:    movw %ax, (%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 6(%rsi)
-; SSE42-NEXT:    movw %ax, 4(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 10(%rsi)
-; SSE42-NEXT:    movw %ax, 8(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 14(%rsi)
-; SSE42-NEXT:    movw %ax, 12(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 18(%rsi)
-; SSE42-NEXT:    movw %ax, 16(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 22(%rsi)
-; SSE42-NEXT:    movw %ax, 20(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 26(%rsi)
-; SSE42-NEXT:    movw %ax, 24(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 30(%rsi)
-; SSE42-NEXT:    movw %ax, 28(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 34(%rsi)
-; SSE42-NEXT:    movw %ax, 32(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 38(%rsi)
-; SSE42-NEXT:    movw %ax, 36(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 42(%rsi)
-; SSE42-NEXT:    movw %ax, 40(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 46(%rsi)
-; SSE42-NEXT:    movw %ax, 44(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 50(%rsi)
-; SSE42-NEXT:    movw %ax, 48(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 54(%rsi)
-; SSE42-NEXT:    movw %ax, 52(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 58(%rsi)
-; SSE42-NEXT:    movw %ax, 56(%rsi)
-; SSE42-NEXT:    pextrb $2, %xmm0, 62(%rsi)
-; SSE42-NEXT:    movw %ax, 60(%rsi)
+; SSE42-NEXT:    pextrb $2, %xmm0, 2(%rdx)
+; SSE42-NEXT:    movw %ax, (%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 6(%rdx)
+; SSE42-NEXT:    movw %ax, 4(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 10(%rdx)
+; SSE42-NEXT:    movw %ax, 8(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 14(%rdx)
+; SSE42-NEXT:    movw %ax, 12(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 18(%rdx)
+; SSE42-NEXT:    movw %ax, 16(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 22(%rdx)
+; SSE42-NEXT:    movw %ax, 20(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 26(%rdx)
+; SSE42-NEXT:    movw %ax, 24(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 30(%rdx)
+; SSE42-NEXT:    movw %ax, 28(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 34(%rdx)
+; SSE42-NEXT:    movw %ax, 32(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 38(%rdx)
+; SSE42-NEXT:    movw %ax, 36(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 42(%rdx)
+; SSE42-NEXT:    movw %ax, 40(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 46(%rdx)
+; SSE42-NEXT:    movw %ax, 44(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 50(%rdx)
+; SSE42-NEXT:    movw %ax, 48(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 54(%rdx)
+; SSE42-NEXT:    movw %ax, 52(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 58(%rdx)
+; SSE42-NEXT:    movw %ax, 56(%rdx)
+; SSE42-NEXT:    pextrb $2, %xmm0, 62(%rdx)
+; SSE42-NEXT:    movw %ax, 60(%rdx)
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: vec384_v3i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpextrb $2, %xmm0, 2(%rsi)
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    movw %ax, (%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 6(%rsi)
-; AVX-NEXT:    movw %ax, 4(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 10(%rsi)
-; AVX-NEXT:    movw %ax, 8(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 14(%rsi)
-; AVX-NEXT:    movw %ax, 12(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 18(%rsi)
-; AVX-NEXT:    movw %ax, 16(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 22(%rsi)
-; AVX-NEXT:    movw %ax, 20(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 26(%rsi)
-; AVX-NEXT:    movw %ax, 24(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 30(%rsi)
-; AVX-NEXT:    movw %ax, 28(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 34(%rsi)
-; AVX-NEXT:    movw %ax, 32(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 38(%rsi)
-; AVX-NEXT:    movw %ax, 36(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 42(%rsi)
-; AVX-NEXT:    movw %ax, 40(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 46(%rsi)
-; AVX-NEXT:    movw %ax, 44(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 50(%rsi)
-; AVX-NEXT:    movw %ax, 48(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 54(%rsi)
-; AVX-NEXT:    movw %ax, 52(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 58(%rsi)
-; AVX-NEXT:    movw %ax, 56(%rsi)
-; AVX-NEXT:    vpextrb $2, %xmm0, 62(%rsi)
-; AVX-NEXT:    movw %ax, 60(%rsi)
-; AVX-NEXT:    retq
-  %in.subvec.neg = load <3 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <3 x i8> zeroinitializer, %in.subvec.neg
+; AVX1-LABEL: vec384_v3i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpextrb $2, %xmm0, 2(%rsi)
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    movw %ax, (%rsi)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 2(%rdx)
+; AVX1-NEXT:    movw %ax, (%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 6(%rdx)
+; AVX1-NEXT:    movw %ax, 4(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 10(%rdx)
+; AVX1-NEXT:    movw %ax, 8(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 14(%rdx)
+; AVX1-NEXT:    movw %ax, 12(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 18(%rdx)
+; AVX1-NEXT:    movw %ax, 16(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 22(%rdx)
+; AVX1-NEXT:    movw %ax, 20(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 26(%rdx)
+; AVX1-NEXT:    movw %ax, 24(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 30(%rdx)
+; AVX1-NEXT:    movw %ax, 28(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 34(%rdx)
+; AVX1-NEXT:    movw %ax, 32(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 38(%rdx)
+; AVX1-NEXT:    movw %ax, 36(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 42(%rdx)
+; AVX1-NEXT:    movw %ax, 40(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 46(%rdx)
+; AVX1-NEXT:    movw %ax, 44(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 50(%rdx)
+; AVX1-NEXT:    movw %ax, 48(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 54(%rdx)
+; AVX1-NEXT:    movw %ax, 52(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 58(%rdx)
+; AVX1-NEXT:    movw %ax, 56(%rdx)
+; AVX1-NEXT:    vpextrb $2, %xmm0, 62(%rdx)
+; AVX1-NEXT:    movw %ax, 60(%rdx)
+; AVX1-NEXT:    retq
+;
+; AVX2-ONLY-LABEL: vec384_v3i8:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 2(%rsi)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, %eax
+; AVX2-ONLY-NEXT:    movw %ax, (%rsi)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 2(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, (%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 6(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 4(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 10(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 8(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 14(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 12(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 18(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 16(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 22(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 20(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 26(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 24(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 30(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 28(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 34(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 32(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 38(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 36(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 42(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 40(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 46(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 44(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 50(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 48(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 54(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 52(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 58(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 56(%rdx)
+; AVX2-ONLY-NEXT:    vpextrb $2, %xmm0, 62(%rdx)
+; AVX2-ONLY-NEXT:    movw %ax, 60(%rdx)
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec384_v3i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpextrb $2, %xmm0, 2(%rsi)
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    movw %ax, (%rsi)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 2(%rdx)
+; AVX512-NEXT:    movw %ax, (%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 6(%rdx)
+; AVX512-NEXT:    movw %ax, 4(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 10(%rdx)
+; AVX512-NEXT:    movw %ax, 8(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 14(%rdx)
+; AVX512-NEXT:    movw %ax, 12(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 18(%rdx)
+; AVX512-NEXT:    movw %ax, 16(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 22(%rdx)
+; AVX512-NEXT:    movw %ax, 20(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 26(%rdx)
+; AVX512-NEXT:    movw %ax, 24(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 30(%rdx)
+; AVX512-NEXT:    movw %ax, 28(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 34(%rdx)
+; AVX512-NEXT:    movw %ax, 32(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 38(%rdx)
+; AVX512-NEXT:    movw %ax, 36(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 42(%rdx)
+; AVX512-NEXT:    movw %ax, 40(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 46(%rdx)
+; AVX512-NEXT:    movw %ax, 44(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 50(%rdx)
+; AVX512-NEXT:    movw %ax, 48(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 54(%rdx)
+; AVX512-NEXT:    movw %ax, 52(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 58(%rdx)
+; AVX512-NEXT:    movw %ax, 56(%rdx)
+; AVX512-NEXT:    vpextrb $2, %xmm0, 62(%rdx)
+; AVX512-NEXT:    movw %ax, 60(%rdx)
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <3 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <3 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1>
+  store <3 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <3 x i8>, ptr %out.vec.ptr, i64 0
   store <3 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <3 x i8>, ptr %out.vec.ptr, i64 1
@@ -2289,178 +2810,238 @@ define void @vec384_v3i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v3i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v3i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v3i16:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movq (%rdi), %rax
 ; SCALAR-NEXT:    movq %rax, %rcx
 ; SCALAR-NEXT:    shrq $32, %rcx
-; SCALAR-NEXT:    movl %eax, %edx
-; SCALAR-NEXT:    andl $-65536, %edx # imm = 0xFFFF0000
-; SCALAR-NEXT:    negl %eax
-; SCALAR-NEXT:    movzwl %ax, %eax
-; SCALAR-NEXT:    subl %edx, %eax
-; SCALAR-NEXT:    negl %ecx
-; SCALAR-NEXT:    movw %cx, 4(%rsi)
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movl %eax, (%rsi)
-; SCALAR-NEXT:    movw %cx, 12(%rsi)
-; SCALAR-NEXT:    movl %eax, 8(%rsi)
-; SCALAR-NEXT:    movw %cx, 20(%rsi)
-; SCALAR-NEXT:    movl %eax, 16(%rsi)
-; SCALAR-NEXT:    movw %cx, 28(%rsi)
-; SCALAR-NEXT:    movl %eax, 24(%rsi)
-; SCALAR-NEXT:    movw %cx, 36(%rsi)
-; SCALAR-NEXT:    movl %eax, 32(%rsi)
-; SCALAR-NEXT:    movw %cx, 44(%rsi)
-; SCALAR-NEXT:    movl %eax, 40(%rsi)
-; SCALAR-NEXT:    movw %cx, 52(%rsi)
-; SCALAR-NEXT:    movl %eax, 48(%rsi)
-; SCALAR-NEXT:    movw %cx, 60(%rsi)
-; SCALAR-NEXT:    movl %eax, 56(%rsi)
+; SCALAR-NEXT:    movw %cx, 4(%rsi)
+; SCALAR-NEXT:    movw %cx, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movw %cx, 12(%rdx)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movw %cx, 20(%rdx)
+; SCALAR-NEXT:    movl %eax, 16(%rdx)
+; SCALAR-NEXT:    movw %cx, 28(%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
+; SCALAR-NEXT:    movw %cx, 36(%rdx)
+; SCALAR-NEXT:    movl %eax, 32(%rdx)
+; SCALAR-NEXT:    movw %cx, 44(%rdx)
+; SCALAR-NEXT:    movl %eax, 40(%rdx)
+; SCALAR-NEXT:    movw %cx, 52(%rdx)
+; SCALAR-NEXT:    movl %eax, 48(%rdx)
+; SCALAR-NEXT:    movw %cx, 60(%rdx)
+; SCALAR-NEXT:    movl %eax, 56(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-ONLY-LABEL: vec384_v3i16:
 ; SSE2-ONLY:       # %bb.0:
 ; SSE2-ONLY-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-ONLY-NEXT:    pxor %xmm1, %xmm1
-; SSE2-ONLY-NEXT:    psubw %xmm0, %xmm1
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-ONLY-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-ONLY-NEXT:    movd %xmm1, (%rsi)
 ; SSE2-ONLY-NEXT:    pextrw $2, %xmm1, %eax
 ; SSE2-ONLY-NEXT:    movw %ax, 4(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 12(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 16(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 20(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 28(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 32(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 36(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 44(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 48(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 52(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 60(%rsi)
+; SSE2-ONLY-NEXT:    movw %ax, 4(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, (%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 12(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 20(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 16(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 28(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 36(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 32(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 44(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 52(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 48(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 60(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rdx)
 ; SSE2-ONLY-NEXT:    retq
 ;
 ; SSE3-LABEL: vec384_v3i16:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE3-NEXT:    pxor %xmm1, %xmm1
-; SSE3-NEXT:    psubw %xmm0, %xmm1
+; SSE3-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE3-NEXT:    pxor %xmm0, %xmm1
 ; SSE3-NEXT:    movd %xmm1, (%rsi)
 ; SSE3-NEXT:    pextrw $2, %xmm1, %eax
 ; SSE3-NEXT:    movw %ax, 4(%rsi)
-; SSE3-NEXT:    movd %xmm1, 8(%rsi)
-; SSE3-NEXT:    movw %ax, 12(%rsi)
-; SSE3-NEXT:    movd %xmm1, 16(%rsi)
-; SSE3-NEXT:    movw %ax, 20(%rsi)
-; SSE3-NEXT:    movd %xmm1, 24(%rsi)
-; SSE3-NEXT:    movw %ax, 28(%rsi)
-; SSE3-NEXT:    movd %xmm1, 32(%rsi)
-; SSE3-NEXT:    movw %ax, 36(%rsi)
-; SSE3-NEXT:    movd %xmm1, 40(%rsi)
-; SSE3-NEXT:    movw %ax, 44(%rsi)
-; SSE3-NEXT:    movd %xmm1, 48(%rsi)
-; SSE3-NEXT:    movw %ax, 52(%rsi)
-; SSE3-NEXT:    movd %xmm1, 56(%rsi)
-; SSE3-NEXT:    movw %ax, 60(%rsi)
+; SSE3-NEXT:    movw %ax, 4(%rdx)
+; SSE3-NEXT:    movd %xmm1, (%rdx)
+; SSE3-NEXT:    movw %ax, 12(%rdx)
+; SSE3-NEXT:    movd %xmm1, 8(%rdx)
+; SSE3-NEXT:    movw %ax, 20(%rdx)
+; SSE3-NEXT:    movd %xmm1, 16(%rdx)
+; SSE3-NEXT:    movw %ax, 28(%rdx)
+; SSE3-NEXT:    movd %xmm1, 24(%rdx)
+; SSE3-NEXT:    movw %ax, 36(%rdx)
+; SSE3-NEXT:    movd %xmm1, 32(%rdx)
+; SSE3-NEXT:    movw %ax, 44(%rdx)
+; SSE3-NEXT:    movd %xmm1, 40(%rdx)
+; SSE3-NEXT:    movw %ax, 52(%rdx)
+; SSE3-NEXT:    movd %xmm1, 48(%rdx)
+; SSE3-NEXT:    movw %ax, 60(%rdx)
+; SSE3-NEXT:    movd %xmm1, 56(%rdx)
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-ONLY-LABEL: vec384_v3i16:
 ; SSSE3-ONLY:       # %bb.0:
 ; SSSE3-ONLY-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSSE3-ONLY-NEXT:    pxor %xmm1, %xmm1
-; SSSE3-ONLY-NEXT:    psubw %xmm0, %xmm1
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSSE3-ONLY-NEXT:    pxor %xmm0, %xmm1
 ; SSSE3-ONLY-NEXT:    movd %xmm1, (%rsi)
 ; SSSE3-ONLY-NEXT:    pextrw $2, %xmm1, %eax
 ; SSSE3-ONLY-NEXT:    movw %ax, 4(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 12(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 16(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 20(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 28(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 32(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 36(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 44(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 48(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 52(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 60(%rsi)
+; SSSE3-ONLY-NEXT:    movw %ax, 4(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, (%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 12(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 20(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 16(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 28(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 36(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 32(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 44(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 52(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 48(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 60(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rdx)
 ; SSSE3-ONLY-NEXT:    retq
 ;
 ; SSE41-LABEL: vec384_v3i16:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    psubw %xmm0, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    pextrw $2, %xmm1, 4(%rsi)
 ; SSE41-NEXT:    movd %xmm1, (%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 12(%rsi)
-; SSE41-NEXT:    movd %xmm1, 8(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 20(%rsi)
-; SSE41-NEXT:    movd %xmm1, 16(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 28(%rsi)
-; SSE41-NEXT:    movd %xmm1, 24(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 36(%rsi)
-; SSE41-NEXT:    movd %xmm1, 32(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 44(%rsi)
-; SSE41-NEXT:    movd %xmm1, 40(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 52(%rsi)
-; SSE41-NEXT:    movd %xmm1, 48(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 60(%rsi)
-; SSE41-NEXT:    movd %xmm1, 56(%rsi)
+; SSE41-NEXT:    pextrw $2, %xmm1, 4(%rdx)
+; SSE41-NEXT:    movd %xmm1, (%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 12(%rdx)
+; SSE41-NEXT:    movd %xmm1, 8(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 20(%rdx)
+; SSE41-NEXT:    movd %xmm1, 16(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 28(%rdx)
+; SSE41-NEXT:    movd %xmm1, 24(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 36(%rdx)
+; SSE41-NEXT:    movd %xmm1, 32(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 44(%rdx)
+; SSE41-NEXT:    movd %xmm1, 40(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 52(%rdx)
+; SSE41-NEXT:    movd %xmm1, 48(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 60(%rdx)
+; SSE41-NEXT:    movd %xmm1, 56(%rdx)
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_v3i16:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE42-NEXT:    pxor %xmm1, %xmm1
-; SSE42-NEXT:    psubw %xmm0, %xmm1
+; SSE42-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE42-NEXT:    pxor %xmm0, %xmm1
 ; SSE42-NEXT:    pextrw $2, %xmm1, 4(%rsi)
 ; SSE42-NEXT:    movd %xmm1, (%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 12(%rsi)
-; SSE42-NEXT:    movd %xmm1, 8(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 20(%rsi)
-; SSE42-NEXT:    movd %xmm1, 16(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 28(%rsi)
-; SSE42-NEXT:    movd %xmm1, 24(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 36(%rsi)
-; SSE42-NEXT:    movd %xmm1, 32(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 44(%rsi)
-; SSE42-NEXT:    movd %xmm1, 40(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 52(%rsi)
-; SSE42-NEXT:    movd %xmm1, 48(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 60(%rsi)
-; SSE42-NEXT:    movd %xmm1, 56(%rsi)
+; SSE42-NEXT:    pextrw $2, %xmm1, 4(%rdx)
+; SSE42-NEXT:    movd %xmm1, (%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 12(%rdx)
+; SSE42-NEXT:    movd %xmm1, 8(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 20(%rdx)
+; SSE42-NEXT:    movd %xmm1, 16(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 28(%rdx)
+; SSE42-NEXT:    movd %xmm1, 24(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 36(%rdx)
+; SSE42-NEXT:    movd %xmm1, 32(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 44(%rdx)
+; SSE42-NEXT:    movd %xmm1, 40(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 52(%rdx)
+; SSE42-NEXT:    movd %xmm1, 48(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 60(%rdx)
+; SSE42-NEXT:    movd %xmm1, 56(%rdx)
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: vec384_v3i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpextrw $2, %xmm0, 4(%rsi)
-; AVX-NEXT:    vmovd %xmm0, (%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 12(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 8(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 20(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 16(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 28(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 24(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 36(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 32(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 44(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 40(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 52(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 48(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 60(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 56(%rsi)
-; AVX-NEXT:    retq
-  %in.subvec.neg = load <3 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <3 x i16> zeroinitializer, %in.subvec.neg
+; AVX1-LABEL: vec384_v3i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpextrw $2, %xmm0, 4(%rsi)
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 4(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, (%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 12(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 8(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 20(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 16(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 28(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 24(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 36(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 32(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 44(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 40(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 52(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 48(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 60(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 56(%rdx)
+; AVX1-NEXT:    retq
+;
+; AVX2-ONLY-LABEL: vec384_v3i16:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 4(%rsi)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 4(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, (%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 12(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 8(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 20(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 16(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 28(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 24(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 36(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 32(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 44(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 40(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 52(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 48(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 60(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 56(%rdx)
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec384_v3i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpextrw $2, %xmm0, 4(%rsi)
+; AVX512-NEXT:    vmovd %xmm0, (%rsi)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 4(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, (%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 12(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 8(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 20(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 16(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 28(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 24(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 36(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 32(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 44(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 40(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 52(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 48(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 60(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 56(%rdx)
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <3 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <3 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1>
+  store <3 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <3 x i16>, ptr %out.vec.ptr, i64 0
   store <3 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <3 x i16>, ptr %out.vec.ptr, i64 1
@@ -2480,116 +3061,131 @@ define void @vec384_v3i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v3i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v3i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v3i32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    movq (%rdi), %rax
-; SCALAR-NEXT:    movq %rax, %rcx
-; SCALAR-NEXT:    shrq $32, %rcx
-; SCALAR-NEXT:    negl %ecx
-; SCALAR-NEXT:    shlq $32, %rcx
-; SCALAR-NEXT:    negl %eax
-; SCALAR-NEXT:    orq %rcx, %rax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl 8(%rdi), %ecx
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
-; SCALAR-NEXT:    movq %rax, (%rsi)
-; SCALAR-NEXT:    movl %ecx, 24(%rsi)
-; SCALAR-NEXT:    movq %rax, 16(%rsi)
-; SCALAR-NEXT:    movl %ecx, 40(%rsi)
-; SCALAR-NEXT:    movq %rax, 32(%rsi)
-; SCALAR-NEXT:    movl %ecx, 56(%rsi)
-; SCALAR-NEXT:    movq %rax, 48(%rsi)
+; SCALAR-NEXT:    movl 8(%rdi), %eax
+; SCALAR-NEXT:    movq (%rdi), %rcx
+; SCALAR-NEXT:    movq %rcx, %rdi
+; SCALAR-NEXT:    shrq $32, %rdi
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    shlq $32, %rdi
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    orq %rdi, %rcx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    movl %eax, 8(%rsi)
+; SCALAR-NEXT:    movq %rcx, (%rsi)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movq %rcx, (%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
+; SCALAR-NEXT:    movq %rcx, 16(%rdx)
+; SCALAR-NEXT:    movl %eax, 40(%rdx)
+; SCALAR-NEXT:    movq %rcx, 32(%rdx)
+; SCALAR-NEXT:    movl %eax, 56(%rdx)
+; SCALAR-NEXT:    movq %rcx, 48(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-ONLY-LABEL: vec384_v3i32:
 ; SSE2-ONLY:       # %bb.0:
-; SSE2-ONLY-NEXT:    pxor %xmm0, %xmm0
-; SSE2-ONLY-NEXT:    psubd (%rdi), %xmm0
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-ONLY-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-ONLY-NEXT:    movq %xmm0, (%rsi)
 ; SSE2-ONLY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 16(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 32(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 48(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rsi)
+; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, (%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 16(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 32(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE2-ONLY-NEXT:    retq
 ;
 ; SSE3-LABEL: vec384_v3i32:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    pxor %xmm0, %xmm0
-; SSE3-NEXT:    psubd (%rdi), %xmm0
+; SSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE3-NEXT:    pxor (%rdi), %xmm0
 ; SSE3-NEXT:    movq %xmm0, (%rsi)
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-NEXT:    movd %xmm1, 8(%rsi)
-; SSE3-NEXT:    movq %xmm0, 16(%rsi)
-; SSE3-NEXT:    movd %xmm1, 24(%rsi)
-; SSE3-NEXT:    movq %xmm0, 32(%rsi)
-; SSE3-NEXT:    movd %xmm1, 40(%rsi)
-; SSE3-NEXT:    movq %xmm0, 48(%rsi)
-; SSE3-NEXT:    movd %xmm1, 56(%rsi)
+; SSE3-NEXT:    movd %xmm1, 8(%rdx)
+; SSE3-NEXT:    movq %xmm0, (%rdx)
+; SSE3-NEXT:    movd %xmm1, 24(%rdx)
+; SSE3-NEXT:    movq %xmm0, 16(%rdx)
+; SSE3-NEXT:    movd %xmm1, 40(%rdx)
+; SSE3-NEXT:    movq %xmm0, 32(%rdx)
+; SSE3-NEXT:    movd %xmm1, 56(%rdx)
+; SSE3-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-ONLY-LABEL: vec384_v3i32:
 ; SSSE3-ONLY:       # %bb.0:
-; SSSE3-ONLY-NEXT:    pxor %xmm0, %xmm0
-; SSSE3-ONLY-NEXT:    psubd (%rdi), %xmm0
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSSE3-ONLY-NEXT:    pxor (%rdi), %xmm0
 ; SSSE3-ONLY-NEXT:    movq %xmm0, (%rsi)
 ; SSSE3-ONLY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 16(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 32(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 48(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rsi)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, (%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 16(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 32(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 48(%rdx)
 ; SSSE3-ONLY-NEXT:    retq
 ;
 ; SSE41-LABEL: vec384_v3i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    psubd (%rdi), %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor (%rdi), %xmm0
 ; SSE41-NEXT:    pextrd $2, %xmm0, 8(%rsi)
 ; SSE41-NEXT:    movq %xmm0, (%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 24(%rsi)
-; SSE41-NEXT:    movq %xmm0, 16(%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 40(%rsi)
-; SSE41-NEXT:    movq %xmm0, 32(%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 56(%rsi)
-; SSE41-NEXT:    movq %xmm0, 48(%rsi)
+; SSE41-NEXT:    pextrd $2, %xmm0, 8(%rdx)
+; SSE41-NEXT:    movq %xmm0, (%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 24(%rdx)
+; SSE41-NEXT:    movq %xmm0, 16(%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 40(%rdx)
+; SSE41-NEXT:    movq %xmm0, 32(%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 56(%rdx)
+; SSE41-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_v3i32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pxor %xmm0, %xmm0
-; SSE42-NEXT:    psubd (%rdi), %xmm0
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE42-NEXT:    pxor (%rdi), %xmm0
 ; SSE42-NEXT:    pextrd $2, %xmm0, 8(%rsi)
 ; SSE42-NEXT:    movq %xmm0, (%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 24(%rsi)
-; SSE42-NEXT:    movq %xmm0, 16(%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 40(%rsi)
-; SSE42-NEXT:    movq %xmm0, 32(%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 56(%rsi)
-; SSE42-NEXT:    movq %xmm0, 48(%rsi)
+; SSE42-NEXT:    pextrd $2, %xmm0, 8(%rdx)
+; SSE42-NEXT:    movq %xmm0, (%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 24(%rdx)
+; SSE42-NEXT:    movq %xmm0, 16(%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 40(%rdx)
+; SSE42-NEXT:    movq %xmm0, 32(%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 56(%rdx)
+; SSE42-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v3i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
 ; AVX-NEXT:    vmovq %xmm0, (%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 24(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 16(%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 40(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 32(%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 56(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 48(%rsi)
+; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
+; AVX-NEXT:    vmovq %xmm0, (%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 16(%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 32(%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <3 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <3 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <3 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <3 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1>
+  store <3 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <3 x i32>, ptr %out.vec.ptr, i64 0
   store <3 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <3 x i32>, ptr %out.vec.ptr, i64 1
@@ -2601,117 +3197,132 @@ define void @vec384_v3i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v3f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v3f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v3f32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    movq (%rdi), %rax
-; SCALAR-NEXT:    movq %rax, %rcx
-; SCALAR-NEXT:    shrq $32, %rcx
-; SCALAR-NEXT:    negl %ecx
-; SCALAR-NEXT:    shlq $32, %rcx
-; SCALAR-NEXT:    negl %eax
-; SCALAR-NEXT:    orq %rcx, %rax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl 8(%rdi), %ecx
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
-; SCALAR-NEXT:    movq %rax, (%rsi)
-; SCALAR-NEXT:    movl %ecx, 24(%rsi)
-; SCALAR-NEXT:    movq %rax, 16(%rsi)
-; SCALAR-NEXT:    movl %ecx, 40(%rsi)
-; SCALAR-NEXT:    movq %rax, 32(%rsi)
-; SCALAR-NEXT:    movl %ecx, 56(%rsi)
-; SCALAR-NEXT:    movq %rax, 48(%rsi)
+; SCALAR-NEXT:    movl 8(%rdi), %eax
+; SCALAR-NEXT:    movq (%rdi), %rcx
+; SCALAR-NEXT:    movq %rcx, %rdi
+; SCALAR-NEXT:    shrq $32, %rdi
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    shlq $32, %rdi
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    orq %rdi, %rcx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    movl %eax, 8(%rsi)
+; SCALAR-NEXT:    movq %rcx, (%rsi)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movq %rcx, (%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
+; SCALAR-NEXT:    movq %rcx, 16(%rdx)
+; SCALAR-NEXT:    movl %eax, 40(%rdx)
+; SCALAR-NEXT:    movq %rcx, 32(%rdx)
+; SCALAR-NEXT:    movl %eax, 56(%rdx)
+; SCALAR-NEXT:    movq %rcx, 48(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-ONLY-LABEL: vec384_v3f32:
 ; SSE2-ONLY:       # %bb.0:
-; SSE2-ONLY-NEXT:    pxor %xmm0, %xmm0
-; SSE2-ONLY-NEXT:    psubd (%rdi), %xmm0
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-ONLY-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-ONLY-NEXT:    movq %xmm0, (%rsi)
 ; SSE2-ONLY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 16(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 32(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 48(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rsi)
+; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, (%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 16(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 32(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE2-ONLY-NEXT:    retq
 ;
 ; SSE3-LABEL: vec384_v3f32:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    pxor %xmm0, %xmm0
-; SSE3-NEXT:    psubd (%rdi), %xmm0
+; SSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE3-NEXT:    pxor (%rdi), %xmm0
 ; SSE3-NEXT:    movq %xmm0, (%rsi)
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-NEXT:    movd %xmm1, 8(%rsi)
-; SSE3-NEXT:    movq %xmm0, 16(%rsi)
-; SSE3-NEXT:    movd %xmm1, 24(%rsi)
-; SSE3-NEXT:    movq %xmm0, 32(%rsi)
-; SSE3-NEXT:    movd %xmm1, 40(%rsi)
-; SSE3-NEXT:    movq %xmm0, 48(%rsi)
-; SSE3-NEXT:    movd %xmm1, 56(%rsi)
+; SSE3-NEXT:    movd %xmm1, 8(%rdx)
+; SSE3-NEXT:    movq %xmm0, (%rdx)
+; SSE3-NEXT:    movd %xmm1, 24(%rdx)
+; SSE3-NEXT:    movq %xmm0, 16(%rdx)
+; SSE3-NEXT:    movd %xmm1, 40(%rdx)
+; SSE3-NEXT:    movq %xmm0, 32(%rdx)
+; SSE3-NEXT:    movd %xmm1, 56(%rdx)
+; SSE3-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-ONLY-LABEL: vec384_v3f32:
 ; SSSE3-ONLY:       # %bb.0:
-; SSSE3-ONLY-NEXT:    pxor %xmm0, %xmm0
-; SSSE3-ONLY-NEXT:    psubd (%rdi), %xmm0
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSSE3-ONLY-NEXT:    pxor (%rdi), %xmm0
 ; SSSE3-ONLY-NEXT:    movq %xmm0, (%rsi)
 ; SSSE3-ONLY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 16(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 32(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 48(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rsi)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, (%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 16(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 32(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 48(%rdx)
 ; SSSE3-ONLY-NEXT:    retq
 ;
 ; SSE41-LABEL: vec384_v3f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    psubd (%rdi), %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor (%rdi), %xmm0
 ; SSE41-NEXT:    pextrd $2, %xmm0, 8(%rsi)
 ; SSE41-NEXT:    movq %xmm0, (%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 24(%rsi)
-; SSE41-NEXT:    movq %xmm0, 16(%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 40(%rsi)
-; SSE41-NEXT:    movq %xmm0, 32(%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 56(%rsi)
-; SSE41-NEXT:    movq %xmm0, 48(%rsi)
+; SSE41-NEXT:    pextrd $2, %xmm0, 8(%rdx)
+; SSE41-NEXT:    movq %xmm0, (%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 24(%rdx)
+; SSE41-NEXT:    movq %xmm0, 16(%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 40(%rdx)
+; SSE41-NEXT:    movq %xmm0, 32(%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 56(%rdx)
+; SSE41-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_v3f32:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pxor %xmm0, %xmm0
-; SSE42-NEXT:    psubd (%rdi), %xmm0
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE42-NEXT:    pxor (%rdi), %xmm0
 ; SSE42-NEXT:    pextrd $2, %xmm0, 8(%rsi)
 ; SSE42-NEXT:    movq %xmm0, (%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 24(%rsi)
-; SSE42-NEXT:    movq %xmm0, 16(%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 40(%rsi)
-; SSE42-NEXT:    movq %xmm0, 32(%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 56(%rsi)
-; SSE42-NEXT:    movq %xmm0, 48(%rsi)
+; SSE42-NEXT:    pextrd $2, %xmm0, 8(%rdx)
+; SSE42-NEXT:    movq %xmm0, (%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 24(%rdx)
+; SSE42-NEXT:    movq %xmm0, 16(%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 40(%rdx)
+; SSE42-NEXT:    movq %xmm0, 32(%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 56(%rdx)
+; SSE42-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v3f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
 ; AVX-NEXT:    vmovq %xmm0, (%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 24(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 16(%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 40(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 32(%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 56(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 48(%rsi)
+; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
+; AVX-NEXT:    vmovq %xmm0, (%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 16(%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 32(%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <3 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <3 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <3 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <3 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1>
   %in.subvec = bitcast <3 x i32> %in.subvec.int to <3 x float>
+  store <3 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <3 x float>, ptr %out.vec.ptr, i64 0
   store <3 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <3 x float>, ptr %out.vec.ptr, i64 1
@@ -2723,60 +3334,71 @@ define void @vec384_v3f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v3i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v3i64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v3i64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq 16(%rdi), %rcx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subq 8(%rdi), %rdx
-; SCALAR-NEXT:    subq (%rdi), %rax
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    movq 16(%rdi), %rdi
+; SCALAR-NEXT:    notq %rdi
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
 ; SCALAR-NEXT:    movq %rax, (%rsi)
-; SCALAR-NEXT:    movq %rdx, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, 16(%rsi)
-; SCALAR-NEXT:    movq %rcx, 48(%rsi)
-; SCALAR-NEXT:    movq %rdx, 40(%rsi)
-; SCALAR-NEXT:    movq %rax, 32(%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rdi, 16(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rdi, 16(%rdx)
+; SCALAR-NEXT:    movq %rdi, 48(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v3i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubq (%rdi), %xmm0
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    subq 16(%rdi), %rax
-; SSE2-NEXT:    movq %rax, 16(%rsi)
+; SSE2-NEXT:    movq 16(%rdi), %rax
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movq %rax, 48(%rsi)
-; SSE2-NEXT:    movdqu %xmm0, 32(%rsi)
+; SSE2-NEXT:    notq %rax
+; SSE2-NEXT:    movq %rax, 16(%rsi)
+; SSE2-NEXT:    movq %rax, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movq %rax, 48(%rdx)
+; SSE2-NEXT:    movdqu %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v3i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    xorl %eax, %eax
-; AVX1-NEXT:    subq 16(%rdi), %rax
-; AVX1-NEXT:    movq %rax, 16(%rsi)
-; AVX1-NEXT:    movq %rax, 48(%rsi)
-; AVX1-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rdx)
+; AVX1-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX1-NEXT:    vmovlps %xmm1, 48(%rdx)
+; AVX1-NEXT:    vmovups %xmm0, 32(%rdx)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v3i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubq (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, 16(%rsi)
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX2-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX2-NEXT:    vmovq %xmm1, 16(%rdx)
+; AVX2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-NEXT:    vmovq %xmm1, 48(%rdx)
+; AVX2-NEXT:    vmovdqu %xmm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <3 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <3 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <3 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <3 x i64> %in.subvec.not, <i64 -1, i64 -1, i64 -1>
+  store <3 x i64> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <3 x i64>, ptr %out.vec.ptr, i64 0
   store <3 x i64> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <3 x i64>, ptr %out.vec.ptr, i64 1
@@ -2784,61 +3406,72 @@ define void @vec384_v3i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v3f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v3f64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v3f64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq 16(%rdi), %rcx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subq 8(%rdi), %rdx
-; SCALAR-NEXT:    subq (%rdi), %rax
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    movq 16(%rdi), %rdi
+; SCALAR-NEXT:    notq %rdi
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
 ; SCALAR-NEXT:    movq %rax, (%rsi)
-; SCALAR-NEXT:    movq %rdx, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, 16(%rsi)
-; SCALAR-NEXT:    movq %rcx, 48(%rsi)
-; SCALAR-NEXT:    movq %rdx, 40(%rsi)
-; SCALAR-NEXT:    movq %rax, 32(%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rdi, 16(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rdi, 16(%rdx)
+; SCALAR-NEXT:    movq %rdi, 48(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v3f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubq (%rdi), %xmm0
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    subq 16(%rdi), %rax
-; SSE2-NEXT:    movq %rax, 16(%rsi)
+; SSE2-NEXT:    movq 16(%rdi), %rax
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movq %rax, 48(%rsi)
-; SSE2-NEXT:    movdqu %xmm0, 32(%rsi)
+; SSE2-NEXT:    notq %rax
+; SSE2-NEXT:    movq %rax, 16(%rsi)
+; SSE2-NEXT:    movq %rax, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movq %rax, 48(%rdx)
+; SSE2-NEXT:    movdqu %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v3f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    xorl %eax, %eax
-; AVX1-NEXT:    subq 16(%rdi), %rax
-; AVX1-NEXT:    movq %rax, 16(%rsi)
-; AVX1-NEXT:    movq %rax, 48(%rsi)
-; AVX1-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rdx)
+; AVX1-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX1-NEXT:    vmovlps %xmm1, 48(%rdx)
+; AVX1-NEXT:    vmovups %xmm0, 32(%rdx)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v3f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubq (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, 16(%rsi)
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX2-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX2-NEXT:    vmovq %xmm1, 16(%rdx)
+; AVX2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-NEXT:    vmovq %xmm1, 48(%rdx)
+; AVX2-NEXT:    vmovdqu %xmm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <3 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <3 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <3 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <3 x i64> %in.subvec.not, <i64 -1, i64 -1, i64 -1>
   %in.subvec = bitcast <3 x i64> %in.subvec.int to <3 x double>
+  store <3 x double> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <3 x double>, ptr %out.vec.ptr, i64 0
   store <3 x double> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <3 x double>, ptr %out.vec.ptr, i64 1
@@ -2846,99 +3479,106 @@ define void @vec384_v3f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v4i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v4i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subb 1(%rdi), %dl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 2(%rdi), %r8b
-; SCALAR-NEXT:    subb 3(%rdi), %cl
-; SCALAR-NEXT:    movb %cl, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movb %dl, 1(%rsi)
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movb %r8b, 3(%rsi)
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %dil, 1(%rsi)
 ; SCALAR-NEXT:    movb %al, (%rsi)
-; SCALAR-NEXT:    movb %cl, 7(%rsi)
-; SCALAR-NEXT:    movb %r8b, 6(%rsi)
-; SCALAR-NEXT:    movb %dl, 5(%rsi)
-; SCALAR-NEXT:    movb %al, 4(%rsi)
-; SCALAR-NEXT:    movb %cl, 11(%rsi)
-; SCALAR-NEXT:    movb %r8b, 10(%rsi)
-; SCALAR-NEXT:    movb %dl, 9(%rsi)
-; SCALAR-NEXT:    movb %al, 8(%rsi)
-; SCALAR-NEXT:    movb %cl, 15(%rsi)
-; SCALAR-NEXT:    movb %r8b, 14(%rsi)
-; SCALAR-NEXT:    movb %dl, 13(%rsi)
-; SCALAR-NEXT:    movb %al, 12(%rsi)
-; SCALAR-NEXT:    movb %cl, 19(%rsi)
-; SCALAR-NEXT:    movb %r8b, 18(%rsi)
-; SCALAR-NEXT:    movb %dl, 17(%rsi)
-; SCALAR-NEXT:    movb %al, 16(%rsi)
-; SCALAR-NEXT:    movb %cl, 23(%rsi)
-; SCALAR-NEXT:    movb %r8b, 22(%rsi)
-; SCALAR-NEXT:    movb %dl, 21(%rsi)
-; SCALAR-NEXT:    movb %al, 20(%rsi)
-; SCALAR-NEXT:    movb %cl, 27(%rsi)
-; SCALAR-NEXT:    movb %r8b, 26(%rsi)
-; SCALAR-NEXT:    movb %dl, 25(%rsi)
-; SCALAR-NEXT:    movb %al, 24(%rsi)
-; SCALAR-NEXT:    movb %cl, 31(%rsi)
-; SCALAR-NEXT:    movb %r8b, 30(%rsi)
-; SCALAR-NEXT:    movb %dl, 29(%rsi)
-; SCALAR-NEXT:    movb %al, 28(%rsi)
-; SCALAR-NEXT:    movb %cl, 35(%rsi)
-; SCALAR-NEXT:    movb %r8b, 34(%rsi)
-; SCALAR-NEXT:    movb %dl, 33(%rsi)
-; SCALAR-NEXT:    movb %al, 32(%rsi)
-; SCALAR-NEXT:    movb %cl, 39(%rsi)
-; SCALAR-NEXT:    movb %r8b, 38(%rsi)
-; SCALAR-NEXT:    movb %dl, 37(%rsi)
-; SCALAR-NEXT:    movb %al, 36(%rsi)
-; SCALAR-NEXT:    movb %cl, 43(%rsi)
-; SCALAR-NEXT:    movb %r8b, 42(%rsi)
-; SCALAR-NEXT:    movb %dl, 41(%rsi)
-; SCALAR-NEXT:    movb %al, 40(%rsi)
-; SCALAR-NEXT:    movb %cl, 47(%rsi)
-; SCALAR-NEXT:    movb %r8b, 46(%rsi)
-; SCALAR-NEXT:    movb %dl, 45(%rsi)
-; SCALAR-NEXT:    movb %al, 44(%rsi)
+; SCALAR-NEXT:    movb %r8b, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %dil, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %r8b, 7(%rdx)
+; SCALAR-NEXT:    movb %cl, 6(%rdx)
+; SCALAR-NEXT:    movb %dil, 5(%rdx)
+; SCALAR-NEXT:    movb %al, 4(%rdx)
+; SCALAR-NEXT:    movb %r8b, 11(%rdx)
+; SCALAR-NEXT:    movb %cl, 10(%rdx)
+; SCALAR-NEXT:    movb %dil, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %r8b, 15(%rdx)
+; SCALAR-NEXT:    movb %cl, 14(%rdx)
+; SCALAR-NEXT:    movb %dil, 13(%rdx)
+; SCALAR-NEXT:    movb %al, 12(%rdx)
+; SCALAR-NEXT:    movb %r8b, 19(%rdx)
+; SCALAR-NEXT:    movb %cl, 18(%rdx)
+; SCALAR-NEXT:    movb %dil, 17(%rdx)
+; SCALAR-NEXT:    movb %al, 16(%rdx)
+; SCALAR-NEXT:    movb %r8b, 23(%rdx)
+; SCALAR-NEXT:    movb %cl, 22(%rdx)
+; SCALAR-NEXT:    movb %dil, 21(%rdx)
+; SCALAR-NEXT:    movb %al, 20(%rdx)
+; SCALAR-NEXT:    movb %r8b, 27(%rdx)
+; SCALAR-NEXT:    movb %cl, 26(%rdx)
+; SCALAR-NEXT:    movb %dil, 25(%rdx)
+; SCALAR-NEXT:    movb %al, 24(%rdx)
+; SCALAR-NEXT:    movb %r8b, 31(%rdx)
+; SCALAR-NEXT:    movb %cl, 30(%rdx)
+; SCALAR-NEXT:    movb %dil, 29(%rdx)
+; SCALAR-NEXT:    movb %al, 28(%rdx)
+; SCALAR-NEXT:    movb %r8b, 35(%rdx)
+; SCALAR-NEXT:    movb %cl, 34(%rdx)
+; SCALAR-NEXT:    movb %dil, 33(%rdx)
+; SCALAR-NEXT:    movb %al, 32(%rdx)
+; SCALAR-NEXT:    movb %r8b, 39(%rdx)
+; SCALAR-NEXT:    movb %cl, 38(%rdx)
+; SCALAR-NEXT:    movb %dil, 37(%rdx)
+; SCALAR-NEXT:    movb %al, 36(%rdx)
+; SCALAR-NEXT:    movb %r8b, 43(%rdx)
+; SCALAR-NEXT:    movb %cl, 42(%rdx)
+; SCALAR-NEXT:    movb %dil, 41(%rdx)
+; SCALAR-NEXT:    movb %al, 40(%rdx)
+; SCALAR-NEXT:    movb %r8b, 47(%rdx)
+; SCALAR-NEXT:    movb %cl, 46(%rdx)
+; SCALAR-NEXT:    movb %dil, 45(%rdx)
+; SCALAR-NEXT:    movb %al, 44(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v4i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v4i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX1-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v4i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <4 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1>
+  store <4 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 0
   store <4 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 1
@@ -2966,77 +3606,97 @@ define void @vec384_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v4i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v4i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v4i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw (%rdi), %ax
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subw 2(%rdi), %dx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subw 4(%rdi), %r8w
-; SCALAR-NEXT:    subw 6(%rdi), %cx
-; SCALAR-NEXT:    movw %cx, 6(%rsi)
-; SCALAR-NEXT:    movw %r8w, 4(%rsi)
-; SCALAR-NEXT:    movw %dx, 2(%rsi)
+; SCALAR-NEXT:    movzwl 6(%rdi), %r8d
+; SCALAR-NEXT:    movzwl 2(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    movw %r8w, 6(%rsi)
+; SCALAR-NEXT:    movw %di, 4(%rsi)
+; SCALAR-NEXT:    movw %cx, 2(%rsi)
 ; SCALAR-NEXT:    movw %ax, (%rsi)
-; SCALAR-NEXT:    movw %cx, 14(%rsi)
-; SCALAR-NEXT:    movw %r8w, 12(%rsi)
-; SCALAR-NEXT:    movw %dx, 10(%rsi)
-; SCALAR-NEXT:    movw %ax, 8(%rsi)
-; SCALAR-NEXT:    movw %cx, 22(%rsi)
-; SCALAR-NEXT:    movw %r8w, 20(%rsi)
-; SCALAR-NEXT:    movw %dx, 18(%rsi)
-; SCALAR-NEXT:    movw %ax, 16(%rsi)
-; SCALAR-NEXT:    movw %cx, 30(%rsi)
-; SCALAR-NEXT:    movw %r8w, 28(%rsi)
-; SCALAR-NEXT:    movw %dx, 26(%rsi)
-; SCALAR-NEXT:    movw %ax, 24(%rsi)
-; SCALAR-NEXT:    movw %cx, 38(%rsi)
-; SCALAR-NEXT:    movw %r8w, 36(%rsi)
-; SCALAR-NEXT:    movw %dx, 34(%rsi)
-; SCALAR-NEXT:    movw %ax, 32(%rsi)
-; SCALAR-NEXT:    movw %cx, 46(%rsi)
-; SCALAR-NEXT:    movw %r8w, 44(%rsi)
-; SCALAR-NEXT:    movw %dx, 42(%rsi)
-; SCALAR-NEXT:    movw %ax, 40(%rsi)
+; SCALAR-NEXT:    movw %r8w, 6(%rdx)
+; SCALAR-NEXT:    movw %di, 4(%rdx)
+; SCALAR-NEXT:    movw %cx, 2(%rdx)
+; SCALAR-NEXT:    movw %ax, (%rdx)
+; SCALAR-NEXT:    movw %r8w, 14(%rdx)
+; SCALAR-NEXT:    movw %di, 12(%rdx)
+; SCALAR-NEXT:    movw %cx, 10(%rdx)
+; SCALAR-NEXT:    movw %ax, 8(%rdx)
+; SCALAR-NEXT:    movw %r8w, 22(%rdx)
+; SCALAR-NEXT:    movw %di, 20(%rdx)
+; SCALAR-NEXT:    movw %cx, 18(%rdx)
+; SCALAR-NEXT:    movw %ax, 16(%rdx)
+; SCALAR-NEXT:    movw %r8w, 30(%rdx)
+; SCALAR-NEXT:    movw %di, 28(%rdx)
+; SCALAR-NEXT:    movw %cx, 26(%rdx)
+; SCALAR-NEXT:    movw %ax, 24(%rdx)
+; SCALAR-NEXT:    movw %r8w, 38(%rdx)
+; SCALAR-NEXT:    movw %di, 36(%rdx)
+; SCALAR-NEXT:    movw %cx, 34(%rdx)
+; SCALAR-NEXT:    movw %ax, 32(%rdx)
+; SCALAR-NEXT:    movw %r8w, 46(%rdx)
+; SCALAR-NEXT:    movw %di, 44(%rdx)
+; SCALAR-NEXT:    movw %cx, 42(%rdx)
+; SCALAR-NEXT:    movw %ax, 40(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v4i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX1-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec384_v4i16:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <4 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i16> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec384_v4i16:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX2-ONLY-NEXT:    vzeroupper
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec384_v4i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <4 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1>
+  store <4 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i16>, ptr %out.vec.ptr, i64 0
   store <4 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i16>, ptr %out.vec.ptr, i64 1
@@ -3052,50 +3712,39 @@ define void @vec384_v4i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v4i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v4i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v4i32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subl 4(%rdi), %edx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subl 8(%rdi), %r8d
-; SCALAR-NEXT:    subl 12(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %r8d, 8(%rsi)
-; SCALAR-NEXT:    movl %edx, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %r8d, 24(%rsi)
-; SCALAR-NEXT:    movl %edx, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 44(%rsi)
-; SCALAR-NEXT:    movl %r8d, 40(%rsi)
-; SCALAR-NEXT:    movl %edx, 36(%rsi)
-; SCALAR-NEXT:    movl %ecx, 32(%rsi)
+; SCALAR-NEXT:    movaps (%rdi), %xmm0
+; SCALAR-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SCALAR-NEXT:    movaps %xmm0, (%rsi)
+; SCALAR-NEXT:    movaps %xmm0, (%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 16(%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v4i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <4 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1>
+  store <4 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i32>, ptr %out.vec.ptr, i64 0
   store <4 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i32>, ptr %out.vec.ptr, i64 1
@@ -3105,51 +3754,40 @@ define void @vec384_v4i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v4f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v4f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v4f32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subl 4(%rdi), %edx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subl 8(%rdi), %r8d
-; SCALAR-NEXT:    subl 12(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %r8d, 8(%rsi)
-; SCALAR-NEXT:    movl %edx, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %r8d, 24(%rsi)
-; SCALAR-NEXT:    movl %edx, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 44(%rsi)
-; SCALAR-NEXT:    movl %r8d, 40(%rsi)
-; SCALAR-NEXT:    movl %edx, 36(%rsi)
-; SCALAR-NEXT:    movl %ecx, 32(%rsi)
+; SCALAR-NEXT:    movaps (%rdi), %xmm0
+; SCALAR-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SCALAR-NEXT:    movaps %xmm0, (%rsi)
+; SCALAR-NEXT:    movaps %xmm0, (%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 16(%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v4f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <4 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <4 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <4 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1>
   %in.subvec = bitcast <4 x i32> %in.subvec.int to <4 x float>
+  store <4 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x float>, ptr %out.vec.ptr, i64 0
   store <4 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x float>, ptr %out.vec.ptr, i64 1
@@ -3159,201 +3797,265 @@ define void @vec384_v4f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v6i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v6i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v6i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    movq (%rdi), %rdx
-; SCALAR-NEXT:    movq %rdx, %rax
+; SCALAR-NEXT:    movq (%rdi), %rdi
+; SCALAR-NEXT:    movq %rdi, %rax
 ; SCALAR-NEXT:    shrq $40, %rax
-; SCALAR-NEXT:    movq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rcx
 ; SCALAR-NEXT:    shrq $32, %rcx
-; SCALAR-NEXT:    movl %edx, %edi
-; SCALAR-NEXT:    shrl $24, %edi
-; SCALAR-NEXT:    movl %edx, %r8d
-; SCALAR-NEXT:    shrl $16, %r8d
-; SCALAR-NEXT:    movl %edx, %r9d
-; SCALAR-NEXT:    shrl $8, %r9d
-; SCALAR-NEXT:    negb %dl
-; SCALAR-NEXT:    movzbl %dl, %edx
-; SCALAR-NEXT:    negb %r9b
-; SCALAR-NEXT:    movzbl %r9b, %r9d
-; SCALAR-NEXT:    shll $8, %r9d
-; SCALAR-NEXT:    orl %edx, %r9d
-; SCALAR-NEXT:    negb %r8b
-; SCALAR-NEXT:    movzbl %r8b, %edx
-; SCALAR-NEXT:    negb %dil
+; SCALAR-NEXT:    movl %edi, %r8d
+; SCALAR-NEXT:    shrl $24, %r8d
+; SCALAR-NEXT:    movl %edi, %r9d
+; SCALAR-NEXT:    shrl $16, %r9d
+; SCALAR-NEXT:    movl %edi, %r10d
+; SCALAR-NEXT:    shrl $8, %r10d
+; SCALAR-NEXT:    notb %dil
 ; SCALAR-NEXT:    movzbl %dil, %edi
-; SCALAR-NEXT:    shll $8, %edi
-; SCALAR-NEXT:    orl %edx, %edi
-; SCALAR-NEXT:    negb %cl
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    movzbl %r10b, %r10d
+; SCALAR-NEXT:    shll $8, %r10d
+; SCALAR-NEXT:    orl %edi, %r10d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl %r9b, %edi
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movzbl %r8b, %r8d
+; SCALAR-NEXT:    shll $8, %r8d
+; SCALAR-NEXT:    orl %edi, %r8d
+; SCALAR-NEXT:    notb %cl
 ; SCALAR-NEXT:    movzbl %cl, %ecx
-; SCALAR-NEXT:    negb %al
+; SCALAR-NEXT:    notb %al
 ; SCALAR-NEXT:    movzbl %al, %eax
 ; SCALAR-NEXT:    shll $8, %eax
 ; SCALAR-NEXT:    orl %ecx, %eax
 ; SCALAR-NEXT:    movw %ax, 4(%rsi)
-; SCALAR-NEXT:    shll $16, %edi
-; SCALAR-NEXT:    movzwl %r9w, %ecx
-; SCALAR-NEXT:    orl %edi, %ecx
+; SCALAR-NEXT:    shll $16, %r8d
+; SCALAR-NEXT:    movzwl %r10w, %ecx
+; SCALAR-NEXT:    orl %r8d, %ecx
 ; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movw %ax, 12(%rsi)
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
-; SCALAR-NEXT:    movw %ax, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movw %ax, 28(%rsi)
-; SCALAR-NEXT:    movl %ecx, 24(%rsi)
-; SCALAR-NEXT:    movw %ax, 36(%rsi)
-; SCALAR-NEXT:    movl %ecx, 32(%rsi)
-; SCALAR-NEXT:    movw %ax, 44(%rsi)
-; SCALAR-NEXT:    movl %ecx, 40(%rsi)
-; SCALAR-NEXT:    movw %ax, 52(%rsi)
-; SCALAR-NEXT:    movl %ecx, 48(%rsi)
-; SCALAR-NEXT:    movw %ax, 60(%rsi)
-; SCALAR-NEXT:    movl %ecx, 56(%rsi)
+; SCALAR-NEXT:    movw %ax, 4(%rdx)
+; SCALAR-NEXT:    movl %ecx, (%rdx)
+; SCALAR-NEXT:    movw %ax, 12(%rdx)
+; SCALAR-NEXT:    movl %ecx, 8(%rdx)
+; SCALAR-NEXT:    movw %ax, 20(%rdx)
+; SCALAR-NEXT:    movl %ecx, 16(%rdx)
+; SCALAR-NEXT:    movw %ax, 28(%rdx)
+; SCALAR-NEXT:    movl %ecx, 24(%rdx)
+; SCALAR-NEXT:    movw %ax, 36(%rdx)
+; SCALAR-NEXT:    movl %ecx, 32(%rdx)
+; SCALAR-NEXT:    movw %ax, 44(%rdx)
+; SCALAR-NEXT:    movl %ecx, 40(%rdx)
+; SCALAR-NEXT:    movw %ax, 52(%rdx)
+; SCALAR-NEXT:    movl %ecx, 48(%rdx)
+; SCALAR-NEXT:    movw %ax, 60(%rdx)
+; SCALAR-NEXT:    movl %ecx, 56(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-ONLY-LABEL: vec384_v6i8:
 ; SSE2-ONLY:       # %bb.0:
 ; SSE2-ONLY-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-ONLY-NEXT:    pxor %xmm1, %xmm1
-; SSE2-ONLY-NEXT:    psubb %xmm0, %xmm1
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-ONLY-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-ONLY-NEXT:    movd %xmm1, (%rsi)
 ; SSE2-ONLY-NEXT:    pextrw $2, %xmm1, %eax
 ; SSE2-ONLY-NEXT:    movw %ax, 4(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 12(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 16(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 20(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 28(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 32(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 36(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 44(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 48(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 52(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rsi)
-; SSE2-ONLY-NEXT:    movw %ax, 60(%rsi)
+; SSE2-ONLY-NEXT:    movw %ax, 4(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, (%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 12(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 20(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 16(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 28(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 36(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 32(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 44(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 52(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 48(%rdx)
+; SSE2-ONLY-NEXT:    movw %ax, 60(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rdx)
 ; SSE2-ONLY-NEXT:    retq
 ;
 ; SSE3-LABEL: vec384_v6i8:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE3-NEXT:    pxor %xmm1, %xmm1
-; SSE3-NEXT:    psubb %xmm0, %xmm1
+; SSE3-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE3-NEXT:    pxor %xmm0, %xmm1
 ; SSE3-NEXT:    movd %xmm1, (%rsi)
 ; SSE3-NEXT:    pextrw $2, %xmm1, %eax
 ; SSE3-NEXT:    movw %ax, 4(%rsi)
-; SSE3-NEXT:    movd %xmm1, 8(%rsi)
-; SSE3-NEXT:    movw %ax, 12(%rsi)
-; SSE3-NEXT:    movd %xmm1, 16(%rsi)
-; SSE3-NEXT:    movw %ax, 20(%rsi)
-; SSE3-NEXT:    movd %xmm1, 24(%rsi)
-; SSE3-NEXT:    movw %ax, 28(%rsi)
-; SSE3-NEXT:    movd %xmm1, 32(%rsi)
-; SSE3-NEXT:    movw %ax, 36(%rsi)
-; SSE3-NEXT:    movd %xmm1, 40(%rsi)
-; SSE3-NEXT:    movw %ax, 44(%rsi)
-; SSE3-NEXT:    movd %xmm1, 48(%rsi)
-; SSE3-NEXT:    movw %ax, 52(%rsi)
-; SSE3-NEXT:    movd %xmm1, 56(%rsi)
-; SSE3-NEXT:    movw %ax, 60(%rsi)
+; SSE3-NEXT:    movw %ax, 4(%rdx)
+; SSE3-NEXT:    movd %xmm1, (%rdx)
+; SSE3-NEXT:    movw %ax, 12(%rdx)
+; SSE3-NEXT:    movd %xmm1, 8(%rdx)
+; SSE3-NEXT:    movw %ax, 20(%rdx)
+; SSE3-NEXT:    movd %xmm1, 16(%rdx)
+; SSE3-NEXT:    movw %ax, 28(%rdx)
+; SSE3-NEXT:    movd %xmm1, 24(%rdx)
+; SSE3-NEXT:    movw %ax, 36(%rdx)
+; SSE3-NEXT:    movd %xmm1, 32(%rdx)
+; SSE3-NEXT:    movw %ax, 44(%rdx)
+; SSE3-NEXT:    movd %xmm1, 40(%rdx)
+; SSE3-NEXT:    movw %ax, 52(%rdx)
+; SSE3-NEXT:    movd %xmm1, 48(%rdx)
+; SSE3-NEXT:    movw %ax, 60(%rdx)
+; SSE3-NEXT:    movd %xmm1, 56(%rdx)
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-ONLY-LABEL: vec384_v6i8:
 ; SSSE3-ONLY:       # %bb.0:
 ; SSSE3-ONLY-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSSE3-ONLY-NEXT:    pxor %xmm1, %xmm1
-; SSSE3-ONLY-NEXT:    psubb %xmm0, %xmm1
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSSE3-ONLY-NEXT:    pxor %xmm0, %xmm1
 ; SSSE3-ONLY-NEXT:    movd %xmm1, (%rsi)
 ; SSSE3-ONLY-NEXT:    pextrw $2, %xmm1, %eax
 ; SSSE3-ONLY-NEXT:    movw %ax, 4(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 12(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 16(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 20(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 28(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 32(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 36(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 44(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 48(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 52(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rsi)
-; SSSE3-ONLY-NEXT:    movw %ax, 60(%rsi)
+; SSSE3-ONLY-NEXT:    movw %ax, 4(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, (%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 12(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 20(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 16(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 28(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 36(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 32(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 44(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 52(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 48(%rdx)
+; SSSE3-ONLY-NEXT:    movw %ax, 60(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rdx)
 ; SSSE3-ONLY-NEXT:    retq
 ;
 ; SSE41-LABEL: vec384_v6i8:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    psubb %xmm0, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    pextrw $2, %xmm1, 4(%rsi)
 ; SSE41-NEXT:    movd %xmm1, (%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 12(%rsi)
-; SSE41-NEXT:    movd %xmm1, 8(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 20(%rsi)
-; SSE41-NEXT:    movd %xmm1, 16(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 28(%rsi)
-; SSE41-NEXT:    movd %xmm1, 24(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 36(%rsi)
-; SSE41-NEXT:    movd %xmm1, 32(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 44(%rsi)
-; SSE41-NEXT:    movd %xmm1, 40(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 52(%rsi)
-; SSE41-NEXT:    movd %xmm1, 48(%rsi)
-; SSE41-NEXT:    pextrw $2, %xmm1, 60(%rsi)
-; SSE41-NEXT:    movd %xmm1, 56(%rsi)
+; SSE41-NEXT:    pextrw $2, %xmm1, 4(%rdx)
+; SSE41-NEXT:    movd %xmm1, (%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 12(%rdx)
+; SSE41-NEXT:    movd %xmm1, 8(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 20(%rdx)
+; SSE41-NEXT:    movd %xmm1, 16(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 28(%rdx)
+; SSE41-NEXT:    movd %xmm1, 24(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 36(%rdx)
+; SSE41-NEXT:    movd %xmm1, 32(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 44(%rdx)
+; SSE41-NEXT:    movd %xmm1, 40(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 52(%rdx)
+; SSE41-NEXT:    movd %xmm1, 48(%rdx)
+; SSE41-NEXT:    pextrw $2, %xmm1, 60(%rdx)
+; SSE41-NEXT:    movd %xmm1, 56(%rdx)
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_v6i8:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE42-NEXT:    pxor %xmm1, %xmm1
-; SSE42-NEXT:    psubb %xmm0, %xmm1
+; SSE42-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE42-NEXT:    pxor %xmm0, %xmm1
 ; SSE42-NEXT:    pextrw $2, %xmm1, 4(%rsi)
 ; SSE42-NEXT:    movd %xmm1, (%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 12(%rsi)
-; SSE42-NEXT:    movd %xmm1, 8(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 20(%rsi)
-; SSE42-NEXT:    movd %xmm1, 16(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 28(%rsi)
-; SSE42-NEXT:    movd %xmm1, 24(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 36(%rsi)
-; SSE42-NEXT:    movd %xmm1, 32(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 44(%rsi)
-; SSE42-NEXT:    movd %xmm1, 40(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 52(%rsi)
-; SSE42-NEXT:    movd %xmm1, 48(%rsi)
-; SSE42-NEXT:    pextrw $2, %xmm1, 60(%rsi)
-; SSE42-NEXT:    movd %xmm1, 56(%rsi)
+; SSE42-NEXT:    pextrw $2, %xmm1, 4(%rdx)
+; SSE42-NEXT:    movd %xmm1, (%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 12(%rdx)
+; SSE42-NEXT:    movd %xmm1, 8(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 20(%rdx)
+; SSE42-NEXT:    movd %xmm1, 16(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 28(%rdx)
+; SSE42-NEXT:    movd %xmm1, 24(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 36(%rdx)
+; SSE42-NEXT:    movd %xmm1, 32(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 44(%rdx)
+; SSE42-NEXT:    movd %xmm1, 40(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 52(%rdx)
+; SSE42-NEXT:    movd %xmm1, 48(%rdx)
+; SSE42-NEXT:    pextrw $2, %xmm1, 60(%rdx)
+; SSE42-NEXT:    movd %xmm1, 56(%rdx)
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: vec384_v6i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpextrw $2, %xmm0, 4(%rsi)
-; AVX-NEXT:    vmovd %xmm0, (%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 12(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 8(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 20(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 16(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 28(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 24(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 36(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 32(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 44(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 40(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 52(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 48(%rsi)
-; AVX-NEXT:    vpextrw $2, %xmm0, 60(%rsi)
-; AVX-NEXT:    vmovd %xmm0, 56(%rsi)
-; AVX-NEXT:    retq
-  %in.subvec.neg = load <6 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <6 x i8> zeroinitializer, %in.subvec.neg
+; AVX1-LABEL: vec384_v6i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpextrw $2, %xmm0, 4(%rsi)
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 4(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, (%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 12(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 8(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 20(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 16(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 28(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 24(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 36(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 32(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 44(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 40(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 52(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 48(%rdx)
+; AVX1-NEXT:    vpextrw $2, %xmm0, 60(%rdx)
+; AVX1-NEXT:    vmovd %xmm0, 56(%rdx)
+; AVX1-NEXT:    retq
+;
+; AVX2-ONLY-LABEL: vec384_v6i8:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 4(%rsi)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 4(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, (%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 12(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 8(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 20(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 16(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 28(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 24(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 36(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 32(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 44(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 40(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 52(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 48(%rdx)
+; AVX2-ONLY-NEXT:    vpextrw $2, %xmm0, 60(%rdx)
+; AVX2-ONLY-NEXT:    vmovd %xmm0, 56(%rdx)
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec384_v6i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpextrw $2, %xmm0, 4(%rsi)
+; AVX512-NEXT:    vmovd %xmm0, (%rsi)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 4(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, (%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 12(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 8(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 20(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 16(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 28(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 24(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 36(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 32(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 44(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 40(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 52(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 48(%rdx)
+; AVX512-NEXT:    vpextrw $2, %xmm0, 60(%rdx)
+; AVX512-NEXT:    vmovd %xmm0, 56(%rdx)
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <6 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <6 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <6 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <6 x i8>, ptr %out.vec.ptr, i64 0
   store <6 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <6 x i8>, ptr %out.vec.ptr, i64 1
@@ -3373,130 +4075,137 @@ define void @vec384_v6i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v6i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v6i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v6i16:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movl 8(%rdi), %eax
-; SCALAR-NEXT:    movq (%rdi), %rdx
-; SCALAR-NEXT:    movq %rdx, %rcx
-; SCALAR-NEXT:    shrq $32, %rcx
-; SCALAR-NEXT:    movq %rdx, %rdi
-; SCALAR-NEXT:    shrq $48, %rdi
-; SCALAR-NEXT:    negl %edi
-; SCALAR-NEXT:    shll $16, %edi
-; SCALAR-NEXT:    negl %ecx
-; SCALAR-NEXT:    movzwl %cx, %ecx
-; SCALAR-NEXT:    orl %edi, %ecx
-; SCALAR-NEXT:    movl %edx, %edi
-; SCALAR-NEXT:    andl $-65536, %edi # imm = 0xFFFF0000
-; SCALAR-NEXT:    negl %edx
-; SCALAR-NEXT:    movzwl %dx, %edx
-; SCALAR-NEXT:    subl %edi, %edx
-; SCALAR-NEXT:    movl %eax, %edi
-; SCALAR-NEXT:    andl $-65536, %edi # imm = 0xFFFF0000
-; SCALAR-NEXT:    negl %eax
-; SCALAR-NEXT:    movzwl %ax, %eax
-; SCALAR-NEXT:    subl %edi, %eax
+; SCALAR-NEXT:    movq (%rdi), %rcx
+; SCALAR-NEXT:    movq %rcx, %rdi
+; SCALAR-NEXT:    shrq $32, %rdi
+; SCALAR-NEXT:    movq %rcx, %r8
+; SCALAR-NEXT:    shrq $48, %r8
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    shll $16, %r8d
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    movzwl %di, %edi
+; SCALAR-NEXT:    orl %r8d, %edi
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movl %eax, 8(%rsi)
-; SCALAR-NEXT:    shlq $32, %rcx
-; SCALAR-NEXT:    orq %rdx, %rcx
+; SCALAR-NEXT:    shlq $32, %rdi
+; SCALAR-NEXT:    orq %rdi, %rcx
 ; SCALAR-NEXT:    movq %rcx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 24(%rsi)
-; SCALAR-NEXT:    movq %rcx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 40(%rsi)
-; SCALAR-NEXT:    movq %rcx, 32(%rsi)
-; SCALAR-NEXT:    movl %eax, 56(%rsi)
-; SCALAR-NEXT:    movq %rcx, 48(%rsi)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movq %rcx, (%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
+; SCALAR-NEXT:    movq %rcx, 16(%rdx)
+; SCALAR-NEXT:    movl %eax, 40(%rdx)
+; SCALAR-NEXT:    movq %rcx, 32(%rdx)
+; SCALAR-NEXT:    movl %eax, 56(%rdx)
+; SCALAR-NEXT:    movq %rcx, 48(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-ONLY-LABEL: vec384_v6i16:
 ; SSE2-ONLY:       # %bb.0:
-; SSE2-ONLY-NEXT:    pxor %xmm0, %xmm0
-; SSE2-ONLY-NEXT:    psubw (%rdi), %xmm0
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-ONLY-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-ONLY-NEXT:    movq %xmm0, (%rsi)
 ; SSE2-ONLY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 16(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 32(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 48(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rsi)
+; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, (%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 16(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 32(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE2-ONLY-NEXT:    retq
 ;
 ; SSE3-LABEL: vec384_v6i16:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    pxor %xmm0, %xmm0
-; SSE3-NEXT:    psubw (%rdi), %xmm0
+; SSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE3-NEXT:    pxor (%rdi), %xmm0
 ; SSE3-NEXT:    movq %xmm0, (%rsi)
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-NEXT:    movd %xmm1, 8(%rsi)
-; SSE3-NEXT:    movq %xmm0, 16(%rsi)
-; SSE3-NEXT:    movd %xmm1, 24(%rsi)
-; SSE3-NEXT:    movq %xmm0, 32(%rsi)
-; SSE3-NEXT:    movd %xmm1, 40(%rsi)
-; SSE3-NEXT:    movq %xmm0, 48(%rsi)
-; SSE3-NEXT:    movd %xmm1, 56(%rsi)
+; SSE3-NEXT:    movd %xmm1, 8(%rdx)
+; SSE3-NEXT:    movq %xmm0, (%rdx)
+; SSE3-NEXT:    movd %xmm1, 24(%rdx)
+; SSE3-NEXT:    movq %xmm0, 16(%rdx)
+; SSE3-NEXT:    movd %xmm1, 40(%rdx)
+; SSE3-NEXT:    movq %xmm0, 32(%rdx)
+; SSE3-NEXT:    movd %xmm1, 56(%rdx)
+; SSE3-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-ONLY-LABEL: vec384_v6i16:
 ; SSSE3-ONLY:       # %bb.0:
-; SSSE3-ONLY-NEXT:    pxor %xmm0, %xmm0
-; SSSE3-ONLY-NEXT:    psubw (%rdi), %xmm0
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSSE3-ONLY-NEXT:    pxor (%rdi), %xmm0
 ; SSSE3-ONLY-NEXT:    movq %xmm0, (%rsi)
 ; SSSE3-ONLY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 16(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 32(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 48(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rsi)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, (%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 16(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 32(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 48(%rdx)
 ; SSSE3-ONLY-NEXT:    retq
 ;
 ; SSE41-LABEL: vec384_v6i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    psubw (%rdi), %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor (%rdi), %xmm0
 ; SSE41-NEXT:    pextrd $2, %xmm0, 8(%rsi)
 ; SSE41-NEXT:    movq %xmm0, (%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 24(%rsi)
-; SSE41-NEXT:    movq %xmm0, 16(%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 40(%rsi)
-; SSE41-NEXT:    movq %xmm0, 32(%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 56(%rsi)
-; SSE41-NEXT:    movq %xmm0, 48(%rsi)
+; SSE41-NEXT:    pextrd $2, %xmm0, 8(%rdx)
+; SSE41-NEXT:    movq %xmm0, (%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 24(%rdx)
+; SSE41-NEXT:    movq %xmm0, 16(%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 40(%rdx)
+; SSE41-NEXT:    movq %xmm0, 32(%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 56(%rdx)
+; SSE41-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_v6i16:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pxor %xmm0, %xmm0
-; SSE42-NEXT:    psubw (%rdi), %xmm0
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE42-NEXT:    pxor (%rdi), %xmm0
 ; SSE42-NEXT:    pextrd $2, %xmm0, 8(%rsi)
 ; SSE42-NEXT:    movq %xmm0, (%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 24(%rsi)
-; SSE42-NEXT:    movq %xmm0, 16(%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 40(%rsi)
-; SSE42-NEXT:    movq %xmm0, 32(%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 56(%rsi)
-; SSE42-NEXT:    movq %xmm0, 48(%rsi)
+; SSE42-NEXT:    pextrd $2, %xmm0, 8(%rdx)
+; SSE42-NEXT:    movq %xmm0, (%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 24(%rdx)
+; SSE42-NEXT:    movq %xmm0, 16(%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 40(%rdx)
+; SSE42-NEXT:    movq %xmm0, 32(%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 56(%rdx)
+; SSE42-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v6i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
 ; AVX-NEXT:    vmovq %xmm0, (%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 24(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 16(%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 40(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 32(%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 56(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 48(%rsi)
+; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
+; AVX-NEXT:    vmovq %xmm0, (%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 16(%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 32(%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <6 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <6 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <6 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <6 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  store <6 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <6 x i16>, ptr %out.vec.ptr, i64 0
   store <6 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <6 x i16>, ptr %out.vec.ptr, i64 1
@@ -3508,74 +4217,86 @@ define void @vec384_v6i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v6i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v6i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v6i32:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movq (%rdi), %rax
 ; SCALAR-NEXT:    movq 8(%rdi), %rcx
-; SCALAR-NEXT:    movq %rax, %rdx
-; SCALAR-NEXT:    shrq $32, %rdx
-; SCALAR-NEXT:    movq %rcx, %r8
+; SCALAR-NEXT:    movq %rax, %r8
 ; SCALAR-NEXT:    shrq $32, %r8
-; SCALAR-NEXT:    movq 16(%rdi), %rdi
-; SCALAR-NEXT:    movq %rdi, %r9
+; SCALAR-NEXT:    movq %rcx, %r9
 ; SCALAR-NEXT:    shrq $32, %r9
-; SCALAR-NEXT:    negl %r9d
+; SCALAR-NEXT:    movq 16(%rdi), %rdi
+; SCALAR-NEXT:    movq %rdi, %r10
+; SCALAR-NEXT:    shrq $32, %r10
+; SCALAR-NEXT:    notl %r10d
+; SCALAR-NEXT:    shlq $32, %r10
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    orq %r10, %rdi
+; SCALAR-NEXT:    notl %r9d
 ; SCALAR-NEXT:    shlq $32, %r9
-; SCALAR-NEXT:    negl %edi
-; SCALAR-NEXT:    orq %r9, %rdi
-; SCALAR-NEXT:    negl %r8d
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    orq %r9, %rcx
+; SCALAR-NEXT:    notl %r8d
 ; SCALAR-NEXT:    shlq $32, %r8
-; SCALAR-NEXT:    negl %ecx
-; SCALAR-NEXT:    orq %r8, %rcx
-; SCALAR-NEXT:    negl %edx
-; SCALAR-NEXT:    shlq $32, %rdx
-; SCALAR-NEXT:    negl %eax
-; SCALAR-NEXT:    orq %rdx, %rax
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    orq %r8, %rax
 ; SCALAR-NEXT:    movq %rax, (%rsi)
 ; SCALAR-NEXT:    movq %rcx, 8(%rsi)
 ; SCALAR-NEXT:    movq %rdi, 16(%rsi)
-; SCALAR-NEXT:    movq %rdi, 48(%rsi)
-; SCALAR-NEXT:    movq %rcx, 40(%rsi)
-; SCALAR-NEXT:    movq %rax, 32(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rdi, 16(%rdx)
+; SCALAR-NEXT:    movq %rdi, 48(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v6i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd 16(%rdi), %xmm1
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movq %xmm1, 16(%rsi)
-; SSE2-NEXT:    movq %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqu %xmm0, 32(%rsi)
+; SSE2-NEXT:    movq %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movq %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqu %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v6i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovq %xmm1, 16(%rsi)
-; AVX1-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX1-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rdx)
+; AVX1-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX1-NEXT:    vmovlps %xmm1, 48(%rdx)
+; AVX1-NEXT:    vmovups %xmm0, 32(%rdx)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v6i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubd (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, 16(%rsi)
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX2-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX2-NEXT:    vmovq %xmm1, 16(%rdx)
+; AVX2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-NEXT:    vmovq %xmm1, 48(%rdx)
+; AVX2-NEXT:    vmovdqu %xmm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <6 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <6 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <6 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <6 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  store <6 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <6 x i32>, ptr %out.vec.ptr, i64 0
   store <6 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <6 x i32>, ptr %out.vec.ptr, i64 1
@@ -3583,75 +4304,87 @@ define void @vec384_v6i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v6f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v6f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v6f32:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movq (%rdi), %rax
 ; SCALAR-NEXT:    movq 8(%rdi), %rcx
-; SCALAR-NEXT:    movq %rax, %rdx
-; SCALAR-NEXT:    shrq $32, %rdx
-; SCALAR-NEXT:    movq %rcx, %r8
+; SCALAR-NEXT:    movq %rax, %r8
 ; SCALAR-NEXT:    shrq $32, %r8
-; SCALAR-NEXT:    movq 16(%rdi), %rdi
-; SCALAR-NEXT:    movq %rdi, %r9
+; SCALAR-NEXT:    movq %rcx, %r9
 ; SCALAR-NEXT:    shrq $32, %r9
-; SCALAR-NEXT:    negl %r9d
+; SCALAR-NEXT:    movq 16(%rdi), %rdi
+; SCALAR-NEXT:    movq %rdi, %r10
+; SCALAR-NEXT:    shrq $32, %r10
+; SCALAR-NEXT:    notl %r10d
+; SCALAR-NEXT:    shlq $32, %r10
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    orq %r10, %rdi
+; SCALAR-NEXT:    notl %r9d
 ; SCALAR-NEXT:    shlq $32, %r9
-; SCALAR-NEXT:    negl %edi
-; SCALAR-NEXT:    orq %r9, %rdi
-; SCALAR-NEXT:    negl %r8d
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    orq %r9, %rcx
+; SCALAR-NEXT:    notl %r8d
 ; SCALAR-NEXT:    shlq $32, %r8
-; SCALAR-NEXT:    negl %ecx
-; SCALAR-NEXT:    orq %r8, %rcx
-; SCALAR-NEXT:    negl %edx
-; SCALAR-NEXT:    shlq $32, %rdx
-; SCALAR-NEXT:    negl %eax
-; SCALAR-NEXT:    orq %rdx, %rax
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    orq %r8, %rax
 ; SCALAR-NEXT:    movq %rax, (%rsi)
 ; SCALAR-NEXT:    movq %rcx, 8(%rsi)
 ; SCALAR-NEXT:    movq %rdi, 16(%rsi)
-; SCALAR-NEXT:    movq %rdi, 48(%rsi)
-; SCALAR-NEXT:    movq %rcx, 40(%rsi)
-; SCALAR-NEXT:    movq %rax, 32(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rdi, 16(%rdx)
+; SCALAR-NEXT:    movq %rdi, 48(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v6f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd 16(%rdi), %xmm1
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movq %xmm1, 16(%rsi)
-; SSE2-NEXT:    movq %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqu %xmm0, 32(%rsi)
+; SSE2-NEXT:    movq %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movq %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqu %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v6f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovq %xmm1, 16(%rsi)
-; AVX1-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX1-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rdx)
+; AVX1-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX1-NEXT:    vmovlps %xmm1, 48(%rdx)
+; AVX1-NEXT:    vmovups %xmm0, 32(%rdx)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v6f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubd (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, 16(%rsi)
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX2-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX2-NEXT:    vmovq %xmm1, 16(%rdx)
+; AVX2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-NEXT:    vmovq %xmm1, 48(%rdx)
+; AVX2-NEXT:    vmovdqu %xmm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <6 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <6 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <6 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <6 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %in.subvec = bitcast <6 x i32> %in.subvec.int to <6 x float>
+  store <6 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <6 x float>, ptr %out.vec.ptr, i64 0
   store <6 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <6 x float>, ptr %out.vec.ptr, i64 1
@@ -3659,111 +4392,135 @@ define void @vec384_v6f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v8i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v8i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v8i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb 1(%rdi), %cl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 2(%rdi), %r8b
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subb 3(%rdi), %r9b
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subb 4(%rdi), %r10b
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subb 5(%rdi), %r11b
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subb 6(%rdi), %bl
-; SCALAR-NEXT:    subb 7(%rdi), %dl
-; SCALAR-NEXT:    movb %dl, 7(%rsi)
-; SCALAR-NEXT:    movb %bl, 6(%rsi)
-; SCALAR-NEXT:    movb %r11b, 5(%rsi)
-; SCALAR-NEXT:    movb %r10b, 4(%rsi)
-; SCALAR-NEXT:    movb %r9b, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movzbl 7(%rdi), %ebx
+; SCALAR-NEXT:    movzbl 6(%rdi), %r11d
+; SCALAR-NEXT:    movzbl 5(%rdi), %r10d
+; SCALAR-NEXT:    movzbl 4(%rdi), %r9d
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    notb %bl
+; SCALAR-NEXT:    movb %bl, 7(%rsi)
+; SCALAR-NEXT:    movb %r11b, 6(%rsi)
+; SCALAR-NEXT:    movb %r10b, 5(%rsi)
+; SCALAR-NEXT:    movb %r9b, 4(%rsi)
+; SCALAR-NEXT:    movb %r8b, 3(%rsi)
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %dil, 1(%rsi)
 ; SCALAR-NEXT:    movb %al, (%rsi)
-; SCALAR-NEXT:    movb %dl, 15(%rsi)
-; SCALAR-NEXT:    movb %bl, 14(%rsi)
-; SCALAR-NEXT:    movb %r11b, 13(%rsi)
-; SCALAR-NEXT:    movb %r10b, 12(%rsi)
-; SCALAR-NEXT:    movb %r9b, 11(%rsi)
-; SCALAR-NEXT:    movb %r8b, 10(%rsi)
-; SCALAR-NEXT:    movb %cl, 9(%rsi)
-; SCALAR-NEXT:    movb %al, 8(%rsi)
-; SCALAR-NEXT:    movb %dl, 23(%rsi)
-; SCALAR-NEXT:    movb %bl, 22(%rsi)
-; SCALAR-NEXT:    movb %r11b, 21(%rsi)
-; SCALAR-NEXT:    movb %r10b, 20(%rsi)
-; SCALAR-NEXT:    movb %r9b, 19(%rsi)
-; SCALAR-NEXT:    movb %r8b, 18(%rsi)
-; SCALAR-NEXT:    movb %cl, 17(%rsi)
-; SCALAR-NEXT:    movb %al, 16(%rsi)
-; SCALAR-NEXT:    movb %dl, 31(%rsi)
-; SCALAR-NEXT:    movb %bl, 30(%rsi)
-; SCALAR-NEXT:    movb %r11b, 29(%rsi)
-; SCALAR-NEXT:    movb %r10b, 28(%rsi)
-; SCALAR-NEXT:    movb %r9b, 27(%rsi)
-; SCALAR-NEXT:    movb %r8b, 26(%rsi)
-; SCALAR-NEXT:    movb %cl, 25(%rsi)
-; SCALAR-NEXT:    movb %al, 24(%rsi)
-; SCALAR-NEXT:    movb %dl, 39(%rsi)
-; SCALAR-NEXT:    movb %bl, 38(%rsi)
-; SCALAR-NEXT:    movb %r11b, 37(%rsi)
-; SCALAR-NEXT:    movb %r10b, 36(%rsi)
-; SCALAR-NEXT:    movb %r9b, 35(%rsi)
-; SCALAR-NEXT:    movb %r8b, 34(%rsi)
-; SCALAR-NEXT:    movb %cl, 33(%rsi)
-; SCALAR-NEXT:    movb %al, 32(%rsi)
-; SCALAR-NEXT:    movb %dl, 47(%rsi)
-; SCALAR-NEXT:    movb %bl, 46(%rsi)
-; SCALAR-NEXT:    movb %r11b, 45(%rsi)
-; SCALAR-NEXT:    movb %r10b, 44(%rsi)
-; SCALAR-NEXT:    movb %r9b, 43(%rsi)
-; SCALAR-NEXT:    movb %r8b, 42(%rsi)
-; SCALAR-NEXT:    movb %cl, 41(%rsi)
-; SCALAR-NEXT:    movb %al, 40(%rsi)
+; SCALAR-NEXT:    movb %bl, 7(%rdx)
+; SCALAR-NEXT:    movb %r11b, 6(%rdx)
+; SCALAR-NEXT:    movb %r10b, 5(%rdx)
+; SCALAR-NEXT:    movb %r9b, 4(%rdx)
+; SCALAR-NEXT:    movb %r8b, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %dil, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %bl, 15(%rdx)
+; SCALAR-NEXT:    movb %r11b, 14(%rdx)
+; SCALAR-NEXT:    movb %r10b, 13(%rdx)
+; SCALAR-NEXT:    movb %r9b, 12(%rdx)
+; SCALAR-NEXT:    movb %r8b, 11(%rdx)
+; SCALAR-NEXT:    movb %cl, 10(%rdx)
+; SCALAR-NEXT:    movb %dil, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %bl, 23(%rdx)
+; SCALAR-NEXT:    movb %r11b, 22(%rdx)
+; SCALAR-NEXT:    movb %r10b, 21(%rdx)
+; SCALAR-NEXT:    movb %r9b, 20(%rdx)
+; SCALAR-NEXT:    movb %r8b, 19(%rdx)
+; SCALAR-NEXT:    movb %cl, 18(%rdx)
+; SCALAR-NEXT:    movb %dil, 17(%rdx)
+; SCALAR-NEXT:    movb %al, 16(%rdx)
+; SCALAR-NEXT:    movb %bl, 31(%rdx)
+; SCALAR-NEXT:    movb %r11b, 30(%rdx)
+; SCALAR-NEXT:    movb %r10b, 29(%rdx)
+; SCALAR-NEXT:    movb %r9b, 28(%rdx)
+; SCALAR-NEXT:    movb %r8b, 27(%rdx)
+; SCALAR-NEXT:    movb %cl, 26(%rdx)
+; SCALAR-NEXT:    movb %dil, 25(%rdx)
+; SCALAR-NEXT:    movb %al, 24(%rdx)
+; SCALAR-NEXT:    movb %bl, 39(%rdx)
+; SCALAR-NEXT:    movb %r11b, 38(%rdx)
+; SCALAR-NEXT:    movb %r10b, 37(%rdx)
+; SCALAR-NEXT:    movb %r9b, 36(%rdx)
+; SCALAR-NEXT:    movb %r8b, 35(%rdx)
+; SCALAR-NEXT:    movb %cl, 34(%rdx)
+; SCALAR-NEXT:    movb %dil, 33(%rdx)
+; SCALAR-NEXT:    movb %al, 32(%rdx)
+; SCALAR-NEXT:    movb %bl, 47(%rdx)
+; SCALAR-NEXT:    movb %r11b, 46(%rdx)
+; SCALAR-NEXT:    movb %r10b, 45(%rdx)
+; SCALAR-NEXT:    movb %r9b, 44(%rdx)
+; SCALAR-NEXT:    movb %r8b, 43(%rdx)
+; SCALAR-NEXT:    movb %cl, 42(%rdx)
+; SCALAR-NEXT:    movb %dil, 41(%rdx)
+; SCALAR-NEXT:    movb %al, 40(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v8i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX1-NEXT:    vmovaps %ymm1, (%rsi)
-; AVX1-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX1-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec384_v8i8:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-  %in.subvec.neg = load <8 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <8 x i8> zeroinitializer, %in.subvec.neg
+; AVX2-ONLY-LABEL: vec384_v8i8:
+; AVX2-ONLY:       # %bb.0:
+; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
+; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX2-ONLY-NEXT:    vzeroupper
+; AVX2-ONLY-NEXT:    retq
+;
+; AVX512-LABEL: vec384_v8i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX512-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %in.subvec.not = load <8 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <8 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <8 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <8 x i8>, ptr %out.vec.ptr, i64 0
   store <8 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <8 x i8>, ptr %out.vec.ptr, i64 1
@@ -3779,72 +4536,83 @@ define void @vec384_v8i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v8i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v8i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v8i16:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw (%rdi), %ax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw 2(%rdi), %cx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subw 4(%rdi), %r8w
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subw 6(%rdi), %r9w
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subw 8(%rdi), %r10w
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subw 10(%rdi), %r11w
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subw 12(%rdi), %bx
-; SCALAR-NEXT:    subw 14(%rdi), %dx
-; SCALAR-NEXT:    movw %dx, 14(%rsi)
-; SCALAR-NEXT:    movw %bx, 12(%rsi)
-; SCALAR-NEXT:    movw %r11w, 10(%rsi)
-; SCALAR-NEXT:    movw %r10w, 8(%rsi)
-; SCALAR-NEXT:    movw %r9w, 6(%rsi)
-; SCALAR-NEXT:    movw %r8w, 4(%rsi)
+; SCALAR-NEXT:    movzwl 14(%rdi), %ebx
+; SCALAR-NEXT:    movl 12(%rdi), %r11d
+; SCALAR-NEXT:    movzwl 10(%rdi), %r10d
+; SCALAR-NEXT:    movl 8(%rdi), %r9d
+; SCALAR-NEXT:    movzwl 6(%rdi), %r8d
+; SCALAR-NEXT:    movzwl 2(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    notl %r9d
+; SCALAR-NEXT:    notl %r10d
+; SCALAR-NEXT:    notl %r11d
+; SCALAR-NEXT:    notl %ebx
+; SCALAR-NEXT:    movw %bx, 14(%rsi)
+; SCALAR-NEXT:    movw %r11w, 12(%rsi)
+; SCALAR-NEXT:    movw %r10w, 10(%rsi)
+; SCALAR-NEXT:    movw %r9w, 8(%rsi)
+; SCALAR-NEXT:    movw %r8w, 6(%rsi)
+; SCALAR-NEXT:    movw %di, 4(%rsi)
 ; SCALAR-NEXT:    movw %cx, 2(%rsi)
 ; SCALAR-NEXT:    movw %ax, (%rsi)
-; SCALAR-NEXT:    movw %dx, 30(%rsi)
-; SCALAR-NEXT:    movw %bx, 28(%rsi)
-; SCALAR-NEXT:    movw %r11w, 26(%rsi)
-; SCALAR-NEXT:    movw %r10w, 24(%rsi)
-; SCALAR-NEXT:    movw %r9w, 22(%rsi)
-; SCALAR-NEXT:    movw %r8w, 20(%rsi)
-; SCALAR-NEXT:    movw %cx, 18(%rsi)
-; SCALAR-NEXT:    movw %ax, 16(%rsi)
-; SCALAR-NEXT:    movw %dx, 46(%rsi)
-; SCALAR-NEXT:    movw %bx, 44(%rsi)
-; SCALAR-NEXT:    movw %r11w, 42(%rsi)
-; SCALAR-NEXT:    movw %r10w, 40(%rsi)
-; SCALAR-NEXT:    movw %r9w, 38(%rsi)
-; SCALAR-NEXT:    movw %r8w, 36(%rsi)
-; SCALAR-NEXT:    movw %cx, 34(%rsi)
-; SCALAR-NEXT:    movw %ax, 32(%rsi)
+; SCALAR-NEXT:    movw %bx, 14(%rdx)
+; SCALAR-NEXT:    movw %r11w, 12(%rdx)
+; SCALAR-NEXT:    movw %r10w, 10(%rdx)
+; SCALAR-NEXT:    movw %r9w, 8(%rdx)
+; SCALAR-NEXT:    movw %r8w, 6(%rdx)
+; SCALAR-NEXT:    movw %di, 4(%rdx)
+; SCALAR-NEXT:    movw %cx, 2(%rdx)
+; SCALAR-NEXT:    movw %ax, (%rdx)
+; SCALAR-NEXT:    movw %bx, 30(%rdx)
+; SCALAR-NEXT:    movw %r11w, 28(%rdx)
+; SCALAR-NEXT:    movw %r10w, 26(%rdx)
+; SCALAR-NEXT:    movw %r9w, 24(%rdx)
+; SCALAR-NEXT:    movw %r8w, 22(%rdx)
+; SCALAR-NEXT:    movw %di, 20(%rdx)
+; SCALAR-NEXT:    movw %cx, 18(%rdx)
+; SCALAR-NEXT:    movw %ax, 16(%rdx)
+; SCALAR-NEXT:    movw %bx, 46(%rdx)
+; SCALAR-NEXT:    movw %r11w, 44(%rdx)
+; SCALAR-NEXT:    movw %r10w, 42(%rdx)
+; SCALAR-NEXT:    movw %r9w, 40(%rdx)
+; SCALAR-NEXT:    movw %r8w, 38(%rdx)
+; SCALAR-NEXT:    movw %di, 36(%rdx)
+; SCALAR-NEXT:    movw %cx, 34(%rdx)
+; SCALAR-NEXT:    movw %ax, 32(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v8i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubw (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <8 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <8 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <8 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <8 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  store <8 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <8 x i16>, ptr %out.vec.ptr, i64 0
   store <8 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <8 x i16>, ptr %out.vec.ptr, i64 1
@@ -3854,91 +4622,95 @@ define void @vec384_v8i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v12i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v12i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v12i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbp
 ; SCALAR-NEXT:    pushq %r15
 ; SCALAR-NEXT:    pushq %r14
+; SCALAR-NEXT:    pushq %r12
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    movq (%rdi), %r8
+; SCALAR-NEXT:    movq (%rdi), %r9
 ; SCALAR-NEXT:    movq 8(%rdi), %rcx
 ; SCALAR-NEXT:    movl %ecx, %eax
 ; SCALAR-NEXT:    shrl $8, %eax
-; SCALAR-NEXT:    movl %ecx, %edx
-; SCALAR-NEXT:    shrl $24, %edx
 ; SCALAR-NEXT:    movl %ecx, %edi
-; SCALAR-NEXT:    shrl $16, %edi
-; SCALAR-NEXT:    movq %r8, %r9
-; SCALAR-NEXT:    shrq $40, %r9
-; SCALAR-NEXT:    movq %r8, %r10
-; SCALAR-NEXT:    shrq $32, %r10
-; SCALAR-NEXT:    movq %r8, %r11
-; SCALAR-NEXT:    shrq $56, %r11
-; SCALAR-NEXT:    movq %r8, %rbx
-; SCALAR-NEXT:    shrq $48, %rbx
-; SCALAR-NEXT:    movl %r8d, %ebp
+; SCALAR-NEXT:    shrl $24, %edi
+; SCALAR-NEXT:    movl %ecx, %r8d
+; SCALAR-NEXT:    shrl $16, %r8d
+; SCALAR-NEXT:    movq %r9, %r10
+; SCALAR-NEXT:    shrq $40, %r10
+; SCALAR-NEXT:    movq %r9, %r11
+; SCALAR-NEXT:    shrq $32, %r11
+; SCALAR-NEXT:    movq %r9, %rbx
+; SCALAR-NEXT:    shrq $56, %rbx
+; SCALAR-NEXT:    movq %r9, %r14
+; SCALAR-NEXT:    shrq $48, %r14
+; SCALAR-NEXT:    movl %r9d, %ebp
 ; SCALAR-NEXT:    shrl $8, %ebp
-; SCALAR-NEXT:    movl %r8d, %r14d
-; SCALAR-NEXT:    shrl $24, %r14d
-; SCALAR-NEXT:    movl %r8d, %r15d
-; SCALAR-NEXT:    shrl $16, %r15d
-; SCALAR-NEXT:    negb %r15b
+; SCALAR-NEXT:    movl %r9d, %r15d
+; SCALAR-NEXT:    shrl $24, %r15d
+; SCALAR-NEXT:    movl %r9d, %r12d
+; SCALAR-NEXT:    shrl $16, %r12d
+; SCALAR-NEXT:    notb %r12b
+; SCALAR-NEXT:    movzbl %r12b, %r12d
+; SCALAR-NEXT:    notb %r15b
 ; SCALAR-NEXT:    movzbl %r15b, %r15d
-; SCALAR-NEXT:    negb %r14b
-; SCALAR-NEXT:    movzbl %r14b, %r14d
-; SCALAR-NEXT:    shll $8, %r14d
-; SCALAR-NEXT:    orl %r15d, %r14d
-; SCALAR-NEXT:    shll $16, %r14d
-; SCALAR-NEXT:    negb %r8b
-; SCALAR-NEXT:    movzbl %r8b, %r8d
-; SCALAR-NEXT:    negb %bpl
+; SCALAR-NEXT:    shll $8, %r15d
+; SCALAR-NEXT:    orl %r12d, %r15d
+; SCALAR-NEXT:    shll $16, %r15d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl %r9b, %r9d
+; SCALAR-NEXT:    notb %bpl
 ; SCALAR-NEXT:    movzbl %bpl, %ebp
 ; SCALAR-NEXT:    shll $8, %ebp
-; SCALAR-NEXT:    orl %r8d, %ebp
-; SCALAR-NEXT:    movzwl %bp, %r8d
-; SCALAR-NEXT:    orl %r14d, %r8d
-; SCALAR-NEXT:    negb %bl
+; SCALAR-NEXT:    orl %r9d, %ebp
+; SCALAR-NEXT:    movzwl %bp, %r9d
+; SCALAR-NEXT:    orl %r15d, %r9d
+; SCALAR-NEXT:    notb %r14b
+; SCALAR-NEXT:    movzbl %r14b, %ebp
+; SCALAR-NEXT:    notb %bl
 ; SCALAR-NEXT:    movzbl %bl, %ebx
-; SCALAR-NEXT:    negb %r11b
+; SCALAR-NEXT:    shll $8, %ebx
+; SCALAR-NEXT:    orl %ebp, %ebx
+; SCALAR-NEXT:    shll $16, %ebx
+; SCALAR-NEXT:    notb %r11b
 ; SCALAR-NEXT:    movzbl %r11b, %r11d
-; SCALAR-NEXT:    shll $8, %r11d
-; SCALAR-NEXT:    orl %ebx, %r11d
-; SCALAR-NEXT:    shll $16, %r11d
-; SCALAR-NEXT:    negb %r10b
+; SCALAR-NEXT:    notb %r10b
 ; SCALAR-NEXT:    movzbl %r10b, %r10d
-; SCALAR-NEXT:    negb %r9b
-; SCALAR-NEXT:    movzbl %r9b, %r9d
-; SCALAR-NEXT:    shll $8, %r9d
-; SCALAR-NEXT:    orl %r10d, %r9d
-; SCALAR-NEXT:    movzwl %r9w, %r9d
-; SCALAR-NEXT:    orl %r11d, %r9d
-; SCALAR-NEXT:    negb %dil
+; SCALAR-NEXT:    shll $8, %r10d
+; SCALAR-NEXT:    orl %r11d, %r10d
+; SCALAR-NEXT:    movzwl %r10w, %r10d
+; SCALAR-NEXT:    orl %ebx, %r10d
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movzbl %r8b, %r8d
+; SCALAR-NEXT:    notb %dil
 ; SCALAR-NEXT:    movzbl %dil, %edi
-; SCALAR-NEXT:    negb %dl
-; SCALAR-NEXT:    movzbl %dl, %edx
-; SCALAR-NEXT:    shll $8, %edx
-; SCALAR-NEXT:    orl %edi, %edx
-; SCALAR-NEXT:    shll $16, %edx
-; SCALAR-NEXT:    negb %cl
+; SCALAR-NEXT:    shll $8, %edi
+; SCALAR-NEXT:    orl %r8d, %edi
+; SCALAR-NEXT:    shll $16, %edi
+; SCALAR-NEXT:    notb %cl
 ; SCALAR-NEXT:    movzbl %cl, %ecx
-; SCALAR-NEXT:    negb %al
+; SCALAR-NEXT:    notb %al
 ; SCALAR-NEXT:    movzbl %al, %eax
 ; SCALAR-NEXT:    shll $8, %eax
 ; SCALAR-NEXT:    orl %ecx, %eax
 ; SCALAR-NEXT:    movzwl %ax, %eax
-; SCALAR-NEXT:    orl %edx, %eax
+; SCALAR-NEXT:    orl %edi, %eax
 ; SCALAR-NEXT:    movl %eax, 8(%rsi)
-; SCALAR-NEXT:    shlq $32, %r9
-; SCALAR-NEXT:    orq %r9, %r8
-; SCALAR-NEXT:    movq %r8, (%rsi)
-; SCALAR-NEXT:    movl %eax, 24(%rsi)
-; SCALAR-NEXT:    movq %r8, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 40(%rsi)
-; SCALAR-NEXT:    movq %r8, 32(%rsi)
-; SCALAR-NEXT:    movl %eax, 56(%rsi)
-; SCALAR-NEXT:    movq %r8, 48(%rsi)
+; SCALAR-NEXT:    shlq $32, %r10
+; SCALAR-NEXT:    orq %r10, %r9
+; SCALAR-NEXT:    movq %r9, (%rsi)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movq %r9, (%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
+; SCALAR-NEXT:    movq %r9, 16(%rdx)
+; SCALAR-NEXT:    movl %eax, 40(%rdx)
+; SCALAR-NEXT:    movq %r9, 32(%rdx)
+; SCALAR-NEXT:    movl %eax, 56(%rdx)
+; SCALAR-NEXT:    movq %r9, 48(%rdx)
 ; SCALAR-NEXT:    popq %rbx
+; SCALAR-NEXT:    popq %r12
 ; SCALAR-NEXT:    popq %r14
 ; SCALAR-NEXT:    popq %r15
 ; SCALAR-NEXT:    popq %rbp
@@ -3946,92 +4718,105 @@ define void @vec384_v12i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; SSE2-ONLY-LABEL: vec384_v12i8:
 ; SSE2-ONLY:       # %bb.0:
-; SSE2-ONLY-NEXT:    pxor %xmm0, %xmm0
-; SSE2-ONLY-NEXT:    psubb (%rdi), %xmm0
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-ONLY-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-ONLY-NEXT:    movq %xmm0, (%rsi)
 ; SSE2-ONLY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 16(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 32(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSE2-ONLY-NEXT:    movq %xmm0, 48(%rsi)
-; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rsi)
+; SSE2-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, (%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 16(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 32(%rdx)
+; SSE2-ONLY-NEXT:    movd %xmm1, 56(%rdx)
+; SSE2-ONLY-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE2-ONLY-NEXT:    retq
 ;
 ; SSE3-LABEL: vec384_v12i8:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    pxor %xmm0, %xmm0
-; SSE3-NEXT:    psubb (%rdi), %xmm0
+; SSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE3-NEXT:    pxor (%rdi), %xmm0
 ; SSE3-NEXT:    movq %xmm0, (%rsi)
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE3-NEXT:    movd %xmm1, 8(%rsi)
-; SSE3-NEXT:    movq %xmm0, 16(%rsi)
-; SSE3-NEXT:    movd %xmm1, 24(%rsi)
-; SSE3-NEXT:    movq %xmm0, 32(%rsi)
-; SSE3-NEXT:    movd %xmm1, 40(%rsi)
-; SSE3-NEXT:    movq %xmm0, 48(%rsi)
-; SSE3-NEXT:    movd %xmm1, 56(%rsi)
+; SSE3-NEXT:    movd %xmm1, 8(%rdx)
+; SSE3-NEXT:    movq %xmm0, (%rdx)
+; SSE3-NEXT:    movd %xmm1, 24(%rdx)
+; SSE3-NEXT:    movq %xmm0, 16(%rdx)
+; SSE3-NEXT:    movd %xmm1, 40(%rdx)
+; SSE3-NEXT:    movq %xmm0, 32(%rdx)
+; SSE3-NEXT:    movd %xmm1, 56(%rdx)
+; SSE3-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-ONLY-LABEL: vec384_v12i8:
 ; SSSE3-ONLY:       # %bb.0:
-; SSSE3-ONLY-NEXT:    pxor %xmm0, %xmm0
-; SSSE3-ONLY-NEXT:    psubb (%rdi), %xmm0
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSSE3-ONLY-NEXT:    pxor (%rdi), %xmm0
 ; SSSE3-ONLY-NEXT:    movq %xmm0, (%rsi)
 ; SSSE3-ONLY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 16(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 32(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rsi)
-; SSSE3-ONLY-NEXT:    movq %xmm0, 48(%rsi)
-; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rsi)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 8(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, (%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 24(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 16(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 40(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 32(%rdx)
+; SSSE3-ONLY-NEXT:    movd %xmm1, 56(%rdx)
+; SSSE3-ONLY-NEXT:    movq %xmm0, 48(%rdx)
 ; SSSE3-ONLY-NEXT:    retq
 ;
 ; SSE41-LABEL: vec384_v12i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    psubb (%rdi), %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor (%rdi), %xmm0
 ; SSE41-NEXT:    pextrd $2, %xmm0, 8(%rsi)
 ; SSE41-NEXT:    movq %xmm0, (%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 24(%rsi)
-; SSE41-NEXT:    movq %xmm0, 16(%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 40(%rsi)
-; SSE41-NEXT:    movq %xmm0, 32(%rsi)
-; SSE41-NEXT:    pextrd $2, %xmm0, 56(%rsi)
-; SSE41-NEXT:    movq %xmm0, 48(%rsi)
+; SSE41-NEXT:    pextrd $2, %xmm0, 8(%rdx)
+; SSE41-NEXT:    movq %xmm0, (%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 24(%rdx)
+; SSE41-NEXT:    movq %xmm0, 16(%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 40(%rdx)
+; SSE41-NEXT:    movq %xmm0, 32(%rdx)
+; SSE41-NEXT:    pextrd $2, %xmm0, 56(%rdx)
+; SSE41-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_v12i8:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pxor %xmm0, %xmm0
-; SSE42-NEXT:    psubb (%rdi), %xmm0
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE42-NEXT:    pxor (%rdi), %xmm0
 ; SSE42-NEXT:    pextrd $2, %xmm0, 8(%rsi)
 ; SSE42-NEXT:    movq %xmm0, (%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 24(%rsi)
-; SSE42-NEXT:    movq %xmm0, 16(%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 40(%rsi)
-; SSE42-NEXT:    movq %xmm0, 32(%rsi)
-; SSE42-NEXT:    pextrd $2, %xmm0, 56(%rsi)
-; SSE42-NEXT:    movq %xmm0, 48(%rsi)
+; SSE42-NEXT:    pextrd $2, %xmm0, 8(%rdx)
+; SSE42-NEXT:    movq %xmm0, (%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 24(%rdx)
+; SSE42-NEXT:    movq %xmm0, 16(%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 40(%rdx)
+; SSE42-NEXT:    movq %xmm0, 32(%rdx)
+; SSE42-NEXT:    pextrd $2, %xmm0, 56(%rdx)
+; SSE42-NEXT:    movq %xmm0, 48(%rdx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v12i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
 ; AVX-NEXT:    vmovq %xmm0, (%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 24(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 16(%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 40(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 32(%rsi)
-; AVX-NEXT:    vpextrd $2, %xmm0, 56(%rsi)
-; AVX-NEXT:    vmovq %xmm0, 48(%rsi)
+; AVX-NEXT:    vpextrd $2, %xmm0, 8(%rdx)
+; AVX-NEXT:    vmovq %xmm0, (%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 24(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 16(%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 40(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 32(%rdx)
+; AVX-NEXT:    vpextrd $2, %xmm0, 56(%rdx)
+; AVX-NEXT:    vmovq %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <12 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <12 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <12 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <12 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <12 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <12 x i8>, ptr %out.vec.ptr, i64 0
   store <12 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <12 x i8>, ptr %out.vec.ptr, i64 1
@@ -4043,110 +4828,108 @@ define void @vec384_v12i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v12i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v12i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v12i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    pushq %rbp
 ; SCALAR-NEXT:    pushq %r14
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    movq (%rdi), %rdx
-; SCALAR-NEXT:    movq 8(%rdi), %r10
-; SCALAR-NEXT:    movq %rdx, %rax
-; SCALAR-NEXT:    shrq $32, %rax
-; SCALAR-NEXT:    movq %rdx, %rcx
-; SCALAR-NEXT:    shrq $48, %rcx
-; SCALAR-NEXT:    movq %r10, %r8
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    movq %rax, %r8
 ; SCALAR-NEXT:    shrq $32, %r8
-; SCALAR-NEXT:    movq %r10, %r9
+; SCALAR-NEXT:    movq %rax, %r9
 ; SCALAR-NEXT:    shrq $48, %r9
+; SCALAR-NEXT:    movq %rcx, %r10
+; SCALAR-NEXT:    shrq $32, %r10
+; SCALAR-NEXT:    movq %rcx, %r11
+; SCALAR-NEXT:    shrq $48, %r11
 ; SCALAR-NEXT:    movq 16(%rdi), %rdi
-; SCALAR-NEXT:    movq %rdi, %r11
-; SCALAR-NEXT:    shrq $32, %r11
 ; SCALAR-NEXT:    movq %rdi, %rbx
-; SCALAR-NEXT:    shrq $48, %rbx
-; SCALAR-NEXT:    movl %edi, %ebp
-; SCALAR-NEXT:    andl $-65536, %ebp # imm = 0xFFFF0000
-; SCALAR-NEXT:    negl %edi
-; SCALAR-NEXT:    movzwl %di, %r14d
-; SCALAR-NEXT:    subl %ebp, %r14d
-; SCALAR-NEXT:    negl %ebx
-; SCALAR-NEXT:    shll $16, %ebx
-; SCALAR-NEXT:    negl %r11d
-; SCALAR-NEXT:    movzwl %r11w, %edi
-; SCALAR-NEXT:    orl %ebx, %edi
-; SCALAR-NEXT:    shlq $32, %rdi
-; SCALAR-NEXT:    orq %r14, %rdi
-; SCALAR-NEXT:    movl %r10d, %r11d
-; SCALAR-NEXT:    andl $-65536, %r11d # imm = 0xFFFF0000
-; SCALAR-NEXT:    negl %r10d
+; SCALAR-NEXT:    shrq $32, %rbx
+; SCALAR-NEXT:    movq %rdi, %r14
+; SCALAR-NEXT:    shrq $48, %r14
+; SCALAR-NEXT:    notl %r14d
+; SCALAR-NEXT:    shll $16, %r14d
+; SCALAR-NEXT:    notl %ebx
+; SCALAR-NEXT:    movzwl %bx, %ebx
+; SCALAR-NEXT:    orl %r14d, %ebx
+; SCALAR-NEXT:    shlq $32, %rbx
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    orq %rbx, %rdi
+; SCALAR-NEXT:    notl %r11d
+; SCALAR-NEXT:    shll $16, %r11d
+; SCALAR-NEXT:    notl %r10d
 ; SCALAR-NEXT:    movzwl %r10w, %r10d
-; SCALAR-NEXT:    subl %r11d, %r10d
-; SCALAR-NEXT:    negl %r9d
+; SCALAR-NEXT:    orl %r11d, %r10d
+; SCALAR-NEXT:    shlq $32, %r10
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    orq %r10, %rcx
+; SCALAR-NEXT:    notl %r9d
 ; SCALAR-NEXT:    shll $16, %r9d
-; SCALAR-NEXT:    negl %r8d
+; SCALAR-NEXT:    notl %r8d
 ; SCALAR-NEXT:    movzwl %r8w, %r8d
 ; SCALAR-NEXT:    orl %r9d, %r8d
 ; SCALAR-NEXT:    shlq $32, %r8
-; SCALAR-NEXT:    orq %r10, %r8
-; SCALAR-NEXT:    movl %edx, %r9d
-; SCALAR-NEXT:    andl $-65536, %r9d # imm = 0xFFFF0000
-; SCALAR-NEXT:    negl %edx
-; SCALAR-NEXT:    movzwl %dx, %edx
-; SCALAR-NEXT:    subl %r9d, %edx
-; SCALAR-NEXT:    negl %ecx
-; SCALAR-NEXT:    shll $16, %ecx
-; SCALAR-NEXT:    negl %eax
-; SCALAR-NEXT:    movzwl %ax, %eax
-; SCALAR-NEXT:    orl %ecx, %eax
-; SCALAR-NEXT:    shlq $32, %rax
-; SCALAR-NEXT:    orq %rdx, %rax
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    orq %r8, %rax
 ; SCALAR-NEXT:    movq %rax, (%rsi)
-; SCALAR-NEXT:    movq %r8, 8(%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
 ; SCALAR-NEXT:    movq %rdi, 16(%rsi)
-; SCALAR-NEXT:    movq %rdi, 48(%rsi)
-; SCALAR-NEXT:    movq %r8, 40(%rsi)
-; SCALAR-NEXT:    movq %rax, 32(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rdi, 16(%rdx)
+; SCALAR-NEXT:    movq %rdi, 48(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    popq %r14
-; SCALAR-NEXT:    popq %rbp
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v12i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw 16(%rdi), %xmm1
-; SSE2-NEXT:    psubw (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movq %xmm1, 16(%rsi)
-; SSE2-NEXT:    movq %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqu %xmm0, 32(%rsi)
+; SSE2-NEXT:    movq %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movq %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqu %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v12i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubw 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovq %xmm1, 16(%rsi)
-; AVX1-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX1-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rdx)
+; AVX1-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX1-NEXT:    vmovlps %xmm1, 48(%rdx)
+; AVX1-NEXT:    vmovups %xmm0, 32(%rdx)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v12i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubw (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, 16(%rsi)
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX2-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX2-NEXT:    vmovq %xmm1, 16(%rdx)
+; AVX2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-NEXT:    vmovq %xmm1, 48(%rdx)
+; AVX2-NEXT:    vmovdqu %xmm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <12 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <12 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <12 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <12 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  store <12 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <12 x i16>, ptr %out.vec.ptr, i64 0
   store <12 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <12 x i16>, ptr %out.vec.ptr, i64 1
@@ -4154,7 +4937,7 @@ define void @vec384_v12i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v16i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbp
@@ -4163,107 +4946,146 @@ define void @vec384_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-NEXT:    pushq %r13
 ; SCALAR-NEXT:    pushq %r12
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 2(%rdi), %al
-; SCALAR-NEXT:    movl %eax, %edx
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 3(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 4(%rdi), %al
-; SCALAR-NEXT:    movl %eax, %r8d
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subb 5(%rdi), %r10b
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 6(%rdi), %al
-; SCALAR-NEXT:    movl %eax, %r11d
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 7(%rdi), %al
-; SCALAR-NEXT:    movl %eax, %ebx
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %ebp, %ebp
-; SCALAR-NEXT:    subb 8(%rdi), %bpl
-; SCALAR-NEXT:    xorl %r14d, %r14d
-; SCALAR-NEXT:    subb 9(%rdi), %r14b
-; SCALAR-NEXT:    xorl %r15d, %r15d
-; SCALAR-NEXT:    subb 10(%rdi), %r15b
-; SCALAR-NEXT:    xorl %r12d, %r12d
-; SCALAR-NEXT:    subb 11(%rdi), %r12b
-; SCALAR-NEXT:    xorl %r13d, %r13d
-; SCALAR-NEXT:    subb 12(%rdi), %r13b
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subb 13(%rdi), %r9b
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb 14(%rdi), %cl
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 15(%rdi), %al
-; SCALAR-NEXT:    movb %al, 15(%rsi)
+; SCALAR-NEXT:    movzbl 15(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 14(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 13(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 12(%rdi), %r11d
+; SCALAR-NEXT:    movzbl 11(%rdi), %r13d
+; SCALAR-NEXT:    movzbl 10(%rdi), %r12d
+; SCALAR-NEXT:    movzbl 9(%rdi), %ebp
+; SCALAR-NEXT:    movzbl 8(%rdi), %r14d
+; SCALAR-NEXT:    movzbl 7(%rdi), %ebx
+; SCALAR-NEXT:    movzbl 6(%rdi), %r10d
+; SCALAR-NEXT:    movzbl 5(%rdi), %r15d
+; SCALAR-NEXT:    movzbl 4(%rdi), %r9d
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    movb %dil, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movl %r15d, %r9d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    notb %bl
+; SCALAR-NEXT:    movb %bl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r14b
+; SCALAR-NEXT:    notb %bpl
+; SCALAR-NEXT:    movl %ebp, %r15d
+; SCALAR-NEXT:    notb %r12b
+; SCALAR-NEXT:    movb %r12b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r13b
+; SCALAR-NEXT:    movb %r13b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movb %r8b, 15(%rsi)
 ; SCALAR-NEXT:    movb %cl, 14(%rsi)
-; SCALAR-NEXT:    movb %r9b, 13(%rsi)
-; SCALAR-NEXT:    movb %r13b, 12(%rsi)
-; SCALAR-NEXT:    movb %r12b, 11(%rsi)
-; SCALAR-NEXT:    movb %r15b, 10(%rsi)
-; SCALAR-NEXT:    movb %r14b, 9(%rsi)
-; SCALAR-NEXT:    movb %bpl, 8(%rsi)
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    movb %dil, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %dil, 13(%rsi)
+; SCALAR-NEXT:    movb %r11b, 12(%rsi)
+; SCALAR-NEXT:    movl %r11d, %ebp
+; SCALAR-NEXT:    movb %r11b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %r13b, 11(%rsi)
+; SCALAR-NEXT:    movb %r12b, 10(%rsi)
+; SCALAR-NEXT:    movb %r15b, 9(%rsi)
+; SCALAR-NEXT:    movb %r14b, 8(%rsi)
 ; SCALAR-NEXT:    movb %bl, 7(%rsi)
-; SCALAR-NEXT:    movb %r11b, 6(%rsi)
-; SCALAR-NEXT:    movb %r10b, 5(%rsi)
-; SCALAR-NEXT:    movb %r8b, 4(%rsi)
-; SCALAR-NEXT:    movl %r8d, %r11d
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
-; SCALAR-NEXT:    movb %r8b, 3(%rsi)
-; SCALAR-NEXT:    movb %dl, 2(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 4-byte Reload
-; SCALAR-NEXT:    movb %dl, 1(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, (%rsi)
-; SCALAR-NEXT:    movb %al, 31(%rsi)
-; SCALAR-NEXT:    movb %cl, 30(%rsi)
-; SCALAR-NEXT:    movb %r9b, 29(%rsi)
-; SCALAR-NEXT:    movb %r13b, 28(%rsi)
-; SCALAR-NEXT:    movb %r12b, 27(%rsi)
-; SCALAR-NEXT:    movb %r15b, 26(%rsi)
-; SCALAR-NEXT:    movb %r14b, 25(%rsi)
-; SCALAR-NEXT:    movb %bpl, 24(%rsi)
-; SCALAR-NEXT:    movb %bl, 23(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
-; SCALAR-NEXT:    movb %bl, 22(%rsi)
-; SCALAR-NEXT:    movb %r10b, 21(%rsi)
+; SCALAR-NEXT:    movb %r10b, 6(%rsi)
 ; SCALAR-NEXT:    movl %r10d, %ebx
-; SCALAR-NEXT:    movb %r11b, 20(%rsi)
-; SCALAR-NEXT:    movl %r11d, %r10d
-; SCALAR-NEXT:    movb %r8b, 19(%rsi)
-; SCALAR-NEXT:    movl %r8d, %r11d
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
-; SCALAR-NEXT:    movb %r8b, 18(%rsi)
-; SCALAR-NEXT:    movb %dl, 17(%rsi)
-; SCALAR-NEXT:    movb %dil, 16(%rsi)
-; SCALAR-NEXT:    movb %al, 47(%rsi)
-; SCALAR-NEXT:    movb %cl, 46(%rsi)
-; SCALAR-NEXT:    movb %r9b, 45(%rsi)
-; SCALAR-NEXT:    movb %r13b, 44(%rsi)
-; SCALAR-NEXT:    movb %r12b, 43(%rsi)
-; SCALAR-NEXT:    movb %r15b, 42(%rsi)
-; SCALAR-NEXT:    movb %r14b, 41(%rsi)
-; SCALAR-NEXT:    movb %bpl, 40(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 39(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 38(%rsi)
-; SCALAR-NEXT:    movb %bl, 37(%rsi)
-; SCALAR-NEXT:    movb %r10b, 36(%rsi)
-; SCALAR-NEXT:    movb %r11b, 35(%rsi)
-; SCALAR-NEXT:    movb %r8b, 34(%rsi)
-; SCALAR-NEXT:    movb %dl, 33(%rsi)
-; SCALAR-NEXT:    movb %dil, 32(%rsi)
+; SCALAR-NEXT:    movb %r10b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %r9b, 5(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r11b, 4(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r12d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r12b, 3(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r13b, 1(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r10b, (%rsi)
+; SCALAR-NEXT:    movb %r8b, 15(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %dil, 14(%rdx)
+; SCALAR-NEXT:    movb %al, 13(%rdx)
+; SCALAR-NEXT:    movb %bpl, 12(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 11(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 10(%rdx)
+; SCALAR-NEXT:    movb %r15b, 9(%rdx)
+; SCALAR-NEXT:    movb %r14b, 8(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebp # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bpl, 7(%rdx)
+; SCALAR-NEXT:    movb %bl, 6(%rdx)
+; SCALAR-NEXT:    movb %r9b, 5(%rdx)
+; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %r11b, 4(%rdx)
+; SCALAR-NEXT:    movb %r12b, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movl %r13d, %ebx
+; SCALAR-NEXT:    movb %r13b, 1(%rdx)
+; SCALAR-NEXT:    movl %r10d, %esi
+; SCALAR-NEXT:    movb %r10b, (%rdx)
+; SCALAR-NEXT:    movb %r8b, 31(%rdx)
+; SCALAR-NEXT:    movb %dil, 30(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 29(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r11b, 28(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r13b, 27(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r12d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r12b, 26(%rdx)
+; SCALAR-NEXT:    movb %r15b, 25(%rdx)
+; SCALAR-NEXT:    movb %r14b, 24(%rdx)
+; SCALAR-NEXT:    movb %bpl, 23(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r10b, 22(%rdx)
+; SCALAR-NEXT:    movb %r9b, 21(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r9b, 20(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %dil, 19(%rdx)
+; SCALAR-NEXT:    movb %cl, 18(%rdx)
+; SCALAR-NEXT:    movb %bl, 17(%rdx)
+; SCALAR-NEXT:    movb %sil, 16(%rdx)
+; SCALAR-NEXT:    movb %r8b, 47(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r8b, 46(%rdx)
+; SCALAR-NEXT:    movb %al, 45(%rdx)
+; SCALAR-NEXT:    movb %r11b, 44(%rdx)
+; SCALAR-NEXT:    movb %r13b, 43(%rdx)
+; SCALAR-NEXT:    movb %r12b, 42(%rdx)
+; SCALAR-NEXT:    movb %r15b, 41(%rdx)
+; SCALAR-NEXT:    movb %r14b, 40(%rdx)
+; SCALAR-NEXT:    movb %bpl, 39(%rdx)
+; SCALAR-NEXT:    movb %r10b, 38(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 37(%rdx)
+; SCALAR-NEXT:    movb %r9b, 36(%rdx)
+; SCALAR-NEXT:    movb %dil, 35(%rdx)
+; SCALAR-NEXT:    movb %cl, 34(%rdx)
+; SCALAR-NEXT:    movb %bl, 33(%rdx)
+; SCALAR-NEXT:    movb %sil, 32(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    popq %r12
 ; SCALAR-NEXT:    popq %r13
@@ -4274,23 +5096,26 @@ define void @vec384_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; SSE2-LABEL: vec384_v16i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubb (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_v16i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <16 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <16 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <16 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <16 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <16 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <16 x i8>, ptr %out.vec.ptr, i64 0
   store <16 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <16 x i8>, ptr %out.vec.ptr, i64 1
@@ -4300,194 +5125,206 @@ define void @vec384_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec384_v24i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec384_v24i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec384_v24i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movq (%rdi), %rax
 ; SCALAR-NEXT:    movq 8(%rdi), %rcx
-; SCALAR-NEXT:    movq 16(%rdi), %rdx
-; SCALAR-NEXT:    movq %rdx, %rdi
-; SCALAR-NEXT:    shrq $40, %rdi
-; SCALAR-NEXT:    movq %rdx, %r8
-; SCALAR-NEXT:    shrq $56, %r8
-; SCALAR-NEXT:    movq %rdx, %r9
-; SCALAR-NEXT:    shrq $48, %r9
-; SCALAR-NEXT:    negb %r9b
+; SCALAR-NEXT:    movq 16(%rdi), %rdi
+; SCALAR-NEXT:    movq %rdi, %r8
+; SCALAR-NEXT:    shrq $40, %r8
+; SCALAR-NEXT:    movq %rdi, %r9
+; SCALAR-NEXT:    shrq $56, %r9
+; SCALAR-NEXT:    movq %rdi, %r10
+; SCALAR-NEXT:    shrq $48, %r10
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    movzbl %r10b, %r10d
+; SCALAR-NEXT:    notb %r9b
 ; SCALAR-NEXT:    movzbl %r9b, %r9d
-; SCALAR-NEXT:    negb %r8b
+; SCALAR-NEXT:    shll $8, %r9d
+; SCALAR-NEXT:    orl %r10d, %r9d
+; SCALAR-NEXT:    movq %rdi, %r10
+; SCALAR-NEXT:    shrq $32, %r10
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    movzbl %r10b, %r10d
+; SCALAR-NEXT:    notb %r8b
 ; SCALAR-NEXT:    movzbl %r8b, %r8d
 ; SCALAR-NEXT:    shll $8, %r8d
+; SCALAR-NEXT:    orl %r10d, %r8d
+; SCALAR-NEXT:    movl %edi, %r10d
+; SCALAR-NEXT:    shrl $24, %r10d
+; SCALAR-NEXT:    shll $16, %r9d
+; SCALAR-NEXT:    movzwl %r8w, %r8d
 ; SCALAR-NEXT:    orl %r9d, %r8d
-; SCALAR-NEXT:    movq %rdx, %r9
-; SCALAR-NEXT:    shrq $32, %r9
-; SCALAR-NEXT:    negb %r9b
+; SCALAR-NEXT:    movl %edi, %r9d
+; SCALAR-NEXT:    shrl $16, %r9d
+; SCALAR-NEXT:    notb %r9b
 ; SCALAR-NEXT:    movzbl %r9b, %r9d
-; SCALAR-NEXT:    negb %dil
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    movzbl %r10b, %r10d
+; SCALAR-NEXT:    shll $8, %r10d
+; SCALAR-NEXT:    orl %r9d, %r10d
+; SCALAR-NEXT:    movl %edi, %r9d
+; SCALAR-NEXT:    shrl $8, %r9d
+; SCALAR-NEXT:    notb %dil
 ; SCALAR-NEXT:    movzbl %dil, %edi
-; SCALAR-NEXT:    shll $8, %edi
-; SCALAR-NEXT:    orl %r9d, %edi
-; SCALAR-NEXT:    movl %edx, %r9d
-; SCALAR-NEXT:    shrl $24, %r9d
-; SCALAR-NEXT:    shll $16, %r8d
-; SCALAR-NEXT:    movzwl %di, %edi
-; SCALAR-NEXT:    orl %r8d, %edi
-; SCALAR-NEXT:    movl %edx, %r8d
-; SCALAR-NEXT:    shrl $16, %r8d
-; SCALAR-NEXT:    negb %r8b
-; SCALAR-NEXT:    movzbl %r8b, %r8d
-; SCALAR-NEXT:    negb %r9b
+; SCALAR-NEXT:    notb %r9b
 ; SCALAR-NEXT:    movzbl %r9b, %r9d
 ; SCALAR-NEXT:    shll $8, %r9d
-; SCALAR-NEXT:    orl %r8d, %r9d
-; SCALAR-NEXT:    movl %edx, %r8d
-; SCALAR-NEXT:    shrl $8, %r8d
-; SCALAR-NEXT:    negb %dl
-; SCALAR-NEXT:    movzbl %dl, %edx
-; SCALAR-NEXT:    negb %r8b
-; SCALAR-NEXT:    movzbl %r8b, %r8d
-; SCALAR-NEXT:    shll $8, %r8d
-; SCALAR-NEXT:    orl %edx, %r8d
-; SCALAR-NEXT:    movq %rcx, %r10
-; SCALAR-NEXT:    shrq $40, %r10
-; SCALAR-NEXT:    shll $16, %r9d
-; SCALAR-NEXT:    movzwl %r8w, %edx
-; SCALAR-NEXT:    orl %r9d, %edx
+; SCALAR-NEXT:    orl %edi, %r9d
+; SCALAR-NEXT:    movq %rcx, %r11
+; SCALAR-NEXT:    shrq $40, %r11
+; SCALAR-NEXT:    shll $16, %r10d
+; SCALAR-NEXT:    movzwl %r9w, %edi
+; SCALAR-NEXT:    orl %r10d, %edi
+; SCALAR-NEXT:    movq %rcx, %r9
+; SCALAR-NEXT:    shrq $56, %r9
+; SCALAR-NEXT:    shlq $32, %r8
+; SCALAR-NEXT:    orq %r8, %rdi
 ; SCALAR-NEXT:    movq %rcx, %r8
-; SCALAR-NEXT:    shrq $56, %r8
-; SCALAR-NEXT:    shlq $32, %rdi
-; SCALAR-NEXT:    orq %rdi, %rdx
-; SCALAR-NEXT:    movq %rcx, %rdi
-; SCALAR-NEXT:    shrq $48, %rdi
-; SCALAR-NEXT:    negb %dil
-; SCALAR-NEXT:    movzbl %dil, %edi
-; SCALAR-NEXT:    negb %r8b
+; SCALAR-NEXT:    shrq $48, %r8
+; SCALAR-NEXT:    notb %r8b
 ; SCALAR-NEXT:    movzbl %r8b, %r8d
-; SCALAR-NEXT:    shll $8, %r8d
-; SCALAR-NEXT:    orl %edi, %r8d
-; SCALAR-NEXT:    movq %rcx, %rdi
-; SCALAR-NEXT:    shrq $32, %rdi
-; SCALAR-NEXT:    negb %dil
-; SCALAR-NEXT:    movzbl %dil, %edi
-; SCALAR-NEXT:    negb %r10b
-; SCALAR-NEXT:    movzbl %r10b, %r9d
-; SCALAR-NEXT:    shll $8, %r9d
-; SCALAR-NEXT:    orl %edi, %r9d
-; SCALAR-NEXT:    movl %ecx, %r10d
-; SCALAR-NEXT:    shrl $24, %r10d
-; SCALAR-NEXT:    shll $16, %r8d
-; SCALAR-NEXT:    movzwl %r9w, %edi
-; SCALAR-NEXT:    orl %r8d, %edi
-; SCALAR-NEXT:    movl %ecx, %r8d
-; SCALAR-NEXT:    shrl $16, %r8d
-; SCALAR-NEXT:    negb %r8b
-; SCALAR-NEXT:    movzbl %r8b, %r8d
-; SCALAR-NEXT:    negb %r10b
-; SCALAR-NEXT:    movzbl %r10b, %r9d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl %r9b, %r9d
 ; SCALAR-NEXT:    shll $8, %r9d
 ; SCALAR-NEXT:    orl %r8d, %r9d
-; SCALAR-NEXT:    movl %ecx, %r8d
-; SCALAR-NEXT:    shrl $8, %r8d
-; SCALAR-NEXT:    negb %cl
+; SCALAR-NEXT:    movq %rcx, %r8
+; SCALAR-NEXT:    shrq $32, %r8
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movzbl %r8b, %r8d
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movzbl %r11b, %r10d
+; SCALAR-NEXT:    shll $8, %r10d
+; SCALAR-NEXT:    orl %r8d, %r10d
+; SCALAR-NEXT:    movl %ecx, %r11d
+; SCALAR-NEXT:    shrl $24, %r11d
+; SCALAR-NEXT:    shll $16, %r9d
+; SCALAR-NEXT:    movzwl %r10w, %r8d
+; SCALAR-NEXT:    orl %r9d, %r8d
+; SCALAR-NEXT:    movl %ecx, %r9d
+; SCALAR-NEXT:    shrl $16, %r9d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl %r9b, %r9d
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movzbl %r11b, %r10d
+; SCALAR-NEXT:    shll $8, %r10d
+; SCALAR-NEXT:    orl %r9d, %r10d
+; SCALAR-NEXT:    movl %ecx, %r9d
+; SCALAR-NEXT:    shrl $8, %r9d
+; SCALAR-NEXT:    notb %cl
 ; SCALAR-NEXT:    movzbl %cl, %ecx
-; SCALAR-NEXT:    negb %r8b
-; SCALAR-NEXT:    movzbl %r8b, %r8d
-; SCALAR-NEXT:    shll $8, %r8d
-; SCALAR-NEXT:    orl %ecx, %r8d
-; SCALAR-NEXT:    movq %rax, %r10
-; SCALAR-NEXT:    shrq $40, %r10
-; SCALAR-NEXT:    shll $16, %r9d
-; SCALAR-NEXT:    movzwl %r8w, %ecx
-; SCALAR-NEXT:    orl %r9d, %ecx
-; SCALAR-NEXT:    movq %rax, %r8
-; SCALAR-NEXT:    shrq $56, %r8
-; SCALAR-NEXT:    shlq $32, %rdi
-; SCALAR-NEXT:    orq %rdi, %rcx
-; SCALAR-NEXT:    movq %rax, %rdi
-; SCALAR-NEXT:    shrq $48, %rdi
-; SCALAR-NEXT:    negb %dil
-; SCALAR-NEXT:    movzbl %dil, %edi
-; SCALAR-NEXT:    negb %r8b
-; SCALAR-NEXT:    movzbl %r8b, %r8d
-; SCALAR-NEXT:    shll $8, %r8d
-; SCALAR-NEXT:    orl %edi, %r8d
-; SCALAR-NEXT:    movq %rax, %rdi
-; SCALAR-NEXT:    shrq $32, %rdi
-; SCALAR-NEXT:    negb %dil
-; SCALAR-NEXT:    movzbl %dil, %edi
-; SCALAR-NEXT:    negb %r10b
-; SCALAR-NEXT:    movzbl %r10b, %r9d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl %r9b, %r9d
 ; SCALAR-NEXT:    shll $8, %r9d
-; SCALAR-NEXT:    orl %edi, %r9d
-; SCALAR-NEXT:    movl %eax, %r10d
-; SCALAR-NEXT:    shrl $24, %r10d
-; SCALAR-NEXT:    shll $16, %r8d
-; SCALAR-NEXT:    movzwl %r9w, %edi
-; SCALAR-NEXT:    orl %r8d, %edi
-; SCALAR-NEXT:    movl %eax, %r8d
-; SCALAR-NEXT:    shrl $16, %r8d
-; SCALAR-NEXT:    negb %r8b
+; SCALAR-NEXT:    orl %ecx, %r9d
+; SCALAR-NEXT:    movq %rax, %r11
+; SCALAR-NEXT:    shrq $40, %r11
+; SCALAR-NEXT:    shll $16, %r10d
+; SCALAR-NEXT:    movzwl %r9w, %ecx
+; SCALAR-NEXT:    orl %r10d, %ecx
+; SCALAR-NEXT:    movq %rax, %r9
+; SCALAR-NEXT:    shrq $56, %r9
+; SCALAR-NEXT:    shlq $32, %r8
+; SCALAR-NEXT:    orq %r8, %rcx
+; SCALAR-NEXT:    movq %rax, %r8
+; SCALAR-NEXT:    shrq $48, %r8
+; SCALAR-NEXT:    notb %r8b
 ; SCALAR-NEXT:    movzbl %r8b, %r8d
-; SCALAR-NEXT:    negb %r10b
-; SCALAR-NEXT:    movzbl %r10b, %r9d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl %r9b, %r9d
 ; SCALAR-NEXT:    shll $8, %r9d
 ; SCALAR-NEXT:    orl %r8d, %r9d
-; SCALAR-NEXT:    movl %eax, %r8d
-; SCALAR-NEXT:    shrl $8, %r8d
-; SCALAR-NEXT:    negb %al
-; SCALAR-NEXT:    movzbl %al, %eax
-; SCALAR-NEXT:    negb %r8b
+; SCALAR-NEXT:    movq %rax, %r8
+; SCALAR-NEXT:    shrq $32, %r8
+; SCALAR-NEXT:    notb %r8b
 ; SCALAR-NEXT:    movzbl %r8b, %r8d
-; SCALAR-NEXT:    shll $8, %r8d
-; SCALAR-NEXT:    orl %eax, %r8d
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movzbl %r11b, %r10d
+; SCALAR-NEXT:    shll $8, %r10d
+; SCALAR-NEXT:    orl %r8d, %r10d
+; SCALAR-NEXT:    movl %eax, %r11d
+; SCALAR-NEXT:    shrl $24, %r11d
 ; SCALAR-NEXT:    shll $16, %r9d
-; SCALAR-NEXT:    movzwl %r8w, %eax
-; SCALAR-NEXT:    orl %r9d, %eax
-; SCALAR-NEXT:    shlq $32, %rdi
-; SCALAR-NEXT:    orq %rdi, %rax
+; SCALAR-NEXT:    movzwl %r10w, %r8d
+; SCALAR-NEXT:    orl %r9d, %r8d
+; SCALAR-NEXT:    movl %eax, %r9d
+; SCALAR-NEXT:    shrl $16, %r9d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl %r9b, %r9d
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movzbl %r11b, %r10d
+; SCALAR-NEXT:    shll $8, %r10d
+; SCALAR-NEXT:    orl %r9d, %r10d
+; SCALAR-NEXT:    movl %eax, %r9d
+; SCALAR-NEXT:    shrl $8, %r9d
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movzbl %al, %eax
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movzbl %r9b, %r9d
+; SCALAR-NEXT:    shll $8, %r9d
+; SCALAR-NEXT:    orl %eax, %r9d
+; SCALAR-NEXT:    shll $16, %r10d
+; SCALAR-NEXT:    movzwl %r9w, %eax
+; SCALAR-NEXT:    orl %r10d, %eax
+; SCALAR-NEXT:    shlq $32, %r8
+; SCALAR-NEXT:    orq %r8, %rax
 ; SCALAR-NEXT:    movq %rax, (%rsi)
 ; SCALAR-NEXT:    movq %rcx, 8(%rsi)
-; SCALAR-NEXT:    movq %rdx, 16(%rsi)
-; SCALAR-NEXT:    movq %rdx, 48(%rsi)
-; SCALAR-NEXT:    movq %rcx, 40(%rsi)
-; SCALAR-NEXT:    movq %rax, 32(%rsi)
+; SCALAR-NEXT:    movq %rdi, 16(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rdi, 16(%rdx)
+; SCALAR-NEXT:    movq %rdi, 48(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec384_v24i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb 16(%rdi), %xmm1
-; SSE2-NEXT:    psubb (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movq %xmm1, 16(%rsi)
-; SSE2-NEXT:    movq %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqu %xmm0, 32(%rsi)
+; SSE2-NEXT:    movq %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movq %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqu %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec384_v24i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubb 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    vmovq %xmm1, 16(%rsi)
-; AVX1-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX1-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX1-NEXT:    vmovlps %xmm1, 16(%rdx)
+; AVX1-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX1-NEXT:    vmovlps %xmm1, 48(%rdx)
+; AVX1-NEXT:    vmovups %xmm0, 32(%rdx)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_v24i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubb (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, 16(%rsi)
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    vmovq %xmm1, 48(%rsi)
-; AVX2-NEXT:    vmovdqu %xmm0, 32(%rsi)
+; AVX2-NEXT:    vmovq %xmm1, 16(%rdx)
+; AVX2-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX2-NEXT:    vmovq %xmm1, 48(%rdx)
+; AVX2-NEXT:    vmovdqu %xmm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <24 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <24 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <24 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <24 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <24 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <24 x i8>, ptr %out.vec.ptr, i64 0
   store <24 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <24 x i8>, ptr %out.vec.ptr, i64 1
@@ -4495,133 +5332,196 @@ define void @vec384_v24i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v2i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v2i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb (%rdi), %cl
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movb %al, 1(%rsi)
-; SCALAR-NEXT:    movb %cl, (%rsi)
-; SCALAR-NEXT:    movb %al, 3(%rsi)
-; SCALAR-NEXT:    movb %cl, 2(%rsi)
-; SCALAR-NEXT:    movb %al, 5(%rsi)
-; SCALAR-NEXT:    movb %cl, 4(%rsi)
-; SCALAR-NEXT:    movb %al, 7(%rsi)
-; SCALAR-NEXT:    movb %cl, 6(%rsi)
-; SCALAR-NEXT:    movb %al, 9(%rsi)
-; SCALAR-NEXT:    movb %cl, 8(%rsi)
-; SCALAR-NEXT:    movb %al, 11(%rsi)
-; SCALAR-NEXT:    movb %cl, 10(%rsi)
-; SCALAR-NEXT:    movb %al, 13(%rsi)
-; SCALAR-NEXT:    movb %cl, 12(%rsi)
-; SCALAR-NEXT:    movb %al, 15(%rsi)
-; SCALAR-NEXT:    movb %cl, 14(%rsi)
-; SCALAR-NEXT:    movb %al, 17(%rsi)
-; SCALAR-NEXT:    movb %cl, 16(%rsi)
-; SCALAR-NEXT:    movb %al, 19(%rsi)
-; SCALAR-NEXT:    movb %cl, 18(%rsi)
-; SCALAR-NEXT:    movb %al, 21(%rsi)
-; SCALAR-NEXT:    movb %cl, 20(%rsi)
-; SCALAR-NEXT:    movb %al, 23(%rsi)
-; SCALAR-NEXT:    movb %cl, 22(%rsi)
-; SCALAR-NEXT:    movb %al, 25(%rsi)
-; SCALAR-NEXT:    movb %cl, 24(%rsi)
-; SCALAR-NEXT:    movb %al, 27(%rsi)
-; SCALAR-NEXT:    movb %cl, 26(%rsi)
-; SCALAR-NEXT:    movb %al, 29(%rsi)
-; SCALAR-NEXT:    movb %cl, 28(%rsi)
-; SCALAR-NEXT:    movb %al, 31(%rsi)
-; SCALAR-NEXT:    movb %cl, 30(%rsi)
-; SCALAR-NEXT:    movb %al, 33(%rsi)
-; SCALAR-NEXT:    movb %cl, 32(%rsi)
-; SCALAR-NEXT:    movb %al, 35(%rsi)
-; SCALAR-NEXT:    movb %cl, 34(%rsi)
-; SCALAR-NEXT:    movb %al, 37(%rsi)
-; SCALAR-NEXT:    movb %cl, 36(%rsi)
-; SCALAR-NEXT:    movb %al, 39(%rsi)
-; SCALAR-NEXT:    movb %cl, 38(%rsi)
-; SCALAR-NEXT:    movb %al, 41(%rsi)
-; SCALAR-NEXT:    movb %cl, 40(%rsi)
-; SCALAR-NEXT:    movb %al, 43(%rsi)
-; SCALAR-NEXT:    movb %cl, 42(%rsi)
-; SCALAR-NEXT:    movb %al, 45(%rsi)
-; SCALAR-NEXT:    movb %cl, 44(%rsi)
-; SCALAR-NEXT:    movb %al, 47(%rsi)
-; SCALAR-NEXT:    movb %cl, 46(%rsi)
-; SCALAR-NEXT:    movb %al, 49(%rsi)
-; SCALAR-NEXT:    movb %cl, 48(%rsi)
-; SCALAR-NEXT:    movb %al, 51(%rsi)
-; SCALAR-NEXT:    movb %cl, 50(%rsi)
-; SCALAR-NEXT:    movb %al, 53(%rsi)
-; SCALAR-NEXT:    movb %cl, 52(%rsi)
-; SCALAR-NEXT:    movb %al, 55(%rsi)
-; SCALAR-NEXT:    movb %cl, 54(%rsi)
-; SCALAR-NEXT:    movb %al, 57(%rsi)
-; SCALAR-NEXT:    movb %cl, 56(%rsi)
-; SCALAR-NEXT:    movb %al, 59(%rsi)
-; SCALAR-NEXT:    movb %cl, 58(%rsi)
-; SCALAR-NEXT:    movb %al, 61(%rsi)
-; SCALAR-NEXT:    movb %cl, 60(%rsi)
-; SCALAR-NEXT:    movb %al, 63(%rsi)
-; SCALAR-NEXT:    movb %cl, 62(%rsi)
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %ecx
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movb %al, (%rsi)
+; SCALAR-NEXT:    movb %cl, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %cl, 3(%rdx)
+; SCALAR-NEXT:    movb %al, 2(%rdx)
+; SCALAR-NEXT:    movb %cl, 5(%rdx)
+; SCALAR-NEXT:    movb %al, 4(%rdx)
+; SCALAR-NEXT:    movb %cl, 7(%rdx)
+; SCALAR-NEXT:    movb %al, 6(%rdx)
+; SCALAR-NEXT:    movb %cl, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %cl, 11(%rdx)
+; SCALAR-NEXT:    movb %al, 10(%rdx)
+; SCALAR-NEXT:    movb %cl, 13(%rdx)
+; SCALAR-NEXT:    movb %al, 12(%rdx)
+; SCALAR-NEXT:    movb %cl, 15(%rdx)
+; SCALAR-NEXT:    movb %al, 14(%rdx)
+; SCALAR-NEXT:    movb %cl, 17(%rdx)
+; SCALAR-NEXT:    movb %al, 16(%rdx)
+; SCALAR-NEXT:    movb %cl, 19(%rdx)
+; SCALAR-NEXT:    movb %al, 18(%rdx)
+; SCALAR-NEXT:    movb %cl, 21(%rdx)
+; SCALAR-NEXT:    movb %al, 20(%rdx)
+; SCALAR-NEXT:    movb %cl, 23(%rdx)
+; SCALAR-NEXT:    movb %al, 22(%rdx)
+; SCALAR-NEXT:    movb %cl, 25(%rdx)
+; SCALAR-NEXT:    movb %al, 24(%rdx)
+; SCALAR-NEXT:    movb %cl, 27(%rdx)
+; SCALAR-NEXT:    movb %al, 26(%rdx)
+; SCALAR-NEXT:    movb %cl, 29(%rdx)
+; SCALAR-NEXT:    movb %al, 28(%rdx)
+; SCALAR-NEXT:    movb %cl, 31(%rdx)
+; SCALAR-NEXT:    movb %al, 30(%rdx)
+; SCALAR-NEXT:    movb %cl, 33(%rdx)
+; SCALAR-NEXT:    movb %al, 32(%rdx)
+; SCALAR-NEXT:    movb %cl, 35(%rdx)
+; SCALAR-NEXT:    movb %al, 34(%rdx)
+; SCALAR-NEXT:    movb %cl, 37(%rdx)
+; SCALAR-NEXT:    movb %al, 36(%rdx)
+; SCALAR-NEXT:    movb %cl, 39(%rdx)
+; SCALAR-NEXT:    movb %al, 38(%rdx)
+; SCALAR-NEXT:    movb %cl, 41(%rdx)
+; SCALAR-NEXT:    movb %al, 40(%rdx)
+; SCALAR-NEXT:    movb %cl, 43(%rdx)
+; SCALAR-NEXT:    movb %al, 42(%rdx)
+; SCALAR-NEXT:    movb %cl, 45(%rdx)
+; SCALAR-NEXT:    movb %al, 44(%rdx)
+; SCALAR-NEXT:    movb %cl, 47(%rdx)
+; SCALAR-NEXT:    movb %al, 46(%rdx)
+; SCALAR-NEXT:    movb %cl, 49(%rdx)
+; SCALAR-NEXT:    movb %al, 48(%rdx)
+; SCALAR-NEXT:    movb %cl, 51(%rdx)
+; SCALAR-NEXT:    movb %al, 50(%rdx)
+; SCALAR-NEXT:    movb %cl, 53(%rdx)
+; SCALAR-NEXT:    movb %al, 52(%rdx)
+; SCALAR-NEXT:    movb %cl, 55(%rdx)
+; SCALAR-NEXT:    movb %al, 54(%rdx)
+; SCALAR-NEXT:    movb %cl, 57(%rdx)
+; SCALAR-NEXT:    movb %al, 56(%rdx)
+; SCALAR-NEXT:    movb %cl, 59(%rdx)
+; SCALAR-NEXT:    movb %al, 58(%rdx)
+; SCALAR-NEXT:    movb %cl, 61(%rdx)
+; SCALAR-NEXT:    movb %al, 60(%rdx)
+; SCALAR-NEXT:    movb %cl, 63(%rdx)
+; SCALAR-NEXT:    movb %al, 62(%rdx)
 ; SCALAR-NEXT:    retq
 ;
-; SSE2-LABEL: vec512_v2i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
-; SSE2-NEXT:    retq
+; SSE2-ONLY-LABEL: vec512_v2i8:
+; SSE2-ONLY:       # %bb.0:
+; SSE2-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-ONLY-NEXT:    pxor (%rdi), %xmm0
+; SSE2-ONLY-NEXT:    movd %xmm0, %eax
+; SSE2-ONLY-NEXT:    movw %ax, (%rsi)
+; SSE2-ONLY-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE2-ONLY-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-ONLY-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-ONLY-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-ONLY-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-ONLY-NEXT:    movdqa %xmm0, 48(%rdx)
+; SSE2-ONLY-NEXT:    retq
+;
+; SSE3-LABEL: vec512_v2i8:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE3-NEXT:    pxor (%rdi), %xmm0
+; SSE3-NEXT:    movd %xmm0, %eax
+; SSE3-NEXT:    movw %ax, (%rsi)
+; SSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE3-NEXT:    movdqa %xmm0, (%rdx)
+; SSE3-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE3-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE3-NEXT:    movdqa %xmm0, 48(%rdx)
+; SSE3-NEXT:    retq
+;
+; SSSE3-ONLY-LABEL: vec512_v2i8:
+; SSSE3-ONLY:       # %bb.0:
+; SSSE3-ONLY-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSSE3-ONLY-NEXT:    pxor (%rdi), %xmm0
+; SSSE3-ONLY-NEXT:    movd %xmm0, %eax
+; SSSE3-ONLY-NEXT:    movw %ax, (%rsi)
+; SSSE3-ONLY-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSSE3-ONLY-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, (%rdx)
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSSE3-ONLY-NEXT:    movdqa %xmm0, 48(%rdx)
+; SSSE3-ONLY-NEXT:    retq
+;
+; SSE41-LABEL: vec512_v2i8:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor (%rdi), %xmm0
+; SSE41-NEXT:    pextrw $0, %xmm0, (%rsi)
+; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE41-NEXT:    movdqa %xmm0, (%rdx)
+; SSE41-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE41-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE41-NEXT:    movdqa %xmm0, 48(%rdx)
+; SSE41-NEXT:    retq
+;
+; SSE42-LABEL: vec512_v2i8:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE42-NEXT:    pxor (%rdi), %xmm0
+; SSE42-NEXT:    pextrw $0, %xmm0, (%rsi)
+; SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE42-NEXT:    movdqa %xmm0, (%rdx)
+; SSE42-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE42-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE42-NEXT:    movdqa %xmm0, 48(%rdx)
+; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v2i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = mem[0,0,0,0,4,5,6,7]
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpextrw $0, %xmm0, (%rsi)
+; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: vec512_v2i8:
 ; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX2-ONLY-NEXT:    vpbroadcastw %xmm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
 ; AVX512F-LABEL: vec512_v2i8:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX512F-NEXT:    vpbroadcastw %xmm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
-; AVX512F-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512F-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: vec512_v2i8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX512BW-NEXT:    vpbroadcastw %xmm0, %zmm0
-; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %in.subvec.neg = load <2 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i8> %in.subvec.not, <i8 -1, i8 -1>
+  store <2 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 0
   store <2 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i8>, ptr %out.vec.ptr, i64 1
@@ -4689,89 +5589,96 @@ define void @vec512_v2i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v2i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v2i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw (%rdi), %cx
-; SCALAR-NEXT:    subw 2(%rdi), %ax
-; SCALAR-NEXT:    movw %ax, 2(%rsi)
-; SCALAR-NEXT:    movw %cx, (%rsi)
-; SCALAR-NEXT:    movw %ax, 6(%rsi)
-; SCALAR-NEXT:    movw %cx, 4(%rsi)
-; SCALAR-NEXT:    movw %ax, 10(%rsi)
-; SCALAR-NEXT:    movw %cx, 8(%rsi)
-; SCALAR-NEXT:    movw %ax, 14(%rsi)
-; SCALAR-NEXT:    movw %cx, 12(%rsi)
-; SCALAR-NEXT:    movw %ax, 18(%rsi)
-; SCALAR-NEXT:    movw %cx, 16(%rsi)
-; SCALAR-NEXT:    movw %ax, 22(%rsi)
-; SCALAR-NEXT:    movw %cx, 20(%rsi)
-; SCALAR-NEXT:    movw %ax, 26(%rsi)
-; SCALAR-NEXT:    movw %cx, 24(%rsi)
-; SCALAR-NEXT:    movw %ax, 30(%rsi)
-; SCALAR-NEXT:    movw %cx, 28(%rsi)
-; SCALAR-NEXT:    movw %ax, 34(%rsi)
-; SCALAR-NEXT:    movw %cx, 32(%rsi)
-; SCALAR-NEXT:    movw %ax, 38(%rsi)
-; SCALAR-NEXT:    movw %cx, 36(%rsi)
-; SCALAR-NEXT:    movw %ax, 42(%rsi)
-; SCALAR-NEXT:    movw %cx, 40(%rsi)
-; SCALAR-NEXT:    movw %ax, 46(%rsi)
-; SCALAR-NEXT:    movw %cx, 44(%rsi)
-; SCALAR-NEXT:    movw %ax, 50(%rsi)
-; SCALAR-NEXT:    movw %cx, 48(%rsi)
-; SCALAR-NEXT:    movw %ax, 54(%rsi)
-; SCALAR-NEXT:    movw %cx, 52(%rsi)
-; SCALAR-NEXT:    movw %ax, 58(%rsi)
-; SCALAR-NEXT:    movw %cx, 56(%rsi)
-; SCALAR-NEXT:    movw %ax, 62(%rsi)
-; SCALAR-NEXT:    movw %cx, 60(%rsi)
+; SCALAR-NEXT:    movzwl 2(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movw %cx, 2(%rsi)
+; SCALAR-NEXT:    movw %ax, (%rsi)
+; SCALAR-NEXT:    movw %cx, 2(%rdx)
+; SCALAR-NEXT:    movw %ax, (%rdx)
+; SCALAR-NEXT:    movw %cx, 6(%rdx)
+; SCALAR-NEXT:    movw %ax, 4(%rdx)
+; SCALAR-NEXT:    movw %cx, 10(%rdx)
+; SCALAR-NEXT:    movw %ax, 8(%rdx)
+; SCALAR-NEXT:    movw %cx, 14(%rdx)
+; SCALAR-NEXT:    movw %ax, 12(%rdx)
+; SCALAR-NEXT:    movw %cx, 18(%rdx)
+; SCALAR-NEXT:    movw %ax, 16(%rdx)
+; SCALAR-NEXT:    movw %cx, 22(%rdx)
+; SCALAR-NEXT:    movw %ax, 20(%rdx)
+; SCALAR-NEXT:    movw %cx, 26(%rdx)
+; SCALAR-NEXT:    movw %ax, 24(%rdx)
+; SCALAR-NEXT:    movw %cx, 30(%rdx)
+; SCALAR-NEXT:    movw %ax, 28(%rdx)
+; SCALAR-NEXT:    movw %cx, 34(%rdx)
+; SCALAR-NEXT:    movw %ax, 32(%rdx)
+; SCALAR-NEXT:    movw %cx, 38(%rdx)
+; SCALAR-NEXT:    movw %ax, 36(%rdx)
+; SCALAR-NEXT:    movw %cx, 42(%rdx)
+; SCALAR-NEXT:    movw %ax, 40(%rdx)
+; SCALAR-NEXT:    movw %cx, 46(%rdx)
+; SCALAR-NEXT:    movw %ax, 44(%rdx)
+; SCALAR-NEXT:    movw %cx, 50(%rdx)
+; SCALAR-NEXT:    movw %ax, 48(%rdx)
+; SCALAR-NEXT:    movw %cx, 54(%rdx)
+; SCALAR-NEXT:    movw %ax, 52(%rdx)
+; SCALAR-NEXT:    movw %cx, 58(%rdx)
+; SCALAR-NEXT:    movw %ax, 56(%rdx)
+; SCALAR-NEXT:    movw %cx, 62(%rdx)
+; SCALAR-NEXT:    movw %ax, 60(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v2i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v2i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: vec512_v2i16:
 ; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX2-ONLY-NEXT:    vpbroadcastd %xmm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v2i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX512-NEXT:    vpbroadcastd %xmm0, %zmm0
-; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.subvec.neg = load <2 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i16> %in.subvec.not, <i16 -1, i16 -1>
+  store <2 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 0
   store <2 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i16>, ptr %out.vec.ptr, i64 1
@@ -4807,76 +5714,83 @@ define void @vec512_v2i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v2i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v2i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v2i32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    subl 4(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
-; SCALAR-NEXT:    movl %eax, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %ecx, 24(%rsi)
-; SCALAR-NEXT:    movl %eax, 36(%rsi)
-; SCALAR-NEXT:    movl %ecx, 32(%rsi)
-; SCALAR-NEXT:    movl %eax, 44(%rsi)
-; SCALAR-NEXT:    movl %ecx, 40(%rsi)
-; SCALAR-NEXT:    movl %eax, 52(%rsi)
-; SCALAR-NEXT:    movl %ecx, 48(%rsi)
-; SCALAR-NEXT:    movl %eax, 60(%rsi)
-; SCALAR-NEXT:    movl %ecx, 56(%rsi)
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %ecx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl %ecx, 4(%rsi)
+; SCALAR-NEXT:    movl %eax, (%rsi)
+; SCALAR-NEXT:    movl %ecx, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ecx, 12(%rdx)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movl %ecx, 20(%rdx)
+; SCALAR-NEXT:    movl %eax, 16(%rdx)
+; SCALAR-NEXT:    movl %ecx, 28(%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
+; SCALAR-NEXT:    movl %ecx, 36(%rdx)
+; SCALAR-NEXT:    movl %eax, 32(%rdx)
+; SCALAR-NEXT:    movl %ecx, 44(%rdx)
+; SCALAR-NEXT:    movl %eax, 40(%rdx)
+; SCALAR-NEXT:    movl %ecx, 52(%rdx)
+; SCALAR-NEXT:    movl %eax, 48(%rdx)
+; SCALAR-NEXT:    movl %ecx, 60(%rdx)
+; SCALAR-NEXT:    movl %eax, 56(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v2i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v2i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: vec512_v2i32:
 ; AVX2-ONLY:       # %bb.0:
 ; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v2i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512-NEXT:    vpbroadcastq %xmm0, %zmm0
-; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.subvec.neg = load <2 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i32> %in.subvec.not, <i32 -1, i32 -1>
+  store <2 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i32>, ptr %out.vec.ptr, i64 0
   store <2 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i32>, ptr %out.vec.ptr, i64 1
@@ -4896,77 +5810,84 @@ define void @vec512_v2i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v2f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v2f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v2f32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    subl 4(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %ecx, 8(%rsi)
-; SCALAR-NEXT:    movl %eax, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %ecx, 24(%rsi)
-; SCALAR-NEXT:    movl %eax, 36(%rsi)
-; SCALAR-NEXT:    movl %ecx, 32(%rsi)
-; SCALAR-NEXT:    movl %eax, 44(%rsi)
-; SCALAR-NEXT:    movl %ecx, 40(%rsi)
-; SCALAR-NEXT:    movl %eax, 52(%rsi)
-; SCALAR-NEXT:    movl %ecx, 48(%rsi)
-; SCALAR-NEXT:    movl %eax, 60(%rsi)
-; SCALAR-NEXT:    movl %ecx, 56(%rsi)
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %ecx
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl %ecx, 4(%rsi)
+; SCALAR-NEXT:    movl %eax, (%rsi)
+; SCALAR-NEXT:    movl %ecx, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ecx, 12(%rdx)
+; SCALAR-NEXT:    movl %eax, 8(%rdx)
+; SCALAR-NEXT:    movl %ecx, 20(%rdx)
+; SCALAR-NEXT:    movl %eax, 16(%rdx)
+; SCALAR-NEXT:    movl %ecx, 28(%rdx)
+; SCALAR-NEXT:    movl %eax, 24(%rdx)
+; SCALAR-NEXT:    movl %ecx, 36(%rdx)
+; SCALAR-NEXT:    movl %eax, 32(%rdx)
+; SCALAR-NEXT:    movl %ecx, 44(%rdx)
+; SCALAR-NEXT:    movl %eax, 40(%rdx)
+; SCALAR-NEXT:    movl %ecx, 52(%rdx)
+; SCALAR-NEXT:    movl %eax, 48(%rdx)
+; SCALAR-NEXT:    movl %ecx, 60(%rdx)
+; SCALAR-NEXT:    movl %eax, 56(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v2f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v2f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: vec512_v2f32:
 ; AVX2-ONLY:       # %bb.0:
 ; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v2f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512-NEXT:    vpbroadcastq %xmm0, %zmm0
-; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.subvec.neg = load <2 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <2 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <2 x i32> %in.subvec.not, <i32 -1, i32 -1>
   %in.subvec = bitcast <2 x i32> %in.subvec.int to <2 x float>
+  store <2 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x float>, ptr %out.vec.ptr, i64 0
   store <2 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x float>, ptr %out.vec.ptr, i64 1
@@ -4986,44 +5907,49 @@ define void @vec512_v2f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v2i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v2i64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v2i64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq (%rdi), %rcx
-; SCALAR-NEXT:    subq 8(%rdi), %rax
-; SCALAR-NEXT:    movq %rax, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, (%rsi)
-; SCALAR-NEXT:    movq %rax, 24(%rsi)
-; SCALAR-NEXT:    movq %rcx, 16(%rsi)
-; SCALAR-NEXT:    movq %rax, 40(%rsi)
-; SCALAR-NEXT:    movq %rcx, 32(%rsi)
-; SCALAR-NEXT:    movq %rax, 56(%rsi)
-; SCALAR-NEXT:    movq %rcx, 48(%rsi)
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 24(%rdx)
+; SCALAR-NEXT:    movq %rax, 16(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
+; SCALAR-NEXT:    movq %rcx, 56(%rdx)
+; SCALAR-NEXT:    movq %rax, 48(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubq (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 48(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec512_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 48(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <2 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i64> %in.subvec.not, <i64 -1, i64 -1>
+  store <2 x i64> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i64>, ptr %out.vec.ptr, i64 0
   store <2 x i64> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i64>, ptr %out.vec.ptr, i64 1
@@ -5035,45 +5961,50 @@ define void @vec512_v2i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v2f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v2f64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v2f64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq (%rdi), %rcx
-; SCALAR-NEXT:    subq 8(%rdi), %rax
-; SCALAR-NEXT:    movq %rax, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, (%rsi)
-; SCALAR-NEXT:    movq %rax, 24(%rsi)
-; SCALAR-NEXT:    movq %rcx, 16(%rsi)
-; SCALAR-NEXT:    movq %rax, 40(%rsi)
-; SCALAR-NEXT:    movq %rcx, 32(%rsi)
-; SCALAR-NEXT:    movq %rax, 56(%rsi)
-; SCALAR-NEXT:    movq %rcx, 48(%rsi)
+; SCALAR-NEXT:    movq (%rdi), %rax
+; SCALAR-NEXT:    movq 8(%rdi), %rcx
+; SCALAR-NEXT:    notq %rax
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    movq %rcx, 8(%rsi)
+; SCALAR-NEXT:    movq %rax, (%rsi)
+; SCALAR-NEXT:    movq %rcx, 8(%rdx)
+; SCALAR-NEXT:    movq %rax, (%rdx)
+; SCALAR-NEXT:    movq %rcx, 24(%rdx)
+; SCALAR-NEXT:    movq %rax, 16(%rdx)
+; SCALAR-NEXT:    movq %rcx, 40(%rdx)
+; SCALAR-NEXT:    movq %rax, 32(%rdx)
+; SCALAR-NEXT:    movq %rcx, 56(%rdx)
+; SCALAR-NEXT:    movq %rax, 48(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v2f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubq (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 48(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec512_v2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 48(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <2 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <2 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <2 x i64> %in.subvec.not, <i64 -1, i64 -1>
   %in.subvec = bitcast <2 x i64> %in.subvec.int to <2 x double>
+  store <2 x double> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x double>, ptr %out.vec.ptr, i64 0
   store <2 x double> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x double>, ptr %out.vec.ptr, i64 1
@@ -5085,28 +6016,33 @@ define void @vec512_v2f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v2i128(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v2i128(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; ALL-LABEL: vec512_v2i128:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    xorl %eax, %eax
-; ALL-NEXT:    xorl %ecx, %ecx
-; ALL-NEXT:    subq (%rdi), %rcx
-; ALL-NEXT:    movl $0, %edx
-; ALL-NEXT:    sbbq 8(%rdi), %rdx
-; ALL-NEXT:    xorl %r8d, %r8d
-; ALL-NEXT:    subq 16(%rdi), %r8
-; ALL-NEXT:    sbbq 24(%rdi), %rax
-; ALL-NEXT:    movq %r8, 16(%rsi)
-; ALL-NEXT:    movq %rcx, (%rsi)
-; ALL-NEXT:    movq %rax, 24(%rsi)
-; ALL-NEXT:    movq %rdx, 8(%rsi)
-; ALL-NEXT:    movq %r8, 48(%rsi)
-; ALL-NEXT:    movq %rax, 56(%rsi)
-; ALL-NEXT:    movq %rcx, 32(%rsi)
-; ALL-NEXT:    movq %rdx, 40(%rsi)
+; ALL-NEXT:    movq 16(%rdi), %rax
+; ALL-NEXT:    movq 24(%rdi), %rcx
+; ALL-NEXT:    movq (%rdi), %r8
+; ALL-NEXT:    movq 8(%rdi), %rdi
+; ALL-NEXT:    notq %rdi
+; ALL-NEXT:    notq %r8
+; ALL-NEXT:    notq %rcx
+; ALL-NEXT:    notq %rax
+; ALL-NEXT:    movq %rax, 16(%rsi)
+; ALL-NEXT:    movq %rcx, 24(%rsi)
+; ALL-NEXT:    movq %r8, (%rsi)
+; ALL-NEXT:    movq %rdi, 8(%rsi)
+; ALL-NEXT:    movq %rax, 16(%rdx)
+; ALL-NEXT:    movq %rcx, 24(%rdx)
+; ALL-NEXT:    movq %r8, (%rdx)
+; ALL-NEXT:    movq %rdi, 8(%rdx)
+; ALL-NEXT:    movq %rax, 48(%rdx)
+; ALL-NEXT:    movq %rcx, 56(%rdx)
+; ALL-NEXT:    movq %r8, 32(%rdx)
+; ALL-NEXT:    movq %rdi, 40(%rdx)
 ; ALL-NEXT:    retq
-  %in.subvec.neg = load <2 x i128>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <2 x i128> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <2 x i128>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <2 x i128> %in.subvec.not, <i128 -1, i128 -1>
+  store <2 x i128> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <2 x i128>, ptr %out.vec.ptr, i64 0
   store <2 x i128> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <2 x i128>, ptr %out.vec.ptr, i64 1
@@ -5114,125 +6050,134 @@ define void @vec512_v2i128(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v4i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v4i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subb 1(%rdi), %dl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 2(%rdi), %r8b
-; SCALAR-NEXT:    subb 3(%rdi), %cl
-; SCALAR-NEXT:    movb %cl, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movb %dl, 1(%rsi)
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movb %r8b, 3(%rsi)
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %dil, 1(%rsi)
 ; SCALAR-NEXT:    movb %al, (%rsi)
-; SCALAR-NEXT:    movb %cl, 7(%rsi)
-; SCALAR-NEXT:    movb %r8b, 6(%rsi)
-; SCALAR-NEXT:    movb %dl, 5(%rsi)
-; SCALAR-NEXT:    movb %al, 4(%rsi)
-; SCALAR-NEXT:    movb %cl, 11(%rsi)
-; SCALAR-NEXT:    movb %r8b, 10(%rsi)
-; SCALAR-NEXT:    movb %dl, 9(%rsi)
-; SCALAR-NEXT:    movb %al, 8(%rsi)
-; SCALAR-NEXT:    movb %cl, 15(%rsi)
-; SCALAR-NEXT:    movb %r8b, 14(%rsi)
-; SCALAR-NEXT:    movb %dl, 13(%rsi)
-; SCALAR-NEXT:    movb %al, 12(%rsi)
-; SCALAR-NEXT:    movb %cl, 19(%rsi)
-; SCALAR-NEXT:    movb %r8b, 18(%rsi)
-; SCALAR-NEXT:    movb %dl, 17(%rsi)
-; SCALAR-NEXT:    movb %al, 16(%rsi)
-; SCALAR-NEXT:    movb %cl, 23(%rsi)
-; SCALAR-NEXT:    movb %r8b, 22(%rsi)
-; SCALAR-NEXT:    movb %dl, 21(%rsi)
-; SCALAR-NEXT:    movb %al, 20(%rsi)
-; SCALAR-NEXT:    movb %cl, 27(%rsi)
-; SCALAR-NEXT:    movb %r8b, 26(%rsi)
-; SCALAR-NEXT:    movb %dl, 25(%rsi)
-; SCALAR-NEXT:    movb %al, 24(%rsi)
-; SCALAR-NEXT:    movb %cl, 31(%rsi)
-; SCALAR-NEXT:    movb %r8b, 30(%rsi)
-; SCALAR-NEXT:    movb %dl, 29(%rsi)
-; SCALAR-NEXT:    movb %al, 28(%rsi)
-; SCALAR-NEXT:    movb %cl, 35(%rsi)
-; SCALAR-NEXT:    movb %r8b, 34(%rsi)
-; SCALAR-NEXT:    movb %dl, 33(%rsi)
-; SCALAR-NEXT:    movb %al, 32(%rsi)
-; SCALAR-NEXT:    movb %cl, 39(%rsi)
-; SCALAR-NEXT:    movb %r8b, 38(%rsi)
-; SCALAR-NEXT:    movb %dl, 37(%rsi)
-; SCALAR-NEXT:    movb %al, 36(%rsi)
-; SCALAR-NEXT:    movb %cl, 43(%rsi)
-; SCALAR-NEXT:    movb %r8b, 42(%rsi)
-; SCALAR-NEXT:    movb %dl, 41(%rsi)
-; SCALAR-NEXT:    movb %al, 40(%rsi)
-; SCALAR-NEXT:    movb %cl, 47(%rsi)
-; SCALAR-NEXT:    movb %r8b, 46(%rsi)
-; SCALAR-NEXT:    movb %dl, 45(%rsi)
-; SCALAR-NEXT:    movb %al, 44(%rsi)
-; SCALAR-NEXT:    movb %cl, 51(%rsi)
-; SCALAR-NEXT:    movb %r8b, 50(%rsi)
-; SCALAR-NEXT:    movb %dl, 49(%rsi)
-; SCALAR-NEXT:    movb %al, 48(%rsi)
-; SCALAR-NEXT:    movb %cl, 55(%rsi)
-; SCALAR-NEXT:    movb %r8b, 54(%rsi)
-; SCALAR-NEXT:    movb %dl, 53(%rsi)
-; SCALAR-NEXT:    movb %al, 52(%rsi)
-; SCALAR-NEXT:    movb %cl, 59(%rsi)
-; SCALAR-NEXT:    movb %r8b, 58(%rsi)
-; SCALAR-NEXT:    movb %dl, 57(%rsi)
-; SCALAR-NEXT:    movb %al, 56(%rsi)
-; SCALAR-NEXT:    movb %cl, 63(%rsi)
-; SCALAR-NEXT:    movb %r8b, 62(%rsi)
-; SCALAR-NEXT:    movb %dl, 61(%rsi)
-; SCALAR-NEXT:    movb %al, 60(%rsi)
+; SCALAR-NEXT:    movb %r8b, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %dil, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %r8b, 7(%rdx)
+; SCALAR-NEXT:    movb %cl, 6(%rdx)
+; SCALAR-NEXT:    movb %dil, 5(%rdx)
+; SCALAR-NEXT:    movb %al, 4(%rdx)
+; SCALAR-NEXT:    movb %r8b, 11(%rdx)
+; SCALAR-NEXT:    movb %cl, 10(%rdx)
+; SCALAR-NEXT:    movb %dil, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %r8b, 15(%rdx)
+; SCALAR-NEXT:    movb %cl, 14(%rdx)
+; SCALAR-NEXT:    movb %dil, 13(%rdx)
+; SCALAR-NEXT:    movb %al, 12(%rdx)
+; SCALAR-NEXT:    movb %r8b, 19(%rdx)
+; SCALAR-NEXT:    movb %cl, 18(%rdx)
+; SCALAR-NEXT:    movb %dil, 17(%rdx)
+; SCALAR-NEXT:    movb %al, 16(%rdx)
+; SCALAR-NEXT:    movb %r8b, 23(%rdx)
+; SCALAR-NEXT:    movb %cl, 22(%rdx)
+; SCALAR-NEXT:    movb %dil, 21(%rdx)
+; SCALAR-NEXT:    movb %al, 20(%rdx)
+; SCALAR-NEXT:    movb %r8b, 27(%rdx)
+; SCALAR-NEXT:    movb %cl, 26(%rdx)
+; SCALAR-NEXT:    movb %dil, 25(%rdx)
+; SCALAR-NEXT:    movb %al, 24(%rdx)
+; SCALAR-NEXT:    movb %r8b, 31(%rdx)
+; SCALAR-NEXT:    movb %cl, 30(%rdx)
+; SCALAR-NEXT:    movb %dil, 29(%rdx)
+; SCALAR-NEXT:    movb %al, 28(%rdx)
+; SCALAR-NEXT:    movb %r8b, 35(%rdx)
+; SCALAR-NEXT:    movb %cl, 34(%rdx)
+; SCALAR-NEXT:    movb %dil, 33(%rdx)
+; SCALAR-NEXT:    movb %al, 32(%rdx)
+; SCALAR-NEXT:    movb %r8b, 39(%rdx)
+; SCALAR-NEXT:    movb %cl, 38(%rdx)
+; SCALAR-NEXT:    movb %dil, 37(%rdx)
+; SCALAR-NEXT:    movb %al, 36(%rdx)
+; SCALAR-NEXT:    movb %r8b, 43(%rdx)
+; SCALAR-NEXT:    movb %cl, 42(%rdx)
+; SCALAR-NEXT:    movb %dil, 41(%rdx)
+; SCALAR-NEXT:    movb %al, 40(%rdx)
+; SCALAR-NEXT:    movb %r8b, 47(%rdx)
+; SCALAR-NEXT:    movb %cl, 46(%rdx)
+; SCALAR-NEXT:    movb %dil, 45(%rdx)
+; SCALAR-NEXT:    movb %al, 44(%rdx)
+; SCALAR-NEXT:    movb %r8b, 51(%rdx)
+; SCALAR-NEXT:    movb %cl, 50(%rdx)
+; SCALAR-NEXT:    movb %dil, 49(%rdx)
+; SCALAR-NEXT:    movb %al, 48(%rdx)
+; SCALAR-NEXT:    movb %r8b, 55(%rdx)
+; SCALAR-NEXT:    movb %cl, 54(%rdx)
+; SCALAR-NEXT:    movb %dil, 53(%rdx)
+; SCALAR-NEXT:    movb %al, 52(%rdx)
+; SCALAR-NEXT:    movb %r8b, 59(%rdx)
+; SCALAR-NEXT:    movb %cl, 58(%rdx)
+; SCALAR-NEXT:    movb %dil, 57(%rdx)
+; SCALAR-NEXT:    movb %al, 56(%rdx)
+; SCALAR-NEXT:    movb %r8b, 63(%rdx)
+; SCALAR-NEXT:    movb %cl, 62(%rdx)
+; SCALAR-NEXT:    movb %dil, 61(%rdx)
+; SCALAR-NEXT:    movb %al, 60(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v4i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v4i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[0,0,0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: vec512_v4i8:
 ; AVX2-ONLY:       # %bb.0:
-; AVX2-ONLY-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-ONLY-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX2-ONLY-NEXT:    vpbroadcastd %xmm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v4i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX512-NEXT:    vpbroadcastd %xmm0, %zmm0
-; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.subvec.neg = load <4 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1>
+  store <4 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 0
   store <4 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i8>, ptr %out.vec.ptr, i64 1
@@ -5268,96 +6213,105 @@ define void @vec512_v4i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v4i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v4i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v4i16:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw (%rdi), %ax
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subw 2(%rdi), %dx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subw 4(%rdi), %r8w
-; SCALAR-NEXT:    subw 6(%rdi), %cx
-; SCALAR-NEXT:    movw %cx, 6(%rsi)
-; SCALAR-NEXT:    movw %r8w, 4(%rsi)
-; SCALAR-NEXT:    movw %dx, 2(%rsi)
+; SCALAR-NEXT:    movzwl 6(%rdi), %r8d
+; SCALAR-NEXT:    movzwl 2(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    movw %r8w, 6(%rsi)
+; SCALAR-NEXT:    movw %di, 4(%rsi)
+; SCALAR-NEXT:    movw %cx, 2(%rsi)
 ; SCALAR-NEXT:    movw %ax, (%rsi)
-; SCALAR-NEXT:    movw %cx, 14(%rsi)
-; SCALAR-NEXT:    movw %r8w, 12(%rsi)
-; SCALAR-NEXT:    movw %dx, 10(%rsi)
-; SCALAR-NEXT:    movw %ax, 8(%rsi)
-; SCALAR-NEXT:    movw %cx, 22(%rsi)
-; SCALAR-NEXT:    movw %r8w, 20(%rsi)
-; SCALAR-NEXT:    movw %dx, 18(%rsi)
-; SCALAR-NEXT:    movw %ax, 16(%rsi)
-; SCALAR-NEXT:    movw %cx, 30(%rsi)
-; SCALAR-NEXT:    movw %r8w, 28(%rsi)
-; SCALAR-NEXT:    movw %dx, 26(%rsi)
-; SCALAR-NEXT:    movw %ax, 24(%rsi)
-; SCALAR-NEXT:    movw %cx, 38(%rsi)
-; SCALAR-NEXT:    movw %r8w, 36(%rsi)
-; SCALAR-NEXT:    movw %dx, 34(%rsi)
-; SCALAR-NEXT:    movw %ax, 32(%rsi)
-; SCALAR-NEXT:    movw %cx, 46(%rsi)
-; SCALAR-NEXT:    movw %r8w, 44(%rsi)
-; SCALAR-NEXT:    movw %dx, 42(%rsi)
-; SCALAR-NEXT:    movw %ax, 40(%rsi)
-; SCALAR-NEXT:    movw %cx, 54(%rsi)
-; SCALAR-NEXT:    movw %r8w, 52(%rsi)
-; SCALAR-NEXT:    movw %dx, 50(%rsi)
-; SCALAR-NEXT:    movw %ax, 48(%rsi)
-; SCALAR-NEXT:    movw %cx, 62(%rsi)
-; SCALAR-NEXT:    movw %r8w, 60(%rsi)
-; SCALAR-NEXT:    movw %dx, 58(%rsi)
-; SCALAR-NEXT:    movw %ax, 56(%rsi)
+; SCALAR-NEXT:    movw %r8w, 6(%rdx)
+; SCALAR-NEXT:    movw %di, 4(%rdx)
+; SCALAR-NEXT:    movw %cx, 2(%rdx)
+; SCALAR-NEXT:    movw %ax, (%rdx)
+; SCALAR-NEXT:    movw %r8w, 14(%rdx)
+; SCALAR-NEXT:    movw %di, 12(%rdx)
+; SCALAR-NEXT:    movw %cx, 10(%rdx)
+; SCALAR-NEXT:    movw %ax, 8(%rdx)
+; SCALAR-NEXT:    movw %r8w, 22(%rdx)
+; SCALAR-NEXT:    movw %di, 20(%rdx)
+; SCALAR-NEXT:    movw %cx, 18(%rdx)
+; SCALAR-NEXT:    movw %ax, 16(%rdx)
+; SCALAR-NEXT:    movw %r8w, 30(%rdx)
+; SCALAR-NEXT:    movw %di, 28(%rdx)
+; SCALAR-NEXT:    movw %cx, 26(%rdx)
+; SCALAR-NEXT:    movw %ax, 24(%rdx)
+; SCALAR-NEXT:    movw %r8w, 38(%rdx)
+; SCALAR-NEXT:    movw %di, 36(%rdx)
+; SCALAR-NEXT:    movw %cx, 34(%rdx)
+; SCALAR-NEXT:    movw %ax, 32(%rdx)
+; SCALAR-NEXT:    movw %r8w, 46(%rdx)
+; SCALAR-NEXT:    movw %di, 44(%rdx)
+; SCALAR-NEXT:    movw %cx, 42(%rdx)
+; SCALAR-NEXT:    movw %ax, 40(%rdx)
+; SCALAR-NEXT:    movw %r8w, 54(%rdx)
+; SCALAR-NEXT:    movw %di, 52(%rdx)
+; SCALAR-NEXT:    movw %cx, 50(%rdx)
+; SCALAR-NEXT:    movw %ax, 48(%rdx)
+; SCALAR-NEXT:    movw %r8w, 62(%rdx)
+; SCALAR-NEXT:    movw %di, 60(%rdx)
+; SCALAR-NEXT:    movw %cx, 58(%rdx)
+; SCALAR-NEXT:    movw %ax, 56(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v4i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: vec512_v4i16:
 ; AVX2-ONLY:       # %bb.0:
 ; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v4i16:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512-NEXT:    vpbroadcastq %xmm0, %zmm0
-; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.subvec.neg = load <4 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1>
+  store <4 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i16>, ptr %out.vec.ptr, i64 0
   store <4 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i16>, ptr %out.vec.ptr, i64 1
@@ -5377,56 +6331,42 @@ define void @vec512_v4i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v4i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v4i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v4i32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subl 4(%rdi), %edx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subl 8(%rdi), %r8d
-; SCALAR-NEXT:    subl 12(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %r8d, 8(%rsi)
-; SCALAR-NEXT:    movl %edx, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %r8d, 24(%rsi)
-; SCALAR-NEXT:    movl %edx, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 44(%rsi)
-; SCALAR-NEXT:    movl %r8d, 40(%rsi)
-; SCALAR-NEXT:    movl %edx, 36(%rsi)
-; SCALAR-NEXT:    movl %ecx, 32(%rsi)
-; SCALAR-NEXT:    movl %eax, 60(%rsi)
-; SCALAR-NEXT:    movl %r8d, 56(%rsi)
-; SCALAR-NEXT:    movl %edx, 52(%rsi)
-; SCALAR-NEXT:    movl %ecx, 48(%rsi)
+; SCALAR-NEXT:    movaps (%rdi), %xmm0
+; SCALAR-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SCALAR-NEXT:    movaps %xmm0, (%rsi)
+; SCALAR-NEXT:    movaps %xmm0, (%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 16(%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 32(%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 48(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v4i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 48(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec512_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 48(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <4 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1>
+  store <4 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i32>, ptr %out.vec.ptr, i64 0
   store <4 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i32>, ptr %out.vec.ptr, i64 1
@@ -5438,57 +6378,43 @@ define void @vec512_v4i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v4f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v4f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v4f32:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subl (%rdi), %ecx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subl 4(%rdi), %edx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subl 8(%rdi), %r8d
-; SCALAR-NEXT:    subl 12(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, 12(%rsi)
-; SCALAR-NEXT:    movl %r8d, 8(%rsi)
-; SCALAR-NEXT:    movl %edx, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, (%rsi)
-; SCALAR-NEXT:    movl %eax, 28(%rsi)
-; SCALAR-NEXT:    movl %r8d, 24(%rsi)
-; SCALAR-NEXT:    movl %edx, 20(%rsi)
-; SCALAR-NEXT:    movl %ecx, 16(%rsi)
-; SCALAR-NEXT:    movl %eax, 44(%rsi)
-; SCALAR-NEXT:    movl %r8d, 40(%rsi)
-; SCALAR-NEXT:    movl %edx, 36(%rsi)
-; SCALAR-NEXT:    movl %ecx, 32(%rsi)
-; SCALAR-NEXT:    movl %eax, 60(%rsi)
-; SCALAR-NEXT:    movl %r8d, 56(%rsi)
-; SCALAR-NEXT:    movl %edx, 52(%rsi)
-; SCALAR-NEXT:    movl %ecx, 48(%rsi)
+; SCALAR-NEXT:    movaps (%rdi), %xmm0
+; SCALAR-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SCALAR-NEXT:    movaps %xmm0, (%rsi)
+; SCALAR-NEXT:    movaps %xmm0, (%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 16(%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 32(%rdx)
+; SCALAR-NEXT:    movaps %xmm0, 48(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v4f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 48(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec512_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 48(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <4 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <4 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <4 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1>
   %in.subvec = bitcast <4 x i32> %in.subvec.int to <4 x float>
+  store <4 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x float>, ptr %out.vec.ptr, i64 0
   store <4 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x float>, ptr %out.vec.ptr, i64 1
@@ -5500,60 +6426,68 @@ define void @vec512_v4f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v4i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v4i64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v4i64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq (%rdi), %rcx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subq 8(%rdi), %rdx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subq 16(%rdi), %r8
-; SCALAR-NEXT:    subq 24(%rdi), %rax
+; SCALAR-NEXT:    movq 24(%rdi), %rax
+; SCALAR-NEXT:    movq 16(%rdi), %rcx
+; SCALAR-NEXT:    movq (%rdi), %r8
+; SCALAR-NEXT:    movq 8(%rdi), %rdi
+; SCALAR-NEXT:    notq %r8
+; SCALAR-NEXT:    notq %rdi
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
 ; SCALAR-NEXT:    movq %rax, 24(%rsi)
-; SCALAR-NEXT:    movq %r8, 16(%rsi)
-; SCALAR-NEXT:    movq %rdx, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, (%rsi)
-; SCALAR-NEXT:    movq %rax, 56(%rsi)
-; SCALAR-NEXT:    movq %r8, 48(%rsi)
-; SCALAR-NEXT:    movq %rdx, 40(%rsi)
-; SCALAR-NEXT:    movq %rcx, 32(%rsi)
+; SCALAR-NEXT:    movq %rcx, 16(%rsi)
+; SCALAR-NEXT:    movq %rdi, 8(%rsi)
+; SCALAR-NEXT:    movq %r8, (%rsi)
+; SCALAR-NEXT:    movq %rax, 24(%rdx)
+; SCALAR-NEXT:    movq %rcx, 16(%rdx)
+; SCALAR-NEXT:    movq %rdi, 8(%rdx)
+; SCALAR-NEXT:    movq %r8, (%rdx)
+; SCALAR-NEXT:    movq %rax, 56(%rdx)
+; SCALAR-NEXT:    movq %rcx, 48(%rdx)
+; SCALAR-NEXT:    movq %rdi, 40(%rdx)
+; SCALAR-NEXT:    movq %r8, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubq 16(%rdi), %xmm1
-; SSE2-NEXT:    psubq (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubq 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec512_v4i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubq (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <4 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <4 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <4 x i64> %in.subvec.not, <i64 -1, i64 -1, i64 -1, i64 -1>
+  store <4 x i64> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x i64>, ptr %out.vec.ptr, i64 0
   store <4 x i64> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x i64>, ptr %out.vec.ptr, i64 1
@@ -5561,61 +6495,69 @@ define void @vec512_v4i64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v4f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v4f64(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v4f64:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subq (%rdi), %rcx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subq 8(%rdi), %rdx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subq 16(%rdi), %r8
-; SCALAR-NEXT:    subq 24(%rdi), %rax
+; SCALAR-NEXT:    movq 24(%rdi), %rax
+; SCALAR-NEXT:    movq 16(%rdi), %rcx
+; SCALAR-NEXT:    movq (%rdi), %r8
+; SCALAR-NEXT:    movq 8(%rdi), %rdi
+; SCALAR-NEXT:    notq %r8
+; SCALAR-NEXT:    notq %rdi
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
 ; SCALAR-NEXT:    movq %rax, 24(%rsi)
-; SCALAR-NEXT:    movq %r8, 16(%rsi)
-; SCALAR-NEXT:    movq %rdx, 8(%rsi)
-; SCALAR-NEXT:    movq %rcx, (%rsi)
-; SCALAR-NEXT:    movq %rax, 56(%rsi)
-; SCALAR-NEXT:    movq %r8, 48(%rsi)
-; SCALAR-NEXT:    movq %rdx, 40(%rsi)
-; SCALAR-NEXT:    movq %rcx, 32(%rsi)
+; SCALAR-NEXT:    movq %rcx, 16(%rsi)
+; SCALAR-NEXT:    movq %rdi, 8(%rsi)
+; SCALAR-NEXT:    movq %r8, (%rsi)
+; SCALAR-NEXT:    movq %rax, 24(%rdx)
+; SCALAR-NEXT:    movq %rcx, 16(%rdx)
+; SCALAR-NEXT:    movq %rdi, 8(%rdx)
+; SCALAR-NEXT:    movq %r8, (%rdx)
+; SCALAR-NEXT:    movq %rax, 56(%rdx)
+; SCALAR-NEXT:    movq %rcx, 48(%rdx)
+; SCALAR-NEXT:    movq %rdi, 40(%rdx)
+; SCALAR-NEXT:    movq %r8, 32(%rdx)
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v4f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubq 16(%rdi), %xmm1
-; SSE2-NEXT:    psubq (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v4f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubq 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubq (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec512_v4f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubq (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <4 x i64>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <4 x i64> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <4 x i64>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <4 x i64> %in.subvec.not, <i64 -1, i64 -1, i64 -1, i64 -1>
   %in.subvec = bitcast <4 x i64> %in.subvec.int to <4 x double>
+  store <4 x double> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <4 x double>, ptr %out.vec.ptr, i64 0
   store <4 x double> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <4 x double>, ptr %out.vec.ptr, i64 1
@@ -5623,138 +6565,151 @@ define void @vec512_v4f64(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v8i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v8i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v8i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb 1(%rdi), %cl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 2(%rdi), %r8b
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subb 3(%rdi), %r9b
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subb 4(%rdi), %r10b
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subb 5(%rdi), %r11b
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subb 6(%rdi), %bl
-; SCALAR-NEXT:    subb 7(%rdi), %dl
-; SCALAR-NEXT:    movb %dl, 7(%rsi)
-; SCALAR-NEXT:    movb %bl, 6(%rsi)
-; SCALAR-NEXT:    movb %r11b, 5(%rsi)
-; SCALAR-NEXT:    movb %r10b, 4(%rsi)
-; SCALAR-NEXT:    movb %r9b, 3(%rsi)
-; SCALAR-NEXT:    movb %r8b, 2(%rsi)
-; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movzbl 7(%rdi), %ebx
+; SCALAR-NEXT:    movzbl 6(%rdi), %r11d
+; SCALAR-NEXT:    movzbl 5(%rdi), %r10d
+; SCALAR-NEXT:    movzbl 4(%rdi), %r9d
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    notb %bl
+; SCALAR-NEXT:    movb %bl, 7(%rsi)
+; SCALAR-NEXT:    movb %r11b, 6(%rsi)
+; SCALAR-NEXT:    movb %r10b, 5(%rsi)
+; SCALAR-NEXT:    movb %r9b, 4(%rsi)
+; SCALAR-NEXT:    movb %r8b, 3(%rsi)
+; SCALAR-NEXT:    movb %cl, 2(%rsi)
+; SCALAR-NEXT:    movb %dil, 1(%rsi)
 ; SCALAR-NEXT:    movb %al, (%rsi)
-; SCALAR-NEXT:    movb %dl, 15(%rsi)
-; SCALAR-NEXT:    movb %bl, 14(%rsi)
-; SCALAR-NEXT:    movb %r11b, 13(%rsi)
-; SCALAR-NEXT:    movb %r10b, 12(%rsi)
-; SCALAR-NEXT:    movb %r9b, 11(%rsi)
-; SCALAR-NEXT:    movb %r8b, 10(%rsi)
-; SCALAR-NEXT:    movb %cl, 9(%rsi)
-; SCALAR-NEXT:    movb %al, 8(%rsi)
-; SCALAR-NEXT:    movb %dl, 23(%rsi)
-; SCALAR-NEXT:    movb %bl, 22(%rsi)
-; SCALAR-NEXT:    movb %r11b, 21(%rsi)
-; SCALAR-NEXT:    movb %r10b, 20(%rsi)
-; SCALAR-NEXT:    movb %r9b, 19(%rsi)
-; SCALAR-NEXT:    movb %r8b, 18(%rsi)
-; SCALAR-NEXT:    movb %cl, 17(%rsi)
-; SCALAR-NEXT:    movb %al, 16(%rsi)
-; SCALAR-NEXT:    movb %dl, 31(%rsi)
-; SCALAR-NEXT:    movb %bl, 30(%rsi)
-; SCALAR-NEXT:    movb %r11b, 29(%rsi)
-; SCALAR-NEXT:    movb %r10b, 28(%rsi)
-; SCALAR-NEXT:    movb %r9b, 27(%rsi)
-; SCALAR-NEXT:    movb %r8b, 26(%rsi)
-; SCALAR-NEXT:    movb %cl, 25(%rsi)
-; SCALAR-NEXT:    movb %al, 24(%rsi)
-; SCALAR-NEXT:    movb %dl, 39(%rsi)
-; SCALAR-NEXT:    movb %bl, 38(%rsi)
-; SCALAR-NEXT:    movb %r11b, 37(%rsi)
-; SCALAR-NEXT:    movb %r10b, 36(%rsi)
-; SCALAR-NEXT:    movb %r9b, 35(%rsi)
-; SCALAR-NEXT:    movb %r8b, 34(%rsi)
-; SCALAR-NEXT:    movb %cl, 33(%rsi)
-; SCALAR-NEXT:    movb %al, 32(%rsi)
-; SCALAR-NEXT:    movb %dl, 47(%rsi)
-; SCALAR-NEXT:    movb %bl, 46(%rsi)
-; SCALAR-NEXT:    movb %r11b, 45(%rsi)
-; SCALAR-NEXT:    movb %r10b, 44(%rsi)
-; SCALAR-NEXT:    movb %r9b, 43(%rsi)
-; SCALAR-NEXT:    movb %r8b, 42(%rsi)
-; SCALAR-NEXT:    movb %cl, 41(%rsi)
-; SCALAR-NEXT:    movb %al, 40(%rsi)
-; SCALAR-NEXT:    movb %dl, 55(%rsi)
-; SCALAR-NEXT:    movb %bl, 54(%rsi)
-; SCALAR-NEXT:    movb %r11b, 53(%rsi)
-; SCALAR-NEXT:    movb %r10b, 52(%rsi)
-; SCALAR-NEXT:    movb %r9b, 51(%rsi)
-; SCALAR-NEXT:    movb %r8b, 50(%rsi)
-; SCALAR-NEXT:    movb %cl, 49(%rsi)
-; SCALAR-NEXT:    movb %al, 48(%rsi)
-; SCALAR-NEXT:    movb %dl, 63(%rsi)
-; SCALAR-NEXT:    movb %bl, 62(%rsi)
-; SCALAR-NEXT:    movb %r11b, 61(%rsi)
-; SCALAR-NEXT:    movb %r10b, 60(%rsi)
-; SCALAR-NEXT:    movb %r9b, 59(%rsi)
-; SCALAR-NEXT:    movb %r8b, 58(%rsi)
-; SCALAR-NEXT:    movb %cl, 57(%rsi)
-; SCALAR-NEXT:    movb %al, 56(%rsi)
+; SCALAR-NEXT:    movb %bl, 7(%rdx)
+; SCALAR-NEXT:    movb %r11b, 6(%rdx)
+; SCALAR-NEXT:    movb %r10b, 5(%rdx)
+; SCALAR-NEXT:    movb %r9b, 4(%rdx)
+; SCALAR-NEXT:    movb %r8b, 3(%rdx)
+; SCALAR-NEXT:    movb %cl, 2(%rdx)
+; SCALAR-NEXT:    movb %dil, 1(%rdx)
+; SCALAR-NEXT:    movb %al, (%rdx)
+; SCALAR-NEXT:    movb %bl, 15(%rdx)
+; SCALAR-NEXT:    movb %r11b, 14(%rdx)
+; SCALAR-NEXT:    movb %r10b, 13(%rdx)
+; SCALAR-NEXT:    movb %r9b, 12(%rdx)
+; SCALAR-NEXT:    movb %r8b, 11(%rdx)
+; SCALAR-NEXT:    movb %cl, 10(%rdx)
+; SCALAR-NEXT:    movb %dil, 9(%rdx)
+; SCALAR-NEXT:    movb %al, 8(%rdx)
+; SCALAR-NEXT:    movb %bl, 23(%rdx)
+; SCALAR-NEXT:    movb %r11b, 22(%rdx)
+; SCALAR-NEXT:    movb %r10b, 21(%rdx)
+; SCALAR-NEXT:    movb %r9b, 20(%rdx)
+; SCALAR-NEXT:    movb %r8b, 19(%rdx)
+; SCALAR-NEXT:    movb %cl, 18(%rdx)
+; SCALAR-NEXT:    movb %dil, 17(%rdx)
+; SCALAR-NEXT:    movb %al, 16(%rdx)
+; SCALAR-NEXT:    movb %bl, 31(%rdx)
+; SCALAR-NEXT:    movb %r11b, 30(%rdx)
+; SCALAR-NEXT:    movb %r10b, 29(%rdx)
+; SCALAR-NEXT:    movb %r9b, 28(%rdx)
+; SCALAR-NEXT:    movb %r8b, 27(%rdx)
+; SCALAR-NEXT:    movb %cl, 26(%rdx)
+; SCALAR-NEXT:    movb %dil, 25(%rdx)
+; SCALAR-NEXT:    movb %al, 24(%rdx)
+; SCALAR-NEXT:    movb %bl, 39(%rdx)
+; SCALAR-NEXT:    movb %r11b, 38(%rdx)
+; SCALAR-NEXT:    movb %r10b, 37(%rdx)
+; SCALAR-NEXT:    movb %r9b, 36(%rdx)
+; SCALAR-NEXT:    movb %r8b, 35(%rdx)
+; SCALAR-NEXT:    movb %cl, 34(%rdx)
+; SCALAR-NEXT:    movb %dil, 33(%rdx)
+; SCALAR-NEXT:    movb %al, 32(%rdx)
+; SCALAR-NEXT:    movb %bl, 47(%rdx)
+; SCALAR-NEXT:    movb %r11b, 46(%rdx)
+; SCALAR-NEXT:    movb %r10b, 45(%rdx)
+; SCALAR-NEXT:    movb %r9b, 44(%rdx)
+; SCALAR-NEXT:    movb %r8b, 43(%rdx)
+; SCALAR-NEXT:    movb %cl, 42(%rdx)
+; SCALAR-NEXT:    movb %dil, 41(%rdx)
+; SCALAR-NEXT:    movb %al, 40(%rdx)
+; SCALAR-NEXT:    movb %bl, 55(%rdx)
+; SCALAR-NEXT:    movb %r11b, 54(%rdx)
+; SCALAR-NEXT:    movb %r10b, 53(%rdx)
+; SCALAR-NEXT:    movb %r9b, 52(%rdx)
+; SCALAR-NEXT:    movb %r8b, 51(%rdx)
+; SCALAR-NEXT:    movb %cl, 50(%rdx)
+; SCALAR-NEXT:    movb %dil, 49(%rdx)
+; SCALAR-NEXT:    movb %al, 48(%rdx)
+; SCALAR-NEXT:    movb %bl, 63(%rdx)
+; SCALAR-NEXT:    movb %r11b, 62(%rdx)
+; SCALAR-NEXT:    movb %r10b, 61(%rdx)
+; SCALAR-NEXT:    movb %r9b, 60(%rdx)
+; SCALAR-NEXT:    movb %r8b, 59(%rdx)
+; SCALAR-NEXT:    movb %cl, 58(%rdx)
+; SCALAR-NEXT:    movb %dil, 57(%rdx)
+; SCALAR-NEXT:    movb %al, 56(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movq %xmm1, (%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v8i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-ONLY-LABEL: vec512_v8i8:
 ; AVX2-ONLY:       # %bb.0:
 ; AVX2-ONLY-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-ONLY-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
+; AVX2-ONLY-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-ONLY-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-ONLY-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX2-ONLY-NEXT:    vpbroadcastq %xmm0, %ymm0
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-ONLY-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
 ; AVX512-LABEL: vec512_v8i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512-NEXT:    vpbroadcastq %xmm0, %zmm0
-; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %in.subvec.neg = load <8 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <8 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <8 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <8 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <8 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <8 x i8>, ptr %out.vec.ptr, i64 0
   store <8 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <8 x i8>, ptr %out.vec.ptr, i64 1
@@ -5774,82 +6729,93 @@ define void @vec512_v8i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v8i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v8i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v8i16:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw (%rdi), %ax
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw 2(%rdi), %cx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subw 4(%rdi), %r8w
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subw 6(%rdi), %r9w
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subw 8(%rdi), %r10w
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subw 10(%rdi), %r11w
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subw 12(%rdi), %bx
-; SCALAR-NEXT:    subw 14(%rdi), %dx
-; SCALAR-NEXT:    movw %dx, 14(%rsi)
-; SCALAR-NEXT:    movw %bx, 12(%rsi)
-; SCALAR-NEXT:    movw %r11w, 10(%rsi)
-; SCALAR-NEXT:    movw %r10w, 8(%rsi)
-; SCALAR-NEXT:    movw %r9w, 6(%rsi)
-; SCALAR-NEXT:    movw %r8w, 4(%rsi)
+; SCALAR-NEXT:    movzwl 14(%rdi), %ebx
+; SCALAR-NEXT:    movl 12(%rdi), %r11d
+; SCALAR-NEXT:    movzwl 10(%rdi), %r10d
+; SCALAR-NEXT:    movl 8(%rdi), %r9d
+; SCALAR-NEXT:    movzwl 6(%rdi), %r8d
+; SCALAR-NEXT:    movzwl 2(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    notl %r9d
+; SCALAR-NEXT:    notl %r10d
+; SCALAR-NEXT:    notl %r11d
+; SCALAR-NEXT:    notl %ebx
+; SCALAR-NEXT:    movw %bx, 14(%rsi)
+; SCALAR-NEXT:    movw %r11w, 12(%rsi)
+; SCALAR-NEXT:    movw %r10w, 10(%rsi)
+; SCALAR-NEXT:    movw %r9w, 8(%rsi)
+; SCALAR-NEXT:    movw %r8w, 6(%rsi)
+; SCALAR-NEXT:    movw %di, 4(%rsi)
 ; SCALAR-NEXT:    movw %cx, 2(%rsi)
 ; SCALAR-NEXT:    movw %ax, (%rsi)
-; SCALAR-NEXT:    movw %dx, 30(%rsi)
-; SCALAR-NEXT:    movw %bx, 28(%rsi)
-; SCALAR-NEXT:    movw %r11w, 26(%rsi)
-; SCALAR-NEXT:    movw %r10w, 24(%rsi)
-; SCALAR-NEXT:    movw %r9w, 22(%rsi)
-; SCALAR-NEXT:    movw %r8w, 20(%rsi)
-; SCALAR-NEXT:    movw %cx, 18(%rsi)
-; SCALAR-NEXT:    movw %ax, 16(%rsi)
-; SCALAR-NEXT:    movw %dx, 46(%rsi)
-; SCALAR-NEXT:    movw %bx, 44(%rsi)
-; SCALAR-NEXT:    movw %r11w, 42(%rsi)
-; SCALAR-NEXT:    movw %r10w, 40(%rsi)
-; SCALAR-NEXT:    movw %r9w, 38(%rsi)
-; SCALAR-NEXT:    movw %r8w, 36(%rsi)
-; SCALAR-NEXT:    movw %cx, 34(%rsi)
-; SCALAR-NEXT:    movw %ax, 32(%rsi)
-; SCALAR-NEXT:    movw %dx, 62(%rsi)
-; SCALAR-NEXT:    movw %bx, 60(%rsi)
-; SCALAR-NEXT:    movw %r11w, 58(%rsi)
-; SCALAR-NEXT:    movw %r10w, 56(%rsi)
-; SCALAR-NEXT:    movw %r9w, 54(%rsi)
-; SCALAR-NEXT:    movw %r8w, 52(%rsi)
-; SCALAR-NEXT:    movw %cx, 50(%rsi)
-; SCALAR-NEXT:    movw %ax, 48(%rsi)
+; SCALAR-NEXT:    movw %bx, 14(%rdx)
+; SCALAR-NEXT:    movw %r11w, 12(%rdx)
+; SCALAR-NEXT:    movw %r10w, 10(%rdx)
+; SCALAR-NEXT:    movw %r9w, 8(%rdx)
+; SCALAR-NEXT:    movw %r8w, 6(%rdx)
+; SCALAR-NEXT:    movw %di, 4(%rdx)
+; SCALAR-NEXT:    movw %cx, 2(%rdx)
+; SCALAR-NEXT:    movw %ax, (%rdx)
+; SCALAR-NEXT:    movw %bx, 30(%rdx)
+; SCALAR-NEXT:    movw %r11w, 28(%rdx)
+; SCALAR-NEXT:    movw %r10w, 26(%rdx)
+; SCALAR-NEXT:    movw %r9w, 24(%rdx)
+; SCALAR-NEXT:    movw %r8w, 22(%rdx)
+; SCALAR-NEXT:    movw %di, 20(%rdx)
+; SCALAR-NEXT:    movw %cx, 18(%rdx)
+; SCALAR-NEXT:    movw %ax, 16(%rdx)
+; SCALAR-NEXT:    movw %bx, 46(%rdx)
+; SCALAR-NEXT:    movw %r11w, 44(%rdx)
+; SCALAR-NEXT:    movw %r10w, 42(%rdx)
+; SCALAR-NEXT:    movw %r9w, 40(%rdx)
+; SCALAR-NEXT:    movw %r8w, 38(%rdx)
+; SCALAR-NEXT:    movw %di, 36(%rdx)
+; SCALAR-NEXT:    movw %cx, 34(%rdx)
+; SCALAR-NEXT:    movw %ax, 32(%rdx)
+; SCALAR-NEXT:    movw %bx, 62(%rdx)
+; SCALAR-NEXT:    movw %r11w, 60(%rdx)
+; SCALAR-NEXT:    movw %r10w, 58(%rdx)
+; SCALAR-NEXT:    movw %r9w, 56(%rdx)
+; SCALAR-NEXT:    movw %r8w, 54(%rdx)
+; SCALAR-NEXT:    movw %di, 52(%rdx)
+; SCALAR-NEXT:    movw %cx, 50(%rdx)
+; SCALAR-NEXT:    movw %ax, 48(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v8i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubw (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 48(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec512_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 48(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <8 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <8 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <8 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <8 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  store <8 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <8 x i16>, ptr %out.vec.ptr, i64 0
   store <8 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <8 x i16>, ptr %out.vec.ptr, i64 1
@@ -5861,78 +6827,90 @@ define void @vec512_v8i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v8i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v8i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v8i32:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subl (%rdi), %eax
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subl 4(%rdi), %edx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subl 8(%rdi), %r8d
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subl 12(%rdi), %r9d
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subl 16(%rdi), %r10d
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subl 20(%rdi), %r11d
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subl 24(%rdi), %ebx
-; SCALAR-NEXT:    subl 28(%rdi), %ecx
-; SCALAR-NEXT:    movl %ecx, 28(%rsi)
-; SCALAR-NEXT:    movl %ebx, 24(%rsi)
-; SCALAR-NEXT:    movl %r11d, 20(%rsi)
-; SCALAR-NEXT:    movl %r10d, 16(%rsi)
-; SCALAR-NEXT:    movl %r9d, 12(%rsi)
-; SCALAR-NEXT:    movl %r8d, 8(%rsi)
-; SCALAR-NEXT:    movl %edx, 4(%rsi)
+; SCALAR-NEXT:    movl 28(%rdi), %ebx
+; SCALAR-NEXT:    movl 24(%rdi), %r11d
+; SCALAR-NEXT:    movl 20(%rdi), %r10d
+; SCALAR-NEXT:    movl 16(%rdi), %r9d
+; SCALAR-NEXT:    movl 12(%rdi), %r8d
+; SCALAR-NEXT:    movl 8(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    notl %r9d
+; SCALAR-NEXT:    notl %r10d
+; SCALAR-NEXT:    notl %r11d
+; SCALAR-NEXT:    notl %ebx
+; SCALAR-NEXT:    movl %ebx, 28(%rsi)
+; SCALAR-NEXT:    movl %r11d, 24(%rsi)
+; SCALAR-NEXT:    movl %r10d, 20(%rsi)
+; SCALAR-NEXT:    movl %r9d, 16(%rsi)
+; SCALAR-NEXT:    movl %r8d, 12(%rsi)
+; SCALAR-NEXT:    movl %ecx, 8(%rsi)
+; SCALAR-NEXT:    movl %edi, 4(%rsi)
 ; SCALAR-NEXT:    movl %eax, (%rsi)
-; SCALAR-NEXT:    movl %ecx, 60(%rsi)
-; SCALAR-NEXT:    movl %ebx, 56(%rsi)
-; SCALAR-NEXT:    movl %r11d, 52(%rsi)
-; SCALAR-NEXT:    movl %r10d, 48(%rsi)
-; SCALAR-NEXT:    movl %r9d, 44(%rsi)
-; SCALAR-NEXT:    movl %r8d, 40(%rsi)
-; SCALAR-NEXT:    movl %edx, 36(%rsi)
-; SCALAR-NEXT:    movl %eax, 32(%rsi)
+; SCALAR-NEXT:    movl %ebx, 28(%rdx)
+; SCALAR-NEXT:    movl %r11d, 24(%rdx)
+; SCALAR-NEXT:    movl %r10d, 20(%rdx)
+; SCALAR-NEXT:    movl %r9d, 16(%rdx)
+; SCALAR-NEXT:    movl %r8d, 12(%rdx)
+; SCALAR-NEXT:    movl %ecx, 8(%rdx)
+; SCALAR-NEXT:    movl %edi, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ebx, 60(%rdx)
+; SCALAR-NEXT:    movl %r11d, 56(%rdx)
+; SCALAR-NEXT:    movl %r10d, 52(%rdx)
+; SCALAR-NEXT:    movl %r9d, 48(%rdx)
+; SCALAR-NEXT:    movl %r8d, 44(%rdx)
+; SCALAR-NEXT:    movl %ecx, 40(%rdx)
+; SCALAR-NEXT:    movl %edi, 36(%rdx)
+; SCALAR-NEXT:    movl %eax, 32(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v8i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd 16(%rdi), %xmm1
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec512_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubd (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <8 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <8 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <8 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <8 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  store <8 x i32> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <8 x i32>, ptr %out.vec.ptr, i64 0
   store <8 x i32> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <8 x i32>, ptr %out.vec.ptr, i64 1
@@ -5940,79 +6918,91 @@ define void @vec512_v8i32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v8f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v8f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v8f32:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subl (%rdi), %eax
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subl 4(%rdi), %edx
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subl 8(%rdi), %r8d
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subl 12(%rdi), %r9d
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subl 16(%rdi), %r10d
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subl 20(%rdi), %r11d
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subl 24(%rdi), %ebx
-; SCALAR-NEXT:    subl 28(%rdi), %ecx
-; SCALAR-NEXT:    movl %ecx, 28(%rsi)
-; SCALAR-NEXT:    movl %ebx, 24(%rsi)
-; SCALAR-NEXT:    movl %r11d, 20(%rsi)
-; SCALAR-NEXT:    movl %r10d, 16(%rsi)
-; SCALAR-NEXT:    movl %r9d, 12(%rsi)
-; SCALAR-NEXT:    movl %r8d, 8(%rsi)
-; SCALAR-NEXT:    movl %edx, 4(%rsi)
+; SCALAR-NEXT:    movl 28(%rdi), %ebx
+; SCALAR-NEXT:    movl 24(%rdi), %r11d
+; SCALAR-NEXT:    movl 20(%rdi), %r10d
+; SCALAR-NEXT:    movl 16(%rdi), %r9d
+; SCALAR-NEXT:    movl 12(%rdi), %r8d
+; SCALAR-NEXT:    movl 8(%rdi), %ecx
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %eax
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    notl %r9d
+; SCALAR-NEXT:    notl %r10d
+; SCALAR-NEXT:    notl %r11d
+; SCALAR-NEXT:    notl %ebx
+; SCALAR-NEXT:    movl %ebx, 28(%rsi)
+; SCALAR-NEXT:    movl %r11d, 24(%rsi)
+; SCALAR-NEXT:    movl %r10d, 20(%rsi)
+; SCALAR-NEXT:    movl %r9d, 16(%rsi)
+; SCALAR-NEXT:    movl %r8d, 12(%rsi)
+; SCALAR-NEXT:    movl %ecx, 8(%rsi)
+; SCALAR-NEXT:    movl %edi, 4(%rsi)
 ; SCALAR-NEXT:    movl %eax, (%rsi)
-; SCALAR-NEXT:    movl %ecx, 60(%rsi)
-; SCALAR-NEXT:    movl %ebx, 56(%rsi)
-; SCALAR-NEXT:    movl %r11d, 52(%rsi)
-; SCALAR-NEXT:    movl %r10d, 48(%rsi)
-; SCALAR-NEXT:    movl %r9d, 44(%rsi)
-; SCALAR-NEXT:    movl %r8d, 40(%rsi)
-; SCALAR-NEXT:    movl %edx, 36(%rsi)
-; SCALAR-NEXT:    movl %eax, 32(%rsi)
+; SCALAR-NEXT:    movl %ebx, 28(%rdx)
+; SCALAR-NEXT:    movl %r11d, 24(%rdx)
+; SCALAR-NEXT:    movl %r10d, 20(%rdx)
+; SCALAR-NEXT:    movl %r9d, 16(%rdx)
+; SCALAR-NEXT:    movl %r8d, 12(%rdx)
+; SCALAR-NEXT:    movl %ecx, 8(%rdx)
+; SCALAR-NEXT:    movl %edi, 4(%rdx)
+; SCALAR-NEXT:    movl %eax, (%rdx)
+; SCALAR-NEXT:    movl %ebx, 60(%rdx)
+; SCALAR-NEXT:    movl %r11d, 56(%rdx)
+; SCALAR-NEXT:    movl %r10d, 52(%rdx)
+; SCALAR-NEXT:    movl %r9d, 48(%rdx)
+; SCALAR-NEXT:    movl %r8d, 44(%rdx)
+; SCALAR-NEXT:    movl %ecx, 40(%rdx)
+; SCALAR-NEXT:    movl %edi, 36(%rdx)
+; SCALAR-NEXT:    movl %eax, 32(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE2-LABEL: vec512_v8f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubd 16(%rdi), %xmm1
-; SSE2-NEXT:    psubd (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v8f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec512_v8f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubd (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <8 x i32>, ptr %in.subvec.ptr, align 64
-  %in.subvec.int = sub <8 x i32> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <8 x i32>, ptr %in.subvec.ptr, align 64
+  %in.subvec.int = xor <8 x i32> %in.subvec.not, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %in.subvec = bitcast <8 x i32> %in.subvec.int to <8 x float>
+  store <8 x float> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <8 x float>, ptr %out.vec.ptr, i64 0
   store <8 x float> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <8 x float>, ptr %out.vec.ptr, i64 1
@@ -6020,7 +7010,7 @@ define void @vec512_v8f32(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v16i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbp
@@ -6029,121 +7019,177 @@ define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-NEXT:    pushq %r13
 ; SCALAR-NEXT:    pushq %r12
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 2(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 3(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb 4(%rdi), %cl
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subb 5(%rdi), %dl
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 6(%rdi), %r8b
-; SCALAR-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subb 7(%rdi), %r9b
-; SCALAR-NEXT:    movl %r9d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %ebp, %ebp
-; SCALAR-NEXT:    subb 8(%rdi), %bpl
-; SCALAR-NEXT:    xorl %r14d, %r14d
-; SCALAR-NEXT:    subb 9(%rdi), %r14b
-; SCALAR-NEXT:    xorl %r15d, %r15d
-; SCALAR-NEXT:    subb 10(%rdi), %r15b
-; SCALAR-NEXT:    xorl %r12d, %r12d
-; SCALAR-NEXT:    subb 11(%rdi), %r12b
-; SCALAR-NEXT:    xorl %r13d, %r13d
-; SCALAR-NEXT:    subb 12(%rdi), %r13b
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subb 13(%rdi), %bl
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subb 14(%rdi), %r11b
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subb 15(%rdi), %r10b
-; SCALAR-NEXT:    movb %r10b, 15(%rsi)
-; SCALAR-NEXT:    movb %r11b, 14(%rsi)
-; SCALAR-NEXT:    movb %bl, 13(%rsi)
-; SCALAR-NEXT:    movb %r13b, 12(%rsi)
-; SCALAR-NEXT:    movb %r12b, 11(%rsi)
-; SCALAR-NEXT:    movb %r15b, 10(%rsi)
-; SCALAR-NEXT:    movb %r14b, 9(%rsi)
-; SCALAR-NEXT:    movb %bpl, 8(%rsi)
-; SCALAR-NEXT:    movb %r9b, 7(%rsi)
-; SCALAR-NEXT:    movb %r8b, 6(%rsi)
-; SCALAR-NEXT:    movb %dl, 5(%rsi)
+; SCALAR-NEXT:    movzbl 15(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 14(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 13(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 12(%rdi), %r10d
+; SCALAR-NEXT:    movzbl 11(%rdi), %r13d
+; SCALAR-NEXT:    movzbl 10(%rdi), %r12d
+; SCALAR-NEXT:    movzbl 9(%rdi), %r15d
+; SCALAR-NEXT:    movzbl 8(%rdi), %r14d
+; SCALAR-NEXT:    movzbl 7(%rdi), %ebp
+; SCALAR-NEXT:    movzbl 6(%rdi), %r11d
+; SCALAR-NEXT:    movzbl 5(%rdi), %ebx
+; SCALAR-NEXT:    movzbl 4(%rdi), %r9d
+; SCALAR-NEXT:    movzbl 3(%rdi), %r8d
+; SCALAR-NEXT:    movzbl 2(%rdi), %ecx
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %edi
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    movb %dil, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movl %ebx, %r9d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movl %r11d, %ebx
+; SCALAR-NEXT:    notb %bpl
+; SCALAR-NEXT:    notb %r14b
+; SCALAR-NEXT:    notb %r15b
+; SCALAR-NEXT:    movb %r15b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r12b
+; SCALAR-NEXT:    movb %r12b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r13b
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    movb %r10b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movb %r11b, 15(%rsi)
+; SCALAR-NEXT:    movb %r11b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %r8b, 14(%rsi)
+; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    movb %dil, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %dil, 13(%rsi)
+; SCALAR-NEXT:    movb %r10b, 12(%rsi)
+; SCALAR-NEXT:    movb %r13b, 11(%rsi)
+; SCALAR-NEXT:    movb %r12b, 10(%rsi)
+; SCALAR-NEXT:    movb %r15b, 9(%rsi)
+; SCALAR-NEXT:    movb %r14b, 8(%rsi)
+; SCALAR-NEXT:    movl %r14d, %r12d
+; SCALAR-NEXT:    movb %bpl, 7(%rsi)
+; SCALAR-NEXT:    movl %ebp, %r14d
+; SCALAR-NEXT:    movb %bpl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %bl, 6(%rsi)
+; SCALAR-NEXT:    movb %bl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %r9b, 5(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
 ; SCALAR-NEXT:    movb %cl, 4(%rsi)
-; SCALAR-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    movb %al, 3(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 2(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
-; SCALAR-NEXT:    movb %r8b, 1(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, (%rsi)
-; SCALAR-NEXT:    movb %r10b, 31(%rsi)
-; SCALAR-NEXT:    movb %r11b, 30(%rsi)
-; SCALAR-NEXT:    movb %bl, 29(%rsi)
-; SCALAR-NEXT:    movb %r13b, 28(%rsi)
-; SCALAR-NEXT:    movb %r12b, 27(%rsi)
-; SCALAR-NEXT:    movb %r15b, 26(%rsi)
-; SCALAR-NEXT:    movb %r14b, 25(%rsi)
-; SCALAR-NEXT:    movb %bpl, 24(%rsi)
-; SCALAR-NEXT:    movb %r9b, 23(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 4-byte Reload
-; SCALAR-NEXT:    movb %r9b, 22(%rsi)
-; SCALAR-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    movb %dl, 21(%rsi)
-; SCALAR-NEXT:    movb %cl, 20(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
-; SCALAR-NEXT:    movb %cl, 19(%rsi)
-; SCALAR-NEXT:    movb %al, 18(%rsi)
-; SCALAR-NEXT:    movb %r8b, 17(%rsi)
-; SCALAR-NEXT:    movb %dil, 16(%rsi)
-; SCALAR-NEXT:    movl %edi, %r8d
-; SCALAR-NEXT:    movb %r10b, 47(%rsi)
-; SCALAR-NEXT:    movb %r11b, 46(%rsi)
-; SCALAR-NEXT:    movb %bl, 45(%rsi)
-; SCALAR-NEXT:    movb %r13b, 44(%rsi)
-; SCALAR-NEXT:    movb %r12b, 43(%rsi)
-; SCALAR-NEXT:    movb %r15b, 42(%rsi)
-; SCALAR-NEXT:    movb %r14b, 41(%rsi)
-; SCALAR-NEXT:    movb %bpl, 40(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 39(%rsi)
-; SCALAR-NEXT:    movb %r9b, 38(%rsi)
-; SCALAR-NEXT:    movb %dl, 37(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 4-byte Reload
-; SCALAR-NEXT:    movb %dl, 36(%rsi)
-; SCALAR-NEXT:    movb %cl, 35(%rsi)
-; SCALAR-NEXT:    movb %al, 34(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
-; SCALAR-NEXT:    movb %cl, 33(%rsi)
-; SCALAR-NEXT:    movb %r8b, 32(%rsi)
-; SCALAR-NEXT:    movb %r10b, 63(%rsi)
-; SCALAR-NEXT:    movb %r11b, 62(%rsi)
-; SCALAR-NEXT:    movb %bl, 61(%rsi)
-; SCALAR-NEXT:    movb %r13b, 60(%rsi)
-; SCALAR-NEXT:    movb %r12b, 59(%rsi)
-; SCALAR-NEXT:    movb %r15b, 58(%rsi)
-; SCALAR-NEXT:    movb %r14b, 57(%rsi)
-; SCALAR-NEXT:    movb %bpl, 56(%rsi)
-; SCALAR-NEXT:    movb %dil, 55(%rsi)
-; SCALAR-NEXT:    movb %r9b, 54(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 53(%rsi)
-; SCALAR-NEXT:    movb %dl, 52(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 4-byte Reload
-; SCALAR-NEXT:    movb %dl, 51(%rsi)
-; SCALAR-NEXT:    movb %al, 50(%rsi)
-; SCALAR-NEXT:    movb %cl, 49(%rsi)
-; SCALAR-NEXT:    movb %r8b, 48(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebp # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bpl, 3(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %dil, 2(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %cl, 1(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r10b, (%rsi)
+; SCALAR-NEXT:    movb %r11b, 15(%rdx)
+; SCALAR-NEXT:    movb %r8b, 14(%rdx)
+; SCALAR-NEXT:    movb %al, 13(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 12(%rdx)
+; SCALAR-NEXT:    movb %r13b, 11(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r15d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r15b, 10(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 9(%rdx)
+; SCALAR-NEXT:    movb %r12b, 8(%rdx)
+; SCALAR-NEXT:    movb %r14b, 7(%rdx)
+; SCALAR-NEXT:    movb %bl, 6(%rdx)
+; SCALAR-NEXT:    movb %r9b, 5(%rdx)
+; SCALAR-NEXT:    movl %r9d, %r11d
+; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r8b, 4(%rdx)
+; SCALAR-NEXT:    movb %bpl, 3(%rdx)
+; SCALAR-NEXT:    movb %dil, 2(%rdx)
+; SCALAR-NEXT:    movb %cl, 1(%rdx)
+; SCALAR-NEXT:    movl %ecx, %r14d
+; SCALAR-NEXT:    movl %r10d, %esi
+; SCALAR-NEXT:    movb %r10b, (%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %cl, 31(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r9b, 30(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %dil, 29(%rdx)
+; SCALAR-NEXT:    movb %al, 28(%rdx)
+; SCALAR-NEXT:    movl %eax, %r10d
+; SCALAR-NEXT:    movb %r13b, 27(%rdx)
+; SCALAR-NEXT:    movb %r15b, 26(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r15d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r15b, 25(%rdx)
+; SCALAR-NEXT:    movl %r12d, %ebp
+; SCALAR-NEXT:    movb %r12b, 24(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 23(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 22(%rdx)
+; SCALAR-NEXT:    movb %r11b, 21(%rdx)
+; SCALAR-NEXT:    movb %r8b, 20(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r8b, 19(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r8b, 18(%rdx)
+; SCALAR-NEXT:    movb %r14b, 17(%rdx)
+; SCALAR-NEXT:    movb %sil, 16(%rdx)
+; SCALAR-NEXT:    movl %esi, %r11d
+; SCALAR-NEXT:    movb %cl, 47(%rdx)
+; SCALAR-NEXT:    movb %r9b, 46(%rdx)
+; SCALAR-NEXT:    movb %dil, 45(%rdx)
+; SCALAR-NEXT:    movb %r10b, 44(%rdx)
+; SCALAR-NEXT:    movb %r13b, 43(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r12d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r12b, 42(%rdx)
+; SCALAR-NEXT:    movb %r15b, 41(%rdx)
+; SCALAR-NEXT:    movl %ebp, %r14d
+; SCALAR-NEXT:    movb %bpl, 40(%rdx)
+; SCALAR-NEXT:    movl %ebx, %ebp
+; SCALAR-NEXT:    movb %bl, 39(%rdx)
+; SCALAR-NEXT:    movl %eax, %ebx
+; SCALAR-NEXT:    movb %al, 38(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %cl, 37(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 36(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 35(%rdx)
+; SCALAR-NEXT:    movb %r8b, 34(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r9b, 33(%rdx)
+; SCALAR-NEXT:    movb %r11b, 32(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r11b, 63(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r11b, 62(%rdx)
+; SCALAR-NEXT:    movb %dil, 61(%rdx)
+; SCALAR-NEXT:    movb %r10b, 60(%rdx)
+; SCALAR-NEXT:    movb %r13b, 59(%rdx)
+; SCALAR-NEXT:    movb %r12b, 58(%rdx)
+; SCALAR-NEXT:    movb %r15b, 57(%rdx)
+; SCALAR-NEXT:    movb %r14b, 56(%rdx)
+; SCALAR-NEXT:    movb %bpl, 55(%rdx)
+; SCALAR-NEXT:    movb %bl, 54(%rdx)
+; SCALAR-NEXT:    movb %cl, 53(%rdx)
+; SCALAR-NEXT:    movb %al, 52(%rdx)
+; SCALAR-NEXT:    movb %sil, 51(%rdx)
+; SCALAR-NEXT:    movb %r8b, 50(%rdx)
+; SCALAR-NEXT:    movb %r9b, 49(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 48(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    popq %r12
 ; SCALAR-NEXT:    popq %r13
@@ -6154,25 +7200,28 @@ define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; SSE2-LABEL: vec512_v16i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    psubb (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 48(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec512_v16i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 32(%rsi)
-; AVX-NEXT:    vmovdqa %xmm0, 48(%rsi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rdx)
+; AVX-NEXT:    vmovdqa %xmm0, 48(%rdx)
 ; AVX-NEXT:    retq
-  %in.subvec.neg = load <16 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <16 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <16 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <16 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <16 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <16 x i8>, ptr %out.vec.ptr, i64 0
   store <16 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <16 x i8>, ptr %out.vec.ptr, i64 1
@@ -6184,7 +7233,7 @@ define void @vec512_v16i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v16i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v16i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v16i16:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbp
@@ -6193,82 +7242,120 @@ define void @vec512_v16i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-NEXT:    pushq %r13
 ; SCALAR-NEXT:    pushq %r12
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw (%rdi), %ax
+; SCALAR-NEXT:    movzwl 30(%rdi), %eax
 ; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw 2(%rdi), %ax
+; SCALAR-NEXT:    movl 28(%rdi), %eax
 ; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw 4(%rdi), %ax
-; SCALAR-NEXT:    movl %eax, %r8d
+; SCALAR-NEXT:    movzwl 26(%rdi), %eax
 ; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw 6(%rdi), %ax
+; SCALAR-NEXT:    movl 24(%rdi), %r13d
+; SCALAR-NEXT:    movzwl 22(%rdi), %r12d
+; SCALAR-NEXT:    movl 20(%rdi), %r15d
+; SCALAR-NEXT:    movzwl 18(%rdi), %r14d
+; SCALAR-NEXT:    movl 16(%rdi), %ebx
+; SCALAR-NEXT:    movzwl 14(%rdi), %r11d
+; SCALAR-NEXT:    movl 12(%rdi), %r10d
+; SCALAR-NEXT:    movzwl 10(%rdi), %r9d
+; SCALAR-NEXT:    movl 8(%rdi), %r8d
+; SCALAR-NEXT:    movzwl 6(%rdi), %ecx
+; SCALAR-NEXT:    movzwl 2(%rdi), %ebp
+; SCALAR-NEXT:    movl (%rdi), %eax
+; SCALAR-NEXT:    movl 4(%rdi), %edi
+; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw 8(%rdi), %ax
-; SCALAR-NEXT:    movl %eax, %r9d
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subw 10(%rdi), %r10w
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subw 12(%rdi), %r11w
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subw 14(%rdi), %bx
-; SCALAR-NEXT:    xorl %ebp, %ebp
-; SCALAR-NEXT:    subw 16(%rdi), %bp
-; SCALAR-NEXT:    xorl %r14d, %r14d
-; SCALAR-NEXT:    subw 18(%rdi), %r14w
-; SCALAR-NEXT:    xorl %r15d, %r15d
-; SCALAR-NEXT:    subw 20(%rdi), %r15w
-; SCALAR-NEXT:    xorl %r12d, %r12d
-; SCALAR-NEXT:    subw 22(%rdi), %r12w
-; SCALAR-NEXT:    xorl %r13d, %r13d
-; SCALAR-NEXT:    subw 24(%rdi), %r13w
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subw 26(%rdi), %dx
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subw 28(%rdi), %cx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subw 30(%rdi), %ax
-; SCALAR-NEXT:    movw %ax, 30(%rsi)
-; SCALAR-NEXT:    movw %cx, 28(%rsi)
-; SCALAR-NEXT:    movw %dx, 26(%rsi)
+; SCALAR-NEXT:    notl %ebp
+; SCALAR-NEXT:    movl %ebp, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    notl %r9d
+; SCALAR-NEXT:    movl %r9d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    movl %r10d, %edi
+; SCALAR-NEXT:    notl %edi
+; SCALAR-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    notl %r11d
+; SCALAR-NEXT:    movl %r11d, %r9d
+; SCALAR-NEXT:    notl %ebx
+; SCALAR-NEXT:    movl %ebx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    notl %r14d
+; SCALAR-NEXT:    notl %r15d
+; SCALAR-NEXT:    notl %r12d
+; SCALAR-NEXT:    notl %r13d
+; SCALAR-NEXT:    movl %r13d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 4-byte Reload
+; SCALAR-NEXT:    notl %r10d
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 4-byte Reload
+; SCALAR-NEXT:    notl %r11d
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
+; SCALAR-NEXT:    notl %r8d
+; SCALAR-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    movw %r8w, 30(%rsi)
+; SCALAR-NEXT:    movw %r11w, 28(%rsi)
+; SCALAR-NEXT:    movl %r11d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    movw %r10w, 26(%rsi)
+; SCALAR-NEXT:    movl %r10d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SCALAR-NEXT:    movw %r13w, 24(%rsi)
 ; SCALAR-NEXT:    movw %r12w, 22(%rsi)
 ; SCALAR-NEXT:    movw %r15w, 20(%rsi)
 ; SCALAR-NEXT:    movw %r14w, 18(%rsi)
-; SCALAR-NEXT:    movw %bp, 16(%rsi)
-; SCALAR-NEXT:    movw %bx, 14(%rsi)
-; SCALAR-NEXT:    movw %r11w, 12(%rsi)
-; SCALAR-NEXT:    movw %r10w, 10(%rsi)
-; SCALAR-NEXT:    movw %r9w, 8(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 4-byte Reload
-; SCALAR-NEXT:    movw %r9w, 6(%rsi)
-; SCALAR-NEXT:    movw %r8w, 4(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
-; SCALAR-NEXT:    movw %r8w, 2(%rsi)
+; SCALAR-NEXT:    movw %bx, 16(%rsi)
+; SCALAR-NEXT:    movw %r9w, 14(%rsi)
+; SCALAR-NEXT:    movw %di, 12(%rsi)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebp # 4-byte Reload
+; SCALAR-NEXT:    movw %bp, 10(%rsi)
 ; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movw %di, (%rsi)
-; SCALAR-NEXT:    movw %ax, 62(%rsi)
-; SCALAR-NEXT:    movw %cx, 60(%rsi)
-; SCALAR-NEXT:    movw %dx, 58(%rsi)
-; SCALAR-NEXT:    movw %r13w, 56(%rsi)
-; SCALAR-NEXT:    movw %r12w, 54(%rsi)
-; SCALAR-NEXT:    movw %r15w, 52(%rsi)
-; SCALAR-NEXT:    movw %r14w, 50(%rsi)
-; SCALAR-NEXT:    movw %bp, 48(%rsi)
-; SCALAR-NEXT:    movw %bx, 46(%rsi)
-; SCALAR-NEXT:    movw %r11w, 44(%rsi)
-; SCALAR-NEXT:    movw %r10w, 42(%rsi)
+; SCALAR-NEXT:    movw %di, 8(%rsi)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
+; SCALAR-NEXT:    movw %cx, 6(%rsi)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
+; SCALAR-NEXT:    movw %r8w, 4(%rsi)
 ; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movw %ax, 40(%rsi)
-; SCALAR-NEXT:    movw %r9w, 38(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movw %ax, 36(%rsi)
-; SCALAR-NEXT:    movw %r8w, 34(%rsi)
-; SCALAR-NEXT:    movw %di, 32(%rsi)
+; SCALAR-NEXT:    movw %ax, 2(%rsi)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
+; SCALAR-NEXT:    movw %bx, (%rsi)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 4-byte Reload
+; SCALAR-NEXT:    movw %r13w, 30(%rdx)
+; SCALAR-NEXT:    movw %r11w, 28(%rdx)
+; SCALAR-NEXT:    movw %r10w, 26(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Reload
+; SCALAR-NEXT:    movw %si, 24(%rdx)
+; SCALAR-NEXT:    movw %r12w, 22(%rdx)
+; SCALAR-NEXT:    movw %r15w, 20(%rdx)
+; SCALAR-NEXT:    movw %r14w, 18(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 4-byte Reload
+; SCALAR-NEXT:    movw %r11w, 16(%rdx)
+; SCALAR-NEXT:    movw %r9w, 14(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 4-byte Reload
+; SCALAR-NEXT:    movw %r10w, 12(%rdx)
+; SCALAR-NEXT:    movw %bp, 10(%rdx)
+; SCALAR-NEXT:    movw %di, 8(%rdx)
+; SCALAR-NEXT:    movw %cx, 6(%rdx)
+; SCALAR-NEXT:    movw %r8w, 4(%rdx)
+; SCALAR-NEXT:    movw %ax, 2(%rdx)
+; SCALAR-NEXT:    movl %ebx, %esi
+; SCALAR-NEXT:    movw %si, (%rdx)
+; SCALAR-NEXT:    movw %r13w, 62(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
+; SCALAR-NEXT:    movw %bx, 60(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
+; SCALAR-NEXT:    movw %bx, 58(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
+; SCALAR-NEXT:    movw %bx, 56(%rdx)
+; SCALAR-NEXT:    movw %r12w, 54(%rdx)
+; SCALAR-NEXT:    movw %r15w, 52(%rdx)
+; SCALAR-NEXT:    movw %r14w, 50(%rdx)
+; SCALAR-NEXT:    movw %r11w, 48(%rdx)
+; SCALAR-NEXT:    movw %r9w, 46(%rdx)
+; SCALAR-NEXT:    movw %r10w, 44(%rdx)
+; SCALAR-NEXT:    movw %bp, 42(%rdx)
+; SCALAR-NEXT:    movw %di, 40(%rdx)
+; SCALAR-NEXT:    movw %cx, 38(%rdx)
+; SCALAR-NEXT:    movw %r8w, 36(%rdx)
+; SCALAR-NEXT:    movw %ax, 34(%rdx)
+; SCALAR-NEXT:    movw %si, 32(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    popq %r12
 ; SCALAR-NEXT:    popq %r13
@@ -6279,37 +7366,41 @@ define void @vec512_v16i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; SSE2-LABEL: vec512_v16i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubw 16(%rdi), %xmm1
-; SSE2-NEXT:    psubw (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubw 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubw (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec512_v16i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubw (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <16 x i16>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <16 x i16> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <16 x i16>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <16 x i16> %in.subvec.not, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  store <16 x i16> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <16 x i16>, ptr %out.vec.ptr, i64 0
   store <16 x i16> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <16 x i16>, ptr %out.vec.ptr, i64 1
@@ -6317,7 +7408,7 @@ define void @vec512_v16i16(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 
-define void @vec512_v32i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
+define void @vec512_v32i8(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-LABEL: vec512_v32i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    pushq %rbp
@@ -6326,190 +7417,260 @@ define void @vec512_v32i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ; SCALAR-NEXT:    pushq %r13
 ; SCALAR-NEXT:    pushq %r12
 ; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb (%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 1(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 2(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 3(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 4(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 5(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 6(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 7(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 8(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 9(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 10(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 11(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 12(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 13(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 14(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 15(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 16(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 17(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 18(%rdi), %al
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    xorl %r13d, %r13d
-; SCALAR-NEXT:    subb 19(%rdi), %r13b
-; SCALAR-NEXT:    xorl %r12d, %r12d
-; SCALAR-NEXT:    subb 20(%rdi), %r12b
-; SCALAR-NEXT:    xorl %r15d, %r15d
-; SCALAR-NEXT:    subb 21(%rdi), %r15b
-; SCALAR-NEXT:    xorl %r14d, %r14d
-; SCALAR-NEXT:    subb 22(%rdi), %r14b
-; SCALAR-NEXT:    xorl %ebp, %ebp
-; SCALAR-NEXT:    subb 23(%rdi), %bpl
-; SCALAR-NEXT:    xorl %ebx, %ebx
-; SCALAR-NEXT:    subb 24(%rdi), %bl
-; SCALAR-NEXT:    xorl %r11d, %r11d
-; SCALAR-NEXT:    subb 25(%rdi), %r11b
-; SCALAR-NEXT:    xorl %r10d, %r10d
-; SCALAR-NEXT:    subb 26(%rdi), %r10b
-; SCALAR-NEXT:    xorl %r9d, %r9d
-; SCALAR-NEXT:    subb 27(%rdi), %r9b
-; SCALAR-NEXT:    xorl %r8d, %r8d
-; SCALAR-NEXT:    subb 28(%rdi), %r8b
-; SCALAR-NEXT:    xorl %edx, %edx
-; SCALAR-NEXT:    subb 29(%rdi), %dl
-; SCALAR-NEXT:    xorl %ecx, %ecx
-; SCALAR-NEXT:    subb 30(%rdi), %cl
-; SCALAR-NEXT:    xorl %eax, %eax
-; SCALAR-NEXT:    subb 31(%rdi), %al
-; SCALAR-NEXT:    movb %al, 31(%rsi)
-; SCALAR-NEXT:    movb %cl, 30(%rsi)
-; SCALAR-NEXT:    movb %dl, 29(%rsi)
-; SCALAR-NEXT:    movb %r8b, 28(%rsi)
-; SCALAR-NEXT:    movb %r9b, 27(%rsi)
-; SCALAR-NEXT:    movb %r10b, 26(%rsi)
-; SCALAR-NEXT:    movb %r11b, 25(%rsi)
-; SCALAR-NEXT:    movb %bl, 24(%rsi)
-; SCALAR-NEXT:    movb %bpl, 23(%rsi)
-; SCALAR-NEXT:    movb %r14b, 22(%rsi)
-; SCALAR-NEXT:    movb %r15b, 21(%rsi)
-; SCALAR-NEXT:    movb %r12b, 20(%rsi)
-; SCALAR-NEXT:    movb %r13b, 19(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 18(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 17(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 16(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 15(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 14(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; SCALAR-NEXT:    movzbl 16(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 15(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 14(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 13(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 12(%rdi), %r13d
+; SCALAR-NEXT:    movzbl 11(%rdi), %eax
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 10(%rdi), %r12d
+; SCALAR-NEXT:    movzbl 9(%rdi), %r15d
+; SCALAR-NEXT:    movzbl 8(%rdi), %r14d
+; SCALAR-NEXT:    movzbl 7(%rdi), %ebp
+; SCALAR-NEXT:    movzbl 6(%rdi), %ebx
+; SCALAR-NEXT:    movzbl 5(%rdi), %r11d
+; SCALAR-NEXT:    movzbl 4(%rdi), %r10d
+; SCALAR-NEXT:    movzbl 3(%rdi), %r9d
+; SCALAR-NEXT:    movzbl 2(%rdi), %r8d
+; SCALAR-NEXT:    movzbl (%rdi), %eax
+; SCALAR-NEXT:    movzbl 1(%rdi), %ecx
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    movb %r8b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    movb %r10b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movb %r11b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %bl
+; SCALAR-NEXT:    movb %bl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %bpl
+; SCALAR-NEXT:    movb %bpl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r14b
+; SCALAR-NEXT:    movb %r14b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r15b
+; SCALAR-NEXT:    movb %r15b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r12b
+; SCALAR-NEXT:    movb %r12b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %bl
+; SCALAR-NEXT:    movb %bl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb %r13b
+; SCALAR-NEXT:    movb %r13b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    notb {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Folded Spill
+; SCALAR-NEXT:    notb {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Folded Spill
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    notb %r8b
+; SCALAR-NEXT:    notb {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Folded Spill
+; SCALAR-NEXT:    movzbl 17(%rdi), %eax
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 18(%rdi), %eax
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 19(%rdi), %eax
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 20(%rdi), %r11d
+; SCALAR-NEXT:    notb %r11b
+; SCALAR-NEXT:    movb %r11b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 21(%rdi), %eax
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 22(%rdi), %ebp
+; SCALAR-NEXT:    notb %bpl
+; SCALAR-NEXT:    movb %bpl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 23(%rdi), %r10d
+; SCALAR-NEXT:    notb %r10b
+; SCALAR-NEXT:    movb %r10b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 24(%rdi), %r9d
+; SCALAR-NEXT:    notb %r9b
+; SCALAR-NEXT:    movb %r9b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 25(%rdi), %r14d
+; SCALAR-NEXT:    notb %r14b
+; SCALAR-NEXT:    movb %r14b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 26(%rdi), %r15d
+; SCALAR-NEXT:    notb %r15b
+; SCALAR-NEXT:    movb %r15b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 27(%rdi), %r12d
+; SCALAR-NEXT:    notb %r12b
+; SCALAR-NEXT:    movb %r12b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 28(%rdi), %r13d
+; SCALAR-NEXT:    notb %r13b
+; SCALAR-NEXT:    movb %r13b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 29(%rdi), %ecx
+; SCALAR-NEXT:    notb %cl
+; SCALAR-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 30(%rdi), %eax
+; SCALAR-NEXT:    notb %al
+; SCALAR-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movzbl 31(%rdi), %edi
+; SCALAR-NEXT:    notb %dil
+; SCALAR-NEXT:    movb %dil, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; SCALAR-NEXT:    movb %dil, 31(%rsi)
+; SCALAR-NEXT:    movb %al, 30(%rsi)
+; SCALAR-NEXT:    movb %cl, 29(%rsi)
+; SCALAR-NEXT:    movb %r13b, 28(%rsi)
+; SCALAR-NEXT:    movb %r12b, 27(%rsi)
+; SCALAR-NEXT:    movb %r15b, 26(%rsi)
+; SCALAR-NEXT:    movb %r14b, 25(%rsi)
+; SCALAR-NEXT:    movb %r9b, 24(%rsi)
+; SCALAR-NEXT:    movb %r10b, 23(%rsi)
+; SCALAR-NEXT:    movb %bpl, 22(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebp # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bpl, 21(%rsi)
+; SCALAR-NEXT:    movb %r11b, 20(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 19(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 18(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 17(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r11b, 16(%rsi)
+; SCALAR-NEXT:    movb %r8b, 15(%rsi)
+; SCALAR-NEXT:    movl %r8d, %r14d
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r10b, 14(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 1-byte Folded Reload
 ; SCALAR-NEXT:    movb %dil, 13(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 12(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 11(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 10(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 9(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 8(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 7(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 6(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 5(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 4(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 3(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 2(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, 1(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movb %dil, (%rsi)
-; SCALAR-NEXT:    movb %al, 63(%rsi)
-; SCALAR-NEXT:    movb %cl, 62(%rsi)
-; SCALAR-NEXT:    movb %dl, 61(%rsi)
-; SCALAR-NEXT:    movb %r8b, 60(%rsi)
-; SCALAR-NEXT:    movb %r9b, 59(%rsi)
-; SCALAR-NEXT:    movb %r10b, 58(%rsi)
-; SCALAR-NEXT:    movb %r11b, 57(%rsi)
-; SCALAR-NEXT:    movb %bl, 56(%rsi)
-; SCALAR-NEXT:    movb %bpl, 55(%rsi)
-; SCALAR-NEXT:    movb %r14b, 54(%rsi)
-; SCALAR-NEXT:    movb %r15b, 53(%rsi)
-; SCALAR-NEXT:    movb %r12b, 52(%rsi)
-; SCALAR-NEXT:    movb %r13b, 51(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 50(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 49(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 48(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 47(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 46(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 45(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 44(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 43(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 42(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 41(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 40(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 39(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 38(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 37(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 36(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 35(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 34(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
-; SCALAR-NEXT:    movb %al, 33(%rsi)
-; SCALAR-NEXT:    movb %dil, 32(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 12(%rsi)
+; SCALAR-NEXT:    movb %bl, 11(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r13b, 10(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %cl, 9(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 8(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 7(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r8b, 6(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r8b, 5(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r12d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r12b, 4(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r9b, 3(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r15d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r15b, 2(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r8b, 1(%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, (%rsi)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 31(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 30(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 29(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 28(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 27(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 26(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 25(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 24(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 23(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 22(%rdx)
+; SCALAR-NEXT:    movb %bpl, 21(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 20(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 19(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 18(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebp # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bpl, 17(%rdx)
+; SCALAR-NEXT:    movb %r11b, 16(%rdx)
+; SCALAR-NEXT:    movb %r14b, 15(%rdx)
+; SCALAR-NEXT:    movb %r10b, 14(%rdx)
+; SCALAR-NEXT:    movb %dil, 13(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r11b, 12(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 11(%rdx)
+; SCALAR-NEXT:    movb %r13b, 10(%rdx)
+; SCALAR-NEXT:    movb %cl, 9(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %r10b, 8(%rdx)
+; SCALAR-NEXT:    movb %al, 7(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %cl, 6(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %al, 5(%rdx)
+; SCALAR-NEXT:    movb %r12b, 4(%rdx)
+; SCALAR-NEXT:    movb %r9b, 3(%rdx)
+; SCALAR-NEXT:    movb %r15b, 2(%rdx)
+; SCALAR-NEXT:    movb %r8b, 1(%rdx)
+; SCALAR-NEXT:    movb %bl, (%rdx)
+; SCALAR-NEXT:    movl %ebx, %edi
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 63(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 62(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 61(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 60(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 59(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 58(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 57(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 56(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 55(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 54(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 53(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 52(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 51(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 50(%rdx)
+; SCALAR-NEXT:    movb %bpl, 49(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 48(%rdx)
+; SCALAR-NEXT:    movb %r14b, 47(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 46(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %bl, 45(%rdx)
+; SCALAR-NEXT:    movb %r11b, 44(%rdx)
+; SCALAR-NEXT:    movb %sil, 43(%rdx)
+; SCALAR-NEXT:    movb %r13b, 42(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 41(%rdx)
+; SCALAR-NEXT:    movb %r10b, 40(%rdx)
+; SCALAR-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 1-byte Folded Reload
+; SCALAR-NEXT:    movb %sil, 39(%rdx)
+; SCALAR-NEXT:    movb %cl, 38(%rdx)
+; SCALAR-NEXT:    movb %al, 37(%rdx)
+; SCALAR-NEXT:    movb %r12b, 36(%rdx)
+; SCALAR-NEXT:    movb %r9b, 35(%rdx)
+; SCALAR-NEXT:    movb %r15b, 34(%rdx)
+; SCALAR-NEXT:    movb %r8b, 33(%rdx)
+; SCALAR-NEXT:    movb %dil, 32(%rdx)
 ; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    popq %r12
 ; SCALAR-NEXT:    popq %r13
@@ -6520,37 +7681,41 @@ define void @vec512_v32i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; SSE2-LABEL: vec512_v32i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    psubb 16(%rdi), %xmm1
-; SSE2-NEXT:    psubb (%rdi), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    pxor (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rsi)
 ; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 48(%rsi)
-; SSE2-NEXT:    movdqa %xmm0, 32(%rsi)
+; SSE2-NEXT:    movdqa %xmm0, (%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rdx)
+; SSE2-NEXT:    movdqa %xmm1, 48(%rdx)
+; SSE2-NEXT:    movdqa %xmm0, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: vec512_v32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsubb 16(%rdi), %xmm0, %xmm1
-; AVX1-NEXT:    vpsubb (%rdi), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vcmptrueps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vxorps (%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX1-NEXT:    vmovaps %ymm0, 32(%rsi)
+; AVX1-NEXT:    vmovaps %ymm0, (%rdx)
+; AVX1-NEXT:    vmovaps %ymm0, 32(%rdx)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vec512_v32i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsubb (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
-; AVX2-NEXT:    vmovdqa %ymm0, 32(%rsi)
+; AVX2-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rdx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %in.subvec.neg = load <32 x i8>, ptr %in.subvec.ptr, align 64
-  %in.subvec = sub <32 x i8> zeroinitializer, %in.subvec.neg
+  %in.subvec.not = load <32 x i8>, ptr %in.subvec.ptr, align 64
+  %in.subvec = xor <32 x i8> %in.subvec.not, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+  store <32 x i8> %in.subvec, ptr %out.subvec.ptr, align 64
   %out.subvec0.ptr = getelementptr <32 x i8>, ptr %out.vec.ptr, i64 0
   store <32 x i8> %in.subvec, ptr %out.subvec0.ptr, align 64
   %out.subvec1.ptr = getelementptr <32 x i8>, ptr %out.vec.ptr, i64 1
@@ -6558,5 +7723,4 @@ define void @vec512_v32i8(ptr %in.subvec.ptr, ptr %out.vec.ptr) nounwind {
   ret void
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; SSE: {{.*}}
 ; SSSE3: {{.*}}
