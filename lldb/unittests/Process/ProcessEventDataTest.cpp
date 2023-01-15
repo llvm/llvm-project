@@ -142,9 +142,7 @@ ThreadSP CreateThread(ProcessSP &process_sp, bool should_stop,
 TEST_F(ProcessEventDataTest, DoOnRemoval) {
   ArchSpec arch("x86_64-apple-macosx-");
 
-  Platform::SetHostPlatform(
-      PlatformRemoteMacOSX::CreateInstance(true, &arch, /*debugger=*/nullptr,
-                                           /*metadata=*/nullptr));
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
@@ -184,9 +182,7 @@ TEST_F(ProcessEventDataTest, DoOnRemoval) {
 TEST_F(ProcessEventDataTest, ShouldStop) {
   ArchSpec arch("x86_64-apple-macosx-");
 
-  Platform::SetHostPlatform(
-      PlatformRemoteMacOSX::CreateInstance(true, &arch, /*debugger=*/nullptr,
-                                           /*metadata=*/nullptr));
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);

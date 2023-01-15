@@ -235,8 +235,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
-      if (Register::isVirtualRegister(SrcReg) &&
-          Register::isVirtualRegister(DstReg)) {
+      if (SrcReg.isVirtual() && DstReg.isVirtual()) {
         auto SrcRC = MRI.getRegClass(SrcReg);
         auto DstRC = MRI.getRegClass(DstReg);
         if (SrcRC == DstRC) {

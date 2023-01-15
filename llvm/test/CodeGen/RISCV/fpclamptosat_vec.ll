@@ -5695,10 +5695,10 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    slti a0, s1, 1
 ; CHECK-NOV-NEXT:    neg a0, a0
-; CHECK-NOV-NEXT:    and a0, a0, s0
 ; CHECK-NOV-NEXT:    addi s1, s1, -1
 ; CHECK-NOV-NEXT:    seqz a5, s1
 ; CHECK-NOV-NEXT:    addi a5, a5, -1
+; CHECK-NOV-NEXT:    and a5, a5, s0
 ; CHECK-NOV-NEXT:    and a0, a5, a0
 ; CHECK-NOV-NEXT:    beqz a4, .LBB47_6
 ; CHECK-NOV-NEXT:  # %bb.5: # %entry
@@ -6185,10 +6185,10 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    slti a0, s1, 1
 ; CHECK-NOV-NEXT:    neg a0, a0
-; CHECK-NOV-NEXT:    and a0, a0, s0
 ; CHECK-NOV-NEXT:    addi s1, s1, -1
 ; CHECK-NOV-NEXT:    seqz a5, s1
 ; CHECK-NOV-NEXT:    addi a5, a5, -1
+; CHECK-NOV-NEXT:    and a5, a5, s0
 ; CHECK-NOV-NEXT:    and a0, a5, a0
 ; CHECK-NOV-NEXT:    beqz a4, .LBB50_6
 ; CHECK-NOV-NEXT:  # %bb.5: # %entry
@@ -6664,10 +6664,10 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    slti a0, s1, 1
 ; CHECK-NOV-NEXT:    neg a0, a0
-; CHECK-NOV-NEXT:    and a0, a0, s0
 ; CHECK-NOV-NEXT:    addi s1, s1, -1
 ; CHECK-NOV-NEXT:    seqz a5, s1
 ; CHECK-NOV-NEXT:    addi a5, a5, -1
+; CHECK-NOV-NEXT:    and a5, a5, s0
 ; CHECK-NOV-NEXT:    and a0, a5, a0
 ; CHECK-NOV-NEXT:    beqz a4, .LBB53_6
 ; CHECK-NOV-NEXT:  # %bb.5: # %entry
@@ -6727,10 +6727,10 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-V-NEXT:    addi a1, a1, -1
 ; CHECK-V-NEXT:    slti a0, s1, 1
 ; CHECK-V-NEXT:    neg a0, a0
-; CHECK-V-NEXT:    and a0, a0, s0
 ; CHECK-V-NEXT:    addi s1, s1, -1
 ; CHECK-V-NEXT:    seqz a5, s1
 ; CHECK-V-NEXT:    addi a5, a5, -1
+; CHECK-V-NEXT:    and a5, a5, s0
 ; CHECK-V-NEXT:    and a0, a5, a0
 ; CHECK-V-NEXT:    beqz a4, .LBB53_6
 ; CHECK-V-NEXT:  # %bb.5: # %entry

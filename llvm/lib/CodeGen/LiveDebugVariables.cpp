@@ -764,8 +764,7 @@ void LDVImpl::print(raw_ostream &OS) {
 
 void UserValue::mapVirtRegs(LDVImpl *LDV) {
   for (unsigned i = 0, e = locations.size(); i != e; ++i)
-    if (locations[i].isReg() &&
-        Register::isVirtualRegister(locations[i].getReg()))
+    if (locations[i].isReg() && locations[i].getReg().isVirtual())
       LDV->mapVirtReg(locations[i].getReg(), this);
 }
 
@@ -786,7 +785,7 @@ LDVImpl::getUserValue(const DILocalVariable *Var,
 }
 
 void LDVImpl::mapVirtReg(Register VirtReg, UserValue *EC) {
-  assert(Register::isVirtualRegister(VirtReg) && "Only map VirtRegs");
+  assert(VirtReg.isVirtual() && "Only map VirtRegs");
   UserValue *&Leader = virtRegToEqClass[VirtReg];
   Leader = UserValue::merge(Leader, EC);
 }
@@ -822,7 +821,7 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // will be incorrect.
   bool Discard = false;
   for (const MachineOperand &Op : MI.debug_operands()) {
-    if (Op.isReg() && Register::isVirtualRegister(Op.getReg())) {
+    if (Op.isReg() && Op.getReg().isVirtual()) {
       const Register Reg = Op.getReg();
       if (!LIS->hasInterval(Reg)) {
         // The DBG_VALUE is described by a virtual register that does not have a
@@ -1018,9 +1017,8 @@ void UserValue::addDefsFromCopies(
     SmallVectorImpl<std::pair<SlotIndex, DbgVariableValue>> &NewDefs,
     MachineRegisterInfo &MRI, LiveIntervals &LIS) {
   // Don't track copies from physregs, there are too many uses.
-  if (any_of(LocIntervals, [](auto LocI) {
-        return !Register::isVirtualRegister(LocI.second->reg());
-      }))
+  if (any_of(LocIntervals,
+             [](auto LocI) { return !LocI.second->reg().isVirtual(); }))
     return;
 
   // Collect all the (vreg, valno) pairs that are copies of LI.
@@ -1041,7 +1039,7 @@ void UserValue::addDefsFromCopies(
       // arguments, and the argument registers are always call clobbered. We are
       // better off in the source register which could be a callee-saved
       // register, or it could be spilled.
-      if (!Register::isVirtualRegister(DstReg))
+      if (!DstReg.isVirtual())
         continue;
 
       // Is the value extended to reach this copy? If not, another def may be
@@ -1120,7 +1118,7 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
     bool ShouldExtendDef = false;
     for (unsigned LocNo : DbgValue.loc_nos()) {
       const MachineOperand &LocMO = locations[LocNo];
-      if (!LocMO.isReg() || !Register::isVirtualRegister(LocMO.getReg())) {
+      if (!LocMO.isReg() || !LocMO.getReg().isVirtual()) {
         ShouldExtendDef |= !LocMO.isReg();
         continue;
       }
@@ -1528,8 +1526,7 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
     unsigned SpillOffset = 0;
     MachineOperand Loc = locations[I];
     // Only virtual registers are rewritten.
-    if (Loc.isReg() && Loc.getReg() &&
-        Register::isVirtualRegister(Loc.getReg())) {
+    if (Loc.isReg() && Loc.getReg() && Loc.getReg().isVirtual()) {
       Register VirtReg = Loc.getReg();
       if (VRM.isAssignedReg(VirtReg) &&
           Register::isPhysicalRegister(VRM.getPhys(VirtReg))) {

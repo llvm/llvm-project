@@ -581,8 +581,8 @@ define signext i1 @vpreduce_or_nxv128i1(i1 signext %s, <vscale x 128 x i1> %v, <
 ; RV32-NEXT:    vmv1r.v v0, v9
 ; RV32-NEXT:    vcpop.m a1, v11, v0.t
 ; RV32-NEXT:    snez a1, a1
-; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    or a0, a3, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    slli a0, a0, 31
 ; RV32-NEXT:    srai a0, a0, 31
 ; RV32-NEXT:    ret
@@ -608,8 +608,8 @@ define signext i1 @vpreduce_or_nxv128i1(i1 signext %s, <vscale x 128 x i1> %v, <
 ; RV64-NEXT:    vmv1r.v v0, v9
 ; RV64-NEXT:    vcpop.m a1, v11, v0.t
 ; RV64-NEXT:    snez a1, a1
-; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    or a0, a3, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    slli a0, a0, 63
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    ret

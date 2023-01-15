@@ -87,11 +87,39 @@ static PackInfo getPackingInfoFromConsumer(
   return packInfo;
 }
 
+static SmallVector<int64_t> computeOuterDims(ArrayRef<int64_t> perm,
+                                             ArrayRef<AffineExpr> exprs) {
+  // Compute `outer_dims_perm`. See example:
+  // current exprs      : (d0, d1, d2, d3) -> (d2, d3)
+  // perm               : [0, 3, 1, 2]
+  // First map d2, d3 with their position in the array as:
+  // currentPositionTileLoops: dim | pos
+  //                           d2  | 0
+  //                           d3  | 1
+  // then scan `perm` in order and get the `outer_dims_perm`
+  // to be used, here it would be [1, 0].
+  assert(!perm.empty() && "expect perm not to be empty");
+  assert(!exprs.empty() && "expect exprs not to be empty");
+  if (exprs.size() == 1)
+    return {};
+  SmallVector<int64_t> outerDimsPerm;
+  DenseMap<int64_t, int64_t> currentPositionTileLoops;
+  for (auto [pos, expr] : llvm::enumerate(exprs)) {
+    unsigned posInDomain = expr.cast<AffineDimExpr>().getPosition();
+    currentPositionTileLoops[posInDomain] = pos;
+  }
+  for (int64_t loopIdx : perm) {
+    if (currentPositionTileLoops.count(loopIdx))
+      outerDimsPerm.push_back(currentPositionTileLoops.lookup(loopIdx));
+  }
+  return outerDimsPerm;
+}
+
 /// Returns a tuple for packed operand and indexing_map with the assumptions:
 ///   1) The generic op is the producer of the pack op.
 ///   2) The generic op has only one result.
 /// If the operand is a scalar or packing dimensions are all irrelevant to the
-/// operand, the opreand and the updated indexing map will be returned.
+/// operand, the operand and the updated indexing map will be returned.
 /// Otherwise, it returns the packed operand and the updated indexing map. E.g.,
 ///
 ///   #map0 = affine_map<(d0, d1) -> (d0, d1)>
@@ -148,15 +176,25 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
     exprs.push_back(b.getAffineDimExpr(packInfo.tileToPointMapping[dimPos]));
   }
 
-  // Step 2. Fold transpose variants (i.e., outerDimsPerm) into generic op.
-  // TODO: should we propagate the permutation of outer dims to the pack op?
+  // Step 2. Handle outer dim permutations.
   SmallVector<int64_t> outerDimsPerm;
   if (!packInfo.outerDimsOnDomainPerm.empty()) {
+    outerDimsPerm = computeOuterDims(packInfo.outerDimsOnDomainPerm, exprs);
+
+    // Step 2.1: Fold transpose into the linalg.generic.
     SmallVector<int64_t> inversedOuterPerm =
         invertPermutationVector(packInfo.outerDimsOnDomainPerm);
     for (auto i : llvm::seq<unsigned>(0, origIndexingMap.getNumResults())) {
       int64_t dimPos = exprs[i].cast<AffineDimExpr>().getPosition();
       exprs[i] = b.getAffineDimExpr(inversedOuterPerm[dimPos]);
+    }
+    // Step 2.2: Undo the transposition on `exprs` and propagate the
+    // transposition on the pack using outerDimsPerm.
+    if (!outerDimsPerm.empty()) {
+      SmallVector<AffineExpr> auxVec = exprs;
+      for (const auto &en : enumerate(outerDimsPerm))
+        auxVec[en.index()] = exprs[en.value()];
+      exprs = auxVec;
     }
   }
   auto indexingMap = AffineMap::get(numLoops, 0, exprs, b.getContext());
@@ -254,9 +292,7 @@ bubbleUpPackOpThroughElemGenericOp(RewriterBase &rewriter,
     indexingMaps.push_back(packedIndexingMap);
   }
 
-  int64_t numLoops = genericOp.getNumLoops();
   int64_t numInnerLoops = packInfo.getNumTiledLoops();
-  int64_t newNumLoops = numLoops + numInnerLoops;
   SmallVector<utils::IteratorType> iterTypes =
       genericOp.getIteratorTypesArray();
   iterTypes.append(numInnerLoops, utils::IteratorType::parallel);
@@ -265,24 +301,18 @@ bubbleUpPackOpThroughElemGenericOp(RewriterBase &rewriter,
   auto [packedOutOperand, packedOutIndexingMap] =
       getOrCreatePackedViewOfOperand(rewriter, loc, packInfo, genericOp,
                                      opOperand);
-  SmallVector<AffineExpr> outExprs(
-      packedOutIndexingMap.getResults().drop_back(numInnerLoops));
-  // Apply transpose to the indexing map, because we'll replace the init operand
-  // with the destination of pack op.
-  auto outerDimsPerm = packOp.getOuterDimsPerm();
-  if (!outerDimsPerm.empty()) {
-    applyPermutationToVector<AffineExpr>(outExprs, outerDimsPerm);
-  }
-  for (int i = 0; i < numInnerLoops; ++i)
-    outExprs.push_back(rewriter.getAffineDimExpr(numLoops + i));
-  AffineMap outMap =
-      AffineMap::get(newNumLoops, 0, outExprs, rewriter.getContext());
-  indexingMaps.push_back(outMap);
+  indexingMaps.push_back(packedOutIndexingMap);
 
+  // We'll replace the init operand with the destination of pack op if the init
+  // operand has not users in the body of the linalg.generic (pure elementwise).
+  // If it has users we need to pack the init operand too and replace the init
+  // with the packing result.
+  Value dest = (genericOp.getRegionOutputArgs()[0].use_empty())
+                   ? packOp.getDest()
+                   : packedOutOperand;
   auto newGenericOp = rewriter.create<linalg::GenericOp>(
-      loc, packOp.getDestType(), inputOperands, packOp.getDest(), indexingMaps,
-      iterTypes, /*bodyBuild=*/nullptr,
-      linalg::getPrunedAttributeList(genericOp));
+      loc, dest.getType(), inputOperands, dest, indexingMaps, iterTypes,
+      /*bodyBuild=*/nullptr, linalg::getPrunedAttributeList(genericOp));
   rewriter.cloneRegionBefore(genericOp.getRegion(), newGenericOp.getRegion(),
                              newGenericOp.getRegion().begin());
   return newGenericOp;

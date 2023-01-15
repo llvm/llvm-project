@@ -356,11 +356,12 @@ BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
 
 /// Replace 'BB's terminator with one that does not have an unwind successor
 /// block. Rewrites `invoke` to `call`, etc. Updates any PHIs in unwind
-/// successor.
+/// successor. Returns the instruction that replaced the original terminator,
+/// which might be a call in case the original terminator was an invoke.
 ///
 /// \param BB  Block whose terminator will be replaced.  Its terminator must
 ///            have an unwind successor.
-void removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
+Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 
 /// Remove all blocks that can not be reached from the function's entry.
 ///

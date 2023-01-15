@@ -1562,7 +1562,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
     for (const MachineOperand &MO : MI->operands())
       if (MO.isReg() && MO.isUse()) {
         Register Reg = MO.getReg();
-        if (Register::isVirtualRegister(Reg))
+        if (Reg.isVirtual())
           Uses.insert(Reg);
         else if (MRI.isAllocatable(Reg))
           for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
@@ -1574,7 +1574,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
     for (const MachineOperand &MO : SU->getInstr()->operands())
       if (MO.isReg() && MO.isDef() && !MO.isDead()) {
         Register Reg = MO.getReg();
-        if (Register::isVirtualRegister(Reg)) {
+        if (Reg.isVirtual()) {
           if (!Uses.count(Reg))
             LiveOutRegs.push_back(RegisterMaskPair(Reg,
                                                    LaneBitmask::getNone()));
@@ -2500,7 +2500,7 @@ void SMSchedule::orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
   for (std::deque<SUnit *>::iterator I = Insts.begin(), E = Insts.end(); I != E;
        ++I, ++Pos) {
     for (MachineOperand &MO : MI->operands()) {
-      if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
+      if (!MO.isReg() || !MO.getReg().isVirtual())
         continue;
 
       Register Reg = MO.getReg();

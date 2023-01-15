@@ -331,7 +331,8 @@ bool RISCVISAInfo::compareExtension(const std::string &LHS,
 
 void RISCVISAInfo::toFeatures(
     std::vector<StringRef> &Features,
-    std::function<StringRef(const Twine &)> StrAlloc) const {
+    llvm::function_ref<StringRef(const Twine &)> StrAlloc,
+    bool AddAllExtensions) const {
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
 
@@ -342,6 +343,19 @@ void RISCVISAInfo::toFeatures(
       Features.push_back(StrAlloc("+experimental-" + ExtName));
     } else {
       Features.push_back(StrAlloc("+" + ExtName));
+    }
+  }
+  if (AddAllExtensions) {
+    for (const RISCVSupportedExtension &Ext : SupportedExtensions) {
+      if (Exts.count(Ext.Name))
+        continue;
+      Features.push_back(StrAlloc(Twine("-") + Ext.Name));
+    }
+
+    for (const RISCVSupportedExtension &Ext : SupportedExperimentalExtensions) {
+      if (Exts.count(Ext.Name))
+        continue;
+      Features.push_back(StrAlloc(Twine("-experimental-") + Ext.Name));
     }
   }
 }

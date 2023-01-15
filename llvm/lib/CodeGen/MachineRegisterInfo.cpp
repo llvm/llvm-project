@@ -384,7 +384,7 @@ void MachineRegisterInfo::replaceRegWith(Register FromReg, Register ToReg) {
 
   // TODO: This could be more efficient by bulk changing the operands.
   for (MachineOperand &O : llvm::make_early_inc_range(reg_operands(FromReg))) {
-    if (Register::isPhysicalRegister(ToReg)) {
+    if (ToReg.isPhysical()) {
       O.substPhysReg(ToReg, *TRI);
     } else {
       O.setReg(ToReg);
@@ -496,7 +496,7 @@ MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
 
 LaneBitmask MachineRegisterInfo::getMaxLaneMaskForVReg(Register Reg) const {
   // Lane masks are only defined for vregs.
-  assert(Register::isVirtualRegister(Reg));
+  assert(Reg.isVirtual());
   const TargetRegisterClass &TRC = *getRegClass(Reg);
   return TRC.getLaneMask();
 }

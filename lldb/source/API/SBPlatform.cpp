@@ -7,16 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBPlatform.h"
-#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBPlatform.h"
-#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Host/File.h"
-#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -295,31 +292,7 @@ SBPlatform::SBPlatform() { LLDB_INSTRUMENT_VA(this); }
 SBPlatform::SBPlatform(const char *platform_name) {
   LLDB_INSTRUMENT_VA(this, platform_name);
 
-  m_opaque_sp = Platform::Create(platform_name, /*debugger = */ nullptr,
-                                 /*metadata = */ nullptr);
-}
-
-SBPlatform::SBPlatform(const char *platform_name, const SBDebugger &debugger,
-                       const char *script_name, const SBStructuredData &dict) {
-  LLDB_INSTRUMENT_VA(this, platform_name, debugger, script_name, dict);
-
-  if (!script_name || !dict.IsValid() || !dict.m_impl_up)
-    return;
-
-  StructuredData::ObjectSP obj_sp = dict.m_impl_up->GetObjectSP();
-
-  if (!obj_sp)
-    return;
-
-  StructuredData::DictionarySP dict_sp =
-      std::make_shared<StructuredData::Dictionary>(obj_sp);
-  if (!dict_sp || dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
-    return;
-
-  const ScriptedMetadata metadata(script_name, dict_sp);
-
-  m_opaque_sp =
-      Platform::Create(platform_name, debugger.m_opaque_sp.get(), &metadata);
+  m_opaque_sp = Platform::Create(platform_name);
 }
 
 SBPlatform::SBPlatform(const SBPlatform &rhs) {

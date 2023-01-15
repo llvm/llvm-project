@@ -139,58 +139,63 @@ private:
 };
 
 // "platform select <platform-name>"
-CommandObjectPlatformSelect::CommandObjectPlatformSelect(
-    CommandInterpreter &interpreter)
-    : CommandObjectParsed(interpreter, "platform select",
-                          "Create a platform if needed and select it as the "
-                          "current platform.",
-                          "platform select <platform-name>", 0),
-      m_platform_options(
-          false) // Don't include the "--platform" option by passing false
-{
-  m_option_group.Append(&m_platform_options, LLDB_OPT_SET_ALL, 1);
-  m_option_group.Append(&m_platform_options.m_class_options,
-                        LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_ALL);
-  m_option_group.Finalize();
-  CommandArgumentData platform_arg{eArgTypePlatform, eArgRepeatPlain};
-  m_arguments.push_back({platform_arg});
-}
+class CommandObjectPlatformSelect : public CommandObjectParsed {
+public:
+  CommandObjectPlatformSelect(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "platform select",
+                            "Create a platform if needed and select it as the "
+                            "current platform.",
+                            "platform select <platform-name>", 0),
+        m_platform_options(
+            false) // Don't include the "--platform" option by passing false
+  {
+    m_option_group.Append(&m_platform_options, LLDB_OPT_SET_ALL, 1);
+    m_option_group.Finalize();
+    CommandArgumentData platform_arg{eArgTypePlatform, eArgRepeatPlain};
+    m_arguments.push_back({platform_arg});
+  }
 
-void CommandObjectPlatformSelect::HandleCompletion(CompletionRequest &request) {
-  CommandCompletions::PlatformPluginNames(GetCommandInterpreter(), request,
-                                          nullptr);
-}
+  ~CommandObjectPlatformSelect() override = default;
 
-Options *CommandObjectPlatformSelect::GetOptions() { return &m_option_group; }
+  void HandleCompletion(CompletionRequest &request) override {
+    CommandCompletions::PlatformPluginNames(GetCommandInterpreter(), request,
+                                            nullptr);
+  }
 
-bool CommandObjectPlatformSelect::DoExecute(Args &args,
-                                            CommandReturnObject &result) {
-  if (args.GetArgumentCount() == 1) {
-    const char *platform_name = args.GetArgumentAtIndex(0);
-    if (platform_name && platform_name[0]) {
-      const bool select = true;
-      m_platform_options.SetPlatformName(platform_name);
-      Status error;
-      ArchSpec platform_arch;
-      PlatformSP platform_sp(m_platform_options.CreatePlatformWithOptions(
-          m_interpreter, ArchSpec(), select, error, platform_arch));
-      if (platform_sp) {
-        GetDebugger().GetPlatformList().SetSelectedPlatform(platform_sp);
+  Options *GetOptions() override { return &m_option_group; }
 
-        platform_sp->GetStatus(result.GetOutputStream());
-        result.SetStatus(eReturnStatusSuccessFinishResult);
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    if (args.GetArgumentCount() == 1) {
+      const char *platform_name = args.GetArgumentAtIndex(0);
+      if (platform_name && platform_name[0]) {
+        const bool select = true;
+        m_platform_options.SetPlatformName(platform_name);
+        Status error;
+        ArchSpec platform_arch;
+        PlatformSP platform_sp(m_platform_options.CreatePlatformWithOptions(
+            m_interpreter, ArchSpec(), select, error, platform_arch));
+        if (platform_sp) {
+          GetDebugger().GetPlatformList().SetSelectedPlatform(platform_sp);
+
+          platform_sp->GetStatus(result.GetOutputStream());
+          result.SetStatus(eReturnStatusSuccessFinishResult);
+        } else {
+          result.AppendError(error.AsCString());
+        }
       } else {
-        result.AppendError(error.AsCString());
+        result.AppendError("invalid platform name");
       }
     } else {
-      result.AppendError("invalid platform name");
+      result.AppendError(
+          "platform create takes a platform name as an argument\n");
     }
-  } else {
-    result.AppendError(
-        "platform create takes a platform name as an argument\n");
+    return result.Succeeded();
   }
-  return result.Succeeded();
-}
+
+  OptionGroupOptions m_option_group;
+  OptionGroupPlatform m_platform_options;
+};
 
 // "platform list"
 class CommandObjectPlatformList : public CommandObjectParsed {

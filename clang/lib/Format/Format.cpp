@@ -2282,9 +2282,11 @@ private:
       }
     }
     if (Style.DerivePointerAlignment) {
-      Style.PointerAlignment = countVariableAlignments(AnnotatedLines) <= 0
-                                   ? FormatStyle::PAS_Left
-                                   : FormatStyle::PAS_Right;
+      const auto NetRightCount = countVariableAlignments(AnnotatedLines);
+      if (NetRightCount > 0)
+        Style.PointerAlignment = FormatStyle::PAS_Right;
+      else if (NetRightCount < 0)
+        Style.PointerAlignment = FormatStyle::PAS_Left;
       Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
     }
     if (Style.Standard == FormatStyle::LS_Auto) {
