@@ -123,6 +123,19 @@ static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
           formatv("unknown tombstone value: '{0}'", S).str().c_str());
   }
 
+  if (opt::Arg *BuildAccelerator = Args.getLastArg(OPT_build_accelerator)) {
+    StringRef S = BuildAccelerator->getValue();
+
+    if (S == "none")
+      Options.AccelTableKind = DwarfUtilAccelKind::None;
+    else if (S == "DWARF")
+      Options.AccelTableKind = DwarfUtilAccelKind::DWARF;
+    else
+      return createStringError(
+          std::errc::invalid_argument,
+          formatv("unknown build-accelerator value: '{0}'", S).str().c_str());
+  }
+
   if (Options.Verbose) {
     if (Options.NumThreads != 1 && Args.hasArg(OPT_threads))
       warning("--num-threads set to 1 because verbose mode is specified");
@@ -423,8 +436,9 @@ static Error saveCopyOfFile(const Options &Opts, ObjectFile &InputFile) {
 }
 
 static Error applyCLOptions(const struct Options &Opts, ObjectFile &InputFile) {
-  if (Opts.DoGarbageCollection) {
-    verbose("Do garbage collection for debug info ...", Opts.Verbose);
+  if (Opts.DoGarbageCollection ||
+      Opts.AccelTableKind != DwarfUtilAccelKind::None) {
+    verbose("Do debug info linking...", Opts.Verbose);
 
     DebugInfoBits LinkedDebugInfo;
     raw_svector_ostream OutStream(LinkedDebugInfo);
