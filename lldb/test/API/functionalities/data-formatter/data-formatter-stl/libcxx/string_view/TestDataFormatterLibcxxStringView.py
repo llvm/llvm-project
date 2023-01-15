@@ -96,10 +96,10 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
                              type='std::u32string_view',
                              summary='""')
         self.expect_var_path('uchar_source',
-                             type='std::basic_string<unsigned char, std::char_traits<unsigned char>, std::allocator<unsigned char> >',
+                             type='std::basic_string<unsigned char>',
                              summary='"aaaaaaaaaa"')
         self.expect_var_path('uchar',
-                             type='std::basic_string_view<unsigned char, std::char_traits<unsigned char> >',
+                             type='std::basic_string_view<unsigned char>',
                              summary='"aaaaa"')
         self.expect_var_path('oops',
                              type='std::string_view',
@@ -172,10 +172,10 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
                              type='std::u32string_view',
                              summary='""')
         self.expect_var_path('uchar_source',
-                             type='std::basic_string<unsigned char, std::char_traits<unsigned char>, std::allocator<unsigned char> >',
+                             type='std::basic_string<unsigned char>',
                              summary='"aaaaaaaaaa"')
         self.expect_var_path('uchar',
-                             type='std::basic_string_view<unsigned char, std::char_traits<unsigned char> >',
+                             type='std::basic_string_view<unsigned char>',
                              summary='"aaaaa"')
  
         self.runCmd('cont')
