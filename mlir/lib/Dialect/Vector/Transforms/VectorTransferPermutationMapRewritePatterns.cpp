@@ -20,15 +20,16 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-/// Transpose a vector transfer op's `in_bounds` attribute according to given
-/// indices.
+/// Transpose a vector transfer op's `in_bounds` attribute by applying reverse
+/// permutation based on the given indices.
 static ArrayAttr
-transposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
-                      const SmallVector<unsigned> &permutation) {
-  SmallVector<bool> newInBoundsValues;
+inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
+                             const SmallVector<unsigned> &permutation) {
+  SmallVector<bool> newInBoundsValues(permutation.size());
+  size_t index = 0;
   for (unsigned pos : permutation)
-    newInBoundsValues.push_back(
-        attr.getValue()[pos].cast<BoolAttr>().getValue());
+    newInBoundsValues[pos] =
+        attr.getValue()[index++].cast<BoolAttr>().getValue();
   return builder.getBoolArrayAttr(newInBoundsValues);
 }
 
@@ -85,7 +86,7 @@ struct TransferReadPermutationLowering
 
     // Transpose in_bounds attribute.
     ArrayAttr newInBoundsAttr =
-        op.getInBounds() ? transposeInBoundsAttr(
+        op.getInBounds() ? inverseTransposeInBoundsAttr(
                                rewriter, op.getInBounds().value(), permutation)
                          : ArrayAttr();
 
@@ -142,16 +143,17 @@ struct TransferWritePermutationLowering
     // E.g.:  (d0, d1, d2, d3, d4, d5) -> (d5, d3, d4)
     // comp = (d0, d1, d2) -> (d2, d0, d1)
     auto comp = compressUnusedDims(map);
+    AffineMap permutationMap = inversePermutation(comp);
     // Get positions of remaining result dims.
     SmallVector<int64_t> indices;
-    llvm::transform(comp.getResults(), std::back_inserter(indices),
+    llvm::transform(permutationMap.getResults(), std::back_inserter(indices),
                     [](AffineExpr expr) {
                       return expr.dyn_cast<AffineDimExpr>().getPosition();
                     });
 
     // Transpose in_bounds attribute.
     ArrayAttr newInBoundsAttr =
-        op.getInBounds() ? transposeInBoundsAttr(
+        op.getInBounds() ? inverseTransposeInBoundsAttr(
                                rewriter, op.getInBounds().value(), permutation)
                          : ArrayAttr();
 
