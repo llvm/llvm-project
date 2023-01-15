@@ -1386,3 +1386,9 @@ func.func @extract_scalable_from_fixed_length_vector(%arg0 : vector<16xf32>) {
   // expected-error@+1 {{op failed to verify that it is not extracting scalable from fixed-length vectors.}}
   %0 = llvm.intr.vector.extract %arg0[0] : vector<[8]xf32> from vector<16xf32>
 }
+
+// -----
+
+#void = #llvm.di_void_result_type
+// expected-error@below {{expected subroutine to have non-void argument types}}
+#void_argument_type = #llvm.di_subroutine_type<types = #void, #void>

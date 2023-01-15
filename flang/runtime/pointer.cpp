@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/pointer.h"
+#include "assign.h"
 #include "derived.h"
 #include "stat.h"
 #include "terminator.h"
@@ -132,6 +133,22 @@ int RTNAME(PointerAllocate)(Descriptor &pointer, bool hasStat,
   return stat;
 }
 
+int RTNAME(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
+    bool hasStat, const Descriptor *errMsg, const char *sourceFile,
+    int sourceLine) {
+  if (pointer.Elements() == 0) {
+    return StatOk;
+  }
+  int stat{RTNAME(PointerAllocate)(
+      pointer, hasStat, errMsg, sourceFile, sourceLine)};
+  if (stat == StatOk) {
+    Terminator terminator{sourceFile, sourceLine};
+    // 9.7.1.2(7)
+    Assign(pointer, source, terminator, /*skipRealloc=*/true);
+  }
+  return stat;
+}
+
 int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -187,7 +204,7 @@ bool RTNAME(PointerIsAssociatedWith)(
   return true;
 }
 
-// TODO: PointerCheckLengthParameter, PointerAllocateSource
+// TODO: PointerCheckLengthParameter
 
 } // extern "C"
 } // namespace Fortran::runtime

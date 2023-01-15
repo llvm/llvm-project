@@ -102,6 +102,10 @@ Improvements to clang-tidy
 - Fix a minor bug in `add_new_check.py` to only traverse subdirectories
   when updating the list of checks in the documentation.
 
+- Deprecate the global configuration file option `AnalyzeTemporaryDtors`,
+  which is no longer in use. The option will be fully removed in
+  :program:`clang-tidy` version 18.
+
 New checks
 ^^^^^^^^^^
 

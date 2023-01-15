@@ -6327,14 +6327,6 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
                : OpRes;
   }
 
-  if (const SCEVAddExpr *A = dyn_cast<SCEVAddExpr>(S)) {
-    // The result is the min of all operands results.
-    uint32_t MinOpRes = GetMinTrailingZeros(A->getOperand(0));
-    for (unsigned i = 1, e = A->getNumOperands(); MinOpRes && i != e; ++i)
-      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(A->getOperand(i)));
-    return MinOpRes;
-  }
-
   if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S)) {
     // The result is the sum of all operands results.
     uint32_t SumOpRes = GetMinTrailingZeros(M->getOperand(0));
@@ -6346,27 +6338,13 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
     return SumOpRes;
   }
 
-  if (const SCEVAddRecExpr *A = dyn_cast<SCEVAddRecExpr>(S)) {
+  if (isa<SCEVAddExpr>(S) || isa<SCEVAddRecExpr>(S) || isa<SCEVMinMaxExpr>(S) ||
+      isa<SCEVSequentialMinMaxExpr>(S)) {
     // The result is the min of all operands results.
-    uint32_t MinOpRes = GetMinTrailingZeros(A->getOperand(0));
-    for (unsigned i = 1, e = A->getNumOperands(); MinOpRes && i != e; ++i)
-      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(A->getOperand(i)));
-    return MinOpRes;
-  }
-
-  if (const SCEVSMaxExpr *M = dyn_cast<SCEVSMaxExpr>(S)) {
-    // The result is the min of all operands results.
+    const SCEVNAryExpr *M = cast<SCEVNAryExpr>(S);
     uint32_t MinOpRes = GetMinTrailingZeros(M->getOperand(0));
-    for (unsigned i = 1, e = M->getNumOperands(); MinOpRes && i != e; ++i)
-      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(M->getOperand(i)));
-    return MinOpRes;
-  }
-
-  if (const SCEVUMaxExpr *M = dyn_cast<SCEVUMaxExpr>(S)) {
-    // The result is the min of all operands results.
-    uint32_t MinOpRes = GetMinTrailingZeros(M->getOperand(0));
-    for (unsigned i = 1, e = M->getNumOperands(); MinOpRes && i != e; ++i)
-      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(M->getOperand(i)));
+    for (unsigned I = 1, E = M->getNumOperands(); MinOpRes && I != E; ++I)
+      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(M->getOperand(I)));
     return MinOpRes;
   }
 

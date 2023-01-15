@@ -327,5 +327,31 @@ RISCVInst DecodeC_FSWSP(uint32_t inst) {
   return FSW{Rs{gpr_sp_riscv}, DecodeCSS_RS2(inst), uint32_t(offset)};
 }
 
+RISCVInst DecodeC_FLDSP(uint32_t inst) {
+  auto rd = DecodeCI_RD(inst);
+  uint16_t offset = ((inst << 4) & 0x1c0)   // offset[8:6]
+                    | ((inst >> 7) & 0x20)  // offset[5]
+                    | ((inst >> 2) & 0x18); // offset[4:3]
+  return FLD{rd, Rs{gpr_sp_riscv}, uint32_t(offset)};
+}
+
+RISCVInst DecodeC_FSDSP(uint32_t inst) {
+  uint16_t offset = ((inst >> 1) & 0x1c0)   // offset[8:6]
+                    | ((inst >> 7) & 0x38); // offset[5:3]
+  return FSD{Rs{gpr_sp_riscv}, DecodeCSS_RS2(inst), uint32_t(offset)};
+}
+
+RISCVInst DecodeC_FLD(uint32_t inst) {
+  uint16_t offset = ((inst << 1) & 0xc0)    // imm[7:6]
+                    | ((inst >> 7) & 0x38); // imm[5:3]
+  return FLD{DecodeCL_RD(inst), DecodeCL_RS1(inst), uint32_t(offset)};
+}
+
+RISCVInst DecodeC_FSD(uint32_t inst) {
+  uint16_t offset = ((inst << 1) & 0xc0)    // imm[7:6]
+                    | ((inst >> 7) & 0x38); // imm[5:3]
+  return FSD{DecodeCS_RS1(inst), DecodeCS_RS2(inst), uint32_t(offset)};
+}
+
 } // namespace lldb_private
 #endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVCINSTRUCTION_H

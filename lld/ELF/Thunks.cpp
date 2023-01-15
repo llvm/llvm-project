@@ -199,17 +199,46 @@ public:
   void addSymbols(ThunkSection &isec) override;
 };
 
-class ARMV4PILongThunk final : public ARMThunk {
+// Implementations of Thunks for v4. BLX is not supported, and loads
+// will not invoke Arm/Thumb state changes.
+class ARMV4PILongBXThunk final : public ARMThunk {
 public:
-  ARMV4PILongThunk(Symbol &dest, int64_t addend) : ARMThunk(dest, addend) {}
+  ARMV4PILongBXThunk(Symbol &dest, int64_t addend) : ARMThunk(dest, addend) {}
 
   uint32_t sizeLong() override { return 16; }
   void writeLong(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
 };
 
-// Implementations of Thunks for v4. BLX is not supported, and loads
-// will not invoke Arm/Thumb state changes.
+class ARMV4PILongThunk final : public ARMThunk {
+public:
+  ARMV4PILongThunk(Symbol &dest, int64_t addend) : ARMThunk(dest, addend) {}
+
+  uint32_t sizeLong() override { return 12; }
+  void writeLong(uint8_t *buf) override;
+  void addSymbols(ThunkSection &isec) override;
+};
+
+class ThumbV4PILongBXThunk final : public ThumbThunk {
+public:
+  ThumbV4PILongBXThunk(Symbol &dest, int64_t addend)
+      : ThumbThunk(dest, addend) {}
+
+  uint32_t sizeLong() override { return 16; }
+  void writeLong(uint8_t *buf) override;
+  void addSymbols(ThunkSection &isec) override;
+};
+
+class ThumbV4PILongThunk final : public ThumbThunk {
+public:
+  ThumbV4PILongThunk(Symbol &dest, int64_t addend)
+      : ThumbThunk(dest, addend) {}
+
+  uint32_t sizeLong() override { return 20; }
+  void writeLong(uint8_t *buf) override;
+  void addSymbols(ThunkSection &isec) override;
+};
+
 class ARMV4ABSLongBXThunk final : public ARMThunk {
 public:
   ARMV4ABSLongBXThunk(Symbol &dest, int64_t addend) : ARMThunk(dest, addend) {}
@@ -788,7 +817,7 @@ void ThumbV4ABSLongThunk::addSymbols(ThunkSection &isec) {
   addSymbol("$d", STT_NOTYPE, 12, isec);
 }
 
-void ARMV4PILongThunk::writeLong(uint8_t *buf) {
+void ARMV4PILongBXThunk::writeLong(uint8_t *buf) {
   const uint8_t data[] = {
       0x04, 0xc0, 0x9f, 0xe5, // P:  ldr ip, [pc,#4] ; L2
       0x0c, 0xc0, 0x8f, 0xe0, // L1: add ip, pc, ip
@@ -801,11 +830,75 @@ void ARMV4PILongThunk::writeLong(uint8_t *buf) {
   target->relocateNoSym(buf + 12, R_ARM_REL32, s - p - 12);
 }
 
+void ARMV4PILongBXThunk::addSymbols(ThunkSection &isec) {
+  addSymbol(saver().save("__ARMv4PILongBXThunk_" + destination.getName()),
+            STT_FUNC, 0, isec);
+  addSymbol("$a", STT_NOTYPE, 0, isec);
+  addSymbol("$d", STT_NOTYPE, 12, isec);
+}
+
+void ARMV4PILongThunk::writeLong(uint8_t *buf) {
+  const uint8_t data[] = {
+      0x00, 0xc0, 0x9f, 0xe5, // P:  ldr ip, [pc] ; L2
+      0x0c, 0xf0, 0x8f, 0xe0, // L1: add pc, pc, r12
+      0x00, 0x00, 0x00, 0x00, // L2: .word S - (P + (L1 - P) + 8)
+  };
+  uint64_t s = getARMThunkDestVA(destination);
+  uint64_t p = getThunkTargetSym()->getVA() & ~0x1;
+  memcpy(buf, data, sizeof(data));
+  target->relocateNoSym(buf + 8, R_ARM_REL32, s - p - 12);
+}
+
 void ARMV4PILongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__ARMv4PILongThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
+  addSymbol("$d", STT_NOTYPE, 8, isec);
+}
+
+void ThumbV4PILongBXThunk::writeLong(uint8_t *buf) {
+  const uint8_t data[] = {
+      0x78, 0x47,             // P:  bx pc
+      0xfd, 0xe7,             //     b #-6 ; Arm recommended sequence to follow bx pc
+      0x00, 0xc0, 0x9f, 0xe5, //     ldr r12, [pc] ; L2
+      0x0f, 0xf0, 0x8c, 0xe0, // L1: add pc, r12, pc
+      0x00, 0x00, 0x00, 0x00, // L2: .word S - (P + (L1 - P) + 8)
+  };
+  uint64_t s = getARMThunkDestVA(destination);
+  uint64_t p = getThunkTargetSym()->getVA() & ~0x1;
+  memcpy(buf, data, sizeof(data));
+  target->relocateNoSym(buf + 12, R_ARM_REL32, s - p - 16);
+}
+
+void ThumbV4PILongBXThunk::addSymbols(ThunkSection &isec) {
+  addSymbol(saver().save("__Thumbv4PILongBXThunk_" + destination.getName()),
+            STT_FUNC, 1, isec);
+  addSymbol("$t", STT_NOTYPE, 0, isec);
+  addSymbol("$a", STT_NOTYPE, 4, isec);
   addSymbol("$d", STT_NOTYPE, 12, isec);
+}
+
+void ThumbV4PILongThunk::writeLong(uint8_t *buf) {
+  const uint8_t data[] = {
+      0x78, 0x47,             // P:  bx pc
+      0xfd, 0xe7,             //     b #-6 ; Arm recommended sequence to follow bx pc
+      0x04, 0xc0, 0x9f, 0xe5, //     ldr ip, [pc,#4] ; L2
+      0x0c, 0xc0, 0x8f, 0xe0, // L1: add ip, pc, ip
+      0x1c, 0xff, 0x2f, 0xe1, //     bx ip
+      0x00, 0x00, 0x00, 0x00, // L2: .word S - (P + (L1 - P) + 8)
+  };
+  uint64_t s = getARMThunkDestVA(destination);
+  uint64_t p = getThunkTargetSym()->getVA() & ~0x1;
+  memcpy(buf, data, sizeof(data));
+  target->relocateNoSym(buf + 16, R_ARM_REL32, s - p - 16);
+}
+
+void ThumbV4PILongThunk::addSymbols(ThunkSection &isec) {
+  addSymbol(saver().save("__Thumbv4PILongThunk_" + destination.getName()),
+            STT_FUNC, 1, isec);
+  addSymbol("$t", STT_NOTYPE, 0, isec);
+  addSymbol("$a", STT_NOTYPE, 4, isec);
+  addSymbol("$d", STT_NOTYPE, 16, isec);
 }
 
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
@@ -1143,8 +1236,6 @@ static Thunk *addThunkAArch64(RelType type, Symbol &s, int64_t a) {
 // - MOVT and MOVW instructions cannot be used.
 // - We can't rewrite BL in place to BLX. We will need thunks.
 //
-// TODO: Support PIC interworking thunks for V4T.
-// TODO: More efficient PIC non-interworking thunks for V4T.
 // TODO: use B for short Thumb->Arm thunks instead of LDR (this doesn't work for
 //       Arm->Thumb, as in Arm state no BX PC trick; it doesn't switch state).
 static Thunk *addThunkArmv4(RelType reloc, Symbol &s, int64_t a) {
@@ -1155,17 +1246,20 @@ static Thunk *addThunkArmv4(RelType reloc, Symbol &s, int64_t a) {
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
   case R_ARM_CALL:
-    if (config->picThunk)
-      // can be used for both Arm->Arm and Arm->Thumb
+    if (config->picThunk) {
+      if (thumb_target)
+        return make<ARMV4PILongBXThunk>(s, a);
       return make<ARMV4PILongThunk>(s, a);
+    }
     if (thumb_target)
       return make<ARMV4ABSLongBXThunk>(s, a);
     return make<ARMV5LongLdrPcThunk>(s, a);
   case R_ARM_THM_CALL:
-    if (config->picThunk && !thumb_target)
-      fatal("PIC relocations across state change not supported for Armv4T");
-    if (config->picThunk && thumb_target)
-      return make<ThumbV6MPILongThunk>(s, a);
+    if (config->picThunk) {
+      if (thumb_target)
+        return make<ThumbV4PILongThunk>(s, a);
+      return make<ThumbV4PILongBXThunk>(s, a);
+    }
     if (thumb_target)
       return make<ThumbV4ABSLongThunk>(s, a);
     return make<ThumbV4ABSLongBXThunk>(s, a);
@@ -1187,7 +1281,7 @@ static Thunk *addThunkArmv5v6(RelType reloc, Symbol &s, int64_t a) {
   case R_ARM_CALL:
   case R_ARM_THM_CALL:
     if (config->picThunk)
-      return make<ARMV4PILongThunk>(s, a);
+      return make<ARMV4PILongBXThunk>(s, a);
     return make<ARMV5LongLdrPcThunk>(s, a);
   }
   fatal("relocation " + toString(reloc) + " to " + toString(s) +

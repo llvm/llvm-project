@@ -26,7 +26,7 @@
 // XFAIL: target={{.*windows-msvc.*}}
 
 // Issue #41838
-// XFAIL: target={{sparc.*solaris.*}}
+// XFAIL: sparc-target-arch && target={{.*solaris.*}}
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -366,9 +366,6 @@ enum PolicyScheme : uint8_t {
   // Passthru operand is at first parameter in C builtin.
   HasPassthruOperand,
   HasPolicyOperand,
-  // Special case for vmerge, the passthru operand is second
-  // parameter in C builtin.
-  HasPassthruOperandAtIdx1,
 };
 
 // TODO refactor RVVIntrinsic class design after support all intrinsic

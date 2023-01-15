@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRAffineTransformOps
   MLIRAffineTransformOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAffineAnalysis
   MLIRAffineDialect
   MLIRFuncDialect
   MLIRIR

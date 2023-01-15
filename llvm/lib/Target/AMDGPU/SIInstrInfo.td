@@ -1199,15 +1199,32 @@ class NamedOperandBit_1<string Name, AsmOperandClass MatchClass> :
   let ParserMatchClass = MatchClass;
 }
 
-class NamedOperandU8<string Name, AsmOperandClass MatchClass> : Operand<i8> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+class CustomOperandClass<string CName, bit Optional> : AsmOperandClass {
+  let Name = CName;
+  let PredicateMethod = "is"#CName;
+  let ParserMethod = "parse"#CName;
+  let RenderMethod = "addImmOperands";
+  let IsOptional = Optional;
+  let DefaultMethod = "default"#CName;
 }
 
-class NamedOperandU16<string Name, AsmOperandClass MatchClass> : Operand<i16> {
+class CustomOperand<ValueType Type, bit Optional = 0, string Name = NAME,
+    AsmOperandClass Class = CustomOperandClass<Name, Optional>>
+    : Operand<Type> {
   let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+  let ParserMatchClass = Class;
 }
+
+class NamedIntOperandClass<string Prefix, string Name>
+    : CustomOperandClass<Name, 1> {
+  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
+  let ParserMethod =
+    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#ImmTy#"); }";
+}
+
+class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME>
+  : CustomOperand<Type, 1, Name, NamedIntOperandClass<Prefix, Name>>;
 
 class NamedOperandU32<string Name, AsmOperandClass MatchClass> : Operand<i32> {
   let PrintMethod = "print"#Name;
@@ -1234,10 +1251,10 @@ class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
 
 let OperandType = "OPERAND_IMMEDIATE" in {
 
-def flat_offset : NamedOperandU16<"FlatOffset", NamedMatchClass<"FlatOffset">>;
-def offset : NamedOperandU16<"Offset", NamedMatchClass<"Offset">>;
-def offset0 : NamedOperandU8<"Offset0", NamedMatchClass<"Offset0">>;
-def offset1 : NamedOperandU8<"Offset1", NamedMatchClass<"Offset1">>;
+def flat_offset : CustomOperand<i16, 1, "FlatOffset">;
+def offset : NamedIntOperand<i16, "offset", "Offset">;
+def offset0 : NamedIntOperand<i8, "offset0", "Offset0">;
+def offset1 : NamedIntOperand<i8, "offset1", "Offset1">;
 
 def gds : NamedOperandBit<"GDS", NamedMatchClass<"GDS">>;
 
@@ -1270,10 +1287,10 @@ def NV : NamedOperandBit<"NV", NamedMatchClass<"NV">>;
 def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
 def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 
-def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT", 0>>;
+def FORMAT : CustomOperand<i8>;
 
-def DMask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
-def Dim : NamedOperandU8<"Dim", NamedMatchClass<"Dim", 0>>;
+def DMask : NamedIntOperand<i16, "dmask">;
+def Dim : CustomOperand<i8>;
 
 def dst_sel : NamedOperandU32<"SDWADstSel", NamedMatchClass<"SDWADstSel">>;
 def src0_sel : NamedOperandU32<"SDWASrc0Sel", NamedMatchClass<"SDWASrc0Sel">>;
@@ -1303,10 +1320,10 @@ def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 }
 
-def wait_vdst : NamedOperandU8<"WaitVDST", NamedMatchClass<"WaitVDST">>;
-def wait_exp : NamedOperandU8<"WaitEXP", NamedMatchClass<"WaitEXP">>;
-def wait_va_vdst : NamedOperandU8<"WaitVAVDST", NamedMatchClass<"WaitVAVDST">>;
-def wait_vm_vsrc : NamedOperandU8<"WaitVMVSRC", NamedMatchClass<"WaitVMVSRC">>;
+def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
+def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
+def wait_va_vdst : NamedIntOperand<i8, "wait_va_vdst", "WaitVAVDST">;
+def wait_vm_vsrc : NamedIntOperand<i8, "wait_vm_vsrc", "WaitVMVSRC">;
 
 } // End OperandType = "OPERAND_IMMEDIATE"
 

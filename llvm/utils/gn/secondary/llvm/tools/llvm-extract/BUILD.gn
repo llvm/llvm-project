@@ -3,8 +3,8 @@ executable("llvm-extract") {
     "//llvm/lib/Bitcode/Writer",
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
-    "//llvm/lib/Support",
     "//llvm/lib/Passes",
+    "//llvm/lib/Support",
     "//llvm/lib/Transforms/IPO",
   ]
   sources = [ "llvm-extract.cpp" ]
