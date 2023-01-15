@@ -1272,8 +1272,8 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
     // We sort the entries before bundling so they appear in a deterministic
     // order in the final binary.
     llvm::sort(Input, [](OffloadingImage &A, OffloadingImage &B) {
-      return A.StringData["triple"].compare(B.StringData["triple"]) == 1 ||
-             A.StringData["arch"].compare(B.StringData["arch"]) == 1 ||
+      return A.StringData["triple"] > B.StringData["triple"] ||
+             A.StringData["arch"] > B.StringData["arch"] ||
              A.TheOffloadKind < B.TheOffloadKind;
     });
     auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
