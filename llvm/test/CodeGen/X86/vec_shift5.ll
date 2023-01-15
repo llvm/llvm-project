@@ -304,54 +304,6 @@ define <2 x i8> @PR58661(<2 x i8> %a0) {
   ret <2 x i8> %y
 }
 
-; Disguised splat of shift-by-immediate of splat
-
-define <8 x i16> @splat_of_shl_of_splat(<8 x i16> %x) {
-; CHECK-LABEL: splat_of_shl_of_splat:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; CHECK-NEXT:    psllw $15, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
-; CHECK-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %i0 = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> zeroinitializer
-  %i1 = tail call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %i0, i32 15)
-  %i2 = shufflevector <8 x i16> %i1, <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-  ret <8 x i16> %i2
-}
-define <8 x i16> @splat_of_lshr_of_splat(<8 x i16> %x) {
-; CHECK-LABEL: splat_of_lshr_of_splat:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; CHECK-NEXT:    psrlw $15, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
-; CHECK-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %i0 = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> zeroinitializer
-  %i1 = tail call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %i0, i32 15)
-  %i2 = shufflevector <8 x i16> %i1, <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-  ret <8 x i16> %i2
-}
-define <8 x i16> @splat_of_ashr_of_splat(<8 x i16> %x) {
-; CHECK-LABEL: splat_of_ashr_of_splat:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; CHECK-NEXT:    psraw $15, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
-; CHECK-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
-; CHECK-NEXT:    ret{{[l|q]}}
-  %i0 = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> zeroinitializer
-  %i1 = tail call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> %i0, i32 15)
-  %i2 = shufflevector <8 x i16> %i1, <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-  ret <8 x i16> %i2
-}
-
 declare <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16>, i32)
 declare <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16>, i32)
 declare <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16>, i32)
