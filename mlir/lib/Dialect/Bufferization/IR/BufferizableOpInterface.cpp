@@ -41,6 +41,39 @@ MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::AnalysisState)
 using namespace mlir;
 using namespace bufferization;
 
+Region *bufferization::getEnclosingRepetitiveRegion(
+    Operation *op, const BufferizationOptions &options) {
+  if (!op->getBlock())
+    return nullptr;
+  return getEnclosingRepetitiveRegion(op->getBlock(), options);
+}
+
+Region *bufferization::getEnclosingRepetitiveRegion(
+    Value value, const BufferizationOptions &options) {
+  Region *region = value.getParentRegion();
+  while (region) {
+    Operation *op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+    region = op->getParentRegion();
+  }
+  return nullptr;
+}
+
+Region *bufferization::getEnclosingRepetitiveRegion(
+    Block *block, const BufferizationOptions &options) {
+  Region *region = block->getParent();
+  Operation *op = nullptr;
+  do {
+    op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+  } while ((region = op->getParentRegion()));
+  return nullptr;
+}
+
 Operation *bufferization::getOwnerOfValue(Value value) {
   if (auto opResult = value.dyn_cast<OpResult>())
     return opResult.getDefiningOp();

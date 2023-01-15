@@ -52,9 +52,7 @@ void PlatformRemoteiOS::Terminate() {
   PlatformDarwin::Terminate();
 }
 
-PlatformSP PlatformRemoteiOS::CreateInstance(bool force, const ArchSpec *arch,
-                                             const Debugger *debugger,
-                                             const ScriptedMetadata *metadata) {
+PlatformSP PlatformRemoteiOS::CreateInstance(bool force, const ArchSpec *arch) {
   Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;

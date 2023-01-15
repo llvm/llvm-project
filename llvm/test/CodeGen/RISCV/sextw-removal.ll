@@ -1061,9 +1061,9 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:  .LBB18_10: # %if.end
 ; CHECK-NEXT:    addiw a2, a2, -1
 ; CHECK-NEXT:    andi a2, a2, -2
-; CHECK-NEXT:    add a1, a1, a2
 ; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    srli a0, a0, 31
+; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    addw a0, a1, a0
 ; CHECK-NEXT:  .LBB18_11: # %cleanup
 ; CHECK-NEXT:    ret
@@ -1108,9 +1108,9 @@ define signext i32 @bug(i32 signext %x) {
 ; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    addiw a2, a2, -1
 ; NOREMOVAL-NEXT:    andi a2, a2, -2
-; NOREMOVAL-NEXT:    add a1, a1, a2
 ; NOREMOVAL-NEXT:    not a0, a0
 ; NOREMOVAL-NEXT:    srli a0, a0, 31
+; NOREMOVAL-NEXT:    add a0, a2, a0
 ; NOREMOVAL-NEXT:    addw a0, a1, a0
 ; NOREMOVAL-NEXT:  .LBB18_11: # %cleanup
 ; NOREMOVAL-NEXT:    ret

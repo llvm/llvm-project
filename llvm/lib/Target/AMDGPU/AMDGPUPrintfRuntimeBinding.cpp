@@ -161,7 +161,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
   LLVMContext &Ctx = M.getContext();
   IRBuilder<> Builder(Ctx);
   Type *I32Ty = Type::getInt32Ty(Ctx);
-  unsigned UniqID = 0;
+
+  // Instead of creating global variables, the printf format strings are
+  // extracted and passed as metadata. This avoids polluting llvm's symbol
+  // tables in this module. Metadata is going to be extracted by the backend
+  // passes and inserted into the OpenCL binary as appropriate.
+  NamedMDNode *metaD = M.getOrInsertNamedMetadata("llvm.printf.fmts");
+  unsigned UniqID = metaD->getNumOperands();
 
   for (auto *CI : Printfs) {
     unsigned NumOps = CI->arg_size();
@@ -186,31 +192,17 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
         Op = Op_simplified;
     }
 
-    Value *Stripped = Op->stripPointerCasts();
-    if (isa<UndefValue>(Stripped) || isa<ConstantPointerNull>(Stripped))
-      continue;
-
-    GlobalVariable *GVar = dyn_cast<GlobalVariable>(Stripped);
-    if (!GVar || !GVar->hasDefinitiveInitializer() || !GVar->isConstant()) {
-      diagnoseInvalidFormatString(CI);
+    StringRef FormatStr;
+    if (!getConstantStringInfo(Op, FormatStr)) {
+      Value *Stripped = Op->stripPointerCasts();
+      if (!isa<UndefValue>(Stripped) && !isa<ConstantPointerNull>(Stripped))
+        diagnoseInvalidFormatString(CI);
       continue;
     }
-
-    auto *Init = GVar->getInitializer();
-    if (isa<UndefValue>(Init) || isa<ConstantAggregateZero>(Init))
-      continue;
-
-    auto *CA = dyn_cast<ConstantDataArray>(Init);
-    if (!CA || !CA->isString()) {
-      diagnoseInvalidFormatString(CI);
-      continue;
-    }
-
-    StringRef Str(CA->getAsCString());
 
     // We need this call to ascertain that we are printing a string or a
     // pointer. It takes out the specifiers and fills up the first arg.
-    getConversionSpecifiers(OpConvSpecifiers, Str, NumOps - 1);
+    getConversionSpecifiers(OpConvSpecifiers, FormatStr, NumOps - 1);
 
     // Add metadata for the string
     std::string AStreamHolder;
@@ -271,9 +263,9 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       Sizes << ArgSize << ':';
       Sum += ArgSize;
     }
-    LLVM_DEBUG(dbgs() << "Printf format string in source = " << Str.str()
+    LLVM_DEBUG(dbgs() << "Printf format string in source = " << FormatStr
                       << '\n');
-    for (char C : Str) {
+    for (char C : FormatStr) {
       // Rest of the C escape sequences (e.g. \') are handled correctly
       // by the MDParser
       switch (C) {
@@ -326,15 +318,6 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     std::string fmtstr = itostr(++UniqID) + ":" + Sizes.str();
     MDString *fmtStrArray = MDString::get(Ctx, fmtstr);
 
-    // Instead of creating global variables, the
-    // printf format strings are extracted
-    // and passed as metadata. This avoids
-    // polluting llvm's symbol tables in this module.
-    // Metadata is going to be extracted
-    // by the backend passes and inserted
-    // into the OpenCL binary as appropriate.
-    StringRef amd("llvm.printf.fmts");
-    NamedMDNode *metaD = M.getOrInsertNamedMetadata(amd);
     MDNode *myMD = MDNode::get(Ctx, fmtStrArray);
     metaD->addOperand(myMD);
     Value *sumC = ConstantInt::get(SizetTy, Sum, false);
@@ -489,7 +472,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
     return false;
 
   auto PrintfFunction = M.getFunction("printf");
-  if (!PrintfFunction)
+  if (!PrintfFunction || !PrintfFunction->isDeclaration())
     return false;
 
   for (auto &U : PrintfFunction->uses()) {

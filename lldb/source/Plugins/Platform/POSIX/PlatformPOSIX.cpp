@@ -310,8 +310,7 @@ Status PlatformPOSIX::ConnectRemote(Args &args) {
     if (!m_remote_platform_sp)
       m_remote_platform_sp =
           platform_gdb_server::PlatformRemoteGDBServer::CreateInstance(
-              /*force=*/true, /*arch=*/nullptr, /*debugger=*/nullptr,
-              /*metadata=*/nullptr);
+              /*force=*/true, nullptr);
 
     if (m_remote_platform_sp && error.Success())
       error = m_remote_platform_sp->ConnectRemote(args);

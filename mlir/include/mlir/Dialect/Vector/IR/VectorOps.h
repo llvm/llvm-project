@@ -203,6 +203,20 @@ inline bool isReductionIterator(Attribute attr) {
   return attr.cast<IteratorTypeAttr>().getValue() == IteratorType::reduction;
 }
 
+//===----------------------------------------------------------------------===//
+// Vector Masking Utilities
+//===----------------------------------------------------------------------===//
+
+/// Create the vector.yield-ended region of a vector.mask op with `maskableOp`
+/// as masked operation.
+void createMaskOpRegion(OpBuilder &builder, Operation *maskableOp);
+
+/// Creates a vector.mask operation around a maskable operation. Returns the
+/// vector.mask operation if the mask provided is valid. Otherwise, returns the
+/// maskable operation itself.
+Operation *maskOperation(RewriterBase &rewriter, Operation *maskableOp,
+                         Value mask);
+
 } // namespace vector
 } // namespace mlir
 

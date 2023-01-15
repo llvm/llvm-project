@@ -57,7 +57,7 @@ Register llvm::constrainOperandRegClass(
     const TargetRegisterClass &RegClass, MachineOperand &RegMO) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
-  assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
+  assert(Reg.isVirtual() && "PhysReg not implemented");
 
   // Save the old register class to check whether
   // the change notifications will be required.
@@ -109,7 +109,7 @@ Register llvm::constrainOperandRegClass(
     MachineOperand &RegMO, unsigned OpIdx) {
   Register Reg = RegMO.getReg();
   // Assume physical registers are properly constrained.
-  assert(Register::isVirtualRegister(Reg) && "PhysReg not implemented");
+  assert(Reg.isVirtual() && "PhysReg not implemented");
 
   const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx, &TRI, MF);
   // Some of the target independent instructions, like COPY, may not impose any
@@ -171,7 +171,7 @@ bool llvm::constrainSelectedInstRegOperands(MachineInstr &I,
 
     Register Reg = MO.getReg();
     // Physical registers don't need to be constrained.
-    if (Register::isPhysicalRegister(Reg))
+    if (Reg.isPhysical())
       continue;
 
     // Register operands with a value of 0 (e.g. predicate operands) don't need
@@ -235,7 +235,7 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
       continue;
 
     Register Reg = MO.getReg();
-    if (Register::isPhysicalRegister(Reg) || !MRI.use_nodbg_empty(Reg))
+    if (Reg.isPhysical() || !MRI.use_nodbg_empty(Reg))
       return false;
   }
   return true;
@@ -333,7 +333,7 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
       break;
     case TargetOpcode::COPY:
       VReg = MI->getOperand(1).getReg();
-      if (Register::isPhysicalRegister(VReg))
+      if (VReg.isPhysical())
         return std::nullopt;
       break;
     case TargetOpcode::G_INTTOPTR:

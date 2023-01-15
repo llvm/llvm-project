@@ -105,7 +105,7 @@ static Node readNode(uint32_t Offset, const Node *Parent = nullptr) {
     uint8_t H = UnicodeNameToCodepointIndex[Offset++];
     N.HasSibling = H & 0x80;
     bool HasChildren = H & 0x40;
-    H &= ~0xC0;
+    H &= ~uint8_t(0xC0);
     if (HasChildren) {
       N.ChildrenOffset = (H << 16);
       N.ChildrenOffset |=

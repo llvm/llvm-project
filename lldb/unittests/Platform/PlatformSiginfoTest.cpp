@@ -82,19 +82,15 @@ public:
 
     switch (arch.GetTriple().getOS()) {
     case llvm::Triple::FreeBSD:
-      platform_sp = platform_freebsd::PlatformFreeBSD::CreateInstance(
-          true, &arch, /*debugger=*/nullptr,
-          /*metadata=*/nullptr);
+      platform_sp =
+          platform_freebsd::PlatformFreeBSD::CreateInstance(true, &arch);
       break;
     case llvm::Triple::Linux:
-      platform_sp = platform_linux::PlatformLinux::CreateInstance(
-          true, &arch, /*debugger=*/nullptr,
-          /*metadata=*/nullptr);
+      platform_sp = platform_linux::PlatformLinux::CreateInstance(true, &arch);
       break;
     case llvm::Triple::NetBSD:
-      platform_sp = platform_netbsd::PlatformNetBSD::CreateInstance(
-          true, &arch, /*debugger=*/nullptr,
-          /*metadata=*/nullptr);
+      platform_sp =
+          platform_netbsd::PlatformNetBSD::CreateInstance(true, &arch);
       break;
     default:
       llvm_unreachable("unknown ostype in triple");

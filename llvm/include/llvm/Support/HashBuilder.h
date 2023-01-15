@@ -261,13 +261,12 @@ public:
 
   template <typename T1, typename T2>
   HashBuilderImpl &add(const std::pair<T1, T2> &Value) {
-    add(Value.first);
-    add(Value.second);
-    return *this;
+    return add(Value.first, Value.second);
   }
 
   template <typename... Ts> HashBuilderImpl &add(const std::tuple<Ts...> &Arg) {
-    return addTupleHelper(Arg, typename std::index_sequence_for<Ts...>());
+    std::apply([this](const auto &...Args) { this->add(Args...); }, Arg);
+    return *this;
   }
 
   /// A convenenience variadic helper.
@@ -280,12 +279,10 @@ public:
   /// add(Arg1)
   /// add(Arg2)
   /// ```
-  template <typename T, typename... Ts>
-  std::enable_if_t<(sizeof...(Ts) >= 1), HashBuilderImpl &>
-  add(const T &FirstArg, const Ts &...Args) {
-    add(FirstArg);
-    add(Args...);
-    return *this;
+  template <typename... Ts>
+  std::enable_if_t<(sizeof...(Ts) > 1), HashBuilderImpl &>
+  add(const Ts &...Args) {
+    return (add(Args), ...);
   }
 
   template <typename ForwardIteratorT>
@@ -325,13 +322,6 @@ public:
   }
 
 private:
-  template <typename... Ts, std::size_t... Indices>
-  HashBuilderImpl &addTupleHelper(const std::tuple<Ts...> &Arg,
-                                  std::index_sequence<Indices...>) {
-    add(std::get<Indices>(Arg)...);
-    return *this;
-  }
-
   // FIXME: Once available, specialize this function for `contiguous_iterator`s,
   // and use it for `ArrayRef` and `StringRef`.
   template <typename ForwardIteratorT>
