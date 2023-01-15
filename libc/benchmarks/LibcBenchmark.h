@@ -99,7 +99,7 @@ struct BenchmarkState {
 struct BenchmarkResult {
   BenchmarkStatus TerminationStatus = BenchmarkStatus::Running;
   Duration BestGuess = {};
-  llvm::Optional<llvm::SmallVector<BenchmarkState, 16>> MaybeBenchmarkLog;
+  std::optional<llvm::SmallVector<BenchmarkState, 16>> MaybeBenchmarkLog;
 };
 
 // Stores information about a cache in the host memory system.
