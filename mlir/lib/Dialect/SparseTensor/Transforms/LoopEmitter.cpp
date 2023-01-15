@@ -167,9 +167,7 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
     } else {
       // Annotated sparse tensors.
       // We also need the value buffer for annotated all dense `sparse` tensor.
-      auto dynShape = {ShapedType::kDynamic};
-      auto sparseTp = MemRefType::get(dynShape, elementType);
-      valBuffer[t] = builder.create<ToValuesOp>(loc, sparseTp, tensor);
+      valBuffer[t] = genToValues(builder, loc, tensor);
     }
     // NOTE: we can also prepare for 0 dim here in advance, this will hosit
     // some loop preparation from tensor iteration, but will also (undesirably)
@@ -180,9 +178,8 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
 void LoopEmitter::enterNewLoopSeq(OpBuilder &builder, Location loc,
                                   ArrayRef<size_t> tids,
                                   ArrayRef<size_t> dims) {
-  // Universal Index start from 0
   assert(loopSeqStack.size() == loopStack.size());
-  // Universal index starts from 0
+  // Universal Index starts from 0.
   loopSeqStack.emplace_back(constantIndex(builder, loc, 0));
   // Prepares for all the tensors used in the current loop sequence.
   for (auto [tid, dim] : llvm::zip(tids, dims))

@@ -73,7 +73,7 @@ inline namespace __cpo {
 } // namespace __cpo
 
 template<ranges::viewable_range _Range>
-using all_t = decltype(views::all(declval<_Range>()));
+using all_t = decltype(views::all(std::declval<_Range>()));
 
 } // namespace ranges::views
 

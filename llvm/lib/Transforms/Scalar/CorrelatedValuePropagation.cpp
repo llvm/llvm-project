@@ -438,8 +438,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
 // See if we can prove that the given binary op intrinsic will not overflow.
 static bool willNotOverflow(BinaryOpIntrinsic *BO, LazyValueInfo *LVI) {
-  ConstantRange LRange = LVI->getConstantRange(BO->getLHS(), BO);
-  ConstantRange RRange = LVI->getConstantRange(BO->getRHS(), BO);
+  ConstantRange LRange = LVI->getConstantRangeAtUse(BO->getOperandUse(0));
+  ConstantRange RRange = LVI->getConstantRangeAtUse(BO->getOperandUse(1));
   ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
       BO->getBinaryOp(), RRange, BO->getNoWrapKind());
   return NWRegion.contains(LRange);
@@ -769,15 +769,23 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool expandURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   assert(Instr->getOpcode() == Instruction::URem);
   assert(!Instr->getType()->isVectorTy());
 
-  Value *X = Instr->getOperand(0);
-  Value *Y = Instr->getOperand(1);
+  const Use &X = Instr->getOperandUse(0);
+  const Use &Y = Instr->getOperandUse(1);
 
-  ConstantRange XCR = LVI->getConstantRange(X, Instr);
-  ConstantRange YCR = LVI->getConstantRange(Y, Instr);
+  ConstantRange XCR = LVI->getConstantRangeAtUse(X);
+  ConstantRange YCR = LVI->getConstantRangeAtUse(Y);
+
+  // X u% Y -> X  iff X u< Y
+  if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
+    Instr->replaceAllUsesWith(X);
+    Instr->eraseFromParent();
+    ++NumURemExpanded;
+    return true;
+  }
 
   // Given
   //   R  = X u% Y
@@ -807,42 +815,20 @@ static bool expandURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
                 YCR.umul_sat(APInt(YCR.getBitWidth(), 2))) &&
       !YCR.isAllNegative())
     return false;
-  IRBuilder<> B{Instr};
+
+  IRBuilder<> B(Instr);
   // NOTE: this transformation introduces two uses of X,
   //       but it may be undef so we must freeze it first.
-  X = B.CreateFreeze(X, X->getName() + ".frozen");
-  auto *AdjX = B.CreateNUWSub(X, Y, Instr->getName() + ".urem");
-  auto *Cmp = B.CreateICmp(ICmpInst::ICMP_ULT, X, Y, Instr->getName() + ".cmp");
-  auto *ExpandedURem = B.CreateSelect(Cmp, X, AdjX);
+  Value *FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
+  auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
+  auto *Cmp =
+      B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
+  auto *ExpandedURem = B.CreateSelect(Cmp, FrozenX, AdjX);
   ExpandedURem->takeName(Instr);
   Instr->replaceAllUsesWith(ExpandedURem);
   Instr->eraseFromParent();
   ++NumURemExpanded;
   return true;
-}
-
-static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
-  assert(Instr->getOpcode() == Instruction::URem);
-  assert(!Instr->getType()->isVectorTy());
-
-  Value *X = Instr->getOperand(0);
-  Value *Y = Instr->getOperand(1);
-
-  ConstantRange XCR = LVI->getConstantRange(X, Instr);
-  ConstantRange YCR = LVI->getConstantRange(Y, Instr);
-
-  // X u% Y -> X  iff X u< Y
-  if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
-    Instr->replaceAllUsesWith(X);
-    Instr->eraseFromParent();
-    ++NumURemExpanded;
-    return true;
-  }
-
-  if (expandURem(Instr, LVI))
-    return true;
-
-  return false;
 }
 
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's

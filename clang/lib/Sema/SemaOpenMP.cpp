@@ -11121,9 +11121,10 @@ StmtResult Sema::ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
                                               SourceLocation EndLoc) {
   const OMPNowaitClause *NowaitC =
       OMPExecutableDirective::getSingleClause<OMPNowaitClause>(Clauses);
-  const OMPDependClause *DependC =
-      OMPExecutableDirective::getSingleClause<OMPDependClause>(Clauses);
-  if (NowaitC && !DependC) {
+  bool HasDependC =
+      !OMPExecutableDirective::getClausesOfKind<OMPDependClause>(Clauses)
+           .empty();
+  if (NowaitC && !HasDependC) {
     Diag(StartLoc, diag::err_omp_nowait_clause_without_depend);
     return StmtError();
   }
@@ -15648,6 +15649,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     break;
   case OMPC_thread_limit:
     switch (DKind) {
+    case OMPD_target:
     case OMPD_target_teams:
     case OMPD_target_teams_distribute:
     case OMPD_target_teams_distribute_simd:
@@ -15689,7 +15691,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
     case OMPD_parallel_loop:
-    case OMPD_target:
     case OMPD_target_simd:
     case OMPD_target_parallel:
     case OMPD_target_parallel_for:

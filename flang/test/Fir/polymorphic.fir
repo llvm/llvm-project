@@ -75,8 +75,7 @@ func.func @_QMunlimitedPsub1(%arg0: !fir.class<!fir.array<?xnone>> {fir.bindc_na
   %c1_i64_0 = arith.constant 1 : i64
   %0 = arith.subi %c1_i64, %c1_i64_0 : i64
   %1 = fir.coordinate_of %arg0, %0 : (!fir.class<!fir.array<?xnone>>, i64) -> !fir.ref<none>
-  %2 = fir.box_tdesc %arg0 : (!fir.class<!fir.array<?xnone>>) -> !fir.tdesc<none>
-  %3 = fir.embox %1 tdesc %2 : (!fir.ref<none>, !fir.tdesc<none>) -> !fir.class<none>
+  %3 = fir.embox %1 source_box %arg0 : (!fir.ref<none>, !fir.class<!fir.array<?xnone>>) -> !fir.class<none>
   fir.select_type %3 : !fir.class<none> [#fir.type_is<i32>, ^bb1, unit, ^bb2]
 ^bb1:
   %4 = fir.box_addr %3 : (!fir.class<none>) -> !fir.ref<i32>
@@ -90,11 +89,12 @@ func.func @_QMunlimitedPsub1(%arg0: !fir.class<!fir.array<?xnone>> {fir.bindc_na
 // CHECK-LABEL: define void @_QMunlimitedPsub1(
 // CHECK-SAME: ptr %[[ARRAY:.*]]) {
 // CHECK: %[[BOX:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+// CHECK: %{{.}} = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 7, i32 0, i32 2
 // CHECK: %[[TYPE_DESC_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 8
 // CHECK: %[[TYPE_DESC:.*]] = load ptr, ptr %[[TYPE_DESC_GEP]]
-// CHECK: %[[ELE_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %0, i32 0, i32 1
+// CHECK: %[[ELE_SIZE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 1
 // CHECK: %[[ELE_SIZE:.*]] = load i64, ptr %[[ELE_SIZE_GEP]]
-// CHECK: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %0, i32 0, i32 4
+// CHECK: %[[TYPE_CODE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ARRAY]], i32 0, i32 4
 // CHECK: %[[TYPE_CODE:.*]] = load i32, ptr %[[TYPE_CODE_GEP]]
 // CHECK: %{{.*}} = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } undef, i64 %[[ELE_SIZE]], 1
 // CHECK: %[[TYPE_CODE_TRUNC:.*]] = trunc i32 %[[TYPE_CODE]] to i8

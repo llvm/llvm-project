@@ -11,7 +11,7 @@
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -72,7 +72,7 @@ createFuncFromCluster(OpBuilder &b, const SmallVector<Operation *, 8> &cluster,
   shape::FuncOp fnOp = b.create<shape::FuncOp>(loc, fnName, fnType);
   Block *block = fnOp.addEntryBlock();
   b.setInsertionPoint(block, block->end());
-  BlockAndValueMapping bvm;
+  IRMapping bvm;
   if (cluster.empty()) {
     bvm.map(shape, fnOp.getArgument(0));
   } else {

@@ -389,7 +389,13 @@ struct FusionCandidateCompare {
   /// Comparison functor to sort two Control Flow Equivalent fusion candidates
   /// into dominance order.
   /// If LHS dominates RHS and RHS post-dominates LHS, return true;
-  /// IF RHS dominates LHS and LHS post-dominates RHS, return false;
+  /// If RHS dominates LHS and LHS post-dominates RHS, return false;
+  /// If both LHS and RHS are not dominating each other then, non-strictly
+  /// post dominate check will decide the order of candidates. If RHS
+  /// non-strictly post dominates LHS then, return true. If LHS non-strictly
+  /// post dominates RHS then, return false. If both are non-strictly post
+  /// dominate each other then, level in the post dominator tree will decide
+  /// the order of candidates.
   bool operator()(const FusionCandidate &LHS,
                   const FusionCandidate &RHS) const {
     const DominatorTree *DT = &(LHS.DT);
@@ -415,9 +421,29 @@ struct FusionCandidateCompare {
       return true;
     }
 
-    // If LHS does not dominate RHS and RHS does not dominate LHS then there is
-    // no dominance relationship between the two FusionCandidates. Thus, they
-    // should not be in the same set together.
+    // If two FusionCandidates are in the same level of dominator tree,
+    // they will not dominate each other, but may still be control flow
+    // equivalent. To sort those FusionCandidates, nonStrictlyPostDominate()
+    // function is needed.
+    bool WrongOrder =
+        nonStrictlyPostDominate(LHSEntryBlock, RHSEntryBlock, DT, LHS.PDT);
+    bool RightOrder =
+        nonStrictlyPostDominate(RHSEntryBlock, LHSEntryBlock, DT, LHS.PDT);
+    if (WrongOrder && RightOrder) {
+      // If common predecessor of LHS and RHS post dominates both
+      // FusionCandidates then, Order of FusionCandidate can be
+      // identified by its level in post dominator tree.
+      DomTreeNode *LNode = LHS.PDT->getNode(LHSEntryBlock);
+      DomTreeNode *RNode = LHS.PDT->getNode(RHSEntryBlock);
+      return LNode->getLevel() > RNode->getLevel();
+    } else if (WrongOrder)
+      return false;
+    else if (RightOrder)
+      return true;
+
+    // If LHS does not non-strict Postdominate RHS and RHS does not non-strict
+    // Postdominate LHS then, there is no dominance relationship between the
+    // two FusionCandidates. Thus, they should not be in the same set together.
     llvm_unreachable(
         "No dominance relationship between these fusion candidates!");
   }

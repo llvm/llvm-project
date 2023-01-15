@@ -1611,7 +1611,7 @@ clang-tools-extra/clangd/unittests/tweaks/DefineOutlineTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpASTTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpRecordLayoutTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpSymbolTests.cpp
-clang-tools-extra/clangd/unittests/tweaks/ExpandAutoTypeTests.cpp
+clang-tools-extra/clangd/unittests/tweaks/ExpandDeducedTypeTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExpandMacroTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExtractFunctionTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExtractVariableTests.cpp
@@ -5536,7 +5536,7 @@ llvm/include/llvm/TableGen/Parser.h
 llvm/include/llvm/TableGen/StringToOffsetTable.h
 llvm/include/llvm/Target/CGPassBuilderOption.h
 llvm/include/llvm/Target/CodeGenCWrappers.h
-llvm/include/llvm/Testing/Support/Annotations.h
+llvm/include/llvm/Testing/Annotations/Annotations.h
 llvm/include/llvm/Testing/Support/SupportHelpers.h
 llvm/include/llvm/TextAPI/Architecture.h
 llvm/include/llvm/TextAPI/ArchitectureSet.h
@@ -6839,7 +6839,7 @@ llvm/lib/Target/XCore/MCTargetDesc/XCoreMCAsmInfo.h
 llvm/lib/Target/XCore/MCTargetDesc/XCoreMCTargetDesc.cpp
 llvm/lib/Target/XCore/MCTargetDesc/XCoreMCTargetDesc.h
 llvm/lib/Target/XCore/TargetInfo/XCoreTargetInfo.cpp
-llvm/lib/Testing/Support/Annotations.cpp
+llvm/lib/Testing/Annotations/Annotations.cpp
 llvm/lib/Testing/Support/Error.cpp
 llvm/lib/Testing/Support/SupportHelpers.cpp
 llvm/lib/TextAPI/ArchitectureSet.cpp

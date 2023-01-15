@@ -8,10 +8,10 @@
 
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/Block.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -104,7 +104,7 @@ static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// This class wraps a BlockAndValueMapping to provide recursive lookup
+/// This class wraps a IRMapping to provide recursive lookup
 /// functionality, i.e. we will traverse if the mapped value also has a mapping.
 struct ConversionValueMapping {
   /// Lookup a mapped value within the map. If a mapping for the provided value
@@ -145,7 +145,7 @@ struct ConversionValueMapping {
 
 private:
   /// Current value mappings.
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
 };
 } // namespace
 
@@ -1620,9 +1620,10 @@ void ConversionPatternRewriter::inlineRegionBefore(Region &region,
   PatternRewriter::inlineRegionBefore(region, parent, before);
 }
 
-void ConversionPatternRewriter::cloneRegionBefore(
-    Region &region, Region &parent, Region::iterator before,
-    BlockAndValueMapping &mapping) {
+void ConversionPatternRewriter::cloneRegionBefore(Region &region,
+                                                  Region &parent,
+                                                  Region::iterator before,
+                                                  IRMapping &mapping) {
   if (region.empty())
     return;
   PatternRewriter::cloneRegionBefore(region, parent, before, mapping);

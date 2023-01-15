@@ -16,8 +16,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 
@@ -158,8 +158,8 @@ private:
   /// Adds type to funcOp's workgroup attributions.
   Value createWorkgroupBuffer() {
     // TODO: Pick a proper location for the attribution.
-    int workgroupMemoryAddressSpace =
-        gpu::GPUDialect::getWorkgroupAddressSpace();
+    auto workgroupMemoryAddressSpace = gpu::AddressSpaceAttr::get(
+        funcOp->getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());
     auto bufferType = MemRefType::get({kSubgroupSize}, valueType, AffineMap{},
                                       workgroupMemoryAddressSpace);
     return funcOp.addWorkgroupAttribution(bufferType, rewriter.getUnknownLoc());
@@ -186,7 +186,7 @@ private:
       Block *split = rewriter.splitBlock(block, rewriter.getInsertionPoint());
 
       // Insert accumulator body between split block.
-      BlockAndValueMapping mapping;
+      IRMapping mapping;
       mapping.map(body.getArgument(0), lhs);
       mapping.map(body.getArgument(1), rhs);
       rewriter.cloneRegionBefore(body, *split->getParent(),
@@ -404,7 +404,7 @@ struct GpuAllReduceConversion : public RewritePattern {
       return WalkResult::advance();
     };
 
-    if (funcOp.walk(callback).wasInterrupted())
+    if (funcOp.walk(callback).wasInterrupted() || reduceOps.empty())
       return rewriter.notifyMatchFailure(
           op, "Non uniform reductions are not supported yet.");
 

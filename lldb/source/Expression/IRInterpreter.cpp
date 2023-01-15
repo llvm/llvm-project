@@ -408,7 +408,7 @@ public:
     lldb_private::Status alloc_error;
 
     return Malloc(m_target_data.getTypeAllocSize(type),
-                  m_target_data.getPrefTypeAlignment(type));
+                  m_target_data.getPrefTypeAlign(type).value());
   }
 
   std::string PrintData(lldb::addr_t addr, llvm::Type *type) {

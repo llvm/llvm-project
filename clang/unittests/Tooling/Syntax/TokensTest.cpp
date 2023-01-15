@@ -37,7 +37,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include <cassert>
 #include <cstdlib>

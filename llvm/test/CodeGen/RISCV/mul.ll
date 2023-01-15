@@ -1274,9 +1274,9 @@ define i128 @muli128_m63(i128 %a) nounwind {
 ; RV32I-NEXT:    srli a7, a7, 26
 ; RV32I-NEXT:    slli t4, a5, 6
 ; RV32I-NEXT:    or a7, t4, a7
+; RV32I-NEXT:    add a7, a7, t1
+; RV32I-NEXT:    add a7, a7, t3
 ; RV32I-NEXT:    sub a5, a5, a7
-; RV32I-NEXT:    add t1, t1, t3
-; RV32I-NEXT:    sub a5, a5, t1
 ; RV32I-NEXT:    sub a7, t2, t0
 ; RV32I-NEXT:    sub a3, a3, a6
 ; RV32I-NEXT:    sub a3, a3, a4

@@ -3,7 +3,6 @@
 set(EXCLUDE_FROM_ALL ON)
 
 add_llvm_library(LLVMTestingSupport
-  Annotations.cpp
   Error.cpp
   SupportHelpers.cpp
 

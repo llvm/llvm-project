@@ -47,7 +47,7 @@
 
 ;; Ensure lld does not emit empty combined module in default.
 ; RUN: rm -fr objpath && mkdir objpath
-; RUN: ld.lld 1.bc 2.bc -o objpath/a.out --save-temps
+; RUN: ld.lld -shared 1.bc 2.bc -o objpath/a.out --save-temps
 ; RUN: ls objpath/a.out*.lto.* | count 2
 
 ; EMPTY:     file format elf64-x86-64

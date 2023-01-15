@@ -390,10 +390,9 @@ uint16_t __kmpc_parallel_level(IdentTy *Loc, uint32_t);
 /// Tasking
 ///
 ///{
-extern "C" {
-TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, uint32_t, int32_t,
-                                        uint64_t TaskSizeInclPrivateValues,
-                                        uint64_t SharedValuesSize,
+TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, int32_t, int32_t,
+                                        size_t TaskSizeInclPrivateValues,
+                                        size_t SharedValuesSize,
                                         TaskFnTy TaskFn);
 
 int32_t __kmpc_omp_task(IdentTy *Loc, uint32_t TId,
@@ -428,9 +427,6 @@ void __kmpc_taskloop(IdentTy *Loc, uint32_t TId,
 void *__kmpc_task_allow_completion_event(IdentTy *loc_ref,
                                                 uint32_t gtid,
                                                 TaskDescriptorTy *task);
-
-}
-///}
 
 /// Misc
 ///

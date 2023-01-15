@@ -1289,7 +1289,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
               break;
             }
           }
-          if (KMP_ATOMIC_LD_RLX(&v->steal_flag) != READY ||
+          if (KMP_ATOMIC_LD_ACQ(&v->steal_flag) != READY ||
               v->u.p.count >= (UT)v->u.p.ub) {
             pr->u.p.parm4 = (victimId + 1) % nproc; // shift start victim tid
             continue; // no chunks to steal, try next victim

@@ -5,6 +5,10 @@
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-far | FileCheck %s --check-prefixes=FAR
 // RUN: ld.lld %t/a.o --script %t/near.lds -o %t/a-near
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-near | FileCheck %s --check-prefixes=NEAR
+// RUN: ld.lld %t/a.o -pie --script %t/far.lds -o %t/a-far-pie
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-far-pie | FileCheck %s --check-prefixes=FAR-PIE
+// RUN: ld.lld %t/a.o -pie --script %t/near.lds -o %t/a-near-pie
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-near-pie | FileCheck %s --check-prefixes=NEAR
 
 /// On Armv4T there is no blx instruction so long branch/exchange looks slightly
 /// different.
@@ -57,6 +61,34 @@ thumb_start:
 // FAR-NEXT:  <$d>:
 // FAR-NEXT:   1000024: 05 00 00 06  	.word	0x06000005
 
+// FAR-PIE-LABEL: <_start>:
+// FAR-PIE-NEXT:   1000000:      	bl	0x1000010 <__ARMv4PILongThunk_target> @ imm = #8
+// FAR-PIE-NEXT:                	bx	lr
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <thumb_start>:
+// FAR-PIE-NEXT:   1000008:      	bl	0x100001c <__Thumbv4PILongThunk_thumb_target> @ imm = #16
+// FAR-PIE-NEXT:                	bx	lr
+// FAR-PIE-NEXT:                	bmi	0xffffba                @ imm = #-88
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <__ARMv4PILongThunk_target>:
+// FAR-PIE-NEXT:   1000010:      	ldr	r12, [pc]               @ 0x1000018 <__ARMv4PILongThunk_target+0x8>
+// FAR-PIE-NEXT:                	add	pc, pc, r12
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <$d>:
+// FAR-PIE-NEXT:   1000018: e4 ff ff 04  	.word	0x04ffffe4
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <__Thumbv4PILongThunk_thumb_target>:
+// FAR-PIE-NEXT:   100001c:      	bx	pc
+// FAR-PIE-NEXT:                	b	0x100001c <__Thumbv4PILongThunk_thumb_target> @ imm = #-6
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <$a>:
+// FAR-PIE-NEXT:   1000020:      	ldr	r12, [pc, #4]           @ 0x100002c <__Thumbv4PILongThunk_thumb_target+0x10>
+// FAR-PIE-NEXT:                	add	r12, pc, r12
+// FAR-PIE-NEXT:                	bx	r12
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <$d>:
+// FAR-PIE-NEXT:   100002c: d9 ff ff 04  	.word	0x04ffffd9
+
 // NEAR-LABEL: <_start>:
 // NEAR-NEXT:  1000000:      	bl	0x100000c <thumb_start+0x4> @ imm = #4
 // NEAR-NEXT:               	bx	lr
@@ -83,6 +115,12 @@ thumb_target:
 // FAR-EMPTY:
 // FAR-LABEL: <thumb_target>:
 // FAR-NEXT:   6000004:      	bx	lr
+
+// FAR-PIE-LABEL: <target>:
+// FAR-PIE-NEXT:   6000000:     bx	lr
+// FAR-PIE-EMPTY:
+// FAR-PIE-LABEL: <thumb_target>:
+// FAR-PIE-NEXT:   6000004:     bx	lr
 
 // NEAR-LABEL: <target>:
 // NEAR-LABEL:  100000e:      	bx	lr

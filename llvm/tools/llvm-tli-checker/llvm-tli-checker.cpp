@@ -54,9 +54,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class TLICheckerOptTable : public opt::OptTable {
+class TLICheckerOptTable : public opt::GenericOptTable {
 public:
-  TLICheckerOptTable() : OptTable(InfoTable) {}
+  TLICheckerOptTable() : GenericOptTable(InfoTable) {}
 };
 } // end anonymous namespace
 

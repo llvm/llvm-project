@@ -18,7 +18,7 @@
 #include "mlir/Dialect/Async/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -425,7 +425,7 @@ static ParallelComputeFunction createParallelComputeFunction(
       }
 
       // Copy the body of the parallel op into the inner-most loop.
-      BlockAndValueMapping mapping;
+      IRMapping mapping;
       mapping.map(op.getInductionVars(), computeBlockInductionVars);
       mapping.map(computeFuncType.captures, captures);
 

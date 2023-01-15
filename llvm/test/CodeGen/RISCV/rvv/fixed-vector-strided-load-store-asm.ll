@@ -828,23 +828,23 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    addi a4, a4, 1
 ; CHECK-NEXT:    andi a5, a4, -32
 ; CHECK-NEXT:    add a3, a5, a2
-; CHECK-NEXT:    slli a6, a2, 2
-; CHECK-NEXT:    add a6, a6, a2
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    add a6, a1, a6
+; CHECK-NEXT:    slli a7, a2, 2
+; CHECK-NEXT:    add a6, a0, a2
+; CHECK-NEXT:    add a2, a1, a2
+; CHECK-NEXT:    add a2, a2, a7
 ; CHECK-NEXT:    li a7, 32
 ; CHECK-NEXT:    li t0, 5
 ; CHECK-NEXT:    mv t1, a5
 ; CHECK-NEXT:  .LBB13_3: # %bb15
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetvli zero, a7, e8, m1, ta, ma
-; CHECK-NEXT:    vlse8.v v8, (a6), t0
-; CHECK-NEXT:    vle8.v v9, (a2)
+; CHECK-NEXT:    vlse8.v v8, (a2), t0
+; CHECK-NEXT:    vle8.v v9, (a6)
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
-; CHECK-NEXT:    vse8.v v8, (a2)
+; CHECK-NEXT:    vse8.v v8, (a6)
 ; CHECK-NEXT:    addi t1, t1, -32
-; CHECK-NEXT:    addi a2, a2, 32
-; CHECK-NEXT:    addi a6, a6, 160
+; CHECK-NEXT:    addi a6, a6, 32
+; CHECK-NEXT:    addi a2, a2, 160
 ; CHECK-NEXT:    bnez t1, .LBB13_3
 ; CHECK-NEXT:  # %bb.4: # %bb30
 ; CHECK-NEXT:    beq a4, a5, .LBB13_7
@@ -852,8 +852,8 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    addiw a2, a3, -1024
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    slli a4, a3, 2
-; CHECK-NEXT:    add a3, a4, a3
 ; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:  .LBB13_6: # %bb35
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lb a3, 0(a1)

@@ -50,7 +50,7 @@ static constexpr opt::OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-ELFOptTable::ELFOptTable() : OptTable(optInfo) {}
+ELFOptTable::ELFOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

@@ -1197,7 +1197,8 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
     MachineInstrBuilder NewI;
     if (MI.getOpcode() == TargetOpcode::G_LOAD) {
       NewI = MIRBuilder.buildInstr(AArch64::LDPXi, {s64, s64}, {});
-      MIRBuilder.buildMerge(ValReg, {NewI->getOperand(0), NewI->getOperand(1)});
+      MIRBuilder.buildMergeLikeInstr(
+          ValReg, {NewI->getOperand(0), NewI->getOperand(1)});
     } else {
       auto Split = MIRBuilder.buildUnmerge(s64, MI.getOperand(0));
       NewI = MIRBuilder.buildInstr(
@@ -1499,7 +1500,7 @@ bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
                                    *MRI.getTargetRegisterInfo(),
                                    *ST->getRegBankInfo());
 
-  MIRBuilder.buildMerge(MI.getOperand(0), {DstLo, DstHi});
+  MIRBuilder.buildMergeLikeInstr(MI.getOperand(0), {DstLo, DstHi});
   MI.eraseFromParent();
   return true;
 }

@@ -27,14 +27,6 @@ ScriptedPythonInterface::ScriptedPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
     : ScriptedInterface(), m_interpreter(interpreter) {}
 
-Status
-ScriptedPythonInterface::GetStatusFromMethod(llvm::StringRef method_name) {
-  Status error;
-  Dispatch<Status>(method_name, error);
-
-  return error;
-}
-
 template <>
 StructuredData::ArraySP
 ScriptedPythonInterface::ExtractValueFromPythonObject<StructuredData::ArraySP>(

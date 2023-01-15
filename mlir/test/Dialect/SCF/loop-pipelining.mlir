@@ -417,7 +417,7 @@ func.func @loop_carried(%A: memref<?xf32>, %result: memref<?xf32>) {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
-//   CHECK-DAG:   %[[CSTF:.*]] = arith.constant 1.000000e+00 : f32
+//   CHECK-DAG:   %[[CSTF:.*]] = arith.constant 2.000000e+00 : f32
 // Prologue:
 //       CHECK:   %[[L0:.*]] = memref.load %[[A]][%[[C0]]] : memref<?xf32>
 //  CHECK-NEXT:   %[[ADD0:.*]] = arith.addf %[[L0]], %[[CSTF]] : f32
@@ -426,19 +426,22 @@ func.func @loop_carried(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:   %[[R:.*]]:3 = scf.for %[[IV:.*]] = %[[C0]] to %[[C2]]
 //  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
 //  CHECK-SAME:     %[[ADDARG:.*]] = %[[ADD0]], %[[LARG:.*]] = %[[L1]]) -> (f32, f32, f32) {
-//  CHECK-NEXT:     %[[ADD1:.*]] = arith.addf %[[LARG]], %[[ADDARG]] : f32
+//  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ADDARG]], %[[CSTF]] : f32
+//  CHECK-NEXT:     %[[ADD1:.*]] = arith.addf %[[LARG]], %[[MUL0]] : f32
 //  CHECK-NEXT:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] : index
 //  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV2]]] : memref<?xf32>
-//  CHECK-NEXT:     scf.yield %[[ADDARG]], %[[ADD1]], %[[L2]] : f32, f32, f32
+//  CHECK-NEXT:     scf.yield %[[MUL0]], %[[ADD1]], %[[L2]] : f32, f32, f32
 //  CHECK-NEXT:   }
 // Epilogue:
-//  CHECK-NEXT:   %[[ADD2:.*]] = arith.addf %[[R]]#2, %[[R]]#1 : f32
-//  CHECK-NEXT:   return %[[ADD2]] : f32
+//  CHECK-NEXT:   %[[MUL1:.*]] = arith.mulf %[[R]]#1, %[[CSTF]] : f32
+//  CHECK-NEXT:   %[[ADD2:.*]] = arith.addf %[[R]]#2, %[[MUL1]] : f32
+//  CHECK-NEXT:   %[[MUL2:.*]] = arith.mulf %[[ADD2]], %[[CSTF]] : f32
+//  CHECK-NEXT:   return %[[MUL2]] : f32
 func.func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %cf = arith.constant 1.0 : f32
+  %cf = arith.constant 2.0 : f32
   %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf) -> (f32) {
     %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
     %A1_elem = arith.addf %A_elem, %arg0 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 1 } : f32
@@ -455,7 +458,7 @@ func.func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
-//   CHECK-DAG:   %[[CSTF:.*]] = arith.constant 1.000000e+00 : f32
+//   CHECK-DAG:   %[[CSTF:.*]] = arith.constant 2.000000e+00 : f32
 // Prologue:
 //       CHECK:   %[[L0:.*]] = scf.execute_region
 //  CHECK-NEXT:     memref.load %[[A]][%[[C0]]] : memref<?xf32>
@@ -467,23 +470,26 @@ func.func @backedge_different_stage(%A: memref<?xf32>) -> f32 {
 //       CHECK:   %[[R:.*]]:3 = scf.for %[[IV:.*]] = %[[C0]] to %[[C2]]
 //  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
 //  CHECK-SAME:     %[[ADDARG:.*]] = %[[ADD0]], %[[LARG:.*]] = %[[L1]]) -> (f32, f32, f32) {
+//       CHECK:     %[[MUL0:.*]] = arith.mulf %[[ADDARG]], %[[CSTF]] : f32
 //       CHECK:     %[[ADD1:.*]] = scf.execute_region
-//  CHECK-NEXT:       arith.addf %[[LARG]], %[[ADDARG]] : f32
+//  CHECK-NEXT:       arith.addf %[[LARG]], %[[MUL0]] : f32
 //       CHECK:     %[[IV2:.*]] = arith.addi %[[IV]], %[[C2]] : index
 //       CHECK:     %[[L2:.*]] = scf.execute_region
 //  CHECK-NEXT:       memref.load %[[A]][%[[IV2]]] : memref<?xf32>
-//       CHECK:     scf.yield %[[ADDARG]], %[[ADD1]], %[[L2]] : f32, f32, f32
+//       CHECK:     scf.yield %[[MUL0]], %[[ADD1]], %[[L2]] : f32, f32, f32
 //  CHECK-NEXT:   }
 // Epilogue:
+//       CHECK:   %[[MUL1:.*]] = arith.mulf %[[R]]#1, %[[CSTF]] : f32
 //       CHECK:   %[[ADD2:.*]] = scf.execute_region
-//  CHECK-NEXT:    arith.addf %[[R]]#2, %[[R]]#1 : f32
-//       CHECK:   return %[[ADD2]] : f32
+//  CHECK-NEXT:    arith.addf %[[R]]#2, %[[MUL1]] : f32
+//       CHECK:   %[[MUL2:.*]] = arith.mulf %[[ADD2]], %[[CSTF]] : f32
+//       CHECK:   return %[[MUL2]] : f32
 
 func.func @region_backedge_different_stage(%A: memref<?xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %cf = arith.constant 1.0 : f32
+  %cf = arith.constant 2.0 : f32
   %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf) -> (f32) {
     %A_elem = scf.execute_region -> f32 {
       %A_elem1 = memref.load %A[%i0] : memref<?xf32>
@@ -507,7 +513,7 @@ func.func @region_backedge_different_stage(%A: memref<?xf32>) -> f32 {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
-//   CHECK-DAG:   %[[CSTF:.*]] = arith.constant 1.000000e+00 : f32
+//   CHECK-DAG:   %[[CSTF:.*]] = arith.constant 2.000000e+00 : f32
 // Prologue:
 //       CHECK:   %[[L0:.*]] = memref.load %[[A]][%[[C0]]] : memref<?xf32>
 // Kernel:
@@ -515,18 +521,20 @@ func.func @region_backedge_different_stage(%A: memref<?xf32>) -> f32 {
 //  CHECK-SAME:     step %[[C1]] iter_args(%[[C:.*]] = %[[CSTF]],
 //  CHECK-SAME:     %[[LARG:.*]] = %[[L0]]) -> (f32, f32) {
 //  CHECK-NEXT:     %[[ADD0:.*]] = arith.addf %[[LARG]], %[[C]] : f32
+//  CHECK-NEXT:     %[[MUL0:.*]] = arith.mulf %[[ADD0]], %[[CSTF]] : f32
 //  CHECK-NEXT:     %[[IV1:.*]] = arith.addi %[[IV]], %[[C1]] : index
 //  CHECK-NEXT:     %[[L2:.*]] = memref.load %[[A]][%[[IV1]]] : memref<?xf32>
-//  CHECK-NEXT:     scf.yield %[[ADD0]], %[[L2]] : f32, f32
+//  CHECK-NEXT:     scf.yield %[[MUL0]], %[[L2]] : f32, f32
 //  CHECK-NEXT:   }
 // Epilogue:
 //  CHECK-NEXT:   %[[ADD1:.*]] = arith.addf %[[R]]#1, %[[R]]#0 : f32
-//  CHECK-NEXT:   return %[[ADD1]] : f32
+//  CHECK-NEXT:   %[[MUL1:.*]] = arith.mulf %[[ADD1]], %[[CSTF]] : f32
+//  CHECK-NEXT:   return %[[MUL1]] : f32
 func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %cf = arith.constant 1.0 : f32
+  %cf = arith.constant 2.0 : f32
   %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf) -> (f32) {
     %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 2 } : memref<?xf32>
     %A1_elem = arith.addf %A_elem, %arg0 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : f32
@@ -538,7 +546,7 @@ func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
 
 // -----
 
-// CHECK: @pipeline_op_with_region(%[[ARG0:.+]]: memref<?xf32>, %[[ARG1:.+]]: memref<?xf32>, %[[ARG2:.+]]: memref<?xf32>) {
+// CHECK: @pipeline_op_with_region(%[[ARG0:.+]]: memref<?xf32>, %[[ARG1:.+]]: memref<?xf32>, %[[ARG2:.+]]: memref<?xf32>, %[[CF:.*]]: f32) {
 // CHECK:   %[[C0:.+]] = arith.constant 0 :
 // CHECK:   %[[C3:.+]] = arith.constant 3 :
 // CHECK:   %[[C1:.+]] = arith.constant 1 :
@@ -590,11 +598,10 @@ func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
   __test_pipelining_stage__ = 1,
   __test_pipelining_op_order__ = 2
 }
-func.func @pipeline_op_with_region(%A: memref<?xf32>, %B: memref<?xf32>, %result: memref<?xf32>) {
+func.func @pipeline_op_with_region(%A: memref<?xf32>, %B: memref<?xf32>, %result: memref<?xf32>, %cf: f32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %cf = arith.constant 1.0 : f32
   %a_buf = memref.alloc() : memref<2x8xf32>
   %b_buf = memref.alloc() : memref<2x8xf32>
   scf.for %i0 = %c0 to %c4 step %c1 {

@@ -1201,13 +1201,16 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/Affine/TransformOps/*.h"]),
     includes = ["include"],
     deps = [
+        ":AffineAnalysis",
         ":AffineDialect",
         ":AffineTransformOpsIncGen",
         ":AffineTransforms",
         ":AffineUtils",
         ":FuncDialect",
         ":IR",
+        ":PDLDialect",
         ":TransformDialect",
+        ":Transforms",
         ":VectorDialect",
     ],
 )

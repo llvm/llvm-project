@@ -17,7 +17,7 @@ class StackCoreScriptedProcesTestCase(TestBase):
     def create_stack_skinny_corefile(self, file):
         self.build()
         target, process, thread, _ = lldbutil.run_to_source_breakpoint(self, "// break here",
-                                                                       lldb.SBFileSpec("baz.c"))
+                                                                       lldb.SBFileSpec("baz.cpp"))
         self.assertTrue(process.IsValid(), "Process is invalid.")
         # FIXME: Use SBAPI to save the process corefile.
         self.runCmd("process save-core -s stack  " + file)
@@ -109,9 +109,9 @@ class StackCoreScriptedProcesTestCase(TestBase):
         self.assertTrue(func, "Invalid function.")
 
         self.assertIn("baz", frame.GetFunctionName())
-        self.assertEqual(frame.vars.GetSize(), 2)
-        self.assertEqual(int(frame.vars.GetFirstValueByName('j').GetValue()), 42 * 42)
+        self.assertGreater(frame.vars.GetSize(), 0)
         self.assertEqual(int(frame.vars.GetFirstValueByName('k').GetValue()), 42)
+        self.assertEqual(int(frame.vars.GetFirstValueByName('j').Dereference().GetValue()), 42 * 42)
 
         corefile_dylib = self.get_module_with_name(corefile_target, 'libbaz.dylib')
         self.assertTrue(corefile_dylib, "Dynamic library libbaz.dylib not found.")

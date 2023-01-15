@@ -35,7 +35,7 @@ struct AllocatorVersionMagic {
   uint8_t Magic[4] = {};
   // Update the version number when the AllocatorState or AllocationMetadata
   // change.
-  static constexpr uint16_t kAllocatorVersion = 2;
+  static constexpr uint16_t kAllocatorVersion = 1;
   uint16_t Version = 0;
   uint16_t Reserved = 0;
 };
@@ -98,12 +98,6 @@ struct AllocationMetadata {
 
   // Whether this allocation has been deallocated yet.
   bool IsDeallocated = false;
-
-  // In recoverable mode, whether this allocation has had a crash associated
-  // with it. This has certain side effects, like meaning this allocation will
-  // permanently occupy a slot, and won't ever have another crash reported from
-  // it.
-  bool HasCrashed = false;
 };
 
 // This holds the state that's shared between the GWP-ASan allocator and the
@@ -132,11 +126,6 @@ struct AllocatorState {
   // Returns whether the provided pointer is a guard page or not. The pointer
   // must be within memory owned by this pool, else the result is undefined.
   bool isGuardPage(uintptr_t Ptr) const;
-
-  // Returns the address that's used by __gwp_asan_get_internal_crash_address()
-  // and GPA::raiseInternallyDetectedError() to communicate that the SEGV in
-  // question comes from an internally-detected error.
-  uintptr_t internallyDetectedErrorFaultAddress() const;
 
   // The number of guarded slots that this pool holds.
   size_t MaxSimultaneousAllocations = 0;

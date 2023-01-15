@@ -2026,6 +2026,9 @@ public:
   bool isSizelessType() const;
   bool isSizelessBuiltinType() const;
 
+  /// Returns true for SVE scalable vector types.
+  bool isSVESizelessBuiltinType() const;
+
   /// Determines if this is a sizeless type supported by the
   /// 'arm_sve_vector_bits' type attribute, which can be applied to a single
   /// SVE vector or predicate, excluding tuple types such as svint32x4_t.

@@ -17,6 +17,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -129,8 +130,11 @@ namespace {
 /// ARM disassembler for all ARM platforms.
 class ARMDisassembler : public MCDisassembler {
 public:
-  ARMDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx) :
-    MCDisassembler(STI, Ctx) {
+  std::unique_ptr<const MCInstrInfo> MCII;
+
+  ARMDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
+                  const MCInstrInfo *MCII)
+      : MCDisassembler(STI, Ctx), MCII(MCII) {
     InstructionEndianness = STI.getFeatureBits()[ARM::ModeBigEndianInstructions]
                                 ? llvm::support::big
                                 : llvm::support::little;
@@ -157,6 +161,8 @@ private:
   mutable ITStatus ITBlock;
   mutable VPTStatus VPTBlock;
 
+  void AddThumb1SBit(MCInst &MI, bool InITBlock) const;
+  bool isVectorPredicable(const MCInst &MI) const;
   DecodeStatus AddThumbPredicate(MCInst&) const;
   void UpdateThumbVFPPredicate(DecodeStatus &, MCInst&) const;
 
@@ -700,7 +706,7 @@ static DecodeStatus DecodeT2AddSubSPImm(MCInst &Inst, unsigned Insn,
 static MCDisassembler *createARMDisassembler(const Target &T,
                                              const MCSubtargetInfo &STI,
                                              MCContext &Ctx) {
-  return new ARMDisassembler(STI, Ctx);
+  return new ARMDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
 // Post-decoding checks
@@ -835,12 +841,6 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
   return MCDisassembler::Fail;
 }
 
-namespace llvm {
-
-extern const MCInstrDesc ARMInsts[];
-
-} // end namespace llvm
-
 /// tryAddingSymbolicOperand - trys to add a symbolic operand in place of the
 /// immediate Value in the MCInst.  The immediate Value has had any PC
 /// adjustment made by the caller.  If the instruction is a branch instruction
@@ -882,14 +882,15 @@ static void tryAddingPcLoadReferenceComment(uint64_t Address, int Value,
 // implicitly set CPSR.  Since it's not represented in the encoding, the
 // auto-generated decoder won't inject the CPSR operand.  We need to fix
 // that as a post-pass.
-static void AddThumb1SBit(MCInst &MI, bool InITBlock) {
-  const MCOperandInfo *OpInfo = ARMInsts[MI.getOpcode()].OpInfo;
-  unsigned short NumOps = ARMInsts[MI.getOpcode()].NumOperands;
+void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
   MCInst::iterator I = MI.begin();
-  for (unsigned i = 0; i < NumOps; ++i, ++I) {
+  for (unsigned i = 0; i < MCID.NumOperands; ++i, ++I) {
     if (I == MI.end()) break;
-    if (OpInfo[i].isOptionalDef() && OpInfo[i].RegClass == ARM::CCRRegClassID) {
-      if (i > 0 && OpInfo[i-1].isPredicate()) continue;
+    if (MCID.OpInfo[i].isOptionalDef() &&
+        MCID.OpInfo[i].RegClass == ARM::CCRRegClassID) {
+      if (i > 0 && MCID.OpInfo[i - 1].isPredicate())
+        continue;
       MI.insert(I, MCOperand::createReg(InITBlock ? 0 : ARM::CPSR));
       return;
     }
@@ -898,11 +899,10 @@ static void AddThumb1SBit(MCInst &MI, bool InITBlock) {
   MI.insert(I, MCOperand::createReg(InITBlock ? 0 : ARM::CPSR));
 }
 
-static bool isVectorPredicable(unsigned Opcode) {
-  const MCOperandInfo *OpInfo = ARMInsts[Opcode].OpInfo;
-  unsigned short NumOps = ARMInsts[Opcode].NumOperands;
-  for (unsigned i = 0; i < NumOps; ++i) {
-    if (ARM::isVpred(OpInfo[i].OperandType))
+bool ARMDisassembler::isVectorPredicable(const MCInst &MI) const {
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
+  for (unsigned i = 0; i < MCID.NumOperands; ++i) {
+    if (ARM::isVpred(MCID.OpInfo[i].OperandType))
       return true;
   }
   return false;
@@ -961,8 +961,8 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
 
   // Warn on non-VPT predicable instruction in a VPT block and a VPT
   // predicable instruction in an IT block
-  if ((!isVectorPredicable(MI.getOpcode()) && VPTBlock.instrInVPTBlock()) ||
-       (isVectorPredicable(MI.getOpcode()) && ITBlock.instrInITBlock()))
+  if ((!isVectorPredicable(MI) && VPTBlock.instrInVPTBlock()) ||
+      (isVectorPredicable(MI) && ITBlock.instrInITBlock()))
     S = SoftFail;
 
   // If we're in an IT/VPT block, base the predicate on that.  Otherwise,
@@ -977,15 +977,15 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
     VPTBlock.advanceVPTState();
   }
 
-  const MCOperandInfo *OpInfo = ARMInsts[MI.getOpcode()].OpInfo;
-  unsigned short NumOps = ARMInsts[MI.getOpcode()].NumOperands;
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
 
   MCInst::iterator CCI = MI.begin();
-  for (unsigned i = 0; i < NumOps; ++i, ++CCI) {
-    if (OpInfo[i].isPredicate() || CCI == MI.end()) break;
+  for (unsigned i = 0; i < MCID.NumOperands; ++i, ++CCI) {
+    if (MCID.OpInfo[i].isPredicate() || CCI == MI.end())
+      break;
   }
 
-  if (ARMInsts[MI.getOpcode()].isPredicable()) {
+  if (MCID.isPredicable()) {
     CCI = MI.insert(CCI, MCOperand::createImm(CC));
     ++CCI;
     if (CC == ARMCC::AL)
@@ -998,11 +998,12 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
 
   MCInst::iterator VCCI = MI.begin();
   unsigned VCCPos;
-  for (VCCPos = 0; VCCPos < NumOps; ++VCCPos, ++VCCI) {
-    if (ARM::isVpred(OpInfo[VCCPos].OperandType) || VCCI == MI.end()) break;
+  for (VCCPos = 0; VCCPos < MCID.NumOperands; ++VCCPos, ++VCCI) {
+    if (ARM::isVpred(MCID.OpInfo[VCCPos].OperandType) || VCCI == MI.end())
+      break;
   }
 
-  if (isVectorPredicable(MI.getOpcode())) {
+  if (isVectorPredicable(MI)) {
     VCCI = MI.insert(VCCI, MCOperand::createImm(VCC));
     ++VCCI;
     if (VCC == ARMVCC::None)
@@ -1012,9 +1013,8 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
     ++VCCI;
     VCCI = MI.insert(VCCI, MCOperand::createReg(0));
     ++VCCI;
-    if (OpInfo[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
-      int TiedOp = ARMInsts[MI.getOpcode()].getOperandConstraint(
-        VCCPos + 3, MCOI::TIED_TO);
+    if (MCID.OpInfo[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
+      int TiedOp = MCID.getOperandConstraint(VCCPos + 3, MCOI::TIED_TO);
       assert(TiedOp >= 0 &&
              "Inactive register in vpred_r is not tied to an output!");
       // Copy the operand to ensure it's not invalidated when MI grows.
@@ -1045,12 +1045,13 @@ void ARMDisassembler::UpdateThumbVFPPredicate(
     VPTBlock.advanceVPTState();
   }
 
-  const MCOperandInfo *OpInfo = ARMInsts[MI.getOpcode()].OpInfo;
+  const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
+  const MCOperandInfo *OpInfo = MCID.OpInfo;
   MCInst::iterator I = MI.begin();
-  unsigned short NumOps = ARMInsts[MI.getOpcode()].NumOperands;
+  unsigned short NumOps = MCID.NumOperands;
   for (unsigned i = 0; i < NumOps; ++i, ++I) {
     if (OpInfo[i].isPredicate() ) {
-      if (CC != ARMCC::AL && !ARMInsts[MI.getOpcode()].isPredicable())
+      if (CC != ARMCC::AL && !MCID.isPredicable())
         Check(S, SoftFail);
       I->setImm(CC);
       ++I;
@@ -1633,7 +1634,9 @@ static DecodeStatus DecodePredicateOperand(MCInst &Inst, unsigned Val,
   // AL predicate is not allowed on Thumb1 branches.
   if (Inst.getOpcode() == ARM::tBcc && Val == 0xE)
     return MCDisassembler::Fail;
-  if (Val != ARMCC::AL && !ARMInsts[Inst.getOpcode()].isPredicable())
+  const MCInstrInfo *MCII =
+      static_cast<const ARMDisassembler *>(Decoder)->MCII.get();
+  if (Val != ARMCC::AL && !MCII->get(Inst.getOpcode()).isPredicable())
     Check(S, MCDisassembler::SoftFail);
   Inst.addOperand(MCOperand::createImm(Val));
   if (Val == ARMCC::AL) {

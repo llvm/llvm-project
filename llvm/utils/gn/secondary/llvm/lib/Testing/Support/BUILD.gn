@@ -5,7 +5,6 @@ static_library("Support") {
     "//third-party/unittest:gtest",
   ]
   sources = [
-    "Annotations.cpp",
     "Error.cpp",
     "SupportHelpers.cpp",
   ]

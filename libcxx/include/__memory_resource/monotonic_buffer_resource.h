@@ -69,7 +69,7 @@ public:
       : __res_(__upstream) {
     __initial_.__start_ = static_cast<char*>(__buffer);
     if (__buffer != nullptr) {
-      __initial_.__cur_ = static_cast<char*>(__buffer);
+      __initial_.__cur_ = static_cast<char*>(__buffer) + __buffer_size;
       __initial_.__end_ = static_cast<char*>(__buffer) + __buffer_size;
     } else {
       __initial_.__cur_  = nullptr;
@@ -85,7 +85,8 @@ public:
   monotonic_buffer_resource& operator=(const monotonic_buffer_resource&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI void release() {
-    __initial_.__cur_ = __initial_.__start_;
+    if (__initial_.__start_ != nullptr)
+      __initial_.__cur_ = __initial_.__end_;
     while (__chunks_ != nullptr) {
       __chunk_footer* __next = __chunks_->__next_;
       __res_->deallocate(__chunks_->__start_, __chunks_->__allocation_size(), __chunks_->__align_);

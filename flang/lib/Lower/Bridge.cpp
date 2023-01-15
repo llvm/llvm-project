@@ -489,35 +489,9 @@ public:
                Fortran::lower::StatementContext &context,
                mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
-    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
-      hlfir::EntityWithAttributes loweredExpr =
-          Fortran::lower::convertExprToHLFIR(loc, *this, expr, localSymbols,
-                                             context);
-      fir::ExtendedValue exv = Fortran::lower::translateToExtendedValue(
-          loc, getFirOpBuilder(), loweredExpr, context);
-      // Load scalar references to integer, logical, real, or complex value
-      // to an mlir value, dereference allocatable and pointers, and get rid
-      // of fir.box that are no needed or create a copy into contiguous memory.
-      return exv.match(
-          [&](const fir::UnboxedValue &box) -> fir::ExtendedValue {
-            if (mlir::Type elementType = fir::dyn_cast_ptrEleTy(box.getType()))
-              if (fir::isa_trivial(elementType))
-                return getFirOpBuilder().create<fir::LoadOp>(loc, box);
-            return box;
-          },
-          [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
-            return box;
-          },
-          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-            return box;
-          },
-          [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
-            return box;
-          },
-          [&](const auto &) -> fir::ExtendedValue {
-            TODO(loc, "lower descriptor designator to HLFIR value");
-          });
-    }
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR())
+      return Fortran::lower::convertExprToValue(loc, *this, expr, localSymbols,
+                                                context);
     return Fortran::lower::createSomeExtendedExpression(loc, *this, expr,
                                                         localSymbols, context);
   }
@@ -3792,7 +3766,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
     fir::KindMapping &kindMap,
     const Fortran::lower::LoweringOptions &loweringOptions,
-    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults)
+    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
+    llvm::StringRef filePath)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -3822,7 +3797,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
 
   // Create the module and attach the attributes.
   module = std::make_unique<mlir::ModuleOp>(
-      mlir::ModuleOp::create(mlir::UnknownLoc::get(&context)));
+      mlir::ModuleOp::create(mlir::FileLineColLoc::get(
+          &getMLIRContext(), filePath, /*line=*/0, /*col=*/0)));
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);

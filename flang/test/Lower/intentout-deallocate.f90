@@ -215,8 +215,10 @@ contains
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
 ! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[TYPE_DESC_ADDR:.*]] = fir.address_of(@_QMmod1E.dt.t) : !fir.ref<!fir.type<{{.*}}>>
 ! CHECK:   %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMmod1Tt{a:i32}>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:   %[[TYPE_NONE:.*]] = fir.convert %9 : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[BOX_NONE]], %[[TYPE_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK: }
 
   subroutine sub15(p)
@@ -231,8 +233,9 @@ contains
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK: %[[IS_ALLOCATED:.*]] = arith.cmpi ne, %[[BOX_ADDR_PTR]], %[[C0]] : i64
 ! CHECK: fir.if %[[IS_ALLOCATED]] {
+! CHECK:   %[[NULL_TYPE_DESC:.*]] = fir.zero_bits !fir.ref<none>  
 ! CHECK:   %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:   %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[BOX_NONE]], %[[NULL_TYPE_DESC]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK: }
 
 end module

@@ -1356,16 +1356,18 @@ bool Attributor::isAssumedDead(const Instruction &I,
   if (ManifestAddedBlocks.contains(I.getParent()))
     return false;
 
-  if (!FnLivenessAA)
-    FnLivenessAA =
-        lookupAAFor<AAIsDead>(IRPosition::function(*I.getFunction(), CBCtx),
-                              QueryingAA, DepClassTy::NONE);
+  const Function &F = *I.getFunction();
+  if (!FnLivenessAA || FnLivenessAA->getAnchorScope() != &F)
+    FnLivenessAA = &getOrCreateAAFor<AAIsDead>(IRPosition::function(F, CBCtx),
+                                               QueryingAA, DepClassTy::NONE);
+
+  // Don't use recursive reasoning.
+  if (QueryingAA == FnLivenessAA)
+    return false;
 
   // If we have a context instruction and a liveness AA we use it.
-  if (FnLivenessAA &&
-      FnLivenessAA->getIRPosition().getAnchorScope() == I.getFunction() &&
-      (CheckBBLivenessOnly ? FnLivenessAA->isAssumedDead(I.getParent())
-                           : FnLivenessAA->isAssumedDead(&I))) {
+  if (CheckBBLivenessOnly ? FnLivenessAA->isAssumedDead(I.getParent())
+                          : FnLivenessAA->isAssumedDead(&I)) {
     if (QueryingAA)
       recordDependence(*FnLivenessAA, *QueryingAA, DepClass);
     if (!FnLivenessAA->isKnownDead(&I))
@@ -1379,7 +1381,8 @@ bool Attributor::isAssumedDead(const Instruction &I,
   const IRPosition IRP = IRPosition::inst(I, CBCtx);
   const AAIsDead &IsDeadAA =
       getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
-  // Don't check liveness for AAIsDead.
+
+  // Don't use recursive reasoning.
   if (QueryingAA == &IsDeadAA)
     return false;
 
@@ -1399,6 +1402,13 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
                                const AAIsDead *FnLivenessAA,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  // Don't check liveness for constants, e.g. functions, used as (floating)
+  // values since the context instruction and such is here meaningless.
+  if (IRP.getPositionKind() == IRPosition::IRP_FLOAT &&
+      isa<Constant>(IRP.getAssociatedValue())) {
+    return false;
+  }
+
   Instruction *CtxI = IRP.getCtxI();
   if (CtxI &&
       isAssumedDead(*CtxI, QueryingAA, FnLivenessAA, UsedAssumedInformation,
@@ -1417,7 +1427,8 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
         QueryingAA, DepClassTy::NONE);
   else
     IsDeadAA = &getOrCreateAAFor<AAIsDead>(IRP, QueryingAA, DepClassTy::NONE);
-  // Don't check liveness for AAIsDead.
+
+  // Don't use recursive reasoning.
   if (QueryingAA == IsDeadAA)
     return false;
 
@@ -1436,9 +1447,15 @@ bool Attributor::isAssumedDead(const BasicBlock &BB,
                                const AbstractAttribute *QueryingAA,
                                const AAIsDead *FnLivenessAA,
                                DepClassTy DepClass) {
-  if (!FnLivenessAA)
-    FnLivenessAA = lookupAAFor<AAIsDead>(IRPosition::function(*BB.getParent()),
-                                         QueryingAA, DepClassTy::NONE);
+  const Function &F = *BB.getParent();
+  if (!FnLivenessAA || FnLivenessAA->getAnchorScope() != &F)
+    FnLivenessAA = &getOrCreateAAFor<AAIsDead>(IRPosition::function(F),
+                                               QueryingAA, DepClassTy::NONE);
+
+  // Don't use recursive reasoning.
+  if (QueryingAA == FnLivenessAA)
+    return false;
+
   if (FnLivenessAA->isAssumedDead(&BB)) {
     if (QueryingAA)
       recordDependence(*FnLivenessAA, *QueryingAA, DepClass);
@@ -1454,6 +1471,11 @@ bool Attributor::checkForAllUses(
     bool CheckBBLivenessOnly, DepClassTy LivenessDepClass,
     bool IgnoreDroppableUses,
     function_ref<bool(const Use &OldU, const Use &NewU)> EquivalentUseCB) {
+
+  // Check virtual uses first.
+  for (VirtualUseCallbackTy &CB : VirtualUseCallbacks.lookup(&V))
+    if (!CB(*this, &QueryingAA))
+      return false;
 
   // Check the trivial case first as it catches void values.
   if (V.use_empty())
@@ -1586,7 +1608,8 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                                       const Function &Fn,
                                       bool RequireAllCallSites,
                                       const AbstractAttribute *QueryingAA,
-                                      bool &UsedAssumedInformation) {
+                                      bool &UsedAssumedInformation,
+                                      bool CheckPotentiallyDead) {
   if (RequireAllCallSites && !Fn.hasLocalLinkage()) {
     LLVM_DEBUG(
         dbgs()
@@ -1594,6 +1617,10 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
         << " has no internal linkage, hence not all call sites are known\n");
     return false;
   }
+  // Check virtual uses first.
+  for (VirtualUseCallbackTy &CB : VirtualUseCallbacks.lookup(&Fn))
+    if (!CB(*this, QueryingAA))
+      return false;
 
   SmallVector<const Use *, 8> Uses(make_pointer_range(Fn.uses()));
   for (unsigned u = 0; u < Uses.size(); ++u) {
@@ -1606,7 +1633,8 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
         dbgs() << "[Attributor] Check use: " << *U << " in " << *U.getUser()
                << "\n";
     });
-    if (isAssumedDead(U, QueryingAA, nullptr, UsedAssumedInformation,
+    if (!CheckPotentiallyDead &&
+        isAssumedDead(U, QueryingAA, nullptr, UsedAssumedInformation,
                       /* CheckBBLivenessOnly */ true)) {
       DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
                       dbgs() << "[Attributor] Dead use, skip!\n");
@@ -2068,13 +2096,23 @@ void Attributor::identifyDeadInternalFunctions() {
   if (!Configuration.DeleteFns)
     return;
 
+  // To avoid triggering an assertion in the lazy call graph we will not delete
+  // any internal library functions. We should modify the assertion though and
+  // allow internals to be deleted.
+  const auto *TLI =
+      isModulePass()
+          ? nullptr
+          : getInfoCache().getTargetLibraryInfoForFunction(*Functions.back());
+  LibFunc LF;
+
   // Identify dead internal functions and delete them. This happens outside
   // the other fixpoint analysis as we might treat potentially dead functions
   // as live to lower the number of iterations. If they happen to be dead, the
   // below fixpoint loop will identify and eliminate them.
+
   SmallVector<Function *, 8> InternalFns;
   for (Function *F : Functions)
-    if (F->hasLocalLinkage())
+    if (F->hasLocalLinkage() && (isModulePass() || !TLI->getLibFunc(*F, LF)))
       InternalFns.push_back(F);
 
   SmallPtrSet<Function *, 8> LiveInternalFns;
@@ -2153,11 +2191,6 @@ ChangeStatus Attributor::cleanupIR() {
         for (auto &Arg : RI->getFunction()->args())
           Arg.removeAttr(Attribute::Returned);
     }
-
-    // Do not perform call graph altering changes outside the SCC.
-    if (auto *CB = dyn_cast_or_null<CallBase>(I))
-      if (CB->isCallee(U))
-        return;
 
     LLVM_DEBUG(dbgs() << "Use " << *NewV << " in " << *U->getUser()
                       << " instead of " << *OldV << "\n");
@@ -2404,10 +2437,20 @@ ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
                      /* CheckBBLivenessOnly */ true))
     CS = AA.update(*this);
 
-  if (!AA.isQueryAA() && DV.empty()) {
-    // If the attribute did not query any non-fix information, the state
-    // will not change and we can indicate that right away.
-    AAState.indicateOptimisticFixpoint();
+  if (!AA.isQueryAA() && DV.empty() && !AA.getState().isAtFixpoint()) {
+    // If the AA did not rely on outside information but changed, we run it
+    // again to see if it found a fixpoint. Most AAs do but we don't require
+    // them to. Hence, it might take the AA multiple iterations to get to a
+    // fixpoint even if it does not rely on outside information, which is fine.
+    ChangeStatus RerunCS = ChangeStatus::UNCHANGED;
+    if (CS == ChangeStatus::CHANGED)
+      RerunCS = AA.update(*this);
+
+    // If the attribute did not change during the run or rerun, and it still did
+    // not query any non-fix information, the state will not change and we can
+    // indicate that right at this point.
+    if (RerunCS == ChangeStatus::UNCHANGED && !AA.isQueryAA() && DV.empty())
+      AAState.indicateOptimisticFixpoint();
   }
 
   if (!AAState.isAtFixpoint())
@@ -2824,7 +2867,8 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     // Use the CallSiteReplacementCreator to create replacement call sites.
     bool UsedAssumedInformation = false;
     bool Success = checkForAllCallSites(CallSiteReplacementCreator, *OldFn,
-                                        true, nullptr, UsedAssumedInformation);
+                                        true, nullptr, UsedAssumedInformation,
+                                        /* CheckPotentiallyDead */ true);
     (void)Success;
     assert(Success && "Assumed call site replacement to succeed!");
 

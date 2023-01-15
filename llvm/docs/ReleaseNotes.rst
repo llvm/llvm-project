@@ -114,6 +114,15 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+Changes to Interprocedural Optimizations
+----------------------------------------
+
+* Function Specialization has been integrated into IPSCCP.
+* Specialization of functions has been enabled by default at all
+  optimization levels except Os, Oz. This has exposed a mis-compilation
+  in SPEC/CINT2017rate/502.gcc_r when built via the LLVM Test Suite with
+  both LTO and PGO enabled, but without the option -fno-strict-aliasing.
+
 Changes to the AArch64 Backend
 ------------------------------
 

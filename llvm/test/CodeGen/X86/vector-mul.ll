@@ -1945,8 +1945,7 @@ define <2 x i64> @mul_v2i64_60_120(<2 x i64> %x) nounwind {
 ; don't know that we only need one pmuludq to compute the full 64 bits. This
 ; sort of issue is more likely to occur when there is a loop and one of the
 ; multiply inputs is loop invariant.
-; FIXME: We should be able to insert an AssertZExt for this.
-define <2 x i64> @mul_v2i64_zext_cross_bb(<2 x i32>* %in, <2 x i32>* %y) {
+define <2 x i64> @mul_v2i64_zext_cross_bb(ptr %in, ptr %y) {
 ; X86-SSE2-LABEL: mul_v2i64_zext_cross_bb:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax

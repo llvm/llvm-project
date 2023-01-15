@@ -101,16 +101,6 @@ static Type getI1SameShape(Type type) {
 // Printing, parsing and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 
-void ICmpOp::build(OpBuilder &builder, OperationState &result,
-                   ICmpPredicate predicate, Value lhs, Value rhs) {
-  build(builder, result, getI1SameShape(lhs.getType()), predicate, lhs, rhs);
-}
-
-void FCmpOp::build(OpBuilder &builder, OperationState &result,
-                   FCmpPredicate predicate, Value lhs, Value rhs) {
-  build(builder, result, getI1SameShape(lhs.getType()), predicate, lhs, rhs);
-}
-
 void ICmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyICmpPredicate(getPredicate()) << "\" " << getOperand(0)
     << ", " << getOperand(1);
@@ -1373,20 +1363,6 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
-// ExtractElementOp
-//===----------------------------------------------------------------------===//
-
-/// Expects vector to be an LLVM vector type and position to be an integer type.
-void LLVM::ExtractElementOp::build(OpBuilder &b, OperationState &result,
-                                   Value vector, Value position,
-                                   ArrayRef<NamedAttribute> attrs) {
-  auto vectorType = vector.getType();
-  auto llvmType = LLVM::getVectorElementType(vectorType);
-  build(b, result, llvmType, vector, position);
-  result.addAttributes(attrs);
-}
-
-//===----------------------------------------------------------------------===//
 // ExtractValueOp
 //===----------------------------------------------------------------------===//
 
@@ -2593,6 +2569,45 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
 // Utilities for LLVM::MetadataOp
 //===----------------------------------------------------------------------===//
 
+void MetadataOp::build(OpBuilder &builder, OperationState &result,
+                       StringRef symName, bool createBodyBlock,
+                       ArrayRef<NamedAttribute> attributes) {
+  result.addAttribute(getSymNameAttrName(result.name),
+                      builder.getStringAttr(symName));
+  result.attributes.append(attributes.begin(), attributes.end());
+  Region *body = result.addRegion();
+  if (createBodyBlock)
+    body->emplaceBlock();
+}
+
+ParseResult MetadataOp::parse(OpAsmParser &parser, OperationState &result) {
+  StringAttr symName;
+  if (parser.parseSymbolName(symName, getSymNameAttrName(result.name),
+                             result.attributes) ||
+      parser.parseOptionalAttrDictWithKeyword(result.attributes))
+    return failure();
+
+  Region *bodyRegion = result.addRegion();
+  if (parser.parseRegion(*bodyRegion))
+    return failure();
+
+  // If the region appeared to be empty to parseRegion(),
+  // add the body block explicitly.
+  if (bodyRegion->empty())
+    bodyRegion->emplaceBlock();
+
+  return success();
+}
+
+void MetadataOp::print(OpAsmPrinter &printer) {
+  printer << ' ';
+  printer.printSymbolName(getSymName());
+  printer.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
+                                           {getSymNameAttrName().getValue()});
+  printer << ' ';
+  printer.printRegion(getBody());
+}
+
 namespace {
 // A node of the TBAA graph.
 struct TBAAGraphNode {
@@ -2810,10 +2825,10 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
-        .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
-              DILexicalBlockFileAttr, DILocalVariableAttr, DISubprogramAttr,
-              DISubroutineTypeAttr>([&](auto attr) {
+        .Case<DIVoidResultTypeAttr, DIBasicTypeAttr, DICompileUnitAttr,
+              DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+              DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
+              DISubprogramAttr, DISubroutineTypeAttr>([&](auto attr) {
           os << decltype(attr)::getMnemonic();
           return AliasResult::OverridableAlias;
         })
@@ -2831,8 +2846,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
   /// Conservative allowlist-based inlining of operations supported so far.
-  bool isLegalToInline(Operation *op, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
     if (isPure(op))
       return true;
     return llvm::TypeSwitch<Operation *, bool>(op)

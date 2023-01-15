@@ -76,9 +76,9 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 };
 } // namespace rc_opt
 
-class RcOptTable : public opt::OptTable {
+class RcOptTable : public opt::GenericOptTable {
 public:
-  RcOptTable() : OptTable(rc_opt::InfoTable, /* IgnoreCase = */ true) {}
+  RcOptTable() : GenericOptTable(rc_opt::InfoTable, /* IgnoreCase = */ true) {}
 };
 
 enum Windres_ID {
@@ -110,10 +110,10 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 };
 } // namespace windres_opt
 
-class WindresOptTable : public opt::OptTable {
+class WindresOptTable : public opt::GenericOptTable {
 public:
   WindresOptTable()
-      : OptTable(windres_opt::InfoTable, /* IgnoreCase = */ false) {}
+      : GenericOptTable(windres_opt::InfoTable, /* IgnoreCase = */ false) {}
 };
 
 static ExitOnError ExitOnErr;

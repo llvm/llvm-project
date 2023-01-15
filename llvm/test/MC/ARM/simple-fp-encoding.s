@@ -34,9 +34,13 @@
 
         vnmul.f64       d16, d17, d16
         vnmul.f32       s0, s1, s0
+        vnmul.f64       d0, d1
+        vnmul.f32       s0, s1
 
 @ CHECK: vnmul.f64 d16, d17, d16     @ encoding: [0xe0,0x0b,0x61,0xee]
 @ CHECK: vnmul.f32 s0, s1, s0        @ encoding: [0xc0,0x0a,0x20,0xee]
+@ CHECK: vnmul.f64 d0, d0, d1        @ encoding: [0x41,0x0b,0x20,0xee]
+@ CHECK: vnmul.f32 s0, s0, s1        @ encoding: [0x60,0x0a,0x20,0xee]
 
         vcmp.f64       d17, d16
         vcmp.f32       s1, s0

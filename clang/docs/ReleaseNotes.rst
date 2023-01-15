@@ -351,6 +351,9 @@ Bug Fixes
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Clang now supports implicit conversion warnings (``-Wsign-conversion``,
+  ``Wshorten-64-to-32``, etc) for compound assignment operators (like +=, -=, <<=, >>= etc) 
+  with integral operands.
 - Clang will now check compile-time determinable string literals as format strings.
   Fixes `Issue 55805: <https://github.com/llvm/llvm-project/issues/55805>`_.
 - ``-Wformat`` now recognizes ``%b`` for the ``printf``/``scanf`` family of
@@ -447,6 +450,11 @@ Improvements to Clang's diagnostics
   ``#pragma clang __debug sloc_usage`` can also be used to request this report.
 - Clang no longer permits the keyword 'bool' in a concept declaration as a
   concepts-ts compatibility extension.
+- Clang now diagnoses overflow undefined behavior in a constant expression while
+  evaluating a compound assignment with remainder as operand.
+- Add ``-Wreturn-local-addr``, a GCC alias for ``-Wreturn-stack-address``.
+- Clang now suppresses ``-Wlogical-op-parentheses`` on ``(x && a || b)`` and ``(a || b && x)``
+  only when ``x`` is a string literal.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -738,6 +746,10 @@ C++20 Feature Support
 - Correctly handle access-checks in requires expression. Fixes `GH53364 <https://github.com/llvm/llvm-project/issues/53364>`_,
   `GH53334 <https://github.com/llvm/llvm-project/issues/53334>`_.
 
+- Implemented `P0960R3: <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0960r3.html>`_
+  and `P1975R0: <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1975r0.html>`_,
+  which allows parenthesized aggregate-initialization.
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -791,6 +803,9 @@ RISC-V Support in Clang
 - ``sifive-7-rv32`` and ``sifive-7-rv64`` are no longer supported for ``-mcpu``.
   Use ``sifive-e76``, ``sifive-s76``, or ``sifive-u74`` instead.
 - Native detections via ``-mcpu=native`` and ``-mtune=native`` are supported.
+- Fix interaction of ``-mcpu`` and ``-march``, RISC-V backend will take the
+  architecture extension union of ``-mcpu`` and ``-march`` before, and now will
+  take architecture extensions from ``-march`` if both are given.
 
 X86 Support in Clang
 --------------------

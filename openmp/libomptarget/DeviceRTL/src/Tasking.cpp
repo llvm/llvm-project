@@ -25,9 +25,10 @@ using namespace ompx;
 #pragma omp begin declare target device_type(nohost)
 
 extern "C" {
-TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, uint32_t, int32_t,
-                                        uint64_t TaskSizeInclPrivateValues,
-                                        uint64_t SharedValuesSize,
+
+TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, int32_t, int32_t,
+                                        size_t TaskSizeInclPrivateValues,
+                                        size_t SharedValuesSize,
                                         TaskFnTy TaskFn) {
   FunctionTracingRAII();
   auto TaskSizeInclPrivateValuesPadded =

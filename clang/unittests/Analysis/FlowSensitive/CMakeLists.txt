@@ -41,5 +41,6 @@ clang_target_link_libraries(ClangAnalysisFlowSensitiveTests
 target_link_libraries(ClangAnalysisFlowSensitiveTests
   PRIVATE
   clangTesting
+  LLVMTestingAnnotations
   LLVMTestingSupport
   )

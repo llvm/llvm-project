@@ -430,7 +430,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         log,
         "DWARFASTParserClang::ParseTypeFromDWARF "
         "(die = {0:x16}, decl_ctx = {1:p} (die "
-        "{2:16x})) (3:s) name = '{4}')",
+        "{2:x16})) {3} name = '{4}')",
         die.GetOffset(), static_cast<void *>(context), context_die.GetOffset(),
         die.GetTagAsCString(), die.GetName());
   }
@@ -677,7 +677,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ParseType (die = {0:16x}) {1} '{2}' "
+                "SymbolFileDWARF::ParseType (die = {0:x16}) {1} '{2}' "
                 "is Objective-C 'id' built-in type.",
                 die.GetOffset(), die.GetTagAsCString(), die.GetName());
           clang_type = m_ast.GetBasicType(eBasicTypeObjCID);

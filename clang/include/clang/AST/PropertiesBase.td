@@ -517,20 +517,16 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
   def : Creator<[{
     (void)ctx;
     APValue::LValueBase base;
-    QualType elemTy;
     if (hasBase) {
       if (isTypeInfo) {
         base = APValue::LValueBase::getTypeInfo(
             TypeInfoLValue(typeInfo->getTypePtr()), *type);
-        elemTy = base.getTypeInfoType();
       } else if (isExpr) {
         base = APValue::LValueBase(cast<Expr>(*stmt),
                                    *callIndex, *version);
-        elemTy = base.get<const Expr *>()->getType();
       } else {
         base = APValue::LValueBase(cast<ValueDecl>(*decl),
                                    *callIndex, *version);
-        elemTy = base.get<const ValueDecl *>()->getType();
       }
     }
     CharUnits offset = CharUnits::fromQuantity(offsetQuantity);
@@ -543,7 +539,6 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     auto pathLength = lvaluePath->Path.size();
     APValue::LValuePathEntry *path = result.setLValueUninit(
         base, offset, pathLength, isLValueOnePastTheEnd, isNullPtr).data();
-    assert(lvaluePath->getType() == elemTy && "Unexpected type reference!");
     llvm::copy(lvaluePath->Path, path);
     return result;
   }]>;

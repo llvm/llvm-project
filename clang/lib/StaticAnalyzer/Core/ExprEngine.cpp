@@ -1901,6 +1901,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ConceptSpecializationExprClass:
     case Stmt::CXXRewrittenBinaryOperatorClass:
     case Stmt::RequiresExprClass:
+    case Expr::CXXParenListInitExprClass:
       // Fall through.
 
     // Cases we intentionally don't evaluate, since they don't need
@@ -3461,7 +3462,8 @@ ProgramStateRef ExprEngine::processPointerEscapedOnBind(
   for (const std::pair<SVal, SVal> &LocAndVal : LocAndVals) {
     // Cases (1) and (2).
     const MemRegion *MR = LocAndVal.first.getAsRegion();
-    if (!MR || !MR->hasStackStorage()) {
+    if (!MR ||
+        !isa<StackSpaceRegion, StaticGlobalSpaceRegion>(MR->getMemorySpace())) {
       Escaped.push_back(LocAndVal.second);
       continue;
     }

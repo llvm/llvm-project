@@ -10,7 +10,6 @@ module {
     llvm.tbaa_type_desc @tbaa_type_desc_5 {id = "int", members = {<@tbaa_type_desc_1, 0>}}
     llvm.tbaa_type_desc @tbaa_type_desc_6 {id = "agg1_t", members = {<@tbaa_type_desc_5, 0>, <@tbaa_type_desc_5, 4>}}
     llvm.tbaa_tag @tbaa_tag_7 {access_type = @tbaa_type_desc_5, base_type = @tbaa_type_desc_6, offset = 0 : i64, constant}
-    llvm.return
   }
   llvm.func @tbaa2(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
     %0 = llvm.mlir.constant(0 : i32) : i32
