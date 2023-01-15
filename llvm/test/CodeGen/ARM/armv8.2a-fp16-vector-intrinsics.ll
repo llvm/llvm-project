@@ -1437,14 +1437,14 @@ entry:
   ret <8 x half> %shuffle.i
 }
 
-define <4 x half> @test_vld_dup1_4xhalf(half* %b) {
+define <4 x half> @test_vld_dup1_4xhalf(ptr %b) {
 ; CHECK-LABEL: test_vld_dup1_4xhalf:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0[]}, [r0:16]
 ; CHECK-NEXT:    bx lr
 
 entry:
-  %b1 = load half, half* %b, align 2
+  %b1 = load half, ptr %b, align 2
   %vecinit = insertelement <4 x half> undef, half %b1, i32 0
   %vecinit2 = insertelement <4 x half> %vecinit, half %b1, i32 1
   %vecinit3 = insertelement <4 x half> %vecinit2, half %b1, i32 2
@@ -1452,14 +1452,14 @@ entry:
   ret <4 x half> %vecinit4
 }
 
-define <8 x half> @test_vld_dup1_8xhalf(half* %b) local_unnamed_addr {
+define <8 x half> @test_vld_dup1_8xhalf(ptr %b) local_unnamed_addr {
 ; CHECK-LABEL: test_vld_dup1_8xhalf:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.16 {d0[], d1[]}, [r0:16]
 ; CHECK-NEXT:    bx lr
 
 entry:
-  %b1 = load half, half* %b, align 2
+  %b1 = load half, ptr %b, align 2
   %vecinit = insertelement <8 x half> undef, half %b1, i32 0
   %vecinit8 = shufflevector <8 x half> %vecinit, <8 x half> undef, <8 x i32> zeroinitializer
   ret <8 x half> %vecinit8
@@ -1535,20 +1535,20 @@ declare <4 x half> @llvm.fma.v4f16(<4 x half>, <4 x half>, <4 x half>)
 declare <8 x half> @llvm.fma.v8f16(<8 x half>, <8 x half>, <8 x half>)
 declare <8 x i8> @llvm.arm.neon.vbsl.v8i8(<8 x i8>, <8 x i8>, <8 x i8>)
 declare <16 x i8> @llvm.arm.neon.vbsl.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)
-declare { <8 x half>, <8 x half> } @llvm.arm.neon.vld2lane.v8f16.p0i8(i8*, <8 x half>, <8 x half>, i32, i32)
-declare { <4 x half>, <4 x half> } @llvm.arm.neon.vld2lane.v4f16.p0i8(i8*, <4 x half>, <4 x half>, i32, i32)
-declare { <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld3lane.v8f16.p0i8(i8*, <8 x half>, <8 x half>, <8 x half>, i32, i32)
-declare { <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld3lane.v4f16.p0i8(i8*, <4 x half>, <4 x half>, <4 x half>, i32, i32)
-declare { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld4lane.v8f16.p0i8(i8*, <8 x half>, <8 x half>, <8 x half>, <8 x half>, i32, i32)
-declare { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld4lane.v4f16.p0i8(i8*, <4 x half>, <4 x half>, <4 x half>, <4 x half>, i32, i32)
-declare void @llvm.arm.neon.vst2lane.p0i8.v8f16(i8*, <8 x half>, <8 x half>, i32, i32)
-declare void @llvm.arm.neon.vst2lane.p0i8.v4f16(i8*, <4 x half>, <4 x half>, i32, i32)
-declare void @llvm.arm.neon.vst3lane.p0i8.v8f16(i8*, <8 x half>, <8 x half>, <8 x half>, i32, i32)
-declare void @llvm.arm.neon.vst3lane.p0i8.v4f16(i8*, <4 x half>, <4 x half>, <4 x half>, i32, i32)
-declare void @llvm.arm.neon.vst4lane.p0i8.v8f16(i8*, <8 x half>, <8 x half>, <8 x half>, <8 x half>, i32, i32)
-declare void @llvm.arm.neon.vst4lane.p0i8.v4f16(i8*, <4 x half>, <4 x half>, <4 x half>, <4 x half>, i32, i32)
+declare { <8 x half>, <8 x half> } @llvm.arm.neon.vld2lane.v8f16.p0(ptr, <8 x half>, <8 x half>, i32, i32)
+declare { <4 x half>, <4 x half> } @llvm.arm.neon.vld2lane.v4f16.p0(ptr, <4 x half>, <4 x half>, i32, i32)
+declare { <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld3lane.v8f16.p0(ptr, <8 x half>, <8 x half>, <8 x half>, i32, i32)
+declare { <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld3lane.v4f16.p0(ptr, <4 x half>, <4 x half>, <4 x half>, i32, i32)
+declare { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld4lane.v8f16.p0(ptr, <8 x half>, <8 x half>, <8 x half>, <8 x half>, i32, i32)
+declare { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld4lane.v4f16.p0(ptr, <4 x half>, <4 x half>, <4 x half>, <4 x half>, i32, i32)
+declare void @llvm.arm.neon.vst2lane.p0.v8f16(ptr, <8 x half>, <8 x half>, i32, i32)
+declare void @llvm.arm.neon.vst2lane.p0.v4f16(ptr, <4 x half>, <4 x half>, i32, i32)
+declare void @llvm.arm.neon.vst3lane.p0.v8f16(ptr, <8 x half>, <8 x half>, <8 x half>, i32, i32)
+declare void @llvm.arm.neon.vst3lane.p0.v4f16(ptr, <4 x half>, <4 x half>, <4 x half>, i32, i32)
+declare void @llvm.arm.neon.vst4lane.p0.v8f16(ptr, <8 x half>, <8 x half>, <8 x half>, <8 x half>, i32, i32)
+declare void @llvm.arm.neon.vst4lane.p0.v4f16(ptr, <4 x half>, <4 x half>, <4 x half>, <4 x half>, i32, i32)
 
-define { <8 x half>, <8 x half> } @test_vld2q_lane_f16(i8*, <8 x half>, <8 x half>) {
+define { <8 x half>, <8 x half> } @test_vld2q_lane_f16(ptr, <8 x half>, <8 x half>) {
 ; CHECK-LABEL: test_vld2q_lane_f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
@@ -1556,11 +1556,11 @@ define { <8 x half>, <8 x half> } @test_vld2q_lane_f16(i8*, <8 x half>, <8 x hal
 ; CHECK-NEXT:    vld2.16 {d1[3], d3[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %3 = tail call { <8 x half>, <8 x half> } @llvm.arm.neon.vld2lane.v8f16.p0i8(i8* %0, <8 x half> %1, <8 x half> %2, i32 7, i32 2)
+  %3 = tail call { <8 x half>, <8 x half> } @llvm.arm.neon.vld2lane.v8f16.p0(ptr %0, <8 x half> %1, <8 x half> %2, i32 7, i32 2)
   ret { <8 x half>, <8 x half> } %3
 }
 
-define { <4 x half>, <4 x half> } @test_vld2_lane_f16(i8*, <4 x half>, <4 x half>) {
+define { <4 x half>, <4 x half> } @test_vld2_lane_f16(ptr, <4 x half>, <4 x half>) {
 ; CHECK-LABEL: test_vld2_lane_f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0 def $q0
@@ -1568,11 +1568,11 @@ define { <4 x half>, <4 x half> } @test_vld2_lane_f16(i8*, <4 x half>, <4 x half
 ; CHECK-NEXT:    vld2.16 {d0[3], d1[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %3 = tail call { <4 x half>, <4 x half> } @llvm.arm.neon.vld2lane.v4f16.p0i8(i8* %0, <4 x half> %1, <4 x half> %2, i32 3, i32 2)
+  %3 = tail call { <4 x half>, <4 x half> } @llvm.arm.neon.vld2lane.v4f16.p0(ptr %0, <4 x half> %1, <4 x half> %2, i32 3, i32 2)
   ret { <4 x half>, <4 x half> } %3
 }
 
-define { <8 x half>, <8 x half>, <8 x half> } @test_vld3q_lane_f16(i8*, <8 x half>, <8 x half>, <8 x half>) {
+define { <8 x half>, <8 x half>, <8 x half> } @test_vld3q_lane_f16(ptr, <8 x half>, <8 x half>, <8 x half>) {
 ; CHECK-LABEL: test_vld3q_lane_f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -1581,11 +1581,11 @@ define { <8 x half>, <8 x half>, <8 x half> } @test_vld3q_lane_f16(i8*, <8 x hal
 ; CHECK-NEXT:    vld3.16 {d1[3], d3[3], d5[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %4 = tail call { <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld3lane.v8f16.p0i8(i8* %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, i32 7, i32 2)
+  %4 = tail call { <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld3lane.v8f16.p0(ptr %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, i32 7, i32 2)
   ret { <8 x half>, <8 x half>, <8 x half> } %4
 }
 
-define { <4 x half>, <4 x half>, <4 x half> } @test_vld3_lane_f16(i8*, <4 x half>, <4 x half>, <4 x half>) {
+define { <4 x half>, <4 x half>, <4 x half> } @test_vld3_lane_f16(ptr, <4 x half>, <4 x half>, <4 x half>) {
 ; CHECK-LABEL: test_vld3_lane_f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
@@ -1594,10 +1594,10 @@ define { <4 x half>, <4 x half>, <4 x half> } @test_vld3_lane_f16(i8*, <4 x half
 ; CHECK-NEXT:    vld3.16 {d0[3], d1[3], d2[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %4 = tail call { <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld3lane.v4f16.p0i8(i8* %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, i32 3, i32 2)
+  %4 = tail call { <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld3lane.v4f16.p0(ptr %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, i32 3, i32 2)
   ret { <4 x half>, <4 x half>, <4 x half> } %4
 }
-define { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @test_vld4lane_v8f16_p0i8(i8*, <8 x half>, <8 x half>, <8 x half>, <8 x half>) {
+define { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @test_vld4lane_v8f16_p0i8(ptr, <8 x half>, <8 x half>, <8 x half>, <8 x half>) {
 ; CHECK-LABEL: test_vld4lane_v8f16_p0i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -1607,10 +1607,10 @@ define { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @test_vld4lane_v8f16_p
 ; CHECK-NEXT:    vld4.16 {d1[3], d3[3], d5[3], d7[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %5 = tail call { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld4lane.v8f16.p0i8(i8* %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, <8 x half> %4, i32 7, i32 2)
+  %5 = tail call { <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.arm.neon.vld4lane.v8f16.p0(ptr %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, <8 x half> %4, i32 7, i32 2)
   ret { <8 x half>, <8 x half>, <8 x half>, <8 x half> } %5
 }
-define { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @test_vld4lane_v4f16_p0i8(i8*, <4 x half>, <4 x half>, <4 x half>, <4 x half>) {
+define { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @test_vld4lane_v4f16_p0i8(ptr, <4 x half>, <4 x half>, <4 x half>, <4 x half>) {
 ; CHECK-LABEL: test_vld4lane_v4f16_p0i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d3 killed $d3 killed $q0_q1 def $q0_q1
@@ -1620,10 +1620,10 @@ define { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @test_vld4lane_v4f16_p
 ; CHECK-NEXT:    vld4.16 {d0[3], d1[3], d2[3], d3[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
- %5 = tail call { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld4lane.v4f16.p0i8(i8* %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, <4 x half> %4, i32 3, i32 2)
+ %5 = tail call { <4 x half>, <4 x half>, <4 x half>, <4 x half> } @llvm.arm.neon.vld4lane.v4f16.p0(ptr %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, <4 x half> %4, i32 3, i32 2)
  ret { <4 x half>, <4 x half>, <4 x half>, <4 x half> } %5
 }
-define void @test_vst2lane_p0i8_v8f16(i8*, <8 x half>, <8 x half>) {
+define void @test_vst2lane_p0i8_v8f16(ptr, <8 x half>, <8 x half>) {
 ; CHECK-LABEL: test_vst2lane_p0i8_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
@@ -1631,10 +1631,10 @@ define void @test_vst2lane_p0i8_v8f16(i8*, <8 x half>, <8 x half>) {
 ; CHECK-NEXT:    vst2.16 {d0[0], d2[0]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  tail call void @llvm.arm.neon.vst2lane.p0i8.v8f16(i8* %0, <8 x half> %1, <8 x half> %2, i32 0, i32 1)
+  tail call void @llvm.arm.neon.vst2lane.p0.v8f16(ptr %0, <8 x half> %1, <8 x half> %2, i32 0, i32 1)
   ret void
 }
-define void @test_vst2lane_p0i8_v4f16(i8*, <4 x half>, <4 x half>) {
+define void @test_vst2lane_p0i8_v4f16(ptr, <4 x half>, <4 x half>) {
 ; CHECK-LABEL: test_vst2lane_p0i8_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0 def $q0
@@ -1642,10 +1642,10 @@ define void @test_vst2lane_p0i8_v4f16(i8*, <4 x half>, <4 x half>) {
 ; CHECK-NEXT:    vst2.16 {d0[0], d1[0]}, [r0:32]
 ; CHECK-NEXT:    bx lr
 entry:
-  tail call void @llvm.arm.neon.vst2lane.p0i8.v4f16(i8* %0, <4 x half> %1, <4 x half> %2, i32 0, i32 0)
+  tail call void @llvm.arm.neon.vst2lane.p0.v4f16(ptr %0, <4 x half> %1, <4 x half> %2, i32 0, i32 0)
   ret void
 }
-define void @test_vst3lane_p0i8_v8f16(i8*, <8 x half>, <8 x half>, <8 x half>) {
+define void @test_vst3lane_p0i8_v8f16(ptr, <8 x half>, <8 x half>, <8 x half>) {
 ; CHECK-LABEL: test_vst3lane_p0i8_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -1654,10 +1654,10 @@ define void @test_vst3lane_p0i8_v8f16(i8*, <8 x half>, <8 x half>, <8 x half>) {
 ; CHECK-NEXT:    vst3.16 {d0[0], d2[0], d4[0]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  tail call void @llvm.arm.neon.vst3lane.p0i8.v8f16(i8* %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, i32 0, i32 0)
+  tail call void @llvm.arm.neon.vst3lane.p0.v8f16(ptr %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, i32 0, i32 0)
   ret void
 }
-define void @test_vst3lane_p0i8_v4f16(i8*, <4 x half>, <4 x half>, <4 x half>) {
+define void @test_vst3lane_p0i8_v4f16(ptr, <4 x half>, <4 x half>, <4 x half>) {
 ; CHECK-LABEL: test_vst3lane_p0i8_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
@@ -1666,10 +1666,10 @@ define void @test_vst3lane_p0i8_v4f16(i8*, <4 x half>, <4 x half>, <4 x half>) {
 ; CHECK-NEXT:    vst3.16 {d0[0], d1[0], d2[0]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  tail call void @llvm.arm.neon.vst3lane.p0i8.v4f16(i8* %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, i32 0, i32 0)
+  tail call void @llvm.arm.neon.vst3lane.p0.v4f16(ptr %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, i32 0, i32 0)
   ret void
 }
-define void @test_vst4lane_p0i8_v8f16(i8*, <8 x half>, <8 x half>, <8 x half>, <8 x half>) {
+define void @test_vst4lane_p0i8_v8f16(ptr, <8 x half>, <8 x half>, <8 x half>, <8 x half>) {
 ; CHECK-LABEL: test_vst4lane_p0i8_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
@@ -1679,10 +1679,10 @@ define void @test_vst4lane_p0i8_v8f16(i8*, <8 x half>, <8 x half>, <8 x half>, <
 ; CHECK-NEXT:    vst4.16 {d0[0], d2[0], d4[0], d6[0]}, [r0:64]
 ; CHECK-NEXT:    bx lr
 entry:
-  tail call void @llvm.arm.neon.vst4lane.p0i8.v8f16(i8* %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, <8 x half> %4, i32 0, i32 0)
+  tail call void @llvm.arm.neon.vst4lane.p0.v8f16(ptr %0, <8 x half> %1, <8 x half> %2, <8 x half> %3, <8 x half> %4, i32 0, i32 0)
   ret void
 }
-define void @test_vst4lane_p0i8_v4f16(i8*, <4 x half>, <4 x half>, <4 x half>, <4 x half>) {
+define void @test_vst4lane_p0i8_v4f16(ptr, <4 x half>, <4 x half>, <4 x half>, <4 x half>) {
 ; CHECK-LABEL: test_vst4lane_p0i8_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d3 killed $d3 killed $q0_q1 def $q0_q1
@@ -1692,6 +1692,6 @@ define void @test_vst4lane_p0i8_v4f16(i8*, <4 x half>, <4 x half>, <4 x half>, <
 ; CHECK-NEXT:    vst4.16 {d0[0], d1[0], d2[0], d3[0]}, [r0:64]
 ; CHECK-NEXT:    bx lr
 entry:
-  tail call void @llvm.arm.neon.vst4lane.p0i8.v4f16(i8* %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, <4 x half> %4, i32 0, i32 0)
+  tail call void @llvm.arm.neon.vst4lane.p0.v4f16(ptr %0, <4 x half> %1, <4 x half> %2, <4 x half> %3, <4 x half> %4, i32 0, i32 0)
   ret void
 }

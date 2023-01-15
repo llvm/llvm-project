@@ -21,6 +21,7 @@
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stoptheworld.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+#include "sanitizer_common/sanitizer_thread_registry.h"
 
 // LeakSanitizer relies on some Glibc's internals (e.g. TLS machinery) on Linux.
 // Also, LSan doesn't like 32 bit architectures
@@ -90,7 +91,6 @@ bool WordIsPoisoned(uptr addr);
 // Wrappers for ThreadRegistry access.
 void LockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
 void UnlockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
-ThreadRegistry *GetThreadRegistryLocked();
 // If called from the main thread, updates the main thread's TID in the thread
 // registry. We need this to handle processes that fork() without a subsequent
 // exec(), which invalidates the recorded TID. To update it, we must call
@@ -105,6 +105,8 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches);
 void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg);
+void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs);
+void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads);
 
 //// --------------------------------------------------------------------------
 //// Allocator prototypes.
@@ -142,8 +144,6 @@ void ForEachChunk(ForEachChunkCallback callback, void *arg);
 
 // Helper for __lsan_ignore_object().
 IgnoreObjectResult IgnoreObjectLocked(const void *p);
-
-void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs);
 
 // The rest of the LSan interface which is implemented by library.
 

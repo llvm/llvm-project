@@ -25,7 +25,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -593,14 +592,14 @@ private:
 
   /// Assign new LoopIDs for the partition's cloned loop.
   void setNewLoopID(MDNode *OrigLoopID, InstPartition *Part) {
-    Optional<MDNode *> PartitionID = makeFollowupLoopID(
+    std::optional<MDNode *> PartitionID = makeFollowupLoopID(
         OrigLoopID,
         {LLVMLoopDistributeFollowupAll,
          Part->hasDepCycle() ? LLVMLoopDistributeFollowupSequential
                              : LLVMLoopDistributeFollowupCoincident});
     if (PartitionID) {
       Loop *NewLoop = Part->getDistributedLoop();
-      NewLoop->setLoopID(PartitionID.value());
+      NewLoop->setLoopID(*PartitionID);
     }
   }
 };
@@ -820,12 +819,10 @@ public:
       // The unversioned loop will not be changed, so we inherit all attributes
       // from the original loop, but remove the loop distribution metadata to
       // avoid to distribute it again.
-      MDNode *UnversionedLoopID =
-          makeFollowupLoopID(OrigLoopID,
-                             {LLVMLoopDistributeFollowupAll,
-                              LLVMLoopDistributeFollowupFallback},
-                             "llvm.loop.distribute.", true)
-              .value();
+      MDNode *UnversionedLoopID = *makeFollowupLoopID(
+          OrigLoopID,
+          {LLVMLoopDistributeFollowupAll, LLVMLoopDistributeFollowupFallback},
+          "llvm.loop.distribute.", true);
       LVer.getNonVersionedLoop()->setLoopID(UnversionedLoopID);
     }
 
@@ -892,7 +889,7 @@ public:
   /// If the optional has a value, it indicates whether distribution was forced
   /// to be enabled (true) or disabled (false).  If the optional has no value
   /// distribution was not forced either way.
-  const Optional<bool> &isForced() const { return IsForced; }
+  const std::optional<bool> &isForced() const { return IsForced; }
 
 private:
   /// Filter out checks between pointers from the same partition.
@@ -936,7 +933,7 @@ private:
   /// Check whether the loop metadata is forcing distribution to be
   /// enabled/disabled.
   void setForced() {
-    Optional<const MDOperand *> Value =
+    std::optional<const MDOperand *> Value =
         findStringMetadataForLoop(L, "llvm.loop.distribute.enable");
     if (!Value)
       return;
@@ -963,7 +960,7 @@ private:
   /// If the optional has a value, it indicates whether distribution was forced
   /// to be enabled (true) or disabled (false).  If the optional has no value
   /// distribution was not forced either way.
-  Optional<bool> IsForced;
+  std::optional<bool> IsForced;
 };
 
 } // end anonymous namespace

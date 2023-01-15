@@ -667,16 +667,15 @@ void COFFDumper::printFileHeaders() {
 
   {
     DictScope D(W, "ImageFileHeader");
-    W.printEnum  ("Machine", Obj->getMachine(),
-                    makeArrayRef(ImageFileMachineType));
+    W.printEnum("Machine", Obj->getMachine(), ArrayRef(ImageFileMachineType));
     W.printNumber("SectionCount", Obj->getNumberOfSections());
     W.printHex   ("TimeDateStamp", FormattedTime, Obj->getTimeDateStamp());
     W.printHex   ("PointerToSymbolTable", Obj->getPointerToSymbolTable());
     W.printNumber("SymbolCount", Obj->getNumberOfSymbols());
     W.printNumber("StringTableSize", Obj->getStringTableSize());
     W.printNumber("OptionalHeaderSize", Obj->getSizeOfOptionalHeader());
-    W.printFlags ("Characteristics", Obj->getCharacteristics(),
-                    makeArrayRef(ImageFileCharacteristics));
+    W.printFlags("Characteristics", Obj->getCharacteristics(),
+                 ArrayRef(ImageFileCharacteristics));
   }
 
   // Print PE header. This header does not exist if this is an object file and
@@ -737,9 +736,10 @@ void COFFDumper::printPEHeader(const PEHeader *Hdr) {
   W.printNumber("MinorSubsystemVersion", Hdr->MinorSubsystemVersion);
   W.printNumber("SizeOfImage", Hdr->SizeOfImage);
   W.printNumber("SizeOfHeaders", Hdr->SizeOfHeaders);
-  W.printEnum  ("Subsystem", Hdr->Subsystem, makeArrayRef(PEWindowsSubsystem));
-  W.printFlags ("Characteristics", Hdr->DLLCharacteristics,
-                makeArrayRef(PEDLLCharacteristics));
+  W.printHex   ("CheckSum", Hdr->CheckSum);
+  W.printEnum("Subsystem", Hdr->Subsystem, ArrayRef(PEWindowsSubsystem));
+  W.printFlags("Characteristics", Hdr->DLLCharacteristics,
+               ArrayRef(PEDLLCharacteristics));
   W.printNumber("SizeOfStackReserve", Hdr->SizeOfStackReserve);
   W.printNumber("SizeOfStackCommit", Hdr->SizeOfStackCommit);
   W.printNumber("SizeOfHeapReserve", Hdr->SizeOfHeapReserve);
@@ -774,7 +774,7 @@ void COFFDumper::printCOFFDebugDirectory() {
     W.printHex("TimeDateStamp", FormattedTime, D.TimeDateStamp);
     W.printHex("MajorVersion", D.MajorVersion);
     W.printHex("MinorVersion", D.MinorVersion);
-    W.printEnum("Type", D.Type, makeArrayRef(ImageDebugType));
+    W.printEnum("Type", D.Type, ArrayRef(ImageDebugType));
     W.printHex("SizeOfData", D.SizeOfData);
     W.printHex("AddressOfRawData", D.AddressOfRawData);
     W.printHex("PointerToRawData", D.PointerToRawData);
@@ -791,7 +791,7 @@ void COFFDumper::printCOFFDebugDirectory() {
       DictScope PDBScope(W, "PDBInfo");
       W.printHex("PDBSignature", DebugInfo->Signature.CVSignature);
       if (DebugInfo->Signature.CVSignature == OMF::Signature::PDB70) {
-        W.printBinary("PDBGUID", makeArrayRef(DebugInfo->PDB70.Signature));
+        W.printBinary("PDBGUID", ArrayRef(DebugInfo->PDB70.Signature));
         W.printNumber("PDBAge", DebugInfo->PDB70.Age);
         W.printString("PDBFileName", PDBFileName);
       }
@@ -807,7 +807,7 @@ void COFFDumper::printCOFFDebugDirectory() {
         // but that might change in the future
         uint16_t Characteristics = RawData[0];
         W.printFlags("ExtendedCharacteristics", Characteristics,
-                     makeArrayRef(PEExtendedDLLCharacteristics));
+                     ArrayRef(PEExtendedDLLCharacteristics));
       }
       W.printBinaryBlock("RawData", RawData);
     }
@@ -934,8 +934,7 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
   W.printHex("GuardCFCheckDispatch", Conf->GuardCFCheckDispatch);
   W.printHex("GuardCFFunctionTable", Conf->GuardCFFunctionTable);
   W.printNumber("GuardCFFunctionCount", Conf->GuardCFFunctionCount);
-  W.printFlags("GuardFlags", Conf->GuardFlags,
-               makeArrayRef(PELoadConfigGuardFlags),
+  W.printFlags("GuardFlags", Conf->GuardFlags, ArrayRef(PELoadConfigGuardFlags),
                (uint32_t)COFF::GuardFlags::CF_FUNCTION_TABLE_SIZE_MASK);
 
   Tables.GuardFidTableVA = Conf->GuardCFFunctionTable;
@@ -1081,7 +1080,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
       W.printHex("IgnoredSubsectionKind", SubType);
       SubType &= ~SubsectionIgnoreFlag;
     }
-    W.printEnum("SubSectionType", SubType, makeArrayRef(SubSectionTypes));
+    W.printEnum("SubSectionType", SubType, ArrayRef(SubSectionTypes));
     W.printHex("SubSectionSize", SubSectionSize);
 
     // Get the contents of the subsection.
@@ -1178,7 +1177,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         W.printHex("MaxStackSize", FD.MaxStackSize);
         W.printHex("PrologSize", FD.PrologSize);
         W.printHex("SavedRegsSize", FD.SavedRegsSize);
-        W.printFlags("Flags", FD.Flags, makeArrayRef(FrameDataFlags));
+        W.printFlags("Flags", FD.Flags, ArrayRef(FrameDataFlags));
 
         // The FrameFunc string is a small RPN program. It can be broken up into
         // statements that end in the '=' operator, which assigns the value on
@@ -1296,7 +1295,7 @@ void COFFDumper::printCodeViewFileChecksums(StringRef Subsection) {
     W.printHex("Filename", Filename, FC.FileNameOffset);
     W.printHex("ChecksumSize", FC.Checksum.size());
     W.printEnum("ChecksumKind", uint8_t(FC.Kind),
-                makeArrayRef(FileChecksumKindNames));
+                ArrayRef(FileChecksumKindNames));
 
     W.printBinary("ChecksumBytes", FC.Checksum);
   }
@@ -1435,9 +1434,9 @@ void COFFDumper::printSectionHeaders() {
     W.printHex   ("PointerToLineNumbers", Section->PointerToLinenumbers);
     W.printNumber("RelocationCount", Section->NumberOfRelocations);
     W.printNumber("LineNumberCount", Section->NumberOfLinenumbers);
-    W.printFlags ("Characteristics", Section->Characteristics,
-                    makeArrayRef(ImageSectionCharacteristics),
-                    COFF::SectionCharacteristics(0x00F00000));
+    W.printFlags("Characteristics", Section->Characteristics,
+                 ArrayRef(ImageSectionCharacteristics),
+                 COFF::SectionCharacteristics(0x00F00000));
 
     if (opts::SectionRelocations) {
       ListScope D(W, "Relocations");
@@ -1573,11 +1572,10 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
   W.printString("Name", SymbolName);
   W.printNumber("Value", Symbol.getValue());
   W.printNumber("Section", SectionName, Symbol.getSectionNumber());
-  W.printEnum  ("BaseType", Symbol.getBaseType(), makeArrayRef(ImageSymType));
-  W.printEnum  ("ComplexType", Symbol.getComplexType(),
-                                                   makeArrayRef(ImageSymDType));
-  W.printEnum  ("StorageClass", Symbol.getStorageClass(),
-                                                   makeArrayRef(ImageSymClass));
+  W.printEnum("BaseType", Symbol.getBaseType(), ArrayRef(ImageSymType));
+  W.printEnum("ComplexType", Symbol.getComplexType(), ArrayRef(ImageSymDType));
+  W.printEnum("StorageClass", Symbol.getStorageClass(),
+              ArrayRef(ImageSymClass));
   W.printNumber("AuxSymbolCount", Symbol.getNumberOfAuxSymbols());
 
   for (uint8_t I = 0; I < Symbol.getNumberOfAuxSymbols(); ++I) {
@@ -1599,8 +1597,8 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
 
       DictScope AS(W, "AuxWeakExternal");
       W.printNumber("Linked", getSymbolName(Aux->TagIndex), Aux->TagIndex);
-      W.printEnum  ("Search", Aux->Characteristics,
-                    makeArrayRef(WeakExternalCharacteristics));
+      W.printEnum("Search", Aux->Characteristics,
+                  ArrayRef(WeakExternalCharacteristics));
 
     } else if (Symbol.isFileRecord()) {
       const char *FileName;
@@ -1625,7 +1623,7 @@ void COFFDumper::printSymbol(const SymbolRef &Sym) {
       W.printNumber("LineNumberCount", Aux->NumberOfLinenumbers);
       W.printHex("Checksum", Aux->CheckSum);
       W.printNumber("Number", AuxNumber);
-      W.printEnum("Selection", Aux->Selection, makeArrayRef(ImageCOMDATSelect));
+      W.printEnum("Selection", Aux->Selection, ArrayRef(ImageCOMDATSelect));
 
       if (Section && Section->Characteristics & COFF::IMAGE_SCN_LNK_COMDAT
           && Aux->Selection == COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
@@ -1681,7 +1679,7 @@ void COFFDumper::printUnwindInfo() {
   }
   default:
     W.printEnum("unsupported Image Machine", Obj->getMachine(),
-                makeArrayRef(ImageFileMachineType));
+                ArrayRef(ImageFileMachineType));
     break;
   }
 }
@@ -1929,7 +1927,7 @@ void COFFDumper::printResourceDirectoryTable(
         std::copy(RawEntryNameString.begin(), RawEntryNameString.end(),
                   EndianCorrectedNameString.begin() + 1);
         EndianCorrectedNameString[0] = UNI_UTF16_BYTE_ORDER_MARK_SWAPPED;
-        RawEntryNameString = makeArrayRef(EndianCorrectedNameString);
+        RawEntryNameString = ArrayRef(EndianCorrectedNameString);
       }
       std::string EntryNameString;
       if (!llvm::convertUTF16ToUTF8String(RawEntryNameString, EntryNameString))
@@ -2141,6 +2139,6 @@ void COFFDumper::printCOFFTLSDirectory(
   W.printHex("AddressOfCallBacks", TlsTable->AddressOfCallBacks);
   W.printHex("SizeOfZeroFill", TlsTable->SizeOfZeroFill);
   W.printFlags("Characteristics", TlsTable->Characteristics,
-               makeArrayRef(ImageSectionCharacteristics),
+               ArrayRef(ImageSectionCharacteristics),
                COFF::SectionCharacteristics(COFF::IMAGE_SCN_ALIGN_MASK));
 }

@@ -15,9 +15,9 @@
 ; RUN: llc -mtriple=mips64-unknown-freebsd11.0 < %s -asm-verbose -relocation-model=pic | \
 ; RUN:     FileCheck -check-prefixes=ALL,FREEBSD,FREEBSD-NEW,N64 %s
 
-@_ZTISt9exception = external constant i8*
+@_ZTISt9exception = external constant ptr
 
-define i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @main() personality ptr @__gxx_personality_v0 {
 ; ALL: .cfi_startproc
 
 ; Linux must rely on the assembler/linker converting the encodings.
@@ -36,9 +36,9 @@ entry:
 ; ALL: jalr
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-    catch i8* null
-    catch i8* bitcast (i8** @_ZTISt9exception to i8*)
+  %0 = landingpad { ptr, i32 }
+    catch ptr null
+    catch ptr @_ZTISt9exception
   ret i32 0
 
 cont:

@@ -332,7 +332,7 @@ void LVElement::resolveFullname(LVElement *BaseType, StringRef Name) {
          "Extra double spaces in name.");
 
   LLVM_DEBUG({ dbgs() << "Fullname = '" << Fullname << "'\n"; });
-  setName(Fullname.c_str());
+  setName(Fullname);
 }
 
 void LVElement::setFile(LVElement *Reference) {

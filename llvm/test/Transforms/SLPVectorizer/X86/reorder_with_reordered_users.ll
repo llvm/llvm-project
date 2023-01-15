@@ -42,28 +42,22 @@
 ; comment out reorderTopToBottom() and remove the stores.
 
 
-define void @reorder_crash(float* %ptr) {
+define void @reorder_crash(ptr %ptr) {
 ; CHECK-LABEL: @reorder_crash(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, float* [[PTR:%.*]], i64 0
 ; CHECK-NEXT:    br i1 undef, label [[BB0:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb0:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb12:
 ; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[TMP4]], <4 x float>* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[PTR]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, <4 x float>* [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 0, i32 1>
 ; CHECK-NEXT:    br label [[BB3]]
@@ -72,24 +66,23 @@ define void @reorder_crash(float* %ptr) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %gep0 = getelementptr inbounds float, float* %ptr, i64 0
-  %gep1 = getelementptr inbounds float, float* %ptr, i64 1
-  %gep2 = getelementptr inbounds float, float* %ptr, i64 2
-  %gep3 = getelementptr inbounds float, float* %ptr, i64 3
+  %gep1 = getelementptr inbounds float, ptr %ptr, i64 1
+  %gep2 = getelementptr inbounds float, ptr %ptr, i64 2
+  %gep3 = getelementptr inbounds float, ptr %ptr, i64 3
   br i1 undef, label %bb0, label %bb12
 
 bb0:
   ; Used by phi in this order: 1, 0, 2, 3
-  %ld00 = load float, float* %gep0
-  %ld01 = load float, float* %gep1
-  %ld02 = load float, float* %gep2
-  %ld03 = load float, float* %gep3
+  %ld00 = load float, ptr %ptr
+  %ld01 = load float, ptr %gep1
+  %ld02 = load float, ptr %gep2
+  %ld03 = load float, ptr %gep3
 
   ; External store users in natural order 0, 1, 2, 3
-  store float %ld00, float *%gep0
-  store float %ld01, float *%gep1
-  store float %ld02, float *%gep2
-  store float %ld03, float *%gep3
+  store float %ld00, ptr %ptr
+  store float %ld01, ptr %gep1
+  store float %ld02, ptr %gep2
+  store float %ld03, ptr %gep3
   br label %bb3
 
 bb12:
@@ -97,25 +90,25 @@ bb12:
 
 bb1:
   ; Used by phi in this order: 1, 0, 2, 3
-  %ld10 = load float, float* %gep0
-  %ld11 = load float, float* %gep1
-  %ld12 = load float, float* %gep2
-  %ld13 = load float, float* %gep3
+  %ld10 = load float, ptr %ptr
+  %ld11 = load float, ptr %gep1
+  %ld12 = load float, ptr %gep2
+  %ld13 = load float, ptr %gep3
 
   ; External store users in natural order 0, 1, 2, 3
-  store float %ld10, float *%gep0
-  store float %ld11, float *%gep1
-  store float %ld12, float *%gep2
-  store float %ld13, float *%gep3
+  store float %ld10, ptr %ptr
+  store float %ld11, ptr %gep1
+  store float %ld12, ptr %gep2
+  store float %ld13, ptr %gep3
 
   br label %bb3
 
 bb2:
   ; Used by fadd in this order: 2, 3, 0, 1
-  %ld20 = load float, float* %gep0
-  %ld21 = load float, float* %gep1
-  %ld22 = load float, float* %gep2
-  %ld23 = load float, float* %gep3
+  %ld20 = load float, ptr %ptr
+  %ld21 = load float, ptr %gep1
+  %ld22 = load float, ptr %gep2
+  %ld23 = load float, ptr %gep3
 
   ; Used by phi in this order: 0, 1, 2, 3
   %add20 = fadd float %ld22, 0.0

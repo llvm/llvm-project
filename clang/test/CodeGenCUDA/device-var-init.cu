@@ -4,12 +4,12 @@
 // Make sure we don't allow dynamic initialization for device
 // variables, but accept empty constructors allowed by CUDA.
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx64-nvidia-cuda -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -std=c++11 \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefixes=DEVICE,NVPTX %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx64-nvidia-cuda -std=c++11 \
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -std=c++11 \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefixes=HOST %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -std=c++11 \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefixes=DEVICE,AMDGCN %s
 
 #ifdef __clang__
@@ -192,69 +192,69 @@ __device__ void df() {
   // NVPTX:  %[[t_b_ned:.*]] = alloca %struct.T_B_NED
   // NVPTX:  %[[t_f_ned:.*]] = alloca %struct.T_F_NED
   // NVPTX:  %[[t_fa_ned:.*]] = alloca %struct.T_FA_NED
-  // AMDGCN:  %[[ec:.*]] ={{.*}} addrspacecast %struct.EC addrspace(5)* %ec to %struct.EC*
-  // AMDGCN:  %[[ed:.*]] ={{.*}} addrspacecast %struct.ED addrspace(5)* %ed to %struct.ED*
-  // AMDGCN:  %[[ecd:.*]] ={{.*}} addrspacecast %struct.ECD addrspace(5)* %ecd to %struct.ECD*
-  // AMDGCN:  %[[etc:.*]] ={{.*}} addrspacecast %struct.ETC addrspace(5)* %etc to %struct.ETC*
-  // AMDGCN:  %[[uc:.*]] ={{.*}} addrspacecast %struct.UC addrspace(5)* %uc to %struct.UC*
-  // AMDGCN:  %[[ud:.*]] ={{.*}} addrspacecast %struct.UD addrspace(5)* %ud to %struct.UD*
-  // AMDGCN:  %[[eci:.*]] ={{.*}} addrspacecast %struct.ECI addrspace(5)* %eci to %struct.ECI*
-  // AMDGCN:  %[[nec:.*]] ={{.*}} addrspacecast %struct.NEC addrspace(5)* %nec to %struct.NEC*
-  // AMDGCN:  %[[ned:.*]] ={{.*}} addrspacecast %struct.NED addrspace(5)* %ned to %struct.NED*
-  // AMDGCN:  %[[ncv:.*]] ={{.*}} addrspacecast %struct.NCV addrspace(5)* %ncv to %struct.NCV*
-  // AMDGCN:  %[[vd:.*]] ={{.*}} addrspacecast %struct.VD addrspace(5)* %vd to %struct.VD*
-  // AMDGCN:  %[[ncf:.*]] ={{.*}} addrspacecast %struct.NCF addrspace(5)* %ncf to %struct.NCF*
-  // AMDGCN:  %[[ncfs:.*]] ={{.*}} addrspacecast %struct.NCFS addrspace(5)* %ncfs to %struct.NCFS*
-  // AMDGCN:  %[[utc:.*]] ={{.*}} addrspacecast %struct.UTC addrspace(5)* %utc to %struct.UTC*
-  // AMDGCN:  %[[netc:.*]] ={{.*}} addrspacecast %struct.NETC addrspace(5)* %netc to %struct.NETC*
-  // AMDGCN:  %[[ec_i_ec:.*]] ={{.*}} addrspacecast %struct.EC_I_EC addrspace(5)* %ec_i_ec to %struct.EC_I_EC*
-  // AMDGCN:  %[[ec_i_ec1:.*]] ={{.*}} addrspacecast %struct.EC_I_EC1 addrspace(5)* %ec_i_ec1 to %struct.EC_I_EC1*
-  // AMDGCN:  %[[t_v_t:.*]] ={{.*}} addrspacecast %struct.T_V_T addrspace(5)* %t_v_t to %struct.T_V_T*
-  // AMDGCN:  %[[t_b_nec:.*]] ={{.*}} addrspacecast %struct.T_B_NEC addrspace(5)* %t_b_nec to %struct.T_B_NEC*
-  // AMDGCN:  %[[t_f_nec:.*]] ={{.*}} addrspacecast %struct.T_F_NEC addrspace(5)* %t_f_nec to %struct.T_F_NEC*
-  // AMDGCN:  %[[t_fa_nec:.*]] ={{.*}} addrspacecast %struct.T_FA_NEC addrspace(5)* %t_fa_nec to %struct.T_FA_NEC*
-  // AMDGCN:  %[[t_b_ned:.*]] ={{.*}} addrspacecast %struct.T_B_NED addrspace(5)* %t_b_ned to %struct.T_B_NED*
-  // AMDGCN:  %[[t_f_ned:.*]] ={{.*}} addrspacecast %struct.T_F_NED addrspace(5)* %t_f_ned to %struct.T_F_NED*
-  // AMDGCN:  %[[t_fa_ned:.*]] ={{.*}} addrspacecast %struct.T_FA_NED addrspace(5)* %t_fa_ned to %struct.T_FA_NED*
+  // AMDGCN:  %[[ec:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ec to ptr
+  // AMDGCN:  %[[ed:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ed to ptr
+  // AMDGCN:  %[[ecd:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ecd to ptr
+  // AMDGCN:  %[[etc:.*]] ={{.*}} addrspacecast ptr addrspace(5) %etc to ptr
+  // AMDGCN:  %[[uc:.*]] ={{.*}} addrspacecast ptr addrspace(5) %uc to ptr
+  // AMDGCN:  %[[ud:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ud to ptr
+  // AMDGCN:  %[[eci:.*]] ={{.*}} addrspacecast ptr addrspace(5) %eci to ptr
+  // AMDGCN:  %[[nec:.*]] ={{.*}} addrspacecast ptr addrspace(5) %nec to ptr
+  // AMDGCN:  %[[ned:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ned to ptr
+  // AMDGCN:  %[[ncv:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ncv to ptr
+  // AMDGCN:  %[[vd:.*]] ={{.*}} addrspacecast ptr addrspace(5) %vd to ptr
+  // AMDGCN:  %[[ncf:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ncf to ptr
+  // AMDGCN:  %[[ncfs:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ncfs to ptr
+  // AMDGCN:  %[[utc:.*]] ={{.*}} addrspacecast ptr addrspace(5) %utc to ptr
+  // AMDGCN:  %[[netc:.*]] ={{.*}} addrspacecast ptr addrspace(5) %netc to ptr
+  // AMDGCN:  %[[ec_i_ec:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ec_i_ec to ptr
+  // AMDGCN:  %[[ec_i_ec1:.*]] ={{.*}} addrspacecast ptr addrspace(5) %ec_i_ec1 to ptr
+  // AMDGCN:  %[[t_v_t:.*]] ={{.*}} addrspacecast ptr addrspace(5) %t_v_t to ptr
+  // AMDGCN:  %[[t_b_nec:.*]] ={{.*}} addrspacecast ptr addrspace(5) %t_b_nec to ptr
+  // AMDGCN:  %[[t_f_nec:.*]] ={{.*}} addrspacecast ptr addrspace(5) %t_f_nec to ptr
+  // AMDGCN:  %[[t_fa_nec:.*]] ={{.*}} addrspacecast ptr addrspace(5) %t_fa_nec to ptr
+  // AMDGCN:  %[[t_b_ned:.*]] ={{.*}} addrspacecast ptr addrspace(5) %t_b_ned to ptr
+  // AMDGCN:  %[[t_f_ned:.*]] ={{.*}} addrspacecast ptr addrspace(5) %t_f_ned to ptr
+  // AMDGCN:  %[[t_fa_ned:.*]] ={{.*}} addrspacecast ptr addrspace(5) %t_fa_ned to ptr
 
   T t;
   // DEVICE-NOT: call
   EC ec;
-  // DEVICE:  call void @_ZN2ECC1Ev(%struct.EC* {{[^,]*}} %[[ec]])
+  // DEVICE:  call void @_ZN2ECC1Ev(ptr {{[^,]*}} %[[ec]])
   ED ed;
   // DEVICE-NOT: call
   ECD ecd;
-  // DEVICE:  call void @_ZN3ECDC1Ev(%struct.ECD* {{[^,]*}} %[[ecd]])
+  // DEVICE:  call void @_ZN3ECDC1Ev(ptr {{[^,]*}} %[[ecd]])
   ETC etc;
-  // DEVICE:  call void @_ZN3ETCC1IJEEEDpT_(%struct.ETC* {{[^,]*}} %[[etc]])
+  // DEVICE:  call void @_ZN3ETCC1IJEEEDpT_(ptr {{[^,]*}} %[[etc]])
   UC uc;
   // undefined constructor -- not allowed
-  // DEVICE:  call void @_ZN2UCC1Ev(%struct.UC* {{[^,]*}} %[[uc]])
+  // DEVICE:  call void @_ZN2UCC1Ev(ptr {{[^,]*}} %[[uc]])
   UD ud;
   // undefined destructor -- not allowed
   // DEVICE-NOT: call
   ECI eci;
   // empty constructor w/ initializer list -- not allowed
-  // DEVICE:  call void @_ZN3ECIC1Ev(%struct.ECI* {{[^,]*}} %[[eci]])
+  // DEVICE:  call void @_ZN3ECIC1Ev(ptr {{[^,]*}} %[[eci]])
   NEC nec;
   // non-empty constructor -- not allowed
-  // DEVICE:  call void @_ZN3NECC1Ev(%struct.NEC* {{[^,]*}} %[[nec]])
+  // DEVICE:  call void @_ZN3NECC1Ev(ptr {{[^,]*}} %[[nec]])
   // non-empty destructor -- not allowed
   NED ned;
   // no-constructor,  virtual method -- not allowed
-  // DEVICE:  call void @_ZN3NCVC1Ev(%struct.NCV* {{[^,]*}} %[[ncv]])
+  // DEVICE:  call void @_ZN3NCVC1Ev(ptr {{[^,]*}} %[[ncv]])
   NCV ncv;
   // DEVICE-NOT: call
   VD vd;
-  // DEVICE:  call void @_ZN2VDC1Ev(%struct.VD* {{[^,]*}} %[[vd]])
+  // DEVICE:  call void @_ZN2VDC1Ev(ptr {{[^,]*}} %[[vd]])
   NCF ncf;
-  // DEVICE:   call void @_ZN3NCFC1Ev(%struct.NCF* {{[^,]*}} %[[ncf]])
+  // DEVICE:   call void @_ZN3NCFC1Ev(ptr {{[^,]*}} %[[ncf]])
   NCFS ncfs;
-  // DEVICE:  call void @_ZN4NCFSC1Ev(%struct.NCFS* {{[^,]*}} %[[ncfs]])
+  // DEVICE:  call void @_ZN4NCFSC1Ev(ptr {{[^,]*}} %[[ncfs]])
   UTC utc;
-  // DEVICE:  call void @_ZN3UTCC1IJEEEDpT_(%struct.UTC* {{[^,]*}} %[[utc]])
+  // DEVICE:  call void @_ZN3UTCC1IJEEEDpT_(ptr {{[^,]*}} %[[utc]])
   NETC netc;
-  // DEVICE:  call void @_ZN4NETCC1IJEEEDpT_(%struct.NETC* {{[^,]*}} %[[netc]])
+  // DEVICE:  call void @_ZN4NETCC1IJEEEDpT_(ptr {{[^,]*}} %[[netc]])
   T_B_T t_b_t;
   // DEVICE-NOT: call
   T_F_T t_f_t;
@@ -262,17 +262,17 @@ __device__ void df() {
   T_FA_T t_fa_t;
   // DEVICE-NOT: call
   EC_I_EC ec_i_ec;
-  // DEVICE:  call void @_ZN7EC_I_ECC1Ev(%struct.EC_I_EC* {{[^,]*}} %[[ec_i_ec]])
+  // DEVICE:  call void @_ZN7EC_I_ECC1Ev(ptr {{[^,]*}} %[[ec_i_ec]])
   EC_I_EC1 ec_i_ec1;
-  // DEVICE:  call void @_ZN8EC_I_EC1C1Ev(%struct.EC_I_EC1* {{[^,]*}} %[[ec_i_ec1]])
+  // DEVICE:  call void @_ZN8EC_I_EC1C1Ev(ptr {{[^,]*}} %[[ec_i_ec1]])
   T_V_T t_v_t;
-  // DEVICE:  call void @_ZN5T_V_TC1Ev(%struct.T_V_T* {{[^,]*}} %[[t_v_t]])
+  // DEVICE:  call void @_ZN5T_V_TC1Ev(ptr {{[^,]*}} %[[t_v_t]])
   T_B_NEC t_b_nec;
-  // DEVICE:  call void @_ZN7T_B_NECC1Ev(%struct.T_B_NEC* {{[^,]*}} %[[t_b_nec]])
+  // DEVICE:  call void @_ZN7T_B_NECC1Ev(ptr {{[^,]*}} %[[t_b_nec]])
   T_F_NEC t_f_nec;
-  // DEVICE:  call void @_ZN7T_F_NECC1Ev(%struct.T_F_NEC* {{[^,]*}} %[[t_f_nec]])
+  // DEVICE:  call void @_ZN7T_F_NECC1Ev(ptr {{[^,]*}} %[[t_f_nec]])
   T_FA_NEC t_fa_nec;
-  // DEVICE:  call void @_ZN8T_FA_NECC1Ev(%struct.T_FA_NEC* {{[^,]*}} %[[t_fa_nec]])
+  // DEVICE:  call void @_ZN8T_FA_NECC1Ev(ptr {{[^,]*}} %[[t_fa_nec]])
   T_B_NED t_b_ned;
   // DEVICE-NOT: call
   T_F_NED t_f_ned;
@@ -280,9 +280,9 @@ __device__ void df() {
   T_FA_NED t_fa_ned;
   // DEVICE-NOT: call
   static __shared__ EC s_ec;
-  // DEVICE-NOT: call void @_ZN2ECC1Ev(%struct.EC* addrspacecast (%struct.EC addrspace(3)* @_ZZ2dfvE4s_ec to %struct.EC*))
+  // DEVICE-NOT: call void @_ZN2ECC1Ev(ptr addrspacecast (ptr addrspace(3) @_ZZ2dfvE4s_ec to ptr))
   static __shared__ ETC s_etc;
-  // DEVICE-NOT: call void @_ZN3ETCC1IJEEEDpT_(%struct.ETC* addrspacecast (%struct.ETC addrspace(3)* @_ZZ2dfvE5s_etc to %struct.ETC*))
+  // DEVICE-NOT: call void @_ZN3ETCC1IJEEEDpT_(ptr addrspacecast (ptr addrspace(3) @_ZZ2dfvE5s_etc to ptr))
 
   static const int const_array[] = {1, 2, 3, 4, 5};
   static const int const_int = 123;
@@ -291,14 +291,14 @@ __device__ void df() {
   df(); // DEVICE: call void @_Z2dfv()
 
   // Verify that we only call non-empty destructors
-  // DEVICE-NEXT: call void @_ZN8T_FA_NEDD1Ev(%struct.T_FA_NED* {{[^,]*}} %[[t_fa_ned]])
-  // DEVICE-NEXT: call void @_ZN7T_F_NEDD1Ev(%struct.T_F_NED* {{[^,]*}} %[[t_f_ned]])
-  // DEVICE-NEXT: call void @_ZN7T_B_NEDD1Ev(%struct.T_B_NED* {{[^,]*}} %[[t_b_ned]])
-  // DEVICE-NEXT: call void @_ZN2VDD1Ev(%struct.VD* {{[^,]*}} %[[vd]])
-  // DEVICE-NEXT: call void @_ZN3NEDD1Ev(%struct.NED* {{[^,]*}} %[[ned]])
-  // DEVICE-NEXT: call void @_ZN2UDD1Ev(%struct.UD* {{[^,]*}} %[[ud]])
-  // DEVICE-NEXT: call void @_ZN3ECDD1Ev(%struct.ECD* {{[^,]*}} %[[ecd]])
-  // DEVICE-NEXT: call void @_ZN2EDD1Ev(%struct.ED* {{[^,]*}} %[[ed]])
+  // DEVICE-NEXT: call void @_ZN8T_FA_NEDD1Ev(ptr {{[^,]*}} %[[t_fa_ned]])
+  // DEVICE-NEXT: call void @_ZN7T_F_NEDD1Ev(ptr {{[^,]*}} %[[t_f_ned]])
+  // DEVICE-NEXT: call void @_ZN7T_B_NEDD1Ev(ptr {{[^,]*}} %[[t_b_ned]])
+  // DEVICE-NEXT: call void @_ZN2VDD1Ev(ptr {{[^,]*}} %[[vd]])
+  // DEVICE-NEXT: call void @_ZN3NEDD1Ev(ptr {{[^,]*}} %[[ned]])
+  // DEVICE-NEXT: call void @_ZN2UDD1Ev(ptr {{[^,]*}} %[[ud]])
+  // DEVICE-NEXT: call void @_ZN3ECDD1Ev(ptr {{[^,]*}} %[[ecd]])
+  // DEVICE-NEXT: call void @_ZN2EDD1Ev(ptr {{[^,]*}} %[[ed]])
 
   // DEVICE-NEXT: ret void
 }

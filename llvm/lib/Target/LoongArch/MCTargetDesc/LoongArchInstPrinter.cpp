@@ -57,6 +57,14 @@ void LoongArchInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   MO.getExpr()->print(O, &MAI);
 }
 
+void LoongArchInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+  assert(MO.isReg() && "printAtomicMemOp can only print register operands");
+  printRegName(O, MO.getReg());
+}
+
 const char *LoongArchInstPrinter::getRegisterName(unsigned RegNo) {
   // Default print reg alias name
   return getRegisterName(RegNo, LoongArch::RegAliasName);

@@ -17,7 +17,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"
 
 @i = global i32 23, align 4
-@indirect = global i32* @i, align 8, !dbg !6, !dbg !0, !dbg !14, !dbg !15, !dbg !16
+@indirect = global ptr @i, align 8, !dbg !6, !dbg !0, !dbg !14, !dbg !15, !dbg !16
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!10, !11, !12, !13}

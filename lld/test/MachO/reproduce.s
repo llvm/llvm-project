@@ -11,6 +11,7 @@
 # RUN:     -exported_symbols_list main.exports \
 # RUN:     -order_file main.order \
 # RUN:     -sectcreate __COMPLETELY __legit sectdata.txt \
+# RUN:     -rpath /usr/lib/swift \
 # RUN:     build1/foo.o -o bar --reproduce repro1.tar
 
 # RUN: tar tf repro1.tar | FileCheck -DPATH='%:t.dir' --check-prefix=LIST %s
@@ -30,6 +31,7 @@
 # RSP1-NEXT: -exported_symbols_list [[BASEDIR:.+]]/main.exports
 # RSP1-NEXT: -order_file [[BASEDIR]]/main.order
 # RSP1-NEXT: -sectcreate __COMPLETELY __legit [[BASEDIR]]/sectdata.txt
+# RSP1-NEXT: -rpath /usr/lib/swift
 # RSP1-NOT:  {{^}}repro1{{[/\\]}}
 # RSP1-NEXT: [[BASEDIR]]/build1/foo.o
 # RSP1-NEXT: -o bar

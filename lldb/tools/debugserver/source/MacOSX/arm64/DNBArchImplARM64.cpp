@@ -2022,10 +2022,41 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
     switch (set) {
     case e_regSetGPR:
       if (reg <= gpr_pc) {
-        if (reg == gpr_pc || reg == gpr_lr || reg == gpr_sp || reg == gpr_fp)
-          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__x[reg]);
-        else
+        switch (reg) {
+#if __has_feature(ptrauth_calls) && defined(__LP64__)
+        case gpr_pc:
+          value->value.uint64 = clear_pac_bits(
+              reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
+          break;
+        case gpr_lr:
+          value->value.uint64 = clear_pac_bits(
+              reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr));
+          break;
+        case gpr_sp:
+          value->value.uint64 = clear_pac_bits(
+              reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp));
+          break;
+        case gpr_fp:
+          value->value.uint64 = clear_pac_bits(
+              reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp));
+          break;
+#else
+        case gpr_pc:
+          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__pc);
+          break;
+        case gpr_lr:
+          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__lr);
+          break;
+        case gpr_sp:
+          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__sp);
+          break;
+        case gpr_fp:
+          value->value.uint64 = clear_pac_bits(m_state.context.gpr.__fp);
+          break;
+#endif
+        default:
           value->value.uint64 = m_state.context.gpr.__x[reg];
+        }
         return true;
       } else if (reg == gpr_cpsr) {
         value->value.uint32 = m_state.context.gpr.__cpsr;

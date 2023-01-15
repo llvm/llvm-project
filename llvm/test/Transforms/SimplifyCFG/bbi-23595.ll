@@ -11,17 +11,17 @@
 ; We're expecting the dbg.label associated with 'W' to disappear, because
 ; the 'W' label was removed.
 
-define i16 @_Z7test_itv() {
+define i16 @_Z7test_itv(i1 %c) {
 ; CHECK-LABEL: @_Z7test_itv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 undef, i16 1, i16 0
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[C:%.*]], i16 1, i16 0
 ; CHECK-NEXT:    ret i16 0
 ;
 entry:
   br label %sw.bb
 
 sw.bb:                                            ; preds = %entry
-  br i1 undef, label %W, label %cleanup4
+  br i1 %c, label %W, label %cleanup4
 
 W:                                                ; preds = %sw.bb
   call void @llvm.dbg.label(metadata !1), !dbg !8

@@ -13,14 +13,15 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
 /// \return
-///   The given string or \b None if it's empty.
-static Optional<const char *> ToOptionalString(const char *s) {
+///   The given string or \b std::nullopt if it's empty.
+static std::optional<const char *> ToOptionalString(const char *s) {
   if (!s)
     return std::nullopt;
   return s;
@@ -407,7 +408,7 @@ public:
       m_j.attribute("id", item.id);
       if (m_options.show_timestamps)
         m_j.attribute("timestamp_ns", item.timestamp
-                                          ? Optional<std::string>(
+                                          ? std::optional<std::string>(
                                                 std::to_string(*item.timestamp))
                                           : std::nullopt);
 
@@ -531,11 +532,11 @@ CalculateSymbolInfo(const ExecutionContext &exe_ctx, lldb::addr_t load_address,
   return symbol_info;
 }
 
-Optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
+std::optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
   ThreadSP thread_sp = m_cursor_sp->GetExecutionContextRef().GetThreadSP();
 
   SymbolInfo prev_symbol_info;
-  Optional<lldb::user_id_t> last_id;
+  std::optional<lldb::user_id_t> last_id;
 
   ExecutionContext exe_ctx;
   thread_sp->GetProcess()->GetTarget().CalculateExecutionContext(exe_ctx);
@@ -668,7 +669,7 @@ TraceDumper::FunctionCall::GetLastTracedSegment() {
   return m_traced_segments.back();
 }
 
-const Optional<TraceDumper::FunctionCall::UntracedPrefixSegment> &
+const std::optional<TraceDumper::FunctionCall::UntracedPrefixSegment> &
 TraceDumper::FunctionCall::GetUntracedPrefixSegment() const {
   return m_untraced_prefix_segment;
 }

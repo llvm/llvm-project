@@ -11,7 +11,7 @@ declare dso_local void @g(...) local_unnamed_addr #2
 
 define dso_local void @f() local_unnamed_addr #0 {
 entry:
-  tail call void bitcast (void (...)* @g to void ()*)() #3
+  tail call void @g() #3
   ret void
 }
 ; Function has thumb2 target-feature, tail call is allowed and must be widened.
@@ -20,7 +20,7 @@ entry:
 
 define dso_local void @h() local_unnamed_addr #2 {
 entry:
-  tail call void bitcast (void (...)* @g to void ()*)() #3
+  tail call void @g() #3
   ret void
 }
 ; Function does not have thumb2 target-feature, tail call should not be

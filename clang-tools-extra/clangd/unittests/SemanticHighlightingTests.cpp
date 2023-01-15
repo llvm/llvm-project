@@ -113,9 +113,9 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       void $Function_def[[foo]](int $Parameter_def[[A]], $Class[[AS]] $Parameter_def[[As]]) {
         $Primitive_deduced_defaultLibrary[[auto]] $LocalVariable_def[[VeryLongVariableName]] = 12312;
         $Class[[AS]]     $LocalVariable_def[[AA]];
-        $Primitive_deduced_defaultLibrary[[auto]] $LocalVariable_def[[L]] = $LocalVariable[[AA]].$Field[[SomeMember]] + $Parameter[[A]];
+        $Primitive_deduced_defaultLibrary[[auto]] $LocalVariable_def[[L]] = $LocalVariable[[AA]].$Field[[SomeMember]] $Operator[[+]] $Parameter[[A]];
         auto $LocalVariable_def[[FN]] = [ $LocalVariable[[AA]]](int $Parameter_def[[A]]) -> void {};
-        $LocalVariable[[FN]](12312);
+        $LocalVariable[[FN]]$Operator_userDefined[[(]]12312$Operator_userDefined[[)]];
       }
     )cpp",
       R"cpp(
@@ -144,7 +144,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       struct $Class_def[[B]] {
         $Class_decl_constrDestr[[B]]();
         ~$Class_decl_constrDestr[[B]]();
-        void operator<<($Class[[B]]);
+        void operator$Operator_decl[[<<]]($Class[[B]]);
         $Class[[AAA]] $Field_decl[[AA]];
       };
       $Class[[B]]::$Class_def_constrDestr[[B]]() {}
@@ -203,20 +203,20 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         static double $StaticField_decl_static[[S]];
         static void $StaticMethod_def_static[[bar]]() {}
         void $Method_def[[foo]]() {
-          $Field[[B]] = 123;
-          this->$Field[[B]] = 156;
+          $Field[[B]] $Operator[[=]] 123;
+          this->$Field[[B]] $Operator[[=]] 156;
           this->$Method[[foo]]();
           $Method[[foo]]();
           $StaticMethod_static[[bar]]();
-          $StaticField_static[[S]] = 90.1;
+          $StaticField_static[[S]] $Operator[[=]] 90.1;
         }
       };
       void $Function_def[[foo]]() {
         $Class[[A]] $LocalVariable_def[[AA]];
-        $LocalVariable[[AA]].$Field[[B]] += 2;
+        $LocalVariable[[AA]].$Field[[B]] $Operator[[+=]] 2;
         $LocalVariable[[AA]].$Method[[foo]]();
         $LocalVariable[[AA]].$Field[[E]].$Field[[C]];
-        $Class[[A]]::$StaticField_static[[S]] = 90;
+        $Class[[A]]::$StaticField_static[[S]] $Operator[[=]] 90;
       }
     )cpp",
       R"cpp(
@@ -295,10 +295,10 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       struct $Class_def[[B]] {};
       struct $Class_def[[A]] {
         $Class[[B]] $Field_decl[[BB]];
-        $Class[[A]] &operator=($Class[[A]] &&$Parameter_def[[O]]);
+        $Class[[A]] &operator$Operator_decl[[=]]($Class[[A]] &&$Parameter_def[[O]]);
       };
 
-      $Class[[A]] &$Class[[A]]::operator=($Class[[A]] &&$Parameter_def[[O]]) = default;
+      $Class[[A]] &$Class[[A]]::operator$Operator_def[[=]]($Class[[A]] &&$Parameter_def[[O]]) = default;
     )cpp",
       R"cpp(
       enum $Enum_decl[[En]] {
@@ -327,9 +327,9 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       $Enum_deduced[[auto]] $Variable_def[[AE]] = $Enum[[E]]::$EnumConstant_readonly[[E]];
       $Class_deduced[[auto]] $Variable_def[[AF]] = $Class[[Foo]]();
       $Class_deduced[[decltype]](auto) $Variable_def[[AF2]] = $Class[[Foo]]();
-      $Class_deduced[[auto]] *$Variable_def[[AFP]] = &$Variable[[AF]];
+      $Class_deduced[[auto]] *$Variable_def[[AFP]] = $Operator[[&]]$Variable[[AF]];
       $Enum_deduced[[auto]] &$Variable_def[[AER]] = $Variable[[AE]];
-      $Primitive_deduced_defaultLibrary[[auto]] $Variable_def[[Form]] = 10.2 + 2 * 4;
+      $Primitive_deduced_defaultLibrary[[auto]] $Variable_def[[Form]] = 10.2 $Operator[[+]] 2 $Operator[[*]] 4;
       $Primitive_deduced_defaultLibrary[[decltype]]($Variable[[Form]]) $Variable_def[[F]] = 10;
       auto $Variable_def[[Fun]] = []()->void{};
     )cpp",
@@ -342,21 +342,21 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       template<int *$TemplateParameter_def_readonly[[U]]>
       class $Class_def[[IP]] {
         void $Method_def[[f]]() {
-          *$TemplateParameter_readonly[[U]] += 5;
+          $Operator[[*]]$TemplateParameter_readonly[[U]] $Operator[[+=]] 5;
         }
       };
       template<unsigned $TemplateParameter_def_readonly[[U]] = 2>
       class $Class_def[[Foo]] {
         void $Method_def[[f]]() {
           for(int $LocalVariable_def[[I]] = 0;
-            $LocalVariable[[I]] < $TemplateParameter_readonly[[U]];) {}
+            $LocalVariable[[I]] $Operator[[<]] $TemplateParameter_readonly[[U]];) {}
         }
       };
 
       $Class[[G]] $Variable_def[[L]];
       void $Function_def[[f]]() {
         $Class[[Foo]]<123> $LocalVariable_def[[F]];
-        $Class[[GP]]<&$Variable[[L]]> $LocalVariable_def[[LL]];
+        $Class[[GP]]<$Operator[[&]]$Variable[[L]]> $LocalVariable_def[[LL]];
         $Class[[GR]]<$Variable[[L]]> $LocalVariable_def[[LLL]];
       }
     )cpp",
@@ -366,7 +366,8 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       struct $Class_def[[G]] {
         void $Method_def[[foo]](
             $TemplateParameter[[T]] *$Parameter_def[[O]]) {
-          ($Parameter[[O]]->*$TemplateParameter_readonly[[method]])(10);
+          ($Parameter[[O]]$Operator_userDefined[[->*]]$TemplateParameter_readonly[[method]])(10);
+
         }
       };
       struct $Class_def[[F]] {
@@ -375,14 +376,14 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       template<void (*$TemplateParameter_def_readonly[[Func]])()>
       struct $Class_def[[A]] {
         void $Method_def[[f]]() {
-          (*$TemplateParameter_readonly[[Func]])();
+          ($Operator[[*]]$TemplateParameter_readonly[[Func]])();
         }
       };
 
       void $Function_def[[foo]]() {
         $Class[[F]] $LocalVariable_def[[FF]];
-        $Class[[G]]<$Class[[F]], &$Class[[F]]::$Method[[f]]> $LocalVariable_def[[GG]];
-        $LocalVariable[[GG]].$Method[[foo]](&$LocalVariable_usedAsMutablePointer[[FF]]);
+        $Class[[G]]<$Class[[F]], $Operator[[&]]$Class[[F]]::$Method[[f]]> $LocalVariable_def[[GG]];
+        $LocalVariable[[GG]].$Method[[foo]]($Operator[[&]]$LocalVariable_usedAsMutablePointer[[FF]]);
         $Class[[A]]<$Function[[foo]]> $LocalVariable_def[[AA]];
       }
     )cpp",
@@ -411,7 +412,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Macro[[DEF_VAR_TYPE]]($Class[[A]], $LocalVariable_def[[AA]]);
         double $Macro[[SOME_NAME]];
         int $Macro[[SOME_NAME_SET]];
-        $LocalVariable[[variable]] = 20.1;
+        $LocalVariable[[variable]] $Operator[[=]] 20.1;
         $Macro[[MACRO_CONCAT]](var, 2, float);
         $Macro[[DEF_VAR_T]]($Class[[A]], $Macro[[CPY]](
               $Macro[[CPY]]($LocalVariable_def[[Nested]])),
@@ -436,8 +437,8 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       int $Variable_def[[y]];
       int $Function_decl[[f]]();
       void $Function_def[[foo]]() {
-        $Macro[[assert]]($Variable[[x]] != $Variable[[y]]);
-        $Macro[[assert]]($Variable[[x]] != $Function[[f]]());
+        $Macro[[assert]]($Variable[[x]] $Operator[[!=]] $Variable[[y]]);
+        $Macro[[assert]]($Variable[[x]] $Operator[[!=]] $Function[[f]]());
       }
     )cpp",
       // highlighting all macro references
@@ -467,7 +468,7 @@ $InactiveCode[[#endif]]
         auto [$LocalVariable_decl[[G1]], $LocalVariable_decl[[G2]]] = $Variable[[Global]];
         $Class_deduced[[auto]] [$LocalVariable_decl[[P1]], $LocalVariable_decl[[P2]]] = $Parameter[[P]];
         // Highlights references to BindingDecls.
-        $LocalVariable[[B1]]++;
+        $LocalVariable[[B1]]$Operator[[++]];
       }
     )cpp",
       R"cpp(
@@ -724,9 +725,9 @@ sizeof...($TemplateParameter[[Elements]]);
           return 0;
         }
         - (int)$Method_def[[doSomething]] {
-          $Class[[Foo]].$Field_static[[sharedInstance]].$Field[[someProperty]] = 1;
-          self.$Field[[someProperty]] = self.$Field[[someProperty]] + self.$Field[[otherMethod]] + 1;
-          self->$Field[[_someProperty]] = $Field[[_someProperty]] + 1;
+          $Class[[Foo]].$Field_static[[sharedInstance]].$Field[[someProperty]] $Operator[[=]] 1;
+          self.$Field[[someProperty]] $Operator[[=]] self.$Field[[someProperty]] $Operator[[+]] self.$Field[[otherMethod]] $Operator[[+]] 1;
+          self->$Field[[_someProperty]] $Operator[[=]] $Field[[_someProperty]] $Operator[[+]] 1;
         }
         @end
       )cpp",
@@ -747,11 +748,11 @@ sizeof...($TemplateParameter[[Elements]]);
       // Modifier for variables passed as non-const references
       R"cpp(
         struct $Class_def[[ClassWithOp]] {
-            void operator()(int);
-            void operator()(int, int &);
-            void operator()(int, int, const int &);
-            int &operator[](int &);
-            int operator[](int) const;
+            void operator$Operator_decl[[(]]$Operator_decl[[)]](int);
+            void operator$Operator_decl[[(]]$Operator_decl[[)]](int, int &);
+            void operator$Operator_decl[[(]]$Operator_decl[[)]](int, int, const int &);
+            int &operator$Operator_decl[[[]]$Operator_decl[[]]](int &);
+            int operator$Operator_decl[[[]]$Operator_decl[[]]](int) const;
         };
         struct $Class_def[[ClassWithStaticMember]] {
             static inline int $StaticField_def_static[[j]] = 0;
@@ -791,16 +792,16 @@ sizeof...($TemplateParameter[[Elements]]);
                            $LocalVariable_usedAsMutablePointer[[array]], $LocalVariable_usedAsMutableReference[[array]],
                            $LocalVariable[[array]]
                            );
-          [](int){}($LocalVariable[[val]]);
-          [](int&){}($LocalVariable_usedAsMutableReference[[val]]);
-          [](const int&){}($LocalVariable[[val]]);
+          [](int){}$Operator_userDefined[[(]]$LocalVariable[[val]]$Operator_userDefined[[)]];
+          [](int&){}$Operator_userDefined[[(]]$LocalVariable_usedAsMutableReference[[val]]$Operator_userDefined[[)]];
+          [](const int&){}$Operator_userDefined[[(]]$LocalVariable[[val]]$Operator_userDefined[[)]];
           $Class[[ClassWithOp]] $LocalVariable_def[[c]];
           const $Class[[ClassWithOp]] $LocalVariable_def_readonly[[c2]];
-          $LocalVariable[[c]]($LocalVariable[[val]]);
-          $LocalVariable[[c]](0, $LocalVariable_usedAsMutableReference[[val]]);
-          $LocalVariable[[c]](0, 0, $LocalVariable[[val]]);
-          $LocalVariable[[c]][$LocalVariable_usedAsMutableReference[[val]]];
-          $LocalVariable_readonly[[c2]][$LocalVariable[[val]]];
+          $LocalVariable[[c]]$Operator_userDefined[[(]]$LocalVariable[[val]]$Operator_userDefined[[)]];
+          $LocalVariable[[c]]$Operator_userDefined[[(]]0, $LocalVariable_usedAsMutableReference[[val]]$Operator_userDefined[[)]];
+          $LocalVariable[[c]]$Operator_userDefined[[(]]0, 0, $LocalVariable[[val]]$Operator_userDefined[[)]];
+          $LocalVariable[[c]]$Operator_userDefined[[[]]$LocalVariable_usedAsMutableReference[[val]]$Operator_userDefined[[]]];
+          $LocalVariable_readonly[[c2]]$Operator_userDefined[[[]]$LocalVariable[[val]]$Operator_userDefined[[]]];
         }
         struct $Class_def[[S]] {
           $Class_def_constrDestr[[S]](int&) {
@@ -824,7 +825,7 @@ sizeof...($TemplateParameter[[Elements]]);
         void $Function_def[[foo]]() {
           int $LocalVariable_def[[a]], $LocalVariable_def[[b]];
           [ $LocalVariable_def[[c]] = $LocalVariable[[a]],
-            $LocalVariable_def[[d]]($LocalVariable[[b]]) ]() {}();
+            $LocalVariable_def[[d]]($LocalVariable[[b]]) ]() {}$Operator_userDefined[[(]]$Operator_userDefined[[)]];
         }
       )cpp",
       // Enum base specifier
@@ -877,8 +878,8 @@ sizeof...($TemplateParameter[[Elements]]);
                                   const $TemplateParameter[[auto]] $Parameter_def_readonly[[auto_type]], 
                                   const int $Parameter_def_readonly[[explicit_type]]) {
             return $Parameter_readonly[[template_type]] 
-                 + $Parameter_readonly[[auto_type]] 
-                 + $Parameter_readonly[[explicit_type]];
+                 $Operator_userDefined[[+]] $Parameter_readonly[[auto_type]]
+                 $Operator_userDefined[[+]] $Parameter_readonly[[explicit_type]];
         }
       )cpp",
       // Explicit template specialization
@@ -894,6 +895,33 @@ sizeof...($TemplateParameter[[Elements]]);
         template <>
         int $Variable_def[[x]]<int> = (int)sizeof($Class[[Base]]);
       )cpp",
+      // operator calls in template
+      R"cpp(
+        template<typename $TemplateParameter_def[[T]]> class $Class_def[[C]] {
+            bool $Method_def[[compare]]($TemplateParameter[[T]] $Parameter_def[[t1]], $TemplateParameter[[T]] $Parameter_def[[t2]]) { return $Parameter[[t1]] $Operator_userDefined[[==]] $Parameter[[t2]]; }
+            $TemplateParameter[[T]] $Method_def[[deref]]($TemplateParameter[[T]] *$Parameter_def[[t]]) { return $Operator_userDefined[[*]]$Parameter[[t]]; }
+        };
+      )cpp",
+      // new and delete
+      R"cpp(
+        struct $Class_def[[S]] { int *$Field_decl[[a]]; };
+        void $Function_def[[f]]() {
+          $Class[[S]] *$LocalVariable_def[[s]] = $Operator[[new]] $Class[[S]];
+          $LocalVariable[[s]]->$Field[[a]] $Operator[[=]] $Operator[[new]] int[10];
+          $Operator[[delete]][] $LocalVariable[[s]]->$Field[[a]];
+          $Operator[[delete]] $LocalVariable[[s]];
+        }
+      )cpp",
+      // explicit operator invocation
+      R"cpp(
+        struct $Class_def[[S]] {
+            $Class[[S]] operator$Operator_decl[[+]](const $Class[[S]] &$Parameter_def_readonly[[other]]);
+        };
+        void $Function_def[[f]]() {
+            $Class[[S]] $LocalVariable_def[[s]];
+            $Class[[S]] $LocalVariable_def[[s2]] = $LocalVariable[[s]].operator$Operator_userDefined[[+]]($LocalVariable[[s]]);
+        }
+      )cpp",
       // no crash
       R"cpp(
         struct $Class_def[[Foo]] {
@@ -901,8 +929,18 @@ sizeof...($TemplateParameter[[Elements]]);
         };
 
         void $Function_def[[s]]($Class[[Foo]] $Parameter_def[[f]]) {
-          auto $LocalVariable_def[[k]] = &$Class[[Foo]]::$Method[[foo]];
-          ($Parameter[[f]].*$LocalVariable[[k]])(); // no crash on VisitCXXMemberCallExpr
+          auto $LocalVariable_def[[k]] = $Operator[[&]]$Class[[Foo]]::$Method[[foo]];
+          ($Parameter[[f]]$Operator[[.*]]$LocalVariable[[k]])(); // no crash on VisitCXXMemberCallExpr
+        }
+      )cpp",
+      R"cpp(
+        template<typename>
+        class $Class_def[[Foo]] {};
+
+        template<typename $TemplateParameter_def[[T]]>
+        void $Function_def[[k]]() {
+          auto $LocalVariable_def[[s]] = $Operator[[new]] $Class[[Foo]]<$TemplateParameter[[T]]>();
+          $Operator[[delete]] $LocalVariable[[s]];
         }
       )cpp"};
   for (const auto &TestCase : TestCases)
@@ -942,7 +980,7 @@ sizeof...($TemplateParameter[[Elements]]);
     @end
     int $Function_def[[somethingUsingSystemSymbols]]() {
       $Class_defaultLibrary[[SYSObject]] *$LocalVariable_def[[obj]] = [$Class_defaultLibrary[[SYSObject]] $StaticMethod_static_defaultLibrary[[new]]];
-      return $LocalVariable[[obj]].$Field_defaultLibrary[[value]] + $LocalVariable[[obj]].$Field_readonly[[user_property]];
+      return $LocalVariable[[obj]].$Field_defaultLibrary[[value]] $Operator[[+]] $LocalVariable[[obj]].$Field_readonly[[user_property]];
     }
   )cpp",
                      {{"SystemSDK/SYSObject.h", R"cpp(

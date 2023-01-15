@@ -5,7 +5,7 @@
 ; See http://reviews.llvm.org/D20703 for context.
 define void @test() {
 entry:
-  %bf.load = load i32, i32* null, align 4
+  %bf.load = load i32, ptr null, align 4
   %bf.clear = lshr i32 %bf.load, 1
   %div = and i32 %bf.clear, 134217727
   %sub = add nsw i32 %div, -1

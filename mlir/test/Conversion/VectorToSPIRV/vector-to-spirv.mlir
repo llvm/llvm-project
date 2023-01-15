@@ -16,6 +16,23 @@ func.func @bitcast(%arg0 : vector<2xf32>, %arg1: vector<2xf16>) -> (vector<4xf16
 
 // -----
 
+// Check that without the proper capability we fail the pattern application
+// to avoid generating invalid ops.
+
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>> } {
+
+// CHECK-LABEL: @bitcast
+func.func @bitcast(%arg0 : vector<2xf32>, %arg1: vector<2xf16>) -> (vector<4xf16>, vector<1xf32>) {
+  // CHECK-COUNT-2: vector.bitcast
+  %0 = vector.bitcast %arg0 : vector<2xf32> to vector<4xf16>
+  %1 = vector.bitcast %arg1 : vector<2xf16> to vector<1xf32>
+  return %0, %1: vector<4xf16>, vector<1xf32>
+}
+
+} // end module
+
+// -----
+
 module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>> } {
 
 // CHECK-LABEL: @cl_fma

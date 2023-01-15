@@ -495,7 +495,7 @@ define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
   ret <2 x double> %r
 }
 
-define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwind {
+define double @sqrt_fdiv_common_operand_extra_use(double %x, ptr %p) nounwind {
 ; FAULT-LABEL: sqrt_fdiv_common_operand_extra_use:
 ; FAULT:       // %bb.0:
 ; FAULT-NEXT:    fsqrt d0, d0
@@ -521,12 +521,12 @@ define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwin
 ; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    ret
   %sqrt = call fast double @llvm.sqrt.f64(double %x)
-  store double %sqrt, double* %p
+  store double %sqrt, ptr %p
   %r = fdiv fast double %x, %sqrt
   ret double %r
 }
 
-define double @sqrt_simplify_before_recip_3_uses(double %x, double* %p1, double* %p2) nounwind {
+define double @sqrt_simplify_before_recip_3_uses(double %x, ptr %p1, ptr %p2) nounwind {
 ; FAULT-LABEL: sqrt_simplify_before_recip_3_uses:
 ; FAULT:       // %bb.0:
 ; FAULT-NEXT:    fsqrt d0, d0
@@ -562,12 +562,12 @@ define double @sqrt_simplify_before_recip_3_uses(double %x, double* %p1, double*
   %rsqrt = fdiv fast double 1.0, %sqrt
   %r = fdiv fast double 42.0, %sqrt
   %sqrt_fast = fdiv fast double %x, %sqrt
-  store double %rsqrt, double* %p1, align 8
-  store double %r, double* %p2, align 8
+  store double %rsqrt, ptr %p1, align 8
+  store double %r, ptr %p2, align 8
   ret double %sqrt_fast
 }
 
-define double @sqrt_simplify_before_recip_3_uses_order(double %x, double* %p1, double* %p2) nounwind {
+define double @sqrt_simplify_before_recip_3_uses_order(double %x, ptr %p1, ptr %p2) nounwind {
 ; FAULT-LABEL: sqrt_simplify_before_recip_3_uses_order:
 ; FAULT:       // %bb.0:
 ; FAULT-NEXT:    fsqrt d0, d0
@@ -609,13 +609,13 @@ define double @sqrt_simplify_before_recip_3_uses_order(double %x, double* %p1, d
   %sqrt_fast = fdiv fast double %x, %sqrt
   %r1 = fdiv fast double 42.0, %sqrt
   %r2 = fdiv fast double 43.0, %sqrt
-  store double %r1, double* %p1, align 8
-  store double %r2, double* %p2, align 8
+  store double %r1, ptr %p1, align 8
+  store double %r2, ptr %p2, align 8
   ret double %sqrt_fast
 }
 
 
-define double @sqrt_simplify_before_recip_4_uses(double %x, double* %p1, double* %p2, double* %p3) nounwind {
+define double @sqrt_simplify_before_recip_4_uses(double %x, ptr %p1, ptr %p2, ptr %p3) nounwind {
 ; FAULT-LABEL: sqrt_simplify_before_recip_4_uses:
 ; FAULT:       // %bb.0:
 ; FAULT-NEXT:    fsqrt d0, d0
@@ -665,9 +665,9 @@ define double @sqrt_simplify_before_recip_4_uses(double %x, double* %p1, double*
   %r1 = fdiv fast double 42.0, %sqrt
   %r2 = fdiv fast double 43.0, %sqrt
   %sqrt_fast = fdiv fast double %x, %sqrt
-  store double %rsqrt, double* %p1, align 8
-  store double %r1, double* %p2, align 8
-  store double %r2, double* %p3, align 8
+  store double %rsqrt, ptr %p1, align 8
+  store double %r1, ptr %p2, align 8
+  store double %r2, ptr %p3, align 8
   ret double %sqrt_fast
 }
 

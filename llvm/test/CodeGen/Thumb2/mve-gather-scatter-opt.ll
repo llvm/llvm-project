@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp -enable-arm-maskedgatscat=false %s -o - | FileCheck --check-prefix NOGATSCAT %s
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=-mve %s -o - | FileCheck --check-prefix NOMVE %s
 
-define arm_aapcs_vfpcc <4 x i32> @unscaled_i32_i32_gather(i8* %base, <4 x i32>* %offptr) {
+define arm_aapcs_vfpcc <4 x i32> @unscaled_i32_i32_gather(ptr %base, ptr %offptr) {
 ; NOGATSCAT-LABEL: unscaled_i32_i32_gather:
 ; NOGATSCAT:       @ %bb.0: @ %entry
 ; NOGATSCAT-NEXT:    vldrw.u32 q0, [r1]
@@ -31,17 +31,17 @@ define arm_aapcs_vfpcc <4 x i32> @unscaled_i32_i32_gather(i8* %base, <4 x i32>* 
 ; NOMVE-NEXT:    pop {r4, pc}
 
 entry:
-  %offs = load <4 x i32>, <4 x i32>* %offptr, align 4
-  %byte_ptrs = getelementptr inbounds i8, i8* %base, <4 x i32> %offs
-  %ptrs = bitcast <4 x i8*> %byte_ptrs to <4 x i32*>
-  %gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %offs = load <4 x i32>, ptr %offptr, align 4
+  %byte_ptrs = getelementptr inbounds i8, ptr %base, <4 x i32> %offs
+  %ptrs = bitcast <4 x ptr> %byte_ptrs to <4 x ptr>
+  %gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
   ret <4 x i32> %gather
 }
 
-declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
+declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
 
 
-define arm_aapcs_vfpcc void @unscaled_i32_i8_scatter(i8* %base, <4 x i8>* %offptr, <4 x i32> %input) {
+define arm_aapcs_vfpcc void @unscaled_i32_i8_scatter(ptr %base, ptr %offptr, <4 x i32> %input) {
 ; NOGATSCAT-LABEL: unscaled_i32_i8_scatter:
 ; NOGATSCAT:       @ %bb.0: @ %entry
 ; NOGATSCAT-NEXT:    .save {r4, r5, r7, lr}
@@ -75,12 +75,12 @@ define arm_aapcs_vfpcc void @unscaled_i32_i8_scatter(i8* %base, <4 x i8>* %offpt
 ; NOMVE-NEXT:    pop {r4, pc}
 
 entry:
-  %offs = load <4 x i8>, <4 x i8>* %offptr, align 1
+  %offs = load <4 x i8>, ptr %offptr, align 1
   %offs.zext = zext <4 x i8> %offs to <4 x i32>
-  %byte_ptrs = getelementptr inbounds i8, i8* %base, <4 x i32> %offs.zext
-  %ptrs = bitcast <4 x i8*> %byte_ptrs to <4 x i32*>
-  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %input, <4 x i32*> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  %byte_ptrs = getelementptr inbounds i8, ptr %base, <4 x i32> %offs.zext
+  %ptrs = bitcast <4 x ptr> %byte_ptrs to <4 x ptr>
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %input, <4 x ptr> %ptrs, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
 
-declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>, <4 x i32*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>, <4 x ptr>, i32, <4 x i1>)

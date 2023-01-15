@@ -272,7 +272,7 @@ define i1 @test_rec_neg(i1 %c) norecurse {
 ; CGSCC-NEXT:    [[RC1:%.*]] = call noundef i1 @rec(i1 noundef true)
 ; CGSCC-NEXT:    br i1 [[RC1]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[RC2:%.*]] = call noundef i1 @rec(i1 [[C]])
+; CGSCC-NEXT:    [[RC2:%.*]] = call noundef i1 @rec(i1 noundef [[C]])
 ; CGSCC-NEXT:    ret i1 [[RC2]]
 ; CGSCC:       f:
 ; CGSCC-NEXT:    ret i1 [[RC1]]
@@ -288,7 +288,7 @@ f:
 
 define internal i1 @rec(i1 %c1) {
 ; CHECK-LABEL: define {{[^@]+}}@rec
-; CHECK-SAME: (i1 [[C1:%.*]]) {
+; CHECK-SAME: (i1 noundef [[C1:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C1]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 true

@@ -15,7 +15,7 @@
 ; CHECK: DW_AT_high_pc [DW_FORM_data4]          (0x00000010)
 
 ; CHECK: DW_TAG_compile_unit
-; CHECK: DW_AT_stmt_list [DW_FORM_sec_offset]   (0x0000003d)
+; CHECK: DW_AT_stmt_list [DW_FORM_sec_offset]   (0x00000040)
 ; CHECK: DW_AT_low_pc [DW_FORM_addr]            (0x0000000000000010)
 ; CHECK: DW_AT_high_pc [DW_FORM_data4]          (0x00000009)
 ; CHECK: DW_TAG_subprogram
@@ -26,7 +26,7 @@
 ; CHECK: .debug_line contents:
 ; CHECK-NEXT: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
-; CHECK-NEXT: total_length: 0x00000039
+; CHECK-NEXT: total_length: 0x0000003c
 ; CHECK: file_names[  1]:
 ; CHECK-NEXT: name: "simple.c"
 ; CHECK-NEXT: dir_index: 0
@@ -43,13 +43,13 @@
 ; DWARF3: DW_AT_stmt_list [DW_FORM_data4]    (0x00000000)
 
 ; DWARF3: DW_TAG_compile_unit
-; DWARF3: DW_AT_stmt_list [DW_FORM_data4]   (0x0000003c)
+; DWARF3: DW_AT_stmt_list [DW_FORM_data4]   (0x0000003f)
 
 
 ; DWARF3: .debug_line contents:
 ; DWARF3-NEXT: debug_line[{{.*}}]
 ; DWARF3-NEXT: Line table prologue:
-; DWARF3-NEXT: total_length: 0x00000038
+; DWARF3-NEXT: total_length: 0x0000003b
 ; DWARF3: file_names[  1]:
 ; DWARF3-NEXT: name: "simple.c"
 ; DWARF3-NEXT: dir_index: 0
@@ -73,9 +73,9 @@
 define i32 @test(i32 %a) nounwind uwtable ssp !dbg !5 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* %a.addr, align 4, !dbg !17
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  %0 = load i32, ptr %a.addr, align 4, !dbg !17
   %call = call i32 @fn(i32 %0), !dbg !17
   ret i32 %call, !dbg !17
 }
@@ -85,9 +85,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 define i32 @fn(i32 %a) nounwind uwtable ssp !dbg !13 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !19, metadata !DIExpression()), !dbg !20
-  %0 = load i32, i32* %a.addr, align 4, !dbg !21
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !19, metadata !DIExpression()), !dbg !20
+  %0 = load i32, ptr %a.addr, align 4, !dbg !21
   ret i32 %0, !dbg !21
 }
 

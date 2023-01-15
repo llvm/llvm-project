@@ -18,11 +18,11 @@ declare i32 @cond.i32()
 
 declare i32 @__CxxFrameHandler3(...)
 
-define i32 @test1_freeze(i1* %ptr0, i1* %ptr1, i1* %ptr2) {
+define i32 @test1_freeze(ptr %ptr0, ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: @test1_freeze(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND1:%.*]] = load i1, i1* [[PTR1:%.*]], align 1
-; CHECK-NEXT:    [[COND2:%.*]] = load i1, i1* [[PTR2:%.*]], align 1
+; CHECK-NEXT:    [[COND1:%.*]] = load i1, ptr [[PTR1:%.*]], align 1
+; CHECK-NEXT:    [[COND2:%.*]] = load i1, ptr [[PTR2:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[COND1]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_US:%.*]]
@@ -32,7 +32,7 @@ define i32 @test1_freeze(i1* %ptr0, i1* %ptr1, i1* %ptr2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @a()
 ; CHECK-NEXT:    br label [[LATCH_US:%.*]]
 ; CHECK:       latch.us:
-; CHECK-NEXT:    [[V_US:%.*]] = load i1, i1* [[PTR0:%.*]], align 1
+; CHECK-NEXT:    [[V_US:%.*]] = load i1, ptr [[PTR0:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V_US]], label [[LOOP_BEGIN_US]], label [[LOOP_EXIT_SPLIT_US:%.*]]
 ; CHECK:       loop_exit.split.us:
 ; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
@@ -50,7 +50,7 @@ define i32 @test1_freeze(i1* %ptr0, i1* %ptr1, i1* %ptr2) {
 ; CHECK-NEXT:    call void @sink3(i1 true)
 ; CHECK-NEXT:    br label [[LATCH_US2:%.*]]
 ; CHECK:       latch.us2:
-; CHECK-NEXT:    [[V_US3:%.*]] = load i1, i1* [[PTR0]], align 1
+; CHECK-NEXT:    [[V_US3:%.*]] = load i1, ptr [[PTR0]], align 1
 ; CHECK-NEXT:    br i1 [[V_US3]], label [[LOOP_BEGIN_US1]], label [[LOOP_EXIT_SPLIT_SPLIT_US:%.*]]
 ; CHECK:       loop_exit.split.split.us:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT:%.*]]
@@ -65,7 +65,7 @@ define i32 @test1_freeze(i1* %ptr0, i1* %ptr1, i1* %ptr2) {
 ; CHECK-NEXT:    call void @sink4(i1 false)
 ; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[V:%.*]] = load i1, i1* [[PTR0]], align 1
+; CHECK-NEXT:    [[V:%.*]] = load i1, ptr [[PTR0]], align 1
 ; CHECK-NEXT:    br i1 [[V]], label [[LOOP_BEGIN]], label [[LOOP_EXIT_SPLIT_SPLIT:%.*]]
 ; CHECK:       loop_exit.split.split:
 ; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT]]
@@ -75,8 +75,8 @@ define i32 @test1_freeze(i1* %ptr0, i1* %ptr1, i1* %ptr2) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %cond1 = load i1, i1* %ptr1
-  %cond2 = load i1, i1* %ptr2
+  %cond1 = load i1, ptr %ptr1
+  %cond2 = load i1, ptr %ptr2
   br label %loop_begin
 
 loop_begin:
@@ -105,7 +105,7 @@ loop_b_b:
 ; %cond2 is replaced to false
 
 latch:
-  %v = load i1, i1* %ptr0
+  %v = load i1, ptr %ptr0
   br i1 %v, label %loop_begin, label %loop_exit
 
 loop_exit:
@@ -116,36 +116,36 @@ loop_exit:
 ; produces a non-loop clone that can reach multiple exit blocks which are part
 ; of different outer loops we correctly divide the cloned loop blocks between
 ; the outer loops based on reachability.
-define i32 @test7a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test7a(ptr %ptr, ptr %cond.ptr, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test7a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_loop_begin:
 ; CHECK-NEXT:    [[A_PHI:%.*]] = phi i32 [ [[A]], [[LOOP_BEGIN]] ], [ [[A2:%.*]], [[INNER_INNER_LOOP_EXIT:%.*]] ]
-; CHECK-NEXT:    [[COND:%.*]] = load i1, i1* [[COND_PTR:%.*]], align 1
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = load i1, ptr [[COND_PTR:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND]]
 ; CHECK-NEXT:    br i1 [[COND_FR]], label [[INNER_LOOP_BEGIN_SPLIT_US:%.*]], label [[INNER_LOOP_BEGIN_SPLIT:%.*]]
 ; CHECK:       inner_loop_begin.split.us:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN_US:%.*]]
 ; CHECK:       inner_inner_loop_begin.us:
-; CHECK-NEXT:    [[V1_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[V1_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1_US]], label [[INNER_INNER_LOOP_A_US:%.*]], label [[INNER_INNER_LOOP_B_US:%.*]]
 ; CHECK:       inner_inner_loop_b.us:
-; CHECK-NEXT:    [[V3_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3_US]], label [[INNER_INNER_LOOP_EXIT_SPLIT_US:%.*]], label [[INNER_INNER_LOOP_C_US_LOOPEXIT:%.*]]
 ; CHECK:       inner_inner_loop_a.us:
 ; CHECK-NEXT:    [[A_PHI_LCSSA10:%.*]] = phi i32 [ [[A_PHI]], [[INNER_INNER_LOOP_BEGIN_US]] ]
 ; CHECK-NEXT:    [[B_LCSSA6:%.*]] = phi i32 [ [[B]], [[INNER_INNER_LOOP_BEGIN_US]] ]
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[LOOP_EXIT_SPLIT_US:%.*]], label [[INNER_INNER_LOOP_C_US:%.*]]
 ; CHECK:       inner_inner_loop_c.us.loopexit:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_C_US]]
 ; CHECK:       inner_inner_loop_c.us:
-; CHECK-NEXT:    [[V4_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V4_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4_US]], label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT_US:%.*]], label [[INNER_INNER_LOOP_D_US:%.*]]
 ; CHECK:       inner_inner_loop_d.us:
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT_US]]
@@ -160,24 +160,24 @@ define i32 @test7a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK:       inner_loop_begin.split:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_inner_loop_begin:
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[INNER_INNER_LOOP_A:%.*]], label [[INNER_INNER_LOOP_B:%.*]]
 ; CHECK:       inner_inner_loop_a:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[LOOP_EXIT_SPLIT:%.*]], label [[INNER_INNER_LOOP_C:%.*]]
 ; CHECK:       inner_inner_loop_b:
-; CHECK-NEXT:    [[V3:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3]], label [[INNER_INNER_LOOP_EXIT_SPLIT:%.*]], label [[INNER_INNER_LOOP_C]]
 ; CHECK:       inner_inner_loop_c:
-; CHECK-NEXT:    [[V4:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V4:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4]], label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT:%.*]], label [[INNER_INNER_LOOP_D:%.*]]
 ; CHECK:       inner_inner_loop_d:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN]]
 ; CHECK:       inner_inner_loop_exit.split:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_EXIT]]
 ; CHECK:       inner_inner_loop_exit:
-; CHECK-NEXT:    [[A2]] = load i32, i32* [[A_PTR]], align 4
-; CHECK-NEXT:    [[V5:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[A2]] = load i32, ptr [[A_PTR]], align 4
+; CHECK-NEXT:    [[V5:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V5]], label [[INNER_LOOP_EXIT_LOOPEXIT1:%.*]], label [[INNER_LOOP_BEGIN]]
 ; CHECK:       inner_loop_exit.loopexit.split:
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT_LOOPEXIT]]
@@ -201,29 +201,29 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %a = load i32, i32* %a.ptr
+  %a = load i32, ptr %a.ptr
   br label %inner_loop_begin
 
 inner_loop_begin:
   %a.phi = phi i32 [ %a, %loop_begin ], [ %a2, %inner_inner_loop_exit ]
-  %cond = load i1, i1* %cond.ptr
-  %b = load i32, i32* %b.ptr
+  %cond = load i1, ptr %cond.ptr
+  %b = load i32, ptr %b.ptr
   br label %inner_inner_loop_begin
 
 inner_inner_loop_begin:
-  %v1 = load i1, i1* %ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %inner_inner_loop_a, label %inner_inner_loop_b
 
 inner_inner_loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %loop_exit, label %inner_inner_loop_c
 
 inner_inner_loop_b:
-  %v3 = load i1, i1* %ptr
+  %v3 = load i1, ptr %ptr
   br i1 %v3, label %inner_inner_loop_exit, label %inner_inner_loop_c
 
 inner_inner_loop_c:
-  %v4 = load i1, i1* %ptr
+  %v4 = load i1, ptr %ptr
   br i1 %v4, label %inner_loop_exit, label %inner_inner_loop_d
 
 inner_inner_loop_d:
@@ -233,8 +233,8 @@ inner_inner_loop_d:
 ; The original copy that continues to loop.
 
 inner_inner_loop_exit:
-  %a2 = load i32, i32* %a.ptr
-  %v5 = load i1, i1* %ptr
+  %a2 = load i32, ptr %a.ptr
+  %v5 = load i1, ptr %ptr
   br i1 %v5, label %inner_loop_exit, label %inner_loop_begin
 
 inner_loop_exit:
@@ -249,32 +249,32 @@ loop_exit:
 
 ; Same pattern as @test7a but here the original loop becomes a non-loop that
 ; can reach multiple exit blocks which are part of different outer loops.
-define i32 @test7b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test7b(ptr %ptr, ptr %cond.ptr, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test7b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_loop_begin:
 ; CHECK-NEXT:    [[A_PHI:%.*]] = phi i32 [ [[A]], [[LOOP_BEGIN]] ], [ [[A2:%.*]], [[INNER_INNER_LOOP_EXIT:%.*]] ]
-; CHECK-NEXT:    [[COND:%.*]] = load i1, i1* [[COND_PTR:%.*]], align 1
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = load i1, ptr [[COND_PTR:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND]]
 ; CHECK-NEXT:    br i1 [[COND_FR]], label [[INNER_LOOP_BEGIN_SPLIT_US:%.*]], label [[INNER_LOOP_BEGIN_SPLIT:%.*]]
 ; CHECK:       inner_loop_begin.split.us:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN_US:%.*]]
 ; CHECK:       inner_inner_loop_begin.us:
-; CHECK-NEXT:    [[V1_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[V1_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1_US]], label [[INNER_INNER_LOOP_A_US:%.*]], label [[INNER_INNER_LOOP_B_US:%.*]]
 ; CHECK:       inner_inner_loop_b.us:
-; CHECK-NEXT:    [[V3_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3_US]], label [[INNER_INNER_LOOP_EXIT_SPLIT_US:%.*]], label [[INNER_INNER_LOOP_C_US:%.*]]
 ; CHECK:       inner_inner_loop_a.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[LOOP_EXIT_SPLIT_US:%.*]], label [[INNER_INNER_LOOP_C_US]]
 ; CHECK:       inner_inner_loop_c.us:
-; CHECK-NEXT:    [[V4_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V4_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4_US]], label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT_US:%.*]], label [[INNER_INNER_LOOP_D_US:%.*]]
 ; CHECK:       inner_inner_loop_d.us:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN_US]]
@@ -289,28 +289,28 @@ define i32 @test7b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK:       inner_loop_begin.split:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_inner_loop_begin:
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[INNER_INNER_LOOP_A:%.*]], label [[INNER_INNER_LOOP_B:%.*]]
 ; CHECK:       inner_inner_loop_a:
 ; CHECK-NEXT:    [[A_PHI_LCSSA:%.*]] = phi i32 [ [[A_PHI]], [[INNER_INNER_LOOP_BEGIN]] ]
 ; CHECK-NEXT:    [[B_LCSSA3:%.*]] = phi i32 [ [[B]], [[INNER_INNER_LOOP_BEGIN]] ]
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[LOOP_EXIT_SPLIT:%.*]], label [[INNER_INNER_LOOP_C:%.*]]
 ; CHECK:       inner_inner_loop_b:
-; CHECK-NEXT:    [[V3:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3]], label [[INNER_INNER_LOOP_EXIT_SPLIT:%.*]], label [[INNER_INNER_LOOP_C_LOOPEXIT:%.*]]
 ; CHECK:       inner_inner_loop_c.loopexit:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_C]]
 ; CHECK:       inner_inner_loop_c:
-; CHECK-NEXT:    [[V4:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V4:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4]], label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT:%.*]], label [[INNER_INNER_LOOP_D:%.*]]
 ; CHECK:       inner_inner_loop_d:
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT]]
 ; CHECK:       inner_inner_loop_exit.split:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_EXIT]]
 ; CHECK:       inner_inner_loop_exit:
-; CHECK-NEXT:    [[A2]] = load i32, i32* [[A_PTR]], align 4
-; CHECK-NEXT:    [[V5:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[A2]] = load i32, ptr [[A_PTR]], align 4
+; CHECK-NEXT:    [[V5:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V5]], label [[INNER_LOOP_EXIT_LOOPEXIT1:%.*]], label [[INNER_LOOP_BEGIN]]
 ; CHECK:       inner_loop_exit.loopexit.split:
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT_LOOPEXIT]]
@@ -334,29 +334,29 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %a = load i32, i32* %a.ptr
+  %a = load i32, ptr %a.ptr
   br label %inner_loop_begin
 
 inner_loop_begin:
   %a.phi = phi i32 [ %a, %loop_begin ], [ %a2, %inner_inner_loop_exit ]
-  %cond = load i1, i1* %cond.ptr
-  %b = load i32, i32* %b.ptr
+  %cond = load i1, ptr %cond.ptr
+  %b = load i32, ptr %b.ptr
   br label %inner_inner_loop_begin
 
 inner_inner_loop_begin:
-  %v1 = load i1, i1* %ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %inner_inner_loop_a, label %inner_inner_loop_b
 
 inner_inner_loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %loop_exit, label %inner_inner_loop_c
 
 inner_inner_loop_b:
-  %v3 = load i1, i1* %ptr
+  %v3 = load i1, ptr %ptr
   br i1 %v3, label %inner_inner_loop_exit, label %inner_inner_loop_c
 
 inner_inner_loop_c:
-  %v4 = load i1, i1* %ptr
+  %v4 = load i1, ptr %ptr
   br i1 %v4, label %inner_loop_exit, label %inner_inner_loop_d
 
 inner_inner_loop_d:
@@ -366,8 +366,8 @@ inner_inner_loop_d:
 ; blocks.
 
 inner_inner_loop_exit:
-  %a2 = load i32, i32* %a.ptr
-  %v5 = load i1, i1* %ptr
+  %a2 = load i32, ptr %a.ptr
+  %v5 = load i1, ptr %ptr
   br i1 %v5, label %inner_loop_exit, label %inner_loop_begin
 
 inner_loop_exit:
@@ -382,29 +382,29 @@ loop_exit:
 
 ; Test that when the exit block set of an inner loop changes to start at a less
 ; high level of the loop nest we correctly hoist the loop up the nest.
-define i32 @test8a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test8a(ptr %ptr, ptr %cond.ptr, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test8a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_loop_begin:
 ; CHECK-NEXT:    [[A_PHI:%.*]] = phi i32 [ [[A]], [[LOOP_BEGIN]] ], [ [[A2:%.*]], [[INNER_INNER_LOOP_EXIT:%.*]] ]
-; CHECK-NEXT:    [[COND:%.*]] = load i1, i1* [[COND_PTR:%.*]], align 1
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = load i1, ptr [[COND_PTR:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND]]
 ; CHECK-NEXT:    br i1 [[COND_FR]], label [[INNER_LOOP_BEGIN_SPLIT_US:%.*]], label [[INNER_LOOP_BEGIN_SPLIT:%.*]]
 ; CHECK:       inner_loop_begin.split.us:
 ; CHECK-NEXT:    [[A_PHI_LCSSA4:%.*]] = phi i32 [ [[A_PHI]], [[INNER_LOOP_BEGIN]] ]
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN_US:%.*]]
 ; CHECK:       inner_inner_loop_begin.us:
-; CHECK-NEXT:    [[V1_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[V1_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1_US]], label [[INNER_INNER_LOOP_A_US:%.*]], label [[INNER_INNER_LOOP_B_US:%.*]]
 ; CHECK:       inner_inner_loop_b.us:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_LATCH_US:%.*]]
 ; CHECK:       inner_inner_loop_a.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[INNER_INNER_LOOP_LATCH_US]], label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT_US:%.*]]
 ; CHECK:       inner_inner_loop_latch.us:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN_US]]
@@ -414,18 +414,18 @@ define i32 @test8a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK:       inner_loop_begin.split:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_inner_loop_begin:
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[INNER_INNER_LOOP_A:%.*]], label [[INNER_INNER_LOOP_B:%.*]]
 ; CHECK:       inner_inner_loop_a:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[INNER_INNER_LOOP_LATCH:%.*]], label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT:%.*]]
 ; CHECK:       inner_inner_loop_b:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_EXIT]]
 ; CHECK:       inner_inner_loop_latch:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN]]
 ; CHECK:       inner_inner_loop_exit:
-; CHECK-NEXT:    [[A2]] = load i32, i32* [[A_PTR]], align 4
-; CHECK-NEXT:    [[V4:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[A2]] = load i32, ptr [[A_PTR]], align 4
+; CHECK-NEXT:    [[V4:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4]], label [[INNER_LOOP_EXIT_LOOPEXIT1:%.*]], label [[INNER_LOOP_BEGIN]]
 ; CHECK:       inner_loop_exit.loopexit.split:
 ; CHECK-NEXT:    [[A_PHI_LCSSA2:%.*]] = phi i32 [ [[A_PHI]], [[INNER_INNER_LOOP_A]] ]
@@ -438,7 +438,7 @@ define i32 @test8a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT]]
 ; CHECK:       inner_loop_exit:
 ; CHECK-NEXT:    [[A_PHI3:%.*]] = phi i32 [ [[A_PHI_LCSSA]], [[INNER_LOOP_EXIT_LOOPEXIT1]] ], [ [[DOTUS_PHI]], [[INNER_LOOP_EXIT_LOOPEXIT]] ]
-; CHECK-NEXT:    [[V5:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V5:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V5]], label [[LOOP_EXIT:%.*]], label [[LOOP_BEGIN]]
 ; CHECK:       loop_exit:
 ; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi i32 [ [[A_PHI3]], [[INNER_LOOP_EXIT]] ]
@@ -448,21 +448,21 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %a = load i32, i32* %a.ptr
+  %a = load i32, ptr %a.ptr
   br label %inner_loop_begin
 
 inner_loop_begin:
   %a.phi = phi i32 [ %a, %loop_begin ], [ %a2, %inner_inner_loop_exit ]
-  %cond = load i1, i1* %cond.ptr
-  %b = load i32, i32* %b.ptr
+  %cond = load i1, ptr %cond.ptr
+  %b = load i32, ptr %b.ptr
   br label %inner_inner_loop_begin
 
 inner_inner_loop_begin:
-  %v1 = load i1, i1* %ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %inner_inner_loop_a, label %inner_inner_loop_b
 
 inner_inner_loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %inner_inner_loop_latch, label %inner_loop_exit
 
 inner_inner_loop_b:
@@ -474,12 +474,12 @@ inner_inner_loop_latch:
 ; The original region exits the loop earlier.
 
 inner_inner_loop_exit:
-  %a2 = load i32, i32* %a.ptr
-  %v4 = load i1, i1* %ptr
+  %a2 = load i32, ptr %a.ptr
+  %v4 = load i1, ptr %ptr
   br i1 %v4, label %inner_loop_exit, label %inner_loop_begin
 
 inner_loop_exit:
-  %v5 = load i1, i1* %ptr
+  %v5 = load i1, ptr %ptr
   br i1 %v5, label %loop_exit, label %loop_begin
 
 loop_exit:
@@ -489,28 +489,28 @@ loop_exit:
 
 ; Same pattern as @test8a but where the original loop looses an exit block and
 ; needs to be hoisted up the nest.
-define i32 @test8b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test8b(ptr %ptr, ptr %cond.ptr, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test8b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_loop_begin:
 ; CHECK-NEXT:    [[A_PHI:%.*]] = phi i32 [ [[A]], [[LOOP_BEGIN]] ], [ [[A2:%.*]], [[INNER_INNER_LOOP_EXIT:%.*]] ]
-; CHECK-NEXT:    [[COND:%.*]] = load i1, i1* [[COND_PTR:%.*]], align 1
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = load i1, ptr [[COND_PTR:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND]]
 ; CHECK-NEXT:    br i1 [[COND_FR]], label [[INNER_LOOP_BEGIN_SPLIT_US:%.*]], label [[INNER_LOOP_BEGIN_SPLIT:%.*]]
 ; CHECK:       inner_loop_begin.split.us:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN_US:%.*]]
 ; CHECK:       inner_inner_loop_begin.us:
-; CHECK-NEXT:    [[V1_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[V1_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1_US]], label [[INNER_INNER_LOOP_A_US:%.*]], label [[INNER_INNER_LOOP_B_US:%.*]]
 ; CHECK:       inner_inner_loop_b.us:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_EXIT_SPLIT_US:%.*]]
 ; CHECK:       inner_inner_loop_a.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[INNER_INNER_LOOP_LATCH_US:%.*]], label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT_US:%.*]]
 ; CHECK:       inner_inner_loop_latch.us:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN_US]]
@@ -523,18 +523,18 @@ define i32 @test8b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    [[A_PHI_LCSSA4:%.*]] = phi i32 [ [[A_PHI]], [[INNER_LOOP_BEGIN]] ]
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_inner_loop_begin:
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[INNER_INNER_LOOP_A:%.*]], label [[INNER_INNER_LOOP_B:%.*]]
 ; CHECK:       inner_inner_loop_a:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[INNER_INNER_LOOP_LATCH:%.*]], label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT:%.*]]
 ; CHECK:       inner_inner_loop_b:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_LATCH]]
 ; CHECK:       inner_inner_loop_latch:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN]]
 ; CHECK:       inner_inner_loop_exit:
-; CHECK-NEXT:    [[A2]] = load i32, i32* [[A_PTR]], align 4
-; CHECK-NEXT:    [[V4:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[A2]] = load i32, ptr [[A_PTR]], align 4
+; CHECK-NEXT:    [[V4:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4]], label [[INNER_LOOP_EXIT_LOOPEXIT1:%.*]], label [[INNER_LOOP_BEGIN]]
 ; CHECK:       inner_loop_exit.loopexit.split:
 ; CHECK-NEXT:    [[A_PHI_LCSSA2:%.*]] = phi i32 [ [[A_PHI_LCSSA4]], [[INNER_INNER_LOOP_A]] ]
@@ -547,7 +547,7 @@ define i32 @test8b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT]]
 ; CHECK:       inner_loop_exit:
 ; CHECK-NEXT:    [[A_PHI3:%.*]] = phi i32 [ [[A_PHI_LCSSA]], [[INNER_LOOP_EXIT_LOOPEXIT1]] ], [ [[DOTUS_PHI]], [[INNER_LOOP_EXIT_LOOPEXIT]] ]
-; CHECK-NEXT:    [[V5:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V5:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V5]], label [[LOOP_EXIT:%.*]], label [[LOOP_BEGIN]]
 ; CHECK:       loop_exit:
 ; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi i32 [ [[A_PHI3]], [[INNER_LOOP_EXIT]] ]
@@ -557,21 +557,21 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %a = load i32, i32* %a.ptr
+  %a = load i32, ptr %a.ptr
   br label %inner_loop_begin
 
 inner_loop_begin:
   %a.phi = phi i32 [ %a, %loop_begin ], [ %a2, %inner_inner_loop_exit ]
-  %cond = load i1, i1* %cond.ptr
-  %b = load i32, i32* %b.ptr
+  %cond = load i1, ptr %cond.ptr
+  %b = load i32, ptr %b.ptr
   br label %inner_inner_loop_begin
 
 inner_inner_loop_begin:
-  %v1 = load i1, i1* %ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %inner_inner_loop_a, label %inner_inner_loop_b
 
 inner_inner_loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %inner_inner_loop_latch, label %inner_loop_exit
 
 inner_inner_loop_b:
@@ -583,12 +583,12 @@ inner_inner_loop_latch:
 ; The original region is now an exit in the preheader.
 
 inner_inner_loop_exit:
-  %a2 = load i32, i32* %a.ptr
-  %v4 = load i1, i1* %ptr
+  %a2 = load i32, ptr %a.ptr
+  %v4 = load i1, ptr %ptr
   br i1 %v4, label %inner_loop_exit, label %inner_loop_begin
 
 inner_loop_exit:
-  %v5 = load i1, i1* %ptr
+  %v5 = load i1, ptr %ptr
   br i1 %v5, label %loop_exit, label %loop_begin
 
 loop_exit:
@@ -597,7 +597,7 @@ loop_exit:
 }
 
 ; Test that requires re-forming dedicated exits for the cloned loop.
-define i32 @test10a(i1* %ptr, i1 %cond, i32* %a.ptr) {
+define i32 @test10a(ptr %ptr, i1 %cond, ptr %a.ptr) {
 ; CHECK-LABEL: @test10a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND:%.*]]
@@ -605,14 +605,14 @@ define i32 @test10a(i1* %ptr, i1 %cond, i32* %a.ptr) {
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_US:%.*]]
 ; CHECK:       loop_begin.us:
-; CHECK-NEXT:    [[A_US:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
-; CHECK-NEXT:    [[V1_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[A_US:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1_US]], label [[LOOP_A_US:%.*]], label [[LOOP_B_US:%.*]]
 ; CHECK:       loop_b.us:
 ; CHECK-NEXT:    [[A_US_LCSSA:%.*]] = phi i32 [ [[A_US]], [[LOOP_BEGIN_US]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT_US:%.*]]
 ; CHECK:       loop_a.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[LOOP_EXIT_SPLIT_US_LOOPEXIT:%.*]], label [[LOOP_BEGIN_BACKEDGE_US:%.*]]
 ; CHECK:       loop_begin.backedge.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_US]]
@@ -625,11 +625,11 @@ define i32 @test10a(i1* %ptr, i1 %cond, i32* %a.ptr) {
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[LOOP_A:%.*]], label [[LOOP_B:%.*]]
 ; CHECK:       loop_a:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[LOOP_EXIT_SPLIT:%.*]], label [[LOOP_BEGIN_BACKEDGE:%.*]]
 ; CHECK:       loop_begin.backedge:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN]]
@@ -646,12 +646,12 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %a = load i32, i32* %a.ptr
-  %v1 = load i1, i1* %ptr
+  %a = load i32, ptr %a.ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %loop_a, label %loop_b
 
 loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %loop_exit, label %loop_begin
 
 loop_b:
@@ -666,7 +666,7 @@ loop_exit:
 }
 
 ; Test that requires re-forming dedicated exits for the original loop.
-define i32 @test10b(i1* %ptr, i1 %cond, i32* %a.ptr) {
+define i32 @test10b(ptr %ptr, i1 %cond, ptr %a.ptr) {
 ; CHECK-LABEL: @test10b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND:%.*]]
@@ -674,13 +674,13 @@ define i32 @test10b(i1* %ptr, i1 %cond, i32* %a.ptr) {
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_US:%.*]]
 ; CHECK:       loop_begin.us:
-; CHECK-NEXT:    [[A_US:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
-; CHECK-NEXT:    [[V1_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[A_US:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1_US]], label [[LOOP_A_US:%.*]], label [[LOOP_B_US:%.*]]
 ; CHECK:       loop_b.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_BACKEDGE_US:%.*]]
 ; CHECK:       loop_a.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[LOOP_BEGIN_BACKEDGE_US]], label [[LOOP_EXIT_SPLIT_US:%.*]]
 ; CHECK:       loop_begin.backedge.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_US]]
@@ -690,11 +690,11 @@ define i32 @test10b(i1* %ptr, i1 %cond, i32* %a.ptr) {
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[LOOP_A:%.*]], label [[LOOP_B:%.*]]
 ; CHECK:       loop_a:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[LOOP_BEGIN_BACKEDGE:%.*]], label [[LOOP_EXIT_SPLIT_LOOPEXIT:%.*]]
 ; CHECK:       loop_begin.backedge:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN]]
@@ -715,12 +715,12 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %a = load i32, i32* %a.ptr
-  %v1 = load i1, i1* %ptr
+  %a = load i32, ptr %a.ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %loop_a, label %loop_b
 
 loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %loop_begin, label %loop_exit
 
 loop_b:
@@ -738,16 +738,16 @@ loop_exit:
 ; exits even an outer loop, we don't add the cloned preheader to the outer
 ; loop and do add the needed LCSSA phi nodes for the new exit block from the
 ; outer loop.
-define i32 @test11a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test11a(ptr %ptr, ptr %cond.ptr, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test11a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[LOOP_LATCH:%.*]], label [[INNER_LOOP_PH:%.*]]
 ; CHECK:       inner_loop_ph:
-; CHECK-NEXT:    [[COND:%.*]] = load i1, i1* [[COND_PTR:%.*]], align 1
+; CHECK-NEXT:    [[COND:%.*]] = load i1, ptr [[COND_PTR:%.*]], align 1
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND]]
 ; CHECK-NEXT:    br i1 [[COND_FR]], label [[INNER_LOOP_PH_SPLIT_US:%.*]], label [[INNER_LOOP_PH_SPLIT:%.*]]
 ; CHECK:       inner_loop_ph.split.us:
@@ -755,7 +755,7 @@ define i32 @test11a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN_US:%.*]]
 ; CHECK:       inner_loop_begin.us:
 ; CHECK-NEXT:    call void @sink1(i32 [[B_LCSSA]])
-; CHECK-NEXT:    [[A_US:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[A_US:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT_SPLIT_US:%.*]]
 ; CHECK:       loop_exit.loopexit.split.us:
 ; CHECK-NEXT:    [[A_LCSSA2_US:%.*]] = phi i32 [ [[A_US]], [[INNER_LOOP_BEGIN_US]] ]
@@ -764,14 +764,14 @@ define i32 @test11a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_loop_begin:
 ; CHECK-NEXT:    call void @sink1(i32 [[B]])
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR]], align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP_A:%.*]]
 ; CHECK:       inner_loop_a:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[INNER_LOOP_EXIT:%.*]], label [[INNER_LOOP_BEGIN]]
 ; CHECK:       inner_loop_exit:
 ; CHECK-NEXT:    [[A_INNER_LCSSA:%.*]] = phi i32 [ [[A]], [[INNER_LOOP_A]] ]
-; CHECK-NEXT:    [[V3:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3]], label [[LOOP_LATCH]], label [[LOOP_EXIT_LOOPEXIT1:%.*]]
 ; CHECK:       loop_latch:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN]]
@@ -788,21 +788,21 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %b = load i32, i32* %b.ptr
-  %v1 = load i1, i1* %ptr
+  %b = load i32, ptr %b.ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %loop_latch, label %inner_loop_ph
 
 inner_loop_ph:
-  %cond = load i1, i1* %cond.ptr
+  %cond = load i1, ptr %cond.ptr
   br label %inner_loop_begin
 
 inner_loop_begin:
   call void @sink1(i32 %b)
-  %a = load i32, i32* %a.ptr
+  %a = load i32, ptr %a.ptr
   br i1 %cond, label %loop_exit, label %inner_loop_a
 
 inner_loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %inner_loop_exit, label %inner_loop_begin
 ; The cloned path doesn't actually loop and is an exit from the outer loop as
 ; well.
@@ -810,7 +810,7 @@ inner_loop_a:
 
 inner_loop_exit:
   %a.inner_lcssa = phi i32 [ %a, %inner_loop_a ]
-  %v3 = load i1, i1* %ptr
+  %v3 = load i1, ptr %ptr
   br i1 %v3, label %loop_latch, label %loop_exit
 
 loop_latch:
@@ -825,26 +825,26 @@ loop_exit:
 ; directly exits even an outer loop, we remove the original preheader from the
 ; outer loop and add needed LCSSA phi nodes for the new exit block from the
 ; outer loop.
-define i32 @test11b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test11b(ptr %ptr, ptr %cond.ptr, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test11b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[LOOP_LATCH:%.*]], label [[INNER_LOOP_PH:%.*]]
 ; CHECK:       inner_loop_ph:
-; CHECK-NEXT:    [[COND:%.*]] = load i1, i1* [[COND_PTR:%.*]], align 1
+; CHECK-NEXT:    [[COND:%.*]] = load i1, ptr [[COND_PTR:%.*]], align 1
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND]]
 ; CHECK-NEXT:    br i1 [[COND_FR]], label [[INNER_LOOP_PH_SPLIT_US:%.*]], label [[INNER_LOOP_PH_SPLIT:%.*]]
 ; CHECK:       inner_loop_ph.split.us:
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN_US:%.*]]
 ; CHECK:       inner_loop_begin.us:
 ; CHECK-NEXT:    call void @sink1(i32 [[B]])
-; CHECK-NEXT:    [[A_US:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[A_US:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP_A_US:%.*]]
 ; CHECK:       inner_loop_a.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[INNER_LOOP_EXIT_SPLIT_US:%.*]], label [[INNER_LOOP_BEGIN_US]]
 ; CHECK:       inner_loop_exit.split.us:
 ; CHECK-NEXT:    [[A_INNER_LCSSA_US:%.*]] = phi i32 [ [[A_US]], [[INNER_LOOP_A_US]] ]
@@ -854,10 +854,10 @@ define i32 @test11b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_loop_begin:
 ; CHECK-NEXT:    call void @sink1(i32 [[B_LCSSA]])
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR]], align 4
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       inner_loop_exit:
-; CHECK-NEXT:    [[V3:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3]], label [[LOOP_LATCH]], label [[LOOP_EXIT_LOOPEXIT1:%.*]]
 ; CHECK:       loop_latch:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN]]
@@ -875,28 +875,28 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %b = load i32, i32* %b.ptr
-  %v1 = load i1, i1* %ptr
+  %b = load i32, ptr %b.ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %loop_latch, label %inner_loop_ph
 
 inner_loop_ph:
-  %cond = load i1, i1* %cond.ptr
+  %cond = load i1, ptr %cond.ptr
   br label %inner_loop_begin
 
 inner_loop_begin:
   call void @sink1(i32 %b)
-  %a = load i32, i32* %a.ptr
+  %a = load i32, ptr %a.ptr
   br i1 %cond, label %inner_loop_a, label %loop_exit
 
 inner_loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %inner_loop_exit, label %inner_loop_begin
 ; The cloned path continues to loop without the exit out of the entire nest.
 ; The original remains a loop losing the exit edge.
 
 inner_loop_exit:
   %a.inner_lcssa = phi i32 [ %a, %inner_loop_a ]
-  %v3 = load i1, i1* %ptr
+  %v3 = load i1, ptr %ptr
   br i1 %v3, label %loop_latch, label %loop_exit
 
 loop_latch:
@@ -911,18 +911,18 @@ loop_exit:
 ; another loop, we correctly attribute the cloned preheader to that outermost
 ; loop rather than only handling the case where the preheader is not in any loop
 ; at all.
-define i32 @test12a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test12a(ptr %ptr, ptr %cond.ptr, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test12a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_loop_begin:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[INNER_LOOP_LATCH:%.*]], label [[INNER_INNER_LOOP_PH:%.*]]
 ; CHECK:       inner_inner_loop_ph:
-; CHECK-NEXT:    [[COND:%.*]] = load i1, i1* [[COND_PTR:%.*]], align 1
+; CHECK-NEXT:    [[COND:%.*]] = load i1, ptr [[COND_PTR:%.*]], align 1
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND]]
 ; CHECK-NEXT:    br i1 [[COND_FR]], label [[INNER_INNER_LOOP_PH_SPLIT_US:%.*]], label [[INNER_INNER_LOOP_PH_SPLIT:%.*]]
 ; CHECK:       inner_inner_loop_ph.split.us:
@@ -930,7 +930,7 @@ define i32 @test12a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN_US:%.*]]
 ; CHECK:       inner_inner_loop_begin.us:
 ; CHECK-NEXT:    call void @sink1(i32 [[B_LCSSA]])
-; CHECK-NEXT:    [[A_US:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[A_US:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT_LOOPEXIT_SPLIT_US:%.*]]
 ; CHECK:       inner_loop_exit.loopexit.split.us:
 ; CHECK-NEXT:    [[A_LCSSA2_US:%.*]] = phi i32 [ [[A_US]], [[INNER_INNER_LOOP_BEGIN_US]] ]
@@ -939,14 +939,14 @@ define i32 @test12a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_inner_loop_begin:
 ; CHECK-NEXT:    call void @sink1(i32 [[B]])
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR]], align 4
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_A:%.*]]
 ; CHECK:       inner_inner_loop_a:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[INNER_INNER_LOOP_EXIT:%.*]], label [[INNER_INNER_LOOP_BEGIN]]
 ; CHECK:       inner_inner_loop_exit:
 ; CHECK-NEXT:    [[A_INNER_INNER_LCSSA:%.*]] = phi i32 [ [[A]], [[INNER_INNER_LOOP_A]] ]
-; CHECK-NEXT:    [[V3:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3]], label [[INNER_LOOP_LATCH]], label [[INNER_LOOP_EXIT_LOOPEXIT1:%.*]]
 ; CHECK:       inner_loop_latch:
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN]]
@@ -957,7 +957,7 @@ define i32 @test12a(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT]]
 ; CHECK:       inner_loop_exit:
 ; CHECK-NEXT:    [[A_INNER_LCSSA:%.*]] = phi i32 [ [[A_LCSSA2_US]], [[INNER_LOOP_EXIT_LOOPEXIT]] ], [ [[A_INNER_INNER_LCSSA_LCSSA]], [[INNER_LOOP_EXIT_LOOPEXIT1]] ]
-; CHECK-NEXT:    [[V4:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V4:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4]], label [[LOOP_BEGIN]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop_exit:
 ; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi i32 [ [[A_INNER_LCSSA]], [[INNER_LOOP_EXIT]] ]
@@ -970,21 +970,21 @@ loop_begin:
   br label %inner_loop_begin
 
 inner_loop_begin:
-  %b = load i32, i32* %b.ptr
-  %v1 = load i1, i1* %ptr
+  %b = load i32, ptr %b.ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %inner_loop_latch, label %inner_inner_loop_ph
 
 inner_inner_loop_ph:
-  %cond = load i1, i1* %cond.ptr
+  %cond = load i1, ptr %cond.ptr
   br label %inner_inner_loop_begin
 
 inner_inner_loop_begin:
   call void @sink1(i32 %b)
-  %a = load i32, i32* %a.ptr
+  %a = load i32, ptr %a.ptr
   br i1 %cond, label %inner_loop_exit, label %inner_inner_loop_a
 
 inner_inner_loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %inner_inner_loop_exit, label %inner_inner_loop_begin
 ; The cloned path doesn't actually loop and is an exit from the outer loop as
 ; well.
@@ -992,7 +992,7 @@ inner_inner_loop_a:
 
 inner_inner_loop_exit:
   %a.inner_inner_lcssa = phi i32 [ %a, %inner_inner_loop_a ]
-  %v3 = load i1, i1* %ptr
+  %v3 = load i1, ptr %ptr
   br i1 %v3, label %inner_loop_latch, label %inner_loop_exit
 
 inner_loop_latch:
@@ -1000,7 +1000,7 @@ inner_loop_latch:
 
 inner_loop_exit:
   %a.inner_lcssa = phi i32 [ %a, %inner_inner_loop_begin ], [ %a.inner_inner_lcssa, %inner_inner_loop_exit ]
-  %v4 = load i1, i1* %ptr
+  %v4 = load i1, ptr %ptr
   br i1 %v4, label %loop_begin, label %loop_exit
 
 loop_exit:
@@ -1012,28 +1012,28 @@ loop_exit:
 ; another loop, we correctly sink the preheader to the outermost loop rather
 ; than only handling the case where the preheader is completely removed from
 ; a loop.
-define i32 @test12b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test12b(ptr %ptr, ptr %cond.ptr, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test12b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_loop_begin:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[INNER_LOOP_LATCH:%.*]], label [[INNER_INNER_LOOP_PH:%.*]]
 ; CHECK:       inner_inner_loop_ph:
-; CHECK-NEXT:    [[COND:%.*]] = load i1, i1* [[COND_PTR:%.*]], align 1
+; CHECK-NEXT:    [[COND:%.*]] = load i1, ptr [[COND_PTR:%.*]], align 1
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND]]
 ; CHECK-NEXT:    br i1 [[COND_FR]], label [[INNER_INNER_LOOP_PH_SPLIT_US:%.*]], label [[INNER_INNER_LOOP_PH_SPLIT:%.*]]
 ; CHECK:       inner_inner_loop_ph.split.us:
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN_US:%.*]]
 ; CHECK:       inner_inner_loop_begin.us:
 ; CHECK-NEXT:    call void @sink1(i32 [[B]])
-; CHECK-NEXT:    [[A_US:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[A_US:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_A_US:%.*]]
 ; CHECK:       inner_inner_loop_a.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[INNER_INNER_LOOP_EXIT_SPLIT_US:%.*]], label [[INNER_INNER_LOOP_BEGIN_US]]
 ; CHECK:       inner_inner_loop_exit.split.us:
 ; CHECK-NEXT:    [[A_INNER_INNER_LCSSA_US:%.*]] = phi i32 [ [[A_US]], [[INNER_INNER_LOOP_A_US]] ]
@@ -1043,10 +1043,10 @@ define i32 @test12b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_INNER_LOOP_BEGIN:%.*]]
 ; CHECK:       inner_inner_loop_begin:
 ; CHECK-NEXT:    call void @sink1(i32 [[B_LCSSA]])
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR]], align 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR]], align 4
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       inner_inner_loop_exit:
-; CHECK-NEXT:    [[V3:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3]], label [[INNER_LOOP_LATCH]], label [[INNER_LOOP_EXIT_LOOPEXIT1:%.*]]
 ; CHECK:       inner_loop_latch:
 ; CHECK-NEXT:    br label [[INNER_LOOP_BEGIN]]
@@ -1058,7 +1058,7 @@ define i32 @test12b(i1* %ptr, i1* %cond.ptr, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK-NEXT:    br label [[INNER_LOOP_EXIT]]
 ; CHECK:       inner_loop_exit:
 ; CHECK-NEXT:    [[A_INNER_LCSSA:%.*]] = phi i32 [ [[A_LCSSA2]], [[INNER_LOOP_EXIT_LOOPEXIT]] ], [ [[A_INNER_INNER_LCSSA_LCSSA]], [[INNER_LOOP_EXIT_LOOPEXIT1]] ]
-; CHECK-NEXT:    [[V4:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V4:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4]], label [[LOOP_BEGIN]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop_exit:
 ; CHECK-NEXT:    [[A_LCSSA:%.*]] = phi i32 [ [[A_INNER_LCSSA]], [[INNER_LOOP_EXIT]] ]
@@ -1071,28 +1071,28 @@ loop_begin:
   br label %inner_loop_begin
 
 inner_loop_begin:
-  %b = load i32, i32* %b.ptr
-  %v1 = load i1, i1* %ptr
+  %b = load i32, ptr %b.ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %inner_loop_latch, label %inner_inner_loop_ph
 
 inner_inner_loop_ph:
-  %cond = load i1, i1* %cond.ptr
+  %cond = load i1, ptr %cond.ptr
   br label %inner_inner_loop_begin
 
 inner_inner_loop_begin:
   call void @sink1(i32 %b)
-  %a = load i32, i32* %a.ptr
+  %a = load i32, ptr %a.ptr
   br i1 %cond, label %inner_inner_loop_a, label %inner_loop_exit
 
 inner_inner_loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %inner_inner_loop_exit, label %inner_inner_loop_begin
 ; The cloned path continues to loop without the exit out of the entire nest.
 ; The original remains a loop losing the exit edge.
 
 inner_inner_loop_exit:
   %a.inner_inner_lcssa = phi i32 [ %a, %inner_inner_loop_a ]
-  %v3 = load i1, i1* %ptr
+  %v3 = load i1, ptr %ptr
   br i1 %v3, label %inner_loop_latch, label %inner_loop_exit
 
 inner_loop_latch:
@@ -1100,7 +1100,7 @@ inner_loop_latch:
 
 inner_loop_exit:
   %a.inner_lcssa = phi i32 [ %a, %inner_inner_loop_begin ], [ %a.inner_inner_lcssa, %inner_inner_loop_exit ]
-  %v4 = load i1, i1* %ptr
+  %v4 = load i1, ptr %ptr
   br i1 %v4, label %loop_begin, label %loop_exit
 
 loop_exit:
@@ -1113,7 +1113,7 @@ loop_exit:
 ; exiting block that connects the inner loop to the cloned loop is not the header
 ; block. This ensures that we correctly handle interesting corner cases of
 ; traversing back to the header when establishing the cloned loop.
-define i32 @test13a(i1* %ptr, i1 %cond, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test13a(ptr %ptr, i1 %cond, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test13a(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND:%.*]]
@@ -1121,26 +1121,26 @@ define i32 @test13a(i1* %ptr, i1 %cond, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_US:%.*]]
 ; CHECK:       loop_begin.us:
-; CHECK-NEXT:    [[A_US:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
-; CHECK-NEXT:    [[V1_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[A_US:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1_US]], label [[LOOP_A_US:%.*]], label [[LOOP_B_US:%.*]]
 ; CHECK:       loop_b.us:
-; CHECK-NEXT:    [[B_US:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[B_US:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP_B_INNER_PH_US:%.*]]
 ; CHECK:       loop_b_inner_ph.us:
 ; CHECK-NEXT:    br label [[LOOP_B_INNER_HEADER_US:%.*]]
 ; CHECK:       loop_b_inner_header.us:
-; CHECK-NEXT:    [[V3_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3_US]], label [[LOOP_B_INNER_LATCH_US:%.*]], label [[LOOP_B_INNER_BODY_US:%.*]]
 ; CHECK:       loop_b_inner_body.us:
-; CHECK-NEXT:    [[V4_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V4_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4_US]], label [[LOOP_B_INNER_LATCH_US]], label [[LOOP_B_INNER_EXIT_US:%.*]]
 ; CHECK:       loop_b_inner_exit.us:
 ; CHECK-NEXT:    br label [[LOOP_LATCH_US:%.*]]
 ; CHECK:       loop_b_inner_latch.us:
 ; CHECK-NEXT:    br label [[LOOP_B_INNER_HEADER_US]]
 ; CHECK:       loop_a.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[LOOP_EXIT_SPLIT_US:%.*]], label [[LOOP_LATCH_US]]
 ; CHECK:       loop_latch.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_US]]
@@ -1150,14 +1150,14 @@ define i32 @test13a(i1* %ptr, i1 %cond, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[LOOP_A:%.*]], label [[LOOP_B:%.*]]
 ; CHECK:       loop_a:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[LOOP_EXIT_SPLIT_LOOPEXIT:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop_b:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR]], align 4
 ; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT:%.*]]
 ; CHECK:       loop_latch:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN]]
@@ -1175,27 +1175,27 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %a = load i32, i32* %a.ptr
-  %v1 = load i1, i1* %ptr
+  %a = load i32, ptr %a.ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %loop_a, label %loop_b
 
 loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %loop_exit, label %loop_latch
 
 loop_b:
-  %b = load i32, i32* %b.ptr
+  %b = load i32, ptr %b.ptr
   br i1 %cond, label %loop_b_inner_ph, label %loop_exit
 
 loop_b_inner_ph:
   br label %loop_b_inner_header
 
 loop_b_inner_header:
-  %v3 = load i1, i1* %ptr
+  %v3 = load i1, ptr %ptr
   br i1 %v3, label %loop_b_inner_latch, label %loop_b_inner_body
 
 loop_b_inner_body:
-  %v4 = load i1, i1* %ptr
+  %v4 = load i1, ptr %ptr
   br i1 %v4, label %loop_b_inner_latch, label %loop_b_inner_exit
 
 loop_b_inner_latch:
@@ -1220,7 +1220,7 @@ loop_exit:
 ; the header block. This ensures that we correctly handle interesting corner
 ; cases of traversing back to the header when re-establishing the original loop
 ; still exists after unswitching.
-define i32 @test13b(i1* %ptr, i1 %cond, i32* %a.ptr, i32* %b.ptr) {
+define i32 @test13b(ptr %ptr, i1 %cond, ptr %a.ptr, ptr %b.ptr) {
 ; CHECK-LABEL: @test13b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND:%.*]]
@@ -1228,14 +1228,14 @@ define i32 @test13b(i1* %ptr, i1 %cond, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_US:%.*]]
 ; CHECK:       loop_begin.us:
-; CHECK-NEXT:    [[A_US:%.*]] = load i32, i32* [[A_PTR:%.*]], align 4
-; CHECK-NEXT:    [[V1_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[A_US:%.*]] = load i32, ptr [[A_PTR:%.*]], align 4
+; CHECK-NEXT:    [[V1_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[V1_US]], label [[LOOP_A_US:%.*]], label [[LOOP_B_US:%.*]]
 ; CHECK:       loop_b.us:
-; CHECK-NEXT:    [[B_US:%.*]] = load i32, i32* [[B_PTR:%.*]], align 4
+; CHECK-NEXT:    [[B_US:%.*]] = load i32, ptr [[B_PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP_EXIT_SPLIT_US:%.*]]
 ; CHECK:       loop_a.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2_US]], label [[LOOP_EXIT_SPLIT_US_LOOPEXIT:%.*]], label [[LOOP_LATCH_US:%.*]]
 ; CHECK:       loop_latch.us:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN_US]]
@@ -1248,22 +1248,22 @@ define i32 @test13b(i1* %ptr, i1 %cond, i32* %a.ptr, i32* %b.ptr) {
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[A_PTR]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_PTR]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V1]], label [[LOOP_A:%.*]], label [[LOOP_B:%.*]]
 ; CHECK:       loop_a:
-; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V2:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[LOOP_EXIT_SPLIT:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop_b:
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[B_PTR]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[B_PTR]], align 4
 ; CHECK-NEXT:    br label [[LOOP_B_INNER_PH:%.*]]
 ; CHECK:       loop_b_inner_ph:
 ; CHECK-NEXT:    br label [[LOOP_B_INNER_HEADER:%.*]]
 ; CHECK:       loop_b_inner_header:
-; CHECK-NEXT:    [[V3:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V3:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V3]], label [[LOOP_B_INNER_LATCH:%.*]], label [[LOOP_B_INNER_BODY:%.*]]
 ; CHECK:       loop_b_inner_body:
-; CHECK-NEXT:    [[V4:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[V4:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V4]], label [[LOOP_B_INNER_LATCH]], label [[LOOP_B_INNER_EXIT:%.*]]
 ; CHECK:       loop_b_inner_latch:
 ; CHECK-NEXT:    br label [[LOOP_B_INNER_HEADER]]
@@ -1282,27 +1282,27 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %a = load i32, i32* %a.ptr
-  %v1 = load i1, i1* %ptr
+  %a = load i32, ptr %a.ptr
+  %v1 = load i1, ptr %ptr
   br i1 %v1, label %loop_a, label %loop_b
 
 loop_a:
-  %v2 = load i1, i1* %ptr
+  %v2 = load i1, ptr %ptr
   br i1 %v2, label %loop_exit, label %loop_latch
 
 loop_b:
-  %b = load i32, i32* %b.ptr
+  %b = load i32, ptr %b.ptr
   br i1 %cond, label %loop_exit, label %loop_b_inner_ph
 
 loop_b_inner_ph:
   br label %loop_b_inner_header
 
 loop_b_inner_header:
-  %v3 = load i1, i1* %ptr
+  %v3 = load i1, ptr %ptr
   br i1 %v3, label %loop_b_inner_latch, label %loop_b_inner_body
 
 loop_b_inner_body:
-  %v4 = load i1, i1* %ptr
+  %v4 = load i1, ptr %ptr
   br i1 %v4, label %loop_b_inner_latch, label %loop_b_inner_exit
 
 loop_b_inner_latch:
@@ -1335,7 +1335,7 @@ declare i32 @h(i32 %arg)
 ; skip whole subregions of the outer loop blocks but just because the header of
 ; the outer loop is also the preheader of an inner loop shouldn't confuse this
 ; walk.
-define void @test23(i1 %arg, i1* %ptr) {
+define void @test23(i1 %arg, ptr %ptr) {
 ; CHECK-LABEL: @test23(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i1 [[ARG:%.*]]
@@ -1348,7 +1348,7 @@ define void @test23(i1 %arg, i1* %ptr) {
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    br label [[INNER_LATCH_US:%.*]]
 ; CHECK:       inner.latch.us:
-; CHECK-NEXT:    [[INNER_COND_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    [[INNER_COND_US:%.*]] = load i1, ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[INNER_COND_US]], label [[INNER_HEADER_US]], label [[OUTER_BODY_US:%.*]]
 ; CHECK:       outer.body.us:
 ; CHECK-NEXT:    br label [[OUTER_BODY_LEFT_US:%.*]]
@@ -1356,7 +1356,7 @@ define void @test23(i1 %arg, i1* %ptr) {
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    br label [[OUTER_LATCH_US:%.*]]
 ; CHECK:       outer.latch.us:
-; CHECK-NEXT:    [[OUTER_COND_US:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[OUTER_COND_US:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[OUTER_COND_US]], label [[OUTER_HEADER_US]], label [[EXIT_SPLIT_US:%.*]]
 ; CHECK:       exit.split.us:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -1368,7 +1368,7 @@ define void @test23(i1 %arg, i1* %ptr) {
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    br label [[INNER_LATCH:%.*]]
 ; CHECK:       inner.latch:
-; CHECK-NEXT:    [[INNER_COND:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[INNER_COND:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[INNER_COND]], label [[INNER_HEADER]], label [[OUTER_BODY:%.*]]
 ; CHECK:       outer.body:
 ; CHECK-NEXT:    br label [[OUTER_BODY_RIGHT:%.*]]
@@ -1376,7 +1376,7 @@ define void @test23(i1 %arg, i1* %ptr) {
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    br label [[OUTER_LATCH:%.*]]
 ; CHECK:       outer.latch:
-; CHECK-NEXT:    [[OUTER_COND:%.*]] = load i1, i1* [[PTR]], align 1
+; CHECK-NEXT:    [[OUTER_COND:%.*]] = load i1, ptr [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[OUTER_COND]], label [[OUTER_HEADER]], label [[EXIT_SPLIT:%.*]]
 ; CHECK:       exit.split:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -1396,7 +1396,7 @@ inner.header:
   br label %inner.latch
 
 inner.latch:
-  %inner.cond = load i1, i1* %ptr
+  %inner.cond = load i1, ptr %ptr
   br i1 %inner.cond, label %inner.header, label %outer.body
 
 outer.body:
@@ -1411,7 +1411,7 @@ outer.body.right:
   br label %outer.latch
 
 outer.latch:
-  %outer.cond = load i1, i1* %ptr
+  %outer.cond = load i1, ptr %ptr
   br i1 %outer.cond, label %outer.header, label %exit
 
 exit:
@@ -1797,15 +1797,15 @@ exit:
 ;   A < B < C
 ; into
 ;   A < (B, C)
-define void @hoist_inner_loop1(i32* %ptr) {
+define void @hoist_inner_loop1(ptr %ptr) {
 ; CHECK-LABEL: @hoist_inner_loop1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[A_HEADER:%.*]]
 ; CHECK:       a.header:
-; CHECK-NEXT:    [[X_A:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[X_A:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[B_HEADER:%.*]]
 ; CHECK:       b.header:
-; CHECK-NEXT:    [[X_B:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[X_B:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i1 [[V1]]
 ; CHECK-NEXT:    br i1 [[V1_FR]], label [[B_HEADER_SPLIT_US:%.*]], label [[B_HEADER_SPLIT:%.*]]
@@ -1823,8 +1823,8 @@ define void @hoist_inner_loop1(i32* %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @c()
 ; CHECK-NEXT:    br label [[C_LATCH:%.*]]
 ; CHECK:       c.latch:
-; CHECK-NEXT:    store i32 [[X_A]], i32* [[PTR]], align 4
-; CHECK-NEXT:    store i32 [[X_B_LCSSA]], i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_A]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_B_LCSSA]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[V2]], label [[C_HEADER]], label [[A_EXIT_C:%.*]]
 ; CHECK:       b.latch:
@@ -1843,11 +1843,11 @@ entry:
   br label %a.header
 
 a.header:
-  %x.a = load i32, i32* %ptr
+  %x.a = load i32, ptr %ptr
   br label %b.header
 
 b.header:
-  %x.b = load i32, i32* %ptr
+  %x.b = load i32, ptr %ptr
   %v1 = call i1 @cond()
   br label %c.header
 
@@ -1857,8 +1857,8 @@ c.header:
 
 c.latch:
   ; Use values from other loops to check LCSSA form.
-  store i32 %x.a, i32* %ptr
-  store i32 %x.b, i32* %ptr
+  store i32 %x.a, ptr %ptr
+  store i32 %x.b, ptr %ptr
   %v2 = call i1 @cond()
   br i1 %v2, label %c.header, label %a.exit.c
 
@@ -1883,15 +1883,15 @@ exit:
 ;   A < B < C
 ; into
 ;   (A < B), C
-define void @hoist_inner_loop2(i32* %ptr) {
+define void @hoist_inner_loop2(ptr %ptr) {
 ; CHECK-LABEL: @hoist_inner_loop2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[A_HEADER:%.*]]
 ; CHECK:       a.header:
-; CHECK-NEXT:    [[X_A:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[X_A:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[B_HEADER:%.*]]
 ; CHECK:       b.header:
-; CHECK-NEXT:    [[X_B:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[X_B:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i1 [[V1]]
 ; CHECK-NEXT:    br i1 [[V1_FR]], label [[B_HEADER_SPLIT_US:%.*]], label [[B_HEADER_SPLIT:%.*]]
@@ -1910,8 +1910,8 @@ define void @hoist_inner_loop2(i32* %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @c()
 ; CHECK-NEXT:    br label [[C_LATCH:%.*]]
 ; CHECK:       c.latch:
-; CHECK-NEXT:    store i32 [[X_A_LCSSA]], i32* [[PTR]], align 4
-; CHECK-NEXT:    store i32 [[X_B_LCSSA]], i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_A_LCSSA]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_B_LCSSA]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[V2]], label [[C_HEADER]], label [[EXIT:%.*]]
 ; CHECK:       b.latch:
@@ -1926,11 +1926,11 @@ entry:
   br label %a.header
 
 a.header:
-  %x.a = load i32, i32* %ptr
+  %x.a = load i32, ptr %ptr
   br label %b.header
 
 b.header:
-  %x.b = load i32, i32* %ptr
+  %x.b = load i32, ptr %ptr
   %v1 = call i1 @cond()
   br label %c.header
 
@@ -1940,8 +1940,8 @@ c.header:
 
 c.latch:
   ; Use values from other loops to check LCSSA form.
-  store i32 %x.a, i32* %ptr
-  store i32 %x.b, i32* %ptr
+  store i32 %x.a, ptr %ptr
+  store i32 %x.b, ptr %ptr
   %v2 = call i1 @cond()
   br i1 %v2, label %c.header, label %exit
 
@@ -1961,15 +1961,15 @@ exit:
 ;   A < B < C < D
 ; into
 ;   (A < B), (C < D)
-define void @hoist_inner_loop3(i32* %ptr) {
+define void @hoist_inner_loop3(ptr %ptr) {
 ; CHECK-LABEL: @hoist_inner_loop3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[A_HEADER:%.*]]
 ; CHECK:       a.header:
-; CHECK-NEXT:    [[X_A:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[X_A:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[B_HEADER:%.*]]
 ; CHECK:       b.header:
-; CHECK-NEXT:    [[X_B:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[X_B:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i1 [[V1]]
 ; CHECK-NEXT:    br i1 [[V1_FR]], label [[B_HEADER_SPLIT_US:%.*]], label [[B_HEADER_SPLIT:%.*]]
@@ -1988,12 +1988,12 @@ define void @hoist_inner_loop3(i32* %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @c()
 ; CHECK-NEXT:    br label [[C_BODY:%.*]]
 ; CHECK:       c.body:
-; CHECK-NEXT:    [[X_C:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[X_C:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[D_HEADER:%.*]]
 ; CHECK:       d.header:
-; CHECK-NEXT:    store i32 [[X_A_LCSSA]], i32* [[PTR]], align 4
-; CHECK-NEXT:    store i32 [[X_B_LCSSA]], i32* [[PTR]], align 4
-; CHECK-NEXT:    store i32 [[X_C]], i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_A_LCSSA]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_B_LCSSA]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_C]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[V2]], label [[D_HEADER]], label [[C_LATCH:%.*]]
 ; CHECK:       c.latch:
@@ -2011,11 +2011,11 @@ entry:
   br label %a.header
 
 a.header:
-  %x.a = load i32, i32* %ptr
+  %x.a = load i32, ptr %ptr
   br label %b.header
 
 b.header:
-  %x.b = load i32, i32* %ptr
+  %x.b = load i32, ptr %ptr
   %v1 = call i1 @cond()
   br label %c.header
 
@@ -2024,14 +2024,14 @@ c.header:
   br i1 %v1, label %b.latch, label %c.body
 
 c.body:
-  %x.c = load i32, i32* %ptr
+  %x.c = load i32, ptr %ptr
   br label %d.header
 
 d.header:
   ; Use values from other loops to check LCSSA form.
-  store i32 %x.a, i32* %ptr
-  store i32 %x.b, i32* %ptr
-  store i32 %x.c, i32* %ptr
+  store i32 %x.a, ptr %ptr
+  store i32 %x.b, ptr %ptr
+  store i32 %x.c, ptr %ptr
   %v2 = call i1 @cond()
   br i1 %v2, label %d.header, label %c.latch
 
@@ -2161,18 +2161,18 @@ exit:
 ;   A < B < C < D
 ; into
 ;   A < ((B < C), D)
-define void @hoist_inner_loop5(i32* %ptr) {
+define void @hoist_inner_loop5(ptr %ptr) {
 ; CHECK-LABEL: @hoist_inner_loop5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[A_HEADER:%.*]]
 ; CHECK:       a.header:
-; CHECK-NEXT:    [[X_A:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[X_A:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[B_HEADER:%.*]]
 ; CHECK:       b.header:
-; CHECK-NEXT:    [[X_B:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[X_B:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[C_HEADER:%.*]]
 ; CHECK:       c.header:
-; CHECK-NEXT:    [[X_C:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[X_C:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i1 [[V1]]
 ; CHECK-NEXT:    br i1 [[V1_FR]], label [[C_HEADER_SPLIT_US:%.*]], label [[C_HEADER_SPLIT:%.*]]
@@ -2191,9 +2191,9 @@ define void @hoist_inner_loop5(i32* %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @d()
 ; CHECK-NEXT:    br label [[D_LATCH:%.*]]
 ; CHECK:       d.latch:
-; CHECK-NEXT:    store i32 [[X_A]], i32* [[PTR]], align 4
-; CHECK-NEXT:    store i32 [[X_B_LCSSA]], i32* [[PTR]], align 4
-; CHECK-NEXT:    store i32 [[X_C_LCSSA]], i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_A]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_B_LCSSA]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_C_LCSSA]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[V2]], label [[D_HEADER]], label [[A_LATCH:%.*]]
 ; CHECK:       c.latch:
@@ -2210,15 +2210,15 @@ entry:
   br label %a.header
 
 a.header:
-  %x.a = load i32, i32* %ptr
+  %x.a = load i32, ptr %ptr
   br label %b.header
 
 b.header:
-  %x.b = load i32, i32* %ptr
+  %x.b = load i32, ptr %ptr
   br label %c.header
 
 c.header:
-  %x.c = load i32, i32* %ptr
+  %x.c = load i32, ptr %ptr
   %v1 = call i1 @cond()
   br label %d.header
 
@@ -2228,9 +2228,9 @@ d.header:
 
 d.latch:
   ; Use values from other loops to check LCSSA form.
-  store i32 %x.a, i32* %ptr
-  store i32 %x.b, i32* %ptr
-  store i32 %x.c, i32* %ptr
+  store i32 %x.a, ptr %ptr
+  store i32 %x.b, ptr %ptr
+  store i32 %x.c, ptr %ptr
   %v2 = call i1 @cond()
   br i1 %v2, label %d.header, label %a.latch
 
@@ -2248,15 +2248,15 @@ exit:
   ret void
 }
 
-define void @hoist_inner_loop_switch(i32* %ptr) {
+define void @hoist_inner_loop_switch(ptr %ptr) {
 ; CHECK-LABEL: @hoist_inner_loop_switch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[A_HEADER:%.*]]
 ; CHECK:       a.header:
-; CHECK-NEXT:    [[X_A:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[X_A:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[B_HEADER:%.*]]
 ; CHECK:       b.header:
-; CHECK-NEXT:    [[X_B:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[X_B:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V1:%.*]] = call i32 @cond.i32()
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1]]
 ; CHECK-NEXT:    switch i32 [[V1_FR]], label [[B_HEADER_SPLIT:%.*]] [
@@ -2279,8 +2279,8 @@ define void @hoist_inner_loop_switch(i32* %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @c()
 ; CHECK-NEXT:    br label [[C_LATCH:%.*]]
 ; CHECK:       c.latch:
-; CHECK-NEXT:    store i32 [[X_A_LCSSA]], i32* [[PTR]], align 4
-; CHECK-NEXT:    store i32 [[X_B_LCSSA]], i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_A_LCSSA]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 [[X_B_LCSSA]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[V2]], label [[C_HEADER]], label [[EXIT:%.*]]
 ; CHECK:       b.latch:
@@ -2295,11 +2295,11 @@ entry:
   br label %a.header
 
 a.header:
-  %x.a = load i32, i32* %ptr
+  %x.a = load i32, ptr %ptr
   br label %b.header
 
 b.header:
-  %x.b = load i32, i32* %ptr
+  %x.b = load i32, ptr %ptr
   %v1 = call i32 @cond.i32()
   br label %c.header
 
@@ -2313,8 +2313,8 @@ c.header:
 
 c.latch:
   ; Use values from other loops to check LCSSA form.
-  store i32 %x.a, i32* %ptr
-  store i32 %x.b, i32* %ptr
+  store i32 %x.a, ptr %ptr
+  store i32 %x.b, ptr %ptr
   %v2 = call i1 @cond()
   br i1 %v2, label %c.header, label %exit
 

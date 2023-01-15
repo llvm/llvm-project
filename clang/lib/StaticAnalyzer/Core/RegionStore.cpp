@@ -263,11 +263,13 @@ public:
 typedef const RegionBindingsRef& RegionBindingsConstRef;
 
 Optional<SVal> RegionBindingsRef::getDirectBinding(const MemRegion *R) const {
-  return Optional<SVal>::create(lookup(R, BindingKey::Direct));
+  const SVal *V = lookup(R, BindingKey::Direct);
+  return V ? Optional<SVal>(*V) : std::nullopt;
 }
 
 Optional<SVal> RegionBindingsRef::getDefaultBinding(const MemRegion *R) const {
-  return Optional<SVal>::create(lookup(R, BindingKey::Default));
+  const SVal *V = lookup(R, BindingKey::Default);
+  return V ? Optional<SVal>(*V) : std::nullopt;
 }
 
 RegionBindingsRef RegionBindingsRef::addBinding(BindingKey K, SVal V) const {
@@ -483,8 +485,8 @@ public: // Part of public interface to class.
   /// than using a Default binding at the base of the entire region. This is a
   /// heuristic attempting to avoid building long chains of LazyCompoundVals.
   ///
-  /// \returns The updated store bindings, or \c None if binding non-lazily
-  ///          would be too expensive.
+  /// \returns The updated store bindings, or \c std::nullopt if binding
+  ///          non-lazily would be too expensive.
   Optional<RegionBindingsRef> tryBindSmallStruct(RegionBindingsConstRef B,
                                                  const TypedValueRegion *R,
                                                  const RecordDecl *RD,
@@ -1665,7 +1667,7 @@ getElementRegionOffsetsWithBase(const ElementRegion *ER) {
 /// \param ArrayExtents [in] The array of extents.
 /// \param DstOffsets [out]  The array of offsets of type `uint64_t`.
 /// \returns:
-/// - `None` for successful convertion.
+/// - `std::nullopt` for successful convertion.
 /// - `UndefinedVal` or `UnknownVal` otherwise. It's expected that this SVal
 ///   will be returned as a suitable value of the access operation.
 ///   which should be returned as a correct

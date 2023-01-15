@@ -66,7 +66,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -99,6 +98,7 @@
 #include <cstdlib>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -734,7 +734,7 @@ void FilterAndStoreDiagnosticConsumer::HandleDiagnostic(
     }
 
     if (StandaloneDiags) {
-      llvm::Optional<StoredDiagnostic> StoredDiag;
+      std::optional<StoredDiagnostic> StoredDiag;
       if (!ResultDiag) {
         StoredDiag.emplace(Level, Info);
         ResultDiag = &*StoredDiag;
@@ -1378,7 +1378,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
   SmallVector<StoredDiagnostic, 4> NewPreambleDiags;
   ASTUnitPreambleCallbacks Callbacks;
   {
-    llvm::Optional<CaptureDroppedDiagnostics> Capture;
+    std::optional<CaptureDroppedDiagnostics> Capture;
     if (CaptureDiagnostics != CaptureDiagsKind::None)
       Capture.emplace(CaptureDiagnostics, *Diagnostics, &NewPreambleDiags,
                       &NewPreambleDiagsStandalone);
@@ -1761,8 +1761,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     CIOpts.VFS = VFS;
     CIOpts.Diags = Diags;
     CIOpts.ProbePrecompiled = true; // FIXME: historical default. Needed?
-    CI = createInvocation(llvm::makeArrayRef(ArgBegin, ArgEnd),
-                          std::move(CIOpts));
+    CI = createInvocation(llvm::ArrayRef(ArgBegin, ArgEnd), std::move(CIOpts));
     if (!CI)
       return nullptr;
   }
@@ -2243,7 +2242,7 @@ void ASTUnit::CodeComplete(
   Clang->setCodeCompletionConsumer(AugmentedConsumer);
 
   auto getUniqueID =
-      [&FileMgr](StringRef Filename) -> Optional<llvm::sys::fs::UniqueID> {
+      [&FileMgr](StringRef Filename) -> std::optional<llvm::sys::fs::UniqueID> {
     if (auto Status = FileMgr.getVirtualFileSystem().status(Filename))
       return Status->getUniqueID();
     return std::nullopt;

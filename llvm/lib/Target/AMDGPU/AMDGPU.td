@@ -285,6 +285,12 @@ def FeatureMADIntraFwdBug : SubtargetFeature<"mad-intra-fwd-bug",
   "MAD_U64/I64 intra instruction forwarding bug"
 >;
 
+def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
+  "HasMSAALoadDstSelBug",
+  "true",
+  "MSAA loads not honoring dst_sel bug"
+>;
+
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
   "ldsbankcount"#Value,
   "LDSBankCount",
@@ -476,10 +482,10 @@ def FeatureR128A16 : SubtargetFeature<"r128-a16",
   "Support gfx9-style A16 for 16-bit coordinates/gradients/lod/clamp/mip image operands, where a16 is aliased with r128"
 >;
 
-def FeatureGFX10A16 : SubtargetFeature<"a16",
-  "HasGFX10A16",
+def FeatureA16 : SubtargetFeature<"a16",
+  "HasA16",
   "true",
-  "Support gfx10-style A16 for 16-bit coordinates/gradients/lod/clamp/mip image operands"
+  "Support A16 for 16-bit coordinates/gradients/lod/clamp/mip image operands"
 >;
 
 def FeatureG16 : SubtargetFeature<"g16",
@@ -723,6 +729,24 @@ def FeatureVOPD : SubtargetFeature<"vopd",
   "Has VOPD dual issue wave32 instructions"
 >;
 
+def FeatureVALUTransUseHazard : SubtargetFeature<"valu-trans-use-hazard",
+  "HasVALUTransUseHazard",
+  "true",
+  "Hazard when TRANS instructions are closely followed by a use of the result"
+>;
+
+def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
+  "HasSALUFloatInsts",
+  "true",
+  "Has SALU floating point instructions"
+>;
+
+def FeatureVGPRSingleUseHintInsts : SubtargetFeature<"vgpr-singleuse-hint",
+  "HasVGPRSingleUseHintInsts",
+  "true",
+  "Has single-use VGPR hint instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -901,7 +925,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
-   FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
+   FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
    FeatureNegativeScratchOffsetBug
   ]
@@ -921,7 +945,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
-   FeatureGFX10A16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
+   FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts
   ]
 >;
@@ -940,7 +964,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
-   FeatureGFX10A16, FeatureFastDenormalF32, FeatureG16,
+   FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
   ]
 >;
@@ -1300,31 +1324,41 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
+   FeatureVALUTransUseHazard,
    FeatureMADIntraFwdBug]>;
 
-def FeatureISAVersion11_0_0 : FeatureSet<
+def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureMSAALoadDstSelBug,
+     FeatureVALUTransUseHazard])>;
+
+def FeatureISAVersion11_0_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [FeatureGFX11FullVGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [FeatureGFX11FullVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_3 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [])>;
+
+// Features for GFX 11.5.0
+def FeatureISAVersion11_5_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts,
+     FeatureVGPRSingleUseHintInsts])>;
 
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
-  let noNamedPositionallyEncodedOperands = 1;
-  let useDeprecatedPositionallyEncodedOperands = 1;
 }
 
 def AMDGPUAsmParser : AsmParser {
@@ -1672,8 +1706,8 @@ def HasExtendedImageInsts : Predicate<"Subtarget->hasExtendedImageInsts()">,
 def HasR128A16 : Predicate<"Subtarget->hasR128A16()">,
   AssemblerPredicate<(all_of FeatureR128A16)>;
 
-def HasGFX10A16 : Predicate<"Subtarget->hasGFX10A16()">,
-  AssemblerPredicate<(all_of FeatureGFX10A16)>;
+def HasA16 : Predicate<"Subtarget->hasA16()">,
+  AssemblerPredicate<(all_of FeatureA16)>;
 
 def HasG16 : Predicate<"Subtarget->hasG16()">,
   AssemblerPredicate<(all_of FeatureG16)>;
@@ -1790,6 +1824,12 @@ def HasUnalignedAccessMode : Predicate<"Subtarget->hasUnalignedAccessMode()">,
 def HasMADIntraFwdBug : Predicate<"Subtarget->hasMADIntraFwdBug()">;
 
 def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
+
+def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
+  AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
+
+def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts()">,
+  AssemblerPredicate<(all_of FeatureVGPRSingleUseHintInsts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

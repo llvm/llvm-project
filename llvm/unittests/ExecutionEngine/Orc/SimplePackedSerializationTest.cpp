@@ -137,6 +137,16 @@ TEST(SimplePackedSerializationTest, StdPairSerialization) {
   spsSerializationRoundTrip<SPSTuple<int32_t, SPSString>>(P);
 }
 
+TEST(SimplePackedSerializationTest, StdOptionalNoValueSerialization) {
+  std::optional<int64_t> NoValue;
+  spsSerializationRoundTrip<SPSOptional<int64_t>>(NoValue);
+}
+
+TEST(SimplePackedSerializationTest, StdOptionalValueSerialization) {
+  std::optional<int64_t> Value(42);
+  spsSerializationRoundTrip<SPSOptional<int64_t>>(Value);
+}
+
 TEST(SimplePackedSerializationTest, ArgListSerialization) {
   using BAL = SPSArgList<bool, int32_t, SPSString>;
 

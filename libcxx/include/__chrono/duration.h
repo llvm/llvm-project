@@ -151,7 +151,7 @@ typename enable_if
 >::type
 floor(const duration<_Rep, _Period>& __d)
 {
-    _ToDuration __t = duration_cast<_ToDuration>(__d);
+    _ToDuration __t = chrono::duration_cast<_ToDuration>(__d);
     if (__t > __d)
         __t = __t - _ToDuration{1};
     return __t;
@@ -166,7 +166,7 @@ typename enable_if
 >::type
 ceil(const duration<_Rep, _Period>& __d)
 {
-    _ToDuration __t = duration_cast<_ToDuration>(__d);
+    _ToDuration __t = chrono::duration_cast<_ToDuration>(__d);
     if (__t < __d)
         __t = __t + _ToDuration{1};
     return __t;
@@ -181,7 +181,7 @@ typename enable_if
 >::type
 round(const duration<_Rep, _Period>& __d)
 {
-    _ToDuration __lower = floor<_ToDuration>(__d);
+    _ToDuration __lower = chrono::floor<_ToDuration>(__d);
     _ToDuration __upper = __lower + _ToDuration{1};
     auto __lowerDiff = __d - __lower;
     auto __upperDiff = __upper - __d;

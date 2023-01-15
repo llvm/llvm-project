@@ -21,6 +21,7 @@ TEST_MSVC_DIAGNOSTIC_IGNORED(4242 4244) // Various truncation warnings
 #include <compare>
 #include <limits>  // quiet_NaN
 #include <tuple>
+#include <type_traits>
 #include <utility> // declval
 
 template <typename T, typename U = T>

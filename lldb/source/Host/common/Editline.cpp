@@ -8,6 +8,7 @@
 
 #include <climits>
 #include <iomanip>
+#include <optional>
 
 #include "lldb/Host/Editline.h"
 
@@ -1062,7 +1063,7 @@ unsigned char Editline::ApplyAutosuggestCommand(int ch) {
   llvm::StringRef line(line_info->buffer,
                        line_info->lastchar - line_info->buffer);
 
-  if (llvm::Optional<std::string> to_add = m_suggestion_callback(line))
+  if (std::optional<std::string> to_add = m_suggestion_callback(line))
     el_insertstr(m_editline, to_add->c_str());
 
   return CC_REDISPLAY;
@@ -1085,7 +1086,7 @@ unsigned char Editline::TypedCharacter(int ch) {
   const char *ansi_suffix =
       m_color_prompts ? m_suggestion_ansi_suffix.c_str() : "";
 
-  if (llvm::Optional<std::string> to_add = m_suggestion_callback(line)) {
+  if (std::optional<std::string> to_add = m_suggestion_callback(line)) {
     std::string to_add_color = ansi_prefix + to_add.value() + ansi_suffix;
     fputs(typed.c_str(), m_output_file);
     fputs(to_add_color.c_str(), m_output_file);

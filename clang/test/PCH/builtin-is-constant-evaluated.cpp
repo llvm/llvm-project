@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t
+// RUN: %clang_cc1 -std=c++98 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t-cxx11
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t-cxx11 -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
+// RUN: %clang_cc1 -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
+// RUN: %clang_cc1 -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t-cxx11
+// RUN: %clang_cc1 -std=c++11 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t-cxx11 -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
 
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t-cxx11
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t-cxx11 -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
+// RUN: %clang_cc1 -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -include %s -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
+// RUN: %clang_cc1 -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -emit-pch %s -o %t-cxx11
+// RUN: %clang_cc1 -std=c++20 -Wno-constant-evaluated -triple x86_64-linux -include-pch %t-cxx11 -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CXX11
 
 // expected-no-diagnostics
 
@@ -32,12 +32,12 @@ extern const float e = __builtin_is_constant_evaluated();
 void g(...);
 
 // CHECK-LABEL: define {{.*}} @_Z1fv(
-// CHECK:       store i8 0, i8* %[[A:.*]],
-// CHECK:       store i8 1, i8* %[[B:.*]],
-// CXX11:       store i8 1, i8* %[[C:.*]],
-// CHECK:       store float 0.000000e+00, float* %[[D:.*]],
-// CHECK:       store float 0.000000e+00, float* %[[E:.*]],
-// CHECK:       load i8, i8* %[[A]],
+// CHECK:       store i8 0, ptr %[[A:.*]],
+// CHECK:       store i8 1, ptr %[[B:.*]],
+// CXX11:       store i8 1, ptr %[[C:.*]],
+// CHECK:       store float 0.000000e+00, ptr %[[D:.*]],
+// CHECK:       store float 0.000000e+00, ptr %[[E:.*]],
+// CHECK:       load i8, ptr %[[A]],
 // CHECK:       call {{.*}} @_Z1gz(i32 noundef %{{[^,]+}}, i32 noundef 1
 // CXX11-SAME:  , i32 noundef 1
 // CHECK-SAME:  , double noundef %{{[^,]+}}, double noundef 0.000000e+00)

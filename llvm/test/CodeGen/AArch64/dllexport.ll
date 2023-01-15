@@ -33,10 +33,10 @@ define weak_odr dllexport void @l() {
 @p = weak_odr dllexport global i32 0, align 4
 @q = weak_odr dllexport unnamed_addr constant i32 0
 
-@r = dllexport alias void (), void () * @f
-@s = dllexport alias void (), void () * @g
-@t = dllexport alias void (), void () * @f
-@u = weak_odr dllexport alias void (), void () * @g
+@r = dllexport alias void (), ptr @f
+@s = dllexport alias void (), ptr @g
+@t = dllexport alias void (), ptr @f
+@u = weak_odr dllexport alias void (), ptr @g
 
 ; CHECK: .section .drectve
 ; CHECK-GNU-NOT: -export:f

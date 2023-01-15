@@ -973,6 +973,10 @@ public:
   virtual OptionalParseResult parseOptionalAttribute(StringAttr &result,
                                                      Type type = {}) = 0;
 
+  /// Parse an optional symbol ref attribute and return it in result.
+  virtual OptionalParseResult parseOptionalAttribute(SymbolRefAttr &result,
+                                                     Type type = {}) = 0;
+
   /// Parse an optional attribute of a specific type and add it to the list with
   /// the specified name.
   template <typename AttrType>
@@ -1209,8 +1213,9 @@ public:
   }
 
   /// Parse a dimension list of a tensor or memref type.  This populates the
-  /// dimension list, using -1 for the `?` dimensions if `allowDynamic` is set
-  /// and errors out on `?` otherwise. Parsing the trailing `x` is configurable.
+  /// dimension list, using ShapedType::kDynamic for the `?` dimensions if
+  /// `allowDynamic` is set and errors out on `?` otherwise. Parsing the
+  /// trailing `x` is configurable.
   ///
   ///   dimension-list ::= eps | dimension (`x` dimension)*
   ///   dimension-list-with-trailing-x ::= (dimension `x`)*

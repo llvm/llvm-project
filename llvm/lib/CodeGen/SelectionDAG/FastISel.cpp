@@ -1252,22 +1252,22 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     if (Op) {
       assert(DI->getVariable()->isValidLocationForIntrinsic(MIMD.getDL()) &&
              "Expected inlined-at fields to agree");
-      // A dbg.declare describes the address of a source variable, so lower it
-      // into an indirect DBG_VALUE.
-      auto Builder =
-          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(),
-                  TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true, *Op,
-                  DI->getVariable(), DI->getExpression());
-
-      // If using instruction referencing, mutate this into a DBG_INSTR_REF,
-      // to be later patched up by finalizeDebugInstrRefs. Tack a deref onto
-      // the expression, we don't have an "indirect" flag in DBG_INSTR_REF.
       if (UseInstrRefDebugInfo && Op->isReg()) {
-        Builder->setDesc(TII.get(TargetOpcode::DBG_INSTR_REF));
-        Builder->getOperand(1).ChangeToImmediate(0);
-        auto *NewExpr =
-           DIExpression::prepend(DI->getExpression(), DIExpression::DerefBefore);
-        Builder->getOperand(3).setMetadata(NewExpr);
+        // If using instruction referencing, produce this as a DBG_INSTR_REF,
+        // to be later patched up by finalizeDebugInstrRefs. Tack a deref onto
+        // the expression, we don't have an "indirect" flag in DBG_INSTR_REF.
+        SmallVector<uint64_t, 3> Ops(
+            {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_deref});
+        auto *NewExpr = DIExpression::prependOpcodes(DI->getExpression(), Ops);
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(),
+                TII.get(TargetOpcode::DBG_INSTR_REF), /*IsIndirect*/ false, *Op,
+                DI->getVariable(), NewExpr);
+      } else {
+        // A dbg.declare describes the address of a source variable, so lower it
+        // into an indirect DBG_VALUE.
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(),
+                TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true, *Op,
+                DI->getVariable(), DI->getExpression());
       }
     } else {
       // We can't yet handle anything else here because it would require
@@ -1314,16 +1314,23 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
           .addMetadata(DI->getExpression());
     } else if (Register Reg = lookUpRegForValue(V)) {
       // FIXME: This does not handle register-indirect values at offset 0.
-      bool IsIndirect = false;
-      auto Builder =
-          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II,
-                  IsIndirect, Reg, DI->getVariable(), DI->getExpression());
-
-      // If using instruction referencing, mutate this into a DBG_INSTR_REF,
-      // to be later patched up by finalizeDebugInstrRefs.
-      if (UseInstrRefDebugInfo) {
-        Builder->setDesc(TII.get(TargetOpcode::DBG_INSTR_REF));
-        Builder->getOperand(1).ChangeToImmediate(0);
+      if (!UseInstrRefDebugInfo) {
+        bool IsIndirect = false;
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II, IsIndirect,
+                Reg, DI->getVariable(), DI->getExpression());
+      } else {
+        // If using instruction referencing, produce this as a DBG_INSTR_REF,
+        // to be later patched up by finalizeDebugInstrRefs.
+        SmallVector<MachineOperand, 1> MOs({MachineOperand::CreateReg(
+            /* Reg */ Reg, /* isDef */ false, /* isImp */ false,
+            /* isKill */ false, /* isDead */ false,
+            /* isUndef */ false, /* isEarlyClobber */ false,
+            /* SubReg */ 0, /* isDebug */ true)});
+        SmallVector<uint64_t, 2> Ops({dwarf::DW_OP_LLVM_arg, 0});
+        auto *NewExpr = DIExpression::prependOpcodes(DI->getExpression(), Ops);
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(),
+                TII.get(TargetOpcode::DBG_INSTR_REF), /*IsIndirect*/ false, MOs,
+                DI->getVariable(), NewExpr);
       }
     } else {
       // We don't know how to handle other cases, so we drop.
@@ -1935,8 +1942,9 @@ Register FastISel::fastEmitInst_r(unsigned MachineInstOpcode,
   else {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
         .addReg(Op0);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.getImplicitDefs()[0]);
   }
 
   return ResultReg;
@@ -1959,8 +1967,9 @@ Register FastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
         .addReg(Op0)
         .addReg(Op1);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.getImplicitDefs()[0]);
   }
   return ResultReg;
 }
@@ -1985,8 +1994,9 @@ Register FastISel::fastEmitInst_rrr(unsigned MachineInstOpcode,
         .addReg(Op0)
         .addReg(Op1)
         .addReg(Op2);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.getImplicitDefs()[0]);
   }
   return ResultReg;
 }
@@ -2007,8 +2017,9 @@ Register FastISel::fastEmitInst_ri(unsigned MachineInstOpcode,
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
         .addReg(Op0)
         .addImm(Imm);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.getImplicitDefs()[0]);
   }
   return ResultReg;
 }
@@ -2031,8 +2042,9 @@ Register FastISel::fastEmitInst_rii(unsigned MachineInstOpcode,
         .addReg(Op0)
         .addImm(Imm1)
         .addImm(Imm2);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.getImplicitDefs()[0]);
   }
   return ResultReg;
 }
@@ -2050,8 +2062,9 @@ Register FastISel::fastEmitInst_f(unsigned MachineInstOpcode,
   else {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II)
         .addFPImm(FPImm);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.getImplicitDefs()[0]);
   }
   return ResultReg;
 }
@@ -2075,8 +2088,9 @@ Register FastISel::fastEmitInst_rri(unsigned MachineInstOpcode,
         .addReg(Op0)
         .addReg(Op1)
         .addImm(Imm);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.getImplicitDefs()[0]);
   }
   return ResultReg;
 }
@@ -2091,8 +2105,9 @@ Register FastISel::fastEmitInst_i(unsigned MachineInstOpcode,
         .addImm(Imm);
   else {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II).addImm(Imm);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg).addReg(II.ImplicitDefs[0]);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(II.getImplicitDefs()[0]);
   }
   return ResultReg;
 }

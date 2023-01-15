@@ -1,4 +1,4 @@
-; RUN: opt %s -disable-output -debugify-each -debugify-quiet -debugify-export - -globalopt | FileCheck %s
+; RUN: opt %s -disable-output -debugify-each -debugify-quiet -debugify-export - -passes=globalopt | FileCheck %s
 ; RUN: opt %s -disable-output -debugify-each -debugify-quiet -debugify-export - -passes=globalopt | FileCheck %s
 
 ; CHECK: Pass Name

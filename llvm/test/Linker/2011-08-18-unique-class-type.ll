@@ -11,7 +11,7 @@ target triple = "x86_64-apple-macosx10.7.0"
 define void @_Z3fooN2N11AE() nounwind uwtable ssp !dbg !5 {
 entry:
   %mya = alloca %"class.N1::A", align 1
-  call void @llvm.dbg.declare(metadata %"class.N1::A"* %mya, metadata !9, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.declare(metadata ptr %mya, metadata !9, metadata !DIExpression()), !dbg !13
   ret void, !dbg !14
 }
 

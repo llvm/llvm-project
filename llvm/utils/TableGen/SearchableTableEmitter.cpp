@@ -378,7 +378,7 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   }
 
   if (IsContiguous) {
-    OS << "  auto Table = makeArrayRef(" << IndexName << ");\n";
+    OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
     OS << "  size_t Idx = " << Index.Fields[0].Name << ";\n";
     OS << "  return Idx >= Table.size() ? nullptr : ";
     if (IsPrimary)
@@ -423,7 +423,7 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   }
   OS << "};\n";
 
-  OS << "  auto Table = makeArrayRef(" << IndexName << ");\n";
+  OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
   OS << "  auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,\n";
   OS << "    [](const " << IndexTypeName << " &LHS, const KeyType &RHS) {\n";
 

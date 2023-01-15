@@ -1,8 +1,15 @@
-// RUN: mlir-opt %s --sparse-compiler=enable-runtime-library=false | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=false
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
+//
+// Do the same run, but now with vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{command}
 
 module {
   func.func @entry() {
@@ -17,16 +24,15 @@ module {
     %buffer = memref.alloc(%c1) : memref<?xf32>
 
     memref.store %c0, %bufferSizes[%c0] : memref<?xindex>
-    %buffer2 = sparse_tensor.push_back %bufferSizes, %buffer, %d2 {idx=0 : index} : memref<?xindex>, memref<?xf32>, f32
-    %buffer3 = sparse_tensor.push_back %bufferSizes, %buffer2, %d1, %c10 {idx=0 : index} : memref<?xindex>, memref<?xf32>, f32, index
+    %buffer2, %s0 = sparse_tensor.push_back %c0, %buffer, %d2 : index, memref<?xf32>, f32
+    %buffer3, %s1 = sparse_tensor.push_back %s0, %buffer2, %d1, %c10 : index, memref<?xf32>, f32, index
 
     // CHECK: 16
     %capacity = memref.dim %buffer3, %c0 : memref<?xf32>
     vector.print %capacity : index
 
-    // CHECK: ( 11 )
-    %size = vector.transfer_read %bufferSizes[%c0], %c0: memref<?xindex>, vector<1xindex>
-    vector.print %size : vector<1xindex>
+    // CHECK: 11
+    vector.print %s1 : index
 
     // CHECK (  2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 )
     %values = vector.transfer_read %buffer3[%c0], %d0: memref<?xf32>, vector<11xf32>

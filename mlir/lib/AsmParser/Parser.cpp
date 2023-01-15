@@ -28,6 +28,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -501,7 +502,7 @@ public:
 
   /// Return the location of the value identified by its name and number if it
   /// has been already reference.
-  Optional<SMLoc> getReferenceLoc(StringRef name, unsigned number) {
+  std::optional<SMLoc> getReferenceLoc(StringRef name, unsigned number) {
     auto &values = isolatedNameScopes.back().values;
     if (!values.count(name) || number >= values[name].size())
       return {};
@@ -1870,7 +1871,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
     if (iface && !iface->getDefaultDialect().empty())
       defaultDialect = iface->getDefaultDialect();
   } else {
-    Optional<Dialect::ParseOpHook> dialectHook;
+    std::optional<Dialect::ParseOpHook> dialectHook;
     Dialect *dialect = opNameInfo->getDialect();
     if (!dialect) {
       InFlightDiagnostic diag =
@@ -2056,7 +2057,7 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
                << "previously referenced here";
       }
       Location loc = entryArg.sourceLoc.has_value()
-                         ? entryArg.sourceLoc.value()
+                         ? *entryArg.sourceLoc
                          : getEncodedSourceLocation(argInfo.location);
       BlockArgument arg = block->addArgument(entryArg.type, loc);
 

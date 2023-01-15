@@ -20,6 +20,7 @@
 #include <cassert>
 #include <climits>
 #include <cstring>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -30,7 +31,6 @@ class raw_ostream;
 
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
-template <typename T> class Optional;
 template <typename T, typename Enable> struct DenseMapInfo;
 
 class APInt;
@@ -342,6 +342,13 @@ public:
   ///
   /// \returns true if this APInt is non-positive.
   bool isNonPositive() const { return !isStrictlyPositive(); }
+
+  /// Determine if this APInt Value only has the specified bit set.
+  ///
+  /// \returns true if this APInt only has the specified bit set.
+  bool isOneBitSet(unsigned BitNo) const {
+    return (*this)[BitNo] && countPopulation() == 1;
+  }
 
   /// Determine if all bits are set.  This is true for zero-width values.
   bool isAllOnes() const {
@@ -955,9 +962,7 @@ public:
   ///
   /// Perform an unsigned remainder operation on this APInt with RHS being the
   /// divisor. Both this and RHS are treated as unsigned quantities for purposes
-  /// of this operation. Note that this is a true remainder operation and not a
-  /// modulo operation because the sign follows the sign of the dividend which
-  /// is *this.
+  /// of this operation.
   ///
   /// \returns a new APInt value containing the remainder result
   APInt urem(const APInt &RHS) const;
@@ -966,6 +971,9 @@ public:
   /// Function for signed remainder operation.
   ///
   /// Signed remainder operation on APInt.
+  ///
+  /// Note that this is a true remainder operation and not a modulo operation
+  /// because the sign follows the sign of the dividend which is *this.
   APInt srem(const APInt &RHS) const;
   int64_t srem(int64_t RHS) const;
 
@@ -1490,6 +1498,16 @@ public:
     return U.pVal[0];
   }
 
+  /// Get zero extended value if possible
+  ///
+  /// This method attempts to return the value of this APInt as a zero extended
+  /// uint64_t. The bitwidth must be <= 64 or the value must fit within a
+  /// uint64_t. Otherwise no value is returned.
+  std::optional<uint64_t> tryZExtValue() const {
+    return (getActiveBits() <= 64) ? std::optional<uint64_t>(getZExtValue())
+                                   : std::nullopt;
+  };
+
   /// Get sign extended value
   ///
   /// This method attempts to return the value of this APInt as a sign extended
@@ -1501,6 +1519,16 @@ public:
     assert(getSignificantBits() <= 64 && "Too many bits for int64_t");
     return int64_t(U.pVal[0]);
   }
+
+  /// Get sign extended value if possible
+  ///
+  /// This method attempts to return the value of this APInt as a sign extended
+  /// int64_t. The bitwidth must be <= 64 or the value must fit within an
+  /// int64_t. Otherwise no value is returned.
+  std::optional<int64_t> trySExtValue() const {
+    return (getSignificantBits() <= 64) ? std::optional<int64_t>(getSExtValue())
+                                        : std::nullopt;
+  };
 
   /// Get bits required for string value.
   ///
@@ -2248,13 +2276,13 @@ APInt RoundingSDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
 ///
 /// The returned value may have a different bit width from the input
 /// coefficients.
-Optional<APInt> SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
-                                           unsigned RangeWidth);
+std::optional<APInt> SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
+                                                unsigned RangeWidth);
 
 /// Compare two values, and if they are different, return the position of the
 /// most significant bit that is different in the values.
-Optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
-                                                  const APInt &B);
+std::optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
+                                                       const APInt &B);
 
 /// Splat/Merge neighboring bits to widen/narrow the bitmask represented
 /// by \param A to \param NewBitWidth bits.

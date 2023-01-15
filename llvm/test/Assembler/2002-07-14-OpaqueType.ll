@@ -5,7 +5,7 @@
 
 %Ty = type opaque
 
-define %Ty* @func() {
-	ret %Ty* null
+define ptr @func() {
+	ret ptr null
 }
  

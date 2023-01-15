@@ -89,7 +89,7 @@ gpu.module @test_module {
     // CHECK: nvvm.shfl.sync bfly {{.*}}
     // CHECK: nvvm.barrier0
     // CHECK: llvm.fadd
-    %result = gpu.all_reduce add %arg0 {} : (f32) -> (f32)
+    %result = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
 
     gpu.return
   }
@@ -104,7 +104,7 @@ gpu.module @test_module {
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
     // CHECK: nvvm.barrier0
-    %result = gpu.all_reduce %arg0 {
+    %result = gpu.all_reduce %arg0 uniform {
     ^bb(%lhs : i32, %rhs : i32):
       %xor = arith.xori %lhs, %rhs : i32
       "gpu.yield"(%xor) : (i32) -> ()
@@ -174,6 +174,21 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_fabsf(%{{.*}}) : (f32) -> f32
     %result64 = math.absf %arg_f64 : f64
     // CHECK: llvm.call @__nv_fabs(%{{.*}}) : (f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__nv_cbrtf(f32) -> f32
+  // CHECK: llvm.func @__nv_cbrt(f64) -> f64
+  // CHECK-LABEL: func @gpu_cbrt
+  func.func @gpu_cbrt(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = math.cbrt %arg_f32 : f32
+    // CHECK: llvm.call @__nv_cbrtf(%{{.*}}) : (f32) -> f32
+    %result64 = math.cbrt %arg_f64 : f64
+    // CHECK: llvm.call @__nv_cbrt(%{{.*}}) : (f64) -> f64
     func.return %result32, %result64 : f32, f64
   }
 }
@@ -323,6 +338,25 @@ gpu.module @test_module {
     %result64 = math.sin %arg_f64 : f64
     // CHECK: llvm.call @__nv_sin(%{{.*}}) : (f64) -> f64
     func.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__nv_tanf(f32) -> f32
+  // CHECK: llvm.func @__nv_tan(f64) -> f64
+  // CHECK-LABEL: func @gpu_tan
+  func.func @gpu_tan(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
+    %result16 = math.tan %arg_f16 : f16
+    // CHECK: llvm.fpext %{{.*}} : f16 to f32
+    // CHECK-NEXT: llvm.call @__nv_tanf(%{{.*}}) : (f32) -> f32
+    // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
+    %result32 = math.tan %arg_f32 : f32
+    // CHECK: llvm.call @__nv_tanf(%{{.*}}) : (f32) -> f32
+    %result64 = math.tan %arg_f64 : f64
+    // CHECK: llvm.call @__nv_tan(%{{.*}}) : (f64) -> f64
+    func.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
 
@@ -501,3 +535,42 @@ gpu.module @test_module {
     gpu.return
   }
 }
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-DAG: llvm.mlir.global internal constant @[[$PRINT_GLOBAL0:[A-Za-z0-9_]+]]("Hello, world\0A\00")
+  // CHECK-DAG: llvm.mlir.global internal constant @[[$PRINT_GLOBAL1:[A-Za-z0-9_]+]]("Hello: %d\0A\00")
+  // CHECK-DAG: llvm.func @vprintf(!llvm.ptr<i8>, !llvm.ptr<i8>) -> i32
+
+  // CHECK-LABEL: func @test_const_printf
+  gpu.func @test_const_printf() {
+    // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL0]] : !llvm.ptr<array<14 x i8>>
+    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr<array<14 x i8>>) -> !llvm.ptr<i8>
+    // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : index) : i64
+    // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<()> : (i64) -> !llvm.ptr<struct<()>>
+    // CHECK-NEXT: %[[ARGPTR:.*]] = llvm.bitcast %[[ALLOC]] : !llvm.ptr<struct<()>> to !llvm.ptr<i8>
+    // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ARGPTR]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> i32
+    gpu.printf "Hello, world\n"
+    gpu.return
+  }
+
+  // CHECK-LABEL: func @test_printf
+  // CHECK: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: f32)
+  gpu.func @test_printf(%arg0: i32, %arg1: f32) {
+    // CHECK-NEXT: %[[FORMATSTR:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL1]] : !llvm.ptr<array<11 x i8>>
+    // CHECK-NEXT: %[[FORMATSTART:.*]] = llvm.getelementptr %[[FORMATSTR]][0, 0] : (!llvm.ptr<array<11 x i8>>) -> !llvm.ptr<i8>
+    // CHECK-NEXT: %[[EXT:.+]] = llvm.fpext %[[ARG1]] : f32 to f64
+    // CHECK-NEXT: %[[O:.*]] = llvm.mlir.constant(1 : index) : i64
+    // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<(i32, f64)> : (i64) -> !llvm.ptr<struct<(i32, f64)>>
+    // CHECK-NEXT: %[[EL0:.*]] = llvm.getelementptr %[[ALLOC]][0, 0] : (!llvm.ptr<struct<(i32, f64)>>) -> !llvm.ptr<i32>
+    // CHECK-NEXT: llvm.store %[[ARG0]], %[[EL0]] : !llvm.ptr<i32>
+    // CHECK-NEXT: %[[EL1:.*]] = llvm.getelementptr %[[ALLOC]][0, 1] : (!llvm.ptr<struct<(i32, f64)>>) -> !llvm.ptr<f64>
+    // CHECK-NEXT: llvm.store %[[EXT]], %[[EL1]] : !llvm.ptr<f64>
+    // CHECK-NEXT: %[[ARGPTR:.*]] = llvm.bitcast %[[ALLOC]] : !llvm.ptr<struct<(i32, f64)>> to !llvm.ptr<i8>
+    // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ARGPTR]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> i32
+    gpu.printf "Hello: %d\n" %arg0, %arg1 : i32, f32
+    gpu.return
+  }
+}
+

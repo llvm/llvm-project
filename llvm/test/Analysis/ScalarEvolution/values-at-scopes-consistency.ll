@@ -4,7 +4,7 @@
 ; This used to register a ValuesAtScopes user, even though nothing was
 ; added to ValuesAtScope due to a prior invalidation.
 
-define void @main(i8* %p) {
+define void @main(ptr %p) {
 entry:
   br label %loop1
 
@@ -14,8 +14,8 @@ loop1:
 loop2:
   %i = phi i64 [ 0, %loop1 ], [ %i.next, %loop2.latch ]
   %i.next = add nuw nsw i64 %i, 1
-  %gep = getelementptr i8, i8* %p, i64 %i
-  %val = load i8, i8* %gep
+  %gep = getelementptr i8, ptr %p, i64 %i
+  %val = load i8, ptr %gep
   %c = icmp eq i8 %val, 0
   br i1 %c, label %loop2.latch, label %exit
 

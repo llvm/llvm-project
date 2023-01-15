@@ -58,7 +58,7 @@
 namespace llvm {
 pthread_t
 llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
-                            llvm::Optional<unsigned> StackSizeInBytes) {
+                            std::optional<unsigned> StackSizeInBytes) {
   int errnum;
 
   // Construct the attributes object.

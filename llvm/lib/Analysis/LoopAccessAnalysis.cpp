@@ -1366,11 +1366,11 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
 }
 
 /// Check whether the access through \p Ptr has a constant stride.
-Optional<int64_t>
-llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy,
-                   Value *Ptr, const Loop *Lp,
-                   const ValueToValueMap &StridesMap, bool Assume,
-                   bool ShouldCheckWrap) {
+std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
+                                          Type *AccessTy, Value *Ptr,
+                                          const Loop *Lp,
+                                          const ValueToValueMap &StridesMap,
+                                          bool Assume, bool ShouldCheckWrap) {
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
 
@@ -1441,7 +1441,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy,
 
   auto &DL = Lp->getHeader()->getModule()->getDataLayout();
   TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
-  int64_t Size = AllocSize.getFixedSize();
+  int64_t Size = AllocSize.getFixedValue();
   const APInt &APStepVal = C->getAPInt();
 
   // Huge step value - give up.
@@ -1477,10 +1477,11 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy,
   return Stride;
 }
 
-Optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
-                                    Value *PtrB, const DataLayout &DL,
-                                    ScalarEvolution &SE, bool StrictCheck,
-                                    bool CheckType) {
+std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
+                                         Type *ElemTyB, Value *PtrB,
+                                         const DataLayout &DL,
+                                         ScalarEvolution &SE, bool StrictCheck,
+                                         bool CheckType) {
   assert(PtrA && PtrB && "Expected non-nullptr pointers.");
   assert(cast<PointerType>(PtrA->getType())
              ->isOpaqueOrPointeeTypeMatches(ElemTyA) && "Wrong PtrA type");
@@ -1560,8 +1561,8 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
   int Cnt = 1;
   bool IsConsecutive = true;
   for (auto *Ptr : VL.drop_front()) {
-    Optional<int> Diff = getPointersDiff(ElemTy, Ptr0, ElemTy, Ptr, DL, SE,
-                                         /*StrictCheck=*/true);
+    std::optional<int> Diff = getPointersDiff(ElemTy, Ptr0, ElemTy, Ptr, DL, SE,
+                                              /*StrictCheck=*/true);
     if (!Diff)
       return false;
 
@@ -1596,8 +1597,9 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
     return false;
   Type *ElemTyA = getLoadStoreType(A);
   Type *ElemTyB = getLoadStoreType(B);
-  Optional<int> Diff = getPointersDiff(ElemTyA, PtrA, ElemTyB, PtrB, DL, SE,
-                                       /*StrictCheck=*/true, CheckType);
+  std::optional<int> Diff =
+      getPointersDiff(ElemTyA, PtrA, ElemTyB, PtrB, DL, SE,
+                      /*StrictCheck=*/true, CheckType);
   return Diff && *Diff == 1;
 }
 

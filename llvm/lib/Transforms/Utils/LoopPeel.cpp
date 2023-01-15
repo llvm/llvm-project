@@ -11,7 +11,6 @@
 
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Loads.h"
@@ -161,7 +160,7 @@ public:
 
   // Calculate the sufficient minimum number of iterations of the loop to peel
   // such that phi instructions become determined (subject to allowable limits)
-  Optional<unsigned> calculateIterationsToPeel();
+  std::optional<unsigned> calculateIterationsToPeel();
 
 protected:
   using PeelCounter = std::optional<unsigned>;
@@ -253,7 +252,7 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
   return Unknown;
 }
 
-Optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
+std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
   unsigned Iterations = 0;
   for (auto &PHI : L.getHeader()->phis()) {
     PeelCounter ToInvariance = calculate(PHI);
@@ -265,7 +264,7 @@ Optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
     }
   }
   assert((Iterations <= MaxIterations) && "bad result in phi analysis");
-  return Iterations ? Optional<unsigned>(Iterations) : std::nullopt;
+  return Iterations ? std::optional<unsigned>(Iterations) : std::nullopt;
 }
 
 } // unnamed namespace
@@ -570,7 +569,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (L->getHeader()->getParent()->hasProfileData()) {
     if (violatesLegacyMultiExitLoopCheck(L))
       return;
-    Optional<unsigned> EstimatedTripCount = getLoopEstimatedTripCount(L);
+    std::optional<unsigned> EstimatedTripCount = getLoopEstimatedTripCount(L);
     if (!EstimatedTripCount)
       return;
 
@@ -808,10 +807,12 @@ static void cloneLoopBlocks(
     LVMap[KV.first] = KV.second;
 }
 
-TargetTransformInfo::PeelingPreferences llvm::gatherPeelingPreferences(
-    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
-    Optional<bool> UserAllowPeeling,
-    Optional<bool> UserAllowProfileBasedPeeling, bool UnrollingSpecficValues) {
+TargetTransformInfo::PeelingPreferences
+llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
+                               const TargetTransformInfo &TTI,
+                               std::optional<bool> UserAllowPeeling,
+                               std::optional<bool> UserAllowProfileBasedPeeling,
+                               bool UnrollingSpecficValues) {
   TargetTransformInfo::PeelingPreferences PP;
 
   // Set the default values.
@@ -853,7 +854,7 @@ TargetTransformInfo::PeelingPreferences llvm::gatherPeelingPreferences(
 /// optimizations.
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
                     ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
-                    bool PreserveLCSSA) {
+                    bool PreserveLCSSA, ValueToValueMapTy &LVMap) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
   assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
 
@@ -945,8 +946,6 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   InsertBot->setName(Header->getName() + ".peel.next");
   NewPreHeader->setName(PreHeader->getName() + ".peel.newph");
 
-  ValueToValueMapTy LVMap;
-
   Instruction *LatchTerm =
       cast<Instruction>(cast<BasicBlock>(Latch)->getTerminator());
 
@@ -996,9 +995,8 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), &DT, LI);
     InsertBot->setName(Header->getName() + ".peel.next");
 
-    F->getBasicBlockList().splice(InsertTop->getIterator(),
-                                  F->getBasicBlockList(),
-                                  NewBlocks[0]->getIterator(), F->end());
+    F->splice(InsertTop->getIterator(), F, NewBlocks[0]->getIterator(),
+              F->end());
   }
 
   // Now adjust the phi nodes in the loop header to get their initial values

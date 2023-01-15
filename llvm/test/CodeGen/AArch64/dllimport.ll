@@ -8,7 +8,7 @@ declare dllimport i32 @external()
 declare i32 @internal()
 
 define i32 @get_var() {
-  %1 = load i32, i32* @var, align 4
+  %1 = load i32, ptr @var, align 4
   ret i32 %1
 }
 
@@ -19,7 +19,7 @@ define i32 @get_var() {
 ; CHECK: ret
 
 define i32 @get_ext() {
-  %1 = load i32, i32* @ext, align 4
+  %1 = load i32, ptr @ext, align 4
   ret i32 %1
 }
 
@@ -31,8 +31,8 @@ define i32 @get_ext() {
 ; GLOBAL-ISEL-FALLBACK: ldr w0, [x8, :lo12:ext]
 ; CHECK: ret
 
-define i32* @get_var_pointer() {
-  ret i32* @var
+define ptr @get_var_pointer() {
+  ret ptr @var
 }
 
 ; CHECK-LABEL: get_var_pointer

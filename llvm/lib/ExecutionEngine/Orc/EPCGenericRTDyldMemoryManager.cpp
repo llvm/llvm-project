@@ -94,8 +94,8 @@ uint8_t *EPCGenericRTDyldMemoryManager::allocateDataSection(
 }
 
 void EPCGenericRTDyldMemoryManager::reserveAllocationSpace(
-    uintptr_t CodeSize, uint32_t CodeAlign, uintptr_t RODataSize,
-    uint32_t RODataAlign, uintptr_t RWDataSize, uint32_t RWDataAlign) {
+    uintptr_t CodeSize, Align CodeAlign, uintptr_t RODataSize,
+    Align RODataAlign, uintptr_t RWDataSize, Align RWDataAlign) {
 
   {
     std::lock_guard<std::mutex> Lock(M);
@@ -103,15 +103,15 @@ void EPCGenericRTDyldMemoryManager::reserveAllocationSpace(
     if (!ErrMsg.empty())
       return;
 
-    if (!isPowerOf2_32(CodeAlign) || CodeAlign > EPC.getPageSize()) {
+    if (CodeAlign > EPC.getPageSize()) {
       ErrMsg = "Invalid code alignment in reserveAllocationSpace";
       return;
     }
-    if (!isPowerOf2_32(RODataAlign) || RODataAlign > EPC.getPageSize()) {
+    if (RODataAlign > EPC.getPageSize()) {
       ErrMsg = "Invalid ro-data alignment in reserveAllocationSpace";
       return;
     }
-    if (!isPowerOf2_32(RWDataAlign) || RWDataAlign > EPC.getPageSize()) {
+    if (RWDataAlign > EPC.getPageSize()) {
       ErrMsg = "Invalid rw-data alignment in reserveAllocationSpace";
       return;
     }

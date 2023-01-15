@@ -22,78 +22,59 @@
 #include "llvm/ADT/SmallString.h"
 
 namespace mlir {
+class FunctionOpInterface;
 
 namespace function_interface_impl {
-
-/// Return the name of the attribute used for function types.
-inline StringRef getTypeAttrName() { return "function_type"; }
-
-/// Return the name of the attribute used for function argument attributes.
-inline StringRef getArgDictAttrName() { return "arg_attrs"; }
-
-/// Return the name of the attribute used for function argument attributes.
-inline StringRef getResultDictAttrName() { return "res_attrs"; }
 
 /// Returns the dictionary attribute corresponding to the argument at 'index'.
 /// If there are no argument attributes at 'index', a null attribute is
 /// returned.
-DictionaryAttr getArgAttrDict(Operation *op, unsigned index);
+DictionaryAttr getArgAttrDict(FunctionOpInterface op, unsigned index);
 
 /// Returns the dictionary attribute corresponding to the result at 'index'.
 /// If there are no result attributes at 'index', a null attribute is
 /// returned.
-DictionaryAttr getResultAttrDict(Operation *op, unsigned index);
+DictionaryAttr getResultAttrDict(FunctionOpInterface op, unsigned index);
 
-namespace detail {
-/// Update the given index into an argument or result attribute dictionary.
-void setArgResAttrDict(Operation *op, StringRef attrName,
-                       unsigned numTotalIndices, unsigned index,
-                       DictionaryAttr attrs);
-} // namespace detail
+/// Return all of the attributes for the argument at 'index'.
+ArrayRef<NamedAttribute> getArgAttrs(FunctionOpInterface op, unsigned index);
+
+/// Return all of the attributes for the result at 'index'.
+ArrayRef<NamedAttribute> getResultAttrs(FunctionOpInterface op, unsigned index);
 
 /// Set all of the argument or result attribute dictionaries for a function. The
 /// size of `attrs` is expected to match the number of arguments/results of the
 /// given `op`.
-void setAllArgAttrDicts(Operation *op, ArrayRef<DictionaryAttr> attrs);
-void setAllArgAttrDicts(Operation *op, ArrayRef<Attribute> attrs);
-void setAllResultAttrDicts(Operation *op, ArrayRef<DictionaryAttr> attrs);
-void setAllResultAttrDicts(Operation *op, ArrayRef<Attribute> attrs);
-
-/// Return all of the attributes for the argument at 'index'.
-inline ArrayRef<NamedAttribute> getArgAttrs(Operation *op, unsigned index) {
-  auto argDict = getArgAttrDict(op, index);
-  return argDict ? argDict.getValue() : std::nullopt;
-}
-
-/// Return all of the attributes for the result at 'index'.
-inline ArrayRef<NamedAttribute> getResultAttrs(Operation *op, unsigned index) {
-  auto resultDict = getResultAttrDict(op, index);
-  return resultDict ? resultDict.getValue() : std::nullopt;
-}
+void setAllArgAttrDicts(FunctionOpInterface op, ArrayRef<DictionaryAttr> attrs);
+void setAllArgAttrDicts(FunctionOpInterface op, ArrayRef<Attribute> attrs);
+void setAllResultAttrDicts(FunctionOpInterface op,
+                           ArrayRef<DictionaryAttr> attrs);
+void setAllResultAttrDicts(FunctionOpInterface op, ArrayRef<Attribute> attrs);
 
 /// Insert the specified arguments and update the function type attribute.
-void insertFunctionArguments(Operation *op, ArrayRef<unsigned> argIndices,
-                             TypeRange argTypes,
+void insertFunctionArguments(FunctionOpInterface op,
+                             ArrayRef<unsigned> argIndices, TypeRange argTypes,
                              ArrayRef<DictionaryAttr> argAttrs,
                              ArrayRef<Location> argLocs,
                              unsigned originalNumArgs, Type newType);
 
 /// Insert the specified results and update the function type attribute.
-void insertFunctionResults(Operation *op, ArrayRef<unsigned> resultIndices,
+void insertFunctionResults(FunctionOpInterface op,
+                           ArrayRef<unsigned> resultIndices,
                            TypeRange resultTypes,
                            ArrayRef<DictionaryAttr> resultAttrs,
                            unsigned originalNumResults, Type newType);
 
 /// Erase the specified arguments and update the function type attribute.
-void eraseFunctionArguments(Operation *op, const BitVector &argIndices,
+void eraseFunctionArguments(FunctionOpInterface op, const BitVector &argIndices,
                             Type newType);
 
 /// Erase the specified results and update the function type attribute.
-void eraseFunctionResults(Operation *op, const BitVector &resultIndices,
-                          Type newType);
+void eraseFunctionResults(FunctionOpInterface op,
+                          const BitVector &resultIndices, Type newType);
 
 /// Set a FunctionOpInterface operation's type signature.
-void setFunctionType(Operation *op, Type newType);
+void setFunctionType(FunctionOpInterface op, Type newType);
 
 /// Insert a set of `newTypes` into `oldTypes` at the given `indices`. If any
 /// types are inserted, `storage` is used to hold the new type list. The new
@@ -111,20 +92,10 @@ TypeRange filterTypesOut(TypeRange types, const BitVector &indices,
 //===----------------------------------------------------------------------===//
 
 /// Set the attributes held by the argument at 'index'.
-template <typename ConcreteType>
-void setArgAttrs(ConcreteType op, unsigned index,
-                 ArrayRef<NamedAttribute> attributes) {
-  assert(index < op.getNumArguments() && "invalid argument number");
-  return detail::setArgResAttrDict(
-      op, getArgDictAttrName(), op.getNumArguments(), index,
-      DictionaryAttr::get(op->getContext(), attributes));
-}
-template <typename ConcreteType>
-void setArgAttrs(ConcreteType op, unsigned index, DictionaryAttr attributes) {
-  return detail::setArgResAttrDict(
-      op, getArgDictAttrName(), op.getNumArguments(), index,
-      attributes ? attributes : DictionaryAttr::get(op->getContext()));
-}
+void setArgAttrs(FunctionOpInterface op, unsigned index,
+                 ArrayRef<NamedAttribute> attributes);
+void setArgAttrs(FunctionOpInterface op, unsigned index,
+                 DictionaryAttr attributes);
 
 /// If the an attribute exists with the specified name, change it to the new
 /// value. Otherwise, add a new attribute with the specified name/value.
@@ -158,23 +129,10 @@ Attribute removeArgAttr(ConcreteType op, unsigned index, StringAttr name) {
 //===----------------------------------------------------------------------===//
 
 /// Set the attributes held by the result at 'index'.
-template <typename ConcreteType>
-void setResultAttrs(ConcreteType op, unsigned index,
-                    ArrayRef<NamedAttribute> attributes) {
-  assert(index < op.getNumResults() && "invalid result number");
-  return detail::setArgResAttrDict(
-      op, getResultDictAttrName(), op.getNumResults(), index,
-      DictionaryAttr::get(op->getContext(), attributes));
-}
-
-template <typename ConcreteType>
-void setResultAttrs(ConcreteType op, unsigned index,
-                    DictionaryAttr attributes) {
-  assert(index < op.getNumResults() && "invalid result number");
-  return detail::setArgResAttrDict(
-      op, getResultDictAttrName(), op.getNumResults(), index,
-      attributes ? attributes : DictionaryAttr::get(op->getContext()));
-}
+void setResultAttrs(FunctionOpInterface op, unsigned index,
+                    ArrayRef<NamedAttribute> attributes);
+void setResultAttrs(FunctionOpInterface op, unsigned index,
+                    DictionaryAttr attributes);
 
 /// If the an attribute exists with the specified name, change it to the new
 /// value. Otherwise, add a new attribute with the specified name/value.
@@ -207,10 +165,6 @@ Attribute removeResultAttr(ConcreteType op, unsigned index, StringAttr name) {
 /// method on FunctionOpInterface::Trait.
 template <typename ConcreteOp>
 LogicalResult verifyTrait(ConcreteOp op) {
-  if (!op.getFunctionTypeAttr())
-    return op.emitOpError("requires a type attribute '")
-           << function_interface_impl::getTypeAttrName() << '\'';
-
   if (failed(op.verifyType()))
     return failure();
 
@@ -218,9 +172,8 @@ LogicalResult verifyTrait(ConcreteOp op) {
     unsigned numArgs = op.getNumArguments();
     if (allArgAttrs.size() != numArgs) {
       return op.emitOpError()
-             << "expects argument attribute array `" << getArgDictAttrName()
-             << "` to have the same number of elements as the number of "
-                "function arguments, got "
+             << "expects argument attribute array to have the same number of "
+                "elements as the number of function arguments, got "
              << allArgAttrs.size() << ", but expected " << numArgs;
     }
     for (unsigned i = 0; i != numArgs; ++i) {
@@ -250,9 +203,8 @@ LogicalResult verifyTrait(ConcreteOp op) {
     unsigned numResults = op.getNumResults();
     if (allResultAttrs.size() != numResults) {
       return op.emitOpError()
-             << "expects result attribute array `" << getResultDictAttrName()
-             << "` to have the same number of elements as the number of "
-                "function results, got "
+             << "expects result attribute array to have the same number of "
+                "elements as the number of function results, got "
              << allResultAttrs.size() << ", but expected " << numResults;
     }
     for (unsigned i = 0; i != numResults; ++i) {

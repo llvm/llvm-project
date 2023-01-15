@@ -41,12 +41,13 @@ struct MergeConsecutiveExtractSlice : public OpRewritePattern<ExtractSliceOp> {
 };
 
 /// Merges consecutive tensor.insert_slice ops into one.
-struct MergeConsecutiveInsertSlice : public OpRewritePattern<InsertSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+template <typename OpTy>
+struct MergeConsecutiveInsertSlice : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(InsertSliceOp nextOp,
+  LogicalResult matchAndRewrite(OpTy nextOp,
                                 PatternRewriter &rewriter) const override {
-    auto prevOp = nextOp.getSource().getDefiningOp<InsertSliceOp>();
+    auto prevOp = nextOp.getSource().template getDefiningOp<InsertSliceOp>();
     if (!prevOp)
       return failure();
 
@@ -67,7 +68,7 @@ struct MergeConsecutiveInsertSlice : public OpRewritePattern<InsertSliceOp> {
         !prevOp.getDestType().hasStaticShape())
       return failure();
 
-    rewriter.replaceOpWithNewOp<InsertSliceOp>(
+    rewriter.replaceOpWithNewOp<OpTy>(
         nextOp, prevOp.getSource(), nextOp.getDest(), nextOp.getMixedOffsets(),
         nextOp.getMixedSizes(), nextOp.getMixedStrides());
     return success();
@@ -77,6 +78,8 @@ struct MergeConsecutiveInsertSlice : public OpRewritePattern<InsertSliceOp> {
 
 void mlir::tensor::populateMergeConsecutiveInsertExtractSlicePatterns(
     RewritePatternSet &patterns) {
-  patterns.add<MergeConsecutiveExtractSlice, MergeConsecutiveInsertSlice>(
+  patterns.add<MergeConsecutiveExtractSlice,
+               MergeConsecutiveInsertSlice<InsertSliceOp>,
+               MergeConsecutiveInsertSlice<ParallelInsertSliceOp>>(
       patterns.getContext());
 }

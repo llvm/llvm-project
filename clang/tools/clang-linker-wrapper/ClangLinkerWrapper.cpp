@@ -53,6 +53,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <atomic>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -121,7 +122,10 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "LinkerWrapperOpts.inc"
 #undef PREFIX
 
@@ -134,9 +138,9 @@ static constexpr OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class WrapperOptTable : public opt::OptTable {
+class WrapperOptTable : public opt::GenericOptTable {
 public:
-  WrapperOptTable() : OptTable(InfoTable) {}
+  WrapperOptTable() : opt::GenericOptTable(InfoTable) {}
 };
 
 const OptTable &getOptTable() {
@@ -323,9 +327,9 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   // Create a new file to write the linked device image to.
   auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
-                           Triple.getArchName() + "-" + Arch,
-                       "out");
+      createOutputFile(sys::path::filename(ExecutableName) + "." +
+                           Triple.getArchName() + "." + Arch,
+                       "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -367,8 +371,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
   // Create a new file to write the linked device image to.
-  auto TempFileOrErr = createOutputFile(
-      sys::path::filename(ExecutableName) + "-device", "fatbin");
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName), "fatbin");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -402,9 +406,9 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   // Create a new file to write the linked device image to.
   auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "-" +
-                           Triple.getArchName() + "-" + Arch,
-                       "out");
+      createOutputFile(sys::path::filename(ExecutableName) + "." +
+                           Triple.getArchName() + "." + Arch,
+                       "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
   std::string ArchArg = ("-plugin-opt=mcpu=" + Arch).str();
@@ -447,9 +451,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
   // Create a new file to write the linked device image to.
-  auto TempFileOrErr = createOutputFile(sys::path::filename(ExecutableName) +
-                                            "-device-" + Triple.getArchName(),
-                                        "hipfb");
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName), "hipfb");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -506,6 +509,42 @@ const char *getLDMOption(const llvm::Triple &T) {
   }
 }
 
+Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args) {
+  llvm::TimeTraceScope TimeScope("Clang Assembler");
+  // Use `clang` to invoke the generic assembler.
+  Expected<std::string> ClangPath =
+      findProgram("clang", {getMainExecutable("clang")});
+  if (!ClangPath)
+    return ClangPath.takeError();
+
+  const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  // Create a new file to write the linked device image to. Assume that the
+  // input filename already has the device and architecture.
+  auto TempFileOrErr = createOutputFile(sys::path::stem(InputFile), "o");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+
+  StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
+  SmallVector<StringRef, 16> CmdArgs{
+      *ClangPath,
+      "-o",
+      *TempFileOrErr,
+      "-fPIC",
+      "-c",
+      Args.MakeArgString("--target=" + Triple.getTriple()),
+      Args.MakeArgString("-" + OptLevel),
+      Triple.isAMDGPU() ? Args.MakeArgString("-mcpu=" + Arch)
+                        : Args.MakeArgString("-march=" + Arch),
+      InputFile,
+  };
+
+  if (Error Err = executeCommands(*ClangPath, CmdArgs))
+    return std::move(Err);
+
+  return *TempFileOrErr;
+}
+
 Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("Generic linker");
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
@@ -513,9 +552,9 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   // Create a new file to write the linked device image to.
   auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "-" +
-                           Triple.getArchName() + "-" + Arch,
-                       "out");
+      createOutputFile(sys::path::filename(ExecutableName) + "." +
+                           Triple.getArchName() + "." + Arch,
+                       "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -666,12 +705,24 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
   if (SaveTemps) {
-    std::string TempName = (sys::path::filename(ExecutableName) + "-device-" +
-                            Triple.getTriple() + "-" + Arch)
+    std::string TempName = (sys::path::filename(ExecutableName) + "." +
+                            Triple.getTriple() + "." + Arch)
                                .str();
     Conf.PostInternalizeModuleHook = [=](size_t Task, const Module &M) {
-      std::string File = !Task ? TempName + ".bc"
-                               : TempName + "." + std::to_string(Task) + ".bc";
+      std::string File =
+          !Task ? TempName + ".postlink.bc"
+                : TempName + "." + std::to_string(Task) + ".postlink.bc";
+      error_code EC;
+      raw_fd_ostream LinkedBitcode(File, EC, sys::fs::OF_None);
+      if (EC)
+        reportError(errorCodeToError(EC));
+      WriteBitcodeToFile(M, LinkedBitcode);
+      return true;
+    };
+    Conf.PreCodeGenModuleHook = [=](size_t Task, const Module &M) {
+      std::string File =
+          !Task ? TempName + ".postopt.bc"
+                : TempName + "." + std::to_string(Task) + ".postopt.bc";
       error_code EC;
       raw_fd_ostream LinkedBitcode(File, EC, sys::fs::OF_None);
       if (EC)
@@ -681,7 +732,8 @@ std::unique_ptr<lto::LTO> createLTO(
     };
   }
   Conf.PostOptModuleHook = Hook;
-  Conf.CGFileType = Triple.isNVPTX() ? CGFT_AssemblyFile : CGFT_ObjectFile;
+  Conf.CGFileType =
+      (Triple.isNVPTX() || SaveTemps) ? CGFT_AssemblyFile : CGFT_ObjectFile;
 
   // TODO: Handle remark files
   Conf.HasWholeProgramVisibility = Args.hasArg(OPT_whole_program);
@@ -702,6 +754,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
                        const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("Link bitcode files");
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
 
   SmallVector<OffloadFile, 4> BitcodeInputFiles;
   DenseSet<StringRef> UsedInRegularObj;
@@ -848,11 +901,11 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
           const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
     int FD = -1;
     auto &TempFile = Files[Task];
-    StringRef Extension = (Triple.isNVPTX()) ? "s" : "o";
+    StringRef Extension = (Triple.isNVPTX() || SaveTemps) ? "s" : "o";
     std::string TaskStr = Task ? "." + std::to_string(Task) : "";
     auto TempFileOrErr =
-        createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
-                             Triple.getTriple() + TaskStr,
+        createOutputFile(sys::path::filename(ExecutableName) + "." +
+                             Triple.getTriple() + "." + Arch + TaskStr,
                          Extension);
     if (!TempFileOrErr)
       reportError(TempFileOrErr.takeError());
@@ -881,9 +934,12 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   }
 
   // Is we are compiling for NVPTX we need to run the assembler first.
-  if (Triple.isNVPTX()) {
+  if (Triple.isNVPTX() || SaveTemps) {
     for (StringRef &File : Files) {
-      auto FileOrErr = nvptx::assemble(File, Args, !SingleOutput);
+
+      auto FileOrErr = Triple.isNVPTX()
+                           ? nvptx::assemble(File, Args, !SingleOutput)
+                           : generic::assemble(File, Args);
       if (!FileOrErr)
         return FileOrErr.takeError();
       File = *FileOrErr;
@@ -942,8 +998,8 @@ Expected<StringRef> compileModule(Module &M) {
     M.setDataLayout(TM->createDataLayout());
 
   int FD = -1;
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "-wrapper", "o");
+  auto TempFileOrErr = createOutputFile(
+      sys::path::filename(ExecutableName) + ".image.wrapper", "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
   if (std::error_code EC = sys::fs::openFileForWrite(*TempFileOrErr, FD))
@@ -1183,8 +1239,12 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
     for (OffloadKind Kind : ActiveOffloadKinds) {
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
           llvm::MemoryBuffer::getFileOrSTDIN(*OutputOrErr);
-      if (std::error_code EC = FileOrErr.getError())
-        return createFileError(*OutputOrErr, EC);
+      if (std::error_code EC = FileOrErr.getError()) {
+        if (DryRun)
+          FileOrErr = MemoryBuffer::getMemBuffer("");
+        else
+          return createFileError(*OutputOrErr, EC);
+      }
 
       OffloadingImage TheImage{};
       TheImage.TheImageKind =
@@ -1228,8 +1288,8 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
   return WrappedOutput;
 }
 
-Optional<std::string> findFile(StringRef Dir, StringRef Root,
-                               const Twine &Name) {
+std::optional<std::string> findFile(StringRef Dir, StringRef Root,
+                                    const Twine &Name) {
   SmallString<128> Path;
   if (Dir.startswith("="))
     sys::path::append(Path, Root, Dir.substr(1), Name);
@@ -1241,20 +1301,24 @@ Optional<std::string> findFile(StringRef Dir, StringRef Root,
   return std::nullopt;
 }
 
-Optional<std::string> findFromSearchPaths(StringRef Name, StringRef Root,
-                                          ArrayRef<StringRef> SearchPaths) {
+std::optional<std::string>
+findFromSearchPaths(StringRef Name, StringRef Root,
+                    ArrayRef<StringRef> SearchPaths) {
   for (StringRef Dir : SearchPaths)
-    if (Optional<std::string> File = findFile(Dir, Root, Name))
+    if (std::optional<std::string> File = findFile(Dir, Root, Name))
       return File;
   return std::nullopt;
 }
 
-Optional<std::string> searchLibraryBaseName(StringRef Name, StringRef Root,
-                                            ArrayRef<StringRef> SearchPaths) {
+std::optional<std::string>
+searchLibraryBaseName(StringRef Name, StringRef Root,
+                      ArrayRef<StringRef> SearchPaths) {
   for (StringRef Dir : SearchPaths) {
-    if (Optional<std::string> File = findFile(Dir, Root, "lib" + Name + ".so"))
+    if (std::optional<std::string> File =
+            findFile(Dir, Root, "lib" + Name + ".so"))
       return File;
-    if (Optional<std::string> File = findFile(Dir, Root, "lib" + Name + ".a"))
+    if (std::optional<std::string> File =
+            findFile(Dir, Root, "lib" + Name + ".a"))
       return File;
   }
   return std::nullopt;
@@ -1262,8 +1326,8 @@ Optional<std::string> searchLibraryBaseName(StringRef Name, StringRef Root,
 
 /// Search for static libraries in the linker's library path given input like
 /// `-lfoo` or `-l:libfoo.a`.
-Optional<std::string> searchLibrary(StringRef Input, StringRef Root,
-                                    ArrayRef<StringRef> SearchPaths) {
+std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
+                                         ArrayRef<StringRef> SearchPaths) {
   if (Input.startswith(":"))
     return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
   return searchLibraryBaseName(Input, Root, SearchPaths);

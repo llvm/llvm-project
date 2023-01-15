@@ -8,6 +8,7 @@
 
 #include "ABISysV_arm.h"
 
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/STLExtras.h"
@@ -1353,7 +1354,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
       size_t bit_width = 0;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           compiler_type.IsPointerOrReferenceType()) {
-        if (llvm::Optional<uint64_t> size = compiler_type.GetBitSize(&thread))
+        if (std::optional<uint64_t> size = compiler_type.GetBitSize(&thread))
           bit_width = *size;
       } else {
         // We only handle integer, pointer and reference types currently...
@@ -1460,8 +1461,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-  llvm::Optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
-  llvm::Optional<uint64_t> byte_size = compiler_type.GetByteSize(&thread);
+  std::optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
+  std::optional<uint64_t> byte_size = compiler_type.GetByteSize(&thread);
   if (!bit_width || !byte_size)
     return return_valobj_sp;
 
@@ -1597,8 +1598,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
           compiler_type.IsHomogeneousAggregate(&base_type);
 
       if (homogeneous_count > 0 && homogeneous_count <= 4) {
-        llvm::Optional<uint64_t> base_byte_size =
-            base_type.GetByteSize(&thread);
+        std::optional<uint64_t> base_byte_size = base_type.GetByteSize(&thread);
         if (base_type.IsVectorType()) {
           if (base_byte_size &&
               (*base_byte_size == 8 || *base_byte_size == 16)) {
@@ -1626,7 +1626,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
                                                       nullptr, nullptr);
 
             if (base_type.IsFloatingPointType(float_count, is_complex)) {
-              llvm::Optional<uint64_t> base_byte_size =
+              std::optional<uint64_t> base_byte_size =
                   base_type.GetByteSize(&thread);
               if (float_count == 2 && is_complex) {
                 if (index != 0 && base_byte_size &&

@@ -5122,7 +5122,8 @@ static void AddRecordMembersCompletionResults(
 // Returns the RecordDecl inside the BaseType, falling back to primary template
 // in case of specializations. Since we might not have a decl for the
 // instantiation/specialization yet, e.g. dependent code.
-static RecordDecl *getAsRecordDecl(const QualType BaseType) {
+static RecordDecl *getAsRecordDecl(QualType BaseType) {
+  BaseType = BaseType.getNonReferenceType();
   if (auto *RD = BaseType->getAsRecordDecl()) {
     if (const auto *CTSD =
             llvm::dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
@@ -5511,11 +5512,16 @@ private:
 // We accept some lossiness (like dropping parameters).
 // We only try to handle common expressions on the LHS of MemberExpr.
 QualType getApproximateType(const Expr *E) {
+  if (E->getType().isNull())
+    return QualType();
+  E = E->IgnoreParenImpCasts();
   QualType Unresolved = E->getType();
-  if (Unresolved.isNull() ||
-      !Unresolved->isSpecificBuiltinType(BuiltinType::Dependent))
-    return Unresolved;
-  E = E->IgnoreParens();
+  // We only resolve DependentTy, or undeduced autos (including auto* etc).
+  if (!Unresolved->isSpecificBuiltinType(BuiltinType::Dependent)) {
+    AutoType *Auto = Unresolved->getContainedAutoType();
+    if (!Auto || !Auto->isUndeducedAutoType())
+      return Unresolved;
+  }
   // A call: approximate-resolve callee to a function type, get its return type
   if (const CallExpr *CE = llvm::dyn_cast<CallExpr>(E)) {
     QualType Callee = getApproximateType(CE->getCallee());
@@ -5576,6 +5582,13 @@ QualType getApproximateType(const Expr *E) {
                })) {
         return llvm::cast<ValueDecl>(Member)->getType().getNonReferenceType();
       }
+    }
+  }
+  // A reference to an `auto` variable: approximate-resolve its initializer.
+  if (const auto *DRE = llvm::dyn_cast<DeclRefExpr>(E)) {
+    if (const auto *VD = llvm::dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (VD->hasInit())
+        return getApproximateType(VD->getInit());
     }
   }
   return Unresolved;
@@ -10017,10 +10030,10 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
         break;
       case llvm::sys::fs::file_type::regular_file: {
         // Only files that really look like headers. (Except in special dirs).
-        // Header extensions from Types.def, which we can't depend on here.
         const bool IsHeader = Filename.endswith_insensitive(".h") ||
                               Filename.endswith_insensitive(".hh") ||
                               Filename.endswith_insensitive(".hpp") ||
+                              Filename.endswith_insensitive(".hxx") ||
                               Filename.endswith_insensitive(".inc") ||
                               (ExtensionlessHeaders && !Filename.contains('.'));
         if (!IsHeader)
@@ -10087,7 +10100,7 @@ void Sema::CodeCompleteAvailabilityPlatformName() {
                         CodeCompletionContext::CCC_Other);
   Results.EnterNewScope();
   static const char *Platforms[] = {"macOS", "iOS", "watchOS", "tvOS"};
-  for (const char *Platform : llvm::makeArrayRef(Platforms)) {
+  for (const char *Platform : llvm::ArrayRef(Platforms)) {
     Results.AddResult(CodeCompletionResult(Platform));
     Results.AddResult(CodeCompletionResult(Results.getAllocator().CopyString(
         Twine(Platform) + "ApplicationExtension")));

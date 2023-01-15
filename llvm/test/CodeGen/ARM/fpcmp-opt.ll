@@ -5,7 +5,7 @@
 ; rdar://10964603
 
 ; Disable this optimization unless we know one of them is zero.
-define arm_apcscc i32 @t1(float* %a, float* %b) nounwind {
+define arm_apcscc i32 @t1(ptr %a, ptr %b) nounwind {
 entry:
 ; CHECK-LABEL: t1:
 ; CHECK: vldr [[S0:s[0-9]+]],
@@ -13,8 +13,8 @@ entry:
 ; CHECK: vcmp.f32 [[S1]], [[S0]]
 ; CHECK: vmrs APSR_nzcv, fpscr
 ; CHECK: beq
-  %0 = load float, float* %a
-  %1 = load float, float* %b
+  %0 = load float, ptr %a
+  %1 = load float, ptr %b
   %2 = fcmp une float %0, %1
   br i1 %2, label %bb1, label %bb2
 
@@ -29,7 +29,7 @@ bb2:
 
 ; If one side is zero, the other size sign bit is masked off to allow
 ; +0.0 == -0.0
-define arm_apcscc i32 @t2(double* %a, double* %b) nounwind {
+define arm_apcscc i32 @t2(ptr %a, ptr %b) nounwind {
 entry:
 ; CHECK-LABEL: t2:
 ; CHECK-NOT: vldr
@@ -41,7 +41,7 @@ entry:
 ; CHECK-NOT: vcmp.f32
 ; CHECK-NOT: vmrs
 ; CHECK: bne
-  %0 = load double, double* %a
+  %0 = load double, ptr %a
   %1 = fcmp oeq double %0, 0.000000e+00
   br i1 %1, label %bb1, label %bb2
 
@@ -54,7 +54,7 @@ bb2:
   ret i32 %3
 }
 
-define arm_apcscc i32 @t3(float* %a, float* %b) nounwind {
+define arm_apcscc i32 @t3(ptr %a, ptr %b) nounwind {
 entry:
 ; CHECK-LABEL: t3:
 ; CHECK-NOT: vldr
@@ -64,7 +64,7 @@ entry:
 ; CHECK-NOT: vcmp.f32
 ; CHECK-NOT: vmrs
 ; CHECK: bne
-  %0 = load float, float* %a
+  %0 = load float, ptr %a
   %1 = fcmp oeq float %0, 0.000000e+00
   br i1 %1, label %bb1, label %bb2
 

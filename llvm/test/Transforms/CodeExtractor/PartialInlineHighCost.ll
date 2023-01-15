@@ -1,8 +1,6 @@
 ; The outlined region has high frequency  and the outlining
 ; call sequence is expensive (input, output, multiple exit etc)
 ; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=2 -S | FileCheck %s
-; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=2 -S | FileCheck %s
-; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -max-num-inline-blocks=2 -S | FileCheck --check-prefix=NOCOST %s
 ; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -max-num-inline-blocks=2 -S | FileCheck  --check-prefix=NOCOST %s
 
 

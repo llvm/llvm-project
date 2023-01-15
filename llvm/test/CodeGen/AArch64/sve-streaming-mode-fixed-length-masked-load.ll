@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; Masked Load
 ;
 
-define <4 x i8> @masked_load_v4i8(<4 x i8>* %src, <4 x i1> %mask) #0 {
+define <4 x i8> @masked_load_v4i8(ptr %src, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -18,11 +18,11 @@ define <4 x i8> @masked_load_v4i8(<4 x i8>* %src, <4 x i1> %mask) #0 {
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-  %load = call <4 x i8> @llvm.masked.load.v4i8(<4 x i8>* %src, i32 8, <4 x i1> %mask, <4 x i8> zeroinitializer)
+  %load = call <4 x i8> @llvm.masked.load.v4i8(ptr %src, i32 8, <4 x i1> %mask, <4 x i8> zeroinitializer)
   ret <4 x i8> %load
 }
 
-define <8 x i8> @masked_load_v8i8(<8 x i8>* %src, <8 x i1> %mask) #0 {
+define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -33,11 +33,11 @@ define <8 x i8> @masked_load_v8i8(<8 x i8>* %src, <8 x i1> %mask) #0 {
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-  %load = call <8 x i8> @llvm.masked.load.v8i8(<8 x i8>* %src, i32 8, <8 x i1> %mask, <8 x i8> zeroinitializer)
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %src, i32 8, <8 x i1> %mask, <8 x i8> zeroinitializer)
   ret <8 x i8> %load
 }
 
-define <16 x i8> @masked_load_v16i8(<16 x i8>* %src, <16 x i1> %mask) #0 {
+define <16 x i8> @masked_load_v16i8(ptr %src, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -48,11 +48,11 @@ define <16 x i8> @masked_load_v16i8(<16 x i8>* %src, <16 x i1> %mask) #0 {
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %load = call <16 x i8> @llvm.masked.load.v16i8(<16 x i8>* %src, i32 8, <16 x i1> %mask, <16 x i8> zeroinitializer)
+  %load = call <16 x i8> @llvm.masked.load.v16i8(ptr %src, i32 8, <16 x i1> %mask, <16 x i8> zeroinitializer)
   ret <16 x i8> %load
 }
 
-define <32 x i8> @masked_load_v32i8(<32 x i8>* %src, <32 x i1> %mask) #0 {
+define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
@@ -129,11 +129,11 @@ define <32 x i8> @masked_load_v32i8(<32 x i8>* %src, <32 x i1> %mask) #0 {
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
-  %load = call <32 x i8> @llvm.masked.load.v32i8(<32 x i8>* %src, i32 8, <32 x i1> %mask, <32 x i8> zeroinitializer)
+  %load = call <32 x i8> @llvm.masked.load.v32i8(ptr %src, i32 8, <32 x i1> %mask, <32 x i8> zeroinitializer)
   ret <32 x i8> %load
 }
 
-define <2 x half> @masked_load_v2f16(<2 x half>* %src, <2 x i1> %mask) #0 {
+define <2 x half> @masked_load_v2f16(ptr %src, <2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
@@ -154,11 +154,11 @@ define <2 x half> @masked_load_v2f16(<2 x half>* %src, <2 x i1> %mask) #0 {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-  %load = call <2 x half> @llvm.masked.load.v2f16(<2 x half>* %src, i32 8, <2 x i1> %mask, <2 x half> zeroinitializer)
+  %load = call <2 x half> @llvm.masked.load.v2f16(ptr %src, i32 8, <2 x i1> %mask, <2 x half> zeroinitializer)
   ret <2 x half> %load
 }
 
-define <4 x half> @masked_load_v4f16(<4 x half>* %src, <4 x i1> %mask) #0 {
+define <4 x half> @masked_load_v4f16(ptr %src, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -169,11 +169,11 @@ define <4 x half> @masked_load_v4f16(<4 x half>* %src, <4 x i1> %mask) #0 {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-  %load = call <4 x half> @llvm.masked.load.v4f16(<4 x half>* %src, i32 8, <4 x i1> %mask, <4 x half> zeroinitializer)
+  %load = call <4 x half> @llvm.masked.load.v4f16(ptr %src, i32 8, <4 x i1> %mask, <4 x half> zeroinitializer)
   ret <4 x half> %load
 }
 
-define <8 x half> @masked_load_v8f16(<8 x half>* %src, <8 x i1> %mask) #0 {
+define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -185,11 +185,11 @@ define <8 x half> @masked_load_v8f16(<8 x half>* %src, <8 x i1> %mask) #0 {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %load = call <8 x half> @llvm.masked.load.v8f16(<8 x half>* %src, i32 8, <8 x i1> %mask, <8 x half> zeroinitializer)
+  %load = call <8 x half> @llvm.masked.load.v8f16(ptr %src, i32 8, <8 x i1> %mask, <8 x half> zeroinitializer)
   ret <8 x half> %load
 }
 
-define <16 x half> @masked_load_v16f16(<16 x half>* %src, <16 x i1> %mask) #0 {
+define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -209,11 +209,11 @@ define <16 x half> @masked_load_v16f16(<16 x half>* %src, <16 x i1> %mask) #0 {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
-  %load = call <16 x half> @llvm.masked.load.v16f16(<16 x half>* %src, i32 8, <16 x i1> %mask, <16 x half> zeroinitializer)
+  %load = call <16 x half> @llvm.masked.load.v16f16(ptr %src, i32 8, <16 x i1> %mask, <16 x half> zeroinitializer)
   ret <16 x half> %load
 }
 
-define <2 x float> @masked_load_v2f32(<2 x float>* %src, <2 x i1> %mask) #0 {
+define <2 x float> @masked_load_v2f32(ptr %src, <2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -224,11 +224,11 @@ define <2 x float> @masked_load_v2f32(<2 x float>* %src, <2 x i1> %mask) #0 {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
-  %load = call <2 x float> @llvm.masked.load.v2f32(<2 x float>* %src, i32 8, <2 x i1> %mask, <2 x float> zeroinitializer)
+  %load = call <2 x float> @llvm.masked.load.v2f32(ptr %src, i32 8, <2 x i1> %mask, <2 x float> zeroinitializer)
   ret <2 x float> %load
 }
 
-define <4 x float> @masked_load_v4f32(<4 x float>* %src, <4 x i1> %mask) #0 {
+define <4 x float> @masked_load_v4f32(ptr %src, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -240,11 +240,11 @@ define <4 x float> @masked_load_v4f32(<4 x float>* %src, <4 x i1> %mask) #0 {
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %load = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %src, i32 8, <4 x i1> %mask, <4 x float> zeroinitializer)
+  %load = call <4 x float> @llvm.masked.load.v4f32(ptr %src, i32 8, <4 x i1> %mask, <4 x float> zeroinitializer)
   ret <4 x float> %load
 }
 
-define <8 x float> @masked_load_v8f32(<8 x float>* %src, <8 x i1> %mask) #0 {
+define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -289,11 +289,11 @@ define <8 x float> @masked_load_v8f32(<8 x float>* %src, <8 x i1> %mask) #0 {
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-  %load = call <8 x float> @llvm.masked.load.v8f32(<8 x float>* %src, i32 8, <8 x i1> %mask, <8 x float> zeroinitializer)
+  %load = call <8 x float> @llvm.masked.load.v8f32(ptr %src, i32 8, <8 x i1> %mask, <8 x float> zeroinitializer)
   ret <8 x float> %load
 }
 
-define <2 x double> @masked_load_v2f64(<2 x double>* %src, <2 x i1> %mask) #0 {
+define <2 x double> @masked_load_v2f64(ptr %src, <2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -305,11 +305,11 @@ define <2 x double> @masked_load_v2f64(<2 x double>* %src, <2 x i1> %mask) #0 {
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
-  %load = call <2 x double> @llvm.masked.load.v2f64(<2 x double>* %src, i32 8, <2 x i1> %mask, <2 x double> zeroinitializer)
+  %load = call <2 x double> @llvm.masked.load.v2f64(ptr %src, i32 8, <2 x i1> %mask, <2 x double> zeroinitializer)
   ret <2 x double> %load
 }
 
-define <4 x double> @masked_load_v4f64(<4 x double>* %src, <4 x i1> %mask) #0 {
+define <4 x double> @masked_load_v4f64(ptr %src, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_load_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -330,25 +330,25 @@ define <4 x double> @masked_load_v4f64(<4 x double>* %src, <4 x i1> %mask) #0 {
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
-  %load = call <4 x double> @llvm.masked.load.v4f64(<4 x double>* %src, i32 8, <4 x i1> %mask, <4 x double> zeroinitializer)
+  %load = call <4 x double> @llvm.masked.load.v4f64(ptr %src, i32 8, <4 x i1> %mask, <4 x double> zeroinitializer)
   ret <4 x double> %load
 }
 
-declare <4 x i8> @llvm.masked.load.v4i8(<4 x i8>*, i32, <4 x i1>, <4 x i8>)
-declare <8 x i8> @llvm.masked.load.v8i8(<8 x i8>*, i32, <8 x i1>, <8 x i8>)
-declare <16 x i8> @llvm.masked.load.v16i8(<16 x i8>*, i32, <16 x i1>, <16 x i8>)
-declare <32 x i8> @llvm.masked.load.v32i8(<32 x i8>*, i32, <32 x i1>, <32 x i8>)
+declare <4 x i8> @llvm.masked.load.v4i8(ptr, i32, <4 x i1>, <4 x i8>)
+declare <8 x i8> @llvm.masked.load.v8i8(ptr, i32, <8 x i1>, <8 x i8>)
+declare <16 x i8> @llvm.masked.load.v16i8(ptr, i32, <16 x i1>, <16 x i8>)
+declare <32 x i8> @llvm.masked.load.v32i8(ptr, i32, <32 x i1>, <32 x i8>)
 
-declare <2 x half> @llvm.masked.load.v2f16(<2 x half>*, i32, <2 x i1>, <2 x half>)
-declare <4 x half> @llvm.masked.load.v4f16(<4 x half>*, i32, <4 x i1>, <4 x half>)
-declare <8 x half> @llvm.masked.load.v8f16(<8 x half>*, i32, <8 x i1>, <8 x half>)
-declare <16 x half> @llvm.masked.load.v16f16(<16 x half>*, i32, <16 x i1>, <16 x half>)
+declare <2 x half> @llvm.masked.load.v2f16(ptr, i32, <2 x i1>, <2 x half>)
+declare <4 x half> @llvm.masked.load.v4f16(ptr, i32, <4 x i1>, <4 x half>)
+declare <8 x half> @llvm.masked.load.v8f16(ptr, i32, <8 x i1>, <8 x half>)
+declare <16 x half> @llvm.masked.load.v16f16(ptr, i32, <16 x i1>, <16 x half>)
 
-declare <2 x float> @llvm.masked.load.v2f32(<2 x float>*, i32, <2 x i1>, <2 x float>)
-declare <4 x float> @llvm.masked.load.v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
-declare <8 x float> @llvm.masked.load.v8f32(<8 x float>*, i32, <8 x i1>, <8 x float>)
+declare <2 x float> @llvm.masked.load.v2f32(ptr, i32, <2 x i1>, <2 x float>)
+declare <4 x float> @llvm.masked.load.v4f32(ptr, i32, <4 x i1>, <4 x float>)
+declare <8 x float> @llvm.masked.load.v8f32(ptr, i32, <8 x i1>, <8 x float>)
 
-declare <2 x double> @llvm.masked.load.v2f64(<2 x double>*, i32, <2 x i1>, <2 x double>)
-declare <4 x double> @llvm.masked.load.v4f64(<4 x double>*, i32, <4 x i1>, <4 x double>)
+declare <2 x double> @llvm.masked.load.v2f64(ptr, i32, <2 x i1>, <2 x double>)
+declare <4 x double> @llvm.masked.load.v4f64(ptr, i32, <4 x i1>, <4 x double>)
 
 attributes #0 = { "target-features"="+sve" }

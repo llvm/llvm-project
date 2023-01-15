@@ -31,21 +31,21 @@
 ; VI: buffer_store_short v[[B_F16]]
 ; VI: s_endpgm
 define amdgpu_kernel void @br_cc_f16(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
 entry:
-  %a.val = load volatile half, half addrspace(1)* %a
-  %b.val = load volatile half, half addrspace(1)* %b
+  %a.val = load volatile half, ptr addrspace(1) %a
+  %b.val = load volatile half, ptr addrspace(1) %b
   %fcmp = fcmp olt half %a.val, %b.val
   br i1 %fcmp, label %one, label %two
 
 one:
-  store half %a.val, half addrspace(1)* %r
+  store half %a.val, ptr addrspace(1) %r
   ret void
 
 two:
-  store half %b.val, half addrspace(1)* %r
+  store half %b.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -70,19 +70,19 @@ two:
 ; SI:  v_cvt_f16_f32_e32 v[[B_F16:[0-9]+]], v[[B_F32]]
 
 define amdgpu_kernel void @br_cc_f16_imm_a(
-    half addrspace(1)* %r,
-    half addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b) {
 entry:
-  %b.val = load half, half addrspace(1)* %b
+  %b.val = load half, ptr addrspace(1) %b
   %fcmp = fcmp olt half 0xH3800, %b.val
   br i1 %fcmp, label %one, label %two
 
 one:
-  store half 0xH3800, half addrspace(1)* %r
+  store half 0xH3800, ptr addrspace(1) %r
   ret void
 
 two:
-  store half %b.val, half addrspace(1)* %r
+  store half %b.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -103,18 +103,18 @@ two:
 ; GCN: buffer_store_short v[[B_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @br_cc_f16_imm_b(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %fcmp = fcmp olt half %a.val, 0xH3800
   br i1 %fcmp, label %one, label %two
 
 one:
-  store half %a.val, half addrspace(1)* %r
+  store half %a.val, ptr addrspace(1) %r
   ret void
 
 two:
-  store half 0xH3800, half addrspace(1)* %r
+  store half 0xH3800, ptr addrspace(1) %r
   ret void
 }

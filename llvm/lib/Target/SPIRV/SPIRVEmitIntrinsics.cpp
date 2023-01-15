@@ -198,6 +198,7 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
   for (auto &Op : I.operands())
     if (Op.get()->getType()->isSized())
       Args.push_back(Op);
+  IRB->SetInsertPoint(&I);
   IRB->CreateIntrinsic(Intrinsic::spv_switch, {I.getOperand(0)->getType()},
                        {Args});
   return &I;

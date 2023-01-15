@@ -23,6 +23,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -279,6 +280,10 @@ OptionalParseResult Parser::parseOptionalAttribute(StringAttr &attribute,
                                                    Type type) {
   return parseOptionalAttributeWithToken(Token::string, attribute, type);
 }
+OptionalParseResult Parser::parseOptionalAttribute(SymbolRefAttr &result,
+                                                   Type type) {
+  return parseOptionalAttributeWithToken(Token::at_identifier, result, type);
+}
 
 /// Attribute dictionary.
 ///
@@ -290,7 +295,7 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
   llvm::SmallDenseSet<StringAttr> seenKeys;
   auto parseElt = [&]() -> ParseResult {
     // The name of an attribute can either be a bare identifier, or a string.
-    Optional<StringAttr> nameId;
+    std::optional<StringAttr> nameId;
     if (getToken().is(Token::string))
       nameId = builder.getStringAttr(getToken().getStringValue());
     else if (getToken().isAny(Token::bare_identifier, Token::inttype) ||
@@ -512,7 +517,7 @@ private:
   std::vector<std::pair<bool, Token>> storage;
 
   /// Storage used when parsing elements that were stored as hex values.
-  Optional<Token> hexStorage;
+  std::optional<Token> hexStorage;
 };
 } // namespace
 
@@ -570,7 +575,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
       return nullptr;
     if (isComplex) {
       // If this is a complex, treat the parsed values as complex values.
-      auto complexData = llvm::makeArrayRef(
+      auto complexData = llvm::ArrayRef(
           reinterpret_cast<std::complex<APInt> *>(intValues.data()),
           intValues.size() / 2);
       return DenseElementsAttr::get(type, complexData);
@@ -584,7 +589,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
       return nullptr;
     if (isComplex) {
       // If this is a complex, treat the parsed values as complex values.
-      auto complexData = llvm::makeArrayRef(
+      auto complexData = llvm::ArrayRef(
           reinterpret_cast<std::complex<APFloat> *>(floatValues.data()),
           floatValues.size() / 2);
       return DenseElementsAttr::get(type, complexData);
@@ -686,7 +691,7 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
 DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc, ShapedType type,
                                                      Type eltTy) {
   if (hexStorage.has_value()) {
-    auto stringValue = hexStorage.value().getStringValue();
+    auto stringValue = hexStorage->getStringValue();
     return DenseStringElementsAttr::get(type, {stringValue});
   }
 

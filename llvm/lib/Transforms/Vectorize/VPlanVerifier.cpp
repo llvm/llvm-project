@@ -14,6 +14,7 @@
 
 #include "VPlanVerifier.h"
 #include "VPlan.h"
+#include "VPlanCFG.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Support/CommandLine.h"
 

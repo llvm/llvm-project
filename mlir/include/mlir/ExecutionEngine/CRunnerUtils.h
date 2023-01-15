@@ -486,4 +486,13 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT uint64_t rtrand(void *, uint64_t m);
 // Deletes the random number generator.
 extern "C" MLIR_CRUNNERUTILS_EXPORT void rtdrand(void *);
 
+//===----------------------------------------------------------------------===//
+// Runtime support library to allow the use of std::sort in MLIR program.
+//===----------------------------------------------------------------------===//
+extern "C" MLIR_CRUNNERUTILS_EXPORT void
+_mlir_ciface_stdSortI64(uint64_t n, StridedMemRefType<int64_t, 1> *vref);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void
+_mlir_ciface_stdSortF64(uint64_t n, StridedMemRefType<double, 1> *vref);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void
+_mlir_ciface_stdSortF32(uint64_t n, StridedMemRefType<float, 1> *vref);
 #endif // MLIR_EXECUTIONENGINE_CRUNNERUTILS_H

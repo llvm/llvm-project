@@ -82,9 +82,11 @@ public:
 
   /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
   explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
-      : DataflowAnalysis(Context, {ApplyBuiltinTransfer
-                                       ? TransferOptions{}
-                                       : llvm::Optional<TransferOptions>()}) {}
+      : DataflowAnalysis(
+            Context,
+            {ApplyBuiltinTransfer
+                 ? DataflowAnalysisContext::Options{}
+                 : std::optional<DataflowAnalysisContext::Options>()}) {}
 
   explicit DataflowAnalysis(ASTContext &Context,
                             DataflowAnalysisOptions Options)
@@ -218,15 +220,16 @@ runDataflowAnalysis(
       BlockStates;
   BlockStates.reserve(TypeErasedBlockStates->size());
 
-  llvm::transform(std::move(*TypeErasedBlockStates),
-                  std::back_inserter(BlockStates), [](auto &OptState) {
-                    return std::move(OptState).transform([](auto &&State) {
-                      return DataflowAnalysisState<typename AnalysisT::Lattice>{
-                          llvm::any_cast<typename AnalysisT::Lattice>(
-                              std::move(State.Lattice.Value)),
-                          std::move(State.Env)};
-                    });
-                  });
+  llvm::transform(
+      std::move(*TypeErasedBlockStates), std::back_inserter(BlockStates),
+      [](auto &OptState) {
+        return llvm::transformOptional(std::move(OptState), [](auto &&State) {
+          return DataflowAnalysisState<typename AnalysisT::Lattice>{
+              llvm::any_cast<typename AnalysisT::Lattice>(
+                  std::move(State.Lattice.Value)),
+              std::move(State.Env)};
+        });
+      });
   return BlockStates;
 }
 

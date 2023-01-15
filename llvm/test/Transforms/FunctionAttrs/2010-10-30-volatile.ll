@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
-; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 ; PR8279
 
 @g = constant i32 1

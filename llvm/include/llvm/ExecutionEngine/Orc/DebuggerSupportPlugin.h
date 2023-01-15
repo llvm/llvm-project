@@ -41,9 +41,9 @@ public:
       : RegisterActionAddr(RegisterActionAddr) {}
 
   Error notifyFailed(MaterializationResponsibility &MR) override;
-  Error notifyRemovingResources(ResourceKey K) override;
+  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override;
 
-  void notifyTransferringResources(ResourceKey DstKey,
+  void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                    ResourceKey SrcKey) override;
 
   void modifyPassConfig(MaterializationResponsibility &MR,

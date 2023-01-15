@@ -8,11 +8,11 @@ define hidden void @foo() {
 ; CHECK:       if:
 ; CHECK-NEXT:    br i1 false, label [[L50:%.*]], label [[IF]]
 ; CHECK:       L50:
-; CHECK-NEXT:    store i8 poison, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    ret void
 ;
 top:
-  %.promoted = load i8, i8* undef, align 8
+  %.promoted = load i8, ptr undef, align 8
   br label %if
 
 ;; This is really a multi-valued phi, because the phi is defined by an expression of the phi.
@@ -26,6 +26,6 @@ if:                                               ; preds = %if, %top
 
 L50:                                              ; preds = %if
   %.lcssa = phi i8 [ %1, %if ]
-  store i8 %.lcssa, i8* undef, align 8
+  store i8 %.lcssa, ptr undef, align 8
   ret void
 }

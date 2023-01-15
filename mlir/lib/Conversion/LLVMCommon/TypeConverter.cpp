@@ -42,13 +42,13 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // before the conversions below since conversions are attempted in reverse
   // order and those should take priority.
   addConversion([](Type type) {
-    return LLVM::isCompatibleType(type) ? llvm::Optional<Type>(type)
+    return LLVM::isCompatibleType(type) ? std::optional<Type>(type)
                                         : std::nullopt;
   });
 
   // LLVM container types may (recursively) contain other types that must be
   // converted even when the outer type is compatible.
-  addConversion([&](LLVM::LLVMPointerType type) -> llvm::Optional<Type> {
+  addConversion([&](LLVM::LLVMPointerType type) -> std::optional<Type> {
     if (type.isOpaque())
       return type;
     if (auto pointee = convertType(type.getElementType()))
@@ -56,7 +56,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
     return std::nullopt;
   });
   addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results,
-                    ArrayRef<Type> callStack) -> llvm::Optional<LogicalResult> {
+                    ArrayRef<Type> callStack) -> std::optional<LogicalResult> {
     // Fastpath for types that won't be converted by this callback anyway.
     if (LLVM::isCompatibleType(type)) {
       results.push_back(type);
@@ -99,12 +99,12 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
         type.getContext(), convertedSubtypes, type.isPacked()));
     return success();
   });
-  addConversion([&](LLVM::LLVMArrayType type) -> llvm::Optional<Type> {
+  addConversion([&](LLVM::LLVMArrayType type) -> std::optional<Type> {
     if (auto element = convertType(type.getElementType()))
       return LLVM::LLVMArrayType::get(element, type.getNumElements());
     return std::nullopt;
   });
-  addConversion([&](LLVM::LLVMFunctionType type) -> llvm::Optional<Type> {
+  addConversion([&](LLVM::LLVMFunctionType type) -> std::optional<Type> {
     Type convertedResType = convertType(type.getReturnType());
     if (!convertedResType)
       return std::nullopt;
@@ -123,7 +123,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // value represents a memref.
   addArgumentMaterialization(
       [&](OpBuilder &builder, UnrankedMemRefType resultType, ValueRange inputs,
-          Location loc) -> Optional<Value> {
+          Location loc) -> std::optional<Value> {
         if (inputs.size() == 1)
           return std::nullopt;
         return UnrankedMemRefDescriptor::pack(builder, loc, *this, resultType,
@@ -131,7 +131,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       });
   addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
                                  ValueRange inputs,
-                                 Location loc) -> Optional<Value> {
+                                 Location loc) -> std::optional<Value> {
     // TODO: bare ptr conversion could be handled here but we would need a way
     // to distinguish between FuncOp and other regions.
     if (inputs.size() == 1)
@@ -142,7 +142,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // non-LLVM types persist after an LLVM conversion.
   addSourceMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs,
-                               Location loc) -> Optional<Value> {
+                               Location loc) -> std::optional<Value> {
     if (inputs.size() != 1)
       return std::nullopt;
 
@@ -151,7 +151,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   });
   addTargetMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs,
-                               Location loc) -> Optional<Value> {
+                               Location loc) -> std::optional<Value> {
     if (inputs.size() != 1)
       return std::nullopt;
 

@@ -5,11 +5,11 @@
 
 declare void @foo()
 
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 
-define void @test1(<2 x i32 addrspace(1)*> addrspace(1)* %obj) gc "statepoint-example" {
+define void @test1(ptr addrspace(1) %obj) gc "statepoint-example" {
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, <2 x i32 addrspace(1)*> addrspace(1)* %obj)
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr @foo, i32 0, i32 0, i32 0, i32 0, ptr addrspace(1) %obj)
   %obj.relocated = call coldcc i8 @llvm.experimental.gc.relocate.i8(token %safepoint_token, i32 7, i32 7) ; (%obj, %obj)
   ret void
 }

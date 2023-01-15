@@ -33,6 +33,8 @@ def Toy_Dialect : Dialect {
   // We set this bit to generate the declarations for the dialect's type parsing
   // and printing hooks.
   let useDefaultTypePrinterParser = 1;
+
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 // Base class for toy dialect operations. This operation inherits from the base
@@ -186,7 +188,9 @@ def FuncOp : Toy_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    TypeAttrOf<FunctionType>:$function_type
+    TypeAttrOf<FunctionType>:$function_type,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
   let regions = (region AnyRegion:$body);
 

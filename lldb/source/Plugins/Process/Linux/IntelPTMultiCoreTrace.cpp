@@ -9,6 +9,7 @@
 #include "IntelPTMultiCoreTrace.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Procfs.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -35,7 +36,7 @@ static Error IncludePerfEventParanoidMessageInError(Error &&error) {
 Expected<std::unique_ptr<IntelPTMultiCoreTrace>>
 IntelPTMultiCoreTrace::StartOnAllCores(const TraceIntelPTStartRequest &request,
                                        NativeProcessProtocol &process,
-                                       Optional<int> cgroup_fd) {
+                                       std::optional<int> cgroup_fd) {
   Expected<ArrayRef<cpu_id_t>> cpu_ids = GetAvailableLogicalCoreIDs();
   if (!cpu_ids)
     return cpu_ids.takeError();
@@ -145,7 +146,7 @@ Error IntelPTMultiCoreTrace::TraceStop(lldb::tid_t tid) {
                            "per-cpu process tracing is enabled.");
 }
 
-Expected<Optional<std::vector<uint8_t>>>
+Expected<std::optional<std::vector<uint8_t>>>
 IntelPTMultiCoreTrace::TryGetBinaryData(
     const TraceGetBinaryDataRequest &request) {
   if (!request.cpu_id)

@@ -6,14 +6,14 @@
 
 @d = external dso_local global %struct.c
 
-define void @e(%struct.a* byval(%struct.a) %f) {
+define void @e(ptr byval(%struct.a) %f) {
 ; CHECK-LABEL: @e(
 ; CHECK-NEXT:    ret void
 ;
   ret void
 }
 
-define void @g(%struct.c* byval(%struct.c) %f) {
+define void @g(ptr byval(%struct.c) %f) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:    ret void
 ;
@@ -22,9 +22,9 @@ define void @g(%struct.c* byval(%struct.c) %f) {
 
 define void @h() {
 ; CHECK-LABEL: @h(
-; CHECK-NEXT:    call void bitcast (void (%struct.a*)* @e to void (%struct.c*)*)(%struct.c* byval(%struct.c) @d)
+; CHECK-NEXT:    call void @e(ptr byval(%struct.c) @d)
 ; CHECK-NEXT:    ret void
 ;
-  call void @g(%struct.c* byval(%struct.c) @d)
+  call void @g(ptr byval(%struct.c) @d)
   ret void
 }

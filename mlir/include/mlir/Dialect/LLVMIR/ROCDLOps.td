@@ -30,6 +30,19 @@ def ROCDL_Dialect : Dialect {
     /// Get the name of the attribute used to annotate external kernel
     /// functions.
     static StringRef getKernelFuncAttrName() { return "rocdl.kernel"; }
+    static constexpr ::llvm::StringLiteral getFlatWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.flat_work_group_size");
+    }
+    static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.reqd_work_group_size");
+    }
+
+    /// The address space value that represents global memory.
+    static constexpr unsigned kGlobalMemoryAddressSpace = 1;
+    /// The address space value that represents shared memory.
+    static constexpr unsigned kSharedMemoryAddressSpace = 3;
+    /// The address space value that represents private memory.
+    static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];
 }
 
@@ -49,8 +62,9 @@ class ROCDL_SpecialRegisterOp<string mnemonic,
     list<Trait> traits = []> :
   ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
-  string llvmBuilder = "$res = createIntrinsicCall(builder,"
-    # "llvm::Intrinsic::amdgcn_" # !subst(".","_", mnemonic) # ");";
+  string llvmBuilder = "$res = createIntrinsicCallWithRange(builder,"
+    # "llvm::Intrinsic::amdgcn_" # !subst(".","_", mnemonic)
+    # ", op->getAttrOfType<::mlir::DenseI32ArrayAttr>(\"range\"));";
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 

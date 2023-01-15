@@ -358,7 +358,7 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
       ++I;
       auto Delim = std::find(I, Input.end(), '}');
       assert(Delim != Input.end());
-      llvm::Optional<llvm::sys::unicode::LooseMatchingResult> Res =
+      std::optional<llvm::sys::unicode::LooseMatchingResult> Res =
           llvm::sys::unicode::nameToCodepointLooseMatching(
               StringRef(I, std::distance(I, Delim)));
       assert(Res);
@@ -487,7 +487,7 @@ static void DiagnoseInvalidUnicodeCharacterName(
 
   namespace u = llvm::sys::unicode;
 
-  llvm::Optional<u::LooseMatchingResult> Res =
+  std::optional<u::LooseMatchingResult> Res =
       u::nameToCodepointLooseMatching(Name);
   if (Res) {
     Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
@@ -515,8 +515,9 @@ static void DiagnoseInvalidUnicodeCharacterName(
 
     std::string Str;
     llvm::UTF32 V = Match.Value;
-    LLVM_ATTRIBUTE_UNUSED bool Converted =
+    bool Converted =
         llvm::convertUTF32ToUTF8String(llvm::ArrayRef<llvm::UTF32>(&V, 1), Str);
+    (void)Converted;
     assert(Converted && "Found a match wich is not a unicode character");
 
     Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
@@ -548,11 +549,10 @@ static bool ProcessNamedUCNEscape(const char *ThisTokBegin,
     return false;
   }
   ThisTokBuf++;
-  const char *ClosingBrace =
-      std::find_if_not(ThisTokBuf, ThisTokEnd, [](char C) {
-        return llvm::isAlnum(C) || llvm::isSpace(C) || C == '_' || C == '-';
-      });
-  bool Incomplete = ClosingBrace == ThisTokEnd || *ClosingBrace != '}';
+  const char *ClosingBrace = std::find_if(ThisTokBuf, ThisTokEnd, [](char C) {
+    return C == '}' || isVerticalWhitespace(C);
+  });
+  bool Incomplete = ClosingBrace == ThisTokEnd;
   bool Empty = ClosingBrace == ThisTokBuf;
   if (Incomplete || Empty) {
     if (Diags) {
@@ -566,8 +566,7 @@ static bool ProcessNamedUCNEscape(const char *ThisTokBegin,
   }
   StringRef Name(ThisTokBuf, ClosingBrace - ThisTokBuf);
   ThisTokBuf = ClosingBrace + 1;
-  llvm::Optional<char32_t> Res =
-      llvm::sys::unicode::nameToCodepointStrict(Name);
+  std::optional<char32_t> Res = llvm::sys::unicode::nameToCodepointStrict(Name);
   if (!Res) {
     if (Diags)
       DiagnoseInvalidUnicodeCharacterName(Diags, Features, Loc, ThisTokBegin,

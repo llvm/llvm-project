@@ -350,18 +350,18 @@ define i1 @test12(i32 %x) {
   ret i1 %cmp
 }
 
-define i1 @test13(i8 %x, i64* %p) {
+define i1 @test13(i8 %x, ptr %p) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT]], 128
-; CHECK-NEXT:    store i64 [[ADD]], i64* [[P:%.*]], align 8
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret i1 true
 ;
   %zext = zext i8 %x to i64
   %add = add nuw nsw i64 %zext, 128
   %cmp = icmp ult i64 %add, 384
   ; Without this extra use, InstSimplify could handle this
-  store i64 %add, i64* %p
+  store i64 %add, ptr %p
   ret i1 %cmp
 }
 

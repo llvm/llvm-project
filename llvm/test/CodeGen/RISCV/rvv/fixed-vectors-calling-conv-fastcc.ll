@@ -2,37 +2,37 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX8
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=4 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX4
 
-define fastcc <4 x i8> @ret_v4i8(<4 x i8>* %p) {
+define fastcc <4 x i8> @ret_v4i8(ptr %p) {
 ; CHECK-LABEL: ret_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <4 x i8>, <4 x i8>* %p
+  %v = load <4 x i8>, ptr %p
   ret <4 x i8> %v
 }
 
-define fastcc <4 x i32> @ret_v4i32(<4 x i32>* %p) {
+define fastcc <4 x i32> @ret_v4i32(ptr %p) {
 ; CHECK-LABEL: ret_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <4 x i32>, <4 x i32>* %p
+  %v = load <4 x i32>, ptr %p
   ret <4 x i32> %v
 }
 
-define fastcc <8 x i32> @ret_v8i32(<8 x i32>* %p) {
+define fastcc <8 x i32> @ret_v8i32(ptr %p) {
 ; CHECK-LABEL: ret_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <8 x i32>, <8 x i32>* %p
+  %v = load <8 x i32>, ptr %p
   ret <8 x i32> %v
 }
 
-define fastcc <16 x i64> @ret_v16i64(<16 x i64>* %p) {
+define fastcc <16 x i64> @ret_v16i64(ptr %p) {
 ; LMULMAX8-LABEL: ret_v16i64:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
@@ -46,33 +46,33 @@ define fastcc <16 x i64> @ret_v16i64(<16 x i64>* %p) {
 ; LMULMAX4-NEXT:    addi a0, a0, 64
 ; LMULMAX4-NEXT:    vle64.v v12, (a0)
 ; LMULMAX4-NEXT:    ret
-  %v = load <16 x i64>, <16 x i64>* %p
+  %v = load <16 x i64>, ptr %p
   ret <16 x i64> %v
 }
 
-define fastcc <8 x i1> @ret_mask_v8i1(<8 x i1>* %p) {
+define fastcc <8 x i1> @ret_mask_v8i1(ptr %p) {
 ; CHECK-LABEL: ret_mask_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <8 x i1>, <8 x i1>* %p
+  %v = load <8 x i1>, ptr %p
   ret <8 x i1> %v
 }
 
-define fastcc <32 x i1> @ret_mask_v32i1(<32 x i1>* %p) {
+define fastcc <32 x i1> @ret_mask_v32i1(ptr %p) {
 ; CHECK-LABEL: ret_mask_v32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    ret
-  %v = load <32 x i1>, <32 x i1>* %p
+  %v = load <32 x i1>, ptr %p
   ret <32 x i1> %v
 }
 
 ; Return the vector via registers v8-v23
-define fastcc <64 x i32> @ret_split_v64i32(<64 x i32>* %x) {
+define fastcc <64 x i32> @ret_split_v64i32(ptr %x) {
 ; LMULMAX8-LABEL: ret_split_v64i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a1, 32
@@ -93,12 +93,12 @@ define fastcc <64 x i32> @ret_split_v64i32(<64 x i32>* %x) {
 ; LMULMAX4-NEXT:    addi a0, a0, 192
 ; LMULMAX4-NEXT:    vle32.v v20, (a0)
 ; LMULMAX4-NEXT:    ret
-  %v = load <64 x i32>, <64 x i32>* %x
+  %v = load <64 x i32>, ptr %x
   ret <64 x i32> %v
 }
 
 ; Return the vector fully via the stack
-define fastcc <128 x i32> @ret_split_v128i32(<128 x i32>* %x) {
+define fastcc <128 x i32> @ret_split_v128i32(ptr %x) {
 ; LMULMAX8-LABEL: ret_split_v128i32:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    addi a2, a1, 128
@@ -153,7 +153,7 @@ define fastcc <128 x i32> @ret_split_v128i32(<128 x i32>* %x) {
 ; LMULMAX4-NEXT:    addi a0, a0, 64
 ; LMULMAX4-NEXT:    vse32.v v8, (a0)
 ; LMULMAX4-NEXT:    ret
-  %v = load <128 x i32>, <128 x i32>* %x
+  %v = load <128 x i32>, ptr %x
   ret <128 x i32> %v
 }
 

@@ -4,7 +4,7 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-define amdgpu_kernel void @v_pack_b32_v2f16(half addrspace(1)* %in0, half addrspace(1)* %in1) #0 {
+define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 ; GCN-LABEL: v_pack_b32_v2f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -40,10 +40,10 @@ define amdgpu_kernel void @v_pack_b32_v2f16(half addrspace(1)* %in0, half addrsp
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in0.gep = getelementptr inbounds half, half addrspace(1)* %in0, i64 %tid.ext
-  %in1.gep = getelementptr inbounds half, half addrspace(1)* %in1, i64 %tid.ext
-  %v0 = load volatile half, half addrspace(1)* %in0.gep
-  %v1 = load volatile half, half addrspace(1)* %in1.gep
+  %in0.gep = getelementptr inbounds half, ptr addrspace(1) %in0, i64 %tid.ext
+  %in1.gep = getelementptr inbounds half, ptr addrspace(1) %in1, i64 %tid.ext
+  %v0 = load volatile half, ptr addrspace(1) %in0.gep
+  %v1 = load volatile half, ptr addrspace(1) %in1.gep
   %v0.add = fadd half %v0, 2.0
   %v1.add = fadd half %v1, 2.0
   %vec.0 = insertelement <2 x half> undef, half %v0.add, i32 0
@@ -53,7 +53,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16(half addrspace(1)* %in0, half addrsp
   ret void
 }
 
-define amdgpu_kernel void @v_pack_b32_v2f16_sub(half addrspace(1)* %in0, half addrspace(1)* %in1) #0 {
+define amdgpu_kernel void @v_pack_b32_v2f16_sub(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 ; GCN-LABEL: v_pack_b32_v2f16_sub:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -89,10 +89,10 @@ define amdgpu_kernel void @v_pack_b32_v2f16_sub(half addrspace(1)* %in0, half ad
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in0.gep = getelementptr inbounds half, half addrspace(1)* %in0, i64 %tid.ext
-  %in1.gep = getelementptr inbounds half, half addrspace(1)* %in1, i64 %tid.ext
-  %v0 = load volatile half, half addrspace(1)* %in0.gep
-  %v1 = load volatile half, half addrspace(1)* %in1.gep
+  %in0.gep = getelementptr inbounds half, ptr addrspace(1) %in0, i64 %tid.ext
+  %in1.gep = getelementptr inbounds half, ptr addrspace(1) %in1, i64 %tid.ext
+  %v0 = load volatile half, ptr addrspace(1) %in0.gep
+  %v1 = load volatile half, ptr addrspace(1) %in1.gep
   %v0.add = fsub half %v0, 2.0
   %v1.add = fadd half %v1, 2.0
   %vec.0 = insertelement <2 x half> undef, half %v0.add, i32 0
@@ -135,15 +135,15 @@ define amdgpu_kernel void @fptrunc(
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GISEL-NEXT:    s_endpgm
-    <2 x half> addrspace(1)* %r,
-    <2 x float> addrspace(1)* %a) {
-  %a.val = load <2 x float>, <2 x float> addrspace(1)* %a
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
+  %a.val = load <2 x float>, ptr addrspace(1) %a
   %r.val = fptrunc <2 x float> %a.val to <2 x half>
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
-define amdgpu_kernel void @v_pack_b32.fabs(half addrspace(1)* %in0, half addrspace(1)* %in1) #0 {
+define amdgpu_kernel void @v_pack_b32.fabs(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 ; GCN-LABEL: v_pack_b32.fabs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -179,10 +179,10 @@ define amdgpu_kernel void @v_pack_b32.fabs(half addrspace(1)* %in0, half addrspa
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in0.gep = getelementptr inbounds half, half addrspace(1)* %in0, i64 %tid.ext
-  %in1.gep = getelementptr inbounds half, half addrspace(1)* %in1, i64 %tid.ext
-  %v0 = load volatile half, half addrspace(1)* %in0.gep
-  %v1 = load volatile half, half addrspace(1)* %in1.gep
+  %in0.gep = getelementptr inbounds half, ptr addrspace(1) %in0, i64 %tid.ext
+  %in1.gep = getelementptr inbounds half, ptr addrspace(1) %in1, i64 %tid.ext
+  %v0 = load volatile half, ptr addrspace(1) %in0.gep
+  %v1 = load volatile half, ptr addrspace(1) %in1.gep
   %v0.add = fadd half %v0, 2.0
   %v1.add = fadd half %v1, 2.0
   %v0.fabs = call half @llvm.fabs.f16(half %v0.add)
@@ -194,7 +194,7 @@ define amdgpu_kernel void @v_pack_b32.fabs(half addrspace(1)* %in0, half addrspa
   ret void
 }
 
-define amdgpu_kernel void @v_pack_b32.fneg(half addrspace(1)* %in0, half addrspace(1)* %in1) #0 {
+define amdgpu_kernel void @v_pack_b32.fneg(ptr addrspace(1) %in0, ptr addrspace(1) %in1) #0 {
 ; GCN-LABEL: v_pack_b32.fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -230,10 +230,10 @@ define amdgpu_kernel void @v_pack_b32.fneg(half addrspace(1)* %in0, half addrspa
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in0.gep = getelementptr inbounds half, half addrspace(1)* %in0, i64 %tid.ext
-  %in1.gep = getelementptr inbounds half, half addrspace(1)* %in1, i64 %tid.ext
-  %v0 = load volatile half, half addrspace(1)* %in0.gep
-  %v1 = load volatile half, half addrspace(1)* %in1.gep
+  %in0.gep = getelementptr inbounds half, ptr addrspace(1) %in0, i64 %tid.ext
+  %in1.gep = getelementptr inbounds half, ptr addrspace(1) %in1, i64 %tid.ext
+  %v0 = load volatile half, ptr addrspace(1) %in0.gep
+  %v1 = load volatile half, ptr addrspace(1) %in1.gep
   %v0.add = fadd half %v0, 2.0
   %v1.add = fadd half %v1, 2.0
   %v0.fneg = fsub half -0.0, %v0.add

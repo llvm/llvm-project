@@ -255,6 +255,38 @@ template <int PREC, typename T> inline T Nearest(T x, bool positive) {
   }
 }
 
+// Exponentiation operator for (Real ** Integer) cases (10.1.5.2.1).
+template <typename BTy, typename ETy> BTy FPowI(BTy base, ETy exp) {
+  if (exp == ETy{0})
+    return BTy{1};
+  bool isNegativePower{exp < ETy{0}};
+  bool isMinPower{exp == std::numeric_limits<ETy>::min()};
+  if (isMinPower) {
+    exp = std::numeric_limits<ETy>::max();
+  } else if (isNegativePower) {
+    exp = -exp;
+  }
+  BTy result{1};
+  BTy origBase{base};
+  while (true) {
+    if (exp & ETy{1}) {
+      result *= base;
+    }
+    exp >>= 1;
+    if (exp == ETy{0}) {
+      break;
+    }
+    base *= base;
+  }
+  if (isMinPower) {
+    result *= origBase;
+  }
+  if (isNegativePower) {
+    result = BTy{1} / result;
+  }
+  return result;
+}
+
 extern "C" {
 
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Ceiling4_1)(
@@ -869,6 +901,56 @@ CppTypeFor<TypeCategory::Real, 10> RTNAME(Spacing10)(
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Spacing16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Spacing<113>(x);
+}
+#endif
+
+CppTypeFor<TypeCategory::Real, 4> RTNAME(FPow4i)(
+    CppTypeFor<TypeCategory::Real, 4> b,
+    CppTypeFor<TypeCategory::Integer, 4> e) {
+  return FPowI(b, e);
+}
+CppTypeFor<TypeCategory::Real, 8> RTNAME(FPow8i)(
+    CppTypeFor<TypeCategory::Real, 8> b,
+    CppTypeFor<TypeCategory::Integer, 4> e) {
+  return FPowI(b, e);
+}
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTNAME(FPow10i)(
+    CppTypeFor<TypeCategory::Real, 10> b,
+    CppTypeFor<TypeCategory::Integer, 4> e) {
+  return FPowI(b, e);
+}
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTNAME(FPow16i)(
+    CppTypeFor<TypeCategory::Real, 16> b,
+    CppTypeFor<TypeCategory::Integer, 4> e) {
+  return FPowI(b, e);
+}
+#endif
+
+CppTypeFor<TypeCategory::Real, 4> RTNAME(FPow4k)(
+    CppTypeFor<TypeCategory::Real, 4> b,
+    CppTypeFor<TypeCategory::Integer, 8> e) {
+  return FPowI(b, e);
+}
+CppTypeFor<TypeCategory::Real, 8> RTNAME(FPow8k)(
+    CppTypeFor<TypeCategory::Real, 8> b,
+    CppTypeFor<TypeCategory::Integer, 8> e) {
+  return FPowI(b, e);
+}
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTNAME(FPow10k)(
+    CppTypeFor<TypeCategory::Real, 10> b,
+    CppTypeFor<TypeCategory::Integer, 8> e) {
+  return FPowI(b, e);
+}
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTNAME(FPow16k)(
+    CppTypeFor<TypeCategory::Real, 16> b,
+    CppTypeFor<TypeCategory::Integer, 8> e) {
+  return FPowI(b, e);
 }
 #endif
 } // extern "C"

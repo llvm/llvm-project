@@ -9,22 +9,19 @@
 #include "UncheckedOptionalAccessCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
-#include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/Any.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -33,18 +30,19 @@ namespace bugprone {
 using ast_matchers::MatchFinder;
 using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
-using llvm::Optional;
+using dataflow::UncheckedOptionalAccessModelOptions;
 
 static constexpr llvm::StringLiteral FuncID("fun");
 
-static Optional<std::vector<SourceLocation>>
-analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
+static std::optional<std::vector<SourceLocation>>
+analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
+                UncheckedOptionalAccessModelOptions ModelOptions) {
   using dataflow::ControlFlowContext;
   using dataflow::DataflowAnalysisState;
   using llvm::Expected;
 
   Expected<ControlFlowContext> Context =
-      ControlFlowContext::build(&FuncDecl, FuncDecl.getBody(), &ASTCtx);
+      ControlFlowContext::build(&FuncDecl, *FuncDecl.getBody(), ASTCtx);
   if (!Context)
     return std::nullopt;
 
@@ -52,10 +50,10 @@ analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
       std::make_unique<dataflow::WatchedLiteralsSolver>());
   dataflow::Environment Env(AnalysisContext, FuncDecl);
   UncheckedOptionalAccessModel Analysis(ASTCtx);
-  UncheckedOptionalAccessDiagnoser Diagnoser;
+  UncheckedOptionalAccessDiagnoser Diagnoser(ModelOptions);
   std::vector<SourceLocation> Diagnostics;
-  Expected<std::vector<
-      Optional<DataflowAnalysisState<UncheckedOptionalAccessModel::Lattice>>>>
+  Expected<std::vector<std::optional<
+      DataflowAnalysisState<UncheckedOptionalAccessModel::Lattice>>>>
       BlockToOutputState = dataflow::runDataflowAnalysis(
           *Context, Analysis, Env,
           [&ASTCtx, &Diagnoser, &Diagnostics](
@@ -97,8 +95,8 @@ void UncheckedOptionalAccessCheck::check(
   if (FuncDecl->isTemplated())
     return;
 
-  if (Optional<std::vector<SourceLocation>> Errors =
-          analyzeFunction(*FuncDecl, *Result.Context))
+  if (std::optional<std::vector<SourceLocation>> Errors =
+          analyzeFunction(*FuncDecl, *Result.Context, ModelOptions))
     for (const SourceLocation &Loc : *Errors)
       diag(Loc, "unchecked access to optional value");
 }

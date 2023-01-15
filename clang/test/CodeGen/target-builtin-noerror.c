@@ -109,6 +109,7 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("goldmont-plus");
   (void)__builtin_cpu_is("grandridge");
   (void)__builtin_cpu_is("graniterapids");
+  (void)__builtin_cpu_is("emeraldrapids");
   (void)__builtin_cpu_is("haswell");
   (void)__builtin_cpu_is("icelake-client");
   (void)__builtin_cpu_is("icelake-server");
@@ -135,4 +136,5 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("znver1");
   (void)__builtin_cpu_is("znver2");
   (void)__builtin_cpu_is("znver3");
+  (void)__builtin_cpu_is("znver4");
 }

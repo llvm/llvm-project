@@ -39,20 +39,18 @@ getOffsetsSizesAndStrides(ArrayRef<Range> ranges);
 /// Helper function to dispatch an OpFoldResult into `staticVec` if:
 ///   a) it is an IntegerAttr
 /// In other cases, the OpFoldResult is dispached to the `dynamicVec`.
-/// In such dynamic cases, a copy of the `sentinel` value is also pushed to
+/// In such dynamic cases, ShapedType::kDynamic is also pushed to
 /// `staticVec`. This is useful to extract mixed static and dynamic entries that
 /// come from an AttrSizedOperandSegments trait.
 void dispatchIndexOpFoldResult(OpFoldResult ofr,
                                SmallVectorImpl<Value> &dynamicVec,
-                               SmallVectorImpl<int64_t> &staticVec,
-                               int64_t sentinel);
+                               SmallVectorImpl<int64_t> &staticVec);
 
 /// Helper function to dispatch multiple OpFoldResults according to the behavior
 /// of `dispatchIndexOpFoldResult(OpFoldResult ofr` for a single OpFoldResult.
 void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
-                                SmallVectorImpl<int64_t> &staticVec,
-                                int64_t sentinel);
+                                SmallVectorImpl<int64_t> &staticVec);
 
 /// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
 SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr);
@@ -69,7 +67,7 @@ SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values);
 SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr);
 
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
-Optional<int64_t> getConstantIntValue(OpFoldResult ofr);
+std::optional<int64_t> getConstantIntValue(OpFoldResult ofr);
 
 /// Return true if `ofr` is constant integer equal to `value`.
 bool isConstantIntValue(OpFoldResult ofr, int64_t value);

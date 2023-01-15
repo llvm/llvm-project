@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -O0 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -O0 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 // RUN: %clang -fcoroutines-ts -std=c++14 -O0 -emit-llvm -c  %s -o %t -Xclang -disable-llvm-passes && %clang -c %t
 
 #include "Inputs/coroutine-exp-namespace.h"
@@ -51,13 +51,11 @@ detached_task foo() {
 
 // check that the lifetime of the coroutine handle used to obtain the address is contained within single basic block, and hence does not live across suspension points.
 // CHECK-LABEL: final.suspend:
-// CHECK:         %{{.+}} = call token @llvm.coro.save(i8* null)
-// CHECK:         %[[HDL_CAST1:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[HDL:.+]] to i8*
-// CHECK:         call void @llvm.lifetime.start.p0i8(i64 8, i8* %[[HDL_CAST1]])
-// CHECK:         %[[CALL:.+]] = call i8* @_ZN13detached_task12promise_type13final_awaiter13await_suspendENSt12experimental13coroutines_v116coroutine_handleIS0_EE(
-// CHECK:         %[[HDL_CAST2:.+]] = getelementptr inbounds %"struct.std::experimental::coroutines_v1::coroutine_handle.0", %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[HDL]], i32 0, i32 0
-// CHECK:         store i8* %[[CALL]], i8** %[[HDL_CAST2]], align 8
-// CHECK:         %[[HDL_TRANSFER:.+]] = call i8* @_ZNKSt12experimental13coroutines_v116coroutine_handleIvE7addressEv(%"struct.std::experimental::coroutines_v1::coroutine_handle.0"* nonnull align 8 dereferenceable(8) %[[HDL]])
-// CHECK:         %[[HDL_CAST3:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[HDL]] to i8*
-// CHECK:         call void @llvm.lifetime.end.p0i8(i64 8, i8* %[[HDL_CAST3]])
-// CHECK:         call void @llvm.coro.resume(i8* %[[HDL_TRANSFER]])
+// CHECK:         %{{.+}} = call token @llvm.coro.save(ptr null)
+// CHECK:         call void @llvm.lifetime.start.p0(i64 8, ptr %[[HDL:.+]])
+// CHECK:         %[[CALL:.+]] = call ptr @_ZN13detached_task12promise_type13final_awaiter13await_suspendENSt12experimental13coroutines_v116coroutine_handleIS0_EE(
+// CHECK:         %[[HDL_CAST2:.+]] = getelementptr inbounds %"struct.std::experimental::coroutines_v1::coroutine_handle.0", ptr %[[HDL]], i32 0, i32 0
+// CHECK:         store ptr %[[CALL]], ptr %[[HDL_CAST2]], align 8
+// CHECK:         %[[HDL_TRANSFER:.+]] = call ptr @_ZNKSt12experimental13coroutines_v116coroutine_handleIvE7addressEv(ptr nonnull align 8 dereferenceable(8) %[[HDL]])
+// CHECK:         call void @llvm.lifetime.end.p0(i64 8, ptr %[[HDL]])
+// CHECK:         call void @llvm.coro.resume(ptr %[[HDL_TRANSFER]])

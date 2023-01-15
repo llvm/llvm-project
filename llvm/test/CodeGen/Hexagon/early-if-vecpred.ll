@@ -23,7 +23,7 @@ b3:                                               ; preds = %b1
 
 b5:                                               ; preds = %b3, %b1
   %v6 = phi <128 x i1> [ %v4, %b3 ], [ %v2, %b1 ]
-  tail call void asm sideeffect "if ($0) vmem($1) = $2;", "q,r,v,~{memory}"(<128 x i1> %v6, <32 x i32>* undef, <32 x i32> undef) #2
+  tail call void asm sideeffect "if ($0) vmem($1) = $2;", "q,r,v,~{memory}"(<128 x i1> %v6, ptr undef, <32 x i32> undef) #2
   ret void
 }
 

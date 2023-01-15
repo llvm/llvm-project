@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -54,7 +55,7 @@ void DurationFactoryFloatCheck::check(const MatchFinder::MatchResult &Result) {
   if (Arg->getBeginLoc().isMacroID())
     return;
 
-  llvm::Optional<std::string> SimpleArg = stripFloatCast(Result, *Arg);
+  std::optional<std::string> SimpleArg = stripFloatCast(Result, *Arg);
   if (!SimpleArg)
     SimpleArg = stripFloatLiteralFraction(Result, *Arg);
 

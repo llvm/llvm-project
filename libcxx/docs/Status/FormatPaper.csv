@@ -11,18 +11,18 @@ Section,Description,Dependencies,Assignee,Status,First released version
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::day``",,Mark de Wever,|Complete|, Clang 16
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month``",,Mark de Wever,|Complete|, Clang 16
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year``",,Mark de Wever,|Complete|, Clang 16
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::weekday``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::weekday_indexed``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::weekday_last``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month_day``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month_day_last``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month_weekday``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month_weekday_last``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_day``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_day_last``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_weekday``",,Mark de Wever,|In Progress|,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_weekday_last``",,Mark de Wever,|In Progress|,
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::weekday``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::weekday_indexed``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::weekday_last``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month_day``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month_day_last``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month_weekday``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month_weekday_last``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_day``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_day_last``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_weekday``",,Mark de Wever,|Complete|, Clang 16
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year_month_weekday_last``",,Mark de Wever,|Complete|, Clang 16
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::hh_mm_ss<duration<Rep, Period>>``",,Mark de Wever,|In Progress|,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::sys_info``",A ``<chrono>`` implementation,Mark de Wever,,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::local_info``",A ``<chrono>`` implementation,Mark de Wever,,
@@ -33,5 +33,5 @@ Section,Description,Dependencies,Assignee,Status,First released version
 `[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: sequences",,Mark de Wever,|In Progress|,
 `[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: associative",,Mark de Wever,,
 `[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: container adaptors",,Mark de Wever,,
-`[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: ``pair`` and ``tuple``",,Mark de Wever,|In Progress|,
+`[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: ``pair`` and ``tuple``",,Mark de Wever,|Complete|,Clang 16
 `[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: ``vector<bool>``",,Mark de Wever,,

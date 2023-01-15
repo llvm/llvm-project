@@ -27,12 +27,12 @@
 #include "index/SymbolID.h"
 #include "support/MemoryTree.h"
 #include "clang/Index/IndexSymbol.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -147,7 +147,7 @@ struct VersionedTextDocumentIdentifier : public TextDocumentIdentifier {
   /// including undo/redo. The number doesn't need to be consecutive.
   ///
   /// clangd extension: versions are optional, and synthesized if missing.
-  llvm::Optional<std::int64_t> version;
+  std::optional<std::int64_t> version;
 };
 llvm::json::Value toJSON(const VersionedTextDocumentIdentifier &);
 bool fromJSON(const llvm::json::Value &, VersionedTextDocumentIdentifier &,
@@ -228,6 +228,16 @@ struct Location {
 llvm::json::Value toJSON(const Location &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Location &);
 
+/// Extends Locations returned by textDocument/references with extra info.
+/// This is a clangd extension: LSP uses `Location`.
+struct ReferenceLocation : Location {
+  /// clangd extension: contains the name of the function or class in which the
+  /// reference occurs
+  std::optional<std::string> containerName;
+};
+llvm::json::Value toJSON(const ReferenceLocation &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ReferenceLocation &);
+
 struct TextEdit {
   /// The range of the text document to be manipulated. To insert
   /// text into a document create a range where start === end.
@@ -255,7 +265,7 @@ struct TextDocumentItem {
   /// change, including undo/redo.
   ///
   /// clangd extension: versions are optional, and synthesized if missing.
-  llvm::Optional<int64_t> version;
+  std::optional<int64_t> version;
 
   /// The content of the opened text document.
   std::string text;
@@ -405,7 +415,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, MarkupKind);
 struct ClientCapabilities {
   /// The supported set of SymbolKinds for workspace/symbol.
   /// workspace.symbol.symbolKind.valueSet
-  llvm::Optional<SymbolKindBitset> WorkspaceSymbolKinds;
+  std::optional<SymbolKindBitset> WorkspaceSymbolKinds;
 
   /// Whether the client accepts diagnostics with codeActions attached inline.
   /// textDocument.publishDiagnostics.codeActionsInline.
@@ -428,6 +438,10 @@ struct ClientCapabilities {
   /// This is a clangd extension. (LSP says this is for unrelated text only).
   /// textDocument.completion.editsNearCursor
   bool CompletionFixes = false;
+
+  /// Client supports displaying a container string for results of
+  /// textDocument/reference (clangd extension)
+  bool ReferenceContainer = false;
 
   /// Client supports hierarchical document symbols.
   /// textDocument.documentSymbol.hierarchicalDocumentSymbolSupport
@@ -454,7 +468,7 @@ struct ClientCapabilities {
 
   /// The supported set of CompletionItemKinds for textDocument/completion.
   /// textDocument.completion.completionItemKind.valueSet
-  llvm::Optional<CompletionItemKindBitset> CompletionItemKinds;
+  std::optional<CompletionItemKindBitset> CompletionItemKinds;
 
   /// The documentation format that should be used for textDocument/completion.
   /// textDocument.completion.completionItem.documentationFormat
@@ -475,7 +489,7 @@ struct ClientCapabilities {
   bool TheiaSemanticHighlighting = false;
 
   /// Supported encodings for LSP character offsets. (clangd extension).
-  llvm::Optional<std::vector<OffsetEncoding>> offsetEncoding;
+  std::optional<std::vector<OffsetEncoding>> offsetEncoding;
 
   /// The content format that should be used for Hover requests.
   /// textDocument.hover.contentEncoding
@@ -534,7 +548,7 @@ struct InitializationOptions {
   // also set through the initialize request (initializationOptions field).
   ConfigurationSettings ConfigSettings;
 
-  llvm::Optional<std::string> compilationDatabasePath;
+  std::optional<std::string> compilationDatabasePath;
   // Additional flags to be included in the "fallback command" used when
   // the compilation database doesn't describe an opened file.
   // The command used will be approximately `clang $FILE $fallbackFlags`.
@@ -551,18 +565,18 @@ struct InitializeParams {
   /// the server. Is null if the process has not been started by another
   /// process. If the parent process is not alive then the server should exit
   /// (see exit notification) its process.
-  llvm::Optional<int> processId;
+  std::optional<int> processId;
 
   /// The rootPath of the workspace. Is null
   /// if no folder is open.
   ///
   /// @deprecated in favour of rootUri.
-  llvm::Optional<std::string> rootPath;
+  std::optional<std::string> rootPath;
 
   /// The rootUri of the workspace. Is null if no
   /// folder is open. If both `rootPath` and `rootUri` are set
   /// `rootUri` wins.
-  llvm::Optional<URIForFile> rootUri;
+  std::optional<URIForFile> rootUri;
 
   // User provided initialization options.
   // initializationOptions?: any;
@@ -573,7 +587,7 @@ struct InitializeParams {
   llvm::json::Object rawCapabilities;
 
   /// The initial trace setting. If omitted trace is disabled ('off').
-  llvm::Optional<TraceLevel> trace;
+  std::optional<TraceLevel> trace;
 
   /// User-provided initialization options.
   InitializationOptions initializationOptions;
@@ -636,14 +650,14 @@ struct WorkDoneProgressReport {
   ///
   /// Clients that don't support cancellation or don't support control
   /// the button's enablement state are allowed to ignore the setting.
-  llvm::Optional<bool> cancellable;
+  std::optional<bool> cancellable;
 
   /// Optional, more detailed associated progress message. Contains
   /// complementary information to the `title`.
   ///
   /// Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
   /// If unset, the previous progress message (if any) is still valid.
-  llvm::Optional<std::string> message;
+  std::optional<std::string> message;
 
   /// Optional progress percentage to display (value 100 is considered 100%).
   /// If not provided infinite progress is assumed and clients are allowed
@@ -651,7 +665,7 @@ struct WorkDoneProgressReport {
   ///
   /// The value should be steadily rising. Clients are free to ignore values
   /// that are not following this rule.
-  llvm::Optional<unsigned> percentage;
+  std::optional<unsigned> percentage;
 };
 llvm::json::Value toJSON(const WorkDoneProgressReport &);
 //
@@ -659,7 +673,7 @@ llvm::json::Value toJSON(const WorkDoneProgressReport &);
 struct WorkDoneProgressEnd {
   /// Optional, a final message indicating to for example indicate the outcome
   /// of the operation.
-  llvm::Optional<std::string> message;
+  std::optional<std::string> message;
 };
 llvm::json::Value toJSON(const WorkDoneProgressEnd &);
 
@@ -708,10 +722,10 @@ bool fromJSON(const llvm::json::Value &, DidSaveTextDocumentParams &,
 
 struct TextDocumentContentChangeEvent {
   /// The range of the document that changed.
-  llvm::Optional<Range> range;
+  std::optional<Range> range;
 
   /// The length of the range that got replaced.
-  llvm::Optional<int> rangeLength;
+  std::optional<int> rangeLength;
 
   /// The new text of the range/document.
   std::string text;
@@ -732,7 +746,7 @@ struct DidChangeTextDocumentParams {
   /// version of the file. If not set, diagnostics are eventually consistent:
   /// either they will be provided for this version or some subsequent one.
   /// This is a clangd extension.
-  llvm::Optional<bool> wantDiagnostics;
+  std::optional<bool> wantDiagnostics;
 
   /// Force a complete rebuild of the file, ignoring all cached state. Slow!
   /// This is useful to defeat clangd's assumption that missing headers will
@@ -864,7 +878,7 @@ struct Diagnostic {
   std::string code;
 
   /// An optional property to describe the error code.
-  llvm::Optional<CodeDescription> codeDescription;
+  std::optional<CodeDescription> codeDescription;
 
   /// A human-readable string describing the source of this
   /// diagnostic, e.g. 'typescript' or 'super lint'.
@@ -878,18 +892,18 @@ struct Diagnostic {
 
   /// An array of related diagnostic information, e.g. when symbol-names within
   /// a scope collide all definitions can be marked via this property.
-  llvm::Optional<std::vector<DiagnosticRelatedInformation>> relatedInformation;
+  std::optional<std::vector<DiagnosticRelatedInformation>> relatedInformation;
 
   /// The diagnostic's category. Can be omitted.
   /// An LSP extension that's used to send the name of the category over to the
   /// client. The category typically describes the compilation stage during
   /// which the issue was produced, e.g. "Semantic Issue" or "Parse Issue".
-  llvm::Optional<std::string> category;
+  std::optional<std::string> category;
 
   /// Clangd extension: code actions related to this diagnostic.
   /// Only with capability textDocument.publishDiagnostics.codeActionsInline.
   /// (These actions can also be obtained using textDocument/codeAction).
-  llvm::Optional<std::vector<CodeAction>> codeActions;
+  std::optional<std::vector<CodeAction>> codeActions;
 
   /// A data entry field that is preserved between a
   /// `textDocument/publishDiagnostics` notification
@@ -919,7 +933,7 @@ struct PublishDiagnosticsParams {
   /// An array of diagnostic information items.
   std::vector<Diagnostic> diagnostics;
   /// The version number of the document the diagnostics are published for.
-  llvm::Optional<int64_t> version;
+  std::optional<int64_t> version;
 };
 llvm::json::Value toJSON(const PublishDiagnosticsParams &);
 
@@ -1004,13 +1018,13 @@ struct CodeAction {
 
   /// The kind of the code action.
   /// Used to filter code actions.
-  llvm::Optional<std::string> kind;
+  std::optional<std::string> kind;
   const static llvm::StringLiteral QUICKFIX_KIND;
   const static llvm::StringLiteral REFACTOR_KIND;
   const static llvm::StringLiteral INFO_KIND;
 
   /// The diagnostics that this code action resolves.
-  llvm::Optional<std::vector<Diagnostic>> diagnostics;
+  std::optional<std::vector<Diagnostic>> diagnostics;
 
   /// Marks this as a preferred action. Preferred actions are used by the
   /// `auto fix` command and can be targeted by keybindings.
@@ -1020,11 +1034,11 @@ struct CodeAction {
   bool isPreferred = false;
 
   /// The workspace edit this code action performs.
-  llvm::Optional<WorkspaceEdit> edit;
+  std::optional<WorkspaceEdit> edit;
 
   /// A command this code action executes. If a code action provides an edit
   /// and a command, first the edit is executed and then the command.
-  llvm::Optional<Command> command;
+  std::optional<Command> command;
 };
 llvm::json::Value toJSON(const CodeAction &);
 
@@ -1082,7 +1096,7 @@ struct SymbolInformation {
   /// This can be used to re-rank results as the user types, using client-side
   /// fuzzy-matching (that score should be multiplied with this one).
   /// This is a clangd extension, set only for workspace/symbol responses.
-  llvm::Optional<float> score;
+  std::optional<float> score;
 };
 llvm::json::Value toJSON(const SymbolInformation &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolInformation &);
@@ -1103,9 +1117,9 @@ struct SymbolDetails {
 
   SymbolID ID;
 
-  llvm::Optional<Location> declarationRange;
+  std::optional<Location> declarationRange;
 
-  llvm::Optional<Location> definitionRange;
+  std::optional<Location> definitionRange;
 };
 llvm::json::Value toJSON(const SymbolDetails &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolDetails &);
@@ -1119,7 +1133,7 @@ struct WorkspaceSymbolParams {
 
   /// Max results to return, overriding global default. 0 means no limit.
   /// Clangd extension.
-  llvm::Optional<int> limit;
+  std::optional<int> limit;
 };
 bool fromJSON(const llvm::json::Value &, WorkspaceSymbolParams &,
               llvm::json::Path);
@@ -1131,7 +1145,7 @@ llvm::json::Value toJSON(const ApplyWorkspaceEditParams &);
 
 struct ApplyWorkspaceEditResponse {
   bool applied = true;
-  llvm::Optional<std::string> failureReason;
+  std::optional<std::string> failureReason;
 };
 bool fromJSON(const llvm::json::Value &, ApplyWorkspaceEditResponse &,
               llvm::json::Path);
@@ -1171,7 +1185,7 @@ struct CompletionParams : TextDocumentPositionParams {
 
   /// Max results to return, overriding global default. 0 means no limit.
   /// Clangd extension.
-  llvm::Optional<int> limit;
+  std::optional<int> limit;
 };
 bool fromJSON(const llvm::json::Value &, CompletionParams &, llvm::json::Path);
 
@@ -1187,7 +1201,7 @@ struct Hover {
 
   /// An optional range is a range inside a text document
   /// that is used to visualize a hover, e.g. by changing the background color.
-  llvm::Optional<Range> range;
+  std::optional<Range> range;
 };
 llvm::json::Value toJSON(const Hover &H);
 
@@ -1223,7 +1237,7 @@ struct CompletionItem {
   std::string detail;
 
   /// A human-readable string that represents a doc-comment.
-  llvm::Optional<MarkupContent> documentation;
+  std::optional<MarkupContent> documentation;
 
   /// A string that should be used when comparing this item with other items.
   /// When `falsy` the label is used.
@@ -1246,7 +1260,7 @@ struct CompletionItem {
   ///
   /// Note: The range of the edit must be a single line range and it must
   /// contain the position at which completion has been requested.
-  llvm::Optional<TextEdit> textEdit;
+  std::optional<TextEdit> textEdit;
 
   /// An optional array of additional text edits that are applied when selecting
   /// this completion. Edits must not overlap with the main edit nor with
@@ -1297,7 +1311,7 @@ struct ParameterInformation {
   /// label.
   /// Offsets are computed by lspLength(), which counts UTF-16 code units by
   /// default but that can be overriden, see its documentation for details.
-  llvm::Optional<std::pair<unsigned, unsigned>> labelOffsets;
+  std::optional<std::pair<unsigned, unsigned>> labelOffsets;
 
   /// The documentation of this parameter. Optional.
   std::string documentation;
@@ -1408,7 +1422,7 @@ struct TypeHierarchyItem {
   SymbolKind kind;
 
   /// More detail for this item, e.g. the signature of a function.
-  llvm::Optional<std::string> detail;
+  std::optional<std::string> detail;
 
   /// The resource identifier of this item.
   URIForFile uri;
@@ -1425,7 +1439,7 @@ struct TypeHierarchyItem {
   struct ResolveParams {
     SymbolID symbolID;
     /// None means parents aren't resolved and empty is no parents.
-    llvm::Optional<std::vector<ResolveParams>> parents;
+    std::optional<std::vector<ResolveParams>> parents;
   };
   /// A data entry field that is preserved between a type hierarchy prepare and
   /// supertypes or subtypes requests. It could also be used to identify the
@@ -1438,13 +1452,13 @@ struct TypeHierarchyItem {
   bool deprecated = false;
 
   /// This is a clangd exntesion.
-  llvm::Optional<std::vector<TypeHierarchyItem>> parents;
+  std::optional<std::vector<TypeHierarchyItem>> parents;
 
   /// If this type hierarchy item is resolved, it contains the direct children
   /// of the current item. Could be empty if the item does not have any
   /// descendants. If not defined, the children have not been resolved.
   /// This is a clangd exntesion.
-  llvm::Optional<std::vector<TypeHierarchyItem>> children;
+  std::optional<std::vector<TypeHierarchyItem>> children;
 };
 llvm::json::Value toJSON(const TypeHierarchyItem::ResolveParams &);
 bool fromJSON(const TypeHierarchyItem::ResolveParams &);
@@ -1552,7 +1566,7 @@ struct InlayHintsParams {
   ///
   /// None is a clangd extension, which hints for computing hints on the whole
   /// file.
-  llvm::Optional<Range> range;
+  std::optional<Range> range;
 };
 bool fromJSON(const llvm::json::Value &, InlayHintsParams &, llvm::json::Path);
 
@@ -1716,9 +1730,9 @@ llvm::json::Value toJSON(const SemanticTokensEdit &);
 struct SemanticTokensOrDelta {
   std::string resultId;
   /// Set if we computed edits relative to a previous set of tokens.
-  llvm::Optional<std::vector<SemanticTokensEdit>> edits;
+  std::optional<std::vector<SemanticTokensEdit>> edits;
   /// Set if we computed a fresh set of tokens.
-  llvm::Optional<std::vector<SemanticToken>> tokens; // encoded as integer array
+  std::optional<std::vector<SemanticToken>> tokens; // encoded as integer array
 };
 llvm::json::Value toJSON(const SemanticTokensOrDelta &);
 
@@ -1831,7 +1845,7 @@ struct ASTParams {
   /// The position of the node to be dumped.
   /// The highest-level node that entirely contains the range will be returned.
   /// If no range is given, the root translation unit node will be returned.
-  llvm::Optional<Range> range;
+  std::optional<Range> range;
 };
 bool fromJSON(const llvm::json::Value &, ASTParams &, llvm::json::Path);
 
@@ -1855,7 +1869,7 @@ struct ASTNode {
   std::string arcana;
   /// The range of the original source file covered by this node.
   /// May be missing for implicit nodes, or those created by macro expansion.
-  llvm::Optional<Range> range;
+  std::optional<Range> range;
   /// Nodes nested within this one, such as the operands of a BinaryOperator.
   std::vector<ASTNode> children;
 };

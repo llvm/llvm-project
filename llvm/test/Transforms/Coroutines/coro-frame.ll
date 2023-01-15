@@ -44,7 +44,7 @@ pad:
 ; CHECK: ret i8* %hdl
 
 ; See if the float was loaded from the frame
-; CHECK-LABEL: @f.resume(%f.Frame* noalias nonnull align 8
+; CHECK-LABEL: @f.resume(%f.Frame* noundef nonnull align 8
 ; CHECK: %r.reload = load double, double* %r.reload.addr
 ; CHECK: call double @print(double %r.reload)
 ; CHECK: ret void

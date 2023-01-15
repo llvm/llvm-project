@@ -166,8 +166,8 @@ protected:
   // returns true if specified address range is inside address ranges
   // of executable sections.
   bool isInsideExecutableSectionsAddressRange(uint64_t LowPC,
-                                              Optional<uint64_t> HighPC) {
-    Optional<AddressRange> Range =
+                                              std::optional<uint64_t> HighPC) {
+    std::optional<AddressRange> Range =
         TextAddressRanges.getRangeThatContains(LowPC);
 
     if (HighPC)
@@ -176,7 +176,7 @@ protected:
     return Range.has_value();
   }
 
-  uint64_t isBFDDeadAddressRange(uint64_t LowPC, Optional<uint64_t> HighPC,
+  uint64_t isBFDDeadAddressRange(uint64_t LowPC, std::optional<uint64_t> HighPC,
                                  uint16_t Version) {
     if (LowPC == 0)
       return true;
@@ -187,7 +187,8 @@ protected:
     return !isInsideExecutableSectionsAddressRange(LowPC, HighPC);
   }
 
-  uint64_t isMAXPCDeadAddressRange(uint64_t LowPC, Optional<uint64_t> HighPC,
+  uint64_t isMAXPCDeadAddressRange(uint64_t LowPC,
+                                   std::optional<uint64_t> HighPC,
                                    uint16_t Version, uint8_t AddressByteSize) {
     if (Version <= 4 && HighPC) {
       if (LowPC == (dwarf::computeTombstoneAddress(AddressByteSize) - 1))
@@ -202,7 +203,7 @@ protected:
     return false;
   }
 
-  bool isDeadAddressRange(uint64_t LowPC, Optional<uint64_t> HighPC,
+  bool isDeadAddressRange(uint64_t LowPC, std::optional<uint64_t> HighPC,
                           uint16_t Version, TombstoneKind Tombstone,
                           uint8_t AddressByteSize) {
     switch (Tombstone) {

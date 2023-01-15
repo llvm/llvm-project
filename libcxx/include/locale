@@ -211,6 +211,9 @@ template <class charT> class messages_byname;
 #include <streambuf>
 #include <version>
 
+// TODO: Fix __bsd_locale_defaults.h
+// NOLINTBEGIN(libcpp-robust-against-adl)
+
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 // Most unix variants have catopen.  These are the specific ones that don't.
 #  if !defined(__BIONIC__) && !defined(_NEWLIB_VERSION) && !defined(__EMSCRIPTEN__)
@@ -446,8 +449,8 @@ string
 __num_get<_CharT>::__stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep)
 {
     locale __loc = __iob.getloc();
-    use_facet<ctype<_CharT> >(__loc).widen(__src, __src + 26, __atoms);
-    const numpunct<_CharT>& __np = use_facet<numpunct<_CharT> >(__loc);
+    std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + 26, __atoms);
+    const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
     __thousands_sep = __np.thousands_sep();
     return __np.grouping();
 }
@@ -459,8 +462,8 @@ __num_get<_CharT>::__stage2_float_prep(ios_base& __iob, _CharT* __atoms, _CharT&
                     _CharT& __thousands_sep)
 {
     locale __loc = __iob.getloc();
-    use_facet<ctype<_CharT> >(__loc).widen(__src, __src + 32, __atoms);
-    const numpunct<_CharT>& __np = use_facet<numpunct<_CharT> >(__loc);
+    std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + 32, __atoms);
+    const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
     __decimal_point = __np.decimal_point();
     __thousands_sep = __np.thousands_sep();
     return __np.grouping();
@@ -494,7 +497,7 @@ __num_get<_CharT>::__stage2_int_loop(_CharT __ct, int __base, char* __a, char*& 
         }
         return 0;
     }
-    ptrdiff_t __f = find(__atoms, __atoms + 26, __ct) - __atoms;
+    ptrdiff_t __f = std::find(__atoms, __atoms + 26, __ct) - __atoms;
     if (__f >= 24)
         return -1;
     switch (__base)
@@ -547,7 +550,7 @@ __num_get<_CharT>::__stage2_float_loop(_CharT __ct, bool& __in_units, char& __ex
         }
         return 0;
     }
-    ptrdiff_t __f = find(__atoms, __atoms + 32, __ct) - __atoms;
+    ptrdiff_t __f = std::find(__atoms, __atoms + 32, __ct) - __atoms;
     if (__f >= 32)
         return -1;
     char __x = __src[__f];
@@ -677,7 +680,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~num_get() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~num_get() override {}
 
     template <class _Fp>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
@@ -849,7 +852,7 @@ __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err)
         __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
         errno = 0;
         char *__p2;
-        _Tp __ld = __do_strtod<_Tp>(__a, &__p2);
+        _Tp __ld = std::__do_strtod<_Tp>(__a, &__p2);
         __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
         if (__current_errno == 0)
             errno = __save_errno;
@@ -892,8 +895,8 @@ num_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
         }
         return __b;
     }
-    const ctype<_CharT>& __ct = use_facet<ctype<_CharT> >(__iob.getloc());
-    const numpunct<_CharT>& __np = use_facet<numpunct<_CharT> >(__iob.getloc());
+    const ctype<_CharT>& __ct = std::use_facet<ctype<_CharT> >(__iob.getloc());
+    const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__iob.getloc());
     typedef typename numpunct<_CharT>::string_type string_type;
     const string_type __names[2] = {__np.truename(), __np.falsename()};
     const string_type* __i = _VSTD::__scan_keyword(__b, __e, __names, __names+2,
@@ -950,7 +953,7 @@ num_get<_CharT, _InputIterator>::__do_get_signed(iter_type __b, iter_type __e,
     if (__grouping.size() != 0 && __g_end-__g < __num_get_base::__num_get_buf_sz)
         *__g_end++ = __dc;
     // Stage 3
-    __v = __num_get_signed_integral<_Signed>(__a, __a_end, __err, __base);
+    __v = std::__num_get_signed_integral<_Signed>(__a, __a_end, __err, __base);
     // Digit grouping checked
     __check_grouping(__grouping, __g, __g_end, __err);
     // EOF checked
@@ -1007,7 +1010,7 @@ num_get<_CharT, _InputIterator>::__do_get_unsigned(iter_type __b, iter_type __e,
     if (__grouping.size() != 0 && __g_end-__g < __num_get_base::__num_get_buf_sz)
         *__g_end++ = __dc;
     // Stage 3
-    __v = __num_get_unsigned_integral<_Unsigned>(__a, __a_end, __err, __base);
+    __v = std::__num_get_unsigned_integral<_Unsigned>(__a, __a_end, __err, __base);
     // Digit grouping checked
     __check_grouping(__grouping, __g, __g_end, __err);
     // EOF checked
@@ -1062,7 +1065,7 @@ num_get<_CharT, _InputIterator>::__do_get_floating_point(iter_type __b, iter_typ
     if (__grouping.size() != 0 && __in_units && __g_end-__g < __num_get_base::__num_get_buf_sz)
         *__g_end++ = __dc;
     // Stage 3
-    __v = __num_get_float<_Fp>(__a, __a_end, __err);
+    __v = std::__num_get_float<_Fp>(__a, __a_end, __err);
     // Digit grouping checked
     __check_grouping(__grouping, __g, __g_end, __err);
     // EOF checked
@@ -1084,8 +1087,8 @@ num_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
     char_type __atoms[26];
     char_type __thousands_sep = 0;
     string __grouping;
-    use_facet<ctype<_CharT> >(__iob.getloc()).widen(__num_get_base::__src,
-                                                    __num_get_base::__src + 26, __atoms);
+    std::use_facet<ctype<_CharT> >(__iob.getloc()).widen(__num_get_base::__src,
+                                                         __num_get_base::__src + 26, __atoms);
     string __buf;
     __buf.resize(__buf.capacity());
     char* __a = &__buf[0];
@@ -1152,8 +1155,8 @@ __num_put<_CharT>::__widen_and_group_int(char* __nb, char* __np, char* __ne,
                                          _CharT* __ob, _CharT*& __op, _CharT*& __oe,
                                          const locale& __loc)
 {
-    const ctype<_CharT>&    __ct = use_facet<ctype<_CharT> >   (__loc);
-    const numpunct<_CharT>& __npt = use_facet<numpunct<_CharT> >(__loc);
+    const ctype<_CharT>&    __ct = std::use_facet<ctype<_CharT> >   (__loc);
+    const numpunct<_CharT>& __npt = std::use_facet<numpunct<_CharT> >(__loc);
     string __grouping = __npt.grouping();
     if (__grouping.empty())
     {
@@ -1172,7 +1175,7 @@ __num_put<_CharT>::__widen_and_group_int(char* __nb, char* __np, char* __ne,
             *__oe++ = __ct.widen(*__nf++);
             *__oe++ = __ct.widen(*__nf++);
         }
-        reverse(__nf, __ne);
+        std::reverse(__nf, __ne);
         _CharT __thousands_sep = __npt.thousands_sep();
         unsigned __dc = 0;
         unsigned __dg = 0;
@@ -1189,7 +1192,7 @@ __num_put<_CharT>::__widen_and_group_int(char* __nb, char* __np, char* __ne,
             *__oe++ = __ct.widen(*__p);
             ++__dc;
         }
-        reverse(__ob + (__nf - __nb), __oe);
+        std::reverse(__ob + (__nf - __nb), __oe);
     }
     if (__np == __ne)
         __op = __oe;
@@ -1203,8 +1206,8 @@ __num_put<_CharT>::__widen_and_group_float(char* __nb, char* __np, char* __ne,
                                            _CharT* __ob, _CharT*& __op, _CharT*& __oe,
                                            const locale& __loc)
 {
-    const ctype<_CharT>&    __ct = use_facet<ctype<_CharT> >   (__loc);
-    const numpunct<_CharT>& __npt = use_facet<numpunct<_CharT> >(__loc);
+    const ctype<_CharT>&    __ct = std::use_facet<ctype<_CharT> >   (__loc);
+    const numpunct<_CharT>& __npt = std::use_facet<numpunct<_CharT> >(__loc);
     string __grouping = __npt.grouping();
     __oe = __ob;
     char* __nf = __nb;
@@ -1233,7 +1236,7 @@ __num_put<_CharT>::__widen_and_group_float(char* __nb, char* __np, char* __ne,
     }
     else
     {
-        reverse(__nf, __ns);
+        std::reverse(__nf, __ns);
         _CharT __thousands_sep = __npt.thousands_sep();
         unsigned __dc = 0;
         unsigned __dg = 0;
@@ -1249,7 +1252,7 @@ __num_put<_CharT>::__widen_and_group_float(char* __nb, char* __np, char* __ne,
             *__oe++ = __ct.widen(*__p);
             ++__dc;
         }
-        reverse(__ob + (__nf - __nb), __oe);
+        std::reverse(__ob + (__nf - __nb), __oe);
     }
     for (__nf = __ns; __nf < __ne; ++__nf)
     {
@@ -1347,7 +1350,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~num_put() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~num_put() override {}
 
     virtual iter_type do_put(iter_type __s, ios_base& __iob, char_type __fl,
                              bool __v) const;
@@ -1459,7 +1462,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
 {
     if ((__iob.flags() & ios_base::boolalpha) == 0)
         return do_put(__s, __iob, __fl, (unsigned long)__v);
-    const numpunct<char_type>& __np = use_facet<numpunct<char_type> >(__iob.getloc());
+    const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.getloc());
     typedef typename numpunct<char_type>::string_type string_type;
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
     string_type __tmp(__v ? __np.truename() : __np.falsename());
@@ -1505,7 +1508,7 @@ num_put<_CharT, _OutputIterator>::__do_put_integral(iter_type __s, ios_base& __i
     this->__widen_and_group_int(__nar, __np, __ne, __o, __op, __oe, __iob.getloc());
     // [__o, __oe) contains thousands_sep'd wide number
     // Stage 3 & 4
-    return __pad_and_output(__s, __o, __op, __oe, __iob, __fl);
+    return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);
 }
 
 template <class _CharT, class _OutputIterator>
@@ -1593,7 +1596,7 @@ num_put<_CharT, _OutputIterator>::__do_put_floating_point(iter_type __s, ios_bas
     this->__widen_and_group_float(__nb, __np, __ne, __ob, __op, __oe, __iob.getloc());
     // [__o, __oe) contains thousands_sep'd wide number
     // Stage 3 & 4
-    __s = __pad_and_output(__s, __ob, __op, __oe, __iob, __fl);
+    __s = std::__pad_and_output(__s, __ob, __op, __oe, __iob, __fl);
     return __s;
 }
 
@@ -1628,7 +1631,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
     char_type __o[2*(__nbuf-1) - 1];
     char_type* __op;  // pad here
     char_type* __oe;  // end of output
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__iob.getloc());
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
     __ct.widen(__nar, __ne, __o);
     __oe = __o + (__ne - __nar);
     if (__np == __ne)
@@ -1637,7 +1640,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
         __op = __o + (__np - __nar);
     // [__o, __oe) contains wide number
     // Stage 3 & 4
-    return __pad_and_output(__s, __o, __op, __oe, __iob, __fl);
+    return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<char>;
@@ -1792,7 +1795,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~time_get() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_get() override {}
 
     virtual dateorder do_date_order() const;
     virtual iter_type do_get_time(iter_type __b, iter_type __e, ios_base& __iob,
@@ -1923,7 +1926,7 @@ time_get<_CharT, _InputIterator>::__get_month(int& __m,
                                               ios_base::iostate& __err,
                                               const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 2) - 1;
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 2) - 1;
     if (!(__err & ios_base::failbit) && 0 <= __t && __t <= 11)
         __m = __t;
     else
@@ -1937,7 +1940,7 @@ time_get<_CharT, _InputIterator>::__get_year(int& __y,
                                              ios_base::iostate& __err,
                                              const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 4);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 4);
     if (!(__err & ios_base::failbit))
     {
         if (__t < 69)
@@ -1955,7 +1958,7 @@ time_get<_CharT, _InputIterator>::__get_year4(int& __y,
                                               ios_base::iostate& __err,
                                               const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 4);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 4);
     if (!(__err & ios_base::failbit))
         __y = __t - 1900;
 }
@@ -1967,7 +1970,7 @@ time_get<_CharT, _InputIterator>::__get_hour(int& __h,
                                              ios_base::iostate& __err,
                                              const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 2);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 2);
     if (!(__err & ios_base::failbit) && __t <= 23)
         __h = __t;
     else
@@ -1981,7 +1984,7 @@ time_get<_CharT, _InputIterator>::__get_12_hour(int& __h,
                                                 ios_base::iostate& __err,
                                                 const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 2);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 2);
     if (!(__err & ios_base::failbit) && 1 <= __t && __t <= 12)
         __h = __t;
     else
@@ -1995,7 +1998,7 @@ time_get<_CharT, _InputIterator>::__get_minute(int& __m,
                                                ios_base::iostate& __err,
                                                const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 2);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 2);
     if (!(__err & ios_base::failbit) && __t <= 59)
         __m = __t;
     else
@@ -2009,7 +2012,7 @@ time_get<_CharT, _InputIterator>::__get_second(int& __s,
                                                ios_base::iostate& __err,
                                                const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 2);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 2);
     if (!(__err & ios_base::failbit) && __t <= 60)
         __s = __t;
     else
@@ -2023,7 +2026,7 @@ time_get<_CharT, _InputIterator>::__get_weekday(int& __w,
                                                 ios_base::iostate& __err,
                                                 const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 1);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 1);
     if (!(__err & ios_base::failbit) && __t <= 6)
         __w = __t;
     else
@@ -2037,7 +2040,7 @@ time_get<_CharT, _InputIterator>::__get_day_year_num(int& __d,
                                                      ios_base::iostate& __err,
                                                      const ctype<char_type>& __ct) const
 {
-    int __t = __get_up_to_n_digits(__b, __e, __err, __ct, 3);
+    int __t = std::__get_up_to_n_digits(__b, __e, __err, __ct, 3);
     if (!(__err & ios_base::failbit) && __t <= 365)
         __d = __t;
     else
@@ -2102,7 +2105,7 @@ time_get<_CharT, _InputIterator>::get(iter_type __b, iter_type __e,
                                       ios_base::iostate& __err, tm* __tm,
                                       const char_type* __fmtb, const char_type* __fmte) const
 {
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__iob.getloc());
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
     __err = ios_base::goodbit;
     while (__fmtb != __fmte && __err == ios_base::goodbit)
     {
@@ -2189,7 +2192,7 @@ time_get<_CharT, _InputIterator>::do_get_weekday(iter_type __b, iter_type __e,
                                                  ios_base::iostate& __err,
                                                  tm* __tm) const
 {
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__iob.getloc());
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
     __get_weekdayname(__tm->tm_wday, __b, __e, __err, __ct);
     return __b;
 }
@@ -2201,7 +2204,7 @@ time_get<_CharT, _InputIterator>::do_get_monthname(iter_type __b, iter_type __e,
                                                    ios_base::iostate& __err,
                                                    tm* __tm) const
 {
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__iob.getloc());
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
     __get_monthname(__tm->tm_mon, __b, __e, __err, __ct);
     return __b;
 }
@@ -2213,7 +2216,7 @@ time_get<_CharT, _InputIterator>::do_get_year(iter_type __b, iter_type __e,
                                               ios_base::iostate& __err,
                                               tm* __tm) const
 {
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__iob.getloc());
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
     __get_year(__tm->tm_year, __b, __e, __err, __ct);
     return __b;
 }
@@ -2226,7 +2229,7 @@ time_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
                                          char __fmt, char) const
 {
     __err = ios_base::goodbit;
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__iob.getloc());
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
     switch (__fmt)
     {
     case 'a':
@@ -2411,25 +2414,17 @@ public:
           __time_get_storage<_CharT>(__nm) {}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~time_get_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_get_byname() override {}
 
-    _LIBCPP_INLINE_VISIBILITY
-     dateorder do_date_order() const override {return this->__do_date_order();}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL dateorder do_date_order() const override {return this->__do_date_order();}
 private:
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type* __weeks() const override  {return this->__weeks_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type* __months() const override {return this->__months_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type* __am_pm() const override  {return this->__am_pm_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type& __c() const override      {return this->__c_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type& __r() const override      {return this->__r_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type& __x() const override      {return this->__x_;}
-    _LIBCPP_INLINE_VISIBILITY
-     const string_type& __X() const override      {return this->__X_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type* __weeks() const override  {return this->__weeks_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type* __months() const override {return this->__months_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type* __am_pm() const override  {return this->__am_pm_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __c() const override      {return this->__c_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __r() const override      {return this->__r_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __x() const override      {return this->__x_;}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL const string_type& __X() const override      {return this->__X_;}
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_get_byname<char>;
@@ -2479,7 +2474,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~time_put() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_put() override {}
     virtual iter_type do_put(iter_type __s, ios_base&, char_type, const tm* __tm,
                              char __fmt, char __mod) const;
 
@@ -2504,7 +2499,7 @@ time_put<_CharT, _OutputIterator>::put(iter_type __s, ios_base& __iob,
                                        const char_type* __pb,
                                        const char_type* __pe) const
 {
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__iob.getloc());
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
     for (; __pb != __pe; ++__pb)
     {
         if (__ct.narrow(*__pb, 0) == '%')
@@ -2567,7 +2562,7 @@ public:
         : time_put<_CharT, _OutputIterator>(__nm, __refs) {}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~time_put_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~time_put_byname() override {}
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<char>;
@@ -2615,7 +2610,7 @@ public:
     static const bool intl = _International;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~moneypunct() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~moneypunct() override {}
 
     virtual char_type   do_decimal_point() const {return numeric_limits<char_type>::max();}
     virtual char_type   do_thousands_sep() const {return numeric_limits<char_type>::max();}
@@ -2665,7 +2660,7 @@ public:
         : moneypunct<_CharT, _International>(__refs) {init(__nm.c_str());}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~moneypunct_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~moneypunct_byname() override {}
 
      char_type   do_decimal_point() const override {return __decimal_point_;}
      char_type   do_thousands_sep() const override {return __thousands_sep_;}
@@ -2732,7 +2727,7 @@ __money_get<_CharT>::__gather_info(bool __intl, const locale& __loc,
     if (__intl)
     {
         const moneypunct<char_type, true>& __mp =
-            use_facet<moneypunct<char_type, true> >(__loc);
+            std::use_facet<moneypunct<char_type, true> >(__loc);
         __pat = __mp.neg_format();
         __nsn = __mp.negative_sign();
         __psn = __mp.positive_sign();
@@ -2745,7 +2740,7 @@ __money_get<_CharT>::__gather_info(bool __intl, const locale& __loc,
     else
     {
         const moneypunct<char_type, false>& __mp =
-            use_facet<moneypunct<char_type, false> >(__loc);
+            std::use_facet<moneypunct<char_type, false> >(__loc);
         __pat = __mp.neg_format();
         __nsn = __mp.negative_sign();
         __psn = __mp.positive_sign();
@@ -2793,7 +2788,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~money_get() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~money_get() override {}
 
     virtual iter_type do_get(iter_type __b, iter_type __e, bool __intl,
                              ios_base& __iob, ios_base::iostate& __err,
@@ -2829,7 +2824,7 @@ __double_or_nothing(unique_ptr<_Tp, void(*)(void*)>& __b, _Tp*& __n, _Tp*& __e)
     if (__new_cap == 0)
         __new_cap = sizeof(_Tp);
     size_t __n_off = static_cast<size_t>(__n - __b.get());
-    _Tp* __t = (_Tp*)realloc(__owns ? __b.get() : 0, __new_cap);
+    _Tp* __t = (_Tp*)std::realloc(__owns ? __b.get() : 0, __new_cap);
     if (__t == 0)
         __throw_bad_alloc();
     if (__owns)
@@ -2944,7 +2939,7 @@ money_get<_CharT, _InputIterator>::__do_get(iter_type& __b, iter_type __e,
                         ++__sym_space_end;
                     const size_t __num_spaces = __sym_space_end - __sym.begin();
                     if (__num_spaces > __spaces.size() ||
-                        !equal(__spaces.end() - __num_spaces, __spaces.end(),
+                        !std::equal(__spaces.end() - __num_spaces, __spaces.end(),
                                __sym.begin())) {
                         // No match. Put __sym_space_end back at the
                         // beginning of __sym, which will prevent a
@@ -2975,14 +2970,14 @@ money_get<_CharT, _InputIterator>::__do_get(iter_type& __b, iter_type __e,
                 if (__ct.is(ctype_base::digit, __c))
                 {
                     if (__wn == __we)
-                        __double_or_nothing(__wb, __wn, __we);
+                        std::__double_or_nothing(__wb, __wn, __we);
                     *__wn++ = __c;
                     ++__ng;
                 }
                 else if (__grp.size() > 0 && __ng > 0 && __c == __ts)
                 {
                     if (__gn == __ge)
-                        __double_or_nothing(__gb, __gn, __ge);
+                        std::__double_or_nothing(__gb, __gn, __ge);
                     *__gn++ = __ng;
                     __ng = 0;
                 }
@@ -2992,7 +2987,7 @@ money_get<_CharT, _InputIterator>::__do_get(iter_type& __b, iter_type __e,
             if (__gb.get() != __gn && __ng > 0)
             {
                 if (__gn == __ge)
-                    __double_or_nothing(__gb, __gn, __ge);
+                    std::__double_or_nothing(__gb, __gn, __ge);
                 *__gn++ = __ng;
             }
             if (__fd > 0)
@@ -3010,7 +3005,7 @@ money_get<_CharT, _InputIterator>::__do_get(iter_type& __b, iter_type __e,
                         return false;
                     }
                     if (__wn == __we)
-                        __double_or_nothing(__wb, __wn, __we);
+                        std::__double_or_nothing(__wb, __wn, __we);
                     *__wn++ = *__b;
                 }
             }
@@ -3060,7 +3055,7 @@ money_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
     char_type* __wn;
     char_type* __we = __wbuf + __bz;
     locale __loc = __iob.getloc();
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__loc);
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__loc);
     bool __neg = false;
     if (__do_get(__b, __e, __intl, __loc, __iob.flags(), __err, __neg, __ct,
                  __wb, __wn, __we))
@@ -3081,7 +3076,7 @@ money_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
         if (__neg)
             *__nc++ = '-';
         for (const char_type* __w = __wb.get(); __w < __wn; ++__w, ++__nc)
-            *__nc = __src[find(__atoms, _VSTD::end(__atoms), *__w) - __atoms];
+            *__nc = __src[std::find(__atoms, _VSTD::end(__atoms), *__w) - __atoms];
         *__nc = char();
         if (sscanf(__nbuf, "%Lf", &__v) != 1)
             __throw_runtime_error("money_get error");
@@ -3104,7 +3099,7 @@ money_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
     char_type* __wn;
     char_type* __we = __wbuf + __bz;
     locale __loc = __iob.getloc();
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__loc);
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__loc);
     bool __neg = false;
     if (__do_get(__b, __e, __intl, __loc, __iob.flags(), __err, __neg, __ct,
                  __wb, __wn, __we))
@@ -3166,7 +3161,7 @@ __money_put<_CharT>::__gather_info(bool __intl, bool __neg, const locale& __loc,
     if (__intl)
     {
         const moneypunct<char_type, true>& __mp =
-            use_facet<moneypunct<char_type, true> >(__loc);
+            std::use_facet<moneypunct<char_type, true> >(__loc);
         if (__neg)
         {
             __pat = __mp.neg_format();
@@ -3186,7 +3181,7 @@ __money_put<_CharT>::__gather_info(bool __intl, bool __neg, const locale& __loc,
     else
     {
         const moneypunct<char_type, false>& __mp =
-            use_facet<moneypunct<char_type, false> >(__loc);
+            std::use_facet<moneypunct<char_type, false> >(__loc);
         if (__neg)
         {
             __pat = __mp.neg_format();
@@ -3286,7 +3281,7 @@ __money_put<_CharT>::__format(char_type* __mb, char_type*& __mi, char_type*& __m
                 }
             }
             // reverse it
-            reverse(__t, __me);
+            std::reverse(__t, __me);
             }
             break;
         }
@@ -3337,7 +3332,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~money_put() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~money_put() override {}
 
     virtual iter_type do_put(iter_type __s, bool __intl, ios_base& __iob,
                              char_type __fl, long double __units) const;
@@ -3378,7 +3373,7 @@ money_put<_CharT, _OutputIterator>::do_put(iter_type __s, bool __intl,
     }
     // gather info
     locale __loc = __iob.getloc();
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__loc);
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__loc);
     __ct.widen(__bb, __bb + __n, __db);
     bool __neg = __n > 0 && __bb[0] == '-';
     money_base::pattern __pat;
@@ -3410,7 +3405,7 @@ money_put<_CharT, _OutputIterator>::do_put(iter_type __s, bool __intl,
     this->__format(__mb, __mi, __me, __iob.flags(),
                    __db, __db + __n, __ct,
                    __neg, __pat, __dp, __ts, __grp, __sym, __sn, __fd);
-    return __pad_and_output(__s, __mb, __mi, __me, __iob, __fl);
+    return std::__pad_and_output(__s, __mb, __mi, __me, __iob, __fl);
 }
 
 template <class _CharT, class _OutputIterator>
@@ -3421,7 +3416,7 @@ money_put<_CharT, _OutputIterator>::do_put(iter_type __s, bool __intl,
 {
     // gather info
     locale __loc = __iob.getloc();
-    const ctype<char_type>& __ct = use_facet<ctype<char_type> >(__loc);
+    const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__loc);
     bool __neg = __digits.size() > 0 && __digits[0] == __ct.widen('-');
     money_base::pattern __pat;
     char_type __dp;
@@ -3452,7 +3447,7 @@ money_put<_CharT, _OutputIterator>::do_put(iter_type __s, bool __intl,
     this->__format(__mb, __mi, __me, __iob.flags(),
                    __digits.data(), __digits.data() + __digits.size(), __ct,
                    __neg, __pat, __dp, __ts, __grp, __sym, __sn, __fd);
-    return __pad_and_output(__s, __mb, __mi, __me, __iob, __fl);
+    return std::__pad_and_output(__s, __mb, __mi, __me, __iob, __fl);
 }
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<char>;
@@ -3505,7 +3500,7 @@ public:
     static locale::id id;
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~messages() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~messages() override {}
 
     virtual catalog do_open(const basic_string<char>&, const locale&) const;
     virtual string_type do_get(catalog, int __set, int __msgid,
@@ -3539,7 +3534,7 @@ messages<_CharT>::do_get(catalog __c, int __set, int __msgid,
 {
 #ifdef _LIBCPP_HAS_CATOPEN
     string __ndflt;
-    __narrow_to_utf8<sizeof(char_type)*__CHAR_BIT__>()(back_inserter(__ndflt),
+    __narrow_to_utf8<sizeof(char_type)*__CHAR_BIT__>()(std::back_inserter(__ndflt),
                                                        __dflt.c_str(),
                                                        __dflt.c_str() + __dflt.size());
     if (__c != -1)
@@ -3547,7 +3542,7 @@ messages<_CharT>::do_get(catalog __c, int __set, int __msgid,
     nl_catd __cat = (nl_catd)__c;
     char* __n = catgets(__cat, __set, __msgid, __ndflt.c_str());
     string_type __w;
-    __widen_from_utf8<sizeof(char_type)*__CHAR_BIT__>()(back_inserter(__w),
+    __widen_from_utf8<sizeof(char_type)*__CHAR_BIT__>()(std::back_inserter(__w),
                                                         __n, __n + _VSTD::strlen(__n));
     return __w;
 #else // !_LIBCPP_HAS_CATOPEN
@@ -3594,7 +3589,7 @@ public:
         : messages<_CharT>(__refs) {}
 
 protected:
-    _LIBCPP_HIDE_FROM_ABI ~messages_byname() override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~messages_byname() override {}
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;
@@ -3994,7 +3989,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     char_type __1buf;
     if (this->gptr() == 0)
         this->setg(&__1buf, &__1buf+1, &__1buf+1);
-    const size_t __unget_sz = __initial ? 0 : min<size_t>((this->egptr() - this->eback()) / 2, 4);
+    const size_t __unget_sz = __initial ? 0 : std::min<size_t>((this->egptr() - this->eback()) / 2, 4);
     int_type __c = traits_type::eof();
     if (this->gptr() == this->egptr())
     {
@@ -4265,7 +4260,7 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
             {
                 if (this->gptr() != this->egptr())
                 {
-                    reverse(this->gptr(), this->egptr());
+                    std::reverse(this->gptr(), this->egptr());
                     codecvt_base::result __r;
                     const char_type* __e = this->gptr();
                     char* __extbe;
@@ -4358,12 +4353,15 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
+// NOLINTEND(libcpp-robust-against-adl)
+
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <atomic>
 #  include <concepts>
 #  include <cstdarg>
 #  include <iterator>
 #  include <stdexcept>
+#  include <type_traits>
 #  include <typeinfo>
 #endif
 

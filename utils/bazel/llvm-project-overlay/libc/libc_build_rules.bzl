@@ -10,7 +10,40 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 LIBC_ROOT_TARGET = ":libc_root"
 INTERNAL_SUFFIX = ".__internal__"
 
-def libc_function(name, srcs, weak = False, deps = None, copts = None, **kwargs):
+def _libc_library(name, copts = None, **kwargs):
+    """Internal macro to serve as a base for all other libc library rules.
+
+    Args:
+      name: Target name.
+      copts: The special compiler options for the target.
+      **kwargs: All other attributes relevant for the cc_library rule.
+    """
+    copts = copts or []
+
+    # We want all libc sources to be compiled with "hidden" visibility.
+    # The public symbols will be given "default" visibility explicitly.
+    # See src/__support/common.h for more information.
+    copts.append("-fvisibility=hidden")
+    native.cc_library(
+        name = name,
+        copts = copts,
+        linkstatic = 1,
+        **kwargs
+    )
+
+# A convenience var which should be used to list all libc support libraries.
+# Any library which does not define a public function should be listed with
+# libc_support_library.
+libc_support_library = _libc_library
+
+def libc_function(
+        name,
+        srcs,
+        weak = False,
+        deps = None,
+        copts = None,
+        local_defines = None,
+        **kwargs):
     """Add target for a libc function.
 
     The libc function is eventually available as a cc_library target by name
@@ -23,9 +56,12 @@ def libc_function(name, srcs, weak = False, deps = None, copts = None, **kwargs)
       name: Target name. It is normally the name of the function this target is
             for.
       srcs: The .cpp files which contain the function implementation.
-      weak: Whether the symbol is marked weak.
+      weak: Make the symbol corresponding to the libc function "weak".
       deps: The list of target dependencies if any.
       copts: The list of options to add to the C++ compilation command.
+      local_defines: The preprocessor defines which will be prepended with -D
+                     and passed to the compile command of this target but not
+                     its deps.
       **kwargs: Other attributes relevant for a cc_library. For example, deps.
     """
     deps = deps or []
@@ -33,6 +69,7 @@ def libc_function(name, srcs, weak = False, deps = None, copts = None, **kwargs)
     copts = copts or []
     copts.append("-O3")
     copts.append("-fno-builtin")
+    copts.append("-fno-lax-vector-conversions")
 
     # We compile the code twice, the first target is suffixed with ".__internal__" and contains the
     # C++ functions in the "__llvm_libc" namespace. This allows us to test the function in the
@@ -47,15 +84,18 @@ def libc_function(name, srcs, weak = False, deps = None, copts = None, **kwargs)
     )
 
     # This second target is the llvm libc C function.
-    copts.append("-DLLVM_LIBC_PUBLIC_PACKAGING")
+
+    func_attrs = ["__attribute__((visibility(\"default\")))"]
     if weak:
-        copts.append("-DLLVM_LIBC_FUNCTION_ATTR=__attribute__((weak))")
-    native.cc_library(
+        func_attrs.append("__attribute__((weak))")
+    local_defines = local_defines or ["LLVM_LIBC_PUBLIC_PACKAGING"]
+    local_defines.append("LLVM_LIBC_FUNCTION_ATTR='%s'" % " ".join(func_attrs))
+    _libc_library(
         name = name,
         srcs = srcs,
         deps = deps,
         copts = copts,
-        linkstatic = 1,
+        local_defines = local_defines,
         **kwargs
     )
 

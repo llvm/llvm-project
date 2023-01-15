@@ -398,7 +398,7 @@
 // CHECK-WARNING-DAG: optimization flag '-falign-loops' is not supported
 // CHECK-WARNING-DAG: optimization flag '-falign-jumps' is not supported
 // CHECK-WARNING-DAG: optimization flag '-falign-jumps=100' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fexcess-precision=100' is not supported
+// CHECK-WARNING-DAG: unsupported argument '100' to option '-fexcess-precision='
 // CHECK-WARNING-DAG: optimization flag '-fbranch-count-reg' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fcaller-saves' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fno-default-inline' is not supported

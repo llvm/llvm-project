@@ -372,7 +372,7 @@ static const Expr *findWeakLValue(const Expr *E) {
 ///
 /// If the runtime does support a required entrypoint, then this method will
 /// generate a call and return the resulting value.  Otherwise it will return
-/// None and the caller can generate a msgSend instead.
+/// std::nullopt and the caller can generate a msgSend instead.
 static Optional<llvm::Value *>
 tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
                                   llvm::Value *Receiver,
@@ -3984,7 +3984,8 @@ static llvm::Value *emitIsPlatformVersionAtLeast(CodeGenFunction &CGF,
   llvm::SmallVector<llvm::Value *, 8> Args;
 
   auto EmitArgs = [&](const VersionTuple &Version, const llvm::Triple &TT) {
-    Optional<unsigned> Min = Version.getMinor(), SMin = Version.getSubminor();
+    std::optional<unsigned> Min = Version.getMinor(),
+                            SMin = Version.getSubminor();
     Args.push_back(
         llvm::ConstantInt::get(CGM.Int32Ty, getBaseMachOPlatformID(TT)));
     Args.push_back(llvm::ConstantInt::get(CGM.Int32Ty, Version.getMajor()));
@@ -4022,7 +4023,8 @@ CodeGenFunction::EmitBuiltinAvailable(const VersionTuple &Version) {
         CGM.CreateRuntimeFunction(FTy, "__isOSVersionAtLeast");
   }
 
-  Optional<unsigned> Min = Version.getMinor(), SMin = Version.getSubminor();
+  std::optional<unsigned> Min = Version.getMinor(),
+                          SMin = Version.getSubminor();
   llvm::Value *Args[] = {
       llvm::ConstantInt::get(CGM.Int32Ty, Version.getMajor()),
       llvm::ConstantInt::get(CGM.Int32Ty, Min.value_or(0)),

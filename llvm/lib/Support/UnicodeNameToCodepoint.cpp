@@ -105,7 +105,7 @@ static Node readNode(uint32_t Offset, const Node *Parent = nullptr) {
     uint8_t H = UnicodeNameToCodepointIndex[Offset++];
     N.HasSibling = H & 0x80;
     bool HasChildren = H & 0x40;
-    H &= ~0xC0;
+    H &= ~uint8_t(0xC0);
     if (HasChildren) {
       N.ChildrenOffset = (H << 16);
       N.ChildrenOffset |=
@@ -285,7 +285,7 @@ static std::size_t findSyllable(StringRef Name, bool Strict,
   return size_t(Len);
 }
 
-static llvm::Optional<char32_t>
+static std::optional<char32_t>
 nameToHangulCodePoint(StringRef Name, bool Strict, BufferType &Buffer) {
   Buffer.clear();
   // Hangul Syllable Decomposition
@@ -343,7 +343,7 @@ static const GeneratedNamesData GeneratedNamesDataTable[] = {
     {"CJK COMPATIBILITY IDEOGRAPH-", 0x2F800, 0x2FA1D},
 };
 
-static llvm::Optional<char32_t>
+static std::optional<char32_t>
 nameToGeneratedCodePoint(StringRef Name, bool Strict, BufferType &Buffer) {
   for (auto &&Item : GeneratedNamesDataTable) {
     Buffer.clear();
@@ -370,12 +370,12 @@ nameToGeneratedCodePoint(StringRef Name, bool Strict, BufferType &Buffer) {
   return std::nullopt;
 }
 
-static llvm::Optional<char32_t> nameToCodepoint(StringRef Name, bool Strict,
-                                                BufferType &Buffer) {
+static std::optional<char32_t> nameToCodepoint(StringRef Name, bool Strict,
+                                               BufferType &Buffer) {
   if (Name.empty())
     return std::nullopt;
 
-  llvm::Optional<char32_t> Res = nameToHangulCodePoint(Name, Strict, Buffer);
+  std::optional<char32_t> Res = nameToHangulCodePoint(Name, Strict, Buffer);
   if (!Res)
     Res = nameToGeneratedCodePoint(Name, Strict, Buffer);
   if (Res)
@@ -400,14 +400,14 @@ static llvm::Optional<char32_t> nameToCodepoint(StringRef Name, bool Strict,
   return std::nullopt;
 }
 
-llvm::Optional<char32_t> nameToCodepointStrict(StringRef Name) {
+std::optional<char32_t> nameToCodepointStrict(StringRef Name) {
 
   BufferType Buffer;
   auto Opt = nameToCodepoint(Name, true, Buffer);
   return Opt;
 }
 
-llvm::Optional<LooseMatchingResult>
+std::optional<LooseMatchingResult>
 nameToCodepointLooseMatching(StringRef Name) {
   BufferType Buffer;
   auto Opt = nameToCodepoint(Name, false, Buffer);

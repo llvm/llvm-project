@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_INSERTIONPOINT_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_REFACTOR_INSERTIONPOINT_H
+
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -51,3 +54,5 @@ llvm::Expected<tooling::Replacement> insertDecl(llvm::StringRef Code,
 
 } // namespace clangd
 } // namespace clang
+
+#endif

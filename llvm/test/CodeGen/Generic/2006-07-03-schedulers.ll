@@ -6,7 +6,7 @@
 ; The top-down schedulers are excluded here because they don't yet support
 ; targets that use physreg defs.
 
-declare i32 @printf(i8*, i32, float)
+declare i32 @printf(ptr, i32, float)
 
 define i32 @testissue(i32 %i, float %x, float %y) {
 	br label %bb1
@@ -26,7 +26,7 @@ bb1:		; preds = %bb1, %0
 	br i1 %b, label %bb1, label %bb2
 
 bb2:		; preds = %bb1
-	%Msg = inttoptr i64 0 to i8*		; <i8*> [#uses=1]
-	call i32 @printf( i8* %Msg, i32 %m1, float %z3 )		; <i32>:1 [#uses=0]
+	%Msg = inttoptr i64 0 to ptr		; <ptr> [#uses=1]
+	call i32 @printf( ptr %Msg, i32 %m1, float %z3 )		; <i32>:1 [#uses=0]
 	ret i32 0
 }

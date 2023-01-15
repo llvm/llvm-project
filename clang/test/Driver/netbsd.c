@@ -476,4 +476,11 @@
 // RELOCATABLE-NOT: "-pie"
 // RELOCATABLE-NOT: "-dynamic-linker"
 // RELOCATABLE-NOT: "-l
-// RELOCATABLE-NOT: crt{{[^./]+}}.o
+// RELOCATABLE-NOT: crt{{[^./\\]+}}.o
+
+// Check that the driver passes include paths to cc1 on NetBSD.
+// RUN: %clang -### %s --target=x86_64-unknown-netbsd -r 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DRIVER-PASS-INCLUDES
+// DRIVER-PASS-INCLUDES:      "-cc1" {{.*}}"-resource-dir" "[[RESOURCE:[^"]+]]"
+// DRIVER-PASS-INCLUDES-SAME: "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
+// DRIVER-PASS-INCLUDES-SAME: {{^}} "-internal-externc-isystem" "{{.*}}/usr/include"

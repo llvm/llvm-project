@@ -77,6 +77,7 @@ class ModulePass;
   void initializePPCMIPeepholePass(PassRegistry&);
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
+  void initializePPCDAGToDAGISelPass(PassRegistry &);
 
   extern char &PPCVSXFMAMutateID;
 

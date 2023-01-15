@@ -350,7 +350,7 @@ module {
 
 module {
   gpu.module @gpu_funcs {
-    // expected-error @+1 {{expected memref type in attribution}}
+    // expected-error @below {{'gpu.func' op expected memref type in attribution}}
     gpu.func @kernel() workgroup(%0: i32) {
       gpu.return
     }
@@ -361,8 +361,8 @@ module {
 
 module {
   gpu.module @gpu_funcs {
-    // expected-error @+1 {{expected memory space 3 in attribution}}
-    gpu.func @kernel() workgroup(%0: memref<4xf32>) {
+    // expected-error @below {{'gpu.func' op expected memory space workgroup in attribution}}
+    gpu.func @kernel() workgroup(%0: memref<4xf32, #gpu.address_space<private>>) {
       gpu.return
     }
   }
@@ -372,19 +372,8 @@ module {
 
 module {
   gpu.module @gpu_funcs {
-    // expected-error @+1 {{expected memory space 5 in attribution}}
-    gpu.func @kernel() private(%0: memref<4xf32>) {
-      gpu.return
-    }
-  }
-}
-
-// -----
-
-module {
-  gpu.module @gpu_funcs {
-    // expected-error @+1 {{expected memory space 5 in attribution}}
-    gpu.func @kernel() private(%0: memref<4xf32>) {
+    // expected-error @below {{'gpu.func' op expected memory space private in attribution}}
+    gpu.func @kernel() private(%0: memref<4xf32, #gpu.address_space<workgroup>>) {
       gpu.return
     }
   }
@@ -598,4 +587,26 @@ func.func @alloc() {
    // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
    %1 = gpu.alloc(%0) : memref<2x?x?xf32, 1>
    return
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @kernel {
+    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must be a dense i32 array}}
+    gpu.func @kernel() kernel attributes {gpu.known_block_size = 32 : i32} {
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @kernel {
+    // expected-error@+1 {{'gpu.func' op gpu.known_block_size must contain exactly 3 elements}}
+    gpu.func @kernel() kernel attributes {gpu.known_block_size = array<i32: 2, 1>} {
+      gpu.return
+    }
+  }
 }

@@ -20,7 +20,7 @@ using namespace mlir::dataflow;
 
 LogicalResult AbstractDenseDataFlowAnalysis::initialize(Operation *top) {
   // Visit every operation and block.
-  visitOperation(top);
+  processOperation(top);
   for (Region &region : top->getRegions()) {
     for (Block &block : region) {
       visitBlock(&block);
@@ -34,7 +34,7 @@ LogicalResult AbstractDenseDataFlowAnalysis::initialize(Operation *top) {
 
 LogicalResult AbstractDenseDataFlowAnalysis::visit(ProgramPoint point) {
   if (auto *op = point.dyn_cast<Operation *>())
-    visitOperation(op);
+    processOperation(op);
   else if (auto *block = point.dyn_cast<Block *>())
     visitBlock(block);
   else
@@ -42,7 +42,7 @@ LogicalResult AbstractDenseDataFlowAnalysis::visit(ProgramPoint point) {
   return success();
 }
 
-void AbstractDenseDataFlowAnalysis::visitOperation(Operation *op) {
+void AbstractDenseDataFlowAnalysis::processOperation(Operation *op) {
   // If the containing block is not executable, bail out.
   if (!getOrCreateFor<Executable>(op, op->getBlock())->isLive())
     return;

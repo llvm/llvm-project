@@ -72,11 +72,11 @@ class GVNLegacyPass;
 /// Intended use is to create a default object, modify parameters with
 /// additional setters and then pass it to GVN.
 struct GVNOptions {
-  std::optional<bool> AllowPRE = std::nullopt;
-  std::optional<bool> AllowLoadPRE = std::nullopt;
-  std::optional<bool> AllowLoadInLoopPRE = std::nullopt;
-  std::optional<bool> AllowLoadPRESplitBackedge = std::nullopt;
-  std::optional<bool> AllowMemDep = std::nullopt;
+  std::optional<bool> AllowPRE;
+  std::optional<bool> AllowLoadPRE;
+  std::optional<bool> AllowLoadInLoopPRE;
+  std::optional<bool> AllowLoadPRESplitBackedge;
+  std::optional<bool> AllowMemDep;
 
   GVNOptions() = default;
 
@@ -318,10 +318,9 @@ private:
   bool processAssumeIntrinsic(AssumeInst *II);
 
   /// Given a local dependency (Def or Clobber) determine if a value is
-  /// available for the load.  Returns true if an value is known to be
-  /// available and populates Res.  Returns false otherwise.
-  bool AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
-                               Value *Address, gvn::AvailableValue &Res);
+  /// available for the load.
+  std::optional<gvn::AvailableValue>
+  AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo, Value *Address);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to

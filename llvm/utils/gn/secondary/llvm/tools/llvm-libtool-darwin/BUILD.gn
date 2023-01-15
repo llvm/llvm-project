@@ -23,6 +23,7 @@ executable("llvm-libtool-darwin") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "llvm-libtool-darwin.cpp" ]
 }

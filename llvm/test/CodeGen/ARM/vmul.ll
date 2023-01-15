@@ -609,7 +609,7 @@ define <2 x i64> @vmull_extvec_u32(<2 x i32> %arg) nounwind {
 }
 
 ; rdar://9197392
-define void @distribute(i16* %dst, i8* %src, i32 %mul) nounwind {
+define void @distribute(ptr %dst, ptr %src, i32 %mul) nounwind {
 ; CHECK-LABEL: distribute:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.8 {d16, d17}, [r1]
@@ -622,7 +622,7 @@ entry:
   %0 = trunc i32 %mul to i8
   %1 = insertelement <8 x i8> undef, i8 %0, i32 0
   %2 = shufflevector <8 x i8> %1, <8 x i8> undef, <8 x i32> zeroinitializer
-  %3 = tail call <16 x i8> @llvm.arm.neon.vld1.v16i8.p0i8(i8* %src, i32 1)
+  %3 = tail call <16 x i8> @llvm.arm.neon.vld1.v16i8.p0(ptr %src, i32 1)
   %4 = bitcast <16 x i8> %3 to <2 x double>
   %5 = extractelement <2 x double> %4, i32 1
   %6 = bitcast double %5 to <8 x i8>
@@ -633,20 +633,19 @@ entry:
   %11 = zext <8 x i8> %10 to <8 x i16>
   %12 = add <8 x i16> %7, %11
   %13 = mul <8 x i16> %12, %8
-  %14 = bitcast i16* %dst to i8*
-  tail call void @llvm.arm.neon.vst1.p0i8.v8i16(i8* %14, <8 x i16> %13, i32 2)
+  tail call void @llvm.arm.neon.vst1.p0.v8i16(ptr %dst, <8 x i16> %13, i32 2)
   ret void
 }
 
-declare <16 x i8> @llvm.arm.neon.vld1.v16i8.p0i8(i8*, i32) nounwind readonly
+declare <16 x i8> @llvm.arm.neon.vld1.v16i8.p0(ptr, i32) nounwind readonly
 
-declare void @llvm.arm.neon.vst1.p0i8.v8i16(i8*, <8 x i16>, i32) nounwind
+declare void @llvm.arm.neon.vst1.p0.v8i16(ptr, <8 x i16>, i32) nounwind
 
 ; Take advantage of the Cortex-A8 multiplier accumulator forward.
 
 %struct.uint8x8_t = type { <8 x i8> }
 
-define void @distribute2(%struct.uint8x8_t* nocapture %dst, i8* %src, i32 %mul) nounwind {
+define void @distribute2(ptr nocapture %dst, ptr %src, i32 %mul) nounwind {
 ; CHECK-LABEL: distribute2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.8 {d16, d17}, [r1]
@@ -659,7 +658,7 @@ entry:
   %0 = trunc i32 %mul to i8
   %1 = insertelement <8 x i8> undef, i8 %0, i32 0
   %2 = shufflevector <8 x i8> %1, <8 x i8> undef, <8 x i32> zeroinitializer
-  %3 = tail call <16 x i8> @llvm.arm.neon.vld1.v16i8.p0i8(i8* %src, i32 1)
+  %3 = tail call <16 x i8> @llvm.arm.neon.vld1.v16i8.p0(ptr %src, i32 1)
   %4 = bitcast <16 x i8> %3 to <2 x double>
   %5 = extractelement <2 x double> %4, i32 1
   %6 = bitcast double %5 to <8 x i8>
@@ -667,12 +666,11 @@ entry:
   %8 = bitcast double %7 to <8 x i8>
   %9 = add <8 x i8> %6, %8
   %10 = mul <8 x i8> %9, %2
-  %11 = getelementptr inbounds %struct.uint8x8_t, %struct.uint8x8_t* %dst, i32 0, i32 0
-  store <8 x i8> %10, <8 x i8>* %11, align 8
+  store <8 x i8> %10, ptr %dst, align 8
   ret void
 }
 
-define void @distribute2_commutative(%struct.uint8x8_t* nocapture %dst, i8* %src, i32 %mul) nounwind {
+define void @distribute2_commutative(ptr nocapture %dst, ptr %src, i32 %mul) nounwind {
 ; CHECK-LABEL: distribute2_commutative:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.8 {d16, d17}, [r1]
@@ -685,7 +683,7 @@ entry:
   %0 = trunc i32 %mul to i8
   %1 = insertelement <8 x i8> undef, i8 %0, i32 0
   %2 = shufflevector <8 x i8> %1, <8 x i8> undef, <8 x i32> zeroinitializer
-  %3 = tail call <16 x i8> @llvm.arm.neon.vld1.v16i8.p0i8(i8* %src, i32 1)
+  %3 = tail call <16 x i8> @llvm.arm.neon.vld1.v16i8.p0(ptr %src, i32 1)
   %4 = bitcast <16 x i8> %3 to <2 x double>
   %5 = extractelement <2 x double> %4, i32 1
   %6 = bitcast double %5 to <8 x i8>
@@ -693,8 +691,7 @@ entry:
   %8 = bitcast double %7 to <8 x i8>
   %9 = add <8 x i8> %6, %8
   %10 = mul <8 x i8> %2, %9
-  %11 = getelementptr inbounds %struct.uint8x8_t, %struct.uint8x8_t* %dst, i32 0, i32 0
-  store <8 x i8> %10, <8 x i8>* %11, align 8
+  store <8 x i8> %10, ptr %dst, align 8
   ret void
 }
 
@@ -749,8 +746,8 @@ for.body33.lr.ph:                                 ; preds = %for.body
 
 for.body33:                                       ; preds = %for.body33, %for.body33.lr.ph
   %add45 = add i32 undef, undef
-  %vld155 = tail call <16 x i8> @llvm.arm.neon.vld1.v16i8.p0i8(i8* undef, i32 1)
-  %0 = load i32*, i32** undef, align 4
+  %vld155 = tail call <16 x i8> @llvm.arm.neon.vld1.v16i8.p0(ptr undef, i32 1)
+  %0 = load ptr, ptr undef, align 4
   %shuffle.i250 = shufflevector <2 x i64> undef, <2 x i64> undef, <1 x i32> zeroinitializer
   %1 = bitcast <1 x i64> %shuffle.i250 to <8 x i8>
   %vmovl.i249 = zext <8 x i8> %1 to <8 x i16>
@@ -789,7 +786,7 @@ for.body33:                                       ; preds = %for.body33, %for.bo
   %4 = bitcast <8 x i8> %vqmovn1.i180 to <1 x i64>
   %shuffle.i = shufflevector <1 x i64> %4, <1 x i64> undef, <2 x i32> <i32 0, i32 1>
   %5 = bitcast <2 x i64> %shuffle.i to <16 x i8>
-  store <16 x i8> %5, <16 x i8>* undef, align 16
+  store <16 x i8> %5, ptr undef, align 16
   %add177 = add nsw i32 undef, 16
   br i1 undef, label %for.body33, label %for.cond.loopexit
 
@@ -808,28 +805,28 @@ define void @no_illegal_types_vmull_sext(<4 x i32> %a) {
 ; CHECK-LABEL: no_illegal_types_vmull_sext:
 ; CHECK:       @ %bb.0: @ %entry
 entry:
-  %wide.load283.i = load <4 x i8>, <4 x i8>* undef, align 1
+  %wide.load283.i = load <4 x i8>, ptr undef, align 1
   %0 = sext <4 x i8> %wide.load283.i to <4 x i32>
   %1 = sub nsw <4 x i32> %0, %a
   %2 = mul nsw <4 x i32> %1, %1
   %predphi290.v.i = select <4 x i1> undef, <4 x i32> undef, <4 x i32> %2
-  store <4 x i32> %predphi290.v.i, <4 x i32>* undef, align 4
+  store <4 x i32> %predphi290.v.i, ptr undef, align 4
   ret void
 }
 define void @no_illegal_types_vmull_zext(<4 x i32> %a) {
 ; CHECK-LABEL: no_illegal_types_vmull_zext:
 ; CHECK:       @ %bb.0: @ %entry
 entry:
-  %wide.load283.i = load <4 x i8>, <4 x i8>* undef, align 1
+  %wide.load283.i = load <4 x i8>, ptr undef, align 1
   %0 = zext <4 x i8> %wide.load283.i to <4 x i32>
   %1 = sub nsw <4 x i32> %0, %a
   %2 = mul nsw <4 x i32> %1, %1
   %predphi290.v.i = select <4 x i1> undef, <4 x i32> undef, <4 x i32> %2
-  store <4 x i32> %predphi290.v.i, <4 x i32>* undef, align 4
+  store <4 x i32> %predphi290.v.i, ptr undef, align 4
   ret void
 }
 
-define void @fmul_splat(<4 x float>* %A, <4 x float>* nocapture %dst, float %tmp) nounwind {
+define void @fmul_splat(ptr %A, ptr nocapture %dst, float %tmp) nounwind {
 ; Look for a scalar float rather than a splat, then a vector*scalar multiply.
 ; CHECK-LABEL: fmul_splat:
 ; CHECK:       @ %bb.0:
@@ -838,17 +835,17 @@ define void @fmul_splat(<4 x float>* %A, <4 x float>* nocapture %dst, float %tmp
 ; CHECK-NEXT:    vmul.f32 q8, q8, d0[0]
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r1]
 ; CHECK-NEXT:    bx lr
-  %tmp5 = load <4 x float>, <4 x float>* %A, align 4
+  %tmp5 = load <4 x float>, ptr %A, align 4
   %tmp6 = insertelement <4 x float> undef, float %tmp, i32 0
   %tmp7 = insertelement <4 x float> %tmp6, float %tmp, i32 1
   %tmp8 = insertelement <4 x float> %tmp7, float %tmp, i32 2
   %tmp9 = insertelement <4 x float> %tmp8, float %tmp, i32 3
   %tmp10 = fmul <4 x float> %tmp9, %tmp5
-  store <4 x float> %tmp10, <4 x float>* %dst, align 4
+  store <4 x float> %tmp10, ptr %dst, align 4
   ret void
 }
 
-define void @fmul_splat_load(<4 x float>* %A, <4 x float>* nocapture %dst, float* nocapture readonly %src) nounwind {
+define void @fmul_splat_load(ptr %A, ptr nocapture %dst, ptr nocapture readonly %src) nounwind {
 ; Look for doing a normal scalar FP load rather than an to-all-lanes load,
 ; then a vector*scalar multiply.
 ; FIXME: Temporarily broken due to splat representation changes.
@@ -859,13 +856,13 @@ define void @fmul_splat_load(<4 x float>* %A, <4 x float>* nocapture %dst, float
 ; CHECK-NEXT:    vmul.f32 q8, q9, q8
 ; CHECK-NEXT:    vst1.32 {d16, d17}, [r1]
 ; CHECK-NEXT:    bx lr
-  %tmp = load float, float* %src, align 4
-  %tmp5 = load <4 x float>, <4 x float>* %A, align 4
+  %tmp = load float, ptr %src, align 4
+  %tmp5 = load <4 x float>, ptr %A, align 4
   %tmp6 = insertelement <4 x float> undef, float %tmp, i32 0
   %tmp7 = insertelement <4 x float> %tmp6, float %tmp, i32 1
   %tmp8 = insertelement <4 x float> %tmp7, float %tmp, i32 2
   %tmp9 = insertelement <4 x float> %tmp8, float %tmp, i32 3
   %tmp10 = fmul <4 x float> %tmp9, %tmp5
-  store <4 x float> %tmp10, <4 x float>* %dst, align 4
+  store <4 x float> %tmp10, ptr %dst, align 4
   ret void
 }

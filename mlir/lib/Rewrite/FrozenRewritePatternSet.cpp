@@ -100,7 +100,7 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(
         continue;
     }
 
-    if (Optional<OperationName> rootName = pat->getRootKind()) {
+    if (std::optional<OperationName> rootName = pat->getRootKind()) {
       impl->nativeOpSpecificPatternMap[*rootName].push_back(pat.get());
       impl->nativeOpSpecificPatternList.push_back(std::move(pat));
       continue;

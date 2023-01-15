@@ -197,6 +197,28 @@ def Math_Atan2Op : Math_FloatBinaryOp<"atan2">{
 }
 
 //===----------------------------------------------------------------------===//
+// CbrtOp
+//===----------------------------------------------------------------------===//
+
+def Math_CbrtOp : Math_FloatUnaryOp<"cbrt"> {
+  let summary = "cube root of the specified value";
+  let description = [{
+    The `cbrt` operation computes the cube root. It takes one operand of
+    floating point type (i.e., scalar, tensor or vector) and returns one result
+    of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar cube root value.
+    %a = math.cbrt %b : f64
+    ```
+
+    Note: This op is not equivalent to powf(..., 1/3.0).
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CeilOp
 //===----------------------------------------------------------------------===//
 
@@ -857,7 +879,8 @@ def Math_TruncOp : Math_FloatUnaryOp<"trunc"> {
 //===----------------------------------------------------------------------===//
 
 def Math_FPowIOp : Math_Op<"fpowi",
-    [SameOperandsAndResultShape, AllTypesMatch<["lhs", "result"]>]> {
+    [SameOperandsAndResultShape, AllTypesMatch<["lhs", "result"]>,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "floating point raised to the signed integer power";
   let description = [{
     Syntax:
@@ -890,9 +913,12 @@ def Math_FPowIOp : Math_Op<"fpowi",
     ```
   }];
 
-  let arguments = (ins FloatLike:$lhs, SignlessIntegerLike:$rhs);
+  let arguments = (ins FloatLike:$lhs, SignlessIntegerLike:$rhs,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs FloatLike:$result);
-  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs)";
+  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($lhs) `,` type($rhs) }];
 
   // TODO: add a constant folder using pow[f] for cases, when
   //       the power argument is exactly representable in floating

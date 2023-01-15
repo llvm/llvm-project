@@ -50,7 +50,7 @@
 %struct.B = type { i32 }
 %struct.A = type { i8 }
 
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_ctor, ptr null }]
 @__asan_option_detect_stack_use_after_return = external global i32
 @___asan_gen_ = private unnamed_addr constant [11 x i8] c"1 32 8 1 A\00", align 1
 @___asan_gen_1 = private unnamed_addr constant [13 x i8] c"1 32 1 3 tmp\00", align 1
@@ -59,8 +59,8 @@
 define i32 @_Z3fn1v() #0 !dbg !22 {
 entry:
   %MyAlloca = alloca [64 x i8], align 32, !dbg !39
-  %0 = ptrtoint [64 x i8]* %MyAlloca to i64, !dbg !39
-  %1 = load i32, i32* @__asan_option_detect_stack_use_after_return, !dbg !39
+  %0 = ptrtoint ptr %MyAlloca to i64, !dbg !39
+  %1 = load i32, ptr @__asan_option_detect_stack_use_after_return, !dbg !39
   %2 = icmp ne i32 %1, 0, !dbg !39
   br i1 %2, label %3, label %5
 
@@ -71,26 +71,26 @@ entry:
 ; <label>:5                                       ; preds = %entry, %3
   %6 = phi i64 [ %0, %entry ], [ %4, %3 ], !dbg !39
   %7 = add i64 %6, 32, !dbg !39
-  %8 = inttoptr i64 %7 to %struct.C*, !dbg !39
-  %9 = inttoptr i64 %6 to i64*, !dbg !39
-  store i64 1102416563, i64* %9, !dbg !39
+  %8 = inttoptr i64 %7 to ptr, !dbg !39
+  %9 = inttoptr i64 %6 to ptr, !dbg !39
+  store i64 1102416563, ptr %9, !dbg !39
   %10 = add i64 %6, 8, !dbg !39
-  %11 = inttoptr i64 %10 to i64*, !dbg !39
-  store i64 ptrtoint ([11 x i8]* @___asan_gen_ to i64), i64* %11, !dbg !39
+  %11 = inttoptr i64 %10 to ptr, !dbg !39
+  store i64 ptrtoint (ptr @___asan_gen_ to i64), ptr %11, !dbg !39
   %12 = add i64 %6, 16, !dbg !39
-  %13 = inttoptr i64 %12 to i64*, !dbg !39
-  store i64 ptrtoint (i32 ()* @_Z3fn1v to i64), i64* %13, !dbg !39
+  %13 = inttoptr i64 %12 to ptr, !dbg !39
+  store i64 ptrtoint (ptr @_Z3fn1v to i64), ptr %13, !dbg !39
   %14 = lshr i64 %6, 3, !dbg !39
   %15 = add i64 %14, 2147450880, !dbg !39
   %16 = add i64 %15, 0, !dbg !39
-  %17 = inttoptr i64 %16 to i64*, !dbg !39
-  store i64 -868083117767659023, i64* %17, !dbg !39
-  %i.i = getelementptr inbounds %struct.C, %struct.C* %8, i64 0, i32 1, i32 0, !dbg !39
-  %18 = ptrtoint i32* %i.i to i64, !dbg !39
+  %17 = inttoptr i64 %16 to ptr, !dbg !39
+  store i64 -868083117767659023, ptr %17, !dbg !39
+  %i.i = getelementptr inbounds %struct.C, ptr %8, i64 0, i32 1, i32 0, !dbg !39
+  %18 = ptrtoint ptr %i.i to i64, !dbg !39
   %19 = lshr i64 %18, 3, !dbg !39
   %20 = add i64 %19, 2147450880, !dbg !39
-  %21 = inttoptr i64 %20 to i8*, !dbg !39
-  %22 = load i8, i8* %21, !dbg !39
+  %21 = inttoptr i64 %20 to ptr, !dbg !39
+  %22 = load i8, ptr %21, !dbg !39
   %23 = icmp ne i8 %22, 0, !dbg !39
   br i1 %23, label %24, label %30, !dbg !39
 
@@ -107,18 +107,18 @@ entry:
   unreachable
 
 ; <label>:30                                      ; preds = %24, %5
-  store i32 0, i32* %i.i, align 4, !dbg !39, !tbaa !41
-  tail call void @llvm.dbg.value(metadata %struct.C* %8, metadata !27, metadata !DIExpression(DW_OP_deref)), !dbg !46
-  call void @_ZN1C5m_fn3Ev(%struct.C* %8), !dbg !47
+  store i32 0, ptr %i.i, align 4, !dbg !39, !tbaa !41
+  tail call void @llvm.dbg.value(metadata ptr %8, metadata !27, metadata !DIExpression(DW_OP_deref)), !dbg !46
+  call void @_ZN1C5m_fn3Ev(ptr %8), !dbg !47
   unreachable, !dbg !47
 }
 
 ; Function Attrs: sanitize_address
-define void @_ZN1C5m_fn3Ev(%struct.C* nocapture %this) #1 align 2 !dbg !28 {
+define void @_ZN1C5m_fn3Ev(ptr nocapture %this) #1 align 2 !dbg !28 {
 entry:
   %MyAlloca = alloca [64 x i8], align 32, !dbg !48
-  %0 = ptrtoint [64 x i8]* %MyAlloca to i64, !dbg !48
-  %1 = load i32, i32* @__asan_option_detect_stack_use_after_return, !dbg !48
+  %0 = ptrtoint ptr %MyAlloca to i64, !dbg !48
+  %1 = load i32, ptr @__asan_option_detect_stack_use_after_return, !dbg !48
   %2 = icmp ne i32 %1, 0, !dbg !48
   br i1 %2, label %3, label %5
 
@@ -129,28 +129,28 @@ entry:
 ; <label>:5                                       ; preds = %entry, %3
   %6 = phi i64 [ %0, %entry ], [ %4, %3 ], !dbg !48
   %7 = add i64 %6, 32, !dbg !48
-  %8 = inttoptr i64 %7 to %struct.A*, !dbg !48
-  %9 = inttoptr i64 %6 to i64*, !dbg !48
-  store i64 1102416563, i64* %9, !dbg !48
+  %8 = inttoptr i64 %7 to ptr, !dbg !48
+  %9 = inttoptr i64 %6 to ptr, !dbg !48
+  store i64 1102416563, ptr %9, !dbg !48
   %10 = add i64 %6, 8, !dbg !48
-  %11 = inttoptr i64 %10 to i64*, !dbg !48
-  store i64 ptrtoint ([13 x i8]* @___asan_gen_1 to i64), i64* %11, !dbg !48
+  %11 = inttoptr i64 %10 to ptr, !dbg !48
+  store i64 ptrtoint (ptr @___asan_gen_1 to i64), ptr %11, !dbg !48
   %12 = add i64 %6, 16, !dbg !48
-  %13 = inttoptr i64 %12 to i64*, !dbg !48
-  store i64 ptrtoint (void (%struct.C*)* @_ZN1C5m_fn3Ev to i64), i64* %13, !dbg !48
+  %13 = inttoptr i64 %12 to ptr, !dbg !48
+  store i64 ptrtoint (ptr @_ZN1C5m_fn3Ev to i64), ptr %13, !dbg !48
   %14 = lshr i64 %6, 3, !dbg !48
   %15 = add i64 %14, 2147450880, !dbg !48
   %16 = add i64 %15, 0, !dbg !48
-  %17 = inttoptr i64 %16 to i64*, !dbg !48
-  store i64 -868083113472691727, i64* %17, !dbg !48
-  tail call void @llvm.dbg.value(metadata %struct.C* %this, metadata !30, metadata !DIExpression()), !dbg !48
-  %call = call i32 @_ZN1A5m_fn1Ev(%struct.A* %8), !dbg !49
-  %i.i = getelementptr inbounds %struct.C, %struct.C* %this, i64 0, i32 1, i32 0, !dbg !50
-  %18 = ptrtoint i32* %i.i to i64, !dbg !50
+  %17 = inttoptr i64 %16 to ptr, !dbg !48
+  store i64 -868083113472691727, ptr %17, !dbg !48
+  tail call void @llvm.dbg.value(metadata ptr %this, metadata !30, metadata !DIExpression()), !dbg !48
+  %call = call i32 @_ZN1A5m_fn1Ev(ptr %8), !dbg !49
+  %i.i = getelementptr inbounds %struct.C, ptr %this, i64 0, i32 1, i32 0, !dbg !50
+  %18 = ptrtoint ptr %i.i to i64, !dbg !50
   %19 = lshr i64 %18, 3, !dbg !50
   %20 = add i64 %19, 2147450880, !dbg !50
-  %21 = inttoptr i64 %20 to i8*, !dbg !50
-  %22 = load i8, i8* %21, !dbg !50
+  %21 = inttoptr i64 %20 to ptr, !dbg !50
+  %22 = load i8, ptr %21, !dbg !50
   %23 = icmp ne i8 %22, 0, !dbg !50
   br i1 %23, label %24, label %30, !dbg !50
 
@@ -167,33 +167,33 @@ entry:
   unreachable
 
 ; <label>:30                                      ; preds = %24, %5
-  store i32 0, i32* %i.i, align 4, !dbg !50, !tbaa !41
-  store i64 1172321806, i64* %9, !dbg !52
+  store i32 0, ptr %i.i, align 4, !dbg !50, !tbaa !41
+  store i64 1172321806, ptr %9, !dbg !52
   %31 = icmp ne i64 %6, %0, !dbg !52
   br i1 %31, label %32, label %39, !dbg !52
 
 ; <label>:32                                      ; preds = %30
   %33 = add i64 %15, 0, !dbg !52
-  %34 = inttoptr i64 %33 to i64*, !dbg !52
-  store i64 -723401728380766731, i64* %34, !dbg !52
+  %34 = inttoptr i64 %33 to ptr, !dbg !52
+  store i64 -723401728380766731, ptr %34, !dbg !52
   %35 = add i64 %6, 56, !dbg !52
-  %36 = inttoptr i64 %35 to i64*, !dbg !52
-  %37 = load i64, i64* %36, !dbg !52
-  %38 = inttoptr i64 %37 to i8*, !dbg !52
-  store i8 0, i8* %38, !dbg !52
+  %36 = inttoptr i64 %35 to ptr, !dbg !52
+  %37 = load i64, ptr %36, !dbg !52
+  %38 = inttoptr i64 %37 to ptr, !dbg !52
+  store i8 0, ptr %38, !dbg !52
   br label %42, !dbg !52
 
 ; <label>:39                                      ; preds = %30
   %40 = add i64 %15, 0, !dbg !52
-  %41 = inttoptr i64 %40 to i64*, !dbg !52
-  store i64 0, i64* %41, !dbg !52
+  %41 = inttoptr i64 %40 to ptr, !dbg !52
+  store i64 0, ptr %41, !dbg !52
   br label %42, !dbg !52
 
 ; <label>:42                                      ; preds = %39, %32
   ret void, !dbg !52
 }
 
-declare i32 @_ZN1A5m_fn1Ev(%struct.A*) #2
+declare i32 @_ZN1A5m_fn1Ev(ptr) #2
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3
@@ -253,11 +253,11 @@ declare void @__asan_loadN(i64, i64)
 
 declare void @__asan_storeN(i64, i64)
 
-declare i8* @__asan_memmove(i8*, i8*, i64)
+declare ptr @__asan_memmove(ptr, ptr, i64)
 
-declare i8* @__asan_memcpy(i8*, i8*, i64)
+declare ptr @__asan_memcpy(ptr, ptr, i64)
 
-declare i8* @__asan_memset(i8*, i32, i64)
+declare ptr @__asan_memset(ptr, i32, i64)
 
 declare void @__asan_handle_no_return()
 

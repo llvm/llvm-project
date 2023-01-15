@@ -51,7 +51,6 @@ barrier type_traits
 bit cstdint
 bit cstdlib
 bit limits
-bit type_traits
 bit version
 bitset climits
 bitset cstddef
@@ -100,7 +99,6 @@ chrono tuple
 chrono type_traits
 chrono version
 cinttypes cstdint
-cmath type_traits
 cmath version
 codecvt cctype
 codecvt cstddef
@@ -113,7 +111,6 @@ compare cmath
 compare cstddef
 compare cstdint
 compare limits
-compare type_traits
 compare version
 complex cmath
 complex iosfwd
@@ -122,7 +119,6 @@ complex stdexcept
 complex type_traits
 complex version
 concepts cstddef
-concepts type_traits
 concepts version
 condition_variable atomic
 condition_variable cstddef
@@ -136,7 +132,6 @@ condition_variable new
 condition_variable ratio
 condition_variable stdexcept
 condition_variable system_error
-condition_variable type_traits
 condition_variable typeinfo
 condition_variable version
 coroutine compare
@@ -165,9 +160,14 @@ deque type_traits
 deque version
 exception cstddef
 exception cstdlib
-exception type_traits
 exception version
 execution version
+expected cstddef
+expected cstdlib
+expected exception
+expected initializer_list
+expected new
+expected version
 experimental/algorithm algorithm
 experimental/algorithm cstddef
 experimental/algorithm type_traits
@@ -190,7 +190,6 @@ experimental/functional vector
 experimental/iterator cstddef
 experimental/iterator iosfwd
 experimental/iterator iterator
-experimental/iterator type_traits
 experimental/list experimental/memory_resource
 experimental/list list
 experimental/map experimental/memory_resource
@@ -305,7 +304,6 @@ fstream istream
 fstream mutex
 fstream ostream
 fstream string
-fstream type_traits
 fstream typeinfo
 fstream version
 functional array
@@ -359,7 +357,6 @@ iostream version
 istream cstddef
 istream iosfwd
 istream ostream
-istream type_traits
 istream version
 iterator compare
 iterator concepts
@@ -368,13 +365,11 @@ iterator cstdlib
 iterator initializer_list
 iterator iosfwd
 iterator limits
-iterator type_traits
 iterator variant
 iterator version
 latch atomic
 latch limits
 latch version
-limits type_traits
 limits version
 list compare
 list cstddef
@@ -403,7 +398,6 @@ locale mutex
 locale new
 locale streambuf
 locale string
-locale type_traits
 locale version
 map compare
 map cstddef
@@ -428,7 +422,6 @@ memory limits
 memory new
 memory stdexcept
 memory tuple
-memory type_traits
 memory typeinfo
 memory version
 memory_resource cstddef
@@ -438,7 +431,6 @@ memory_resource mutex
 memory_resource new
 memory_resource stdexcept
 memory_resource tuple
-memory_resource type_traits
 memory_resource version
 mutex atomic
 mutex cstddef
@@ -453,13 +445,11 @@ mutex ratio
 mutex stdexcept
 mutex system_error
 mutex tuple
-mutex type_traits
 mutex typeinfo
 mutex version
 new cstddef
 new cstdlib
 new exception
-new type_traits
 new version
 numbers type_traits
 numbers version
@@ -492,7 +482,6 @@ ostream locale
 ostream new
 ostream stdexcept
 ostream streambuf
-ostream type_traits
 ostream typeinfo
 ostream version
 queue compare
@@ -554,7 +543,6 @@ scoped_allocator cstddef
 scoped_allocator limits
 scoped_allocator new
 scoped_allocator tuple
-scoped_allocator type_traits
 scoped_allocator version
 semaphore atomic
 semaphore ctime
@@ -581,6 +569,8 @@ shared_mutex ratio
 shared_mutex system_error
 shared_mutex type_traits
 shared_mutex version
+source_location cstdint
+source_location version
 span array
 span cstddef
 span initializer_list
@@ -591,7 +581,6 @@ sstream cstddef
 sstream istream
 sstream ostream
 sstream string
-sstream type_traits
 sstream version
 stack compare
 stack cstddef
@@ -664,7 +653,6 @@ thread type_traits
 thread version
 tuple compare
 tuple cstddef
-tuple type_traits
 tuple version
 type_traits cstddef
 type_traits cstdint
@@ -707,10 +695,8 @@ unordered_set type_traits
 unordered_set version
 utility compare
 utility cstddef
-utility cstdlib
 utility initializer_list
 utility limits
-utility type_traits
 utility version
 valarray cmath
 valarray cstddef
@@ -731,7 +717,6 @@ variant initializer_list
 variant limits
 variant new
 variant tuple
-variant type_traits
 variant version
 vector climits
 vector compare

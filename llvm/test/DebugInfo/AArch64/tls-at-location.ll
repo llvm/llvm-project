@@ -9,7 +9,7 @@
 ; Function Attrs: noinline nounwind optnone
 define i32 @foo() #0 !dbg !11 {
 entry:
-  %0 = load i32, i32* @var, align 4, !dbg !14
+  %0 = load i32, ptr @var, align 4, !dbg !14
   ret i32 %0, !dbg !15
 }
 

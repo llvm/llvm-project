@@ -483,15 +483,15 @@ class fir_SwitchTerminatorOp<string mnemonic, list<Trait> traits = []> :
     // The number of blocks that may be branched to
     unsigned getNumDest() { return (*this)->getNumSuccessors(); }
 
-    llvm::Optional<mlir::OperandRange> getCompareOperands(unsigned cond);
-    llvm::Optional<llvm::ArrayRef<mlir::Value>> getCompareOperands(
+    std::optional<mlir::OperandRange> getCompareOperands(unsigned cond);
+    std::optional<llvm::ArrayRef<mlir::Value>> getCompareOperands(
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);
-    llvm::Optional<mlir::ValueRange> getCompareOperands(
+    std::optional<mlir::ValueRange> getCompareOperands(
         mlir::ValueRange operands, unsigned cond);
 
-    llvm::Optional<llvm::ArrayRef<mlir::Value>> getSuccessorOperands(
+    std::optional<llvm::ArrayRef<mlir::Value>> getSuccessorOperands(
         llvm::ArrayRef<mlir::Value> operands, unsigned cond);
-    llvm::Optional<mlir::ValueRange> getSuccessorOperands(
+    std::optional<mlir::ValueRange> getSuccessorOperands(
         mlir::ValueRange operands, unsigned cond);
 
     // Helper function to deal with Optional operand forms
@@ -763,7 +763,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
     Optional<AnyShapeType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_TypeDescType>:$tdesc,
+    Optional<fir_ClassType>:$sourceBox,
     OptionalAttr<AffineMapAttr>:$accessMap
   );
 
@@ -774,14 +774,14 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
       "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
       CArg<"mlir::Value", "{}">:$slice,
       CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"mlir::Value", "{}">:$tdesc),
+      CArg<"mlir::Value", "{}">:$sourceBox),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    typeparams, tdesc, mlir::AffineMapAttr{}); }]>
+                    typeparams, sourceBox, mlir::AffineMapAttr{}); }]>
   ];
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
-      (`tdesc` $tdesc^)? (`map` $accessMap^)? attr-dict `:`
+      (`source_box` $sourceBox^)? (`map` $accessMap^)? attr-dict `:`
       functional-type(operands, results)
   }];
 
@@ -790,7 +790,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
   let extraClassDeclaration = [{
     bool hasLenParams() { return !getTypeparams().empty(); }
     unsigned numLenParams() { return getTypeparams().size(); }
-    unsigned getTdescOffset() {
+    unsigned getSourceBoxOffset() {
       return 1 + (getShape() ? 1 : 0) + (getSlice() ? 1 : 0)
           + numLenParams();
     }
@@ -1029,6 +1029,9 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoMemoryEffect]> {
 
   let extraClassDeclaration = [{
     mlir::Type getTupleType();
+    mlir::Value getLowerBound() {return getResult(0);};
+    mlir::Value getExtent() {return getResult(1);};
+    mlir::Value getByteStride() {return getResult(2);};
   }];
 }
 
@@ -1048,7 +1051,7 @@ def fir_BoxEleSizeOp : fir_SimpleOneResultOp<"box_elesize", [NoMemoryEffect]> {
     must box an array of REAL values (with dynamic rank and extent).
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxOrClassType:$val);
 
   let results = (outs AnyIntegerLike);
 }
@@ -1773,6 +1776,8 @@ def fir_ShapeOp : fir_Op<"shape", [NoMemoryEffect]> {
   }];
 
   let hasVerifier = 1;
+
+  let builders = [OpBuilder<(ins "mlir::ValueRange":$extents)>];
 }
 
 def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoMemoryEffect]> {
@@ -2421,16 +2426,16 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoMemoryEffect]> {
   let builders = [
     OpBuilder<(ins "fir::CharacterType":$inType,
       "llvm::StringRef":$value,
-      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+      CArg<"std::optional<int64_t>", "{}">:$len)>,
     OpBuilder<(ins "fir::CharacterType":$inType,
       "llvm::ArrayRef<char>":$xlist,
-      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+      CArg<"std::optional<int64_t>", "{}">:$len)>,
     OpBuilder<(ins "fir::CharacterType":$inType,
       "llvm::ArrayRef<char16_t>":$xlist,
-      CArg<"llvm::Optional<int64_t>", "{}">:$len)>,
+      CArg<"std::optional<int64_t>", "{}">:$len)>,
     OpBuilder<(ins "fir::CharacterType":$inType,
       "llvm::ArrayRef<char32_t>":$xlist,
-      CArg<"llvm::Optional<int64_t>", "{}">:$len)>];
+      CArg<"std::optional<int64_t>", "{}">:$len)>];
 
   let extraClassDeclaration = [{
     static constexpr const char *size() { return "size"; }

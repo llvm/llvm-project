@@ -14,12 +14,12 @@ entry:
 for.cond64.preheader.i:
   %i.1984.i = phi i32 [ 0, %entry ], [ %inc166.i.1, %for.cond64.preheader.i ]
   %inc166.i = add nsw i32 %i.1984.i, 1
-  %arrayidx71.i1422.1 = getelementptr inbounds %struct.A, %struct.A* undef, i32 0, i32 7, i32 %inc166.i
+  %arrayidx71.i1422.1 = getelementptr inbounds %struct.A, ptr undef, i32 0, i32 7, i32 %inc166.i
   %storemerge800.i.1 = select i1 undef, i32 1310, i32 undef
   %sub156.i.1 = sub nsw i32 0, %storemerge800.i.1
   %sub156.storemerge800.i.1 = select i1 undef, i32 %storemerge800.i.1, i32 %sub156.i.1
-  store i32 %sub156.storemerge800.i.1, i32* %arrayidx71.i1422.1, align 4
-  store i32 0, i32* undef, align 4
+  store i32 %sub156.storemerge800.i.1, ptr %arrayidx71.i1422.1, align 4
+  store i32 0, ptr undef, align 4
   %inc166.i.1 = add nsw i32 %i.1984.i, 2
   br label %for.cond64.preheader.i
 

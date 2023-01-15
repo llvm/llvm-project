@@ -9,8 +9,8 @@ target datalayout = "e-m:e-p:16:16-p1:32:16-i32:16-i64:16-n8:16"
 define void @foo() {
 ; CHECK-LABEL: @foo
 entry:
-  %arrayidx.i1 = getelementptr inbounds i16, i16* undef, i16 undef
-  %arrayidx.i = addrspacecast i16* %arrayidx.i1 to i16 addrspace(1)*
+  %arrayidx.i1 = getelementptr inbounds i16, ptr undef, i16 undef
+  %arrayidx.i = addrspacecast ptr %arrayidx.i1 to ptr addrspace(1)
   br i1 undef, label %for.body.i, label %bar.exit
 
 for.body.i:                                       ; preds = %for.body.i, %entry
@@ -18,8 +18,8 @@ for.body.i:                                       ; preds = %for.body.i, %entry
 ; will try to find the base object to prove deferenceability.  If we look
 ; through the addrspacecast, we'll fail an assertion about bitwidths matching
 ; CHECK-LABEL: for.body.i
-; CHECK:   %0 = load i16, i16 addrspace(1)* %arrayidx.i, align 2
-  %0 = load i16, i16 addrspace(1)* %arrayidx.i, align 2
+; CHECK:   %0 = load i16, ptr addrspace(1) %arrayidx.i, align 2
+  %0 = load i16, ptr addrspace(1) %arrayidx.i, align 2
   %cmp1.i = icmp eq i16 %0, 0
   br i1 %cmp1.i, label %bar.exit, label %for.body.i
 

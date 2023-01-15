@@ -46,6 +46,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <optional>
 #include <utility>
 
@@ -59,10 +60,12 @@ STATISTIC(NumAddrTaken, "Number of local variables that have their address"
 
 static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
                                           cl::init(true), cl::Hidden);
+static cl::opt<bool> DisableCheckNoReturn("disable-check-noreturn-call",
+                                          cl::init(false), cl::Hidden);
 
 char StackProtector::ID = 0;
 
-StackProtector::StackProtector() : FunctionPass(ID), SSPBufferSize(8) {
+StackProtector::StackProtector() : FunctionPass(ID) {
   initializeStackProtectorPass(*PassRegistry::getPassRegistry());
 }
 
@@ -83,20 +86,16 @@ void StackProtector::getAnalysisUsage(AnalysisUsage &AU) const {
 bool StackProtector::runOnFunction(Function &Fn) {
   F = &Fn;
   M = F->getParent();
-  DominatorTreeWrapperPass *DTWP =
-      getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+    DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
   TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   Trip = TM->getTargetTriple();
   TLI = TM->getSubtargetImpl(Fn)->getTargetLowering();
   HasPrologue = false;
   HasIRCheck = false;
 
-  Attribute Attr = Fn.getFnAttribute("stack-protector-buffer-size");
-  if (Attr.isStringAttribute() &&
-      Attr.getValueAsString().getAsInteger(10, SSPBufferSize))
-    return false; // Invalid integer string
-
+  SSPBufferSize = Fn.getFnAttributeAsParsedInteger(
+      "stack-protector-buffer-size", DefaultSSPBufferSize);
   if (!RequiresStackProtector())
     return false;
 
@@ -109,7 +108,14 @@ bool StackProtector::runOnFunction(Function &Fn) {
   }
 
   ++NumFunProtected;
-  return InsertStackProtectors();
+  bool Changed = InsertStackProtectors();
+#ifdef EXPENSIVE_CHECKS
+  assert((!DTU ||
+          DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full)) &&
+         "Failed to maintain validity of domtree!");
+#endif
+  DTU.reset();
+  return Changed;
 }
 
 /// \param [out] IsLarge is set to true if a protectable array is found and
@@ -415,11 +421,11 @@ static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
 ///
 /// Returns true if the platform/triple supports the stackprotectorcreate pseudo
 /// node.
-static bool CreatePrologue(Function *F, Module *M, ReturnInst *RI,
+static bool CreatePrologue(Function *F, Module *M, Instruction *CheckLoc,
                            const TargetLoweringBase *TLI, AllocaInst *&AI) {
   bool SupportsSelectionDAGSP = false;
   IRBuilder<> B(&F->getEntryBlock().front());
-  PointerType *PtrTy = Type::getInt8PtrTy(RI->getContext());
+  PointerType *PtrTy = Type::getInt8PtrTy(CheckLoc->getContext());
   AI = B.CreateAlloca(PtrTy, nullptr, "StackGuardSlot");
 
   Value *GuardSlot = getStackGuard(TLI, M, B, &SupportsSelectionDAGSP);
@@ -442,16 +448,33 @@ bool StackProtector::InsertStackProtectors() {
       TLI->useStackGuardXorFP() ||
       (EnableSelectionDAGSP && !TM->Options.EnableFastISel);
   AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
+  BasicBlock *FailBB = nullptr;
 
   for (BasicBlock &BB : llvm::make_early_inc_range(*F)) {
-    ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!RI)
+    // This is stack protector auto generated check BB, skip it.
+    if (&BB == FailBB)
+      continue;
+    Instruction *CheckLoc = dyn_cast<ReturnInst>(BB.getTerminator());
+    if (!CheckLoc && !DisableCheckNoReturn) {
+      for (auto &Inst : BB) {
+        auto *CB = dyn_cast<CallBase>(&Inst);
+        if (!CB)
+          continue;
+        if (!CB->doesNotReturn())
+          continue;
+        // Do stack check before non-return calls (e.g: __cxa_throw)
+        CheckLoc = CB;
+        break;
+      }
+    }
+
+    if (!CheckLoc)
       continue;
 
     // Generate prologue instrumentation if not already generated.
     if (!HasPrologue) {
       HasPrologue = true;
-      SupportsSelectionDAGSP &= CreatePrologue(F, M, RI, TLI, AI);
+      SupportsSelectionDAGSP &= CreatePrologue(F, M, CheckLoc, TLI, AI);
     }
 
     // SelectionDAG based code generation. Nothing else needs to be done here.
@@ -477,8 +500,7 @@ bool StackProtector::InsertStackProtectors() {
     // verifier guarantees that a tail call is either directly before the
     // return or with a single correct bitcast of the return value in between so
     // we don't need to worry about many situations here.
-    Instruction *CheckLoc = RI;
-    Instruction *Prev = RI->getPrevNonDebugInstruction();
+    Instruction *Prev = CheckLoc->getPrevNonDebugInstruction();
     if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isTailCall())
       CheckLoc = Prev;
     else if (Prev) {
@@ -515,8 +537,8 @@ bool StackProtector::InsertStackProtectors() {
       //     ...
       //     %1 = <stack guard>
       //     %2 = load StackGuardSlot
-      //     %3 = cmp i1 %1, %2
-      //     br i1 %3, label %SP_return, label %CallStackCheckFailBlk
+      //     %3 = icmp ne i1 %1, %2
+      //     br i1 %3, label %CallStackCheckFailBlk, label %SP_return
       //
       //   SP_return:
       //     ret ...
@@ -528,38 +550,33 @@ bool StackProtector::InsertStackProtectors() {
       // Create the FailBB. We duplicate the BB every time since the MI tail
       // merge pass will merge together all of the various BB into one including
       // fail BB generated by the stack protector pseudo instruction.
-      BasicBlock *FailBB = CreateFailBB();
+      if (!FailBB)
+        FailBB = CreateFailBB();
 
-      // Split the basic block before the return instruction.
-      BasicBlock *NewBB =
-          BB.splitBasicBlock(CheckLoc->getIterator(), "SP_return");
-
-      // Update the dominator tree if we need to.
-      if (DT && DT->isReachableFromEntry(&BB)) {
-        DT->addNewBlock(NewBB, &BB);
-        DT->addNewBlock(FailBB, &BB);
-      }
-
-      // Remove default branch instruction to the new BB.
-      BB.getTerminator()->eraseFromParent();
-
-      // Move the newly created basic block to the point right after the old
-      // basic block so that it's in the "fall through" position.
-      NewBB->moveAfter(&BB);
-
-      // Generate the stack protector instructions in the old basic block.
-      IRBuilder<> B(&BB);
+      IRBuilder<> B(CheckLoc);
       Value *Guard = getStackGuard(TLI, M, B);
       LoadInst *LI2 = B.CreateLoad(B.getInt8PtrTy(), AI, true);
-      Value *Cmp = B.CreateICmpEQ(Guard, LI2);
+      auto *Cmp = cast<ICmpInst>(B.CreateICmpNE(Guard, LI2));
       auto SuccessProb =
           BranchProbabilityInfo::getBranchProbStackProtector(true);
       auto FailureProb =
           BranchProbabilityInfo::getBranchProbStackProtector(false);
       MDNode *Weights = MDBuilder(F->getContext())
-                            .createBranchWeights(SuccessProb.getNumerator(),
-                                                 FailureProb.getNumerator());
-      B.CreateCondBr(Cmp, NewBB, FailBB, Weights);
+                            .createBranchWeights(FailureProb.getNumerator(),
+                                                 SuccessProb.getNumerator());
+
+      SplitBlockAndInsertIfThen(Cmp, CheckLoc,
+                                /*Unreachable=*/false, Weights,
+                                DTU ? &*DTU : nullptr,
+                                /*LI=*/nullptr, /*ThenBlock=*/FailBB);
+
+      auto *BI = cast<BranchInst>(Cmp->getParent()->getTerminator());
+      BasicBlock *NewBB = BI->getSuccessor(1);
+      NewBB->setName("SP_return");
+      NewBB->moveAfter(&BB);
+
+      Cmp->setPredicate(Cmp->getInversePredicate());
+      BI->swapSuccessors();
     }
   }
 

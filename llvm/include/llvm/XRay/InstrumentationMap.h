@@ -90,10 +90,10 @@ public:
   const FunctionAddressMap &getFunctionAddresses() { return FunctionAddresses; }
 
   /// Returns an XRay computed function id, provided a function address.
-  Optional<int32_t> getFunctionId(uint64_t Addr) const;
+  std::optional<int32_t> getFunctionId(uint64_t Addr) const;
 
   /// Returns the function address for a function id.
-  Optional<uint64_t> getFunctionAddr(int32_t FuncId) const;
+  std::optional<uint64_t> getFunctionAddr(int32_t FuncId) const;
 
   /// Provide read-only access to the entries of the instrumentation map.
   const SledContainer &sleds() const { return Sleds; };

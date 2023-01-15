@@ -139,9 +139,9 @@ define i32 @logical_or_3ops_duplicate(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    %cond_p4 = select i1 %cond_p0, i1 true, i1 %cond_p1
 ; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond_p5 = select i1 %cond_p4, i1 true, i1 %cond_p2
-; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1) umin_seq (true + %cond_p2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq ((true + %cond_p1) umin (true + %cond_p2)))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond = select i1 %cond_p5, i1 true, i1 %cond_p3
-; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq (true + %cond_p1) umin_seq (true + %cond_p2) umin_seq (true + %cond_p3))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (true + ((true + %cond_p0) umin_seq ((true + %cond_p1) umin (true + %cond_p2)) umin_seq (true + %cond_p3))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_duplicate
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m umin_seq %k)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
@@ -432,7 +432,7 @@ define i32 @logical_and_2ops_and_constant(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 42)
 ; CHECK-NEXT:    --> (42 umin %n) U: [0,43) S: [0,43) Exits: (42 umin %n) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond = select i1 %cond_p1, i1 true, i1 %cond_p0
-; CHECK-NEXT:    --> (true + ((true + %cond_p1) umin_seq (true + %cond_p0))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (true + ((true + %cond_p1) umin (true + %cond_p0))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_2ops_and_constant
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (42 umin %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 42
@@ -528,7 +528,7 @@ for.body5:                                        ; preds = %for.cond4
   br label %for.cond4
 }
 
-define i64 @uminseq_vs_ptrtoint_complexity(i64 %n, i64 %m, i64* %ptr) {
+define i64 @uminseq_vs_ptrtoint_complexity(i64 %n, i64 %m, ptr %ptr) {
 ; CHECK-LABEL: 'uminseq_vs_ptrtoint_complexity'
 ; CHECK-NEXT:  Classifying expressions for: @uminseq_vs_ptrtoint_complexity
 ; CHECK-NEXT:    %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
@@ -537,10 +537,10 @@ define i64 @uminseq_vs_ptrtoint_complexity(i64 %n, i64 %m, i64* %ptr) {
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
-; CHECK-NEXT:    %ptr.int = ptrtoint i64* %ptr to i64
-; CHECK-NEXT:    --> (ptrtoint i64* %ptr to i64) U: full-set S: full-set
+; CHECK-NEXT:    %ptr.int = ptrtoint ptr %ptr to i64
+; CHECK-NEXT:    --> (ptrtoint ptr %ptr to i64) U: full-set S: full-set
 ; CHECK-NEXT:    %r = add i64 %i, %ptr.int
-; CHECK-NEXT:    --> {(ptrtoint i64* %ptr to i64),+,1}<%loop> U: full-set S: full-set --> ((%n umin_seq %m) + (ptrtoint i64* %ptr to i64)) U: full-set S: full-set
+; CHECK-NEXT:    --> {(ptrtoint ptr %ptr to i64),+,1}<%loop> U: full-set S: full-set --> ((%n umin_seq %m) + (ptrtoint ptr %ptr to i64)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @uminseq_vs_ptrtoint_complexity
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
@@ -559,7 +559,7 @@ loop:
   %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
   br i1 %cond, label %loop, label %exit
 exit:
-  %ptr.int = ptrtoint i64* %ptr to i64
+  %ptr.int = ptrtoint ptr %ptr to i64
   %r = add i64 %i, %ptr.int
   ret i64 %r
 }
@@ -574,7 +574,7 @@ define i32 @logical_and_implies_poison1(i32 %n) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((1 + %n) umin %n)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((1 + %n) umin %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
@@ -607,7 +607,7 @@ define i32 @logical_and_implies_poison2(i32 %n) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((1 + %n) umin %n)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((1 + %n) umin %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
@@ -640,7 +640,7 @@ define i32 @logical_and_implies_poison3(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin %n)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison3
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n + %m) umin %n)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
@@ -704,7 +704,7 @@ define i32 @logical_and_implies_poison_noundef(i32 %n, i32 noundef %m) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_noundef
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin %m)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
@@ -768,7 +768,7 @@ define i32 @logical_and_implies_poison_complex1(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin (1 + %n + %m))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_complex1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n + %m) umin (1 + %n + %m))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
@@ -804,7 +804,7 @@ define i32 @logical_and_implies_poison_complex2(i32 %n, i32 %m, i32 %l) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n + %m) umin (%n + %m + %l))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_poison_complex2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n + %m) umin (%n + %m + %l))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
@@ -874,9 +874,9 @@ define i32 @logical_and_implies_multiple_ops(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (((1 + %n) umin %n) umin_seq %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_p0 umin %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond2 = select i1 %cond, i1 %cond_p2, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1 umin_seq %cond_p2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> ((%cond_p0 umin %cond_p1) umin_seq %cond_p2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_multiple_ops
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (((1 + %n) umin %n) umin_seq %m)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
@@ -907,18 +907,18 @@ define i32 @logical_and_implies_multiple_ops2(i32 %n, i32 %m) {
 ; CHECK-NEXT:    %add = add i32 %n, 1
 ; CHECK-NEXT:    --> (1 + %n) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq (1 + %n)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq ((1 + %n) umin %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq (1 + %n))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq ((1 + %n) umin %m))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
 ; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond2 = select i1 %cond, i1 %cond_p2, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1 umin_seq %cond_p2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_p0 umin_seq (%cond_p1 umin %cond_p2)) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_implies_multiple_ops2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m umin_seq (1 + %n))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq ((1 + %n) umin %m))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq %m umin_seq (1 + %n))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m umin_seq (1 + %n))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%n umin_seq ((1 + %n) umin %m))
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq ((1 + %n) umin %m))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
@@ -1352,7 +1352,7 @@ define i32 @logical_and_zero_arg2(i32 %n) {
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
-; CHECK-NEXT:    --> (%cond_p0 umin_seq %cond_p1) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%cond_p1 umin %cond_p0) U: full-set S: full-set Exits: false LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_and_zero_arg2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 0
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 0

@@ -116,16 +116,16 @@ define half @test_frem(half %a, half %b) #0 {
 ; CHECK-COMMON-LABEL: test_store:
 ; CHECK-COMMON-NEXT: str  h0, [x0]
 ; CHECK-COMMON-NEXT: ret
-define void @test_store(half %a, half* %b) #0 {
-  store half %a, half* %b
+define void @test_store(half %a, ptr %b) #0 {
+  store half %a, ptr %b
   ret void
 }
 
 ; CHECK-COMMON-LABEL: test_load:
 ; CHECK-COMMON-NEXT: ldr  h0, [x0]
 ; CHECK-COMMON-NEXT: ret
-define half @test_load(half* %a) #0 {
-  %r = load half, half* %a
+define half @test_load(ptr %a) #0 {
+  %r = load half, ptr %a
   ret half %r
 }
 
@@ -494,12 +494,12 @@ define i1 @test_fcmp_ord(half %a, half %b) #0 {
 ; CHECK-FP16-NEXT: str   h0, [x0]
 ; CHECK-FP16-NEXT: ret
 
-define void @test_fccmp(half %in, half* %out) {
+define void @test_fccmp(half %in, ptr %out) {
   %cmp1 = fcmp ogt half %in, 0xH4800
   %cmp2 = fcmp olt half %in, 0xH4500
   %cond = and i1 %cmp1, %cmp2
   %result = select i1 %cond, half %in, half 0xH4500
-  store half %result, half* %out
+  store half %result, ptr %out
   ret void
 }
 
@@ -517,14 +517,14 @@ define void @test_fccmp(half %in, half* %out) {
 ; CHECK-FP16-NEXT: str wzr, [x8]
 ; CHECK-FP16-NEXT: ret
 
-define void @test_br_cc(half %a, half %b, i32* %p1, i32* %p2) #0 {
+define void @test_br_cc(half %a, half %b, ptr %p1, ptr %p2) #0 {
   %c = fcmp uge half %a, %b
   br i1 %c, label %then, label %else
 then:
-  store i32 0, i32* %p1
+  store i32 0, ptr %p1
   ret void
 else:
-  store i32 0, i32* %p2
+  store i32 0, ptr %p2
   ret void
 }
 
@@ -538,20 +538,20 @@ else:
 ; CHECK-COMMON: bl {{_?}}test_dummy
 ; CHECK-COMMON: fmov  s0, s[[R]]
 ; CHECK-COMMON: ret
-define half @test_phi(half* %p1) #0 {
+define half @test_phi(ptr %p1) #0 {
 entry:
-  %a = load half, half* %p1
+  %a = load half, ptr %p1
   br label %loop
 loop:
   %r = phi half [%a, %entry], [%b, %loop]
-  %b = load half, half* %p1
-  %c = call i1 @test_dummy(half* %p1)
+  %b = load half, ptr %p1
+  %c = call i1 @test_dummy(ptr %p1)
   br i1 %c, label %loop, label %return
 return:
   ret half %r
 }
 
-declare i1 @test_dummy(half* %p1) #0
+declare i1 @test_dummy(ptr %p1) #0
 
 ; CHECK-CVT-LABEL: test_fptosi_i32:
 ; CHECK-CVT-NEXT: fcvt s0, h0

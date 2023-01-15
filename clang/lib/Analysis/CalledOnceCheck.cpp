@@ -880,8 +880,8 @@ private:
   template <class CallLikeExpr>
   void checkIndirectCall(const CallLikeExpr *CallOrMessage) {
     // CallExpr::arguments does not interact nicely with llvm::enumerate.
-    llvm::ArrayRef<const Expr *> Arguments = llvm::makeArrayRef(
-        CallOrMessage->getArgs(), CallOrMessage->getNumArgs());
+    llvm::ArrayRef<const Expr *> Arguments =
+        llvm::ArrayRef(CallOrMessage->getArgs(), CallOrMessage->getNumArgs());
 
     // Let's check if any of the call arguments is a point of interest.
     for (const auto &Argument : llvm::enumerate(Arguments)) {
@@ -1157,8 +1157,8 @@ private:
   bool shouldBlockArgumentBeCalledOnce(const CallLikeExpr *CallOrMessage,
                                        const Stmt *BlockArgument) const {
     // CallExpr::arguments does not interact nicely with llvm::enumerate.
-    llvm::ArrayRef<const Expr *> Arguments = llvm::makeArrayRef(
-        CallOrMessage->getArgs(), CallOrMessage->getNumArgs());
+    llvm::ArrayRef<const Expr *> Arguments =
+        llvm::ArrayRef(CallOrMessage->getArgs(), CallOrMessage->getNumArgs());
 
     for (const auto &Argument : llvm::enumerate(Arguments)) {
       if (Argument.value() == BlockArgument) {

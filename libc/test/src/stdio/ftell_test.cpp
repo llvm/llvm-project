@@ -16,6 +16,7 @@
 #include "src/stdio/setvbuf.h"
 #include "utils/UnitTest/Test.h"
 
+#include <errno.h>
 #include <stdio.h>
 
 class LlvmLibcFTellTest : public __llvm_libc::testing::Test {
@@ -53,6 +54,10 @@ protected:
     ASSERT_EQ(size_t(__llvm_libc::ftell(file)), READ_SIZE);
 
     ASSERT_EQ(0, __llvm_libc::fclose(file));
+
+    // errno = 0;
+    // ASSERT_EQ(__llvm_libc::ftell(file), long(-1));
+    // ASSERT_NE(errno, 0);
   }
 };
 

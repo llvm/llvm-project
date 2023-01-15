@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 source_filename = "test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
@@ -31,7 +31,7 @@ target triple = "x86_64-apple-macosx10.12.0"
 ; Function Attrs: nounwind optsize ssp uwtable
 define void @foo(i32 %in) #0 {
 entry:
-  store i32 %in, i32* getelementptr inbounds (%struct.mystruct, %struct.mystruct* @static_struct, i32 0, i32 0), align 8, !tbaa !17
+  store i32 %in, ptr @static_struct, align 8, !tbaa !17
   ret void
 }
 
@@ -39,28 +39,28 @@ entry:
 define void @bar(i32 %in) #0 {
 entry:
   %conv = sext i32 %in to i64
-  store i64 %conv, i64* getelementptr inbounds (%struct.mystruct, %struct.mystruct* @static_struct, i32 0, i32 1), align 8, !tbaa !23
+  store i64 %conv, ptr getelementptr inbounds (%struct.mystruct, ptr @static_struct, i32 0, i32 1), align 8, !tbaa !23
   ret void
 }
 
 ; Function Attrs: nounwind optsize ssp uwtable
-define i32 @main(i32 %argc, i8** %argv) #0 !dbg !24 {
+define i32 @main(i32 %argc, ptr %argv) #0 !dbg !24 {
 entry:
   call void @llvm.dbg.value(metadata i32 %argc, metadata !31, metadata !33), !dbg !34
-  call void @llvm.dbg.value(metadata i8** %argv, metadata !32, metadata !33), !dbg !35
-  %0 = load i8*, i8** %argv, align 8, !dbg !36, !tbaa !37
-  %arrayidx1 = getelementptr inbounds i8, i8* %0, i64 1, !dbg !36
-  %1 = load i8, i8* %arrayidx1, align 1, !dbg !36, !tbaa !39
+  call void @llvm.dbg.value(metadata ptr %argv, metadata !32, metadata !33), !dbg !35
+  %0 = load ptr, ptr %argv, align 8, !dbg !36, !tbaa !37
+  %arrayidx1 = getelementptr inbounds i8, ptr %0, i64 1, !dbg !36
+  %1 = load i8, ptr %arrayidx1, align 1, !dbg !36, !tbaa !39
   %conv = sext i8 %1 to i32, !dbg !36
   call void @foo(i32 %conv) #2, !dbg !40
-  %2 = load i8*, i8** %argv, align 8, !dbg !41, !tbaa !37
-  %arrayidx3 = getelementptr inbounds i8, i8* %2, i64 1, !dbg !41
-  %3 = load i8, i8* %arrayidx3, align 1, !dbg !41, !tbaa !39
+  %2 = load ptr, ptr %argv, align 8, !dbg !41, !tbaa !37
+  %arrayidx3 = getelementptr inbounds i8, ptr %2, i64 1, !dbg !41
+  %3 = load i8, ptr %arrayidx3, align 1, !dbg !41, !tbaa !39
   %conv4 = sext i8 %3 to i32, !dbg !41
   call void @bar(i32 %conv4) #2, !dbg !42
-  %4 = load i32, i32* getelementptr inbounds (%struct.mystruct, %struct.mystruct* @static_struct, i32 0, i32 0), align 8, !dbg !43, !tbaa !17
+  %4 = load i32, ptr @static_struct, align 8, !dbg !43, !tbaa !17
   %conv5 = sext i32 %4 to i64, !dbg !44
-  %5 = load i64, i64* getelementptr inbounds (%struct.mystruct, %struct.mystruct* @static_struct, i32 0, i32 1), align 8, !dbg !45, !tbaa !23
+  %5 = load i64, ptr getelementptr inbounds (%struct.mystruct, ptr @static_struct, i32 0, i32 1), align 8, !dbg !45, !tbaa !23
   %add = add nsw i64 %conv5, %5, !dbg !46
   %conv6 = trunc i64 %add to i32, !dbg !44
   ret i32 %conv6, !dbg !47

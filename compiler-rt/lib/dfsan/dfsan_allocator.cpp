@@ -33,8 +33,12 @@ struct DFsanMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
 };
 
-static const uptr kAllocatorSpace = 0x700000000000ULL;
-static const uptr kMaxAllowedMallocSize = 8UL << 30;
+#if defined(__aarch64__)
+const uptr kAllocatorSpace = 0xE00000000000ULL;
+#else
+const uptr kAllocatorSpace = 0x700000000000ULL;
+#endif
+const uptr kMaxAllowedMallocSize = 8UL << 30;
 
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;

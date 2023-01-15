@@ -12,7 +12,7 @@ target triple = "x86_64-apple-macosx"
 
 %struct.s = type opaque
 
-@i = common global %struct.s* null, align 8, !dbg !0
+@i = common global ptr null, align 8, !dbg !0
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!11, !12}

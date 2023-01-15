@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PerfContextSwitchDecoder.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -191,7 +192,7 @@ ThreadContinuousExecution ThreadContinuousExecution::CreateOnlyStartExecution(
 static Error RecoverExecutionsFromConsecutiveRecords(
     cpu_id_t cpu_id, const LinuxPerfZeroTscConversion &tsc_conversion,
     const ContextSwitchRecord &current_record,
-    const Optional<ContextSwitchRecord> &prev_record,
+    const std::optional<ContextSwitchRecord> &prev_record,
     std::function<void(const ThreadContinuousExecution &execution)>
         on_new_execution) {
   if (!prev_record) {
@@ -252,7 +253,7 @@ lldb_private::trace_intel_pt::DecodePerfContextSwitchTrace(
   size_t offset = 0;
 
   auto do_decode = [&]() -> Error {
-    Optional<ContextSwitchRecord> prev_record;
+    std::optional<ContextSwitchRecord> prev_record;
     while (offset < data.size()) {
       const perf_event_header &perf_record =
           *reinterpret_cast<const perf_event_header *>(data.data() + offset);

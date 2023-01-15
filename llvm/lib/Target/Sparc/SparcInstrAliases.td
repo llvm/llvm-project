@@ -516,6 +516,14 @@ def : InstAlias<"wr $simm13, %tbr", (WRTBRri G0, i32imm:$simm13), 0>;
 def : InstAlias<"pwr $rs2, %psr", (PWRPSRrr G0, IntRegs:$rs2), 0>;
 def : InstAlias<"pwr $simm13, %psr", (PWRPSRri G0, i32imm:$simm13), 0>;
 
+// wrpr %reg, %rd -> wrpr %reg, %g0, %rd
+// wrpr  imm, %rd -> wrpr  %g0, imm, %rd
+// Nonstandard GNU extensions.
+let Predicates = [HasV9] in {
+  def : InstAlias<"wrpr $rs1, $rd", (WRPRrr PRRegs:$rd, IntRegs:$rs1, G0), 0>;
+  def : InstAlias<"wrpr $simm13, $rd", (WRPRri PRRegs:$rd, G0, i32imm:$simm13), 0>;
+}
+
 // flush -> flush %g0
 def : InstAlias<"flush", (FLUSH), 0>;
 

@@ -10,6 +10,7 @@
 #define liblldb_IntelPTPerThreadTraceCollection_H_
 
 #include "IntelPTSingleBufferTrace.h"
+#include <optional>
 
 namespace lldb_private {
 namespace process_linux {
@@ -61,7 +62,7 @@ public:
   size_t GetTracedThreadsCount() const;
 
   /// \copydoc IntelPTProcessTrace::TryGetBinaryData()
-  llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  llvm::Expected<std::optional<std::vector<uint8_t>>>
   TryGetBinaryData(const TraceGetBinaryDataRequest &request);
 
 private:

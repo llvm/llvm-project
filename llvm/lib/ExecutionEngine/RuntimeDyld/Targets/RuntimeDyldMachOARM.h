@@ -30,7 +30,7 @@ public:
 
   unsigned getMaxStubSize() const override { return 8; }
 
-  unsigned getStubAlignment() override { return 4; }
+  Align getStubAlignment() override { return Align(4); }
 
   Expected<JITSymbolFlags> getJITSymbolFlags(const SymbolRef &SR) override {
     auto Flags = RuntimeDyldImpl::getJITSymbolFlags(SR);

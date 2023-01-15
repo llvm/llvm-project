@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -DOMP5 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix CHECK --check-prefix OMP50
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix CHECK --check-prefix OMP50
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -DOMP51 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix CHECK --check-prefix OMP51
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -DOMP51 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -DOMP51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix CHECK --check-prefix OMP51
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix CHECK --check-prefix OMP45
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
@@ -11,6 +14,9 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -DOMP5 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix CHECK --check-prefix OMP50
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -DOMP5 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix CHECK --check-prefix OMP50
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -DOMP51 -ast-print %s -Wno-openmp-mapping | FileCheck %s --check-prefix CHECK --check-prefix OMP51
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -DOMP51 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -DOMP51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -Wno-openmp-mapping | FileCheck %s --check-prefix CHECK --check-prefix OMP51
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -156,16 +162,19 @@ T tmain(T argc) {
 // CHECK: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: foo();
 #pragma omp target
-#ifdef OMP5
+#ifdef OMP51
+#pragma omp teams distribute parallel for simd if(simd:argc) nontemporal(argc, c, d) order(reproducible:concurrent)
+#elif OMP5
 #pragma omp teams distribute parallel for simd if(simd:argc) nontemporal(argc, c, d) order(concurrent)
 #else
 #pragma omp teams distribute parallel for simd
-#endif // OMP5
+#endif // OMP51
   for (int i = 0; i < 10; ++i)
     foo();
 // CHECK: #pragma omp target
 // OMP45-NEXT: #pragma omp teams distribute parallel for simd
 // OMP50-NEXT: #pragma omp teams distribute parallel for simd if(simd: argc) nontemporal(argc,c,d) order(concurrent)
+// OMP51-NEXT: #pragma omp teams distribute parallel for simd if(simd: argc) nontemporal(argc,c,d) order(reproducible: concurrent)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: foo();
 #pragma omp target

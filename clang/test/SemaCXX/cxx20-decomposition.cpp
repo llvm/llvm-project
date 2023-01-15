@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify -Wunused-variable %s
 
 template <typename, typename>
 constexpr bool is_same = false;
@@ -80,7 +79,17 @@ struct tuple {
 namespace std {
 
 template <typename T>
-struct tuple_size {
+struct tuple_size;
+
+template <typename T>
+struct tuple_size<T&> : tuple_size<T>{};
+
+template <typename T>
+requires requires { tuple_size<T>::value; }
+struct tuple_size<const T> : tuple_size<T>{};
+
+template <>
+struct tuple_size<tuple> {
   static constexpr unsigned long value = 2;
 };
 
@@ -137,5 +146,39 @@ void check_tuple_like() {
       static_assert(is_same<decltype(v), int>);
       static_assert(is_same<decltype(r), const int &>);
     };
+  }
+}
+
+namespace ODRUseTests {
+  struct P { int a; int b; };
+  void GH57826() {
+    const auto [a, b] = P{1, 2}; //expected-note 2{{'b' declared here}} \
+                                 //expected-note 3{{'a' declared here}}
+    (void)[&](auto c) { return b + [&a] {
+        return a;
+    }(); }(0);
+    (void)[&](auto c) { return b + [&a](auto) {
+        return a;
+    }(0); }(0);
+    (void)[=](auto c) { return b + [&a](auto) {
+        return a;
+    }(0); }(0);
+    (void)[&a,&b](auto c) { return b + [&a](auto) {
+        return a;
+    }(0); }(0);
+    (void)[&a,&b](auto c) { return b + [a](auto) {
+        return a;
+    }(0); }(0);
+    (void)[&a](auto c) { return b + [&a](auto) { // expected-error 2{{variable 'b' cannot be implicitly captured}} \
+                                                 // expected-note 2{{lambda expression begins here}} \
+                                                 // expected-note 4{{capture 'b'}}
+        return a;
+    }(0); }(0); // expected-note {{in instantiation}}
+    (void)[&b](auto c) { return b + [](auto) {   // expected-note 3{{lambda expression begins here}} \
+                                                 // expected-note 6{{capture 'a'}} \
+                                                 // expected-note 6{{default capture}} \
+                                                 // expected-note {{in instantiation}}
+        return a;  // expected-error 3{{variable 'a' cannot be implicitly captured}}
+    }(0); }(0); // expected-note 2{{in instantiation}}
   }
 }

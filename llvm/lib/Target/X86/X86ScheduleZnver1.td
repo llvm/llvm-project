@@ -223,14 +223,15 @@ defm : X86WriteRes<WriteBitTestSet,      [ZnALU], 2, [1], 2>;
 defm : ZnWriteResPair<WriteBSF, [ZnALU], 3, [12], 6, 4, 2>;
 defm : ZnWriteResPair<WriteBSR, [ZnALU], 4, [16], 6, 4, 2>;
 defm : ZnWriteResPair<WriteLZCNT,          [ZnALU], 2>;
-defm : ZnWriteResPair<WriteTZCNT,          [ZnALU], 2>;
+defm : ZnWriteResPair<WriteTZCNT,          [ZnALU], 2, [2], 2, 4, 0>;
 defm : ZnWriteResPair<WritePOPCNT,         [ZnALU], 1>;
 
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
 
 // BMI1 BEXTR, BMI2 BZHI
-defm : ZnWriteResPair<WriteBEXTR, [ZnALU], 1>;
+defm : ZnWriteResPair<WriteBEXTR, [ZnALU], 1, [1], 1, 4, 1>;
+defm : ZnWriteResPair<WriteBLS,   [ZnALU], 2, [2], 2, 4, 1>;
 defm : ZnWriteResPair<WriteBZHI,  [ZnALU], 1>;
 
 // IDIV
@@ -552,7 +553,7 @@ def ZnWritePUSH : SchedWriteRes<[ZnAGU]>{
 }
 def : InstRW<[ZnWritePUSH], (instregex "PUSH(16|32)rmm")>;
 
-//PUSHF
+// PUSHF
 def : InstRW<[WriteMicrocoded], (instregex "PUSHF(16|32)")>;
 
 // PUSHA.
@@ -702,12 +703,6 @@ def ZnWriteBTRSCm : SchedWriteRes<[ZnAGU, ZnALU]> {
 // m,r,i.
 def : SchedAlias<WriteBitTestSetImmRMW, ZnWriteBTRSCm>;
 def : SchedAlias<WriteBitTestSetRegRMW, ZnWriteBTRSCm>;
-
-// BLSI BLSMSK BLSR.
-// r,r.
-def : SchedAlias<WriteBLS, ZnWriteALULat2>;
-// r,m.
-def : SchedAlias<WriteBLSLd, ZnWriteALULat2Ld>;
 
 // PDEP PEXT.
 // r,r,r.

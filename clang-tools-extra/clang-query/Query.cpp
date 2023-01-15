@@ -14,6 +14,7 @@
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Tooling/NodeIntrospection.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::dynamic;
@@ -183,7 +184,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     std::vector<BoundNodes> Matches;
     DynTypedMatcher MaybeBoundMatcher = Matcher;
     if (QS.BindRoot) {
-      llvm::Optional<DynTypedMatcher> M = Matcher.tryBind("root");
+      std::optional<DynTypedMatcher> M = Matcher.tryBind("root");
       if (M)
         MaybeBoundMatcher = *M;
     }

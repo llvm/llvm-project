@@ -13,6 +13,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/Support/Error.h"
+#include <optional>
 
 class DIERef;
 class DWARFASTParser;
@@ -55,7 +56,7 @@ public:
 
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }
 
-  llvm::Optional<DIERef> GetDIERef() const;
+  std::optional<DIERef> GetDIERef() const;
 
   void Set(DWARFUnit *cu, DWARFDebugInfoEntry *die) {
     if (cu && die) {
@@ -107,7 +108,7 @@ public:
   uint64_t GetAttributeValueAsUnsigned(const dw_attr_t attr,
                                        uint64_t fail_value) const;
 
-  llvm::Optional<uint64_t>
+  std::optional<uint64_t>
   GetAttributeValueAsOptionalUnsigned(const dw_attr_t attr) const;
 
   uint64_t GetAttributeValueAsAddress(const dw_attr_t attr,

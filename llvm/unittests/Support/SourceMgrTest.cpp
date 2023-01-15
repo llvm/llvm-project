@@ -511,7 +511,7 @@ TEST_F(SourceMgrTest, OverlappingRanges) {
 TEST_F(SourceMgrTest, BasicFixit) {
   setMainBuffer("aaa bbb\nccc ddd\n", "file.in");
   printMessage(getLoc(4), SourceMgr::DK_Error, "message", std::nullopt,
-               makeArrayRef(SMFixIt(getRange(4, 3), "zzz")));
+               ArrayRef(SMFixIt(getRange(4, 3), "zzz")));
 
   EXPECT_EQ("file.in:1:5: error: message\n"
             "aaa bbb\n"
@@ -523,7 +523,7 @@ TEST_F(SourceMgrTest, BasicFixit) {
 TEST_F(SourceMgrTest, FixitForTab) {
   setMainBuffer("aaa\tbbb\nccc ddd\n", "file.in");
   printMessage(getLoc(3), SourceMgr::DK_Error, "message", std::nullopt,
-               makeArrayRef(SMFixIt(getRange(3, 1), "zzz")));
+               ArrayRef(SMFixIt(getRange(3, 1), "zzz")));
 
   EXPECT_EQ("file.in:1:4: error: message\n"
             "aaa     bbb\n"

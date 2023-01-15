@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <mutex>
+#include <optional>
 
 using namespace lldb_private;
 
@@ -66,7 +67,7 @@ llvm::VersionTuple HostInfoLinux::GetOSVersion() {
   return g_fields->m_os_version;
 }
 
-llvm::Optional<std::string> HostInfoLinux::GetOSBuildString() {
+std::optional<std::string> HostInfoLinux::GetOSBuildString() {
   struct utsname un;
   ::memset(&un, 0, sizeof(utsname));
 

@@ -13,13 +13,12 @@
 #include "Feature.h"
 #include "TestFS.h"
 #include "clang/Basic/DiagnosticSema.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -436,7 +435,7 @@ TEST_F(ConfigCompileTests, ExternalBlockDisablesBackgroundIndex) {
 
 TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   auto GetFrag = [](llvm::StringRef Directory,
-                    llvm::Optional<const char *> MountPoint) {
+                    std::optional<const char *> MountPoint) {
     Fragment Frag;
     Frag.Source.Directory = Directory.str();
     Fragment::IndexBlock::ExternalBlock External;

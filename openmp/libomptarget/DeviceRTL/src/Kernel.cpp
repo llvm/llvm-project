@@ -17,7 +17,7 @@
 #include "Synchronization.h"
 #include "Types.h"
 
-using namespace _OMP;
+using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -66,7 +66,7 @@ extern "C" {
 /// \param Ident               Source location identification, can be NULL.
 ///
 int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine, bool) {
+                           bool UseGenericStateMachine) {
   FunctionTracingRAII();
   const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
   if (IsSPMD) {
@@ -125,7 +125,7 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
 ///
 /// \param Ident Source location identification, can be NULL.
 ///
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool) {
+void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode) {
   FunctionTracingRAII();
   const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
   state::assumeInitialState(IsSPMD);

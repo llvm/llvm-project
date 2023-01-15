@@ -649,3 +649,25 @@ static_assert(test_init_capture() == __LINE__ - 4);
 #else
 static_assert(test_init_capture() == __LINE__ );
 #endif
+
+namespace check_immediate_invocations_in_templates {
+
+template <typename T = int>
+struct G {
+    T line = __builtin_LINE();
+};
+template <typename T>
+struct S {
+    int i = G<T>{}.line;
+};
+static_assert(S<int>{}.i != // intentional new line
+              S<int>{}.i);
+
+template <typename T>
+constexpr int f(int i = G<T>{}.line) {
+    return i;
+}
+
+static_assert(f<int>() != // intentional new line
+              f<int>());
+}

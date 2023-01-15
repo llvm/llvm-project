@@ -14,10 +14,10 @@
 
 define void @f0() {
 ; CHECK-LABEL: entry:
-; CHECK:   store i8 1, i8 addrspace(3)* @small_lds, align 1
+; CHECK:   store i8 1, ptr addrspace(3) @small_lds, align 1
 ; CHECK:   ret void
 entry:
-  store i8 1, i8 addrspace(3)* @small_lds, align 1
+  store i8 1, ptr addrspace(3) @small_lds, align 1
   ret void
 }
 

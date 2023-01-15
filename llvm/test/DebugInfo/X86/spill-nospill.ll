@@ -24,7 +24,7 @@
 ; CHECK-LABEL: f: # @f
 ; CHECK: callq   g
 ; CHECK: movl    %eax, [[X_OFFS:[0-9]+]](%rsp)          # 4-byte Spill
-; CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[X_OFFS]]] [$rsp+0]
+; CHECK: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[X_OFFS]], DW_OP_deref] $rsp
 ; CHECK: #APP
 ; CHECK: #NO_APP
 ; CHECK: callq   g

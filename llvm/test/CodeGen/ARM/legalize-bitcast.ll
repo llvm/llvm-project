@@ -29,7 +29,7 @@ define i32 @vec_to_int() {
 ; CHECK-NEXT:    pop {r4}
 ; CHECK-NEXT:    bx lr
 bb.0:
-  %vec6 = load <6 x i16>, <6 x i16>* @vec6_p, align 1
+  %vec6 = load <6 x i16>, ptr @vec6_p, align 1
   br label %bb.1
 
 bb.1:

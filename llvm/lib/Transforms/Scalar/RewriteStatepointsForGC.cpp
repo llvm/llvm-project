@@ -17,8 +17,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -110,6 +108,9 @@ static cl::opt<bool, true> ClobberNonLiveOverride("rs4gc-clobber-non-live",
 static cl::opt<bool>
     AllowStatepointWithNoDeoptInfo("rs4gc-allow-statepoint-with-no-deopt-info",
                                    cl::Hidden, cl::init(true));
+
+static cl::opt<bool> RematDerivedAtUses("rs4gc-remat-derived-at-uses",
+                                        cl::Hidden, cl::init(true));
 
 /// The IR fed into RewriteStatepointsForGC may have had attributes and
 /// metadata implying dereferenceability that are no longer valid/correct after
@@ -318,7 +319,7 @@ static void findLiveSetAtInst(Instruction *inst, GCPtrLivenessData &Data,
                               StatepointLiveSetTy &out);
 
 // TODO: Once we can get to the GCStrategy, this becomes
-// Optional<bool> isGCManagedPointer(const Type *Ty) const override {
+// std::optional<bool> isGCManagedPointer(const Type *Ty) const override {
 
 static bool isGCPointerType(Type *T) {
   if (auto *PT = dyn_cast<PointerType>(T))
@@ -1401,6 +1402,61 @@ static void recomputeLiveInValues(
   }
 }
 
+// Utility function which clones all instructions from "ChainToBase"
+// and inserts them before "InsertBefore". Returns rematerialized value
+// which should be used after statepoint.
+static Instruction *rematerializeChain(ArrayRef<Instruction *> ChainToBase,
+                                       Instruction *InsertBefore,
+                                       Value *RootOfChain,
+                                       Value *AlternateLiveBase) {
+  Instruction *LastClonedValue = nullptr;
+  Instruction *LastValue = nullptr;
+  // Walk backwards to visit top-most instructions first.
+  for (Instruction *Instr :
+       make_range(ChainToBase.rbegin(), ChainToBase.rend())) {
+    // Only GEP's and casts are supported as we need to be careful to not
+    // introduce any new uses of pointers not in the liveset.
+    // Note that it's fine to introduce new uses of pointers which were
+    // otherwise not used after this statepoint.
+    assert(isa<GetElementPtrInst>(Instr) || isa<CastInst>(Instr));
+
+    Instruction *ClonedValue = Instr->clone();
+    ClonedValue->insertBefore(InsertBefore);
+    ClonedValue->setName(Instr->getName() + ".remat");
+
+    // If it is not first instruction in the chain then it uses previously
+    // cloned value. We should update it to use cloned value.
+    if (LastClonedValue) {
+      assert(LastValue);
+      ClonedValue->replaceUsesOfWith(LastValue, LastClonedValue);
+#ifndef NDEBUG
+      for (auto *OpValue : ClonedValue->operand_values()) {
+        // Assert that cloned instruction does not use any instructions from
+        // this chain other than LastClonedValue
+        assert(!is_contained(ChainToBase, OpValue) &&
+               "incorrect use in rematerialization chain");
+        // Assert that the cloned instruction does not use the RootOfChain
+        // or the AlternateLiveBase.
+        assert(OpValue != RootOfChain && OpValue != AlternateLiveBase);
+      }
+#endif
+    } else {
+      // For the first instruction, replace the use of unrelocated base i.e.
+      // RootOfChain/OrigRootPhi, with the corresponding PHI present in the
+      // live set. They have been proved to be the same PHI nodes.  Note
+      // that the *only* use of the RootOfChain in the ChainToBase list is
+      // the first Value in the list.
+      if (RootOfChain != AlternateLiveBase)
+        ClonedValue->replaceUsesOfWith(RootOfChain, AlternateLiveBase);
+    }
+
+    LastClonedValue = ClonedValue;
+    LastValue = Instr;
+  }
+  assert(LastClonedValue);
+  return LastClonedValue;
+}
+
 // When inserting gc.relocate and gc.result calls, we need to ensure there are
 // no uses of the original value / return value between the gc.statepoint and
 // the gc.relocate / gc.result call.  One case which can arise is a phi node
@@ -2381,6 +2437,126 @@ findRematerializationCandidates(PointerToBaseTy PointerToBase,
   }
 }
 
+// Try to rematerialize derived pointers immediately before their uses
+// (instead of rematerializing after every statepoint it is live through).
+// This can be beneficial when derived pointer is live across many
+// statepoints, but uses are rare.
+static void rematerializeLiveValuesAtUses(
+    RematCandTy &RematerizationCandidates,
+    MutableArrayRef<PartiallyConstructedSafepointRecord> Records,
+    PointerToBaseTy &PointerToBase) {
+  if (!RematDerivedAtUses)
+    return;
+
+  SmallVector<Instruction *, 32> LiveValuesToBeDeleted;
+
+  LLVM_DEBUG(dbgs() << "Rematerialize derived pointers at uses, "
+                    << "Num statepoints: " << Records.size() << '\n');
+
+  for (auto &It : RematerizationCandidates) {
+    Instruction *Cand = cast<Instruction>(It.first);
+    auto &Record = It.second;
+
+    if (Record.Cost >= RematerializationThreshold)
+      continue;
+
+    if (Cand->user_empty())
+      continue;
+
+    if (Cand->hasOneUse())
+      if (auto *U = dyn_cast<Instruction>(Cand->getUniqueUndroppableUser()))
+        if (U->getParent() == Cand->getParent())
+          continue;
+
+    // Rematerialization before PHI nodes is not implemented.
+    if (llvm::any_of(Cand->users(),
+                     [](const auto *U) { return isa<PHINode>(U); }))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Trying cand " << *Cand << " ... ");
+
+    // Count of rematerialization instructions we introduce is equal to number
+    // of candidate uses.
+    // Count of rematerialization instructions we eliminate is equal to number
+    // of statepoints it is live through.
+    // Consider transformation profitable if latter is greater than former
+    // (in other words, we create less than eliminate).
+    unsigned NumLiveStatepoints = llvm::count_if(
+        Records, [Cand](const auto &R) { return R.LiveSet.contains(Cand); });
+    unsigned NumUses = Cand->getNumUses();
+
+    LLVM_DEBUG(dbgs() << "Num uses: " << NumUses << " Num live statepoints: "
+                      << NumLiveStatepoints << " ");
+
+    if (NumLiveStatepoints < NumUses) {
+      LLVM_DEBUG(dbgs() << "not profitable\n");
+      continue;
+    }
+
+    // If rematerialization is 'free', then favor rematerialization at
+    // uses as it generally shortens live ranges.
+    // TODO: Short (size ==1) chains only?
+    if (NumLiveStatepoints == NumUses && Record.Cost > 0) {
+      LLVM_DEBUG(dbgs() << "not profitable\n");
+      continue;
+    }
+
+    LLVM_DEBUG(dbgs() << "looks profitable\n");
+
+    // ChainToBase may contain another remat candidate (as a sub chain) which
+    // has been rewritten by now. Need to recollect chain to have up to date
+    // value.
+    // TODO: sort records in findRematerializationCandidates() in
+    // decreasing chain size order?
+    if (Record.ChainToBase.size() > 1) {
+      Record.ChainToBase.clear();
+      findRematerializableChainToBasePointer(Record.ChainToBase, Cand);
+    }
+
+    // Current rematerialization algorithm is very simple: we rematerialize
+    // immediately before EVERY use, even if there are several uses in same
+    // block or if use is local to Cand Def. The reason is that this allows
+    // us to avoid recomputing liveness without complicated analysis:
+    // - If we did not eliminate all uses of original Candidate, we do not
+    //   know exaclty in what BBs it is still live.
+    // - If we rematerialize once per BB, we need to find proper insertion
+    //   place (first use in block, but after Def) and analyze if there is
+    //   statepoint between uses in the block.
+    while (!Cand->user_empty()) {
+      Instruction *UserI = cast<Instruction>(*Cand->user_begin());
+      Instruction *RematChain = rematerializeChain(
+          Record.ChainToBase, UserI, Record.RootOfChain, PointerToBase[Cand]);
+      UserI->replaceUsesOfWith(Cand, RematChain);
+      PointerToBase[RematChain] = PointerToBase[Cand];
+    }
+    LiveValuesToBeDeleted.push_back(Cand);
+  }
+
+  LLVM_DEBUG(dbgs() << "Rematerialized " << LiveValuesToBeDeleted.size()
+                    << " derived pointers\n");
+  for (auto *Cand : LiveValuesToBeDeleted) {
+    assert(Cand->use_empty() && "Unexpected user remain");
+    RematerizationCandidates.erase(Cand);
+    for (auto &R : Records) {
+      assert(!R.LiveSet.contains(Cand) ||
+             R.LiveSet.contains(PointerToBase[Cand]));
+      R.LiveSet.remove(Cand);
+    }
+  }
+
+  // Recollect not rematerialized chains - we might have rewritten
+  // their sub-chains.
+  if (!LiveValuesToBeDeleted.empty()) {
+    for (auto &P : RematerizationCandidates) {
+      auto &R = P.second;
+      if (R.ChainToBase.size() > 1) {
+        R.ChainToBase.clear();
+        findRematerializableChainToBasePointer(R.ChainToBase, P.first);
+      }
+    }
+  }
+}
+
 // From the statepoint live set pick values that are cheaper to recompute then
 // to relocate. Remove this values from the live set, rematerialize them after
 // statepoint and record them in "Info" structure. Note that similar to
@@ -2416,69 +2592,14 @@ static void rematerializeLiveValues(CallBase *Call,
 
     // Clone instructions and record them inside "Info" structure.
 
-    // For each live pointer find get its defining chain.
-    SmallVector<Instruction *, 3> ChainToBase = Record.ChainToBase;
-    // Walk backwards to visit top-most instructions first.
-    std::reverse(ChainToBase.begin(), ChainToBase.end());
-
-    // Utility function which clones all instructions from "ChainToBase"
-    // and inserts them before "InsertBefore". Returns rematerialized value
-    // which should be used after statepoint.
-    auto rematerializeChain = [&ChainToBase](
-        Instruction *InsertBefore, Value *RootOfChain, Value *AlternateLiveBase) {
-      Instruction *LastClonedValue = nullptr;
-      Instruction *LastValue = nullptr;
-      for (Instruction *Instr: ChainToBase) {
-        // Only GEP's and casts are supported as we need to be careful to not
-        // introduce any new uses of pointers not in the liveset.
-        // Note that it's fine to introduce new uses of pointers which were
-        // otherwise not used after this statepoint.
-        assert(isa<GetElementPtrInst>(Instr) || isa<CastInst>(Instr));
-
-        Instruction *ClonedValue = Instr->clone();
-        ClonedValue->insertBefore(InsertBefore);
-        ClonedValue->setName(Instr->getName() + ".remat");
-
-        // If it is not first instruction in the chain then it uses previously
-        // cloned value. We should update it to use cloned value.
-        if (LastClonedValue) {
-          assert(LastValue);
-          ClonedValue->replaceUsesOfWith(LastValue, LastClonedValue);
-#ifndef NDEBUG
-          for (auto *OpValue : ClonedValue->operand_values()) {
-            // Assert that cloned instruction does not use any instructions from
-            // this chain other than LastClonedValue
-            assert(!is_contained(ChainToBase, OpValue) &&
-                   "incorrect use in rematerialization chain");
-            // Assert that the cloned instruction does not use the RootOfChain
-            // or the AlternateLiveBase.
-            assert(OpValue != RootOfChain && OpValue != AlternateLiveBase);
-          }
-#endif
-        } else {
-          // For the first instruction, replace the use of unrelocated base i.e.
-          // RootOfChain/OrigRootPhi, with the corresponding PHI present in the
-          // live set. They have been proved to be the same PHI nodes.  Note
-          // that the *only* use of the RootOfChain in the ChainToBase list is
-          // the first Value in the list.
-          if (RootOfChain != AlternateLiveBase)
-            ClonedValue->replaceUsesOfWith(RootOfChain, AlternateLiveBase);
-        }
-
-        LastClonedValue = ClonedValue;
-        LastValue = Instr;
-      }
-      assert(LastClonedValue);
-      return LastClonedValue;
-    };
-
     // Different cases for calls and invokes. For invokes we need to clone
     // instructions both on normal and unwind path.
     if (isa<CallInst>(Call)) {
       Instruction *InsertBefore = Call->getNextNode();
       assert(InsertBefore);
-      Instruction *RematerializedValue = rematerializeChain(
-          InsertBefore, Record.RootOfChain, PointerToBase[LiveValue]);
+      Instruction *RematerializedValue =
+          rematerializeChain(Record.ChainToBase, InsertBefore,
+                             Record.RootOfChain, PointerToBase[LiveValue]);
       Info.RematerializedValues[RematerializedValue] = LiveValue;
     } else {
       auto *Invoke = cast<InvokeInst>(Call);
@@ -2488,17 +2609,19 @@ static void rematerializeLiveValues(CallBase *Call,
       Instruction *UnwindInsertBefore =
           &*Invoke->getUnwindDest()->getFirstInsertionPt();
 
-      Instruction *NormalRematerializedValue = rematerializeChain(
-          NormalInsertBefore, Record.RootOfChain, PointerToBase[LiveValue]);
-      Instruction *UnwindRematerializedValue = rematerializeChain(
-          UnwindInsertBefore, Record.RootOfChain, PointerToBase[LiveValue]);
+      Instruction *NormalRematerializedValue =
+          rematerializeChain(Record.ChainToBase, NormalInsertBefore,
+                             Record.RootOfChain, PointerToBase[LiveValue]);
+      Instruction *UnwindRematerializedValue =
+          rematerializeChain(Record.ChainToBase, UnwindInsertBefore,
+                             Record.RootOfChain, PointerToBase[LiveValue]);
 
       Info.RematerializedValues[NormalRematerializedValue] = LiveValue;
       Info.RematerializedValues[UnwindRematerializedValue] = LiveValue;
     }
   }
 
-  // Remove rematerializaed values from the live set
+  // Remove rematerialized values from the live set.
   for (auto *LiveValue: LiveValuesToBeDeleted) {
     Info.LiveSet.remove(LiveValue);
   }
@@ -2699,6 +2822,9 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // In order to reduce live set of statepoint we might choose to rematerialize
   // some values instead of relocating them. This is purely an optimization and
   // does not influence correctness.
+  // First try rematerialization at uses, then after statepoints.
+  rematerializeLiveValuesAtUses(RematerizationCandidates, Records,
+                                PointerToBase);
   for (size_t i = 0; i < Records.size(); i++)
     rematerializeLiveValues(ToUpdate[i], Records[i], PointerToBase,
                             RematerizationCandidates, TTI);

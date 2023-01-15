@@ -11,7 +11,7 @@
 
 #include "llvm/Config/llvm-config.h"
 
-#ifdef LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TFLITE
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/IR/LLVMContext.h"
@@ -86,7 +86,7 @@ public:
   /// evaluation fails or the model is invalid, or an EvaluationResult
   /// otherwise. The inputs are assumed to have been already provided via
   /// getInput(). When returning std::nullopt, it also invalidates this object.
-  Optional<EvaluationResult> evaluate();
+  std::optional<EvaluationResult> evaluate();
 
   /// Provides access to the input vector.
   template <typename T> T *getInput(size_t Index) {
@@ -106,5 +106,5 @@ private:
 
 } // namespace llvm
 
-#endif // LLVM_HAVE_TF_API
+#endif // LLVM_HAVE_TFLITE
 #endif // LLVM_ANALYSIS_UTILS_TFUTILS_H

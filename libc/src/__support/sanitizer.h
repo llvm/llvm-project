@@ -9,11 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_SANITIZER_H
 #define LLVM_LIBC_SRC_SUPPORT_SANITIZER_H
 
-#ifdef __has_feature
-#define LLVM_LIBC_HAVE_FEATURE(f) __has_feature(f)
-#else
-#define LLVM_LIBC_HAVE_FEATURE(f) 0
-#endif
+#include "src/__support/compiler_features.h"
 
 // MemorySanitizer (MSan) is a detector of uninitialized reads. It consists of
 // a compiler instrumentation module and a run-time library.
@@ -25,7 +21,7 @@
 #define LLVM_LIBC_HAVE_MEMORY_SANITIZER 1
 #elif defined(__SANITIZE_MEMORY__)
 #define LLVM_LIBC_HAVE_MEMORY_SANITIZER 1
-#elif !defined(__native_client__) && LLVM_LIBC_HAVE_FEATURE(memory_sanitizer)
+#elif !defined(__native_client__) && LLVM_LIBC_HAS_FEATURE(memory_sanitizer)
 #define LLVM_LIBC_HAVE_MEMORY_SANITIZER 1
 #endif
 
@@ -38,14 +34,14 @@
 #define LLVM_LIBC_HAVE_ADDRESS_SANITIZER 1
 #elif defined(__SANITIZE_ADDRESS__)
 #define LLVM_LIBC_HAVE_ADDRESS_SANITIZER 1
-#elif LLVM_LIBC_HAVE_FEATURE(address_sanitizer)
+#elif LLVM_LIBC_HAS_FEATURE(address_sanitizer)
 #define LLVM_LIBC_HAVE_ADDRESS_SANITIZER 1
 #endif
 
 // HWAddressSanitizer (HWASan) is a fast, low memory overhead error detector.
 #ifdef LLVM_LIBC_HAVE_HWADDRESS_SANITIZER
 #error "LLVM_LIBC_HAVE_HWADDRESS_SANITIZER cannot be directly set."
-#elif LLVM_LIBC_HAVE_FEATURE(hwaddress_sanitizer)
+#elif LLVM_LIBC_HAS_FEATURE(hwaddress_sanitizer)
 #define LLVM_LIBC_HAVE_HWADDRESS_SANITIZER 1
 #endif
 

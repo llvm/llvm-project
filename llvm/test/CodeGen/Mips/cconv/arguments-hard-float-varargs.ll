@@ -33,16 +33,15 @@
 define void @double_args(double %a, ...)
                          nounwind {
 entry:
-        %0 = getelementptr [11 x double], [11 x double]* @doubles, i32 0, i32 1
-        store volatile double %a, double* %0
+        %0 = getelementptr [11 x double], ptr @doubles, i32 0, i32 1
+        store volatile double %a, ptr %0
 
-        %ap = alloca i8*
-        %ap2 = bitcast i8** %ap to i8*
-        call void @llvm.va_start(i8* %ap2)
-        %b = va_arg i8** %ap, double
-        %1 = getelementptr [11 x double], [11 x double]* @doubles, i32 0, i32 2
-        store volatile double %b, double* %1
-        call void @llvm.va_end(i8* %ap2)
+        %ap = alloca ptr
+        call void @llvm.va_start(ptr %ap)
+        %b = va_arg ptr %ap, double
+        %1 = getelementptr [11 x double], ptr @doubles, i32 0, i32 2
+        store volatile double %b, ptr %1
+        call void @llvm.va_end(ptr %ap)
         ret void
 }
 
@@ -95,16 +94,15 @@ entry:
 
 define void @float_args(float %a, ...) nounwind {
 entry:
-        %0 = getelementptr [11 x float], [11 x float]* @floats, i32 0, i32 1
-        store volatile float %a, float* %0
+        %0 = getelementptr [11 x float], ptr @floats, i32 0, i32 1
+        store volatile float %a, ptr %0
 
-        %ap = alloca i8*
-        %ap2 = bitcast i8** %ap to i8*
-        call void @llvm.va_start(i8* %ap2)
-        %b = va_arg i8** %ap, float
-        %1 = getelementptr [11 x float], [11 x float]* @floats, i32 0, i32 2
-        store volatile float %b, float* %1
-        call void @llvm.va_end(i8* %ap2)
+        %ap = alloca ptr
+        call void @llvm.va_start(ptr %ap)
+        %b = va_arg ptr %ap, float
+        %1 = getelementptr [11 x float], ptr @floats, i32 0, i32 2
+        store volatile float %b, ptr %1
+        call void @llvm.va_end(ptr %ap)
         ret void
 }
 
@@ -159,6 +157,6 @@ entry:
 ; NEWBE-DAG:         lwc1 [[FTMP1:\$f[0-9]+]], 12($sp)
 ; ALL-DAG:           swc1 [[FTMP1]], 8([[R2]])
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_copy(i8*, i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_copy(ptr, ptr)
+declare void @llvm.va_end(ptr)

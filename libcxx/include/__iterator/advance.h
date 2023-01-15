@@ -17,12 +17,14 @@
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_integral.h>
 #include <__utility/convert_to_integral.h>
+#include <__utility/declval.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cstdlib>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -56,7 +58,7 @@ void __advance(_RandIter& __i, typename iterator_traits<_RandIter>::difference_t
 
 template <
     class _InputIter, class _Distance,
-    class _IntegralDistance = decltype(_VSTD::__convert_to_integral(declval<_Distance>())),
+    class _IntegralDistance = decltype(_VSTD::__convert_to_integral(std::declval<_Distance>())),
     class = __enable_if_t<is_integral<_IntegralDistance>::value> >
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 void advance(_InputIter& __i, _Distance __orig_n) {

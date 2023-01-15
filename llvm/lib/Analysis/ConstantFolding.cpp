@@ -561,8 +561,8 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
         !LoadTy->isVectorTy())
       return nullptr;
 
-    Type *MapTy = Type::getIntNTy(
-          C->getContext(), DL.getTypeSizeInBits(LoadTy).getFixedSize());
+    Type *MapTy = Type::getIntNTy(C->getContext(),
+                                  DL.getTypeSizeInBits(LoadTy).getFixedValue());
     if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, Offset, DL)) {
       if (Res->isNullValue() && !LoadTy->isX86_MMXTy() &&
           !LoadTy->isX86_AMXTy())
@@ -705,7 +705,7 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
   // Explicitly check for out-of-bounds access, so we return poison even if the
   // constant is a uniform value.
   TypeSize Size = DL.getTypeAllocSize(C->getType());
-  if (!Size.isScalable() && Offset.sge(Size.getFixedSize()))
+  if (!Size.isScalable() && Offset.sge(Size.getFixedValue()))
     return PoisonValue::get(Ty);
 
   // Try an offset-independent fold of a uniform value.
@@ -903,11 +903,10 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
       return nullptr;
 
   unsigned BitWidth = DL.getTypeSizeInBits(IntIdxTy);
-  APInt Offset =
-      APInt(BitWidth,
-            DL.getIndexedOffsetInType(
-                SrcElemTy,
-                makeArrayRef((Value * const *)Ops.data() + 1, Ops.size() - 1)));
+  APInt Offset = APInt(
+      BitWidth,
+      DL.getIndexedOffsetInType(
+          SrcElemTy, ArrayRef((Value *const *)Ops.data() + 1, Ops.size() - 1)));
   Ptr = StripPtrCastKeepAS(Ptr);
 
   // If this is a GEP of a GEP, fold it all into a single GEP.
@@ -1617,6 +1616,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   // exceptions even for SNANs.
   case Intrinsic::fabs:
   case Intrinsic::copysign:
+  case Intrinsic::is_fpclass:
   // Non-constrained variants of rounding operations means default FP
   // environment, they can be folded in any case.
   case Intrinsic::ceil:
@@ -1946,8 +1946,12 @@ getEvaluationRoundingMode(const ConstrainedFPIntrinsic *CI) {
 static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
                                           const APFloat &Src) {
   // Zero, positive and negative, is always OK to fold.
-  if (Src.isZero())
-    return ConstantFP::get(CI->getContext(), Src);
+  if (Src.isZero()) {
+    // Get a fresh 0, since ppc_fp128 does have non-canonical zeros.
+    return ConstantFP::get(
+        CI->getContext(),
+        APFloat::getZero(Src.getSemantics(), Src.isNegative()));
+  }
 
   if (!Ty->isIEEELikeFPTy())
     return nullptr;
@@ -1965,9 +1969,10 @@ static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
     if (DenormMode == DenormalMode::getIEEE())
       return nullptr;
 
-    bool IsPositive = !Src.isNegative() ||
-                      DenormMode.Input == DenormalMode::PositiveZero ||
-                      DenormMode.Output == DenormalMode::PositiveZero;
+    bool IsPositive =
+        (!Src.isNegative() || DenormMode.Input == DenormalMode::PositiveZero ||
+         (DenormMode.Output == DenormalMode::PositiveZero &&
+          DenormMode.Input == DenormalMode::IEEE));
     return ConstantFP::get(CI->getContext(),
                            APFloat::getZero(Src.getSemantics(), !IsPositive));
   }
@@ -2626,6 +2631,26 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         break;
       }
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
+      switch (IntrinsicID) {
+      case Intrinsic::is_fpclass: {
+        uint32_t Mask = Op2C->getZExtValue();
+        bool Result =
+          ((Mask & fcSNan) && Op1V.isNaN() && Op1V.isSignaling()) ||
+          ((Mask & fcQNan) && Op1V.isNaN() && !Op1V.isSignaling()) ||
+          ((Mask & fcNegInf) && Op1V.isInfinity() && Op1V.isNegative()) ||
+          ((Mask & fcNegNormal) && Op1V.isNormal() && Op1V.isNegative()) ||
+          ((Mask & fcNegSubnormal) && Op1V.isDenormal() && Op1V.isNegative()) ||
+          ((Mask & fcNegZero) && Op1V.isZero() && Op1V.isNegative()) ||
+          ((Mask & fcPosZero) && Op1V.isZero() && !Op1V.isNegative()) ||
+          ((Mask & fcPosSubnormal) && Op1V.isDenormal() && !Op1V.isNegative()) ||
+          ((Mask & fcPosNormal) && Op1V.isNormal() && !Op1V.isNegative()) ||
+          ((Mask & fcPosInf) && Op1V.isInfinity() && !Op1V.isNegative());
+        return ConstantInt::get(Ty, Result);
+      }
+      default:
+        break;
+      }
+
       if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
         return nullptr;
       if (IntrinsicID == Intrinsic::powi && Ty->isHalfTy())

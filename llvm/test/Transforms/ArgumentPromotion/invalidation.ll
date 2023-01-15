@@ -11,40 +11,40 @@
 
 @G = constant i32 0
 
-define internal i32 @a(i32* %x) {
+define internal i32 @a(ptr %x) {
 ; CHECK-LABEL: define {{[^@]+}}@a
 ; CHECK-SAME: (i32 [[X_0_VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 [[X_0_VAL]]
 ;
 entry:
-  %v = load i32, i32* %x
+  %v = load i32, ptr %x
   ret i32 %v
 }
 
 define i32 @b() {
 ; CHECK-LABEL: define {{[^@]+}}@b() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @G, align 4
+; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, ptr @G, align 4
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @a(i32 [[G_VAL]])
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %v = call i32 @a(i32* @G)
+  %v = call i32 @a(ptr @G)
   ret i32 %v
 }
 
 define i32 @c() {
 ; CHECK-LABEL: define {{[^@]+}}@c() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, i32* @G, align 4
+; CHECK-NEXT:    [[G_VAL:%.*]] = load i32, ptr @G, align 4
 ; CHECK-NEXT:    [[V1:%.*]] = call i32 @a(i32 [[G_VAL]])
 ; CHECK-NEXT:    [[V2:%.*]] = call i32 @b()
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[V1]], [[V2]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
-  %v1 = call i32 @a(i32* @G)
+  %v1 = call i32 @a(ptr @G)
   %v2 = call i32 @b()
   %result = add i32 %v1, %v2
   ret i32 %result

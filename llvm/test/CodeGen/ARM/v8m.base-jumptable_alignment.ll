@@ -8,7 +8,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8m.base-arm-none-eabi"
 
 @crc32_tab = external unnamed_addr global [256 x i32], align 4
-@g_566 = external global i32**, align 4
+@g_566 = external global ptr, align 4
 
 define void @main() {
 ; CHECK-LABEL: main:
@@ -52,7 +52,7 @@ define void @main() {
 ; CHECK-NEXT:  .LBB0_7: @ %lbl_1394.i.i.i.loopexit
 ; CHECK-NEXT:  .LBB0_8: @ %for.end476.i.i.i.loopexit
 entry:
-  %0 = load volatile i32**, i32*** @g_566, align 4
+  %0 = load volatile ptr, ptr @g_566, align 4
   br label %func_16.exit.i.i.i
 
 lbl_1394.i.i.i.loopexit:                          ; preds = %for.cond14.preheader.us.i.i.i
@@ -85,6 +85,6 @@ for.end476.i.i.i.loopexit:                        ; preds = %for.cond14.preheade
   unreachable
 
 func_1.exit.loopexit:                             ; preds = %for.cond14.preheader.us.i.i.i
-  %arrayidx.i63.i.i5252 = getelementptr inbounds [256 x i32], [256 x i32]* @crc32_tab, i32 0, i32 undef
+  %arrayidx.i63.i.i5252 = getelementptr inbounds [256 x i32], ptr @crc32_tab, i32 0, i32 undef
   unreachable
 }

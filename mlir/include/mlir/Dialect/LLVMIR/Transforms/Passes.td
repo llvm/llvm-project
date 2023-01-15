@@ -14,6 +14,7 @@ include "mlir/Pass/PassBase.td"
 def LLVMLegalizeForExport : Pass<"llvm-legalize-for-export"> {
   let summary = "Legalize LLVM dialect to be convertible to LLVM IR";
   let constructor = "::mlir::LLVM::createLegalizeForExportPass()";
+  let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
 def LLVMRequestCWrappers

@@ -32,6 +32,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -62,6 +63,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -311,7 +313,8 @@ void TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 // SelectionDAGISel code
 //===----------------------------------------------------------------------===//
 
-SelectionDAGISel::SelectionDAGISel(TargetMachine &tm, CodeGenOpt::Level OL)
+SelectionDAGISel::SelectionDAGISel(char &ID, TargetMachine &tm,
+                                   CodeGenOpt::Level OL)
     : MachineFunctionPass(ID), TM(tm), FuncInfo(new FunctionLoweringInfo()),
       SwiftError(new SwiftErrorValueTracking()),
       CurDAG(new SelectionDAG(tm, OL)),
@@ -342,6 +345,10 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   if (UseMBPI && OptLevel != CodeGenOpt::None)
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
+  if (getEnableAssignmentTracking()) {
+    AU.addRequired<AssignmentTrackingAnalysis>();
+    AU.addPreserved<AssignmentTrackingAnalysis>();
+  }
   if (OptLevel != CodeGenOpt::None)
     LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -412,10 +419,15 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOpt::None)
     BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
 
+  FunctionVarLocs const *FnVarLocs = nullptr;
+  if (getEnableAssignmentTracking())
+    FnVarLocs = getAnalysis<AssignmentTrackingAnalysis>().getResults();
+
   LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
 
   CurDAG->init(*MF, *ORE, this, LibInfo,
-               getAnalysisIfAvailable<LegacyDivergenceAnalysis>(), PSI, BFI);
+               getAnalysisIfAvailable<LegacyDivergenceAnalysis>(), PSI, BFI,
+               FnVarLocs);
   FuncInfo->set(Fn, *MF, CurDAG);
   SwiftError->setFunction(*MF);
 
@@ -492,7 +504,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       To = J->second;
     }
     // Make sure the new register has a sufficiently constrained register class.
-    if (Register::isVirtualRegister(From) && Register::isVirtualRegister(To))
+    if (From.isVirtual() && To.isVirtual())
       MRI.constrainRegClass(To, MRI.getRegClass(From));
     // Replace it.
 
@@ -539,10 +551,10 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     MachineInstr *MI = FuncInfo->ArgDbgValues[e - i - 1];
     assert(MI->getOpcode() != TargetOpcode::DBG_VALUE_LIST &&
            "Function parameters should not be described by DBG_VALUE_LIST.");
-    bool hasFI = MI->getOperand(0).isFI();
+    bool hasFI = MI->getDebugOperand(0).isFI();
     Register Reg =
-        hasFI ? TRI.getFrameRegister(*MF) : MI->getOperand(0).getReg();
-    if (Register::isPhysicalRegister(Reg))
+        hasFI ? TRI.getFrameRegister(*MF) : MI->getDebugOperand(0).getReg();
+    if (Reg.isPhysical())
       EntryMBB->insert(EntryMBB->begin(), MI);
     else {
       MachineInstr *Def = RegInfo->getVRegDef(Reg);
@@ -571,7 +583,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       DebugLoc DL = MI->getDebugLoc();
       bool IsIndirect = MI->isIndirectDebugValue();
       if (IsIndirect)
-        assert(MI->getOperand(1).getImm() == 0 &&
+        assert(MI->getDebugOffset().getImm() == 0 &&
                "DBG_VALUE with nonzero offset");
       assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
              "Expected inlined-at fields to agree");
@@ -1292,54 +1304,73 @@ static bool isFoldedOrDeadInstruction(const Instruction *I,
          !FuncInfo.isExportedInst(I); // Exported instrs must be computed.
 }
 
+static void processDbgDeclare(FunctionLoweringInfo &FuncInfo,
+                              const Value *Address, DIExpression *Expr,
+                              DILocalVariable *Var, DebugLoc DbgLoc) {
+  MachineFunction *MF = FuncInfo.MF;
+  const DataLayout &DL = MF->getDataLayout();
+
+  assert(Var && "Missing variable");
+  assert(DbgLoc && "Missing location");
+
+  // Look through casts and constant offset GEPs. These mostly come from
+  // inalloca.
+  APInt Offset(DL.getTypeSizeInBits(Address->getType()), 0);
+  Address = Address->stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
+
+  // Check if the variable is a static alloca or a byval or inalloca
+  // argument passed in memory. If it is not, then we will ignore this
+  // intrinsic and handle this during isel like dbg.value.
+  int FI = std::numeric_limits<int>::max();
+  if (const auto *AI = dyn_cast<AllocaInst>(Address)) {
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
+    if (SI != FuncInfo.StaticAllocaMap.end())
+      FI = SI->second;
+  } else if (const auto *Arg = dyn_cast<Argument>(Address))
+    FI = FuncInfo.getArgumentFrameIndex(Arg);
+
+  if (FI == std::numeric_limits<int>::max())
+    return;
+
+  if (Offset.getBoolValue())
+    Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset,
+                                 Offset.getZExtValue());
+
+  LLVM_DEBUG(dbgs() << "processDbgDeclare: setVariableDbgInfo Var=" << *Var
+                    << ", Expr=" << *Expr << ",  FI=" << FI
+                    << ", DbgLoc=" << DbgLoc << "\n");
+  MF->setVariableDbgInfo(Var, Expr, FI, DbgLoc);
+}
+
 /// Collect llvm.dbg.declare information. This is done after argument lowering
 /// in case the declarations refer to arguments.
 static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
-  MachineFunction *MF = FuncInfo.MF;
-  const DataLayout &DL = MF->getDataLayout();
   for (const BasicBlock &BB : *FuncInfo.Fn) {
     for (const Instruction &I : BB) {
-      const DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(&I);
-      if (!DI)
-        continue;
-
-      assert(DI->getVariable() && "Missing variable");
-      assert(DI->getDebugLoc() && "Missing location");
-      const Value *Address = DI->getAddress();
-      if (!Address) {
-        LLVM_DEBUG(dbgs() << "processDbgDeclares skipping " << *DI
-                          << " (bad address)\n");
-        continue;
+      if (const DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(&I)) {
+        Value *Address = DI->getAddress();
+        if (!Address) {
+          LLVM_DEBUG(dbgs() << "processDbgDeclares skipping " << *DI
+                            << " (bad address)\n");
+          continue;
+        }
+        processDbgDeclare(FuncInfo, Address, DI->getExpression(),
+                          DI->getVariable(), DI->getDebugLoc());
       }
-
-      // Look through casts and constant offset GEPs. These mostly come from
-      // inalloca.
-      APInt Offset(DL.getTypeSizeInBits(Address->getType()), 0);
-      Address = Address->stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
-
-      // Check if the variable is a static alloca or a byval or inalloca
-      // argument passed in memory. If it is not, then we will ignore this
-      // intrinsic and handle this during isel like dbg.value.
-      int FI = std::numeric_limits<int>::max();
-      if (const auto *AI = dyn_cast<AllocaInst>(Address)) {
-        auto SI = FuncInfo.StaticAllocaMap.find(AI);
-        if (SI != FuncInfo.StaticAllocaMap.end())
-          FI = SI->second;
-      } else if (const auto *Arg = dyn_cast<Argument>(Address))
-        FI = FuncInfo.getArgumentFrameIndex(Arg);
-
-      if (FI == std::numeric_limits<int>::max())
-        continue;
-
-      DIExpression *Expr = DI->getExpression();
-      if (Offset.getBoolValue())
-        Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset,
-                                     Offset.getZExtValue());
-      LLVM_DEBUG(dbgs() << "processDbgDeclares: setVariableDbgInfo FI=" << FI
-                        << ", " << *DI << "\n");
-      MF->setVariableDbgInfo(DI->getVariable(), Expr, FI, DI->getDebugLoc());
     }
   }
+}
+
+/// Collect single location variable information generated with assignment
+/// tracking. This is done after argument lowering in case the declarations
+/// refer to arguments.
+static void processSingleLocVars(FunctionLoweringInfo &FuncInfo,
+                                 FunctionVarLocs const *FnVarLocs) {
+  for (auto It = FnVarLocs->single_locs_begin(),
+            End = FnVarLocs->single_locs_end();
+       It != End; ++It)
+    processDbgDeclare(FuncInfo, It->V, It->Expr,
+                      FnVarLocs->getDILocalVariable(It->VariableID), It->DL);
 }
 
 void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
@@ -1404,7 +1435,13 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   if (FastIS && Inserted)
     FastIS->setLastLocalValue(&*std::prev(FuncInfo->InsertPt));
 
-  processDbgDeclares(*FuncInfo);
+  if (getEnableAssignmentTracking()) {
+    assert(CurDAG->getFunctionVarLocs() &&
+           "expected AssignmentTrackingAnalysis pass results");
+    processSingleLocVars(*FuncInfo, CurDAG->getFunctionVarLocs());
+  } else {
+    processDbgDeclares(*FuncInfo);
+  }
 
   // Iterate over all basic blocks in the function.
   StackProtector &SP = getAnalysis<StackProtector>();
@@ -2208,6 +2245,11 @@ void SelectionDAGISel::Select_ARITH_FENCE(SDNode *N) {
                        N->getOperand(0));
 }
 
+void SelectionDAGISel::Select_MEMBARRIER(SDNode *N) {
+  CurDAG->SelectNodeTo(N, TargetOpcode::MEMBARRIER, N->getValueType(0),
+                       N->getOperand(0));
+}
+
 void SelectionDAGISel::pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops,
                                                 SDValue OpVal, SDLoc DL) {
   SDNode *OpNode = OpVal.getNode();
@@ -2302,7 +2344,7 @@ void SelectionDAGISel::Select_PATCHPOINT(SDNode *N) {
   Ops.push_back(RegMask);
   Ops.push_back(Chain);
   if (Glue.has_value())
-    Ops.push_back(Glue.value());
+    Ops.push_back(*Glue);
 
   SDVTList NodeTys = N->getVTList();
   CurDAG->SelectNodeTo(N, TargetOpcode::PATCHPOINT, NodeTys, Ops);
@@ -2861,6 +2903,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::ARITH_FENCE:
     Select_ARITH_FENCE(NodeToMatch);
+    return;
+  case ISD::MEMBARRIER:
+    Select_MEMBARRIER(NodeToMatch);
     return;
   case ISD::STACKMAP:
     Select_STACKMAP(NodeToMatch);
@@ -3779,5 +3824,3 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
   }
   report_fatal_error(Twine(Msg.str()));
 }
-
-char SelectionDAGISel::ID = 0;

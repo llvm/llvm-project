@@ -14,7 +14,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -380,7 +379,7 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
         break;
 
       // Check to see if this store is to a constant offset from the start ptr.
-      Optional<int64_t> Offset =
+      std::optional<int64_t> Offset =
           isPointerOffset(StartPtr, NextStore->getPointerOperand(), *DL);
       if (!Offset)
         break;
@@ -398,7 +397,8 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
         break;
 
       // Check to see if this store is to a constant offset from the start ptr.
-      Optional<int64_t> Offset = isPointerOffset(StartPtr, MSI->getDest(), *DL);
+      std::optional<int64_t> Offset =
+          isPointerOffset(StartPtr, MSI->getDest(), *DL);
       if (!Offset)
         break;
 
@@ -563,7 +563,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
           End->eraseFromParent();
       }
     } else {
-      uint64_t Size = *Info.AI->getAllocationSizeInBits(*DL) / 8;
+      uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());
       tagAlloca(AI, &*IRB.GetInsertPoint(), Ptr, Size);
       for (auto *RI : SInfo.RetVec) {

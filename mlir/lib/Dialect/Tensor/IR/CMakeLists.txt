@@ -57,9 +57,11 @@ add_mlir_dialect_library(MLIRTensorTilingInterfaceImpl
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
+  MLIRAffineUtils
   MLIRDialectUtils
   MLIRIR
   MLIRLinalgDialect
+  MLIRLinalgUtils
   MLIRSCFDialect
   MLIRSupport
   MLIRTensorDialect

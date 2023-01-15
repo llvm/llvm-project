@@ -15,6 +15,7 @@
 namespace mlir {
 namespace bufferization {
 class AnalysisState;
+struct BufferizationStatistics;
 struct OneShotBufferizationOptions;
 
 /// A function that matches anchor OpOperands for tensor::EmptyOp elimination.
@@ -49,7 +50,8 @@ LogicalResult insertSliceAnchoredEmptyTensorEliminationStep(
 /// After applying this transform, the IR can be bufferized without inserting
 /// additional buffer allocations.
 LogicalResult insertTensorCopies(Operation *op,
-                                 const OneShotBufferizationOptions &options);
+                                 const OneShotBufferizationOptions &options,
+                                 BufferizationStatistics *statistics = nullptr);
 
 /// Resolve RaW and other conflicts by inserting bufferization.alloc_tensor ops.
 /// After applying this transform, the IR can be bufferized without inserting

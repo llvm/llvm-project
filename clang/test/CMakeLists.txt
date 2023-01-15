@@ -15,6 +15,8 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_THREADS
   LLVM_WITH_Z3
+  PPC_LINUX_DEFAULT_IEEELONGDOUBLE
+  LLVM_TOOL_LLVM_DRIVER_BUILD
   )
 
 configure_lit_site_cfg(
@@ -173,6 +175,7 @@ set_target_properties(check-clang PROPERTIES FOLDER "Clang tests")
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
   PARAMS ${CLANG_TEST_PARAMS}
   DEPENDS ${CLANG_TEST_DEPS}
+  FOLDER "Clang tests/Suites"
 )
 
 # Add a legacy target spelling: clang-test

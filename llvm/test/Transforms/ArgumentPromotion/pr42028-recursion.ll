@@ -3,7 +3,7 @@
 
 ; This shouldn't get infinitely promoted.
 
-%S = type { %S* }
+%S = type { ptr }
 
 define i32 @test_inf_promote_caller(i32 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test_inf_promote_caller
@@ -11,43 +11,39 @@ define i32 @test_inf_promote_caller(i32 %arg) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TEMP:%.*]] = alloca [[S:%.*]], align 8
 ; CHECK-NEXT:    [[TEMP1:%.*]] = alloca [[S]], align 8
-; CHECK-NEXT:    [[TEMP2:%.*]] = call i32 @test_inf_promote_callee(%S* [[TEMP]], %S* [[TEMP1]])
+; CHECK-NEXT:    [[TEMP2:%.*]] = call i32 @test_inf_promote_callee(ptr [[TEMP]], ptr [[TEMP1]])
 ; CHECK-NEXT:    ret i32 0
 ;
 bb:
   %temp = alloca %S
   %temp1 = alloca %S
-  %temp2 = call i32 @test_inf_promote_callee(%S* %temp, %S* %temp1)
+  %temp2 = call i32 @test_inf_promote_callee(ptr %temp, ptr %temp1)
   ret i32 0
 }
 
-define internal i32 @test_inf_promote_callee(%S* %arg, %S* %arg1) {
+define internal i32 @test_inf_promote_callee(ptr %arg, ptr %arg1) {
 ; CHECK-LABEL: define {{[^@]+}}@test_inf_promote_callee
-; CHECK-SAME: (%S* [[ARG:%.*]], %S* [[ARG1:%.*]]) {
+; CHECK-SAME: (ptr [[ARG:%.*]], ptr [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr [[S:%.*]], %S* [[ARG1]], i32 0, i32 0
-; CHECK-NEXT:    [[TEMP2:%.*]] = load %S*, %S** [[TEMP]], align 8
-; CHECK-NEXT:    [[TEMP3:%.*]] = getelementptr [[S]], %S* [[ARG]], i32 0, i32 0
-; CHECK-NEXT:    [[TEMP4:%.*]] = load %S*, %S** [[TEMP3]], align 8
-; CHECK-NEXT:    [[TEMP5:%.*]] = call i32 @test_inf_promote_callee2(%S* [[TEMP4]], %S* [[TEMP2]])
+; CHECK-NEXT:    [[TEMP2:%.*]] = load ptr, ptr [[ARG1]], align 8
+; CHECK-NEXT:    [[TEMP4:%.*]] = load ptr, ptr [[ARG]], align 8
+; CHECK-NEXT:    [[TEMP5:%.*]] = call i32 @test_inf_promote_callee2(ptr [[TEMP4]], ptr [[TEMP2]])
 ; CHECK-NEXT:    ret i32 0
 ;
 bb:
-  %temp = getelementptr %S, %S* %arg1, i32 0, i32 0
-  %temp2 = load %S*, %S** %temp
-  %temp3 = getelementptr %S, %S* %arg, i32 0, i32 0
-  %temp4 = load %S*, %S** %temp3
-  %temp5 = call i32 @test_inf_promote_callee2(%S* %temp4, %S* %temp2)
+  %temp2 = load ptr, ptr %arg1
+  %temp4 = load ptr, ptr %arg
+  %temp5 = call i32 @test_inf_promote_callee2(ptr %temp4, ptr %temp2)
   ret i32 0
 }
 
-define internal i32 @test_inf_promote_callee2(%S* %arg, %S* %arg1) {
+define internal i32 @test_inf_promote_callee2(ptr %arg, ptr %arg1) {
 ; CHECK-LABEL: define {{[^@]+}}@test_inf_promote_callee2
-; CHECK-SAME: (%S* [[ARG:%.*]], %S* [[ARG1:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call i32 @test_inf_promote_callee(%S* [[ARG]], %S* [[ARG1]])
+; CHECK-SAME: (ptr [[ARG:%.*]], ptr [[ARG1:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i32 @test_inf_promote_callee(ptr [[ARG]], ptr [[ARG1]])
 ; CHECK-NEXT:    ret i32 0
 ;
-  %r = call i32 @test_inf_promote_callee(%S* %arg, %S* %arg1)
+  %r = call i32 @test_inf_promote_callee(ptr %arg, ptr %arg1)
   ret i32 0
 }
 

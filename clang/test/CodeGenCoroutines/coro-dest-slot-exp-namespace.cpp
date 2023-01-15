@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 #include "Inputs/coroutine-exp-namespace.h"
 
@@ -33,7 +33,7 @@ extern "C" coro f(int) { co_return; }
 // CHECK: call void @_ZNSt12experimental13coroutines_v113suspend_never12await_resumeEv(
 // CHECK: %[[CLEANUP_DEST1:.+]] = phi i32 [ 0, %[[FINAL_READY]] ], [ 2, %[[FINAL_CLEANUP]] ]
 // CHECK: %[[CLEANUP_DEST2:.+]] = phi i32 [ %[[CLEANUP_DEST0]], %{{.+}} ], [ %[[CLEANUP_DEST1]], %{{.+}} ], [ 0, %{{.+}} ]
-// CHECK: call i8* @llvm.coro.free(
+// CHECK: call ptr @llvm.coro.free(
 // CHECK: switch i32 %[[CLEANUP_DEST2]], label %{{.+}} [
 // CHECK-NEXT: i32 0
 // CHECK-NEXT: i32 2

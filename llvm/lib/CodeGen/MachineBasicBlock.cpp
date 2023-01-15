@@ -456,8 +456,8 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   if (IrrLoopHeaderWeight && IsStandalone) {
     if (Indexes) OS << '\t';
-    OS.indent(2) << "; Irreducible loop header weight: "
-                 << IrrLoopHeaderWeight.value() << '\n';
+    OS.indent(2) << "; Irreducible loop header weight: " << *IrrLoopHeaderWeight
+                 << '\n';
   }
 }
 
@@ -561,11 +561,6 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       default:
         os << getSectionID().Number;
       }
-      hasAttributes = true;
-    }
-    if (getBBID().has_value()) {
-      os << (hasAttributes ? ", " : " (");
-      os << "bb_id " << *getBBID();
       hasAttributes = true;
     }
   }
@@ -1071,8 +1066,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
             MO.isUndef())
           continue;
         Register Reg = MO.getReg();
-        if (Register::isPhysicalRegister(Reg) ||
-            LV->getVarInfo(Reg).removeKill(MI)) {
+        if (Reg.isPhysical() || LV->getVarInfo(Reg).removeKill(MI)) {
           KilledRegs.push_back(Reg);
           LLVM_DEBUG(dbgs() << "Removing terminator kill: " << MI);
           MO.setIsKill(false);
@@ -1158,7 +1152,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
       for (instr_iterator I = instr_end(), E = instr_begin(); I != E;) {
         if (!(--I)->addRegisterKilled(Reg, TRI, /* AddIfNotFound= */ false))
           continue;
-        if (Register::isVirtualRegister(Reg))
+        if (Reg.isVirtual())
           LV->getVarInfo(Reg).Kills.push_back(&*I);
         LLVM_DEBUG(dbgs() << "Restored terminator kill: " << *I);
         break;
@@ -1654,11 +1648,6 @@ bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
       return true;
   }
   return false;
-}
-
-unsigned MachineBasicBlock::getBBIDOrNumber() const {
-  uint8_t BBAddrMapVersion = getParent()->getContext().getBBAddrMapVersion();
-  return BBAddrMapVersion < 2 ? getNumber() : *getBBID();
 }
 
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);

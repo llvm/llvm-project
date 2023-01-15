@@ -4,9 +4,9 @@
 ; RUN: llc %s -o - -mtriple=aarch64-arm-none-eabi     -global-isel=1 -global-isel-abort=1 -mattr=+mops,+mte  | FileCheck %s --check-prefix=GISel
 ; RUN: llc %s -o - -mtriple=aarch64-arm-none-eabi -O2 -mattr=+mops,+mte  | FileCheck %s --check-prefix=SDAG
 
-declare i8* @llvm.aarch64.mops.memset.tag(i8*, i8, i64)
+declare ptr @llvm.aarch64.mops.memset.tag(ptr, i8, i64)
 
-define i8* @memset_tagged_0_zeroval(i8* %dst, i64 %size) {
+define ptr @memset_tagged_0_zeroval(ptr %dst, i64 %size) {
 ; GISel-O0-LABEL: memset_tagged_0_zeroval:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    mov x8, xzr
@@ -31,11 +31,11 @@ define i8* @memset_tagged_0_zeroval(i8* %dst, i64 %size) {
 ; SDAG-NEXT:    setge [x0]!, x8!, xzr
 ; SDAG-NEXT:    ret
 entry:
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 0, i64 0)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 0, i64 0)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_1_zeroval(i8* %dst, i64 %size) {
+define ptr @memset_tagged_1_zeroval(ptr %dst, i64 %size) {
 ; GISel-O0-LABEL: memset_tagged_1_zeroval:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    mov x9, xzr
@@ -62,11 +62,11 @@ define i8* @memset_tagged_1_zeroval(i8* %dst, i64 %size) {
 ; SDAG-NEXT:    setge [x0]!, x8!, xzr
 ; SDAG-NEXT:    ret
 entry:
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 0, i64 1)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 0, i64 1)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_10_zeroval(i8* %dst, i64 %size) {
+define ptr @memset_tagged_10_zeroval(ptr %dst, i64 %size) {
 ; GISel-O0-LABEL: memset_tagged_10_zeroval:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    mov x9, xzr
@@ -93,11 +93,11 @@ define i8* @memset_tagged_10_zeroval(i8* %dst, i64 %size) {
 ; SDAG-NEXT:    setge [x0]!, x8!, xzr
 ; SDAG-NEXT:    ret
 entry:
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 0, i64 10)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 0, i64 10)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_10000_zeroval(i8* %dst, i64 %size) {
+define ptr @memset_tagged_10000_zeroval(ptr %dst, i64 %size) {
 ; GISel-O0-LABEL: memset_tagged_10000_zeroval:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    mov x9, xzr
@@ -124,11 +124,11 @@ define i8* @memset_tagged_10000_zeroval(i8* %dst, i64 %size) {
 ; SDAG-NEXT:    setge [x0]!, x8!, xzr
 ; SDAG-NEXT:    ret
 entry:
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 0, i64 10000)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 0, i64 10000)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_size_zeroval(i8* %dst, i64 %size) {
+define ptr @memset_tagged_size_zeroval(ptr %dst, i64 %size) {
 ; GISel-O0-LABEL: memset_tagged_size_zeroval:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    mov x8, xzr
@@ -151,11 +151,11 @@ define i8* @memset_tagged_size_zeroval(i8* %dst, i64 %size) {
 ; SDAG-NEXT:    setge [x0]!, x1!, xzr
 ; SDAG-NEXT:    ret
 entry:
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 0, i64 %size)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 0, i64 %size)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_0(i8* %dst, i64 %size, i32 %value) {
+define ptr @memset_tagged_0(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_0:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    // implicit-def: $x9
@@ -185,11 +185,11 @@ define i8* @memset_tagged_0(i8* %dst, i64 %size, i32 %value) {
 ; SDAG-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 %value_trunc, i64 0)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 %value_trunc, i64 0)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_1(i8* %dst, i64 %size, i32 %value) {
+define ptr @memset_tagged_1(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_1:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    // implicit-def: $x9
@@ -220,11 +220,11 @@ define i8* @memset_tagged_1(i8* %dst, i64 %size, i32 %value) {
 ; SDAG-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 %value_trunc, i64 1)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 %value_trunc, i64 1)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_10(i8* %dst, i64 %size, i32 %value) {
+define ptr @memset_tagged_10(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_10:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    // implicit-def: $x9
@@ -255,11 +255,11 @@ define i8* @memset_tagged_10(i8* %dst, i64 %size, i32 %value) {
 ; SDAG-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 %value_trunc, i64 10)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 %value_trunc, i64 10)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_10000(i8* %dst, i64 %size, i32 %value) {
+define ptr @memset_tagged_10000(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_10000:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    // implicit-def: $x9
@@ -290,11 +290,11 @@ define i8* @memset_tagged_10000(i8* %dst, i64 %size, i32 %value) {
 ; SDAG-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 %value_trunc, i64 10000)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 %value_trunc, i64 10000)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_size(i8* %dst, i64 %size, i32 %value) {
+define ptr @memset_tagged_size(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_size:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    // implicit-def: $x8
@@ -321,11 +321,11 @@ define i8* @memset_tagged_size(i8* %dst, i64 %size, i32 %value) {
 ; SDAG-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* %dst, i8 %value_trunc, i64 %size)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr %dst, i8 %value_trunc, i64 %size)
+  ret ptr %r
 }
 
-define i8* @memset_tagged_size_aligned(i8* %dst, i64 %size, i32 %value) {
+define ptr @memset_tagged_size_aligned(ptr %dst, i64 %size, i32 %value) {
 ; GISel-O0-LABEL: memset_tagged_size_aligned:
 ; GISel-O0:       // %bb.0: // %entry
 ; GISel-O0-NEXT:    // implicit-def: $x8
@@ -352,6 +352,6 @@ define i8* @memset_tagged_size_aligned(i8* %dst, i64 %size, i32 %value) {
 ; SDAG-NEXT:    ret
 entry:
   %value_trunc = trunc i32 %value to i8
-  %r = tail call i8* @llvm.aarch64.mops.memset.tag(i8* align 16 %dst, i8 %value_trunc, i64 %size)
-  ret i8* %r
+  %r = tail call ptr @llvm.aarch64.mops.memset.tag(ptr align 16 %dst, i8 %value_trunc, i64 %size)
+  ret ptr %r
 }

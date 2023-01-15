@@ -28,10 +28,17 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
-#include <__tuple/tuple_element.h>
-#include <__tuple/tuple_size.h>
+#include <__tuple_dir/tuple_element.h>
+#include <__tuple_dir/tuple_size.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/make_unsigned.h>
+#include <__type_traits/remove_const.h>
+#include <__type_traits/remove_pointer.h>
 #include <__utility/move.h>
-#include <type_traits>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

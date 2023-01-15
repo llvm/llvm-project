@@ -27,7 +27,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace {
@@ -601,7 +600,7 @@ mlir::LogicalResult fir::ArrayModifyOp::verify() {
 // BoxAddrOp
 //===----------------------------------------------------------------------===//
 
-mlir::OpFoldResult fir::BoxAddrOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
+mlir::OpFoldResult fir::BoxAddrOp::fold(FoldAdaptor adaptor) {
   if (auto *v = getVal().getDefiningOp()) {
     if (auto box = mlir::dyn_cast<fir::EmboxOp>(v)) {
       if (!box.getSlice()) // Fold only if not sliced
@@ -617,8 +616,7 @@ mlir::OpFoldResult fir::BoxAddrOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
 // BoxCharLenOp
 //===----------------------------------------------------------------------===//
 
-mlir::OpFoldResult
-fir::BoxCharLenOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
+mlir::OpFoldResult fir::BoxCharLenOp::fold(FoldAdaptor adaptor) {
   if (auto v = getVal().getDefiningOp()) {
     if (auto box = mlir::dyn_cast<fir::EmboxCharOp>(v))
       return box.getLen();
@@ -886,7 +884,7 @@ void fir::ConvertOp::getCanonicalizationPatterns(
                  ForwardConstantConvertPattern>(context);
 }
 
-mlir::OpFoldResult fir::ConvertOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
+mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
   if (getValue().getType() == getType())
     return getValue();
   if (matchPattern(getValue(), mlir::m_Op<fir::ConvertOp>())) {
@@ -938,7 +936,8 @@ mlir::LogicalResult fir::ConvertOp::verify() {
       (inType.isa<fir::BoxProcType>() && outType.isa<fir::BoxProcType>()) ||
       (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
       (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
-      (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)))
+      (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
+      (fir::isPolymorphicType(inType) && outType.isa<BoxType>()))
     return mlir::success();
   return emitOpError("invalid type conversion");
 }
@@ -1181,8 +1180,8 @@ mlir::LogicalResult fir::EmboxOp::verify() {
     return emitOpError("shape must not be provided for a scalar");
   if (getSlice() && !isArray)
     return emitOpError("slice must not be provided for a scalar");
-  if (getTdesc() && !getResult().getType().isa<fir::ClassType>())
-    return emitOpError("tdesc must be used with fir.class result type");
+  if (getSourceBox() && !getResult().getType().isa<fir::ClassType>())
+    return emitOpError("source_box must be used with fir.class result type");
   return mlir::success();
 }
 
@@ -2529,11 +2528,11 @@ getMutableSuccessorOperands(unsigned pos, mlir::MutableOperandRange operands,
       mlir::MutableOperandRange::OperandSegment(pos, targetOffsetAttr));
 }
 
-llvm::Optional<mlir::OperandRange> fir::SelectOp::getCompareOperands(unsigned) {
+std::optional<mlir::OperandRange> fir::SelectOp::getCompareOperands(unsigned) {
   return {};
 }
 
-llvm::Optional<llvm::ArrayRef<mlir::Value>>
+std::optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectOp::getCompareOperands(llvm::ArrayRef<mlir::Value>, unsigned) {
   return {};
 }
@@ -2543,7 +2542,7 @@ mlir::SuccessorOperands fir::SelectOp::getSuccessorOperands(unsigned oper) {
       oper, getTargetArgsMutable(), getTargetOffsetAttr()));
 }
 
-llvm::Optional<llvm::ArrayRef<mlir::Value>>
+std::optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
                                     unsigned oper) {
   auto a =
@@ -2553,7 +2552,7 @@ fir::SelectOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
 
-llvm::Optional<mlir::ValueRange>
+std::optional<mlir::ValueRange>
 fir::SelectOp::getSuccessorOperands(mlir::ValueRange operands, unsigned oper) {
   auto a =
       (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr());
@@ -2572,14 +2571,14 @@ unsigned fir::SelectOp::targetOffsetSize() {
 // SelectCaseOp
 //===----------------------------------------------------------------------===//
 
-llvm::Optional<mlir::OperandRange>
+std::optional<mlir::OperandRange>
 fir::SelectCaseOp::getCompareOperands(unsigned cond) {
   auto a =
       (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getCompareOffsetAttr());
   return {getSubOperands(cond, getCompareArgs(), a)};
 }
 
-llvm::Optional<llvm::ArrayRef<mlir::Value>>
+std::optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectCaseOp::getCompareOperands(llvm::ArrayRef<mlir::Value> operands,
                                       unsigned cond) {
   auto a =
@@ -2589,7 +2588,7 @@ fir::SelectCaseOp::getCompareOperands(llvm::ArrayRef<mlir::Value> operands,
   return {getSubOperands(cond, getSubOperands(1, operands, segments), a)};
 }
 
-llvm::Optional<mlir::ValueRange>
+std::optional<mlir::ValueRange>
 fir::SelectCaseOp::getCompareOperands(mlir::ValueRange operands,
                                       unsigned cond) {
   auto a =
@@ -2604,7 +2603,7 @@ mlir::SuccessorOperands fir::SelectCaseOp::getSuccessorOperands(unsigned oper) {
       oper, getTargetArgsMutable(), getTargetOffsetAttr()));
 }
 
-llvm::Optional<llvm::ArrayRef<mlir::Value>>
+std::optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectCaseOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
                                         unsigned oper) {
   auto a =
@@ -2614,7 +2613,7 @@ fir::SelectCaseOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
 
-llvm::Optional<mlir::ValueRange>
+std::optional<mlir::ValueRange>
 fir::SelectCaseOp::getSuccessorOperands(mlir::ValueRange operands,
                                         unsigned oper) {
   auto a =
@@ -2864,12 +2863,12 @@ void fir::SelectRankOp::print(mlir::OpAsmPrinter &p) {
   printIntegralSwitchTerminator(*this, p);
 }
 
-llvm::Optional<mlir::OperandRange>
+std::optional<mlir::OperandRange>
 fir::SelectRankOp::getCompareOperands(unsigned) {
   return {};
 }
 
-llvm::Optional<llvm::ArrayRef<mlir::Value>>
+std::optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectRankOp::getCompareOperands(llvm::ArrayRef<mlir::Value>, unsigned) {
   return {};
 }
@@ -2879,7 +2878,7 @@ mlir::SuccessorOperands fir::SelectRankOp::getSuccessorOperands(unsigned oper) {
       oper, getTargetArgsMutable(), getTargetOffsetAttr()));
 }
 
-llvm::Optional<llvm::ArrayRef<mlir::Value>>
+std::optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectRankOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
                                         unsigned oper) {
   auto a =
@@ -2889,7 +2888,7 @@ fir::SelectRankOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
 
-llvm::Optional<mlir::ValueRange>
+std::optional<mlir::ValueRange>
 fir::SelectRankOp::getSuccessorOperands(mlir::ValueRange operands,
                                         unsigned oper) {
   auto a =
@@ -2909,12 +2908,12 @@ unsigned fir::SelectRankOp::targetOffsetSize() {
 // SelectTypeOp
 //===----------------------------------------------------------------------===//
 
-llvm::Optional<mlir::OperandRange>
+std::optional<mlir::OperandRange>
 fir::SelectTypeOp::getCompareOperands(unsigned) {
   return {};
 }
 
-llvm::Optional<llvm::ArrayRef<mlir::Value>>
+std::optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectTypeOp::getCompareOperands(llvm::ArrayRef<mlir::Value>, unsigned) {
   return {};
 }
@@ -2924,7 +2923,7 @@ mlir::SuccessorOperands fir::SelectTypeOp::getSuccessorOperands(unsigned oper) {
       oper, getTargetArgsMutable(), getTargetOffsetAttr()));
 }
 
-llvm::Optional<llvm::ArrayRef<mlir::Value>>
+std::optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectTypeOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
                                         unsigned oper) {
   auto a =
@@ -2934,7 +2933,7 @@ fir::SelectTypeOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
 
-llvm::Optional<mlir::ValueRange>
+std::optional<mlir::ValueRange>
 fir::SelectTypeOp::getSuccessorOperands(mlir::ValueRange operands,
                                         unsigned oper) {
   auto a =
@@ -3087,6 +3086,12 @@ mlir::LogicalResult fir::ShapeOp::verify() {
   return mlir::success();
 }
 
+void fir::ShapeOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                         mlir::ValueRange extents) {
+  auto type = fir::ShapeType::get(builder.getContext(), extents.size());
+  build(builder, result, type, extents);
+}
+
 //===----------------------------------------------------------------------===//
 // ShapeShiftOp
 //===----------------------------------------------------------------------===//
@@ -3219,7 +3224,7 @@ mkNamedIntegerAttr(mlir::OpBuilder &builder, llvm::StringRef name, int64_t v) {
 void fir::StringLitOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result,
                              fir::CharacterType inType, llvm::StringRef val,
-                             llvm::Optional<int64_t> len) {
+                             std::optional<int64_t> len) {
   auto valAttr = builder.getNamedAttr(value(), builder.getStringAttr(val));
   int64_t length = len ? *len : inType.getLen();
   auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
@@ -3241,7 +3246,7 @@ void fir::StringLitOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result,
                              fir::CharacterType inType,
                              llvm::ArrayRef<char> vlist,
-                             llvm::Optional<std::int64_t> len) {
+                             std::optional<std::int64_t> len) {
   auto valAttr =
       builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
   std::int64_t length = len ? *len : inType.getLen();
@@ -3254,7 +3259,7 @@ void fir::StringLitOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result,
                              fir::CharacterType inType,
                              llvm::ArrayRef<char16_t> vlist,
-                             llvm::Optional<std::int64_t> len) {
+                             std::optional<std::int64_t> len) {
   auto valAttr =
       builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
   std::int64_t length = len ? *len : inType.getLen();
@@ -3267,7 +3272,7 @@ void fir::StringLitOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result,
                              fir::CharacterType inType,
                              llvm::ArrayRef<char32_t> vlist,
-                             llvm::Optional<std::int64_t> len) {
+                             std::optional<std::int64_t> len) {
   auto valAttr =
       builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
   std::int64_t length = len ? *len : inType.getLen();

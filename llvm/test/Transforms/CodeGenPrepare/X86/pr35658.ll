@@ -13,7 +13,7 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %e.03 = phi ptr [ @gv, %entry ], [ %arrayidx1, %for.body ]
   %tobool = icmp eq i16 undef, 0
-  br i1 undef, label %for.body, label %for.end
+  br i1 %tobool, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
 ; CHECK: sunkaddr

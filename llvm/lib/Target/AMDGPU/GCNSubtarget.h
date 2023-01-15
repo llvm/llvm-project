@@ -129,7 +129,7 @@ protected:
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
   bool HasR128A16 = false;
-  bool HasGFX10A16 = false;
+  bool HasA16 = false;
   bool HasG16 = false;
   bool HasNSAEncoding = false;
   unsigned NSAMaxSize = 0;
@@ -179,6 +179,8 @@ protected:
   bool UnalignedDSAccess = false;
   bool HasPackedTID = false;
   bool ScalarizeGlobal = false;
+  bool HasSALUFloatInsts = false;
+  bool HasVGPRSingleUseHintInsts = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -192,9 +194,11 @@ protected:
   bool HasFlatSegmentOffsetBug = false;
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
+  bool HasMSAALoadDstSelBug = false;
   bool HasGFX11FullVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
+  bool HasVALUTransUseHazard = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -297,6 +301,8 @@ public:
   /// a 32-bit register implicitly zeroes the high 16-bits, rather than preserve
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
+
+  bool supportsWGP() const { return getGeneration() >= GFX10; }
 
   bool hasIntClamp() const {
     return HasIntClamp;
@@ -598,6 +604,8 @@ public:
            (EnableFlatScratch && hasFlatScratchInsts());
   }
 
+  bool hasDSAddTid() const { return getGeneration() >= GFX9; }
+
   bool hasGlobalAddTidInsts() const {
     return GFX10_BEncoding;
   }
@@ -897,11 +905,7 @@ public:
     return HasR128A16;
   }
 
-  bool hasGFX10A16() const {
-    return HasGFX10A16;
-  }
-
-  bool hasA16() const { return hasR128A16() || hasGFX10A16(); }
+  bool hasA16() const { return HasA16; }
 
   bool hasG16() const { return HasG16; }
 
@@ -914,6 +918,8 @@ public:
   bool hasImageGather4D16Bug() const { return HasImageGather4D16Bug; }
 
   bool hasMADIntraFwdBug() const { return HasMADIntraFwdBug; }
+
+  bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
 
@@ -1061,7 +1067,7 @@ public:
     return getGeneration() >= GFX11;
   }
 
-  bool hasVALUTransUseHazard() const { return getGeneration() >= GFX11; }
+  bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() >= GFX11; }
 
@@ -1094,7 +1100,9 @@ public:
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
-  bool hasDSAddTid() const { return getGeneration() >= GFX9; }
+  bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
+
+  bool hasVGPRSingleUseHintInsts() const { return HasVGPRSingleUseHintInsts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

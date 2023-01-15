@@ -94,7 +94,5 @@ const Type *getTypedPtrEltType(const Type *Type);
 
 // Check if given LLVM type is a special opaque builtin type.
 bool isSpecialOpaqueType(const Type *Ty);
-
-std::string getFunctionGlobalIdentifier(const Function *F);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

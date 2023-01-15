@@ -13,7 +13,6 @@
 #include "DwarfCompileUnit.h"
 #include "AddressPool.h"
 #include "DwarfExpression.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -1130,7 +1129,7 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
   AbsDef = &ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE, nullptr);
   ContextCU->applySubprogramAttributesToDefinition(SP, *AbsDef);
   ContextCU->addSInt(*AbsDef, dwarf::DW_AT_inline,
-                     DD->getDwarfVersion() <= 4 ? Optional<dwarf::Form>()
+                     DD->getDwarfVersion() <= 4 ? std::optional<dwarf::Form>()
                                                 : dwarf::DW_FORM_implicit_const,
                      dwarf::DW_INL_inlined);
   if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))

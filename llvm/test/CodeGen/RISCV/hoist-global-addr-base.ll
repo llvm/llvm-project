@@ -22,8 +22,8 @@ define dso_local void @multiple_stores() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw a1, 164(a0)
 ; CHECK-NEXT:    ret
 entry:
-  store i32 10, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
-  store i32 20, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 2), align 4
+  store i32 10, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
+  store i32 20, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 2), align 4
   ret void
 }
 
@@ -40,12 +40,12 @@ define dso_local void @control_flow_with_mem_access() local_unnamed_addr nounwin
 ; CHECK-NEXT:  .LBB1_2: # %if.end
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 2), align 4
+  %0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 2), align 4
   %cmp = icmp sgt i32 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 10, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
+  store i32 10, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
@@ -60,13 +60,13 @@ if.end:                                           ; preds = %if.then, %entry
 ; lui  a0, 18     ---> offset
 ; addi a0, a0, -160
 ; add  a0, a0, a1  ---> base + offset.
-define i8* @big_offset_neg_addi() nounwind {
+define ptr @big_offset_neg_addi() nounwind {
 ; CHECK-LABEL: big_offset_neg_addi:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(g+73568)
 ; CHECK-NEXT:    addi a0, a0, %lo(g+73568)
 ; CHECK-NEXT:    ret
-  ret i8* getelementptr inbounds ([1048576 x i8], [1048576 x i8]* @g, i32 0, i32 73568)
+  ret ptr getelementptr inbounds ([1048576 x i8], ptr @g, i32 0, i32 73568)
 }
 
 ; This test checks for the case where the offset is only an LUI.
@@ -75,45 +75,45 @@ define i8* @big_offset_neg_addi() nounwind {
 ; addi a0, a0, %lo(g)
 ; lui  a1, 128     ---> offset
 ; add  a0, a0, a1  ---> base + offset.
-define i8* @big_offset_lui_tail() nounwind {
+define ptr @big_offset_lui_tail() nounwind {
 ; CHECK-LABEL: big_offset_lui_tail:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(g+524288)
 ; CHECK-NEXT:    addi a0, a0, %lo(g+524288)
 ; CHECK-NEXT:    ret
-  ret i8* getelementptr inbounds ([1048576 x i8], [1048576 x i8]* @g, i32 0, i32 524288)
+  ret ptr getelementptr inbounds ([1048576 x i8], ptr @g, i32 0, i32 524288)
 }
 
-define i8* @big_offset_neg_lui_tail() {
+define ptr @big_offset_neg_lui_tail() {
 ; CHECK-LABEL: big_offset_neg_lui_tail:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(bar-8192)
 ; CHECK-NEXT:    addi a0, a0, %lo(bar-8192)
 ; CHECK-NEXT:    ret
-  ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i32 -8192)
+  ret ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i32 -8192)
 }
 
-define dso_local i32* @big_offset_one_use() local_unnamed_addr nounwind {
+define dso_local ptr @big_offset_one_use() local_unnamed_addr nounwind {
 ; CHECK-LABEL: big_offset_one_use:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s+16572)
 ; CHECK-NEXT:    addi a0, a0, %lo(s+16572)
 ; CHECK-NEXT:    ret
 entry:
-  ret i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 5)
+  ret ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 5)
 }
 
-define dso_local i32* @small_offset_one_use() local_unnamed_addr nounwind {
+define dso_local ptr @small_offset_one_use() local_unnamed_addr nounwind {
 ; CHECK-LABEL: small_offset_one_use:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s+160)
 ; CHECK-NEXT:    addi a0, a0, %lo(s+160)
 ; CHECK-NEXT:    ret
 entry:
-  ret i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1)
+  ret ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1)
 }
 
-define dso_local i32* @control_flow_no_mem(i32 %n) local_unnamed_addr nounwind {
+define dso_local ptr @control_flow_no_mem(i32 %n) local_unnamed_addr nounwind {
 ; CHECK-LABEL: control_flow_no_mem:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(s)
@@ -127,13 +127,13 @@ define dso_local i32* @control_flow_no_mem(i32 %n) local_unnamed_addr nounwind {
 ; CHECK-NEXT:    addi a0, a0, 160
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 2), align 4
+  %0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 2), align 4
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 if.then:                                          ; preds = %entry
-  ret i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1)
+  ret ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1)
 if.end:                                           ; preds = %if.then, %entry
-  ret i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 3)
+  ret ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 3)
 }
 
 define dso_local i32 @load_half() nounwind {
@@ -169,7 +169,7 @@ define dso_local i32 @load_half() nounwind {
 ; RV64-NEXT:  .LBB8_2: # %if.then
 ; RV64-NEXT:    call abort@plt
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([6 x i16], [6 x i16]* @foo, i32 0, i32 4), align 2
+  %0 = load i16, ptr getelementptr inbounds ([6 x i16], ptr @foo, i32 0, i32 4), align 2
   %cmp = icmp eq i16 %0, 140
   br i1 %cmp, label %if.end, label %if.then
 
@@ -191,22 +191,22 @@ define dso_local void @one_store() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    sw a1, %lo(s+160)(a0)
 ; CHECK-NEXT:    ret
 entry:
-  store i32 10, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
+  store i32 10, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
   ret void
 }
 
-define i8* @neg_offset() {
+define ptr @neg_offset() {
 ; CHECK-LABEL: neg_offset:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(bar-8191)
 ; CHECK-NEXT:    addi a0, a0, %lo(bar-8191)
 ; CHECK-NEXT:    ret
-    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i32 -8191)
+    ret ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i32 -8191)
 }
 
 ; This uses an LUI+ADDI on RV64 that does not produce a simm32. For RV32, we'll
 ; truncate the offset.
-define i8* @neg_offset_not_simm32() {
+define ptr @neg_offset_not_simm32() {
 ; RV32-LABEL: neg_offset_not_simm32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(bar+2147482283)
@@ -221,45 +221,45 @@ define i8* @neg_offset_not_simm32() {
 ; RV64-NEXT:    addi a1, a1, -1365
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    ret
-    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 -2147485013)
+    ret ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 -2147485013)
 }
 
-define i8* @offset_addi_addi() {
+define ptr @offset_addi_addi() {
 ; CHECK-LABEL: offset_addi_addi:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(bar+3211)
 ; CHECK-NEXT:    addi a0, a0, %lo(bar+3211)
 ; CHECK-NEXT:    ret
-    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
+    ret ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 3211)
 }
 
-define i8* @offset_addi_addi_neg() {
+define ptr @offset_addi_addi_neg() {
 ; CHECK-LABEL: offset_addi_addi_neg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(bar-4000)
 ; CHECK-NEXT:    addi a0, a0, %lo(bar-4000)
 ; CHECK-NEXT:    ret
-    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 -4000)
+    ret ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 -4000)
 }
 
 ; With Zba the constant 6424 is created with LI+SH2ADD.
-define i8* @offset_sh2add() {
+define ptr @offset_sh2add() {
 ; CHECK-LABEL: offset_sh2add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(bar+6424)
 ; CHECK-NEXT:    addi a0, a0, %lo(bar+6424)
 ; CHECK-NEXT:    ret
-    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 6424)
+    ret ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 6424)
 }
 
 ; With Zba the constant 12848 is created with LI+SH3ADD.
-define i8* @offset_sh3add() {
+define ptr @offset_sh3add() {
 ; CHECK-LABEL: offset_sh3add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(bar+12848)
 ; CHECK-NEXT:    addi a0, a0, %lo(bar+12848)
 ; CHECK-NEXT:    ret
-    ret i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 12848)
+    ret ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 12848)
 }
 
 define dso_local void @read_modify_write() local_unnamed_addr nounwind {
@@ -279,9 +279,9 @@ define dso_local void @read_modify_write() local_unnamed_addr nounwind {
 ; RV64-NEXT:    sw a1, %lo(s+160)(a0)
 ; RV64-NEXT:    ret
 entry:
-  %x = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
+  %x = load i32, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
   %y = add i32 %x, 10
-  store i32 %y, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
+  store i32 %y, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
   ret void
 }
 
@@ -297,19 +297,19 @@ define dso_local void @rmw_with_control_flow() nounwind {
 ; CHECK-NEXT:  .LBB17_2: # %if.end
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 2), align 4
+  %0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 2), align 4
   %cmp = icmp sgt i32 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 10, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 2), align 4
+  store i32 10, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 2), align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
-%struct.foo = type { i32, %struct.foo* }
+%struct.foo = type { i32, ptr }
 
 @f = global %struct.foo zeroinitializer, align 8
 
@@ -328,7 +328,7 @@ define void @self_store() {
 ; RV64-NEXT:    addi a0, a0, %lo(f)
 ; RV64-NEXT:    sd a0, 8(a0)
 ; RV64-NEXT:    ret
-  store %struct.foo* @f, %struct.foo** getelementptr inbounds (%struct.foo, %struct.foo* @f, i64 0, i32 1), align 8
+  store ptr @f, ptr getelementptr inbounds (%struct.foo, ptr @f, i64 0, i32 1), align 8
   ret void
 }
 
@@ -339,7 +339,7 @@ define void @store_addi_addi() {
 ; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    sb a1, %lo(bar+3211)(a0)
 ; CHECK-NEXT:    ret
-  store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
+  store i8 10, ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 3211)
   ret void
 }
 
@@ -350,7 +350,7 @@ define void @store_addi_addi_neg() {
 ; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    sb a1, %lo(bar-4000)(a0)
 ; CHECK-NEXT:    ret
-  store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 -4000)
+  store i8 10, ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 -4000)
   ret void
 }
 
@@ -362,7 +362,7 @@ define void @store_sh2add() {
 ; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    sb a1, %lo(bar+6424)(a0)
 ; CHECK-NEXT:    ret
-  store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 6424)
+  store i8 10, ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 6424)
   ret void
 }
 
@@ -374,7 +374,7 @@ define void @store_sh3add() {
 ; CHECK-NEXT:    li a1, 10
 ; CHECK-NEXT:    sb a1, %lo(bar+12848)(a0)
 ; CHECK-NEXT:    ret
-  store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 12848)
+  store i8 10, ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 12848)
   ret void
 }
 
@@ -395,9 +395,9 @@ define dso_local void @rmw_addi_addi() nounwind {
 ; RV64-NEXT:    sb a1, %lo(bar+3211)(a0)
 ; RV64-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
+  %0 = load i8, ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 3211)
   %1 = add i8 %0, 10
-  store i8 %1, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
+  store i8 %1, ptr getelementptr inbounds ([0 x i8], ptr @bar, i32 0, i64 3211)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

@@ -12,6 +12,7 @@
 
 #include "CSKYTargetMachine.h"
 #include "CSKY.h"
+#include "CSKYMachineFunctionInfo.h"
 #include "CSKYSubtarget.h"
 #include "CSKYTargetObjectFile.h"
 #include "TargetInfo/CSKYTargetInfo.h"
@@ -29,6 +30,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTarget() {
 
   PassRegistry *Registry = PassRegistry::getPassRegistry();
   initializeCSKYConstantIslandsPass(*Registry);
+  initializeCSKYDAGToDAGISelPass(*Registry);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -87,6 +89,13 @@ CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+MachineFunctionInfo *CSKYTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return CSKYMachineFunctionInfo::create<CSKYMachineFunctionInfo>(Allocator, F,
+                                                                  STI);
+}
+
 namespace {
 class CSKYPassConfig : public TargetPassConfig {
 public:
@@ -114,7 +123,7 @@ void CSKYPassConfig::addIRPasses() {
 }
 
 bool CSKYPassConfig::addInstSelector() {
-  addPass(createCSKYISelDag(getCSKYTargetMachine()));
+  addPass(createCSKYISelDag(getCSKYTargetMachine(), getOptLevel()));
 
   return false;
 }

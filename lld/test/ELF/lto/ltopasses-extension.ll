@@ -1,5 +1,5 @@
 ; REQUIRES: x86, plugins, examples
-; UNSUPPORTED: windows
+; UNSUPPORTED: target={{.*windows.*}}
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: ld.lld -%loadnewpmbye --lto-newpm-passes="goodbye" -mllvm=%loadbye -mllvm=-wave-goodbye %t.o -o /dev/null 2>&1 | FileCheck %s
 ; CHECK: Bye

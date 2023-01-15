@@ -557,7 +557,7 @@ public:
   }
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_enable_option_table);
+    return llvm::ArrayRef(g_enable_option_table);
   }
 
   StructuredData::DictionarySP BuildConfigurationData(bool enabled) {

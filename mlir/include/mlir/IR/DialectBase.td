@@ -17,6 +17,14 @@
 // Dialect definitions
 //===----------------------------------------------------------------------===//
 
+// Generate 'fold' method with 'ArrayRef<Attribute>' parameter.
+// New code should prefer using 'kEmitFoldAdaptorFolder' and
+// consider 'kEmitRawAttributesFolder' deprecated and to be
+// removed in the future.
+defvar kEmitRawAttributesFolder = 0;
+// Generate 'fold' method with 'FoldAdaptor' parameter.
+defvar kEmitFoldAdaptorFolder = 1;
+
 class Dialect {
   // The name of the dialect.
   string name = ?;
@@ -85,6 +93,9 @@ class Dialect {
 
   // If this dialect can be extended at runtime with new operations or types.
   bit isExtensible = 0;
+
+  // Fold API to use for operations in this dialect.
+  int useFoldAPI = kEmitRawAttributesFolder;
 }
 
 #endif // DIALECTBASE_TD

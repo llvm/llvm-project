@@ -5,17 +5,17 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @donteliminate() {
 ; CHECK-LABEL: donteliminate
-; CHECK-NEXT: tail call noalias i8* @allocmemory()
-; CHECK-NEXT: tail call noalias i8* @allocmemory()
-; CHECK-NEXT: tail call noalias i8* @allocmemory()
+; CHECK-NEXT: tail call noalias ptr @allocmemory()
+; CHECK-NEXT: tail call noalias ptr @allocmemory()
+; CHECK-NEXT: tail call noalias ptr @allocmemory()
 ; CHECK-NEXT: ret void
-  %1 = tail call noalias i8* @allocmemory()
-  %2 = tail call noalias i8* @allocmemory()
-  %3 = tail call noalias i8* @allocmemory()
+  %1 = tail call noalias ptr @allocmemory()
+  %2 = tail call noalias ptr @allocmemory()
+  %3 = tail call noalias ptr @allocmemory()
   ret void
 }
 
 ; Function Attrs: inaccessiblememonly
-declare noalias i8* @allocmemory() #0
+declare noalias ptr @allocmemory() #0
 
 attributes #0 = { inaccessiblememonly }

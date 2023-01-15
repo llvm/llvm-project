@@ -6,7 +6,7 @@
 ; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefix=CM %s
 
 ; Signed 24-bit multiply is not supported on pre-Cayman GPUs.
-define amdgpu_kernel void @test_smul24_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 ; SI-LABEL: test_smul24_i32:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -93,11 +93,11 @@ entry:
   %b.shl = shl i32 %b, 8
   %b.24 = ashr i32 %b.shl, 8
   %mul24 = mul i32 %a.24, %b.24
-  store i32 %mul24, i32 addrspace(1)* %out
+  store i32 %mul24, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_smulhi24_i64(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smulhi24_i64(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 ; SI-LABEL: test_smulhi24_i64:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -179,7 +179,7 @@ entry:
   %mul48 = mul i64 %a.24.i64, %b.24.i64
   %mul48.hi = lshr i64 %mul48, 32
   %mul24hi = trunc i64 %mul48.hi to i32
-  store i32 %mul24hi, i32 addrspace(1)* %out
+  store i32 %mul24hi, ptr addrspace(1) %out
   ret void
 }
 
@@ -298,7 +298,7 @@ define <2 x i64> @test_smul48_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; unnecessary extension instructions because after legalization they
 ; will not be removed by SimplifyDemandedBits because there are
 ; multiple uses by the separate mul and mulhi.
-define amdgpu_kernel void @test_smul24_i64(i64 addrspace(1)* %out, [8 x i32], i32 %a, [8 x i32], i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i64(ptr addrspace(1) %out, [8 x i32], i32 %a, [8 x i32], i32 %b) #0 {
 ; SI-LABEL: test_smul24_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -396,11 +396,11 @@ define amdgpu_kernel void @test_smul24_i64(i64 addrspace(1)* %out, [8 x i32], i3
   %shr2.i = ashr i32 %shl1.i, 8
   %conv3.i = sext i32 %shr2.i to i64
   %mul.i = mul i64 %conv3.i, %conv.i
-  store i64 %mul.i, i64 addrspace(1)* %out
+  store i64 %mul.i, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_smul24_i64_square(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i64_square(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 ; SI-LABEL: test_smul24_i64_square:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -483,11 +483,11 @@ define amdgpu_kernel void @test_smul24_i64_square(i64 addrspace(1)* %out, i32 %a
   %shr.i = ashr i32 %shl.i, 8
   %conv.i = sext i32 %shr.i to i64
   %mul.i = mul i64 %conv.i, %conv.i
-  store i64 %mul.i, i64 addrspace(1)* %out
+  store i64 %mul.i, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_smul24_i33(i64 addrspace(1)* %out, i33 %a, i33 %b) #0 {
+define amdgpu_kernel void @test_smul24_i33(ptr addrspace(1) %out, i33 %a, i33 %b) #0 {
 ; SI-LABEL: test_smul24_i33:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
@@ -600,11 +600,11 @@ entry:
   %b.24 = ashr i33 %b.shl, 9
   %mul24 = mul i33 %a.24, %b.24
   %ext = sext i33 %mul24 to i64
-  store i64 %ext, i64 addrspace(1)* %out
+  store i64 %ext, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_smulhi24_i33(i32 addrspace(1)* %out, i33 %a, i33 %b) {
+define amdgpu_kernel void @test_smulhi24_i33(ptr addrspace(1) %out, i33 %a, i33 %b) {
 ; SI-LABEL: test_smulhi24_i33:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xd
@@ -692,11 +692,11 @@ entry:
   %hi = lshr i33 %tmp2, 32
   %trunc = trunc i33 %hi to i32
 
-  store i32 %trunc, i32 addrspace(1)* %out
+  store i32 %trunc, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @simplify_i24_crash(<2 x i32> addrspace(1)* %out, i32 %arg0, <2 x i32> %arg1, <2 x i32> %arg2) {
+define amdgpu_kernel void @simplify_i24_crash(ptr addrspace(1) %out, i32 %arg0, <2 x i32> %arg1, <2 x i32> %arg2) {
 ; SI-LABEL: simplify_i24_crash:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_load_dword s2, s[0:1], 0xb
@@ -833,7 +833,7 @@ bb11:
   %tmp19 = shl <2 x i32> %tmp16, <i32 8, i32 8>
   %tmp20 = ashr <2 x i32> %tmp19, <i32 8, i32 8>
   %tmp21 = mul <2 x i32> %tmp18, %tmp20
-  store <2 x i32> %tmp21, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %tmp21, ptr addrspace(1) %out
   br label %bb7
 
 bb7:

@@ -27,9 +27,9 @@ template <size_t Size> struct Memcpy {
 #ifdef LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
     return __builtin_memcpy_inline(dst, src, SIZE);
 #else
-    deferred_static_assert("Missing __builtin_memcpy_inline");
-    (void)dst;
-    (void)src;
+    // The codegen may be suboptimal.
+    for (size_t i = 0; i < Size; ++i)
+      dst[i] = src[i];
 #endif
   }
 

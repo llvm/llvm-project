@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx -mattr=+ptx60 -mcpu=sm_30 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
 
 ; Verify that the NVPTX target removes invalid symbol names prior to emitting
 ; PTX.
@@ -26,14 +26,14 @@ target triple = "nvptx64-unknown-unknown"
 ; Function Attrs: nounwind
 define internal void @.function.() {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @.str)
   ret void
 }
 
 ; Function Attrs: nounwind
 define internal void @_$_function_$_() {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @_$_str, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @_$_str)
   ret void
 }
 
@@ -45,4 +45,4 @@ entry:
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

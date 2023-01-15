@@ -84,7 +84,7 @@ static CmpInst *getInnerLoopGuardCmp(const Loop &InnerLoop) {
 static bool checkSafeInstruction(const Instruction &I,
                                  const CmpInst *InnerLoopGuardCmp,
                                  const CmpInst *OuterLoopLatchCmp,
-                                 Optional<Loop::LoopBounds> OuterLoopLB) {
+                                 std::optional<Loop::LoopBounds> OuterLoopLB) {
 
   bool IsAllowed =
       isSafeToSpeculativelyExecute(&I) || isa<PHINode>(I) || isa<BranchInst>(I);

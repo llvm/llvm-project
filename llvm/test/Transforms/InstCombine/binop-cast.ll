@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i32)
+declare void @use_vec(<2 x i32>)
 
 define i32 @testAdd(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @testAdd(
@@ -68,6 +69,73 @@ define i32 @and_sext_to_sel_multi_use_constant_mask(i1 %y) {
   %sext = sext i1 %y to i32
   call void @use(i32 %sext)
   %r = and i32 %sext, 42
+  ret i32 %r
+}
+
+define <2 x i32> @and_not_sext_to_sel(<2 x i32> %x, <2 x i1> %y) {
+; CHECK-LABEL: @and_not_sext_to_sel(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[Y:%.*]] to <2 x i32>
+; CHECK-NEXT:    call void @use_vec(<2 x i32> [[SEXT]])
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[Y]], <2 x i32> zeroinitializer, <2 x i32> [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %sext = sext <2 x i1> %y to <2 x i32>
+  call void @use_vec(<2 x i32> %sext)
+  %not = xor <2 x i32> %sext, <i32 -1, i32 -1>
+  %r = and <2 x i32> %not, %x
+  ret <2 x i32> %r
+}
+
+define i32 @and_not_sext_to_sel_commute(i32 %px, i1 %y) {
+; CHECK-LABEL: @and_not_sext_to_sel_commute(
+; CHECK-NEXT:    [[X:%.*]] = mul i32 [[PX:%.*]], [[PX]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SEXT]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[SEXT]], -1
+; CHECK-NEXT:    call void @use(i32 [[NOT]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y]], i32 0, i32 [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = mul i32 %px, %px ; thwart complexity-based canonicalization
+  %sext = sext i1 %y to i32
+  call void @use(i32 %sext)
+  %not = xor i32 %sext, -1
+  call void @use(i32 %not)
+  %r = and i32 %x, %not
+  ret i32 %r
+}
+
+; negative test - must be 'not'
+
+define i32 @and_xor_sext_to_sel(i32 %x, i1 %y) {
+; CHECK-LABEL: @and_xor_sext_to_sel(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[SEXT]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[SEXT]], -2
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[XOR]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i1 %y to i32
+  call void @use(i32 %sext)
+  %xor = xor i32 %sext, -2
+  %r = and i32 %xor, %x
+  ret i32 %r
+}
+
+; negative test - must be 'sext'
+
+define i32 @and_not_zext_to_sel(i32 %x, i1 %y) {
+; CHECK-LABEL: @and_not_zext_to_sel(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    call void @use(i32 [[ZEXT]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[ZEXT]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[NOT]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zext = zext i1 %y to i32
+  call void @use(i32 %zext)
+  %not = xor i32 %zext, -1
+  %r = and i32 %not, %x
   ret i32 %r
 }
 

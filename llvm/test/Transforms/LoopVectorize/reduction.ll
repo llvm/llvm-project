@@ -8,17 +8,17 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: add <4 x i32>
 ;CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32>
 ;CHECK: ret i32
-define i32 @reduction_sum(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) nounwind uwtable readonly noinline ssp {
+define i32 @reduction_sum(i32 %n, ptr noalias nocapture %A, ptr noalias nocapture %B) nounwind uwtable readonly noinline ssp {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
 .lr.ph:                                           ; preds = %0, %.lr.ph
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %sum.02 = phi i32 [ %9, %.lr.ph ], [ 0, %0 ]
-  %2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %3 = load i32, i32* %2, align 4
-  %4 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %5 = load i32, i32* %4, align 4
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %5 = load i32, ptr %4, align 4
   %6 = trunc i64 %indvars.iv to i32
   %7 = add i32 %sum.02, %6
   %8 = add i32 %7, %3
@@ -39,17 +39,17 @@ define i32 @reduction_sum(i32 %n, i32* noalias nocapture %A, i32* noalias nocapt
 ;CHECK: mul <4 x i32>
 ;CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32>
 ;CHECK: ret i32
-define i32 @reduction_prod(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) nounwind uwtable readonly noinline ssp {
+define i32 @reduction_prod(i32 %n, ptr noalias nocapture %A, ptr noalias nocapture %B) nounwind uwtable readonly noinline ssp {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
 .lr.ph:                                           ; preds = %0, %.lr.ph
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %prod.02 = phi i32 [ %9, %.lr.ph ], [ 1, %0 ]
-  %2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %3 = load i32, i32* %2, align 4
-  %4 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %5 = load i32, i32* %4, align 4
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %5 = load i32, ptr %4, align 4
   %6 = trunc i64 %indvars.iv to i32
   %7 = mul i32 %prod.02, %6
   %8 = mul i32 %7, %3
@@ -70,17 +70,17 @@ define i32 @reduction_prod(i32 %n, i32* noalias nocapture %A, i32* noalias nocap
 ;CHECK: mul nsw <4 x i32>
 ;CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32>
 ;CHECK: ret i32
-define i32 @reduction_mix(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) nounwind uwtable readonly noinline ssp {
+define i32 @reduction_mix(i32 %n, ptr noalias nocapture %A, ptr noalias nocapture %B) nounwind uwtable readonly noinline ssp {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
 .lr.ph:                                           ; preds = %0, %.lr.ph
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %sum.02 = phi i32 [ %9, %.lr.ph ], [ 0, %0 ]
-  %2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %3 = load i32, i32* %2, align 4
-  %4 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %5 = load i32, i32* %4, align 4
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %5 = load i32, ptr %4, align 4
   %6 = mul nsw i32 %5, %3
   %7 = trunc i64 %indvars.iv to i32
   %8 = add i32 %sum.02, %7
@@ -99,17 +99,17 @@ define i32 @reduction_mix(i32 %n, i32* noalias nocapture %A, i32* noalias nocapt
 ;CHECK: mul <4 x i32>
 ;CHECK: call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32>
 ;CHECK: ret i32
-define i32 @reduction_mul(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) nounwind uwtable readonly noinline ssp {
+define i32 @reduction_mul(i32 %n, ptr noalias nocapture %A, ptr noalias nocapture %B) nounwind uwtable readonly noinline ssp {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
 .lr.ph:                                           ; preds = %0, %.lr.ph
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %0 ]
   %sum.02 = phi i32 [ %9, %.lr.ph ], [ 19, %0 ]
-  %2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %3 = load i32, i32* %2, align 4
-  %4 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %5 = load i32, i32* %4, align 4
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %5 = load i32, ptr %4, align 4
   %6 = trunc i64 %indvars.iv to i32
   %7 = add i32 %3, %6
   %8 = add i32 %7, %5
@@ -129,7 +129,7 @@ define i32 @reduction_mul(i32 %n, i32* noalias nocapture %A, i32* noalias nocapt
 ;CHECK: <i32 120, i32 0, i32 0, i32 0>
 ;CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32>
 ;CHECK: ret i32
-define i32 @start_at_non_zero(i32* nocapture %in, i32* nocapture %coeff, i32* nocapture %out, i32 %n) nounwind uwtable readonly ssp {
+define i32 @start_at_non_zero(ptr nocapture %in, ptr nocapture %coeff, ptr nocapture %out, i32 %n) nounwind uwtable readonly ssp {
 entry:
   %cmp7 = icmp sgt i32 %n, 0
   br i1 %cmp7, label %for.body, label %for.end
@@ -137,10 +137,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.09 = phi i32 [ %add, %for.body ], [ 120, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %in, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %coeff, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %in, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %coeff, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %mul = mul nsw i32 %1, %0
   %add = add nsw i32 %mul, %sum.09
   %indvars.iv.next = add i64 %indvars.iv, 1
@@ -158,7 +158,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: and <4 x i32>
 ;CHECK: call i32 @llvm.vector.reduce.and.v4i32(<4 x i32>
 ;CHECK: ret i32
-define i32 @reduction_and(i32 %n, i32* nocapture %A, i32* nocapture %B) nounwind uwtable readonly {
+define i32 @reduction_and(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable readonly {
 entry:
   %cmp7 = icmp sgt i32 %n, 0
   br i1 %cmp7, label %for.body, label %for.end
@@ -166,10 +166,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %and, %for.body ], [ -1, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %and = and i32 %add, %result.08
   %indvars.iv.next = add i64 %indvars.iv, 1
@@ -186,7 +186,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: or <4 x i32>
 ;CHECK: call i32 @llvm.vector.reduce.or.v4i32(<4 x i32>
 ;CHECK: ret i32
-define i32 @reduction_or(i32 %n, i32* nocapture %A, i32* nocapture %B) nounwind uwtable readonly {
+define i32 @reduction_or(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable readonly {
 entry:
   %cmp7 = icmp sgt i32 %n, 0
   br i1 %cmp7, label %for.body, label %for.end
@@ -194,10 +194,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %or, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %or = or i32 %add, %result.08
   %indvars.iv.next = add i64 %indvars.iv, 1
@@ -214,7 +214,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: xor <4 x i32>
 ;CHECK: call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32>
 ;CHECK: ret i32
-define i32 @reduction_xor(i32 %n, i32* nocapture %A, i32* nocapture %B) nounwind uwtable readonly {
+define i32 @reduction_xor(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwind uwtable readonly {
 entry:
   %cmp7 = icmp sgt i32 %n, 0
   br i1 %cmp7, label %for.body, label %for.end
@@ -222,10 +222,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %xor, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %xor = xor i32 %add, %result.08
   %indvars.iv.next = add i64 %indvars.iv, 1
@@ -243,7 +243,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-NOT: phi <4 x i32>
 ;CHECK-NOT: sub nsw <4 x i32>
 ;CHECK: ret i32
-define i32 @reduction_sub_rhs(i32 %n, i32* noalias nocapture %A) nounwind uwtable readonly {
+define i32 @reduction_sub_rhs(i32 %n, ptr noalias nocapture %A) nounwind uwtable readonly {
 entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
@@ -251,8 +251,8 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %x.05 = phi i32 [ %sub, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %sub = sub nsw i32 %0, %x.05
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -270,7 +270,7 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK: phi <4 x i32>
 ;CHECK: sub <4 x i32>
 ;CHECK: ret i32
-define i32 @reduction_sub_lhs(i32 %n, i32* noalias nocapture %A) nounwind uwtable readonly {
+define i32 @reduction_sub_lhs(i32 %n, ptr noalias nocapture %A) nounwind uwtable readonly {
 entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
@@ -278,8 +278,8 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %x.05 = phi i32 [ %sub, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %sub = sub nsw i32 %x.05, %0
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -295,17 +295,17 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK: reduction_conditional
 ; CHECK: fadd fast <4 x float>
 
-define float @reduction_conditional(float* %A, float* %B, float* %C, float %S) {
+define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 entry:
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %sum.033 = phi float [ %S, %entry ], [ %sum.1, %for.inc ]
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %B, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx2, align 4
   %cmp3 = fcmp ogt float %0, %1
   br i1 %cmp3, label %if.then, label %for.inc
 
@@ -340,17 +340,17 @@ for.end:
 ; We can't vectorize reductions with phi inputs from outside the reduction.
 ; CHECK: noreduction_phi
 ; CHECK-NOT: fadd <4 x float>
-define float @noreduction_phi(float* %A, float* %B, float* %C, float %S) {
+define float @noreduction_phi(ptr %A, ptr %B, ptr %C, float %S) {
 entry:
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %sum.033 = phi float [ %S, %entry ], [ %sum.1, %for.inc ]
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %B, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx2, align 4
   %cmp3 = fcmp ogt float %0, %1
   br i1 %cmp3, label %if.then, label %for.inc
 
@@ -386,7 +386,7 @@ for.end:
 ; CHECK: noredux_header_phi
 ; CHECK-NOT: fadd <4 x float>
 
-define float @noredux_header_phi(float* %A, float* %B, float* %C, float %S)  {
+define float @noredux_header_phi(ptr %A, ptr %B, ptr %C, float %S)  {
 entry:
   br label %for.body
 
@@ -394,8 +394,8 @@ for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum2.09 = phi float [ 0.000000e+00, %entry ], [ %add1, %for.body ]
   %sum.08 = phi float [ %S, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %B, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
   %add = fadd fast float %sum.08, %0
   %add1 = fadd fast float %sum2.09, %add
   %indvars.iv.next = add i64 %indvars.iv, 1
@@ -469,7 +469,7 @@ exit:
 ;CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32>
 ;CHECK: %sum.copy = phi i32 [ %[[SCALAR:.*]], %.lr.ph ], [ %[[VECTOR:.*]], %middle.block ]
 ;CHECK: ret i32
-define i32 @reduction_sum_multiuse(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) {
+define i32 @reduction_sum_multiuse(i32 %n, ptr noalias nocapture %A, ptr noalias nocapture %B) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph.preheader, label %end
 .lr.ph.preheader:                                 ; preds = %0
@@ -478,10 +478,10 @@ define i32 @reduction_sum_multiuse(i32 %n, i32* noalias nocapture %A, i32* noali
 .lr.ph:                                           ; preds = %0, %.lr.ph
   %indvars.iv = phi i64 [ %indvars.iv.next, %.lr.ph ], [ 0, %.lr.ph.preheader ]
   %sum.02 = phi i32 [ %9, %.lr.ph ], [ 0, %.lr.ph.preheader ]
-  %2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %3 = load i32, i32* %2, align 4
-  %4 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %5 = load i32, i32* %4, align 4
+  %2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %3 = load i32, ptr %2, align 4
+  %4 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %5 = load i32, ptr %4, align 4
   %6 = trunc i64 %indvars.iv to i32
   %7 = add i32 %sum.02, %6
   %8 = add i32 %7, %3
@@ -507,7 +507,7 @@ end:
 ; variable. We cannot vectorize this.
 ; CHECK-LABEL: reduction_reset(
 ; CHECK-NOT: <4 x i32>
-define void @reduction_reset(i32 %N, i32* nocapture readonly %arrayA, i32* nocapture %arrayB) {
+define void @reduction_reset(i32 %N, ptr nocapture readonly %arrayA, ptr nocapture %arrayB) {
 entry:
   %c4 = icmp sgt i32 %N, 0
   br i1 %c4, label %.lr.ph.preheader, label %._crit_edge
@@ -520,8 +520,8 @@ entry:
 .lr.ph:                                           ; preds = %.lr.ph, %.lr.ph.preheader
   %indvars.iv = phi i64 [ 0, %.lr.ph.preheader ], [ %indvars.iv.next, %.lr.ph ]
   %.017 = phi i32 [ 100, %.lr.ph.preheader ], [ %csel, %.lr.ph ]
-  %c6 = getelementptr inbounds i32, i32* %arrayA, i64 %indvars.iv
-  %c7 = load i32, i32* %c6, align 4
+  %c6 = getelementptr inbounds i32, ptr %arrayA, i64 %indvars.iv
+  %c7 = load i32, ptr %c6, align 4
   %c8 = icmp sgt i32 %c7, 0
   %c9 = add nsw i32 %c7, %.017
   %csel = select i1 %c8, i32 %c9, i32 0
@@ -537,13 +537,13 @@ entry:
 ._crit_edge:                                      ; preds = %._crit_edge.loopexit, %entry
   %.015.lcssa = phi i64 [ -1, %entry ], [ %phitmp19, %._crit_edge.loopexit ]
   %.0.lcssa = phi i32 [ 100, %entry ], [ %csel.lcssa, %._crit_edge.loopexit ]
-  %c10 = getelementptr inbounds i32, i32* %arrayB, i64 %.015.lcssa
-  store i32 %.0.lcssa, i32* %c10, align 4
+  %c10 = getelementptr inbounds i32, ptr %arrayB, i64 %.015.lcssa
+  store i32 %.0.lcssa, ptr %c10, align 4
   ret void
 }
 
 ; Can vectorize reduction with redundant single-operand phi input.
-define i64 @reduction_with_phi_with_one_incoming_on_backedge(i16 %n, i64* %A) {
+define i64 @reduction_with_phi_with_one_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-LABEL: @reduction_with_phi_with_one_incoming_on_backedge
 ; CHECK: add <4 x i64>
 ;
@@ -553,8 +553,8 @@ entry:
 loop.header:
   %iv = phi i16 [ 1, %entry ], [ %iv.next, %loop.latch ]
   %sum = phi i64 [ 0, %entry ], [ %phi.sum.next, %loop.latch ]
-  %gep.A = getelementptr i64, i64* %A, i16 %iv
-  %lv.A = load i64, i64* %gep.A
+  %gep.A = getelementptr i64, ptr %A, i16 %iv
+  %lv.A = load i64, ptr %gep.A
   %sum.next = add nsw i64 %sum, %lv.A
   br label %loop.bb
 
@@ -573,7 +573,7 @@ exit:
 }
 
 ; Can vectorize reduction with redundant two-operand phi input.
-define i64 @reduction_with_phi_with_two_incoming_on_backedge(i16 %n, i64* %A) {
+define i64 @reduction_with_phi_with_two_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-LABEL: @reduction_with_phi_with_two_incoming_on_backedge
 ; CHECK: add <4 x i64>
 ;
@@ -583,8 +583,8 @@ entry:
 loop.header:
   %iv = phi i16 [ 1, %entry ], [ %iv.next, %loop.latch ]
   %sum = phi i64 [ 0, %entry ], [ %phi.sum.next, %loop.latch ]
-  %gep.A = getelementptr i64, i64* %A, i16 %iv
-  %lv.A = load i64, i64* %gep.A
+  %gep.A = getelementptr i64, ptr %A, i16 %iv
+  %lv.A = load i64, ptr %gep.A
   %sum.next = add nsw i64 %sum, %lv.A
   %cmp.0 = icmp eq i64 %lv.A, 29
   br i1 %cmp.0, label %loop.bb, label %loop.latch

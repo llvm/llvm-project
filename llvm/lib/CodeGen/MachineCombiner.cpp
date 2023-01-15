@@ -90,7 +90,6 @@ public:
   StringRef getPassName() const override { return "Machine InstCombiner"; }
 
 private:
-  bool doSubstitute(unsigned NewSize, unsigned OldSize, bool OptForSize);
   bool combineInstructions(MachineBasicBlock *);
   MachineInstr *getOperandDef(const MachineOperand &MO);
   bool isTransientMI(const MachineInstr *MI);
@@ -152,7 +151,7 @@ void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 MachineInstr *MachineCombiner::getOperandDef(const MachineOperand &MO) {
   MachineInstr *DefInstr = nullptr;
   // We need a virtual register definition.
-  if (MO.isReg() && Register::isVirtualRegister(MO.getReg()))
+  if (MO.isReg() && MO.getReg().isVirtual())
     DefInstr = MRI->getUniqueVRegDef(MO.getReg());
   // PHI's have no depth etc.
   if (DefInstr && DefInstr->isPHI())
@@ -220,7 +219,7 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
     unsigned IDepth = 0;
     for (const MachineOperand &MO : InstrPtr->operands()) {
       // Check for virtual register operand.
-      if (!(MO.isReg() && Register::isVirtualRegister(MO.getReg())))
+      if (!(MO.isReg() && MO.getReg().isVirtual()))
         continue;
       if (!MO.isUse())
         continue;
@@ -276,7 +275,7 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
 
   for (const MachineOperand &MO : NewRoot->operands()) {
     // Check for virtual register operand.
-    if (!(MO.isReg() && Register::isVirtualRegister(MO.getReg())))
+    if (!(MO.isReg() && MO.getReg().isVirtual()))
       continue;
     if (!MO.isDef())
       continue;
@@ -464,8 +463,8 @@ bool MachineCombiner::preservesResourceLen(
   instr2instrSC(InsInstrs, InsInstrsSC);
   instr2instrSC(DelInstrs, DelInstrsSC);
 
-  ArrayRef<const MCSchedClassDesc *> MSCInsArr = makeArrayRef(InsInstrsSC);
-  ArrayRef<const MCSchedClassDesc *> MSCDelArr = makeArrayRef(DelInstrsSC);
+  ArrayRef<const MCSchedClassDesc *> MSCInsArr{InsInstrsSC};
+  ArrayRef<const MCSchedClassDesc *> MSCDelArr{DelInstrsSC};
 
   // Compute new resource length.
   unsigned ResLenAfterCombine =
@@ -483,17 +482,6 @@ bool MachineCombiner::preservesResourceLen(
 
   return ResLenAfterCombine <=
          ResLenBeforeCombine + TII->getExtendResourceLenLimit();
-}
-
-/// \returns true when new instruction sequence should be generated
-/// independent if it lengthens critical path or not
-bool MachineCombiner::doSubstitute(unsigned NewSize, unsigned OldSize,
-                                   bool OptForSize) {
-  if (OptForSize && (NewSize < OldSize))
-    return true;
-  if (!TSchedModel.hasInstrSchedModelOrItineraries())
-    return true;
-  return false;
 }
 
 /// Inserts InsInstrs and deletes DelInstrs. Incrementally updates instruction
@@ -641,18 +629,16 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
     if (VerifyPatternOrder)
       verifyPatternOrder(MBB, MI, Patterns);
 
-    for (auto P : Patterns) {
+    for (const auto P : Patterns) {
       SmallVector<MachineInstr *, 16> InsInstrs;
       SmallVector<MachineInstr *, 16> DelInstrs;
       DenseMap<unsigned, unsigned> InstrIdxForVirtReg;
       TII->genAlternativeCodeSequence(MI, P, InsInstrs, DelInstrs,
                                       InstrIdxForVirtReg);
-      unsigned NewInstCount = InsInstrs.size();
-      unsigned OldInstCount = DelInstrs.size();
       // Found pattern, but did not generate alternative sequence.
       // This can happen e.g. when an immediate could not be materialized
       // in a single instruction.
-      if (!NewInstCount)
+      if (InsInstrs.empty())
         continue;
 
       LLVM_DEBUG(if (dump_intrs) {
@@ -666,10 +652,6 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
           InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
                           /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
       });
-
-      bool SubstituteAlways = false;
-      if (ML && TII->isThroughputPattern(P))
-        SubstituteAlways = true;
 
       if (IncrementalUpdate && LastUpdate != BlockIter) {
         // Update depths since the last incremental update.
@@ -698,12 +680,24 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         }
       }
 
-      // Substitute when we optimize for codesize and the new sequence has
-      // fewer instructions OR
-      // the new sequence neither lengthens the critical path nor increases
-      // resource pressure.
-      if (SubstituteAlways ||
-          doSubstitute(NewInstCount, OldInstCount, OptForSize)) {
+      if (ML && TII->isThroughputPattern(P)) {
+        LLVM_DEBUG(dbgs() << "\t Replacing due to throughput pattern in loop\n");
+        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+                                 RegUnits, TII, P, IncrementalUpdate);
+        // Eagerly stop after the first pattern fires.
+        Changed = true;
+        break;
+      } else if (OptForSize && InsInstrs.size() < DelInstrs.size()) {
+        LLVM_DEBUG(dbgs() << "\t Replacing due to OptForSize ("
+                          << InsInstrs.size() << " < "
+                          << DelInstrs.size() << ")\n");
+        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+                                 RegUnits, TII, P, IncrementalUpdate);
+        // Eagerly stop after the first pattern fires.
+        Changed = true;
+        break;
+      } else if (!TSchedModel.hasInstrSchedModelOrItineraries()) {
+        LLVM_DEBUG(dbgs() << "\t Replacing due to lack of schedule model\n");
         insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.

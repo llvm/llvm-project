@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
-// expected-error @below {{expects the entry block to have one argument of type implementing TransformTypeInterface}}
+// expected-error @below {{expects the entry block to have one argument of type implementing TransformHandleTypeInterface}}
 transform.sequence failures(propagate) {
 }
 
@@ -31,6 +31,17 @@ transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   // expected-note @below {{terminator}}
   transform.yield
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expects the type of the block argument to match the type of the operand}}
+  transform.sequence %arg0: !transform.any_op failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    transform.yield
+  }
 }
 
 // -----
@@ -179,7 +190,7 @@ transform.sequence failures(propagate) {
 
 // -----
 
-// expected-error @below {{expects the entry block to have one argument of type implementing TransformTypeInterface}}
+// expected-error @below {{expects the entry block to have one argument of type implementing TransformHandleTypeInterface}}
 transform.alternatives {
 ^bb0:
   transform.yield
@@ -198,4 +209,22 @@ transform.sequence failures(propagate) {
   }
   // expected-note @below {{used here as operand #0}}
   transform.test_consume_operand %0
+}
+
+// -----
+
+transform.sequence failures(suppress) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{TransformOpInterface requires memory effects on operands to be specified}}
+  // expected-note @below {{no effects specified for operand #0}}
+  transform.test_required_memory_effects %arg0 : (!transform.any_op) -> !transform.any_op
+}
+
+// -----
+
+transform.sequence failures(suppress) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{TransformOpInterface requires 'allocate' memory effect to be specified for results}}
+  // expected-note @below {{no 'allocate' effect specified for result #0}}
+  transform.test_required_memory_effects %arg0 {has_operand_effect} : (!transform.any_op) -> !transform.any_op
 }

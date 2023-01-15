@@ -9,6 +9,7 @@
 #include "SuspiciousMemoryComparisonCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -16,8 +17,8 @@ namespace clang {
 namespace tidy {
 namespace bugprone {
 
-static llvm::Optional<uint64_t> tryEvaluateSizeExpr(const Expr *SizeExpr,
-                                                    const ASTContext &Ctx) {
+static std::optional<uint64_t> tryEvaluateSizeExpr(const Expr *SizeExpr,
+                                                   const ASTContext &Ctx) {
   Expr::EvalResult Result;
   if (SizeExpr->EvaluateAsRValue(Result, Ctx))
     return Ctx.toBits(
@@ -41,7 +42,7 @@ void SuspiciousMemoryComparisonCheck::check(
 
   const Expr *SizeExpr = CE->getArg(2);
   assert(SizeExpr != nullptr && "Third argument of memcmp is mandatory.");
-  llvm::Optional<uint64_t> ComparedBits = tryEvaluateSizeExpr(SizeExpr, Ctx);
+  std::optional<uint64_t> ComparedBits = tryEvaluateSizeExpr(SizeExpr, Ctx);
 
   for (unsigned int ArgIndex = 0; ArgIndex < 2; ++ArgIndex) {
     const Expr *ArgExpr = CE->getArg(ArgIndex);

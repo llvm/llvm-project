@@ -33,7 +33,6 @@ namespace llvm {
   class SourceMgr;
   class Type;
   struct MaybeAlign;
-  template <typename T> class Optional;
   class Function;
   class Value;
   class BasicBlock;
@@ -180,8 +179,10 @@ namespace llvm {
           Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
           BlockAddressPFS(nullptr) {}
     bool Run(
-        bool UpgradeDebugInfo, DataLayoutCallbackTy DataLayoutCallback =
-                                   [](StringRef) { return std::nullopt; });
+        bool UpgradeDebugInfo,
+        DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+          return std::nullopt;
+        });
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
 
@@ -292,7 +293,7 @@ namespace llvm {
     bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
-    Optional<MemoryEffects> parseMemoryAttr();
+    std::optional<MemoryEffects> parseMemoryAttr();
     bool parseScopeAndOrdering(bool IsAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
     bool parseScope(SyncScope::ID &SSID);
@@ -319,8 +320,8 @@ namespace llvm {
     bool parseTopLevelEntities();
     bool validateEndOfModule(bool UpgradeDebugInfo);
     bool validateEndOfIndex();
-    bool parseTargetDefinitions();
-    bool parseTargetDefinition();
+    bool parseTargetDefinitions(DataLayoutCallbackTy DataLayoutCallback);
+    bool parseTargetDefinition(std::string &TentativeDLStr, LocTy &DLStrLoc);
     bool parseModuleAsm();
     bool parseSourceFileName();
     bool parseUnnamedType();
@@ -434,6 +435,7 @@ namespace llvm {
 
     bool parseArrayVectorType(Type *&Result, bool IsVector);
     bool parseFunctionType(Type *&Result);
+    bool parseTargetExtType(Type *&Result);
 
     // Function Semantic Analysis.
     class PerFunctionState {

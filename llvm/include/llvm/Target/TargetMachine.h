@@ -17,6 +17,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/PGOOptions.h"
@@ -63,6 +64,7 @@ class PassManagerBase;
 }
 using legacy::PassManagerBase;
 
+struct MachineFunctionInfo;
 namespace yaml {
 struct MachineFunctionInfo;
 }
@@ -110,7 +112,7 @@ protected: // Can only create subclasses.
   unsigned O0WantsFastISel : 1;
 
   // PGO related tunables.
-  std::optional<PGOOptions> PGOOption = std::nullopt;
+  std::optional<PGOOptions> PGOOption;
 
 public:
   const TargetOptions DefaultOptions;
@@ -133,6 +135,13 @@ public:
     return nullptr;
   }
   virtual TargetLoweringObjectFile *getObjFileLowering() const {
+    return nullptr;
+  }
+
+  /// Create the target's instance of MachineFunctionInfo
+  virtual MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const {
     return nullptr;
   }
 

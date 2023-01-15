@@ -570,7 +570,7 @@ define signext i32 @ctpop_i32(i32 signext %a) nounwind {
   ret i32 %1
 }
 
-define signext i32 @ctpop_i32_load(i32* %p) nounwind {
+define signext i32 @ctpop_i32_load(ptr %p) nounwind {
 ; RV64I-LABEL: ctpop_i32_load:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
@@ -605,7 +605,7 @@ define signext i32 @ctpop_i32_load(i32* %p) nounwind {
 ; RV64ZBB-NEXT:    lwu a0, 0(a0)
 ; RV64ZBB-NEXT:    cpopw a0, a0
 ; RV64ZBB-NEXT:    ret
-  %a = load i32, i32* %p
+  %a = load i32, ptr %p
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   ret i32 %1
 }
@@ -957,7 +957,7 @@ define signext i32 @bswap_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    and a2, a0, a2
 ; RV64I-NEXT:    slli a2, a2, 8
 ; RV64I-NEXT:    slliw a0, a0, 24
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -971,7 +971,7 @@ define signext i32 @bswap_i32(i32 signext %a) nounwind {
 }
 
 ; Similar to bswap_i32 but the result is not sign extended.
-define void @bswap_i32_nosext(i32 signext %a, i32* %x) nounwind {
+define void @bswap_i32_nosext(i32 signext %a, ptr %x) nounwind {
 ; RV64I-LABEL: bswap_i32_nosext:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a2, a0, 8
@@ -983,7 +983,7 @@ define void @bswap_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64I-NEXT:    and a3, a0, a3
 ; RV64I-NEXT:    slli a3, a3, 8
 ; RV64I-NEXT:    slli a0, a0, 24
-; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    or a2, a3, a2
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    sw a0, 0(a1)
 ; RV64I-NEXT:    ret
@@ -995,7 +995,7 @@ define void @bswap_i32_nosext(i32 signext %a, i32* %x) nounwind {
 ; RV64ZBB-NEXT:    sw a0, 0(a1)
 ; RV64ZBB-NEXT:    ret
   %1 = tail call i32 @llvm.bswap.i32(i32 %a)
-  store i32 %1, i32* %x
+  store i32 %1, ptr %x
   ret void
 }
 
@@ -1016,8 +1016,8 @@ define i64 @bswap_i64(i64 %a) {
 ; RV64I-NEXT:    srli a5, a0, 8
 ; RV64I-NEXT:    srliw a5, a5, 24
 ; RV64I-NEXT:    slli a5, a5, 24
-; RV64I-NEXT:    or a3, a5, a3
 ; RV64I-NEXT:    or a1, a3, a1
+; RV64I-NEXT:    or a1, a5, a1
 ; RV64I-NEXT:    and a4, a0, a4
 ; RV64I-NEXT:    slli a4, a4, 24
 ; RV64I-NEXT:    srliw a3, a0, 24
@@ -1026,8 +1026,8 @@ define i64 @bswap_i64(i64 %a) {
 ; RV64I-NEXT:    and a2, a0, a2
 ; RV64I-NEXT:    slli a2, a2, 40
 ; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    or a0, a0, a2
-; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    or a2, a2, a3
+; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

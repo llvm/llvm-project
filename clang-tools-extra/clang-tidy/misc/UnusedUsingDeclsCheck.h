@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_USING_DECLS_H
 
 #include "../ClangTidyCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <vector>
 
@@ -23,8 +24,7 @@ namespace misc {
 /// http://clang.llvm.org/extra/clang-tidy/checks/misc/unused-using-decls.html
 class UnusedUsingDeclsCheck : public ClangTidyCheck {
 public:
-  UnusedUsingDeclsCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UnusedUsingDeclsCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void onEndOfTranslationUnit() override;
@@ -48,6 +48,9 @@ private:
   };
 
   std::vector<UsingDeclContext> Contexts;
+
+  const StringRef RawStringHeaderFileExtensions;
+  utils::FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace misc

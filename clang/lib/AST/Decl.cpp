@@ -54,7 +54,6 @@
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1020,6 +1019,16 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
     } else if (isExplicitMemberSpecialization(MD)) {
       explicitSpecSuppressor = MD;
     }
+
+    // OpenMP target declare device functions are not callable from the host so
+    // they should not be exported from the device image. This applies to all
+    // functions as the host-callable kernel functions are emitted at codegen.
+    ASTContext &Context = D->getASTContext();
+    if (Context.getLangOpts().OpenMP && Context.getLangOpts().OpenMPIsDevice &&
+        ((Context.getTargetInfo().getTriple().isAMDGPU() ||
+          Context.getTargetInfo().getTriple().isNVPTX()) ||
+         OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(MD)))
+      LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
 
   } else if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     if (const auto *spec = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
@@ -3180,11 +3189,13 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
 }
 
 bool FunctionDecl::isReservedGlobalPlacementOperator() const {
-  assert(getDeclName().getNameKind() == DeclarationName::CXXOperatorName);
-  assert(getDeclName().getCXXOverloadedOperator() == OO_New ||
-         getDeclName().getCXXOverloadedOperator() == OO_Delete ||
-         getDeclName().getCXXOverloadedOperator() == OO_Array_New ||
-         getDeclName().getCXXOverloadedOperator() == OO_Array_Delete);
+  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
+    return false;
+  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
+    return false;
 
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
@@ -3347,6 +3358,8 @@ bool FunctionDecl::isNoReturn() const {
 MultiVersionKind FunctionDecl::getMultiVersionKind() const {
   if (hasAttr<TargetAttr>())
     return MultiVersionKind::Target;
+  if (hasAttr<TargetVersionAttr>())
+    return MultiVersionKind::TargetVersion;
   if (hasAttr<CPUDispatchAttr>())
     return MultiVersionKind::CPUDispatch;
   if (hasAttr<CPUSpecificAttr>())
@@ -3365,7 +3378,8 @@ bool FunctionDecl::isCPUSpecificMultiVersion() const {
 }
 
 bool FunctionDecl::isTargetMultiVersion() const {
-  return isMultiVersion() && hasAttr<TargetAttr>();
+  return isMultiVersion() &&
+         (hasAttr<TargetAttr>() || hasAttr<TargetVersionAttr>());
 }
 
 bool FunctionDecl::isTargetClonesMultiVersion() const {
@@ -5365,8 +5379,8 @@ ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
     return std::nullopt;
 
   const auto *StoredLocs = getTrailingObjects<SourceLocation>();
-  return llvm::makeArrayRef(StoredLocs,
-                            getNumModuleIdentifiers(getImportedModule()));
+  return llvm::ArrayRef(StoredLocs,
+                        getNumModuleIdentifiers(getImportedModule()));
 }
 
 SourceRange ImportDecl::getSourceRange() const {

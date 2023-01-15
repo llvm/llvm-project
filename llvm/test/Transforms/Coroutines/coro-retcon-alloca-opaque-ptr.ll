@@ -4,8 +4,8 @@
 
 target datalayout = "p:64:64:64"
 
-declare {i8*, i8*, i32} @prototype_f(i8*, i1)
-define {i8*, i8*, i32} @f(i8* %buffer, i32 %n, { i32 } %dummy) {
+declare {ptr, ptr, i32} @prototype_f(ptr, i1)
+define {ptr, ptr, i32} @f(ptr %buffer, i32 %n, { i32 } %dummy) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[BUFFER:%.*]], i64 0, i32 1
@@ -17,15 +17,15 @@ define {i8*, i8*, i32} @f(i8* %buffer, i32 %n, { i32 } %dummy) {
 ; CHECK-NEXT:    ret { ptr, ptr, i32 } [[TMP2]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, i8* %buffer, i8* bitcast ({i8*, i8*, i32} (i8*, i1)* @prototype_f to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_f, ptr @allocate, ptr @deallocate)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
 loop:
   %n.val = phi i32 [ %n, %entry ], [ %inc, %resume ]
   %alloca = call token @llvm.coro.alloca.alloc.i32(i32 %n.val, i32 8)
-  %ptr = call i8* @llvm.coro.alloca.get(token %alloca)
-  %unwind = call i1 (...) @llvm.coro.suspend.retcon.i1(i8* %ptr, i32 %n.val)
+  %ptr = call ptr @llvm.coro.alloca.get(token %alloca)
+  %unwind = call i1 (...) @llvm.coro.suspend.retcon.i1(ptr %ptr, i32 %n.val)
   call void @llvm.coro.alloca.free(token %alloca)
   br i1 %unwind, label %cleanup, label %resume
 
@@ -34,13 +34,13 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0)
   unreachable
 }
 
 
-declare {i8*, i32} @prototype_g(i8*, i1)
-define {i8*, i32} @g(i8* %buffer, i32 %n) {
+declare {ptr, i32} @prototype_g(ptr, i1)
+define {ptr, i32} @g(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  coro.return:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
@@ -51,15 +51,15 @@ define {i8*, i32} @g(i8* %buffer, i32 %n) {
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP2]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, i8* %buffer, i8* bitcast ({i8*, i32} (i8*, i1)* @prototype_g to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, ptr %buffer, ptr @prototype_g, ptr @allocate, ptr @deallocate)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
 loop:
   %n.val = phi i32 [ %n, %entry ], [ %inc, %resume ]
   %alloca = call token @llvm.coro.alloca.alloc.i32(i32 %n.val, i32 8)
-  %ptr = call i8* @llvm.coro.alloca.get(token %alloca)
-  call void @use(i8* %ptr)
+  %ptr = call ptr @llvm.coro.alloca.get(token %alloca)
+  call void @use(ptr %ptr)
   call void @llvm.coro.alloca.free(token %alloca)
   %unwind = call i1 (...) @llvm.coro.suspend.retcon.i1(i32 %n.val)
   br i1 %unwind, label %cleanup, label %resume
@@ -69,22 +69,22 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0)
   unreachable
 }
 
-declare token @llvm.coro.id.retcon(i32, i32, i8*, i8*, i8*, i8*)
-declare i8* @llvm.coro.begin(token, i8*)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.suspend.retcon.isVoid(...)
-declare i1 @llvm.coro.end(i8*, i1)
-declare i8* @llvm.coro.prepare.retcon(i8*)
+declare i1 @llvm.coro.end(ptr, i1)
+declare ptr @llvm.coro.prepare.retcon(ptr)
 declare token @llvm.coro.alloca.alloc.i32(i32, i32)
-declare i8* @llvm.coro.alloca.get(token)
+declare ptr @llvm.coro.alloca.get(token)
 declare void @llvm.coro.alloca.free(token)
 
-declare noalias i8* @allocate(i32 %size)
-declare void @deallocate(i8* %ptr)
+declare noalias ptr @allocate(i32 %size)
+declare void @deallocate(ptr %ptr)
 
 declare void @print(i32)
-declare void @use(i8*)
+declare void @use(ptr)

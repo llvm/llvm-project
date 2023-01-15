@@ -19,8 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/CFLAndersAliasAnalysis.h"
-#include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -191,7 +189,7 @@ protected:
     // This special-casing introduces less adaptor passes. If we have the need
     // of adding module passes after function passes, we could change the
     // implementation to accommodate that.
-    Optional<bool> AddingFunctionPasses;
+    std::optional<bool> AddingFunctionPasses;
   };
 
   // Function object to maintain state while adding codegen machine passes.
@@ -483,26 +481,11 @@ Error CodeGenPassBuilder<Derived>::buildPipeline(
   return Error::success();
 }
 
-static inline AAManager registerAAAnalyses(CFLAAType UseCFLAA) {
+static inline AAManager registerAAAnalyses() {
   AAManager AA;
 
   // The order in which these are registered determines their priority when
   // being queried.
-
-  switch (UseCFLAA) {
-  case CFLAAType::Steensgaard:
-    AA.registerFunctionAnalysis<CFLSteensAA>();
-    break;
-  case CFLAAType::Andersen:
-    AA.registerFunctionAnalysis<CFLAndersAA>();
-    break;
-  case CFLAAType::Both:
-    AA.registerFunctionAnalysis<CFLAndersAA>();
-    AA.registerFunctionAnalysis<CFLSteensAA>();
-    break;
-  default:
-    break;
-  }
 
   // Basic AliasAnalysis support.
   // Add TypeBasedAliasAnalysis before BasicAliasAnalysis so that
@@ -527,7 +510,7 @@ void CodeGenPassBuilder<Derived>::registerModuleAnalyses(
 template <typename Derived>
 void CodeGenPassBuilder<Derived>::registerFunctionAnalyses(
     FunctionAnalysisManager &FAM) const {
-  FAM.registerPass([this] { return registerAAAnalyses(this->Opt.UseCFLAA); });
+  FAM.registerPass([this] { return registerAAAnalyses(); });
 
 #define FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)                        \
   FAM.registerPass([&] { return PASS_NAME CONSTRUCTOR; });

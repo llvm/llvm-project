@@ -38,3 +38,13 @@ define void @func_arg_attrs(
     ptr inalloca(i64) %arg3) {
   ret void
 }
+
+; // -----
+
+; CHECK-LABEL: @entry_count
+; CHECK-SAME:  attributes {function_entry_count = 4242 : i64}
+define void @entry_count() !prof !1 {
+  ret void
+}
+
+!1 = !{!"function_entry_count", i64 4242}

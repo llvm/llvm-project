@@ -5459,16 +5459,15 @@ AST_MATCHER_P(ArraySubscriptExpr, hasBase,
   return false;
 }
 
-/// Matches a 'for', 'while', 'do while' statement or a function
-/// definition that has a given body. Note that in case of functions
-/// this matcher only matches the definition itself and not the other
-/// declarations of the same function.
+/// Matches a 'for', 'while', 'do' statement or a function definition that has
+/// a given body. Note that in case of functions this matcher only matches the
+/// definition itself and not the other declarations of the same function.
 ///
 /// Given
 /// \code
 ///   for (;;) {}
 /// \endcode
-/// hasBody(compoundStmt())
+/// forStmt(hasBody(compoundStmt()))
 ///   matches 'for (;;) {}'
 /// with compoundStmt()
 ///   matching '{}'
@@ -5478,12 +5477,11 @@ AST_MATCHER_P(ArraySubscriptExpr, hasBase,
 ///   void f();
 ///   void f() {}
 /// \endcode
-/// hasBody(functionDecl())
+/// functionDecl(hasBody(compoundStmt()))
 ///   matches 'void f() {}'
 /// with compoundStmt()
 ///   matching '{}'
 ///   but does not match 'void f();'
-
 AST_POLYMORPHIC_MATCHER_P(hasBody,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(DoStmt, ForStmt,
                                                           WhileStmt,
@@ -5824,8 +5822,6 @@ AST_MATCHER_P(ExplicitCastExpr, hasDestinationType,
 
 /// Matches implicit casts whose destination type matches a given
 /// matcher.
-///
-/// FIXME: Unit test this matcher
 AST_MATCHER_P(ImplicitCastExpr, hasImplicitDestinationType,
               internal::Matcher<QualType>, InnerMatcher) {
   return InnerMatcher.matches(Node.getType(), Finder, Builder);
@@ -7812,6 +7808,30 @@ AST_MATCHER(NamespaceDecl, isAnonymous) {
 /// \endcode
 /// cxxRecordDecl(hasName("vector"), isInStdNamespace()) will match only #1.
 AST_MATCHER(Decl, isInStdNamespace) { return Node.isInStdNamespace(); }
+
+/// Matches declarations in an anonymous namespace.
+///
+/// Given
+/// \code
+///   class vector {};
+///   namespace foo {
+///     class vector {};
+///     namespace {
+///       class vector {}; // #1
+///     }
+///   }
+///   namespace {
+///     class vector {}; // #2
+///     namespace foo {
+///       class vector{}; // #3
+///     }
+///   }
+/// \endcode
+/// cxxRecordDecl(hasName("vector"), isInAnonymousNamespace()) will match
+/// #1, #2 and #3.
+AST_MATCHER(Decl, isInAnonymousNamespace) {
+  return Node.isInAnonymousNamespace();
+}
 
 /// If the given case statement does not use the GNU case range
 /// extension, matches the constant given in the statement.

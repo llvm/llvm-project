@@ -160,10 +160,12 @@ defm FLE_D : FPCmp_rr_m<0b1010001, 0b000, "fle.d", DINX>;
 defm FCLASS_D : FPUnaryOp_r_m<0b1110001, 0b00000, 0b001, XDINX, "fclass.d">,
                 Sched<[WriteFClass64, ReadFClass64]>;
 
+let IsSignExtendingOpW = 1 in
 defm FCVT_W_D : FPUnaryOp_r_frm_m<0b1100001, 0b00000, XDINX, "fcvt.w.d">,
                Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
 defm          : FPUnaryOpDynFrmAlias_m<FCVT_W_D, "fcvt.w.d", XDINX>;
 
+let IsSignExtendingOpW = 1 in
 defm FCVT_WU_D : FPUnaryOp_r_frm_m<0b1100001, 0b00001, XDINX, "fcvt.wu.d">,
                  Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
 defm           : FPUnaryOpDynFrmAlias_m<FCVT_WU_D, "fcvt.wu.d", XDINX>;

@@ -175,7 +175,7 @@ if.end250:                                        ; preds = %for.cond246
   br i1 undef, label %if.end256, label %for.end562
 
 if.end256:                                        ; preds = %if.end250
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   br i1 undef, label %if.then274, label %for.cond404.preheader
 
 for.cond404.preheader:                            ; preds = %if.end256
@@ -379,7 +379,7 @@ for.body48:                                       ; preds = %for.inc221, %for.bo
   br i1 undef, label %for.inc221, label %for.body65.lr.ph
 
 for.body65.lr.ph:                                 ; preds = %for.body48
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   %1 = sext i32 %0 to i64
   br label %for.body65.us
 

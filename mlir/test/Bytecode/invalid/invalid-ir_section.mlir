@@ -2,7 +2,7 @@
 // the IR section.
 
 // Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: s390x-
+// UNSUPPORTED: target=s390x-{{.*}}
 
 //===--------------------------------------------------------------------===//
 // Operations

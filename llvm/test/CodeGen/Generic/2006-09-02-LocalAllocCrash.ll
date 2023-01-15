@@ -1,12 +1,12 @@
 ; RUN: llc < %s -regalloc=fast -optimize-regalloc=0
 	
 %struct.CHESS_POSITION = type { i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i32, i32, i8, i8, [64 x i8], i8, i8, i8, i8, i8 }
-@search = external global %struct.CHESS_POSITION		; <%struct.CHESS_POSITION*> [#uses=2]
-@bishop_shift_rl45 = external global [64 x i32]		; <[64 x i32]*> [#uses=1]
-@bishop_shift_rr45 = external global [64 x i32]		; <[64 x i32]*> [#uses=1]
-@black_outpost = external global [64 x i8]		; <[64 x i8]*> [#uses=1]
-@bishop_mobility_rl45 = external global [64 x [256 x i32]]		; <[64 x [256 x i32]]*> [#uses=1]
-@bishop_mobility_rr45 = external global [64 x [256 x i32]]		; <[64 x [256 x i32]]*> [#uses=1]
+@search = external global %struct.CHESS_POSITION		; <ptr> [#uses=2]
+@bishop_shift_rl45 = external global [64 x i32]		; <ptr> [#uses=1]
+@bishop_shift_rr45 = external global [64 x i32]		; <ptr> [#uses=1]
+@black_outpost = external global [64 x i8]		; <ptr> [#uses=1]
+@bishop_mobility_rl45 = external global [64 x [256 x i32]]		; <ptr> [#uses=1]
+@bishop_mobility_rr45 = external global [64 x [256 x i32]]		; <ptr> [#uses=1]
 
 declare fastcc i32 @FirstOne()
 
@@ -78,33 +78,33 @@ cond_true1369.preheader:		; preds = %cond_true1254
 	ret void
 
 bb1567:		; preds = %cond_true1254
-	%tmp1580 = load i64, i64* getelementptr (%struct.CHESS_POSITION, %struct.CHESS_POSITION* @search, i32 0, i32 3)		; <i64> [#uses=1]
-	%tmp1591 = load i64, i64* getelementptr (%struct.CHESS_POSITION, %struct.CHESS_POSITION* @search, i32 0, i32 4)		; <i64> [#uses=1]
+	%tmp1580 = load i64, ptr getelementptr (%struct.CHESS_POSITION, ptr @search, i32 0, i32 3)		; <i64> [#uses=1]
+	%tmp1591 = load i64, ptr getelementptr (%struct.CHESS_POSITION, ptr @search, i32 0, i32 4)		; <i64> [#uses=1]
 	%tmp1572 = tail call fastcc i32 @FirstOne( )		; <i32> [#uses=5]
-	%tmp1582 = getelementptr [64 x i32], [64 x i32]* @bishop_shift_rl45, i32 0, i32 %tmp1572		; <i32*> [#uses=1]
-	%tmp1583 = load i32, i32* %tmp1582		; <i32> [#uses=1]
+	%tmp1582 = getelementptr [64 x i32], ptr @bishop_shift_rl45, i32 0, i32 %tmp1572		; <ptr> [#uses=1]
+	%tmp1583 = load i32, ptr %tmp1582		; <i32> [#uses=1]
 	%tmp1583.upgrd.1 = trunc i32 %tmp1583 to i8		; <i8> [#uses=1]
 	%shift.upgrd.2 = zext i8 %tmp1583.upgrd.1 to i64		; <i64> [#uses=1]
 	%tmp1584 = lshr i64 %tmp1580, %shift.upgrd.2		; <i64> [#uses=1]
 	%tmp1584.upgrd.3 = trunc i64 %tmp1584 to i32		; <i32> [#uses=1]
 	%tmp1585 = and i32 %tmp1584.upgrd.3, 255		; <i32> [#uses=1]
 	%gep.upgrd.4 = zext i32 %tmp1585 to i64		; <i64> [#uses=1]
-	%tmp1587 = getelementptr [64 x [256 x i32]], [64 x [256 x i32]]* @bishop_mobility_rl45, i32 0, i32 %tmp1572, i64 %gep.upgrd.4		; <i32*> [#uses=1]
-	%tmp1588 = load i32, i32* %tmp1587		; <i32> [#uses=1]
-	%tmp1593 = getelementptr [64 x i32], [64 x i32]* @bishop_shift_rr45, i32 0, i32 %tmp1572		; <i32*> [#uses=1]
-	%tmp1594 = load i32, i32* %tmp1593		; <i32> [#uses=1]
+	%tmp1587 = getelementptr [64 x [256 x i32]], ptr @bishop_mobility_rl45, i32 0, i32 %tmp1572, i64 %gep.upgrd.4		; <ptr> [#uses=1]
+	%tmp1588 = load i32, ptr %tmp1587		; <i32> [#uses=1]
+	%tmp1593 = getelementptr [64 x i32], ptr @bishop_shift_rr45, i32 0, i32 %tmp1572		; <ptr> [#uses=1]
+	%tmp1594 = load i32, ptr %tmp1593		; <i32> [#uses=1]
 	%tmp1594.upgrd.5 = trunc i32 %tmp1594 to i8		; <i8> [#uses=1]
 	%shift.upgrd.6 = zext i8 %tmp1594.upgrd.5 to i64		; <i64> [#uses=1]
 	%tmp1595 = lshr i64 %tmp1591, %shift.upgrd.6		; <i64> [#uses=1]
 	%tmp1595.upgrd.7 = trunc i64 %tmp1595 to i32		; <i32> [#uses=1]
 	%tmp1596 = and i32 %tmp1595.upgrd.7, 255		; <i32> [#uses=1]
 	%gep.upgrd.8 = zext i32 %tmp1596 to i64		; <i64> [#uses=1]
-	%tmp1598 = getelementptr [64 x [256 x i32]], [64 x [256 x i32]]* @bishop_mobility_rr45, i32 0, i32 %tmp1572, i64 %gep.upgrd.8		; <i32*> [#uses=1]
-	%tmp1599 = load i32, i32* %tmp1598		; <i32> [#uses=1]
+	%tmp1598 = getelementptr [64 x [256 x i32]], ptr @bishop_mobility_rr45, i32 0, i32 %tmp1572, i64 %gep.upgrd.8		; <ptr> [#uses=1]
+	%tmp1599 = load i32, ptr %tmp1598		; <i32> [#uses=1]
 	%tmp1600.neg = sub i32 0, %tmp1588		; <i32> [#uses=1]
 	%tmp1602 = sub i32 %tmp1600.neg, %tmp1599		; <i32> [#uses=1]
-	%tmp1604 = getelementptr [64 x i8], [64 x i8]* @black_outpost, i32 0, i32 %tmp1572		; <i8*> [#uses=1]
-	%tmp1605 = load i8, i8* %tmp1604		; <i8> [#uses=1]
+	%tmp1604 = getelementptr [64 x i8], ptr @black_outpost, i32 0, i32 %tmp1572		; <ptr> [#uses=1]
+	%tmp1605 = load i8, ptr %tmp1604		; <i8> [#uses=1]
 	%tmp1606 = icmp eq i8 %tmp1605, 0		; <i1> [#uses=1]
 	br i1 %tmp1606, label %cond_next1637, label %cond_true1607
 

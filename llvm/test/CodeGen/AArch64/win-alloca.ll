@@ -5,11 +5,11 @@
 define void @func(i64 %a) {
 entry:
   %0 = alloca i8, i64 %a, align 16
-  call void @func2(i8* nonnull %0)
+  call void @func2(ptr nonnull %0)
   ret void
 }
 
-declare void @func2(i8*)
+declare void @func2(ptr)
 
 ; The -O0 version here ends up much less elegant, so just check the
 ; details of the optimized form, but check that -O0 at least emits the

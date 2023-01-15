@@ -107,7 +107,7 @@ private:
     if (elementIndentStack.empty())
       return;
 
-    for (bool isLastElt : llvm::makeArrayRef(elementIndentStack).drop_back())
+    for (bool isLastElt : llvm::ArrayRef(elementIndentStack).drop_back())
       os << (isLastElt ? "  " : " |");
     os << (elementIndentStack.back() ? " `" : " |");
   }
@@ -330,7 +330,7 @@ void NodePrinter::printImpl(const NamedAttributeDecl *decl) {
 void NodePrinter::printImpl(const OpNameDecl *decl) {
   os << "OpNameDecl " << decl;
   if (Optional<StringRef> name = decl->getName())
-    os << " Name<" << name << ">";
+    os << " Name<" << *name << ">";
   os << "\n";
 }
 

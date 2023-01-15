@@ -19,6 +19,7 @@
 #include <cstdlib>
 #include <grp.h>
 #include <mutex>
+#include <optional>
 #include <pwd.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -38,7 +39,7 @@ bool HostInfoPosix::GetHostname(std::string &s) {
   return false;
 }
 
-llvm::Optional<std::string> HostInfoPosix::GetOSKernelDescription() {
+std::optional<std::string> HostInfoPosix::GetOSKernelDescription() {
   struct utsname un;
   if (uname(&un) < 0)
     return std::nullopt;
@@ -56,8 +57,8 @@ llvm::Optional<std::string> HostInfoPosix::GetOSKernelDescription() {
 namespace {
 class PosixUserIDResolver : public UserIDResolver {
 protected:
-  llvm::Optional<std::string> DoGetUserName(id_t uid) override;
-  llvm::Optional<std::string> DoGetGroupName(id_t gid) override;
+  std::optional<std::string> DoGetUserName(id_t uid) override;
+  std::optional<std::string> DoGetGroupName(id_t gid) override;
 };
 } // namespace
 
@@ -66,7 +67,7 @@ struct PasswdEntry {
   std::string shell;
 };
 
-static llvm::Optional<PasswdEntry> GetPassword(id_t uid) {
+static std::optional<PasswdEntry> GetPassword(id_t uid) {
 #ifdef USE_GETPWUID
   // getpwuid_r is missing from android-9
   // The caller should provide some thread safety by making sure no one calls
@@ -88,13 +89,13 @@ static llvm::Optional<PasswdEntry> GetPassword(id_t uid) {
   return std::nullopt;
 }
 
-llvm::Optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
-  if (llvm::Optional<PasswdEntry> password = GetPassword(uid))
+std::optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
+  if (std::optional<PasswdEntry> password = GetPassword(uid))
     return password->username;
   return std::nullopt;
 }
 
-llvm::Optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
+std::optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
 #ifndef __ANDROID__
   char group_buffer[PATH_MAX];
   size_t group_buffer_size = sizeof(group_buffer);
@@ -133,7 +134,7 @@ uint32_t HostInfoPosix::GetEffectiveGroupID() { return getegid(); }
 FileSpec HostInfoPosix::GetDefaultShell() {
   if (const char *v = ::getenv("SHELL"))
     return FileSpec(v);
-  if (llvm::Optional<PasswdEntry> password = GetPassword(::geteuid()))
+  if (std::optional<PasswdEntry> password = GetPassword(::geteuid()))
     return FileSpec(password->shell);
   return FileSpec("/bin/sh");
 }

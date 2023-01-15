@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
-; RUN: opt < %s -passes=rewrite-statepoints-for-gc -spp-rematerialization-threshold=0 -S | FileCheck %s
 
 
 declare void @foo()
@@ -164,10 +163,10 @@ merge:                                            ; preds = %kill, %entry, %entr
 }
 
 ; Check to make sure we handle values live over an entry statepoint
-define void @test6(i8 addrspace(1)* %arg1, i8 addrspace(1)* %arg2, i8 addrspace(1)* %arg3) gc "statepoint-example" {
+define void @test6(i8 addrspace(1)* %arg1, i8 addrspace(1)* %arg2, i8 addrspace(1)* %arg3, i1 %c) gc "statepoint-example" {
 ; CHECK-LABEL: @test6
 entry:
-  br i1 undef, label %gc.safepoint_poll.exit2, label %do_safepoint
+  br i1 %c, label %gc.safepoint_poll.exit2, label %do_safepoint
 
 do_safepoint:                                     ; preds = %entry
 ; CHECK-LABEL: do_safepoint:

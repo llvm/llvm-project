@@ -13,8 +13,10 @@
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
@@ -95,6 +97,7 @@ public:
 
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect>();
+    registry.insert<LLVM::LLVMDialect>();
   }
 
   void runOnOperation() override {
@@ -102,6 +105,8 @@ public:
       // Run enabling transformations.
       OpPassManager pm("builtin.module");
       pm.addPass(createPreSparsificationRewritePass());
+      pm.addNestedPass<func::FuncOp>(
+          bufferization::createEmptyTensorToAllocTensorPass());
       if (failed(runPipeline(pm, getOperation())))
         return signalPassFailure();
     }
@@ -144,6 +149,7 @@ public:
       } else {
         pm.addPass(createSparseTensorCodegenPass(enableBufferInitialization));
         pm.addPass(createSparseBufferRewritePass(enableBufferInitialization));
+        pm.addPass(createStorageSpecifierToLLVMPass());
       }
       if (failed(runPipeline(pm, getOperation())))
         return signalPassFailure();

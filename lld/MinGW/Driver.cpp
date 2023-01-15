@@ -29,11 +29,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Driver.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -44,6 +44,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -61,7 +62,10 @@ enum {
 };
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
@@ -75,9 +79,9 @@ static constexpr opt::OptTable::Info infoTable[] = {
 };
 
 namespace {
-class MinGWOptTable : public opt::OptTable {
+class MinGWOptTable : public opt::GenericOptTable {
 public:
-  MinGWOptTable() : OptTable(infoTable, false) {}
+  MinGWOptTable() : opt::GenericOptTable(infoTable, false) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace
@@ -111,7 +115,8 @@ opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> argv) {
 }
 
 // Find a file by concatenating given paths.
-static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
+static std::optional<std::string> findFile(StringRef path1,
+                                           const Twine &path2) {
   SmallString<128> s;
   sys::path::append(s, path1, path2);
   if (sys::fs::exists(s))
@@ -124,7 +129,7 @@ static std::string
 searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
   if (name.startswith(":")) {
     for (StringRef dir : searchPaths)
-      if (Optional<std::string> s = findFile(dir, name.substr(1)))
+      if (std::optional<std::string> s = findFile(dir, name.substr(1)))
         return *s;
     error("unable to find library -l" + name);
     return "";
@@ -132,19 +137,19 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
 
   for (StringRef dir : searchPaths) {
     if (!bStatic) {
-      if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll.a"))
+      if (std::optional<std::string> s = findFile(dir, "lib" + name + ".dll.a"))
         return *s;
-      if (Optional<std::string> s = findFile(dir, name + ".dll.a"))
+      if (std::optional<std::string> s = findFile(dir, name + ".dll.a"))
         return *s;
     }
-    if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
+    if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
       return *s;
-    if (Optional<std::string> s = findFile(dir, name + ".lib"))
-       return *s;
+    if (std::optional<std::string> s = findFile(dir, name + ".lib"))
+      return *s;
     if (!bStatic) {
-      if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll"))
+      if (std::optional<std::string> s = findFile(dir, "lib" + name + ".dll"))
         return *s;
-      if (Optional<std::string> s = findFile(dir, name + ".dll"))
+      if (std::optional<std::string> s = findFile(dir, name + ".dll"))
         return *s;
     }
   }

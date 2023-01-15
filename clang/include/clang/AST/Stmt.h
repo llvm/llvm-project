@@ -1923,7 +1923,7 @@ public:
 
   SourceLocation getAttrLoc() const { return AttributedStmtBits.AttrLoc; }
   ArrayRef<const Attr *> getAttrs() const {
-    return llvm::makeArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
+    return llvm::ArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
   }
 
   Stmt *getSubStmt() { return SubStmt; }
@@ -3334,16 +3334,16 @@ public:
   //===--- Other ---===//
 
   ArrayRef<StringRef> getAllConstraints() const {
-    return llvm::makeArrayRef(Constraints, NumInputs + NumOutputs);
+    return llvm::ArrayRef(Constraints, NumInputs + NumOutputs);
   }
 
   ArrayRef<StringRef> getClobbers() const {
-    return llvm::makeArrayRef(Clobbers, NumClobbers);
+    return llvm::ArrayRef(Clobbers, NumClobbers);
   }
 
   ArrayRef<Expr*> getAllExprs() const {
-    return llvm::makeArrayRef(reinterpret_cast<Expr**>(Exprs),
-                              NumInputs + NumOutputs);
+    return llvm::ArrayRef(reinterpret_cast<Expr **>(Exprs),
+                          NumInputs + NumOutputs);
   }
 
   StringRef getClobber(unsigned i) const { return getClobbers()[i]; }

@@ -11,6 +11,10 @@
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{option} = "enable-runtime-library=false s2s-strategy=2"
 // RUN: %{command}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false s2s-strategy=2 vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{command}
 
 #Tensor1 = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "dense", "compressed" ]

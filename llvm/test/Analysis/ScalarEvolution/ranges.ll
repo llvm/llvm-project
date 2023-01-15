@@ -28,12 +28,12 @@ define i32 @ashr(i32 %a) {
 define i64 @ashr_global() {
 ; CHECK-LABEL: 'ashr_global'
 ; CHECK-NEXT:  Classifying expressions for: @ashr_global
-; CHECK-NEXT:    %ashr = ashr i64 ptrtoint (i8* @G to i64), 63
+; CHECK-NEXT:    %ashr = ashr i64 ptrtoint (ptr @G to i64), 63
 ; CHECK-NEXT:    --> %ashr U: [-1,1) S: [-1,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @ashr_global
 ;
-  %ashr = ashr i64 ptrtoint (i8* @G to i64), 63
-  %pos = icmp sge i8* @G, null
+  %ashr = ashr i64 ptrtoint (ptr @G to i64), 63
+  %pos = icmp sge ptr @G, null
   call void @llvm.assume(i1 %pos)
   ret i64 %ashr
 }

@@ -13,7 +13,7 @@
 %struct.__s = type { i32 }
 
 @a = dso_local global %struct.__s zeroinitializer, align 4, !dbg !0
-@u = dso_local global i32* null, align 8, !dbg !5
+@u = dso_local global ptr null, align 8, !dbg !5
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!17, !18, !19, !20, !21}

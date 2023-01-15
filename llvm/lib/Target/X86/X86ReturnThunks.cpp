@@ -43,12 +43,14 @@ using namespace llvm;
 #define PASS_KEY "x86-return-thunks"
 #define DEBUG_TYPE PASS_KEY
 
+namespace {
 struct X86ReturnThunks final : public MachineFunctionPass {
   static char ID;
   X86ReturnThunks() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return "X86 Return Thunks"; }
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+} // namespace
 
 char X86ReturnThunks::ID = 0;
 

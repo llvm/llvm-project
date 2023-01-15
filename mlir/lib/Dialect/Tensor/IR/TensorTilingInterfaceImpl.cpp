@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
@@ -71,6 +72,38 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
   }
 };
 
+template <typename OpTy>
+static SmallVector<Range> getPackUnPackIterationDomain(OpTy op,
+                                                       OpBuilder &builder) {
+  static_assert(llvm::is_one_of<OpTy, PackOp, UnPackOp>::value,
+                "applies to only pack or unpack operations");
+  OpBuilder::InsertionGuard g(builder);
+  Location loc = op.getLoc();
+  int64_t rank = (std::is_same<OpTy, PackOp>::value) ? op.getSourceRank()
+                                                     : op.getDestRank();
+  Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  Value one = builder.create<arith::ConstantIndexOp>(loc, 1);
+  ReifiedRankedShapedTypeDims resultShape;
+  (void)op.reifyResultShapes(builder, resultShape);
+  SmallVector<Range> loopBounds(rank);
+  for (auto dim : llvm::seq<int64_t>(0, rank)) {
+    loopBounds[dim].offset = zero;
+    loopBounds[dim].stride = one;
+    loopBounds[dim].size = resultShape[0][dim];
+  }
+  return loopBounds;
+}
+
+static void applyInversePermToRange(SmallVector<OpFoldResult> &offsets,
+                                    SmallVector<OpFoldResult> &sizes,
+                                    ArrayRef<int64_t> permutation) {
+  if (permutation.empty())
+    return;
+  SmallVector<int64_t> inversedPerm = invertPermutationVector(permutation);
+  applyPermutationToVector<OpFoldResult>(offsets, inversedPerm);
+  applyPermutationToVector<OpFoldResult>(sizes, inversedPerm);
+}
+
 struct PackOpTiling
     : public TilingInterface::ExternalModel<PackOpTiling, PackOp> {
 
@@ -85,21 +118,7 @@ struct PackOpTiling
   }
 
   SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
-    OpBuilder::InsertionGuard guard(b);
-    auto packOp = cast<PackOp>(op);
-    Location loc = packOp.getLoc();
-    int64_t rank = packOp.getSourceRank();
-    Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
-    Value one = b.create<arith::ConstantIndexOp>(loc, 1);
-    ReifiedRankedShapedTypeDims resultShape;
-    (void)packOp.reifyResultShapes(b, resultShape);
-    SmallVector<Range> loopRanges(rank);
-    for (auto dim : llvm::seq<int64_t>(0, rank)) {
-      loopRanges[dim].offset = zero;
-      loopRanges[dim].stride = one;
-      loopRanges[dim].size = resultShape[0][dim];
-    }
-    return loopRanges;
+    return getPackUnPackIterationDomain<PackOp>(cast<PackOp>(op), b);
   }
 
   SmallVector<Operation *>
@@ -112,15 +131,9 @@ struct PackOpTiling
     // The tiling is applied on interchanged dimensions. We have to undo the
     // interchange to map sizes and offsets to the original input.
     int64_t inputRank = packOp.getSourceRank();
-    ArrayRef<int64_t> dimsToOuterBlock(packOp.getOuterDimsPerm());
     SmallVector<OpFoldResult> origOffsets(offsets.begin(), offsets.end());
     SmallVector<OpFoldResult> origSizes(sizes.begin(), sizes.end());
-    if (!dimsToOuterBlock.empty()) {
-      SmallVector<int64_t> inversedPerm =
-          invertPermutationVector(dimsToOuterBlock);
-      applyPermutationToVector<OpFoldResult>(origOffsets, inversedPerm);
-      applyPermutationToVector<OpFoldResult>(origSizes, inversedPerm);
-    }
+    applyInversePermToRange(origOffsets, origSizes, packOp.getOuterDimsPerm());
 
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         packOp.getDimAndTileMapping();
@@ -207,6 +220,219 @@ struct PackOpTiling
       resultSizes.push_back(getAsOpFoldResult(outputShape[0][dataTileDim]));
 
     return success();
+  }
+};
+
+struct UnpackTileDimInfo {
+  bool isAlignedToInnerTileSize;
+  OpFoldResult sourceOffset;
+  OpFoldResult sourceSize;
+  OpFoldResult resultOffset;
+  OpFoldResult destExpandedSize;
+};
+
+/// Returns the needed information for tiling unpack op on `tileDim` with given
+/// `tileOffset` and `tileSize`. For more details, see the comment of the
+/// `getTiledImplementation`.
+static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
+                                              int64_t tileDim,
+                                              OpFoldResult tileOffset,
+                                              OpFoldResult tileSize) {
+  UnpackTileDimInfo info;
+  Attribute zeroAttr = b.getIndexAttr(0);
+  Attribute oneAttr = b.getIndexAttr(1);
+  DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
+      unpackOp.getDimAndTileMapping();
+  // The dimension is not one of packed data dimension.
+  if (!dimAndTileMapping.count(tileDim)) {
+    info.isAlignedToInnerTileSize = true;
+    info.sourceOffset = tileOffset;
+    info.sourceSize = tileSize;
+    info.resultOffset = zeroAttr;
+    info.destExpandedSize = tileSize;
+    return info;
+  }
+
+  Location loc = unpackOp.getLoc();
+  using AV = AffineValueExpr;
+  AffineBuilder ab(b, loc);
+  AffineExpr dim0, dim1, sym0;
+  bindDims(b.getContext(), dim0, dim1);
+  bindSymbols(b.getContext(), sym0);
+
+  OpFoldResult innerTileSize = dimAndTileMapping[tileDim];
+
+  info.isAlignedToInnerTileSize = false;
+  FailureOr<int64_t> cstSize = linalg::getConstantUpperBoundForIndex(
+      getValueOrCreateConstantIndexOp(b, loc, tileSize));
+  std::optional<int64_t> cstInnerSize = getConstantIntValue(innerTileSize);
+  if (!failed(cstSize) && cstInnerSize) {
+    if (*cstSize % *cstInnerSize == 0)
+      info.isAlignedToInnerTileSize = true;
+
+    // If the tiling size equals to the inner tiling size, the outer dims are
+    // always 1.
+    if (*cstInnerSize == *cstSize) {
+      auto lhs = AV(dim0).bind(tileOffset);
+      auto rhs = AV(dim1).bind(innerTileSize);
+      info.sourceOffset = ab.floor(lhs, rhs);
+      info.sourceSize = oneAttr;
+      info.resultOffset = zeroAttr;
+      info.destExpandedSize = tileSize;
+      return info;
+    }
+  }
+
+  if (info.isAlignedToInnerTileSize) {
+    info.sourceOffset =
+        ab.floor(AV(dim0).bind(tileOffset), AV(dim1).bind(innerTileSize));
+    info.resultOffset = zeroAttr;
+    info.destExpandedSize = tileSize;
+
+    // The ceilDiv is needed here because there could be incomplete tile even
+    // it is perfect tiling cases. E.g.,
+    //   %0 = unpack tensor<33x2xf32> into tensor<64xf32>
+    // If the tiling size is 32, there will be 3 tiles. Two of them have
+    // size=32; one of them have size=2. The size is represented using
+    // affine_min op; we need ceilDiv.
+    info.sourceSize =
+        ab.ceil(AV(dim0).bind(tileSize), AV(dim1).bind(innerTileSize));
+    return info;
+  }
+
+  DivModValue firstCoord =
+      getDivMod(b, loc, getValueOrCreateConstantIndexOp(b, loc, tileOffset),
+                getValueOrCreateConstantIndexOp(b, loc, innerTileSize));
+  OpFoldResult tileExclusiveBound =
+      ab.add(AV(dim0).bind(tileOffset), AV(dim1).bind(tileSize));
+  DivModValue lastCoord = getDivMod(
+      b, loc,
+      getValueOrCreateConstantIndexOp(
+          b, loc,
+          ab.sub(AV(dim0).bind(tileExclusiveBound), AV(dim1).bind(oneAttr))),
+      getValueOrCreateConstantIndexOp(b, loc, innerTileSize));
+
+  OpFoldResult lengthMinusOne = ab.sub(AV(dim0).bind(lastCoord.quotient),
+                                       AV(dim1).bind(firstCoord.quotient));
+  info.sourceSize =
+      ab.add(AV(dim0).bind(lengthMinusOne), AV(dim1).bind(oneAttr));
+  info.sourceOffset = firstCoord.quotient;
+  info.resultOffset = firstCoord.remainder;
+  info.destExpandedSize =
+      ab.mul(AV(dim0).bind(info.sourceSize), AV(sym0).bind(innerTileSize));
+  return info;
+}
+
+struct UnPackOpTiling
+    : public TilingInterface::ExternalModel<UnPackOpTiling, UnPackOp> {
+
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
+    auto unpackOp = cast<UnPackOp>(op);
+    SmallVector<utils::IteratorType> iteratorTypes(
+        unpackOp.getDestRank(), utils::IteratorType::parallel);
+    return iteratorTypes;
+  }
+
+  SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
+    return getPackUnPackIterationDomain<UnPackOp>(cast<UnPackOp>(op), b);
+  }
+
+  /// There are two cases in tiling unpack ops. If the tiling size is aligned to
+  /// the inner tile size, the corresponding tiles of source are all complete.
+  /// Otherwise, there are in-complete tiles. We will need to expand the slice
+  /// of source for getting complete tiles. The tiled unpack op unpacks more
+  /// data from source, so We'll need an extract_slice op to shift and truncate
+  /// the output.
+  /// Take Nn_to_N as an example. Say that N=32, n=8, and tiling_size=15. The
+  /// coordinates of second tile (i.e., result[15..31]) are
+  /// [(1, 7), (2, 0,), (2, 1) ... (3, 6), (3, 7)]. The first row and the last
+  /// row are incomplete tiles. To represent the unpack op, we have to complete
+  /// the rows. I.e., the input coordinates would start with (1, 0); end with
+  /// (3, 7). In this context, the tiled unpack produces a (3 * n) elements
+  /// because there are 3 rows in total. Follow by a tensor.extract_slice op, we
+  /// can get the actual result.
+  SmallVector<Operation *>
+  getTiledImplementation(Operation *op, OpBuilder &b,
+                         ArrayRef<OpFoldResult> offsets,
+                         ArrayRef<OpFoldResult> sizes) const {
+    auto unpackOp = cast<UnPackOp>(op);
+    int64_t srcRank = unpackOp.getSourceRank();
+    int64_t destRank = unpackOp.getDestRank();
+    int64_t numInnerTiles = srcRank - destRank;
+    Location loc = unpackOp.getLoc();
+
+    // The perfect tiling case indicates that the tiling sizes are multiple of
+    // inner_tile_size. In this context, no extra data is needed when
+    // representing the tiled unpack op.
+    bool isPerfectTilingCase = true;
+    Attribute oneAttr = b.getIndexAttr(1);
+    SmallVector<OpFoldResult> sliceSrcStrides(destRank, oneAttr);
+    SmallVector<OpFoldResult> sliceSrcIndices, sliceSrcSizes;
+    SmallVector<OpFoldResult> destExpandedSizes, resultOffsetsFromDest;
+    for (auto dim : llvm::seq<int64_t>(0, destRank)) {
+      UnpackTileDimInfo info =
+          getUnpackTileDimInfo(b, unpackOp, dim, offsets[dim], sizes[dim]);
+      if (!info.isAlignedToInnerTileSize)
+        isPerfectTilingCase = false;
+      sliceSrcIndices.push_back(info.sourceOffset);
+      sliceSrcSizes.push_back(info.sourceSize);
+      destExpandedSizes.push_back(info.destExpandedSize);
+      resultOffsetsFromDest.push_back(info.resultOffset);
+    }
+
+    // The tiling is applied on destination dimensions. We have to apply the
+    // interchange on source dimensions if outer_dims_perm is set.
+    applyInversePermToRange(sliceSrcIndices, sliceSrcSizes,
+                            unpackOp.getOuterDimsPerm());
+    Attribute zeroAttr = b.getIndexAttr(0);
+    sliceSrcIndices.append(numInnerTiles, zeroAttr);
+    sliceSrcSizes.append(unpackOp.getMixedTiles());
+    sliceSrcStrides.append(numInnerTiles, oneAttr);
+    Value sliceSource =
+        b.create<ExtractSliceOp>(loc, unpackOp.getSource(), sliceSrcIndices,
+                                 sliceSrcSizes, sliceSrcStrides);
+
+    SmallVector<OpFoldResult> destStrides(destRank, oneAttr);
+    Value sliceDest;
+    if (isPerfectTilingCase) {
+      sliceDest = b.create<ExtractSliceOp>(loc, unpackOp.getDest(), offsets,
+                                           sizes, destStrides);
+    } else {
+      sliceDest = b.create<EmptyOp>(loc, destExpandedSizes,
+                                    unpackOp.getDestType().getElementType());
+    }
+
+    Operation *tiledUnpackOp =
+        b.create<UnPackOp>(loc, TypeRange{sliceDest.getType()},
+                           ValueRange{sliceSource, sliceDest}, op->getAttrs());
+
+    if (isPerfectTilingCase)
+      return {tiledUnpackOp};
+
+    Operation *extractSlice =
+        b.create<ExtractSliceOp>(loc, tiledUnpackOp->getResult(0),
+                                 resultOffsetsFromDest, sizes, destStrides);
+    return {tiledUnpackOp, extractSlice};
+  }
+
+  LogicalResult
+  getResultTilePosition(Operation *op, OpBuilder &b, unsigned resultNumber,
+                        ArrayRef<OpFoldResult> offsets,
+                        ArrayRef<OpFoldResult> sizes,
+                        SmallVector<OpFoldResult> &resultOffsets,
+                        SmallVector<OpFoldResult> &resultSizes) const {
+    resultOffsets = llvm::to_vector(offsets);
+    resultSizes = llvm::to_vector(sizes);
+    return success();
+  }
+
+  FailureOr<Value> generateResultTileValue(Operation *op, OpBuilder &b,
+                                           unsigned resultNumber,
+                                           ArrayRef<OpFoldResult> offsets,
+                                           ArrayRef<OpFoldResult> sizes) const {
+    return getTiledImplementation(op, b, offsets, sizes)
+        .back()
+        ->getResult(resultNumber);
   }
 };
 
@@ -358,7 +584,7 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
   // The shape of the result can be obtained from the sizes passed in.
   SmallVector<Value> dynDims;
   SmallVector<int64_t> shape;
-  dispatchIndexOpFoldResults(sizes, dynDims, shape, ShapedType::kDynamic);
+  dispatchIndexOpFoldResults(sizes, dynDims, shape);
   RankedTensorType resultType =
       RankedTensorType::get(shape, padOp.getResultType().getElementType());
 
@@ -390,7 +616,7 @@ Operation *tensor::bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
                                     staticNewHighs, newLows, newHighs);
 
     // Copy region to new PadOp.
-    BlockAndValueMapping bvm;
+    IRMapping bvm;
     padOp.getRegion().cloneInto(&newPadOp.getRegion(), bvm);
 
     // Cast result and return.
@@ -425,5 +651,6 @@ void mlir::tensor::registerTilingInterfaceExternalModels(
   registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
     tensor::PadOp::attachInterface<PadOpTiling>(*ctx);
     tensor::PackOp::attachInterface<PackOpTiling>(*ctx);
+    tensor::UnPackOp::attachInterface<UnPackOpTiling>(*ctx);
   });
 }

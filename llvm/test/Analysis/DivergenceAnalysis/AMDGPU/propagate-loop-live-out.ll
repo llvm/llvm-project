@@ -1,8 +1,7 @@
 ; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
-; CHECK: bb6:
 ; CHECK: DIVERGENT:       %.126.i355.i = phi i1 [ false, %bb5 ], [ true, %bb4 ]
-; CHECK: DIVERGENT:       br i1 %.126.i355.i, label %bb7, label %bb8
 
 ; Function Attrs: nounwind readnone speculatable
 declare i32 @llvm.amdgcn.workitem.id.x() #0

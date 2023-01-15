@@ -22,16 +22,16 @@
   %s.9 = type { i8, i8 }
 
   ; Function Attrs: nounwind optsize
-  define dso_local void @f0(%s.0* byval(%s.0) nocapture readonly align 8 %a0) local_unnamed_addr #0 {
+  define dso_local void @f0(ptr byval(%s.0) nocapture readonly align 8 %a0) local_unnamed_addr #0 {
   b0:
-    %v0 = getelementptr inbounds %s.0, %s.0* %a0, i32 0, i32 10
-    %v1 = load i8, i8* %v0, align 8
-    %v2 = tail call i8* @f1(i8 signext %v1) #0
+    %v0 = getelementptr inbounds %s.0, ptr %a0, i32 0, i32 10
+    %v1 = load i8, ptr %v0, align 8
+    %v2 = tail call ptr @f1(i8 signext %v1) #0
     unreachable
   }
 
   ; Function Attrs: nounwind optsize
-  declare dso_local i8* @f1(i8 signext) local_unnamed_addr #0
+  declare dso_local ptr @f1(i8 signext) local_unnamed_addr #0
 
   attributes #0 = { nounwind optsize "target-cpu"="hexagonv65" }
 

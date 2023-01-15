@@ -26,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -303,6 +304,8 @@ void SymbolRelevanceSignals::computeASTSignals(
       (SemaResult.Kind != CodeCompletionResult::RK_Pattern))
     return;
   if (const NamedDecl *ND = SemaResult.getDeclaration()) {
+    if (hasUnstableLinkage(ND))
+      return;
     auto ID = getSymbolID(ND);
     if (!ID)
       return;
@@ -365,7 +368,7 @@ static float scopeProximityScore(unsigned ScopeDistance) {
   return std::max(0.65, 2.0 * std::pow(0.6, ScopeDistance / 2.0));
 }
 
-static llvm::Optional<llvm::StringRef>
+static std::optional<llvm::StringRef>
 wordMatching(llvm::StringRef Name, const llvm::StringSet<> *ContextWords) {
   if (ContextWords)
     for (const auto &Word : ContextWords->keys())

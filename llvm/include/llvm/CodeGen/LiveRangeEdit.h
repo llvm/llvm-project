@@ -18,7 +18,6 @@
 #define LLVM_CODEGEN_LIVERANGEEDIT_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -134,7 +133,7 @@ public:
       : Parent(parent), NewRegs(newRegs), MRI(MF.getRegInfo()), LIS(lis),
         VRM(vrm), TII(*MF.getSubtarget().getInstrInfo()), TheDelegate(delegate),
         FirstNew(newRegs.size()), DeadRemats(deadRemats) {
-    MRI.setDelegate(this);
+    MRI.addDelegate(this);
   }
 
   ~LiveRangeEdit() override { MRI.resetDelegate(this); }
@@ -164,9 +163,7 @@ public:
   /// we want to drop it from the NewRegs set.
   void pop_back() { NewRegs.pop_back(); }
 
-  ArrayRef<Register> regs() const {
-    return makeArrayRef(NewRegs).slice(FirstNew);
-  }
+  ArrayRef<Register> regs() const { return ArrayRef(NewRegs).slice(FirstNew); }
 
   /// createFrom - Create a new virtual register based on OldReg.
   Register createFrom(Register OldReg);

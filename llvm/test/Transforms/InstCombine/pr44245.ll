@@ -8,57 +8,57 @@ define void @test(i1 %c) {
 ; CHECK-NEXT:  bb16:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB17:%.*]], label [[BB24:%.*]]
 ; CHECK:       bb17:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[TMP0:%.*]], [[BB47:%.*]] ], [ undef, [[BB16:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[DOTIN1:%.*]], [[BB47:%.*]] ], [ undef, [[BB16:%.*]] ]
 ; CHECK-NEXT:    store ptr [[I]], ptr undef, align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb24:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB44:%.*]], label [[BB49:%.*]]
 ; CHECK:       bb44:
-; CHECK-NEXT:    [[TMP467:%.*]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
+; CHECK-NEXT:    [[TMP46:%.*]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb47:
-; CHECK-NEXT:    [[TMP0]] = phi ptr [ [[TMP1:%.*]], [[BB150:%.*]] ], [ [[TMP1221:%.*]], [[BB119:%.*]] ], [ [[TMP1032:%.*]], [[BB101:%.*]] ], [ [[TMP933:%.*]], [[BB91:%.*]] ], [ [[TMP834:%.*]], [[BB81:%.*]] ], [ [[TMP705:%.*]], [[BB67:%.*]] ], [ [[TMP586:%.*]], [[BB56:%.*]] ], [ [[TMP467]], [[BB44]] ]
+; CHECK-NEXT:    [[DOTIN1]] = phi ptr [ [[DOTIN:%.*]], [[BB150:%.*]] ], [ [[TMP122:%.*]], [[BB119:%.*]] ], [ [[TMP103:%.*]], [[BB101:%.*]] ], [ [[TMP93:%.*]], [[BB91:%.*]] ], [ [[TMP83:%.*]], [[BB81:%.*]] ], [ [[TMP70:%.*]], [[BB67:%.*]] ], [ [[TMP58:%.*]], [[BB56:%.*]] ], [ [[TMP46]], [[BB44]] ]
 ; CHECK-NEXT:    br label [[BB17]]
 ; CHECK:       bb49:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB56]], label [[BB59:%.*]]
 ; CHECK:       bb56:
-; CHECK-NEXT:    [[TMP586]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
+; CHECK-NEXT:    [[TMP58]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb59:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB67]], label [[BB71:%.*]]
 ; CHECK:       bb67:
-; CHECK-NEXT:    [[TMP705]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
+; CHECK-NEXT:    [[TMP70]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb71:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB81]], label [[BB84:%.*]]
 ; CHECK:       bb81:
-; CHECK-NEXT:    [[TMP834]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
+; CHECK-NEXT:    [[TMP83]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb84:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB91]], label [[BB94:%.*]]
 ; CHECK:       bb91:
-; CHECK-NEXT:    [[TMP933]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
+; CHECK-NEXT:    [[TMP93]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb94:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB101]], label [[BB104:%.*]]
 ; CHECK:       bb101:
-; CHECK-NEXT:    [[TMP1032]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
+; CHECK-NEXT:    [[TMP103]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb104:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB119]], label [[BB123:%.*]]
 ; CHECK:       bb119:
-; CHECK-NEXT:    [[TMP1221]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
+; CHECK-NEXT:    [[TMP122]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb123:
 ; CHECK-NEXT:    br i1 [[C]], label [[BB147:%.*]], label [[BB152:%.*]]
 ; CHECK:       bb147:
-; CHECK-NEXT:    [[TMP1499:%.*]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
+; CHECK-NEXT:    [[TMP149:%.*]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB150]]
 ; CHECK:       bb150:
-; CHECK-NEXT:    [[TMP1]] = phi ptr [ [[TMP1848:%.*]], [[BB152]] ], [ [[TMP1499]], [[BB147]] ]
+; CHECK-NEXT:    [[DOTIN]] = phi ptr [ [[TMP184:%.*]], [[BB152]] ], [ [[TMP149]], [[BB147]] ]
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb152:
-; CHECK-NEXT:    [[TMP1848]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
+; CHECK-NEXT:    [[TMP184]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    br label [[BB150]]
 ;

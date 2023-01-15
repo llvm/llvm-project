@@ -2,7 +2,7 @@
 //
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %s -O3 -S -emit-llvm -o - | FileCheck %s
 // This test is expected to fail on PowerPC.
-// XFAIL: powerpc
+// XFAIL: target=powerpc{{.*}}
 
 #include "Inputs/coroutine.h"
 

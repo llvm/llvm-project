@@ -39,10 +39,10 @@ for1.header:
 for2:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for2 ], [ 1, %for1.header ]
   call void @foo(i64 %indvars.iv23)
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv, i64 %indvars.iv23
-  %lv = load i32, i32* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %indvars.iv, i64 %indvars.iv23
+  %lv = load i32, ptr %arrayidx5
   %add = add nsw i32 %lv, %k
-  store i32 %add, i32* %arrayidx5
+  store i32 %add, ptr %arrayidx5
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv, 99
   br i1 %exitcond, label %for2.loopexit , label %for2
@@ -92,10 +92,10 @@ for1.header:
 for2:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for2 ], [ 1, %for1.header ]
   call void @bar(i64 %indvars.iv23)
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv, i64 %indvars.iv23
-  %lv = load i32, i32* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %indvars.iv, i64 %indvars.iv23
+  %lv = load i32, ptr %arrayidx5
   %add = add nsw i32 %lv, %k
-  store i32 %add, i32* %arrayidx5
+  store i32 %add, ptr %arrayidx5
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv, 99
   br i1 %exitcond, label %for2.loopexit , label %for2

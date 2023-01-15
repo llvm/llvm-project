@@ -25,6 +25,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <memory>
+#include <optional>
 
 namespace opts {
 
@@ -197,9 +198,9 @@ std::vector<DataInCodeRegion> readDataInCode(const MachOObjectFile &O) {
   return DataInCode;
 }
 
-Optional<uint64_t> readStartAddress(const MachOObjectFile &O) {
-  Optional<uint64_t> StartOffset;
-  Optional<uint64_t> TextVMAddr;
+std::optional<uint64_t> readStartAddress(const MachOObjectFile &O) {
+  std::optional<uint64_t> StartOffset;
+  std::optional<uint64_t> TextVMAddr;
   for (const object::MachOObjectFile::LoadCommandInfo &LC : O.load_commands()) {
     switch (LC.C.cmd) {
     case MachO::LC_MAIN: {
@@ -228,7 +229,7 @@ Optional<uint64_t> readStartAddress(const MachOObjectFile &O) {
     }
   }
   return (TextVMAddr && StartOffset)
-             ? Optional<uint64_t>(*TextVMAddr + *StartOffset)
+             ? std::optional<uint64_t>(*TextVMAddr + *StartOffset)
              : std::nullopt;
 }
 
@@ -334,7 +335,7 @@ void MachORewriteInstance::disassembleFunctions() {
       continue;
     Function.disassemble();
     if (opts::PrintDisasm)
-      Function.print(outs(), "after disassembly", true);
+      Function.print(outs(), "after disassembly");
   }
 }
 
@@ -357,7 +358,7 @@ void MachORewriteInstance::postProcessFunctions() {
       continue;
     Function.postProcessCFG();
     if (opts::PrintCFG)
-      Function.print(outs(), "after building cfg", true);
+      Function.print(outs(), "after building cfg");
   }
 }
 

@@ -14,6 +14,8 @@
 #include <__memory/uses_allocator.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/remove_cv.h>
+#include <__utility/declval.h>
 #include <__utility/pair.h>
 #include <tuple>
 

@@ -19,7 +19,7 @@
 # CHECK: DW_AT_type [DW_FORM_ref4]
 # CHECK: DW_AT_decl_file [DW_FORM_data1]
 # CHECK: DW_AT_decl_line [DW_FORM_data1]
-# CHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x4, DW_OP_piece 0x4, DW_OP_addrx 0x5, DW_OP_piece 0x4)
+# CHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x2, DW_OP_piece 0x4, DW_OP_addrx 0x3, DW_OP_piece 0x4)
 
 # This test checks that we update DW_AT_location [DW_FORM_exprloc] with multiple DW_OP_addrx.
 

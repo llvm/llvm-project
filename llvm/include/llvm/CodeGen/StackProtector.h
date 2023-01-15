@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
@@ -35,6 +36,8 @@ class Type;
 
 class StackProtector : public FunctionPass {
 private:
+  static constexpr unsigned DefaultSSPBufferSize = 8;
+
   /// A mapping of AllocaInsts to their required SSP layout.
   using SSPLayoutMap = DenseMap<const AllocaInst *,
                                 MachineFrameInfo::SSPLayoutKind>;
@@ -49,7 +52,7 @@ private:
   Function *F;
   Module *M;
 
-  DominatorTree *DT;
+  std::optional<DomTreeUpdater> DTU;
 
   /// Layout - Mapping of allocations to the required SSPLayoutKind.
   /// StackProtector analysis will update this map when determining if an
@@ -58,7 +61,7 @@ private:
 
   /// The minimum size of buffers that will receive stack smashing
   /// protection when -fstack-protection is used.
-  unsigned SSPBufferSize = 0;
+  unsigned SSPBufferSize = DefaultSSPBufferSize;
 
   /// VisitedPHIs - The set of PHI nodes visited when determining
   /// if a variable's reference has been taken.  This set

@@ -48,9 +48,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-LABEL: define dso_local noundef ptr @_Z3foov
 define dso_local noundef ptr @_Z3foov() #0 !dbg !39 {
 entry:
-  ;; We should still have memprof/callsite metadata for the non-inlined calls
-  ;; from main, but should have removed those from the inlined call in_Z4foo2v.
-  ;; CHECK: call {{.*}} @_Znam{{.*}} !memprof ![[ORIGMEMPROF:[0-9]+]]
+  ;; We should keep the original memprof metadata intact.
+  ; CHECK: call {{.*}} @_Znam{{.*}} !memprof ![[ORIGMEMPROF:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #7, !dbg !42, !memprof !43, !callsite !52
   ret ptr %call, !dbg !53
 }
@@ -244,22 +243,22 @@ attributes #9 = { builtin nounwind }
 !43 = !{!44, !46, !48, !50}
 !44 = !{!45, !"cold"}
 !45 = !{i64 -2458008693472584243, i64 7394638144382192936}
-!46 = !{!47, !"noncold"}
+!46 = !{!47, !"notcold"}
 !47 = !{i64 -2458008693472584243, i64 -8908997186479157179}
-!48 = !{!49, !"noncold"}
+!48 = !{!49, !"notcold"}
 !49 = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -4805294506621015872}
 !50 = !{!51, !"cold"}
 !51 = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -972865200055133905}
-; CHECK: ![[ORIGMEMPROF]] = !{![[ORIGMIB1:[0-9]+]], ![[ORIGMIB2:[0-9]+]]}
+; CHECK: ![[ORIGMEMPROF]] = !{![[ORIGMIB1:[0-9]+]], ![[ORIGMIB2:[0-9]+]], ![[ORIGMIB3:[0-9]+]], ![[ORIGMIB4:[0-9]+]]}
 ; CHECK: ![[ORIGMIB1]] = !{![[ORIGMIBSTACK1:[0-9]+]], !"cold"}
 ; CHECK: ![[ORIGMIBSTACK1]] = !{i64 -2458008693472584243, i64 7394638144382192936}
 ; CHECK: ![[ORIGMIB2]] = !{![[ORIGMIBSTACK2:[0-9]+]], !"notcold"}
 ; CHECK: ![[ORIGMIBSTACK2]] = !{i64 -2458008693472584243, i64 -8908997186479157179}
-; CHECK: ![[NEWMEMPROF]] = !{![[NEWMIB1:[0-9]+]], ![[NEWMIB2:[0-9]+]]}
-; CHECK: ![[NEWMIB1]] = !{![[NEWMIBSTACK1:[0-9]+]], !"notcold"}
-; CHECK: ![[NEWMIBSTACK1]] = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -4805294506621015872}
-; CHECK: ![[NEWMIB2]] = !{![[NEWMIBSTACK2:[0-9]+]], !"cold"}
-; CHECK: ![[NEWMIBSTACK2]] = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -972865200055133905}
+; CHECK: ![[ORIGMIB3]] = !{![[ORIGMIBSTACK3:[0-9]+]], !"notcold"}
+; CHECK: ![[ORIGMIBSTACK3]] = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -4805294506621015872}
+; CHECK: ![[ORIGMIB4]] = !{![[ORIGMIBSTACK4:[0-9]+]], !"cold"}
+; CHECK: ![[ORIGMIBSTACK4]] = !{i64 -2458008693472584243, i64 -8079659623765193173, i64 -972865200055133905}
+; CHECK: ![[NEWMEMPROF]] = !{![[ORIGMIB3:[0-9]+]], ![[ORIGMIB4:[0-9]+]]}
 ; CHECK: ![[NEWCALLSITE]] = !{i64 -2458008693472584243, i64 -8079659623765193173}
 !52 = !{i64 -2458008693472584243}
 !53 = !DILocation(line: 5, column: 3, scope: !39)

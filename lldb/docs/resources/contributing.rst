@@ -44,7 +44,7 @@ rules of thumb:
   missing object files, or otherwise inconsistent debug info, LLVM's
   error handling types such as `llvm::Expected<T>
   <https://llvm.org/doxygen/classllvm_1_1Expected.html>`_ or
-  `llvm::Optional<T>
+  `std::optional<T>
   <https://llvm.org/doxygen/classllvm_1_1Optional.html>`_ should be
   used. Functions that may fail should return their result using these
   wrapper types instead of using a bool to indicate success. Returning

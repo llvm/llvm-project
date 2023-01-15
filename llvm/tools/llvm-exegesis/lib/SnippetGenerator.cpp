@@ -75,6 +75,7 @@ Error SnippetGenerator::generateConfigurations(
       {
         BenchmarkCode BC;
         BC.Info = CT.Info;
+        BC.Key.Instructions.reserve(CT.Instructions.size());
         for (InstructionTemplate &IT : CT.Instructions) {
           if (auto error = randomizeUnsetVariables(State, ForbiddenRegs, IT))
             return error;
@@ -140,9 +141,10 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
 }
 
 Expected<std::vector<CodeTemplate>>
-generateSelfAliasingCodeTemplates(InstructionTemplate Variant) {
-  const AliasingConfigurations SelfAliasing(Variant.getInstr(),
-                                            Variant.getInstr());
+generateSelfAliasingCodeTemplates(InstructionTemplate Variant,
+                                  const BitVector &ForbiddenRegisters) {
+  const AliasingConfigurations SelfAliasing(
+      Variant.getInstr(), Variant.getInstr(), ForbiddenRegisters);
   if (SelfAliasing.empty())
     return make_error<SnippetGeneratorFailure>("empty self aliasing");
   std::vector<CodeTemplate> Result;

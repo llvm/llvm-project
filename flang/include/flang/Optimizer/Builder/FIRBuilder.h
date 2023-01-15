@@ -18,12 +18,13 @@
 
 #include "flang/Common/MathOptionsBase.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace fir {
 class AbstractArrayBox;
@@ -181,6 +182,13 @@ public:
                               llvm::ArrayRef<mlir::NamedAttribute> attrs) {
     return createTemporary(loc, type, name, {}, {}, attrs);
   }
+
+  /// Create a temporary on the heap.
+  mlir::Value
+  createHeapTemporary(mlir::Location loc, mlir::Type type,
+                      llvm::StringRef name = {}, mlir::ValueRange shape = {},
+                      mlir::ValueRange lenParams = {},
+                      llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 
   /// Create a global value.
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
@@ -425,15 +433,15 @@ public:
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
-private:
-  /// Set attributes (e.g. FastMathAttr) to \p op operation
-  /// based on the current attributes setting.
-  void setCommonAttributes(mlir::Operation *op) const;
-
   /// FirOpBuilder hook for creating new operation.
   void notifyOperationInserted(mlir::Operation *op) override {
     setCommonAttributes(op);
   }
+
+private:
+  /// Set attributes (e.g. FastMathAttr) to \p op operation
+  /// based on the current attributes setting.
+  void setCommonAttributes(mlir::Operation *op) const;
 
   const KindMapping &kindMap;
 
@@ -586,12 +594,9 @@ mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type);
 
-/// Unwrap integer constant from an mlir::Value.
-llvm::Optional<std::int64_t> getIntIfConstant(mlir::Value value);
-
 /// Get the integer constants of triplet and compute the extent.
-llvm::Optional<std::int64_t>
-getExtentFromTriplet(mlir::Value lb, mlir::Value ub, mlir::Value stride);
+std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
+                                                 mlir::Value stride);
 
 /// Generate max(\p value, 0) where \p value is a scalar integer.
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,

@@ -714,8 +714,7 @@ bool ExternalFileUnit::SetDirectRec(
 void ExternalFileUnit::EndIoStatement() {
   io_.reset();
   u_.emplace<std::monostate>();
-  CriticalSection critical{lock_};
-  isBusy_ = false;
+  lock_.Drop();
 }
 
 void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(

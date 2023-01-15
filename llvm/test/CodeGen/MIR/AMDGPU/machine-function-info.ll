@@ -42,8 +42,8 @@
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
-  %gep = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %arg0
-  store float 0.0, float addrspace(3)* %gep, align 4
+  %gep = getelementptr inbounds [512 x float], ptr addrspace(3) @lds, i32 0, i32 %arg0
+  store float 0.0, ptr addrspace(3) %gep, align 4
   ret void
 }
 
@@ -82,8 +82,8 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: vgprForAGPRCopy: ''
 ; CHECK-NEXT: body:
 define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
-  %gep = getelementptr inbounds [128 x i32], [128 x i32] addrspace(2)* @gds, i32 0, i32 %arg0
-  atomicrmw add i32 addrspace(2)* %gep, i32 8 seq_cst
+  %gep = getelementptr inbounds [128 x i32], ptr addrspace(2) @gds, i32 0, i32 %arg0
+  atomicrmw add ptr addrspace(2) %gep, i32 8 seq_cst
   ret void
 }
 
@@ -232,13 +232,13 @@ define amdgpu_ps void @high_address_bits() #4 {
 ; CHECK: wwmReservedRegs:
 ; CHECK-NEXT: - '$vgpr2'
 ; CHECK-NEXT: - '$vgpr3'
-define amdgpu_cs void @wwm_reserved_regs(i32 addrspace(1)* %ptr, <4 x i32> inreg %tmp14) {
-  %ld0 = load volatile i32, i32 addrspace(1)* %ptr
-  %ld1 = load volatile i32, i32 addrspace(1)* %ptr
+define amdgpu_cs void @wwm_reserved_regs(ptr addrspace(1) %ptr, <4 x i32> inreg %tmp14) {
+  %ld0 = load volatile i32, ptr addrspace(1) %ptr
+  %ld1 = load volatile i32, ptr addrspace(1) %ptr
   %inactive0 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %ld1, i32 0)
   %inactive1 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %ld0, i32 0)
-  store volatile i32 %inactive0, i32 addrspace(1)* %ptr
-  store volatile i32 %inactive1, i32 addrspace(1)* %ptr
+  store volatile i32 %inactive0, ptr addrspace(1) %ptr
+  store volatile i32 %inactive1, ptr addrspace(1) %ptr
   ret void
 }
 

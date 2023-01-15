@@ -29,8 +29,8 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLAT_SCR_ARCH-NEXT:    s_endpgm
   %alloca = alloca i32, addrspace(5)
-  %cast = addrspacecast i32 addrspace(5)* %alloca to i32*
-  store volatile i32 0, i32* %cast
+  %cast = addrspacecast ptr addrspace(5) %alloca to ptr
+  store volatile i32 0, ptr %cast
   ret void
 }
 
@@ -55,7 +55,7 @@ define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
 ; FLAT_SCR_ARCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLAT_SCR_ARCH-NEXT:    s_endpgm
   %alloca = alloca i32, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %alloca
+  store volatile i32 0, ptr addrspace(5) %alloca
   ret void
 }
 
@@ -109,7 +109,7 @@ define amdgpu_kernel void @kernel_calls_no_stack() {
   ret void
 }
 
-define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; FLAT_SCR_OPT-LABEL: test:
 ; FLAT_SCR_OPT:       ; %bb.0:
 ; FLAT_SCR_OPT-NEXT:    s_add_u32 s2, s2, s5
@@ -428,7 +428,7 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
   call void asm sideeffect "", "~{v[240:247]}" ()
   call void asm sideeffect "", "~{v[248:255]}" ()
 
-  store i32 %in, i32 addrspace(1)* %out
+  store i32 %in, ptr addrspace(1) %out
   ret void
 }
 

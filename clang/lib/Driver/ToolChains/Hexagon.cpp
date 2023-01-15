@@ -124,7 +124,7 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
       [&](auto FlagOn, auto FlagOff,
           unsigned MinVerNum) -> std::optional<StringRef> {
     // Return an std::optional<StringRef>:
-    // - None indicates a verification failure, or that the flag was not
+    // - std::nullopt indicates a verification failure, or that the flag was not
     //   present in Args.
     // - Otherwise the returned value is that name of the feature to add
     //   to Features.
@@ -341,8 +341,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-pie");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-    CmdArgs.push_back(Args.MakeArgString("-G" + Twine(G.value())));
-    UseG0 = G.value() == 0;
+    CmdArgs.push_back(Args.MakeArgString("-G" + Twine(*G)));
+    UseG0 = *G == 0;
   }
 
   CmdArgs.push_back("-o");

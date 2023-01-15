@@ -414,7 +414,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                 }
                 auto Undef = MIRBuilder.buildUndef({OldLLT});
                 CurVReg =
-                    MIRBuilder.buildMerge({NewLLT}, {CurVReg, Undef}).getReg(0);
+                    MIRBuilder.buildMergeLikeInstr({NewLLT}, {CurVReg, Undef})
+                        .getReg(0);
               } else {
                 // Just do a vector extend.
                 CurVReg = MIRBuilder.buildInstr(ExtendOp, {NewLLT}, {CurVReg})
@@ -1246,7 +1247,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!determineAndHandleAssignments(
             UsingReturnedArg ? ReturnedArgHandler : Handler, Assigner, InArgs,
             MIRBuilder, Info.CallConv, Info.IsVarArg,
-            UsingReturnedArg ? makeArrayRef(OutArgs[0].Regs) : std::nullopt))
+            UsingReturnedArg ? ArrayRef(OutArgs[0].Regs) : std::nullopt))
       return false;
   }
 

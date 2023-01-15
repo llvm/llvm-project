@@ -108,7 +108,7 @@ void RegReAssign::swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B) {
         if (CFI->getOperation() != MCCFIInstruction::OpEscape) {
           CFIReg = CFI->getRegister();
         } else {
-          Optional<uint8_t> Reg =
+          std::optional<uint8_t> Reg =
               readDWARFExpressionTargetReg(CFI->getValues());
           // Handle DW_CFA_def_cfa_expression
           if (!Reg)

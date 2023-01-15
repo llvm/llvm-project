@@ -53,6 +53,7 @@
 #include "lldb/lldb-enumerations.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1084,7 +1085,7 @@ ThreadPlanStack &Thread::GetPlans() const {
   // queries GetDescription makes, and only assert if you try to run the thread.
   if (!m_null_plan_stack_up)
     m_null_plan_stack_up = std::make_unique<ThreadPlanStack>(*this, true);
-  return *(m_null_plan_stack_up.get());
+  return *m_null_plan_stack_up;
 }
 
 void Thread::PushPlan(ThreadPlanSP thread_plan_sp) {
@@ -1663,6 +1664,10 @@ addr_t Thread::GetThreadLocalData(const ModuleSP module,
 bool Thread::SafeToCallFunctions() {
   Process *process = GetProcess().get();
   if (process) {
+    DynamicLoader *loader = GetProcess()->GetDynamicLoader();
+    if (loader && loader->IsFullyInitialized() == false)
+      return false;
+
     SystemRuntime *runtime = process->GetSystemRuntime();
     if (runtime) {
       return runtime->SafeToCallFunctionsOnThisThread(shared_from_this());
@@ -2042,10 +2047,10 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
   if (!type.IsValid())
     return ValueObjectConstResult::Create(&target, Status("no siginfo_t for the platform"));
 
-  llvm::Optional<uint64_t> type_size = type.GetByteSize(nullptr);
+  std::optional<uint64_t> type_size = type.GetByteSize(nullptr);
   assert(type_size);
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data =
-      GetSiginfo(type_size.value());
+      GetSiginfo(*type_size);
   if (!data)
     return ValueObjectConstResult::Create(&target, Status(data.takeError()));
 

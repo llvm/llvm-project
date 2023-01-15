@@ -29,6 +29,7 @@
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
+#include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
@@ -2139,6 +2140,33 @@ public:
 } // namespace clang
 
 //===----------------------------------------------------------------------===//
+// Unsafe buffer usage analysis.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class UnsafeBufferUsageReporter : public UnsafeBufferUsageHandler {
+  Sema &S;
+
+public:
+  UnsafeBufferUsageReporter(Sema &S) : S(S) {}
+
+  void handleUnsafeOperation(const Stmt *Operation) override {
+    S.Diag(Operation->getBeginLoc(), diag::warn_unsafe_buffer_expression)
+        << Operation->getSourceRange();
+  }
+
+  void handleFixableVariable(const VarDecl *Variable,
+                             FixItList &&Fixes) override {
+    const auto &D =
+        S.Diag(Variable->getBeginLoc(), diag::warn_unsafe_buffer_variable);
+    D << Variable << Variable->getSourceRange();
+    for (const auto &F: Fixes)
+      D << F;
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // AnalysisBasedWarnings - Worker object used by Sema to execute analysis-based
 //  warnings on a function, method, or block.
 //===----------------------------------------------------------------------===//
@@ -2429,6 +2457,13 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
       if (S.getLangOpts().CPlusPlus && isNoexcept(FD))
         checkThrowInNonThrowingFunc(S, FD, AC);
+
+  // Emit unsafe buffer usage warnings and fixits.
+  if (!Diags.isIgnored(diag::warn_unsafe_buffer_expression, D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_unsafe_buffer_variable, D->getBeginLoc())) {
+    UnsafeBufferUsageReporter R(S);
+    checkUnsafeBufferUsage(D, R);
+  }
 
   // If none of the previous checks caused a CFG build, trigger one here
   // for the logical error handler.

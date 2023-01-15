@@ -15,6 +15,7 @@
 #include <ranges>
 
 #include <cassert>
+#include <utility>
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -233,12 +234,21 @@ constexpr bool testSize() {
   static_assert(!SizeInvocable<NotSizedSentinel>);
   static_assert( SizeInvocable<ForwardRange>);
 
+  // Test the test.
+  static_assert(std::same_as<decltype(std::declval<ForwardIter>() - std::declval<ForwardIter>()), std::ptrdiff_t>);
+  using UnsignedSize = std::make_unsigned_t<std::ptrdiff_t>;
+  using SignedSize = std::common_type_t<std::ptrdiff_t, std::make_signed_t<UnsignedSize>>;
   ForwardRange forwardRange;
   assert(forwardRange.size() == 8);
   assert(static_cast<ForwardRange const&>(forwardRange).size() == 8);
 
   assert(std::ranges::size(forwardRange) == 8);
+  static_assert(std::same_as<decltype(std::ranges::size(std::declval<ForwardRange>())), UnsignedSize>);
+  static_assert(std::same_as<decltype(std::ranges::ssize(std::declval<ForwardRange>())), SignedSize>);
+
   assert(std::ranges::size(static_cast<ForwardRange const&>(forwardRange)) == 8);
+  static_assert(std::same_as<decltype(std::ranges::size(std::declval<ForwardRange const>())), UnsignedSize>);
+  static_assert(std::same_as<decltype(std::ranges::ssize(std::declval<ForwardRange const>())), SignedSize>);
 
   SizeIsTen sizeTen;
   assert(sizeTen.size() == 10);

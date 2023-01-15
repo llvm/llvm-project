@@ -46,6 +46,16 @@ func.func @one_d_static(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tenso
   return %0 : tensor<100xf32>
 }
 
+// -----
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %1:2 = transform.structured.split %0 after 42 { dimension = 0 }
+}
+
+func.func private @elem(%arg0: f32, %arg1: index, %arg2: index) -> f32
+
 // CHECK-LABEL: @one_d_static_overflow
 // CHECK-SAME:  %[[IN:.+]]: tensor<10xf32>, %[[OUT:.+]]: tensor<10xf32>
 func.func @one_d_static_overflow(%arg0: tensor<10xf32>, %arg1: tensor<10xf32>) -> tensor<10xf32> {
@@ -266,5 +276,47 @@ func.func @one_d_static(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tenso
     linalg.yield %0 : f32
   } -> tensor<100xf32>
   return %0 : tensor<100xf32>
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  // expected-error @below {{splitting does not produce the second part for a subset of targets}}
+  // expected-note @below {{expected splitting to produce the second part of all or none of the targets}}
+  %1:2 = transform.structured.split %0 after 142 { dimension = 0 }
+}
+
+func.func private @elem(%arg0: f32, %arg1: index, %arg2: index) -> f32
+
+func.func @split_one_but_not_other(
+    %arg0: tensor<100xf32>, %arg1: tensor<100xf32>,
+    %arg2: tensor<200xf32>, %arg3: tensor<200xf32>)
+    -> (tensor<100xf32>, tensor<200xf32>) {
+  // expected-note @below {{first target with no second part}}
+  %0 = linalg.generic {
+    indexing_maps = [affine_map<(i) -> (i)>, affine_map<(i) -> (i)>],
+    iterator_types = ["parallel"]
+  }
+  ins(%arg0: tensor<100xf32>) outs(%arg1: tensor<100xf32>) {
+  ^bb0(%arg4: f32, %arg5: f32):
+    %i = linalg.index 0 : index
+    %call_res = func.call @elem(%arg4, %i, %i) : (f32, index, index) -> f32
+    linalg.yield %call_res : f32
+  } -> tensor<100xf32>
+
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(i) -> (i)>, affine_map<(i) -> (i)>],
+    iterator_types = ["parallel"]
+  }
+  ins(%arg2: tensor<200xf32>) outs(%arg3: tensor<200xf32>) {
+  ^bb0(%arg4: f32, %arg5: f32):
+    %i = linalg.index 0 : index
+    %call_res = func.call @elem(%arg4, %i, %i) : (f32, index, index) -> f32
+    linalg.yield %call_res : f32
+  } -> tensor<200xf32>
+
+  return %0, %1 : tensor<100xf32>, tensor<200xf32>
 }
 

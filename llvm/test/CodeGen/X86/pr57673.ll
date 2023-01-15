@@ -1,4 +1,7 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after=x86-optimize-LEAs < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after=x86-optimize-LEAs -experimental-debug-variable-locations=false < %s \
+; RUN:   | FileCheck %s --check-prefix=NORMAL
+; RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after=x86-optimize-LEAs -experimental-debug-variable-locations < %s \
+; RUN:   | FileCheck %s --check-prefix=INSTRREF
 
 ; The LEA optimization pass used to crash on this testcase.
 
@@ -9,50 +12,47 @@
 
 ; CHECK:     LEA64r
 ; CHECK-NOT: LEA64r
-; CHECK:     DBG_VALUE_LIST
+; NORMAL:    DBG_VALUE_LIST
+; INSTRREF:  DBG_INSTR_REF
 
 target triple = "x86_64-unknown-linux-gnu"
 
-%t10 = type { i8*, [32 x i8] }
+%t10 = type { ptr, [32 x i8] }
 
 define void @foo() {
 bb_entry:
   %tmp11 = alloca [0 x [0 x i32]], i32 0, align 4
   %i = alloca %t10, align 8
   %i1 = alloca %t10, align 8
-  %tmp1.sub = getelementptr inbounds [0 x [0 x i32]], [0 x [0 x i32]]* %tmp11, i64 0, i64 0, i64 0
-  %i2 = bitcast [0 x [0 x i32]]* %tmp11 to i8*
   br label %bb_8
 
 bb_8:                                             ; preds = %bb_last, %bb_entry
   br i1 undef, label %bb_last, label %bb_mid
 
 bb_mid:                                           ; preds = %bb_8
-  %i3 = bitcast %t10* %i1 to i8*
-  %i4 = getelementptr inbounds %t10, %t10* %i1, i64 0, i32 1, i64 32
-  %i5 = bitcast %t10* %i to i8*
-  %i6 = getelementptr inbounds %t10, %t10* %i, i64 0, i32 1, i64 32
-  call void @llvm.lifetime.start.p0i8(i64 0, i8* nonnull %i3)
+  %i4 = getelementptr inbounds %t10, ptr %i1, i64 0, i32 1, i64 32
+  %i6 = getelementptr inbounds %t10, ptr %i, i64 0, i32 1, i64 32
+  call void @llvm.lifetime.start.p0(i64 0, ptr nonnull %i1)
   %v21 = call i64 @llvm.ctlz.i64(i64 undef, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull dereferenceable(16) null, i8* noundef nonnull align 8 dereferenceable(16) %i4, i64 16, i1 false)
-  call void @llvm.dbg.value(metadata !DIArgList(i8* %i4, i8* %i4), metadata !4, metadata !DIExpression(DW_OP_LLVM_arg, 0)), !dbg !9
-  call void @llvm.lifetime.end.p0i8(i64 0, i8* nonnull %i3)
-  call void @llvm.lifetime.start.p0i8(i64 0, i8* nonnull %i5)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull dereferenceable(16) null, i8* noundef nonnull align 8 dereferenceable(16) %i6, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 0, i8* nonnull %i5)
+  call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull dereferenceable(16) null, ptr noundef nonnull align 8 dereferenceable(16) %i4, i64 16, i1 false)
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %i4, ptr %i4), metadata !4, metadata !DIExpression(DW_OP_LLVM_arg, 0)), !dbg !9
+  call void @llvm.lifetime.end.p0(i64 0, ptr nonnull %i1)
+  call void @llvm.lifetime.start.p0(i64 0, ptr nonnull %i)
+  call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull dereferenceable(16) null, ptr noundef nonnull align 8 dereferenceable(16) %i6, i64 16, i1 false)
+  call void @llvm.lifetime.end.p0(i64 0, ptr nonnull %i)
   br label %bb_last
 
 bb_last:                                          ; preds = %bb_mid, %bb_8
-  call void @llvm.lifetime.start.p0i8(i64 0, i8* nonnull %i2)
-  call void undef(i32* null, i32* null, i32* null, i32 0, i32* nonnull %tmp1.sub)
-  call void @llvm.lifetime.end.p0i8(i64 0, i8* nonnull %i2)
+  call void @llvm.lifetime.start.p0(i64 0, ptr nonnull %tmp11)
+  call void undef(ptr null, ptr null, ptr null, i32 0, ptr nonnull %tmp11)
+  call void @llvm.lifetime.end.p0(i64 0, ptr nonnull %tmp11)
   br label %bb_8
 }
 
 declare i64 @llvm.ctlz.i64(i64, i1 immarg)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

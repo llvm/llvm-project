@@ -3,10 +3,10 @@
 --- |
 
   declare <4 x float> @llvm.mips.fsqrt.w(<4 x float>)
-  define void @fsqrt_v4f32_builtin(<4 x float>* %a, <4 x float>* %c) { entry: ret void }
+  define void @fsqrt_v4f32_builtin(ptr %a, ptr %c) { entry: ret void }
 
   declare <2 x double> @llvm.mips.fsqrt.d(<2 x double>)
-  define void @fsqrt_v2f64_builtin(<2 x double>* %a, <2 x double>* %c) { entry: ret void }
+  define void @fsqrt_v2f64_builtin(ptr %a, ptr %c) { entry: ret void }
 
 ...
 ---

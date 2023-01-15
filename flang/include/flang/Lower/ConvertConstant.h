@@ -23,31 +23,36 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 
 namespace Fortran::lower {
-template <typename T>
-class ConstantBuilder {};
+class AbstractConverter;
 
-/// Class to lower intrinsic evaluate::Constant to fir::ExtendedValue.
-template <common::TypeCategory TC, int KIND>
-class ConstantBuilder<evaluate::Type<TC, KIND>> {
+/// Class to lower evaluate::Constant to fir::ExtendedValue.
+template <typename T>
+class ConstantBuilder {
 public:
   /// Lower \p constant into a fir::ExtendedValue.
-  /// If \p outlineBigConstantsInReadOnlyMemory is set, character and array
-  /// constants will be lowered into read only memory fir.global, and the
-  /// resulting fir::ExtendedValue will contain the address of the fir.global.
-  /// This option should not be set if the constant is being lowered while the
-  /// builder is already in a fir.global body because fir.global initialization
-  /// body cannot contain code manipulating memory (e.g. fir.load/fir.store...).
-  static fir::ExtendedValue
-  gen(fir::FirOpBuilder &builder, mlir::Location loc,
-      const evaluate::Constant<evaluate::Type<TC, KIND>> &constant,
-      bool outlineBigConstantsInReadOnlyMemory);
+  /// If \p outlineBigConstantsInReadOnlyMemory is set, character, derived
+  /// type, and array constants will be lowered into read only memory
+  /// fir.global, and the resulting fir::ExtendedValue will contain the address
+  /// of the fir.global. This option should not be set if the constant is being
+  /// lowered while the builder is already in a fir.global body because
+  /// fir.global initialization body cannot contain code manipulating memory
+  /// (e.g.  fir.load/fir.store...).
+  static fir::ExtendedValue gen(Fortran::lower::AbstractConverter &converter,
+                                mlir::Location loc,
+                                const evaluate::Constant<T> &constant,
+                                bool outlineBigConstantsInReadOnlyMemory);
 };
-
-template <common::TypeCategory TC, int KIND>
-using IntrinsicConstantBuilder = ConstantBuilder<evaluate::Type<TC, KIND>>;
-
 using namespace evaluate;
-FOR_EACH_INTRINSIC_KIND(extern template class ConstantBuilder, )
+FOR_EACH_SPECIFIC_TYPE(extern template class ConstantBuilder, )
+
+template <typename T>
+fir::ExtendedValue convertConstant(Fortran::lower::AbstractConverter &converter,
+                                   mlir::Location loc,
+                                   const evaluate::Constant<T> &constant,
+                                   bool outlineBigConstantsInReadOnlyMemory) {
+  return ConstantBuilder<T>::gen(converter, loc, constant,
+                                 outlineBigConstantsInReadOnlyMemory);
+}
 
 /// Create a fir.global array with a dense attribute containing the value of
 /// \p initExpr.
@@ -60,6 +65,16 @@ fir::GlobalOp tryCreatingDenseGlobal(fir::FirOpBuilder &builder,
                                      llvm::StringRef globalName,
                                      mlir::StringAttr linkage, bool isConst,
                                      const Fortran::lower::SomeExpr &initExpr);
+
+/// Lower a StructureConstructor that must be lowered in read only data although
+/// it may not be wrapped into a Constant<T> (this may be the case for derived
+/// type descriptor compiler generated data that is not fully compliant with
+/// Fortran constant expression but can and must still be lowered into read only
+/// memory).
+fir::ExtendedValue
+genInlinedStructureCtorLit(Fortran::lower::AbstractConverter &converter,
+                           mlir::Location loc,
+                           const Fortran::evaluate::StructureConstructor &ctor);
 
 } // namespace Fortran::lower
 

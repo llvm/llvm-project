@@ -23,6 +23,7 @@ def Test_Dialect : Dialect {
   let hasNonDefaultDestructor = 1;
   let useDefaultTypePrinterParser = 0;
   let useDefaultAttributePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
   let isExtensible = 1;
   let dependentDialects = ["::mlir::DLTIDialect"];
 
@@ -31,7 +32,7 @@ def Test_Dialect : Dialect {
     void registerTypes();
 
     // Provides a custom printing/parsing for some operations.
-    ::llvm::Optional<ParseOpHook>
+    ::std::optional<ParseOpHook>
       getParseOperationHook(::llvm::StringRef opName) const override;
     ::llvm::unique_function<void(::mlir::Operation *,
                                  ::mlir::OpAsmPrinter &printer)>

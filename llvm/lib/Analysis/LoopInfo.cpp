@@ -198,9 +198,9 @@ static Value *findFinalIVValue(const Loop &L, const PHINode &IndVar,
   return nullptr;
 }
 
-Optional<Loop::LoopBounds> Loop::LoopBounds::getBounds(const Loop &L,
-                                                       PHINode &IndVar,
-                                                       ScalarEvolution &SE) {
+std::optional<Loop::LoopBounds>
+Loop::LoopBounds::getBounds(const Loop &L, PHINode &IndVar,
+                            ScalarEvolution &SE) {
   InductionDescriptor IndDesc;
   if (!InductionDescriptor::isInductionPHI(&IndVar, &L, &SE, IndDesc))
     return std::nullopt;
@@ -284,7 +284,7 @@ Direction Loop::LoopBounds::getDirection() const {
   return Direction::Unknown;
 }
 
-Optional<Loop::LoopBounds> Loop::getBounds(ScalarEvolution &SE) const {
+std::optional<Loop::LoopBounds> Loop::getBounds(ScalarEvolution &SE) const {
   if (PHINode *IndVar = getInductionVariable(SE))
     return LoopBounds::getBounds(*this, *IndVar, SE);
 
@@ -1049,8 +1049,8 @@ MDNode *llvm::findOptionMDForLoop(const Loop *TheLoop, StringRef Name) {
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
 /// operand or null otherwise.  If the string metadata is not found return
 /// Optional's not-a-value.
-Optional<const MDOperand *> llvm::findStringMetadataForLoop(const Loop *TheLoop,
-                                                            StringRef Name) {
+std::optional<const MDOperand *>
+llvm::findStringMetadataForLoop(const Loop *TheLoop, StringRef Name) {
   MDNode *MD = findOptionMDForLoop(TheLoop, Name);
   if (!MD)
     return std::nullopt;
@@ -1064,8 +1064,8 @@ Optional<const MDOperand *> llvm::findStringMetadataForLoop(const Loop *TheLoop,
   }
 }
 
-Optional<bool> llvm::getOptionalBoolLoopAttribute(const Loop *TheLoop,
-                                                  StringRef Name) {
+std::optional<bool> llvm::getOptionalBoolLoopAttribute(const Loop *TheLoop,
+                                                       StringRef Name) {
   MDNode *MD = findOptionMDForLoop(TheLoop, Name);
   if (!MD)
     return std::nullopt;

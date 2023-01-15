@@ -500,7 +500,7 @@ __split_buffer<_Tp, _Allocator>::push_front(const_reference __x)
         }
         else
         {
-            size_type __c = max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
+            size_type __c = std::max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
             __split_buffer<value_type, __alloc_rr&> __t(__c, (__c + 3) / 4, __alloc());
             __t.__construct_at_end(move_iterator<pointer>(__begin_),
                                    move_iterator<pointer>(__end_));
@@ -530,7 +530,7 @@ __split_buffer<_Tp, _Allocator>::push_front(value_type&& __x)
         }
         else
         {
-            size_type __c = max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
+            size_type __c = std::max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
             __split_buffer<value_type, __alloc_rr&> __t(__c, (__c + 3) / 4, __alloc());
             __t.__construct_at_end(move_iterator<pointer>(__begin_),
                                    move_iterator<pointer>(__end_));
@@ -562,7 +562,7 @@ __split_buffer<_Tp, _Allocator>::push_back(const_reference __x)
         }
         else
         {
-            size_type __c = max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
+            size_type __c = std::max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
             __split_buffer<value_type, __alloc_rr&> __t(__c, __c / 4, __alloc());
             __t.__construct_at_end(move_iterator<pointer>(__begin_),
                                    move_iterator<pointer>(__end_));
@@ -592,7 +592,7 @@ __split_buffer<_Tp, _Allocator>::push_back(value_type&& __x)
         }
         else
         {
-            size_type __c = max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
+            size_type __c = std::max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
             __split_buffer<value_type, __alloc_rr&> __t(__c, __c / 4, __alloc());
             __t.__construct_at_end(move_iterator<pointer>(__begin_),
                                    move_iterator<pointer>(__end_));
@@ -624,7 +624,7 @@ __split_buffer<_Tp, _Allocator>::emplace_back(_Args&&... __args)
         }
         else
         {
-            size_type __c = max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
+            size_type __c = std::max<size_type>(2 * static_cast<size_t>(__end_cap() - __first_), 1);
             __split_buffer<value_type, __alloc_rr&> __t(__c, __c / 4, __alloc());
             __t.__construct_at_end(move_iterator<pointer>(__begin_),
                                    move_iterator<pointer>(__end_));

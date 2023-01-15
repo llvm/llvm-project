@@ -110,51 +110,48 @@ define i16 @test10(i16 %A) {
 
 declare void @varargs(i32, ...)
 
-define void @test11(i32* %P) {
+define void @test11(ptr %P) {
 ; ALL-LABEL: @test11(
-; ALL-NEXT:    call void (i32, ...) @varargs(i32 5, i32* [[P:%.*]])
+; ALL-NEXT:    call void (i32, ...) @varargs(i32 5, ptr [[P:%.*]])
 ; ALL-NEXT:    ret void
 ;
-  %c = bitcast i32* %P to i16*
-  call void (i32, ...) @varargs( i32 5, i16* %c )
+  call void (i32, ...) @varargs( i32 5, ptr %P )
   ret void
 }
 
 declare i32 @__gxx_personality_v0(...)
-define void @test_invoke_vararg_cast(i32* %a, i32* %b) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @test_invoke_vararg_cast(ptr %a, ptr %b) personality ptr @__gxx_personality_v0 {
 ; ALL-LABEL: @test_invoke_vararg_cast(
 ; ALL-NEXT:  entry:
-; ALL-NEXT:    invoke void (i32, ...) @varargs(i32 1, i32* [[B:%.*]], i32* [[A:%.*]])
+; ALL-NEXT:    invoke void (i32, ...) @varargs(i32 1, ptr [[B:%.*]], ptr [[A:%.*]])
 ; ALL-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; ALL:       invoke.cont:
 ; ALL-NEXT:    ret void
 ; ALL:       lpad:
-; ALL-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
+; ALL-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
 ; ALL-NEXT:    cleanup
 ; ALL-NEXT:    ret void
 ;
 entry:
-  %0 = bitcast i32* %b to i8*
-  %1 = bitcast i32* %a to i64*
-  invoke void (i32, ...) @varargs(i32 1, i8* %0, i64* %1)
+  invoke void (i32, ...) @varargs(i32 1, ptr %b, ptr %a)
   to label %invoke.cont unwind label %lpad
 
 invoke.cont:
   ret void
 
 lpad:
-  %2 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
   cleanup
   ret void
 }
 
-define i8* @test13(i64 %A) {
+define ptr @test13(i64 %A) {
 ; ALL-LABEL: @test13(
-; ALL-NEXT:    [[C:%.*]] = getelementptr [32832 x i8], [32832 x i8]* @inbuf, i64 0, i64 [[A:%.*]]
-; ALL-NEXT:    ret i8* [[C]]
+; ALL-NEXT:    [[C:%.*]] = getelementptr [0 x i8], ptr @inbuf, i64 0, i64 [[A:%.*]]
+; ALL-NEXT:    ret ptr [[C]]
 ;
-  %c = getelementptr [0 x i8], [0 x i8]* bitcast ([32832 x i8]* @inbuf to [0 x i8]*), i64 0, i64 %A
-  ret i8* %c
+  %c = getelementptr [0 x i8], ptr @inbuf, i64 0, i64 %A
+  ret ptr %c
 }
 
 define i1 @test14(i8 %A) {
@@ -175,12 +172,12 @@ define i1 @test14(i8 %A) {
 ;        ret bool %X
 ;}
 
-define i1 @test16(i32* %P) {
+define i1 @test16(ptr %P) {
 ; ALL-LABEL: @test16(
-; ALL-NEXT:    [[C:%.*]] = icmp ne i32* [[P:%.*]], null
+; ALL-NEXT:    [[C:%.*]] = icmp ne ptr [[P:%.*]], null
 ; ALL-NEXT:    ret i1 [[C]]
 ;
-  %c = icmp ne i32* %P, null
+  %c = icmp ne ptr %P, null
   ret i1 %c
 }
 
@@ -294,22 +291,18 @@ define i32 @test26(float %F) {
   ret i32 %D
 }
 
-define [4 x float]* @test27([9 x [4 x float]]* %A) {
+define ptr @test27(ptr %A) {
 ; ALL-LABEL: @test27(
-; ALL-NEXT:    [[C:%.*]] = getelementptr [9 x [4 x float]], [9 x [4 x float]]* [[A:%.*]], i64 0, i64 0
-; ALL-NEXT:    ret [4 x float]* [[C]]
+; ALL-NEXT:    ret ptr [[A:%.*]]
 ;
-  %c = bitcast [9 x [4 x float]]* %A to [4 x float]*
-  ret [4 x float]* %c
+  ret ptr %A
 }
 
-define float* @test28([4 x float]* %A) {
+define ptr @test28(ptr %A) {
 ; ALL-LABEL: @test28(
-; ALL-NEXT:    [[C:%.*]] = getelementptr [4 x float], [4 x float]* [[A:%.*]], i64 0, i64 0
-; ALL-NEXT:    ret float* [[C]]
+; ALL-NEXT:    ret ptr [[A:%.*]]
 ;
-  %c = bitcast [4 x float]* %A to float*
-  ret float* %c
+  ret ptr %A
 }
 
 define i32 @test29(i32 %c1, i32 %c2) {
@@ -533,33 +526,29 @@ define <2 x i16> @test40vec_undef(<2 x i16> %a) {
 }
 
 ; PR1263
-define i32* @test41(i32* %t1) {
+define ptr @test41(ptr %t1) {
 ; ALL-LABEL: @test41(
-; ALL-NEXT:    ret i32* [[T1:%.*]]
+; ALL-NEXT:    ret ptr [[T1:%.*]]
 ;
-  %t64 = bitcast i32* %t1 to { i32 }*
-  %t65 = getelementptr { i32 }, { i32 }* %t64, i32 0, i32 0
-  ret i32* %t65
+  ret ptr %t1
 }
 
-define i32 addrspace(1)* @test41_addrspacecast_smaller(i32* %t1) {
+define ptr addrspace(1) @test41_addrspacecast_smaller(ptr %t1) {
 ; ALL-LABEL: @test41_addrspacecast_smaller(
-; ALL-NEXT:    [[T65:%.*]] = addrspacecast i32* [[T1:%.*]] to i32 addrspace(1)*
-; ALL-NEXT:    ret i32 addrspace(1)* [[T65]]
+; ALL-NEXT:    [[T64:%.*]] = addrspacecast ptr [[T1:%.*]] to ptr addrspace(1)
+; ALL-NEXT:    ret ptr addrspace(1) [[T64]]
 ;
-  %t64 = addrspacecast i32* %t1 to { i32 } addrspace(1)*
-  %t65 = getelementptr { i32 }, { i32 } addrspace(1)* %t64, i32 0, i32 0
-  ret i32 addrspace(1)* %t65
+  %t64 = addrspacecast ptr %t1 to ptr addrspace(1)
+  ret ptr addrspace(1) %t64
 }
 
-define i32* @test41_addrspacecast_larger(i32 addrspace(1)* %t1) {
+define ptr @test41_addrspacecast_larger(ptr addrspace(1) %t1) {
 ; ALL-LABEL: @test41_addrspacecast_larger(
-; ALL-NEXT:    [[T65:%.*]] = addrspacecast i32 addrspace(1)* [[T1:%.*]] to i32*
-; ALL-NEXT:    ret i32* [[T65]]
+; ALL-NEXT:    [[T64:%.*]] = addrspacecast ptr addrspace(1) [[T1:%.*]] to ptr
+; ALL-NEXT:    ret ptr [[T64]]
 ;
-  %t64 = addrspacecast i32 addrspace(1)* %t1 to { i32 }*
-  %t65 = getelementptr { i32 }, { i32 }* %t64, i32 0, i32 0
-  ret i32* %t65
+  %t64 = addrspacecast ptr addrspace(1) %t1 to ptr
+  ret ptr %t64
 }
 
 define i32 @test42(i32 %X) {
@@ -685,8 +674,8 @@ define i64 @test49(i64 %A) {
 define i64 @test50(i64 %x) {
 ; ALL-LABEL: @test50(
 ; ALL-NEXT:    [[TMP1:%.*]] = shl i64 [[X:%.*]], 30
-; ALL-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -4294967296
-; ALL-NEXT:    [[E:%.*]] = ashr i64 [[TMP2]], 32
+; ALL-NEXT:    [[SEXT:%.*]] = add i64 [[TMP1]], -4294967296
+; ALL-NEXT:    [[E:%.*]] = ashr i64 [[SEXT]], 32
 ; ALL-NEXT:    ret i64 [[E]]
 ;
   %a = lshr i64 %x, 2
@@ -989,215 +978,202 @@ define i1 @test67(i1 %a, i32 %b) {
 
 %s = type { i32, i32, i16 }
 
-define %s @test68(%s *%p, i64 %i) {
+define %s @test68(ptr %p, i64 %i) {
 ; ALL-LABEL: @test68(
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [[S:%.*]], %s* [[P:%.*]], i64 [[I:%.*]]
-; ALL-NEXT:    [[L:%.*]] = load [[S]], %s* [[PP1]], align 4
+; ALL-NEXT:    [[O:%.*]] = mul i64 [[I:%.*]], 12
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[O]]
+; ALL-NEXT:    [[L:%.*]] = load [[S:%.*]], ptr [[PP]], align 4
 ; ALL-NEXT:    ret [[S]] [[L]]
 ;
   %o = mul i64 %i, 12
-  %q = bitcast %s* %p to i8*
-  %pp = getelementptr inbounds i8, i8* %q, i64 %o
-  %r = bitcast i8* %pp to %s*
-  %l = load %s, %s* %r
+  %pp = getelementptr inbounds i8, ptr %p, i64 %o
+  %l = load %s, ptr %pp
   ret %s %l
 }
 
 ; addrspacecasts should be eliminated.
-define %s @test68_addrspacecast(%s* %p, i64 %i) {
+define %s @test68_addrspacecast(ptr %p, i64 %i) {
 ; ALL-LABEL: @test68_addrspacecast(
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [[S:%.*]], %s* [[P:%.*]], i64 [[I:%.*]]
-; ALL-NEXT:    [[L:%.*]] = load [[S]], %s* [[PP1]], align 4
+; ALL-NEXT:    [[O:%.*]] = mul i64 [[I:%.*]], 12
+; ALL-NEXT:    [[Q:%.*]] = addrspacecast ptr [[P:%.*]] to ptr addrspace(2)
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr addrspace(2) [[Q]], i64 [[O]]
+; ALL-NEXT:    [[R:%.*]] = addrspacecast ptr addrspace(2) [[PP]] to ptr
+; ALL-NEXT:    [[L:%.*]] = load [[S:%.*]], ptr [[R]], align 4
 ; ALL-NEXT:    ret [[S]] [[L]]
 ;
   %o = mul i64 %i, 12
-  %q = addrspacecast %s* %p to i8 addrspace(2)*
-  %pp = getelementptr inbounds i8, i8 addrspace(2)* %q, i64 %o
-  %r = addrspacecast i8 addrspace(2)* %pp to %s*
-  %l = load %s, %s* %r
+  %q = addrspacecast ptr %p to ptr addrspace(2)
+  %pp = getelementptr inbounds i8, ptr addrspace(2) %q, i64 %o
+  %r = addrspacecast ptr addrspace(2) %pp to ptr
+  %l = load %s, ptr %r
   ret %s %l
 }
 
-define %s @test68_addrspacecast_2(%s* %p, i64 %i) {
+define %s @test68_addrspacecast_2(ptr %p, i64 %i) {
 ; ALL-LABEL: @test68_addrspacecast_2(
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [[S:%.*]], %s* [[P:%.*]], i64 [[I:%.*]]
-; ALL-NEXT:    [[R:%.*]] = addrspacecast %s* [[PP1]] to [[S]] addrspace(1)*
-; ALL-NEXT:    [[L:%.*]] = load [[S]], [[S]] addrspace(1)* [[R]], align 4
+; ALL-NEXT:    [[O:%.*]] = mul i64 [[I:%.*]], 12
+; ALL-NEXT:    [[Q:%.*]] = addrspacecast ptr [[P:%.*]] to ptr addrspace(2)
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr addrspace(2) [[Q]], i64 [[O]]
+; ALL-NEXT:    [[R:%.*]] = addrspacecast ptr addrspace(2) [[PP]] to ptr addrspace(1)
+; ALL-NEXT:    [[L:%.*]] = load [[S:%.*]], ptr addrspace(1) [[R]], align 4
 ; ALL-NEXT:    ret [[S]] [[L]]
 ;
   %o = mul i64 %i, 12
-  %q = addrspacecast %s* %p to i8 addrspace(2)*
-  %pp = getelementptr inbounds i8, i8 addrspace(2)* %q, i64 %o
-  %r = addrspacecast i8 addrspace(2)* %pp to %s addrspace(1)*
-  %l = load %s, %s addrspace(1)* %r
+  %q = addrspacecast ptr %p to ptr addrspace(2)
+  %pp = getelementptr inbounds i8, ptr addrspace(2) %q, i64 %o
+  %r = addrspacecast ptr addrspace(2) %pp to ptr addrspace(1)
+  %l = load %s, ptr addrspace(1) %r
   ret %s %l
 }
 
-define %s @test68_as1(%s addrspace(1)* %p, i32 %i) {
+define %s @test68_as1(ptr addrspace(1) %p, i32 %i) {
 ; ALL-LABEL: @test68_as1(
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [[S:%.*]], [[S]] addrspace(1)* [[P:%.*]], i32 [[I:%.*]]
-; ALL-NEXT:    [[L:%.*]] = load [[S]], [[S]] addrspace(1)* [[PP1]], align 4
+; ALL-NEXT:    [[O:%.*]] = mul i32 [[I:%.*]], 12
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P:%.*]], i32 [[O]]
+; ALL-NEXT:    [[L:%.*]] = load [[S:%.*]], ptr addrspace(1) [[PP]], align 4
 ; ALL-NEXT:    ret [[S]] [[L]]
 ;
   %o = mul i32 %i, 12
-  %q = bitcast %s addrspace(1)* %p to i8 addrspace(1)*
-  %pp = getelementptr inbounds i8, i8 addrspace(1)* %q, i32 %o
-  %r = bitcast i8 addrspace(1)* %pp to %s addrspace(1)*
-  %l = load %s, %s addrspace(1)* %r
+  %pp = getelementptr inbounds i8, ptr addrspace(1) %p, i32 %o
+  %l = load %s, ptr addrspace(1) %pp
   ret %s %l
 }
 
-define double @test69(double *%p, i64 %i) {
+define double @test69(ptr %p, i64 %i) {
 ; ALL-LABEL: @test69(
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 [[I:%.*]]
-; ALL-NEXT:    [[L:%.*]] = load double, double* [[PP1]], align 8
+; ALL-NEXT:    [[O:%.*]] = shl nsw i64 [[I:%.*]], 3
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[O]]
+; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
   %o = shl nsw i64 %i, 3
-  %q = bitcast double* %p to i8*
-  %pp = getelementptr inbounds i8, i8* %q, i64 %o
-  %r = bitcast i8* %pp to double*
-  %l = load double, double* %r
+  %pp = getelementptr inbounds i8, ptr %p, i64 %o
+  %l = load double, ptr %pp
   ret double %l
 }
 
-define %s @test70(%s *%p, i64 %i) {
+define %s @test70(ptr %p, i64 %i) {
 ; ALL-LABEL: @test70(
-; ALL-NEXT:    [[O:%.*]] = mul nsw i64 [[I:%.*]], 3
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr inbounds [[S:%.*]], %s* [[P:%.*]], i64 [[O]]
-; ALL-NEXT:    [[L:%.*]] = load [[S]], %s* [[PP1]], align 4
+; ALL-NEXT:    [[O:%.*]] = mul nsw i64 [[I:%.*]], 36
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[O]]
+; ALL-NEXT:    [[L:%.*]] = load [[S:%.*]], ptr [[PP]], align 4
 ; ALL-NEXT:    ret [[S]] [[L]]
 ;
   %o = mul nsw i64 %i, 36
-  %q = bitcast %s* %p to i8*
-  %pp = getelementptr inbounds i8, i8* %q, i64 %o
-  %r = bitcast i8* %pp to %s*
-  %l = load %s, %s* %r
+  %pp = getelementptr inbounds i8, ptr %p, i64 %o
+  %l = load %s, ptr %pp
   ret %s %l
 }
 
-define double @test71(double *%p, i64 %i) {
+define double @test71(ptr %p, i64 %i) {
 ; ALL-LABEL: @test71(
-; ALL-NEXT:    [[O:%.*]] = shl i64 [[I:%.*]], 2
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr double, double* [[P:%.*]], i64 [[O]]
-; ALL-NEXT:    [[L:%.*]] = load double, double* [[PP1]], align 8
+; ALL-NEXT:    [[O:%.*]] = shl i64 [[I:%.*]], 5
+; ALL-NEXT:    [[PP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[O]]
+; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
   %o = shl i64 %i, 5
-  %q = bitcast double* %p to i8*
-  %pp = getelementptr i8, i8* %q, i64 %o
-  %r = bitcast i8* %pp to double*
-  %l = load double, double* %r
+  %pp = getelementptr i8, ptr %p, i64 %o
+  %l = load double, ptr %pp
   ret double %l
 }
 
-define double @test72(double *%p, i32 %i) {
+define double @test72(ptr %p, i32 %i) {
 ; ALL-LABEL: @test72(
-; ALL-NEXT:    [[O:%.*]] = sext i32 [[I:%.*]] to i64
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 [[O]]
-; ALL-NEXT:    [[L:%.*]] = load double, double* [[PP1]], align 8
+; ALL-NEXT:    [[SO:%.*]] = shl nsw i32 [[I:%.*]], 3
+; ALL-NEXT:    [[O:%.*]] = sext i32 [[SO]] to i64
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[O]]
+; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
   %so = shl nsw i32 %i, 3
   %o = sext i32 %so to i64
-  %q = bitcast double* %p to i8*
-  %pp = getelementptr inbounds i8, i8* %q, i64 %o
-  %r = bitcast i8* %pp to double*
-  %l = load double, double* %r
+  %pp = getelementptr inbounds i8, ptr %p, i64 %o
+  %l = load double, ptr %pp
   ret double %l
 }
 
-define double @test73(double *%p, i128 %i) {
+define double @test73(ptr %p, i128 %i) {
 ; ALL-LABEL: @test73(
 ; ALL-NEXT:    [[I_TR:%.*]] = trunc i128 [[I:%.*]] to i64
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr double, double* [[P:%.*]], i64 [[I_TR]]
-; ALL-NEXT:    [[L:%.*]] = load double, double* [[PP1]], align 8
+; ALL-NEXT:    [[O:%.*]] = shl i64 [[I_TR]], 3
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[O]]
+; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
   %lo = shl nsw i128 %i, 3
   %o = trunc i128 %lo to i64
-  %q = bitcast double* %p to i8*
-  %pp = getelementptr inbounds i8, i8* %q, i64 %o
-  %r = bitcast i8* %pp to double*
-  %l = load double, double* %r
+  %pp = getelementptr inbounds i8, ptr %p, i64 %o
+  %l = load double, ptr %pp
   ret double %l
 }
 
-define double @test74(double *%p, i64 %i) {
+define double @test74(ptr %p, i64 %i) {
 ; ALL-LABEL: @test74(
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 [[I:%.*]]
-; ALL-NEXT:    [[L:%.*]] = load double, double* [[PP1]], align 8
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[I:%.*]]
+; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
-  %q = bitcast double* %p to i64*
-  %pp = getelementptr inbounds i64, i64* %q, i64 %i
-  %r = bitcast i64* %pp to double*
-  %l = load double, double* %r
+  %pp = getelementptr inbounds i64, ptr %p, i64 %i
+  %l = load double, ptr %pp
   ret double %l
 }
 
-define i32* @test75(i32* %p, i32 %x) {
+define ptr @test75(ptr %p, i32 %x) {
 ; ALL-LABEL: @test75(
 ; ALL-NEXT:    [[Y:%.*]] = shl i32 [[X:%.*]], 3
 ; ALL-NEXT:    [[Z:%.*]] = sext i32 [[Y]] to i64
-; ALL-NEXT:    [[Q:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; ALL-NEXT:    [[R:%.*]] = getelementptr i8, i8* [[Q]], i64 [[Z]]
-; ALL-NEXT:    [[S:%.*]] = bitcast i8* [[R]] to i32*
-; ALL-NEXT:    ret i32* [[S]]
+; ALL-NEXT:    [[R:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[Z]]
+; ALL-NEXT:    ret ptr [[R]]
 ;
   %y = shl i32 %x, 3
   %z = sext i32 %y to i64
-  %q = bitcast i32* %p to i8*
-  %r = getelementptr i8, i8* %q, i64 %z
-  %s = bitcast i8* %r to i32*
-  ret i32* %s
+  %r = getelementptr i8, ptr %p, i64 %z
+  ret ptr %r
 }
 
-define %s @test76(%s *%p, i64 %i, i64 %j) {
+define %s @test76(ptr %p, i64 %i, i64 %j) {
 ; ALL-LABEL: @test76(
-; ALL-NEXT:    [[O2:%.*]] = mul i64 [[I:%.*]], [[J:%.*]]
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [[S:%.*]], %s* [[P:%.*]], i64 [[O2]]
-; ALL-NEXT:    [[L:%.*]] = load [[S]], %s* [[PP1]], align 4
+; ALL-NEXT:    [[O:%.*]] = mul i64 [[I:%.*]], 12
+; ALL-NEXT:    [[O2:%.*]] = mul nsw i64 [[O]], [[J:%.*]]
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[O2]]
+; ALL-NEXT:    [[L:%.*]] = load [[S:%.*]], ptr [[PP]], align 4
 ; ALL-NEXT:    ret [[S]] [[L]]
 ;
   %o = mul i64 %i, 12
   %o2 = mul nsw i64 %o, %j
-  %q = bitcast %s* %p to i8*
-  %pp = getelementptr inbounds i8, i8* %q, i64 %o2
-  %r = bitcast i8* %pp to %s*
-  %l = load %s, %s* %r
+  %pp = getelementptr inbounds i8, ptr %p, i64 %o2
+  %l = load %s, ptr %pp
   ret %s %l
 }
 
-define %s @test77(%s *%p, i64 %i, i64 %j) {
+define %s @test77(ptr %p, i64 %i, i64 %j) {
 ; ALL-LABEL: @test77(
-; ALL-NEXT:    [[O:%.*]] = mul nsw i64 [[I:%.*]], 3
+; ALL-NEXT:    [[O:%.*]] = mul nsw i64 [[I:%.*]], 36
 ; ALL-NEXT:    [[O2:%.*]] = mul nsw i64 [[O]], [[J:%.*]]
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr inbounds [[S:%.*]], %s* [[P:%.*]], i64 [[O2]]
-; ALL-NEXT:    [[L:%.*]] = load [[S]], %s* [[PP1]], align 4
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[O2]]
+; ALL-NEXT:    [[L:%.*]] = load [[S:%.*]], ptr [[PP]], align 4
 ; ALL-NEXT:    ret [[S]] [[L]]
 ;
   %o = mul nsw i64 %i, 36
   %o2 = mul nsw i64 %o, %j
-  %q = bitcast %s* %p to i8*
-  %pp = getelementptr inbounds i8, i8* %q, i64 %o2
-  %r = bitcast i8* %pp to %s*
-  %l = load %s, %s* %r
+  %pp = getelementptr inbounds i8, ptr %p, i64 %o2
+  %l = load %s, ptr %pp
   ret %s %l
 }
 
-define %s @test78(%s *%p, i64 %i, i64 %j, i32 %k, i32 %l, i128 %m, i128 %n) {
+define %s @test78(ptr %p, i64 %i, i64 %j, i32 %k, i32 %l, i128 %m, i128 %n) {
 ; ALL-LABEL: @test78(
-; ALL-NEXT:    [[A:%.*]] = mul nsw i32 [[K:%.*]], 3
+; ALL-NEXT:    [[A:%.*]] = mul nsw i32 [[K:%.*]], 36
 ; ALL-NEXT:    [[B:%.*]] = mul nsw i32 [[A]], [[L:%.*]]
 ; ALL-NEXT:    [[C:%.*]] = sext i32 [[B]] to i128
 ; ALL-NEXT:    [[D:%.*]] = mul nsw i128 [[C]], [[M:%.*]]
 ; ALL-NEXT:    [[E:%.*]] = mul i128 [[D]], [[N:%.*]]
 ; ALL-NEXT:    [[F:%.*]] = trunc i128 [[E]] to i64
-; ALL-NEXT:    [[G:%.*]] = mul i64 [[F]], [[I:%.*]]
-; ALL-NEXT:    [[H:%.*]] = mul i64 [[G]], [[J:%.*]]
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [[S:%.*]], %s* [[P:%.*]], i64 [[H]]
-; ALL-NEXT:    [[LOAD:%.*]] = load [[S]], %s* [[PP1]], align 4
+; ALL-NEXT:    [[G:%.*]] = mul nsw i64 [[F]], [[I:%.*]]
+; ALL-NEXT:    [[H:%.*]] = mul nsw i64 [[G]], [[J:%.*]]
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[H]]
+; ALL-NEXT:    [[LOAD:%.*]] = load [[S:%.*]], ptr [[PP]], align 4
 ; ALL-NEXT:    ret [[S]] [[LOAD]]
 ;
   %a = mul nsw i32 %k, 36
@@ -1208,108 +1184,103 @@ define %s @test78(%s *%p, i64 %i, i64 %j, i32 %k, i32 %l, i128 %m, i128 %n) {
   %f = trunc i128 %e to i64
   %g = mul nsw i64 %f, %i
   %h = mul nsw i64 %g, %j
-  %q = bitcast %s* %p to i8*
-  %pp = getelementptr inbounds i8, i8* %q, i64 %h
-  %r = bitcast i8* %pp to %s*
-  %load = load %s, %s* %r
+  %pp = getelementptr inbounds i8, ptr %p, i64 %h
+  %load = load %s, ptr %pp
   ret %s %load
 }
 
-define %s @test79(%s *%p, i64 %i, i32 %j) {
+define %s @test79(ptr %p, i64 %i, i32 %j) {
 ; ALL-LABEL: @test79(
 ; ALL-NEXT:    [[TMP1:%.*]] = trunc i64 [[I:%.*]] to i32
 ; ALL-NEXT:    [[B:%.*]] = mul i32 [[TMP1]], 36
 ; ALL-NEXT:    [[C:%.*]] = mul i32 [[B]], [[J:%.*]]
-; ALL-NEXT:    [[Q:%.*]] = bitcast %s* [[P:%.*]] to i8*
 ; ALL-NEXT:    [[TMP2:%.*]] = sext i32 [[C]] to i64
-; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, i8* [[Q]], i64 [[TMP2]]
-; ALL-NEXT:    [[R:%.*]] = bitcast i8* [[PP]] to %s*
-; ALL-NEXT:    [[L:%.*]] = load [[S:%.*]], %s* [[R]], align 4
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP2]]
+; ALL-NEXT:    [[L:%.*]] = load [[S:%.*]], ptr [[PP]], align 4
 ; ALL-NEXT:    ret [[S]] [[L]]
 ;
   %a = mul nsw i64 %i, 36
   %b = trunc i64 %a to i32
   %c = mul i32 %b, %j
-  %q = bitcast %s* %p to i8*
-  %pp = getelementptr inbounds i8, i8* %q, i32 %c
-  %r = bitcast i8* %pp to %s*
-  %l = load %s, %s* %r
+  %pp = getelementptr inbounds i8, ptr %p, i32 %c
+  %l = load %s, ptr %pp
   ret %s %l
 }
 
-define double @test80([100 x double]* %p, i32 %i) {
+define double @test80(ptr %p, i32 %i) {
 ; ALL-LABEL: @test80(
-; ALL-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [100 x double], [100 x double]* [[P:%.*]], i64 0, i64 [[TMP1]]
-; ALL-NEXT:    [[L:%.*]] = load double, double* [[PP1]], align 8
+; ALL-NEXT:    [[T:%.*]] = shl nsw i32 [[I:%.*]], 3
+; ALL-NEXT:    [[TMP1:%.*]] = sext i32 [[T]] to i64
+; ALL-NEXT:    [[PP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
+; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
   %t = shl nsw i32 %i, 3
-  %q = bitcast [100 x double]* %p to i8*
-  %pp = getelementptr i8, i8* %q, i32 %t
-  %r = bitcast i8* %pp to double*
-  %l = load double, double* %r
+  %pp = getelementptr i8, ptr %p, i32 %t
+  %l = load double, ptr %pp
   ret double %l
 }
 
-define double @test80_addrspacecast([100 x double] addrspace(1)* %p, i32 %i) {
+define double @test80_addrspacecast(ptr addrspace(1) %p, i32 %i) {
 ; ALL-LABEL: @test80_addrspacecast(
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [100 x double], [100 x double] addrspace(1)* [[P:%.*]], i32 0, i32 [[I:%.*]]
-; ALL-NEXT:    [[L:%.*]] = load double, double addrspace(1)* [[PP1]], align 8
+; ALL-NEXT:    [[T:%.*]] = shl nsw i32 [[I:%.*]], 3
+; ALL-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P:%.*]] to ptr addrspace(2)
+; ALL-NEXT:    [[TMP1:%.*]] = sext i32 [[T]] to i64
+; ALL-NEXT:    [[PP:%.*]] = getelementptr i8, ptr addrspace(2) [[Q]], i64 [[TMP1]]
+; ALL-NEXT:    [[R:%.*]] = addrspacecast ptr addrspace(2) [[PP]] to ptr addrspace(1)
+; ALL-NEXT:    [[L:%.*]] = load double, ptr addrspace(1) [[R]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
   %t = shl nsw i32 %i, 3
-  %q = addrspacecast [100 x double] addrspace(1)* %p to i8 addrspace(2)*
-  %pp = getelementptr i8, i8 addrspace(2)* %q, i32 %t
-  %r = addrspacecast i8 addrspace(2)* %pp to double addrspace(1)*
-  %l = load double, double addrspace(1)* %r
+  %q = addrspacecast ptr addrspace(1) %p to ptr addrspace(2)
+  %pp = getelementptr i8, ptr addrspace(2) %q, i32 %t
+  %r = addrspacecast ptr addrspace(2) %pp to ptr addrspace(1)
+  %l = load double, ptr addrspace(1) %r
   ret double %l
 }
 
-define double @test80_addrspacecast_2([100 x double] addrspace(1)* %p, i32 %i) {
+define double @test80_addrspacecast_2(ptr addrspace(1) %p, i32 %i) {
 ; ALL-LABEL: @test80_addrspacecast_2(
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [100 x double], [100 x double] addrspace(1)* [[P:%.*]], i32 0, i32 [[I:%.*]]
-; ALL-NEXT:    [[R:%.*]] = addrspacecast double addrspace(1)* [[PP1]] to double addrspace(3)*
-; ALL-NEXT:    [[L:%.*]] = load double, double addrspace(3)* [[R]], align 8
+; ALL-NEXT:    [[T:%.*]] = shl nsw i32 [[I:%.*]], 3
+; ALL-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(1) [[P:%.*]] to ptr addrspace(2)
+; ALL-NEXT:    [[TMP1:%.*]] = sext i32 [[T]] to i64
+; ALL-NEXT:    [[PP:%.*]] = getelementptr i8, ptr addrspace(2) [[Q]], i64 [[TMP1]]
+; ALL-NEXT:    [[R:%.*]] = addrspacecast ptr addrspace(2) [[PP]] to ptr addrspace(3)
+; ALL-NEXT:    [[L:%.*]] = load double, ptr addrspace(3) [[R]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
   %t = shl nsw i32 %i, 3
-  %q = addrspacecast [100 x double] addrspace(1)* %p to i8 addrspace(2)*
-  %pp = getelementptr i8, i8 addrspace(2)* %q, i32 %t
-  %r = addrspacecast i8 addrspace(2)* %pp to double addrspace(3)*
-  %l = load double, double addrspace(3)* %r
+  %q = addrspacecast ptr addrspace(1) %p to ptr addrspace(2)
+  %pp = getelementptr i8, ptr addrspace(2) %q, i32 %t
+  %r = addrspacecast ptr addrspace(2) %pp to ptr addrspace(3)
+  %l = load double, ptr addrspace(3) %r
   ret double %l
 }
 
-define double @test80_as1([100 x double] addrspace(1)* %p, i16 %i) {
+define double @test80_as1(ptr addrspace(1) %p, i16 %i) {
 ; ALL-LABEL: @test80_as1(
-; ALL-NEXT:    [[TMP1:%.*]] = sext i16 [[I:%.*]] to i32
-; ALL-NEXT:    [[PP1:%.*]] = getelementptr [100 x double], [100 x double] addrspace(1)* [[P:%.*]], i32 0, i32 [[TMP1]]
-; ALL-NEXT:    [[L:%.*]] = load double, double addrspace(1)* [[PP1]], align 8
+; ALL-NEXT:    [[T:%.*]] = shl nsw i16 [[I:%.*]], 3
+; ALL-NEXT:    [[TMP1:%.*]] = sext i16 [[T]] to i32
+; ALL-NEXT:    [[PP:%.*]] = getelementptr i8, ptr addrspace(1) [[P:%.*]], i32 [[TMP1]]
+; ALL-NEXT:    [[L:%.*]] = load double, ptr addrspace(1) [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
   %t = shl nsw i16 %i, 3
-  %q = bitcast [100 x double] addrspace(1)* %p to i8 addrspace(1)*
-  %pp = getelementptr i8, i8 addrspace(1)* %q, i16 %t
-  %r = bitcast i8 addrspace(1)* %pp to double addrspace(1)*
-  %l = load double, double addrspace(1)* %r
+  %pp = getelementptr i8, ptr addrspace(1) %p, i16 %t
+  %l = load double, ptr addrspace(1) %pp
   ret double %l
 }
 
-define double @test81(double *%p, float %f) {
+define double @test81(ptr %p, float %f) {
 ; ALL-LABEL: @test81(
 ; ALL-NEXT:    [[I:%.*]] = fptosi float [[F:%.*]] to i64
-; ALL-NEXT:    [[Q:%.*]] = bitcast double* [[P:%.*]] to i8*
-; ALL-NEXT:    [[PP:%.*]] = getelementptr i8, i8* [[Q]], i64 [[I]]
-; ALL-NEXT:    [[R:%.*]] = bitcast i8* [[PP]] to double*
-; ALL-NEXT:    [[L:%.*]] = load double, double* [[R]], align 8
+; ALL-NEXT:    [[PP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[I]]
+; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
   %i = fptosi float %f to i64
-  %q = bitcast double* %p to i8*
-  %pp = getelementptr i8, i8* %q, i64 %i
-  %r = bitcast i8* %pp to double*
-  %l = load double, double* %r
+  %pp = getelementptr i8, ptr %p, i64 %i
+  %l = load double, ptr %pp
   ret double %l
 }
 
@@ -1404,13 +1375,13 @@ define i16 @test88(i16 %v) {
   ret i16 %t
 }
 
-define i32 @PR21388(i32* %v) {
+define i32 @PR21388(ptr %v) {
 ; ALL-LABEL: @PR21388(
-; ALL-NEXT:    [[ICMP:%.*]] = icmp slt i32* [[V:%.*]], null
+; ALL-NEXT:    [[ICMP:%.*]] = icmp slt ptr [[V:%.*]], null
 ; ALL-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
 ; ALL-NEXT:    ret i32 [[SEXT]]
 ;
-  %icmp = icmp slt i32* %v, null
+  %icmp = icmp slt ptr %v, null
   %sext = sext i1 %icmp to i32
   ret i32 %sext
 }

@@ -45,10 +45,13 @@ mrs x3, HDFGRTR2_EL2
 mrs x3, HDFGWTR2_EL2
 mrs x3, HFGRTR2_EL2
 mrs x3, HFGWTR2_EL2
+mrs x3, HFGITR2_EL2
 // CHECK: mrs     x3, HDFGRTR2_EL2                // encoding: [0x03,0x31,0x3c,0xd5]
 // CHECK: mrs     x3, HDFGWTR2_EL2                // encoding: [0x23,0x31,0x3c,0xd5]
 // CHECK: mrs     x3, HFGRTR2_EL2                 // encoding: [0x43,0x31,0x3c,0xd5]
 // CHECK: mrs     x3, HFGWTR2_EL2                 // encoding: [0x63,0x31,0x3c,0xd5]
+// CHECK: mrs     x3, HFGITR2_EL2                 // encoding: [0xe3,0x31,0x3c,0xd5]
+// NOFGT: error: expected readable system register
 // NOFGT: error: expected readable system register
 // NOFGT: error: expected readable system register
 // NOFGT: error: expected readable system register
@@ -59,10 +62,13 @@ msr HDFGRTR2_EL2, x3
 msr HDFGWTR2_EL2, x3
 msr HFGRTR2_EL2, x3
 msr HFGWTR2_EL2, x3
+msr HFGITR2_EL2, x3
 // CHECK: msr     HDFGRTR2_EL2, x3                // encoding: [0x03,0x31,0x1c,0xd5]
 // CHECK: msr     HDFGWTR2_EL2, x3                // encoding: [0x23,0x31,0x1c,0xd5]
 // CHECK: msr     HFGRTR2_EL2, x3                 // encoding: [0x43,0x31,0x1c,0xd5]
 // CHECK: msr     HFGWTR2_EL2, x3                 // encoding: [0x63,0x31,0x1c,0xd5]
+// CHECK: msr     HFGITR2_EL2, x3                 // encoding: [0xe3,0x31,0x1c,0xd5]
+// NOFGT: error: expected writable system register
 // NOFGT: error: expected writable system register
 // NOFGT: error: expected writable system register
 // NOFGT: error: expected writable system register

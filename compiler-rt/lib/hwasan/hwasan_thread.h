@@ -46,6 +46,7 @@ class Thread {
   uptr stack_size() { return stack_top() - stack_bottom(); }
   uptr tls_begin() { return tls_begin_; }
   uptr tls_end() { return tls_end_; }
+  DTLS *dtls() { return dtls_; }
   bool IsMainThread() { return unique_id_ == 0; }
 
   bool AddrIsInStack(uptr addr) {
@@ -68,6 +69,9 @@ class Thread {
     Print("Thread: ");
   }
 
+  tid_t os_id() const { return os_id_; }
+  void set_os_id(tid_t os_id) { os_id_ = os_id; }
+
   uptr &vfork_spill() { return vfork_spill_; }
 
  private:
@@ -81,6 +85,7 @@ class Thread {
   uptr stack_bottom_;
   uptr tls_begin_;
   uptr tls_end_;
+  DTLS *dtls_;
 
   u32 random_state_;
   u32 random_buffer_;
@@ -90,6 +95,8 @@ class Thread {
   StackAllocationsRingBuffer *stack_allocations_;
 
   u32 unique_id_;  // counting from zero.
+
+  tid_t os_id_;
 
   u32 tagging_disabled_;  // if non-zero, malloc uses zero tag in this thread.
 

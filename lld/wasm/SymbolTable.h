@@ -15,8 +15,8 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/WasmTraits.h"
+#include <optional>
 
 namespace lld {
 namespace wasm {
@@ -63,26 +63,24 @@ public:
                           InputTable *t);
 
   Symbol *addUndefinedFunction(StringRef name,
-                               llvm::Optional<StringRef> importName,
-                               llvm::Optional<StringRef> importModule,
+                               std::optional<StringRef> importName,
+                               std::optional<StringRef> importModule,
                                uint32_t flags, InputFile *file,
                                const WasmSignature *signature,
                                bool isCalledDirectly);
   Symbol *addUndefinedData(StringRef name, uint32_t flags, InputFile *file);
   Symbol *addUndefinedGlobal(StringRef name,
-                             llvm::Optional<StringRef> importName,
-                             llvm::Optional<StringRef> importModule,
+                             std::optional<StringRef> importName,
+                             std::optional<StringRef> importModule,
                              uint32_t flags, InputFile *file,
                              const WasmGlobalType *type);
-  Symbol *addUndefinedTable(StringRef name,
-                            llvm::Optional<StringRef> importName,
-                            llvm::Optional<StringRef> importModule,
+  Symbol *addUndefinedTable(StringRef name, std::optional<StringRef> importName,
+                            std::optional<StringRef> importModule,
                             uint32_t flags, InputFile *file,
                             const WasmTableType *type);
-  Symbol *addUndefinedTag(StringRef name, llvm::Optional<StringRef> importName,
-                          llvm::Optional<StringRef> importModule,
-                          uint32_t flags, InputFile *file,
-                          const WasmSignature *sig);
+  Symbol *addUndefinedTag(StringRef name, std::optional<StringRef> importName,
+                          std::optional<StringRef> importModule, uint32_t flags,
+                          InputFile *file, const WasmSignature *sig);
 
   TableSymbol *resolveIndirectFunctionTable(bool required);
 

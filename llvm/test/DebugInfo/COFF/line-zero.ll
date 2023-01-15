@@ -32,11 +32,10 @@ target triple = "x86_64-pc-windows-msvc19.22.27905"
 define dso_local i32 @main() local_unnamed_addr #0 !dbg !8 {
 entry:
   %x = alloca i32, align 4
-  %x.0.x.0..sroa_cast = bitcast i32* %x to i8*, !dbg !15
-  call void @llvm.dbg.declare(metadata i32* %x, metadata !13, metadata !DIExpression()), !dbg !15
-  store volatile i32 1, i32* %x, align 4, !dbg !16, !tbaa !17
-  store volatile i32 2, i32* %x, align 4, !dbg !21, !tbaa !17
-  store volatile i32 3, i32* %x, align 4, !dbg !22, !tbaa !17
+  call void @llvm.dbg.declare(metadata ptr %x, metadata !13, metadata !DIExpression()), !dbg !15
+  store volatile i32 1, ptr %x, align 4, !dbg !16, !tbaa !17
+  store volatile i32 2, ptr %x, align 4, !dbg !21, !tbaa !17
+  store volatile i32 3, ptr %x, align 4, !dbg !22, !tbaa !17
   ret i32 0, !dbg !23
 }
 

@@ -3,7 +3,7 @@
 
 ; i32
 
-define void @vst3_v2i32(<2 x i32> *%src, <6 x i32> *%dst) {
+define void @vst3_v2i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v2i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
@@ -22,20 +22,19 @@ define void @vst3_v2i32(<2 x i32> *%src, <6 x i32> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q2, [r1]
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
-  %s1 = getelementptr <2 x i32>, <2 x i32>* %src, i32 0
-  %l1 = load <2 x i32>, <2 x i32>* %s1, align 4
-  %s2 = getelementptr <2 x i32>, <2 x i32>* %src, i32 1
-  %l2 = load <2 x i32>, <2 x i32>* %s2, align 4
-  %s3 = getelementptr <2 x i32>, <2 x i32>* %src, i32 2
-  %l3 = load <2 x i32>, <2 x i32>* %s3, align 4
+  %l1 = load <2 x i32>, ptr %src, align 4
+  %s2 = getelementptr <2 x i32>, ptr %src, i32 1
+  %l2 = load <2 x i32>, ptr %s2, align 4
+  %s3 = getelementptr <2 x i32>, ptr %src, i32 2
+  %l3 = load <2 x i32>, ptr %s3, align 4
   %t1 = shufflevector <2 x i32> %l1, <2 x i32> %l2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t2 = shufflevector <2 x i32> %l3, <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %s = shufflevector <4 x i32> %t1, <4 x i32> %t2, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-  store <6 x i32> %s, <6 x i32> *%dst
+  store <6 x i32> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v4i32(<4 x i32> *%src, <12 x i32> *%dst) {
+define void @vst3_v4i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
@@ -61,20 +60,19 @@ define void @vst3_v4i32(<4 x i32> *%src, <12 x i32> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <4 x i32>, <4 x i32>* %src, i32 0
-  %l1 = load <4 x i32>, <4 x i32>* %s1, align 4
-  %s2 = getelementptr <4 x i32>, <4 x i32>* %src, i32 1
-  %l2 = load <4 x i32>, <4 x i32>* %s2, align 4
-  %s3 = getelementptr <4 x i32>, <4 x i32>* %src, i32 2
-  %l3 = load <4 x i32>, <4 x i32>* %s3, align 4
+  %l1 = load <4 x i32>, ptr %src, align 4
+  %s2 = getelementptr <4 x i32>, ptr %src, i32 1
+  %l2 = load <4 x i32>, ptr %s2, align 4
+  %s3 = getelementptr <4 x i32>, ptr %src, i32 2
+  %l3 = load <4 x i32>, ptr %s3, align 4
   %t1 = shufflevector <4 x i32> %l1, <4 x i32> %l2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %t2 = shufflevector <4 x i32> %l3, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <8 x i32> %t1, <8 x i32> %t2, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-  store <12 x i32> %s, <12 x i32> *%dst
+  store <12 x i32> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v8i32(<8 x i32> *%src, <24 x i32> *%dst) {
+define void @vst3_v8i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v8i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -120,20 +118,19 @@ define void @vst3_v8i32(<8 x i32> *%src, <24 x i32> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
-  %s1 = getelementptr <8 x i32>, <8 x i32>* %src, i32 0
-  %l1 = load <8 x i32>, <8 x i32>* %s1, align 4
-  %s2 = getelementptr <8 x i32>, <8 x i32>* %src, i32 1
-  %l2 = load <8 x i32>, <8 x i32>* %s2, align 4
-  %s3 = getelementptr <8 x i32>, <8 x i32>* %src, i32 2
-  %l3 = load <8 x i32>, <8 x i32>* %s3, align 4
+  %l1 = load <8 x i32>, ptr %src, align 4
+  %s2 = getelementptr <8 x i32>, ptr %src, i32 1
+  %l2 = load <8 x i32>, ptr %s2, align 4
+  %s3 = getelementptr <8 x i32>, ptr %src, i32 2
+  %l3 = load <8 x i32>, ptr %s3, align 4
   %t1 = shufflevector <8 x i32> %l1, <8 x i32> %l2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %t2 = shufflevector <8 x i32> %l3, <8 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <16 x i32> %t1, <16 x i32> %t2, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
-  store <24 x i32> %s, <24 x i32> *%dst
+  store <24 x i32> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v16i32(<16 x i32> *%src, <48 x i32> *%dst) {
+define void @vst3_v16i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v16i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
@@ -244,22 +241,21 @@ define void @vst3_v16i32(<16 x i32> *%src, <48 x i32> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
-  %s1 = getelementptr <16 x i32>, <16 x i32>* %src, i32 0
-  %l1 = load <16 x i32>, <16 x i32>* %s1, align 4
-  %s2 = getelementptr <16 x i32>, <16 x i32>* %src, i32 1
-  %l2 = load <16 x i32>, <16 x i32>* %s2, align 4
-  %s3 = getelementptr <16 x i32>, <16 x i32>* %src, i32 2
-  %l3 = load <16 x i32>, <16 x i32>* %s3, align 4
+  %l1 = load <16 x i32>, ptr %src, align 4
+  %s2 = getelementptr <16 x i32>, ptr %src, i32 1
+  %l2 = load <16 x i32>, ptr %s2, align 4
+  %s3 = getelementptr <16 x i32>, ptr %src, i32 2
+  %l3 = load <16 x i32>, ptr %s3, align 4
   %t1 = shufflevector <16 x i32> %l1, <16 x i32> %l2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %t2 = shufflevector <16 x i32> %l3, <16 x i32> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <32 x i32> %t1, <32 x i32> %t2, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
-  store <48 x i32> %s, <48 x i32> *%dst
+  store <48 x i32> %s, ptr %dst
   ret void
 }
 
 ; i16
 
-define void @vst3_v2i16(<2 x i16> *%src, <6 x i16> *%dst) {
+define void @vst3_v2i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v2i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
@@ -283,20 +279,19 @@ define void @vst3_v2i16(<2 x i16> *%src, <6 x i16> *%dst) {
 ; CHECK-NEXT:    str r0, [r1, #8]
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
-  %s1 = getelementptr <2 x i16>, <2 x i16>* %src, i32 0
-  %l1 = load <2 x i16>, <2 x i16>* %s1, align 4
-  %s2 = getelementptr <2 x i16>, <2 x i16>* %src, i32 1
-  %l2 = load <2 x i16>, <2 x i16>* %s2, align 4
-  %s3 = getelementptr <2 x i16>, <2 x i16>* %src, i32 2
-  %l3 = load <2 x i16>, <2 x i16>* %s3, align 4
+  %l1 = load <2 x i16>, ptr %src, align 4
+  %s2 = getelementptr <2 x i16>, ptr %src, i32 1
+  %l2 = load <2 x i16>, ptr %s2, align 4
+  %s3 = getelementptr <2 x i16>, ptr %src, i32 2
+  %l3 = load <2 x i16>, ptr %s3, align 4
   %t1 = shufflevector <2 x i16> %l1, <2 x i16> %l2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t2 = shufflevector <2 x i16> %l3, <2 x i16> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %s = shufflevector <4 x i16> %t1, <4 x i16> %t2, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-  store <6 x i16> %s, <6 x i16> *%dst
+  store <6 x i16> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v4i16(<4 x i16> *%src, <12 x i16> *%dst) {
+define void @vst3_v4i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v4i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
@@ -325,20 +320,19 @@ define void @vst3_v4i16(<4 x i16> *%src, <12 x i16> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
-  %s1 = getelementptr <4 x i16>, <4 x i16>* %src, i32 0
-  %l1 = load <4 x i16>, <4 x i16>* %s1, align 4
-  %s2 = getelementptr <4 x i16>, <4 x i16>* %src, i32 1
-  %l2 = load <4 x i16>, <4 x i16>* %s2, align 4
-  %s3 = getelementptr <4 x i16>, <4 x i16>* %src, i32 2
-  %l3 = load <4 x i16>, <4 x i16>* %s3, align 4
+  %l1 = load <4 x i16>, ptr %src, align 4
+  %s2 = getelementptr <4 x i16>, ptr %src, i32 1
+  %l2 = load <4 x i16>, ptr %s2, align 4
+  %s3 = getelementptr <4 x i16>, ptr %src, i32 2
+  %l3 = load <4 x i16>, ptr %s3, align 4
   %t1 = shufflevector <4 x i16> %l1, <4 x i16> %l2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %t2 = shufflevector <4 x i16> %l3, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <8 x i16> %t1, <8 x i16> %t2, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-  store <12 x i16> %s, <12 x i16> *%dst
+  store <12 x i16> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v8i16(<8 x i16> *%src, <24 x i16> *%dst) {
+define void @vst3_v8i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
@@ -392,20 +386,19 @@ define void @vst3_v8i16(<8 x i16> *%src, <24 x i16> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <8 x i16>, <8 x i16>* %src, i32 0
-  %l1 = load <8 x i16>, <8 x i16>* %s1, align 4
-  %s2 = getelementptr <8 x i16>, <8 x i16>* %src, i32 1
-  %l2 = load <8 x i16>, <8 x i16>* %s2, align 4
-  %s3 = getelementptr <8 x i16>, <8 x i16>* %src, i32 2
-  %l3 = load <8 x i16>, <8 x i16>* %s3, align 4
+  %l1 = load <8 x i16>, ptr %src, align 4
+  %s2 = getelementptr <8 x i16>, ptr %src, i32 1
+  %l2 = load <8 x i16>, ptr %s2, align 4
+  %s3 = getelementptr <8 x i16>, ptr %src, i32 2
+  %l3 = load <8 x i16>, ptr %s3, align 4
   %t1 = shufflevector <8 x i16> %l1, <8 x i16> %l2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %t2 = shufflevector <8 x i16> %l3, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <16 x i16> %t1, <16 x i16> %t2, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
-  store <24 x i16> %s, <24 x i16> *%dst
+  store <24 x i16> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v16i16(<16 x i16> *%src, <48 x i16> *%dst) {
+define void @vst3_v16i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v16i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
@@ -518,22 +511,21 @@ define void @vst3_v16i16(<16 x i16> *%src, <48 x i16> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <16 x i16>, <16 x i16>* %src, i32 0
-  %l1 = load <16 x i16>, <16 x i16>* %s1, align 4
-  %s2 = getelementptr <16 x i16>, <16 x i16>* %src, i32 1
-  %l2 = load <16 x i16>, <16 x i16>* %s2, align 4
-  %s3 = getelementptr <16 x i16>, <16 x i16>* %src, i32 2
-  %l3 = load <16 x i16>, <16 x i16>* %s3, align 4
+  %l1 = load <16 x i16>, ptr %src, align 4
+  %s2 = getelementptr <16 x i16>, ptr %src, i32 1
+  %l2 = load <16 x i16>, ptr %s2, align 4
+  %s3 = getelementptr <16 x i16>, ptr %src, i32 2
+  %l3 = load <16 x i16>, ptr %s3, align 4
   %t1 = shufflevector <16 x i16> %l1, <16 x i16> %l2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %t2 = shufflevector <16 x i16> %l3, <16 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <32 x i16> %t1, <32 x i16> %t2, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
-  store <48 x i16> %s, <48 x i16> *%dst
+  store <48 x i16> %s, ptr %dst
   ret void
 }
 
 ; i8
 
-define void @vst3_v2i8(<2 x i8> *%src, <6 x i8> *%dst) {
+define void @vst3_v2i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v2i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
@@ -566,20 +558,19 @@ define void @vst3_v2i8(<2 x i8> *%src, <6 x i8> *%dst) {
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
-  %s1 = getelementptr <2 x i8>, <2 x i8>* %src, i32 0
-  %l1 = load <2 x i8>, <2 x i8>* %s1, align 4
-  %s2 = getelementptr <2 x i8>, <2 x i8>* %src, i32 1
-  %l2 = load <2 x i8>, <2 x i8>* %s2, align 4
-  %s3 = getelementptr <2 x i8>, <2 x i8>* %src, i32 2
-  %l3 = load <2 x i8>, <2 x i8>* %s3, align 4
+  %l1 = load <2 x i8>, ptr %src, align 4
+  %s2 = getelementptr <2 x i8>, ptr %src, i32 1
+  %l2 = load <2 x i8>, ptr %s2, align 4
+  %s3 = getelementptr <2 x i8>, ptr %src, i32 2
+  %l3 = load <2 x i8>, ptr %s3, align 4
   %t1 = shufflevector <2 x i8> %l1, <2 x i8> %l2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t2 = shufflevector <2 x i8> %l3, <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %s = shufflevector <4 x i8> %t1, <4 x i8> %t2, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-  store <6 x i8> %s, <6 x i8> *%dst
+  store <6 x i8> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v4i8(<4 x i8> *%src, <12 x i8> *%dst) {
+define void @vst3_v4i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v4i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
@@ -610,20 +601,19 @@ define void @vst3_v4i8(<4 x i8> *%src, <12 x i8> *%dst) {
 ; CHECK-NEXT:    vstrb.16 q1, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
-  %s1 = getelementptr <4 x i8>, <4 x i8>* %src, i32 0
-  %l1 = load <4 x i8>, <4 x i8>* %s1, align 4
-  %s2 = getelementptr <4 x i8>, <4 x i8>* %src, i32 1
-  %l2 = load <4 x i8>, <4 x i8>* %s2, align 4
-  %s3 = getelementptr <4 x i8>, <4 x i8>* %src, i32 2
-  %l3 = load <4 x i8>, <4 x i8>* %s3, align 4
+  %l1 = load <4 x i8>, ptr %src, align 4
+  %s2 = getelementptr <4 x i8>, ptr %src, i32 1
+  %l2 = load <4 x i8>, ptr %s2, align 4
+  %s3 = getelementptr <4 x i8>, ptr %src, i32 2
+  %l3 = load <4 x i8>, ptr %s3, align 4
   %t1 = shufflevector <4 x i8> %l1, <4 x i8> %l2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %t2 = shufflevector <4 x i8> %l3, <4 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <8 x i8> %t1, <8 x i8> %t2, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-  store <12 x i8> %s, <12 x i8> *%dst
+  store <12 x i8> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v8i8(<8 x i8> *%src, <24 x i8> *%dst) {
+define void @vst3_v8i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v8i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
@@ -681,20 +671,19 @@ define void @vst3_v8i8(<8 x i8> *%src, <24 x i8> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <8 x i8>, <8 x i8>* %src, i32 0
-  %l1 = load <8 x i8>, <8 x i8>* %s1, align 4
-  %s2 = getelementptr <8 x i8>, <8 x i8>* %src, i32 1
-  %l2 = load <8 x i8>, <8 x i8>* %s2, align 4
-  %s3 = getelementptr <8 x i8>, <8 x i8>* %src, i32 2
-  %l3 = load <8 x i8>, <8 x i8>* %s3, align 4
+  %l1 = load <8 x i8>, ptr %src, align 4
+  %s2 = getelementptr <8 x i8>, ptr %src, i32 1
+  %l2 = load <8 x i8>, ptr %s2, align 4
+  %s3 = getelementptr <8 x i8>, ptr %src, i32 2
+  %l3 = load <8 x i8>, ptr %s3, align 4
   %t1 = shufflevector <8 x i8> %l1, <8 x i8> %l2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %t2 = shufflevector <8 x i8> %l3, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <16 x i8> %t1, <16 x i8> %t2, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
-  store <24 x i8> %s, <24 x i8> *%dst
+  store <24 x i8> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v16i8(<16 x i8> *%src, <48 x i8> *%dst) {
+define void @vst3_v16i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
@@ -868,22 +857,21 @@ define void @vst3_v16i8(<16 x i8> *%src, <48 x i8> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <16 x i8>, <16 x i8>* %src, i32 0
-  %l1 = load <16 x i8>, <16 x i8>* %s1, align 4
-  %s2 = getelementptr <16 x i8>, <16 x i8>* %src, i32 1
-  %l2 = load <16 x i8>, <16 x i8>* %s2, align 4
-  %s3 = getelementptr <16 x i8>, <16 x i8>* %src, i32 2
-  %l3 = load <16 x i8>, <16 x i8>* %s3, align 4
+  %l1 = load <16 x i8>, ptr %src, align 4
+  %s2 = getelementptr <16 x i8>, ptr %src, i32 1
+  %l2 = load <16 x i8>, ptr %s2, align 4
+  %s3 = getelementptr <16 x i8>, ptr %src, i32 2
+  %l3 = load <16 x i8>, ptr %s3, align 4
   %t1 = shufflevector <16 x i8> %l1, <16 x i8> %l2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %t2 = shufflevector <16 x i8> %l3, <16 x i8> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <32 x i8> %t1, <32 x i8> %t2, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
-  store <48 x i8> %s, <48 x i8> *%dst
+  store <48 x i8> %s, ptr %dst
   ret void
 }
 
 ; i64
 
-define void @vst3_v2i64(<2 x i64> *%src, <6 x i64> *%dst) {
+define void @vst3_v2i64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -898,20 +886,19 @@ define void @vst3_v2i64(<2 x i64> *%src, <6 x i64> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #32]
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <2 x i64>, <2 x i64>* %src, i32 0
-  %l1 = load <2 x i64>, <2 x i64>* %s1, align 4
-  %s2 = getelementptr <2 x i64>, <2 x i64>* %src, i32 1
-  %l2 = load <2 x i64>, <2 x i64>* %s2, align 4
-  %s3 = getelementptr <2 x i64>, <2 x i64>* %src, i32 2
-  %l3 = load <2 x i64>, <2 x i64>* %s3, align 4
+  %l1 = load <2 x i64>, ptr %src, align 4
+  %s2 = getelementptr <2 x i64>, ptr %src, i32 1
+  %l2 = load <2 x i64>, ptr %s2, align 4
+  %s3 = getelementptr <2 x i64>, ptr %src, i32 2
+  %l3 = load <2 x i64>, ptr %s3, align 4
   %t1 = shufflevector <2 x i64> %l1, <2 x i64> %l2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t2 = shufflevector <2 x i64> %l3, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %s = shufflevector <4 x i64> %t1, <4 x i64> %t2, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-  store <6 x i64> %s, <6 x i64> *%dst
+  store <6 x i64> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v4i64(<4 x i64> *%src, <12 x i64> *%dst) {
+define void @vst3_v4i64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v4i64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
@@ -941,22 +928,21 @@ define void @vst3_v4i64(<4 x i64> *%src, <12 x i64> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <4 x i64>, <4 x i64>* %src, i32 0
-  %l1 = load <4 x i64>, <4 x i64>* %s1, align 4
-  %s2 = getelementptr <4 x i64>, <4 x i64>* %src, i32 1
-  %l2 = load <4 x i64>, <4 x i64>* %s2, align 4
-  %s3 = getelementptr <4 x i64>, <4 x i64>* %src, i32 2
-  %l3 = load <4 x i64>, <4 x i64>* %s3, align 4
+  %l1 = load <4 x i64>, ptr %src, align 4
+  %s2 = getelementptr <4 x i64>, ptr %src, i32 1
+  %l2 = load <4 x i64>, ptr %s2, align 4
+  %s3 = getelementptr <4 x i64>, ptr %src, i32 2
+  %l3 = load <4 x i64>, ptr %s3, align 4
   %t1 = shufflevector <4 x i64> %l1, <4 x i64> %l2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %t2 = shufflevector <4 x i64> %l3, <4 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <8 x i64> %t1, <8 x i64> %t2, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-  store <12 x i64> %s, <12 x i64> *%dst
+  store <12 x i64> %s, ptr %dst
   ret void
 }
 
 ; f32
 
-define void @vst3_v2f32(<2 x float> *%src, <6 x float> *%dst) {
+define void @vst3_v2f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldr r2, [r0, #20]
@@ -969,20 +955,19 @@ define void @vst3_v2f32(<2 x float> *%src, <6 x float> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <2 x float>, <2 x float>* %src, i32 0
-  %l1 = load <2 x float>, <2 x float>* %s1, align 4
-  %s2 = getelementptr <2 x float>, <2 x float>* %src, i32 1
-  %l2 = load <2 x float>, <2 x float>* %s2, align 4
-  %s3 = getelementptr <2 x float>, <2 x float>* %src, i32 2
-  %l3 = load <2 x float>, <2 x float>* %s3, align 4
+  %l1 = load <2 x float>, ptr %src, align 4
+  %s2 = getelementptr <2 x float>, ptr %src, i32 1
+  %l2 = load <2 x float>, ptr %s2, align 4
+  %s3 = getelementptr <2 x float>, ptr %src, i32 2
+  %l3 = load <2 x float>, ptr %s3, align 4
   %t1 = shufflevector <2 x float> %l1, <2 x float> %l2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t2 = shufflevector <2 x float> %l3, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %s = shufflevector <4 x float> %t1, <4 x float> %t2, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-  store <6 x float> %s, <6 x float> *%dst
+  store <6 x float> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v4f32(<4 x float> *%src, <12 x float> *%dst) {
+define void @vst3_v4f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
@@ -1007,20 +992,19 @@ define void @vst3_v4f32(<4 x float> *%src, <12 x float> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <4 x float>, <4 x float>* %src, i32 0
-  %l1 = load <4 x float>, <4 x float>* %s1, align 4
-  %s2 = getelementptr <4 x float>, <4 x float>* %src, i32 1
-  %l2 = load <4 x float>, <4 x float>* %s2, align 4
-  %s3 = getelementptr <4 x float>, <4 x float>* %src, i32 2
-  %l3 = load <4 x float>, <4 x float>* %s3, align 4
+  %l1 = load <4 x float>, ptr %src, align 4
+  %s2 = getelementptr <4 x float>, ptr %src, i32 1
+  %l2 = load <4 x float>, ptr %s2, align 4
+  %s3 = getelementptr <4 x float>, ptr %src, i32 2
+  %l3 = load <4 x float>, ptr %s3, align 4
   %t1 = shufflevector <4 x float> %l1, <4 x float> %l2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %t2 = shufflevector <4 x float> %l3, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <8 x float> %t1, <8 x float> %t2, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-  store <12 x float> %s, <12 x float> *%dst
+  store <12 x float> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v8f32(<8 x float> *%src, <24 x float> *%dst) {
+define void @vst3_v8f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v8f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
@@ -1069,20 +1053,19 @@ define void @vst3_v8f32(<8 x float> *%src, <24 x float> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <8 x float>, <8 x float>* %src, i32 0
-  %l1 = load <8 x float>, <8 x float>* %s1, align 4
-  %s2 = getelementptr <8 x float>, <8 x float>* %src, i32 1
-  %l2 = load <8 x float>, <8 x float>* %s2, align 4
-  %s3 = getelementptr <8 x float>, <8 x float>* %src, i32 2
-  %l3 = load <8 x float>, <8 x float>* %s3, align 4
+  %l1 = load <8 x float>, ptr %src, align 4
+  %s2 = getelementptr <8 x float>, ptr %src, i32 1
+  %l2 = load <8 x float>, ptr %s2, align 4
+  %s3 = getelementptr <8 x float>, ptr %src, i32 2
+  %l3 = load <8 x float>, ptr %s3, align 4
   %t1 = shufflevector <8 x float> %l1, <8 x float> %l2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %t2 = shufflevector <8 x float> %l3, <8 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <16 x float> %t1, <16 x float> %t2, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
-  store <24 x float> %s, <24 x float> *%dst
+  store <24 x float> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v16f32(<16 x float> *%src, <48 x float> *%dst) {
+define void @vst3_v16f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v16f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
@@ -1182,22 +1165,21 @@ define void @vst3_v16f32(<16 x float> *%src, <48 x float> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <16 x float>, <16 x float>* %src, i32 0
-  %l1 = load <16 x float>, <16 x float>* %s1, align 4
-  %s2 = getelementptr <16 x float>, <16 x float>* %src, i32 1
-  %l2 = load <16 x float>, <16 x float>* %s2, align 4
-  %s3 = getelementptr <16 x float>, <16 x float>* %src, i32 2
-  %l3 = load <16 x float>, <16 x float>* %s3, align 4
+  %l1 = load <16 x float>, ptr %src, align 4
+  %s2 = getelementptr <16 x float>, ptr %src, i32 1
+  %l2 = load <16 x float>, ptr %s2, align 4
+  %s3 = getelementptr <16 x float>, ptr %src, i32 2
+  %l3 = load <16 x float>, ptr %s3, align 4
   %t1 = shufflevector <16 x float> %l1, <16 x float> %l2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %t2 = shufflevector <16 x float> %l3, <16 x float> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <32 x float> %t1, <32 x float> %t2, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
-  store <48 x float> %s, <48 x float> *%dst
+  store <48 x float> %s, ptr %dst
   ret void
 }
 
 ; f16
 
-define void @vst3_v2f16(<2 x half> *%src, <6 x half> *%dst) {
+define void @vst3_v2f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v2f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrd r2, r3, [r0]
@@ -1217,20 +1199,19 @@ define void @vst3_v2f16(<2 x half> *%src, <6 x half> *%dst) {
 ; CHECK-NEXT:    stm r1!, {r0, r2, r3}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <2 x half>, <2 x half>* %src, i32 0
-  %l1 = load <2 x half>, <2 x half>* %s1, align 4
-  %s2 = getelementptr <2 x half>, <2 x half>* %src, i32 1
-  %l2 = load <2 x half>, <2 x half>* %s2, align 4
-  %s3 = getelementptr <2 x half>, <2 x half>* %src, i32 2
-  %l3 = load <2 x half>, <2 x half>* %s3, align 4
+  %l1 = load <2 x half>, ptr %src, align 4
+  %s2 = getelementptr <2 x half>, ptr %src, i32 1
+  %l2 = load <2 x half>, ptr %s2, align 4
+  %s3 = getelementptr <2 x half>, ptr %src, i32 2
+  %l3 = load <2 x half>, ptr %s3, align 4
   %t1 = shufflevector <2 x half> %l1, <2 x half> %l2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t2 = shufflevector <2 x half> %l3, <2 x half> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %s = shufflevector <4 x half> %t1, <4 x half> %t2, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-  store <6 x half> %s, <6 x half> *%dst
+  store <6 x half> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v4f16(<4 x half> *%src, <12 x half> *%dst) {
+define void @vst3_v4f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
@@ -1264,20 +1245,19 @@ define void @vst3_v4f16(<4 x half> *%src, <12 x half> *%dst) {
 ; CHECK-NEXT:    strd r0, r2, [r1, #16]
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
-  %s1 = getelementptr <4 x half>, <4 x half>* %src, i32 0
-  %l1 = load <4 x half>, <4 x half>* %s1, align 4
-  %s2 = getelementptr <4 x half>, <4 x half>* %src, i32 1
-  %l2 = load <4 x half>, <4 x half>* %s2, align 4
-  %s3 = getelementptr <4 x half>, <4 x half>* %src, i32 2
-  %l3 = load <4 x half>, <4 x half>* %s3, align 4
+  %l1 = load <4 x half>, ptr %src, align 4
+  %s2 = getelementptr <4 x half>, ptr %src, i32 1
+  %l2 = load <4 x half>, ptr %s2, align 4
+  %s3 = getelementptr <4 x half>, ptr %src, i32 2
+  %l3 = load <4 x half>, ptr %s3, align 4
   %t1 = shufflevector <4 x half> %l1, <4 x half> %l2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %t2 = shufflevector <4 x half> %l3, <4 x half> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <8 x half> %t1, <8 x half> %t2, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-  store <12 x half> %s, <12 x half> *%dst
+  store <12 x half> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v8f16(<8 x half> *%src, <24 x half> *%dst) {
+define void @vst3_v8f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9}
@@ -1334,20 +1314,19 @@ define void @vst3_v8f16(<8 x half> *%src, <24 x half> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <8 x half>, <8 x half>* %src, i32 0
-  %l1 = load <8 x half>, <8 x half>* %s1, align 4
-  %s2 = getelementptr <8 x half>, <8 x half>* %src, i32 1
-  %l2 = load <8 x half>, <8 x half>* %s2, align 4
-  %s3 = getelementptr <8 x half>, <8 x half>* %src, i32 2
-  %l3 = load <8 x half>, <8 x half>* %s3, align 4
+  %l1 = load <8 x half>, ptr %src, align 4
+  %s2 = getelementptr <8 x half>, ptr %src, i32 1
+  %l2 = load <8 x half>, ptr %s2, align 4
+  %s3 = getelementptr <8 x half>, ptr %src, i32 2
+  %l3 = load <8 x half>, ptr %s3, align 4
   %t1 = shufflevector <8 x half> %l1, <8 x half> %l2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %t2 = shufflevector <8 x half> %l3, <8 x half> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <16 x half> %t1, <16 x half> %t2, <24 x i32> <i32 0, i32 8, i32 16, i32 1, i32 9, i32 17, i32 2, i32 10, i32 18, i32 3, i32 11, i32 19, i32 4, i32 12, i32 20, i32 5, i32 13, i32 21, i32 6, i32 14, i32 22, i32 7, i32 15, i32 23>
-  store <24 x half> %s, <24 x half> *%dst
+  store <24 x half> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v16f16(<16 x half> *%src, <48 x half> *%dst) {
+define void @vst3_v16f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v16f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
@@ -1477,22 +1456,21 @@ define void @vst3_v16f16(<16 x half> *%src, <48 x half> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <16 x half>, <16 x half>* %src, i32 0
-  %l1 = load <16 x half>, <16 x half>* %s1, align 4
-  %s2 = getelementptr <16 x half>, <16 x half>* %src, i32 1
-  %l2 = load <16 x half>, <16 x half>* %s2, align 4
-  %s3 = getelementptr <16 x half>, <16 x half>* %src, i32 2
-  %l3 = load <16 x half>, <16 x half>* %s3, align 4
+  %l1 = load <16 x half>, ptr %src, align 4
+  %s2 = getelementptr <16 x half>, ptr %src, i32 1
+  %l2 = load <16 x half>, ptr %s2, align 4
+  %s3 = getelementptr <16 x half>, ptr %src, i32 2
+  %l3 = load <16 x half>, ptr %s3, align 4
   %t1 = shufflevector <16 x half> %l1, <16 x half> %l2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %t2 = shufflevector <16 x half> %l3, <16 x half> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <32 x half> %t1, <32 x half> %t2, <48 x i32> <i32 0, i32 16, i32 32, i32 1, i32 17, i32 33, i32 2, i32 18, i32 34, i32 3, i32 19, i32 35, i32 4, i32 20, i32 36, i32 5, i32 21, i32 37, i32 6, i32 22, i32 38, i32 7, i32 23, i32 39, i32 8, i32 24, i32 40, i32 9, i32 25, i32 41, i32 10, i32 26, i32 42, i32 11, i32 27, i32 43, i32 12, i32 28, i32 44, i32 13, i32 29, i32 45, i32 14, i32 30, i32 46, i32 15, i32 31, i32 47>
-  store <48 x half> %s, <48 x half> *%dst
+  store <48 x half> %s, ptr %dst
   ret void
 }
 
 ; f64
 
-define void @vst3_v2f64(<2 x double> *%src, <6 x double> *%dst) {
+define void @vst3_v2f64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v2f64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -1507,20 +1485,19 @@ define void @vst3_v2f64(<2 x double> *%src, <6 x double> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #32]
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <2 x double>, <2 x double>* %src, i32 0
-  %l1 = load <2 x double>, <2 x double>* %s1, align 4
-  %s2 = getelementptr <2 x double>, <2 x double>* %src, i32 1
-  %l2 = load <2 x double>, <2 x double>* %s2, align 4
-  %s3 = getelementptr <2 x double>, <2 x double>* %src, i32 2
-  %l3 = load <2 x double>, <2 x double>* %s3, align 4
+  %l1 = load <2 x double>, ptr %src, align 4
+  %s2 = getelementptr <2 x double>, ptr %src, i32 1
+  %l2 = load <2 x double>, ptr %s2, align 4
+  %s3 = getelementptr <2 x double>, ptr %src, i32 2
+  %l3 = load <2 x double>, ptr %s3, align 4
   %t1 = shufflevector <2 x double> %l1, <2 x double> %l2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t2 = shufflevector <2 x double> %l3, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %s = shufflevector <4 x double> %t1, <4 x double> %t2, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-  store <6 x double> %s, <6 x double> *%dst
+  store <6 x double> %s, ptr %dst
   ret void
 }
 
-define void @vst3_v4f64(<4 x double> *%src, <12 x double> *%dst) {
+define void @vst3_v4f64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst3_v4f64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
@@ -1550,15 +1527,14 @@ define void @vst3_v4f64(<4 x double> *%src, <12 x double> *%dst) {
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:
-  %s1 = getelementptr <4 x double>, <4 x double>* %src, i32 0
-  %l1 = load <4 x double>, <4 x double>* %s1, align 4
-  %s2 = getelementptr <4 x double>, <4 x double>* %src, i32 1
-  %l2 = load <4 x double>, <4 x double>* %s2, align 4
-  %s3 = getelementptr <4 x double>, <4 x double>* %src, i32 2
-  %l3 = load <4 x double>, <4 x double>* %s3, align 4
+  %l1 = load <4 x double>, ptr %src, align 4
+  %s2 = getelementptr <4 x double>, ptr %src, i32 1
+  %l2 = load <4 x double>, ptr %s2, align 4
+  %s3 = getelementptr <4 x double>, ptr %src, i32 2
+  %l3 = load <4 x double>, ptr %s3, align 4
   %t1 = shufflevector <4 x double> %l1, <4 x double> %l2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %t2 = shufflevector <4 x double> %l3, <4 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %s = shufflevector <8 x double> %t1, <8 x double> %t2, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
-  store <12 x double> %s, <12 x double> *%dst
+  store <12 x double> %s, ptr %dst
   ret void
 }

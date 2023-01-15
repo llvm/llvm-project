@@ -8,7 +8,7 @@ target triple = "arm64_32-apple-watchos2.0.0"
 ; CHECK-NEXT:    .quad 36
 ; CHECK-NEXT:    .quad 4804
 
-define <2 x i8*> @vector_gep(<2 x i8*> %0) {
+define <2 x ptr> @vector_gep(<2 x ptr> %0) {
 ; CHECK-LABEL: vector_gep:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:  Lloh0:
@@ -21,6 +21,6 @@ define <2 x i8*> @vector_gep(<2 x i8*> %0) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 entry:
-  %1 = getelementptr i8, <2 x i8*> %0, <2 x i32> <i32 36, i32 4804>
-  ret <2 x i8*> %1
+  %1 = getelementptr i8, <2 x ptr> %0, <2 x i32> <i32 36, i32 4804>
+  ret <2 x ptr> %1
 }

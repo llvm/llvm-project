@@ -136,6 +136,19 @@ public:
     All,         // Keep all frame pointers.
   };
 
+  static StringRef getFramePointerKindName(FramePointerKind Kind) {
+    switch (Kind) {
+    case FramePointerKind::None:
+      return "none";
+    case FramePointerKind::NonLeaf:
+      return "non-leaf";
+    case FramePointerKind::All:
+      return "all";
+    }
+
+    llvm_unreachable("invalid FramePointerKind");
+  }
+
   enum class SwiftAsyncFramePointerKind {
     Auto, // Choose Swift async extended frame info based on deployment target.
     Always, // Unconditionally emit Swift async extended frame info.

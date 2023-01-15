@@ -77,7 +77,6 @@ static lto::Config createConfig() {
 
   // LLD supports the new relocations and address-significance tables.
   c.Options = initTargetOptionsFromCodeGenFlags();
-  c.Options.RelaxELFRelocations = true;
   c.Options.EmitAddrsig = true;
   for (StringRef C : config->mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
@@ -177,8 +176,10 @@ static lto::Config createConfig() {
     };
   }
 
-  if (config->ltoEmitAsm)
+  if (config->ltoEmitAsm) {
     c.CGFileType = CGFT_AssemblyFile;
+    c.Options.MCOptions.AsmVerbose = true;
+  }
 
   if (!config->saveTempsArgs.empty())
     checkError(c.addSaveTemps(config->outputFile.str() + ".",

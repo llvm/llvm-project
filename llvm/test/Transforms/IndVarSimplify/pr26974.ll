@@ -13,7 +13,7 @@ entry:
   br label %for.body
 
 for.cond1.preheader:                              ; preds = %for.body
-  %0 = load i32, i32* @c, align 4
+  %0 = load i32, ptr @c, align 4
   br i1 undef, label %for.cond1.us.preheader, label %for.cond1
 
 for.cond1.us.preheader:                           ; preds = %for.cond1.preheader

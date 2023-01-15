@@ -428,6 +428,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isPrivateKind);
   REGISTER_MATCHER(isFirstPrivateKind);
   REGISTER_MATCHER(isImplicit);
+  REGISTER_MATCHER(isInAnonymousNamespace);
   REGISTER_MATCHER(isInStdNamespace);
   REGISTER_MATCHER(isInTemplateInstantiation);
   REGISTER_MATCHER(isInitCapture);

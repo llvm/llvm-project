@@ -9,7 +9,7 @@
 
   define i32 @tls_func() local_unnamed_addr {
   entry:
-    %0 = load i32, i32* @tls_var
+    %0 = load i32, ptr @tls_var
     ret i32 %0
   }
 

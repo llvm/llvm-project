@@ -8,8 +8,8 @@
 
 define i32 @foo(i32 %a) {
 entry:
-  %0 = call i32 @llvm.annotation.i32(i32 %a, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i32 0, i32 0), i32 2)
+  %0 = call i32 @llvm.annotation.i32(i32 %a, ptr @.str, ptr @.str1, i32 2)
   ret i32 %0
 }
 
-declare i32 @llvm.annotation.i32(i32, i8*, i8*, i32) #1
+declare i32 @llvm.annotation.i32(i32, ptr, ptr, i32) #1

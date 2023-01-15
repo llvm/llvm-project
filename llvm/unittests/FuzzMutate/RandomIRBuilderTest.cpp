@@ -91,7 +91,7 @@ TEST(RandomIRBuilderTest, InsertValueIndexes) {
   const char *Source = "%T = type {i8, i32, i64}\n"
                        "define void @test() {\n"
                        "  %A = alloca %T\n"
-                       "  %L = load %T, %T* %A"
+                       "  %L = load %T, ptr %A"
                        "  ret void\n"
                        "}";
   auto M = parseAssembly(Source, Ctx);
@@ -169,7 +169,7 @@ TEST(RandomIRBuilderTest, InsertValueArray) {
   LLVMContext Ctx;
   const char *SourceCode = "define void @test() {\n"
                            "  %A = alloca [8 x i32]\n"
-                           "  %L = load [8 x i32], [8 x i32]* %A"
+                           "  %L = load [8 x i32], ptr %A"
                            "  ret void\n"
                            "}";
   auto M = parseAssembly(SourceCode, Ctx);
@@ -203,17 +203,17 @@ TEST(RandomIRBuilderTest, Invokes) {
 
   LLVMContext Ctx;
   const char *SourceCode =
-      "declare i32* @f()"
+      "declare ptr @f()"
       "declare i32 @personality_function()"
-      "define i32* @test() personality i32 ()* @personality_function {\n"
+      "define ptr @test() personality ptr @personality_function {\n"
       "entry:\n"
-      "  %val = invoke i32* @f()\n"
+      "  %val = invoke ptr @f()\n"
       "          to label %normal unwind label %exceptional\n"
       "normal:\n"
-      "  ret i32* %val\n"
+      "  ret ptr %val\n"
       "exceptional:\n"
       "  %landing_pad4 = landingpad token cleanup\n"
-      "  ret i32* undef\n"
+      "  ret ptr undef\n"
       "}";
   auto M = parseAssembly(SourceCode, Ctx);
 
@@ -233,46 +233,16 @@ TEST(RandomIRBuilderTest, Invokes) {
   }
 }
 
-TEST(RandomIRBuilderTest, FirstClassTypes) {
-  // Check that we never insert new source as a load from non first class
-  // or unsized type.
-
-  LLVMContext Ctx;
-  const char *SourceCode = "%Opaque = type opaque\n"
-                           "define void @test(i8* %ptr) {\n"
-                           "entry:\n"
-                           "  %tmp = bitcast i8* %ptr to i32* (i32*)*\n"
-                           "  %tmp1 = bitcast i8* %ptr to %Opaque*\n"
-                           "  ret void\n"
-                           "}";
-  auto M = parseAssembly(SourceCode, Ctx);
-
-  std::vector<Type *> Types = {Type::getInt8Ty(Ctx)};
-  RandomIRBuilder IB(Seed, Types);
-
-  Function &F = *M->getFunction("test");
-  BasicBlock &BB = *F.begin();
-  // Non first class type
-  Instruction *FuncPtr = &*BB.begin();
-  // Unsized type
-  Instruction *OpaquePtr = &*std::next(BB.begin());
-
-  for (int i = 0; i < 10; ++i) {
-    Value *V = IB.findOrCreateSource(BB, {FuncPtr, OpaquePtr});
-    ASSERT_FALSE(isa<LoadInst>(V));
-  }
-}
-
 TEST(RandomIRBuilderTest, SwiftError) {
   // Check that we never pick swifterror value as a source for operation
   // other than load, store and call.
 
   LLVMContext Ctx;
-  const char *SourceCode = "declare void @use(i8** swifterror %err)"
+  const char *SourceCode = "declare void @use(ptr swifterror %err)"
                            "define void @test() {\n"
                            "entry:\n"
-                           "  %err = alloca swifterror i8*, align 8\n"
-                           "  call void @use(i8** swifterror %err)\n"
+                           "  %err = alloca swifterror ptr, align 8\n"
+                           "  call void @use(ptr swifterror %err)\n"
                            "  ret void\n"
                            "}";
   auto M = parseAssembly(SourceCode, Ctx);
@@ -332,7 +302,7 @@ TEST(RandomIRBuilderTest, dontConnectToSwitch) {
     // Choose an instruction and connect to later operations.
     size_t IP = uniform<size_t>(IB.Rand, 1, Insts.size() - 1);
     Instruction *Inst = Insts[IP - 1];
-    auto ConnectAfter = makeArrayRef(Insts).slice(IP);
+    auto ConnectAfter = ArrayRef(Insts).slice(IP);
     IB.connectToSink(*BB, ConnectAfter, Inst);
     ASSERT_FALSE(verifyModule(*M, &errs()));
   }

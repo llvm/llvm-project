@@ -14,8 +14,8 @@
   define dso_local i32 @CP() #1 {
   entry:
     %res = alloca half, align 2
-    store half 0xH706B, half* %res, align 2
-    %0 = load half, half* %res, align 2
+    store half 0xH706B, ptr %res, align 2
+    %0 = load half, ptr %res, align 2
     %tobool = fcmp une half %0, 0xH0000
     br i1 %tobool, label %LA, label %END
 
@@ -29,7 +29,7 @@
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { nounwind "target-features"="+v8.2a,+fullfp16" }
   attributes #1 = { "target-features"="+v8.2a,+fullfp16" }

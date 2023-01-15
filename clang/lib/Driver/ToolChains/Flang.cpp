@@ -176,10 +176,41 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     case options::OPT_fno_reciprocal_math:
       ReciprocalMath = false;
       break;
+    case options::OPT_Ofast:
+      [[fallthrough]];
+    case options::OPT_ffast_math:
+      HonorINFs = false;
+      HonorNaNs = false;
+      AssociativeMath = true;
+      ReciprocalMath = true;
+      ApproxFunc = true;
+      SignedZeros = false;
+      FPContract = "fast";
+      break;
+    case options::OPT_fno_fast_math:
+      HonorINFs = true;
+      HonorNaNs = true;
+      AssociativeMath = false;
+      ReciprocalMath = false;
+      ApproxFunc = false;
+      SignedZeros = true;
+      // -fno-fast-math should undo -ffast-math so I return FPContract to the
+      // default. It is important to check it is "fast" (the default) so that
+      // --ffp-contract=off -fno-fast-math --> -ffp-contract=off
+      if (FPContract == "fast")
+        FPContract = "";
+      break;
     }
 
     // If we handled this option claim it
     A->claim();
+  }
+
+  if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
+      ApproxFunc && !SignedZeros &&
+      (FPContract == "fast" || FPContract == "")) {
+    CmdArgs.push_back("-ffast-math");
+    return;
   }
 
   if (!FPContract.empty())
@@ -295,6 +326,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     if (A->getOption().matches(options::OPT_O4)) {
       CmdArgs.push_back("-O3");
       D.Diag(diag::warn_O4_is_O3);
+    } else if (A->getOption().matches(options::OPT_Ofast)) {
+      CmdArgs.push_back("-O3");
     } else {
       A->render(Args, CmdArgs);
     }

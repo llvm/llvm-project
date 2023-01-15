@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
@@ -601,7 +602,7 @@ static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
 /// distinct names (e.g. armv7f) but armv7 binaries run fine on an armv7f
 /// processor.
 void PlatformDarwin::ARMGetSupportedArchitectures(
-    std::vector<ArchSpec> &archs, llvm::Optional<llvm::Triple::OSType> os) {
+    std::vector<ArchSpec> &archs, std::optional<llvm::Triple::OSType> os) {
   const ArchSpec system_arch = GetSystemArchitecture();
   const ArchSpec::Core system_core = system_arch.GetCore();
   for (const char *arch : GetCompatibleArchs(system_core)) {
@@ -1055,7 +1056,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   // Only add the version-min options if we got a version from somewhere
   if (!version.empty() && sdk_type != XcodeSDK::Type::Linux) {
 #define OPTION(PREFIX, NAME, VAR, ...)                                         \
-  const char *opt_##VAR = NAME;                                                \
+  llvm::StringRef opt_##VAR = NAME;                                            \
   (void)opt_##VAR;
 #include "clang/Driver/Options.inc"
 #undef OPTION

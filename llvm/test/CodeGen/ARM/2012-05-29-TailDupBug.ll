@@ -5,7 +5,7 @@
 
 %struct.__CFString.2 = type opaque
 
-declare void @CFRelease(i8*)
+declare void @CFRelease(ptr)
 
 define hidden fastcc i32 @t() ssp {
 entry:
@@ -108,7 +108,7 @@ for.cond57.preheader.i:                           ; preds = %for.cond16.preheade
   br label %cleanup.i
 
 for.body18.i:                                     ; preds = %for.cond16.preheader.i
-  store i16 0, i16* undef, align 2
+  store i16 0, ptr undef, align 2
   br label %while.body.i
 
 while.body.i:                                     ; preds = %while.body.i, %for.body18.i
@@ -119,17 +119,16 @@ cleanup.i:                                        ; preds = %for.cond57.preheade
 
 __CFHyphenationGetHyphensForString.exit:          ; preds = %cleanup.i, %if.then50
   %retval.1.i = phi i32 [ 0, %cleanup.i ], [ -1, %if.then50 ]
-  %phitmp = bitcast %struct.__CFString.2* null to i8*
   br label %if.end68
 
 cleanup.thread:                                   ; preds = %if.end35, %land.lhs.true, %if.end20.i, %if.then4.i
-  call void @llvm.stackrestore(i8* null)
+  call void @llvm.stackrestore(ptr null)
   br label %return
 
 if.end68:                                         ; preds = %__CFHyphenationGetHyphensForString.exit, %__CFHyphenationPullTokenizer.exit
   %hyphenCount.2 = phi i32 [ %retval.1.i, %__CFHyphenationGetHyphensForString.exit ], [ 0, %__CFHyphenationPullTokenizer.exit ]
-  %_token.1 = phi i8* [ %phitmp, %__CFHyphenationGetHyphensForString.exit ], [ undef, %__CFHyphenationPullTokenizer.exit ]
-  call void @CFRelease(i8* %_token.1)
+  %_token.1 = phi ptr [ null, %__CFHyphenationGetHyphensForString.exit ], [ undef, %__CFHyphenationPullTokenizer.exit ]
+  call void @CFRelease(ptr %_token.1)
   br label %return
 
 return:                                           ; preds = %if.end68, %cleanup.thread, %CFStringIsHyphenationAvailableForLocale.exit, %entry
@@ -137,4 +136,4 @@ return:                                           ; preds = %if.end68, %cleanup.
   ret i32 %retval.1
 }
 
-declare void @llvm.stackrestore(i8*) nounwind
+declare void @llvm.stackrestore(ptr) nounwind

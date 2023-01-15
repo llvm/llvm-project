@@ -308,6 +308,278 @@ define i1 @iszero_f128(fp128 %x) nounwind {
   ret i1 %1
 }
 
+define i1 @issnan_float(float %x) nounwind {
+; CHECK-LABEL: issnan_float:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xscvdpspn 0, 1
+; CHECK-NEXT:    lis 4, 32704
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    clrlwi 3, 3, 1
+; CHECK-NEXT:    cmpw 3, 4
+; CHECK-NEXT:    lis 4, 32640
+; CHECK-NEXT:    cmpw 1, 3, 4
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crnand 20, 5, 0
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 1)
+  ret i1 %1
+}
+
+define i1 @issnan_double(double %x) nounwind {
+; CHECK-LABEL: issnan_double:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    li 4, 4095
+; CHECK-NEXT:    clrldi 3, 3, 1
+; CHECK-NEXT:    rldic 4, 4, 51, 1
+; CHECK-NEXT:    cmpd 3, 4
+; CHECK-NEXT:    li 4, 2047
+; CHECK-NEXT:    rldic 4, 4, 52, 1
+; CHECK-NEXT:    cmpd 1, 3, 4
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crnand 20, 5, 0
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 1)
+  ret i1 %1
+}
+
+define i1 @issnan_fp128(fp128 %x) nounwind {
+; CHECK-LABEL: issnan_fp128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stxv 34, -16(1)
+; CHECK-NEXT:    li 5, 32767
+; CHECK-NEXT:    ld 4, -8(1)
+; CHECK-NEXT:    ld 3, -16(1)
+; CHECK-NEXT:    rldic 5, 5, 48, 1
+; CHECK-NEXT:    clrldi 4, 4, 1
+; CHECK-NEXT:    cmpld 4, 5
+; CHECK-NEXT:    cmpd 1, 4, 5
+; CHECK-NEXT:    crandc 20, 5, 2
+; CHECK-NEXT:    cmpdi 1, 3, 0
+; CHECK-NEXT:    li 3, -1
+; CHECK-NEXT:    crandc 21, 2, 6
+; CHECK-NEXT:    rldic 3, 3, 47, 1
+; CHECK-NEXT:    cror 20, 21, 20
+; CHECK-NEXT:    cmpd 4, 3
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crnand 20, 20, 0
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f128(fp128 %x, i32 1)
+  ret i1 %1
+}
+
+define i1 @issnan_ppc_fp128(ppc_fp128 %x) nounwind {
+; CHECK-LABEL: issnan_ppc_fp128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    li 4, 4095
+; CHECK-NEXT:    clrldi 3, 3, 1
+; CHECK-NEXT:    rldic 4, 4, 51, 1
+; CHECK-NEXT:    cmpd 3, 4
+; CHECK-NEXT:    li 4, 2047
+; CHECK-NEXT:    rldic 4, 4, 52, 1
+; CHECK-NEXT:    cmpd 1, 3, 4
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crnand 20, 5, 0
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %x, i32 1)
+  ret i1 %1
+}
+
+define i1 @isqnan_float(float %x) nounwind {
+; CHECK-LABEL: isqnan_float:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xscvdpspn 0, 1
+; CHECK-NEXT:    lis 4, 32703
+; CHECK-NEXT:    ori 4, 4, 65535
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    clrlwi 3, 3, 1
+; CHECK-NEXT:    cmpw 3, 4
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 2)
+  ret i1 %1
+}
+
+define i1 @isqnan_double(double %x) nounwind {
+; CHECK-LABEL: isqnan_double:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    li 4, -17
+; CHECK-NEXT:    clrldi 3, 3, 1
+; CHECK-NEXT:    rldicl 4, 4, 47, 1
+; CHECK-NEXT:    cmpd 3, 4
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 2)
+  ret i1 %1
+}
+
+define i1 @isqnan_fp128(fp128 %x) nounwind {
+; CHECK-LABEL: isqnan_fp128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stxv 34, -16(1)
+; CHECK-NEXT:    li 4, -2
+; CHECK-NEXT:    ld 3, -8(1)
+; CHECK-NEXT:    rldicl 4, 4, 47, 1
+; CHECK-NEXT:    clrldi 3, 3, 1
+; CHECK-NEXT:    cmpd 3, 4
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f128(fp128 %x, i32 2)
+  ret i1 %1
+}
+
+define i1 @isqnan_ppc_fp128(ppc_fp128 %x) nounwind {
+; CHECK-LABEL: isqnan_ppc_fp128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    li 4, -17
+; CHECK-NEXT:    clrldi 3, 3, 1
+; CHECK-NEXT:    rldicl 4, 4, 47, 1
+; CHECK-NEXT:    cmpd 3, 4
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %x, i32 2)
+  ret i1 %1
+}
+
+define i1 @isposzero_double(double %x) nounwind {
+; CHECK-LABEL: isposzero_double:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    cntlzd 3, 3
+; CHECK-NEXT:    rldicl 3, 3, 58, 63
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 64)
+  ret i1 %1
+}
+
+define i1 @isnegzero_double(double %x) nounwind {
+; CHECK-LABEL: isnegzero_double:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    rldic 5, 4, 63, 0
+; CHECK-NEXT:    cmpd 3, 5
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    iseleq 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 32)
+  ret i1 %1
+}
+
+define i1 @isposnormal_double(double %x) nounwind {
+; CHECK-LABEL: isposnormal_double:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    li 5, 4095
+; CHECK-NEXT:    clrldi 4, 3, 1
+; CHECK-NEXT:    rldic 5, 5, 52, 0
+; CHECK-NEXT:    cmpdi 1, 3, -1
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    add 4, 4, 5
+; CHECK-NEXT:    rldicl 4, 4, 11, 53
+; CHECK-NEXT:    cmpldi 4, 1023
+; CHECK-NEXT:    crnand 20, 0, 5
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 256)
+  ret i1 %1
+}
+
+define i1 @isnegnormal_double(double %x) nounwind {
+; CHECK-LABEL: isnegnormal_double:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    li 5, 4095
+; CHECK-NEXT:    clrldi 4, 3, 1
+; CHECK-NEXT:    rldic 5, 5, 52, 0
+; CHECK-NEXT:    cmpdi 1, 3, 0
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    add 4, 4, 5
+; CHECK-NEXT:    rldicl 4, 4, 11, 53
+; CHECK-NEXT:    cmpldi 4, 1023
+; CHECK-NEXT:    crnand 20, 0, 4
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 8)
+  ret i1 %1
+}
+
+define i1 @isnormal_double(double %x) nounwind {
+; CHECK-LABEL: isnormal_double:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    li 4, 4095
+; CHECK-NEXT:    clrldi 3, 3, 1
+; CHECK-NEXT:    rldic 4, 4, 52, 0
+; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    rldicl 3, 3, 11, 53
+; CHECK-NEXT:    cmpldi 3, 1023
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    isellt 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 264)
+  ret i1 %1
+}
+
+define i1 @isclass_00d_double(double %x) nounwind {
+; CHECK-LABEL: isclass_00d_double:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    li 5, 4095
+; CHECK-NEXT:    clrldi 4, 3, 1
+; CHECK-NEXT:    rldic 6, 5, 51, 1
+; CHECK-NEXT:    rldic 5, 5, 52, 0
+; CHECK-NEXT:    cmpd 4, 6
+; CHECK-NEXT:    li 6, 2047
+; CHECK-NEXT:    rldic 6, 6, 52, 1
+; CHECK-NEXT:    cmpd 1, 4, 6
+; CHECK-NEXT:    add 4, 4, 5
+; CHECK-NEXT:    crand 20, 5, 0
+; CHECK-NEXT:    cmpd 3, 5
+; CHECK-NEXT:    rldicl 4, 4, 11, 53
+; CHECK-NEXT:    cmpdi 1, 3, 0
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    cror 20, 2, 20
+; CHECK-NEXT:    cmpldi 4, 1023
+; CHECK-NEXT:    crand 21, 0, 4
+; CHECK-NEXT:    crnor 20, 20, 21
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 13)
+  ret i1 %1
+}
+
+define i1 @isclass_1c0_float(float %x) nounwind {
+; CHECK-LABEL: isclass_1c0_float:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xscvdpspn 0, 1
+; CHECK-NEXT:    li 4, 1
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    srwi 3, 3, 23
+; CHECK-NEXT:    cmplwi 3, 255
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    isellt 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 448)
+  ret i1 %1
+}
+
 declare i1 @llvm.is.fpclass.f32(float, i32)
 declare i1 @llvm.is.fpclass.f64(double, i32)
 declare i1 @llvm.is.fpclass.ppcf128(ppc_fp128, i32)

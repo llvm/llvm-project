@@ -38,6 +38,7 @@ def PDLInterp_Dialect : Dialect {
   let name = "pdl_interp";
   let cppNamespace = "::mlir::pdl_interp";
   let dependentDialects = ["pdl::PDLDialect"];
+  let useFoldAPI = kEmitFoldAdaptorFolder;
   let extraClassDeclaration = [{
     /// Returns the name of the function containing the matcher code. This
     /// function is called by the interpreter when matching an operation.
@@ -652,7 +653,9 @@ def PDLInterp_FuncOp : PDLInterp_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    TypeAttrOf<FunctionType>:$function_type
+    TypeAttrOf<FunctionType>:$function_type,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
   let regions = (region MinSizedRegion<1>:$body);
 
@@ -814,7 +817,7 @@ def PDLInterp_GetOperandsOp : PDLInterp_Op<"get_operands", [Pure]> {
   let assemblyFormat = "($index^)? `of` $inputOp `:` type($value) attr-dict";
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$inputOp,
-                   "Optional<unsigned>":$index), [{
+                   "std::optional<unsigned>":$index), [{
       build($_builder, $_state, resultType, inputOp,
             index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
     }]>,
@@ -881,7 +884,7 @@ def PDLInterp_GetResultsOp : PDLInterp_Op<"get_results", [Pure]> {
   let assemblyFormat = "($index^)? `of` $inputOp `:` type($value) attr-dict";
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$inputOp,
-                   "Optional<unsigned>":$index), [{
+                   "std::optional<unsigned>":$index), [{
       build($_builder, $_state, resultType, inputOp,
             index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
     }]>,

@@ -1128,18 +1128,18 @@ TEST(SmallVectorTest, InitializerList) {
   SmallVector<int, 2> V1 = {};
   EXPECT_TRUE(V1.empty());
   V1 = {0, 0};
-  EXPECT_TRUE(makeArrayRef(V1).equals({0, 0}));
+  EXPECT_TRUE(ArrayRef(V1).equals({0, 0}));
   V1 = {-1, -1};
-  EXPECT_TRUE(makeArrayRef(V1).equals({-1, -1}));
+  EXPECT_TRUE(ArrayRef(V1).equals({-1, -1}));
 
   SmallVector<int, 2> V2 = {1, 2, 3, 4};
-  EXPECT_TRUE(makeArrayRef(V2).equals({1, 2, 3, 4}));
+  EXPECT_TRUE(ArrayRef(V2).equals({1, 2, 3, 4}));
   V2.assign({4});
-  EXPECT_TRUE(makeArrayRef(V2).equals({4}));
+  EXPECT_TRUE(ArrayRef(V2).equals({4}));
   V2.append({3, 2});
-  EXPECT_TRUE(makeArrayRef(V2).equals({4, 3, 2}));
+  EXPECT_TRUE(ArrayRef(V2).equals({4, 3, 2}));
   V2.insert(V2.begin() + 1, 5);
-  EXPECT_TRUE(makeArrayRef(V2).equals({4, 5, 3, 2}));
+  EXPECT_TRUE(ArrayRef(V2).equals({4, 5, 3, 2}));
 }
 
 TEST(SmallVectorTest, ToVector) {

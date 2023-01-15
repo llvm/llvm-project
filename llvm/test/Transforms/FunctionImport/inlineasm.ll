@@ -11,9 +11,9 @@
 define i32 @main() #0 {
 entry:
   %f = alloca i64, align 8
-  call void @foo(i64* %f)
+  call void @foo(ptr %f)
   ret i32 0
 }
 
-; CHECK: declare void @foo(i64*)
-declare void @foo(i64*) #1
+; CHECK: declare void @foo(ptr)
+declare void @foo(ptr) #1

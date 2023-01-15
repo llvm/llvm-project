@@ -9,8 +9,8 @@
 #ifndef LLDB_UTILITY_URIPARSER_H
 #define LLDB_UTILITY_URIPARSER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 namespace llvm {
 class raw_ostream;
@@ -21,7 +21,7 @@ namespace lldb_private {
 struct URI {
   llvm::StringRef scheme;
   llvm::StringRef hostname;
-  llvm::Optional<uint16_t> port;
+  std::optional<uint16_t> port;
   llvm::StringRef path;
 
   bool operator==(const URI &R) const {
@@ -29,7 +29,7 @@ struct URI {
            path == R.path;
   }
 
-  static llvm::Optional<URI> Parse(llvm::StringRef uri);
+  static std::optional<URI> Parse(llvm::StringRef uri);
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const URI &U);

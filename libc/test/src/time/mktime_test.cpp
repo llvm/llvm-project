@@ -15,7 +15,6 @@
 
 #include <errno.h>
 #include <limits.h>
-#include <string.h>
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
 using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;

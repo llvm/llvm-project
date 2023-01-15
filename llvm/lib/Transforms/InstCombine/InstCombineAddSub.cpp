@@ -1129,6 +1129,35 @@ static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {
   return nullptr;
 }
 
+/// Try to reduce signed division by power-of-2 to an arithmetic shift right.
+static Instruction *foldAddToAshr(BinaryOperator &Add) {
+  // Division must be by power-of-2, but not the minimum signed value.
+  Value *X;
+  const APInt *DivC;
+  if (!match(Add.getOperand(0), m_SDiv(m_Value(X), m_Power2(DivC))) ||
+      DivC->isNegative())
+    return nullptr;
+
+  // Rounding is done by adding -1 if the dividend (X) is negative and has any
+  // low bits set. The canonical pattern for that is an "ugt" compare with SMIN:
+  // sext (icmp ugt (X & (DivC - 1)), SMIN)
+  const APInt *MaskC;
+  ICmpInst::Predicate Pred;
+  if (!match(Add.getOperand(1),
+             m_SExt(m_ICmp(Pred, m_And(m_Specific(X), m_APInt(MaskC)),
+                           m_SignMask()))) ||
+      Pred != ICmpInst::ICMP_UGT)
+    return nullptr;
+
+  APInt SMin = APInt::getSignedMinValue(Add.getType()->getScalarSizeInBits());
+  if (*MaskC != (SMin | (*DivC - 1)))
+    return nullptr;
+
+  // (X / DivC) + sext ((X & (SMin | (DivC - 1)) >u SMin) --> X >>s log2(DivC)
+  return BinaryOperator::CreateAShr(
+      X, ConstantInt::get(Add.getType(), DivC->exactLogBase2()));
+}
+
 Instruction *InstCombinerImpl::
     canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
         BinaryOperator &I) {
@@ -1415,6 +1444,13 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(A, NewMask);
   }
 
+  // ZExt (B - A) + ZExt(A) --> ZExt(B)
+  if ((match(RHS, m_ZExt(m_Value(A))) &&
+       match(LHS, m_ZExt(m_NUWSub(m_Value(B), m_Specific(A))))) ||
+      (match(LHS, m_ZExt(m_Value(A))) &&
+       match(RHS, m_ZExt(m_NUWSub(m_Value(B), m_Specific(A))))))
+    return new ZExtInst(B, LHS->getType());
+
   // A+B --> A|B iff A and B have no bits set in common.
   if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
     return BinaryOperator::CreateOr(LHS, RHS);
@@ -1483,6 +1519,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     Value *Shl = Builder.CreateShl(A, ShiftAmtC);
     return BinaryOperator::CreateSub(B, Shl);
   }
+
+  if (Instruction *Ashr = foldAddToAshr(I))
+    return Ashr;
 
   // TODO(jingyue): Consider willNotOverflowSignedAdd and
   // willNotOverflowUnsignedAdd to reduce the number of invocations of
@@ -2404,18 +2443,26 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
   if (Instruction *R = hoistFNegAboveFMulFDiv(I, Builder))
     return R;
 
+  Value *OneUse;
+  if (!match(Op, m_OneUse(m_Value(OneUse))))
+    return nullptr;
+
   // Try to eliminate fneg if at least 1 arm of the select is negated.
   Value *Cond;
-  if (match(Op, m_OneUse(m_Select(m_Value(Cond), m_Value(X), m_Value(Y))))) {
+  if (match(OneUse, m_Select(m_Value(Cond), m_Value(X), m_Value(Y)))) {
     // Unlike most transforms, this one is not safe to propagate nsz unless
-    // it is present on the original select. (We are conservatively intersecting
-    // the nsz flags from the select and root fneg instruction.)
+    // it is present on the original select. We union the flags from the select
+    // and fneg and then remove nsz if needed.
     auto propagateSelectFMF = [&](SelectInst *S, bool CommonOperand) {
       S->copyFastMathFlags(&I);
-      if (auto *OldSel = dyn_cast<SelectInst>(Op))
+      if (auto *OldSel = dyn_cast<SelectInst>(Op)) {
+        FastMathFlags FMF = I.getFastMathFlags();
+        FMF |= OldSel->getFastMathFlags();
+        S->setFastMathFlags(FMF);
         if (!OldSel->hasNoSignedZeros() && !CommonOperand &&
             !isGuaranteedNotToBeUndefOrPoison(OldSel->getCondition()))
           S->setHasNoSignedZeros(false);
+      }
     };
     // -(Cond ? -P : Y) --> Cond ? P : -Y
     Value *P;
@@ -2432,6 +2479,21 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
       propagateSelectFMF(NewSel, P == X);
       return NewSel;
     }
+  }
+
+  // fneg (copysign x, y) -> copysign x, (fneg y)
+  if (match(OneUse, m_CopySign(m_Value(X), m_Value(Y)))) {
+    // The source copysign has an additional value input, so we can't propagate
+    // flags the copysign doesn't also have.
+    FastMathFlags FMF = I.getFastMathFlags();
+    FMF &= cast<FPMathOperator>(OneUse)->getFastMathFlags();
+
+    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+    Builder.setFastMathFlags(FMF);
+
+    Value *NegY = Builder.CreateFNeg(Y);
+    Value *NewCopySign = Builder.CreateCopySign(X, NegY);
+    return replaceInstUsesWith(I, NewCopySign);
   }
 
   return nullptr;

@@ -14,7 +14,7 @@
 // XFAIL: ubsan
 
 // THUMB starts background thead only for Asan.
-// XFAIL: thumb && !asan
+// XFAIL: target=thumb{{.*}} && !asan
 
 // https://github.com/google/sanitizers/issues/981
 // UNSUPPORTED: android-26

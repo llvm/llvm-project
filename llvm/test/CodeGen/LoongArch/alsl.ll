@@ -128,19 +128,16 @@ entry:
   ret i64 %zext
 }
 
-;; Check that alsl.w or alsl.d is not emitted.
 define i8 @mul_add_i8(i8 signext %a, i8 signext %b) nounwind {
 ; LA32-LABEL: mul_add_i8:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ori $a2, $zero, 3
-; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 1
 ; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_add_i8:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ori $a2, $zero, 3
-; LA64-NEXT:    mul.d $a0, $a0, $a2
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 1
 ; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
@@ -192,12 +189,14 @@ entry:
 define i64 @mul_add_i64(i64 signext %a, i64 signext %b) nounwind {
 ; LA32-LABEL: mul_add_i64:
 ; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    slli.w $a4, $a1, 4
+; LA32-NEXT:    sub.w $a1, $a4, $a1
 ; LA32-NEXT:    ori $a4, $zero, 15
-; LA32-NEXT:    mul.w $a1, $a1, $a4
-; LA32-NEXT:    mulh.wu $a5, $a0, $a4
-; LA32-NEXT:    add.w $a1, $a5, $a1
+; LA32-NEXT:    mulh.wu $a4, $a0, $a4
+; LA32-NEXT:    add.w $a1, $a4, $a1
 ; LA32-NEXT:    add.w $a1, $a3, $a1
-; LA32-NEXT:    mul.w $a0, $a0, $a4
+; LA32-NEXT:    slli.w $a3, $a0, 4
+; LA32-NEXT:    sub.w $a0, $a3, $a0
 ; LA32-NEXT:    add.w $a0, $a2, $a0
 ; LA32-NEXT:    sltu $a2, $a0, $a2
 ; LA32-NEXT:    add.w $a1, $a1, $a2
@@ -205,8 +204,8 @@ define i64 @mul_add_i64(i64 signext %a, i64 signext %b) nounwind {
 ;
 ; LA64-LABEL: mul_add_i64:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ori $a2, $zero, 15
-; LA64-NEXT:    mul.d $a0, $a0, $a2
+; LA64-NEXT:    slli.d $a2, $a0, 4
+; LA64-NEXT:    sub.d $a0, $a2, $a0
 ; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
@@ -218,16 +217,14 @@ entry:
 define i32 @mul_add_zext_i8(i8 signext %a, i8 signext %b) nounwind {
 ; LA32-LABEL: mul_add_zext_i8:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ori $a2, $zero, 5
-; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 2
 ; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    andi $a0, $a0, 255
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_add_zext_i8:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ori $a2, $zero, 5
-; LA64-NEXT:    mul.d $a0, $a0, $a2
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 2
 ; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    andi $a0, $a0, 255
 ; LA64-NEXT:    ret
@@ -241,16 +238,16 @@ entry:
 define i32 @mul_add_zext_i16(i16 signext %a, i16 signext %b) nounwind {
 ; LA32-LABEL: mul_add_zext_i16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ori $a2, $zero, 15
-; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    slli.w $a2, $a0, 4
+; LA32-NEXT:    sub.w $a0, $a2, $a0
 ; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_add_zext_i16:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ori $a2, $zero, 15
-; LA64-NEXT:    mul.d $a0, $a0, $a2
+; LA64-NEXT:    slli.d $a2, $a0, 4
+; LA64-NEXT:    sub.d $a0, $a2, $a0
 ; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-NEXT:    ret
@@ -261,20 +258,17 @@ entry:
   ret i32 %zext
 }
 
-;; Check that alsl.wu is not emitted.
 define i64 @mul_add_zext_i32(i32 signext %a, i32 signext %b) nounwind {
 ; LA32-LABEL: mul_add_zext_i32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ori $a2, $zero, 5
-; LA32-NEXT:    mul.w $a0, $a0, $a2
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 2
 ; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: mul_add_zext_i32:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ori $a2, $zero, 5
-; LA64-NEXT:    mul.d $a0, $a0, $a2
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 2
 ; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    ret
@@ -283,4 +277,87 @@ entry:
   %add = add nsw i32 %b, %mul
   %zext = zext i32 %add to i64
   ret i64 %zext
+}
+
+define i8 @alsl_neg_i8(i8 signext %a, i8 signext %b) nounwind {
+; LA32-LABEL: alsl_neg_i8:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 1
+; LA32-NEXT:    sub.w $a0, $a1, $a0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: alsl_neg_i8:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 1
+; LA64-NEXT:    sub.d $a0, $a1, $a0
+; LA64-NEXT:    ret
+entry:
+  %mul = mul nsw i8 %a, -3
+  %add = add nsw i8 %b, %mul
+  ret i8 %add
+}
+
+define i16 @alsl_neg_i16(i16 signext %a, i16 signext %b) nounwind {
+; LA32-LABEL: alsl_neg_i16:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 2
+; LA32-NEXT:    sub.w $a0, $a1, $a0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: alsl_neg_i16:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 2
+; LA64-NEXT:    sub.d $a0, $a1, $a0
+; LA64-NEXT:    ret
+entry:
+  %mul = mul nsw i16 %a, -5
+  %add = add nsw i16 %b, %mul
+  ret i16 %add
+}
+
+define i32 @alsl_neg_i32(i32 signext %a, i32 signext %b) nounwind {
+; LA32-LABEL: alsl_neg_i32:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    alsl.w $a0, $a0, $a0, 3
+; LA32-NEXT:    sub.w $a0, $a1, $a0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: alsl_neg_i32:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    alsl.d $a0, $a0, $a0, 3
+; LA64-NEXT:    sub.d $a0, $a1, $a0
+; LA64-NEXT:    ret
+entry:
+  %mul = mul nsw i32 %a, -9
+  %add = add nsw i32 %b, %mul
+  ret i32 %add
+}
+
+define i64 @mul_add_neg_i64(i64 signext %a, i64 signext %b) nounwind {
+; LA32-LABEL: mul_add_neg_i64:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    slli.w $a4, $a1, 4
+; LA32-NEXT:    sub.w $a1, $a1, $a4
+; LA32-NEXT:    addi.w $a4, $zero, -15
+; LA32-NEXT:    mulh.wu $a4, $a0, $a4
+; LA32-NEXT:    sub.w $a4, $a4, $a0
+; LA32-NEXT:    add.w $a1, $a4, $a1
+; LA32-NEXT:    add.w $a1, $a3, $a1
+; LA32-NEXT:    slli.w $a3, $a0, 4
+; LA32-NEXT:    sub.w $a0, $a0, $a3
+; LA32-NEXT:    add.w $a0, $a2, $a0
+; LA32-NEXT:    sltu $a2, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a1, $a2
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: mul_add_neg_i64:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    slli.d $a2, $a0, 4
+; LA64-NEXT:    sub.d $a0, $a0, $a2
+; LA64-NEXT:    add.d $a0, $a1, $a0
+; LA64-NEXT:    ret
+entry:
+  %mul = mul nsw i64 %a, -15
+  %add = add nsw i64 %b, %mul
+  ret i64 %add
 }

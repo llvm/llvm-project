@@ -6,8 +6,8 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK: .type foo,@function
 ; CHECK-LABEL: foo:
 ; CHECK: end_function
-define i32* @foo() {
-  ret i32* @bar
+define ptr @foo() {
+  ret ptr @bar
 }
 
 ; CHECK: .type bar,@object

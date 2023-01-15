@@ -16,6 +16,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -308,7 +309,7 @@ static std::unique_ptr<TagNode> genLink(const Twine &Text, const Twine &Link) {
 
 static std::unique_ptr<HTMLNode>
 genReference(const Reference &Type, StringRef CurrentDirectory,
-             llvm::Optional<StringRef> JumpToSection = std::nullopt) {
+             std::optional<StringRef> JumpToSection = std::nullopt) {
   if (Type.Path.empty()) {
     if (!JumpToSection)
       return std::make_unique<TextNode>(Type.Name);
@@ -437,7 +438,7 @@ genReferencesBlock(const std::vector<Reference> &References,
 
 static std::unique_ptr<TagNode>
 writeFileDefinition(const Location &L,
-                    llvm::Optional<StringRef> RepositoryUrl = std::nullopt) {
+                    std::optional<StringRef> RepositoryUrl = std::nullopt) {
   if (!L.IsFileInRootDir || !RepositoryUrl)
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
@@ -655,10 +656,10 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.value()));
+      Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
       Out.emplace_back(writeFileDefinition(
-          I.DefLoc.value(), StringRef{CDCtx.RepositoryUrl.value()}));
+          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -704,10 +705,10 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.value()));
+      Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
       Out.emplace_back(writeFileDefinition(
-          I.DefLoc.value(), StringRef{CDCtx.RepositoryUrl.value()}));
+          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -771,10 +772,10 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.value()));
+      Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
       Out.emplace_back(writeFileDefinition(
-          I.DefLoc.value(), StringRef{CDCtx.RepositoryUrl.value()}));
+          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;

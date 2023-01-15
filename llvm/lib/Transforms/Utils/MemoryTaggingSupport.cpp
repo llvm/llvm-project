@@ -174,7 +174,7 @@ bool StackInfoBuilder::isInterestingAlloca(const AllocaInst &AI) {
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
   auto DL = AI.getModule()->getDataLayout();
-  return *AI.getAllocationSizeInBits(DL) / 8;
+  return *AI.getAllocationSize(DL);
 }
 
 void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {

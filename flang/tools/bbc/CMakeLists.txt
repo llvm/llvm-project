@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
 Passes
+TargetParser
 )
 
 add_flang_tool(bbc bbc.cpp

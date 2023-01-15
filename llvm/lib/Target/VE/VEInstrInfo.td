@@ -482,10 +482,6 @@ def GetTLSAddr : SDNode<"VEISD::GETTLSADDR", SDT_SPCall,
 def GetStackTop : SDNode<"VEISD::GETSTACKTOP", SDTNone,
                         [SDNPHasChain, SDNPSideEffect]>;
 
-// MEMBARRIER
-def MemBarrier : SDNode<"VEISD::MEMBARRIER", SDTNone,
-                        [SDNPHasChain, SDNPSideEffect]>;
-
 // TS1AM
 def SDT_TS1AM : SDTypeProfile<1, 3, [SDTCisSameAs<0, 3>, SDTCisPtrTy<1>,
                                      SDTCisVT<2, i32>, SDTCisInt<3>]>;
@@ -2021,10 +2017,6 @@ let Uses = [SX11], hasSideEffects = 1 in
 def GETSTACKTOP : Pseudo<(outs I64:$dst), (ins),
                          "# GET STACK TOP",
                          [(set iPTR:$dst, (GetStackTop))]>;
-
-// MEMBARRIER
-let hasSideEffects = 1 in
-def MEMBARRIER : Pseudo<(outs), (ins), "# MEMBARRIER", [(MemBarrier)] >;
 
 //===----------------------------------------------------------------------===//
 // Other patterns

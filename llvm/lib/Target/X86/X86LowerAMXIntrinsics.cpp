@@ -441,7 +441,7 @@ X86LowerAMXIntrinsics::createTileDPLoops(BasicBlock *Start, BasicBlock *End,
     Value *SubVecB = B.CreateBitCast(EltB, V2I16Ty);
     Value *ZeroV2I16 = Constant::getNullValue(V2I16Ty);
     int ShuffleMask[4] = {2, 0, 3, 1};
-    auto ShuffleArray = makeArrayRef(ShuffleMask);
+    auto ShuffleArray = ArrayRef(ShuffleMask);
     Value *AV2F32 = B.CreateBitCast(
         B.CreateShuffleVector(SubVecA, ZeroV2I16, ShuffleArray), V2F32Ty);
     Value *BV2F32 = B.CreateBitCast(

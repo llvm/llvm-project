@@ -340,10 +340,28 @@ module m8
     call generic(null(), ip) ! ok
     call generic(null(mold=ip), null()) ! ok
     call generic(null(), null(mold=ip)) ! ok
-    !ERROR: One or more NULL() actual arguments to the generic procedure 'generic' requires a MOLD= for disambiguation
+    !ERROR: One or more actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
     call generic(null(), null())
   end subroutine
 end
+
+module m9
+  interface generic
+    procedure s1, s2
+  end interface
+ contains
+  subroutine s1(jf)
+    procedure(integer) :: jf
+  end subroutine
+  subroutine s2(af)
+    procedure(real) :: af
+  end subroutine
+  subroutine test
+    external underspecified
+    !ERROR: One or more actual arguments to the generic procedure 'generic' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call generic(underspecified)
+  end subroutine
+end module
 
 ! Ensure no bogus errors for assignments to CLASS(*) allocatable
 module m10

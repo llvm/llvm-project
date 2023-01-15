@@ -18,8 +18,8 @@ define dso_local void @f1(i32 %a1, i32 %a2) {
 ;CHECK-WIN32:    f1:
 ;CHECK-WIN32:    movw [[REG1:r[0-9]+]], :lower16:.L_MergedGlobals
 ;CHECK-WIN32:    movt [[REG1]], :upper16:.L_MergedGlobals
-  store i32 %a1, i32* @x, align 4
-  store i32 %a2, i32* @y, align 4
+  store i32 %a1, ptr @x, align 4
+  store i32 %a2, ptr @y, align 4
   ret void
 }
 
@@ -37,8 +37,8 @@ define dso_local void @g1(i32 %a1, i32 %a2) {
 ;CHECK-WIN32:    movt    [[REG2]], :upper16:z
 ;CHECK-WIN32:    movw [[REG3:r[0-9]+]], :lower16:.L_MergedGlobals
 ;CHECK-WIN32:    movt [[REG3]], :upper16:.L_MergedGlobals
-  store i32 %a1, i32* @y, align 4
-  store i32 %a2, i32* @z, align 4
+  store i32 %a1, ptr @y, align 4
+  store i32 %a2, ptr @z, align 4
   ret void
 }
 

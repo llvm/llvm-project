@@ -202,13 +202,13 @@ def TestAttrWithFormat : Test_Attr<"TestAttrWithFormat"> {
 }
 
 def TestAttrWithOptionalSigned : Test_Attr<"TestAttrWithOptionalSigned"> {
-  let parameters = (ins OptionalParameter<"mlir::Optional<int64_t>">:$value);
+  let parameters = (ins OptionalParameter<"std::optional<int64_t>">:$value);
   let assemblyFormat = "`<` $value `>`";
   let mnemonic = "attr_with_optional_signed";
 }
 
 def TestAttrWithOptionalUnsigned : Test_Attr<"TestAttrWithOptionalUnsigned"> {
-  let parameters = (ins OptionalParameter<"mlir::Optional<uint64_t>">:$value);
+  let parameters = (ins OptionalParameter<"std::optional<uint64_t>">:$value);
   let assemblyFormat = "`<` $value `>`";
   let mnemonic = "attr_with_optional_unsigned";
 }
@@ -310,7 +310,7 @@ def TestArrayOfEnums : ArrayOfAttr<Test_Dialect, "ArrayOfEnums",
 
 // Test custom directive as optional group anchor.
 def TestCustomAnchor : Test_Attr<"TestCustomAnchor"> {
-  let parameters = (ins "int":$a, OptionalParameter<"mlir::Optional<int>">:$b);
+  let parameters = (ins "int":$a, OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "custom_anchor";
   let assemblyFormat = "`<` $a (`>`) : (`,` custom<TrueFalse>($b)^ `>`)?";
 }

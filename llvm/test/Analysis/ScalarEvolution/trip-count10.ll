@@ -154,7 +154,7 @@ return:
 ; One side of the expression test against a value that will be skipped.
 ; We can't assume undefined behavior just because we have an NSW flag.
 ;
-define void @exit_orcond_nsw(i32 *%a) nounwind {
+define void @exit_orcond_nsw(ptr %a) nounwind {
 ; CHECK-LABEL: 'exit_orcond_nsw'
 ; CHECK-NEXT:  Determining loop execution counts for: @exit_orcond_nsw
 ; CHECK-NEXT:  Loop %for.body.i: Unpredictable backedge-taken count.
@@ -175,6 +175,6 @@ for.body.i:                                       ; preds = %for.body.i, %entry
 
 exit:                                     ; preds = %for.body.i
   %b.01.i.lcssa = phi i32 [ %b.01.i, %for.body.i ]
-  store i32 %b.01.i.lcssa, i32* %a, align 4
+  store i32 %b.01.i.lcssa, ptr %a, align 4
   ret void
 }

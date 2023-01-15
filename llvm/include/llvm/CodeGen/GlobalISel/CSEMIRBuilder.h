@@ -70,7 +70,7 @@ class CSEMIRBuilder : public MachineIRBuilder {
   void profileMBBOpcode(GISelInstProfileBuilder &B, unsigned Opc) const;
 
   void profileEverything(unsigned Opc, ArrayRef<DstOp> DstOps,
-                         ArrayRef<SrcOp> SrcOps, Optional<unsigned> Flags,
+                         ArrayRef<SrcOp> SrcOps, std::optional<unsigned> Flags,
                          GISelInstProfileBuilder &B) const;
 
   // Takes a MachineInstrBuilder and inserts it into the CSEMap using the
@@ -93,7 +93,7 @@ public:
   // Unhide buildInstr
   MachineInstrBuilder
   buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps, ArrayRef<SrcOp> SrcOps,
-             Optional<unsigned> Flag = std::nullopt) override;
+             std::optional<unsigned> Flag = std::nullopt) override;
   // Bring in the other overload from the base class.
   using MachineIRBuilder::buildConstant;
 

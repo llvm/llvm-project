@@ -14,6 +14,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -45,7 +46,7 @@ static bool locationsInSameFile(const SourceManager &Sources,
          Sources.getFileID(Loc1) == Sources.getFileID(Loc2);
 }
 
-static llvm::Optional<std::string>
+static std::optional<std::string>
 getNamespaceNameAsWritten(SourceLocation &Loc, const SourceManager &Sources,
                           const LangOptions &LangOpts) {
   // Loc should be at the begin of the namespace decl (usually, `namespace`
@@ -55,7 +56,7 @@ getNamespaceNameAsWritten(SourceLocation &Loc, const SourceManager &Sources,
   // the opening brace can result from attributes.
   std::string Result;
   int Nesting = 0;
-  while (llvm::Optional<Token> T = utils::lexer::findNextTokenSkippingComments(
+  while (std::optional<Token> T = utils::lexer::findNextTokenSkippingComments(
              Loc, Sources, LangOpts)) {
     Loc = T->getLocation();
     if (T->is(tok::l_brace))
@@ -110,7 +111,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
       return;
   }
 
-  llvm::Optional<std::string> NamespaceNameAsWritten =
+  std::optional<std::string> NamespaceNameAsWritten =
       getNamespaceNameAsWritten(LBraceLoc, Sources, getLangOpts());
   if (!NamespaceNameAsWritten)
     return;

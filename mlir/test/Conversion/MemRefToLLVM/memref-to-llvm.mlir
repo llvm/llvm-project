@@ -89,7 +89,7 @@ func.func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
-// CHECK-LABL: func @view_empty_memref(
+// CHECK-LABEL: func @view_empty_memref(
 // CHECK:        %[[ARG0:.*]]: index,
 // CHECK:        %[[ARG1:.*]]: memref<0xi8>)
 func.func @view_empty_memref(%offset: index, %mem: memref<0xi8>) {

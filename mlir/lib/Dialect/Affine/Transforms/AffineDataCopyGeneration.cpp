@@ -149,8 +149,7 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
             getMemoryFootprintBytes(forOp,
                                     /*memorySpace=*/0);
         return (footprint.has_value() &&
-                static_cast<uint64_t>(footprint.value()) >
-                    fastMemCapacityBytes);
+                static_cast<uint64_t>(*footprint) > fastMemCapacityBytes);
       };
 
       // If the memory footprint of the 'affine.for' loop is higher than fast

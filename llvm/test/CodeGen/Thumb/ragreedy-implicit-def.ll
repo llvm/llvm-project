@@ -7,28 +7,27 @@
 ; CHECK: 6 regalloc - Number of spilled live ranges
 
 declare i32 @otherfn(i32)
-define void @fn(i32 %val, i32* %ptr) {
+define void @fn(i32 %val, ptr %ptr) {
 entry:
-  %gep1 = getelementptr i32, i32* %ptr, i32 0
-  %gep2 = getelementptr i32, i32* %ptr, i32 1
-  %gep3 = getelementptr i32, i32* %ptr, i32 2
-  %gep4 = getelementptr i32, i32* %ptr, i32 3
-  %gep5 = getelementptr i32, i32* %ptr, i32 4
-  %gep6 = getelementptr i32, i32* %ptr, i32 5
-  %gep7 = getelementptr i32, i32* %ptr, i32 6
-  %gep8 = getelementptr i32, i32* %ptr, i32 7
+  %gep2 = getelementptr i32, ptr %ptr, i32 1
+  %gep3 = getelementptr i32, ptr %ptr, i32 2
+  %gep4 = getelementptr i32, ptr %ptr, i32 3
+  %gep5 = getelementptr i32, ptr %ptr, i32 4
+  %gep6 = getelementptr i32, ptr %ptr, i32 5
+  %gep7 = getelementptr i32, ptr %ptr, i32 6
+  %gep8 = getelementptr i32, ptr %ptr, i32 7
   %cmp1 = icmp uge i32 %val, 3
   br i1 %cmp1, label %if, label %then
 
 if:
-  %val1 = load i32, i32* %gep1, align 4
-  %val2 = load i32, i32* %gep2, align 4
-  %val3 = load i32, i32* %gep3, align 4
-  %val4 = load i32, i32* %gep4, align 4
-  %val5 = load i32, i32* %gep5, align 4
-  %val6 = load i32, i32* %gep6, align 4
-  %val7 = load i32, i32* %gep7, align 4
-  %val8 = load i32, i32* %gep8, align 4
+  %val1 = load i32, ptr %ptr, align 4
+  %val2 = load i32, ptr %gep2, align 4
+  %val3 = load i32, ptr %gep3, align 4
+  %val4 = load i32, ptr %gep4, align 4
+  %val5 = load i32, ptr %gep5, align 4
+  %val6 = load i32, ptr %gep6, align 4
+  %val7 = load i32, ptr %gep7, align 4
+  %val8 = load i32, ptr %gep8, align 4
   br label %then
 
 then:
@@ -84,14 +83,14 @@ switchend:
   br i1 %cmp2, label %if2, label %end
 
 if2:
-  store i32 %phi1b, i32* %gep1, align 4
-  store i32 %phi2b, i32* %gep2, align 4
-  store i32 %phi3b, i32* %gep3, align 4
-  store i32 %phi4b, i32* %gep4, align 4
-  store i32 %phi5b, i32* %gep5, align 4
-  store i32 %phi6b, i32* %gep6, align 4
-  store i32 %phi7b, i32* %gep7, align 4
-  store i32 %phi8b, i32* %gep8, align 4
+  store i32 %phi1b, ptr %ptr, align 4
+  store i32 %phi2b, ptr %gep2, align 4
+  store i32 %phi3b, ptr %gep3, align 4
+  store i32 %phi4b, ptr %gep4, align 4
+  store i32 %phi5b, ptr %gep5, align 4
+  store i32 %phi6b, ptr %gep6, align 4
+  store i32 %phi7b, ptr %gep7, align 4
+  store i32 %phi8b, ptr %gep8, align 4
   br label %end
 
 end:

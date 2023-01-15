@@ -23,7 +23,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -593,20 +592,8 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
         // We handle calls specially because the graph-relevant aspects are
         // handled above.
-        if (auto *Call = dyn_cast<CallBase>(&I)) {
-          if (Function *Callee = Call->getCalledFunction()) {
-            // The callgraph doesn't include intrinsic calls.
-            if (Callee->isIntrinsic()) {
-              if (isa<DbgInfoIntrinsic>(Call))
-                // Don't let dbg intrinsics affect alias info.
-                continue;
-
-              MemoryEffects Behaviour = AAResultBase::getMemoryEffects(Callee);
-              FI.addModRefInfo(Behaviour.getModRef());
-            }
-          }
+        if (isa<CallBase>(&I))
           continue;
-        }
 
         // All non-call instructions we use the primary predicates for whether
         // they read or write memory.
@@ -828,7 +815,7 @@ bool GlobalsAAResult::invalidate(Module &, const PreservedAnalyses &PA,
 /// address of the global isn't taken.
 AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
                                    const MemoryLocation &LocB,
-                                   AAQueryInfo &AAQI) {
+                                   AAQueryInfo &AAQI, const Instruction *) {
   // Get the base object these pointers point to.
   const Value *UV1 =
       getUnderlyingObject(LocA.Ptr->stripPointerCastsForAliasAnalysis());
@@ -905,7 +892,7 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     if ((GV1 || GV2) && GV1 != GV2)
       return AliasResult::NoAlias;
 
-  return AAResultBase::alias(LocA, LocB, AAQI);
+  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 }
 
 ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
@@ -927,8 +914,8 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
         // Try ::alias to see if all objects are known not to alias GV.
         !all_of(Objects, [&](const Value *V) {
           return this->alias(MemoryLocation::getBeforeOrAfter(V),
-                             MemoryLocation::getBeforeOrAfter(GV),
-                             AAQI) == AliasResult::NoAlias;
+                             MemoryLocation::getBeforeOrAfter(GV), AAQI,
+                             nullptr) == AliasResult::NoAlias;
         }))
       return ConservativeResult;
 

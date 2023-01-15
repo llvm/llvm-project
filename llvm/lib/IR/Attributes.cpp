@@ -1064,7 +1064,7 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
 }
 
 void AttributeListImpl::Profile(FoldingSetNodeID &ID) const {
-  Profile(ID, makeArrayRef(begin(), end()));
+  Profile(ID, ArrayRef(begin(), end()));
 }
 
 void AttributeListImpl::Profile(FoldingSetNodeID &ID,
@@ -1301,9 +1301,9 @@ AttributeList AttributeList::get(LLVMContext &C,
 AttributeList
 AttributeList::addAttributeAtIndex(LLVMContext &C, unsigned Index,
                                    Attribute::AttrKind Kind) const {
-  if (hasAttributeAtIndex(Index, Kind))
-    return *this;
   AttributeSet Attrs = getAttributes(Index);
+  if (Attrs.hasAttribute(Kind))
+    return *this;
   // TODO: Insert at correct position and avoid sort.
   SmallVector<Attribute, 8> NewAttrs(Attrs.begin(), Attrs.end());
   NewAttrs.push_back(Attribute::get(C, Kind));
@@ -1333,6 +1333,12 @@ AttributeList AttributeList::setAttributesAtIndex(LLVMContext &C,
   if (Index >= AttrSets.size())
     AttrSets.resize(Index + 1);
   AttrSets[Index] = Attrs;
+
+  // Remove trailing empty attribute sets.
+  while (!AttrSets.empty() && !AttrSets.back().hasAttributes())
+    AttrSets.pop_back();
+  if (AttrSets.empty())
+    return {};
   return AttributeList::getImpl(C, AttrSets);
 }
 
@@ -1373,31 +1379,21 @@ AttributeList AttributeList::addParamAttribute(LLVMContext &C,
 AttributeList
 AttributeList::removeAttributeAtIndex(LLVMContext &C, unsigned Index,
                                       Attribute::AttrKind Kind) const {
-  if (!hasAttributeAtIndex(Index, Kind))
+  AttributeSet Attrs = getAttributes(Index);
+  AttributeSet NewAttrs = Attrs.removeAttribute(C, Kind);
+  if (Attrs == NewAttrs)
     return *this;
-
-  Index = attrIdxToArrayIdx(Index);
-  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
-  assert(Index < AttrSets.size());
-
-  AttrSets[Index] = AttrSets[Index].removeAttribute(C, Kind);
-
-  return getImpl(C, AttrSets);
+  return setAttributesAtIndex(C, Index, NewAttrs);
 }
 
 AttributeList AttributeList::removeAttributeAtIndex(LLVMContext &C,
                                                     unsigned Index,
                                                     StringRef Kind) const {
-  if (!hasAttributeAtIndex(Index, Kind))
+  AttributeSet Attrs = getAttributes(Index);
+  AttributeSet NewAttrs = Attrs.removeAttribute(C, Kind);
+  if (Attrs == NewAttrs)
     return *this;
-
-  Index = attrIdxToArrayIdx(Index);
-  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
-  assert(Index < AttrSets.size());
-
-  AttrSets[Index] = AttrSets[Index].removeAttribute(C, Kind);
-
-  return getImpl(C, AttrSets);
+  return setAttributesAtIndex(C, Index, NewAttrs);
 }
 
 AttributeList AttributeList::removeAttributesAtIndex(
@@ -1415,12 +1411,9 @@ AttributeList::removeAttributesAtIndex(LLVMContext &C,
                                        unsigned WithoutIndex) const {
   if (!pImpl)
     return {};
-  WithoutIndex = attrIdxToArrayIdx(WithoutIndex);
-  if (WithoutIndex >= getNumAttrSets())
+  if (attrIdxToArrayIdx(WithoutIndex) >= getNumAttrSets())
     return *this;
-  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
-  AttrSets[WithoutIndex] = AttributeSet();
-  return getImpl(C, AttrSets);
+  return setAttributesAtIndex(C, WithoutIndex, AttributeSet());
 }
 
 AttributeList AttributeList::addDereferenceableRetAttr(LLVMContext &C,

@@ -21,7 +21,7 @@
   target triple = "powerpc64le-unknown-linux-gnu"
 
   ; Function Attrs: nounwind
-  define dso_local void @test(void (i32)* nocapture %fp, i32 signext %Arg, i32 signext %Len, i32* nocapture %Ptr) local_unnamed_addr #0 !prof !29 !section_prefix !30 {
+  define dso_local void @test(ptr nocapture %fp, i32 signext %Arg, i32 signext %Len, ptr nocapture %Ptr) local_unnamed_addr #0 !prof !29 !section_prefix !30 {
   entry:
     tail call void asm sideeffect "#NOTHING", "~{r2}"() #1, !srcloc !31
     %cmp6 = icmp sgt i32 %Len, 0
@@ -36,9 +36,9 @@
 
   for.body:                                         ; preds = %for.inc, %for.body.lr.ph
     %i.07 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-    %0 = load i32, i32* %Ptr, align 4, !tbaa !33
+    %0 = load i32, ptr %Ptr, align 4, !tbaa !33
     %1 = add i32 %i.07, %0
-    store i32 %1, i32* %Ptr, align 4, !tbaa !33
+    store i32 %1, ptr %Ptr, align 4, !tbaa !33
     br i1 %cmp1, label %if.then, label %for.inc, !prof !37
 
   if.then:                                          ; preds = %for.body
@@ -53,7 +53,7 @@
   }
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+vsx,-power9-vector" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { nounwind }

@@ -23,6 +23,7 @@ class LinalgOp;
 } // namespace linalg
 
 namespace transform {
+class TransformHandleTypeInterface;
 // Types needed for builders.
 struct TileSizesSpec {};
 struct NumThreadsSpec {};
@@ -48,7 +49,7 @@ DiagnosedSilenceableFailure tileToForeachThreadOpImpl(
     RewriterBase &rewriter, transform::TransformState &state,
     TransformOpInterface transformOp, ArrayRef<Operation *> targets,
     ArrayRef<OpFoldResult> mixedNumThreads,
-    ArrayRef<OpFoldResult> mixedTileSizes, Optional<ArrayAttr> mapping,
+    ArrayRef<OpFoldResult> mixedTileSizes, std::optional<ArrayAttr> mapping,
     SmallVector<Operation *> &tileOps, SmallVector<Operation *> &tiledOps);
 } // namespace transform
 

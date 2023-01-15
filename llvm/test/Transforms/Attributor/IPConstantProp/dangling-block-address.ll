@@ -6,15 +6,15 @@
 ; IPSCCP should prove that the blocks are dead and delete them, and
 ; properly handle the dangling blockaddress constants.
 
-@code = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4 ; <[5 x i32]*> [#uses=0]
-@bar.l = internal constant [2 x i8*] [i8* blockaddress(@bar, %lab0), i8* blockaddress(@bar, %end)] ; <[2 x i8*]*> [#uses=1]
+@code = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4 ; <ptr> [#uses=0]
+@bar.l = internal constant [2 x ptr] [ptr blockaddress(@bar, %lab0), ptr blockaddress(@bar, %end)] ; <ptr> [#uses=1]
 
 ;.
 ; TUNIT: @[[CODE:[a-zA-Z0-9_$"\\.-]+]] = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4
-; TUNIT: @[[BAR_L:[a-zA-Z0-9_$"\\.-]+]] = internal constant [2 x i8*] [i8* inttoptr (i32 1 to i8*), i8* inttoptr (i32 1 to i8*)]
+; TUNIT: @[[BAR_L:[a-zA-Z0-9_$"\\.-]+]] = internal constant [2 x ptr] [ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 1 to ptr)]
 ;.
 ; CGSCC: @[[CODE:[a-zA-Z0-9_$"\\.-]+]] = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4
-; CGSCC: @[[BAR_L:[a-zA-Z0-9_$"\\.-]+]] = internal constant [2 x i8*] [i8* blockaddress(@bar, [[LAB0:%.*]]), i8* blockaddress(@bar, [[END:%.*]])]
+; CGSCC: @[[BAR_L:[a-zA-Z0-9_$"\\.-]+]] = internal constant [2 x ptr] [ptr blockaddress(@bar, [[LAB0:%.*]]), ptr blockaddress(@bar, [[END:%.*]])]
 ;.
 define internal void @foo(i32 %x) nounwind readnone {
 ; CGSCC: Function Attrs: nounwind memory(none)
@@ -22,19 +22,19 @@ define internal void @foo(i32 %x) nounwind readnone {
 ; CGSCC-SAME: (i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    store volatile i32 -1, i32* [[B]], align 4
+; CGSCC-NEXT:    store volatile i32 -1, ptr [[B]], align 4
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  %b = alloca i32, align 4                        ; <i32*> [#uses=1]
-  store volatile i32 -1, i32* %b
+  %b = alloca i32, align 4                        ; <ptr> [#uses=1]
+  store volatile i32 -1, ptr %b
   ret void
 }
 
-define internal void @bar(i32* nocapture %pc) nounwind readonly {
+define internal void @bar(ptr nocapture %pc) nounwind readonly {
 ; CGSCC: Function Attrs: nounwind memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
-; CGSCC-SAME: (i32* nocapture [[PC:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (ptr nocapture [[PC:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[INDIRECTGOTO:%.*]]
 ; CGSCC:       lab0:
@@ -44,11 +44,11 @@ define internal void @bar(i32* nocapture %pc) nounwind readonly {
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       indirectgoto:
 ; CGSCC-NEXT:    [[INDVAR]] = phi i32 [ [[INDVAR_NEXT]], [[LAB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CGSCC-NEXT:    [[PC_ADDR_0:%.*]] = getelementptr i32, i32* [[PC]], i32 [[INDVAR]]
-; CGSCC-NEXT:    [[TMP1_PN:%.*]] = load i32, i32* [[PC_ADDR_0]], align 4
-; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* @bar.l, i32 0, i32 [[TMP1_PN]]
-; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load i8*, i8** [[INDIRECT_GOTO_DEST_IN]], align 8
-; CGSCC-NEXT:    indirectbr i8* [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
+; CGSCC-NEXT:    [[PC_ADDR_0:%.*]] = getelementptr i32, ptr [[PC]], i32 [[INDVAR]]
+; CGSCC-NEXT:    [[TMP1_PN:%.*]] = load i32, ptr [[PC_ADDR_0]], align 4
+; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST_IN:%.*]] = getelementptr inbounds [2 x ptr], ptr @bar.l, i32 0, i32 [[TMP1_PN]]
+; CGSCC-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = load ptr, ptr [[INDIRECT_GOTO_DEST_IN]], align 8
+; CGSCC-NEXT:    indirectbr ptr [[INDIRECT_GOTO_DEST]], [label [[LAB0]], label %end]
 ;
 entry:
   br label %indirectgoto
@@ -62,11 +62,11 @@ end:                                              ; preds = %indirectgoto
 
 indirectgoto:                                     ; preds = %lab0, %entry
   %indvar = phi i32 [ %indvar.next, %lab0 ], [ 0, %entry ] ; <i32> [#uses=2]
-  %pc.addr.0 = getelementptr i32, i32* %pc, i32 %indvar ; <i32*> [#uses=1]
-  %tmp1.pn = load i32, i32* %pc.addr.0                 ; <i32> [#uses=1]
-  %indirect.goto.dest.in = getelementptr inbounds [2 x i8*], [2 x i8*]* @bar.l, i32 0, i32 %tmp1.pn ; <i8**> [#uses=1]
-  %indirect.goto.dest = load i8*, i8** %indirect.goto.dest.in ; <i8*> [#uses=1]
-  indirectbr i8* %indirect.goto.dest, [label %lab0, label %end]
+  %pc.addr.0 = getelementptr i32, ptr %pc, i32 %indvar ; <ptr> [#uses=1]
+  %tmp1.pn = load i32, ptr %pc.addr.0                 ; <i32> [#uses=1]
+  %indirect.goto.dest.in = getelementptr inbounds [2 x ptr], ptr @bar.l, i32 0, i32 %tmp1.pn ; <ptr> [#uses=1]
+  %indirect.goto.dest = load ptr, ptr %indirect.goto.dest.in ; <ptr> [#uses=1]
+  indirectbr ptr %indirect.goto.dest, [label %lab0, label %end]
 }
 
 define i32 @main() nounwind readnone {
@@ -92,3 +92,5 @@ entry:
 ; CGSCC: attributes #[[ATTR1]] = { nounwind memory(read) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

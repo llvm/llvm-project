@@ -6,4 +6,4 @@
 
 ; CHECK: Appending variables with different section name need to be linked
 
-@var = appending global [1 x i32* ] undef, section "dummy"
+@var = appending global [1 x ptr ] undef, section "dummy"

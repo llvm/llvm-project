@@ -16,6 +16,7 @@
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/KnownBits.h"
 
 // RISCV-specific code to select RISCV machine instructions for
 // SelectionDAG operations.
@@ -24,13 +25,13 @@ class RISCVDAGToDAGISel : public SelectionDAGISel {
   const RISCVSubtarget *Subtarget = nullptr;
 
 public:
+  static char ID;
+
+  RISCVDAGToDAGISel() = delete;
+
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
                              CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(TargetMachine, OptLevel) {}
-
-  StringRef getPassName() const override {
-    return "RISCV DAG->DAG Pattern Instruction Selection";
-  }
+      : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<RISCVSubtarget>();
@@ -75,7 +76,8 @@ public:
     return selectSHXADD_UWOp(N, ShAmt, Val);
   }
 
-  bool hasAllNBitUsers(SDNode *Node, unsigned Bits) const;
+  bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
+                       const unsigned Depth = 0) const;
   bool hasAllHUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 16); }
   bool hasAllWUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 32); }
 

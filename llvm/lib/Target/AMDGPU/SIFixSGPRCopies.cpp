@@ -148,7 +148,7 @@ public:
   // 1. Physical register
   // 2. AGPR
   // 3. Defined by the instruction the merely moves the immediate
-  bool lowerSpecialCase(MachineInstr &MI);
+  bool lowerSpecialCase(MachineInstr &MI, MachineBasicBlock::iterator &I);
 
   void processPHINode(MachineInstr &MI);
 
@@ -187,16 +187,16 @@ getCopyRegClasses(const MachineInstr &Copy,
 
   const TargetRegisterClass *SrcRC = SrcReg.isVirtual()
                                          ? MRI.getRegClass(SrcReg)
-                                         : TRI.getPhysRegClass(SrcReg);
+                                         : TRI.getPhysRegBaseClass(SrcReg);
 
   // We don't really care about the subregister here.
   // SrcRC = TRI.getSubRegClass(SrcRC, Copy.getOperand(1).getSubReg());
 
   const TargetRegisterClass *DstRC = DstReg.isVirtual()
                                          ? MRI.getRegClass(DstReg)
-                                         : TRI.getPhysRegClass(DstReg);
+                                         : TRI.getPhysRegBaseClass(DstReg);
 
-  return std::make_pair(SrcRC, DstRC);
+  return std::pair(SrcRC, DstRC);
 }
 
 static bool isVGPRToSGPRCopy(const TargetRegisterClass *SrcRC,
@@ -638,7 +638,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         }
         if (!isVGPRToSGPRCopy(SrcRC, DstRC, *TRI))
           continue;
-        if (lowerSpecialCase(MI))
+        if (lowerSpecialCase(MI, I))
           continue;
 
         analyzeVGPRToSGPRCopy(&MI);
@@ -829,7 +829,8 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   }
 }
 
-bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI) {
+bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
+                                       MachineBasicBlock::iterator &I) {
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   if (!DstReg.isVirtual()) {
@@ -845,6 +846,25 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI) {
               TII->get(AMDGPU::V_READFIRSTLANE_B32), TmpReg)
           .add(MI.getOperand(1));
       MI.getOperand(1).setReg(TmpReg);
+    } else {
+      MachineInstr *DefMI = MRI->getVRegDef(SrcReg);
+      if (DefMI && DefMI->isMoveImmediate()) {
+        MachineOperand SrcConst = DefMI->getOperand(AMDGPU::getNamedOperandIdx(
+            DefMI->getOpcode(), AMDGPU::OpName::src0));
+        if (!SrcConst.isReg()) {
+          const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
+          unsigned MoveSize = TRI->getRegSizeInBits(*SrcRC);
+          unsigned MoveOp =
+              MoveSize == 64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
+          BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(MoveOp),
+                  DstReg)
+              .add(SrcConst);
+          I = std::next(I);
+          if (MRI->hasOneUse(SrcReg))
+            DefMI->eraseFromParent();
+          MI.eraseFromParent();
+        }
+      }
     }
     return true;
   }
@@ -949,8 +969,8 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
         // the COPY has already been MoveToVALUed
         continue;
 
-      SrcRegs.insert(std::make_pair(SiblingCopy->getOperand(1).getReg(),
-                                    SiblingCopy->getOperand(1).getSubReg()));
+      SrcRegs.insert(std::pair(SiblingCopy->getOperand(1).getReg(),
+                               SiblingCopy->getOperand(1).getSubReg()));
     }
   }
   Info->SiblingPenalty = SrcRegs.size();

@@ -27,12 +27,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -82,10 +82,10 @@ bool isUniqueDefinition(const NamedDecl *Decl) {
          isa<ObjCImplDecl>(Decl);
 }
 
-llvm::Optional<HighlightingKind> kindForType(const Type *TP,
-                                             const HeuristicResolver *Resolver);
-llvm::Optional<HighlightingKind>
-kindForDecl(const NamedDecl *D, const HeuristicResolver *Resolver) {
+std::optional<HighlightingKind> kindForType(const Type *TP,
+                                            const HeuristicResolver *Resolver);
+std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
+                                            const HeuristicResolver *Resolver) {
   if (auto *USD = dyn_cast<UsingShadowDecl>(D)) {
     if (auto *Target = USD->getTargetDecl())
       D = Target;
@@ -163,8 +163,8 @@ kindForDecl(const NamedDecl *D, const HeuristicResolver *Resolver) {
   }
   return std::nullopt;
 }
-llvm::Optional<HighlightingKind>
-kindForType(const Type *TP, const HeuristicResolver *Resolver) {
+std::optional<HighlightingKind> kindForType(const Type *TP,
+                                            const HeuristicResolver *Resolver) {
   if (!TP)
     return std::nullopt;
   if (TP->isBuiltinType()) // Builtins are special, they do not have decls.
@@ -331,8 +331,8 @@ unsigned evaluateHighlightPriority(const HighlightingToken &Tok) {
 //
 // In particular, heuristically resolved dependent names get their heuristic
 // kind, plus the dependent modifier.
-llvm::Optional<HighlightingToken> resolveConflict(const HighlightingToken &A,
-                                                  const HighlightingToken &B) {
+std::optional<HighlightingToken> resolveConflict(const HighlightingToken &A,
+                                                 const HighlightingToken &B) {
   unsigned Priority1 = evaluateHighlightPriority(A);
   unsigned Priority2 = evaluateHighlightPriority(B);
   if (Priority1 == Priority2 && A.Kind != B.Kind)
@@ -341,13 +341,14 @@ llvm::Optional<HighlightingToken> resolveConflict(const HighlightingToken &A,
   Result.Modifiers = A.Modifiers | B.Modifiers;
   return Result;
 }
-llvm::Optional<HighlightingToken>
+std::optional<HighlightingToken>
 resolveConflict(ArrayRef<HighlightingToken> Tokens) {
   if (Tokens.size() == 1)
     return Tokens[0];
 
   assert(Tokens.size() >= 2);
-  Optional<HighlightingToken> Winner = resolveConflict(Tokens[0], Tokens[1]);
+  std::optional<HighlightingToken> Winner =
+      resolveConflict(Tokens[0], Tokens[1]);
   for (size_t I = 2; Winner && I < Tokens.size(); ++I)
     Winner = resolveConflict(*Winner, Tokens[I]);
   return Winner;
@@ -473,7 +474,7 @@ public:
   const HeuristicResolver *getResolver() const { return Resolver; }
 
 private:
-  llvm::Optional<Range> getRangeForSourceLocation(SourceLocation Loc) {
+  std::optional<Range> getRangeForSourceLocation(SourceLocation Loc) {
     Loc = getHighlightableSpellingToken(Loc, SourceMgr);
     if (Loc.isInvalid())
       return std::nullopt;
@@ -495,7 +496,7 @@ private:
   HighlightingToken InvalidHighlightingToken;
 };
 
-llvm::Optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
+std::optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   const DeclContext *DC = D->getDeclContext();
   // Injected "Foo" within the class "Foo" has file scope, not class scope.
   if (auto *R = dyn_cast_or_null<RecordDecl>(D))
@@ -523,7 +524,7 @@ llvm::Optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   return HighlightingModifier::GlobalScope;
 }
 
-llvm::Optional<HighlightingModifier> scopeModifier(const Type *T) {
+std::optional<HighlightingModifier> scopeModifier(const Type *T) {
   if (!T)
     return std::nullopt;
   if (T->isBuiltinType())
@@ -563,6 +564,71 @@ public:
         .addModifier(HighlightingModifier::Static)
         .addModifier(HighlightingModifier::Readonly)
         .addModifier(HighlightingModifier::FunctionScope);
+    return true;
+  }
+
+  bool VisitFunctionDecl(FunctionDecl *D) {
+    if (D->isOverloadedOperator()) {
+      const auto AddOpDeclToken = [&](SourceLocation Loc) {
+        auto &Token = H.addToken(Loc, HighlightingKind::Operator)
+                          .addModifier(HighlightingModifier::Declaration);
+        if (D->isThisDeclarationADefinition())
+          Token.addModifier(HighlightingModifier::Definition);
+      };
+      const auto Range = D->getNameInfo().getCXXOperatorNameRange();
+      AddOpDeclToken(Range.getBegin());
+      const auto Kind = D->getOverloadedOperator();
+      if (Kind == OO_Call || Kind == OO_Subscript)
+        AddOpDeclToken(Range.getEnd());
+    }
+    return true;
+  }
+
+  bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
+    const auto AddOpToken = [&](SourceLocation Loc) {
+      H.addToken(Loc, HighlightingKind::Operator)
+          .addModifier(HighlightingModifier::UserDefined);
+    };
+    AddOpToken(E->getOperatorLoc());
+    const auto Kind = E->getOperator();
+    if (Kind == OO_Call || Kind == OO_Subscript) {
+      if (auto *Callee = E->getCallee())
+        AddOpToken(Callee->getBeginLoc());
+    }
+    return true;
+  }
+
+  bool VisitUnaryOperator(UnaryOperator *Op) {
+    auto &Token = H.addToken(Op->getOperatorLoc(), HighlightingKind::Operator);
+    if (Op->getSubExpr()->isTypeDependent())
+      Token.addModifier(HighlightingModifier::UserDefined);
+    return true;
+  }
+
+  bool VisitBinaryOperator(BinaryOperator *Op) {
+    auto &Token = H.addToken(Op->getOperatorLoc(), HighlightingKind::Operator);
+    if (Op->getLHS()->isTypeDependent() || Op->getRHS()->isTypeDependent())
+      Token.addModifier(HighlightingModifier::UserDefined);
+    return true;
+  }
+
+  bool VisitConditionalOperator(ConditionalOperator *Op) {
+    H.addToken(Op->getQuestionLoc(), HighlightingKind::Operator);
+    H.addToken(Op->getColonLoc(), HighlightingKind::Operator);
+    return true;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    auto &Token = H.addToken(E->getBeginLoc(), HighlightingKind::Operator);
+    if (isa_and_present<CXXMethodDecl>(E->getOperatorNew()))
+      Token.addModifier(HighlightingModifier::UserDefined);
+    return true;
+  }
+
+  bool VisitCXXDeleteExpr(CXXDeleteExpr *E) {
+    auto &Token = H.addToken(E->getBeginLoc(), HighlightingKind::Operator);
+    if (isa_and_present<CXXMethodDecl>(E->getOperatorDelete()))
+      Token.addModifier(HighlightingModifier::UserDefined);
     return true;
   }
 
@@ -606,7 +672,7 @@ public:
       return;
     }
 
-    llvm::Optional<SourceLocation> Location;
+    std::optional<SourceLocation> Location;
 
     // FIXME Add "unwrapping" for ArraySubscriptExpr,
     //  e.g. highlight `a` in `a[i]`
@@ -671,12 +737,20 @@ public:
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *CE) {
     // getMethodDecl can return nullptr with member pointers, e.g.
     // `(foo.*pointer_to_member_fun)(arg);`
-    if (isa_and_present<CXXDestructorDecl>(CE->getMethodDecl())) {
-      if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee())) {
-        if (auto *TI = ME->getMemberNameInfo().getNamedTypeInfo()) {
-          H.addExtraModifier(TI->getTypeLoc().getBeginLoc(),
-                             HighlightingModifier::ConstructorOrDestructor);
+    if (auto *D = CE->getMethodDecl()) {
+      if (isa<CXXDestructorDecl>(D)) {
+        if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee())) {
+          if (auto *TI = ME->getMemberNameInfo().getNamedTypeInfo()) {
+            H.addExtraModifier(TI->getTypeLoc().getBeginLoc(),
+                               HighlightingModifier::ConstructorOrDestructor);
+          }
         }
+      } else if (D->isOverloadedOperator()) {
+        if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee()))
+          H.addToken(
+               ME->getMemberNameInfo().getCXXOperatorNameRange().getBegin(),
+               HighlightingKind::Operator)
+              .addModifier(HighlightingModifier::UserDefined);
       }
     }
     return true;
@@ -998,6 +1072,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K) {
     return OS << "Macro";
   case HighlightingKind::Modifier:
     return OS << "Modifier";
+  case HighlightingKind::Operator:
+    return OS << "Operator";
   case HighlightingKind::InactiveCode:
     return OS << "InactiveCode";
   }
@@ -1134,6 +1210,8 @@ llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
     return "macro";
   case HighlightingKind::Modifier:
     return "modifier";
+  case HighlightingKind::Operator:
+    return "operator";
   case HighlightingKind::InactiveCode:
     return "comment";
   }
@@ -1168,6 +1246,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "usedAsMutablePointer"; // nonstandard
   case HighlightingModifier::ConstructorOrDestructor:
     return "constructorOrDestructor"; // nonstandard
+  case HighlightingModifier::UserDefined:
+    return "userDefined"; // nonstandard
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:

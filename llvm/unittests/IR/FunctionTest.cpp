@@ -7,11 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Function.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 using namespace llvm;
 
 namespace {
+
+static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+  SMDiagnostic Err;
+  std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
+  if (!Mod)
+    Err.print("InstructionsTests", errs());
+  return Mod;
+}
+
+static BasicBlock *getBBWithName(Function *F, StringRef Name) {
+  auto It = find_if(
+      *F, [&Name](const BasicBlock &BB) { return BB.getName() == Name; });
+  assert(It != F->end() && "Not found!");
+  return &*It;
+}
 
 TEST(FunctionTest, hasLazyArguments) {
   LLVMContext C;
@@ -162,4 +179,311 @@ TEST(FunctionTest, GetPointerAlignment) {
   EXPECT_EQ(Align(4), Func->getPointerAlignment(DataLayout("Fn32")));
 }
 
+TEST(FunctionTest, InsertBasicBlockAt) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+define void @foo(i32 %a, i32 %b) {
+foo_bb0:
+  ret void
+}
+
+define void @bar() {
+bar_bb0:
+  br label %bar_bb1
+bar_bb1:
+  br label %bar_bb2
+bar_bb2:
+  ret void
+}
+)");
+  Function *FooF = M->getFunction("foo");
+  BasicBlock *FooBB0 = getBBWithName(FooF, "foo_bb0");
+
+  Function *BarF = M->getFunction("bar");
+  BasicBlock *BarBB0 = getBBWithName(BarF, "bar_bb0");
+  BasicBlock *BarBB1 = getBBWithName(BarF, "bar_bb1");
+  BasicBlock *BarBB2 = getBBWithName(BarF, "bar_bb2");
+
+  // Insert foo_bb0 into bar() at the very top.
+  FooBB0->removeFromParent();
+  auto It = BarF->insert(BarF->begin(), FooBB0);
+  EXPECT_EQ(BarBB0->getPrevNode(), FooBB0);
+  EXPECT_EQ(It, FooBB0->getIterator());
+
+  // Insert foo_bb0 into bar() at the very end.
+  FooBB0->removeFromParent();
+  It = BarF->insert(BarF->end(), FooBB0);
+  EXPECT_EQ(FooBB0->getPrevNode(), BarBB2);
+  EXPECT_EQ(FooBB0->getNextNode(), nullptr);
+  EXPECT_EQ(It, FooBB0->getIterator());
+
+  // Insert foo_bb0 into bar() just before bar_bb0.
+  FooBB0->removeFromParent();
+  It = BarF->insert(BarBB0->getIterator(), FooBB0);
+  EXPECT_EQ(FooBB0->getPrevNode(), nullptr);
+  EXPECT_EQ(FooBB0->getNextNode(), BarBB0);
+  EXPECT_EQ(It, FooBB0->getIterator());
+
+  // Insert foo_bb0 into bar() just before bar_bb1.
+  FooBB0->removeFromParent();
+  It = BarF->insert(BarBB1->getIterator(), FooBB0);
+  EXPECT_EQ(FooBB0->getPrevNode(), BarBB0);
+  EXPECT_EQ(FooBB0->getNextNode(), BarBB1);
+  EXPECT_EQ(It, FooBB0->getIterator());
+
+  // Insert foo_bb0 into bar() just before bar_bb2.
+  FooBB0->removeFromParent();
+  It = BarF->insert(BarBB2->getIterator(), FooBB0);
+  EXPECT_EQ(FooBB0->getPrevNode(), BarBB1);
+  EXPECT_EQ(FooBB0->getNextNode(), BarBB2);
+  EXPECT_EQ(It, FooBB0->getIterator());
+}
+
+TEST(FunctionTest, SpliceOneBB) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @from() {
+     from_bb1:
+       br label %from_bb2
+     from_bb2:
+       br label %from_bb3
+     from_bb3:
+       ret void
+    }
+    define void @to() {
+     to_bb1:
+       br label %to_bb2
+     to_bb2:
+       br label %to_bb3
+     to_bb3:
+       ret void
+    }
+)");
+  Function *FromF = M->getFunction("from");
+  BasicBlock *FromBB1 = getBBWithName(FromF, "from_bb1");
+  BasicBlock *FromBB2 = getBBWithName(FromF, "from_bb2");
+  BasicBlock *FromBB3 = getBBWithName(FromF, "from_bb3");
+
+  Function *ToF = M->getFunction("to");
+  BasicBlock *ToBB1 = getBBWithName(ToF, "to_bb1");
+  BasicBlock *ToBB2 = getBBWithName(ToF, "to_bb2");
+  BasicBlock *ToBB3 = getBBWithName(ToF, "to_bb3");
+
+  // Move from_bb2 before to_bb1.
+  ToF->splice(ToBB1->getIterator(), FromF, FromBB2->getIterator());
+  EXPECT_EQ(FromF->size(), 2u);
+  EXPECT_EQ(ToF->size(), 4u);
+
+  auto It = FromF->begin();
+  EXPECT_EQ(&*It++, FromBB1);
+  EXPECT_EQ(&*It++, FromBB3);
+
+  It = ToF->begin();
+  EXPECT_EQ(&*It++, FromBB2);
+  EXPECT_EQ(&*It++, ToBB1);
+  EXPECT_EQ(&*It++, ToBB2);
+  EXPECT_EQ(&*It++, ToBB3);
+
+  // Cleanup to avoid "Uses remain when a value is destroyed!".
+  FromF->splice(FromBB3->getIterator(), ToF, FromBB2->getIterator());
+}
+
+TEST(FunctionTest, SpliceOneBBWhenFromIsSameAsTo) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @fromto() {
+     bb1:
+       br label %bb2
+     bb2:
+       ret void
+    }
+)");
+  Function *F = M->getFunction("fromto");
+  BasicBlock *BB1 = getBBWithName(F, "bb1");
+  BasicBlock *BB2 = getBBWithName(F, "bb2");
+
+  // According to ilist's splice() a single-element splice where dst == src
+  // should be a noop.
+  F->splice(BB1->getIterator(), F, BB1->getIterator());
+
+  auto It = F->begin();
+  EXPECT_EQ(&*It++, BB1);
+  EXPECT_EQ(&*It++, BB2);
+  EXPECT_EQ(F->size(), 2u);
+}
+
+TEST(FunctionTest, SpliceLastBB) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @from() {
+     from_bb1:
+       br label %from_bb2
+     from_bb2:
+       br label %from_bb3
+     from_bb3:
+       ret void
+    }
+    define void @to() {
+     to_bb1:
+       br label %to_bb2
+     to_bb2:
+       br label %to_bb3
+     to_bb3:
+       ret void
+    }
+)");
+
+  Function *FromF = M->getFunction("from");
+  BasicBlock *FromBB1 = getBBWithName(FromF, "from_bb1");
+  BasicBlock *FromBB2 = getBBWithName(FromF, "from_bb2");
+  BasicBlock *FromBB3 = getBBWithName(FromF, "from_bb3");
+
+  Function *ToF = M->getFunction("to");
+  BasicBlock *ToBB1 = getBBWithName(ToF, "to_bb1");
+  BasicBlock *ToBB2 = getBBWithName(ToF, "to_bb2");
+  BasicBlock *ToBB3 = getBBWithName(ToF, "to_bb3");
+
+  // Move from_bb2 before to_bb1.
+  auto ToMove = FromBB2->getIterator();
+  ToF->splice(ToBB1->getIterator(), FromF, ToMove, std::next(ToMove));
+
+  EXPECT_EQ(FromF->size(), 2u);
+  auto It = FromF->begin();
+  EXPECT_EQ(&*It++, FromBB1);
+  EXPECT_EQ(&*It++, FromBB3);
+
+  EXPECT_EQ(ToF->size(), 4u);
+  It = ToF->begin();
+  EXPECT_EQ(&*It++, FromBB2);
+  EXPECT_EQ(&*It++, ToBB1);
+  EXPECT_EQ(&*It++, ToBB2);
+  EXPECT_EQ(&*It++, ToBB3);
+
+  // Cleanup to avoid "Uses remain when a value is destroyed!".
+  FromF->splice(FromBB3->getIterator(), ToF, ToMove);
+}
+
+TEST(FunctionTest, SpliceBBRange) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @from() {
+     from_bb1:
+       br label %from_bb2
+     from_bb2:
+       br label %from_bb3
+     from_bb3:
+       ret void
+    }
+    define void @to() {
+     to_bb1:
+       br label %to_bb2
+     to_bb2:
+       br label %to_bb3
+     to_bb3:
+       ret void
+    }
+)");
+
+  Function *FromF = M->getFunction("from");
+  BasicBlock *FromBB1 = getBBWithName(FromF, "from_bb1");
+  BasicBlock *FromBB2 = getBBWithName(FromF, "from_bb2");
+  BasicBlock *FromBB3 = getBBWithName(FromF, "from_bb3");
+
+  Function *ToF = M->getFunction("to");
+  BasicBlock *ToBB1 = getBBWithName(ToF, "to_bb1");
+  BasicBlock *ToBB2 = getBBWithName(ToF, "to_bb2");
+  BasicBlock *ToBB3 = getBBWithName(ToF, "to_bb3");
+
+  // Move all BBs from @from to @to.
+  ToF->splice(ToBB2->getIterator(), FromF, FromF->begin(), FromF->end());
+
+  EXPECT_EQ(FromF->size(), 0u);
+
+  EXPECT_EQ(ToF->size(), 6u);
+  auto It = ToF->begin();
+  EXPECT_EQ(&*It++, ToBB1);
+  EXPECT_EQ(&*It++, FromBB1);
+  EXPECT_EQ(&*It++, FromBB2);
+  EXPECT_EQ(&*It++, FromBB3);
+  EXPECT_EQ(&*It++, ToBB2);
+  EXPECT_EQ(&*It++, ToBB3);
+}
+
+#ifdef EXPENSIVE_CHECKS
+TEST(FunctionTest, SpliceEndBeforeBegin) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @from() {
+     from_bb1:
+       br label %from_bb2
+     from_bb2:
+       br label %from_bb3
+     from_bb3:
+       ret void
+    }
+    define void @to() {
+     to_bb1:
+       br label %to_bb2
+     to_bb2:
+       br label %to_bb3
+     to_bb3:
+       ret void
+    }
+)");
+
+  Function *FromF = M->getFunction("from");
+  BasicBlock *FromBB1 = getBBWithName(FromF, "from_bb1");
+  BasicBlock *FromBB2 = getBBWithName(FromF, "from_bb2");
+
+  Function *ToF = M->getFunction("to");
+  BasicBlock *ToBB2 = getBBWithName(ToF, "to_bb2");
+
+  EXPECT_DEATH(ToF->splice(ToBB2->getIterator(), FromF, FromBB2->getIterator(),
+                           FromBB1->getIterator()),
+               "FromBeginIt not before FromEndIt!");
+}
+#endif //EXPENSIVE_CHECKS
+
+TEST(FunctionTest, EraseBBs) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @foo() {
+     bb1:
+       br label %bb2
+     bb2:
+       br label %bb3
+     bb3:
+       br label %bb4
+     bb4:
+       br label %bb5
+     bb5:
+       ret void
+    }
+)");
+
+  Function *F = M->getFunction("foo");
+  BasicBlock *BB1 = getBBWithName(F, "bb1");
+  BasicBlock *BB2 = getBBWithName(F, "bb2");
+  BasicBlock *BB3 = getBBWithName(F, "bb3");
+  BasicBlock *BB4 = getBBWithName(F, "bb4");
+  BasicBlock *BB5 = getBBWithName(F, "bb5");
+  EXPECT_EQ(F->size(), 5u);
+
+  // Erase BB2.
+  BB1->getTerminator()->eraseFromParent();
+  auto It = F->erase(BB2->getIterator(), std::next(BB2->getIterator()));
+  EXPECT_EQ(F->size(), 4u);
+  // Check that the iterator returned matches the node after the erased one.
+  EXPECT_EQ(It, BB3->getIterator());
+
+  It = F->begin();
+  EXPECT_EQ(&*It++, BB1);
+  EXPECT_EQ(&*It++, BB3);
+  EXPECT_EQ(&*It++, BB4);
+  EXPECT_EQ(&*It++, BB5);
+
+  // Erase all BBs.
+  It = F->erase(F->begin(), F->end());
+  EXPECT_EQ(F->size(), 0u);
+}
 } // end namespace

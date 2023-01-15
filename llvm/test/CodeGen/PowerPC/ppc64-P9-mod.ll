@@ -1,11 +1,11 @@
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 -verify-machineinstrs | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s -check-prefix=CHECK-PWR8 -implicit-check-not mod[us][wd]
-; RUN: opt < %s -div-rem-pairs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 | \
+; RUN: opt < %s -passes=div-rem-pairs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 | \
 ; RUN:   llc -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-DRP
-; RUN: opt < %s -div-rem-pairs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 | \
+; RUN: opt < %s -passes=div-rem-pairs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr9 | \
 ; RUN:   llc -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-DRP
-; RUN: opt < %s -div-rem-pairs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | \
+; RUN: opt < %s -passes=div-rem-pairs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | \
 ; RUN:   llc -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-PWR8 -implicit-check-not mod[us][wd]
 
 @mod_resultsw = local_unnamed_addr global i32 0, align 4

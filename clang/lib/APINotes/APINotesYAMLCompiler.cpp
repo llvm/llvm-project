@@ -17,7 +17,6 @@
 #include "clang/APINotes/Types.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -550,7 +549,7 @@ struct Module {
   TopLevelItems TopLevel;
   VersionedSeq SwiftVersions;
 
-  std::optional<bool> SwiftInferImportAsMember = std::nullopt;
+  std::optional<bool> SwiftInferImportAsMember;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() /*const*/;

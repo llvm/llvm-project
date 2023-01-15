@@ -75,7 +75,7 @@ Type Dialect::parseType(DialectAsmParser &parser) const {
   return Type();
 }
 
-Optional<Dialect::ParseOpHook>
+std::optional<Dialect::ParseOpHook>
 Dialect::getParseOperationHook(StringRef opName) const {
   return std::nullopt;
 }

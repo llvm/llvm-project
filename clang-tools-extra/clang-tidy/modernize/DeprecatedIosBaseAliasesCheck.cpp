@@ -9,6 +9,7 @@
 #include "DeprecatedIosBaseAliasesCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -21,8 +22,8 @@ static constexpr std::array<StringRef, 5> DeprecatedTypes = {
     "::std::ios_base::seek_dir", "::std::ios_base::streamoff",
     "::std::ios_base::streampos"};
 
-static llvm::Optional<const char *> getReplacementType(StringRef Type) {
-  return llvm::StringSwitch<llvm::Optional<const char *>>(Type)
+static std::optional<const char *> getReplacementType(StringRef Type) {
+  return llvm::StringSwitch<std::optional<const char *>>(Type)
       .Case("io_state", "iostate")
       .Case("open_mode", "openmode")
       .Case("seek_dir", "seekdir")

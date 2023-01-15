@@ -15,6 +15,7 @@ add_llvm_component_library(LLVMLoongArchDesc
   MC
   LoongArchInfo
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   LoongArch

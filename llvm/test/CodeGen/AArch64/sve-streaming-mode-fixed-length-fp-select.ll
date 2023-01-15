@@ -61,15 +61,15 @@ define void @select_v16f16(ptr %a, ptr %b, i1 %mask) #0 {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    csetm w8, ne
 ; CHECK-NEXT:    ldr q1, [x0, #16]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    ldr q3, [x1, #16]
+; CHECK-NEXT:    ldr q2, [x1, #16]
+; CHECK-NEXT:    ldr q3, [x1]
 ; CHECK-NEXT:    mov z4.h, w8
 ; CHECK-NEXT:    bic z2.d, z2.d, z4.d
 ; CHECK-NEXT:    and z0.d, z0.d, z4.d
 ; CHECK-NEXT:    bic z3.d, z3.d, z4.d
 ; CHECK-NEXT:    and z1.d, z1.d, z4.d
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z1.d, z1.d, z3.d
+; CHECK-NEXT:    orr z0.d, z0.d, z3.d
+; CHECK-NEXT:    orr z1.d, z1.d, z2.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <16 x half>, ptr %a
@@ -121,21 +121,21 @@ define void @select_v8f32(ptr %a, ptr %b, i1 %mask) #0 {
 ; CHECK-LABEL: select_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w2, #0x1
-; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    ldr q1, [x0, #16]
+; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    mvn w9, w8
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    ldr q3, [x1, #16]
+; CHECK-NEXT:    ldr q2, [x1, #16]
+; CHECK-NEXT:    ldr q3, [x1]
 ; CHECK-NEXT:    mov z4.s, w8
 ; CHECK-NEXT:    mov z5.s, w9
-; CHECK-NEXT:    and z1.d, z1.d, z4.d
 ; CHECK-NEXT:    and z0.d, z0.d, z4.d
-; CHECK-NEXT:    and z2.d, z2.d, z5.d
+; CHECK-NEXT:    and z1.d, z1.d, z4.d
 ; CHECK-NEXT:    and z3.d, z3.d, z5.d
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    and z2.d, z2.d, z5.d
 ; CHECK-NEXT:    orr z1.d, z1.d, z3.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <8 x float>, ptr %a
   %op2 = load volatile <8 x float>, ptr %b
@@ -186,21 +186,21 @@ define void @select_v4f64(ptr %a, ptr %b, i1 %mask) #0 {
 ; CHECK-LABEL: select_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w2, #0x1
-; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q0, [x0, #16]
 ; CHECK-NEXT:    csetm x8, ne
-; CHECK-NEXT:    ldr q1, [x0, #16]
+; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    mvn x9, x8
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    ldr q3, [x1, #16]
+; CHECK-NEXT:    ldr q2, [x1, #16]
+; CHECK-NEXT:    ldr q3, [x1]
 ; CHECK-NEXT:    mov z4.d, x8
 ; CHECK-NEXT:    mov z5.d, x9
-; CHECK-NEXT:    and z1.d, z1.d, z4.d
 ; CHECK-NEXT:    and z0.d, z0.d, z4.d
-; CHECK-NEXT:    and z2.d, z2.d, z5.d
+; CHECK-NEXT:    and z1.d, z1.d, z4.d
 ; CHECK-NEXT:    and z3.d, z3.d, z5.d
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    and z2.d, z2.d, z5.d
 ; CHECK-NEXT:    orr z1.d, z1.d, z3.d
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    orr z0.d, z0.d, z2.d
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <4 x double>, ptr %a
   %op2 = load volatile <4 x double>, ptr %b

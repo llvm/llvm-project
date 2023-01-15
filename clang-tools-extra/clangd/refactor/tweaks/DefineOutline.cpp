@@ -27,12 +27,12 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/Tokens.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -58,8 +58,8 @@ const FunctionDecl *getSelectedFunction(const SelectionTree::Node *SelNode) {
   return nullptr;
 }
 
-llvm::Optional<Path> getSourceFile(llvm::StringRef FileName,
-                                   const Tweak::Selection &Sel) {
+std::optional<Path> getSourceFile(llvm::StringRef FileName,
+                                  const Tweak::Selection &Sel) {
   assert(Sel.FS);
   if (auto Source = getCorrespondingHeaderOrSource(FileName, Sel.FS))
     return *Source;
@@ -69,7 +69,7 @@ llvm::Optional<Path> getSourceFile(llvm::StringRef FileName,
 // Synthesize a DeclContext for TargetNS from CurContext. TargetNS must be empty
 // for global namespace, and endwith "::" otherwise.
 // Returns std::nullopt if TargetNS is not a prefix of CurContext.
-llvm::Optional<const DeclContext *>
+std::optional<const DeclContext *>
 findContextForNS(llvm::StringRef TargetNS, const DeclContext *CurContext) {
   assert(TargetNS.empty() || TargetNS.endswith("::"));
   // Skip any non-namespace contexts, e.g. TagDecls, functions/methods.
@@ -242,7 +242,7 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
       if (Tok.kind() != Kind)
         continue;
       FoundAny = true;
-      auto Spelling = TokBuf.spelledForExpanded(llvm::makeArrayRef(Tok));
+      auto Spelling = TokBuf.spelledForExpanded(llvm::ArrayRef(Tok));
       if (!Spelling) {
         Errors = llvm::joinErrors(
             std::move(Errors),

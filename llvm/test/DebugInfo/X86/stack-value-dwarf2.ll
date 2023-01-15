@@ -22,50 +22,45 @@ target triple = "i386-apple-ios7.0.0"
 define void @_Z34swift_getGenericMetadata_argumentsv() #0 !dbg !5 {
 entry:
   %ref.tmp = alloca %class.K, align 8
-  %0 = getelementptr inbounds %class.K, %class.K* %ref.tmp, i32 0, i32 0, i32 0, i32 0
-  %call = tail call i64 @_Z8getCacheP23ConditionPlatformHelper(%struct.ConditionPlatformHelper* undef)
-  %1 = bitcast %class.K* %ref.tmp to i64*
-  %LastSearch.i.i = getelementptr inbounds %class.K, %class.K* %ref.tmp, i32 0, i32 0, i32 0
-  %call.i.i = call %"struct.J<K::L, false, int>::Node"* @_ZN1BIPN1JIN1K1LELb0EiE4NodeEE4loadEv(%struct.B* nonnull %LastSearch.i.i)
-  %tobool.i.i = icmp eq %"struct.J<K::L, false, int>::Node"* %call.i.i, null
+  %call = tail call i64 @_Z8getCacheP23ConditionPlatformHelper(ptr undef)
+  %call.i.i = call ptr @_ZN1BIPN1JIN1K1LELb0EiE4NodeEE4loadEv(ptr nonnull %ref.tmp)
+  %tobool.i.i = icmp eq ptr %call.i.i, null
   br i1 %tobool.i.i, label %_ZN1NIN1K1LELi0EE11getOrInsertIiEE1AIPS1_ET_.exit.i, label %if.then.i.i
 
 if.then.i.i:
-  %2 = lshr i64 %call, 32
-  %3 = trunc i64 %2 to i32
-  %Payload.i.i = getelementptr inbounds %"struct.J<K::L, false, int>::Node", %"struct.J<K::L, false, int>::Node"* %call.i.i, i32 0, i32 0
+  %0 = lshr i64 %call, 32
+  %1 = trunc i64 %0 to i32
+  %Payload.i.i = getelementptr inbounds %"struct.J<K::L, false, int>::Node", ptr %call.i.i, i32 0, i32 0
   br label %_ZN1NIN1K1LELi0EE11getOrInsertIiEE1AIPS1_ET_.exit.i
 
 _ZN1NIN1K1LELi0EE11getOrInsertIiEE1AIPS1_ET_.exit.i: ; preds = %if.then.i.i, %entry
-  %retval.sroa.0.0.i.i = phi %"class.K::L"* [ %Payload.i.i, %if.then.i.i ], [ undef, %entry ]
-  %call4.i = call %"struct.K::M"* @_ZN1FIN1K1MEE3getEv(%struct.F* undef)
-  call void @llvm.dbg.value(metadata %"struct.K::M"* %call4.i, metadata !7, metadata !11), !dbg !12
-  call void @llvm.dbg.value(metadata %"struct.K::M"* %call4.i, metadata !7, metadata !18), !dbg !12
-  %Handle2.i.i.i.i.i = getelementptr inbounds %"struct.K::M", %"struct.K::M"* %call4.i, i32 0, i32 0, i32 0
-  %Handle.i.i.i.i.i = getelementptr inbounds %"struct.K::M", %"struct.K::M"* %call4.i, i32 0, i32 1, i32 0
-  %4 = getelementptr inbounds %"class.K::L", %"class.K::L"* %retval.sroa.0.0.i.i, i32 0, i32 0, i32 0
+  %retval.sroa.0.0.i.i = phi ptr [ %Payload.i.i, %if.then.i.i ], [ undef, %entry ]
+  %call4.i = call ptr @_ZN1FIN1K1MEE3getEv(ptr undef)
+  call void @llvm.dbg.value(metadata ptr %call4.i, metadata !7, metadata !11), !dbg !12
+  call void @llvm.dbg.value(metadata ptr %call4.i, metadata !7, metadata !18), !dbg !12
+  %Handle.i.i.i.i.i = getelementptr inbounds %"struct.K::M", ptr %call4.i, i32 0, i32 1, i32 0
   br label %while.body.i.i.i.i
 
 while.body.i.i.i.i:
-  %5 = load i32, i32* %4, align 4
+  %2 = load i32, ptr %retval.sroa.0.0.i.i, align 4
   %call.i.i.i.i.i.i = call i32 @_Z6get_idv(), !dbg !12
-  %call.i.i.i.i.i.i.i = call zeroext i1 @_Z24__libcpp_thread_id_equalii(i32 %5, i32 %call.i.i.i.i.i.i)
-  %6 = load i32, i32* %Handle2.i.i.i.i.i, align 4
-  call void @_ZN23ConditionPlatformHelper4waitERii(i32* nonnull dereferenceable(4) %Handle.i.i.i.i.i, i32 %6)
+  %call.i.i.i.i.i.i.i = call zeroext i1 @_Z24__libcpp_thread_id_equalii(i32 %2, i32 %call.i.i.i.i.i.i)
+  %3 = load i32, ptr %call4.i, align 4
+  call void @_ZN23ConditionPlatformHelper4waitERii(ptr nonnull dereferenceable(4) %Handle.i.i.i.i.i, i32 %3)
   br label %while.body.i.i.i.i
 }
 
-declare i64 @_Z8getCacheP23ConditionPlatformHelper(%struct.ConditionPlatformHelper*) local_unnamed_addr
+declare i64 @_Z8getCacheP23ConditionPlatformHelper(ptr) local_unnamed_addr
 
-declare %"struct.K::M"* @_ZN1FIN1K1MEE3getEv(%struct.F*) local_unnamed_addr
+declare ptr @_ZN1FIN1K1MEE3getEv(ptr) local_unnamed_addr
 
-declare %"struct.J<K::L, false, int>::Node"* @_ZN1BIPN1JIN1K1LELb0EiE4NodeEE4loadEv(%struct.B*) local_unnamed_addr
+declare ptr @_ZN1BIPN1JIN1K1LELb0EiE4NodeEE4loadEv(ptr) local_unnamed_addr
 
 declare i32 @_Z6get_idv() local_unnamed_addr
 
 declare zeroext i1 @_Z24__libcpp_thread_id_equalii(i32, i32) local_unnamed_addr
 
-declare void @_ZN23ConditionPlatformHelper4waitERii(i32* dereferenceable(4), i32) local_unnamed_addr
+declare void @_ZN23ConditionPlatformHelper4waitERii(ptr dereferenceable(4), i32) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

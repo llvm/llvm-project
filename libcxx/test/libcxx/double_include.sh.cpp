@@ -93,6 +93,7 @@ END-SCRIPT
 #include <errno.h>
 #include <exception>
 #include <execution>
+#include <expected>
 #include <fenv.h>
 #if !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 #   include <filesystem>
@@ -165,6 +166,7 @@ END-SCRIPT
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #   include <shared_mutex>
 #endif
+#include <source_location>
 #include <span>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #   include <sstream>

@@ -126,6 +126,7 @@ static unsigned offsetToDisp(MachineInstr &MI) {
   return OffDisp;
 }
 
+namespace {
 class EliminateFrameIndex {
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
@@ -192,6 +193,7 @@ public:
   void processMI(MachineInstr &MI, Register FrameReg, int64_t Offset,
                  int FIOperandNum);
 };
+} // namespace
 
 // Prepare the frame index if it doesn't fit in the immediate field.  Use
 // clobber register to hold calculated address.

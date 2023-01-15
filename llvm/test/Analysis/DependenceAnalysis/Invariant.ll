@@ -4,7 +4,7 @@
 ; Test for a bug, which caused an assert when an invalid
 ; SCEVAddRecExpr is created in addToCoefficient.
 
-; float foo (float g, float* rr[40]) {
+; float foo (float g, ptr rr[40]) {
 ;   float res= 0.0f;
 ;   for (int i = 0; i < 40; i += 5) {
 ;     for (int j = 0; j < 40; j += 5) {
@@ -20,7 +20,7 @@
 ; CHECK: da analyze - input [* 0|<]!
 ; CHECK: da analyze - none!
 
-define float @foo(float %g, [40 x float]* %rr) nounwind {
+define float @foo(float %g, ptr %rr) nounwind {
 entry:
   br label %for.cond1.preheader
 
@@ -32,10 +32,10 @@ for.cond1.preheader:
 for.body3:
   %j.02 = phi i32 [ 0, %for.cond1.preheader ], [ %add8, %for.body3 ]
   %res.11 = phi float [ %res.03, %for.cond1.preheader ], [ %add.res.1, %for.body3 ]
-  %arrayidx4 = getelementptr inbounds [40 x float], [40 x float]* %rr, i32 %j.02, i32 %j.02
-  %0 = load float, float* %arrayidx4, align 4
-  %arrayidx6 = getelementptr inbounds [40 x float], [40 x float]* %rr, i32 %i.04, i32 %j.02
-  %1 = load float, float* %arrayidx6, align 4
+  %arrayidx4 = getelementptr inbounds [40 x float], ptr %rr, i32 %j.02, i32 %j.02
+  %0 = load float, ptr %arrayidx4, align 4
+  %arrayidx6 = getelementptr inbounds [40 x float], ptr %rr, i32 %i.04, i32 %j.02
+  %1 = load float, ptr %arrayidx6, align 4
   %add = fadd float %0, %1
   %cmp7 = fcmp ogt float %add, %g
   %add.res.1 = select i1 %cmp7, float %add, float %res.11

@@ -124,8 +124,8 @@ define i32 @foo(i32 %a, i32 %b) {
   br i1 %tmp2, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
-  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  store i32 %a, ptr %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, ptr %tmp)
   br label %false
 
 false:
@@ -248,8 +248,8 @@ define i32 @bar(i32 %a, i32 %b) {
   br i1 %tmp2, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
-  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  store i32 %a, ptr %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, ptr %tmp)
   br label %false
 
 false:
@@ -257,7 +257,7 @@ false:
 }
 
 ; Function Attrs: optsize
-declare i32 @doSomething(i32, i32*)
+declare i32 @doSomething(i32, ptr)
 
 
 ; Check that we do not perform the restore inside the loop whereas the save
@@ -1442,7 +1442,7 @@ if.end:
   ret i32 %value.addr.0
 }
 
-define i1 @beq_to_bx(i32* %y, i32 %head) {
+define i1 @beq_to_bx(ptr %y, i32 %head) {
 ; ENABLE-V4T-LABEL: beq_to_bx:
 ; ENABLE-V4T:       @ %bb.0: @ %entry
 ; ENABLE-V4T-NEXT:    push {r4, lr}
@@ -1531,18 +1531,18 @@ define i1 @beq_to_bx(i32* %y, i32 %head) {
 ; DISABLE-V5T-NEXT:  LBB11_3: @ %cleanup
 ; DISABLE-V5T-NEXT:    pop {r4, pc}
 entry:
-  %cmp = icmp eq i32* %y, null
+  %cmp = icmp eq ptr %y, null
   br i1 %cmp, label %cleanup, label %if.end
 
 if.end:
-  %z = load i32, i32* %y, align 4
+  %z = load i32, ptr %y, align 4
   %and = and i32 %z, 2
   %cmp2 = icmp eq i32 %and, 0
   br i1 %cmp2, label %cleanup, label %if.end4
 
 if.end4:
-  store i32 %head, i32* %y, align 4
-  store volatile i32 %z, i32* %y, align 4
+  store i32 %head, ptr %y, align 4
+  store volatile i32 %z, ptr %y, align 4
   br label %cleanup
 
 cleanup:

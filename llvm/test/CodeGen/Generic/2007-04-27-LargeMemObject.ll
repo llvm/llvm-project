@@ -4,10 +4,10 @@
 
 define void @test() {
 entry:
-        %currfpu = alloca %struct..0anon, align 16              ; <%struct..0anon*> [#uses=2]
-        %mxcsr = alloca %struct..0anon, align 16                ; <%struct..0anon*> [#uses=1]
-        call void asm sideeffect "fnstenv $0", "=*m,~{dirflag},~{fpsr},~{flags}"( %struct..0anon* elementtype( %struct..0anon) %currfpu )
-        call void asm sideeffect "$0  $1", "=*m,*m,~{dirflag},~{fpsr},~{flags}"( %struct..0anon* elementtype( %struct..0anon) %mxcsr, %struct..0anon* elementtype(%struct..0anon) %currfpu )
+        %currfpu = alloca %struct..0anon, align 16              ; <ptr> [#uses=2]
+        %mxcsr = alloca %struct..0anon, align 16                ; <ptr> [#uses=1]
+        call void asm sideeffect "fnstenv $0", "=*m,~{dirflag},~{fpsr},~{flags}"( ptr elementtype( %struct..0anon) %currfpu )
+        call void asm sideeffect "$0  $1", "=*m,*m,~{dirflag},~{fpsr},~{flags}"( ptr elementtype( %struct..0anon) %mxcsr, ptr elementtype(%struct..0anon) %currfpu )
         ret void
 }
 

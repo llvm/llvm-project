@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Threading.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
 
 #include <cassert>
 #include <errno.h>
+#include <optional>
 #include <stdlib.h>
 #include <string.h>
 
@@ -82,9 +82,9 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
   // which is not enough for some/many normal LLVM compilations. This implements
   // the same interface as std::thread but requests the same stack size as the
   // main thread (8MB) before creation.
-const llvm::Optional<unsigned> llvm::thread::DefaultStackSize = 8 * 1024 * 1024;
+const std::optional<unsigned> llvm::thread::DefaultStackSize = 8 * 1024 * 1024;
 #else
-const llvm::Optional<unsigned> llvm::thread::DefaultStackSize;
+const std::optional<unsigned> llvm::thread::DefaultStackSize;
 #endif
 
 

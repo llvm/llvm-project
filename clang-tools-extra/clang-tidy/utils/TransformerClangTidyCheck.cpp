@@ -10,6 +10,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -67,12 +68,12 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(StringRef Name,
 // we would be accessing `getLangOpts` and `Options` before the underlying
 // `ClangTidyCheck` instance was properly initialized.
 TransformerClangTidyCheck::TransformerClangTidyCheck(
-    std::function<Optional<RewriteRuleWith<std::string>>(const LangOptions &,
-                                                         const OptionsView &)>
+    std::function<std::optional<RewriteRuleWith<std::string>>(
+        const LangOptions &, const OptionsView &)>
         MakeRule,
     StringRef Name, ClangTidyContext *Context)
     : TransformerClangTidyCheck(Name, Context) {
-  if (Optional<RewriteRuleWith<std::string>> R =
+  if (std::optional<RewriteRuleWith<std::string>> R =
           MakeRule(getLangOpts(), Options))
     setRule(std::move(*R));
 }

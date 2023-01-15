@@ -4,7 +4,7 @@ declare void @foo(i64)
 
 ; Verify that redundant adds aren't inserted by LSR.
 ; CHECK-LABEL: @bar(
-define void @bar(double* %A) {
+define void @bar(ptr %A) {
 entry:
   br label %while.cond
 
@@ -19,8 +19,8 @@ while.cond:
 
 land.rhs:
   %indvars.iv.next29 = add nsw i64 %indvars.iv28, -1
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %indvars.iv.next29
-  %Aload = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %indvars.iv.next29
+  %Aload = load double, ptr %arrayidx, align 8
   %cmp1 = fcmp oeq double %Aload, 0.000000e+00
   br i1 %cmp1, label %while.cond, label %if.end
 

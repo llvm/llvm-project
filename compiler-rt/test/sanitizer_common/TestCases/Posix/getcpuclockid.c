@@ -1,6 +1,6 @@
 // RUN: %clang -pthread %s -Wl,-as-needed -o %t && %run %t
 //
-// UNSUPPORTED: darwin, solaris
+// UNSUPPORTED: darwin, target={{.*solaris.*}}
 
 #include <time.h>
 #include <unistd.h>

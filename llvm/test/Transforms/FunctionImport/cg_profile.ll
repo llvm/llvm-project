@@ -10,7 +10,7 @@
 ; CHECK:      !0 = !{i32 1, !"EnableSplitLTOUnit", i32 0}
 ; CHECK-NEXT: !1 = !{i32 5, !"CG Profile", !2}
 ; CHECK-NEXT: !2 = distinct !{!3}
-; CHECK-NEXT: !3 = !{void ()* @foo, void (%class.A*)* bitcast (void (%class.A.0*)* @bar to void (%class.A*)*), i64 2753}
+; CHECK-NEXT: !3 = !{ptr @foo, ptr @bar, i64 2753}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -20,11 +20,11 @@ target triple = "x86_64-unknown-linux-gnu"
 %class.A = type { i8 }
 
 define void @foo() !prof !2 {
-  call void @bar(%class.A* null)
+  call void @bar(ptr null)
   ret void
 }
 
-declare void @bar(%class.A*)
+declare void @bar(ptr)
 
 !llvm.module.flags = !{!1}
 

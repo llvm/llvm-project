@@ -204,7 +204,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   for (auto *I : Params)
     if (auto *VT = dyn_cast<llvm::VectorType>(I))
       LargestVectorWidth = std::max(
-          LargestVectorWidth, VT->getPrimitiveSizeInBits().getKnownMinSize());
+          LargestVectorWidth, VT->getPrimitiveSizeInBits().getKnownMinValue());
 
   // Recompute the parameter attributes list based on the new arguments for
   // the function.
@@ -300,7 +300,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // Since we have now created the new function, splice the body of the old
   // function right into the new function, leaving the old rotting hulk of the
   // function empty.
-  NF->getBasicBlockList().splice(NF->begin(), F->getBasicBlockList());
+  NF->splice(NF->begin(), F);
 
   // We will collect all the new created allocas to promote them into registers
   // after the following loop

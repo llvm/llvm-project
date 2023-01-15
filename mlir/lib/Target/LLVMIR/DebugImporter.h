@@ -29,7 +29,8 @@ namespace detail {
 
 class DebugImporter {
 public:
-  DebugImporter(MLIRContext *context) : context(context) {}
+  DebugImporter(ModuleOp mlirModule)
+      : context(mlirModule.getContext()), mlirModule(mlirModule) {}
 
   /// Translates the given LLVM debug location to an MLIR location.
   Location translateLoc(llvm::DILocation *loc);
@@ -69,6 +70,7 @@ private:
   DenseMap<llvm::DINode *, DINodeAttr> nodeToAttr;
 
   MLIRContext *context;
+  ModuleOp mlirModule;
 };
 
 } // namespace detail

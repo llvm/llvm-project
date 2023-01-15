@@ -407,7 +407,7 @@ Error addFunctionPointerRelocationsToCurrentSymbol(jitlink::Symbol &Sym,
   auto SymStartInBlock =
       (const uint8_t *)B.getContent().data() + Sym.getOffset();
   auto SymSize = Sym.getSize() ? Sym.getSize() : B.getSize() - Sym.getOffset();
-  auto Content = makeArrayRef(SymStartInBlock, SymSize);
+  auto Content = ArrayRef(SymStartInBlock, SymSize);
 
   LLVM_DEBUG(dbgs() << "Adding self-relocations to " << Sym.getName() << "\n");
 

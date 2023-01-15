@@ -7,7 +7,7 @@ define i32 @TestNoTsan(i32 %cond) nounwind readonly uwtable {
 ; CHECK-LABEL: @TestNoTsan(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[COND:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @g, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @g, align 4
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TOBOOL]], i32 0, i32 [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
@@ -16,7 +16,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i32, i32* @g, align 4
+  %0 = load i32, ptr @g, align 4
   br label %return
 
 return:                                           ; preds = %entry, %if.then
@@ -30,7 +30,7 @@ define i32 @TestTsan(i32 %cond) nounwind readonly uwtable sanitize_thread {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[COND:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[RETURN:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @g, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @g, align 4
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
@@ -41,7 +41,7 @@ entry:
   br i1 %tobool, label %return, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i32, i32* @g, align 4
+  %0 = load i32, ptr @g, align 4
   br label %return
 
 return:                                           ; preds = %entry, %if.then

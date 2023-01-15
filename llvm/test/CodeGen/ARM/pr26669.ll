@@ -2,15 +2,15 @@
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "thumbv7--ios5.0.0"
 
-define void @g() personality i32 (...)* @__gxx_personality_sj0 {
+define void @g() personality ptr @__gxx_personality_sj0 {
 entry:
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
   invoke void @f()
           to label %try.cont unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
   br label %try.cont
 

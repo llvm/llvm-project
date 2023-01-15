@@ -102,7 +102,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       // range.
       const bool IsLiveIn = MRI.isLiveIn(Reg);
       TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
-                              RC, TRI);
+                              RC, TRI, Register());
 
       if (Indexes) {
         assert(std::distance(MIS.begin(), I) == 1);
@@ -137,7 +137,8 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
           Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
 
-      TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI);
+      TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI,
+                               Register());
       assert(I != RestoreBlock.begin() &&
              "loadRegFromStackSlot didn't insert any code!");
       // Insert in reverse order.  loadRegFromStackSlot can insert
@@ -296,7 +297,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
 
         int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
         assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
-        if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI)) {
+        if (FuncInfo->allocateSGPRSpillToVGPRLane(MF, FI)) {
           NewReservedRegs = true;
           bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
               MI, FI, nullptr, Indexes, LIS);
@@ -309,8 +310,8 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
 
     // FIXME: Adding to live-ins redundant with reserving registers.
     for (MachineBasicBlock &MBB : MF) {
-      for (auto SSpill : FuncInfo->getSGPRSpillVGPRs())
-        MBB.addLiveIn(SSpill.VGPR);
+      for (auto Reg : FuncInfo->getSGPRSpillVGPRs())
+        MBB.addLiveIn(Reg);
       MBB.sortUniqueLiveIns();
 
       // FIXME: The dead frame indices are replaced with a null register from

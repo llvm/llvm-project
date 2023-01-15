@@ -9,6 +9,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 int Array[] = {1, 2, 3};
 auto IntPtr = reinterpret_cast<int *>(0xabc);
@@ -20,7 +21,7 @@ llvm::StringMap<int> StringMap = {{"foo", 123}, {"bar", 456}};
 llvm::Expected<int> ExpectedValue(8);
 llvm::Expected<int> ExpectedError(llvm::createStringError({}, ""));
 llvm::Optional<int> OptionalValue(9);
-llvm::Optional<int> OptionalNone(llvm::None);
+llvm::Optional<int> OptionalNone(std::nullopt);
 llvm::SmallVector<int, 5> SmallVector = {10, 11, 12};
 llvm::SmallString<5> SmallString("foo");
 llvm::StringRef StringRef = "bar";

@@ -17,6 +17,7 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
@@ -33,6 +34,7 @@
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-io"
 
@@ -112,7 +114,7 @@ namespace {
 /// and an IOMSG specifier variable may be set to a description of a condition.
 struct ConditionSpecInfo {
   const Fortran::lower::SomeExpr *ioStatExpr{};
-  llvm::Optional<fir::ExtendedValue> ioMsg;
+  std::optional<fir::ExtendedValue> ioMsg;
   bool hasErr{};
   bool hasEnd{};
   bool hasEor{};
@@ -269,7 +271,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
                                              symbol.name().ToString() + '\0');
   };
 
-  // Define object names, and static descriptors for global objects.
+  // Define variable names, and static descriptors for global variables.
   bool groupIsLocal = false;
   stringAddress(symbol);
   for (const Fortran::semantics::Symbol &s : details.objects()) {
@@ -278,18 +280,20 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
       groupIsLocal = true;
       continue;
     }
-    // We know we have a global item.  It it's not a pointer or allocatable,
-    // create a static pointer to it.
+    // A global pointer or allocatable variable has a descriptor for typical
+    // accesses. Variables in multiple namelist groups may already have one.
+    // Create descriptors for other cases.
     if (!IsAllocatableOrPointer(s)) {
-      std::string mangleName = converter.mangleName(s) + ".desc";
+      std::string mangleName =
+          Fortran::lower::mangle::globalNamelistDescriptorName(s);
       if (builder.getNamedGlobal(mangleName))
         continue;
       const auto expr = Fortran::evaluate::AsGenericExpr(s);
       fir::BoxType boxTy =
           fir::BoxType::get(fir::PointerType::get(converter.genType(s)));
       auto descFunc = [&](fir::FirOpBuilder &b) {
-        auto box =
-            Fortran::lower::genInitialDataTarget(converter, loc, boxTy, *expr);
+        auto box = Fortran::lower::genInitialDataTarget(
+            converter, loc, boxTy, *expr, /*couldBeInEquivalence=*/true);
         b.create<fir::HasValueOp>(loc, box);
       };
       builder.createGlobalConstant(loc, boxTy, mangleName, descFunc, linkOnce);
@@ -316,10 +320,8 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
                                                 builder.getArrayAttr(idx));
       idx[1] = one;
       mlir::Value descAddr;
-      // Items that we created end in ".desc".
-      std::string suffix = IsAllocatableOrPointer(s) ? "" : ".desc";
-      if (auto desc =
-              builder.getNamedGlobal(converter.mangleName(s) + suffix)) {
+      if (auto desc = builder.getNamedGlobal(
+              Fortran::lower::mangle::globalNamelistDescriptorName(s))) {
         descAddr = builder.create<fir::AddrOfOp>(loc, desc.resultType(),
                                                  desc.getSymbol());
       } else if (Fortran::semantics::FindCommonBlockContaining(s) &&
@@ -599,9 +601,9 @@ static mlir::Value createIoRuntimeCallForItem(mlir::Location loc,
                                               const fir::ExtendedValue &item) {
   mlir::Type argType = inputFunc.getFunctionType().getInput(1);
   llvm::SmallVector<mlir::Value> inputFuncArgs = {cookie};
-  if (argType.isa<fir::BoxType>()) {
+  if (argType.isa<fir::BaseBoxType>()) {
     mlir::Value box = fir::getBase(item);
-    assert(box.getType().isa<fir::BoxType>() && "must be previously emboxed");
+    assert(box.getType().isa<fir::BaseBoxType>() && "must be previously emboxed");
     inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
   } else {
     mlir::Value itemAddr = fir::getBase(item);
@@ -1335,7 +1337,7 @@ constexpr bool isDataTransferInternal<Fortran::parser::PrintStmt>(
 /// If the variable `var` is an array or of a KIND other than the default
 /// (normally 1), then a descriptor is required by the runtime IO API. This
 /// condition holds even in F77 sources.
-static llvm::Optional<fir::ExtendedValue> getVariableBufferRequiredDescriptor(
+static std::optional<fir::ExtendedValue> getVariableBufferRequiredDescriptor(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::parser::Variable &var,
     Fortran::lower::StatementContext &stmtCtx) {
@@ -1352,7 +1354,7 @@ static llvm::Optional<fir::ExtendedValue> getVariableBufferRequiredDescriptor(
 }
 
 template <typename A>
-static llvm::Optional<fir::ExtendedValue>
+static std::optional<fir::ExtendedValue>
 maybeGetInternalIODescriptor(Fortran::lower::AbstractConverter &converter,
                              mlir::Location loc, const A &stmt,
                              Fortran::lower::StatementContext &stmtCtx) {
@@ -1365,7 +1367,7 @@ maybeGetInternalIODescriptor(Fortran::lower::AbstractConverter &converter,
   return std::nullopt;
 }
 template <>
-inline llvm::Optional<fir::ExtendedValue>
+inline std::optional<fir::ExtendedValue>
 maybeGetInternalIODescriptor<Fortran::parser::PrintStmt>(
     Fortran::lower::AbstractConverter &, mlir::Location loc,
     const Fortran::parser::PrintStmt &, Fortran::lower::StatementContext &) {
@@ -1876,7 +1878,7 @@ void genBeginDataTransferCallArgs(
     const A &stmt, mlir::FunctionType ioFuncTy, bool isFormatted,
     bool isListOrNml, [[maybe_unused]] bool isInternal,
     [[maybe_unused]] bool isAsync,
-    const llvm::Optional<fir::ExtendedValue> &descRef, ConditionSpecInfo &csi,
+    const std::optional<fir::ExtendedValue> &descRef, ConditionSpecInfo &csi,
     Fortran::lower::StatementContext &stmtCtx) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto maybeGetFormatArgs = [&]() {
@@ -1953,7 +1955,7 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
   const bool isFormatted = isDataTransferFormatted(stmt);
   const bool isList = isFormatted ? isDataTransferList(stmt) : false;
   const bool isInternal = isDataTransferInternal(stmt);
-  llvm::Optional<fir::ExtendedValue> descRef =
+  std::optional<fir::ExtendedValue> descRef =
       isInternal ? maybeGetInternalIODescriptor(converter, loc, stmt, stmtCtx)
                  : std::nullopt;
   const bool isInternalWithDesc = descRef.has_value();

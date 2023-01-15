@@ -407,10 +407,10 @@ declare noundef nonnull ptr @_Znam(i64 noundef)
       StackIds.push_back(*ContextIter);
     if (First) {
       std::vector<uint64_t> Expected = {2, 3, 4};
-      EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef(Expected));
+      EXPECT_EQ(ArrayRef(StackIds), ArrayRef(Expected));
     } else {
       std::vector<uint64_t> Expected = {2, 3, 5};
-      EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef(Expected));
+      EXPECT_EQ(ArrayRef(StackIds), ArrayRef(Expected));
     }
     First = false;
   }
@@ -435,10 +435,10 @@ TEST_F(MemoryProfileInfoTest, CallStackTestSummary) {
       StackIds.push_back(Index->getStackIdAtIndex(StackIdIndex));
     if (First) {
       std::vector<uint64_t> Expected = {3, 4};
-      EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef(Expected));
+      EXPECT_EQ(ArrayRef(StackIds), ArrayRef(Expected));
     } else {
       std::vector<uint64_t> Expected = {3, 5};
-      EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef(Expected));
+      EXPECT_EQ(ArrayRef(StackIds), ArrayRef(Expected));
     }
     First = false;
   }
@@ -455,10 +455,10 @@ TEST_F(MemoryProfileInfoTest, CallStackTestSummary) {
         StackIds.push_back(Index->getStackIdAtIndex(StackIdIndex));
       if (First) {
         std::vector<uint64_t> Expected = {1, 2, 3, 4};
-        EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef(Expected));
+        EXPECT_EQ(ArrayRef(StackIds), ArrayRef(Expected));
       } else {
         std::vector<uint64_t> Expected = {1, 2, 3, 5};
-        EXPECT_EQ(makeArrayRef(StackIds), makeArrayRef(Expected));
+        EXPECT_EQ(ArrayRef(StackIds), ArrayRef(Expected));
       }
       First = false;
     }

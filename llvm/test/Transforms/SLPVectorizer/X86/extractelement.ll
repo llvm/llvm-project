@@ -42,7 +42,7 @@ define float @f_used_out_of_tree(<2 x float> %x) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    store float [[ADD]], float* @a, align 4
+; CHECK-NEXT:    store float [[ADD]], ptr @a, align 4
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 ; THRESH1-LABEL: @f_used_out_of_tree(
@@ -51,7 +51,7 @@ define float @f_used_out_of_tree(<2 x float> %x) {
 ; THRESH1-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
 ; THRESH1-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
 ; THRESH1-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP4]]
-; THRESH1-NEXT:    store float [[ADD]], float* @a, align 4
+; THRESH1-NEXT:    store float [[ADD]], ptr @a, align 4
 ; THRESH1-NEXT:    ret float [[TMP1]]
 ;
 ; THRESH2-LABEL: @f_used_out_of_tree(
@@ -60,7 +60,7 @@ define float @f_used_out_of_tree(<2 x float> %x) {
 ; THRESH2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
 ; THRESH2-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
 ; THRESH2-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP4]]
-; THRESH2-NEXT:    store float [[ADD]], float* @a, align 4
+; THRESH2-NEXT:    store float [[ADD]], ptr @a, align 4
 ; THRESH2-NEXT:    ret float [[TMP1]]
 ;
   %x0 = extractelement <2 x float> %x, i32 0
@@ -68,7 +68,7 @@ define float @f_used_out_of_tree(<2 x float> %x) {
   %x0x0 = fmul float %x0, %x0
   %x1x1 = fmul float %x1, %x1
   %add = fadd float %x0x0, %x1x1
-  store float %add, float* @a
+  store float %add, ptr @a
   ret float %x0
 }
 

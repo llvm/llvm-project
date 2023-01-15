@@ -400,10 +400,10 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
   if (UnrollRemainder)
     return NewLoop;
 
-  Optional<MDNode *> NewLoopID = makeFollowupLoopID(
+  std::optional<MDNode *> NewLoopID = makeFollowupLoopID(
       LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
   if (NewLoopID) {
-    NewLoop->setLoopID(NewLoopID.value());
+    NewLoop->setLoopID(*NewLoopID);
 
     // Do not setLoopAlreadyUnrolled if loop attributes have been defined
     // explicitly.
@@ -812,10 +812,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     updateLatchBranchWeightsForRemainderLoop(L, remainderLoop, Count);
 
   // Insert the cloned blocks into the function.
-  F->getBasicBlockList().splice(InsertBot->getIterator(),
-                                F->getBasicBlockList(),
-                                NewBlocks[0]->getIterator(),
-                                F->end());
+  F->splice(InsertBot->getIterator(), F, NewBlocks[0]->getIterator(), F->end());
 
   // Now the loop blocks are cloned and the other exiting blocks from the
   // remainder are connected to the original Loop's exit blocks. The remaining

@@ -460,7 +460,7 @@ private:
       return std::make_pair(Refs[A].Offset, Refs[A].Type != RefType::Implicit) <
              std::make_pair(Refs[B].Offset, Refs[B].Type != RefType::Implicit);
     });
-    auto Rest = llvm::makeArrayRef(RefOrder);
+    auto Rest = llvm::ArrayRef(RefOrder);
     unsigned End = 0;
     StartLine();
     for (unsigned I = 0; I < Code.size(); ++I) {
@@ -518,12 +518,18 @@ void writeHTMLReport(FileID File, const include_cleaner::Includes &Includes,
                      HeaderSearch &HS, PragmaIncludes *PI,
                      llvm::raw_ostream &OS) {
   Reporter R(OS, Ctx, HS, Includes, PI, File);
+  const auto& SM = Ctx.getSourceManager();
   for (Decl *Root : Roots)
     walkAST(*Root, [&](SourceLocation Loc, const NamedDecl &D, RefType T) {
+      if(!SM.isWrittenInMainFile(SM.getSpellingLoc(Loc)))
+        return;
       R.addRef(SymbolReference{Loc, D, T});
     });
-  for (const SymbolReference &Ref : MacroRefs)
+  for (const SymbolReference &Ref : MacroRefs) {
+    if (!SM.isWrittenInMainFile(SM.getSpellingLoc(Ref.RefLocation)))
+      continue;
     R.addRef(Ref);
+  }
   R.write();
 }
 

@@ -363,7 +363,7 @@ Expected<ExpressionValue> llvm::min(const ExpressionValue &LeftOperand,
 }
 
 Expected<ExpressionValue> NumericVariableUse::eval() const {
-  Optional<ExpressionValue> Value = Variable->getValue();
+  std::optional<ExpressionValue> Value = Variable->getValue();
   if (Value)
     return *Value;
 
@@ -480,7 +480,7 @@ char ErrorReported::ID = 0;
 
 Expected<NumericVariable *> Pattern::parseNumericVariableDefinition(
     StringRef &Expr, FileCheckPatternContext *Context,
-    Optional<size_t> LineNumber, ExpressionFormat ImplicitFormat,
+    std::optional<size_t> LineNumber, ExpressionFormat ImplicitFormat,
     const SourceMgr &SM) {
   Expected<VariableProperties> ParseVarResult = parseVariable(Expr, SM);
   if (!ParseVarResult)
@@ -518,7 +518,7 @@ Expected<NumericVariable *> Pattern::parseNumericVariableDefinition(
 }
 
 Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
-    StringRef Name, bool IsPseudo, Optional<size_t> LineNumber,
+    StringRef Name, bool IsPseudo, std::optional<size_t> LineNumber,
     FileCheckPatternContext *Context, const SourceMgr &SM) {
   if (IsPseudo && !Name.equals("@LINE"))
     return ErrorDiagnostic::get(
@@ -542,7 +542,7 @@ Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
     Context->GlobalNumericVariableTable[Name] = NumericVariable;
   }
 
-  Optional<size_t> DefLineNumber = NumericVariable->getDefLineNumber();
+  std::optional<size_t> DefLineNumber = NumericVariable->getDefLineNumber();
   if (DefLineNumber && LineNumber && *DefLineNumber == *LineNumber)
     return ErrorDiagnostic::get(
         SM, Name,
@@ -554,7 +554,7 @@ Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
 
 Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
     StringRef &Expr, AllowedOperand AO, bool MaybeInvalidConstraint,
-    Optional<size_t> LineNumber, FileCheckPatternContext *Context,
+    std::optional<size_t> LineNumber, FileCheckPatternContext *Context,
     const SourceMgr &SM) {
   if (Expr.startswith("(")) {
     if (AO != AllowedOperand::Any)
@@ -611,7 +611,7 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
 }
 
 Expected<std::unique_ptr<ExpressionAST>>
-Pattern::parseParenExpr(StringRef &Expr, Optional<size_t> LineNumber,
+Pattern::parseParenExpr(StringRef &Expr, std::optional<size_t> LineNumber,
                         FileCheckPatternContext *Context, const SourceMgr &SM) {
   Expr = Expr.ltrim(SpaceChars);
   assert(Expr.startswith("("));
@@ -646,7 +646,7 @@ Pattern::parseParenExpr(StringRef &Expr, Optional<size_t> LineNumber,
 Expected<std::unique_ptr<ExpressionAST>>
 Pattern::parseBinop(StringRef Expr, StringRef &RemainingExpr,
                     std::unique_ptr<ExpressionAST> LeftOp,
-                    bool IsLegacyLineExpr, Optional<size_t> LineNumber,
+                    bool IsLegacyLineExpr, std::optional<size_t> LineNumber,
                     FileCheckPatternContext *Context, const SourceMgr &SM) {
   RemainingExpr = RemainingExpr.ltrim(SpaceChars);
   if (RemainingExpr.empty())
@@ -690,19 +690,19 @@ Pattern::parseBinop(StringRef Expr, StringRef &RemainingExpr,
 
 Expected<std::unique_ptr<ExpressionAST>>
 Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
-                       Optional<size_t> LineNumber,
+                       std::optional<size_t> LineNumber,
                        FileCheckPatternContext *Context, const SourceMgr &SM) {
   Expr = Expr.ltrim(SpaceChars);
   assert(Expr.startswith("("));
 
-  auto OptFunc = StringSwitch<Optional<binop_eval_t>>(FuncName)
+  auto OptFunc = StringSwitch<binop_eval_t>(FuncName)
                      .Case("add", operator+)
                      .Case("div", operator/)
                      .Case("max", max)
                      .Case("min", min)
                      .Case("mul", operator*)
                      .Case("sub", operator-)
-                     .Default(std::nullopt);
+                     .Default(nullptr);
 
   if (!OptFunc)
     return ErrorDiagnostic::get(
@@ -765,8 +765,8 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
 }
 
 Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
-    StringRef Expr, Optional<NumericVariable *> &DefinedNumericVariable,
-    bool IsLegacyLineExpr, Optional<size_t> LineNumber,
+    StringRef Expr, std::optional<NumericVariable *> &DefinedNumericVariable,
+    bool IsLegacyLineExpr, std::optional<size_t> LineNumber,
     FileCheckPatternContext *Context, const SourceMgr &SM) {
   std::unique_ptr<ExpressionAST> ExpressionASTPointer = nullptr;
   StringRef DefExpr = StringRef();
@@ -1099,7 +1099,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
 
       // Parse numeric substitution block.
       std::unique_ptr<Expression> ExpressionPointer;
-      Optional<NumericVariable *> DefinedNumericVariable;
+      std::optional<NumericVariable *> DefinedNumericVariable;
       if (IsNumBlock) {
         Expected<std::unique_ptr<Expression>> ParseResult =
             parseNumericSubstitutionBlock(MatchStr, DefinedNumericVariable,
@@ -1412,7 +1412,7 @@ void Pattern::printVariableDefs(const SourceMgr &SM,
   for (const auto &VariableDef : NumericVariableDefs) {
     VarCapture VC;
     VC.Name = VariableDef.getKey();
-    Optional<StringRef> StrValue =
+    std::optional<StringRef> StrValue =
         VariableDef.getValue().DefinedNumericVariable->getStringValue();
     if (!StrValue)
       continue;
@@ -2701,7 +2701,7 @@ Error FileCheckPatternContext::defineCmdlineVariables(
       // Now parse the definition both to check that the syntax is correct and
       // to create the necessary class instance.
       StringRef CmdlineDefExpr = CmdlineDef.substr(1);
-      Optional<NumericVariable *> DefinedNumericVariable;
+      std::optional<NumericVariable *> DefinedNumericVariable;
       Expected<std::unique_ptr<Expression>> ExpressionResult =
           Pattern::parseNumericSubstitutionBlock(CmdlineDefExpr,
                                                  DefinedNumericVariable, false,

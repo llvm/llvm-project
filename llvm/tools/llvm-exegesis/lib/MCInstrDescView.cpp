@@ -351,10 +351,12 @@ bool AliasingConfigurations::hasImplicitAliasing() const {
 }
 
 AliasingConfigurations::AliasingConfigurations(
-    const Instruction &DefInstruction, const Instruction &UseInstruction) {
-  if (UseInstruction.AllUseRegs.anyCommon(DefInstruction.AllDefRegs)) {
-    auto CommonRegisters = UseInstruction.AllUseRegs;
-    CommonRegisters &= DefInstruction.AllDefRegs;
+    const Instruction &DefInstruction, const Instruction &UseInstruction,
+    const BitVector &ForbiddenRegisters) {
+  auto CommonRegisters = UseInstruction.AllUseRegs;
+  CommonRegisters &= DefInstruction.AllDefRegs;
+  CommonRegisters.reset(ForbiddenRegisters);
+  if (!CommonRegisters.empty()) {
     for (const MCPhysReg Reg : CommonRegisters.set_bits()) {
       AliasingRegisterOperands ARO;
       addOperandIfAlias(Reg, true, DefInstruction.Operands, ARO.Defs);

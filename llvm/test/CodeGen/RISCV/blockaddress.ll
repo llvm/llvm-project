@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 
-@addr = global i8* null
+@addr = global ptr null
 
 define void @test_blockaddress() nounwind {
 ; RV32I-LABEL: test_blockaddress:
@@ -16,9 +16,9 @@ define void @test_blockaddress() nounwind {
 ; RV32I-NEXT:  .Ltmp0: # Block address taken
 ; RV32I-NEXT:  .LBB0_1: # %block
 ; RV32I-NEXT:    ret
-  store volatile i8* blockaddress(@test_blockaddress, %block), i8** @addr
-  %val = load volatile i8*, i8** @addr
-  indirectbr i8* %val, [label %block]
+  store volatile ptr blockaddress(@test_blockaddress, %block), ptr @addr
+  %val = load volatile ptr, ptr @addr
+  indirectbr ptr %val, [label %block]
 
 block:
   ret void

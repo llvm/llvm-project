@@ -212,6 +212,17 @@ void DbgAssignIntrinsic::setAddress(Value *V) {
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
 }
 
+void DbgAssignIntrinsic::setKillAddress() {
+  if (isKillAddress())
+    return;
+  setAddress(UndefValue::get(getAddress()->getType()));
+}
+
+bool DbgAssignIntrinsic::isKillAddress() const {
+  Value *Addr = getAddress();
+  return !Addr || isa<UndefValue>(Addr);
+}
+
 void DbgAssignIntrinsic::setValue(Value *V) {
   setOperand(OpValue,
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
@@ -301,13 +312,13 @@ ConstrainedFPIntrinsic::getExceptionBehavior() const {
 bool ConstrainedFPIntrinsic::isDefaultFPEnvironment() const {
   std::optional<fp::ExceptionBehavior> Except = getExceptionBehavior();
   if (Except) {
-    if (Except.value() != fp::ebIgnore)
+    if (*Except != fp::ebIgnore)
       return false;
   }
 
   std::optional<RoundingMode> Rounding = getRoundingMode();
   if (Rounding) {
-    if (Rounding.value() != RoundingMode::NearestTiesToEven)
+    if (*Rounding != RoundingMode::NearestTiesToEven)
       return false;
   }
 
@@ -444,13 +455,13 @@ MaybeAlign VPIntrinsic::getPointerAlignment() const {
   std::optional<unsigned> PtrParamOpt =
       getMemoryPointerParamPos(getIntrinsicID());
   assert(PtrParamOpt && "no pointer argument!");
-  return getParamAlign(PtrParamOpt.value());
+  return getParamAlign(*PtrParamOpt);
 }
 
 /// \return The pointer operand of this load,store, gather or scatter.
 Value *VPIntrinsic::getMemoryPointerParam() const {
   if (auto PtrParamOpt = getMemoryPointerParamPos(getIntrinsicID()))
-    return getArgOperand(PtrParamOpt.value());
+    return getArgOperand(*PtrParamOpt);
   return nullptr;
 }
 
@@ -472,7 +483,7 @@ Value *VPIntrinsic::getMemoryDataParam() const {
   auto DataParamOpt = getMemoryDataParamPos(getIntrinsicID());
   if (!DataParamOpt)
     return nullptr;
-  return getArgOperand(DataParamOpt.value());
+  return getArgOperand(*DataParamOpt);
 }
 
 std::optional<unsigned> VPIntrinsic::getMemoryDataParamPos(Intrinsic::ID VPID) {

@@ -271,8 +271,8 @@ static void writeSequence(MutableArrayRef<uint32_t> buf, const char *prefix,
   // instructions and write [first,end).
   auto *sec = make<InputSection>(
       nullptr, SHF_ALLOC, SHT_PROGBITS, 4,
-      makeArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
-                   4 * (buf.size() - first)),
+      ArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
+               4 * (buf.size() - first)),
       ".text");
   ctx.inputSections.push_back(sec);
   for (Defined *sym : defined) {

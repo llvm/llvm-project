@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; Masked Store
 ;
 
-define void @masked_store_v4i8(<4 x i8>* %dst, <4 x i1> %mask) #0 {
+define void @masked_store_v4i8(ptr %dst, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -18,11 +18,11 @@ define void @masked_store_v4i8(<4 x i8>* %dst, <4 x i1> %mask) #0 {
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v4i8(<4 x i8> zeroinitializer, <4 x i8>* %dst, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.store.v4i8(<4 x i8> zeroinitializer, ptr %dst, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v8i8(<8 x i8>* %dst, <8 x i1> %mask) #0 {
+define void @masked_store_v8i8(ptr %dst, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -33,11 +33,11 @@ define void @masked_store_v8i8(<8 x i8>* %dst, <8 x i1> %mask) #0 {
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v8i8(<8 x i8> zeroinitializer, <8 x i8>* %dst, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.store.v8i8(<8 x i8> zeroinitializer, ptr %dst, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v16i8(<16 x i8>* %dst, <16 x i1> %mask) #0 {
+define void @masked_store_v16i8(ptr %dst, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -48,11 +48,11 @@ define void @masked_store_v16i8(<16 x i8>* %dst, <16 x i1> %mask) #0 {
 ; CHECK-NEXT:    mov z0.b, #0 // =0x0
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v16i8(<16 x i8> zeroinitializer, <16 x i8>* %dst, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.store.v16i8(<16 x i8> zeroinitializer, ptr %dst, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v32i8(<32 x i8>* %dst, <32 x i1> %mask) #0 {
+define void @masked_store_v32i8(ptr %dst, <32 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
@@ -129,11 +129,11 @@ define void @masked_store_v32i8(<32 x i8>* %dst, <32 x i1> %mask) #0 {
 ; CHECK-NEXT:    st1b { z0.b }, p1, [x0]
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v32i8(<32 x i8> zeroinitializer, <32 x i8>* %dst, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.store.v32i8(<32 x i8> zeroinitializer, ptr %dst, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v2f16(<2 x half>* %dst, <2 x i1> %mask) #0 {
+define void @masked_store_v2f16(ptr %dst, <2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
@@ -154,11 +154,11 @@ define void @masked_store_v2f16(<2 x half>* %dst, <2 x i1> %mask) #0 {
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v2f16(<2 x half> zeroinitializer, <2 x half>* %dst, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.store.v2f16(<2 x half> zeroinitializer, ptr %dst, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v4f16(<4 x half>* %dst, <4 x i1> %mask) #0 {
+define void @masked_store_v4f16(ptr %dst, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -169,11 +169,11 @@ define void @masked_store_v4f16(<4 x half>* %dst, <4 x i1> %mask) #0 {
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v4f16(<4 x half> zeroinitializer, <4 x half>* %dst, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.store.v4f16(<4 x half> zeroinitializer, ptr %dst, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v8f16(<8 x half>* %dst, <8 x i1> %mask) #0 {
+define void @masked_store_v8f16(ptr %dst, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v8f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -185,11 +185,11 @@ define void @masked_store_v8f16(<8 x half>* %dst, <8 x i1> %mask) #0 {
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v8f16(<8 x half> zeroinitializer, <8 x half>* %dst, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.store.v8f16(<8 x half> zeroinitializer, ptr %dst, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v16f16(<16 x half>* %dst, <16 x i1> %mask) #0 {
+define void @masked_store_v16f16(ptr %dst, <16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
@@ -209,11 +209,11 @@ define void @masked_store_v16f16(<16 x half>* %dst, <16 x i1> %mask) #0 {
 ; CHECK-NEXT:    st1h { z1.h }, p1, [x0, x8, lsl #1]
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v16f16(<16 x half> zeroinitializer, <16 x half>* %dst, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.store.v16f16(<16 x half> zeroinitializer, ptr %dst, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v4f32(<4 x float>* %dst, <4 x i1> %mask) #0 {
+define void @masked_store_v4f32(ptr %dst, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -225,11 +225,11 @@ define void @masked_store_v4f32(<4 x float>* %dst, <4 x i1> %mask) #0 {
 ; CHECK-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v4f32(<4 x float> zeroinitializer, <4 x float>* %dst, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.store.v4f32(<4 x float> zeroinitializer, ptr %dst, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v8f32(<8 x float>* %dst, <8 x i1> %mask) #0 {
+define void @masked_store_v8f32(ptr %dst, <8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
@@ -275,11 +275,11 @@ define void @masked_store_v8f32(<8 x float>* %dst, <8 x i1> %mask) #0 {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v8f32(<8 x float> zeroinitializer, <8 x float>* %dst, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.store.v8f32(<8 x float> zeroinitializer, ptr %dst, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v2f64(<2 x double>* %dst, <2 x i1> %mask) #0 {
+define void @masked_store_v2f64(ptr %dst, <2 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -291,11 +291,11 @@ define void @masked_store_v2f64(<2 x double>* %dst, <2 x i1> %mask) #0 {
 ; CHECK-NEXT:    mov z0.d, #0 // =0x0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v2f64(<2 x double> zeroinitializer, <2 x double>* %dst, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.store.v2f64(<2 x double> zeroinitializer, ptr %dst, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v4f64(<4 x double>* %dst, <4 x i1> %mask) #0 {
+define void @masked_store_v4f64(ptr %dst, <4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_store_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -315,21 +315,21 @@ define void @masked_store_v4f64(<4 x double>* %dst, <4 x i1> %mask) #0 {
 ; CHECK-NEXT:    st1d { z0.d }, p1, [x0, x8, lsl #3]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.store.v4f64(<4 x double> zeroinitializer, <4 x double>* %dst, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.store.v4f64(<4 x double> zeroinitializer, ptr %dst, i32 8, <4 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.store.v4i8(<4 x i8>, <4 x i8>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v8i8(<8 x i8>, <8 x i8>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v32i8(<32 x i8>, <32 x i8>*, i32, <32 x i1>)
-declare void @llvm.masked.store.v2f16(<2 x half>, <2 x half>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v4f16(<4 x half>, <4 x half>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v8f16(<8 x half>, <8 x half>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v16f16(<16 x half>, <16 x half>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v8f32(<8 x float>, <8 x float>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v2f64(<2 x double>, <2 x double>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v4f64(<4 x double>, <4 x double>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v4i8(<4 x i8>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v8i8(<8 x i8>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v16i8(<16 x i8>, ptr, i32, <16 x i1>)
+declare void @llvm.masked.store.v32i8(<32 x i8>, ptr, i32, <32 x i1>)
+declare void @llvm.masked.store.v2f16(<2 x half>, ptr, i32, <2 x i1>)
+declare void @llvm.masked.store.v4f16(<4 x half>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v8f16(<8 x half>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v16f16(<16 x half>, ptr, i32, <16 x i1>)
+declare void @llvm.masked.store.v4f32(<4 x float>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v8f32(<8 x float>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v2f64(<2 x double>, ptr, i32, <2 x i1>)
+declare void @llvm.masked.store.v4f64(<4 x double>, ptr, i32, <4 x i1>)
 
 attributes #0 = { "target-features"="+sve" }

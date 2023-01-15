@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 
 namespace clang {
 
@@ -67,7 +68,8 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
                                     const LangOptions &LangOpts, TokenKind TK,
                                     TokenKinds... TKs) {
   while (true) {
-    Optional<Token> CurrentToken = Lexer::findNextToken(Start, SM, LangOpts);
+    std::optional<Token> CurrentToken =
+        Lexer::findNextToken(Start, SM, LangOpts);
 
     if (!CurrentToken)
       return SourceLocation();
@@ -86,9 +88,9 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
 }
 
 // Finds next token that's not a comment.
-Optional<Token> findNextTokenSkippingComments(SourceLocation Start,
-                                              const SourceManager &SM,
-                                              const LangOptions &LangOpts);
+std::optional<Token> findNextTokenSkippingComments(SourceLocation Start,
+                                                   const SourceManager &SM,
+                                                   const LangOptions &LangOpts);
 
 /// Re-lex the provide \p Range and return \c false if either a macro spans
 /// multiple tokens, a pre-processor directive or failure to retrieve the
@@ -102,10 +104,10 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
 /// must be valid with respect to ``SM``.  Returns ``std::nullopt`` if no
 /// qualifying tokens are found.
 /// \note: doesn't support member function qualifiers.
-llvm::Optional<Token> getQualifyingToken(tok::TokenKind TK,
-                                         CharSourceRange Range,
-                                         const ASTContext &Context,
-                                         const SourceManager &SM);
+std::optional<Token> getQualifyingToken(tok::TokenKind TK,
+                                        CharSourceRange Range,
+                                        const ASTContext &Context,
+                                        const SourceManager &SM);
 
 /// Stmt->getEndLoc does not always behave the same way depending on Token type.
 /// See implementation for exceptions.

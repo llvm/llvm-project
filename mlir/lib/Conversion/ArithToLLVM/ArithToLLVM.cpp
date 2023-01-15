@@ -15,6 +15,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
+#include <type_traits>
 
 namespace mlir {
 #define GEN_PASS_DEF_ARITHTOLLVMCONVERSIONPASS
@@ -142,6 +143,20 @@ struct AddUIExtendedOpLowering
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+template <typename ArithMulOp, bool IsSigned>
+struct MulIExtendedOpLowering : public ConvertOpToLLVMPattern<ArithMulOp> {
+  using ConvertOpToLLVMPattern<ArithMulOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithMulOp op, typename ArithMulOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+using MulSIExtendedOpLowering =
+    MulIExtendedOpLowering<arith::MulSIExtendedOp, true>;
+using MulUIExtendedOpLowering =
+    MulIExtendedOpLowering<arith::MulUIExtendedOp, false>;
+
 struct CmpIOpLowering : public ConvertOpToLLVMPattern<arith::CmpIOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -258,6 +273,67 @@ LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
     return rewriter.notifyMatchFailure(loc, "expected vector result types");
 
   return rewriter.notifyMatchFailure(loc,
+                                     "ND vector types are not supported yet");
+}
+
+//===----------------------------------------------------------------------===//
+// MulIExtendedOpLowering
+//===----------------------------------------------------------------------===//
+
+template <typename ArithMulOp, bool IsSigned>
+LogicalResult MulIExtendedOpLowering<ArithMulOp, IsSigned>::matchAndRewrite(
+    ArithMulOp op, typename ArithMulOp::Adaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Type resultType = adaptor.getLhs().getType();
+
+  if (!LLVM::isCompatibleType(resultType))
+    return failure();
+
+  Location loc = op.getLoc();
+
+  // Handle the scalar and 1D vector cases. Because LLVM does not have a
+  // matching extended multiplication intrinsic, perform regular multiplication
+  // on operands zero-extended to i(2*N) bits, and truncate the results back to
+  // iN types.
+  if (!resultType.isa<LLVM::LLVMArrayType>()) {
+    Type wideType;
+    // Shift amount necessary to extract the high bits from widened result.
+    Attribute shiftValAttr;
+
+    if (auto intTy = resultType.dyn_cast<IntegerType>()) {
+      unsigned resultBitwidth = intTy.getWidth();
+      wideType = rewriter.getIntegerType(resultBitwidth * 2);
+      shiftValAttr = rewriter.getIntegerAttr(wideType, resultBitwidth);
+    } else {
+      auto vecTy = resultType.cast<VectorType>();
+      unsigned resultBitwidth = vecTy.getElementTypeBitWidth();
+      wideType = VectorType::get(vecTy.getShape(),
+                                 rewriter.getIntegerType(resultBitwidth * 2));
+      shiftValAttr = SplatElementsAttr::get(
+          wideType, APInt(resultBitwidth * 2, resultBitwidth));
+    }
+    assert(LLVM::isCompatibleType(wideType) &&
+           "LLVM dialect should support all signless integer types");
+
+    using LLVMExtOp = std::conditional_t<IsSigned, LLVM::SExtOp, LLVM::ZExtOp>;
+    Value lhsExt = rewriter.create<LLVMExtOp>(loc, wideType, adaptor.getLhs());
+    Value rhsExt = rewriter.create<LLVMExtOp>(loc, wideType, adaptor.getRhs());
+    Value mulExt = rewriter.create<LLVM::MulOp>(loc, wideType, lhsExt, rhsExt);
+
+    // Split the 2*N-bit wide result into two N-bit values.
+    Value low = rewriter.create<LLVM::TruncOp>(loc, resultType, mulExt);
+    Value shiftVal = rewriter.create<LLVM::ConstantOp>(loc, shiftValAttr);
+    Value highExt = rewriter.create<LLVM::LShrOp>(loc, mulExt, shiftVal);
+    Value high = rewriter.create<LLVM::TruncOp>(loc, resultType, highExt);
+
+    rewriter.replaceOp(op, {low, high});
+    return success();
+  }
+
+  if (!resultType.isa<VectorType>())
+    return rewriter.notifyMatchFailure(op, "expected vector result type");
+
+  return rewriter.notifyMatchFailure(op,
                                      "ND vector types are not supported yet");
 }
 
@@ -397,6 +473,8 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     MinUIOpLowering,
     MulFOpLowering,
     MulIOpLowering,
+    MulSIExtendedOpLowering,
+    MulUIExtendedOpLowering,
     NegFOpLowering,
     OrIOpLowering,
     RemFOpLowering,

@@ -3,7 +3,7 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
-define i32 @fn2() personality i32 (...)* @__CxxFrameHandler3 {
+define i32 @fn2() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @fn2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -16,7 +16,7 @@ define i32 @fn2() personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[C_0_LCSSA:%.*]] = phi i32 [ [[INDVARS1]], [[FOR_COND]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       catch:
-; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [i8* null, i32 64, i8* null]
+; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    catchret from [[TMP1]] to label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[C_0_LCSSA]]
@@ -38,7 +38,7 @@ catch.dispatch:                                   ; preds = %for.cond
   %0 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null, i32 64, i8* null]
+  %1 = catchpad within %0 [ptr null, i32 64, ptr null]
   catchret from %1 to label %exit
 
 exit:

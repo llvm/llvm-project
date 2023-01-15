@@ -628,8 +628,19 @@ module std [system] {
     export *
 
     module __bit {
-      module bit_cast { private header "__bit/bit_cast.h" }
-      module byteswap { private header "__bit/byteswap.h" }
+      module bit_cast       { private header "__bit/bit_cast.h" }
+      module bit_ceil       { private header "__bit/bit_ceil.h" }
+      module bit_floor      { private header "__bit/bit_floor.h" }
+      module bit_log2       { private header "__bit/bit_log2.h" }
+      module bit_width      { private header "__bit/bit_width.h" }
+      module blsr           { private header "__bit/blsr.h" }
+      module byteswap       { private header "__bit/byteswap.h" }
+      module countl         { private header "__bit/countl.h" }
+      module countr         { private header "__bit/countr.h" }
+      module endian         { private header "__bit/endian.h" }
+      module has_single_bit { private header "__bit/has_single_bit.h" }
+      module popcount       { private header "__bit/popcount.h" }
+      module rotate         { private header "__bit/rotate.h" }
     }
   }
   module bitset {
@@ -785,6 +796,17 @@ module std [system] {
     header "execution"
     export *
   }
+  module expected {
+    header "expected"
+    export *
+
+    module __expected {
+      module bad_expected_access          { private header "__expected/bad_expected_access.h" }
+      module expected                     { private header "__expected/expected.h" }
+      module unexpect                     { private header "__expected/unexpect.h" }
+      module unexpected                   { private header "__expected/unexpected.h" }
+    }
+  }
   module filesystem {
     @requires_LIBCXX_ENABLE_FILESYSTEM@
     header "filesystem"
@@ -845,6 +867,7 @@ module std [system] {
       module formatter_output                { private header "__format/formatter_output.h" }
       module formatter_pointer               { private header "__format/formatter_pointer.h" }
       module formatter_string                { private header "__format/formatter_string.h" }
+      module formatter_tuple                 { private header "__format/formatter_tuple.h" }
       module parser_std_format_spec          { private header "__format/parser_std_format_spec.h" }
       module range_default_formatter         { private header "__format/range_default_formatter.h" }
       module unicode                         { private header "__format/unicode.h" }
@@ -880,7 +903,10 @@ module std [system] {
       module hash                       { private header "__functional/hash.h" }
       module hash_fwd                   { private header "__fwd/hash.h" }
       module identity                   { private header "__functional/identity.h" }
-      module invoke                     { private header "__functional/invoke.h" }
+      module invoke                     {
+        private header "__functional/invoke.h"
+        export type_traits
+      }
       module is_transparent             { private header "__functional/is_transparent.h" }
       module mem_fn                     { private header "__functional/mem_fn.h" }
       module mem_fun_ref                { private header "__functional/mem_fun_ref.h" }
@@ -1265,6 +1291,10 @@ module std [system] {
     header "shared_mutex"
     export version
   }
+  module source_location {
+    header "source_location"
+    export *
+  }
   module span {
     header "span"
     export ranges.__ranges.enable_borrowed_range
@@ -1331,16 +1361,16 @@ module std [system] {
     header "tuple"
     export *
 
-    module apply_cv         { private header "__tuple/apply_cv.h" }
+    module apply_cv         { private header "__tuple_dir/apply_cv.h" }
     module get_fwd          { private header "__fwd/get.h" }
-    module make_tuple_types { private header "__tuple/make_tuple_types.h" }
-    module sfinae_helpers   { private header "__tuple/sfinae_helpers.h" }
-    module tuple_element    { private header "__tuple/tuple_element.h" }
+    module make_tuple_types { private header "__tuple_dir/make_tuple_types.h" }
+    module sfinae_helpers   { private header "__tuple_dir/sfinae_helpers.h" }
+    module tuple_element    { private header "__tuple_dir/tuple_element.h" }
     module tuple_fwd        { private header "__fwd/tuple.h" }
-    module tuple_indices    { private header "__tuple/tuple_indices.h" }
-    module tuple_like       { private header "__tuple/tuple_like.h" }
-    module tuple_size       { private header "__tuple/tuple_size.h" }
-    module tuple_types      { private header "__tuple/tuple_types.h" }
+    module tuple_indices    { private header "__tuple_dir/tuple_indices.h" }
+    module tuple_like       { private header "__tuple_dir/tuple_like.h" }
+    module tuple_size       { private header "__tuple_dir/tuple_size.h" }
+    module tuple_types      { private header "__tuple_dir/tuple_types.h" }
   }
   module type_traits {
     header "type_traits"
@@ -1375,8 +1405,14 @@ module std [system] {
     module is_abstract                         { private header "__type_traits/is_abstract.h" }
     module is_aggregate                        { private header "__type_traits/is_aggregate.h" }
     module is_allocator                        { private header "__type_traits/is_allocator.h" }
-    module is_arithmetic                       { private header "__type_traits/is_arithmetic.h" }
-    module is_array                            { private header "__type_traits/is_array.h" }
+    module is_arithmetic {
+      private header "__type_traits/is_arithmetic.h"
+      export integral_constant
+    }
+    module is_array                            {
+      private header "__type_traits/is_array.h"
+      export integral_constant
+    }
     module is_assignable                       { private header "__type_traits/is_assignable.h" }
     module is_base_of                          { private header "__type_traits/is_base_of.h" }
     module is_bounded_array                    { private header "__type_traits/is_bounded_array.h" }
@@ -1390,7 +1426,10 @@ module std [system] {
     module is_convertible                      { private header "__type_traits/is_convertible.h" }
     module is_copy_assignable                  { private header "__type_traits/is_copy_assignable.h" }
     module is_copy_constructible               { private header "__type_traits/is_copy_constructible.h" }
-    module is_core_convertible                 { private header "__type_traits/is_core_convertible.h" }
+    module is_core_convertible                 {
+      private header "__type_traits/is_core_convertible.h"
+      export integral_constant
+    }
     module is_default_constructible            { private header "__type_traits/is_default_constructible.h" }
     module is_destructible                     { private header "__type_traits/is_destructible.h" }
     module is_empty                            { private header "__type_traits/is_empty.h" }
@@ -1425,7 +1464,10 @@ module std [system] {
     module is_reference                        { private header "__type_traits/is_reference.h" }
     module is_reference_wrapper                { private header "__type_traits/is_reference_wrapper.h" }
     module is_referenceable                    { private header "__type_traits/is_referenceable.h" }
-    module is_same                             { private header "__type_traits/is_same.h" }
+    module is_same                             {
+      private header "__type_traits/is_same.h"
+      export type_traits.integral_constant
+    }
     module is_scalar                           { private header "__type_traits/is_scalar.h" }
     module is_scoped_enum                      { private header "__type_traits/is_scoped_enum.h" }
     module is_signed                           { private header "__type_traits/is_signed.h" }
@@ -1448,7 +1490,10 @@ module std [system] {
     module is_unsigned                         { private header "__type_traits/is_unsigned.h" }
     module is_unsigned_integer                 { private header "__type_traits/is_unsigned_integer.h" }
     module is_valid_expansion                  { private header "__type_traits/is_valid_expansion.h" }
-    module is_void                             { private header "__type_traits/is_void.h" }
+    module is_void                             {
+      private header "__type_traits/is_void.h"
+      export integral_constant
+    }
     module is_volatile                         { private header "__type_traits/is_volatile.h" }
     module lazy                                { private header "__type_traits/lazy.h" }
     module make_32_64_or_128_bit               { private header "__type_traits/make_32_64_or_128_bit.h" }
@@ -1471,6 +1516,7 @@ module std [system] {
     module remove_reference                    { private header "__type_traits/remove_reference.h" }
     module remove_volatile                     { private header "__type_traits/remove_volatile.h" }
     module result_of                           { private header "__type_traits/result_of.h" }
+    module strip_signature                     { private header "__type_traits/strip_signature.h" }
     module type_identity                       { private header "__type_traits/type_identity.h" }
     module type_list                           { private header "__type_traits/type_list.h" }
     module underlying_type                     { private header "__type_traits/underlying_type.h" }
@@ -1549,7 +1595,6 @@ module std [system] {
   module __assert            {         header "__assert"            export * }
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
-  module __bits              { private header "__bits"              export * }
   module __debug             {         header "__debug"             export * }
   module __errc              { private header "__errc"              export * }
   module __hash_table        {         header "__hash_table"        export * }

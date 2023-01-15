@@ -125,6 +125,17 @@ static void handlePhiDef(CallInst *Expect) {
   if (!ExpectedValue)
     return;
   const APInt &ExpectedPhiValue = ExpectedValue->getValue();
+  bool ExpectedValueIsLikely = true;
+  Function *Fn = Expect->getCalledFunction();
+  // If the function is expect_with_probability, then we need to take the
+  // probability into consideration. For example, in
+  // expect.with.probability.i64(i64 %a, i64 1, double 0.0), the
+  // "ExpectedValue" 1 is unlikely. This affects probability propagation later.
+  if (Fn->getIntrinsicID() == Intrinsic::expect_with_probability) {
+    auto *Confidence = cast<ConstantFP>(Expect->getArgOperand(2));
+    double TrueProb = Confidence->getValueAPF().convertToDouble();
+    ExpectedValueIsLikely = (TrueProb > 0.5);
+  }
 
   // Walk up in backward a list of instructions that
   // have 'copy' semantics by 'stripping' the copies
@@ -213,9 +224,12 @@ static void handlePhiDef(CallInst *Expect) {
       continue;
 
     // Not an interesting case when IsUnlikely is false -- we can not infer
-    // anything useful when the operand value matches the expected phi
-    // output.
-    if (ExpectedPhiValue == ApplyOperations(CI->getValue()))
+    // anything useful when:
+    // (1) We expect some phi output and the operand value matches it, or
+    // (2) We don't expect some phi output (i.e. the "ExpectedValue" has low
+    //     probability) and the operand value doesn't match that.
+    const APInt &CurrentPhiValue = ApplyOperations(CI->getValue());
+    if (ExpectedValueIsLikely == (ExpectedPhiValue == CurrentPhiValue))
       continue;
 
     BranchInst *BI = GetDomConditional(i);
@@ -248,6 +262,8 @@ static void handlePhiDef(CallInst *Expect) {
     uint32_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
     std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) = getBranchWeight(
         Expect->getCalledFunction()->getIntrinsicID(), Expect, 2);
+    if (!ExpectedValueIsLikely)
+      std::swap(LikelyBranchWeightVal, UnlikelyBranchWeightVal);
 
     if (IsOpndComingFromSuccessor(BI->getSuccessor(1)))
       BI->setMetadata(LLVMContext::MD_prof,

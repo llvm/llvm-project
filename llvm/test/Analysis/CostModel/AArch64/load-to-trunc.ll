@@ -8,22 +8,22 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; Check that cost is 1 for unusual load to register sized load.
-define i32 @loadUnusualIntegerWithTrunc(i128* %ptr) {
+define i32 @loadUnusualIntegerWithTrunc(ptr %ptr) {
 ; CHECK-LABEL: 'loadUnusualIntegerWithTrunc'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %out = load i128, i128* %ptr, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %out = load i128, ptr %ptr, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %trunc = trunc i128 %out to i32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %trunc
 ;
-  %out = load i128, i128* %ptr
+  %out = load i128, ptr %ptr
   %trunc = trunc i128 %out to i32
   ret i32 %trunc
 }
 
-define i128 @loadUnusualInteger(i128* %ptr) {
+define i128 @loadUnusualInteger(ptr %ptr) {
 ; CHECK-LABEL: 'loadUnusualInteger'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %out = load i128, i128* %ptr, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %out = load i128, ptr %ptr, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i128 %out
 ;
-  %out = load i128, i128* %ptr
+  %out = load i128, ptr %ptr
   ret i128 %out
 }

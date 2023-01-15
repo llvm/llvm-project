@@ -18,7 +18,6 @@
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -255,7 +254,7 @@ static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
 ///      initialize().
 /// {2}: The dialect parent class.
 static const char *const dialectConstructorStr = R"(
-{0}::{0}(::mlir::MLIRContext *context) 
+{0}::{0}(::mlir::MLIRContext *context)
     : ::mlir::{2}(getDialectNamespace(), context, ::mlir::TypeID::get<{0}>()) {{
   {1}
   initialize();

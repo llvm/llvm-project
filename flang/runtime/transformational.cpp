@@ -133,7 +133,318 @@ static inline std::size_t AllocateResult(Descriptor &result,
   return elementLen;
 }
 
+template <TypeCategory CAT, int KIND>
+static inline std::size_t AllocateBesselResult(Descriptor &result, int32_t n1,
+    int32_t n2, Terminator &terminator, const char *function) {
+  int rank{1};
+  SubscriptValue extent[maxRank];
+  for (int j{0}; j < maxRank; j++) {
+    extent[j] = 0;
+  }
+  if (n1 <= n2) {
+    extent[0] = n2 - n1 + 1;
+  }
+
+  std::size_t elementLen{Descriptor::BytesFor(CAT, KIND)};
+  result.Establish(TypeCode{CAT, KIND}, elementLen, nullptr, rank, extent,
+      CFI_attribute_allocatable, false);
+  for (int j{0}; j < rank; ++j) {
+    result.GetDimension(j).SetBounds(1, extent[j]);
+  }
+  if (int stat{result.Allocate()}) {
+    terminator.Crash(
+        "%s: Could not allocate memory for result (stat=%d)", function, stat);
+  }
+  return elementLen;
+}
+
+template <TypeCategory CAT, int KIND>
+static inline void DoBesselJn(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<CAT, KIND> x, CppTypeFor<CAT, KIND> bn2,
+    CppTypeFor<CAT, KIND> bn2_1, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  AllocateBesselResult<CAT, KIND>(result, n1, n2, terminator, "BESSEL_JN");
+
+  // The standard requires that n1 and n2 be non-negative. However, some other
+  // compilers generate results even when n1 and/or n2 are negative. For now,
+  // we also do not enforce the non-negativity constraint.
+  if (n2 < n1) {
+    return;
+  }
+
+  SubscriptValue at[maxRank];
+  for (int j{0}; j < maxRank; ++j) {
+    at[j] = 0;
+  }
+
+  // if n2 >= n1, there will be at least one element in the result.
+  at[0] = n2 - n1 + 1;
+  *result.Element<CppTypeFor<CAT, KIND>>(at) = bn2;
+
+  if (n2 == n1) {
+    return;
+  }
+
+  at[0] = n2 - n1;
+  *result.Element<CppTypeFor<CAT, KIND>>(at) = bn2_1;
+
+  // Bessel functions of the first kind are stable for a backward recursion
+  // (see https://dlmf.nist.gov/10.74.iv and https://dlmf.nist.gov/10.6.E1).
+  //
+  //     J(n-1, x) = (2.0 / x) * n * J(n, x) - J(n+1, x)
+  //
+  // which is equivalent to
+  //
+  //     J(n, x) = (2.0 / x) * (n + 1) * J(n+1, x) - J(n+2, x)
+  //
+  CppTypeFor<CAT, KIND> bn_2 = bn2;
+  CppTypeFor<CAT, KIND> bn_1 = bn2_1;
+  CppTypeFor<CAT, KIND> twoOverX = 2.0 / x;
+  for (int n{n2 - 2}; n >= n1; --n) {
+    auto bn = twoOverX * (n + 1) * bn_1 - bn_2;
+
+    at[0] = n - n1 + 1;
+    *result.Element<CppTypeFor<CAT, KIND>>(at) = bn;
+
+    bn_2 = bn_1;
+    bn_1 = bn;
+  }
+}
+
+template <TypeCategory CAT, int KIND>
+static inline void DoBesselJnX0(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  AllocateBesselResult<CAT, KIND>(result, n1, n2, terminator, "BESSEL_JN");
+
+  // The standard requires that n1 and n2 be non-negative. However, some other
+  // compilers generate results even when n1 and/or n2 are negative. For now,
+  // we also do not enforce the non-negativity constraint.
+  if (n2 < n1) {
+    return;
+  }
+
+  SubscriptValue at[maxRank];
+  for (int j{0}; j < maxRank; ++j) {
+    at[j] = 0;
+  }
+
+  // J(0, 0.0) = 1.0, when n == 0.
+  // J(n, 0.0) = 0.0, when n > 0.
+  at[0] = 1;
+  *result.Element<CppTypeFor<CAT, KIND>>(at) = (n1 == 0) ? 1.0 : 0.0;
+  for (int j{2}; j <= n2 - n1 + 1; ++j) {
+    at[0] = j;
+    *result.Element<CppTypeFor<CAT, KIND>>(at) = 0.0;
+  }
+}
+
+template <TypeCategory CAT, int KIND>
+static inline void DoBesselYn(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<CAT, KIND> x, CppTypeFor<CAT, KIND> bn1,
+    CppTypeFor<CAT, KIND> bn1_1, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  AllocateBesselResult<CAT, KIND>(result, n1, n2, terminator, "BESSEL_YN");
+
+  // The standard requires that n1 and n2 be non-negative. However, some other
+  // compilers generate results even when n1 and/or n2 are negative. For now,
+  // we also do not enforce the non-negativity constraint.
+  if (n2 < n1) {
+    return;
+  }
+
+  SubscriptValue at[maxRank];
+  for (int j{0}; j < maxRank; ++j) {
+    at[j] = 0;
+  }
+
+  // if n2 >= n1, there will be at least one element in the result.
+  at[0] = 1;
+  *result.Element<CppTypeFor<CAT, KIND>>(at) = bn1;
+
+  if (n2 == n1) {
+    return;
+  }
+
+  at[0] = 2;
+  *result.Element<CppTypeFor<CAT, KIND>>(at) = bn1_1;
+
+  // Bessel functions of the second kind are stable for a forward recursion
+  // (see https://dlmf.nist.gov/10.74.iv and https://dlmf.nist.gov/10.6.E1).
+  //
+  //     Y(n+1, x) = (2.0 / x) * n * Y(n, x) - Y(n-1, x)
+  //
+  // which is equivalent to
+  //
+  //     Y(n, x) = (2.0 / x) * (n - 1) * Y(n-1, x) - Y(n-2, x)
+  //
+  CppTypeFor<CAT, KIND> bn_2 = bn1;
+  CppTypeFor<CAT, KIND> bn_1 = bn1_1;
+  CppTypeFor<CAT, KIND> twoOverX = 2.0 / x;
+  for (int n{n1 + 2}; n <= n2; ++n) {
+    auto bn = twoOverX * (n - 1) * bn_1 - bn_2;
+
+    at[0] = n - n1 + 1;
+    *result.Element<CppTypeFor<CAT, KIND>>(at) = bn;
+
+    bn_2 = bn_1;
+    bn_1 = bn;
+  }
+}
+
+template <TypeCategory CAT, int KIND>
+static inline void DoBesselYnX0(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  AllocateBesselResult<CAT, KIND>(result, n1, n2, terminator, "BESSEL_YN");
+
+  // The standard requires that n1 and n2 be non-negative. However, some other
+  // compilers generate results even when n1 and/or n2 are negative. For now,
+  // we also do not enforce the non-negativity constraint.
+  if (n2 < n1) {
+    return;
+  }
+
+  SubscriptValue at[maxRank];
+  for (int j{0}; j < maxRank; ++j) {
+    at[j] = 0;
+  }
+
+  // Y(n, 0.0) = -Inf, when n >= 0
+  for (int j{1}; j <= n2 - n1 + 1; ++j) {
+    at[0] = j;
+    *result.Element<CppTypeFor<CAT, KIND>>(at) =
+        -std::numeric_limits<CppTypeFor<CAT, KIND>>::infinity();
+  }
+}
+
 extern "C" {
+
+// BESSEL_JN
+// TODO: REAL(2 & 3)
+void RTNAME(BesselJn_4)(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, 4> x, CppTypeFor<TypeCategory::Real, 4> bn2,
+    CppTypeFor<TypeCategory::Real, 4> bn2_1, const char *sourceFile, int line) {
+  DoBesselJn<TypeCategory::Real, 4>(
+      result, n1, n2, x, bn2, bn2_1, sourceFile, line);
+}
+
+void RTNAME(BesselJn_8)(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, 8> x, CppTypeFor<TypeCategory::Real, 8> bn2,
+    CppTypeFor<TypeCategory::Real, 8> bn2_1, const char *sourceFile, int line) {
+  DoBesselJn<TypeCategory::Real, 8>(
+      result, n1, n2, x, bn2, bn2_1, sourceFile, line);
+}
+
+#if LDBL_MANT_DIG == 64
+void RTNAME(BesselJn_10)(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, 10> x,
+    CppTypeFor<TypeCategory::Real, 10> bn2,
+    CppTypeFor<TypeCategory::Real, 10> bn2_1, const char *sourceFile,
+    int line) {
+  DoBesselJn<TypeCategory::Real, 10>(
+      result, n1, n2, x, bn2, bn2_1, sourceFile, line);
+}
+#endif
+
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTNAME(BesselJn_16)(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, 16> x,
+    CppTypeFor<TypeCategory::Real, 16> bn2,
+    CppTypeFor<TypeCategory::Real, 16> bn2_1, const char *sourceFile,
+    int line) {
+  DoBesselJn<TypeCategory::Real, 16>(
+      result, n1, n2, x, bn2, bn2_1, sourceFile, line);
+}
+#endif
+
+// TODO: REAL(2 & 3)
+void RTNAME(BesselJnX0_4)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  DoBesselJnX0<TypeCategory::Real, 4>(result, n1, n2, sourceFile, line);
+}
+
+void RTNAME(BesselJnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  DoBesselJnX0<TypeCategory::Real, 8>(result, n1, n2, sourceFile, line);
+}
+
+#if LDBL_MANT_DIG == 64
+void RTNAME(BesselJnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  DoBesselJnX0<TypeCategory::Real, 10>(result, n1, n2, sourceFile, line);
+}
+#endif
+
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTNAME(BesselJnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  DoBesselJnX0<TypeCategory::Real, 16>(result, n1, n2, sourceFile, line);
+}
+#endif
+
+// BESSEL_YN
+// TODO: REAL(2 & 3)
+void RTNAME(BesselYn_4)(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, 4> x, CppTypeFor<TypeCategory::Real, 4> bn1,
+    CppTypeFor<TypeCategory::Real, 4> bn1_1, const char *sourceFile, int line) {
+  DoBesselYn<TypeCategory::Real, 4>(
+      result, n1, n2, x, bn1, bn1_1, sourceFile, line);
+}
+
+void RTNAME(BesselYn_8)(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, 8> x, CppTypeFor<TypeCategory::Real, 8> bn1,
+    CppTypeFor<TypeCategory::Real, 8> bn1_1, const char *sourceFile, int line) {
+  DoBesselYn<TypeCategory::Real, 8>(
+      result, n1, n2, x, bn1, bn1_1, sourceFile, line);
+}
+
+#if LDBL_MANT_DIG == 64
+void RTNAME(BesselYn_10)(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, 10> x,
+    CppTypeFor<TypeCategory::Real, 10> bn1,
+    CppTypeFor<TypeCategory::Real, 10> bn1_1, const char *sourceFile,
+    int line) {
+  DoBesselYn<TypeCategory::Real, 10>(
+      result, n1, n2, x, bn1, bn1_1, sourceFile, line);
+}
+#endif
+
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTNAME(BesselYn_16)(Descriptor &result, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, 16> x,
+    CppTypeFor<TypeCategory::Real, 16> bn1,
+    CppTypeFor<TypeCategory::Real, 16> bn1_1, const char *sourceFile,
+    int line) {
+  DoBesselYn<TypeCategory::Real, 16>(
+      result, n1, n2, x, bn1, bn1_1, sourceFile, line);
+}
+#endif
+
+// TODO: REAL(2 & 3)
+void RTNAME(BesselYnX0_4)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  DoBesselYnX0<TypeCategory::Real, 4>(result, n1, n2, sourceFile, line);
+}
+
+void RTNAME(BesselYnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  DoBesselYnX0<TypeCategory::Real, 8>(result, n1, n2, sourceFile, line);
+}
+
+#if LDBL_MANT_DIG == 64
+void RTNAME(BesselYnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  DoBesselYnX0<TypeCategory::Real, 10>(result, n1, n2, sourceFile, line);
+}
+#endif
+
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTNAME(BesselYnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile, int line) {
+  DoBesselYnX0<TypeCategory::Real, 16>(result, n1, n2, sourceFile, line);
+}
+#endif
 
 // CSHIFT where rank of ARRAY argument > 1
 void RTNAME(Cshift)(Descriptor &result, const Descriptor &source,

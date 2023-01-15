@@ -140,19 +140,25 @@ def SDT_RISCVI2FPOp_VL  : SDTypeProfile<1, 3, [
   SDTCisFP<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>,
   SDTCVecEltisVT<2, i1>, SDTCisSameNumEltsAs<1, 2>, SDTCisVT<3, XLenVT>
 ]>;
+def SDT_RISCVI2FPOp_RM_VL  : SDTypeProfile<1, 4, [
+  SDTCisFP<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>,
+  SDTCVecEltisVT<2, i1>, SDTCisSameNumEltsAs<1, 2>, SDTCisVT<3, XLenVT>,
+  SDTCisVT<4, XLenVT>
+]>;
 
 def riscv_vfcvt_rtz_x_f_vl  : SDNode<"RISCVISD::VFCVT_RTZ_X_F_VL",  SDT_RISCVFP2IOp_VL>;
 def riscv_vfcvt_rtz_xu_f_vl : SDNode<"RISCVISD::VFCVT_RTZ_XU_F_VL", SDT_RISCVFP2IOp_VL>;
 def riscv_sint_to_fp_vl : SDNode<"RISCVISD::SINT_TO_FP_VL", SDT_RISCVI2FPOp_VL>;
 def riscv_uint_to_fp_vl : SDNode<"RISCVISD::UINT_TO_FP_VL", SDT_RISCVI2FPOp_VL>;
+def riscv_vfcvt_rm_f_xu_vl : SDNode<"RISCVISD::VFCVT_RM_F_XU_VL", SDT_RISCVI2FPOp_RM_VL>;
 
-def SDT_RISCVVecCvtX2FOp_VL : SDTypeProfile<1, 4, [
+def SDT_RISCVVecCvtF2XOp_VL : SDTypeProfile<1, 4, [
   SDTCisInt<0>, SDTCisFP<1>, SDTCisSameNumEltsAs<0, 1>,
   SDTCVecEltisVT<2, i1>, SDTCisSameNumEltsAs<1, 2>, SDTCisVT<3, XLenVT>,
   SDTCisVT<4, XLenVT>
 ]>;
 
-def riscv_vfcvt_rm_x_f_vl : SDNode<"RISCVISD::VFCVT_RM_X_F_VL", SDT_RISCVVecCvtX2FOp_VL>;
+def riscv_vfcvt_rm_x_f_vl : SDNode<"RISCVISD::VFCVT_RM_X_F_VL", SDT_RISCVVecCvtF2XOp_VL>;
 def riscv_vfcvt_x_f_vl : SDNode<"RISCVISD::VFCVT_X_F_VL", SDT_RISCVFP2IOp_VL>;
 def riscv_vfround_noexcept_vl: SDNode<"RISCVISD::VFROUND_NOEXCEPT_VL", SDT_RISCVFPUnOp_VL>;
 
@@ -222,6 +228,13 @@ def riscv_vmnot_vl : PatFrag<(ops node:$rs, node:$vl),
                              (riscv_vmxor_vl node:$rs, true_mask, node:$vl)>;
 
 def riscv_vcpop_vl : SDNode<"RISCVISD::VCPOP_VL",
+                            SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
+                                                 SDTCisVec<1>, SDTCisInt<1>,
+                                                 SDTCVecEltisVT<2, i1>,
+                                                 SDTCisSameNumEltsAs<1, 2>,
+                                                 SDTCisVT<3, XLenVT>]>>;
+
+def riscv_vfirst_vl : SDNode<"RISCVISD::VFIRST_VL",
                             SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
                                                  SDTCisVec<1>, SDTCisInt<1>,
                                                  SDTCVecEltisVT<2, i1>,
@@ -437,6 +450,19 @@ multiclass VPatTiedBinaryNoMaskVL_V<SDNode vop,
                      result_reg_class:$rs1,
                      op2_reg_class:$rs2,
                      GPR:$vl, sew, TAIL_AGNOSTIC)>;
+  // Tail undisturbed
+  def : Pat<(riscv_vp_merge_vl true_mask,
+             (result_type (vop
+                           result_reg_class:$rs1,
+                           (op2_type op2_reg_class:$rs2),
+                           srcvalue,
+                           true_mask,
+                           VLOpFrag)),
+             result_reg_class:$rs1, VLOpFrag),
+            (!cast<Instruction>(instruction_name#"_"#suffix#"_"# vlmul.MX#"_TIED")
+                     result_reg_class:$rs1,
+                     op2_reg_class:$rs2,
+                     GPR:$vl, sew, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
 }
 
 multiclass VPatBinaryVL_XI<SDNode vop,
@@ -776,6 +802,18 @@ multiclass VPatConvertI2FPVL_V<SDNode vop, string instruction_name> {
   }
 }
 
+multiclass VPatConvertI2FP_RM_VL_V<SDNode vop, string instruction_name> {
+  foreach fvti = AllFloatVectors in {
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+    def : Pat<(fvti.Vector (vop (ivti.Vector ivti.RegClass:$rs1),
+                                (ivti.Mask V0), (XLenVT timm:$frm),
+                                VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
+                  (fvti.Vector (IMPLICIT_DEF)), ivti.RegClass:$rs1,
+                  (ivti.Mask V0), timm:$frm, GPR:$vl, fvti.Log2SEW, TA_MA)>;
+  }
+}
+
 multiclass VPatWConvertFP2IVL_V<SDNode vop, string instruction_name> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
@@ -825,6 +863,19 @@ multiclass VPatNConvertI2FPVL_V<SDNode vop, string instruction_name> {
               (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), iwti.RegClass:$rs1,
                   (iwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
+  }
+}
+
+multiclass VPatNConvertI2FP_RM_VL_V<SDNode vop, string instruction_name> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
+    def : Pat<(fvti.Vector (vop (iwti.Vector iwti.RegClass:$rs1),
+                                (iwti.Mask V0),  (XLenVT timm:$frm),
+                                VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
+                  (fvti.Vector (IMPLICIT_DEF)), iwti.RegClass:$rs1,
+                  (iwti.Mask V0), timm:$frm, GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
 }
 
@@ -1246,7 +1297,9 @@ multiclass VPatWidenFPMulAccVL_VV_VF<SDNode vop, string instruction_name> {
 
 let Predicates = [HasVInstructions] in {
 
-// 12.1. Vector Single-Width Integer Add and Subtract
+// 11. Vector Integer Arithmetic Instructions
+
+// 11.1. Vector Single-Width Integer Add and Subtract
 defm : VPatBinaryVL_VV_VX_VI<riscv_add_vl, "PseudoVADD">;
 defm : VPatBinaryVL_VV_VX<riscv_sub_vl, "PseudoVSUB">;
 // Handle VRSUB specially since it's the only integer binary op with reversed
@@ -1266,13 +1319,13 @@ foreach vti = AllIntegerVectors in {
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 }
 
-// 12.2. Vector Widening Integer Add/Subtract
+// 11.2. Vector Widening Integer Add/Subtract
 defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwadd_vl,  riscv_vwadd_w_vl,  "PseudoVWADD">;
 defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwaddu_vl, riscv_vwaddu_w_vl, "PseudoVWADDU">;
 defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwsub_vl,  riscv_vwsub_w_vl,  "PseudoVWSUB">;
 defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwsubu_vl, riscv_vwsubu_w_vl, "PseudoVWSUBU">;
 
-// 12.3. Vector Integer Extension
+// 11.3. Vector Integer Extension
 defm : VPatExtendVL_V<riscv_zext_vl, "PseudoVZEXT", "VF2",
                       AllFractionableVF2IntVectors>;
 defm : VPatExtendVL_V<riscv_sext_vl, "PseudoVSEXT", "VF2",
@@ -1286,12 +1339,12 @@ defm : VPatExtendVL_V<riscv_zext_vl, "PseudoVZEXT", "VF8",
 defm : VPatExtendVL_V<riscv_sext_vl, "PseudoVSEXT", "VF8",
                       AllFractionableVF8IntVectors>;
 
-// 12.5. Vector Bitwise Logical Instructions
+// 11.5. Vector Bitwise Logical Instructions
 defm : VPatBinaryVL_VV_VX_VI<riscv_and_vl, "PseudoVAND">;
 defm : VPatBinaryVL_VV_VX_VI<riscv_or_vl,  "PseudoVOR">;
 defm : VPatBinaryVL_VV_VX_VI<riscv_xor_vl, "PseudoVXOR">;
 
-// 12.6. Vector Single-Width Bit Shift Instructions
+// 11.6. Vector Single-Width Bit Shift Instructions
 defm : VPatBinaryVL_VV_VX_VI<riscv_shl_vl, "PseudoVSLL", uimm5>;
 defm : VPatBinaryVL_VV_VX_VI<riscv_srl_vl, "PseudoVSRL", uimm5>;
 defm : VPatBinaryVL_VV_VX_VI<riscv_sra_vl, "PseudoVSRA", uimm5>;
@@ -1305,7 +1358,7 @@ foreach vti = AllIntegerVectors in {
                  vti.RegClass:$rs1, vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
 }
 
-// 12.7. Vector Narrowing Integer Right Shift Instructions
+// 11.7. Vector Narrowing Integer Right Shift Instructions
 defm : VPatBinaryVL_WV_WX_WI<srl, "PseudoVNSRL">;
 defm : VPatBinaryVL_WV_WX_WI<sra, "PseudoVNSRA">;
 
@@ -1329,7 +1382,7 @@ foreach vtiTowti = AllWidenableIntVectors in {
                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
 }
 
-// 12.8. Vector Integer Comparison Instructions
+// 11.8. Vector Integer Comparison Instructions
 foreach vti = AllIntegerVectors in {
   defm : VPatIntegerSetCCVL_VV<vti, "PseudoVMSEQ", SETEQ>;
   defm : VPatIntegerSetCCVL_VV<vti, "PseudoVMSNE", SETNE>;
@@ -1366,35 +1419,35 @@ foreach vti = AllIntegerVectors in {
                                               SplatPat_simm5_plus1_nonzero>;
 } // foreach vti = AllIntegerVectors
 
-// 12.9. Vector Integer Min/Max Instructions
+// 11.9. Vector Integer Min/Max Instructions
 defm : VPatBinaryVL_VV_VX<riscv_umin_vl, "PseudoVMINU">;
 defm : VPatBinaryVL_VV_VX<riscv_smin_vl, "PseudoVMIN">;
 defm : VPatBinaryVL_VV_VX<riscv_umax_vl, "PseudoVMAXU">;
 defm : VPatBinaryVL_VV_VX<riscv_smax_vl, "PseudoVMAX">;
 
-// 12.10. Vector Single-Width Integer Multiply Instructions
+// 11.10. Vector Single-Width Integer Multiply Instructions
 defm : VPatBinaryVL_VV_VX<riscv_mul_vl, "PseudoVMUL">;
 defm : VPatBinaryVL_VV_VX<riscv_mulhs_vl, "PseudoVMULH">;
 defm : VPatBinaryVL_VV_VX<riscv_mulhu_vl, "PseudoVMULHU">;
 
-// 12.11. Vector Integer Divide Instructions
+// 11.11. Vector Integer Divide Instructions
 defm : VPatBinaryVL_VV_VX<riscv_udiv_vl, "PseudoVDIVU">;
 defm : VPatBinaryVL_VV_VX<riscv_sdiv_vl, "PseudoVDIV">;
 defm : VPatBinaryVL_VV_VX<riscv_urem_vl, "PseudoVREMU">;
 defm : VPatBinaryVL_VV_VX<riscv_srem_vl, "PseudoVREM">;
 
-// 12.12. Vector Widening Integer Multiply Instructions
+// 11.12. Vector Widening Integer Multiply Instructions
 defm : VPatBinaryWVL_VV_VX<riscv_vwmul_vl, "PseudoVWMUL">;
 defm : VPatBinaryWVL_VV_VX<riscv_vwmulu_vl, "PseudoVWMULU">;
 defm : VPatBinaryWVL_VV_VX<riscv_vwmulsu_vl, "PseudoVWMULSU">;
 
-// 12.13 Vector Single-Width Integer Multiply-Add Instructions
+// 11.13 Vector Single-Width Integer Multiply-Add Instructions
 defm : VPatMultiplyAddVL_VV_VX<riscv_add_vl, "PseudoVMADD">;
 defm : VPatMultiplyAddVL_VV_VX<riscv_sub_vl, "PseudoVNMSUB">;
 defm : VPatMultiplyAccVL_VV_VX<riscv_add_vl_oneuse, "PseudoVMACC">;
 defm : VPatMultiplyAccVL_VV_VX<riscv_sub_vl_oneuse, "PseudoVNMSAC">;
 
-// 12.14. Vector Widening Integer Multiply-Add Instructions
+// 11.14. Vector Widening Integer Multiply-Add Instructions
 defm : VPatWidenMultiplyAddVL_VV_VX<riscv_vwmul_vl_oneuse, "PseudoVWMACC">;
 defm : VPatWidenMultiplyAddVL_VV_VX<riscv_vwmulu_vl_oneuse, "PseudoVWMACCU">;
 defm : VPatWidenMultiplyAddVL_VV_VX<riscv_vwmulsu_vl_oneuse, "PseudoVWMACCSU">;
@@ -1414,7 +1467,7 @@ foreach vtiTowti = AllWidenableIntVectors in {
                  GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 }
 
-// 12.15. Vector Integer Merge Instructions
+// 11.15. Vector Integer Merge Instructions
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask V0),
                                           vti.RegClass:$rs1,
@@ -1463,7 +1516,7 @@ foreach vti = AllIntegerVectors in {
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
 }
 
-// 12.16. Vector Integer Move Instructions
+// 11.16. Vector Integer Move Instructions
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Vector (riscv_vmv_v_x_vl (vti.Vector undef), GPR:$rs2, VLOpFrag)),
             (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
@@ -1482,6 +1535,8 @@ foreach vti = AllIntegerVectors in {
              $passthru, XLenVT:$imm5, GPR:$vl, vti.Log2SEW)>;
 }
 
+// 12. Vector Fixed-Point Arithmetic Instructions
+
 // 12.1. Vector Single-Width Saturating Add and Subtract
 defm : VPatBinaryVL_VV_VX_VI<riscv_saddsat_vl, "PseudoVSADD">;
 defm : VPatBinaryVL_VV_VX_VI<riscv_uaddsat_vl, "PseudoVSADDU">;
@@ -1490,59 +1545,28 @@ defm : VPatBinaryVL_VV_VX<riscv_usubsat_vl, "PseudoVSSUBU">;
 
 } // Predicates = [HasVInstructions]
 
-// 15.1. Vector Single-Width Integer Reduction Instructions
-let Predicates = [HasVInstructions] in {
-defm : VPatReductionVL<rvv_vecreduce_ADD_vl,  "PseudoVREDSUM", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_UMAX_vl, "PseudoVREDMAXU", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_SMAX_vl, "PseudoVREDMAX", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_UMIN_vl, "PseudoVREDMINU", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
-
-// 15.2. Vector Widening Integer Reduction Instructions
-defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, anyext_oneuse, "PseudoVWREDSUMU", /*is_float*/0>;
-defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, zext_oneuse, "PseudoVWREDSUMU", /*is_float*/0>;
-defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_zext_vl_oneuse, "PseudoVWREDSUMU", /*is_float*/0>;
-defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, sext_oneuse, "PseudoVWREDSUM", /*is_float*/0>;
-defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_sext_vl_oneuse, "PseudoVWREDSUM", /*is_float*/0>;
-} // Predicates = [HasVInstructions]
-
-// 15.3. Vector Single-Width Floating-Point Reduction Instructions
-let Predicates = [HasVInstructionsAnyF] in {
-defm : VPatReductionVL<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
-defm : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDUSUM", /*is_float*/1>;
-defm : VPatReductionVL<rvv_vecreduce_FMIN_vl,     "PseudoVFREDMIN", /*is_float*/1>;
-defm : VPatReductionVL<rvv_vecreduce_FMAX_vl,     "PseudoVFREDMAX", /*is_float*/1>;
-
-// 15.4. Vector Widening Floating-Point Reduction Instructions
-defm : VPatWidenReductionVL<rvv_vecreduce_SEQ_FADD_vl, fpext_oneuse, "PseudoVFWREDOSUM", /*is_float*/1>;
-defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_SEQ_FADD_vl, riscv_fpextend_vl_oneuse, "PseudoVFWREDOSUM", /*is_float*/1>;
-defm : VPatWidenReductionVL<rvv_vecreduce_FADD_vl, fpext_oneuse, "PseudoVFWREDUSUM", /*is_float*/1>;
-defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_FADD_vl, riscv_fpextend_vl_oneuse, "PseudoVFWREDUSUM", /*is_float*/1>;
-} // Predicates = [HasVInstructionsAnyF]
+// 13. Vector Floating-Point Instructions
 
 let Predicates = [HasVInstructionsAnyF] in {
 
-// 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+// 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 defm : VPatBinaryFPVL_VV_VF<riscv_fadd_vl, "PseudoVFADD">;
 defm : VPatBinaryFPVL_VV_VF<riscv_fsub_vl, "PseudoVFSUB">;
 defm : VPatBinaryFPVL_R_VF<riscv_fsub_vl, "PseudoVFRSUB">;
 
-// 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+// 13.3. Vector Widening Floating-Point Add/Subtract Instructions
 defm : VPatWidenBinaryFPVL_VV_VF_WV_WF<riscv_fadd_vl, "PseudoVFWADD">;
 defm : VPatWidenBinaryFPVL_VV_VF_WV_WF<riscv_fsub_vl, "PseudoVFWSUB">;
 
-// 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+// 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm : VPatBinaryFPVL_VV_VF<riscv_fmul_vl, "PseudoVFMUL">;
 defm : VPatBinaryFPVL_VV_VF<riscv_fdiv_vl, "PseudoVFDIV">;
 defm : VPatBinaryFPVL_R_VF<riscv_fdiv_vl, "PseudoVFRDIV">;
 
-// 14.5. Vector Widening Floating-Point Multiply Instructions
+// 13.5. Vector Widening Floating-Point Multiply Instructions
 defm : VPatWidenBinaryFPVL_VV_VF<riscv_fmul_vl, riscv_fpextend_vl_oneuse, "PseudoVFWMUL">;
 
-// 14.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
+// 13.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
 defm : VPatFPMulAddVL_VV_VF<riscv_vfmadd_vl,  "PseudoVFMADD">;
 defm : VPatFPMulAddVL_VV_VF<riscv_vfmsub_vl,  "PseudoVFMSUB">;
 defm : VPatFPMulAddVL_VV_VF<riscv_vfnmadd_vl, "PseudoVFNMADD">;
@@ -1552,17 +1576,17 @@ defm : VPatFPMulAccVL_VV_VF<riscv_vfmsub_vl_oneuse,  "PseudoVFMSAC">;
 defm : VPatFPMulAccVL_VV_VF<riscv_vfnmadd_vl_oneuse, "PseudoVFNMACC">;
 defm : VPatFPMulAccVL_VV_VF<riscv_vfnmsub_vl_oneuse, "PseudoVFNMSAC">;
 
-// 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+// 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 defm : VPatWidenFPMulAccVL_VV_VF<riscv_vfmadd_vl, "PseudoVFWMACC">;
 defm : VPatWidenFPMulAccVL_VV_VF<riscv_vfnmadd_vl, "PseudoVFWNMACC">;
 defm : VPatWidenFPMulAccVL_VV_VF<riscv_vfmsub_vl, "PseudoVFWMSAC">;
 defm : VPatWidenFPMulAccVL_VV_VF<riscv_vfnmsub_vl, "PseudoVFWNMSAC">;
 
-// 14.11. Vector Floating-Point MIN/MAX Instructions
+// 13.11. Vector Floating-Point MIN/MAX Instructions
 defm : VPatBinaryFPVL_VV_VF<riscv_fminnum_vl, "PseudoVFMIN">;
 defm : VPatBinaryFPVL_VV_VF<riscv_fmaxnum_vl, "PseudoVFMAX">;
 
-// 14.13. Vector Floating-Point Compare Instructions
+// 13.13. Vector Floating-Point Compare Instructions
 defm : VPatFPSetCCVL_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
 defm : VPatFPSetCCVL_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
 
@@ -1576,14 +1600,14 @@ defm : VPatFPSetCCVL_VV_VF_FV<SETLE,  "PseudoVMFLE", "PseudoVMFGE">;
 defm : VPatFPSetCCVL_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 
 foreach vti = AllFloatVectors in {
-  // 14.8. Vector Floating-Point Square-Root Instruction
+  // 13.8. Vector Floating-Point Square-Root Instruction
   def : Pat<(riscv_fsqrt_vl (vti.Vector vti.RegClass:$rs2), (vti.Mask V0),
                             VLOpFrag),
             (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX #"_MASK")
                  (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
 
-  // 14.12. Vector Floating-Point Sign-Injection Instructions
+  // 13.12. Vector Floating-Point Sign-Injection Instructions
   def : Pat<(riscv_fabs_vl (vti.Vector vti.RegClass:$rs), (vti.Mask V0),
                            VLOpFrag),
             (!cast<Instruction>("PseudoVFSGNJX_VV_"# vti.LMul.MX #"_MASK")
@@ -1638,8 +1662,8 @@ foreach vti = AllFloatVectors in {
 
 foreach fvti = AllFloatVectors in {
   // Floating-point vselects:
-  // 12.15. Vector Integer Merge Instructions
-  // 14.15. Vector Floating-Point Merge Instruction
+  // 11.15. Vector Integer Merge Instructions
+  // 13.15. Vector Floating-Point Merge Instruction
   def : Pat<(fvti.Vector (riscv_vselect_vl (fvti.Mask V0),
                                            fvti.RegClass:$rs1,
                                            fvti.RegClass:$rs2,
@@ -1689,7 +1713,7 @@ foreach fvti = AllFloatVectors in {
                  fvti.RegClass:$rs2, fvti.RegClass:$rs2, 0, (fvti.Mask V0),
                  GPR:$vl, fvti.Log2SEW)>;
 
-  // 14.16. Vector Floating-Point Move Instruction
+  // 13.16. Vector Floating-Point Move Instruction
   // If we're splatting fpimm0, use vmv.v.x vd, x0.
   def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                          (fvti.Vector undef), (fvti.Scalar (fpimm0)), VLOpFrag)),
@@ -1713,15 +1737,16 @@ foreach fvti = AllFloatVectors in {
              $passthru, (fvti.Scalar fvti.ScalarRegClass:$rs2),
              GPR:$vl, fvti.Log2SEW)>;
 
-  // 14.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
+  // 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
   defm : VPatConvertFP2I_RM_VL_V<riscv_vfcvt_rm_x_f_vl,  "PseudoVFCVT_RM_X_F_V">;
   defm : VPatConvertFP2IVL_V<riscv_vfcvt_x_f_vl, "PseudoVFCVT_X_F_V">;
   defm : VPatConvertFP2IVL_V<riscv_vfcvt_rtz_x_f_vl, "PseudoVFCVT_RTZ_X_F_V">;
   defm : VPatConvertFP2IVL_V<riscv_vfcvt_rtz_xu_f_vl, "PseudoVFCVT_RTZ_XU_F_V">;
   defm : VPatConvertI2FPVL_V<riscv_sint_to_fp_vl, "PseudoVFCVT_F_X_V">;
   defm : VPatConvertI2FPVL_V<riscv_uint_to_fp_vl, "PseudoVFCVT_F_XU_V">;
+  defm : VPatConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_xu_vl, "PseudoVFCVT_RM_F_XU_V">;
 
-  // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+  // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
   defm : VPatWConvertFP2IVL_V<riscv_vfcvt_rtz_x_f_vl, "PseudoVFWCVT_RTZ_X_F_V">;
   defm : VPatWConvertFP2IVL_V<riscv_vfcvt_rtz_xu_f_vl, "PseudoVFWCVT_RTZ_XU_F_V">;
   defm : VPatWConvertI2FPVL_V<riscv_sint_to_fp_vl, "PseudoVFWCVT_F_X_V">;
@@ -1737,11 +1762,13 @@ foreach fvti = AllFloatVectors in {
                   (fvti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
 
-  // 14.19 Narrowing Floating-Point/Integer Type-Convert Instructions
+  // 13.19 Narrowing Floating-Point/Integer Type-Convert Instructions
   defm : VPatNConvertFP2IVL_V<riscv_vfcvt_rtz_x_f_vl, "PseudoVFNCVT_RTZ_X_F_W">;
   defm : VPatNConvertFP2IVL_V<riscv_vfcvt_rtz_xu_f_vl, "PseudoVFNCVT_RTZ_XU_F_W">;
   defm : VPatNConvertI2FPVL_V<riscv_sint_to_fp_vl, "PseudoVFNCVT_F_X_W">;
   defm : VPatNConvertI2FPVL_V<riscv_uint_to_fp_vl, "PseudoVFNCVT_F_XU_W">;
+  defm :
+    VPatNConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_xu_vl, "PseudoVFNCVT_RM_F_XU_W">;
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
@@ -1763,10 +1790,47 @@ foreach fvti = AllFloatVectors in {
 
 } // Predicates = [HasVInstructionsAnyF]
 
+// 14. Vector Reduction Operations
+
+// 14.1. Vector Single-Width Integer Reduction Instructions
+let Predicates = [HasVInstructions] in {
+defm : VPatReductionVL<rvv_vecreduce_ADD_vl,  "PseudoVREDSUM", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_UMAX_vl, "PseudoVREDMAXU", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_SMAX_vl, "PseudoVREDMAX", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_UMIN_vl, "PseudoVREDMINU", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
+
+// 14.2. Vector Widening Integer Reduction Instructions
+defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, anyext_oneuse, "PseudoVWREDSUMU", /*is_float*/0>;
+defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, zext_oneuse, "PseudoVWREDSUMU", /*is_float*/0>;
+defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_zext_vl_oneuse, "PseudoVWREDSUMU", /*is_float*/0>;
+defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, sext_oneuse, "PseudoVWREDSUM", /*is_float*/0>;
+defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_sext_vl_oneuse, "PseudoVWREDSUM", /*is_float*/0>;
+} // Predicates = [HasVInstructions]
+
+// 14.3. Vector Single-Width Floating-Point Reduction Instructions
+let Predicates = [HasVInstructionsAnyF] in {
+defm : VPatReductionVL<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
+defm : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDUSUM", /*is_float*/1>;
+defm : VPatReductionVL<rvv_vecreduce_FMIN_vl,     "PseudoVFREDMIN", /*is_float*/1>;
+defm : VPatReductionVL<rvv_vecreduce_FMAX_vl,     "PseudoVFREDMAX", /*is_float*/1>;
+
+// 14.4. Vector Widening Floating-Point Reduction Instructions
+defm : VPatWidenReductionVL<rvv_vecreduce_SEQ_FADD_vl, fpext_oneuse, "PseudoVFWREDOSUM", /*is_float*/1>;
+defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_SEQ_FADD_vl, riscv_fpextend_vl_oneuse, "PseudoVFWREDOSUM", /*is_float*/1>;
+defm : VPatWidenReductionVL<rvv_vecreduce_FADD_vl, fpext_oneuse, "PseudoVFWREDUSUM", /*is_float*/1>;
+defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_FADD_vl, riscv_fpextend_vl_oneuse, "PseudoVFWREDUSUM", /*is_float*/1>;
+} // Predicates = [HasVInstructionsAnyF]
+
+// 15. Vector Mask Instructions
+
 let Predicates = [HasVInstructions] in {
 
 foreach mti = AllMasks in {
-  // 16.1 Vector Mask-Register Logical Instructions
+  // 15.1 Vector Mask-Register Logical Instructions
   def : Pat<(mti.Mask (riscv_vmset_vl VLOpFrag)),
             (!cast<Instruction>("PseudoVMSET_M_" # mti.BX) GPR:$vl, mti.Log2SEW)>;
   def : Pat<(mti.Mask (riscv_vmclr_vl VLOpFrag)),
@@ -1820,7 +1884,7 @@ foreach mti = AllMasks in {
             (!cast<Instruction>("PseudoVMNAND_MM_" # mti.LMul.MX)
                  VR:$rs, VR:$rs, GPR:$vl, mti.Log2SEW)>;
 
-  // 16.2 Vector count population in mask vcpop.m
+  // 15.2 Vector count population in mask vcpop.m
   def : Pat<(XLenVT (riscv_vcpop_vl (mti.Mask VR:$rs2), (mti.Mask true_mask),
                                     VLOpFrag)),
             (!cast<Instruction>("PseudoVCPOP_M_" # mti.BX)
@@ -1829,13 +1893,25 @@ foreach mti = AllMasks in {
                                     VLOpFrag)),
             (!cast<Instruction>("PseudoVCPOP_M_" # mti.BX # "_MASK")
                  VR:$rs2, (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
+
+  // 15.3 vfirst find-first-set mask bit
+  def : Pat<(XLenVT (riscv_vfirst_vl (mti.Mask VR:$rs2), (mti.Mask true_mask),
+                                    VLOpFrag)),
+            (!cast<Instruction>("PseudoVFIRST_M_" # mti.BX)
+                 VR:$rs2, GPR:$vl, mti.Log2SEW)>;
+  def : Pat<(XLenVT (riscv_vfirst_vl (mti.Mask VR:$rs2), (mti.Mask V0),
+                                    VLOpFrag)),
+            (!cast<Instruction>("PseudoVFIRST_M_" # mti.BX # "_MASK")
+                 VR:$rs2, (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
 }
 
 } // Predicates = [HasVInstructions]
 
+// 16. Vector Permutation Instructions
+
 let Predicates = [HasVInstructions] in {
-// 17.1. Integer Scalar Move Instructions
-// 17.4. Vector Register Gather Instruction
+// 16.1. Integer Scalar Move Instructions
+// 16.4. Vector Register Gather Instruction
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Vector (riscv_vmv_s_x_vl (vti.Vector vti.RegClass:$merge),
                                           vti.ScalarRegClass:$rs1,
@@ -1893,7 +1969,7 @@ foreach vti = AllIntegerVectors in {
 
 let Predicates = [HasVInstructionsAnyF] in {
 
-// 17.2. Floating-Point Scalar Move Instructions
+// 16.2. Floating-Point Scalar Move Instructions
 foreach vti = AllFloatVectors in {
   def : Pat<(vti.Vector (riscv_vfmv_s_f_vl (vti.Vector vti.RegClass:$merge),
                                            (vti.Scalar (fpimm0)),
@@ -1964,9 +2040,10 @@ def riscv_vid_vl : SDNode<"RISCVISD::VID_VL", SDTypeProfile<1, 2,
                           [SDTCisVec<0>, SDTCVecEltisVT<1, i1>,
                            SDTCisSameNumEltsAs<0, 1>, SDTCisVT<2, XLenVT>]>, []>;
 
-def SDTRVVSlide : SDTypeProfile<1, 5, [
+def SDTRVVSlide : SDTypeProfile<1, 6, [
   SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisVT<3, XLenVT>,
-  SDTCVecEltisVT<4, i1>, SDTCisSameNumEltsAs<0, 4>, SDTCisVT<5, XLenVT>
+  SDTCVecEltisVT<4, i1>, SDTCisSameNumEltsAs<0, 4>, SDTCisVT<5, XLenVT>,
+  SDTCisVT<6, XLenVT>
 ]>;
 def SDTRVVSlide1 : SDTypeProfile<1, 5, [
   SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisInt<0>,
@@ -2016,48 +2093,34 @@ foreach vti = !listconcat(AllIntegerVectors, AllFloatVectors) in {
   def : Pat<(vti.Vector (riscv_slideup_vl (vti.Vector vti.RegClass:$rs3),
                                           (vti.Vector vti.RegClass:$rs1),
                                           uimm5:$rs2, (vti.Mask true_mask),
-                                          VLOpFrag)),
+                                          VLOpFrag, (XLenVT timm:$policy))),
             (!cast<Instruction>("PseudoVSLIDEUP_VI_"#vti.LMul.MX)
                 vti.RegClass:$rs3, vti.RegClass:$rs1, uimm5:$rs2,
-                GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
+                GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
 
   def : Pat<(vti.Vector (riscv_slideup_vl (vti.Vector vti.RegClass:$rs3),
                                           (vti.Vector vti.RegClass:$rs1),
                                           GPR:$rs2, (vti.Mask true_mask),
-                                          VLOpFrag)),
+                                          VLOpFrag, (XLenVT timm:$policy))),
             (!cast<Instruction>("PseudoVSLIDEUP_VX_"#vti.LMul.MX)
                 vti.RegClass:$rs3, vti.RegClass:$rs1, GPR:$rs2,
-                GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
+                GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
 
   def : Pat<(vti.Vector (riscv_slidedown_vl (vti.Vector vti.RegClass:$rs3),
                                             (vti.Vector vti.RegClass:$rs1),
                                             uimm5:$rs2, (vti.Mask true_mask),
-                                            VLOpFrag)),
+                                            VLOpFrag, (XLenVT timm:$policy))),
             (!cast<Instruction>("PseudoVSLIDEDOWN_VI_"#vti.LMul.MX)
                 vti.RegClass:$rs3, vti.RegClass:$rs1, uimm5:$rs2,
-                GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
-  def : Pat<(vti.Vector (riscv_slidedown_vl (vti.Vector undef),
-                                            (vti.Vector vti.RegClass:$rs1),
-                                            uimm5:$rs2, (vti.Mask true_mask),
-                                            VLOpFrag)),
-            (!cast<Instruction>("PseudoVSLIDEDOWN_VI_"#vti.LMul.MX)
-                (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, uimm5:$rs2,
-                GPR:$vl, vti.Log2SEW, TA_MA)>;
+                GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
 
   def : Pat<(vti.Vector (riscv_slidedown_vl (vti.Vector vti.RegClass:$rs3),
                                             (vti.Vector vti.RegClass:$rs1),
                                             GPR:$rs2, (vti.Mask true_mask),
-                                            VLOpFrag)),
+                                            VLOpFrag, (XLenVT timm:$policy))),
             (!cast<Instruction>("PseudoVSLIDEDOWN_VX_"#vti.LMul.MX)
                 vti.RegClass:$rs3, vti.RegClass:$rs1, GPR:$rs2,
-                GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
-  def : Pat<(vti.Vector (riscv_slidedown_vl (vti.Vector undef),
-                                            (vti.Vector vti.RegClass:$rs1),
-                                            GPR:$rs2, (vti.Mask true_mask),
-                                            VLOpFrag)),
-            (!cast<Instruction>("PseudoVSLIDEDOWN_VX_"#vti.LMul.MX)
-                (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, GPR:$rs2,
-                GPR:$vl, vti.Log2SEW, TA_MA)>;
+                GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
 }
 
 } // Predicates = [HasVInstructions]

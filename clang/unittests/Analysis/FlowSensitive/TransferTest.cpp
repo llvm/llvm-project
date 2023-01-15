@@ -10,12 +10,14 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Testing/Support/Error.h"
@@ -33,23 +35,33 @@ using ::testing::IsNull;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
 
+using BuiltinOptions = DataflowAnalysisContext::Options;
+
 template <typename Matcher>
 void runDataflow(llvm::StringRef Code, Matcher Match,
                  DataflowAnalysisOptions Options,
                  LangStandard::Kind Std = LangStandard::lang_cxx17,
                  llvm::StringRef TargetFun = "target") {
   using ast_matchers::hasName;
+  llvm::SmallVector<std::string, 3> ASTBuildArgs = {
+      "-fsyntax-only", "-fno-delayed-template-parsing",
+      "-std=" +
+          std::string(LangStandard::getLangStandardForKind(Std).getName())};
+  AnalysisInputs<NoopAnalysis> AI(
+      Code, hasName(TargetFun),
+      [UseBuiltinModel = Options.BuiltinOpts.has_value()](ASTContext &C,
+                                                          Environment &Env) {
+        return NoopAnalysis(
+            C, DataflowAnalysisOptions{UseBuiltinModel
+                                           ? Env.getAnalysisOptions()
+                                           : llvm::Optional<BuiltinOptions>()});
+      });
+  AI.ASTBuildArgs = ASTBuildArgs;
+  if (Options.BuiltinOpts)
+    AI.BuiltinOptions = *Options.BuiltinOpts;
   ASSERT_THAT_ERROR(
       checkDataflow<NoopAnalysis>(
-          AnalysisInputs<NoopAnalysis>(Code, hasName(TargetFun),
-                                       [Options](ASTContext &C, Environment &) {
-                                         return NoopAnalysis(C, Options);
-                                       })
-              .withASTBuildArgs(
-                  {"-fsyntax-only", "-fno-delayed-template-parsing",
-                   "-std=" +
-                       std::string(LangStandard::getLangStandardForKind(Std)
-                                       .getName())}),
+          std::move(AI),
           /*VerifyResults=*/
           [&Match](const llvm::StringMap<DataflowAnalysisState<NoopLattice>>
                        &Results,
@@ -63,8 +75,8 @@ void runDataflow(llvm::StringRef Code, Matcher Match,
                  bool ApplyBuiltinTransfer = true,
                  llvm::StringRef TargetFun = "target") {
   runDataflow(Code, std::move(Match),
-              {ApplyBuiltinTransfer ? TransferOptions{}
-                                    : llvm::Optional<TransferOptions>()},
+              {ApplyBuiltinTransfer ? BuiltinOptions{}
+                                    : std::optional<BuiltinOptions>()},
               Std, TargetFun);
 }
 
@@ -151,6 +163,7 @@ TEST(TransferTest, StructVarDecl) {
 
     void target() {
       A Foo;
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -198,6 +211,7 @@ TEST(TransferTest, StructVarDeclWithInit) {
 
     void target() {
       A Foo = Gen();
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -238,11 +252,13 @@ TEST(TransferTest, StructVarDeclWithInit) {
 TEST(TransferTest, ClassVarDecl) {
   std::string Code = R"(
     class A {
+     public:
       int Bar;
     };
 
     void target() {
       A Foo;
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -336,6 +352,10 @@ TEST(TransferTest, SelfReferentialReferenceVarDecl) {
 
     void target() {
       A &Foo = getA();
+      (void)Foo.Bar.FooRef;
+      (void)Foo.Bar.FooPtr;
+      (void)Foo.Bar.BazRef;
+      (void)Foo.Bar.BazPtr;
       // [[p]]
     }
   )";
@@ -478,6 +498,10 @@ TEST(TransferTest, SelfReferentialPointerVarDecl) {
 
     void target() {
       A *Foo = getA();
+      (void)Foo->Bar->FooRef;
+      (void)Foo->Bar->FooPtr;
+      (void)Foo->Bar->BazRef;
+      (void)Foo->Bar->BazPtr;
       // [[p]]
     }
   )";
@@ -891,7 +915,7 @@ TEST(TransferTest, StructParamDecl) {
     };
 
     void target(A Foo) {
-      (void)0;
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1042,6 +1066,28 @@ TEST(TransferTest, StructMember) {
       });
 }
 
+TEST(TransferTest, StructMemberEnum) {
+  std::string Code = R"(
+    struct A {
+      int Bar;
+      enum E { ONE, TWO };
+    };
+
+    void target(A Foo) {
+      A::E Baz = Foo.ONE;
+      // [[p]]
+    }
+  )";
+  // Minimal expectations -- we're just testing that it doesn't crash, since
+  // enums aren't interpreted.
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        EXPECT_THAT(Results.keys(), UnorderedElementsAre("p"));
+      });
+}
+
 TEST(TransferTest, DerivedBaseMemberClass) {
   std::string Code = R"(
     class A {
@@ -1052,6 +1098,9 @@ TEST(TransferTest, DerivedBaseMemberClass) {
       int APrivate;
     public:
       int APublic;
+
+    private:
+      friend void target();
     };
 
     class B : public A {
@@ -1060,10 +1109,20 @@ TEST(TransferTest, DerivedBaseMemberClass) {
       int BProtected;
     private:
       int BPrivate;
+
+    private:
+      friend void target();
     };
 
     void target() {
       B Foo;
+      (void)Foo.ADefault;
+      (void)Foo.AProtected;
+      (void)Foo.APrivate;
+      (void)Foo.APublic;
+      (void)Foo.BDefault;
+      (void)Foo.BProtected;
+      (void)Foo.BPrivate;
       // [[p]]
     }
   )";
@@ -1202,6 +1261,7 @@ TEST(TransferTest, DerivedBaseMemberStructDefault) {
 
     void target() {
       B Foo;
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1518,6 +1578,54 @@ TEST(TransferTest, ClassThisMember) {
       });
 }
 
+TEST(TransferTest, UnionThisMember) {
+  std::string Code = R"(
+    union A {
+      int Foo;
+      int Bar;
+
+      void target() {
+        A a;
+        // Mention the fields to ensure they're included in the analysis.
+        (void)a.Foo;
+        (void)a.Bar;
+        // [[p]]
+      }
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
+            Env.getThisPointeeStorageLocation());
+        ASSERT_THAT(ThisLoc, NotNull());
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const auto *FooLoc =
+            cast<ScalarStorageLocation>(&ThisLoc->getChild(*FooDecl));
+        ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
+
+        const Value *FooVal = Env.getValue(*FooLoc);
+        ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        const auto *BarLoc =
+            cast<ScalarStorageLocation>(&ThisLoc->getChild(*BarDecl));
+        ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
+
+        const Value *BarVal = Env.getValue(*BarLoc);
+        ASSERT_TRUE(isa_and_nonnull<IntegerValue>(BarVal));
+      });
+}
+
 TEST(TransferTest, StructThisInLambda) {
   std::string ThisCaptureCode = R"(
     struct A {
@@ -1733,6 +1841,7 @@ TEST(TransferTest, TemporaryObject) {
 
     void target() {
       A Foo = A();
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1770,6 +1879,7 @@ TEST(TransferTest, ElidableConstructor) {
 
     void target() {
       A Foo = A();
+      (void)Foo.Bar;
       // [[p]]
     }
   )";
@@ -1807,6 +1917,7 @@ TEST(TransferTest, AssignmentOperator) {
     void target() {
       A Foo;
       A Bar;
+      (void)Foo.Baz;
       // [[p1]]
       Foo = Bar;
       // [[p2]]
@@ -1869,6 +1980,7 @@ TEST(TransferTest, CopyConstructor) {
 
     void target() {
       A Foo;
+      (void)Foo.Baz;
       A Bar = Foo;
       // [[p]]
     }
@@ -1914,6 +2026,7 @@ TEST(TransferTest, CopyConstructorWithParens) {
 
     void target() {
       A Foo;
+      (void)Foo.Baz;
       A Bar((A(Foo)));
       // [[p]]
     }
@@ -1974,6 +2087,7 @@ TEST(TransferTest, MoveConstructor) {
     void target() {
       A Foo;
       A Bar;
+      (void)Foo.Baz;
       // [[p1]]
       Foo = std::move(Bar);
       // [[p2]]
@@ -2537,12 +2651,34 @@ TEST(TransferTest, AssignToUnionMember) {
         ASSERT_THAT(BazDecl, NotNull());
         ASSERT_TRUE(BazDecl->getType()->isUnionType());
 
+        auto BazFields = BazDecl->getType()->getAsRecordDecl()->fields();
+        FieldDecl *FooDecl = nullptr;
+        for (FieldDecl *Field : BazFields) {
+          if (Field->getNameAsString() == "Foo") {
+            FooDecl = Field;
+          } else {
+            FAIL() << "Unexpected field: " << Field->getNameAsString();
+          }
+        }
+        ASSERT_THAT(FooDecl, NotNull());
+
         const auto *BazLoc = dyn_cast_or_null<AggregateStorageLocation>(
             Env.getStorageLocation(*BazDecl, SkipPast::None));
         ASSERT_THAT(BazLoc, NotNull());
+        ASSERT_THAT(Env.getValue(*BazLoc), NotNull());
 
-        // FIXME: Add support for union types.
-        EXPECT_THAT(Env.getValue(*BazLoc), IsNull());
+        const auto *BazVal = cast<StructValue>(Env.getValue(*BazLoc));
+        const auto *FooValFromBazVal = cast<IntegerValue>(BazVal->getChild(*FooDecl));
+        const auto *FooValFromBazLoc = cast<IntegerValue>(Env.getValue(BazLoc->getChild(*FooDecl)));
+        EXPECT_EQ(FooValFromBazLoc, FooValFromBazVal);
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+        const auto *BarLoc = Env.getStorageLocation(*BarDecl, SkipPast::None);
+        ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
+
+        EXPECT_EQ(Env.getValue(*BarLoc), FooValFromBazVal);
+        EXPECT_EQ(Env.getValue(*BarLoc), FooValFromBazLoc);
       });
 }
 
@@ -3613,6 +3749,172 @@ TEST(TransferTest, StructuredBindingAssignFromStructIntMembersToInts) {
       });
 }
 
+TEST(TransferTest, StructuredBindingAssignFromTupleLikeType) {
+  std::string Code = R"(
+    namespace std {
+    using size_t = int;
+    template <class> struct tuple_size;
+    template <std::size_t, class> struct tuple_element;
+    template <class...> class tuple;
+
+    namespace {
+    template <class T, T v>
+    struct size_helper { static const T value = v; };
+    } // namespace
+
+    template <class... T>
+    struct tuple_size<tuple<T...>> : size_helper<std::size_t, sizeof...(T)> {};
+
+    template <std::size_t I, class... T>
+    struct tuple_element<I, tuple<T...>> {
+      using type =  __type_pack_element<I, T...>;
+    };
+
+    template <class...> class tuple {};
+
+    template <std::size_t I, class... T>
+    typename tuple_element<I, tuple<T...>>::type get(tuple<T...>);
+    } // namespace std
+
+    std::tuple<bool, int> makeTuple();
+
+    void target(bool B) {
+      auto [BoundFoo, BoundBar] = makeTuple();
+      bool Baz;
+      // Include if-then-else to test interaction of `BindingDecl` with join.
+      if (B) {
+        Baz = BoundFoo;
+        (void)BoundBar;
+        // [[p1]]
+      } else {
+        Baz = BoundFoo;
+      }
+      (void)0;
+      // [[p2]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+
+        const ValueDecl *BoundFooDecl = findValueDecl(ASTCtx, "BoundFoo");
+        ASSERT_THAT(BoundFooDecl, NotNull());
+
+        const ValueDecl *BoundBarDecl = findValueDecl(ASTCtx, "BoundBar");
+        ASSERT_THAT(BoundBarDecl, NotNull());
+
+        const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+        ASSERT_THAT(BazDecl, NotNull());
+
+        const Value *BoundFooValue =
+            Env1.getValue(*BoundFooDecl, SkipPast::Reference);
+        ASSERT_THAT(BoundFooValue, NotNull());
+        EXPECT_TRUE(isa<BoolValue>(BoundFooValue));
+
+        const Value *BoundBarValue =
+            Env1.getValue(*BoundBarDecl, SkipPast::Reference);
+        ASSERT_THAT(BoundBarValue, NotNull());
+        EXPECT_TRUE(isa<IntegerValue>(BoundBarValue));
+
+        // Test that a `DeclRefExpr` to a `BindingDecl` works as expected.
+        EXPECT_EQ(Env1.getValue(*BazDecl, SkipPast::Reference), BoundFooValue);
+
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        // Test that `BoundFooDecl` retains the value we expect, after the join.
+        BoundFooValue = Env2.getValue(*BoundFooDecl, SkipPast::Reference);
+        EXPECT_EQ(Env2.getValue(*BazDecl, SkipPast::Reference), BoundFooValue);
+      });
+}
+
+TEST(TransferTest, StructuredBindingAssignRefFromTupleLikeType) {
+  std::string Code = R"(
+    namespace std {
+    using size_t = int;
+    template <class> struct tuple_size;
+    template <std::size_t, class> struct tuple_element;
+    template <class...> class tuple;
+
+    namespace {
+    template <class T, T v>
+    struct size_helper { static const T value = v; };
+    } // namespace
+
+    template <class... T>
+    struct tuple_size<tuple<T...>> : size_helper<std::size_t, sizeof...(T)> {};
+
+    template <std::size_t I, class... T>
+    struct tuple_element<I, tuple<T...>> {
+      using type =  __type_pack_element<I, T...>;
+    };
+
+    template <class...> class tuple {};
+
+    template <std::size_t I, class... T>
+    typename tuple_element<I, tuple<T...>>::type get(tuple<T...>);
+    } // namespace std
+
+    std::tuple<bool, int> &getTuple();
+
+    void target(bool B) {
+      auto &[BoundFoo, BoundBar] = getTuple();
+      bool Baz;
+      // Include if-then-else to test interaction of `BindingDecl` with join.
+      if (B) {
+        Baz = BoundFoo;
+        (void)BoundBar;
+        // [[p1]]
+      } else {
+        Baz = BoundFoo;
+      }
+      (void)0;
+      // [[p2]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+
+        const ValueDecl *BoundFooDecl = findValueDecl(ASTCtx, "BoundFoo");
+        ASSERT_THAT(BoundFooDecl, NotNull());
+
+        const ValueDecl *BoundBarDecl = findValueDecl(ASTCtx, "BoundBar");
+        ASSERT_THAT(BoundBarDecl, NotNull());
+
+        const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+        ASSERT_THAT(BazDecl, NotNull());
+
+        const Value *BoundFooValue =
+            Env1.getValue(*BoundFooDecl, SkipPast::Reference);
+        ASSERT_THAT(BoundFooValue, NotNull());
+        EXPECT_TRUE(isa<BoolValue>(BoundFooValue));
+
+        const Value *BoundBarValue =
+            Env1.getValue(*BoundBarDecl, SkipPast::Reference);
+        ASSERT_THAT(BoundBarValue, NotNull());
+        EXPECT_TRUE(isa<IntegerValue>(BoundBarValue));
+
+        // Test that a `DeclRefExpr` to a `BindingDecl` (with reference type)
+        // works as expected. We don't test aliasing properties of the
+        // reference, because we don't model `std::get` and so have no way to
+        // equate separate references into the tuple.
+        EXPECT_EQ(Env1.getValue(*BazDecl, SkipPast::Reference), BoundFooValue);
+
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        // Test that `BoundFooDecl` retains the value we expect, after the join.
+        BoundFooValue = Env2.getValue(*BoundFooDecl, SkipPast::Reference);
+        EXPECT_EQ(Env2.getValue(*BazDecl, SkipPast::Reference), BoundFooValue);
+      });
+}
+// TODO: ref binding
+
 TEST(TransferTest, BinaryOperatorComma) {
   std::string Code = R"(
     void target(int Foo, int Bar) {
@@ -3849,7 +4151,36 @@ TEST(TransferTest, ContextSensitiveOptionDisabled) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{/*.ContextSensitiveOpts=*/std::nullopt}});
+      {BuiltinOptions{/*.ContextSensitiveOpts=*/std::nullopt}});
+}
+
+// This test is a regression test, based on a real crash.
+TEST(TransferTest, ContextSensitiveReturnReferenceFromNonReferenceLvalue) {
+  // This code exercises an unusual code path. If we return an lvalue directly,
+  // the code will catch that it's an l-value based on the `Value`'s kind. If we
+  // pass through a dummy function, the framework won't populate a value at
+  // all. In contrast, this code results in a (fresh) value, but it is not
+  // `ReferenceValue`. This test verifies that we catch this case as well.
+  std::string Code = R"(
+    class S {};
+    S& target(bool b, S &s) {
+      return b ? s : s;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Loc = Env.getReturnStorageLocation();
+        ASSERT_THAT(Loc, NotNull());
+
+        EXPECT_THAT(Env.getValue(*Loc), IsNull());
+      },
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveDepthZero) {
@@ -3877,7 +4208,7 @@ TEST(TransferTest, ContextSensitiveDepthZero) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/0}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/0}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetTrue) {
@@ -3904,7 +4235,7 @@ TEST(TransferTest, ContextSensitiveSetTrue) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetFalse) {
@@ -3931,7 +4262,7 @@ TEST(TransferTest, ContextSensitiveSetFalse) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetBothTrueAndFalse) {
@@ -3968,7 +4299,7 @@ TEST(TransferTest, ContextSensitiveSetBothTrueAndFalse) {
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetTwoLayersDepthOne) {
@@ -3997,7 +4328,7 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthOne) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/1}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/1}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetTwoLayersDepthTwo) {
@@ -4025,7 +4356,7 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthTwo) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetThreeLayersDepthTwo) {
@@ -4055,7 +4386,7 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthTwo) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetThreeLayersDepthThree) {
@@ -4084,7 +4415,7 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthThree) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/3}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/3}}});
 }
 
 TEST(TransferTest, ContextSensitiveMutualRecursion) {
@@ -4128,7 +4459,7 @@ TEST(TransferTest, ContextSensitiveMutualRecursion) {
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{/*.Depth=*/4}}});
+      {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/4}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetMultipleLines) {
@@ -4166,7 +4497,7 @@ TEST(TransferTest, ContextSensitiveSetMultipleLines) {
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveSetMultipleBlocks) {
@@ -4208,7 +4539,7 @@ TEST(TransferTest, ContextSensitiveSetMultipleBlocks) {
         EXPECT_TRUE(Env.flowConditionImplies(BazVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(BazVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnVoid) {
@@ -4227,7 +4558,7 @@ TEST(TransferTest, ContextSensitiveReturnVoid) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         // This just tests that the analysis doesn't crash.
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnTrue) {
@@ -4252,7 +4583,7 @@ TEST(TransferTest, ContextSensitiveReturnTrue) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnFalse) {
@@ -4277,7 +4608,7 @@ TEST(TransferTest, ContextSensitiveReturnFalse) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnArg) {
@@ -4305,7 +4636,7 @@ TEST(TransferTest, ContextSensitiveReturnArg) {
         auto &BazVal = *cast<BoolValue>(Env.getValue(*BazDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(BazVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveReturnInt) {
@@ -4324,7 +4655,7 @@ TEST(TransferTest, ContextSensitiveReturnInt) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         // This just tests that the analysis doesn't crash.
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodLiteral) {
@@ -4353,7 +4684,7 @@ TEST(TransferTest, ContextSensitiveMethodLiteral) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodGetter) {
@@ -4385,7 +4716,7 @@ TEST(TransferTest, ContextSensitiveMethodGetter) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodSetter) {
@@ -4417,7 +4748,7 @@ TEST(TransferTest, ContextSensitiveMethodSetter) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
@@ -4451,7 +4782,7 @@ TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 
@@ -4476,7 +4807,8 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersVoid) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));;
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        ;
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -4485,7 +4817,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersVoid) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
@@ -4509,7 +4841,8 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));;
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        ;
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -4518,7 +4851,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveConstructorBody) {
@@ -4549,7 +4882,7 @@ TEST(TransferTest, ContextSensitiveConstructorBody) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveConstructorInitializer) {
@@ -4580,7 +4913,7 @@ TEST(TransferTest, ContextSensitiveConstructorInitializer) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 TEST(TransferTest, ContextSensitiveConstructorDefault) {
@@ -4611,7 +4944,7 @@ TEST(TransferTest, ContextSensitiveConstructorDefault) {
         auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
-      {TransferOptions{ContextSensitiveOptions{}}});
+      {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
 } // namespace

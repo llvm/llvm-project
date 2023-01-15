@@ -133,8 +133,8 @@ public:
   LCSubFramework(StringRef umbrella) : umbrella(umbrella) {}
 
   uint32_t getSize() const override {
-    return alignTo(sizeof(sub_framework_command) + umbrella.size() + 1,
-                   target->wordSize);
+    return alignToPowerOf2(sizeof(sub_framework_command) + umbrella.size() + 1,
+                           target->wordSize);
   }
 
   void writeTo(uint8_t *buf) const override {
@@ -388,7 +388,8 @@ public:
   explicit LCRPath(StringRef path) : path(path) {}
 
   uint32_t getSize() const override {
-    return alignTo(sizeof(rpath_command) + path.size() + 1, target->wordSize);
+    return alignToPowerOf2(sizeof(rpath_command) + path.size() + 1,
+                           target->wordSize);
   }
 
   void writeTo(uint8_t *buf) const override {
@@ -412,8 +413,8 @@ public:
   explicit LCDyldEnv(StringRef name) : name(name) {}
 
   uint32_t getSize() const override {
-    return alignTo(sizeof(dyld_env_command) + name.size() + 1,
-                   target->wordSize);
+    return alignToPowerOf2(sizeof(dyld_env_command) + name.size() + 1,
+                           target->wordSize);
   }
 
   void writeTo(uint8_t *buf) const override {
@@ -1075,8 +1076,8 @@ void Writer::finalizeAddresses() {
     // `fileOff + fileSize == next segment fileOff`. So we call alignTo() before
     // (instead of after) computing fileSize to ensure that the segments are
     // contiguous. We handle addr / vmSize similarly for the same reason.
-    fileOff = alignTo(fileOff, pageSize);
-    addr = alignTo(addr, pageSize);
+    fileOff = alignToPowerOf2(fileOff, pageSize);
+    addr = alignToPowerOf2(addr, pageSize);
     seg->vmSize = addr - seg->addr;
     seg->fileSize = fileOff - seg->fileOff;
     seg->assignAddressesToStartEndSymbols();
@@ -1319,15 +1320,14 @@ void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
-  if (config->dedupLiterals)
+  if (config->dedupStrings)
     in.cStringSection =
         make<DeduplicatedCStringSection>(section_names::cString);
   else
     in.cStringSection = make<CStringSection>(section_names::cString);
   in.objcMethnameSection =
       make<DeduplicatedCStringSection>(section_names::objcMethname);
-  in.wordLiteralSection =
-      config->dedupLiterals ? make<WordLiteralSection>() : nullptr;
+  in.wordLiteralSection = make<WordLiteralSection>();
   if (config->emitChainedFixups) {
     in.chainedFixups = make<ChainedFixupsSection>();
   } else {

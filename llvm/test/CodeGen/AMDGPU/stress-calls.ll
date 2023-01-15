@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-stress-function-calls -amdgpu-always-inline %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-stress-function-calls -passes=amdgpu-always-inline %s | FileCheck %s
 
 ; CHECK: define internal fastcc i32 @alwaysinline_func(i32 %a) #0 {
 define internal fastcc i32 @alwaysinline_func(i32 %a) alwaysinline {

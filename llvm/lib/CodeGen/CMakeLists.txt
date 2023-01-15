@@ -1,4 +1,4 @@
-if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
+if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
@@ -17,7 +17,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
     )
   endif()
 
-  if (DEFINED LLVM_HAVE_TF_API)
+  if (LLVM_HAVE_TFLITE)
     list(APPEND MLLinkDeps ${tensorflow_c_api} ${tensorflow_fx})
   endif()
 endif()
@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMCodeGen
   AggressiveAntiDepBreaker.cpp
   AllocationOrder.cpp
   Analysis.cpp
+  AssignmentTrackingAnalysis.cpp
   AtomicExpandPass.cpp
   BasicTargetTransformInfo.cpp
   BranchFolding.cpp
@@ -141,6 +142,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineSSAUpdater.cpp
   MachineStripDebug.cpp
   MachineTraceMetrics.cpp
+  MachineUniformityAnalysis.cpp
   MachineVerifier.cpp
   MIRFSDiscriminator.cpp
   MIRSampleProfile.cpp
@@ -211,6 +213,7 @@ add_llvm_component_library(LLVMCodeGen
   SpillPlacement.cpp
   SplitKit.cpp
   StackColoring.cpp
+  StackFrameLayoutAnalysisPass.cpp
   StackMapLivenessAnalysis.cpp
   StackMaps.cpp
   StackProtector.cpp
@@ -228,8 +231,8 @@ add_llvm_component_library(LLVMCodeGen
   TargetRegisterInfo.cpp
   TargetSchedule.cpp
   TargetSubtargetInfo.cpp
-  TypePromotion.cpp
   TwoAddressInstructionPass.cpp
+  TypePromotion.cpp
   UnreachableBlockElim.cpp
   ValueTypes.cpp
   VLIWMachineScheduler.cpp
@@ -264,6 +267,7 @@ add_llvm_component_library(LLVMCodeGen
   Scalar
   Support
   Target
+  TargetParser
   TransformUtils
   )
 

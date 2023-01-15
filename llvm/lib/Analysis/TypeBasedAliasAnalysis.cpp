@@ -373,13 +373,13 @@ static bool isStructPathTBAA(const MDNode *MD) {
 
 AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
                                      const MemoryLocation &LocB,
-                                     AAQueryInfo &AAQI) {
+                                     AAQueryInfo &AAQI, const Instruction *) {
   if (!EnableTBAA)
-    return AAResultBase::alias(LocA, LocB, AAQI);
+    return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 
   // If accesses may alias, chain to the next AliasAnalysis.
   if (Aliases(LocA.AATags.TBAA, LocB.AATags.TBAA))
-    return AAResultBase::alias(LocA, LocB, AAQI);
+    return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 
   // Otherwise return a definitive result.
   return AliasResult::NoAlias;
@@ -490,18 +490,16 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
   SmallSetVector<const MDNode *, 4> PathA;
   TBAANode TA(A);
   while (TA.getNode()) {
-    if (PathA.count(TA.getNode()))
+    if (!PathA.insert(TA.getNode()))
       report_fatal_error("Cycle found in TBAA metadata.");
-    PathA.insert(TA.getNode());
     TA = TA.getParent();
   }
 
   SmallSetVector<const MDNode *, 4> PathB;
   TBAANode TB(B);
   while (TB.getNode()) {
-    if (PathB.count(TB.getNode()))
+    if (!PathB.insert(TB.getNode()))
       report_fatal_error("Cycle found in TBAA metadata.");
-    PathB.insert(TB.getNode());
     TB = TB.getParent();
   }
 

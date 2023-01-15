@@ -137,10 +137,6 @@ public:
     ///
     /// Requirements:
     ///
-    ///  `Prev` must precede `Current` in the value ordering. Widening is *not*
-    ///  called when the current value is already equivalent to the previous
-    ///  value.
-    ///
     ///  `Prev` and `Current` must model values of type `Type`.
     ///
     ///  `Prev` and `Current` must be assigned to the same storage location in
@@ -180,6 +176,10 @@ public:
   /// If `DeclCtx` is a non-static member function, initializes the environment
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
+
+  const DataflowAnalysisContext::Options &getAnalysisOptions() {
+    return DACtx->getOptions();
+  }
 
   /// Creates and returns an environment to use for an inline analysis  of the
   /// callee. Uses the storage location from each argument in the `Call` as the
@@ -229,7 +229,7 @@ public:
   ///
   /// Requirements:
   ///
-  ///  `PrevEnv` must precede `this` in the environment ordering.
+  ///  `PrevEnv` must be the immediate previous version of the environment.
   ///  `PrevEnv` and `this` must use the same `DataflowAnalysisContext`.
   LatticeJoinEffect widen(const Environment &PrevEnv,
                           Environment::ValueModel &Model);
@@ -455,6 +455,9 @@ private:
   /// of the caller.
   void pushCallInternal(const FunctionDecl *FuncDecl,
                         ArrayRef<const Expr *> Args);
+
+  /// Assigns storage locations and values to all variables in `Vars`.
+  void initVars(llvm::DenseSet<const VarDecl *> Vars);
 
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;

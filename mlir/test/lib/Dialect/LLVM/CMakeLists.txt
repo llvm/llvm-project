@@ -15,6 +15,7 @@ add_mlir_library(MLIRLLVMTestPasses
   MLIRLinalgTransforms
   MLIRMathToLLVM
   MLIRMemRefToLLVM
+  MLIRMemRefTransforms
   MLIRPass
   MLIRReconcileUnrealizedCasts
   MLIRSCFToControlFlow

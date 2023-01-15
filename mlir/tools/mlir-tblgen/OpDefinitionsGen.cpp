@@ -22,6 +22,7 @@
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/SideEffects.h"
 #include "mlir/TableGen/Trait.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
@@ -117,11 +118,12 @@ static const char *const opSegmentSizeAttrInitCode = R"(
 ///
 /// {0}: The name of the segment attribute.
 /// {1}: The index of the main operand.
+/// {2}: The range type of adaptor.
 static const char *const variadicOfVariadicAdaptorCalcCode = R"(
   auto tblgenTmpOperands = getODSOperands({1});
   auto sizes = {0}();
 
-  ::llvm::SmallVector<::mlir::ValueRange> tblgenTmpOperandGroups;
+  ::llvm::SmallVector<{2}> tblgenTmpOperandGroups;
   for (int i = 0, e = sizes.size(); i < e; ++i) {{
     tblgenTmpOperandGroups.push_back(tblgenTmpOperands.take_front(sizes[i]));
     tblgenTmpOperands = tblgenTmpOperands.drop_front(sizes[i]);
@@ -902,7 +904,7 @@ void OpEmitter::genAttrNameGetters() {
                           [&](StringRef attrName) {
                             body << "::llvm::StringRef(\"" << attrName << "\")";
                           });
-    body << "};\n  return ::llvm::makeArrayRef(attrNames);";
+    body << "};\n  return ::llvm::ArrayRef(attrNames);";
   }
 
   // Emit the getAttributeNameForIndex methods.
@@ -1129,7 +1131,7 @@ void OpEmitter::genAttrSetters() {
       method = createMethod("bool");
     else if (isOptional)
       method =
-          createMethod("::llvm::Optional<" + baseAttr.getReturnType() + ">");
+          createMethod("::std::optional<" + baseAttr.getReturnType() + ">");
     else
       method = createMethod(attr.getReturnType());
     if (!method)
@@ -1148,7 +1150,7 @@ void OpEmitter::genAttrSetters() {
 
     // TODO: Handle unit attr parameters specially, given that it is treated as
     // optional but not in the same way as the others (i.e. it uses bool over
-    // llvm::Optional<>).
+    // std::optional<>).
     StringRef paramStr = isUnitAttr ? "attrValue" : "*attrValue";
     const char *optionalCodeBody = R"(
     if (attrValue)
@@ -1174,9 +1176,8 @@ void OpEmitter::genOptionalAttrRemovers() {
   // use the string interface. Enables better compile time verification.
   auto emitRemoveAttr = [&](StringRef name) {
     auto upperInitial = name.take_front().upper();
-    auto suffix = name.drop_front();
     auto *method = opClass.addMethod("::mlir::Attribute",
-                                     "remove" + upperInitial + suffix + "Attr");
+                                     op.getRemoverName(name) + "Attr");
     if (!method)
       return;
     method->body() << formatv("  return (*this)->removeAttr({0}AttrName());",
@@ -1191,13 +1192,22 @@ void OpEmitter::genOptionalAttrRemovers() {
 // Generates the code to compute the start and end index of an operand or result
 // range.
 template <typename RangeT>
-static void
-generateValueRangeStartAndEnd(Class &opClass, StringRef methodName,
-                              int numVariadic, int numNonVariadic,
-                              StringRef rangeSizeCall, bool hasAttrSegmentSize,
-                              StringRef sizeAttrInit, RangeT &&odsValues) {
+static void generateValueRangeStartAndEnd(
+    Class &opClass, bool isGenericAdaptorBase, StringRef methodName,
+    int numVariadic, int numNonVariadic, StringRef rangeSizeCall,
+    bool hasAttrSegmentSize, StringRef sizeAttrInit, RangeT &&odsValues) {
+
+  SmallVector<MethodParameter> parameters{MethodParameter("unsigned", "index")};
+  if (isGenericAdaptorBase) {
+    parameters.emplace_back("unsigned", "odsOperandsSize");
+    // The range size is passed per parameter for generic adaptor bases as
+    // using the rangeSizeCall would require the operands, which are not
+    // accessible in the base class.
+    rangeSizeCall = "odsOperandsSize";
+  }
+
   auto *method = opClass.addMethod("std::pair<unsigned, unsigned>", methodName,
-                                   MethodParameter("unsigned", "index"));
+                                   parameters);
   if (!method)
     return;
   auto &body = method->body();
@@ -1219,8 +1229,7 @@ generateValueRangeStartAndEnd(Class &opClass, StringRef methodName,
   }
 }
 
-static std::string generateTypeForGetter(bool isAdaptor,
-                                         const NamedTypeConstraint &value) {
+static std::string generateTypeForGetter(const NamedTypeConstraint &value) {
   std::string str = "::mlir::Value";
   /// If the CPPClassName is not a fully qualified type. Uses of types
   /// across Dialect fail because they are not in the correct namespace. So we
@@ -1230,7 +1239,7 @@ static std::string generateTypeForGetter(bool isAdaptor,
   /// https://github.com/llvm/llvm-project/issues/57279.
   /// Adaptor will have values that are not from the type of their operation and
   /// this is expected, so we dont generate TypedValue for Adaptor
-  if (!isAdaptor && value.constraint.getCPPClassName() != "::mlir::Type" &&
+  if (value.constraint.getCPPClassName() != "::mlir::Type" &&
       StringRef(value.constraint.getCPPClassName()).startswith("::"))
     str = llvm::formatv("::mlir::TypedValue<{0}>",
                         value.constraint.getCPPClassName())
@@ -1249,12 +1258,12 @@ static std::string generateTypeForGetter(bool isAdaptor,
 // "{0}" marker in the pattern.  Note that the pattern should work for any kind
 // of ops, in particular for one-operand ops that may not have the
 // `getOperand(unsigned)` method.
-static void generateNamedOperandGetters(const Operator &op, Class &opClass,
-                                        bool isAdaptor, StringRef sizeAttrInit,
-                                        StringRef rangeType,
-                                        StringRef rangeBeginCall,
-                                        StringRef rangeSizeCall,
-                                        StringRef getOperandCallPattern) {
+static void
+generateNamedOperandGetters(const Operator &op, Class &opClass,
+                            Class *genericAdaptorBase, StringRef sizeAttrInit,
+                            StringRef rangeType, StringRef rangeElementType,
+                            StringRef rangeBeginCall, StringRef rangeSizeCall,
+                            StringRef getOperandCallPattern) {
   const int numOperands = op.getNumOperands();
   const int numVariadicOperands = op.getNumVariableLengthOperands();
   const int numNormalOperands = numOperands - numVariadicOperands;
@@ -1282,10 +1291,31 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
 
   // First emit a few "sink" getter methods upon which we layer all nicer named
   // getter methods.
-  generateValueRangeStartAndEnd(opClass, "getODSOperandIndexAndLength",
-                                numVariadicOperands, numNormalOperands,
-                                rangeSizeCall, attrSizedOperands, sizeAttrInit,
-                                const_cast<Operator &>(op).getOperands());
+  // If generating for an adaptor, the method is put into the non-templated
+  // generic base class, to not require being defined in the header.
+  // Since the operand size can't be determined from the base class however,
+  // it has to be passed as an additional argument. The trampoline below
+  // generates the function with the same signature as the Op in the generic
+  // adaptor.
+  bool isGenericAdaptorBase = genericAdaptorBase != nullptr;
+  generateValueRangeStartAndEnd(
+      /*opClass=*/isGenericAdaptorBase ? *genericAdaptorBase : opClass,
+      isGenericAdaptorBase,
+      /*methodName=*/"getODSOperandIndexAndLength", numVariadicOperands,
+      numNormalOperands, rangeSizeCall, attrSizedOperands, sizeAttrInit,
+      const_cast<Operator &>(op).getOperands());
+  if (isGenericAdaptorBase) {
+    // Generate trampoline for calling 'getODSOperandIndexAndLength' with just
+    // the index. This just calls the implementation in the base class but
+    // passes the operand size as parameter.
+    Method *method = opClass.addMethod("std::pair<unsigned, unsigned>",
+                                       "getODSOperandIndexAndLength",
+                                       MethodParameter("unsigned", "index"));
+    ERROR_IF_PRUNED(method, "getODSOperandIndexAndLength", op);
+    MethodBody &body = method->body();
+    body.indent() << formatv(
+        "return Base::getODSOperandIndexAndLength(index, {0});", rangeSizeCall);
+  }
 
   auto *m = opClass.addMethod(rangeType, "getODSOperands",
                               MethodParameter("unsigned", "index"));
@@ -1302,19 +1332,23 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
       continue;
     std::string name = op.getGetterName(operand.name);
     if (operand.isOptional()) {
-      m = opClass.addMethod(generateTypeForGetter(isAdaptor, operand), name);
+      m = opClass.addMethod(isGenericAdaptorBase
+                                ? rangeElementType
+                                : generateTypeForGetter(operand),
+                            name);
       ERROR_IF_PRUNED(m, name, op);
-      m->body() << "  auto operands = getODSOperands(" << i << ");\n"
-                << "  return operands.empty() ? ::mlir::Value() : "
-                   "*operands.begin();";
+      m->body().indent() << formatv(
+          "auto operands = getODSOperands({0});\n"
+          "return operands.empty() ? {1}{{} : *operands.begin();",
+          i, rangeElementType);
     } else if (operand.isVariadicOfVariadic()) {
       std::string segmentAttr = op.getGetterName(
           operand.constraint.getVariadicOfVariadicSegmentSizeAttr());
-      if (isAdaptor) {
-        m = opClass.addMethod("::llvm::SmallVector<::mlir::ValueRange>", name);
+      if (genericAdaptorBase) {
+        m = opClass.addMethod("::llvm::SmallVector<" + rangeType + ">", name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << llvm::formatv(variadicOfVariadicAdaptorCalcCode,
-                                   segmentAttr, i);
+                                   segmentAttr, i, rangeType);
         continue;
       }
 
@@ -1327,7 +1361,10 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
       ERROR_IF_PRUNED(m, name, op);
       m->body() << "  return getODSOperands(" << i << ");";
     } else {
-      m = opClass.addMethod(generateTypeForGetter(isAdaptor, operand), name);
+      m = opClass.addMethod(isGenericAdaptorBase
+                                ? rangeElementType
+                                : generateTypeForGetter(operand),
+                            name);
       ERROR_IF_PRUNED(m, name, op);
       m->body() << "  return *getODSOperands(" << i << ").begin();";
     }
@@ -1345,9 +1382,10 @@ void OpEmitter::genNamedOperandGetters() {
 
   generateNamedOperandGetters(
       op, opClass,
-      /*isAdaptor=*/false,
+      /*genericAdaptorBase=*/nullptr,
       /*sizeAttrInit=*/attrSizeInitCode,
       /*rangeType=*/"::mlir::Operation::operand_range",
+      /*rangeElementType=*/"::mlir::Value",
       /*rangeBeginCall=*/"getOperation()->operand_begin()",
       /*rangeSizeCall=*/"getOperation()->getNumOperands()",
       /*getOperandCallPattern=*/"getOperation()->getOperand({0})");
@@ -1432,9 +1470,9 @@ void OpEmitter::genNamedResultGetters() {
   }
 
   generateValueRangeStartAndEnd(
-      opClass, "getODSResultIndexAndLength", numVariadicResults,
-      numNormalResults, "getOperation()->getNumResults()", attrSizedResults,
-      attrSizeInitCode, op.getResults());
+      opClass, /*isGenericAdaptorBase=*/false, "getODSResultIndexAndLength",
+      numVariadicResults, numNormalResults, "getOperation()->getNumResults()",
+      attrSizedResults, attrSizeInitCode, op.getResults());
 
   auto *m =
       opClass.addMethod("::mlir::Operation::result_range", "getODSResults",
@@ -1449,8 +1487,7 @@ void OpEmitter::genNamedResultGetters() {
       continue;
     std::string name = op.getGetterName(result.name);
     if (result.isOptional()) {
-      m = opClass.addMethod(generateTypeForGetter(/*isAdaptor=*/false, result),
-                            name);
+      m = opClass.addMethod(generateTypeForGetter(result), name);
       ERROR_IF_PRUNED(m, name, op);
       m->body()
           << "  auto results = getODSResults(" << i << ");\n"
@@ -1460,8 +1497,7 @@ void OpEmitter::genNamedResultGetters() {
       ERROR_IF_PRUNED(m, name, op);
       m->body() << "  return getODSResults(" << i << ");";
     } else {
-      m = opClass.addMethod(generateTypeForGetter(/*isAdaptor=*/false, result),
-                            name);
+      m = opClass.addMethod(generateTypeForGetter(result), name);
       ERROR_IF_PRUNED(m, name, op);
       m->body() << "  return *getODSResults(" << i << ").begin();";
     }
@@ -1726,8 +1762,10 @@ void OpEmitter::genPopulateDefaultAttributes() {
     body << "if (!attributes.get(attrNames[" << index << "])) {\n";
     FmtContext fctx;
     fctx.withBuilder(odsBuilder);
-    std::string defaultValue = std::string(
-        tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+
+    std::string defaultValue =
+        std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                          tgfmt(attr.getDefaultValue(), &fctx)));
     body.indent() << formatv("attributes.append(attrNames[{0}], {1});\n", index,
                              defaultValue);
     body.unindent() << "}\n";
@@ -2289,25 +2327,29 @@ void OpEmitter::genCanonicalizerDecls() {
 }
 
 void OpEmitter::genFolderDecls() {
+  if (!op.hasFolder())
+    return;
+
+  Dialect::FolderAPI folderApi = op.getDialect().getFolderAPI();
+  SmallVector<MethodParameter> paramList;
+  if (folderApi == Dialect::FolderAPI::RawAttributes)
+    paramList.emplace_back("::llvm::ArrayRef<::mlir::Attribute>", "operands");
+  else
+    paramList.emplace_back("FoldAdaptor", "adaptor");
+
+  StringRef retType;
   bool hasSingleResult =
       op.getNumResults() == 1 && op.getNumVariableLengthResults() == 0;
-
-  if (def.getValueAsBit("hasFolder")) {
-    if (hasSingleResult) {
-      auto *m = opClass.declareMethod(
-          "::mlir::OpFoldResult", "fold",
-          MethodParameter("::llvm::ArrayRef<::mlir::Attribute>", "operands"));
-      ERROR_IF_PRUNED(m, "operands", op);
-    } else {
-      SmallVector<MethodParameter> paramList;
-      paramList.emplace_back("::llvm::ArrayRef<::mlir::Attribute>", "operands");
-      paramList.emplace_back("::llvm::SmallVectorImpl<::mlir::OpFoldResult> &",
-                             "results");
-      auto *m = opClass.declareMethod("::mlir::LogicalResult", "fold",
-                                      std::move(paramList));
-      ERROR_IF_PRUNED(m, "fold", op);
-    }
+  if (hasSingleResult) {
+    retType = "::mlir::OpFoldResult";
+  } else {
+    paramList.emplace_back("::llvm::SmallVectorImpl<::mlir::OpFoldResult> &",
+                           "results");
+    retType = "::mlir::LogicalResult";
   }
+
+  auto *m = opClass.declareMethod(retType, "fold", std::move(paramList));
+  ERROR_IF_PRUNED(m, "fold", op);
 }
 
 void OpEmitter::genOpInterfaceMethods(const tblgen::InterfaceTrait *opTrait) {
@@ -2477,67 +2519,57 @@ void OpEmitter::genTypeInterfaceMethods() {
 
   FmtContext fctx;
   fctx.withBuilder("odsBuilder");
+  fctx.addSubst("_ctxt", "context");
   body << "  ::mlir::Builder odsBuilder(context);\n";
 
-  // Preprocess the result types and build all of the types used during
-  // inferrence. This limits the amount of duplicated work when a type is used
-  // to infer multiple others.
-  llvm::DenseMap<Constraint, int> constraintsTypes;
-  llvm::DenseMap<int, int> argumentsTypes;
+  // Process the type inference graph in topological order, starting from types
+  // that are always fully-inferred: operands and results with constructible
+  // types. The type inference graph here will always be a DAG, so this gives
+  // us the correct order for generating the types. -1 is a placeholder to
+  // indicate the type for a result has not been generated.
+  SmallVector<int> constructedIndices(op.getNumResults(), -1);
   int inferredTypeIdx = 0;
-  for (int i = 0, e = op.getNumResults(); i != e; ++i) {
-    auto type = op.getSameTypeAsResult(i).front();
-
-    // If the type isn't an argument, it refers to a buildable type.
-    if (!type.isArg()) {
-      auto it = constraintsTypes.try_emplace(type.getType(), inferredTypeIdx);
-      if (!it.second)
+  for (int numResults = op.getNumResults(); inferredTypeIdx != numResults;) {
+    for (int i = 0, e = op.getNumResults(); i != e; ++i) {
+      if (constructedIndices[i] >= 0)
         continue;
+      const InferredResultType &infer = op.getInferredResultType(i);
+      std::string typeStr;
+      body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = ";
+      if (infer.isArg()) {
+        // If this is an operand, just index into operand list to access the
+        // type.
+        auto arg = op.getArgToOperandOrAttribute(infer.getIndex());
+        if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
+          typeStr = ("operands[" + Twine(arg.operandOrAttributeIndex()) +
+                     "].getType()")
+                        .str();
 
-      // If we haven't seen this constraint, generate a variable for it.
-      body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = "
-           << tgfmt(*type.getType().getBuilderCall(), &fctx) << ";\n";
-      continue;
+          // If this is an attribute, index into the attribute dictionary.
+        } else {
+          auto *attr =
+              op.getArg(arg.operandOrAttributeIndex()).get<NamedAttribute *>();
+          typeStr = ("attributes.get(\"" + attr->name +
+                     "\").cast<::mlir::TypedAttr>().getType()")
+                        .str();
+        }
+      } else if (std::optional<StringRef> builder =
+                     op.getResult(infer.getResultIndex())
+                         .constraint.getBuilderCall()) {
+        typeStr = tgfmt(*builder, &fctx).str();
+      } else if (int index = constructedIndices[infer.getResultIndex()];
+                 index >= 0) {
+        typeStr = ("odsInferredType" + Twine(index)).str();
+      } else {
+        continue;
+      }
+      body << tgfmt(infer.getTransformer(), &fctx.withSelf(typeStr)) << ";\n";
+      constructedIndices[i] = inferredTypeIdx - 1;
     }
-
-    // Otherwise, this is an argument.
-    int argIndex = type.getArg();
-    auto it = argumentsTypes.try_emplace(argIndex, inferredTypeIdx);
-    if (!it.second)
-      continue;
-    body << "  ::mlir::Type odsInferredType" << inferredTypeIdx++ << " = ";
-
-    // If this is an operand, just index into operand list to access the type.
-    auto arg = op.getArgToOperandOrAttribute(argIndex);
-    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
-      body << "operands[" << arg.operandOrAttributeIndex() << "].getType()";
-
-      // If this is an attribute, index into the attribute dictionary.
-    } else {
-      auto *attr =
-          op.getArg(arg.operandOrAttributeIndex()).get<NamedAttribute *>();
-      body << "attributes.get(\"" << attr->name
-           << "\").cast<::mlir::TypedAttr>().getType()";
-    }
-    body << ";\n";
   }
-
-  // Perform a second pass that handles assigning the inferred types to the
-  // results.
-  for (int i = 0, e = op.getNumResults(); i != e; ++i) {
-    auto types = op.getSameTypeAsResult(i);
-
-    // Append the inferred type.
-    auto type = types.front();
-    body << "  inferredReturnTypes[" << i << "] = odsInferredType"
-         << (type.isArg() ? argumentsTypes[type.getArg()]
-                          : constraintsTypes[type.getType()])
+  for (auto [i, index] : llvm::enumerate(constructedIndices))
+    body << "  inferredReturnTypes[" << i << "] = odsInferredType" << index
          << ";\n";
-
-    if (types.size() == 1)
-      continue;
-    // TODO: We could verify equality here, but skipping that for verification.
-  }
   body << "  return ::mlir::success();";
 }
 
@@ -2905,8 +2937,19 @@ void OpEmitter::genOpAsmInterface() {
 
 namespace {
 // Helper class to emit Op operand adaptors to an output stream.  Operand
-// adaptors are wrappers around ArrayRef<Value> that provide named operand
+// adaptors are wrappers around random access ranges that provide named operand
 // getters identical to those defined in the Op.
+// This currently generates 3 classes per Op:
+// * A Base class within the 'detail' namespace, which contains all logic and
+//   members independent of the random access range that is indexed into.
+//   In other words, it contains all the attribute and region getters.
+// * A templated class named '{OpName}GenericAdaptor' with a template parameter
+//   'RangeT' that is indexed into by the getters to access the operands.
+//   It contains all getters to access operands and inherits from the previous
+//   class.
+// * A class named '{OpName}Adaptor', which inherits from the 'GenericAdaptor'
+//   with 'mlir::ValueRange' as template parameter. It adds a constructor from
+//   an instance of the op type and a verify function.
 class OpOperandAdaptorEmitter {
 public:
   static void
@@ -2930,7 +2973,9 @@ private:
   // The operation for which to emit an adaptor.
   const Operator &op;
 
-  // The generated adaptor class.
+  // The generated adaptor classes.
+  Class genericAdaptorBase;
+  Class genericAdaptor;
   Class adaptor;
 
   // The emitter containing all of the locally emitted verification functions.
@@ -2944,42 +2989,47 @@ private:
 OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     const Operator &op,
     const StaticVerifierFunctionEmitter &staticVerifierEmitter)
-    : op(op), adaptor(op.getAdaptorName()),
+    : op(op), genericAdaptorBase(op.getGenericAdaptorName() + "Base"),
+      genericAdaptor(op.getGenericAdaptorName()), adaptor(op.getAdaptorName()),
       staticVerifierEmitter(staticVerifierEmitter),
       emitHelper(op, /*emitForOp=*/false) {
-  adaptor.addField("::mlir::ValueRange", "odsOperands");
-  adaptor.addField("::mlir::DictionaryAttr", "odsAttrs");
-  adaptor.addField("::mlir::RegionRange", "odsRegions");
-  adaptor.addField("::llvm::Optional<::mlir::OperationName>", "odsOpName");
+
+  genericAdaptorBase.declare<VisibilityDeclaration>(Visibility::Protected);
+  genericAdaptorBase.declare<Field>("::mlir::DictionaryAttr", "odsAttrs");
+  genericAdaptorBase.declare<Field>("::mlir::RegionRange", "odsRegions");
+  genericAdaptorBase.declare<Field>("::std::optional<::mlir::OperationName>",
+                                    "odsOpName");
+
+  genericAdaptor.addTemplateParam("RangeT");
+  genericAdaptor.addField("RangeT", "odsOperands");
+  genericAdaptor.addParent(
+      ParentClass("detail::" + genericAdaptorBase.getClassName()));
+  genericAdaptor.declare<UsingDeclaration>(
+      "ValueT", "::llvm::detail::ValueOfRange<RangeT>");
+  genericAdaptor.declare<UsingDeclaration>(
+      "Base", "detail::" + genericAdaptorBase.getClassName());
 
   const auto *attrSizedOperands =
-      op.getTrait("::m::OpTrait::AttrSizedOperandSegments");
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments");
   {
     SmallVector<MethodParameter> paramList;
-    paramList.emplace_back("::mlir::ValueRange", "values");
     paramList.emplace_back("::mlir::DictionaryAttr", "attrs",
                            attrSizedOperands ? "" : "nullptr");
     paramList.emplace_back("::mlir::RegionRange", "regions", "{}");
-    auto *constructor = adaptor.addConstructor(std::move(paramList));
+    auto *baseConstructor = genericAdaptorBase.addConstructor(paramList);
+    baseConstructor->addMemberInitializer("odsAttrs", "attrs");
+    baseConstructor->addMemberInitializer("odsRegions", "regions");
 
-    constructor->addMemberInitializer("odsOperands", "values");
-    constructor->addMemberInitializer("odsAttrs", "attrs");
-    constructor->addMemberInitializer("odsRegions", "regions");
-
-    MethodBody &body = constructor->body();
+    MethodBody &body = baseConstructor->body();
     body.indent() << "if (odsAttrs)\n";
     body.indent() << formatv(
         "odsOpName.emplace(\"{0}\", odsAttrs.getContext());\n",
         op.getOperationName());
-  }
 
-  {
-    auto *constructor =
-        adaptor.addConstructor(MethodParameter(op.getCppClassName(), "op"));
-    constructor->addMemberInitializer("odsOperands", "op->getOperands()");
-    constructor->addMemberInitializer("odsAttrs", "op->getAttrDictionary()");
-    constructor->addMemberInitializer("odsRegions", "op->getRegions()");
-    constructor->addMemberInitializer("odsOpName", "op->getName()");
+    paramList.insert(paramList.begin(), MethodParameter("RangeT", "values"));
+    auto *constructor = genericAdaptor.addConstructor(std::move(paramList));
+    constructor->addMemberInitializer("Base", "attrs, regions");
+    constructor->addMemberInitializer("odsOperands", "values");
   }
 
   std::string sizeAttrInit;
@@ -2987,16 +3037,18 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     sizeAttrInit = formatv(adapterSegmentSizeAttrInitCode,
                            emitHelper.getAttr(operandSegmentAttrName));
   }
-  generateNamedOperandGetters(op, adaptor,
-                              /*isAdaptor=*/true, sizeAttrInit,
-                              /*rangeType=*/"::mlir::ValueRange",
+  generateNamedOperandGetters(op, genericAdaptor,
+                              /*genericAdaptorBase=*/&genericAdaptorBase,
+                              /*sizeAttrInit=*/sizeAttrInit,
+                              /*rangeType=*/"RangeT",
+                              /*rangeElementType=*/"ValueT",
                               /*rangeBeginCall=*/"odsOperands.begin()",
                               /*rangeSizeCall=*/"odsOperands.size()",
                               /*getOperandCallPattern=*/"odsOperands[{0}]");
 
   // Any invalid overlap for `getOperands` will have been diagnosed before here
   // already.
-  if (auto *m = adaptor.addMethod("::mlir::ValueRange", "getOperands"))
+  if (auto *m = genericAdaptor.addMethod("RangeT", "getOperands"))
     m->body() << "  return odsOperands;";
 
   FmtContext fctx;
@@ -3005,7 +3057,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
   // Generate named accessor with Attribute return type.
   auto emitAttrWithStorageType = [&](StringRef name, StringRef emitName,
                                      Attribute attr) {
-    auto *method = adaptor.addMethod(attr.getStorageType(), emitName + "Attr");
+    auto *method =
+        genericAdaptorBase.addMethod(attr.getStorageType(), emitName + "Attr");
     ERROR_IF_PRUNED(method, "Adaptor::" + emitName + "Attr", op);
     auto &body = method->body().indent();
     body << "assert(odsAttrs && \"no attributes when constructing adapter\");\n"
@@ -3027,7 +3080,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
   };
 
   {
-    auto *m = adaptor.addMethod("::mlir::DictionaryAttr", "getAttributes");
+    auto *m =
+        genericAdaptorBase.addMethod("::mlir::DictionaryAttr", "getAttributes");
     ERROR_IF_PRUNED(m, "Adaptor::getAttributes", op);
     m->body() << "  return odsAttrs;";
   }
@@ -3038,7 +3092,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
       continue;
     std::string emitName = op.getGetterName(name);
     emitAttrWithStorageType(name, emitName, attr);
-    emitAttrGetterWithReturnType(fctx, adaptor, op, emitName, attr);
+    emitAttrGetterWithReturnType(fctx, genericAdaptorBase, op, emitName, attr);
   }
 
   unsigned numRegions = op.getNumRegions();
@@ -3050,25 +3104,44 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     // Generate the accessors for a variadic region.
     std::string name = op.getGetterName(region.name);
     if (region.isVariadic()) {
-      auto *m = adaptor.addMethod("::mlir::RegionRange", name);
+      auto *m = genericAdaptorBase.addMethod("::mlir::RegionRange", name);
       ERROR_IF_PRUNED(m, "Adaptor::" + name, op);
       m->body() << formatv("  return odsRegions.drop_front({0});", i);
       continue;
     }
 
-    auto *m = adaptor.addMethod("::mlir::Region &", name);
+    auto *m = genericAdaptorBase.addMethod("::mlir::Region &", name);
     ERROR_IF_PRUNED(m, "Adaptor::" + name, op);
     m->body() << formatv("  return *odsRegions[{0}];", i);
   }
   if (numRegions > 0) {
     // Any invalid overlap for `getRegions` will have been diagnosed before here
     // already.
-    if (auto *m = adaptor.addMethod("::mlir::RegionRange", "getRegions"))
+    if (auto *m =
+            genericAdaptorBase.addMethod("::mlir::RegionRange", "getRegions"))
       m->body() << "  return odsRegions;";
+  }
+
+  StringRef genericAdaptorClassName = genericAdaptor.getClassName();
+  adaptor.addParent(ParentClass(genericAdaptorClassName))
+      .addTemplateParam("::mlir::ValueRange");
+  adaptor.declare<VisibilityDeclaration>(Visibility::Public);
+  adaptor.declare<UsingDeclaration>(genericAdaptorClassName +
+                                    "::" + genericAdaptorClassName);
+  {
+    // Constructor taking the Op as single parameter.
+    auto *constructor =
+        adaptor.addConstructor(MethodParameter(op.getCppClassName(), "op"));
+    constructor->addMemberInitializer(
+        adaptor.getClassName(),
+        "op->getOperands(), op->getAttrDictionary(), op->getRegions()");
   }
 
   // Add verification function.
   addVerification();
+
+  genericAdaptorBase.finalize();
+  genericAdaptor.finalize();
   adaptor.finalize();
 }
 
@@ -3089,14 +3162,26 @@ void OpOperandAdaptorEmitter::emitDecl(
     const Operator &op,
     const StaticVerifierFunctionEmitter &staticVerifierEmitter,
     raw_ostream &os) {
-  OpOperandAdaptorEmitter(op, staticVerifierEmitter).adaptor.writeDeclTo(os);
+  OpOperandAdaptorEmitter emitter(op, staticVerifierEmitter);
+  {
+    NamespaceEmitter ns(os, "detail");
+    emitter.genericAdaptorBase.writeDeclTo(os);
+  }
+  emitter.genericAdaptor.writeDeclTo(os);
+  emitter.adaptor.writeDeclTo(os);
 }
 
 void OpOperandAdaptorEmitter::emitDef(
     const Operator &op,
     const StaticVerifierFunctionEmitter &staticVerifierEmitter,
     raw_ostream &os) {
-  OpOperandAdaptorEmitter(op, staticVerifierEmitter).adaptor.writeDefTo(os);
+  OpOperandAdaptorEmitter emitter(op, staticVerifierEmitter);
+  {
+    NamespaceEmitter ns(os, "detail");
+    emitter.genericAdaptorBase.writeDefTo(os);
+  }
+  emitter.genericAdaptor.writeDefTo(os);
+  emitter.adaptor.writeDefTo(os);
 }
 
 // Emits the opcode enum and op classes.

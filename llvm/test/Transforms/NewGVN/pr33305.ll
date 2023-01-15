@@ -6,7 +6,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
 @a = common global i32 0, align 4
-@b = local_unnamed_addr global i32* @a, align 8
+@b = local_unnamed_addr global ptr @a, align 8
 @e = local_unnamed_addr global i32 -1, align 4
 @g = local_unnamed_addr global i32 1, align 4
 @c = common local_unnamed_addr global i32 0, align 4
@@ -19,14 +19,14 @@ target triple = "x86_64-apple-macosx10.12.0"
 define i32 @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTPR_I:%.*]] = load i32, i32* @c, align 4, !tbaa !3
+; CHECK-NEXT:    [[DOTPR_I:%.*]] = load i32, ptr @c, align 4, !tbaa !3
 ; CHECK-NEXT:    [[CMP13_I:%.*]] = icmp slt i32 [[DOTPR_I]], 1
 ; CHECK-NEXT:    br i1 [[CMP13_I]], label [[FOR_COND1_PREHEADER_LR_PH_I:%.*]], label [[ENTRY_FOR_END9_I_CRIT_EDGE:%.*]]
 ; CHECK:       entry.for.end9.i_crit_edge:
-; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, i32* @h, align 4, !tbaa !3
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr @h, align 4, !tbaa !3
 ; CHECK-NEXT:    br label [[FOR_END9_I:%.*]]
 ; CHECK:       for.cond1.preheader.lr.ph.i:
-; CHECK-NEXT:    [[G_PROMOTED14_I:%.*]] = load i32, i32* @g, align 4, !tbaa !3
+; CHECK-NEXT:    [[G_PROMOTED14_I:%.*]] = load i32, ptr @g, align 4, !tbaa !3
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_I:%.*]]
 ; CHECK:       for.cond1.preheader.i:
 ; CHECK-NEXT:    [[INC816_I:%.*]] = phi i32 [ [[DOTPR_I]], [[FOR_COND1_PREHEADER_LR_PH_I]] ], [ [[INC8_I:%.*]], [[FOR_INC7_I:%.*]] ]
@@ -42,9 +42,9 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK:       lor.rhs.i:
 ; CHECK-NEXT:    [[LNOT_I:%.*]] = xor i1 [[TOBOOL_I]], true
 ; CHECK-NEXT:    [[LNOT_EXT_I:%.*]] = zext i1 [[LNOT_I]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* @e, align 4, !tbaa !3
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @e, align 4, !tbaa !3
 ; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[TMP3]], [[LNOT_EXT_I]]
-; CHECK-NEXT:    store i32 [[XOR_I]], i32* @e, align 4, !tbaa !3
+; CHECK-NEXT:    store i32 [[XOR_I]], ptr @e, align 4, !tbaa !3
 ; CHECK-NEXT:    br label [[LOR_END_I]]
 ; CHECK:       lor.end.i:
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[INC12_I]], 1
@@ -55,44 +55,44 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[INC816_I]], 0
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[FOR_COND1_PREHEADER_I]], label [[FOR_COND_FOR_END9_CRIT_EDGE_I:%.*]]
 ; CHECK:       for.cond.for.end9_crit_edge.i:
-; CHECK-NEXT:    store i32 0, i32* @g, align 4, !tbaa !3
-; CHECK-NEXT:    store i32 2, i32* @h, align 4, !tbaa !3
-; CHECK-NEXT:    store i32 [[INC8_I]], i32* @c, align 4, !tbaa !3
+; CHECK-NEXT:    store i32 0, ptr @g, align 4, !tbaa !3
+; CHECK-NEXT:    store i32 2, ptr @h, align 4, !tbaa !3
+; CHECK-NEXT:    store i32 [[INC8_I]], ptr @c, align 4, !tbaa !3
 ; CHECK-NEXT:    br label [[FOR_END9_I]]
 ; CHECK:       for.end9.i:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[DOTPRE]], [[ENTRY_FOR_END9_I_CRIT_EDGE]] ], [ 2, [[FOR_COND_FOR_END9_CRIT_EDGE_I]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32*, i32** @b, align 8, !tbaa !7
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[TMP5]], align 4, !tbaa !3
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* @e, align 4, !tbaa !3
+; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr @b, align 8, !tbaa !7
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4, !tbaa !3
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr @e, align 4, !tbaa !3
 ; CHECK-NEXT:    [[CMP10_I:%.*]] = icmp slt i32 [[TMP6]], -1
 ; CHECK-NEXT:    br i1 [[CMP10_I]], label [[IF_THEN_I:%.*]], label [[FN1_EXIT:%.*]]
 ; CHECK:       if.then.i:
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* @f, align 4, !tbaa !3
-; CHECK-NEXT:    store i32 [[TMP7]], i32* [[TMP5]], align 4, !tbaa !3
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr @f, align 4, !tbaa !3
+; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP5]], align 4, !tbaa !3
 ; CHECK-NEXT:    br label [[FN1_EXIT]]
 ; CHECK:       fn1.exit:
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* @a, align 4, !tbaa !3
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr @a, align 4, !tbaa !3
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[PUTS2:%.*]] = tail call i32 @puts(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @str.2, i64 0, i64 0))
+; CHECK-NEXT:    [[PUTS2:%.*]] = tail call i32 @puts(ptr @str.2)
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[PUTS:%.*]] = tail call i32 @puts(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str, i64 0, i64 0))
+; CHECK-NEXT:    [[PUTS:%.*]] = tail call i32 @puts(ptr @str)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %.pr.i = load i32, i32* @c, align 4, !tbaa !3
+  %.pr.i = load i32, ptr @c, align 4, !tbaa !3
   %cmp13.i = icmp slt i32 %.pr.i, 1
   br i1 %cmp13.i, label %for.cond1.preheader.lr.ph.i, label %entry.for.end9.i_crit_edge
 
 entry.for.end9.i_crit_edge:                       ; preds = %entry
-  %.pre = load i32, i32* @h, align 4, !tbaa !3
+  %.pre = load i32, ptr @h, align 4, !tbaa !3
   br label %for.end9.i
 
 for.cond1.preheader.lr.ph.i:                      ; preds = %entry
-  %g.promoted14.i = load i32, i32* @g, align 4, !tbaa !3
+  %g.promoted14.i = load i32, ptr @g, align 4, !tbaa !3
   br label %for.cond1.preheader.i
 
 for.cond1.preheader.i:                            ; preds = %for.inc7.i, %for.cond1.preheader.lr.ph.i
@@ -111,9 +111,9 @@ for.body3.i:                                      ; preds = %lor.end.i, %for.con
 lor.rhs.i:                                        ; preds = %for.body3.i
   %lnot.i = xor i1 %tobool.i, true
   %lnot.ext.i = zext i1 %lnot.i to i32
-  %3 = load i32, i32* @e, align 4, !tbaa !3
+  %3 = load i32, ptr @e, align 4, !tbaa !3
   %xor.i = xor i32 %3, %lnot.ext.i
-  store i32 %xor.i, i32* @e, align 4, !tbaa !3
+  store i32 %xor.i, ptr @e, align 4, !tbaa !3
   br label %lor.end.i
 
 lor.end.i:                                        ; preds = %lor.rhs.i, %for.body3.i
@@ -127,36 +127,36 @@ for.inc7.i:                                       ; preds = %lor.end.i
   br i1 %cmp.i, label %for.cond1.preheader.i, label %for.cond.for.end9_crit_edge.i
 
 for.cond.for.end9_crit_edge.i:                    ; preds = %for.inc7.i
-  store i32 0, i32* @g, align 4, !tbaa !3
-  store i32 2, i32* @h, align 4, !tbaa !3
-  store i32 %inc8.i, i32* @c, align 4, !tbaa !3
+  store i32 0, ptr @g, align 4, !tbaa !3
+  store i32 2, ptr @h, align 4, !tbaa !3
+  store i32 %inc8.i, ptr @c, align 4, !tbaa !3
   br label %for.end9.i
 
 for.end9.i:                                       ; preds = %entry.for.end9.i_crit_edge, %for.cond.for.end9_crit_edge.i
   %4 = phi i32 [ %.pre, %entry.for.end9.i_crit_edge ], [ 2, %for.cond.for.end9_crit_edge.i ]
-  %5 = load i32*, i32** @b, align 8, !tbaa !7
-  store i32 %4, i32* %5, align 4, !tbaa !3
-  %6 = load i32, i32* @e, align 4, !tbaa !3
+  %5 = load ptr, ptr @b, align 8, !tbaa !7
+  store i32 %4, ptr %5, align 4, !tbaa !3
+  %6 = load i32, ptr @e, align 4, !tbaa !3
   %cmp10.i = icmp slt i32 %6, -1
   br i1 %cmp10.i, label %if.then.i, label %fn1.exit
 
 if.then.i:                                        ; preds = %for.end9.i
-  %7 = load i32, i32* @f, align 4, !tbaa !3
-  store i32 %7, i32* %5, align 4, !tbaa !3
+  %7 = load i32, ptr @f, align 4, !tbaa !3
+  store i32 %7, ptr %5, align 4, !tbaa !3
   br label %fn1.exit
 
 fn1.exit:                                         ; preds = %if.then.i, %for.end9.i
-  %8 = load i32, i32* @a, align 4, !tbaa !3
+  %8 = load i32, ptr @a, align 4, !tbaa !3
   %tobool = icmp eq i32 %8, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %fn1.exit
-  %puts2 = tail call i32 @puts(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @str.2, i64 0, i64 0))
+  %puts2 = tail call i32 @puts(ptr @str.2)
   tail call void @abort() #3
   unreachable
 
 if.end:                                           ; preds = %fn1.exit
-  %puts = tail call i32 @puts(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str, i64 0, i64 0))
+  %puts = tail call i32 @puts(ptr @str)
   ret i32 0
 }
 
@@ -164,7 +164,7 @@ if.end:                                           ; preds = %fn1.exit
 declare void @abort() local_unnamed_addr #1
 
 ; Function Attrs: nounwind
-declare i32 @puts(i8* nocapture readonly) local_unnamed_addr #2
+declare i32 @puts(ptr nocapture readonly) local_unnamed_addr #2
 
 attributes #0 = { nounwind optsize ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { noreturn nounwind optsize "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

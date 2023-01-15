@@ -47,16 +47,19 @@ void barriers(void) {
 
 void prefetch(void) {
   __builtin_arm_prefetch(0, 1, 2, 0, 1); // pstl3keep
-  // CHECK: call {{.*}} @llvm.prefetch.p0(ptr null, i32 1, i32 1, i32 1)
+  // CHECK: call {{.*}} @llvm.aarch64.prefetch(ptr null, i32 1, i32 2, i32 0, i32 1)
 
   __builtin_arm_prefetch(0, 0, 0, 1, 1); // pldl1keep
-  // CHECK: call {{.*}} @llvm.prefetch.p0(ptr null, i32 0, i32 0, i32 1)
+  // CHECK: call {{.*}} @llvm.aarch64.prefetch(ptr null, i32 0, i32 0, i32 1, i32 1)
 
   __builtin_arm_prefetch(0, 0, 0, 1, 1); // pldl1strm
-  // CHECK: call {{.*}} @llvm.prefetch.p0(ptr null, i32 0, i32 0, i32 1)
+  // CHECK: call {{.*}} @llvm.aarch64.prefetch(ptr null, i32 0, i32 0, i32 1, i32 1)
 
   __builtin_arm_prefetch(0, 0, 0, 0, 0); // plil1keep
-  // CHECK: call {{.*}} @llvm.prefetch.p0(ptr null, i32 0, i32 3, i32 0)
+  // CHECK: call {{.*}} @llvm.aarch64.prefetch(ptr null, i32 0, i32 0, i32 0, i32 0)
+
+  __builtin_arm_prefetch(0, 0, 3, 0, 1); // pldslckeep
+  // CHECK: call {{.*}} @llvm.aarch64.prefetch(ptr null, i32 0, i32 3, i32 0, i32 1)
 }
 
 __attribute__((target("v8.5a")))

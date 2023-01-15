@@ -267,19 +267,19 @@ public:
            getIntrinsicID() != Intrinsic::dbg_assign;
   }
 
-  void setUndef() {
+  void setKillLocation() {
     // TODO: When/if we remove duplicate values from DIArgLists, we don't need
     // this set anymore.
     SmallPtrSet<Value *, 4> RemovedValues;
     for (Value *OldValue : location_ops()) {
       if (!RemovedValues.insert(OldValue).second)
         continue;
-      Value *Undef = UndefValue::get(OldValue->getType());
-      replaceVariableLocationOp(OldValue, Undef);
+      Value *Poison = PoisonValue::get(OldValue->getType());
+      replaceVariableLocationOp(OldValue, Poison);
     }
   }
 
-  bool isUndef() const {
+  bool isKillLocation() const {
     return (getNumVariableLocationOps() == 0 &&
             !getExpression()->isComplex()) ||
            any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
@@ -440,6 +440,13 @@ public:
   }
   void setAssignId(DIAssignID *New);
   void setAddress(Value *V);
+  /// Kill the address component.
+  void setKillAddress();
+  /// Check whether this kills the address component. This doesn't take into
+  /// account the position of the intrinsic, therefore a returned value of false
+  /// does not guarentee the address is a valid location for the variable at the
+  /// intrinsic's position in IR.
+  bool isKillAddress() const;
   void setValue(Value *V);
   /// \name Casting methods
   /// @{

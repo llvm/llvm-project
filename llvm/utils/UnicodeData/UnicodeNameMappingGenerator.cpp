@@ -327,7 +327,7 @@ private:
     std::vector<std::unique_ptr<Node>> Children;
     std::string Name;
     Node *Parent = nullptr;
-    llvm::Optional<char32_t> Value;
+    std::optional<char32_t> Value;
   };
 
   std::unique_ptr<Node> Root = std::make_unique<Node>("");

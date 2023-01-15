@@ -146,8 +146,18 @@ protected:
     Str << " declare <8 x i1> @llvm.vp.icmp.v8i16"
         << "(<8 x i16>, <8 x i16>, metadata, <8 x i1>, i32) ";
 
+    Str << " declare <8 x i16> @llvm.vp.abs.v8i16"
+        << "(<8 x i16>, <8 x i1>, i32, i1 immarg) ";
+    Str << " declare <8 x i16> @llvm.vp.bitreverse.v8i16"
+        << "(<8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.bswap.v8i16"
         << "(<8 x i16>, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.ctpop.v8i16"
+        << "(<8 x i16>, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.ctlz.v8i16"
+        << "(<8 x i16>, <8 x i1>, i32, i1 immarg) ";
+    Str << " declare <8 x i16> @llvm.vp.cttz.v8i16"
+        << "(<8 x i16>, <8 x i1>, i32, i1 immarg) ";
     Str << " declare <8 x i16> @llvm.vp.fshl.v8i16"
         << "(<8 x i16>, <8 x i16>, <8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.fshr.v8i16"
@@ -159,22 +169,22 @@ protected:
 
 /// Check that the property scopes include/llvm/IR/VPIntrinsics.def are closed.
 TEST_F(VPIntrinsicTest, VPIntrinsicsDefScopes) {
-  Optional<Intrinsic::ID> ScopeVPID;
+  std::optional<Intrinsic::ID> ScopeVPID;
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...)                                 \
   ASSERT_FALSE(ScopeVPID.has_value());                                         \
   ScopeVPID = Intrinsic::VPID;
 #define END_REGISTER_VP_INTRINSIC(VPID)                                        \
   ASSERT_TRUE(ScopeVPID.has_value());                                          \
-  ASSERT_EQ(ScopeVPID.value(), Intrinsic::VPID);                               \
+  ASSERT_EQ(*ScopeVPID, Intrinsic::VPID);                                      \
   ScopeVPID = std::nullopt;
 
-  Optional<ISD::NodeType> ScopeOPC;
+  std::optional<ISD::NodeType> ScopeOPC;
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
   ASSERT_FALSE(ScopeOPC.has_value());                                          \
   ScopeOPC = ISD::SDOPC;
 #define END_REGISTER_VP_SDNODE(SDOPC)                                          \
   ASSERT_TRUE(ScopeOPC.has_value());                                           \
-  ASSERT_EQ(ScopeOPC.value(), ISD::SDOPC);                                     \
+  ASSERT_EQ(*ScopeOPC, ISD::SDOPC);                                            \
   ScopeOPC = std::nullopt;
 #include "llvm/IR/VPIntrinsics.def"
 
@@ -267,7 +277,7 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
     std::optional<unsigned> MaskParamPos =
         VPIntrinsic::getMaskParamPos(F.getIntrinsicID());
     if (MaskParamPos) {
-      Type *MaskParamType = F.getArg(MaskParamPos.value())->getType();
+      Type *MaskParamType = F.getArg(*MaskParamPos)->getType();
       ASSERT_TRUE(MaskParamType->isVectorTy());
       ASSERT_TRUE(
           cast<VectorType>(MaskParamType)->getElementType()->isIntegerTy(1));
@@ -276,7 +286,7 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
     std::optional<unsigned> VecLenParamPos =
         VPIntrinsic::getVectorLengthParamPos(F.getIntrinsicID());
     if (VecLenParamPos) {
-      Type *VecLenParamType = F.getArg(VecLenParamPos.value())->getType();
+      Type *VecLenParamType = F.getArg(*VecLenParamPos)->getType();
       ASSERT_TRUE(VecLenParamType->isIntegerTy(32));
     }
   }

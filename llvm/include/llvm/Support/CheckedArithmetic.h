@@ -42,7 +42,7 @@ namespace llvm {
 
 /// Add two signed integers \p LHS and \p RHS.
 /// \return Optional of sum if no signed overflow occurred,
-/// \c None otherwise.
+/// \c std::nullopt otherwise.
 template <typename T>
 std::enable_if_t<std::is_signed<T>::value, std::optional<T>>
 checkedAdd(T LHS, T RHS) {
@@ -51,7 +51,7 @@ checkedAdd(T LHS, T RHS) {
 
 /// Subtract two signed integers \p LHS and \p RHS.
 /// \return Optional of sum if no signed overflow occurred,
-/// \c None otherwise.
+/// \c std::nullopt otherwise.
 template <typename T>
 std::enable_if_t<std::is_signed<T>::value, std::optional<T>>
 checkedSub(T LHS, T RHS) {
@@ -60,7 +60,7 @@ checkedSub(T LHS, T RHS) {
 
 /// Multiply two signed integers \p LHS and \p RHS.
 /// \return Optional of product if no signed overflow occurred,
-/// \c None otherwise.
+/// \c std::nullopt otherwise.
 template <typename T>
 std::enable_if_t<std::is_signed<T>::value, std::optional<T>>
 checkedMul(T LHS, T RHS) {
@@ -69,7 +69,7 @@ checkedMul(T LHS, T RHS) {
 
 /// Multiply A and B, and add C to the resulting product.
 /// \return Optional of result if no signed overflow occurred,
-/// \c None otherwise.
+/// \c std::nullopt otherwise.
 template <typename T>
 std::enable_if_t<std::is_signed<T>::value, std::optional<T>>
 checkedMulAdd(T A, T B, T C) {
@@ -80,7 +80,7 @@ checkedMulAdd(T A, T B, T C) {
 
 /// Add two unsigned integers \p LHS and \p RHS.
 /// \return Optional of sum if no unsigned overflow occurred,
-/// \c None otherwise.
+/// \c std::nullopt otherwise.
 template <typename T>
 std::enable_if_t<std::is_unsigned<T>::value, std::optional<T>>
 checkedAddUnsigned(T LHS, T RHS) {
@@ -89,7 +89,7 @@ checkedAddUnsigned(T LHS, T RHS) {
 
 /// Multiply two unsigned integers \p LHS and \p RHS.
 /// \return Optional of product if no unsigned overflow occurred,
-/// \c None otherwise.
+/// \c std::nullopt otherwise.
 template <typename T>
 std::enable_if_t<std::is_unsigned<T>::value, std::optional<T>>
 checkedMulUnsigned(T LHS, T RHS) {
@@ -98,7 +98,7 @@ checkedMulUnsigned(T LHS, T RHS) {
 
 /// Multiply unsigned integers A and B, and add C to the resulting product.
 /// \return Optional of result if no unsigned overflow occurred,
-/// \c None otherwise.
+/// \c std::nullopt otherwise.
 template <typename T>
 std::enable_if_t<std::is_unsigned<T>::value, std::optional<T>>
 checkedMulAddUnsigned(T A, T B, T C) {

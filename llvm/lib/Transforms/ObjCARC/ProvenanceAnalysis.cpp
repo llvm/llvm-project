@@ -42,10 +42,16 @@ bool ProvenanceAnalysis::relatedSelect(const SelectInst *A,
                                        const Value *B) {
   // If the values are Selects with the same condition, we can do a more precise
   // check: just check for relations between the values on corresponding arms.
-  if (const SelectInst *SB = dyn_cast<SelectInst>(B))
+  if (const SelectInst *SB = dyn_cast<SelectInst>(B)) {
     if (A->getCondition() == SB->getCondition())
       return related(A->getTrueValue(), SB->getTrueValue()) ||
              related(A->getFalseValue(), SB->getFalseValue());
+
+    // Check both arms of B individually. Return false if neither arm is related
+    // to A.
+    if (!(related(SB->getTrueValue(), A) || related(SB->getFalseValue(), A)))
+      return false;
+  }
 
   // Check both arms of the Select node individually.
   return related(A->getTrueValue(), B) || related(A->getFalseValue(), B);

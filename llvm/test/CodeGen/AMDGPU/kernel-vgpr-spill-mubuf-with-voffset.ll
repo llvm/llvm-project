@@ -78,17 +78,17 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
   %arr = alloca < 1339 x i32>, align 8192, addrspace(5)
   %cmp = icmp ne i32 %val, 0
   %vreg = call i32 asm sideeffect "; def vgpr10", "={v10}"()
-  call void @device_func(<1339 x i32> addrspace(5)* %arr)
+  call void @device_func(ptr addrspace(5) %arr)
   br i1 %cmp, label %store, label %end
 
 store:
-  store volatile i32 %vreg, i32 addrspace(3)* undef
+  store volatile i32 %vreg, ptr addrspace(3) undef
   ret void
 
 end:
   ret void
 }
 
-declare void @device_func(<1339 x i32> addrspace(5)*)
+declare void @device_func(ptr addrspace(5))
 
 attributes #0 = { nounwind "frame-pointer"="all" }

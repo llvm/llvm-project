@@ -1,8 +1,8 @@
-; RUN: opt -passes=function-specialization -func-specialization-avg-iters-cost=3 -S < %s | \
+; RUN: opt -passes="ipsccp<func-spec>" -func-specialization-avg-iters-cost=3 -S < %s | \
 ; RUN:   FileCheck %s --check-prefixes=COMMON,DISABLED
-; RUN: opt -passes=function-specialization -force-function-specialization -S < %s | \
+; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization -S < %s | \
 ; RUN:   FileCheck %s --check-prefixes=COMMON,FORCE
-; RUN: opt -passes=function-specialization -func-specialization-avg-iters-cost=3 -force-function-specialization -S < %s | \
+; RUN: opt -passes="ipsccp<func-spec>" -func-specialization-avg-iters-cost=3 -force-function-specialization -S < %s | \
 ; RUN:   FileCheck %s --check-prefixes=COMMON,FORCE
 
 ; Test for specializing a constant global.

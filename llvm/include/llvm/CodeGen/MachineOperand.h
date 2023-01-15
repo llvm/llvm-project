@@ -68,7 +68,8 @@ public:
     MO_IntrinsicID,       ///< Intrinsic ID for ISel
     MO_Predicate,         ///< Generic predicate for ISel
     MO_ShuffleMask,       ///< Other IR Constant for ISel (shuffle masks)
-    MO_Last = MO_ShuffleMask
+    MO_DbgInstrRef, ///< Integer indices referring to an instruction+operand
+    MO_Last = MO_DbgInstrRef
   };
 
 private:
@@ -184,6 +185,11 @@ private:
       MachineOperand *Next;
     } Reg;
 
+    struct { // For MO_DbgInstrRef.
+      unsigned InstrIdx;
+      unsigned OpIdx;
+    } InstrRef;
+
     /// OffsetedInfo - This struct contains the offset and an object identifier.
     /// this represent the object as with an optional offset from it.
     struct {
@@ -281,8 +287,8 @@ public:
   /// \param TypeToPrint specifies the generic type to be printed on uses and
   /// defs. It can be determined using MachineInstr::getTypeToPrint.
   /// \param OpIdx - specifies the index of the operand in machine instruction.
-  /// This will be used by target dependent MIR formatter. Could be None if the
-  /// index is unknown, e.g. called by dump().
+  /// This will be used by target dependent MIR formatter. Could be std::nullopt
+  /// if the index is unknown, e.g. called by dump().
   /// \param PrintDef - whether we want to print `def` on an operand which
   /// isDef. Sometimes, if the operand is printed before '=', we don't print
   /// `def`.
@@ -299,7 +305,7 @@ public:
   /// information from it's parent.
   /// \param IntrinsicInfo - same as \p TRI.
   void print(raw_ostream &os, ModuleSlotTracker &MST, LLT TypeToPrint,
-             Optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
+             std::optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
              bool ShouldPrintRegisterTies, unsigned TiedOperandIdx,
              const TargetRegisterInfo *TRI,
              const TargetIntrinsicInfo *IntrinsicInfo) const;
@@ -347,6 +353,7 @@ public:
   /// isMetadata - Tests if this is a MO_Metadata operand.
   bool isMetadata() const { return OpKind == MO_Metadata; }
   bool isMCSymbol() const { return OpKind == MO_MCSymbol; }
+  bool isDbgInstrRef() const { return OpKind == MO_DbgInstrRef; }
   bool isCFIIndex() const { return OpKind == MO_CFIIndex; }
   bool isIntrinsicID() const { return OpKind == MO_IntrinsicID; }
   bool isPredicate() const { return OpKind == MO_Predicate; }
@@ -584,6 +591,16 @@ public:
     return Contents.Sym;
   }
 
+  unsigned getInstrRefInstrIndex() const {
+    assert(isDbgInstrRef() && "Wrong MachineOperand accessor");
+    return Contents.InstrRef.InstrIdx;
+  }
+
+  unsigned getInstrRefOpIndex() const {
+    assert(isDbgInstrRef() && "Wrong MachineOperand accessor");
+    return Contents.InstrRef.OpIdx;
+  }
+
   unsigned getCFIIndex() const {
     assert(isCFIIndex() && "Wrong MachineOperand accessor");
     return Contents.CFIIndex;
@@ -695,6 +712,15 @@ public:
     Contents.MD = MD;
   }
 
+  void setInstrRefInstrIndex(unsigned InstrIdx) {
+    assert(isDbgInstrRef() && "Wrong MachineOperand mutator");
+    Contents.InstrRef.InstrIdx = InstrIdx;
+  }
+  void setInstrRefOpIndex(unsigned OpIdx) {
+    assert(isDbgInstrRef() && "Wrong MachineOperand mutator");
+    Contents.InstrRef.OpIdx = OpIdx;
+  }
+
   void setMBB(MachineBasicBlock *MBB) {
     assert(isMBB() && "Wrong MachineOperand mutator");
     Contents.MBB = MBB;
@@ -761,6 +787,10 @@ public:
 
   /// Replace this operand with a target index.
   void ChangeToTargetIndex(unsigned Idx, int64_t Offset,
+                           unsigned TargetFlags = 0);
+
+  /// Replace this operand with an Instruction Reference.
+  void ChangeToDbgInstrRef(unsigned InstrIdx, unsigned OpIdx,
                            unsigned TargetFlags = 0);
 
   /// ChangeToRegister - Replace this operand with a new register operand of
@@ -916,6 +946,13 @@ public:
     Op.Contents.Sym = Sym;
     Op.setOffset(0);
     Op.setTargetFlags(TargetFlags);
+    return Op;
+  }
+
+  static MachineOperand CreateDbgInstrRef(unsigned InstrIdx, unsigned OpIdx) {
+    MachineOperand Op(MachineOperand::MO_DbgInstrRef);
+    Op.Contents.InstrRef.InstrIdx = InstrIdx;
+    Op.Contents.InstrRef.OpIdx = OpIdx;
     return Op;
   }
 

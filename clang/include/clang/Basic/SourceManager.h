@@ -1003,7 +1003,7 @@ public:
   /// is no such file in the filesystem.
   ///
   /// This should be called before parsing has begun.
-  Optional<FileEntryRef> bypassFileContentsOverride(FileEntryRef File);
+  OptionalFileEntryRef bypassFileContentsOverride(FileEntryRef File);
 
   /// Specify that a file is transient.
   void setFileIsTransient(const FileEntry *SourceFile);
@@ -1049,7 +1049,7 @@ public:
   }
 
   /// Returns the FileEntryRef for the provided FileID.
-  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
+  OptionalFileEntryRef getFileEntryRefForID(FileID FID) const {
     if (auto *Entry = getSLocEntryForFile(FID))
       return Entry->getFile().getContentCache().OrigEntry;
     return std::nullopt;
@@ -1075,13 +1075,13 @@ public:
   StringRef getBufferData(FileID FID, bool *Invalid = nullptr) const;
 
   /// Return a StringRef to the source buffer data for the
-  /// specified FileID, returning None if invalid.
+  /// specified FileID, returning std::nullopt if invalid.
   ///
   /// \param FID The file ID whose contents will be returned.
   llvm::Optional<StringRef> getBufferDataOrNone(FileID FID) const;
 
   /// Return a StringRef to the source buffer data for the
-  /// specified FileID, returning None if it's not yet loaded.
+  /// specified FileID, returning std::nullopt if it's not yet loaded.
   ///
   /// \param FID The file ID whose contents will be returned.
   llvm::Optional<StringRef> getBufferDataIfLoaded(FileID FID) const;

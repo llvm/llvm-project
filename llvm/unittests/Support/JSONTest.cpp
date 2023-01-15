@@ -46,9 +46,9 @@ TEST(JSONTest, Constructors) {
   EXPECT_EQ(R"({"A":{"B":{}}})", s(Object{{"A", Object{{"B", Object{}}}}}));
   EXPECT_EQ(R"({"A":{"B":{"X":"Y"}}})",
             s(Object{{"A", Object{{"B", Object{{"X", "Y"}}}}}}));
-  EXPECT_EQ("null", s(llvm::Optional<double>()));
-  EXPECT_EQ("2.5", s(llvm::Optional<double>(2.5)));
-  EXPECT_EQ("[[2.5,null]]", s(std::vector<std::vector<llvm::Optional<double>>>{
+  EXPECT_EQ("null", s(std::optional<double>()));
+  EXPECT_EQ("2.5", s(std::optional<double>(2.5)));
+  EXPECT_EQ("[[2.5,null]]", s(std::vector<std::vector<std::optional<double>>>{
                                 {2.5, std::nullopt}}));
 }
 
@@ -174,12 +174,16 @@ TEST(JSONTest, Parse) {
   Compare(R"("\"\\\b\f\n\r\t")", "\"\\\b\f\n\r\t");
   Compare(R"("\u0000")", llvm::StringRef("\0", 1));
   Compare("\"\x7f\"", "\x7f");
-  Compare(R"("\ud801\udc37")", u8"\U00010437"); // UTF16 surrogate pair escape.
-  Compare("\"\xE2\x82\xAC\xF0\x9D\x84\x9E\"", u8"\u20ac\U0001d11e"); // UTF8
+  Compare(R"("\ud801\udc37")", // UTF-16 surrogate pair escape.
+          /*U+10437*/ "\xf0\x90\x90\xb7");
+  Compare("\"\xE2\x82\xAC\xF0\x9D\x84\x9E\"", // UTF-8
+          /*U+20AC U+1D11E*/ "\xe2\x82\xac\xf0\x9d\x84\x9e");
   Compare(
-      R"("LoneLeading=\ud801, LoneTrailing=\udc01, LeadingLeadingTrailing=\ud801\ud801\udc37")",
-      u8"LoneLeading=\ufffd, LoneTrailing=\ufffd, "
-      u8"LeadingLeadingTrailing=\ufffd\U00010437"); // Invalid unicode.
+      // Invalid unicode.
+      R"("LoneLeading=\ud801, LoneTrailing=\udc01, LeadLeadTrail=\ud801\ud801\udc37")",
+      "LoneLeading=" /*U+FFFD*/ "\xef\xbf\xbd, "
+      "LoneTrailing=" /*U+FFFD*/ "\xef\xbf\xbd, "
+      "LeadLeadTrail=" /*U+FFFD U+10437*/ "\xef\xbf\xbd\xf0\x90\x90\xb7");
 
   Compare(R"({"":0,"":0})", Object{{"", 0}});
   Compare(R"({"obj":{},"arr":[]})", Object{{"obj", Object{}}, {"arr", {}}});
@@ -266,9 +270,9 @@ TEST(JSONTest, Inspection) {
   EXPECT_FALSE(O->getNull("boolean"));
   EXPECT_TRUE(O->getNull("null"));
 
-  EXPECT_EQ(O->getNumber("number"), llvm::Optional<double>(2.78));
+  EXPECT_EQ(O->getNumber("number"), std::optional<double>(2.78));
   EXPECT_FALSE(O->getInteger("number"));
-  EXPECT_EQ(O->getString("string"), llvm::Optional<llvm::StringRef>("json"));
+  EXPECT_EQ(O->getString("string"), std::optional<llvm::StringRef>("json"));
   ASSERT_FALSE(O->getObject("missing"));
   ASSERT_FALSE(O->getObject("array"));
   ASSERT_TRUE(O->getObject("object"));
@@ -276,17 +280,17 @@ TEST(JSONTest, Inspection) {
 
   Array *A = O->getArray("array");
   ASSERT_TRUE(A);
-  EXPECT_EQ((*A)[1].getAsBoolean(), llvm::Optional<bool>(true));
+  EXPECT_EQ((*A)[1].getAsBoolean(), std::optional<bool>(true));
   ASSERT_TRUE((*A)[4].getAsArray());
   EXPECT_EQ(*(*A)[4].getAsArray(), (Array{1, 2, 3}));
   EXPECT_EQ((*(*A)[4].getAsArray())[1].getAsInteger(),
-            llvm::Optional<int64_t>(2));
+            std::optional<int64_t>(2));
   int I = 0;
   for (Value &E : *A) {
     if (I++ == 5) {
       ASSERT_TRUE(E.getAsObject());
       EXPECT_EQ(E.getAsObject()->getString("time"),
-                llvm::Optional<llvm::StringRef>("arrow"));
+                std::optional<llvm::StringRef>("arrow"));
     } else
       EXPECT_FALSE(E.getAsObject());
   }
@@ -298,8 +302,8 @@ TEST(JSONTest, Integers) {
     const char *Desc;
     Value Val;
     const char *Str;
-    llvm::Optional<int64_t> AsInt;
-    llvm::Optional<double> AsNumber;
+    std::optional<int64_t> AsInt;
+    std::optional<double> AsNumber;
   } TestCases[] = {
     {
         "Non-integer. Stored as double, not convertible.",
@@ -441,10 +445,10 @@ TEST(JSONTest, U64Integers) {
 // Sample struct with typical JSON-mapping rules.
 struct CustomStruct {
   CustomStruct() : B(false) {}
-  CustomStruct(std::string S, llvm::Optional<int> I, bool B)
+  CustomStruct(std::string S, std::optional<int> I, bool B)
       : S(S), I(I), B(B) {}
   std::string S;
-  llvm::Optional<int> I;
+  std::optional<int> I;
   bool B;
 };
 inline bool operator==(const CustomStruct &L, const CustomStruct &R) {
@@ -513,7 +517,7 @@ TEST(JSONTest, Deserialize) {
   EXPECT_FALSE(fromJSON(Object{{"str", 1}}, V, Root));
   EXPECT_EQ("expected string at CustomStruct.str", toString(Root.getError()));
 
-  // Optional<T> must parse as the correct type if present.
+  // std::optional<T> must parse as the correct type if present.
   EXPECT_FALSE(fromJSON(Object{{"str", "1"}, {"int", "string"}}, V, Root));
   EXPECT_EQ("expected integer at CustomStruct.int", toString(Root.getError()));
 

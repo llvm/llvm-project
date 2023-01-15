@@ -40,6 +40,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -580,7 +581,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       ast_typedef = ast_typedef.AddVolatileModifier();
 
     GetDeclarationForSymbol(type, decl);
-    llvm::Optional<uint64_t> size;
+    std::optional<uint64_t> size;
     if (type_def->getLength())
       size = type_def->getLength();
     return std::make_shared<lldb_private::Type>(
@@ -672,7 +673,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     assert(array_type);
     uint32_t num_elements = array_type->getCount();
     uint32_t element_uid = array_type->getElementTypeId();
-    llvm::Optional<uint64_t> bytes;
+    std::optional<uint64_t> bytes;
     if (uint64_t size = array_type->getLength())
       bytes = size;
 
@@ -713,7 +714,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (builtin_kind == PDB_BuiltinType::None)
       return nullptr;
 
-    llvm::Optional<uint64_t> bytes;
+    std::optional<uint64_t> bytes;
     if (uint64_t size = builtin_type->getLength())
       bytes = size;
     Encoding encoding = TranslateBuiltinEncoding(builtin_kind);
@@ -1260,7 +1261,7 @@ void PDBASTParser::AddRecordMembers(
     auto member_comp_type = member_type->GetLayoutCompilerType();
     if (!member_comp_type.GetCompleteType()) {
       symbol_file.GetObjectFile()->GetModule()->ReportError(
-          ":: Class '%s' has a member '%s' of type '%s' "
+          ":: Class '{0}' has a member '{1}' of type '{2}' "
           "which does not have a complete definition.",
           record_type.GetTypeName().GetCString(), member_name.c_str(),
           member_comp_type.GetTypeName().GetCString());
@@ -1370,7 +1371,7 @@ void PDBASTParser::AddRecordBases(
     auto base_comp_type = base_type->GetFullCompilerType();
     if (!base_comp_type.GetCompleteType()) {
       symbol_file.GetObjectFile()->GetModule()->ReportError(
-          ":: Class '%s' has a base class '%s' "
+          ":: Class '{0}' has a base class '{1}' "
           "which does not have a complete definition.",
           record_type.GetTypeName().GetCString(),
           base_comp_type.GetTypeName().GetCString());
@@ -1429,7 +1430,7 @@ PDBASTParser::AddRecordMethod(lldb_private::SymbolFile &symbol_file,
   CompilerType method_comp_type = method_type->GetFullCompilerType();
   if (!method_comp_type.GetCompleteType()) {
     symbol_file.GetObjectFile()->GetModule()->ReportError(
-        ":: Class '%s' has a method '%s' whose type cannot be completed.",
+        ":: Class '{0}' has a method '{1}' whose type cannot be completed.",
         record_type.GetTypeName().GetCString(),
         method_comp_type.GetTypeName().GetCString());
     if (TypeSystemClang::StartTagDeclarationDefinition(method_comp_type))

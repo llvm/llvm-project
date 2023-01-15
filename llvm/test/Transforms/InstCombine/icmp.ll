@@ -1763,7 +1763,7 @@ define <2 x i1> @icmp_sub57_sge_sub20_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 
 define i1 @icmp_and_shl_neg_ne_0(i32 %A, i32 %B) {
 ; CHECK-LABEL: @icmp_and_shl_neg_ne_0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -1777,7 +1777,7 @@ define i1 @icmp_and_shl_neg_ne_0(i32 %A, i32 %B) {
 
 define i1 @icmp_and_shl_neg_eq_0(i32 %A, i32 %B) {
 ; CHECK-LABEL: @icmp_and_shl_neg_eq_0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], [[A:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -2172,9 +2172,9 @@ define i1 @or_icmp_eq_B_0_icmp_ult_A_B(i64 %a, i64 %b) {
 
 define i1 @or_icmp_eq_B_0_icmp_ult_A_B_logical(i64 %a, i64 %b) {
 ; CHECK-LABEL: @or_icmp_eq_B_0_icmp_ult_A_B_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[B:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[A:%.*]], [[B]]
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[B:%.*]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %1 = icmp eq i64 %b, 0
@@ -2292,6 +2292,31 @@ define i1 @and_icmp_ne_B_0_icmp_uge_A_B_commuted2(i64 %a, i64 %b) {
   ret i1 %3
 }
 
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_commuted1_logical(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_commuted1_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[B:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = icmp uge i64 %a, %b
+  %2 = icmp ne i64 %b, 0
+  %3 = select i1 %1, i1 %2, i1 false
+  ret i1 %3
+}
+
+define i1 @and_icmp_ne_B_0_icmp_uge_A_B_commuted2_logical(i64 %a, i64 %b) {
+; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_commuted2_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[B:%.*]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %1 = icmp ne i64 %b, 0
+  %2 = icmp ule i64 %b, %a
+  %3 = select i1 %1, i1 %2, i1 false
+  ret i1 %3
+}
+
 define i1 @and_icmp_ne_B_0_icmp_uge_A_B_extra_use1(i64 %a, i64 %b) {
 ; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_extra_use1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
@@ -2393,9 +2418,9 @@ define i1 @and_icmp_ne_B_0_icmp_uge_A_B_wrong_op2(i64 %a, i64 %b, i64 %c) {
 
 define i1 @and_icmp_ne_B_0_icmp_uge_A_B_logical(i64 %a, i64 %b) {
 ; CHECK-LABEL: @and_icmp_ne_B_0_icmp_uge_A_B_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[B:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[A:%.*]], [[B]]
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[B:%.*]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %1 = icmp ne i64 %b, 0

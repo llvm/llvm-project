@@ -9,18 +9,16 @@
 #ifndef LLVM_LIBC_SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SUPPORT_CPP_BIT_H
 
+#include "src/__support/compiler_features.h"
+
 namespace __llvm_libc::cpp {
 
-#if defined __has_builtin
-#if __has_builtin(__builtin_bit_cast)
+#if LLVM_LIBC_HAS_BUILTIN(__builtin_bit_cast)
 #define LLVM_LIBC_HAS_BUILTIN_BIT_CAST
 #endif
-#endif
 
-#if defined __has_builtin
-#if __has_builtin(__builtin_memcpy_inline)
+#if LLVM_LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
-#endif
 #endif
 
 // This function guarantees the bitcast to be optimized away by the compiler for

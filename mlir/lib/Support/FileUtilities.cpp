@@ -21,7 +21,7 @@ using namespace mlir;
 
 static std::unique_ptr<llvm::MemoryBuffer>
 openInputFileImpl(StringRef inputFilename, std::string *errorMessage,
-                  Optional<llvm::Align> alignment) {
+                  std::optional<llvm::Align> alignment) {
   auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(
       inputFilename, /*IsText=*/false, /*RequiresNullTerminator=*/true,
       alignment);

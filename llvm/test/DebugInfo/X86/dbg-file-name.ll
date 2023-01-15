@@ -4,7 +4,7 @@
 ; rdar://problem/8884898
 ; CHECK: file	1 "/Users/manav/one/two" "simple.c"
 
-declare i32 @printf(i8*, ...) nounwind
+declare i32 @printf(ptr, ...) nounwind
 
 define i32 @main() nounwind !dbg !6 {
   ret i32 0

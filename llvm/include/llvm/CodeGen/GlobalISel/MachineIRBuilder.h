@@ -217,10 +217,12 @@ private:
 /// Helper class to build MachineInstr.
 /// It keeps internally the insertion point and debug location for all
 /// the new instructions we want to create.
-/// This information can be modify via the related setters.
+/// This information can be modified via the related setters.
 class MachineIRBuilder {
 
   MachineIRBuilderState State;
+
+  unsigned getOpcodeForMerge(const DstOp &DstOp, ArrayRef<SrcOp> SrcOps) const;
 
 protected:
   void validateTruncExt(const LLT Dst, const LLT Src, bool IsExtend);
@@ -487,9 +489,10 @@ public:
   ///       type as \p Op0 or \p Op0 itself.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  Optional<MachineInstrBuilder> materializePtrAdd(Register &Res, Register Op0,
-                                                  const LLT ValueTy,
-                                                  uint64_t Value);
+  std::optional<MachineInstrBuilder> materializePtrAdd(Register &Res,
+                                                       Register Op0,
+                                                       const LLT ValueTy,
+                                                       uint64_t Value);
 
   /// Build and insert \p Res = G_PTRMASK \p Op0, \p Op1
   MachineInstrBuilder buildPtrMask(const DstOp &Res, const SrcOp &Op0,
@@ -658,7 +661,7 @@ public:
 
   /// Build and insert \p Res = G_FPEXT \p Op
   MachineInstrBuilder buildFPExt(const DstOp &Res, const SrcOp &Op,
-                                 Optional<unsigned> Flags = std::nullopt) {
+                                 std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FPEXT, {Res}, {Op}, Flags);
   }
 
@@ -862,8 +865,8 @@ public:
   /// Build and insert G_ASSERT_SEXT, G_ASSERT_ZEXT, or G_ASSERT_ALIGN
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAssertOp(unsigned Opc, const DstOp &Res, const SrcOp &Op,
-				    unsigned Val) {
+  MachineInstrBuilder buildAssertInstr(unsigned Opc, const DstOp &Res,
+                                       const SrcOp &Op, unsigned Val) {
     return buildInstr(Opc, Res, Op).addImm(Val);
   }
 
@@ -872,7 +875,7 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAssertZExt(const DstOp &Res, const SrcOp &Op,
                                       unsigned Size) {
-    return buildAssertOp(TargetOpcode::G_ASSERT_ZEXT, Res, Op, Size);
+    return buildAssertInstr(TargetOpcode::G_ASSERT_ZEXT, Res, Op, Size);
   }
 
   /// Build and insert \p Res = G_ASSERT_SEXT Op, Size
@@ -880,7 +883,7 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAssertSExt(const DstOp &Res, const SrcOp &Op,
                                       unsigned Size) {
-    return buildAssertOp(TargetOpcode::G_ASSERT_SEXT, Res, Op, Size);
+    return buildAssertInstr(TargetOpcode::G_ASSERT_SEXT, Res, Op, Size);
   }
 
   /// Build and insert \p Res = G_ASSERT_ALIGN Op, AlignVal
@@ -888,7 +891,8 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildAssertAlign(const DstOp &Res, const SrcOp &Op,
 				       Align AlignVal) {
-    return buildAssertOp(TargetOpcode::G_ASSERT_ALIGN, Res, Op, AlignVal.value());
+    return buildAssertInstr(TargetOpcode::G_ASSERT_ALIGN, Res, Op,
+                            AlignVal.value());
   }
 
   /// Build and insert `Res = G_LOAD Addr, MMO`.
@@ -967,7 +971,8 @@ public:
   /// Build and insert \p Res = G_MERGE_VALUES \p Op0, ...
   ///
   /// G_MERGE_VALUES combines the input elements contiguously into a larger
-  /// register.
+  /// register. It should only be used when the destination register is not a
+  /// vector.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre The entire register \p Res (and no more) must be covered by the input
@@ -975,9 +980,30 @@ public:
   /// \pre The type of all \p Ops registers must be identical.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildMerge(const DstOp &Res, ArrayRef<Register> Ops);
-  MachineInstrBuilder buildMerge(const DstOp &Res,
-                                 std::initializer_list<SrcOp> Ops);
+  MachineInstrBuilder buildMergeValues(const DstOp &Res,
+                                       ArrayRef<Register> Ops);
+
+  /// Build and insert \p Res = G_MERGE_VALUES \p Op0, ...
+  ///               or \p Res = G_BUILD_VECTOR \p Op0, ...
+  ///               or \p Res = G_CONCAT_VECTORS \p Op0, ...
+  ///
+  /// G_MERGE_VALUES combines the input elements contiguously into a larger
+  /// register. It is used when the destination register is not a vector.
+  /// G_BUILD_VECTOR combines scalar inputs into a vector register.
+  /// G_CONCAT_VECTORS combines vector inputs into a vector register.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre The entire register \p Res (and no more) must be covered by the input
+  ///      registers.
+  /// \pre The type of all \p Ops registers must be identical.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction. The
+  ///         opcode of the new instruction will depend on the types of both
+  ///         the destination and the sources.
+  MachineInstrBuilder buildMergeLikeInstr(const DstOp &Res,
+                                          ArrayRef<Register> Ops);
+  MachineInstrBuilder buildMergeLikeInstr(const DstOp &Res,
+                                          std::initializer_list<SrcOp> Ops);
 
   /// Build and insert \p Res0, ... = G_UNMERGE_VALUES \p Op
   ///
@@ -1092,8 +1118,9 @@ public:
   /// \pre \p Res must be smaller than \p Op
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildFPTrunc(const DstOp &Res, const SrcOp &Op,
-                                   Optional<unsigned> Flags = std::nullopt);
+  MachineInstrBuilder
+  buildFPTrunc(const DstOp &Res, const SrcOp &Op,
+               std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert \p Res = G_TRUNC \p Op
   ///
@@ -1137,7 +1164,7 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildFCmp(CmpInst::Predicate Pred, const DstOp &Res,
                                 const SrcOp &Op0, const SrcOp &Op1,
-                                Optional<unsigned> Flags = std::nullopt);
+                                std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert a \p Res = G_SELECT \p Tst, \p Op0, \p Op1
   ///
@@ -1151,7 +1178,7 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildSelect(const DstOp &Res, const SrcOp &Tst,
                                   const SrcOp &Op0, const SrcOp &Op1,
-                                  Optional<unsigned> Flags = std::nullopt);
+                                  std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert \p Res = G_INSERT_VECTOR_ELT \p Val,
   /// \p Elt, \p Idx
@@ -1167,6 +1194,20 @@ public:
                                                const SrcOp &Val,
                                                const SrcOp &Elt,
                                                const SrcOp &Idx);
+
+  /// Build and insert \p Res = G_EXTRACT_VECTOR_ELT \p Val, \p Idx
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar type.
+  /// \pre \p Val must be a generic virtual register with vector type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildExtractVectorElementConstant(const DstOp &Res,
+                                                        const SrcOp &Val,
+                                                        const int Idx) {
+    return buildExtractVectorElement(Res, Val,
+                                     buildConstant(LLT::scalar(64), Idx));
+  }
 
   /// Build and insert \p Res = G_EXTRACT_VECTOR_ELT \p Val, \p Idx
   ///
@@ -1481,7 +1522,7 @@ public:
 
   MachineInstrBuilder buildAdd(const DstOp &Dst, const SrcOp &Src0,
                                const SrcOp &Src1,
-                               Optional<unsigned> Flags = std::nullopt) {
+                               std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_ADD, {Dst}, {Src0, Src1}, Flags);
   }
 
@@ -1498,7 +1539,7 @@ public:
 
   MachineInstrBuilder buildSub(const DstOp &Dst, const SrcOp &Src0,
                                const SrcOp &Src1,
-                               Optional<unsigned> Flags = std::nullopt) {
+                               std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_SUB, {Dst}, {Src0, Src1}, Flags);
   }
 
@@ -1514,74 +1555,74 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildMul(const DstOp &Dst, const SrcOp &Src0,
                                const SrcOp &Src1,
-                               Optional<unsigned> Flags = std::nullopt) {
+                               std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_MUL, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder buildUMulH(const DstOp &Dst, const SrcOp &Src0,
                                  const SrcOp &Src1,
-                                 Optional<unsigned> Flags = std::nullopt) {
+                                 std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_UMULH, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder buildSMulH(const DstOp &Dst, const SrcOp &Src0,
                                  const SrcOp &Src1,
-                                 Optional<unsigned> Flags = std::nullopt) {
+                                 std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_SMULH, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_UREM \p Op0, \p Op1
   MachineInstrBuilder buildURem(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_UREM, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder buildFMul(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FMUL, {Dst}, {Src0, Src1}, Flags);
   }
 
-  MachineInstrBuilder buildFMinNum(const DstOp &Dst, const SrcOp &Src0,
-                                   const SrcOp &Src1,
-                                   Optional<unsigned> Flags = std::nullopt) {
+  MachineInstrBuilder
+  buildFMinNum(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+               std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FMINNUM, {Dst}, {Src0, Src1}, Flags);
   }
 
-  MachineInstrBuilder buildFMaxNum(const DstOp &Dst, const SrcOp &Src0,
-                                   const SrcOp &Src1,
-                                   Optional<unsigned> Flags = std::nullopt) {
+  MachineInstrBuilder
+  buildFMaxNum(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+               std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FMAXNUM, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder
   buildFMinNumIEEE(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
-                   Optional<unsigned> Flags = std::nullopt) {
+                   std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FMINNUM_IEEE, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder
   buildFMaxNumIEEE(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
-                   Optional<unsigned> Flags = std::nullopt) {
+                   std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FMAXNUM_IEEE, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder buildShl(const DstOp &Dst, const SrcOp &Src0,
                                const SrcOp &Src1,
-                               Optional<unsigned> Flags = std::nullopt) {
+                               std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_SHL, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder buildLShr(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_LSHR, {Dst}, {Src0, Src1}, Flags);
   }
 
   MachineInstrBuilder buildAShr(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_ASHR, {Dst}, {Src0, Src1}, Flags);
   }
 
@@ -1613,7 +1654,7 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildOr(const DstOp &Dst, const SrcOp &Src0,
                               const SrcOp &Src1,
-                              Optional<unsigned> Flags = std::nullopt) {
+                              std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_OR, {Dst}, {Src0, Src1}, Flags);
   }
 
@@ -1672,99 +1713,100 @@ public:
   /// Build and insert \p Res = G_FADD \p Op0, \p Op1
   MachineInstrBuilder buildFAdd(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FADD, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_STRICT_FADD \p Op0, \p Op1
-  MachineInstrBuilder buildStrictFAdd(const DstOp &Dst, const SrcOp &Src0,
-                                      const SrcOp &Src1,
-                                      Optional<unsigned> Flags = std::nullopt) {
+  MachineInstrBuilder
+  buildStrictFAdd(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+                  std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_STRICT_FADD, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_FSUB \p Op0, \p Op1
   MachineInstrBuilder buildFSub(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FSUB, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_FDIV \p Op0, \p Op1
   MachineInstrBuilder buildFDiv(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FDIV, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_FMA \p Op0, \p Op1, \p Op2
   MachineInstrBuilder buildFMA(const DstOp &Dst, const SrcOp &Src0,
                                const SrcOp &Src1, const SrcOp &Src2,
-                               Optional<unsigned> Flags = std::nullopt) {
+                               std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FMA, {Dst}, {Src0, Src1, Src2}, Flags);
   }
 
   /// Build and insert \p Res = G_FMAD \p Op0, \p Op1, \p Op2
   MachineInstrBuilder buildFMAD(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1, const SrcOp &Src2,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FMAD, {Dst}, {Src0, Src1, Src2}, Flags);
   }
 
   /// Build and insert \p Res = G_FNEG \p Op0
   MachineInstrBuilder buildFNeg(const DstOp &Dst, const SrcOp &Src0,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FNEG, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Res = G_FABS \p Op0
   MachineInstrBuilder buildFAbs(const DstOp &Dst, const SrcOp &Src0,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FABS, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Dst = G_FCANONICALIZE \p Src0
   MachineInstrBuilder
   buildFCanonicalize(const DstOp &Dst, const SrcOp &Src0,
-                     Optional<unsigned> Flags = std::nullopt) {
+                     std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FCANONICALIZE, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Dst = G_INTRINSIC_TRUNC \p Src0
   MachineInstrBuilder
   buildIntrinsicTrunc(const DstOp &Dst, const SrcOp &Src0,
-                      Optional<unsigned> Flags = std::nullopt) {
+                      std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_INTRINSIC_TRUNC, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Res = GFFLOOR \p Op0, \p Op1
-  MachineInstrBuilder buildFFloor(const DstOp &Dst, const SrcOp &Src0,
-                                  Optional<unsigned> Flags = std::nullopt) {
+  MachineInstrBuilder
+  buildFFloor(const DstOp &Dst, const SrcOp &Src0,
+              std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FFLOOR, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Dst = G_FLOG \p Src
   MachineInstrBuilder buildFLog(const DstOp &Dst, const SrcOp &Src,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FLOG, {Dst}, {Src}, Flags);
   }
 
   /// Build and insert \p Dst = G_FLOG2 \p Src
   MachineInstrBuilder buildFLog2(const DstOp &Dst, const SrcOp &Src,
-                                 Optional<unsigned> Flags = std::nullopt) {
+                                 std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FLOG2, {Dst}, {Src}, Flags);
   }
 
   /// Build and insert \p Dst = G_FEXP2 \p Src
   MachineInstrBuilder buildFExp2(const DstOp &Dst, const SrcOp &Src,
-                                 Optional<unsigned> Flags = std::nullopt) {
+                                 std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FEXP2, {Dst}, {Src}, Flags);
   }
 
   /// Build and insert \p Dst = G_FPOW \p Src0, \p Src1
   MachineInstrBuilder buildFPow(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
-                                Optional<unsigned> Flags = std::nullopt) {
+                                std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FPOW, {Dst}, {Src0, Src1}, Flags);
   }
 
@@ -1978,7 +2020,7 @@ public:
 
   virtual MachineInstrBuilder
   buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps, ArrayRef<SrcOp> SrcOps,
-             Optional<unsigned> Flags = std::nullopt);
+             std::optional<unsigned> Flags = std::nullopt);
 };
 
 } // End namespace llvm.

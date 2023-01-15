@@ -30,6 +30,13 @@ namespace cf {
 void populateControlFlowToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                  RewritePatternSet &patterns);
 
+/// Populate the cf.assert to LLVM conversion pattern. If `abortOnFailure` is
+/// set to false, the program execution continues when a condition is
+/// unsatisfied.
+void populateAssertToLLVMConversionPattern(LLVMTypeConverter &converter,
+                                           RewritePatternSet &patterns,
+                                           bool abortOnFailure = true);
+
 /// Creates a pass to convert the ControlFlow dialect into the LLVMIR dialect.
 std::unique_ptr<Pass> createConvertControlFlowToLLVMPass();
 } // namespace cf

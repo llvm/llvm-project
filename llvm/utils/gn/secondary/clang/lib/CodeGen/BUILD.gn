@@ -27,6 +27,7 @@ static_library("CodeGen") {
     "//llvm/lib/ProfileData/Coverage",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Coroutines",
     "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/InstCombine",

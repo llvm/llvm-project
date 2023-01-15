@@ -836,6 +836,11 @@ bool UnwrappedLineParser::mightFitOnOneLine(
     Length -= OpeningBrace->TokenText.size() + 1;
   }
 
+  if (const auto *FirstToken = Line.First; FirstToken->is(tok::r_brace)) {
+    assert(!OpeningBrace || OpeningBrace->is(TT_ControlStatementLBrace));
+    Length -= FirstToken->TokenText.size() + 1;
+  }
+
   Index = 0;
   for (auto &Token : Tokens) {
     const auto &SavedToken = SavedTokens[Index++];
@@ -934,9 +939,6 @@ FormatToken *UnwrappedLineParser::parseBlock(
     return IfLBrace;
   }
 
-  Tok->MatchingParen = FormatTok;
-  FormatTok->MatchingParen = Tok;
-
   const bool IsFunctionRBrace =
       FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace);
 
@@ -970,7 +972,10 @@ FormatToken *UnwrappedLineParser::parseBlock(
     }
     return mightFitOnOneLine((*CurrentLines)[Index], Tok);
   };
-  Tok->Optional = RemoveBraces();
+  if (RemoveBraces()) {
+    Tok->MatchingParen = FormatTok;
+    FormatTok->MatchingParen = Tok;
+  }
 
   size_t PPEndHash = computePPHash();
 
@@ -1813,9 +1818,6 @@ void UnwrappedLineParser::parseStructuralElement(
         break;
       }
       break;
-    case tok::kw_concept:
-      parseConcept();
-      return;
     case tok::kw_requires: {
       if (Style.isCpp()) {
         bool ParsedClause = parseRequires();
@@ -2707,20 +2709,10 @@ static void markOptionalBraces(FormatToken *LeftBrace) {
 
   assert(RightBrace->is(tok::r_brace));
   assert(RightBrace->MatchingParen == LeftBrace);
+  assert(LeftBrace->Optional == RightBrace->Optional);
 
-  RightBrace->Optional = LeftBrace->Optional;
-}
-
-static void resetOptional(FormatToken *LeftBrace) {
-  if (!LeftBrace)
-    return;
-
-  const auto *RightBrace = LeftBrace->MatchingParen;
-  const bool IsOptionalRightBrace = RightBrace && RightBrace->Optional;
-  assert(LeftBrace->Optional || !IsOptionalRightBrace);
-
-  if (!IsOptionalRightBrace)
-    LeftBrace->Optional = false;
+  LeftBrace->Optional = true;
+  RightBrace->Optional = true;
 }
 
 void UnwrappedLineParser::handleAttributes() {
@@ -2788,7 +2780,8 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
 
   if (Style.RemoveBracesLLVM) {
     assert(!NestedTooDeep.empty());
-    KeepIfBraces = KeepIfBraces || (IfLeftBrace && !IfLeftBrace->Optional) ||
+    KeepIfBraces = KeepIfBraces ||
+                   (IfLeftBrace && !IfLeftBrace->MatchingParen) ||
                    NestedTooDeep.back() || IfBlockKind == IfStmtKind::IfOnly ||
                    IfBlockKind == IfStmtKind::IfElseIf;
   }
@@ -2819,9 +2812,8 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
                          ElseBlockKind == IfStmtKind::IfElseIf;
       } else if (FollowedByIf && IfLBrace && !IfLBrace->Optional) {
         KeepElseBraces = true;
-        assert(ElseLeftBrace->Optional);
         assert(ElseLeftBrace->MatchingParen);
-        ElseLeftBrace->MatchingParen->Optional = true;
+        markOptionalBraces(ElseLeftBrace);
       }
       addUnwrappedLine();
     } else if (FormatTok->is(tok::kw_if)) {
@@ -2856,7 +2848,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
 
   assert(!NestedTooDeep.empty());
   KeepElseBraces = KeepElseBraces ||
-                   (ElseLeftBrace && !ElseLeftBrace->Optional) ||
+                   (ElseLeftBrace && !ElseLeftBrace->MatchingParen) ||
                    NestedTooDeep.back();
 
   NestedTooDeep.pop_back();
@@ -2864,10 +2856,16 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
   if (!KeepIfBraces && !KeepElseBraces) {
     markOptionalBraces(IfLeftBrace);
     markOptionalBraces(ElseLeftBrace);
+  } else if (IfLeftBrace) {
+    FormatToken *IfRightBrace = IfLeftBrace->MatchingParen;
+    if (IfRightBrace) {
+      assert(IfRightBrace->MatchingParen == IfLeftBrace);
+      assert(!IfLeftBrace->Optional);
+      assert(!IfRightBrace->Optional);
+      IfLeftBrace->MatchingParen = nullptr;
+      IfRightBrace->MatchingParen = nullptr;
+    }
   }
-
-  resetOptional(IfLeftBrace);
-  resetOptional(ElseLeftBrace);
 
   if (IfKind)
     *IfKind = Kind;
@@ -3083,7 +3081,6 @@ void UnwrappedLineParser::parseLoopBody(bool KeepBraces, bool WrapRightBrace) {
       if (!NestedTooDeep.back())
         markOptionalBraces(LeftBrace);
     }
-    resetOptional(LeftBrace);
     if (WrapRightBrace)
       addUnwrappedLine();
   } else {
@@ -3277,26 +3274,6 @@ void UnwrappedLineParser::parseAccessSpecifier() {
   }
 }
 
-/// \brief Parses a concept definition.
-/// \pre The current token has to be the concept keyword.
-///
-/// Returns if either the concept has been completely parsed, or if it detects
-/// that the concept definition is incorrect.
-void UnwrappedLineParser::parseConcept() {
-  assert(FormatTok->is(tok::kw_concept) && "'concept' expected");
-  nextToken();
-  if (!FormatTok->is(tok::identifier))
-    return;
-  nextToken();
-  if (!FormatTok->is(tok::equal))
-    return;
-  nextToken();
-  parseConstraintExpression();
-  if (FormatTok->is(tok::semi))
-    nextToken();
-  addUnwrappedLine();
-}
-
 /// \brief Parses a requires, decides if it is a clause or an expression.
 /// \pre The current token has to be the requires keyword.
 /// \returns true if it parsed a clause.
@@ -3463,6 +3440,8 @@ void UnwrappedLineParser::parseRequiresClause(FormatToken *RequiresToken) {
                                       ? TT_RequiresClauseInARequiresExpression
                                       : TT_RequiresClause);
 
+  // NOTE: parseConstraintExpression is only ever called from this function.
+  // It could be inlined into here.
   parseConstraintExpression();
 
   if (!InRequiresExpression)
@@ -3496,9 +3475,8 @@ void UnwrappedLineParser::parseRequiresExpression(FormatToken *RequiresToken) {
 
 /// \brief Parses a constraint expression.
 ///
-/// This is either the definition of a concept, or the body of a requires
-/// clause. It returns, when the parsing is complete, or the expression is
-/// incorrect.
+/// This is the body of a requires clause. It returns, when the parsing is
+/// complete, or the expression is incorrect.
 void UnwrappedLineParser::parseConstraintExpression() {
   // The special handling for lambdas is needed since tryToParseLambda() eats a
   // token and if a requires expression is the last part of a requires clause
@@ -3565,7 +3543,6 @@ void UnwrappedLineParser::parseConstraintExpression() {
     case tok::minus:
     case tok::star:
     case tok::slash:
-    case tok::kw_decltype:
       LambdaNextTimeAllowed = true;
       // Just eat them.
       nextToken();

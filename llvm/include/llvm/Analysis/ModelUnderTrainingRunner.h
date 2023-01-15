@@ -15,7 +15,7 @@
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Config/llvm-config.h"
 
-#ifdef LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TFLITE
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/Utils/TFUtils.h"
 #include "llvm/IR/LLVMContext.h"
@@ -42,7 +42,7 @@ public:
     return lastEvaluationResult()->getUntypedTensorValue(ExtraOutputIndex + 1);
   }
 
-  const Optional<TFModelEvaluator::EvaluationResult> &
+  const std::optional<TFModelEvaluator::EvaluationResult> &
   lastEvaluationResult() const {
     return LastEvaluationResult;
   }
@@ -68,10 +68,10 @@ private:
   std::unique_ptr<TFModelEvaluator> Evaluator;
   const std::vector<TensorSpec> OutputSpecs;
   const std::vector<TensorSpec> ExtraOutputsForLogging;
-  Optional<TFModelEvaluator::EvaluationResult> LastEvaluationResult;
+  std::optional<TFModelEvaluator::EvaluationResult> LastEvaluationResult;
   void *evaluateUntyped() override;
 };
 
 } // namespace llvm
-#endif // define(LLVM_HAVE_TF_API)
+#endif // define(LLVM_HAVE_TFLITE)
 #endif // LLVM_ANALYSIS_MODELUNDERTRAININGRUNNER_H

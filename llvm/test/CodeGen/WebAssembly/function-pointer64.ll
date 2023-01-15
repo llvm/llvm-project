@@ -11,7 +11,7 @@ entry:
   ret void
 }
 
-define void @foo(void (i32)* %fp) {
+define void @foo(ptr %fp) {
 entry:
   call void %fp(i32 1)
   ret void
@@ -19,12 +19,12 @@ entry:
 
 define void @test() {
 entry:
-  call void @foo(void (i32)* @bar)
-  store void (i32)* @bar, void (i32)** @fptr
+  call void @foo(ptr @bar)
+  store ptr @bar, ptr @fptr
   ret void
 }
 
-@fptr = global void (i32)* @bar
+@fptr = global ptr @bar
 
 ; For simplicity (and compatibility with UB C/C++ code) we keep all types
 ; of pointers the same size, so function pointers (which are 32-bit indices

@@ -34,7 +34,7 @@ public:
   /// will be loaded to find the registration functions.
   static Expected<std::unique_ptr<EPCEHFrameRegistrar>>
   Create(ExecutionSession &ES,
-         Optional<ExecutorAddr> RegistrationFunctionsDylib = std::nullopt);
+         std::optional<ExecutorAddr> RegistrationFunctionsDylib = std::nullopt);
 
   /// Create a EPCEHFrameRegistrar with the given ExecutorProcessControl
   /// object and registration/deregistration function addresses.

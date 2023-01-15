@@ -8,10 +8,10 @@
 ;   main:3 @ _Z5funcAi
 ;   main:3 @ _Z5funcAi:1 @ _Z8funcLeafi
 ;   _Z5funcBi:1 @ _Z8funcLeafi
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -sample-profile-even-count-distribution=0 -S | FileCheck %s --check-prefix=INLINE-ALL
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -sample-profile-even-count-distribution=0 -S | FileCheck %s --check-prefix=INLINE-ALL
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -profile-sample-accurate -sample-profile-even-count-distribution=0 -S | FileCheck %s --check-prefix=INLINE-ALL
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -profile-sample-accurate -sample-profile-even-count-distribution=0 -S | FileCheck %s --check-prefix=INLINE-ALL
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -sample-profile-even-flow-distribution=0 -S | FileCheck %s --check-prefix=INLINE-ALL
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -sample-profile-even-flow-distribution=0 -S | FileCheck %s --check-prefix=INLINE-ALL
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -profile-sample-accurate -sample-profile-even-flow-distribution=0 -S | FileCheck %s --check-prefix=INLINE-ALL
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -profile-sample-accurate -sample-profile-even-flow-distribution=0 -S | FileCheck %s --check-prefix=INLINE-ALL
 ;
 ; Test we inlined the following in top-down order and entry counts accurate reflects post-inline base profile
 ;   _Z5funcAi:1 @ _Z8funcLeafi
@@ -145,7 +145,7 @@ entry:
 ; INLINE-HOT-DAG-SAME: [[LEAF_PROF]] = !{!"function_entry_count", i64 0}
 ; INLINE-HOT-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 13}
 
-; INLINE-NONE: [[MAIN_PROF]] = !{!"function_entry_count", i64 13}
+; INLINE-NONE: [[MAIN_PROF]] = !{!"function_entry_count", i64 14}
 ; INLINE-NONE: [[FUNCA_PROF]] = !{!"function_entry_count", i64 24}
 ; INLINE-NONE-DAG-SAME: [[LEAF_PROF]] = !{!"function_entry_count", i64 21}
 ; INLINE-NONE-DAG: [[FUNCB_PROF]] = !{!"function_entry_count", i64 32}

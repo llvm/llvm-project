@@ -19,6 +19,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -943,7 +944,7 @@ public:
 
 /// Returns the strides if the memory underlying `memRefType` has a contiguous
 /// static layout.
-static llvm::Optional<SmallVector<int64_t, 4>>
+static std::optional<SmallVector<int64_t, 4>>
 computeContiguousStrides(MemRefType memRefType) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;

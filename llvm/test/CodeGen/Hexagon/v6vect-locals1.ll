@@ -13,24 +13,24 @@ target triple = "hexagon"
 @g2 = global <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>, align 64
 
 ; Function Attrs: nounwind
-declare i32 @f0(i8* nocapture, ...) #0
+declare i32 @f0(ptr nocapture, ...) #0
 
 ; Function Attrs: nounwind
-define void @f1(%s.0* byval(%s.0) %a0, <16 x i32> %a1) #0 {
+define void @f1(ptr byval(%s.0) %a0, <16 x i32> %a1) #0 {
 b0:
   %v0 = alloca <16 x i32>, align 64
-  store <16 x i32> %a1, <16 x i32>* %v0, align 64, !tbaa !0
-  %v1 = ptrtoint %s.0* %a0 to i32
-  %v2 = ptrtoint <16 x i32>* %v0 to i32
-  %v3 = call i32 (i8*, ...) @f0(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @g0, i32 0, i32 0), i32 %v1, i32 %v2) #0
+  store <16 x i32> %a1, ptr %v0, align 64, !tbaa !0
+  %v1 = ptrtoint ptr %a0 to i32
+  %v2 = ptrtoint ptr %v0 to i32
+  %v3 = call i32 (ptr, ...) @f0(ptr @g0, i32 %v1, i32 %v2) #0
   ret void
 }
 
 ; Function Attrs: nounwind
 define i32 @f2() #0 {
 b0:
-  %v0 = load <16 x i32>, <16 x i32>* @g2, align 64, !tbaa !0
-  tail call void @f1(%s.0* byval(%s.0) @g1, <16 x i32> %v0)
+  %v0 = load <16 x i32>, ptr @g2, align 64, !tbaa !0
+  tail call void @f1(ptr byval(%s.0) @g1, <16 x i32> %v0)
   ret i32 0
 }
 

@@ -11,30 +11,30 @@ define float @llvmintr_powf_f32_fast025(float %a) #1 {
 ; CHECK-LNX-LABEL: llvmintr_powf_f32_fast025:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    xsrsqrtesp 0, 1
+; CHECK-LNX-NEXT:    vspltisw 2, -3
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-LNX-NEXT:    lfs 3, .LCPI0_0@toc@l(3)
+; CHECK-LNX-NEXT:    lfs 4, .LCPI0_0@toc@l(3)
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
-; CHECK-LNX-NEXT:    lfs 4, .LCPI0_1@toc@l(3)
-; CHECK-LNX-NEXT:    addis 3, 2, .LCPI0_2@toc@ha
-; CHECK-LNX-NEXT:    lfs 5, .LCPI0_2@toc@l(3)
-; CHECK-LNX-NEXT:    xsmulsp 2, 1, 0
+; CHECK-LNX-NEXT:    lfs 5, .LCPI0_1@toc@l(3)
+; CHECK-LNX-NEXT:    xvcvsxwdp 2, 34
+; CHECK-LNX-NEXT:    xsmulsp 3, 1, 0
 ; CHECK-LNX-NEXT:    xsabsdp 1, 1
-; CHECK-LNX-NEXT:    xsmulsp 0, 2, 0
-; CHECK-LNX-NEXT:    xsmulsp 2, 2, 3
+; CHECK-LNX-NEXT:    xsmulsp 0, 3, 0
+; CHECK-LNX-NEXT:    xsmulsp 3, 3, 4
 ; CHECK-LNX-NEXT:    xssubsp 1, 1, 5
-; CHECK-LNX-NEXT:    xsaddsp 0, 0, 4
-; CHECK-LNX-NEXT:    xsmulsp 0, 2, 0
-; CHECK-LNX-NEXT:    xxlxor 2, 2, 2
-; CHECK-LNX-NEXT:    fsel 0, 1, 0, 2
+; CHECK-LNX-NEXT:    xsaddsp 0, 0, 2
+; CHECK-LNX-NEXT:    xsmulsp 0, 3, 0
+; CHECK-LNX-NEXT:    xxlxor 3, 3, 3
+; CHECK-LNX-NEXT:    fsel 0, 1, 0, 3
 ; CHECK-LNX-NEXT:    xsrsqrtesp 1, 0
 ; CHECK-LNX-NEXT:    xsmulsp 6, 0, 1
 ; CHECK-LNX-NEXT:    xsabsdp 0, 0
 ; CHECK-LNX-NEXT:    xsmulsp 1, 6, 1
-; CHECK-LNX-NEXT:    xsmulsp 3, 6, 3
+; CHECK-LNX-NEXT:    xsmulsp 4, 6, 4
 ; CHECK-LNX-NEXT:    xssubsp 0, 0, 5
-; CHECK-LNX-NEXT:    xsaddsp 1, 1, 4
-; CHECK-LNX-NEXT:    xsmulsp 1, 3, 1
-; CHECK-LNX-NEXT:    fsel 1, 0, 1, 2
+; CHECK-LNX-NEXT:    xsaddsp 1, 1, 2
+; CHECK-LNX-NEXT:    xsmulsp 1, 4, 1
+; CHECK-LNX-NEXT:    fsel 1, 0, 1, 3
 ; CHECK-LNX-NEXT:    blr
 ;
 ; CHECK-AIX-LABEL: llvmintr_powf_f32_fast025:
@@ -60,11 +60,11 @@ entry:
 define double @llvmintr_pow_f64_fast025(double %a) #1 {
 ; CHECK-LNX-LABEL: llvmintr_pow_f64_fast025:
 ; CHECK-LNX:       # %bb.0: # %entry
+; CHECK-LNX-NEXT:    vspltisw 2, -3
 ; CHECK-LNX-NEXT:    xstsqrtdp 0, 1
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
-; CHECK-LNX-NEXT:    addis 4, 2, .LCPI1_1@toc@ha
 ; CHECK-LNX-NEXT:    lfs 0, .LCPI1_0@toc@l(3)
-; CHECK-LNX-NEXT:    lfs 2, .LCPI1_1@toc@l(4)
+; CHECK-LNX-NEXT:    xvcvsxwdp 2, 34
 ; CHECK-LNX-NEXT:    bc 12, 2, .LBB1_3
 ; CHECK-LNX-NEXT:  # %bb.1: # %entry
 ; CHECK-LNX-NEXT:    xsrsqrtedp 3, 1
@@ -125,30 +125,30 @@ define float @llvmintr_powf_f32_fast075(float %a) #1 {
 ; CHECK-LNX-LABEL: llvmintr_powf_f32_fast075:
 ; CHECK-LNX:       # %bb.0: # %entry
 ; CHECK-LNX-NEXT:    xsrsqrtesp 0, 1
+; CHECK-LNX-NEXT:    vspltisw 2, -3
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
-; CHECK-LNX-NEXT:    lfs 3, .LCPI2_0@toc@l(3)
+; CHECK-LNX-NEXT:    lfs 4, .LCPI2_0@toc@l(3)
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI2_1@toc@ha
-; CHECK-LNX-NEXT:    lfs 4, .LCPI2_1@toc@l(3)
-; CHECK-LNX-NEXT:    addis 3, 2, .LCPI2_2@toc@ha
-; CHECK-LNX-NEXT:    lfs 5, .LCPI2_2@toc@l(3)
-; CHECK-LNX-NEXT:    xsmulsp 2, 1, 0
+; CHECK-LNX-NEXT:    lfs 5, .LCPI2_1@toc@l(3)
+; CHECK-LNX-NEXT:    xvcvsxwdp 2, 34
+; CHECK-LNX-NEXT:    xsmulsp 3, 1, 0
 ; CHECK-LNX-NEXT:    xsabsdp 1, 1
-; CHECK-LNX-NEXT:    xsmulsp 0, 2, 0
-; CHECK-LNX-NEXT:    xsmulsp 2, 2, 3
+; CHECK-LNX-NEXT:    xsmulsp 0, 3, 0
+; CHECK-LNX-NEXT:    xsmulsp 3, 3, 4
 ; CHECK-LNX-NEXT:    xssubsp 1, 1, 5
-; CHECK-LNX-NEXT:    xsaddsp 0, 0, 4
-; CHECK-LNX-NEXT:    xsmulsp 0, 2, 0
-; CHECK-LNX-NEXT:    xxlxor 2, 2, 2
-; CHECK-LNX-NEXT:    fsel 0, 1, 0, 2
+; CHECK-LNX-NEXT:    xsaddsp 0, 0, 2
+; CHECK-LNX-NEXT:    xsmulsp 0, 3, 0
+; CHECK-LNX-NEXT:    xxlxor 3, 3, 3
+; CHECK-LNX-NEXT:    fsel 0, 1, 0, 3
 ; CHECK-LNX-NEXT:    xsrsqrtesp 1, 0
 ; CHECK-LNX-NEXT:    xsmulsp 6, 0, 1
 ; CHECK-LNX-NEXT:    xsmulsp 1, 6, 1
-; CHECK-LNX-NEXT:    xsmulsp 3, 6, 3
-; CHECK-LNX-NEXT:    xsaddsp 1, 1, 4
-; CHECK-LNX-NEXT:    xsabsdp 4, 0
-; CHECK-LNX-NEXT:    xsmulsp 1, 3, 1
-; CHECK-LNX-NEXT:    xssubsp 3, 4, 5
-; CHECK-LNX-NEXT:    fsel 1, 3, 1, 2
+; CHECK-LNX-NEXT:    xsmulsp 4, 6, 4
+; CHECK-LNX-NEXT:    xsaddsp 1, 1, 2
+; CHECK-LNX-NEXT:    xsabsdp 2, 0
+; CHECK-LNX-NEXT:    xsmulsp 1, 4, 1
+; CHECK-LNX-NEXT:    xssubsp 2, 2, 5
+; CHECK-LNX-NEXT:    fsel 1, 2, 1, 3
 ; CHECK-LNX-NEXT:    xsmulsp 1, 0, 1
 ; CHECK-LNX-NEXT:    blr
 ;
@@ -175,11 +175,11 @@ entry:
 define double @llvmintr_pow_f64_fast075(double %a) #1 {
 ; CHECK-LNX-LABEL: llvmintr_pow_f64_fast075:
 ; CHECK-LNX:       # %bb.0: # %entry
+; CHECK-LNX-NEXT:    vspltisw 2, -3
 ; CHECK-LNX-NEXT:    xstsqrtdp 0, 1
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; CHECK-LNX-NEXT:    addis 4, 2, .LCPI3_1@toc@ha
 ; CHECK-LNX-NEXT:    lfs 0, .LCPI3_0@toc@l(3)
-; CHECK-LNX-NEXT:    lfs 2, .LCPI3_1@toc@l(4)
+; CHECK-LNX-NEXT:    xvcvsxwdp 2, 34
 ; CHECK-LNX-NEXT:    bc 12, 2, .LBB3_3
 ; CHECK-LNX-NEXT:  # %bb.1: # %entry
 ; CHECK-LNX-NEXT:    xsrsqrtedp 3, 1

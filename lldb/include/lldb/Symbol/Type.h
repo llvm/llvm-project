@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/APSInt.h"
 
+#include <optional>
 #include <set>
 
 namespace lldb_private {
@@ -101,7 +102,7 @@ public:
   };
 
   Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
-       llvm::Optional<uint64_t> byte_size, SymbolContextScope *context,
+       std::optional<uint64_t> byte_size, SymbolContextScope *context,
        lldb::user_id_t encoding_uid, EncodingDataType encoding_uid_type,
        const Declaration &decl, const CompilerType &compiler_qual_type,
        ResolveState compiler_type_resolve_state, uint32_t opaque_payload = 0);
@@ -137,11 +138,14 @@ public:
 
   ConstString GetBaseName();
 
-  llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
+  std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
 
   uint32_t GetNumChildren(bool omit_empty_base_classes);
 
   bool IsAggregateType();
+
+  // Returns if the type is a templated decl. Does not look through typedefs.
+  bool IsTemplateType();
 
   bool IsValidType() { return m_encoding_uid_type != eEncodingInvalid; }
 
@@ -167,14 +171,6 @@ public:
 
   bool WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t address,
                      AddressType address_type, DataExtractor &data);
-
-  bool GetIsDeclaration() const;
-
-  void SetIsDeclaration(bool b);
-
-  bool GetIsExternal() const;
-
-  void SetIsExternal(bool b);
 
   lldb::Format GetFormat();
 

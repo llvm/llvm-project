@@ -28,10 +28,12 @@ class PPCGenRegisterBankInfo : public RegisterBankInfo {
 protected:
   enum PartialMappingIdx {
     PMI_None = -1,
-    PMI_GPR64 = 1,
-    PMI_FPR32 = 2,
-    PMI_FPR64 = 3,
-    PMI_Min = PMI_GPR64,
+    PMI_GPR32 = 1,
+    PMI_GPR64 = 2,
+    PMI_FPR32 = 3,
+    PMI_FPR64 = 4,
+    PMI_CR = 5,
+    PMI_Min = PMI_GPR32,
   };
 
   static RegisterBankInfo::PartialMapping PartMappings[];
@@ -69,6 +71,23 @@ public:
 
   InstructionMappings
   getInstrAlternativeMappings(const MachineInstr &MI) const override;
+
+private:
+  /// Maximum recursion depth for hasFPConstraints.
+  const unsigned MaxFPRSearchDepth = 2;
+
+  /// \returns true if \p MI only uses and defines FPRs.
+  bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                        const TargetRegisterInfo &TRI,
+                        unsigned Depth = 0) const;
+
+  /// \returns true if \p MI only uses FPRs.
+  bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
+
+  /// \returns true if \p MI only defines FPRs.
+  bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                     const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
 };
 } // namespace llvm
 

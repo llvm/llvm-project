@@ -96,6 +96,16 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Change to Python 3 in the shebang of `add_new_check.py` and `rename_check.py`,
+  as the existing code is not compatible with Python 2.
+
+- Fix a minor bug in `add_new_check.py` to only traverse subdirectories
+  when updating the list of checks in the documentation.
+
+- Deprecate the global configuration file option `AnalyzeTemporaryDtors`,
+  which is no longer in use. The option will be fully removed in
+  :program:`clang-tidy` version 18.
+
 New checks
 ^^^^^^^^^^
 
@@ -115,11 +125,21 @@ New checks
 
   Warns when using ``do-while`` loops.
 
+- New :doc:`cppcoreguidelines-avoid-reference-coroutine-parameters
+  <clang-tidy/checks/cppcoreguidelines/avoid-reference-coroutine-parameters>` check.
+
+  Warns on coroutines that accept reference parameters.
+
 - New :doc:`misc-use-anonymous-namespace
   <clang-tidy/checks/misc/use-anonymous-namespace>` check.
 
   Warns when using ``static`` function or variables at global scope, and suggests
   moving them into an anonymous namespace.
+
+- New :doc:`bugprone-standalone-empty <clang-tidy/checks/bugprone/standalone-empty>` check.
+
+  Warns when `empty()` is used on a range and the result is ignored. Suggests `clear()`
+  if it is an existing member function.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -150,6 +170,16 @@ Changes in existing checks
 - Fixed false positives in :doc:`google-objc-avoid-throwing-exception
   <clang-tidy/checks/google/objc-avoid-throwing-exception>` check for exceptions
   thrown by code emitted from macros in system headers.
+
+- Improved :doc:`misc-redundant-expression <clang-tidy/checks/misc/redundant-expression>`
+  check.
+
+  The check now skips concept definitions since redundant expressions still make sense
+  inside them.
+
+- Improved :doc:`modernize-loop-convert <clang-tidy/checks/modernize/loop-convert>`
+  to check for container functions ``begin``/``end`` etc on base classes of the container
+  type, instead of only as direct members of the container type itself.
 
 - Improved :doc:`modernize-use-emplace <clang-tidy/checks/modernize/use-emplace>`
   check.
@@ -190,11 +220,9 @@ Changes in existing checks
   <clang-tidy/checks/readability/const-return-type>` to not
   warn about `const` value parameters of declarations inside macros.
 
-- Improved :doc:`misc-redundant-expression <clang-tidy/checks/misc/redundant-expression>`
+- Support removing ``c_str`` calls from ``std::string_view`` constructor calls in
+  :doc:`readability-redundant-string-cstr <clang-tidy/checks/readability/redundant-string-cstr>`
   check.
-
-  The check now skips concept definitions since redundant expressions still make sense
-  inside them.
 
 Removed checks
 ^^^^^^^^^^^^^^

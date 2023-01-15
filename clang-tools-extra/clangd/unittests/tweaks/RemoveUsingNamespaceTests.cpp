@@ -264,6 +264,17 @@ TEST_F(RemoveUsingNamespaceTest, All) {
       }
       
       int main() { 1.5_w; }
+    )cpp"},
+      {
+          R"cpp(
+      namespace a { inline namespace b { void foobar(); } }
+      using namespace a::[[b]];
+      int main() { foobar(); }
+    )cpp",
+          R"cpp(
+      namespace a { inline namespace b { void foobar(); } }
+      
+      int main() { a::b::foobar(); }
     )cpp"}};
   for (auto C : Cases)
     EXPECT_EQ(C.second, apply(C.first)) << C.first;

@@ -42,7 +42,7 @@ public:
     std::shared_ptr<const tidy::ClangTidyOptions> Result;
     read(
         TFS, FreshTime,
-        [this](llvm::Optional<llvm::StringRef> Data) {
+        [this](std::optional<llvm::StringRef> Data) {
           Value.reset();
           if (Data && !Data->empty()) {
             tidy::DiagCallback Diagnostics = [](const llvm::SMDiagnostic &D) {

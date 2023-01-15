@@ -2315,7 +2315,7 @@ deque<_Tp, _Allocator>::__add_front_capacity()
     else
     {
         __split_buffer<pointer, __pointer_allocator&>
-            __buf(max<size_type>(2 * __map_.capacity(), 1),
+            __buf(std::max<size_type>(2 * __map_.capacity(), 1),
                   0, __map_.__alloc());
 
         typedef __allocator_destructor<_Allocator> _Dp;
@@ -2388,8 +2388,8 @@ deque<_Tp, _Allocator>::__add_front_capacity(size_type __n)
     {
         size_type __ds = (__nb + __back_capacity) * __block_size - __map_.empty();
         __split_buffer<pointer, __pointer_allocator&>
-            __buf(max<size_type>(2* __map_.capacity(),
-                                 __nb + __map_.size()),
+            __buf(std::max<size_type>(2* __map_.capacity(),
+                                      __nb + __map_.size()),
                   0, __map_.__alloc());
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
@@ -2457,7 +2457,7 @@ deque<_Tp, _Allocator>::__add_back_capacity()
     else
     {
         __split_buffer<pointer, __pointer_allocator&>
-            __buf(max<size_type>(2* __map_.capacity(), 1),
+            __buf(std::max<size_type>(2* __map_.capacity(), 1),
                   __map_.size(),
                   __map_.__alloc());
 
@@ -2529,8 +2529,8 @@ deque<_Tp, _Allocator>::__add_back_capacity(size_type __n)
     {
         size_type __ds = __front_capacity * __block_size;
         __split_buffer<pointer, __pointer_allocator&>
-            __buf(max<size_type>(2* __map_.capacity(),
-                                 __nb + __map_.size()),
+            __buf(std::max<size_type>(2* __map_.capacity(),
+                                      __nb + __map_.size()),
                   __map_.size() - __front_capacity,
                   __map_.__alloc());
 #ifndef _LIBCPP_NO_EXCEPTIONS

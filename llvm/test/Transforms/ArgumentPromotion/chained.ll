@@ -2,30 +2,30 @@
 ; RUN: opt < %s -passes=argpromotion -S | FileCheck %s
 
 @G1 = constant i32 0
-@G2 = constant i32* @G1
+@G2 = constant ptr @G1
 
-define internal i32 @test(i32** %x) {
+define internal i32 @test(ptr %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test
 ; CHECK-SAME: (i32 [[X_0_VAL_0_VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 [[X_0_VAL_0_VAL]]
 ;
 entry:
-  %y = load i32*, i32** %x
-  %z = load i32, i32* %y
+  %y = load ptr, ptr %x
+  %z = load i32, ptr %y
   ret i32 %z
 }
 
 define i32 @caller() {
 ; CHECK-LABEL: define {{[^@]+}}@caller() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G2_VAL:%.*]] = load i32*, i32** @G2, align 8
-; CHECK-NEXT:    [[G2_VAL_VAL:%.*]] = load i32, i32* [[G2_VAL]], align 4
+; CHECK-NEXT:    [[G2_VAL:%.*]] = load ptr, ptr @G2, align 8
+; CHECK-NEXT:    [[G2_VAL_VAL:%.*]] = load i32, ptr [[G2_VAL]], align 4
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @test(i32 [[G2_VAL_VAL]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
 entry:
-  %x = call i32 @test(i32** @G2)
+  %x = call i32 @test(ptr @G2)
   ret i32 %x
 }
 

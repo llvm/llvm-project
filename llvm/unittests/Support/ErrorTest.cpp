@@ -1070,7 +1070,7 @@ static Error createAnyError() {
 }
 
 struct MoveOnlyBox {
-  Optional<int> Box;
+  std::optional<int> Box;
 
   explicit MoveOnlyBox(int I) : Box(I) {}
   MoveOnlyBox() = default;
@@ -1117,7 +1117,7 @@ TEST(Error, moveInto) {
   // Check that this works with optionals too.
   {
     // Same cases as above.
-    Optional<MoveOnlyBox> MaybeV;
+    std::optional<MoveOnlyBox> MaybeV;
     EXPECT_THAT_ERROR(makeFailure().moveInto(MaybeV), Failed());
     EXPECT_EQ(std::nullopt, MaybeV);
 

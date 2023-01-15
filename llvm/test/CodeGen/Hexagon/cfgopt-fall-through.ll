@@ -48,16 +48,16 @@ b12:                                              ; preds = %b5
   ]
 
 b13:                                              ; preds = %b12, %b12
-  store i32 %a0, i32* undef, align 4
+  store i32 %a0, ptr undef, align 4
   br label %b17
 
 b14:                                              ; preds = %b12
-  store i16 undef, i16* undef, align 4
+  store i16 undef, ptr undef, align 4
   br label %b17
 
 b15:                                              ; preds = %b12, %b9
   %v16 = phi i32 [ 0, %b12 ], [ %v10, %b9 ]
-  store i32 undef, i32* undef, align 4
+  store i32 undef, ptr undef, align 4
   br label %b17
 
 b17:                                              ; preds = %b15, %b14, %b13, %b12, %b6

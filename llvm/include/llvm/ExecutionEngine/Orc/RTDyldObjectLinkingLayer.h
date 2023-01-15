@@ -50,7 +50,7 @@ public:
       MaterializationResponsibility &R, std::unique_ptr<MemoryBuffer>)>;
 
   using GetMemoryManagerFunction =
-      std::function<std::unique_ptr<RuntimeDyld::MemoryManager>()>;
+      unique_function<std::unique_ptr<RuntimeDyld::MemoryManager>()>;
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyEmitted functors.
@@ -140,8 +140,9 @@ private:
                  std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
                  Error Err);
 
-  Error handleRemoveResources(ResourceKey K) override;
-  void handleTransferResources(ResourceKey DstKey, ResourceKey SrcKey) override;
+  Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
+  void handleTransferResources(JITDylib &JD, ResourceKey DstKey,
+                               ResourceKey SrcKey) override;
 
   mutable std::mutex RTDyldLayerMutex;
   GetMemoryManagerFunction GetMemoryManager;

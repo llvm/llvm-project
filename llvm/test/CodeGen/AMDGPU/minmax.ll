@@ -14,7 +14,7 @@ define i32 @test_minmax_i32(i32 %a, i32 %b, i32 %c) {
   ret i32 %sminmax
 }
 
-define amdgpu_ps void @s_test_minmax_i32(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 addrspace(1)* inreg %out) {
+define amdgpu_ps void @s_test_minmax_i32(i32 inreg %a, i32 inreg %b, i32 inreg %c, ptr addrspace(1) inreg %out) {
 ; SDAG-LABEL: s_test_minmax_i32:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_max_i32 s0, s0, s1
@@ -38,7 +38,7 @@ define amdgpu_ps void @s_test_minmax_i32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; GISEL-NEXT:    s_endpgm
   %smax = call i32 @llvm.smax.i32(i32 %a, i32 %b)
   %sminmax = call i32 @llvm.smin.i32(i32 %smax, i32 %c)
-  store i32 %sminmax, i32 addrspace(1)* %out
+  store i32 %sminmax, ptr addrspace(1) %out
   ret void
 }
 
@@ -78,7 +78,7 @@ define i32 @test_maxmin_commuted_i32(i32 %a, i32 %b, i32 %c) {
   ret i32 %smaxmin
 }
 
-define void @test_smed3_i32(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) {
+define void @test_smed3_i32(ptr addrspace(1) %arg, i32 %x, i32 %y, i32 %z) {
 ; GFX11-LABEL: test_smed3_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -91,7 +91,7 @@ define void @test_smed3_i32(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) {
   %tmp1 = call i32 @llvm.smax.i32(i32 %x, i32 %y)
   %tmp2 = call i32 @llvm.smin.i32(i32 %tmp1, i32 %z)
   %tmp3 = call i32 @llvm.smax.i32(i32 %tmp0, i32 %tmp2)
-  store i32 %tmp3, i32 addrspace(1)* %arg
+  store i32 %tmp3, ptr addrspace(1) %arg
   ret void
 }
 
@@ -107,7 +107,7 @@ define i32 @test_minmax_u32(i32 %a, i32 %b, i32 %c) {
   ret i32 %uminmax
 }
 
-define amdgpu_ps void @s_test_minmax_u32(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 addrspace(1)* inreg %out) {
+define amdgpu_ps void @s_test_minmax_u32(i32 inreg %a, i32 inreg %b, i32 inreg %c, ptr addrspace(1) inreg %out) {
 ; SDAG-LABEL: s_test_minmax_u32:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_max_u32 s0, s0, s1
@@ -131,7 +131,7 @@ define amdgpu_ps void @s_test_minmax_u32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; GISEL-NEXT:    s_endpgm
   %smax = call i32 @llvm.umax.i32(i32 %a, i32 %b)
   %sminmax = call i32 @llvm.umin.i32(i32 %smax, i32 %c)
-  store i32 %sminmax, i32 addrspace(1)* %out
+  store i32 %sminmax, ptr addrspace(1) %out
   ret void
 }
 
@@ -171,7 +171,7 @@ define i32 @test_maxmin_commuted_u32(i32 %a, i32 %b, i32 %c) {
   ret i32 %umaxmin
 }
 
-define void @test_umed3_i32(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) {
+define void @test_umed3_i32(ptr addrspace(1) %arg, i32 %x, i32 %y, i32 %z) {
 ; GFX11-LABEL: test_umed3_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -184,7 +184,7 @@ define void @test_umed3_i32(i32 addrspace(1)* %arg, i32 %x, i32 %y, i32 %z) {
   %tmp1 = call i32 @llvm.umax.i32(i32 %x, i32 %y)
   %tmp2 = call i32 @llvm.umin.i32(i32 %tmp1, i32 %z)
   %tmp3 = call i32 @llvm.umax.i32(i32 %tmp0, i32 %tmp2)
-  store i32 %tmp3, i32 addrspace(1)* %arg
+  store i32 %tmp3, ptr addrspace(1) %arg
   ret void
 }
 
@@ -211,7 +211,7 @@ define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
   ret float %minmax
 }
 
-define amdgpu_ps void @s_test_minmax_f32_ieee_false(float inreg %a, float inreg %b, float inreg %c, float addrspace(1)* inreg %out) {
+define amdgpu_ps void @s_test_minmax_f32_ieee_false(float inreg %a, float inreg %b, float inreg %c, ptr addrspace(1) inreg %out) {
 ; SDAG-LABEL: s_test_minmax_f32_ieee_false:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, 0
@@ -233,7 +233,7 @@ define amdgpu_ps void @s_test_minmax_f32_ieee_false(float inreg %a, float inreg 
 ; GISEL-NEXT:    s_endpgm
   %smax = call float @llvm.maxnum.f32(float %a, float %b)
   %sminmax = call float @llvm.minnum.f32(float %smax, float %c)
-  store float %sminmax, float addrspace(1)* %out
+  store float %sminmax, ptr addrspace(1) %out
   ret void
 }
 
@@ -280,7 +280,7 @@ define amdgpu_ps float @test_maxmin_commuted_f32_ieee_false(float %a, float %b, 
   ret float %maxmin
 }
 
-define void @test_med3_f32(float addrspace(1)* %arg, float %x, float %y, float %z) #0 {
+define void @test_med3_f32(ptr addrspace(1) %arg, float %x, float %y, float %z) #0 {
 ; GFX11-LABEL: test_med3_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -293,7 +293,7 @@ define void @test_med3_f32(float addrspace(1)* %arg, float %x, float %y, float %
   %tmp1 = call float @llvm.maxnum.f32(float %x, float %y)
   %tmp2 = call float @llvm.minnum.f32(float %tmp1, float %z)
   %tmp3 = call float @llvm.maxnum.f32(float %tmp0, float %tmp2)
-  store float %tmp3, float addrspace(1)* %arg
+  store float %tmp3, ptr addrspace(1) %arg
   ret void
 }
 
@@ -307,7 +307,7 @@ define amdgpu_ps half @test_minmax_f16_ieee_false(half %a, half %b, half %c) {
   ret half %minmax
 }
 
-define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b, half inreg %c, half addrspace(1)* inreg %out) {
+define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b, half inreg %c, ptr addrspace(1) inreg %out) {
 ; SDAG-LABEL: s_test_minmax_f16_ieee_false:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, 0
@@ -329,7 +329,7 @@ define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b
 ; GISEL-NEXT:    s_endpgm
   %smax = call half @llvm.maxnum.f16(half %a, half %b)
   %sminmax = call half @llvm.minnum.f16(half %smax, half %c)
-  store half %sminmax, half addrspace(1)* %out
+  store half %sminmax, ptr addrspace(1) %out
   ret void
 }
 
@@ -393,7 +393,7 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
   ret half %maxmin
 }
 
-define void @test_med3_f16(half addrspace(1)* %arg, half %x, half %y, half %z) #0 {
+define void @test_med3_f16(ptr addrspace(1) %arg, half %x, half %y, half %z) #0 {
 ; GFX11-LABEL: test_med3_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -406,7 +406,7 @@ define void @test_med3_f16(half addrspace(1)* %arg, half %x, half %y, half %z) #
   %tmp1 = call half @llvm.maxnum.f16(half %x, half %y)
   %tmp2 = call half @llvm.minnum.f16(half %tmp1, half %z)
   %tmp3 = call half @llvm.maxnum.f16(half %tmp0, half %tmp2)
-  store half %tmp3, half addrspace(1)* %arg
+  store half %tmp3, ptr addrspace(1) %arg
   ret void
 }
 

@@ -41,6 +41,7 @@
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/ObjectFileTransformer.h"
+#include <optional>
 
 using namespace llvm;
 using namespace gsym;
@@ -186,7 +187,7 @@ static bool filterArch(MachOObjectFile &Obj) {
 ///
 /// \returns A valid image base address if we are able to extract one.
 template <class ELFT>
-static llvm::Optional<uint64_t>
+static std::optional<uint64_t>
 getImageBaseAddress(const object::ELFFile<ELFT> &ELFFile) {
   auto PhdrRangeOrErr = ELFFile.program_headers();
   if (!PhdrRangeOrErr) {
@@ -207,7 +208,7 @@ getImageBaseAddress(const object::ELFFile<ELFT> &ELFFile) {
 /// \param MachO A mach-o object file we will search.
 ///
 /// \returns A valid image base address if we are able to extract one.
-static llvm::Optional<uint64_t>
+static std::optional<uint64_t>
 getImageBaseAddress(const object::MachOObjectFile *MachO) {
   for (const auto &Command : MachO->load_commands()) {
     if (Command.C.cmd == MachO::LC_SEGMENT) {
@@ -237,7 +238,7 @@ getImageBaseAddress(const object::MachOObjectFile *MachO) {
 /// \param Obj An object file we will search.
 ///
 /// \returns A valid image base address if we are able to extract one.
-static llvm::Optional<uint64_t> getImageBaseAddress(object::ObjectFile &Obj) {
+static std::optional<uint64_t> getImageBaseAddress(object::ObjectFile &Obj) {
   if (const auto *MachO = dyn_cast<object::MachOObjectFile>(&Obj))
     return getImageBaseAddress(MachO);
   else if (const auto *ELFObj = dyn_cast<object::ELF32LEObjectFile>(&Obj))
@@ -285,7 +286,6 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   if (!DICtx)
     return createStringError(std::errc::invalid_argument,
                              "unable to create DWARF context");
-  logAllUnhandledErrors(DICtx->loadRegisterInfo(Obj), OS, "DwarfTransformer: ");
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
@@ -480,7 +480,7 @@ int main(int argc, char const *argv[]) {
 
     std::string InputLine;
     std::string CurrentGSYMPath;
-    llvm::Optional<Expected<GsymReader>> CurrentGsym;
+    std::optional<Expected<GsymReader>> CurrentGsym;
 
     while (std::getline(std::cin, InputLine)) {
       // Strip newline characters.

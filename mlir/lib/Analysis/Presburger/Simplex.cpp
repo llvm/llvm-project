@@ -12,6 +12,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace presburger;
@@ -756,7 +757,7 @@ LogicalResult LexSimplex::restoreRationalConsistency() {
 // lexicographically smaller than B.col(k) / B(i,k), since it lexicographically
 // minimizes the change in sample value.
 LogicalResult LexSimplexBase::moveRowUnknownToColumn(unsigned row) {
-  Optional<unsigned> maybeColumn;
+  std::optional<unsigned> maybeColumn;
   for (unsigned col = 3 + nSymbol, e = getNumColumns(); col < e; ++col) {
     if (tableau(row, col) <= 0)
       continue;
@@ -866,7 +867,7 @@ unsigned LexSimplexBase::getLexMinPivotColumn(unsigned row, unsigned colA,
 /// ordering where we prefer unknowns with lower index.
 Optional<SimplexBase::Pivot> Simplex::findPivot(int row,
                                                 Direction direction) const {
-  Optional<unsigned> col;
+  std::optional<unsigned> col;
   for (unsigned j = 2, e = getNumColumns(); j < e; ++j) {
     MPInt elem = tableau(row, j);
     if (elem == 0)

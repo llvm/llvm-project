@@ -77,8 +77,8 @@ LogicalResult CpAsyncOp::verify() {
 // Given the element type of an operand and whether or not it is an accumulator,
 // this function returns the PTX type (`NVVM::MMATypes`) that corresponds to the
 // operand's element type.
-Optional<mlir::NVVM::MMATypes> MmaOp::inferOperandMMAType(Type operandElType,
-                                                          bool isAccumulator) {
+std::optional<mlir::NVVM::MMATypes>
+MmaOp::inferOperandMMAType(Type operandElType, bool isAccumulator) {
   auto half2Type =
       LLVM::getFixedVectorType(Float16Type::get(operandElType.getContext()), 2);
   if (operandElType.isF64())
@@ -118,14 +118,14 @@ static bool isIntegerPtxType(MMATypes type) {
 }
 
 MMATypes MmaOp::accumPtxType() {
-  Optional<mlir::NVVM::MMATypes> val = inferOperandMMAType(
+  std::optional<mlir::NVVM::MMATypes> val = inferOperandMMAType(
       getODSOperands(2).getTypes().front(), /*isAccum=*/true);
   assert(val.has_value() && "accumulator PTX type should always be inferrable");
   return val.value();
 }
 
 MMATypes MmaOp::resultPtxType() {
-  Optional<mlir::NVVM::MMATypes> val =
+  std::optional<mlir::NVVM::MMATypes> val =
       inferOperandMMAType(getResult().getType(), /*isAccum=*/true);
   assert(val.has_value() && "result PTX type should always be inferrable");
   return val.value();
@@ -159,7 +159,7 @@ void MmaOp::print(OpAsmPrinter &p) {
         regTypes.push_back(this->getOperand(operandIdx).getType());
       }
     }
-    Optional<MMATypes> inferredType =
+    std::optional<MMATypes> inferredType =
         inferOperandMMAType(regTypes.back(), /*isAccum=*/fragIdx >= 2);
     if (inferredType)
       ignoreAttrNames.push_back(frag.ptxTypeAttr);
@@ -191,10 +191,10 @@ void MmaOp::print(OpAsmPrinter &p) {
 
 void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   ValueRange operandA, ValueRange operandB, ValueRange operandC,
-                  ArrayRef<int64_t> shape, Optional<MMAB1Op> b1Op,
-                  Optional<MMAIntOverflow> intOverflow,
-                  Optional<std::array<MMATypes, 2>> multiplicandPtxTypes,
-                  Optional<std::array<MMALayout, 2>> multiplicandLayouts) {
+                  ArrayRef<int64_t> shape, std::optional<MMAB1Op> b1Op,
+                  std::optional<MMAIntOverflow> intOverflow,
+                  std::optional<std::array<MMATypes, 2>> multiplicandPtxTypes,
+                  std::optional<std::array<MMALayout, 2>> multiplicandLayouts) {
 
   assert(shape.size() == 3 && "expected shape to have size 3 (m, n, k)");
   MLIRContext *ctx = builder.getContext();
@@ -247,7 +247,7 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
 //     `->` type($res)
 ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   struct OperandFragment {
-    Optional<MMATypes> elemtype;
+    std::optional<MMATypes> elemtype;
     SmallVector<OpAsmParser::UnresolvedOperand, 4> regs;
     SmallVector<Type> regTypes;
   };

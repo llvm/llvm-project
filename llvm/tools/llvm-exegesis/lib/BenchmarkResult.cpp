@@ -23,7 +23,6 @@
 static constexpr const char kIntegerPrefix[] = "i_0x";
 static constexpr const char kDoublePrefix[] = "f_";
 static constexpr const char kInvalidOperand[] = "INVALID";
-static constexpr llvm::StringLiteral kNoRegister("%noreg");
 
 namespace llvm {
 
@@ -34,29 +33,8 @@ namespace {
 struct YamlContext {
   YamlContext(const exegesis::LLVMState &State)
       : State(&State), ErrorStream(LastError),
-        OpcodeNameToOpcodeIdx(
-            generateOpcodeNameToOpcodeIdxMapping(State.getInstrInfo())),
-        RegNameToRegNo(generateRegNameToRegNoMapping(State.getRegInfo())) {}
-
-  static StringMap<unsigned>
-  generateOpcodeNameToOpcodeIdxMapping(const MCInstrInfo &InstrInfo) {
-    StringMap<unsigned> Map(InstrInfo.getNumOpcodes());
-    for (unsigned I = 0, E = InstrInfo.getNumOpcodes(); I < E; ++I)
-      Map[InstrInfo.getName(I)] = I;
-    assert(Map.size() == InstrInfo.getNumOpcodes() && "Size prediction failed");
-    return Map;
-  };
-
-  StringMap<unsigned>
-  generateRegNameToRegNoMapping(const MCRegisterInfo &RegInfo) {
-    StringMap<unsigned> Map(RegInfo.getNumRegs());
-    // Special-case RegNo 0, which would otherwise be spelled as ''.
-    Map[kNoRegister] = 0;
-    for (unsigned I = 1, E = RegInfo.getNumRegs(); I < E; ++I)
-      Map[RegInfo.getName(I)] = I;
-    assert(Map.size() == RegInfo.getNumRegs() && "Size prediction failed");
-    return Map;
-  };
+        OpcodeNameToOpcodeIdx(State.getOpcodeNameToOpcodeIdxMapping()),
+        RegNameToRegNo(State.getRegNameToRegNoMapping()) {}
 
   void serializeMCInst(const MCInst &MCInst, raw_ostream &OS) {
     OS << getInstrName(MCInst.getOpcode());
@@ -97,7 +75,7 @@ struct YamlContext {
     return RegName;
   }
 
-  Optional<unsigned> getRegNo(StringRef RegName) {
+  std::optional<unsigned> getRegNo(StringRef RegName) {
     auto Iter = RegNameToRegNo.find(RegName);
     if (Iter != RegNameToRegNo.end())
       return Iter->second;
@@ -174,8 +152,8 @@ private:
   const exegesis::LLVMState *State;
   std::string LastError;
   raw_string_ostream ErrorStream;
-  const StringMap<unsigned> OpcodeNameToOpcodeIdx;
-  const StringMap<unsigned> RegNameToRegNo;
+  const DenseMap<StringRef, unsigned> &OpcodeNameToOpcodeIdx;
+  const DenseMap<StringRef, unsigned> &RegNameToRegNo;
 };
 } // namespace
 
@@ -264,7 +242,7 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
     String.split(Pieces, "=0x", /* MaxSplit */ -1,
                  /* KeepEmpty */ false);
     YamlContext &Context = getTypedContext(Ctx);
-    Optional<unsigned> RegNo;
+    std::optional<unsigned> RegNo;
     if (Pieces.size() == 2 && (RegNo = Context.getRegNo(Pieces[0]))) {
       RV.Register = *RegNo;
       const unsigned BitsNeeded = APInt::getBitsNeeded(Pieces[1], kRadix);
@@ -371,7 +349,7 @@ InstructionBenchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
     yaml::yamlize(Yin, Benchmark, /*unused*/ true, Context);
   if (!Context.getLastError().empty())
     return make_error<Failure>(Context.getLastError());
-  return Benchmark;
+  return std::move(Benchmark);
 }
 
 Expected<std::vector<InstructionBenchmark>>
@@ -389,7 +367,7 @@ InstructionBenchmark::readYamls(const LLVMState &State,
       return make_error<Failure>(Context.getLastError());
     Yin.nextDocument();
   }
-  return Benchmarks;
+  return std::move(Benchmarks);
 }
 
 Error InstructionBenchmark::writeYamlTo(const LLVMState &State,
@@ -413,25 +391,6 @@ Error InstructionBenchmark::readYamlFrom(const LLVMState &State,
     yaml::yamlize(Yin, *this, /*unused*/ true, Context);
   if (!Context.getLastError().empty())
     return make_error<Failure>(Context.getLastError());
-  return Error::success();
-}
-
-Error InstructionBenchmark::writeYaml(const LLVMState &State,
-                                      const StringRef Filename) {
-  if (Filename == "-") {
-    if (auto Err = writeYamlTo(State, outs()))
-      return Err;
-  } else {
-    int ResultFD = 0;
-    if (auto E = errorCodeToError(openFileForWrite(Filename, ResultFD,
-                                                   sys::fs::CD_CreateAlways,
-                                                   sys::fs::OF_TextWithCRLF))) {
-      return E;
-    }
-    raw_fd_ostream Ostr(ResultFD, true /*shouldClose*/);
-    if (auto Err = writeYamlTo(State, Ostr))
-      return Err;
-  }
   return Error::success();
 }
 

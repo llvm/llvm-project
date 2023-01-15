@@ -14,8 +14,8 @@ define void @outline_globals1() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* @global1
-  %1 = load i32, i32* @global2
+  %0 = load i32, ptr @global1
+  %1 = load i32, ptr @global2
   %2 = add i32 %0, %1
   ret void
 }
@@ -27,15 +27,15 @@ define void @outline_globals2() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* @global1
-  %1 = load i32, i32* @global2
+  %0 = load i32, ptr @global1
+  %1 = load i32, ptr @global2
   %2 = add i32 %0, %1
   ret void
 }
 
 ; CHECK: define internal void @outlined_ir_func_0()
 ; CHECK: entry_to_outline:
-; CHECK-NEXT: [[TMP1:%.*]] = load i32, i32* @global1, align 4
-; CHECK-NEXT: [[TMP2:%.*]] = load i32, i32* @global2, align 4
+; CHECK-NEXT: [[TMP1:%.*]] = load i32, ptr @global1, align 4
+; CHECK-NEXT: [[TMP2:%.*]] = load i32, ptr @global2, align 4
 ; CHECK-NEXT: [[ADD:%.*]] = add i32 [[TMP1]], [[TMP2]]
 

@@ -6,4 +6,4 @@
 ; RUN: llvm-link %t.1.bc %t.2.bc -S | FileCheck %s
 ; CHECK: global i32 7
 
-@X = external constant i32		; <i32*> [#uses=0]
+@X = external constant i32		; <ptr> [#uses=0]

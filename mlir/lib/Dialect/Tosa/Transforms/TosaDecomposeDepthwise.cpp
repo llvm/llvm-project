@@ -31,24 +31,14 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     ShapedType inputType = input.getType().cast<ShapedType>();
     ShapedType weightType = weight.getType().cast<ShapedType>();
     ShapedType resultType = op.getOutput().getType().cast<ShapedType>();
-    Type inputEType = inputType.getElementType();
 
     if (!(inputType.hasStaticShape() && weightType.hasStaticShape() &&
           resultType.hasStaticShape())) {
       return failure();
     }
 
-    // Quantization information needs to still be performed.
-    if (op.getQuantizationInfo() || !inputEType.isa<FloatType>()) {
+    if (!llvm::all_of(op.getStride(), [](int64_t v) { return v == 1; }))
       return failure();
-    }
-
-    // Stride must be 1 for this optimization.
-    for (Attribute stride : op.getStride().getValue()) {
-      if (!stride.cast<IntegerAttr>().getValue().isOne()) {
-        return failure();
-      }
-    }
 
     // Only works for a 1x1 kernel.
     ArrayRef<int64_t> weightShape = weightType.getShape();
@@ -60,48 +50,96 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
     ArrayRef<int64_t> inputShape = inputType.getShape();
     llvm::SmallVector<int64_t, 2> revisedInputShape{
         inputShape[0], inputShape[1], inputShape[2], inputShape[3], 1};
-    auto revisedInputShapeType = RankedTensorType::get(
+    inputType = RankedTensorType::get(
         revisedInputShape,
         input.getType().dyn_cast<RankedTensorType>().getElementType());
-    auto reshapedInput = rewriter
-                             .create<tosa::ReshapeOp>(
-                                 op.getLoc(), revisedInputShapeType, input,
-                                 rewriter.getI64ArrayAttr(revisedInputShape))
-                             .getResult();
+    input = rewriter
+                .create<tosa::ReshapeOp>(
+                    op.getLoc(), inputType, input,
+                    rewriter.getDenseI64ArrayAttr(revisedInputShape))
+                .getResult();
 
-    // Reshape kernel to [KH, KW, C, M] -> [1, 1, 1, C, M].
-    llvm::SmallVector<int64_t, 2> revisedWeightShape{1, 1, 1, weightShape[2],
-                                                     weightShape[3]};
-    auto revisedWeightShapeType = RankedTensorType::get(
-        revisedWeightShape,
-        weight.getType().dyn_cast<RankedTensorType>().getElementType());
-    auto reshapedWeight = rewriter
-                              .create<tosa::ReshapeOp>(
-                                  op.getLoc(), revisedWeightShapeType, weight,
-                                  rewriter.getI64ArrayAttr(revisedWeightShape))
-                              .getResult();
+    if (inputType.getElementType() != resultType.getElementType()) {
+      inputType = inputType.clone(resultType.getElementType());
+      input = rewriter.create<tosa::CastOp>(op.getLoc(), inputType, input);
+    }
+
+    if (weightType.getElementType() != resultType.getElementType()) {
+      weightType = weightType.clone(resultType.getElementType());
+      weight = rewriter.create<tosa::CastOp>(op.getLoc(), weightType, weight);
+    }
+
+    if (auto quantizationInfo = op.getQuantizationInfo()) {
+      auto iZp = quantizationInfo->getInputZp();
+      auto wZp = quantizationInfo->getWeightZp();
+
+      auto applyZp = [&](Value val, int64_t zp) -> Value {
+        if (zp == 0)
+          return val;
+        auto ety = val.getType().cast<ShapedType>().getElementType();
+        auto zpTy = RankedTensorType::get({}, ety);
+        auto zpAttr =
+            DenseElementsAttr::get(zpTy, rewriter.getIntegerAttr(ety, zp));
+        auto zpVal = rewriter.create<tosa::ConstOp>(op.getLoc(), zpTy, zpAttr);
+        return rewriter.create<tosa::SubOp>(op.getLoc(), val.getType(), val,
+                                            zpVal);
+      };
+
+      input = applyZp(input, iZp);
+      weight = applyZp(weight, wZp);
+    }
+
+    ArrayRef<int64_t> padAttr = op.getPad();
+    llvm::SmallVector<int64_t> pad(10, 0);
+    for (const auto &it : llvm::enumerate(padAttr))
+      pad[it.index() + 2] = it.value();
+
+    if (llvm::any_of(pad, [](int64_t p) { return p != 0; })) {
+      Type inputETy = inputType.getElementType();
+      Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
+
+      llvm::SmallVector<int64_t> newShape(inputType.getShape());
+      for (int i = 0, s = pad.size(); i < s; ++i) {
+        if (newShape[i / 2] != ShapedType::kDynamic) {
+          newShape[i / 2] += pad[i];
+        }
+      }
+
+      auto padSizeTy = RankedTensorType::get({5, 2}, rewriter.getI64Type());
+      auto padSize =
+          DenseIntElementsAttr::get(padSizeTy, ArrayRef<int64_t>(pad));
+      Value padSizeVal =
+          rewriter.create<tosa::ConstOp>(op->getLoc(), padSizeTy, padSize);
+
+      auto padTy = RankedTensorType::get({}, inputETy);
+      auto padAttr = DenseElementsAttr::get(padTy, zeroAttr);
+      Value padVal =
+          rewriter.create<tosa::ConstOp>(op->getLoc(), padTy, padAttr);
+      inputType = RankedTensorType::get(newShape, inputETy);
+      input = rewriter.create<tosa::PadOp>(op->getLoc(), inputType, input,
+                                           padSizeVal, padVal);
+    }
 
     // Perform an elementwise mul over the reshaped input and weight.
-    llvm::SmallVector<int64_t, 2> mulShape{inputShape[0], inputShape[1],
-                                           inputShape[2], inputShape[3],
-                                           weightShape[3]};
+    llvm::SmallVector<int64_t, 2> mulShape{
+        inputType.getDimSize(0), inputType.getDimSize(1),
+        inputType.getDimSize(2), inputType.getDimSize(3), weightShape[3]};
     auto mulShapeType = RankedTensorType::get(
         mulShape,
         weight.getType().dyn_cast<RankedTensorType>().getElementType());
-    Value mulValue =
-        rewriter
-            .create<tosa::MulOp>(op.getLoc(), mulShapeType, reshapedInput,
-                                 reshapedWeight, /*shift=*/0)
-            .getResult();
+    Value mulValue = rewriter
+                         .create<tosa::MulOp>(op.getLoc(), mulShapeType, input,
+                                              weight, /*shift=*/0)
+                         .getResult();
 
     // Reshape output to [N, H, W, C * M].
     auto outputShape = op.getOutput().getType().cast<ShapedType>().getShape();
     auto outputShapeType = RankedTensorType::get(
         outputShape,
         input.getType().dyn_cast<RankedTensorType>().getElementType());
-    auto outputValue =
-        rewriter.create<tosa::ReshapeOp>(op.getLoc(), outputShapeType, mulValue,
-                                         rewriter.getI64ArrayAttr(outputShape));
+    auto outputValue = rewriter.create<tosa::ReshapeOp>(
+        op.getLoc(), outputShapeType, mulValue,
+        rewriter.getDenseI64ArrayAttr(outputShape));
 
     // Add in the bias.
     rewriter

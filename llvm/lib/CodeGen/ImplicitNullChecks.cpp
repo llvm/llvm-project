@@ -26,8 +26,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -98,11 +96,11 @@ class ImplicitNullChecks : public MachineFunctionPass {
 
     /// If non-None, then an instruction in \p Insts that also must be
     /// hoisted.
-    Optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence;
+    std::optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence;
 
     /*implicit*/ DependenceResult(
         bool CanReorder,
-        Optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence)
+        std::optional<ArrayRef<MachineInstr *>::iterator> PotentialDependence)
         : CanReorder(CanReorder), PotentialDependence(PotentialDependence) {
       assert((!PotentialDependence || CanReorder) &&
              "!CanReorder && PotentialDependence.hasValue() not allowed!");
@@ -255,7 +253,7 @@ ImplicitNullChecks::computeDependence(const MachineInstr *MI,
   assert(llvm::all_of(Block, canHandle) && "Check this first!");
   assert(!is_contained(Block, MI) && "Block must be exclusive of MI!");
 
-  Optional<ArrayRef<MachineInstr *>::iterator> Dep;
+  std::optional<ArrayRef<MachineInstr *>::iterator> Dep;
 
   for (auto I = Block.begin(), E = Block.end(); I != E; ++I) {
     if (canReorder(*I, MI))

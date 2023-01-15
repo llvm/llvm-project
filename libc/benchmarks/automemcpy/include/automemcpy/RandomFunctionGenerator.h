@@ -26,7 +26,7 @@ namespace automemcpy {
 struct RandomFunctionGenerator {
   RandomFunctionGenerator();
 
-  // Get the next valid FunctionDescriptor or llvm::None.
+  // Get the next valid FunctionDescriptor or std::nullopt.
   Optional<FunctionDescriptor> next();
 
 private:

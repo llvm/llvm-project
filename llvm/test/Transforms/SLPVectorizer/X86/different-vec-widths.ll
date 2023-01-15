@@ -10,68 +10,52 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @PR28457(double* noalias nocapture align 32 %q, double* noalias nocapture readonly align 32 %p) {
+define void @PR28457(ptr noalias nocapture align 32 %q, ptr noalias nocapture readonly align 32 %p) {
 ; SSE-LABEL: @PR28457(
-; SSE-NEXT:    [[P0:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 0
-; SSE-NEXT:    [[P2:%.*]] = getelementptr inbounds double, double* [[P]], i64 2
-; SSE-NEXT:    [[P4:%.*]] = getelementptr inbounds double, double* [[P]], i64 4
-; SSE-NEXT:    [[Q0:%.*]] = getelementptr inbounds double, double* [[Q:%.*]], i64 0
-; SSE-NEXT:    [[Q2:%.*]] = getelementptr inbounds double, double* [[Q]], i64 2
-; SSE-NEXT:    [[Q4:%.*]] = getelementptr inbounds double, double* [[Q]], i64 4
-; SSE-NEXT:    [[TMP1:%.*]] = bitcast double* [[P0]] to <2 x double>*
-; SSE-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
+; SSE-NEXT:    [[P2:%.*]] = getelementptr inbounds double, ptr [[P:%.*]], i64 2
+; SSE-NEXT:    [[P4:%.*]] = getelementptr inbounds double, ptr [[P]], i64 4
+; SSE-NEXT:    [[Q2:%.*]] = getelementptr inbounds double, ptr [[Q:%.*]], i64 2
+; SSE-NEXT:    [[Q4:%.*]] = getelementptr inbounds double, ptr [[Q]], i64 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[P]], align 8
 ; SSE-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00>
-; SSE-NEXT:    [[TMP4:%.*]] = bitcast double* [[Q0]] to <2 x double>*
-; SSE-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
-; SSE-NEXT:    [[TMP5:%.*]] = bitcast double* [[P2]] to <2 x double>*
-; SSE-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* [[TMP5]], align 8
+; SSE-NEXT:    store <2 x double> [[TMP3]], ptr [[Q]], align 8
+; SSE-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[P2]], align 8
 ; SSE-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], <double 1.000000e+00, double 1.000000e+00>
-; SSE-NEXT:    [[TMP8:%.*]] = bitcast double* [[Q2]] to <2 x double>*
-; SSE-NEXT:    store <2 x double> [[TMP7]], <2 x double>* [[TMP8]], align 8
-; SSE-NEXT:    [[TMP9:%.*]] = bitcast double* [[P4]] to <2 x double>*
-; SSE-NEXT:    [[TMP10:%.*]] = load <2 x double>, <2 x double>* [[TMP9]], align 8
+; SSE-NEXT:    store <2 x double> [[TMP7]], ptr [[Q2]], align 8
+; SSE-NEXT:    [[TMP10:%.*]] = load <2 x double>, ptr [[P4]], align 8
 ; SSE-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], <double 1.000000e+00, double 1.000000e+00>
-; SSE-NEXT:    [[TMP12:%.*]] = bitcast double* [[Q4]] to <2 x double>*
-; SSE-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP12]], align 8
+; SSE-NEXT:    store <2 x double> [[TMP11]], ptr [[Q4]], align 8
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @PR28457(
-; AVX-NEXT:    [[P0:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 0
-; AVX-NEXT:    [[P4:%.*]] = getelementptr inbounds double, double* [[P]], i64 4
-; AVX-NEXT:    [[Q0:%.*]] = getelementptr inbounds double, double* [[Q:%.*]], i64 0
-; AVX-NEXT:    [[Q4:%.*]] = getelementptr inbounds double, double* [[Q]], i64 4
-; AVX-NEXT:    [[TMP1:%.*]] = bitcast double* [[P0]] to <4 x double>*
-; AVX-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* [[TMP1]], align 8
+; AVX-NEXT:    [[P4:%.*]] = getelementptr inbounds double, ptr [[P:%.*]], i64 4
+; AVX-NEXT:    [[Q4:%.*]] = getelementptr inbounds double, ptr [[Q:%.*]], i64 4
+; AVX-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[P]], align 8
 ; AVX-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; AVX-NEXT:    [[TMP4:%.*]] = bitcast double* [[Q0]] to <4 x double>*
-; AVX-NEXT:    store <4 x double> [[TMP3]], <4 x double>* [[TMP4]], align 8
-; AVX-NEXT:    [[TMP5:%.*]] = bitcast double* [[P4]] to <2 x double>*
-; AVX-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* [[TMP5]], align 8
+; AVX-NEXT:    store <4 x double> [[TMP3]], ptr [[Q]], align 8
+; AVX-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[P4]], align 8
 ; AVX-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], <double 1.000000e+00, double 1.000000e+00>
-; AVX-NEXT:    [[TMP8:%.*]] = bitcast double* [[Q4]] to <2 x double>*
-; AVX-NEXT:    store <2 x double> [[TMP7]], <2 x double>* [[TMP8]], align 8
+; AVX-NEXT:    store <2 x double> [[TMP7]], ptr [[Q4]], align 8
 ; AVX-NEXT:    ret void
 ;
-  %p0 = getelementptr inbounds double, double* %p, i64 0
-  %p1 = getelementptr inbounds double, double* %p, i64 1
-  %p2 = getelementptr inbounds double, double* %p, i64 2
-  %p3 = getelementptr inbounds double, double* %p, i64 3
-  %p4 = getelementptr inbounds double, double* %p, i64 4
-  %p5 = getelementptr inbounds double, double* %p, i64 5
+  %p1 = getelementptr inbounds double, ptr %p, i64 1
+  %p2 = getelementptr inbounds double, ptr %p, i64 2
+  %p3 = getelementptr inbounds double, ptr %p, i64 3
+  %p4 = getelementptr inbounds double, ptr %p, i64 4
+  %p5 = getelementptr inbounds double, ptr %p, i64 5
 
-  %q0 = getelementptr inbounds double, double* %q, i64 0
-  %q1 = getelementptr inbounds double, double* %q, i64 1
-  %q2 = getelementptr inbounds double, double* %q, i64 2
-  %q3 = getelementptr inbounds double, double* %q, i64 3
-  %q4 = getelementptr inbounds double, double* %q, i64 4
-  %q5 = getelementptr inbounds double, double* %q, i64 5
+  %q1 = getelementptr inbounds double, ptr %q, i64 1
+  %q2 = getelementptr inbounds double, ptr %q, i64 2
+  %q3 = getelementptr inbounds double, ptr %q, i64 3
+  %q4 = getelementptr inbounds double, ptr %q, i64 4
+  %q5 = getelementptr inbounds double, ptr %q, i64 5
 
-  %d0 = load double, double* %p0
-  %d1 = load double, double* %p1
-  %d2 = load double, double* %p2
-  %d3 = load double, double* %p3
-  %d4 = load double, double* %p4
-  %d5 = load double, double* %p5
+  %d0 = load double, ptr %p
+  %d1 = load double, ptr %p1
+  %d2 = load double, ptr %p2
+  %d3 = load double, ptr %p3
+  %d4 = load double, ptr %p4
+  %d5 = load double, ptr %p5
 
   %a0 = fadd double %d0, 1.0
   %a1 = fadd double %d1, 1.0
@@ -80,11 +64,11 @@ define void @PR28457(double* noalias nocapture align 32 %q, double* noalias noca
   %a4 = fadd double %d4, 1.0
   %a5 = fadd double %d5, 1.0
 
-  store double %a0, double* %q0
-  store double %a1, double* %q1
-  store double %a2, double* %q2
-  store double %a3, double* %q3
-  store double %a4, double* %q4
-  store double %a5, double* %q5
+  store double %a0, ptr %q
+  store double %a1, ptr %q1
+  store double %a2, ptr %q2
+  store double %a3, ptr %q3
+  store double %a4, ptr %q4
+  store double %a5, ptr %q5
   ret void
 }

@@ -991,7 +991,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-const Builtin::Info ARMTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
@@ -1014,8 +1014,8 @@ const Builtin::Info ARMTargetInfo::BuiltinInfo[] = {
 };
 
 ArrayRef<Builtin::Info> ARMTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::ARM::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::ARM::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
 bool ARMTargetInfo::isCLZForZeroUndef() const { return false; }
@@ -1046,7 +1046,7 @@ const char *const ARMTargetInfo::GCCRegNames[] = {
     "q12", "q13", "q14", "q15"};
 
 ArrayRef<const char *> ARMTargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 const TargetInfo::GCCRegAlias ARMTargetInfo::GCCRegAliases[] = {
@@ -1059,7 +1059,7 @@ const TargetInfo::GCCRegAlias ARMTargetInfo::GCCRegAliases[] = {
 };
 
 ArrayRef<TargetInfo::GCCRegAlias> ARMTargetInfo::getGCCRegAliases() const {
-  return llvm::makeArrayRef(GCCRegAliases);
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool ARMTargetInfo::validateAsmConstraint(

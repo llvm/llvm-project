@@ -2,10 +2,10 @@
 ; RUN: llc -O2 < %s -mtriple=aarch64-linux-gnu                     | FileCheck %s --check-prefix=CHECKN
 ; RUN: llc -O2 < %s -mtriple=aarch64-linux-gnu -mattr=strict-align | FileCheck %s --check-prefix=CHECKS
 
-declare i32 @bcmp(i8*, i8*, i64) nounwind readonly
-declare i32 @memcmp(i8*, i8*, i64) nounwind readonly
+declare i32 @bcmp(ptr, ptr, i64) nounwind readonly
+declare i32 @memcmp(ptr, ptr, i64) nounwind readonly
 
-define i1 @test_b2(i8* %s1, i8* %s2) {
+define i1 @test_b2(ptr %s1, ptr %s2) {
 ; CHECKN-LABEL: test_b2:
 ; CHECKN:       // %bb.0: // %entry
 ; CHECKN-NEXT:    ldr x8, [x0]
@@ -29,13 +29,13 @@ define i1 @test_b2(i8* %s1, i8* %s2) {
 ; CHECKS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECKS-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(i8* %s1, i8* %s2, i64 15)
+  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, i64 15)
   %ret = icmp eq i32 %bcmp, 0
   ret i1 %ret
 }
 
 ; TODO: Four loads should be within the limit, but the heuristic isn't implemented.
-define i1 @test_b2_align8(i8* align 8 %s1, i8* align 8 %s2) {
+define i1 @test_b2_align8(ptr align 8 %s1, ptr align 8 %s2) {
 ; CHECKN-LABEL: test_b2_align8:
 ; CHECKN:       // %bb.0: // %entry
 ; CHECKN-NEXT:    ldr x8, [x0]
@@ -59,12 +59,12 @@ define i1 @test_b2_align8(i8* align 8 %s1, i8* align 8 %s2) {
 ; CHECKS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECKS-NEXT:    ret
 entry:
-  %bcmp = call i32 @bcmp(i8* %s1, i8* %s2, i64 15)
+  %bcmp = call i32 @bcmp(ptr %s1, ptr %s2, i64 15)
   %ret = icmp eq i32 %bcmp, 0
   ret i1 %ret
 }
 
-define i1 @test_bs(i8* %s1, i8* %s2) optsize {
+define i1 @test_bs(ptr %s1, ptr %s2) optsize {
 ; CHECKN-LABEL: test_bs:
 ; CHECKN:       // %bb.0: // %entry
 ; CHECKN-NEXT:    ldp x8, x9, [x0]
@@ -92,7 +92,7 @@ define i1 @test_bs(i8* %s1, i8* %s2) optsize {
 ; CHECKS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECKS-NEXT:    ret
 entry:
-  %memcmp = call i32 @memcmp(i8* %s1, i8* %s2, i64 31)
+  %memcmp = call i32 @memcmp(ptr %s1, ptr %s2, i64 31)
   %ret = icmp eq i32 %memcmp, 0
   ret i1 %ret
 }

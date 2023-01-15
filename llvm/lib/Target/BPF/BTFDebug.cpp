@@ -24,6 +24,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -594,6 +595,25 @@ void BTFDebug::processDeclAnnotations(DINodeArray Annotations,
                                                       Value->getString());
     addType(std::move(TypeEntry));
   }
+}
+
+uint32_t BTFDebug::processDISubprogram(const DISubprogram *SP,
+                                       uint32_t ProtoTypeId, uint8_t Scope) {
+  auto FuncTypeEntry =
+      std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
+  uint32_t FuncId = addType(std::move(FuncTypeEntry));
+
+  // Process argument annotations.
+  for (const DINode *DN : SP->getRetainedNodes()) {
+    if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
+      uint32_t Arg = DV->getArg();
+      if (Arg)
+        processDeclAnnotations(DV->getAnnotations(), FuncId, Arg - 1);
+    }
+  }
+  processDeclAnnotations(SP->getAnnotations(), FuncId, -1);
+
+  return FuncId;
 }
 
 /// Generate btf_type_tag chains.
@@ -1177,20 +1197,7 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
 
   // Construct subprogram func type
   uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
-  auto FuncTypeEntry =
-      std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
-  uint32_t FuncTypeId = addType(std::move(FuncTypeEntry));
-
-  // Process argument annotations.
-  for (const DINode *DN : SP->getRetainedNodes()) {
-    if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
-      uint32_t Arg = DV->getArg();
-      if (Arg)
-        processDeclAnnotations(DV->getAnnotations(), FuncTypeId, Arg - 1);
-    }
-  }
-
-  processDeclAnnotations(SP->getAnnotations(), FuncTypeId, -1);
+  uint32_t FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope);
 
   for (const auto &TypeEntry : TypeEntries)
     TypeEntry->completeType(*this);
@@ -1356,7 +1363,7 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   OS.emitLabel(LineSym);
 
   // Construct the lineinfo.
-  auto SP = DL.get()->getScope()->getSubprogram();
+  auto SP = DL->getScope()->getSubprogram();
   constructLineInfo(SP, LineSym, DL.getLine(), DL.getCol());
 
   LineInfoGenerated = true;
@@ -1369,14 +1376,19 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
   for (const GlobalVariable &Global : M->globals()) {
     // Decide the section name.
     StringRef SecName;
-    if (Global.hasSection()) {
-      SecName = Global.getSection();
-    } else if (Global.hasInitializer()) {
-      // data, bss, or readonly sections
-      if (Global.isConstant())
-        SecName = ".rodata";
-      else
-        SecName = Global.getInitializer()->isZeroValue() ? ".bss" : ".data";
+    std::optional<SectionKind> GVKind;
+
+    if (!Global.isDeclarationForLinker())
+      GVKind = TargetLoweringObjectFile::getKindForGlobal(&Global, Asm->TM);
+
+    if (Global.isDeclarationForLinker())
+      SecName = Global.hasSection() ? Global.getSection() : "";
+    else if (GVKind->isCommon())
+      SecName = ".bss";
+    else {
+      TargetLoweringObjectFile *TLOF = Asm->TM.getObjFileLowering();
+      MCSection *Sec = TLOF->SectionForGlobal(&Global, Asm->TM);
+      SecName = Sec->getName();
     }
 
     if (ProcessingMapDef != SecName.startswith(".maps"))
@@ -1387,10 +1399,8 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     // and .rodata.cst<#> sections.
     if (SecName == ".rodata" && Global.hasPrivateLinkage() &&
         DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
-      SectionKind GVKind =
-          TargetLoweringObjectFile::getKindForGlobal(&Global, Asm->TM);
       // skip .rodata.str<#> and .rodata.cst<#> sections
-      if (!GVKind.isMergeableCString() && !GVKind.isMergeableConst()) {
+      if (!GVKind->isMergeableCString() && !GVKind->isMergeableConst()) {
         DataSecEntries[std::string(SecName)] =
             std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
       }
@@ -1532,13 +1542,7 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   uint32_t ProtoTypeId;
   const std::unordered_map<uint32_t, StringRef> FuncArgNames;
   visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
-
-  uint8_t Scope = BTF::FUNC_EXTERN;
-  auto FuncTypeEntry =
-      std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
-  uint32_t FuncId = addType(std::move(FuncTypeEntry));
-
-  processDeclAnnotations(SP->getAnnotations(), FuncId, -1);
+  uint32_t FuncId = processDISubprogram(SP, ProtoTypeId, BTF::FUNC_EXTERN);
 
   if (F->hasSection()) {
     StringRef SecName = F->getSection();

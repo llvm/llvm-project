@@ -51,7 +51,7 @@ using namespace llvm;
 /// \param LockFileName The name of the lock file to read.
 ///
 /// \returns The process ID of the process that owns this lock file
-Optional<std::pair<std::string, int> >
+std::optional<std::pair<std::string, int>>
 LockFileManager::readLockFile(StringRef LockFileName) {
   // Read the owning host and PID out of the lock file. If it appears that the
   // owning process is dead, the lock file is invalid.

@@ -1,18 +1,18 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -mattr=+outline-atomics < %s | FileCheck %s --check-prefix=OUTLINE-ATOMICS
 
-define i32 @foo(i32* %var, i1 %cond) {
+define i32 @foo(ptr %var, i1 %cond) {
 ; OUTLINE-ATOMICS: bl __aarch64_ldadd4_relax
 ; CHECK-LABEL: foo:
   br i1 %cond, label %atomic_ver, label %simple_ver
 simple_ver:
-  %oldval = load i32, i32* %var
+  %oldval = load i32, ptr %var
   %newval = add nsw i32 %oldval, -1
-  store i32 %newval, i32* %var
+  store i32 %newval, ptr %var
   br label %somewhere
 atomic_ver:
   fence seq_cst
-  %val = atomicrmw add i32* %var, i32 -1 monotonic
+  %val = atomicrmw add ptr %var, i32 -1 monotonic
   fence seq_cst
   br label %somewhere
 ; CHECK: dmb

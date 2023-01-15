@@ -48,6 +48,36 @@ unreach:
   ret i32 0
 }
 
+define i32 @test_not_captured_before_load_same_bb_escape_unreachable_block2(ptr %in.ptr) {
+; CHECK-LABEL: @test_not_captured_before_load_same_bb_escape_unreachable_block2(
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       unreach:
+; CHECK-NEXT:    call void @escape_and_clobber(ptr [[A:%.*]])
+; CHECK-NEXT:    ret i32 0
+; CHECK:       bb:
+; CHECK-NEXT:    [[A]] = alloca i32, align 4
+; CHECK-NEXT:    [[IN_LV_1:%.*]] = load ptr, ptr [[IN_PTR:%.*]], align 2
+; CHECK-NEXT:    [[IN_LV_2:%.*]] = load i32, ptr [[IN_LV_1]], align 2
+; CHECK-NEXT:    store i32 99, ptr [[A]], align 4
+; CHECK-NEXT:    call void @escape_and_clobber(ptr [[A]])
+; CHECK-NEXT:    ret i32 [[IN_LV_2]]
+;
+  br label %bb
+
+unreach:
+  call void @escape_and_clobber(ptr %a)
+  ret i32 0
+
+bb:
+  %a = alloca i32, align 4
+  store i32 55, ptr %a
+  %in.lv.1 = load ptr , ptr %in.ptr, align 2
+  %in.lv.2 = load i32 , ptr %in.lv.1, align 2
+  store i32 99, ptr %a, align 4
+  call void @escape_and_clobber(ptr %a)
+  ret i32 %in.lv.2
+}
+
 define i32 @test_captured_and_clobbered_after_load_same_bb_2(ptr %in.ptr) {
 ; CHECK-LABEL: @test_captured_and_clobbered_after_load_same_bb_2(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4

@@ -263,7 +263,7 @@ define <2 x double> @fadd_fma_fmul_3(<2 x double> %x1, <2 x double> %x2, <2 x do
 
 ; negative test
 
-define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_extra_use_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul s1, s0, s1
@@ -272,7 +272,7 @@ define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, 
 ; CHECK-NEXT:    fadd s0, s4, s0
 ; CHECK-NEXT:    ret
   %m1 = fmul fast float %a, %b
-  store float %m1, float* %p
+  store float %m1, ptr %p
   %m2 = fmul fast float %c, %d
   %a1 = fadd fast float %m1, %m2
   %a2 = fadd fast float %n0, %a1
@@ -281,7 +281,7 @@ define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, 
 
 ; negative test
 
-define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_extra_use_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul s2, s2, s3
@@ -291,7 +291,7 @@ define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, 
 ; CHECK-NEXT:    ret
   %m1 = fmul fast float %a, %b
   %m2 = fmul fast float %c, %d
-  store float %m2, float* %p
+  store float %m2, ptr %p
   %a1 = fadd fast float %m1, %m2
   %a2 = fadd fast float %n0, %a1
   ret float %a2
@@ -299,7 +299,7 @@ define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, 
 
 ; negative test
 
-define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
 ; CHECK-LABEL: fadd_fma_fmul_extra_use_3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul s2, s2, s3
@@ -310,7 +310,7 @@ define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, 
   %m1 = fmul fast float %a, %b
   %m2 = fmul fast float %c, %d
   %a1 = fadd fast float %m1, %m2
-  store float %a1, float* %p
+  store float %a1, ptr %p
   %a2 = fadd fast float %n0, %a1
   ret float %a2
 }

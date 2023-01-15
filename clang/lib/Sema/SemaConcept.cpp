@@ -180,7 +180,8 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
       //    is checked. If that is satisfied, the disjunction is satisfied.
       //    Otherwise, the disjunction is satisfied if and only if the second
       //    operand is satisfied.
-      return BO.recreateBinOp(S, LHSRes);
+      // LHS is instantiated while RHS is not. Skip creating invalid BinaryOp.
+      return LHSRes;
 
     if (BO.isAnd() && !IsLHSSatisfied)
       // [temp.constr.op] p2
@@ -189,7 +190,8 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
       //    is checked. If that is not satisfied, the conjunction is not
       //    satisfied. Otherwise, the conjunction is satisfied if and only if
       //    the second operand is satisfied.
-      return BO.recreateBinOp(S, LHSRes);
+      // LHS is instantiated while RHS is not. Skip creating invalid BinaryOp.
+      return LHSRes;
 
     ExprResult RHSRes = calculateConstraintSatisfaction(
         S, BO.getRHS(), Satisfaction, std::forward<AtomicEvaluator>(Evaluator));
@@ -330,7 +332,8 @@ static ExprResult calculateConstraintSatisfaction(
           // bool if this is the operand of an '&&' or '||'. For example, we
           // might lose an lvalue-to-rvalue conversion here. If so, put it back
           // before we try to evaluate.
-          if (!SubstitutedExpression.isInvalid())
+          if (SubstitutedExpression.isUsable() &&
+              !SubstitutedExpression.isInvalid())
             SubstitutedExpression =
                 S.PerformContextuallyConvertToBool(SubstitutedExpression.get());
           if (SubstitutedExpression.isInvalid() || Trap.hasErrorOccurred()) {
@@ -898,31 +901,28 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
     return;
   }
 }
+static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
+                                                        Expr *SubstExpr,
+                                                        bool First = true);
 
 static void diagnoseUnsatisfiedRequirement(Sema &S,
                                            concepts::NestedRequirement *Req,
                                            bool First) {
-  if (Req->isSubstitutionFailure()) {
-    concepts::Requirement::SubstitutionDiagnostic *SubstDiag =
-        Req->getSubstitutionDiagnostic();
-    if (!SubstDiag->DiagMessage.empty())
-      S.Diag(SubstDiag->DiagLoc,
-             diag::note_nested_requirement_substitution_error)
-             << (int)First << SubstDiag->SubstitutedEntity
-             << SubstDiag->DiagMessage;
+  using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
+  for (auto &Pair : Req->getConstraintSatisfaction()) {
+    if (auto *SubstDiag = Pair.second.dyn_cast<SubstitutionDiagnostic *>())
+      S.Diag(SubstDiag->first, diag::note_nested_requirement_substitution_error)
+          << (int)First << Req->getInvalidConstraintEntity() << SubstDiag->second;
     else
-      S.Diag(SubstDiag->DiagLoc,
-             diag::note_nested_requirement_unknown_substitution_error)
-          << (int)First << SubstDiag->SubstitutedEntity;
-    return;
+      diagnoseWellFormedUnsatisfiedConstraintExpr(
+          S, Pair.second.dyn_cast<Expr *>(), First);
+    First = false;
   }
-  S.DiagnoseUnsatisfiedConstraint(Req->getConstraintSatisfaction(), First);
 }
-
 
 static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
                                                         Expr *SubstExpr,
-                                                        bool First = true) {
+                                                        bool First) {
   SubstExpr = SubstExpr->IgnoreParenImpCasts();
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(SubstExpr)) {
     switch (BO->getOpcode()) {
@@ -1002,6 +1002,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
     S.DiagnoseUnsatisfiedConstraint(CSE->getSatisfaction());
     return;
   } else if (auto *RE = dyn_cast<RequiresExpr>(SubstExpr)) {
+    // FIXME: RequiresExpr should store dependent diagnostics.
     for (concepts::Requirement *Req : RE->getRequirements())
       if (!Req->isDependent() && !Req->isSatisfied()) {
         if (auto *E = dyn_cast<concepts::ExprRequirement>(Req))
@@ -1353,6 +1354,7 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
     };
     const auto *FD2 = dyn_cast<FunctionDecl>(D2);
     (void)IsExpectedEntity;
+    (void)FD1;
     (void)FD2;
     assert(IsExpectedEntity(FD1) && FD2 && IsExpectedEntity(FD2) &&
            "use non-instantiated function declaration for constraints partial "

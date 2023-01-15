@@ -15,10 +15,14 @@ class DR:
     return '%s (%s): %s' % (self.issue, self.status, self.title)
 
 def parse(dr):
-  section, issue_link, status, liaison, title = [
-      col.split('>', 1)[1].split('</TD>')[0]
-      for col in dr.split('</TR>', 1)[0].split('<TD')[1:]
-  ]
+  try:
+    section, issue_link, status, liaison, title = [
+        col.split('>', 1)[1].split('</TD>')[0]
+        for col in dr.split('</TR>', 1)[0].split('<TD')[1:]
+    ]
+  except Exception as ex:
+    print(f"Parse error: {ex}\n{dr}", file=sys.stderr)
+    sys.exit(1)
   _, url, issue = issue_link.split('"', 2)
   url = url.strip()
   issue = int(issue.split('>', 1)[1].split('<', 1)[0])

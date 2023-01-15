@@ -5,12 +5,12 @@
 ;
 ; CHECK: call void @barrier
 ; CHECK-NOT: call void @barrier
-define void @check(i1 %cond, i32* %out) {
+define void @check(i1 %cond, ptr %out) {
 entry:
   br i1 %cond, label %if.then, label %if.end
 
 if.then:
-  store i32 5, i32* %out
+  store i32 5, ptr %out
   br label %if.end
 
 if.end:

@@ -122,6 +122,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1101: AK = GK_GFX1101; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1102: AK = GK_GFX1102; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103: AK = GK_GFX1103; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150: AK = GK_GFX1150; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   }
 
@@ -191,6 +192,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1101: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1101;
   case GK_GFX1102: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1102;
   case GK_GFX1103: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1103;
+  case GK_GFX1150: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
 
@@ -407,7 +409,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   if (IVersion.Major >= 7 && !ReserveFlatScr && !hasArchitectedFlatScratch(STI))
     OS << "\t\t.amdhsa_reserve_flat_scratch " << ReserveFlatScr << '\n';
 
-  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
+  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
     switch (*HsaAbiVer) {
     default:
       break;
@@ -594,7 +596,7 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsUnknownOS() {
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDHSA() {
   assert(STI.getTargetTriple().getOS() == Triple::AMDHSA);
 
-  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
+  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(&STI)) {
     switch (*HsaAbiVer) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
@@ -742,7 +744,7 @@ void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
     SymbolELF->setExternal(true);
   }
 
-  if (SymbolELF->declareCommon(Size, Alignment.value(), true)) {
+  if (SymbolELF->declareCommon(Size, Alignment, true)) {
     report_fatal_error("Symbol: " + Symbol->getName() +
                        " redeclared as different type");
   }

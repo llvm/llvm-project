@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -25,7 +26,7 @@ class ImplicitWideningOfMultiplicationResultCheck : public ClangTidyCheck {
   bool ShouldUseCXXStaticCast;
   bool ShouldUseCXXHeader;
 
-  llvm::Optional<FixItHint> includeStddefHeader(SourceLocation File);
+  std::optional<FixItHint> includeStddefHeader(SourceLocation File);
 
   void handleImplicitCastExpr(const ImplicitCastExpr *ICE);
   void handlePointerOffsetting(const Expr *E);

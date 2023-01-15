@@ -22,6 +22,6 @@ define void @foo() nounwind {
 define i32 @bar(i32 %i) {
   %vla = alloca i32, i32 %i, align 4
   tail call void asm sideeffect "mov r7, #1", "~{r11}"()
-  %1 = load volatile i32, i32* %vla, align 4
+  %1 = load volatile i32, ptr %vla, align 4
   ret i32 %1
 }

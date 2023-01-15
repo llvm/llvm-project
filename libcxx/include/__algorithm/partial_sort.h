@@ -47,7 +47,6 @@ _RandomAccessIterator __partial_sort_impl(
           _IterOps<_AlgPolicy>::iter_swap(__i, __first);
           std::__sift_down<_AlgPolicy>(__first, __comp, __len, __first);
       }
-
   }
   std::__sort_heap<_AlgPolicy>(std::move(__first), std::move(__middle), __comp);
 

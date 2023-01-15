@@ -17,7 +17,6 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -238,6 +237,14 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         DefaultDest->removePredecessor(ParentBB);
         i = SI->removeCase(i);
         e = SI->case_end();
+
+        // Removing this case may have made the condition constant. In that
+        // case, update CI and restart iteration through the cases.
+        if (auto *NewCI = dyn_cast<ConstantInt>(SI->getCondition())) {
+          CI = NewCI;
+          i = SI->case_begin();
+        }
+
         Changed = true;
         continue;
       }
@@ -456,7 +463,6 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     case Intrinsic::wasm_trunc_unsigned:
     case Intrinsic::ptrauth_auth:
     case Intrinsic::ptrauth_resign:
-    case Intrinsic::ptrauth_sign:
       return true;
     default:
       return false;
@@ -613,10 +619,8 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
 bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, I);
-  for (auto *DII : DbgUsers) {
-    Value *Undef = UndefValue::get(I->getType());
-    DII->replaceVariableLocationOp(I, Undef);
-  }
+  for (auto *DII : DbgUsers)
+    DII->setKillLocation();
   return !DbgUsers.empty();
 }
 
@@ -1492,7 +1496,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   if (std::optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits()) {
     assert(!ValueSize.isScalable() &&
            "Fragments don't work on scalable types.");
-    return ValueSize.getFixedSize() >= *FragmentSize;
+    return ValueSize.getFixedValue() >= *FragmentSize;
   }
   // We can't always calculate the size of the DI variable (e.g. if it is a
   // VLA). Try to use the size of the alloca that the dbg intrinsic describes
@@ -1838,7 +1842,7 @@ static void salvageDbgAssignAddress(DbgAssignIntrinsic *DAI) {
     DAI->setAddress(NewV);
     DAI->setAddressExpression(SalvagedExpr);
   } else {
-    DAI->setAddress(UndefValue::get(I->getType()));
+    DAI->setKillAddress();
   }
 }
 
@@ -1904,12 +1908,11 @@ void llvm::salvageDebugInfoForDbgValues(
       DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
     } else {
       // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
-      // currently only valid for stack value expressions. Do not salvage
-      // using DIArgList for dbg.assign yet. FIXME: support this.
+      // not currently supported in those instructions. Do not salvage using
+      // DIArgList for dbg.assign yet. FIXME: support this.
       // Also do not salvage if the resulting DIArgList would contain an
       // unreasonably large number of values.
-      Value *Undef = UndefValue::get(I.getOperand(0)->getType());
-      DII->replaceVariableLocationOp(I.getOperand(0), Undef);
+      DII->setKillLocation();
     }
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
     Salvaged = true;
@@ -1918,10 +1921,8 @@ void llvm::salvageDebugInfoForDbgValues(
   if (Salvaged)
     return;
 
-  for (auto *DII : DbgUsers) {
-    Value *Undef = UndefValue::get(I.getType());
-    DII->replaceVariableLocationOp(&I, Undef);
-  }
+  for (auto *DII : DbgUsers)
+    DII->setKillLocation();
 }
 
 Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
@@ -2556,13 +2557,11 @@ static bool markAliveBlocks(Function &F,
   return Changed;
 }
 
-void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
+Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   Instruction *TI = BB->getTerminator();
 
-  if (auto *II = dyn_cast<InvokeInst>(TI)) {
-    changeToCall(II, DTU);
-    return;
-  }
+  if (auto *II = dyn_cast<InvokeInst>(TI))
+    return changeToCall(II, DTU);
 
   Instruction *NewTI;
   BasicBlock *UnwindDest;
@@ -2590,6 +2589,7 @@ void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   TI->eraseFromParent();
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDest}});
+  return NewTI;
 }
 
 /// removeUnreachableBlocks - Remove blocks that are not reachable, even
@@ -3031,9 +3031,9 @@ struct BitPart {
 ///
 /// Because we pass around references into \c BPS, we must use a container that
 /// does not invalidate internal references (std::map instead of DenseMap).
-static const Optional<BitPart> &
+static const std::optional<BitPart> &
 collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
-                std::map<Value *, Optional<BitPart>> &BPS, int Depth,
+                std::map<Value *, std::optional<BitPart>> &BPS, int Depth,
                 bool &FoundRoot) {
   auto I = BPS.find(V);
   if (I != BPS.end())
@@ -3283,7 +3283,7 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 
   // Try to find all the pieces corresponding to the bswap.
   bool FoundRoot = false;
-  std::map<Value *, Optional<BitPart>> BPS;
+  std::map<Value *, std::optional<BitPart>> BPS;
   const auto &Res =
       collectBitParts(I, MatchBSwaps, MatchBitReversals, BPS, 0, FoundRoot);
   if (!Res)

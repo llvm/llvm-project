@@ -235,6 +235,12 @@ void pragma_optimize_foo() {
 #pragma optimize("", on) // expected-error {{'#pragma optimize' can only appear at file scope}}
 }
 
+#pragma managed            // no-warning
+#pragma unmanaged          // no-warning
+#pragma managed(push, on)  // no-warning
+#pragma managed(pop)       // no-warning
+#pragma managed2           // expected-warning{{unknown pragma ignored}}
+
 #pragma execution_character_set                 // expected-warning {{expected '('}}
 #pragma execution_character_set(                // expected-warning {{expected 'push' or 'pop'}}
 #pragma execution_character_set()               // expected-warning {{expected 'push' or 'pop'}}

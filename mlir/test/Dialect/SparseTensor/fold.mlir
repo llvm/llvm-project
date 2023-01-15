@@ -32,6 +32,7 @@ func.func @sparse_dce_getters(%arg0: tensor<64xf32, #SparseVector>) {
   %2 = sparse_tensor.values %arg0 : tensor<64xf32, #SparseVector> to memref<?xf32>
   return
 }
+
 // CHECK-LABEL: func @sparse_concat_dce(
 //   CHECK-NOT: sparse_tensor.concatenate
 //       CHECK: return
@@ -45,3 +46,19 @@ func.func @sparse_concat_dce(%arg0: tensor<2xf64, #SparseVector>,
   return
 }
 
+// CHECK-LABEL: func @sparse_get_specifier_dce_fold(
+//  CHECK-SAME:  %[[A0:.*]]: !sparse_tensor.storage_specifier
+//  CHECK-SAME:  %[[A1:.*]]: i64,
+//  CHECK-SAME:  %[[A2:.*]]: i64)
+//   CHECK-NOT:  sparse_tensor.storage_specifier.set
+//   CHECK-NOT:  sparse_tensor.storage_specifier.get
+//       CHECK:  return %[[A1]]
+func.func @sparse_get_specifier_dce_fold(%arg0: !sparse_tensor.storage_specifier<#SparseVector>, %arg1: i64, %arg2: i64) -> i64 {
+  %0 = sparse_tensor.storage_specifier.set %arg0 dim_sz at 0 with %arg1
+       : i64, !sparse_tensor.storage_specifier<#SparseVector>
+  %1 = sparse_tensor.storage_specifier.set %0 ptr_mem_sz at 0 with %arg2
+       : i64, !sparse_tensor.storage_specifier<#SparseVector>
+  %2 = sparse_tensor.storage_specifier.get %1 dim_sz at 0
+       : !sparse_tensor.storage_specifier<#SparseVector> to i64
+  return %2 : i64
+}

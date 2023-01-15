@@ -16,11 +16,12 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Token.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 namespace find_all_symbols {
 
-llvm::Optional<SymbolInfo>
+std::optional<SymbolInfo>
 FindAllMacros::CreateMacroSymbol(const Token &MacroNameTok,
                                  const MacroInfo *info) {
   std::string FilePath =

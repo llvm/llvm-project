@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
+#include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <string>
 #include <vector>
@@ -57,33 +58,10 @@ private:
       LGI.SymbolFlags[ES.intern(Sym->getName())] = Flags;
     }
 
-    if ((G.getTargetTriple().isOSBinFormatMachO() && hasMachOInitSection(G)) ||
-        (G.getTargetTriple().isOSBinFormatELF() && hasELFInitSection(G)))
+    if (hasInitializerSection(G))
       LGI.InitSymbol = makeInitSymbol(ES, G);
 
     return LGI;
-  }
-
-  static bool hasMachOInitSection(LinkGraph &G) {
-    for (auto &Sec : G.sections())
-      if (Sec.getName() == "__DATA,__objc_selrefs" ||
-          Sec.getName() == "__DATA,__objc_classlist" ||
-          Sec.getName() == "__TEXT,__swift5_protos" ||
-          Sec.getName() == "__TEXT,__swift5_proto" ||
-          Sec.getName() == "__TEXT,__swift5_types" ||
-          Sec.getName() == "__DATA,__mod_init_func")
-        return true;
-    return false;
-  }
-
-  static bool hasELFInitSection(LinkGraph &G) {
-    for (auto &Sec : G.sections()) {
-      auto SecName = Sec.getName();
-      if (SecName.consume_front(".init_array") &&
-          (SecName.empty() || SecName[0] == '.'))
-        return true;
-    }
-    return false;
   }
 
   static SymbolStringPtr makeInitSymbol(ExecutionSession &ES, LinkGraph &G) {
@@ -702,12 +680,12 @@ Error ObjectLinkingLayer::notifyEmitted(MaterializationResponsibility &MR,
       [&](ResourceKey K) { Allocs[K].push_back(std::move(FA)); });
 }
 
-Error ObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
+Error ObjectLinkingLayer::handleRemoveResources(JITDylib &JD, ResourceKey K) {
 
   {
     Error Err = Error::success();
     for (auto &P : Plugins)
-      Err = joinErrors(std::move(Err), P->notifyRemovingResources(K));
+      Err = joinErrors(std::move(Err), P->notifyRemovingResources(JD, K));
     if (Err)
       return Err;
   }
@@ -727,7 +705,8 @@ Error ObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
   return MemMgr.deallocate(std::move(AllocsToRemove));
 }
 
-void ObjectLinkingLayer::handleTransferResources(ResourceKey DstKey,
+void ObjectLinkingLayer::handleTransferResources(JITDylib &JD,
+                                                 ResourceKey DstKey,
                                                  ResourceKey SrcKey) {
   auto I = Allocs.find(SrcKey);
   if (I != Allocs.end()) {
@@ -743,7 +722,7 @@ void ObjectLinkingLayer::handleTransferResources(ResourceKey DstKey,
   }
 
   for (auto &P : Plugins)
-    P->notifyTransferringResources(DstKey, SrcKey);
+    P->notifyTransferringResources(JD, DstKey, SrcKey);
 }
 
 EHFrameRegistrationPlugin::EHFrameRegistrationPlugin(
@@ -795,7 +774,8 @@ Error EHFrameRegistrationPlugin::notifyFailed(
   return Error::success();
 }
 
-Error EHFrameRegistrationPlugin::notifyRemovingResources(ResourceKey K) {
+Error EHFrameRegistrationPlugin::notifyRemovingResources(JITDylib &JD,
+                                                         ResourceKey K) {
   std::vector<ExecutorAddrRange> RangesToRemove;
 
   ES.runSessionLocked([&] {
@@ -819,7 +799,7 @@ Error EHFrameRegistrationPlugin::notifyRemovingResources(ResourceKey K) {
 }
 
 void EHFrameRegistrationPlugin::notifyTransferringResources(
-    ResourceKey DstKey, ResourceKey SrcKey) {
+    JITDylib &JD, ResourceKey DstKey, ResourceKey SrcKey) {
   auto SI = EHFrameRanges.find(SrcKey);
   if (SI == EHFrameRanges.end())
     return;

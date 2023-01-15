@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple armeb-eabi -mattr=armv8.2-a,neon,fullfp16 -target-abi=aapcs-gnu -float-abi hard -o - %s | FileCheck %s
 
 ;64 bit conversions to v4f16
-define void @conv_i64_to_v4f16( i64 %val, <4 x half>* %store ) {
+define void @conv_i64_to_v4f16( i64 %val, ptr %store ) {
 ; CHECK-LABEL: conv_i64_to_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov d16, r1, r0
@@ -15,13 +15,13 @@ define void @conv_i64_to_v4f16( i64 %val, <4 x half>* %store ) {
 ; CHECK-NEXT:    bx lr
 entry:
   %v = bitcast i64 %val to <4 x half>
-  %w = load <4 x half>, <4 x half>* %store
+  %w = load <4 x half>, ptr %store
   %a = fadd <4 x half> %v, %w
-  store <4 x half> %a, <4 x half>* %store
+  store <4 x half> %a, ptr %store
   ret void
 }
 
-define void @conv_f64_to_v4f16( double %val, <4 x half>* %store ) {
+define void @conv_f64_to_v4f16( double %val, ptr %store ) {
 ; CHECK-LABEL: conv_f64_to_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, [r0]
@@ -33,13 +33,13 @@ define void @conv_f64_to_v4f16( double %val, <4 x half>* %store ) {
 ; CHECK-NEXT:    bx lr
 entry:
   %v = bitcast double %val to <4 x half>
-  %w = load <4 x half>, <4 x half>* %store
+  %w = load <4 x half>, ptr %store
   %a = fadd <4 x half> %v, %w
-  store <4 x half> %a, <4 x half>* %store
+  store <4 x half> %a, ptr %store
   ret void
 }
 
-define void @conv_v2f32_to_v4f16( <2 x float> %a, <4 x half>* %store ) {
+define void @conv_v2f32_to_v4f16( <2 x float> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v2f32_to_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, .LCPI2_0
@@ -61,13 +61,13 @@ define void @conv_v2f32_to_v4f16( <2 x float> %a, <4 x half>* %store ) {
 entry:
   %c = fadd <2 x float> %a, <float -1.0, float 1.0>
   %v = bitcast <2 x float> %c to <4 x half>
-  %w = load <4 x half>, <4 x half>* %store
+  %w = load <4 x half>, ptr %store
   %z = fadd <4 x half> %v, %w
-  store <4 x half> %z, <4 x half>* %store
+  store <4 x half> %z, ptr %store
   ret void
 }
 
-define void @conv_v2i32_to_v4f16( <2 x i32> %a, <4 x half>* %store ) {
+define void @conv_v2i32_to_v4f16( <2 x i32> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v2i32_to_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, .LCPI3_0
@@ -89,13 +89,13 @@ define void @conv_v2i32_to_v4f16( <2 x i32> %a, <4 x half>* %store ) {
 entry:
   %c = add <2 x i32> %a, <i32 1, i32 -1>
   %v = bitcast <2 x i32> %c to <4 x half>
-  %w = load <4 x half>, <4 x half>* %store
+  %w = load <4 x half>, ptr %store
   %z = fadd <4 x half> %v, %w
-  store <4 x half> %z, <4 x half>* %store
+  store <4 x half> %z, ptr %store
   ret void
 }
 
-define void @conv_v4i16_to_v4f16( <4 x i16> %a, <4 x half>* %store ) {
+define void @conv_v4i16_to_v4f16( <4 x i16> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v4i16_to_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i64 d16, #0xffff00000000ffff
@@ -111,13 +111,13 @@ define void @conv_v4i16_to_v4f16( <4 x i16> %a, <4 x half>* %store ) {
 entry:
   %c = add <4 x i16> %a, <i16 -1, i16 0, i16 0, i16 -1>
   %v = bitcast <4 x i16> %c to <4 x half>
-  %w = load <4 x half>, <4 x half>* %store
+  %w = load <4 x half>, ptr %store
   %z = fadd <4 x half> %v, %w
-  store <4 x half> %z, <4 x half>* %store
+  store <4 x half> %z, ptr %store
   ret void
 }
 
-define void @conv_v8i8_to_v4f16( <8 x i8> %a, <4 x half>* %store ) {
+define void @conv_v8i8_to_v4f16( <8 x i8> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v8i8_to_v4f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i8 d16, #0x1
@@ -133,13 +133,13 @@ define void @conv_v8i8_to_v4f16( <8 x i8> %a, <4 x half>* %store ) {
 entry:
   %c = add <8 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %v = bitcast <8 x i8> %c to <4 x half>
-  %w = load <4 x half>, <4 x half>* %store
+  %w = load <4 x half>, ptr %store
   %z = fadd <4 x half> %v, %w
-  store <4 x half> %z, <4 x half>* %store
+  store <4 x half> %z, ptr %store
   ret void
 }
 
-define void @conv_v2i64_to_v8f16( <2 x i64> %val, <8 x half>* %store ) {
+define void @conv_v2i64_to_v8f16( <2 x i64> %val, ptr %store ) {
 ; CHECK-LABEL: conv_v2i64_to_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -162,12 +162,12 @@ define void @conv_v2i64_to_v8f16( <2 x i64> %val, <8 x half>* %store ) {
 entry:
   %v = add <2 x i64> %val, <i64 1, i64 -1>
   %v1 = bitcast <2 x i64> %v to <8 x half>
-  %w = load <8 x half>, <8 x half>* %store
+  %w = load <8 x half>, ptr %store
   %a = fadd <8 x half> %v1, %w
-  store <8 x half> %a, <8 x half>* %store
+  store <8 x half> %a, ptr %store
   ret void
 }
-define void @conv_v2f64_to_v8f16( <2 x double> %val, <8 x half>* %store ) {
+define void @conv_v2f64_to_v8f16( <2 x double> %val, ptr %store ) {
 ; CHECK-LABEL: conv_v2f64_to_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f64 d16, #-1.000000e+00
@@ -184,13 +184,13 @@ define void @conv_v2f64_to_v8f16( <2 x double> %val, <8 x half>* %store ) {
 entry:
   %v = fadd <2 x double> %val, <double 1.0, double -1.0>
   %v1 = bitcast <2 x double> %v to <8 x half>
-  %w = load <8 x half>, <8 x half>* %store
+  %w = load <8 x half>, ptr %store
   %a = fadd <8 x half> %v1, %w
-  store <8 x half> %a, <8 x half>* %store
+  store <8 x half> %a, ptr %store
   ret void
 }
 
-define void @conv_v4f32_to_v8f16( <4 x float> %a, <8 x half>* %store ) {
+define void @conv_v4f32_to_v8f16( <4 x float> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v4f32_to_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI8_0
@@ -215,13 +215,13 @@ define void @conv_v4f32_to_v8f16( <4 x float> %a, <8 x half>* %store ) {
 entry:
   %c = fadd <4 x float> %a, <float -1.0, float 1.0, float -1.0, float 1.0>
   %v = bitcast <4 x float> %c to <8 x half>
-  %w = load <8 x half>, <8 x half>* %store
+  %w = load <8 x half>, ptr %store
   %z = fadd <8 x half> %v, %w
-  store <8 x half> %z, <8 x half>* %store
+  store <8 x half> %z, ptr %store
   ret void
 }
 
-define void @conv_v4i32_to_v8f16( <4 x i32> %a, <8 x half>* %store ) {
+define void @conv_v4i32_to_v8f16( <4 x i32> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v4i32_to_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI9_0
@@ -246,13 +246,13 @@ define void @conv_v4i32_to_v8f16( <4 x i32> %a, <8 x half>* %store ) {
 entry:
   %c = add <4 x i32> %a, <i32 -1, i32 1, i32 -1, i32 1>
   %v = bitcast <4 x i32> %c to <8 x half>
-  %w = load <8 x half>, <8 x half>* %store
+  %w = load <8 x half>, ptr %store
   %z = fadd <8 x half> %v, %w
-  store <8 x half> %z, <8 x half>* %store
+  store <8 x half> %z, ptr %store
   ret void
 }
 
-define void @conv_v8i16_to_v8f16( <8 x i16> %a, <8 x half>* %store ) {
+define void @conv_v8i16_to_v8f16( <8 x i16> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v8i16_to_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI10_0
@@ -280,13 +280,13 @@ define void @conv_v8i16_to_v8f16( <8 x i16> %a, <8 x half>* %store ) {
 entry:
   %c = add <8 x i16> %a, <i16 -1, i16 1, i16 0, i16 7, i16 -1, i16 1, i16 0, i16 7>
   %v = bitcast <8 x i16> %c to <8 x half>
-  %w = load <8 x half>, <8 x half>* %store
+  %w = load <8 x half>, ptr %store
   %z = fadd <8 x half> %v, %w
-  store <8 x half> %z, <8 x half>* %store
+  store <8 x half> %z, ptr %store
   ret void
 }
 
-define void @conv_v16i8_to_v8f16( <16 x i8> %a, <8 x half>* %store ) {
+define void @conv_v16i8_to_v8f16( <16 x i8> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v16i8_to_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vrev64.8 q8, q0
@@ -302,13 +302,13 @@ define void @conv_v16i8_to_v8f16( <16 x i8> %a, <8 x half>* %store ) {
 entry:
   %c = add <16 x i8> %a, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %v = bitcast <16 x i8> %c to <8 x half>
-  %w = load <8 x half>, <8 x half>* %store
+  %w = load <8 x half>, ptr %store
   %z = fadd <8 x half> %v, %w
-  store <8 x half> %z, <8 x half>* %store
+  store <8 x half> %z, ptr %store
   ret void
 }
 
-define void @conv_v4f16_to_i64( <4 x half> %a, i64* %store ) {
+define void @conv_v4f16_to_i64( <4 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v4f16_to_i64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, .LCPI12_0
@@ -333,11 +333,11 @@ entry:
   %z = fadd <4 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <4 x half> %z to i64
   %w = add i64 %y, -1
-  store i64 %w, i64* %store
+  store i64 %w, ptr %store
   ret void
 }
 
-define void @conv_v4f16_to_f64( <4 x half> %a, double* %store ) {
+define void @conv_v4f16_to_f64( <4 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v4f16_to_f64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, .LCPI13_0
@@ -360,11 +360,11 @@ entry:
   %z = fadd <4 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <4 x half> %z to double
   %w = fadd double %y, -1.0
-  store double %w, double* %store
+  store double %w, ptr %store
   ret void
 }
 
-define void @conv_v4f16_to_v2i32( <4 x half> %a, <2 x i32>* %store ) {
+define void @conv_v4f16_to_v2i32( <4 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v4f16_to_v2i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, .LCPI14_0
@@ -392,11 +392,11 @@ entry:
   %z = fadd <4 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <4 x half> %z to <2 x i32>
   %w = add <2 x i32> %y, <i32 -1, i32 1>
-  store <2 x i32> %w, <2 x i32>* %store
+  store <2 x i32> %w, ptr %store
   ret void
 }
 
-define void @conv_v4f16_to_v2f32( <4 x half> %a, <2 x float>* %store ) {
+define void @conv_v4f16_to_v2f32( <4 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v4f16_to_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, .LCPI15_0
@@ -424,11 +424,11 @@ entry:
   %z = fadd <4 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <4 x half> %z to <2 x float>
   %w = fadd <2 x float> %y, <float -1.0, float 1.0>
-  store <2 x float> %w, <2 x float>* %store
+  store <2 x float> %w, ptr %store
   ret void
 }
 
-define void @conv_v4f16_to_v4i16( <4 x half> %a, <4 x i16>* %store ) {
+define void @conv_v4f16_to_v4i16( <4 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v4f16_to_v4i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, .LCPI16_0
@@ -457,11 +457,11 @@ entry:
   %z = fadd <4 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <4 x half> %z to <4 x i16>
   %w = add <4 x i16> %y, <i16 -1, i16 1, i16 0, i16 7>
-  store <4 x i16> %w, <4 x i16>* %store
+  store <4 x i16> %w, ptr %store
   ret void
 }
 
-define void @conv_v4f16_to_v8f8( <4 x half> %a, <8 x i8>* %store ) {
+define void @conv_v4f16_to_v8f8( <4 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v4f16_to_v8f8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, .LCPI17_0
@@ -485,11 +485,11 @@ entry:
   %z = fadd <4 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <4 x half> %z to <8 x i8>
   %w = add <8 x i8> %y, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-  store <8 x i8> %w, <8 x i8>* %store
+  store <8 x i8> %w, ptr %store
   ret void
 }
 
-define void @conv_v8f16_to_i128( <8 x half> %a, i128* %store ) {
+define void @conv_v8f16_to_i128( <8 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v8f16_to_i128:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r11, lr}
@@ -524,11 +524,11 @@ entry:
   %z = fadd <8 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <8 x half> %z to i128
   %w = add i128 %y, -1
-  store i128 %w, i128* %store
+  store i128 %w, ptr %store
   ret void
 }
 
-define void @conv_v8f16_to_v2f64( <8 x half> %a, <2 x double>* %store ) {
+define void @conv_v8f16_to_v2f64( <8 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v8f16_to_v2f64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI19_0
@@ -558,11 +558,11 @@ entry:
   %z = fadd <8 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <8 x half> %z to <2 x double>
   %w = fadd <2 x double> %y, <double -1.0, double 1.0>
-  store <2 x double> %w, <2 x double>* %store
+  store <2 x double> %w, ptr %store
   ret void
 }
 
-define void @conv_v8f16_to_v4i32( <8 x half> %a, <4 x i32>* %store ) {
+define void @conv_v8f16_to_v4i32( <8 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v8f16_to_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI20_0
@@ -598,11 +598,11 @@ entry:
   %z = fadd <8 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <8 x half> %z to <4 x i32>
   %w = add <4 x i32> %y, <i32 -1, i32 1, i32 -1, i32 1>
-  store <4 x i32> %w, <4 x i32>* %store
+  store <4 x i32> %w, ptr %store
   ret void
 }
 
-define void @conv_v8f16_to_v4f32( <8 x half> %a, <4 x float>* %store ) {
+define void @conv_v8f16_to_v4f32( <8 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v8f16_to_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI21_0
@@ -638,11 +638,11 @@ entry:
   %z = fadd <8 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <8 x half> %z to <4 x float>
   %w = fadd <4 x float> %y, <float -1.0, float 1.0, float -1.0, float 1.0>
-  store <4 x float> %w, <4 x float>* %store
+  store <4 x float> %w, ptr %store
   ret void
 }
 
-define void @conv_v8f16_to_v8i16( <8 x half> %a, <8 x i16>* %store ) {
+define void @conv_v8f16_to_v8i16( <8 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v8f16_to_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI22_0
@@ -681,11 +681,11 @@ entry:
   %z = fadd <8 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <8 x half> %z to <8 x i16>
   %w = add <8 x i16> %y, <i16 -1, i16 1, i16 0, i16 7, i16 -1, i16 1, i16 0, i16 7>
-  store <8 x i16> %w, <8 x i16>* %store
+  store <8 x i16> %w, ptr %store
   ret void
 }
 
-define void @conv_v8f16_to_v8f8( <8 x half> %a, <16 x i8>* %store ) {
+define void @conv_v8f16_to_v8f8( <8 x half> %a, ptr %store ) {
 ; CHECK-LABEL: conv_v8f16_to_v8f8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI23_0
@@ -714,6 +714,6 @@ entry:
   %z = fadd <8 x half> %a, <half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0, half -1.0, half 1.0>
   %y = bitcast <8 x half> %z to <16 x i8>
   %w = add <16 x i8> %y, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-  store <16 x i8> %w, <16 x i8>* %store
+  store <16 x i8> %w, ptr %store
   ret void
 }

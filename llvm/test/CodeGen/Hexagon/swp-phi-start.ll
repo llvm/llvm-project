@@ -12,7 +12,7 @@
 ; CHECK: }{{[ \t]*}}:endloop
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0, i16* nocapture %a1) #0 {
+define void @f0(i32 %a0, ptr nocapture %a1) #0 {
 b0:
   br i1 undef, label %b1, label %b2
 
@@ -24,10 +24,10 @@ b2:                                               ; preds = %b2, %b1, %b0
   %v1 = phi i32 [ %v7, %b2 ], [ undef, %b0 ], [ %v0, %b1 ]
   %v2 = phi i32 [ %v1, %b2 ], [ %a0, %b0 ], [ undef, %b1 ]
   %v3 = add nsw i32 %v2, -2
-  %v4 = getelementptr inbounds i16, i16* %a1, i32 %v3
-  %v5 = load i16, i16* %v4, align 2, !tbaa !0
-  %v6 = getelementptr inbounds i16, i16* %a1, i32 %v1
-  store i16 %v5, i16* %v6, align 2, !tbaa !0
+  %v4 = getelementptr inbounds i16, ptr %a1, i32 %v3
+  %v5 = load i16, ptr %v4, align 2, !tbaa !0
+  %v6 = getelementptr inbounds i16, ptr %a1, i32 %v1
+  store i16 %v5, ptr %v6, align 2, !tbaa !0
   %v7 = add nsw i32 %v1, -1
   %v8 = icmp sgt i32 %v7, 0
   br i1 %v8, label %b2, label %b3

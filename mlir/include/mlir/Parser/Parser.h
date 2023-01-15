@@ -93,6 +93,14 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
 LogicalResult parseSourceFile(const llvm::SourceMgr &sourceMgr, Block *block,
                               const ParserConfig &config,
                               LocationAttr *sourceFileLoc = nullptr);
+/// An overload with a source manager that may have references taken during the
+/// parsing process, and whose lifetime can be freely extended (such that the
+/// source manager is not destroyed before the parsed IR). This is useful, for
+/// example, to avoid copying some large resources into the MLIRContext and
+/// instead referencing the data directly from the input buffers.
+LogicalResult parseSourceFile(const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                              Block *block, const ParserConfig &config,
+                              LocationAttr *sourceFileLoc = nullptr);
 
 /// This parses the file specified by the indicated filename and appends parsed
 /// operations to the given block. If the block is non-empty, the operations are
@@ -115,6 +123,15 @@ LogicalResult parseSourceFile(llvm::StringRef filename, Block *block,
 LogicalResult parseSourceFile(llvm::StringRef filename,
                               llvm::SourceMgr &sourceMgr, Block *block,
                               const ParserConfig &config,
+                              LocationAttr *sourceFileLoc = nullptr);
+/// An overload with a source manager that may have references taken during the
+/// parsing process, and whose lifetime can be freely extended (such that the
+/// source manager is not destroyed before the parsed IR). This is useful, for
+/// example, to avoid copying some large resources into the MLIRContext and
+/// instead referencing the data directly from the input buffers.
+LogicalResult parseSourceFile(llvm::StringRef filename,
+                              const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                              Block *block, const ParserConfig &config,
                               LocationAttr *sourceFileLoc = nullptr);
 
 /// This parses the IR string and appends parsed operations to the given block.
@@ -157,6 +174,17 @@ inline OwningOpRef<ContainerOpT>
 parseSourceFile(const llvm::SourceMgr &sourceMgr, const ParserConfig &config) {
   return detail::parseSourceFile<ContainerOpT>(config, sourceMgr);
 }
+/// An overload with a source manager that may have references taken during the
+/// parsing process, and whose lifetime can be freely extended (such that the
+/// source manager is not destroyed before the parsed IR). This is useful, for
+/// example, to avoid copying some large resources into the MLIRContext and
+/// instead referencing the data directly from the input buffers.
+template <typename ContainerOpT = Operation *>
+inline OwningOpRef<ContainerOpT>
+parseSourceFile(const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                const ParserConfig &config) {
+  return detail::parseSourceFile<ContainerOpT>(config, sourceMgr);
+}
 
 /// This parses the file specified by the indicated filename. If the source IR
 /// contained a single instance of `ContainerOpT`, it is returned. Otherwise, a
@@ -184,6 +212,18 @@ template <typename ContainerOpT = Operation *>
 inline OwningOpRef<ContainerOpT> parseSourceFile(llvm::StringRef filename,
                                                  llvm::SourceMgr &sourceMgr,
                                                  const ParserConfig &config) {
+  return detail::parseSourceFile<ContainerOpT>(config, filename, sourceMgr);
+}
+/// An overload with a source manager that may have references taken during the
+/// parsing process, and whose lifetime can be freely extended (such that the
+/// source manager is not destroyed before the parsed IR). This is useful, for
+/// example, to avoid copying some large resources into the MLIRContext and
+/// instead referencing the data directly from the input buffers.
+template <typename ContainerOpT = Operation *>
+inline OwningOpRef<ContainerOpT>
+parseSourceFile(llvm::StringRef filename,
+                const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                const ParserConfig &config) {
   return detail::parseSourceFile<ContainerOpT>(config, filename, sourceMgr);
 }
 

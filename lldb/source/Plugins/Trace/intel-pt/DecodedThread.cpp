@@ -10,6 +10,7 @@
 #include "TraceCursorIntelPT.h"
 #include <intel-pt.h>
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -154,7 +155,7 @@ lldb::cpu_id_t DecodedThread::GetCPUByIndex(uint64_t item_index) const {
   return it == m_cpus.begin() ? LLDB_INVALID_CPU_ID : prev(it)->second;
 }
 
-Optional<DecodedThread::TSCRange>
+std::optional<DecodedThread::TSCRange>
 DecodedThread::GetTSCRangeByIndex(uint64_t item_index) const {
   auto next_it = m_tscs.upper_bound(item_index);
   if (next_it == m_tscs.begin())
@@ -162,7 +163,7 @@ DecodedThread::GetTSCRangeByIndex(uint64_t item_index) const {
   return prev(next_it)->second;
 }
 
-Optional<DecodedThread::NanosecondsRange>
+std::optional<DecodedThread::NanosecondsRange>
 DecodedThread::GetNanosecondsRangeByIndex(uint64_t item_index) {
   auto next_it = m_nanoseconds.upper_bound(item_index);
   if (next_it == m_nanoseconds.begin())
@@ -243,7 +244,7 @@ const char *DecodedThread::GetErrorByIndex(uint64_t item_index) const {
 
 DecodedThread::DecodedThread(
     ThreadSP thread_sp,
-    const llvm::Optional<LinuxPerfZeroTscConversion> &tsc_conversion)
+    const std::optional<LinuxPerfZeroTscConversion> &tsc_conversion)
     : m_thread_sp(thread_sp), m_tsc_conversion(tsc_conversion) {}
 
 size_t DecodedThread::CalculateApproximateMemoryUsage() const {

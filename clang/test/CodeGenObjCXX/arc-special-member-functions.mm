@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fobjc-arc -fblocks -triple x86_64-apple-darwin10.0.0 -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fobjc-arc -fblocks -triple x86_64-apple-darwin10.0.0 -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
 
 struct ObjCMember {
   id member;
@@ -13,7 +13,7 @@ struct ObjCBlockMember {
 };
 
 // CHECK: %[[STRUCT_CONTAINSWEAK:.*]] = type { %[[STRUCT_WEAK:.*]] }
-// CHECK: %[[STRUCT_WEAK]] = type { i8* }
+// CHECK: %[[STRUCT_WEAK]] = type { ptr }
 
 // The Weak object that is passed is destructed in this constructor.
 
@@ -151,17 +151,14 @@ void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
 }
 
 // Implicitly-generated copy assignment operator for ObjCBlockMember
-// CHECK:    define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) {{%.*}}* @_ZN15ObjCBlockMemberaSERKS_(
-// CHECK:      [[T0:%.*]] = getelementptr inbounds [[T:%.*]], [[T:%.*]]* {{%.*}}, i32 0, i32 0
-// CHECK-NEXT: [[T1:%.*]] = load i32 (i32)*, i32 (i32)** [[T0]], align 8
-// CHECK-NEXT: [[T2:%.*]] = bitcast i32 (i32)* [[T1]] to i8*
-// CHECK-NEXT: [[T3:%.*]] = call i8* @llvm.objc.retainBlock(i8* [[T2]])
-// CHECK-NEXT: [[T4:%.*]] = bitcast i8* [[T3]] to i32 (i32)*
-// CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds [[T]], [[T]]* {{%.*}}, i32 0, i32 0
-// CHECK-NEXT: [[T6:%.*]] = load i32 (i32)*, i32 (i32)** [[T5]], align 8
-// CHECK-NEXT: store i32 (i32)* [[T4]], i32 (i32)** [[T5]]
-// CHECK-NEXT: [[T7:%.*]] = bitcast i32 (i32)* [[T6]] to i8*
-// CHECK-NEXT: call void @llvm.objc.release(i8* [[T7]])
+// CHECK:    define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN15ObjCBlockMemberaSERKS_(
+// CHECK:      [[T0:%.*]] = getelementptr inbounds [[T:%.*]], ptr {{%.*}}, i32 0, i32 0
+// CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]], align 8
+// CHECK-NEXT: [[T3:%.*]] = call ptr @llvm.objc.retainBlock(ptr [[T1]])
+// CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds [[T]], ptr {{%.*}}, i32 0, i32 0
+// CHECK-NEXT: [[T6:%.*]] = load ptr, ptr [[T5]], align 8
+// CHECK-NEXT: store ptr [[T3]], ptr [[T5]]
+// CHECK-NEXT: call void @llvm.objc.release(ptr [[T6]])
 // CHECK-NEXT: ret
 
 // Check that the Weak object passed to this constructor is not destructed after
@@ -174,7 +171,7 @@ void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
 // Implicitly-generated default constructor for ObjCMember
 // CHECK-LABEL: define linkonce_odr void @_ZN10ObjCMemberC2Ev
 // CHECK-NOT: objc_release
-// CHECK: store i8* null
+// CHECK: store ptr null
 // CHECK-NEXT: ret void
 
 // Implicitly-generated destructor for ObjCMember
@@ -185,31 +182,31 @@ void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
 // Implicitly-generated copy constructor for ObjCMember
 // CHECK-LABEL: define linkonce_odr void @_ZN10ObjCMemberC2ERKS_
 // CHECK-NOT: objc_release
-// CHECK: call i8* @llvm.objc.retain
-// CHECK-NEXT: store i8*
+// CHECK: call ptr @llvm.objc.retain
+// CHECK-NEXT: store ptr
 // CHECK-NEXT: ret void
 
 // Implicitly-generated default constructor for ObjCArrayMember
 // CHECK-LABEL: define linkonce_odr void @_ZN15ObjCArrayMemberC2Ev
-// CHECK: call void @llvm.memset.p0i8.i64
+// CHECK: call void @llvm.memset.p0.i64
 // CHECK: ret
 
 // Implicitly-generated destructor for ObjCArrayMember
 // CHECK-LABEL:    define linkonce_odr void @_ZN15ObjCArrayMemberD2Ev
-// CHECK:      [[BEGIN:%.*]] = getelementptr inbounds [2 x [3 x i8*]], [2 x [3 x i8*]]*
-// CHECK-NEXT: [[END:%.*]] = getelementptr inbounds i8*, i8** [[BEGIN]], i64 6
+// CHECK:      [[BEGIN:%.*]] = getelementptr inbounds [2 x [3 x ptr]], ptr
+// CHECK-NEXT: [[END:%.*]] = getelementptr inbounds ptr, ptr [[BEGIN]], i64 6
 // CHECK-NEXT: br label
-// CHECK:      [[PAST:%.*]] = phi i8** [ [[END]], {{%.*}} ], [ [[CUR:%.*]], {{%.*}} ]
-// CHECK-NEXT: [[CUR]] = getelementptr inbounds i8*, i8** [[PAST]], i64 -1
-// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[CUR]], i8* null)
-// CHECK-NEXT: [[T1:%.*]] = icmp eq i8** [[CUR]], [[BEGIN]]
+// CHECK:      [[PAST:%.*]] = phi ptr [ [[END]], {{%.*}} ], [ [[CUR:%.*]], {{%.*}} ]
+// CHECK-NEXT: [[CUR]] = getelementptr inbounds ptr, ptr [[PAST]], i64 -1
+// CHECK-NEXT: call void @llvm.objc.storeStrong(ptr [[CUR]], ptr null)
+// CHECK-NEXT: [[T1:%.*]] = icmp eq ptr [[CUR]], [[BEGIN]]
 // CHECK-NEXT: br i1 [[T1]],
 // CHECK:      ret void
 
 // Implicitly-generated copy constructor for ObjCArrayMember
 // CHECK-LABEL: define linkonce_odr void @_ZN15ObjCArrayMemberC2ERKS_
-// CHECK: call i8* @llvm.objc.retain
-// CHECK-NEXT: store i8*
+// CHECK: call ptr @llvm.objc.retain
+// CHECK-NEXT: store ptr
 // CHECK: br i1
 // CHECK: ret
 
@@ -220,11 +217,11 @@ void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
 
 // Implicitly-generated destructor for ObjCBlockMember
 // CHECK-LABEL: define linkonce_odr void @_ZN15ObjCBlockMemberD2Ev
-// CHECK: call void @llvm.objc.storeStrong(i8*
+// CHECK: call void @llvm.objc.storeStrong(ptr
 // CHECK: ret
 
 // Implicitly-generated copy constructor for ObjCBlockMember
 // CHECK-LABEL: define linkonce_odr void @_ZN15ObjCBlockMemberC2ERKS_
-// CHECK: call i8* @llvm.objc.retainBlock
+// CHECK: call ptr @llvm.objc.retainBlock
 // CHECK: ret
 

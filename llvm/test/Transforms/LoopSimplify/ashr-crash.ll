@@ -39,22 +39,22 @@ entry:
 for.cond:                                         ; preds = %for.inc7, %entry
   %storemerge = phi i32 [ 0, %entry ], [ %inc8, %for.inc7 ]
   %f.0 = phi i32 [ undef, %entry ], [ %f.1, %for.inc7 ]
-  store i32 %storemerge, i32* @d, align 4
+  store i32 %storemerge, ptr @d, align 4
   %cmp = icmp slt i32 %storemerge, 1
   br i1 %cmp, label %for.cond1, label %for.end9
 
 for.cond1:                                        ; preds = %for.cond, %for.body3
   %storemerge1 = phi i32 [ %inc, %for.body3 ], [ 0, %for.cond ]
   %f.1 = phi i32 [ %xor, %for.body3 ], [ %f.0, %for.cond ]
-  store i32 %storemerge1, i32* @a, align 4
+  store i32 %storemerge1, ptr @a, align 4
   %cmp2 = icmp slt i32 %storemerge1, 1
   br i1 %cmp2, label %for.body3, label %for.inc7
 
 for.body3:                                        ; preds = %for.cond1
-  %0 = load i32, i32* @c, align 4
+  %0 = load i32, ptr @c, align 4
   %cmp4 = icmp sge i32 %storemerge1, %0
   %conv = zext i1 %cmp4 to i32
-  %1 = load i32, i32* @d, align 4
+  %1 = load i32, ptr @d, align 4
   %add = add nsw i32 %conv, %1
   %sext = shl i32 %add, 16
   %conv6 = ashr exact i32 %sext, 16
@@ -63,7 +63,7 @@ for.body3:                                        ; preds = %for.cond1
   br label %for.cond1
 
 for.inc7:                                         ; preds = %for.cond1
-  %2 = load i32, i32* @d, align 4
+  %2 = load i32, ptr @d, align 4
   %inc8 = add nsw i32 %2, 1
   br label %for.cond
 
@@ -72,7 +72,7 @@ for.end9:                                         ; preds = %for.cond
   br i1 %cmp10, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.end9
-  store i32 0, i32* @b, align 4
+  store i32 0, ptr @b, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %for.end9

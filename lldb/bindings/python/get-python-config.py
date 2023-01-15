@@ -51,8 +51,10 @@ def main():
                 break
             except ValueError:
                 tried.append(exe)
-                if os.path.islink(exe):
-                    exe = os.path.join(os.path.realpath(os.path.dirname(exe)), os.readlink(exe))
+                # Retry if the executable is symlinked or similar.
+                # This is roughly equal to os.path.islink, except it also works for junctions on Windows.
+                if os.path.realpath(exe) != exe:
+                    exe = os.path.realpath(exe)
                     continue
                 else:
                     print("Could not find a relative path to sys.executable under sys.prefix", file=sys.stderr)

@@ -25,7 +25,10 @@ class OwningOpRef;
 /// should create a new MLIR Operation in the given context and return a
 /// pointer to it, or a nullptr in case of any error.
 using TranslateSourceMgrToMLIRFunction = std::function<OwningOpRef<Operation *>(
-    llvm::SourceMgr &sourceMgr, MLIRContext *)>;
+    const std::shared_ptr<llvm::SourceMgr> &sourceMgr, MLIRContext *)>;
+using TranslateRawSourceMgrToMLIRFunction =
+    std::function<OwningOpRef<Operation *>(llvm::SourceMgr &sourceMgr,
+                                           MLIRContext *)>;
 
 /// Interface of the function that translates the given string to MLIR. The
 /// implementation should create a new MLIR Operation in the given context. If
@@ -45,7 +48,12 @@ using TranslateFromMLIRFunction =
 /// all MLIR constructs needed during the process inside the given context. This
 /// can be used for round-tripping external formats through the MLIR system.
 using TranslateFunction = std::function<LogicalResult(
-    llvm::SourceMgr &sourceMgr, llvm::raw_ostream &output, MLIRContext *)>;
+    const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+    llvm::raw_ostream &output, MLIRContext *)>;
+
+/// Interface of the function that adds all dialects and dialect extensions used
+/// for the translation to the given DialectRegistry.
+using DialectRegistrationFunction = std::function<void(DialectRegistry &)>;
 
 /// This class contains all of the components necessary for performing a
 /// translation.
@@ -64,7 +72,7 @@ public:
   Optional<llvm::Align> getInputAlignment() const { return inputAlignment; }
 
   /// Invoke the translation function with the given input and output streams.
-  LogicalResult operator()(llvm::SourceMgr &sourceMgr,
+  LogicalResult operator()(const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
                            llvm::raw_ostream &output,
                            MLIRContext *context) const {
     return function(sourceMgr, output, context);
@@ -100,10 +108,20 @@ struct TranslateToMLIRRegistration {
   TranslateToMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description,
       const TranslateSourceMgrToMLIRFunction &function,
+      const DialectRegistrationFunction &dialectRegistration =
+          [](DialectRegistry &) {},
+      Optional<llvm::Align> inputAlignment = std::nullopt);
+  TranslateToMLIRRegistration(
+      llvm::StringRef name, llvm::StringRef description,
+      const TranslateRawSourceMgrToMLIRFunction &function,
+      const DialectRegistrationFunction &dialectRegistration =
+          [](DialectRegistry &) {},
       Optional<llvm::Align> inputAlignment = std::nullopt);
   TranslateToMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description,
       const TranslateStringRefToMLIRFunction &function,
+      const DialectRegistrationFunction &dialectRegistration =
+          [](DialectRegistry &) {},
       Optional<llvm::Align> inputAlignment = std::nullopt);
 };
 
@@ -111,14 +129,14 @@ struct TranslateFromMLIRRegistration {
   TranslateFromMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description,
       const TranslateFromMLIRFunction &function,
-      const std::function<void(DialectRegistry &)> &dialectRegistration =
+      const DialectRegistrationFunction &dialectRegistration =
           [](DialectRegistry &) {});
 
   template <typename FuncTy, typename OpTy = detail::first_argument<FuncTy>,
             typename = std::enable_if_t<!std::is_same_v<OpTy, Operation *>>>
   TranslateFromMLIRRegistration(
       llvm::StringRef name, llvm::StringRef description, FuncTy function,
-      const std::function<void(DialectRegistry &)> &dialectRegistration =
+      const DialectRegistrationFunction &dialectRegistration =
           [](DialectRegistry &) {})
       : TranslateFromMLIRRegistration(
             name, description,
@@ -129,7 +147,7 @@ struct TranslateFromMLIRRegistration {
                      << "expected a '" << OpTy::getOperationName()
                      << "' op, got '" << op->getName().getStringRef() << "'";
             },
-            dialectRegistration){}
+            dialectRegistration) {}
 };
 struct TranslateRegistration {
   TranslateRegistration(llvm::StringRef name, llvm::StringRef description,

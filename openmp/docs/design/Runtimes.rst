@@ -713,6 +713,10 @@ variables is defined below.
     * ``LIBOMPTARGET_STACK_SIZE=<Num>``
     * ``LIBOMPTARGET_SHARED_MEMORY_SIZE=<Num>``
     * ``LIBOMPTARGET_MAP_FORCE_ATOMIC=[TRUE/FALSE] (default TRUE)``
+    * ``LIBOMPTARGET_JIT_OPT_LEVEL={0,1,2,3} (default 3)``
+    * ``LIBOMPTARGET_JIT_REPLACEMENT_MODULE=<in:Filename> (LLVM-IR file)``
+    * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
+    * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
@@ -1049,6 +1053,52 @@ this option. To disable forced atomic map clauses use "false"/"FALSE" as the
 value of the ``LIBOMPTARGET_MAP_FORCE_ATOMIC`` environment variable.
 The default behavior of LLVM 14 is to force atomic maps clauses, prior versions
 of LLVM did not.
+
+
+LIBOMPTARGET_JIT_OPT_LEVEL
+""""""""""""""""""""""""""
+
+This environment variable can be used to change the optimization pipeleine used
+to optimize the embedded device code as part of the device JIT. The value is
+corresponds to the ``-O{0,1,2,3}`` command line argument passed to ``clang``.
+
+
+LIBOMPTARGET_JIT_REPLACEMENT_MODULE
+"""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to replace the embedded device code
+before the device JIT finishes compilation for the target. The value is
+expected to be a filename to an LLVM-IR file, thus containing an LLVM-IR module
+for the respective target. To obtain a device code image compatible with the
+embedded one it is recommended to extract the embedded one either before or
+after IR optimization. This can be done at compile time, after compile time via
+llvm tools (llvm-objdump), or, simply, by setting the
+:ref:`LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE` or
+:ref:`LIBOMPTARGET_JIT_POST_OPT_IR_MODULE` environment variables.
+
+
+LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE
+""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to extract the embedded device code
+before the device JIT runs additional IR optimizations on it (see
+:ref:`LIBOMPTARGET_JIT_OPT_LEVEL`). The value is expected to be a filename into
+which the LLVM-IR module is written. The module can be the analyzed, and
+transformed and loaded back into the JIT pipeline via
+:ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
+
+
+LIBOMPTARGET_JIT_POST_OPT_IR_MODULE
+""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to extract the embedded device code after
+the device JIT runs additional IR optimizations on it (see
+:ref:`LIBOMPTARGET_JIT_OPT_LEVEL`). The value is expected to be a filename into
+which the LLVM-IR module is written. The module can be the analyzed, and
+transformed and loaded back into the JIT pipeline via
+:ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
+
+
 
 .. _libomptarget_plugin:
 

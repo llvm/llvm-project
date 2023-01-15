@@ -4,7 +4,7 @@
 ; Make sure we fix up the Phis when we connect the last
 ; epilog block to the CFG.
 
-define void @f0(i16* nocapture %a0) #0 {
+define void @f0(ptr nocapture %a0) #0 {
 b0:
   br i1 undef, label %b1, label %b2
 
@@ -21,7 +21,7 @@ b4:                                               ; preds = %b3
   br i1 undef, label %b6, label %b5
 
 b5:                                               ; preds = %b4
-  store i16 4096, i16* %a0, align 2
+  store i16 4096, ptr %a0, align 2
   br label %b11
 
 b6:                                               ; preds = %b4
@@ -39,13 +39,13 @@ b9:                                               ; preds = %b8
 
 b10:                                              ; preds = %b10, %b9
   %v1 = phi i32 [ %v8, %b10 ], [ 1, %b9 ]
-  %v2 = getelementptr inbounds [11 x i32], [11 x i32]* undef, i32 0, i32 %v1
-  %v3 = load i32, i32* undef, align 4
+  %v2 = getelementptr inbounds [11 x i32], ptr undef, i32 0, i32 %v1
+  %v3 = load i32, ptr undef, align 4
   %v4 = add nsw i32 %v3, 0
   %v5 = add nsw i32 %v4, 2048
   %v6 = lshr i32 %v5, 12
   %v7 = trunc i32 %v6 to i16
-  store i16 %v7, i16* undef, align 2
+  store i16 %v7, ptr undef, align 2
   %v8 = add nsw i32 %v1, 1
   %v9 = icmp eq i32 %v8, undef
   br i1 %v9, label %b11, label %b10

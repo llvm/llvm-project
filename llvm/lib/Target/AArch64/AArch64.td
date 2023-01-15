@@ -64,6 +64,10 @@ def FeatureCRC : SubtargetFeature<"crc", "HasCRC", "true",
 def FeatureRAS : SubtargetFeature<"ras", "HasRAS", "true",
   "Enable ARMv8 Reliability, Availability and Serviceability Extensions (FEAT_RAS, FEAT_RASv1p1)">;
 
+def FeatureRASv2 : SubtargetFeature<"rasv2", "HasRASv2", "true",
+  "Enable ARMv8.9-A Reliability, Availability and Serviceability Extensions (FEAT_RASv2)",
+  [FeatureRAS]>;
+
 def FeatureLSE : SubtargetFeature<"lse", "HasLSE", "true",
   "Enable ARMv8.1 Large System Extension (LSE) atomic instructions (FEAT_LSE)">;
 
@@ -72,6 +76,9 @@ def FeatureLSE2 : SubtargetFeature<"lse2", "HasLSE2", "true",
 
 def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics", "true",
   "Enable out of line atomics to support LSE instructions">;
+
+def FeatureFMV : SubtargetFeature<"fmv", "HasFMV", "true",
+  "Enable Function Multi Versioning support.">;
 
 def FeatureRDM : SubtargetFeature<"rdm", "HasRDM", "true",
   "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions (FEAT_RDM)">;
@@ -454,6 +461,9 @@ def FeatureHBC : SubtargetFeature<"hbc", "HasHBC",
 def FeatureMOPS : SubtargetFeature<"mops", "HasMOPS",
     "true", "Enable Armv8.8-A memcpy and memset acceleration instructions (FEAT_MOPS)">;
 
+def FeatureNMI : SubtargetFeature<"nmi", "HasNMI",
+    "true", "Enable Armv8.8-A Non-maskable Interrupts (FEAT_NMI, FEAT_GICv3_NMI)">;
+
 def FeatureBRBE : SubtargetFeature<"brbe", "HasBRBE",
     "true", "Enable Branch Record Buffer Extension (FEAT_BRBE)">;
 
@@ -507,6 +517,16 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "NoBTIAtReturnTwice", "true",
                                                  "Don't place a BTI instruction "
                                                  "after a return-twice">;
+
+def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB",
+    "true", "Enable Clear BHB instruction (FEAT_CLRBHB)">;
+
+def FeaturePRFM_SLC : SubtargetFeature<"prfm-slc-target", "HasPRFM_SLC",
+    "true", "Enable SLC target for PRFM instruction">;
+
+def FeatureSPECRES2 : SubtargetFeature<"specres2", "HasSPECRES2",
+    "true", "Enable Speculation Restriction Instruction (FEAT_SPECRES2)",
+    [FeaturePredRes]>;
 
 def FeatureMEC : SubtargetFeature<"mec", "HasMEC",
     "true", "Enable Memory Encryption Contexts Extension", [FeatureRME]>;
@@ -574,11 +594,12 @@ def HasV8_7aOps : SubtargetFeature<
 
 def HasV8_8aOps : SubtargetFeature<
   "v8.8a", "HasV8_8aOps", "true", "Support ARM v8.8a instructions",
-  [HasV8_7aOps, FeatureHBC, FeatureMOPS]>;
+  [HasV8_7aOps, FeatureHBC, FeatureMOPS, FeatureNMI]>;
 
 def HasV8_9aOps : SubtargetFeature<
   "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
-  [HasV8_8aOps, FeatureCSSC]>;
+  [HasV8_8aOps, FeatureCLRBHB, FeaturePRFM_SLC, FeatureSPECRES2,
+   FeatureCSSC, FeatureRASv2]>;
 
 def HasV9_0aOps : SubtargetFeature<
   "v9a", "HasV9_0aOps", "true", "Support ARM v9a instructions",

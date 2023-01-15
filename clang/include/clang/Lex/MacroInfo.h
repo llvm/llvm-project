@@ -247,7 +247,7 @@ public:
   }
   bool tokens_empty() const { return NumReplacementTokens == 0; }
   ArrayRef<Token> tokens() const {
-    return llvm::makeArrayRef(ReplacementTokens, NumReplacementTokens);
+    return llvm::ArrayRef(ReplacementTokens, NumReplacementTokens);
   }
 
   llvm::MutableArrayRef<Token>
@@ -572,7 +572,7 @@ public:
   }
 
   ArrayRef<ModuleMacro *> overrides() const {
-    return llvm::makeArrayRef(overrides_begin(), overrides_end());
+    return llvm::ArrayRef(overrides_begin(), overrides_end());
   }
   /// \}
 

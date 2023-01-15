@@ -107,10 +107,8 @@ public:
 static raw_ostream &operator<<(raw_ostream &OS, const PrintState &PS) {
 
   static const std::pair<char, const char *> Mapping[] = {
-      std::make_pair(StateWQM, "WQM"),
-      std::make_pair(StateStrictWWM, "StrictWWM"),
-      std::make_pair(StateStrictWQM, "StrictWQM"),
-      std::make_pair(StateExact, "Exact")};
+      std::pair(StateWQM, "WQM"), std::pair(StateStrictWWM, "StrictWWM"),
+      std::pair(StateStrictWQM, "StrictWQM"), std::pair(StateExact, "Exact")};
   char State = PS.State;
   for (auto M : Mapping) {
     if (State & M.first) {
@@ -609,7 +607,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
             Register Reg = MO.getReg();
 
             if (!Reg.isVirtual() &&
-                TRI->hasVectorRegisters(TRI->getPhysRegClass(Reg))) {
+                TRI->hasVectorRegisters(TRI->getPhysRegBaseClass(Reg))) {
               Flags = StateWQM;
               break;
             }

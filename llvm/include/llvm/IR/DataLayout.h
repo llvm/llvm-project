@@ -28,6 +28,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -473,7 +474,7 @@ public:
   /// For example, returns 5 for i36 and 10 for x86_fp80.
   TypeSize getTypeStoreSize(Type *Ty) const {
     TypeSize BaseSize = getTypeSizeInBits(Ty);
-    return {divideCeil(BaseSize.getKnownMinSize(), 8), BaseSize.isScalable()};
+    return {divideCeil(BaseSize.getKnownMinValue(), 8), BaseSize.isScalable()};
   }
 
   /// Returns the maximum number of bits that may be overwritten by
@@ -505,7 +506,7 @@ public:
   /// returns 12 or 16 for x86_fp80, depending on alignment.
   TypeSize getTypeAllocSize(Type *Ty) const {
     // Round up to the next alignment boundary.
-    return alignTo(getTypeStoreSize(Ty), getABITypeAlignment(Ty));
+    return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
   }
 
   /// Returns the offset in bits between successive objects of the
@@ -522,6 +523,7 @@ public:
 
   /// Returns the minimum ABI-required alignment for the specified type.
   /// FIXME: Deprecate this function once migration to Align is over.
+  LLVM_DEPRECATED("use getABITypeAlign instead", "getABITypeAlign")
   uint64_t getABITypeAlignment(Type *Ty) const;
 
   /// Returns the minimum ABI-required alignment for the specified type.
@@ -646,7 +648,7 @@ public:
   }
 
   ArrayRef<uint64_t> getMemberOffsets() const {
-    return llvm::makeArrayRef(getTrailingObjects<uint64_t>(), NumElements);
+    return llvm::ArrayRef(getTrailingObjects<uint64_t>(), NumElements);
   }
 
   uint64_t getElementOffset(unsigned Idx) const {
@@ -710,8 +712,12 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
     VectorType *VTy = cast<VectorType>(Ty);
     auto EltCnt = VTy->getElementCount();
     uint64_t MinBits = EltCnt.getKnownMinValue() *
-                       getTypeSizeInBits(VTy->getElementType()).getFixedSize();
+                       getTypeSizeInBits(VTy->getElementType()).getFixedValue();
     return TypeSize(MinBits, EltCnt.isScalable());
+  }
+  case Type::TargetExtTyID: {
+    Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();
+    return getTypeSizeInBits(LayoutTy);
   }
   default:
     llvm_unreachable("DataLayout::getTypeSizeInBits(): Unsupported type");

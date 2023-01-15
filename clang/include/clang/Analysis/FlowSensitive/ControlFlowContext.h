@@ -35,10 +35,6 @@ public:
   static llvm::Expected<ControlFlowContext> build(const Decl *D, Stmt &S,
                                                   ASTContext &C);
 
-  // DEPRECATED. Use overload above.
-  static llvm::Expected<ControlFlowContext> build(const Decl *D, Stmt *S,
-                                                  ASTContext *C);
-
   /// Returns the `Decl` containing the statement used to construct the CFG, if
   /// available.
   const Decl *getDecl() const { return ContainingDecl; }

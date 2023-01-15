@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include <optional>
 
 namespace llvm {
 
@@ -77,6 +78,13 @@ public:
 
     /// Is ODR marking done?
     bool ODRMarkingDone : 1;
+
+    /// Is this a reference to a DIE that hasn't been cloned yet?
+    bool UnclonedReference : 1;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    LLVM_DUMP_METHOD void dump();
+#endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   };
 
   CompileUnit(DWARFUnit &OrigUnit, unsigned ID, bool CanUseODR,
@@ -135,7 +143,7 @@ public:
   uint64_t getHighPc() const { return HighPc; }
   bool hasLabelAt(uint64_t Addr) const { return Labels.count(Addr); }
 
-  Optional<PatchLocation> getUnitRangesAttribute() const {
+  std::optional<PatchLocation> getUnitRangesAttribute() const {
     return UnitRangeAttribute;
   }
 
@@ -243,7 +251,7 @@ private:
   DWARFUnit &OrigUnit;
   unsigned ID;
   std::vector<DIEInfo> Info; ///< DIE info indexed by DIE index.
-  Optional<BasicDIEUnit> NewUnit;
+  std::optional<BasicDIEUnit> NewUnit;
   MCSymbol *LabelBegin = nullptr;
 
   uint64_t StartOffset;
@@ -274,7 +282,7 @@ private:
   /// all the unit's function addresses.
   /// @{
   std::vector<PatchLocation> RangeAttributes;
-  Optional<PatchLocation> UnitRangeAttribute;
+  std::optional<PatchLocation> UnitRangeAttribute;
   /// @}
 
   /// Location attributes that need to be transferred from the

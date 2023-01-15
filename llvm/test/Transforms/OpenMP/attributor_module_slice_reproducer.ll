@@ -13,10 +13,10 @@ define linkonce_odr hidden i8 @_ZStplIdESt7complexIT_ERKS2_S4_() local_unnamed_a
   ret i8 undef
 }
 
-declare void @__omp_offloading_2b_4010cad__ZN11qmcplusplus7ompBLAS17gemv_batched_implIfEEiRiciiPKT_PKS5_iS7_iS5_PKPS3_ii_l148(i64, i64, i64, float**, float**, i64, float**, float*, float*, i64) local_unnamed_addr
+declare void @__omp_offloading_2b_4010cad__ZN11qmcplusplus7ompBLAS17gemv_batched_implIfEEiRiciiPKT_PKS5_iS7_iS5_PKPS3_ii_l148(i64, i64, i64, ptr, ptr, i64, ptr, ptr, ptr, i64) local_unnamed_addr
 
 declare dso_local fastcc void @__kmpc_for_static_init_8u() unnamed_addr
 
 !nvvm.annotations = !{!0}
 
-!0 = !{void (i64, i64, i64, float**, float**, i64, float**, float*, float*, i64)* @__omp_offloading_2b_4010cad__ZN11qmcplusplus7ompBLAS17gemv_batched_implIfEEiRiciiPKT_PKS5_iS7_iS5_PKPS3_ii_l148, !"kernel", i32 1}
+!0 = !{ptr @__omp_offloading_2b_4010cad__ZN11qmcplusplus7ompBLAS17gemv_batched_implIfEEiRiciiPKT_PKS5_iS7_iS5_PKPS3_ii_l148, !"kernel", i32 1}

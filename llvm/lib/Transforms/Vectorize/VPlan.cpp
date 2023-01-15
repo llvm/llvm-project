@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlan.h"
+#include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -196,9 +197,7 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
 }
 
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
-  SmallVector<VPBlockBase *, 8> Blocks(depth_first(Entry));
-
-  for (VPBlockBase *Block : Blocks)
+  for (VPBlockBase *Block : to_vector(depth_first(Entry)))
     delete Block;
 }
 
@@ -265,7 +264,7 @@ void VPTransformState::setDebugLocFromInst(const Value *V) {
   const DILocation *DIL = Inst->getDebugLoc();
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.
-  if (DIL && Inst->getFunction()->isDebugInfoForProfiling() &&
+  if (DIL && Inst->getFunction()->shouldEmitDebugInfoForProfiling() &&
       !isa<DbgInfoIntrinsic>(Inst) && !EnableFSDiscriminator) {
     // FIXME: For scalable vectors, assume vscale=1.
     auto NewDIL =
@@ -576,6 +575,26 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+VPlan::~VPlan() {
+  clearLiveOuts();
+
+  if (Entry) {
+    VPValue DummyValue;
+    for (VPBlockBase *Block : depth_first(Entry))
+      Block->dropAllReferences(&DummyValue);
+
+    VPBlockBase::deleteCFG(Entry);
+  }
+  for (VPValue *VPV : VPValuesToFree)
+    delete VPV;
+  if (TripCount)
+    delete TripCount;
+  if (BackedgeTakenCount)
+    delete BackedgeTakenCount;
+  for (auto &P : VPExternalDefs)
+    delete P.second;
+}
+
 VPActiveLaneMaskPHIRecipe *VPlan::getActiveLaneMaskPhi() {
   VPBasicBlock *Header = getVectorLoopRegion()->getEntryBasicBlock();
   for (VPRecipeBase &R : Header->phis()) {
@@ -585,44 +604,10 @@ VPActiveLaneMaskPHIRecipe *VPlan::getActiveLaneMaskPhi() {
   return nullptr;
 }
 
-static bool canSimplifyBranchOnCond(VPInstruction *Term) {
-  VPInstruction *Not = dyn_cast<VPInstruction>(Term->getOperand(0));
-  if (!Not || Not->getOpcode() != VPInstruction::Not)
-    return false;
-
-  VPInstruction *ALM = dyn_cast<VPInstruction>(Not->getOperand(0));
-  return ALM && ALM->getOpcode() == VPInstruction::ActiveLaneMask;
-}
-
 void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                              Value *CanonicalIVStartValue,
                              VPTransformState &State,
                              bool IsEpilogueVectorization) {
-
-  VPBasicBlock *ExitingVPBB = getVectorLoopRegion()->getExitingBasicBlock();
-  auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
-  // Try to simplify the branch condition if TC <= VF * UF when preparing to
-  // execute the plan for the main vector loop. We only do this if the
-  // terminator is:
-  //  1. BranchOnCount, or
-  //  2. BranchOnCond where the input is Not(ActiveLaneMask).
-  if (!IsEpilogueVectorization && Term && isa<ConstantInt>(TripCountV) &&
-      (Term->getOpcode() == VPInstruction::BranchOnCount ||
-       (Term->getOpcode() == VPInstruction::BranchOnCond &&
-        canSimplifyBranchOnCond(Term)))) {
-    ConstantInt *C = cast<ConstantInt>(TripCountV);
-    uint64_t TCVal = C->getZExtValue();
-    if (TCVal && TCVal <= State.VF.getKnownMinValue() * State.UF) {
-      auto *BOC =
-          new VPInstruction(VPInstruction::BranchOnCond,
-                            {getOrAddExternalDef(State.Builder.getTrue())});
-      Term->eraseFromParent();
-      ExitingVPBB->appendRecipe(BOC);
-      // TODO: Further simplifications are possible
-      //      1. Replace inductions with constants.
-      //      2. Replace vector loop region with VPBasicBlock.
-    }
-  }
 
   // Check if the trip count is needed, and if so build it.
   if (TripCount && TripCount->getNumUsers()) {
@@ -757,7 +742,7 @@ LLVM_DUMP_METHOD
 void VPlan::print(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  O << "VPlan '" << Name << "' {";
+  O << "VPlan '" << getName() << "' {";
 
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
@@ -787,6 +772,29 @@ void VPlan::print(raw_ostream &O) const {
   }
 
   O << "}\n";
+}
+
+std::string VPlan::getName() const {
+  std::string Out;
+  raw_string_ostream RSO(Out);
+  RSO << Name << " for ";
+  if (!VFs.empty()) {
+    RSO << "VF={" << VFs[0];
+    for (ElementCount VF : drop_begin(VFs))
+      RSO << "," << VF;
+    RSO << "},";
+  }
+
+  if (UFs.empty()) {
+    RSO << "UF>=1";
+  } else {
+    RSO << "UF={" << UFs[0];
+    for (unsigned UF : drop_begin(UFs))
+      RSO << "," << UF;
+    RSO << "}";
+  }
+
+  return Out;
 }
 
 LLVM_DUMP_METHOD

@@ -4,7 +4,7 @@
 declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
 
-define i32 @test_udot_v8i8(i8* nocapture readonly %a, i8* nocapture readonly %b) {
+define i32 @test_udot_v8i8(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: test_udot_v8i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -15,18 +15,16 @@ define i32 @test_udot_v8i8(i8* nocapture readonly %a, i8* nocapture readonly %b)
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0
-  %2 = zext <8 x i8> %1 to <8 x i32>
-  %3 = bitcast i8* %b to <8 x i8>*
-  %4 = load <8 x i8>, <8 x i8>* %3
-  %5 = zext <8 x i8> %4 to <8 x i32>
-  %6 = mul nuw nsw <8 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
-  ret i32 %7
+  %0 = load <8 x i8>, ptr %a
+  %1 = zext <8 x i8> %0 to <8 x i32>
+  %2 = load <8 x i8>, ptr %b
+  %3 = zext <8 x i8> %2 to <8 x i32>
+  %4 = mul nuw nsw <8 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @test_udot_v8i8_nomla(i8* nocapture readonly %a1) {
+define i32 @test_udot_v8i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-LABEL: test_udot_v8i8_nomla:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.8b, #1
@@ -37,14 +35,13 @@ define i32 @test_udot_v8i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a1 to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0
-  %2 = zext <8 x i8> %1 to <8 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
-  ret i32 %3
+  %0 = load <8 x i8>, ptr %a1
+  %1 = zext <8 x i8> %0 to <8 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @test_sdot_v8i8(i8* nocapture readonly %a, i8* nocapture readonly %b) {
+define i32 @test_sdot_v8i8(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: test_sdot_v8i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -55,18 +52,16 @@ define i32 @test_sdot_v8i8(i8* nocapture readonly %a, i8* nocapture readonly %b)
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0
-  %2 = sext <8 x i8> %1 to <8 x i32>
-  %3 = bitcast i8* %b to <8 x i8>*
-  %4 = load <8 x i8>, <8 x i8>* %3
-  %5 = sext <8 x i8> %4 to <8 x i32>
-  %6 = mul nsw <8 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
-  ret i32 %7
+  %0 = load <8 x i8>, ptr %a
+  %1 = sext <8 x i8> %0 to <8 x i32>
+  %2 = load <8 x i8>, ptr %b
+  %3 = sext <8 x i8> %2 to <8 x i32>
+  %4 = mul nsw <8 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  ret i32 %5
 }
 
-define i32 @test_sdot_v8i8_nomla(i8* nocapture readonly %a1) {
+define i32 @test_sdot_v8i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-LABEL: test_sdot_v8i8_nomla:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.8b, #1
@@ -77,15 +72,14 @@ define i32 @test_sdot_v8i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a1 to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0
-  %2 = sext <8 x i8> %1 to <8 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
-  ret i32 %3
+  %0 = load <8 x i8>, ptr %a1
+  %1 = sext <8 x i8> %0 to <8 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %1)
+  ret i32 %2
 }
 
 
-define i32 @test_udot_v16i8(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %sum) {
+define i32 @test_udot_v16i8(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %sum) {
 ; CHECK-LABEL: test_udot_v16i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -97,19 +91,17 @@ define i32 @test_udot_v16i8(i8* nocapture readonly %a, i8* nocapture readonly %b
 ; CHECK-NEXT:    add w0, w8, w2
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0
-  %2 = zext <16 x i8> %1 to <16 x i32>
-  %3 = bitcast i8* %b to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3
-  %5 = zext <16 x i8> %4 to <16 x i32>
-  %6 = mul nuw nsw <16 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
-  %op.extra = add i32 %7, %sum
+  %0 = load <16 x i8>, ptr %a
+  %1 = zext <16 x i8> %0 to <16 x i32>
+  %2 = load <16 x i8>, ptr %b
+  %3 = zext <16 x i8> %2 to <16 x i32>
+  %4 = mul nuw nsw <16 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
+  %op.extra = add i32 %5, %sum
   ret i32 %op.extra
 }
 
-define i32 @test_udot_v16i8_nomla(i8* nocapture readonly %a1) {
+define i32 @test_udot_v16i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-LABEL: test_udot_v16i8_nomla:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.16b, #1
@@ -120,14 +112,13 @@ define i32 @test_udot_v16i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a1 to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0
-  %2 = zext <16 x i8> %1 to <16 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
-  ret i32 %3
+  %0 = load <16 x i8>, ptr %a1
+  %1 = zext <16 x i8> %0 to <16 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
+  ret i32 %2
 }
 
-define i32 @test_sdot_v16i8(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %sum) {
+define i32 @test_sdot_v16i8(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %sum) {
 ; CHECK-LABEL: test_sdot_v16i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -139,19 +130,17 @@ define i32 @test_sdot_v16i8(i8* nocapture readonly %a, i8* nocapture readonly %b
 ; CHECK-NEXT:    add w0, w8, w2
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0
-  %2 = sext <16 x i8> %1 to <16 x i32>
-  %3 = bitcast i8* %b to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3
-  %5 = sext <16 x i8> %4 to <16 x i32>
-  %6 = mul nsw <16 x i32> %5, %2
-  %7 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
-  %op.extra = add nsw i32 %7, %sum
+  %0 = load <16 x i8>, ptr %a
+  %1 = sext <16 x i8> %0 to <16 x i32>
+  %2 = load <16 x i8>, ptr %b
+  %3 = sext <16 x i8> %2 to <16 x i32>
+  %4 = mul nsw <16 x i32> %3, %1
+  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
+  %op.extra = add nsw i32 %5, %sum
   ret i32 %op.extra
 }
 
-define i32 @test_sdot_v16i8_nomla(i8* nocapture readonly %a1) {
+define i32 @test_sdot_v16i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-LABEL: test_sdot_v16i8_nomla:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.16b, #1
@@ -162,11 +151,10 @@ define i32 @test_sdot_v16i8_nomla(i8* nocapture readonly %a1) {
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a1 to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0
-  %2 = sext <16 x i8> %1 to <16 x i32>
-  %3 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
-  ret i32 %3
+  %0 = load <16 x i8>, ptr %a1
+  %1 = sext <16 x i8> %0 to <16 x i32>
+  %2 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %1)
+  ret i32 %2
 }
 
 

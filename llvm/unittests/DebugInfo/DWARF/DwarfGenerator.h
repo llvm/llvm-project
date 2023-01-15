@@ -220,7 +220,7 @@ private:
   // Calculate the number of bytes the Contents will take up.
   size_t getContentsSize() const;
 
-  llvm::Optional<DWARFDebugLine::Prologue> Prologue;
+  std::optional<DWARFDebugLine::Prologue> Prologue;
   std::vector<ValueAndLength> CustomPrologue;
   std::vector<ValueAndLength> Contents;
 

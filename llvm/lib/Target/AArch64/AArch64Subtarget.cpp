@@ -172,6 +172,15 @@ void AArch64Subtarget::initializeProperties() {
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
+    switch (ARMProcFamily) {
+    case AppleA14:
+    case AppleA15:
+    case AppleA16:
+      MaxInterleaveFactor = 4;
+      break;
+    default:
+      break;
+    }
     break;
   case ExynosM3:
     MaxInterleaveFactor = 4;
@@ -275,9 +284,8 @@ void AArch64Subtarget::initializeProperties() {
   }
 }
 
-AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
-                                   const std::string &TuneCPU,
-                                   const std::string &FS,
+AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
+                                   StringRef TuneCPU, StringRef FS,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,

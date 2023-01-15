@@ -58,9 +58,7 @@ contains
   ! CHECK: %[[IS_CONTIGOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> i1
   ! CHECK: %[[TEMP:.*]] = fir.if %[[IS_CONTIGOUS]] -> (!fir.heap<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) {
   ! CHECK: } else {
-  ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<2x!fir.type<_QFTp{a:i32}>>)
-  ! CHECK: %{{.*}} = fir.field_index a, !fir.type<_QFTp{a:i32}>
-  ! CHECK-NOT: %{{.*}} = fir.field_index b, !fir.type<_QFTp{a:i32}>
+  ! CHECK: fir.call @_FortranAAssign
   ! CHECK: %[[TEMP_CAST:.*]] = fir.convert %[[TEMP]] : (!fir.heap<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: fir.call @_QFPprint_p(%[[TEMP_CAST]]) {{.*}}: (!fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> ()
 
@@ -96,9 +94,7 @@ contains
   ! CHECK: %[[IS_CONTIGOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> i1
   ! CHECK: %[[TEMP:.*]] = fir.if %[[IS_CONTIGOUS]] -> (!fir.heap<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) {
   ! CHECK: } else {
-  ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<2x!fir.type<_QFTp{a:i32}>>)
-  ! CHECK: %{{.*}} = fir.field_index a, !fir.type<_QFTp{a:i32}>
-  ! CHECK-NOT: %{{.*}} = fir.field_index b, !fir.type<_QFTp{a:i32}>
+  ! CHECK: fir.call @_FortranAAssign
   ! CHECK: %[[TEMP_CAST:.*]] = fir.convert %[[TEMP]] : (!fir.heap<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: fir.call @_QFPprint_p(%[[TEMP_CAST]]) {{.*}}: (!fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> ()
 
@@ -135,15 +131,15 @@ contains
   ! CHECK: %[[C0:.*]] = arith.constant 0 : index
   ! CHECK: %[[BOX_DIMS:.*]]:3 = fir.box_dims %{{.*}}, %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, index) -> (index, index, index)
   ! CHECK: %[[C1:.*]] = arith.constant 1 : index
-  ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
+  ! CHECK: %[[BOUND_OFFSET:.*]] = arith.subi %[[LOAD_LB0]], %[[C1]] : index
+  ! CHECK: %[[UB:.*]] = arith.addi %[[BOX_DIMS]]#1, %[[BOUND_OFFSET]] : index
+  ! CHECK: %[[SLICE:.*]] = fir.slice %[[LOAD_LB0]], %[[UB]], %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[BOX:.*]] = fir.embox %[[MEM]](%[[SHAPE_SHIFT]]) [%[[SLICE]]] : (!fir.heap<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>) -> !fir.box<none> 
   ! CHECK: %[[IS_CONTIGOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) {{.*}}: (!fir.box<none>) -> i1
   ! CHECK: %[[TEMP:.*]] = fir.if %[[IS_CONTIGOUS]] -> (!fir.heap<!fir.array<?x!fir.type<_QFTp{a:i32}>>>) {
   ! CHECK: } else {
-  ! CHECK: %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<?x!fir.type<_QFTp{a:i32}>>)
-  ! CHECK: %{{.*}} = fir.field_index a, !fir.type<_QFTp{a:i32}>
-  ! CHECK-NOT: %{{.*}} = fir.field_index b, !fir.type<_QFTp{a:i32}>
+  ! CHECK: fir.call @_FortranAAssign
   ! CHECK: %[[TEMP_CAST:.*]] = fir.convert %[[TEMP]] : (!fir.heap<!fir.array<?x!fir.type<_QFTp{a:i32}>>>) -> !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: fir.call @_QFPprint_p(%[[TEMP_CAST]]) {{.*}}: (!fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>>) -> ()
 
@@ -156,7 +152,9 @@ contains
   ! CHECK: %[[C0:.*]] = arith.constant 0 : index
   ! CHECK: %[[BOX_DIMS:.*]]:3 = fir.box_dims %{{.*}}, %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, index) -> (index, index, index)
   ! CHECK: %[[C1:.*]] = arith.constant 1 : index
-  ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
+  ! CHECK: %[[BOUND_OFFSET:.*]] = arith.subi %[[LOAD_LB0]], %[[C1]] : index
+  ! CHECK: %[[UB:.*]] = arith.addi %[[BOX_DIMS]]#1, %[[BOUND_OFFSET]] : index
+  ! CHECK: %[[SLICE:.*]] = fir.slice %[[LOAD_LB0]], %[[UB]], %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[BOX:.*]] = fir.embox %[[LOAD_ALLOC]](%[[SHAPE_SHIFT]]) [%[[SLICE]]] : (!fir.heap<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>
   ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>) -> !fir.box<none>
   ! CHECK: %{{.*}} = fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[BOX_NONE]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
@@ -195,7 +193,7 @@ contains
   ! CHECK: %[[BOX:.*]] = fir.rebox %[[ARG0]] : (!fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>
   ! CHECK: %[[FIELD:.*]] = fir.field_index a, !fir.type<_QFTc{a:i32,b:i32}>
   ! CHECK: %[[C0:.*]] = arith.constant 0 : index
-  ! CHECK: %[[BOX_DIMS:.*]]:3 = fir.box_dims %13, %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, index) -> (index, index, index)
+  ! CHECK: %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, index) -> (index, index, index)
   ! CHECK: %[[C1:.*]] = arith.constant 1 : index
   ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD]] : (index, index, index, !fir.field) -> !fir.slice<1>
   ! CHECK: %[[REBOX:.*]] = fir.rebox %arg0 [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>

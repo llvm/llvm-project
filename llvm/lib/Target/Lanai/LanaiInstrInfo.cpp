@@ -50,7 +50,7 @@ void LanaiInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register SourceRegister, bool IsKill, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/) const {
+    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
     DL = Position->getDebugLoc();
@@ -70,7 +70,7 @@ void LanaiInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register DestinationRegister, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo * /*RegisterInfo*/) const {
+    const TargetRegisterInfo * /*RegisterInfo*/, Register /*VReg*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
     DL = Position->getDebugLoc();
@@ -171,7 +171,7 @@ LanaiInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_ABS_HI, "lanai-hi"},
       {MO_ABS_LO, "lanai-lo"},
       {MO_NO_FLAG, "lanai-nf"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 bool LanaiInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,

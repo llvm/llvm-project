@@ -3,8 +3,8 @@
 
 ;; If GOTPCRELX is disabled, don't use GOT for __tls_get_addr to work around
 ;; a ld.bfd bug (binutils PR24784).
-; RUN: llc < %s -mtriple=i386-linux-musl -relocation-model=pic | FileCheck --check-prefixes=CHECK,X86-PLT %s
-; RUN: llc < %s -mtriple=x86_64-linux-musl -relocation-model=pic | FileCheck --check-prefixes=CHECK,X64-PLT %s
+; RUN: llc < %s -mtriple=i386-linux-musl -relocation-model=pic -relax-elf-relocations=false | FileCheck --check-prefixes=CHECK,X86-PLT %s
+; RUN: llc < %s -mtriple=x86_64-linux-musl -relocation-model=pic -relax-elf-relocations=false | FileCheck --check-prefixes=CHECK,X64-PLT %s
 
 @gd = thread_local global i32 0
 @ld = internal thread_local global i32 0

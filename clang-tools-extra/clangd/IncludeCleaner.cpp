@@ -31,6 +31,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include <functional>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -344,7 +345,7 @@ ReferencedLocations findReferencedLocations(ParsedAST &AST) {
 ReferencedFiles findReferencedFiles(
     const ReferencedLocations &Locs, const SourceManager &SM,
     llvm::function_ref<FileID(FileID)> HeaderResponsible,
-    llvm::function_ref<Optional<StringRef>(FileID)> UmbrellaHeader) {
+    llvm::function_ref<std::optional<StringRef>(FileID)> UmbrellaHeader) {
   std::vector<SourceLocation> Sorted{Locs.User.begin(), Locs.User.end()};
   llvm::sort(Sorted); // Group by FileID.
   ReferencedFilesBuilder Builder(SM);
@@ -389,7 +390,7 @@ ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
       [&SM, &Includes](FileID ID) {
         return headerResponsible(ID, SM, Includes);
       },
-      [&SM, &CanonIncludes](FileID ID) -> Optional<StringRef> {
+      [&SM, &CanonIncludes](FileID ID) -> std::optional<StringRef> {
         auto Entry = SM.getFileEntryRefForID(ID);
         if (!Entry)
           return std::nullopt;

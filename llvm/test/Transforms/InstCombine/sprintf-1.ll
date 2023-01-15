@@ -2,9 +2,9 @@
 ; Test that the sprintf library call simplifier works correctly.
 ;
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
-; RUN: opt < %s -mtriple xcore-xmos-elf -passes=instcombine -S | FileCheck %s -check-prefixes=CHECK,CHECK-IPRINTF,WITHSTPCPY
-; RUN: opt < %s -mtriple=i386-pc-windows-msvc -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,WIN
-; RUN: opt < %s -mtriple=i386-mingw32 -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,WIN,NOSTPCPY
+; RUN: opt < %s -mtriple xcore-xmos-elf -passes=instcombine -S | FileCheck %s -check-prefixes=CHECK,WITHSTPCPY,CHECK-IPRINTF
+; RUN: opt < %s -mtriple=i386-pc-windows-msvc -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,NOSTPCPY
+; RUN: opt < %s -mtriple=i386-mingw32 -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,NOSTPCPY
 ; RUN: opt < %s -mtriple=armv7-none-linux-android16 -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,NOSTPCPY
 ; RUN: opt < %s -mtriple=armv7-none-linux-android21 -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,WITHSTPCPY
 ; RUN: opt < %s -mtriple=x86_64-scei-ps4 -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,NOSTPCPY
@@ -82,9 +82,9 @@ define void @test_simplify6(ptr %dst) {
 ; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ptr, ...) @siprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_d, i32 187)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
-; WIN-LABEL: @test_simplify6(
-; WIN-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_d, i32 187)
-; WIN-NEXT:    ret void
+; NOSTPCPY-LABEL: @test_simplify6(
+; NOSTPCPY-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_d, i32 187)
+; NOSTPCPY-NEXT:    ret void
 ;
   call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_d, i32 187)
   ret void
@@ -123,18 +123,18 @@ define i32 @test_simplify8(ptr %dst) {
 ; Check sprintf(dst, "%s", str) -> stpcpy(dest, str) - dest
 
 define i32 @test_simplify9(ptr %dst, ptr %str) {
-; CHECK-IPRINTF-LABEL: @test_simplify9(
-; CHECK-IPRINTF-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
-; CHECK-IPRINTF-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
-; CHECK-IPRINTF-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
-; CHECK-IPRINTF-NEXT:    ret i32 [[TMP3]]
+; WITHSTPCPY-LABEL: @test_simplify9(
+; WITHSTPCPY-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
+; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
+; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
+; WITHSTPCPY-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; WITHSTPCPY-NEXT:    ret i32 [[TMP3]]
 ;
-; WIN-LABEL: @test_simplify9(
-; WIN-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
-; WIN-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
-; WIN-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[STR]], i32 [[LENINC]], i1 false)
-; WIN-NEXT:    ret i32 [[STRLEN]]
+; NOSTPCPY-LABEL: @test_simplify9(
+; NOSTPCPY-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
+; NOSTPCPY-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
+; NOSTPCPY-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST:%.*]], ptr align 1 [[STR]], i32 [[LENINC]], i1 false)
+; NOSTPCPY-NEXT:    ret i32 [[STRLEN]]
 ;
   %r = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_s, ptr %str)
   ret i32 %r
@@ -159,16 +159,16 @@ define void @test_no_simplify2(ptr %dst, ptr %fmt, double %d) {
 }
 
 define i32 @test_no_simplify3(ptr %dst, ptr %str) minsize {
-; CHECK-IPRINTF-LABEL: @test_no_simplify3(
-; CHECK-IPRINTF-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
-; CHECK-IPRINTF-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
-; CHECK-IPRINTF-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
-; CHECK-IPRINTF-NEXT:    ret i32 [[TMP3]]
+; WITHSTPCPY-LABEL: @test_no_simplify3(
+; WITHSTPCPY-NEXT:    [[STPCPY:%.*]] = call ptr @stpcpy(ptr [[DST:%.*]], ptr [[STR:%.*]])
+; WITHSTPCPY-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[STPCPY]] to i32
+; WITHSTPCPY-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[DST]] to i32
+; WITHSTPCPY-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; WITHSTPCPY-NEXT:    ret i32 [[TMP3]]
 ;
-; WIN-LABEL: @test_no_simplify3(
-; WIN-NEXT:    [[R:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_s, ptr [[STR:%.*]])
-; WIN-NEXT:    ret i32 [[R]]
+; NOSTPCPY-LABEL: @test_no_simplify3(
+; NOSTPCPY-NEXT:    [[R:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_s, ptr [[STR:%.*]])
+; NOSTPCPY-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_s, ptr %str)
   ret i32 %r

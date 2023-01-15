@@ -4,7 +4,7 @@
 ; Make sure the loop is unrolled without a remainder loop based on an assumption
 ; that the least significant bit is known to be zero.
 
-define dso_local void @assumeDivisibleTC(i8* noalias nocapture %a, i8* noalias nocapture readonly %b, i32 %p, i32 %q) local_unnamed_addr {
+define dso_local void @assumeDivisibleTC(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i32 %p, i32 %q) local_unnamed_addr {
 ; CHECK-LABEL: @assumeDivisibleTC(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[P:%.*]], 1
@@ -22,17 +22,17 @@ define dso_local void @assumeDivisibleTC(i8* noalias nocapture %a, i8* noalias n
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_011:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INC_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[B:%.*]], i32 [[I_011]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[I_011]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[TMP0]], 3
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i32 [[I_011]]
-; CHECK-NEXT:    store i8 [[ADD]], i8* [[ARRAYIDX4]], align 1
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[I_011]]
+; CHECK-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX4]], align 1
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[I_011]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 [[INC]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[ARRAYIDX_1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[INC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[TMP1]], 3
-; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 [[INC]]
-; CHECK-NEXT:    store i8 [[ADD_1]], i8* [[ARRAYIDX4_1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[INC]]
+; CHECK-NEXT:    store i8 [[ADD_1]], ptr [[ARRAYIDX4_1]], align 1
 ; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[INC]], 1
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp slt i32 [[INC_1]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP1_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -57,11 +57,11 @@ guarded:
 
 for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %guarded ]
-  %arrayidx = getelementptr inbounds i8, i8* %b, i32 %i.011
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %b, i32 %i.011
+  %0 = load i8, ptr %arrayidx, align 1
   %add = add i8 %0, 3
-  %arrayidx4 = getelementptr inbounds i8, i8* %a, i32 %i.011
-  store i8 %add, i8* %arrayidx4, align 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %a, i32 %i.011
+  store i8 %add, ptr %arrayidx4, align 1
   %inc = add nuw nsw i32 %i.011, 1
   %cmp1 = icmp slt i32 %inc, %n
   br i1 %cmp1, label %for.body, label %exit
@@ -73,7 +73,7 @@ exit:
 ; Make sure the loop is unrolled with a remainder loop when the trip-count
 ; is not provably divisible by the unroll factor.
 
-define dso_local void @cannotProveDivisibleTC(i8* noalias nocapture %a, i8* noalias nocapture readonly %b, i32 %p, i32 %q) local_unnamed_addr {
+define dso_local void @cannotProveDivisibleTC(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i32 %p, i32 %q) local_unnamed_addr {
 ; CHECK-LABEL: @cannotProveDivisibleTC(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[P:%.*]], 6
@@ -98,18 +98,18 @@ define dso_local void @cannotProveDivisibleTC(i8* noalias nocapture %a, i8* noal
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_011:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[B:%.*]], i32 [[I_011]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[I_011]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[TMP2]], 3
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i32 [[I_011]]
-; CHECK-NEXT:    store i8 [[ADD]], i8* [[ARRAYIDX4]], align 1
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[I_011]]
+; CHECK-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX4]], align 1
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[I_011]], 1
 ; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 [[INC]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, i8* [[ARRAYIDX_1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[INC]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[TMP3]], 3
-; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 [[INC]]
-; CHECK-NEXT:    store i8 [[ADD_1]], i8* [[ARRAYIDX4_1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[INC]]
+; CHECK-NEXT:    store i8 [[ADD_1]], ptr [[ARRAYIDX4_1]], align 1
 ; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[INC]], 1
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER_NEXT]], 1
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp ne i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
@@ -124,11 +124,11 @@ define dso_local void @cannotProveDivisibleTC(i8* noalias nocapture %a, i8* noal
 ; CHECK:       for.body.epil.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
 ; CHECK:       for.body.epil:
-; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i8, i8* [[B]], i32 [[I_011_UNR]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[ARRAYIDX_EPIL]], align 1
+; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[I_011_UNR]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[ARRAYIDX_EPIL]], align 1
 ; CHECK-NEXT:    [[ADD_EPIL:%.*]] = add i8 [[TMP4]], 3
-; CHECK-NEXT:    [[ARRAYIDX4_EPIL:%.*]] = getelementptr inbounds i8, i8* [[A]], i32 [[I_011_UNR]]
-; CHECK-NEXT:    store i8 [[ADD_EPIL]], i8* [[ARRAYIDX4_EPIL]], align 1
+; CHECK-NEXT:    [[ARRAYIDX4_EPIL:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[I_011_UNR]]
+; CHECK-NEXT:    store i8 [[ADD_EPIL]], ptr [[ARRAYIDX4_EPIL]], align 1
 ; CHECK-NEXT:    br label [[EXIT_LOOPEXIT]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -151,11 +151,11 @@ guarded:
 
 for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %guarded ]
-  %arrayidx = getelementptr inbounds i8, i8* %b, i32 %i.011
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %b, i32 %i.011
+  %0 = load i8, ptr %arrayidx, align 1
   %add = add i8 %0, 3
-  %arrayidx4 = getelementptr inbounds i8, i8* %a, i32 %i.011
-  store i8 %add, i8* %arrayidx4, align 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %a, i32 %i.011
+  store i8 %add, ptr %arrayidx4, align 1
   %inc = add nuw nsw i32 %i.011, 1
   %cmp1 = icmp slt i32 %inc, %n
   br i1 %cmp1, label %for.body, label %exit

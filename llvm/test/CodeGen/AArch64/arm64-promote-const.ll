@@ -160,12 +160,11 @@ if.end:                                           ; preds = %entry, %if.then
   ret <16 x i8> %mul.i
 }
 
-define void @accessBig(i64* %storage) {
+define void @accessBig(ptr %storage) {
 ; PROMOTED-LABEL: accessBig:
 ; PROMOTED: adrp
 ; PROMOTED: ret
-  %addr = bitcast i64* %storage to <1 x i80>*
-  store <1 x i80> <i80 483673642326615442599424>, <1 x i80>* %addr
+  store <1 x i80> <i80 483673642326615442599424>, ptr %storage
   ret void
 }
 

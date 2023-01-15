@@ -125,7 +125,7 @@ ASM_FUNCTION_SPARC_RE = re.compile(
 
 ASM_FUNCTION_SYSTEMZ_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
-    r'[ \t]+.cfi_startproc\n'
+    r'(?:[ \t]+.cfi_startproc\n)?'
     r'(?P<body>.*?)\n'
     r'.Lfunc_end[0-9]+:\n',
     flags=(re.M | re.S))
@@ -172,7 +172,7 @@ ASM_FUNCTION_ARM_IOS_RE = re.compile(
     r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
     flags=(re.M | re.S))
 
-ASM_FUNCTION_WASM32_RE = re.compile(
+ASM_FUNCTION_WASM_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
     r'(?P<body>.*?)\n'
     r'^\s*(\.Lfunc_end[0-9]+:\n|end_function)',
@@ -413,7 +413,7 @@ def scrub_asm_systemz(asm, args):
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-def scrub_asm_wasm32(asm, args):
+def scrub_asm_wasm(asm, args):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
   asm = common.SCRUB_WHITESPACE_RE.sub(r' ', asm)
@@ -502,13 +502,15 @@ def get_run_handler(triple):
       'msp430': (scrub_asm_msp430, ASM_FUNCTION_MSP430_RE),
       'avr': (scrub_asm_avr, ASM_FUNCTION_AVR_RE),
       'ppc32': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
+      'ppc64': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
       'powerpc': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
       'riscv32': (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
       'riscv64': (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
       'lanai': (scrub_asm_lanai, ASM_FUNCTION_LANAI_RE),
       'sparc': (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),
       's390x': (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),
-      'wasm32': (scrub_asm_wasm32, ASM_FUNCTION_WASM32_RE),
+      'wasm32': (scrub_asm_wasm, ASM_FUNCTION_WASM_RE),
+      'wasm64': (scrub_asm_wasm, ASM_FUNCTION_WASM_RE),
       've': (scrub_asm_ve, ASM_FUNCTION_VE_RE),
       'csky': (scrub_asm_csky, ASM_FUNCTION_CSKY_RE),
       'nvptx': (scrub_asm_nvptx, ASM_FUNCTION_NVPTX_RE),

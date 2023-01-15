@@ -11,7 +11,10 @@
 #define _LIBCPP___UTILITY_MOVE_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/remove_reference.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

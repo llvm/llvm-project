@@ -43,6 +43,8 @@ enum NodeType : unsigned {
   // FPR<->GPR transfer operations
   MOVGR2FR_W_LA64,
   MOVFR2GR_S_LA64,
+  MOVFCSR2GR,
+  MOVGR2FCSR,
 
   FTINT,
 
@@ -59,8 +61,10 @@ enum NodeType : unsigned {
   BITREV_4B,
   BITREV_W,
 
-  // Intrinsic operations
+  // Intrinsic operations start ============================================
   BREAK,
+  CACOP_D,
+  CACOP_W,
   DBAR,
   IBAR,
   SYSCALL,
@@ -78,6 +82,20 @@ enum NodeType : unsigned {
   CSRRD,
   CSRWR,
   CSRXCHG,
+
+  // IOCSR access operations
+  IOCSRRD_B,
+  IOCSRRD_W,
+  IOCSRRD_H,
+  IOCSRRD_D,
+  IOCSRWR_B,
+  IOCSRWR_H,
+  IOCSRWR_W,
+  IOCSRWR_D,
+
+  // Read CPU configuration information operation
+  CPUCFG,
+  // Intrinsic operations end =============================================
 };
 } // end namespace LoongArchISD
 
@@ -158,6 +176,10 @@ public:
 
   Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
+  bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
+
+  bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                              SDValue C) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.

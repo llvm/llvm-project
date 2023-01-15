@@ -11,17 +11,16 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK: load i32
 ; CHECK: store <2 x i32>
 ; CHECK: load i32
-define void @interleave_2L_2S(i32* noalias %ptr) {
-  %next.gep = getelementptr i32, i32* %ptr, i64 0
-  %next.gep1 = getelementptr i32, i32* %ptr, i64 1
-  %next.gep2 = getelementptr i32, i32* %ptr, i64 2
+define void @interleave_2L_2S(ptr noalias %ptr) {
+  %next.gep1 = getelementptr i32, ptr %ptr, i64 1
+  %next.gep2 = getelementptr i32, ptr %ptr, i64 2
 
-  %l1 = load i32, i32* %next.gep1, align 4
-  %l2 = load i32, i32* %next.gep, align 4
-  store i32 0, i32* %next.gep1, align 4
-  store i32 0, i32* %next.gep, align 4
-  %l3 = load i32, i32* %next.gep1, align 4
-  %l4 = load i32, i32* %next.gep2, align 4
+  %l1 = load i32, ptr %next.gep1, align 4
+  %l2 = load i32, ptr %ptr, align 4
+  store i32 0, ptr %next.gep1, align 4
+  store i32 0, ptr %ptr, align 4
+  %l3 = load i32, ptr %next.gep1, align 4
+  %l4 = load i32, ptr %next.gep2, align 4
 
   ret void
 }
@@ -31,17 +30,16 @@ define void @interleave_2L_2S(i32* noalias %ptr) {
 ; CHECK: store <2 x i32>
 ; CHECK: load i32
 
-define void @interleave_3L_2S_1L(i32* noalias %ptr) {
-  %next.gep = getelementptr i32, i32* %ptr, i64 0
-  %next.gep1 = getelementptr i32, i32* %ptr, i64 1
-  %next.gep2 = getelementptr i32, i32* %ptr, i64 2
+define void @interleave_3L_2S_1L(ptr noalias %ptr) {
+  %next.gep1 = getelementptr i32, ptr %ptr, i64 1
+  %next.gep2 = getelementptr i32, ptr %ptr, i64 2
 
-  %l2 = load i32, i32* %next.gep, align 4
-  %l1 = load i32, i32* %next.gep1, align 4
-  store i32 0, i32* %next.gep1, align 4
-  store i32 0, i32* %next.gep, align 4
-  %l3 = load i32, i32* %next.gep1, align 4
-  %l4 = load i32, i32* %next.gep2, align 4
+  %l2 = load i32, ptr %ptr, align 4
+  %l1 = load i32, ptr %next.gep1, align 4
+  store i32 0, ptr %next.gep1, align 4
+  store i32 0, ptr %ptr, align 4
+  %l3 = load i32, ptr %next.gep1, align 4
+  %l4 = load i32, ptr %next.gep2, align 4
 
   ret void
 }
@@ -50,16 +48,15 @@ define void @interleave_3L_2S_1L(i32* noalias %ptr) {
 ; CHECK: load i32
 ; CHECK: store <2 x i32>
 ; CHECK: load <2 x i32>
-define void @chain_suffix(i32* noalias %ptr) {
-  %next.gep = getelementptr i32, i32* %ptr, i64 0
-  %next.gep1 = getelementptr i32, i32* %ptr, i64 1
-  %next.gep2 = getelementptr i32, i32* %ptr, i64 2
+define void @chain_suffix(ptr noalias %ptr) {
+  %next.gep1 = getelementptr i32, ptr %ptr, i64 1
+  %next.gep2 = getelementptr i32, ptr %ptr, i64 2
 
-  %l2 = load i32, i32* %next.gep, align 4
-  store i32 0, i32* %next.gep1, align 4
-  store i32 0, i32* %next.gep, align 4
-  %l3 = load i32, i32* %next.gep1, align 4
-  %l4 = load i32, i32* %next.gep2, align 4
+  %l2 = load i32, ptr %ptr, align 4
+  store i32 0, ptr %next.gep1, align 4
+  store i32 0, ptr %ptr, align 4
+  %l3 = load i32, ptr %next.gep1, align 4
+  %l4 = load i32, ptr %next.gep2, align 4
 
   ret void
 }
@@ -69,19 +66,18 @@ define void @chain_suffix(i32* noalias %ptr) {
 ; CHECK: load <2 x i32>
 ; CHECK: store <2 x i32>
 ; CHECK: load <3 x i32>
-define void  @chain_prefix_suffix(i32* noalias %ptr) {
-  %next.gep = getelementptr i32, i32* %ptr, i64 0
-  %next.gep1 = getelementptr i32, i32* %ptr, i64 1
-  %next.gep2 = getelementptr i32, i32* %ptr, i64 2
-  %next.gep3 = getelementptr i32, i32* %ptr, i64 3
+define void  @chain_prefix_suffix(ptr noalias %ptr) {
+  %next.gep1 = getelementptr i32, ptr %ptr, i64 1
+  %next.gep2 = getelementptr i32, ptr %ptr, i64 2
+  %next.gep3 = getelementptr i32, ptr %ptr, i64 3
 
-  %l1 = load i32, i32* %next.gep, align 4
-  %l2 = load i32, i32* %next.gep1, align 4
-  store i32 0, i32* %next.gep1, align 4
-  store i32 0, i32* %next.gep2, align 4
-  %l3 = load i32, i32* %next.gep1, align 4
-  %l4 = load i32, i32* %next.gep2, align 4
-  %l5 = load i32, i32* %next.gep3, align 4
+  %l1 = load i32, ptr %ptr, align 4
+  %l2 = load i32, ptr %next.gep1, align 4
+  store i32 0, ptr %next.gep1, align 4
+  store i32 0, ptr %next.gep2, align 4
+  %l3 = load i32, ptr %next.gep1, align 4
+  %l4 = load i32, ptr %next.gep2, align 4
+  %l5 = load i32, ptr %next.gep3, align 4
 
   ret void
 }
@@ -98,21 +94,20 @@ define void  @chain_prefix_suffix(i32* noalias %ptr) {
 ; CHECK: load i32
 ; CHECK: load i32
 
-define void @interleave_get_longest(i32* noalias %ptr) {
-  %tmp1 = getelementptr i32, i32* %ptr, i64 0
-  %tmp2 = getelementptr i32, i32* %ptr, i64 1
-  %tmp3 = getelementptr i32, i32* %ptr, i64 2
-  %tmp4 = getelementptr i32, i32* %ptr, i64 3
+define void @interleave_get_longest(ptr noalias %ptr) {
+  %tmp2 = getelementptr i32, ptr %ptr, i64 1
+  %tmp3 = getelementptr i32, ptr %ptr, i64 2
+  %tmp4 = getelementptr i32, ptr %ptr, i64 3
 
-  %l1 = load i32, i32* %tmp2, align 4
-  %l2 = load i32, i32* %tmp1, align 4
-  store i32 0, i32* %tmp2, align 4
-  store i32 0, i32* %tmp1, align 4
-  %l3 = load i32, i32* %tmp2, align 4
-  %l4 = load i32, i32* %tmp3, align 4
-  %l5 = load i32, i32* %tmp4, align 4
-  %l6 = load i32, i32* %tmp4, align 4
-  %l7 = load i32, i32* %tmp4, align 4
+  %l1 = load i32, ptr %tmp2, align 4
+  %l2 = load i32, ptr %ptr, align 4
+  store i32 0, ptr %tmp2, align 4
+  store i32 0, ptr %ptr, align 4
+  %l3 = load i32, ptr %tmp2, align 4
+  %l4 = load i32, ptr %tmp3, align 4
+  %l5 = load i32, ptr %tmp4, align 4
+  %l6 = load i32, ptr %tmp4, align 4
+  %l7 = load i32, ptr %tmp4, align 4
 
   ret void
 }

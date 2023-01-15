@@ -886,7 +886,7 @@ void ScalarTraits<bool>::output(const bool &Val, void *, raw_ostream &Out) {
 }
 
 StringRef ScalarTraits<bool>::input(StringRef Scalar, void *, bool &Val) {
-  if (llvm::Optional<bool> Parsed = parseBool(Scalar)) {
+  if (std::optional<bool> Parsed = parseBool(Scalar)) {
     Val = *Parsed;
     return StringRef();
   }

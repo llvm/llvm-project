@@ -3,9 +3,10 @@
 #include "ClangTidyDiagnosticConsumer.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -19,7 +20,7 @@ template <> struct OptionEnumMapping<Colours> {
         {Colours::Yellow, "Yellow"}, {Colours::Green, "Green"},
         {Colours::Blue, "Blue"},     {Colours::Indigo, "Indigo"},
         {Colours::Violet, "Violet"}};
-    return makeArrayRef(Mapping);
+    return ArrayRef(Mapping);
   }
 };
 
@@ -167,7 +168,7 @@ public:
     std::string Message;
     llvm::SourceMgr::DiagKind Kind;
     size_t Pos;
-    Optional<llvm::Annotations::Range> Range;
+    std::optional<llvm::Annotations::Range> Range;
 
     friend void PrintTo(const Diag &D, std::ostream *OS) {
       *OS << (D.Kind == llvm::SourceMgr::DK_Error ? "error: " : "warning: ")

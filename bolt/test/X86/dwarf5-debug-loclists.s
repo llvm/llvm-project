@@ -20,8 +20,8 @@
 
 # POSTCHECK: Addrs: [
 # POSTCHECK-NEXT: 0x
-# POSTCHECK-NEXT: 0x[[#%.16x,ADDR:]]
 # POSTCHECK-NEXT: 0x
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR:]]
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR2:]]
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x0000000c)

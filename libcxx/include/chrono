@@ -385,11 +385,19 @@ class weekday_indexed;
 constexpr bool operator==(const weekday_indexed& x, const weekday_indexed& y) noexcept;
 constexpr bool operator!=(const weekday_indexed& x, const weekday_indexed& y) noexcept;
 
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const weekday_indexed& wdi);
+
 // 25.8.8, class weekday_last    // C++20
 class weekday_last;
 
 constexpr bool operator==(const weekday_last& x, const weekday_last& y) noexcept;
 constexpr bool operator!=(const weekday_last& x, const weekday_last& y) noexcept;
+
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const weekday_last& wdl);
 
 // 25.8.9, class month_day    // C++20
 class month_day;
@@ -397,6 +405,9 @@ class month_day;
 constexpr bool operator==(const month_day& x, const month_day& y) noexcept;
 constexpr strong_ordering operator<=>(const month_day& x, const month_day& y) noexcept;
 
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const month_day& md);
 
 // 25.8.10, class month_day_last    // C++20
 class month_day_last;
@@ -404,17 +415,29 @@ class month_day_last;
 constexpr bool operator==(const month_day_last& x, const month_day_last& y) noexcept;
 constexpr strong_ordering operator<=>(const month_day_last& x, const month_day_last& y) noexcept;
 
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const month_day_last& mdl);
+
 // 25.8.11, class month_weekday    // C++20
 class month_weekday;
 
 constexpr bool operator==(const month_weekday& x, const month_weekday& y) noexcept;
 constexpr bool operator!=(const month_weekday& x, const month_weekday& y) noexcept;
 
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const month_weekday& mwd);
+
 // 25.8.12, class month_weekday_last    // C++20
 class month_weekday_last;
 
 constexpr bool operator==(const month_weekday_last& x, const month_weekday_last& y) noexcept;
 constexpr bool operator!=(const month_weekday_last& x, const month_weekday_last& y) noexcept;
+
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const month_weekday_last& mwdl);
 
 
 // 25.8.13, class year_month    // C++20
@@ -431,6 +454,10 @@ constexpr year_month operator+(const year_month& ym, const years& dy) noexcept;
 constexpr year_month operator+(const years& dy, const year_month& ym) noexcept;
 constexpr year_month operator-(const year_month& ym, const years& dy) noexcept;
 
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const year_month& ym);
+
 // 25.8.14, class year_month_day class    // C++20
 year_month_day;
 
@@ -444,6 +471,9 @@ constexpr year_month_day operator+(const years& dy, const year_month_day& ymd) n
 constexpr year_month_day operator-(const year_month_day& ymd, const months& dm) noexcept;
 constexpr year_month_day operator-(const year_month_day& ymd, const years& dy) noexcept;
 
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const year_month_day& ymd);
 
 // 25.8.15, class year_month_day_last    // C++20
 class year_month_day_last;
@@ -463,6 +493,10 @@ constexpr year_month_day_last
   operator-(const year_month_day_last& ymdl, const months& dm) noexcept;
 constexpr year_month_day_last
   operator-(const year_month_day_last& ymdl, const years& dy) noexcept;
+
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const year_month_day_last& ymdl);
 
 // 25.8.16, class year_month_weekday    // C++20
 class year_month_weekday;
@@ -485,6 +519,10 @@ constexpr year_month_weekday
 constexpr year_month_weekday
   operator-(const year_month_weekday& ymwd, const years& dy) noexcept;
 
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const year_month_weekday& ymwd);
+
 // 25.8.17, class year_month_weekday_last    // C++20
 class year_month_weekday_last;
 
@@ -504,6 +542,10 @@ constexpr year_month_weekday_last
   operator-(const year_month_weekday_last& ymwdl, const months& dm) noexcept;
 constexpr year_month_weekday_last
   operator-(const year_month_weekday_last& ymwdl, const years& dy) noexcept;
+
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const year_month_weekday_last& ymwdl);
 
 // 25.8.18, civil calendar conventional syntax operators    // C++20
 constexpr year_month
@@ -638,6 +680,17 @@ namespace std {
   template<class charT> struct formatter<chrono::month, charT>;                   // C++20
   template<class charT> struct formatter<chrono::year, charT>;                    // C++20
   template<class charT> struct formatter<chrono::weekday, charT>;                 // C++20
+  template<class charT> struct formatter<chrono::weekday_indexed, charT>;         // C++20
+  template<class charT> struct formatter<chrono::weekday_last, charT>;            // C++20
+  template<class charT> struct formatter<chrono::month_day, charT>;               // C++20
+  template<class charT> struct formatter<chrono::month_day_last, charT>;          // C++20
+  template<class charT> struct formatter<chrono::month_weekday, charT>;           // C++20
+  template<class charT> struct formatter<chrono::month_weekday_last, charT>;      // C++20
+  template<class charT> struct formatter<chrono::year_month, charT>;              // C++20
+  template<class charT> struct formatter<chrono::year_month_day, charT>;          // C++20
+  template<class charT> struct formatter<chrono::year_month_day_last, charT>;     // C++20
+  template<class charT> struct formatter<chrono::year_month_weekday, charT>;      // C++20
+  template<class charT> struct formatter<chrono::year_month_weekday_last, charT>; // C++20
 } // namespace std
 
 namespace chrono {

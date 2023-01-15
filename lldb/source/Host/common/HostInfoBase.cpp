@@ -26,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <mutex>
+#include <optional>
 #include <thread>
 
 using namespace lldb;
@@ -107,9 +108,9 @@ const ArchSpec &HostInfoBase::GetArchitecture(ArchitectureKind arch_kind) {
                                               : g_fields->m_host_arch_32;
 }
 
-llvm::Optional<HostInfoBase::ArchitectureKind>
+std::optional<HostInfoBase::ArchitectureKind>
 HostInfoBase::ParseArchitectureKind(llvm::StringRef kind) {
-  return llvm::StringSwitch<llvm::Optional<ArchitectureKind>>(kind)
+  return llvm::StringSwitch<std::optional<ArchitectureKind>>(kind)
       .Case(LLDB_ARCH_DEFAULT, eArchKindDefault)
       .Case(LLDB_ARCH_DEFAULT_32BIT, eArchKind32)
       .Case(LLDB_ARCH_DEFAULT_64BIT, eArchKind64)

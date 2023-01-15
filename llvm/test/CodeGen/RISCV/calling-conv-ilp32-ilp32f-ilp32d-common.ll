@@ -87,16 +87,16 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; RV32I-FPELIM-NEXT:    andi a0, a0, 255
 ; RV32I-FPELIM-NEXT:    slli a1, a1, 16
 ; RV32I-FPELIM-NEXT:    srli a1, a1, 16
-; RV32I-FPELIM-NEXT:    add a0, a0, a1
-; RV32I-FPELIM-NEXT:    add a0, a0, a2
-; RV32I-FPELIM-NEXT:    xor a1, a4, t1
-; RV32I-FPELIM-NEXT:    xor a2, a3, a7
-; RV32I-FPELIM-NEXT:    or a1, a2, a1
-; RV32I-FPELIM-NEXT:    seqz a1, a1
-; RV32I-FPELIM-NEXT:    add a0, a1, a0
+; RV32I-FPELIM-NEXT:    add a1, a1, a2
+; RV32I-FPELIM-NEXT:    xor a2, a4, t1
+; RV32I-FPELIM-NEXT:    xor a3, a3, a7
+; RV32I-FPELIM-NEXT:    or a2, a3, a2
+; RV32I-FPELIM-NEXT:    seqz a2, a2
+; RV32I-FPELIM-NEXT:    add a1, a2, a1
 ; RV32I-FPELIM-NEXT:    add a0, a0, a5
 ; RV32I-FPELIM-NEXT:    add a0, a0, a6
 ; RV32I-FPELIM-NEXT:    add a0, a0, t0
+; RV32I-FPELIM-NEXT:    add a0, a1, a0
 ; RV32I-FPELIM-NEXT:    ret
 ;
 ; RV32I-WITHFP-LABEL: callee_many_scalars:
@@ -110,16 +110,16 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; RV32I-WITHFP-NEXT:    andi a0, a0, 255
 ; RV32I-WITHFP-NEXT:    slli a1, a1, 16
 ; RV32I-WITHFP-NEXT:    srli a1, a1, 16
-; RV32I-WITHFP-NEXT:    add a0, a0, a1
-; RV32I-WITHFP-NEXT:    add a0, a0, a2
-; RV32I-WITHFP-NEXT:    xor a1, a4, t1
-; RV32I-WITHFP-NEXT:    xor a2, a3, a7
-; RV32I-WITHFP-NEXT:    or a1, a2, a1
-; RV32I-WITHFP-NEXT:    seqz a1, a1
-; RV32I-WITHFP-NEXT:    add a0, a1, a0
+; RV32I-WITHFP-NEXT:    add a1, a1, a2
+; RV32I-WITHFP-NEXT:    xor a2, a4, t1
+; RV32I-WITHFP-NEXT:    xor a3, a3, a7
+; RV32I-WITHFP-NEXT:    or a2, a3, a2
+; RV32I-WITHFP-NEXT:    seqz a2, a2
+; RV32I-WITHFP-NEXT:    add a1, a2, a1
 ; RV32I-WITHFP-NEXT:    add a0, a0, a5
 ; RV32I-WITHFP-NEXT:    add a0, a0, a6
 ; RV32I-WITHFP-NEXT:    add a0, a0, t0
+; RV32I-WITHFP-NEXT:    add a0, a1, a0
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 16
@@ -203,8 +203,8 @@ define i32 @callee_large_scalars(i128 %a, fp128 %b) nounwind {
 ; RV32I-FPELIM-NEXT:    or a4, a4, a5
 ; RV32I-FPELIM-NEXT:    xor a0, a0, a1
 ; RV32I-FPELIM-NEXT:    xor a2, a3, a2
-; RV32I-FPELIM-NEXT:    or a0, a2, a0
 ; RV32I-FPELIM-NEXT:    or a0, a0, a4
+; RV32I-FPELIM-NEXT:    or a0, a2, a0
 ; RV32I-FPELIM-NEXT:    seqz a0, a0
 ; RV32I-FPELIM-NEXT:    ret
 ;
@@ -227,8 +227,8 @@ define i32 @callee_large_scalars(i128 %a, fp128 %b) nounwind {
 ; RV32I-WITHFP-NEXT:    or a4, a4, a5
 ; RV32I-WITHFP-NEXT:    xor a0, a0, a1
 ; RV32I-WITHFP-NEXT:    xor a2, a3, a2
-; RV32I-WITHFP-NEXT:    or a0, a2, a0
 ; RV32I-WITHFP-NEXT:    or a0, a0, a4
+; RV32I-WITHFP-NEXT:    or a0, a2, a0
 ; RV32I-WITHFP-NEXT:    seqz a0, a0
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -310,8 +310,8 @@ define i32 @callee_large_scalars_exhausted_regs(i32 %a, i32 %b, i32 %c, i32 %d, 
 ; RV32I-FPELIM-NEXT:    or a3, a3, a4
 ; RV32I-FPELIM-NEXT:    xor a0, a7, a0
 ; RV32I-FPELIM-NEXT:    xor a1, a2, a1
-; RV32I-FPELIM-NEXT:    or a0, a1, a0
 ; RV32I-FPELIM-NEXT:    or a0, a0, a3
+; RV32I-FPELIM-NEXT:    or a0, a1, a0
 ; RV32I-FPELIM-NEXT:    seqz a0, a0
 ; RV32I-FPELIM-NEXT:    ret
 ;
@@ -335,8 +335,8 @@ define i32 @callee_large_scalars_exhausted_regs(i32 %a, i32 %b, i32 %c, i32 %d, 
 ; RV32I-WITHFP-NEXT:    or a3, a3, a4
 ; RV32I-WITHFP-NEXT:    xor a0, a7, a0
 ; RV32I-WITHFP-NEXT:    xor a1, a2, a1
-; RV32I-WITHFP-NEXT:    or a0, a1, a0
 ; RV32I-WITHFP-NEXT:    or a0, a0, a3
+; RV32I-WITHFP-NEXT:    or a0, a1, a0
 ; RV32I-WITHFP-NEXT:    seqz a0, a0
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -458,7 +458,7 @@ define i32 @caller_mixed_scalar_libcalls(i64 %a) nounwind {
 
 ; Check passing of coerced integer arrays
 
-%struct.small = type { i32, i32* }
+%struct.small = type { i32, ptr }
 
 define i32 @callee_small_coerced_struct([2 x i32] %a.coerce) nounwind {
 ; RV32I-FPELIM-LABEL: callee_small_coerced_struct:
@@ -519,7 +519,7 @@ define i32 @caller_small_coerced_struct() nounwind {
 
 %struct.large = type { i32, i32, i32, i32 }
 
-define i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %a) nounwind {
+define i32 @callee_large_struct(ptr byval(%struct.large) align 4 %a) nounwind {
 ; RV32I-FPELIM-LABEL: callee_large_struct:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    lw a1, 0(a0)
@@ -540,12 +540,11 @@ define i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %a) 
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32I-WITHFP-NEXT:    ret
-  %1 = getelementptr inbounds %struct.large, %struct.large* %a, i32 0, i32 0
-  %2 = getelementptr inbounds %struct.large, %struct.large* %a, i32 0, i32 3
-  %3 = load i32, i32* %1
-  %4 = load i32, i32* %2
-  %5 = add i32 %3, %4
-  ret i32 %5
+  %1 = getelementptr inbounds %struct.large, ptr %a, i32 0, i32 3
+  %2 = load i32, ptr %a
+  %3 = load i32, ptr %1
+  %4 = add i32 %2, %3
+  ret i32 %4
 }
 
 define i32 @caller_large_struct() nounwind {
@@ -596,17 +595,15 @@ define i32 @caller_large_struct() nounwind {
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 48
 ; RV32I-WITHFP-NEXT:    ret
   %ls = alloca %struct.large, align 4
-  %1 = bitcast %struct.large* %ls to i8*
-  %a = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 0
-  store i32 1, i32* %a
-  %b = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 1
-  store i32 2, i32* %b
-  %c = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 2
-  store i32 3, i32* %c
-  %d = getelementptr inbounds %struct.large, %struct.large* %ls, i32 0, i32 3
-  store i32 4, i32* %d
-  %2 = call i32 @callee_large_struct(%struct.large* byval(%struct.large) align 4 %ls)
-  ret i32 %2
+  store i32 1, ptr %ls
+  %b = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 1
+  store i32 2, ptr %b
+  %c = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 2
+  store i32 3, ptr %c
+  %d = getelementptr inbounds %struct.large, ptr %ls, i32 0, i32 3
+  store i32 4, ptr %d
+  %1 = call i32 @callee_large_struct(ptr byval(%struct.large) align 4 %ls)
+  ret i32 %1
 }
 
 ; Check 2x*xlen values are aligned appropriately when passed on the stack
@@ -617,14 +614,14 @@ define i32 @callee_aligned_stack(i32 %a, i32 %b, fp128 %c, i32 %d, i32 %e, i64 %
 ; RV32I-FPELIM-LABEL: callee_aligned_stack:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    lw a0, 0(a2)
-; RV32I-FPELIM-NEXT:    lw a1, 20(sp)
-; RV32I-FPELIM-NEXT:    lw a2, 0(sp)
-; RV32I-FPELIM-NEXT:    lw a3, 8(sp)
-; RV32I-FPELIM-NEXT:    lw a4, 16(sp)
-; RV32I-FPELIM-NEXT:    add a0, a0, a7
-; RV32I-FPELIM-NEXT:    add a0, a0, a2
-; RV32I-FPELIM-NEXT:    add a0, a0, a3
-; RV32I-FPELIM-NEXT:    add a0, a0, a4
+; RV32I-FPELIM-NEXT:    lw a1, 0(sp)
+; RV32I-FPELIM-NEXT:    lw a2, 8(sp)
+; RV32I-FPELIM-NEXT:    lw a3, 16(sp)
+; RV32I-FPELIM-NEXT:    lw a4, 20(sp)
+; RV32I-FPELIM-NEXT:    add a1, a7, a1
+; RV32I-FPELIM-NEXT:    add a1, a1, a2
+; RV32I-FPELIM-NEXT:    add a1, a1, a3
+; RV32I-FPELIM-NEXT:    add a1, a1, a4
 ; RV32I-FPELIM-NEXT:    add a0, a0, a1
 ; RV32I-FPELIM-NEXT:    ret
 ;
@@ -635,14 +632,14 @@ define i32 @callee_aligned_stack(i32 %a, i32 %b, fp128 %c, i32 %d, i32 %e, i64 %
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
 ; RV32I-WITHFP-NEXT:    lw a0, 0(a2)
-; RV32I-WITHFP-NEXT:    lw a1, 20(s0)
-; RV32I-WITHFP-NEXT:    lw a2, 0(s0)
-; RV32I-WITHFP-NEXT:    lw a3, 8(s0)
-; RV32I-WITHFP-NEXT:    lw a4, 16(s0)
-; RV32I-WITHFP-NEXT:    add a0, a0, a7
-; RV32I-WITHFP-NEXT:    add a0, a0, a2
-; RV32I-WITHFP-NEXT:    add a0, a0, a3
-; RV32I-WITHFP-NEXT:    add a0, a0, a4
+; RV32I-WITHFP-NEXT:    lw a1, 0(s0)
+; RV32I-WITHFP-NEXT:    lw a2, 8(s0)
+; RV32I-WITHFP-NEXT:    lw a3, 16(s0)
+; RV32I-WITHFP-NEXT:    lw a4, 20(s0)
+; RV32I-WITHFP-NEXT:    add a1, a7, a1
+; RV32I-WITHFP-NEXT:    add a1, a1, a2
+; RV32I-WITHFP-NEXT:    add a1, a1, a3
+; RV32I-WITHFP-NEXT:    add a1, a1, a4
 ; RV32I-WITHFP-NEXT:    add a0, a0, a1
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -844,7 +841,7 @@ define %struct.small @callee_small_struct_ret() nounwind {
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32I-WITHFP-NEXT:    ret
-  ret %struct.small { i32 1, i32* null }
+  ret %struct.small { i32 1, ptr null }
 }
 
 define i32 @caller_small_struct_ret() nounwind {
@@ -873,7 +870,7 @@ define i32 @caller_small_struct_ret() nounwind {
   %1 = call %struct.small @callee_small_struct_ret()
   %2 = extractvalue %struct.small %1, 0
   %3 = extractvalue %struct.small %1, 1
-  %4 = ptrtoint i32* %3 to i32
+  %4 = ptrtoint ptr %3 to i32
   %5 = add i32 %2, %4
   ret i32 %5
 }
@@ -937,7 +934,7 @@ define void @caller_large_scalar_ret() nounwind {
 
 ; Check return of >2x xlen structs
 
-define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) %agg.result) nounwind {
+define void @callee_large_struct_ret(ptr noalias sret(%struct.large) %agg.result) nounwind {
 ; RV32I-FPELIM-LABEL: callee_large_struct_ret:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    li a1, 1
@@ -968,14 +965,13 @@ define void @callee_large_struct_ret(%struct.large* noalias sret(%struct.large) 
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 16
 ; RV32I-WITHFP-NEXT:    ret
-  %a = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 0
-  store i32 1, i32* %a, align 4
-  %b = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 1
-  store i32 2, i32* %b, align 4
-  %c = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 2
-  store i32 3, i32* %c, align 4
-  %d = getelementptr inbounds %struct.large, %struct.large* %agg.result, i32 0, i32 3
-  store i32 4, i32* %d, align 4
+  store i32 1, ptr %agg.result, align 4
+  %b = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 1
+  store i32 2, ptr %b, align 4
+  %c = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 2
+  store i32 3, ptr %c, align 4
+  %d = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 3
+  store i32 4, ptr %d, align 4
   ret void
 }
 
@@ -1009,11 +1005,10 @@ define i32 @caller_large_struct_ret() nounwind {
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 32
 ; RV32I-WITHFP-NEXT:    ret
   %1 = alloca %struct.large
-  call void @callee_large_struct_ret(%struct.large* sret(%struct.large) %1)
-  %2 = getelementptr inbounds %struct.large, %struct.large* %1, i32 0, i32 0
-  %3 = load i32, i32* %2
-  %4 = getelementptr inbounds %struct.large, %struct.large* %1, i32 0, i32 3
-  %5 = load i32, i32* %4
-  %6 = add i32 %3, %5
-  ret i32 %6
+  call void @callee_large_struct_ret(ptr sret(%struct.large) %1)
+  %2 = load i32, ptr %1
+  %3 = getelementptr inbounds %struct.large, ptr %1, i32 0, i32 3
+  %4 = load i32, ptr %3
+  %5 = add i32 %2, %4
+  ret i32 %5
 }

@@ -1,4 +1,5 @@
-; RUN: opt -passes=function-specialization -func-specialization-size-threshold=3 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -func-specialization-size-threshold=3 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<no-func-spec>" -func-specialization-size-threshold=3 -S < %s | FileCheck %s --check-prefix=NOFSPEC
 
 define i64 @main(i64 %x, i1 %flag) {
 ;
@@ -15,6 +16,10 @@ define i64 @main(i64 %x, i1 %flag) {
 ; CHECK-NEXT:   [[TMP2:%.+]] = phi i64 [ [[TMP0]], %plus ], [ [[TMP1]], %minus ]
 ; CHECK-NEXT:   ret i64 [[TMP2]]
 ; CHECK-NEXT: }
+;
+; NOFSPEC-LABEL: @main(i64 %x, i1 %flag) {
+; NOFSPEC-NOT: call i64 @compute.{{[0-9]+}}(
+; NOFSPEC: call i64 @compute(
 ;
 entry:
   br i1 %flag, label %plus, label %minus
@@ -45,6 +50,9 @@ merge:
 ; CHECK-NEXT:    [[TMP0:%.+]] = call i64 @minus(i64 %x)
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ; CHECK-NEXT:  }
+;
+; NOFSPEC: define internal i64 @compute(
+; NOFSPEC-NOT: define internal i64 @compute.{{[0-9]+}}(
 ;
 define internal i64 @compute(i64 %x, ptr %binop) {
 entry:

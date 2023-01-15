@@ -13,11 +13,6 @@ import lldb.runtime.objc.objc_runtime
 import lldb.formatters.metrics
 import lldb.formatters.Logger
 
-try:
-    basestring
-except NameError:
-    basestring = str
-
 statistics = lldb.formatters.metrics.Metrics()
 statistics.add_metric('invalid_isa')
 statistics.add_metric('invalid_pointer')
@@ -168,7 +163,7 @@ def NSIndexSet_SummaryProvider(valobj, dict):
         logger >> "got summary " + str(summary)
         if summary is None:
             summary = '<variable is not NSIndexSet>'
-        if isinstance(summary, basestring):
+        if isinstance(summary, str):
             return summary
         else:
             summary = str(summary) + (' indexes' if summary != 1 else ' index')

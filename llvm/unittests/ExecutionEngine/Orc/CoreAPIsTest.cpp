@@ -99,7 +99,7 @@ TEST_F(CoreAPIsStandardTest, MaterializationSideEffctsOnlyBasic) {
   // results.
 
   std::unique_ptr<MaterializationResponsibility> FooR;
-  Optional<SymbolMap> Result;
+  std::optional<SymbolMap> Result;
 
   cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap(

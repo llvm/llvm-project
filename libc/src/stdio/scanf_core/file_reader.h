@@ -30,6 +30,7 @@ public:
 
   char get_char();
   void unget_char(char c);
+  bool has_error() { return file->error_unlocked(); }
 };
 
 } // namespace scanf_core

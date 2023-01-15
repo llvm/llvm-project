@@ -273,7 +273,7 @@ void MacroCallReconstructor::startReconstruction(FormatToken *Token) {
   // Note that the token's expanded from stack is inside-to-outside, and the
   // expansions for which this token is not the first are the outermost ones.
   ArrayRef<FormatToken *> StartedMacros =
-      makeArrayRef(Token->MacroCtx->ExpandedFrom)
+      ArrayRef(Token->MacroCtx->ExpandedFrom)
           .drop_back(ActiveExpansions.size());
   assert(StartedMacros.size() == Token->MacroCtx->StartOfExpansion);
   // We reconstruct macro calls outside-to-inside.

@@ -957,8 +957,10 @@ def VQDMLAL_HIGH : SOpInst<"vqdmlal_high", "(>Q)(>Q)QQ", "si", OP_QDMLALHi>;
 def VQDMLAL_HIGH_N : SOpInst<"vqdmlal_high_n", "(>Q)(>Q)Q1", "si", OP_QDMLALHi_N>;
 def VQDMLSL_HIGH : SOpInst<"vqdmlsl_high", "(>Q)(>Q)QQ", "si", OP_QDMLSLHi>;
 def VQDMLSL_HIGH_N : SOpInst<"vqdmlsl_high_n", "(>Q)(>Q)Q1", "si", OP_QDMLSLHi_N>;
-def VMULL_P64    : SInst<"vmull", "(1>)11", "Pl">;
-def VMULL_HIGH_P64 : SOpInst<"vmull_high", "(1>)..", "HPl", OP_MULLHi_P64>;
+let TargetGuard = "aes" in {
+  def VMULL_P64    : SInst<"vmull", "(1>)11", "Pl">;
+  def VMULL_HIGH_P64 : SOpInst<"vmull_high", "(1>)..", "HPl", OP_MULLHi_P64>;
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////

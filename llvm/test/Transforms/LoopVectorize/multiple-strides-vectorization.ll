@@ -27,34 +27,35 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.s = type { [32 x i32], [32 x i32], [32 x [32 x i32]] }
 
-define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
+define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-LABEL: @Test(
-; CHECK-NEXT:    [[OBJ4:%.*]] = bitcast %struct.s* [[OBJ:%.*]] to i8*
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr [[STRUCT_S:%.*]], %struct.s* [[OBJ]], i64 0, i32 0, i64 [[Z:%.*]]
-; CHECK-NEXT:    [[SCEVGEP56:%.*]] = bitcast i32* [[SCEVGEP5]] to i8*
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[Z:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 256
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr [[OBJ:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    br label [[DOTOUTER_PREHEADER:%.*]]
 ; CHECK:       .outer.preheader:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[I_NEXT:%.*]], [[DOTOUTER:%.*]] ]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 2, i64 [[I]], i64 0
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = bitcast i32* [[SCEVGEP]] to i8*
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[Z]]
-; CHECK-NEXT:    [[SCEVGEP23:%.*]] = bitcast i32* [[SCEVGEP2]] to i8*
-; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 1, i64 [[I]]
-; CHECK-NEXT:    [[SCEVGEP78:%.*]] = bitcast i32* [[SCEVGEP7]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 1, i64 [[TMP1]]
-; CHECK-NEXT:    [[SCEVGEP910:%.*]] = bitcast i32* [[SCEVGEP9]] to i8*
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 1, i64 [[I]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[I]], 7
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 256
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[I]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 128
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], 132
+; CHECK-NEXT:    [[UGLYGEP4:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[OBJ]], i64 0, i32 1, i64 [[I]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[Z]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult i8* [[SCEVGEP1]], [[SCEVGEP56]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* [[OBJ4]], [[SCEVGEP23]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[UGLYGEP]], [[UGLYGEP2]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[OBJ]], [[UGLYGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND011:%.*]] = icmp ult i8* [[SCEVGEP1]], [[SCEVGEP910]]
-; CHECK-NEXT:    [[BOUND112:%.*]] = icmp ult i8* [[SCEVGEP78]], [[SCEVGEP23]]
-; CHECK-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT13]]
+; CHECK-NEXT:    [[BOUND05:%.*]] = icmp ult ptr [[UGLYGEP]], [[UGLYGEP4]]
+; CHECK-NEXT:    [[BOUND16:%.*]] = icmp ult ptr [[UGLYGEP3]], [[UGLYGEP1]]
+; CHECK-NEXT:    [[FOUND_CONFLICT7:%.*]] = and i1 [[BOUND05]], [[BOUND16]]
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT7]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[Z]], 4
@@ -62,25 +63,22 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP6]], align 4, !alias.scope !0
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4, !alias.scope !3
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 0, i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP12]], align 4, !alias.scope !0
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope !3
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP13]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, <4 x i32>* [[TMP11]], align 4, !alias.scope !5, !noalias !7
-; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <4 x i32> [[TMP8]], [[WIDE_LOAD14]]
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP12]], <4 x i32>* [[TMP13]], align 4, !alias.scope !5, !noalias !7
+; CHECK-NEXT:    [[TMP14:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4, !alias.scope !5, !noalias !7
+; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[TMP14]], [[WIDE_LOAD8]]
+; CHECK-NEXT:    store <4 x i32> [[TMP17]], ptr [[TMP16]], align 4, !alias.scope !5, !noalias !7
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[Z]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[DOTOUTER]], label [[SCALAR_PH]]
@@ -95,14 +93,14 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    br i1 [[EXITCOND_OUTER]], label [[DOTEXIT:%.*]], label [[DOTOUTER_PREHEADER]]
 ; CHECK:       .inner:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[J_NEXT:%.*]], [[DOTINNER]] ]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 0, i64 [[J]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP15]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = add nsw i32 [[TMP17]], [[TMP16]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[J]]
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, i32* [[TMP19]], align 4
-; CHECK-NEXT:    [[TMP21:%.*]] = add nsw i32 [[TMP18]], [[TMP20]]
-; CHECK-NEXT:    store i32 [[TMP21]], i32* [[TMP19]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 0, i64 [[J]]
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = add nsw i32 [[TMP21]], [[TMP20]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[J]]
+; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = add nsw i32 [[TMP22]], [[TMP24]]
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP23]], align 4
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[EXITCOND_INNER:%.*]] = icmp eq i64 [[J_NEXT]], [[Z]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label [[DOTOUTER]], label [[DOTINNER]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -112,7 +110,7 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 
 .outer.preheader:
   %i = phi i64 [ 0, %0 ], [ %i.next, %.outer ]
-  %1 = getelementptr inbounds %struct.s, %struct.s* %obj, i64 0, i32 1, i64 %i
+  %1 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 1, i64 %i
   br label %.inner
 
 .exit:
@@ -125,14 +123,14 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 
 .inner:
   %j = phi i64 [ 0, %.outer.preheader ], [ %j.next, %.inner ]
-  %2 = getelementptr inbounds %struct.s, %struct.s* %obj, i64 0, i32 0, i64 %j
-  %3 = load i32, i32* %2
-  %4 = load i32, i32* %1
+  %2 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 0, i64 %j
+  %3 = load i32, ptr %2
+  %4 = load i32, ptr %1
   %5 = add nsw i32 %4, %3
-  %6 = getelementptr inbounds %struct.s, %struct.s* %obj, i64 0, i32 2, i64 %i, i64 %j
-  %7 = load i32, i32* %6
+  %6 = getelementptr inbounds %struct.s, ptr %obj, i64 0, i32 2, i64 %i, i64 %j
+  %7 = load i32, ptr %6
   %8 = add nsw i32 %5, %7
-  store i32 %8, i32* %6
+  store i32 %8, ptr %6
   %j.next = add nuw nsw i64 %j, 1
   %exitcond.inner = icmp eq i64 %j.next, %z
   br i1 %exitcond.inner, label %.outer, label %.inner

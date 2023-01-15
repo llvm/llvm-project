@@ -4,7 +4,7 @@
 ; Make sure this doesn't hang, and there are no unnecessary
 ; "and" instructions.
 
-define dso_local void @f(i16* %p) {
+define dso_local void @f(ptr %p) {
 ; CHECK-LABEL: f:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:  .LBB0_1: @ %bb
@@ -22,7 +22,7 @@ entry:
   br label %bb
 
 bb:
-  %_p_scalar_ = load i16, i16* %p, align 2
+  %_p_scalar_ = load i16, ptr %p, align 2
   %p_and = and i16 %_p_scalar_, 255
   %p_ = lshr i16 %_p_scalar_, 8
   %p_add = add nuw nsw i16 %p_, 2
@@ -30,6 +30,6 @@ bb:
   %p_add18 = add nuw nsw i16 %p_add14, %p_and
   %p_add19 = add nuw nsw i16 %p_add18, %p_
   %p_200 = lshr i16 %p_add19, 2
-  store i16 %p_200, i16* %p, align 2
+  store i16 %p_200, ptr %p, align 2
   br label %bb
 }

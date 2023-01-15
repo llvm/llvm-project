@@ -12,7 +12,6 @@
 
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -247,7 +246,7 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
   TheLoop->setLoopID(NewLoopID);
 }
 
-Optional<ElementCount>
+std::optional<ElementCount>
 llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
   std::optional<int> Width =
       getOptionalIntLoopAttribute(TheLoop, "llvm.loop.vectorize.width");
@@ -261,7 +260,7 @@ llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
   return std::nullopt;
 }
 
-Optional<MDNode *> llvm::makeFollowupLoopID(
+std::optional<MDNode *> llvm::makeFollowupLoopID(
     MDNode *OrigLoopID, ArrayRef<StringRef> FollowupOptions,
     const char *InheritOptionsExceptPrefix, bool AlwaysNew) {
   if (!OrigLoopID) {
@@ -357,7 +356,7 @@ TransformationMode llvm::hasUnrollTransformation(const Loop *L) {
   std::optional<int> Count =
       getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
   if (Count)
-    return Count.value() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
+    return *Count == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable"))
     return TM_ForcedByUser;
@@ -378,7 +377,7 @@ TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
   std::optional<int> Count =
       getOptionalIntLoopAttribute(L, "llvm.loop.unroll_and_jam.count");
   if (Count)
-    return Count.value() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
+    return *Count == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll_and_jam.enable"))
     return TM_ForcedByUser;
@@ -390,13 +389,13 @@ TransformationMode llvm::hasUnrollAndJamTransformation(const Loop *L) {
 }
 
 TransformationMode llvm::hasVectorizeTransformation(const Loop *L) {
-  Optional<bool> Enable =
+  std::optional<bool> Enable =
       getOptionalBoolLoopAttribute(L, "llvm.loop.vectorize.enable");
 
   if (Enable == false)
     return TM_SuppressedByUser;
 
-  Optional<ElementCount> VectorizeWidth =
+  std::optional<ElementCount> VectorizeWidth =
       getOptionalElementCountLoopAttribute(L);
   std::optional<int> InterleaveCount =
       getOptionalIntLoopAttribute(L, "llvm.loop.interleave.count");
@@ -638,7 +637,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
            "There should be a non-PHI instruction in exit block, else these "
            "instructions will have no parent.");
     for (auto *DVI : DeadDebugInst) {
-      DVI->setUndef();
+      DVI->setKillLocation();
       DVI->moveBefore(InsertDbgValueBefore);
     }
   }
@@ -782,9 +781,9 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
 
 /// Return the estimated trip count for any exiting branch which dominates
 /// the loop latch.
-static Optional<uint64_t>
-getEstimatedTripCount(BranchInst *ExitingBranch, Loop *L,
-                      uint64_t &OrigExitWeight) {
+static std::optional<uint64_t> getEstimatedTripCount(BranchInst *ExitingBranch,
+                                                     Loop *L,
+                                                     uint64_t &OrigExitWeight) {
   // To estimate the number of times the loop body was executed, we want to
   // know the number of times the backedge was taken, vs. the number of times
   // we exited the loop.
@@ -808,7 +807,7 @@ getEstimatedTripCount(BranchInst *ExitingBranch, Loop *L,
   return ExitCount + 1;
 }
 
-Optional<unsigned>
+std::optional<unsigned>
 llvm::getLoopEstimatedTripCount(Loop *L,
                                 unsigned *EstimatedLoopInvocationWeight) {
   // Currently we take the estimate exit count only from the loop latch,
@@ -817,8 +816,8 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // TODO: incorporate information from other exits
   if (BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L)) {
     uint64_t ExitWeight;
-    if (Optional<uint64_t> EstTripCount =
-        getEstimatedTripCount(LatchBranch, L, ExitWeight)) {
+    if (std::optional<uint64_t> EstTripCount =
+            getEstimatedTripCount(LatchBranch, L, ExitWeight)) {
       if (EstimatedLoopInvocationWeight)
         *EstimatedLoopInvocationWeight = ExitWeight;
       return *EstTripCount;
@@ -1477,7 +1476,7 @@ void llvm::setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
 
   // Get number of iterations in the original scalar loop.
   unsigned OrigLoopInvocationWeight = 0;
-  Optional<unsigned> OrigAverageTripCount =
+  std::optional<unsigned> OrigAverageTripCount =
       getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
   if (!OrigAverageTripCount)
     return;
@@ -1704,10 +1703,9 @@ Value *llvm::addDiffRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
-Optional<IVConditionInfo> llvm::hasPartialIVCondition(const Loop &L,
-                                                      unsigned MSSAThreshold,
-                                                      const MemorySSA &MSSA,
-                                                      AAResults &AA) {
+std::optional<IVConditionInfo>
+llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
+                            const MemorySSA &MSSA, AAResults &AA) {
   auto *TI = dyn_cast<BranchInst>(L.getHeader()->getTerminator());
   if (!TI || !TI->isConditional())
     return {};
@@ -1764,7 +1762,7 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(const Loop &L,
       [&L, &AA, &AccessedLocs, &ExitingBlocks, &InstToDuplicate,
        MSSAThreshold](BasicBlock *Succ, BasicBlock *Header,
                       SmallVector<MemoryAccess *, 4> AccessesToCheck)
-      -> Optional<IVConditionInfo> {
+      -> std::optional<IVConditionInfo> {
     IVConditionInfo Info;
     // First, collect all blocks in the loop that are on a patch from Succ
     // to the header.

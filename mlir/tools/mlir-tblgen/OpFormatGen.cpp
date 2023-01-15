@@ -944,7 +944,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body) {
            << "OperandsLoc = parser.getCurrentLocation();\n";
       if (var->isOptional()) {
         body << llvm::formatv(
-            "    ::llvm::Optional<::mlir::OpAsmParser::UnresolvedOperand> "
+            "    ::std::optional<::mlir::OpAsmParser::UnresolvedOperand> "
             "{0}Operand;\n",
             var->name);
       } else if (var->isVariadicOfVariadic()) {
@@ -973,7 +973,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body) {
         body << llvm::formatv(
             "    {0} {1}Operand = {1}Operands.empty() ? {0}() : "
             "{1}Operands[0];\n",
-            "::llvm::Optional<::mlir::OpAsmParser::UnresolvedOperand>",
+            "::std::optional<::mlir::OpAsmParser::UnresolvedOperand>",
             operand->getVar()->name);
 
       } else if (auto *type = dyn_cast<TypeDirective>(input)) {
@@ -1051,7 +1051,7 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
   {
     llvm::raw_string_ostream os(attrBuilderStr);
     os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
-                "attrOptional.value()");
+                "*attrOptional");
   }
 
   // Build a string containing the cases that can be formatted as a keyword.
@@ -2434,7 +2434,7 @@ static bool isOptionallyParsed(FormatElement *el) {
 /// element that satisfies `isInvalid`, skipping any optionally-parsed elements.
 /// If an optional group is encountered, this function recurses into the 'then'
 /// and 'else' elements to check if they are invalid. Returns `success` if the
-/// range is known to be valid or `None` if scanning reached the end.
+/// range is known to be valid or `std::nullopt` if scanning reached the end.
 ///
 /// Since the guard element of an optional group is required, this function
 /// accepts an optional element pointer to mark it as required.

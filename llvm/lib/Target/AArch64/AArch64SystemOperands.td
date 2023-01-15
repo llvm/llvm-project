@@ -168,8 +168,8 @@ def : DC<"GZVA",    0b011, 0b0111, 0b0100, 0b100>;
 }
 
 let Requires = [{ {AArch64::FeatureMEC} }] in {
-def : DC<"CIGDPAE", 0b100, 0b0111, 0b1110, 0b000>;
-def : DC<"CIPAE",   0b100, 0b0111, 0b1110, 0b111>;
+def : DC<"CIPAE",   0b100, 0b0111, 0b1110, 0b000>;
+def : DC<"CIGDPAE", 0b100, 0b0111, 0b1110, 0b111>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -230,33 +230,51 @@ def : TSB<"csync", 0>;
 // PRFM (prefetch) instruction options.
 //===----------------------------------------------------------------------===//
 
-class PRFM<string name, bits<5> encoding> : SearchableTable {
+class PRFM<string type,   bits<2> type_encoding,
+           string target, bits<2> target_encoding,
+           string policy, bits<1> policy_encoding> : SearchableTable {
   let SearchableFields = ["Name", "Encoding"];
   let EnumValueField = "Encoding";
 
-  string Name = name;
+  string Name = type # target # policy;
   bits<5> Encoding;
-  let Encoding = encoding;
+  let Encoding{4-3} = type_encoding;
+  let Encoding{2-1} = target_encoding;
+  let Encoding{0} = policy_encoding;
+
+  code Requires = [{ {} }];
 }
 
-def : PRFM<"pldl1keep", 0x00>;
-def : PRFM<"pldl1strm", 0x01>;
-def : PRFM<"pldl2keep", 0x02>;
-def : PRFM<"pldl2strm", 0x03>;
-def : PRFM<"pldl3keep", 0x04>;
-def : PRFM<"pldl3strm", 0x05>;
-def : PRFM<"plil1keep", 0x08>;
-def : PRFM<"plil1strm", 0x09>;
-def : PRFM<"plil2keep", 0x0a>;
-def : PRFM<"plil2strm", 0x0b>;
-def : PRFM<"plil3keep", 0x0c>;
-def : PRFM<"plil3strm", 0x0d>;
-def : PRFM<"pstl1keep", 0x10>;
-def : PRFM<"pstl1strm", 0x11>;
-def : PRFM<"pstl2keep", 0x12>;
-def : PRFM<"pstl2strm", 0x13>;
-def : PRFM<"pstl3keep", 0x14>;
-def : PRFM<"pstl3strm", 0x15>;
+def : PRFM<"pld", 0b00, "l1",  0b00, "keep", 0b0>;
+def : PRFM<"pld", 0b00, "l1",  0b00, "strm", 0b1>;
+def : PRFM<"pld", 0b00, "l2",  0b01, "keep", 0b0>;
+def : PRFM<"pld", 0b00, "l2",  0b01, "strm", 0b1>;
+def : PRFM<"pld", 0b00, "l3",  0b10, "keep", 0b0>;
+def : PRFM<"pld", 0b00, "l3",  0b10, "strm", 0b1>;
+let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
+def : PRFM<"pld", 0b00, "slc", 0b11, "keep", 0b0>;
+def : PRFM<"pld", 0b00, "slc", 0b11, "strm", 0b1>;
+}
+def : PRFM<"pli", 0b01, "l1",  0b00, "keep", 0b0>;
+def : PRFM<"pli", 0b01, "l1",  0b00, "strm", 0b1>;
+def : PRFM<"pli", 0b01, "l2",  0b01, "keep", 0b0>;
+def : PRFM<"pli", 0b01, "l2",  0b01, "strm", 0b1>;
+def : PRFM<"pli", 0b01, "l3",  0b10, "keep", 0b0>;
+def : PRFM<"pli", 0b01, "l3",  0b10, "strm", 0b1>;
+let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
+def : PRFM<"pli", 0b01, "slc", 0b11, "keep", 0b0>;
+def : PRFM<"pli", 0b01, "slc", 0b11, "strm", 0b1>;
+}
+def : PRFM<"pst", 0b10, "l1",  0b00, "keep", 0b0>;
+def : PRFM<"pst", 0b10, "l1",  0b00, "strm", 0b1>;
+def : PRFM<"pst", 0b10, "l2",  0b01, "keep", 0b0>;
+def : PRFM<"pst", 0b10, "l2",  0b01, "strm", 0b1>;
+def : PRFM<"pst", 0b10, "l3",  0b10, "keep", 0b0>;
+def : PRFM<"pst", 0b10, "l3",  0b10, "strm", 0b1>;
+let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
+def : PRFM<"pst", 0b10, "slc", 0b11, "keep", 0b0>;
+def : PRFM<"pst", 0b10, "slc", 0b11, "strm", 0b1>;
+}
 
 //===----------------------------------------------------------------------===//
 // SVE Prefetch instruction options.
@@ -379,35 +397,55 @@ def : ExactFPImm<"two",  "2.0", 0x3>;
 // PState instruction options.
 //===----------------------------------------------------------------------===//
 
-class PState<string name, bits<5> encoding> : SearchableTable {
+class PStateImm0_15<string name, bits<3> op1, bits<3> op2> : SearchableTable {
   let SearchableFields = ["Name", "Encoding"];
   let EnumValueField = "Encoding";
 
   string Name = name;
-  bits<5> Encoding;
-  let Encoding = encoding;
+  bits<6> Encoding;
+  let Encoding{5-3} = op1;
+  let Encoding{2-0} = op2;
   code Requires = [{ {} }];
 }
 
-def : PState<"SPSel",   0b00101>;
-def : PState<"DAIFSet", 0b11110>;
-def : PState<"DAIFClr", 0b11111>;
+class PStateImm0_1<string name, bits<3> op1, bits<3> op2, bits<3> crm_high> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<9> Encoding;
+  let Encoding{8-6} = crm_high;
+  let Encoding{5-3} = op1;
+  let Encoding{2-0} = op2;
+  code Requires = [{ {} }];
+}
+
+//                   Name,     Op1,   Op2
+def : PStateImm0_15<"SPSel",   0b000, 0b101>;
+def : PStateImm0_15<"DAIFSet", 0b011, 0b110>;
+def : PStateImm0_15<"DAIFClr", 0b011, 0b111>;
 // v8.1a "Privileged Access Never" extension-specific PStates
 let Requires = [{ {AArch64::FeaturePAN} }] in
-def : PState<"PAN",     0b00100>;
+def : PStateImm0_15<"PAN",     0b000, 0b100>;
 
 // v8.2a "User Access Override" extension-specific PStates
 let Requires = [{ {AArch64::FeaturePsUAO} }] in
-def : PState<"UAO",     0b00011>;
+def : PStateImm0_15<"UAO",     0b000, 0b011>;
 // v8.4a timing insensitivity of data processing instructions
 let Requires = [{ {AArch64::FeatureDIT} }] in
-def : PState<"DIT",     0b11010>;
+def : PStateImm0_15<"DIT",     0b011, 0b010>;
 // v8.5a Spectre Mitigation
 let Requires = [{ {AArch64::FeatureSSBS} }] in
-def : PState<"SSBS",    0b11001>;
+def : PStateImm0_15<"SSBS",    0b011, 0b001>;
 // v8.5a Memory Tagging Extension
 let Requires = [{ {AArch64::FeatureMTE} }] in
-def : PState<"TCO",     0b11100>;
+def : PStateImm0_15<"TCO",     0b011, 0b100>;
+// v8.8a Non-Maskable Interrupts
+let Requires = [{ {AArch64::FeatureNMI} }] in
+def : PStateImm0_1<"ALLINT",   0b001, 0b000, 0b000>;
+// v9.4a Exception-based event profiling
+//                  Name,      Op1,   Op2,   Crm_high
+def : PStateImm0_1<"PM",       0b001, 0b000, 0b001>;
 
 //===----------------------------------------------------------------------===//
 // SVCR instruction options.
@@ -600,23 +638,6 @@ defm : TLBI<"PAALLOS",      0b110, 0b1000, 0b0001, 0b100, 0>;
 defm : TLBI<"PAALL",        0b110, 0b1000, 0b0111, 0b100, 0>;
 }
 
-// Armv8.5-A Prediction Restriction by Context instruction options:
-class PRCTX<string name, bits<4> crm> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
-  string Name = name;
-  bits<11> Encoding;
-  let Encoding{10-4} = 0b0110111;
-  let Encoding{3-0} = crm;
-  bit NeedsReg = 1;
-  code Requires = [{ {} }];
-}
-
-let Requires = [{ {AArch64::FeaturePredRes} }] in {
-def : PRCTX<"RCTX", 0b0011>;
-}
-
 //===----------------------------------------------------------------------===//
 // MRS/MSR (system register read/write) instruction options.
 //===----------------------------------------------------------------------===//
@@ -709,6 +730,7 @@ def : ROSysReg<"ID_ISAR6_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b111> {
 }
 def : ROSysReg<"ID_AA64PFR0_EL1",     0b11, 0b000, 0b0000, 0b0100, 0b000>;
 def : ROSysReg<"ID_AA64PFR1_EL1",     0b11, 0b000, 0b0000, 0b0100, 0b001>;
+def : ROSysReg<"ID_AA64PFR2_EL1",     0b11, 0b000, 0b0000, 0b0100, 0b010>;
 def : ROSysReg<"ID_AA64DFR0_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b000>;
 def : ROSysReg<"ID_AA64DFR1_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b001>;
 def : ROSysReg<"ID_AA64AFR0_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b100>;
@@ -719,20 +741,22 @@ def : ROSysReg<"ID_AA64ISAR2_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b010>;
 def : ROSysReg<"ID_AA64MMFR0_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b000>;
 def : ROSysReg<"ID_AA64MMFR1_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b001>;
 def : ROSysReg<"ID_AA64MMFR2_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b010>;
-def : ROSysReg<"MVFR0_EL1",          0b11, 0b000, 0b0000, 0b0011, 0b000>;
-def : ROSysReg<"MVFR1_EL1",          0b11, 0b000, 0b0000, 0b0011, 0b001>;
-def : ROSysReg<"MVFR2_EL1",          0b11, 0b000, 0b0000, 0b0011, 0b010>;
-def : ROSysReg<"RVBAR_EL1",          0b11, 0b000, 0b1100, 0b0000, 0b001>;
-def : ROSysReg<"RVBAR_EL2",          0b11, 0b100, 0b1100, 0b0000, 0b001>;
-def : ROSysReg<"RVBAR_EL3",          0b11, 0b110, 0b1100, 0b0000, 0b001>;
-def : ROSysReg<"ISR_EL1",            0b11, 0b000, 0b1100, 0b0001, 0b000>;
-def : ROSysReg<"CNTPCT_EL0",         0b11, 0b011, 0b1110, 0b0000, 0b001>;
-def : ROSysReg<"CNTVCT_EL0",         0b11, 0b011, 0b1110, 0b0000, 0b010>;
-def : ROSysReg<"ID_MMFR4_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b110>;
-def : ROSysReg<"ID_MMFR5_EL1",       0b11, 0b000, 0b0000, 0b0011, 0b110>;
+def : ROSysReg<"ID_AA64MMFR3_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b011>;
+def : ROSysReg<"ID_AA64MMFR4_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b100>;
+def : ROSysReg<"MVFR0_EL1",           0b11, 0b000, 0b0000, 0b0011, 0b000>;
+def : ROSysReg<"MVFR1_EL1",           0b11, 0b000, 0b0000, 0b0011, 0b001>;
+def : ROSysReg<"MVFR2_EL1",           0b11, 0b000, 0b0000, 0b0011, 0b010>;
+def : ROSysReg<"RVBAR_EL1",           0b11, 0b000, 0b1100, 0b0000, 0b001>;
+def : ROSysReg<"RVBAR_EL2",           0b11, 0b100, 0b1100, 0b0000, 0b001>;
+def : ROSysReg<"RVBAR_EL3",           0b11, 0b110, 0b1100, 0b0000, 0b001>;
+def : ROSysReg<"ISR_EL1",             0b11, 0b000, 0b1100, 0b0001, 0b000>;
+def : ROSysReg<"CNTPCT_EL0",          0b11, 0b011, 0b1110, 0b0000, 0b001>;
+def : ROSysReg<"CNTVCT_EL0",          0b11, 0b011, 0b1110, 0b0000, 0b010>;
+def : ROSysReg<"ID_MMFR4_EL1",        0b11, 0b000, 0b0000, 0b0010, 0b110>;
+def : ROSysReg<"ID_MMFR5_EL1",        0b11, 0b000, 0b0000, 0b0011, 0b110>;
 
 // Trace registers
-//                                 Op0    Op1     CRn     CRm    Op2
+//                                   Op0    Op1     CRn     CRm    Op2
 def : ROSysReg<"TRCSTATR",           0b10, 0b001, 0b0000, 0b0011, 0b000>;
 def : ROSysReg<"TRCIDR8",            0b10, 0b001, 0b0000, 0b0000, 0b110>;
 def : ROSysReg<"TRCIDR9",            0b10, 0b001, 0b0000, 0b0001, 0b110>;
@@ -817,10 +841,12 @@ def : RWSysReg<"SCXTNUM_EL12", 0b11, 0b101, 0b1101, 0b0000, 0b111>;
 
 // v9a Realm Management Extension registers
 let Requires = [{ {AArch64::FeatureRME} }] in {
-def : RWSysReg<"MFAR_EL3",  0b11, 0b110, 0b0110, 0b0000, 0b101>;
 def : RWSysReg<"GPCCR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b110>;
 def : RWSysReg<"GPTBR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b100>;
 }
+// MFAR_EL3 is part of both FEAT_RME and FEAT_PFAR (further below). The latter
+// is unconditional so this register has to be too.
+def : RWSysReg<"MFAR_EL3",  0b11, 0b110, 0b0110, 0b0000, 0b101>;
 
 // v9a Memory Encryption Contexts Extension registers
 let Requires = [{ {AArch64::FeatureMEC} }] in {
@@ -1662,6 +1688,7 @@ def : RWSysReg<"HDFGRTR2_EL2",     0b11, 0b100, 0b0011, 0b0001, 0b000>;
 def : RWSysReg<"HDFGWTR2_EL2",     0b11, 0b100, 0b0011, 0b0001, 0b001>;
 def : RWSysReg<"HFGRTR2_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b010>;
 def : RWSysReg<"HFGWTR2_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b011>;
+def : RWSysReg<"HFGITR2_EL2",      0b11, 0b100, 0b0011, 0b0001, 0b111>;
 }
 
 // v8.6a Enhanced Counter Virtualization
@@ -1727,6 +1754,13 @@ let Requires = [{ {AArch64::FeatureMPAM, AArch64::FeatureSME} }] in {
 def : RWSysReg<"MPAMSM_EL1",    0b11, 0b000, 0b1010, 0b0101, 0b011>;
 } // HasMPAM, HasSME
 
+// v8.8a Non-Maskable Interrupts
+let Requires = [{ {AArch64::FeatureNMI} }] in {
+  //                               Op0   Op1    CRn     CRm     Op2
+  def : RWSysReg<"ALLINT",         0b11, 0b000, 0b0100, 0b0011, 0b000>;
+  def : ROSysReg<"ICC_NMIAR1_EL1", 0b11, 0b000, 0b1100, 0b1001, 0b101>; // FEAT_GICv3_NMI
+}
+
 // v8.9a/v9.4a Memory Attribute Index Enhancement (FEAT_AIE)
 //                            Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"AMAIR2_EL1",  0b11, 0b000, 0b1010, 0b0011, 0b001>;
@@ -1768,6 +1802,7 @@ def : RWSysReg<"S2POR_EL1",   0b11, 0b000, 0b1010, 0b0010, 0b101>;
 def : RWSysReg<"SCTLR2_EL1",  0b11, 0b000, 0b0001, 0b0000, 0b011>;
 def : RWSysReg<"SCTLR2_EL12", 0b11, 0b101, 0b0001, 0b0000, 0b011>;
 def : RWSysReg<"SCTLR2_EL2",  0b11, 0b100, 0b0001, 0b0000, 0b011>;
+def : RWSysReg<"SCTLR2_EL3",  0b11, 0b110, 0b0001, 0b0000, 0b011>;
 
 // v8.9a/v9.4a Extension to Translation Control Registers (FEAT_TCR2)
 //                            Op0   Op1    CRn     CRm     Op2
@@ -1858,3 +1893,18 @@ def : RWSysReg<"TRCITECR_EL2",      0b11, 0b100, 0b0001, 0b0010, 0b011>;
 // v8.9a/9.4a SPE Data Source Filtering (FEAT_SPE_FDS)
 //                                  Op0   Op1    CRn     CRm     Op2
 def : RWSysReg<"PMSDSFR_EL1",       0b11, 0b000, 0b1001, 0b1010, 0b100>;
+
+// v8.9a/9.4a RASv2 (FEAT_RASv2)
+//                                  Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureRASv2} }] in
+def : ROSysReg<"ERXGSR_EL1",        0b11, 0b000, 0b0101, 0b0011, 0b010>;
+
+// v8.9a/9.4a Physical Fault Address (FEAT_PFAR)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PFAR_EL1",          0b11, 0b000, 0b0110, 0b0000, 0b101>;
+def : RWSysReg<"PFAR_EL12",         0b11, 0b101, 0b0110, 0b0000, 0b101>;
+def : RWSysReg<"PFAR_EL2",          0b11, 0b100, 0b0110, 0b0000, 0b101>;
+
+// v9.4a Exception-based event profiling (FEAT_EBEP)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"PM",                0b11, 0b000, 0b0100, 0b0011, 0b001>;

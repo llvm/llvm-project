@@ -314,7 +314,8 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     [[fallthrough]];
   case R_ARM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
-    return !inBranchRange(type, branchAddr, dst + a);
+    return !inBranchRange(type, branchAddr, dst + a) ||
+        (!config->armHasBlx && (s.getVA() & 1));
   }
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
@@ -325,7 +326,8 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     [[fallthrough]];
   case R_ARM_THM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
-    return !inBranchRange(type, branchAddr, dst + a);
+    return !inBranchRange(type, branchAddr, dst + a) ||
+        (!config->armHasBlx && (s.getVA() & 1) == 0);;
   }
   }
   return false;

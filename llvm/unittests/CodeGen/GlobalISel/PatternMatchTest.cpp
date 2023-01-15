@@ -45,7 +45,7 @@ TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
   if (!TM)
     return;
   auto MIBCst = B.buildConstant(LLT::scalar(64), 42);
-  Optional<ValueAndVReg> Src0;
+  std::optional<ValueAndVReg> Src0;
   bool match = mi_match(MIBCst.getReg(0), *MRI, m_GCst(Src0));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0->VReg, MIBCst.getReg(0));
@@ -700,8 +700,8 @@ TEST_F(AArch64GISelMITest, MatchFPOrIntConst) {
 
   Register IntOne = B.buildConstant(LLT::scalar(64), 1).getReg(0);
   Register FPOne = B.buildFConstant(LLT::scalar(64), 1.0).getReg(0);
-  Optional<ValueAndVReg> ValReg;
-  Optional<FPValueAndVReg> FValReg;
+  std::optional<ValueAndVReg> ValReg;
+  std::optional<FPValueAndVReg> FValReg;
 
   EXPECT_TRUE(mi_match(IntOne, *MRI, m_GCst(ValReg)));
   EXPECT_EQ(IntOne, ValReg->VReg);
@@ -723,7 +723,7 @@ TEST_F(AArch64GISelMITest, MatchConstantSplat) {
   Register FPOne = B.buildFConstant(s64, 1.0).getReg(0);
   Register FPZero = B.buildFConstant(s64, 0.0).getReg(0);
   Register Undef = B.buildUndef(s64).getReg(0);
-  Optional<FPValueAndVReg> FValReg;
+  std::optional<FPValueAndVReg> FValReg;
 
   // GFCstOrSplatGFCstMatch allows undef as part of splat. Undef often comes
   // from padding to legalize into available operation and then ignore added

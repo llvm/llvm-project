@@ -128,6 +128,10 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
       createSplitPart(rewriter, op.getLoc(), op, offsets, sizes, firstResults,
                       dimension, remainingSize, totalOffset, secondResults);
 
+  // Propagate any errors in part creation.
+  if (!firstPart || !secondPart)
+    return {TilingInterface(), TilingInterface()};
+
   // Replace the original op with the results of the two newly created ops.
   rewriter.replaceOp(op, secondResults);
   return {firstPart, secondPart};

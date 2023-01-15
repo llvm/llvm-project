@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Option
   ProfileData
   Support
+  TargetParser
   WindowsDriver
   )
 
@@ -92,6 +93,7 @@ add_clang_library(clangDriver
 
   DEPENDS
   ClangDriverOptions
+  RISCVTargetParserTableGen
 
   LINK_LIBS
   clangBasic

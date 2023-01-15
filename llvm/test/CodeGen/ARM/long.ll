@@ -84,7 +84,7 @@ entry:
 define i64 @f10() {
 ; CHECK-LABEL: f10:
 entry:
-        %a = alloca i64, align 8                ; <i64*> [#uses=1]
-        %retval = load i64, i64* %a          ; <i64> [#uses=1]
+        %a = alloca i64, align 8                ; <ptr> [#uses=1]
+        %retval = load i64, ptr %a          ; <i64> [#uses=1]
         ret i64 %retval
 }

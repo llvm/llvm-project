@@ -61,6 +61,17 @@ TEST(TypesTest, CopyPointerType) {
   EXPECT_FALSE(P2C0->isOpaque());
 }
 
+TEST(TypesTest, TargetExtType) {
+  LLVMContext Context;
+  Type *A = TargetExtType::get(Context, "typea");
+  Type *Aparam = TargetExtType::get(Context, "typea", {}, {0, 1});
+  Type *Aparam2 = TargetExtType::get(Context, "typea", {}, {0, 1});
+  // Opaque types with same parameters are identical...
+  EXPECT_EQ(Aparam, Aparam2);
+  // ... but just having the same name is not enough.
+  EXPECT_NE(A, Aparam);
+}
+
 TEST(TypedPointerType, PrintTest) {
   std::string Buffer;
   LLVMContext Context;

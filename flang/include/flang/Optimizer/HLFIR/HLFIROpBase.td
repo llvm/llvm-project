@@ -39,6 +39,7 @@ def hlfir_Dialect : Dialect {
 
   let useDefaultTypePrinterParser = 1;
   let cppNamespace = "hlfir";
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 
@@ -66,6 +67,17 @@ def hlfir_ExprType : TypeDef<hlfir_Dialect, "Expr"> {
     bool isScalar() const { return getShape().empty(); }
     bool isArray() const { return !isScalar(); }
     bool isPolymorphic() const { return getPolymorphic(); }
+    unsigned getRank() const {return getShape().size();}
+    mlir::Type getElementExprType() const {
+      mlir::Type eleTy = getElementType();
+      if (fir::isa_trivial(eleTy))
+        return eleTy;
+      return hlfir::ExprType::get(eleTy.getContext(), Shape{}, eleTy,
+                isPolymorphic());
+    }
+    static constexpr int64_t getUnknownExtent() {
+      return mlir::ShapedType::kDynamic;
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;

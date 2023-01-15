@@ -85,10 +85,10 @@ private:
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
   CallDescriptionMap<SmartPtrMethodHandlerFn> SmartPtrMethodHandlers{
-      {{"reset"}, &SmartPtrModeling::handleReset},
-      {{"release"}, &SmartPtrModeling::handleRelease},
-      {{"swap", 1}, &SmartPtrModeling::handleSwapMethod},
-      {{"get"}, &SmartPtrModeling::handleGet}};
+      {{{"reset"}}, &SmartPtrModeling::handleReset},
+      {{{"release"}}, &SmartPtrModeling::handleRelease},
+      {{{"swap"}, 1}, &SmartPtrModeling::handleSwapMethod},
+      {{{"get"}}, &SmartPtrModeling::handleGet}};
   const CallDescription StdSwapCall{{"std", "swap"}, 2};
   const CallDescription StdMakeUniqueCall{{"std", "make_unique"}};
   const CallDescription StdMakeUniqueForOverwriteCall{

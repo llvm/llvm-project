@@ -4,109 +4,101 @@
 ;
 ; Mostly check we do not crash on these uses
 
-define internal void @internal(void (i8*)* %fp) {
+define internal void @internal(ptr %fp) {
 ;
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@internal
-; TUNIT-SAME: (void (i8*)* nonnull [[FP:%.*]]) {
+; TUNIT-SAME: (ptr nonnull [[FP:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
-; TUNIT-NEXT:    call void [[FP]](i8* bitcast (void (i32*)* @foo to i8*))
-; TUNIT-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
-; TUNIT-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
-; TUNIT-NEXT:    call void @callback2(void (i8*)* nonnull [[FP]])
-; TUNIT-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to i8*
-; TUNIT-NEXT:    call void [[FP]](i8* [[TMP1]])
+; TUNIT-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    call void [[FP]](ptr @foo)
+; TUNIT-NEXT:    call void @callback1(ptr noundef nonnull @foo)
+; TUNIT-NEXT:    call void @callback2(ptr noundef @foo)
+; TUNIT-NEXT:    call void @callback2(ptr nonnull [[FP]])
+; TUNIT-NEXT:    call void [[FP]](ptr [[A]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@internal
-; CGSCC-SAME: (void (i8*)* noundef nonnull [[FP:%.*]]) {
+; CGSCC-SAME: (ptr noundef nonnull [[FP:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
-; CGSCC-NEXT:    call void [[FP]](i8* bitcast (void (i32*)* @foo to i8*))
-; CGSCC-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
-; CGSCC-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
-; CGSCC-NEXT:    call void @callback2(void (i8*)* noundef nonnull [[FP]])
-; CGSCC-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to i8*
-; CGSCC-NEXT:    call void [[FP]](i8* [[TMP1]])
+; CGSCC-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1:[0-9]+]]
+; CGSCC-NEXT:    call void [[FP]](ptr @foo)
+; CGSCC-NEXT:    call void @callback1(ptr noundef nonnull @foo)
+; CGSCC-NEXT:    call void @callback2(ptr noundef @foo)
+; CGSCC-NEXT:    call void @callback2(ptr noundef nonnull [[FP]])
+; CGSCC-NEXT:    call void [[FP]](ptr [[A]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %a = alloca i32, align 4
-  %tmp = bitcast i32* %a to i8*
-  call void @foo(i32* nonnull %a)
-  call void %fp(i8* bitcast (void (i32*)* @foo to i8*))
-  call void @callback1(void (i32*)* nonnull @foo)
-  call void @callback2(void (i8*)* bitcast (void (i32*)* @foo to void (i8*)*))
-  call void @callback2(void (i8*)* %fp)
-  %tmp1 = bitcast i32* %a to i8*
-  call void %fp(i8* %tmp1)
+  call void @foo(ptr nonnull %a)
+  call void %fp(ptr @foo)
+  call void @callback1(ptr nonnull @foo)
+  call void @callback2(ptr @foo)
+  call void @callback2(ptr %fp)
+  call void %fp(ptr %a)
   ret void
 }
 
-define void @external(void (i8*)* %fp) {
+define void @external(ptr %fp) {
 ;
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@external
-; TUNIT-SAME: (void (i8*)* [[FP:%.*]]) {
+; TUNIT-SAME: (ptr [[FP:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
-; TUNIT-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
-; TUNIT-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
-; TUNIT-NEXT:    call void @callback2(void (i8*)* [[FP]])
-; TUNIT-NEXT:    call void [[FP]](i8* bitcast (void (i32*)* @foo to i8*))
-; TUNIT-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to i8*
-; TUNIT-NEXT:    call void [[FP]](i8* [[TMP1]])
-; TUNIT-NEXT:    call void @internal(void (i8*)* nonnull [[FP]])
+; TUNIT-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
+; TUNIT-NEXT:    call void @callback1(ptr noundef nonnull @foo)
+; TUNIT-NEXT:    call void @callback2(ptr noundef @foo)
+; TUNIT-NEXT:    call void @callback2(ptr [[FP]])
+; TUNIT-NEXT:    call void [[FP]](ptr @foo)
+; TUNIT-NEXT:    call void [[FP]](ptr [[A]])
+; TUNIT-NEXT:    call void @internal(ptr nonnull [[FP]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@external
-; CGSCC-SAME: (void (i8*)* [[FP:%.*]]) {
+; CGSCC-SAME: (ptr [[FP:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR2:[0-9]+]]
-; CGSCC-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
-; CGSCC-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
-; CGSCC-NEXT:    call void @callback2(void (i8*)* [[FP]])
-; CGSCC-NEXT:    call void [[FP]](i8* bitcast (void (i32*)* @foo to i8*))
-; CGSCC-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to i8*
-; CGSCC-NEXT:    call void [[FP]](i8* [[TMP1]])
-; CGSCC-NEXT:    call void @internal(void (i8*)* noundef nonnull [[FP]])
+; CGSCC-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    call void @callback1(ptr noundef nonnull @foo)
+; CGSCC-NEXT:    call void @callback2(ptr noundef @foo)
+; CGSCC-NEXT:    call void @callback2(ptr [[FP]])
+; CGSCC-NEXT:    call void [[FP]](ptr @foo)
+; CGSCC-NEXT:    call void [[FP]](ptr [[A]])
+; CGSCC-NEXT:    call void @internal(ptr noundef nonnull [[FP]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %a = alloca i32, align 4
-  %tmp = bitcast i32* %a to i8*
-  call void @foo(i32* nonnull %a)
-  call void @callback1(void (i32*)* nonnull @foo)
-  call void @callback2(void (i8*)* bitcast (void (i32*)* @foo to void (i8*)*))
-  call void @callback2(void (i8*)* %fp)
-  call void %fp(i8* bitcast (void (i32*)* @foo to i8*))
-  %tmp1 = bitcast i32* %a to i8*
-  call void %fp(i8* %tmp1)
-  call void @internal(void (i8*)* %fp)
+  call void @foo(ptr nonnull %a)
+  call void @callback1(ptr nonnull @foo)
+  call void @callback2(ptr @foo)
+  call void @callback2(ptr %fp)
+  call void %fp(ptr @foo)
+  call void %fp(ptr %a)
+  call void @internal(ptr %fp)
   ret void
 }
 
-define internal void @foo(i32* %a) {
+define internal void @foo(ptr %a) {
 ;
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* [[A]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store i32 0, i32* %a
+  store i32 0, ptr %a
   ret void
 }
 
-declare void @callback1(void (i32*)*)
-declare void @callback2(void (i8*)*)
+declare void @callback1(ptr)
+declare void @callback2(ptr)
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }

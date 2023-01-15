@@ -1315,7 +1315,7 @@ TLI_DEFINE_SIG_INTERNAL(Int)
 /// int fprintf(FILE *stream, const char *format, ...);
 TLI_DEFINE_ENUM_INTERNAL(fprintf)
 TLI_DEFINE_STRING_INTERNAL("fprintf")
-TLI_DEFINE_SIG_INTERNAL(Int, Ptr, Ellip)
+TLI_DEFINE_SIG_INTERNAL(Int, Ptr, Ptr, Ellip)
 
 /// int fputc(int c, FILE *stream);
 TLI_DEFINE_ENUM_INTERNAL(fputc)

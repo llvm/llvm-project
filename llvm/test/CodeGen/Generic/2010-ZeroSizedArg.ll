@@ -12,9 +12,8 @@
 define void @t(%0) nounwind {
 entry:
   %arg0 = alloca %union.T0
-  %1 = bitcast %union.T0* %arg0 to %0*
-  store %0 %0, %0* %1, align 1
+  store %0 %0, ptr %arg0, align 1
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

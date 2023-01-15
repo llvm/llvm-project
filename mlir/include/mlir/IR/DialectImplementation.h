@@ -105,17 +105,35 @@ struct FieldParser<std::string> {
   }
 };
 
+/// Parse an Optional attribute.
+template <typename AttributeT>
+struct FieldParser<
+    std::optional<AttributeT>,
+    std::enable_if_t<std::is_base_of<Attribute, AttributeT>::value,
+                     std::optional<AttributeT>>> {
+  static FailureOr<std::optional<AttributeT>> parse(AsmParser &parser) {
+    AttributeT attr;
+    OptionalParseResult result = parser.parseOptionalAttribute(attr);
+    if (result.has_value()) {
+      if (succeeded(*result))
+        return {std::optional<AttributeT>(attr)};
+      return failure();
+    }
+    return {std::nullopt};
+  }
+};
+
 /// Parse an Optional integer.
 template <typename IntT>
 struct FieldParser<
-    llvm::Optional<IntT>,
-    std::enable_if_t<std::is_integral<IntT>::value, Optional<IntT>>> {
-  static FailureOr<Optional<IntT>> parse(AsmParser &parser) {
+    std::optional<IntT>,
+    std::enable_if_t<std::is_integral<IntT>::value, std::optional<IntT>>> {
+  static FailureOr<std::optional<IntT>> parse(AsmParser &parser) {
     IntT value;
     OptionalParseResult result = parser.parseOptionalInteger(value);
     if (result.has_value()) {
       if (succeeded(*result))
-        return {Optional<IntT>(value)};
+        return {std::optional<IntT>(value)};
       return failure();
     }
     return {std::nullopt};

@@ -10,9 +10,9 @@
 
 // iter_common_reference_t
 
-#include <iterator>
-
 #include <concepts>
+#include <iterator>
+#include <type_traits>
 
 struct X { };
 

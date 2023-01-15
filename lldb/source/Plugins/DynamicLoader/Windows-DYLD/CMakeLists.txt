@@ -6,4 +6,5 @@ add_lldb_library(lldbPluginDynamicLoaderWindowsDYLD PLUGIN
     lldbTarget
   LINK_COMPONENTS
     Support
+    TargetParser
   )

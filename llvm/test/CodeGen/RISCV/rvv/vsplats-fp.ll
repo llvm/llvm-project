@@ -75,7 +75,7 @@ define <vscale x 8 x double> @vsplat_zero_nxv8f64() {
 }
 
 ; Test that we fold this to a vlse with 0 stride.
-define <vscale x 8 x float> @vsplat_load_nxv8f32(float* %ptr) {
+define <vscale x 8 x float> @vsplat_load_nxv8f32(ptr %ptr) {
 ; OPTIMIZED-LABEL: vsplat_load_nxv8f32:
 ; OPTIMIZED:       # %bb.0:
 ; OPTIMIZED-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
@@ -88,7 +88,7 @@ define <vscale x 8 x float> @vsplat_load_nxv8f32(float* %ptr) {
 ; NOT-OPTIMIZED-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; NOT-OPTIMIZED-NEXT:    vfmv.v.f v8, ft0
 ; NOT-OPTIMIZED-NEXT:    ret
-  %f = load float, float* %ptr
+  %f = load float, ptr %ptr
   %head = insertelement <vscale x 8 x float> poison, float %f, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x float> %splat

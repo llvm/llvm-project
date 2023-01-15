@@ -399,7 +399,7 @@ void LVELFReader::processOneAttribute(const DWARFDie &Die, LVOffset *OffsetPtr,
       // marks functions that have been removed, by setting the value for the
       // low_pc to the max address.
       if (std::optional<uint64_t> Value = FormValue.getAsAddress()) {
-        CurrentLowPC = Value.value();
+        CurrentLowPC = *Value;
       } else {
         uint64_t UValue = FormValue.getRawUValue();
         if (U->getAddrOffsetSectionItem(UValue)) {
@@ -770,9 +770,19 @@ std::string LVELFReader::getRegisterName(LVSmall Opcode, uint64_t Operands[2]) {
   std::string string;
   raw_string_ostream Stream(string);
   DIDumpOptions DumpOpts;
+  auto *MCRegInfo = MRI.get();
+  auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
+    if (!MCRegInfo)
+      return {};
+    if (std::optional<unsigned> LLVMRegNum =
+            MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
+      if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
+        return StringRef(RegName);
+    return {};
+  };
+  DumpOpts.GetNameForDWARFReg = GetRegName;
   DWARFExpression::prettyPrintRegisterOp(/*U=*/nullptr, Stream, DumpOpts,
-                                         Opcode, Operands, MRI.get(),
-                                         /*isEH=*/false);
+                                         Opcode, Operands);
   return Stream.str();
 }
 
@@ -903,7 +913,7 @@ Error LVELFReader::createScopes() {
           CU->getVersion() >= 5
               ? dwarf::toString(UnitDie.find(dwarf::DW_AT_dwo_name))
               : dwarf::toString(UnitDie.find(dwarf::DW_AT_GNU_dwo_name));
-      StringRef From(DWOFileName.has_value() ? DWOFileName.value() : "");
+      StringRef From(DWOFileName.value_or(""));
       DWOAlternativeLocation = createAlternativePath(From);
     }
 

@@ -15,9 +15,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; BCA0: <GLOBALVAL_SUMMARY_BLOCK
 ; BCA1-NOT: <GLOBALVAL_SUMMARY_BLOCK
 
-; M0: @g = external global void ()*{{$}}
-; M1: @g = global void ()* @f.13757e0fb71915e385efa4dc9d1e08fd, !type !0
-@g = global void ()* @f, !type !0
+; M0: @g = external global ptr{{$}}
+; M1: @g = global ptr @f.13757e0fb71915e385efa4dc9d1e08fd, !type !0
+@g = global ptr @f, !type !0
 
 ; M0: define hidden void @f.13757e0fb71915e385efa4dc9d1e08fd()
 ; M1: declare hidden void @f.13757e0fb71915e385efa4dc9d1e08fd()

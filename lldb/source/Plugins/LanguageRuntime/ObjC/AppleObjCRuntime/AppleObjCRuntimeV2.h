@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 
 #include "AppleObjCRuntime.h"
 #include "lldb/lldb-private.h"
@@ -286,18 +287,24 @@ private:
 
   struct DescriptorMapUpdateResult {
     bool m_update_ran;
+    bool m_retry_update;
     uint32_t m_num_found;
 
-    DescriptorMapUpdateResult(bool ran, uint32_t found) {
+    DescriptorMapUpdateResult(bool ran, bool retry, uint32_t found) {
       m_update_ran = ran;
+
+      m_retry_update = retry;
+
       m_num_found = found;
     }
 
-    static DescriptorMapUpdateResult Fail() { return {false, 0}; }
+    static DescriptorMapUpdateResult Fail() { return {false, false, 0}; }
 
     static DescriptorMapUpdateResult Success(uint32_t found) {
-      return {true, found};
+      return {true, false, found};
     }
+
+    static DescriptorMapUpdateResult Retry() { return {false, true, 0}; }
   };
 
   /// Abstraction to read the Objective-C class info.
@@ -395,6 +402,7 @@ private:
                                uint32_t num_class_infos);
 
   enum class SharedCacheWarningReason {
+    eExpressionUnableToRun,
     eExpressionExecutionFailure,
     eNotEnoughClassesRead
   };
@@ -437,7 +445,7 @@ private:
   EncodingToTypeSP m_encoding_to_type_sp;
   std::once_flag m_no_classes_cached_warning;
   std::once_flag m_no_expanded_cache_warning;
-  llvm::Optional<std::pair<lldb::addr_t, lldb::addr_t>> m_CFBoolean_values;
+  std::optional<std::pair<lldb::addr_t, lldb::addr_t>> m_CFBoolean_values;
   uint64_t m_realized_class_generation_count;
 };
 

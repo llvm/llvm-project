@@ -28,6 +28,16 @@ class AnalysisState;
 struct BufferizationOptions;
 class OpFilter;
 
+/// Bufferization statistics for debugging. These can be printed after running
+/// the OneShotBufferizePass with `-mlir-pass-statistics`. See the pass
+/// definition for more details.
+struct BufferizationStatistics {
+  int64_t numBufferAlloc = 0;
+  int64_t numBufferDealloc = 0;
+  int64_t numTensorInPlace = 0;
+  int64_t numTensorOutOfPlace = 0;
+};
+
 /// A helper type converter class that automatically populates the relevant
 /// materializations and type conversions for bufferization.
 class BufferizeTypeConverter : public TypeConverter {
@@ -65,7 +75,8 @@ void populateEliminateBufferizeMaterializationsPatterns(
 /// can be used to implement partial bufferization passes.
 LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options,
                           bool copyBeforeWrite = true,
-                          const OpFilter *opFilter = nullptr);
+                          const OpFilter *opFilter = nullptr,
+                          BufferizationStatistics *statistics = nullptr);
 
 BufferizationOptions getPartialBufferizationOptions();
 

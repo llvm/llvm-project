@@ -12,6 +12,7 @@ unittest("StaticAnalysisTests") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "APSIntTypeTest.cpp",
     "AnalyzerOptionsTest.cpp",
     "BugReportInterestingnessTest.cpp",
     "CallDescriptionTest.cpp",

@@ -23,8 +23,8 @@ entry:
 ; SOURCE-SCHED: mtc1
 ; SOURCE-SCHED: c.olt.s
 ; SOURCE-SCHED: jr
-  store float 0.000000e+00, float* @gf0, align 4
-  store float 1.000000e+00, float* @gf1, align 4
+  store float 0.000000e+00, ptr @gf0, align 4
+  store float 1.000000e+00, ptr @gf1, align 4
   %cmp = fcmp olt float %a, %b
   %conv = zext i1 %cmp to i32
   %conv1 = sitofp i32 %conv to float
@@ -33,8 +33,8 @@ entry:
 
 define double @select_cc_f64(double %a, double %b) nounwind {
 entry:
-  store double 0.000000e+00, double* @gd0, align 8
-  store double 1.000000e+00, double* @gd1, align 8
+  store double 0.000000e+00, ptr @gd0, align 8
+  store double 1.000000e+00, ptr @gd1, align 8
   %cmp = fcmp olt double %a, %b
   %conv = zext i1 %cmp to i32
   %conv1 = sitofp i32 %conv to double

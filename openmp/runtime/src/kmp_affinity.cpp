@@ -2943,6 +2943,17 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
       }
       (*line)++;
 
+#if KMP_ARCH_LOONGARCH64
+      // The parsing logic of /proc/cpuinfo in this function highly depends on
+      // the blank lines between each processor info block. But on LoongArch a
+      // blank line exists before the first processor info block (i.e. after the
+      // "system type" line). This blank line was added because the "system
+      // type" line is unrelated to any of the CPUs. We must skip this line so
+      // that the original logic works on LoongArch.
+      if (*buf == '\n' && *line == 2)
+        continue;
+#endif
+
       char s1[] = "processor";
       if (strncmp(buf, s1, sizeof(s1) - 1) == 0) {
         CHECK_LINE;

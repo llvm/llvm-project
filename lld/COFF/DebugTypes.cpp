@@ -48,7 +48,7 @@ class TypeServerSource : public TpiSource {
 public:
   explicit TypeServerSource(COFFLinkerContext &ctx, PDBInputFile *f)
       : TpiSource(ctx, PDB, nullptr), pdbInputFile(f) {
-    if (f->loadErr && *f->loadErr)
+    if (f->loadErrorStr)
       return;
     pdb::PDBFile &file = f->session->getPDBFile();
     auto expectedInfo = file.getPDBInfoStream();
@@ -235,7 +235,7 @@ void TpiSource::remapRecord(MutableArrayRef<uint8_t> rec,
         reinterpret_cast<TypeIndex *>(contents.data() + ref.Offset), ref.Count);
     for (TypeIndex &ti : indices) {
       if (!remapTypeIndex(ti, ref.Kind)) {
-        if (config->verbose) {
+        if (ctx.config.verbose) {
           uint16_t kind =
               reinterpret_cast<const RecordPrefix *>(rec.data())->RecordKind;
           StringRef fname = file ? file->getName() : "<unknown PDB>";
@@ -305,7 +305,7 @@ getHashesFromDebugH(ArrayRef<uint8_t> debugH) {
 
 // Merge .debug$T for a generic object file.
 Error TpiSource::mergeDebugT(TypeMerger *m) {
-  assert(!config->debugGHashes &&
+  assert(!ctx.config.debugGHashes &&
          "use remapTpiWithGHashes when ghash is enabled");
 
   CVTypeArray types;
@@ -329,7 +329,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
   tpiMap = indexMapStorage;
   ipiMap = indexMapStorage;
 
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords = indexMapStorage.size() - nbHeadIndices;
     nbTypeRecordsBytes = reader.getLength();
     // Count how many times we saw each type record in our input. This
@@ -356,7 +356,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
 
 // Merge types from a type server PDB.
 Error TypeServerSource::mergeDebugT(TypeMerger *m) {
-  assert(!config->debugGHashes &&
+  assert(!ctx.config.debugGHashes &&
          "use remapTpiWithGHashes when ghash is enabled");
 
   pdb::PDBFile &pdbFile = pdbInputFile->session->getPDBFile();
@@ -385,7 +385,7 @@ Error TypeServerSource::mergeDebugT(TypeMerger *m) {
     ipiMap = ipiSrc->indexMapStorage;
   }
 
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords = tpiMap.size() + ipiMap.size();
     nbTypeRecordsBytes =
         expectedTpi->typeArray().getUnderlyingStream().getLength() +
@@ -424,8 +424,10 @@ Expected<TypeServerSource *> UseTypeServerSource::getTypeServerSource() {
       return createFileError(tsPath, errorCodeToError(std::error_code(
                                          ENOENT, std::generic_category())));
     // If an error occurred during loading, throw it now
-    if (pdb->loadErr && *pdb->loadErr)
-      return createFileError(tsPath, std::move(*pdb->loadErr));
+    if (pdb->loadErrorStr)
+      return createFileError(
+          tsPath, make_error<StringError>(*pdb->loadErrorStr,
+                                          llvm::inconvertibleErrorCode()));
 
     tsSrc = (TypeServerSource *)pdb->debugTypesObj;
 
@@ -601,7 +603,7 @@ void TpiSource::assignGHashesFromVector(
     return;
   GloballyHashedType *hashes = new GloballyHashedType[hashVec.size()];
   memcpy(hashes, hashVec.data(), hashVec.size() * sizeof(GloballyHashedType));
-  ghashes = makeArrayRef(hashes, hashVec.size());
+  ghashes = ArrayRef(hashes, hashVec.size());
   ownedGHashes = true;
 }
 
@@ -725,14 +727,14 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
 }
 
 void TpiSource::remapTpiWithGHashes(GHashState *g) {
-  assert(config->debugGHashes && "ghashes must be enabled");
+  assert(ctx.config.debugGHashes && "ghashes must be enabled");
   fillMapFromGHashes(g);
   tpiMap = indexMapStorage;
   ipiMap = indexMapStorage;
   mergeUniqueTypeRecords(file->debugTypes);
   // TODO: Free all unneeded ghash resources now that we have a full index map.
 
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords = ghashes.size();
     nbTypeRecordsBytes = file->debugTypes.size();
   }
@@ -785,7 +787,7 @@ static ArrayRef<uint8_t> typeArrayToBytes(const CVTypeArray &types) {
 
 // Merge types from a type server PDB.
 void TypeServerSource::remapTpiWithGHashes(GHashState *g) {
-  assert(config->debugGHashes && "ghashes must be enabled");
+  assert(ctx.config.debugGHashes && "ghashes must be enabled");
 
   // IPI merging depends on TPI, so do TPI first, then do IPI.  No need to
   // propagate errors, those should've been handled during ghash loading.
@@ -803,13 +805,13 @@ void TypeServerSource::remapTpiWithGHashes(GHashState *g) {
     ipiSrc->ipiMap = ipiMap;
     ipiSrc->mergeUniqueTypeRecords(typeArrayToBytes(ipi.typeArray()));
 
-    if (config->showSummary) {
+    if (ctx.config.showSummary) {
       nbTypeRecords = ipiSrc->ghashes.size();
       nbTypeRecordsBytes = ipi.typeArray().getUnderlyingStream().getLength();
     }
   }
 
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords += ghashes.size();
     nbTypeRecordsBytes += tpi.typeArray().getUnderlyingStream().getLength();
   }
@@ -896,7 +898,7 @@ void UsePrecompSource::remapTpiWithGHashes(GHashState *g) {
   mergeUniqueTypeRecords(file->debugTypes,
                          TypeIndex(precompDependency.getStartTypeIndex() +
                                    precompDependency.getTypesCount()));
-  if (config->showSummary) {
+  if (ctx.config.showSummary) {
     nbTypeRecords = ghashes.size();
     nbTypeRecordsBytes = file->debugTypes.size();
   }
@@ -1125,8 +1127,7 @@ void TypeMerger::mergeTypesWithGHash() {
   //   - source 0, type 1...
   //   - source 1, type 0...
   std::vector<GHashCell> entries;
-  for (const GHashCell &cell :
-       makeArrayRef(ghashState.table.table, tableSize)) {
+  for (const GHashCell &cell : ArrayRef(ghashState.table.table, tableSize)) {
     if (!cell.isEmpty())
       entries.push_back(cell);
   }
@@ -1193,8 +1194,8 @@ void TypeMerger::sortDependencies() {
   ctx.tpiSourceList.insert(ctx.tpiSourceList.end(), objs.begin(), objs.end());
   for (uint32_t i = 0, e = ctx.tpiSourceList.size(); i < e; ++i)
     ctx.tpiSourceList[i]->tpiSrcIdx = i;
-  dependencySources = makeArrayRef(ctx.tpiSourceList.data(), numDeps);
-  objectSources = makeArrayRef(ctx.tpiSourceList.data() + numDeps, numObjs);
+  dependencySources = ArrayRef(ctx.tpiSourceList.data(), numDeps);
+  objectSources = ArrayRef(ctx.tpiSourceList.data() + numDeps, numObjs);
 }
 
 /// Given the index into the ghash table for a particular type, return the type

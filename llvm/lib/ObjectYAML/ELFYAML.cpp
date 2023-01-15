@@ -541,6 +541,11 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_RISCV_RVE);
     BCase(EF_RISCV_TSO);
     break;
+  case ELF::EM_XTENSA:
+    BCase(EF_XTENSA_XT_INSN);
+    BCaseMask(EF_XTENSA_MACH_NONE, EF_XTENSA_MACH);
+    BCase(EF_XTENSA_XT_LIT);
+    break;
   case ELF::EM_AMDGPU:
     BCaseMask(EF_AMDGPU_MACH_NONE, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_R600_R600, EF_AMDGPU_MACH);
@@ -597,6 +602,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1101, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1102, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1103, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1150, EF_AMDGPU_MACH);
     switch (Object->Header.ABIVersion) {
     default:
       // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
@@ -897,6 +903,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
     break;
   case ELF::EM_LOONGARCH:
 #include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
+    break;
+  case ELF::EM_XTENSA:
+#include "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
     break;
   default:
     // Nothing to do.
@@ -1795,7 +1804,6 @@ void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
 void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
     IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapOptional("ID", E.ID);
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);

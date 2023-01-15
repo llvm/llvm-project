@@ -32,7 +32,7 @@
 ; TOVMEM: s_mov_b32 m0, [[M0_RESTORE]]
 
 ; GCN: s_add_i32 s{{[0-9]+}}, m0, 1
-define amdgpu_kernel void @spill_m0(i32 %cond, i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @spill_m0(i32 %cond, ptr addrspace(1) %out) #0 {
 entry:
   %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
   %cmp0 = icmp eq i32 %cond, 0
@@ -44,7 +44,7 @@ if:
 
 endif:
   %foo = call i32 asm sideeffect "s_add_i32 $0, $1, 1", "=s,{m0}"(i32 %m0) #0
-  store i32 %foo, i32 addrspace(1)* %out
+  store i32 %foo, ptr addrspace(1) %out
   ret void
 }
 
@@ -56,15 +56,14 @@ endif:
 ; GCN-NOT: v_readlane_b32 m0
 ; GCN-NOT: s_buffer_store_dword m0
 ; GCN-NOT: s_buffer_load_dword m0
-define amdgpu_ps void @spill_kill_m0_lds(<16 x i8> addrspace(4)* inreg %arg, <16 x i8> addrspace(4)* inreg %arg1, <32 x i8> addrspace(4)* inreg %arg2, i32 inreg %m0) #0 {
+define amdgpu_ps void @spill_kill_m0_lds(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, i32 inreg %m0) #0 {
 main_body:
   %tmp = call float @llvm.amdgcn.interp.mov(i32 2, i32 0, i32 0, i32 %m0)
   %cmp = fcmp ueq float 0.000000e+00, %tmp
   br i1 %cmp, label %if, label %else
 
 if:                                               ; preds = %main_body
-  %lds_ptr = getelementptr [64 x float], [64 x float] addrspace(3)* @lds, i32 0, i32 0
-  %lds_data_ = load float, float addrspace(3)* %lds_ptr
+  %lds_data_ = load float, ptr addrspace(3) @lds
   %lds_data = call float @llvm.amdgcn.wqm.f32(float %lds_data_)
   br label %endif
 
@@ -115,11 +114,11 @@ main_body:
    br i1 %cmp, label %if, label %else
 
 if:                                               ; preds = %main_body
-  store volatile i32 8, i32 addrspace(1)* undef
+  store volatile i32 8, ptr addrspace(1) undef
   br label %endif
 
 else:                                             ; preds = %main_body
-  store volatile i32 11, i32 addrspace(1)* undef
+  store volatile i32 11, ptr addrspace(1) undef
   br label %endif
 
 endif:
@@ -170,12 +169,12 @@ endif:
 ; TOSMEM: s_endpgm
 define amdgpu_kernel void @restore_m0_lds(i32 %arg) {
   %m0 = call i32 asm sideeffect "s_mov_b32 m0, 0", "={m0}"() #0
-  %sval = load volatile i64, i64 addrspace(4)* undef
+  %sval = load volatile i64, ptr addrspace(4) undef
   %cmp = icmp eq i32 %arg, 0
   br i1 %cmp, label %ret, label %bb
 
 bb:
-  store volatile i64 %sval, i64 addrspace(3)* undef
+  store volatile i64 %sval, ptr addrspace(3) undef
   call void asm sideeffect "; use $0", "{m0}"(i32 %m0) #0
   br label %ret
 

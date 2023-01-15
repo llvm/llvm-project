@@ -31,6 +31,7 @@
 
 #include <cassert>
 #include <numeric>
+#include <optional>
 
 using namespace llvm;
 
@@ -207,9 +208,9 @@ bool TFModelEvaluatorImpl::checkReportAndInvalidate(const TfLiteTensor *Tensor,
   return IsValid;
 }
 
-Optional<TFModelEvaluator::EvaluationResult> TFModelEvaluator::evaluate() {
+std::optional<TFModelEvaluator::EvaluationResult> TFModelEvaluator::evaluate() {
   if (!isValid())
-    return None;
+    return std::nullopt;
   return EvaluationResult(Impl->evaluate());
 }
 
@@ -245,4 +246,4 @@ TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) const {
 TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
 TFModelEvaluator::~TFModelEvaluator() {}
 
-#endif // defined(LLVM_HAVE_TF_API)
+#endif // defined(LLVM_HAVE_TFLITE)

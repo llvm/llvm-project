@@ -124,13 +124,22 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // zext.w
     if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZba())
       return TTI::TCC_Free;
+    // bclri
+    if (ST->hasStdExtZbs() && (~Imm).isPowerOf2())
+      return TTI::TCC_Free;
     if (Inst && Idx == 1 && Imm.getBitWidth() <= ST->getXLen() &&
         canUseShiftPair(Inst, Imm))
       return TTI::TCC_Free;
-    [[fallthrough]];
+    Takes12BitImm = true;
+    break;
   case Instruction::Add:
+    Takes12BitImm = true;
+    break;
   case Instruction::Or:
   case Instruction::Xor:
+    // bseti/binvi
+    if (ST->hasStdExtZbs() && Imm.isPowerOf2())
+      return TTI::TCC_Free;
     Takes12BitImm = true;
     break;
   case Instruction::Mul:
@@ -444,40 +453,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::roundeven, MVT::nxv2f64, 9},
     {Intrinsic::roundeven, MVT::nxv4f64, 9},
     {Intrinsic::roundeven, MVT::nxv8f64, 9},
-    {Intrinsic::fabs, MVT::v2f32, 1},
-    {Intrinsic::fabs, MVT::v4f32, 1},
-    {Intrinsic::fabs, MVT::v8f32, 1},
-    {Intrinsic::fabs, MVT::v16f32, 1},
-    {Intrinsic::fabs, MVT::nxv1f32, 1},
-    {Intrinsic::fabs, MVT::nxv2f32, 1},
-    {Intrinsic::fabs, MVT::nxv4f32, 1},
-    {Intrinsic::fabs, MVT::nxv8f32, 1},
-    {Intrinsic::fabs, MVT::nxv16f32, 1},
-    {Intrinsic::fabs, MVT::v2f64, 1},
-    {Intrinsic::fabs, MVT::v4f64, 1},
-    {Intrinsic::fabs, MVT::v8f64, 1},
-    {Intrinsic::fabs, MVT::v16f64, 1},
-    {Intrinsic::fabs, MVT::nxv1f64, 1},
-    {Intrinsic::fabs, MVT::nxv2f64, 1},
-    {Intrinsic::fabs, MVT::nxv4f64, 1},
-    {Intrinsic::fabs, MVT::nxv8f64, 1},
-    {Intrinsic::sqrt, MVT::v2f32, 1},
-    {Intrinsic::sqrt, MVT::v4f32, 1},
-    {Intrinsic::sqrt, MVT::v8f32, 1},
-    {Intrinsic::sqrt, MVT::v16f32, 1},
-    {Intrinsic::sqrt, MVT::nxv1f32, 1},
-    {Intrinsic::sqrt, MVT::nxv2f32, 1},
-    {Intrinsic::sqrt, MVT::nxv4f32, 1},
-    {Intrinsic::sqrt, MVT::nxv8f32, 1},
-    {Intrinsic::sqrt, MVT::nxv16f32, 1},
-    {Intrinsic::sqrt, MVT::v2f64, 1},
-    {Intrinsic::sqrt, MVT::v4f64, 1},
-    {Intrinsic::sqrt, MVT::v8f64, 1},
-    {Intrinsic::sqrt, MVT::v16f64, 1},
-    {Intrinsic::sqrt, MVT::nxv1f64, 1},
-    {Intrinsic::sqrt, MVT::nxv2f64, 1},
-    {Intrinsic::sqrt, MVT::nxv4f64, 1},
-    {Intrinsic::sqrt, MVT::nxv8f64, 1},
     {Intrinsic::bswap, MVT::v2i16, 3},
     {Intrinsic::bswap, MVT::v4i16, 3},
     {Intrinsic::bswap, MVT::v8i16, 3},
@@ -641,6 +616,41 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::bitreverse, MVT::nxv2i64, 52},
     {Intrinsic::bitreverse, MVT::nxv4i64, 52},
     {Intrinsic::bitreverse, MVT::nxv8i64, 52},
+    {Intrinsic::vp_bitreverse, MVT::v2i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::v4i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::v8i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::v16i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::nxv1i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::nxv2i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::nxv4i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::nxv8i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::nxv16i8, 17},
+    {Intrinsic::vp_bitreverse, MVT::v2i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::v4i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::v8i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::v16i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::nxv1i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::nxv2i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::nxv4i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::nxv8i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::nxv16i16, 24},
+    {Intrinsic::vp_bitreverse, MVT::v2i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::v4i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::v8i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::v16i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::nxv1i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::nxv2i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::nxv4i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::nxv8i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::nxv16i32, 33},
+    {Intrinsic::vp_bitreverse, MVT::v2i64, 52},
+    {Intrinsic::vp_bitreverse, MVT::v4i64, 52},
+    {Intrinsic::vp_bitreverse, MVT::v8i64, 52},
+    {Intrinsic::vp_bitreverse, MVT::v16i64, 52},
+    {Intrinsic::vp_bitreverse, MVT::nxv1i64, 52},
+    {Intrinsic::vp_bitreverse, MVT::nxv2i64, 52},
+    {Intrinsic::vp_bitreverse, MVT::nxv4i64, 52},
+    {Intrinsic::vp_bitreverse, MVT::nxv8i64, 52},
     {Intrinsic::ctpop, MVT::v2i8, 12},
     {Intrinsic::ctpop, MVT::v4i8, 12},
     {Intrinsic::ctpop, MVT::v8i8, 12},
@@ -676,6 +686,117 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::ctpop, MVT::nxv2i64, 21},
     {Intrinsic::ctpop, MVT::nxv4i64, 21},
     {Intrinsic::ctpop, MVT::nxv8i64, 21},
+    {Intrinsic::vp_ctpop, MVT::v2i8, 12},
+    {Intrinsic::vp_ctpop, MVT::v4i8, 12},
+    {Intrinsic::vp_ctpop, MVT::v8i8, 12},
+    {Intrinsic::vp_ctpop, MVT::v16i8, 12},
+    {Intrinsic::vp_ctpop, MVT::nxv1i8, 12},
+    {Intrinsic::vp_ctpop, MVT::nxv2i8, 12},
+    {Intrinsic::vp_ctpop, MVT::nxv4i8, 12},
+    {Intrinsic::vp_ctpop, MVT::nxv8i8, 12},
+    {Intrinsic::vp_ctpop, MVT::nxv16i8, 12},
+    {Intrinsic::vp_ctpop, MVT::v2i16, 19},
+    {Intrinsic::vp_ctpop, MVT::v4i16, 19},
+    {Intrinsic::vp_ctpop, MVT::v8i16, 19},
+    {Intrinsic::vp_ctpop, MVT::v16i16, 19},
+    {Intrinsic::vp_ctpop, MVT::nxv1i16, 19},
+    {Intrinsic::vp_ctpop, MVT::nxv2i16, 19},
+    {Intrinsic::vp_ctpop, MVT::nxv4i16, 19},
+    {Intrinsic::vp_ctpop, MVT::nxv8i16, 19},
+    {Intrinsic::vp_ctpop, MVT::nxv16i16, 19},
+    {Intrinsic::vp_ctpop, MVT::v2i32, 20},
+    {Intrinsic::vp_ctpop, MVT::v4i32, 20},
+    {Intrinsic::vp_ctpop, MVT::v8i32, 20},
+    {Intrinsic::vp_ctpop, MVT::v16i32, 20},
+    {Intrinsic::vp_ctpop, MVT::nxv1i32, 20},
+    {Intrinsic::vp_ctpop, MVT::nxv2i32, 20},
+    {Intrinsic::vp_ctpop, MVT::nxv4i32, 20},
+    {Intrinsic::vp_ctpop, MVT::nxv8i32, 20},
+    {Intrinsic::vp_ctpop, MVT::nxv16i32, 20},
+    {Intrinsic::vp_ctpop, MVT::v2i64, 21},
+    {Intrinsic::vp_ctpop, MVT::v4i64, 21},
+    {Intrinsic::vp_ctpop, MVT::v8i64, 21},
+    {Intrinsic::vp_ctpop, MVT::v16i64, 21},
+    {Intrinsic::vp_ctpop, MVT::nxv1i64, 21},
+    {Intrinsic::vp_ctpop, MVT::nxv2i64, 21},
+    {Intrinsic::vp_ctpop, MVT::nxv4i64, 21},
+    {Intrinsic::vp_ctpop, MVT::nxv8i64, 21},
+    {Intrinsic::vp_ctlz, MVT::v2i8, 19},
+    {Intrinsic::vp_ctlz, MVT::v4i8, 19},
+    {Intrinsic::vp_ctlz, MVT::v8i8, 19},
+    {Intrinsic::vp_ctlz, MVT::v16i8, 19},
+    {Intrinsic::vp_ctlz, MVT::nxv1i8, 19},
+    {Intrinsic::vp_ctlz, MVT::nxv2i8, 19},
+    {Intrinsic::vp_ctlz, MVT::nxv4i8, 19},
+    {Intrinsic::vp_ctlz, MVT::nxv8i8, 19},
+    {Intrinsic::vp_ctlz, MVT::nxv16i8, 19},
+    {Intrinsic::vp_ctlz, MVT::nxv32i8, 19},
+    {Intrinsic::vp_ctlz, MVT::nxv64i8, 19},
+    {Intrinsic::vp_ctlz, MVT::v2i16, 28},
+    {Intrinsic::vp_ctlz, MVT::v4i16, 28},
+    {Intrinsic::vp_ctlz, MVT::v8i16, 28},
+    {Intrinsic::vp_ctlz, MVT::v16i16, 28},
+    {Intrinsic::vp_ctlz, MVT::nxv1i16, 28},
+    {Intrinsic::vp_ctlz, MVT::nxv2i16, 28},
+    {Intrinsic::vp_ctlz, MVT::nxv4i16, 28},
+    {Intrinsic::vp_ctlz, MVT::nxv8i16, 28},
+    {Intrinsic::vp_ctlz, MVT::nxv16i16, 28},
+    {Intrinsic::vp_ctlz, MVT::nxv32i16, 28},
+    {Intrinsic::vp_ctlz, MVT::v2i32, 31},
+    {Intrinsic::vp_ctlz, MVT::v4i32, 31},
+    {Intrinsic::vp_ctlz, MVT::v8i32, 31},
+    {Intrinsic::vp_ctlz, MVT::v16i32, 31},
+    {Intrinsic::vp_ctlz, MVT::nxv1i32, 31},
+    {Intrinsic::vp_ctlz, MVT::nxv2i32, 31},
+    {Intrinsic::vp_ctlz, MVT::nxv4i32, 31},
+    {Intrinsic::vp_ctlz, MVT::nxv8i32, 31},
+    {Intrinsic::vp_ctlz, MVT::nxv16i32, 31},
+    {Intrinsic::vp_ctlz, MVT::v2i64, 35},
+    {Intrinsic::vp_ctlz, MVT::v4i64, 35},
+    {Intrinsic::vp_ctlz, MVT::v8i64, 35},
+    {Intrinsic::vp_ctlz, MVT::v16i64, 35},
+    {Intrinsic::vp_ctlz, MVT::nxv1i64, 35},
+    {Intrinsic::vp_ctlz, MVT::nxv2i64, 35},
+    {Intrinsic::vp_ctlz, MVT::nxv4i64, 35},
+    {Intrinsic::vp_ctlz, MVT::nxv8i64, 35},
+    {Intrinsic::vp_cttz, MVT::v2i8, 16},
+    {Intrinsic::vp_cttz, MVT::v4i8, 16},
+    {Intrinsic::vp_cttz, MVT::v8i8, 16},
+    {Intrinsic::vp_cttz, MVT::v16i8, 16},
+    {Intrinsic::vp_cttz, MVT::nxv1i8, 16},
+    {Intrinsic::vp_cttz, MVT::nxv2i8, 16},
+    {Intrinsic::vp_cttz, MVT::nxv4i8, 16},
+    {Intrinsic::vp_cttz, MVT::nxv8i8, 16},
+    {Intrinsic::vp_cttz, MVT::nxv16i8, 16},
+    {Intrinsic::vp_cttz, MVT::nxv32i8, 16},
+    {Intrinsic::vp_cttz, MVT::nxv64i8, 16},
+    {Intrinsic::vp_cttz, MVT::v2i16, 23},
+    {Intrinsic::vp_cttz, MVT::v4i16, 23},
+    {Intrinsic::vp_cttz, MVT::v8i16, 23},
+    {Intrinsic::vp_cttz, MVT::v16i16, 23},
+    {Intrinsic::vp_cttz, MVT::nxv1i16, 23},
+    {Intrinsic::vp_cttz, MVT::nxv2i16, 23},
+    {Intrinsic::vp_cttz, MVT::nxv4i16, 23},
+    {Intrinsic::vp_cttz, MVT::nxv8i16, 23},
+    {Intrinsic::vp_cttz, MVT::nxv16i16, 23},
+    {Intrinsic::vp_cttz, MVT::nxv32i16, 23},
+    {Intrinsic::vp_cttz, MVT::v2i32, 24},
+    {Intrinsic::vp_cttz, MVT::v4i32, 24},
+    {Intrinsic::vp_cttz, MVT::v8i32, 24},
+    {Intrinsic::vp_cttz, MVT::v16i32, 24},
+    {Intrinsic::vp_cttz, MVT::nxv1i32, 24},
+    {Intrinsic::vp_cttz, MVT::nxv2i32, 24},
+    {Intrinsic::vp_cttz, MVT::nxv4i32, 24},
+    {Intrinsic::vp_cttz, MVT::nxv8i32, 24},
+    {Intrinsic::vp_cttz, MVT::nxv16i32, 24},
+    {Intrinsic::vp_cttz, MVT::v2i64, 25},
+    {Intrinsic::vp_cttz, MVT::v4i64, 25},
+    {Intrinsic::vp_cttz, MVT::v8i64, 25},
+    {Intrinsic::vp_cttz, MVT::v16i64, 25},
+    {Intrinsic::vp_cttz, MVT::nxv1i64, 25},
+    {Intrinsic::vp_cttz, MVT::nxv2i64, 25},
+    {Intrinsic::vp_cttz, MVT::nxv4i64, 25},
+    {Intrinsic::vp_cttz, MVT::nxv8i64, 25},
 };
 
 static unsigned getISDForVPIntrinsicID(Intrinsic::ID ID) {
@@ -720,6 +841,22 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector())
+      return LT.first;
+    break;
+  }
+  case Intrinsic::abs: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      // vrsub.vi v10, v8, 0
+      // vmax.vv v8, v8, v10
+      return LT.first * 2;
+    }
+    break;
+  }
+  case Intrinsic::fabs:
+  case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector())
       return LT.first;
@@ -1061,12 +1198,13 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 }
 
 InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                 unsigned Index) {
+                                                 unsigned Index, Value *Op0,
+                                                 Value *Op1) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   if (Opcode != Instruction::ExtractElement &&
       Opcode != Instruction::InsertElement)
-    return BaseT::getVectorInstrCost(Opcode, Val, Index);
+    return BaseT::getVectorInstrCost(Opcode, Val, Index, Op0, Op1);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
@@ -1080,7 +1218,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return LT.first;
 
   if (!isTypeLegal(Val))
-    return BaseT::getVectorInstrCost(Opcode, Val, Index);
+    return BaseT::getVectorInstrCost(Opcode, Val, Index, Op0, Op1);
 
   // In RVV, we could use vslidedown + vmv.x.s to extract element from vector
   // and vslideup + vmv.s.x to insert element to vector.

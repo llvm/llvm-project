@@ -20,10 +20,10 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 
 #include <algorithm>
 #include <chrono>
+#include <optional>
 
 #include <cerrno>
 #if defined(_WIN32)
@@ -82,7 +82,7 @@ bool SelectHelper::FDIsSetError(lldb::socket_t fd) const {
     return false;
 }
 
-static void updateMaxFd(llvm::Optional<lldb::socket_t> &vold,
+static void updateMaxFd(std::optional<lldb::socket_t> &vold,
                         lldb::socket_t vnew) {
   if (!vold)
     vold = vnew;
@@ -100,10 +100,10 @@ lldb_private::Status SelectHelper::Select() {
     return lldb_private::Status("Too many file descriptors for select()");
 #endif
 
-  llvm::Optional<lldb::socket_t> max_read_fd;
-  llvm::Optional<lldb::socket_t> max_write_fd;
-  llvm::Optional<lldb::socket_t> max_error_fd;
-  llvm::Optional<lldb::socket_t> max_fd;
+  std::optional<lldb::socket_t> max_read_fd;
+  std::optional<lldb::socket_t> max_write_fd;
+  std::optional<lldb::socket_t> max_error_fd;
+  std::optional<lldb::socket_t> max_fd;
   for (auto &pair : m_fd_map) {
     pair.second.PrepareForSelect();
     const lldb::socket_t fd = pair.first;
@@ -198,7 +198,7 @@ lldb_private::Status SelectHelper::Select() {
     if (m_end_time) {
       tv_ptr = &tv;
       const auto remaining_dur =
-          duration_cast<microseconds>(m_end_time.value() - steady_clock::now());
+          duration_cast<microseconds>(*m_end_time - steady_clock::now());
       if (remaining_dur.count() > 0) {
         // Wait for a specific amount of time
         const auto dur_secs = duration_cast<seconds>(remaining_dur);

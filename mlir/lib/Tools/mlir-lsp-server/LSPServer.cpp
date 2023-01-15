@@ -54,7 +54,7 @@ struct LSPServer {
   // Hover
 
   void onHover(const TextDocumentPositionParams &params,
-               Callback<Optional<Hover>> reply);
+               Callback<std::optional<Hover>> reply);
 
   //===--------------------------------------------------------------------===//
   // Document Symbols
@@ -217,7 +217,7 @@ void LSPServer::onReference(const ReferenceParams &params,
 // Hover
 
 void LSPServer::onHover(const TextDocumentPositionParams &params,
-                        Callback<Optional<Hover>> reply) {
+                        Callback<std::optional<Hover>> reply) {
   reply(server.findHover(params.textDocument.uri, params.position));
 }
 

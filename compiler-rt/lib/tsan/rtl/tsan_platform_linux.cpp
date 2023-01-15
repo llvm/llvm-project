@@ -298,11 +298,12 @@ void InitializePlatform() {
       SetAddressSpaceUnlimited();
       reexec = true;
     }
-#if SANITIZER_LINUX && defined(__aarch64__)
+#if SANITIZER_ANDROID && (defined(__aarch64__) || defined(__x86_64__))
     // After patch "arm64: mm: support ARCH_MMAP_RND_BITS." is introduced in
     // linux kernel, the random gap between stack and mapped area is increased
     // from 128M to 36G on 39-bit aarch64. As it is almost impossible to cover
     // this big range, we should disable randomized virtual space on aarch64.
+    // ASLR personality check.
     int old_personality = personality(0xffffffff);
     if (old_personality != -1 && (old_personality & ADDR_NO_RANDOMIZE) == 0) {
       VReport(1, "WARNING: Program is run with randomized virtual address "
@@ -311,6 +312,9 @@ void InitializePlatform() {
       CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
       reexec = true;
     }
+
+#endif
+#if SANITIZER_LINUX && defined(__aarch64__)
     // Initialize the xor key used in {sig}{set,long}jump.
     InitializeLongjmpXorKey();
 #endif

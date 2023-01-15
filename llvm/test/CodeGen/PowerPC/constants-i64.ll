@@ -375,4 +375,30 @@ entry:
   ret i64 11174473921
 }
 
+define i64 @imm19() {
+; CHECK-LABEL: imm19:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  lis 3, -13105
+; CHECK-NEXT:  ori 3, 3, 52479
+; CHECK-NEXT:  rldic 3, 3, 32, 0
+; CHECK-NEXT:  oris 3, 3, 52431
+; CHECK-NEXT:  ori 3, 3, 291
+; CHECK-NEXT:  blr
+entry:
+  ret i64 14758239902941249827 ;0xCCCFCCFFCCCF0123
+}
+
+define i64 @imm20() {
+; CHECK-LABEL: imm20:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  lis 3, -13057
+; CHECK-NEXT:  ori 3, 3, 52479
+; CHECK-NEXT:  rldic 3, 3, 32, 0
+; CHECK-NEXT:  oris 3, 3, 291
+; CHECK-NEXT:  ori 3, 3, 52479
+; CHECK-NEXT:  blr
+entry:
+  ret i64 14771750698406366463 ;0xCCFFCCFF0123CCFF
+}
+
 attributes #0 = { nounwind readnone }

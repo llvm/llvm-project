@@ -29,6 +29,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-isel"
+#define PASS_NAME "AArch64 Instruction Selection"
 
 //===--------------------------------------------------------------------===//
 /// AArch64DAGToDAGISel - AArch64 specific code to select AArch64 machine
@@ -43,13 +44,13 @@ class AArch64DAGToDAGISel : public SelectionDAGISel {
   const AArch64Subtarget *Subtarget;
 
 public:
+  static char ID;
+
+  AArch64DAGToDAGISel() = delete;
+
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
                                CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr) {}
-
-  StringRef getPassName() const override {
-    return "AArch64 Instruction Selection";
-  }
+      : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<AArch64Subtarget>();
@@ -174,6 +175,35 @@ public:
         Index != VT.getVectorNumElements())
       return false;
     Res = N->getOperand(0);
+    return true;
+  }
+
+  bool SelectRoundingVLShr(SDValue N, SDValue &Res1, SDValue &Res2) {
+    if (N.getOpcode() != AArch64ISD::VLSHR)
+      return false;
+    SDValue Op = N->getOperand(0);
+    EVT VT = Op.getValueType();
+    unsigned ShtAmt = N->getConstantOperandVal(1);
+    if (ShtAmt > VT.getScalarSizeInBits() / 2 || Op.getOpcode() != ISD::ADD)
+      return false;
+
+    APInt Imm;
+    if (Op.getOperand(1).getOpcode() == AArch64ISD::MOVIshift)
+      Imm = APInt(VT.getScalarSizeInBits(),
+                  Op.getOperand(1).getConstantOperandVal(0)
+                      << Op.getOperand(1).getConstantOperandVal(1));
+    else if (Op.getOperand(1).getOpcode() == AArch64ISD::DUP &&
+             isa<ConstantSDNode>(Op.getOperand(1).getOperand(0)))
+      Imm = APInt(VT.getScalarSizeInBits(),
+                  Op.getOperand(1).getConstantOperandVal(0));
+    else
+      return false;
+
+    if (Imm != 1ULL << (ShtAmt - 1))
+      return false;
+
+    Res1 = Op.getOperand(0);
+    Res2 = CurDAG->getTargetConstant(ShtAmt, SDLoc(N), MVT::i32);
     return true;
   }
 
@@ -418,6 +448,10 @@ private:
   bool SelectAllActivePredicate(SDValue N);
 };
 } // end anonymous namespace
+
+char AArch64DAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(AArch64DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// isIntImmediate - This method tests to see if the node is a constant
 /// operand. If so Imm will receive the 32-bit value.
@@ -3564,26 +3598,28 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
     // pstatefield for the MSR (immediate) instruction, we also require that an
     // immediate value has been provided as an argument, we know that this is
     // the case as it has been ensured by semantic checking.
-    auto PMapper = AArch64PState::lookupPStateByName(RegString->getString());
-    if (PMapper) {
-      assert(isa<ConstantSDNode>(N->getOperand(2)) &&
-             "Expected a constant integer expression.");
-      unsigned Reg = PMapper->Encoding;
-      uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
-      unsigned State;
-      if (Reg == AArch64PState::PAN || Reg == AArch64PState::UAO ||
-          Reg == AArch64PState::SSBS) {
-        assert(Immed < 2 && "Bad imm");
-        State = AArch64::MSRpstateImm1;
-      } else {
-        assert(Immed < 16 && "Bad imm");
-        State = AArch64::MSRpstateImm4;
+    auto trySelectPState = [&](auto PMapper, unsigned State) {
+      if (PMapper) {
+        assert(isa<ConstantSDNode>(N->getOperand(2)) &&
+               "Expected a constant integer expression.");
+        unsigned Reg = PMapper->Encoding;
+        uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+        CurDAG->SelectNodeTo(
+            N, State, MVT::Other, CurDAG->getTargetConstant(Reg, DL, MVT::i32),
+            CurDAG->getTargetConstant(Immed, DL, MVT::i16), N->getOperand(0));
+        return true;
       }
-      CurDAG->SelectNodeTo(
-          N, State, MVT::Other, CurDAG->getTargetConstant(Reg, DL, MVT::i32),
-          CurDAG->getTargetConstant(Immed, DL, MVT::i16), N->getOperand(0));
+      return false;
+    };
+
+    if (trySelectPState(
+            AArch64PState::lookupPStateImm0_15ByName(RegString->getString()),
+            AArch64::MSRpstateImm4))
       return true;
-    }
+    if (trySelectPState(
+            AArch64PState::lookupPStateImm0_1ByName(RegString->getString()),
+            AArch64::MSRpstateImm1))
+      return true;
   }
 
   int Imm = getIntOperandFromRegisterString(RegString->getString());
@@ -3909,7 +3945,7 @@ void AArch64DAGToDAGISel::SelectTagP(SDNode *N) {
 // vector types larger than NEON don't have a matching SubRegIndex.
 static SDNode *extractSubReg(SelectionDAG *DAG, EVT VT, SDValue V) {
   assert(V.getValueType().isScalableVector() &&
-         V.getValueType().getSizeInBits().getKnownMinSize() ==
+         V.getValueType().getSizeInBits().getKnownMinValue() ==
              AArch64::SVEBitsPerBlock &&
          "Expected to extract from a packed scalable vector!");
   assert(VT.isFixedLengthVector() &&
@@ -3936,7 +3972,7 @@ static SDNode *extractSubReg(SelectionDAG *DAG, EVT VT, SDValue V) {
 // vector types larger than NEON don't have a matching SubRegIndex.
 static SDNode *insertSubReg(SelectionDAG *DAG, EVT VT, SDValue V) {
   assert(VT.isScalableVector() &&
-         VT.getSizeInBits().getKnownMinSize() == AArch64::SVEBitsPerBlock &&
+         VT.getSizeInBits().getKnownMinValue() == AArch64::SVEBitsPerBlock &&
          "Expected to insert into a packed scalable vector!");
   assert(V.getValueType().isFixedLengthVector() &&
          "Expected to insert a fixed length vector!");
@@ -5661,7 +5697,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     return false;
 
   TypeSize TS = MemVT.getSizeInBits();
-  int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinSize()) / 8;
+  int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinValue()) / 8;
   int64_t MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
 
   if ((MulImm % MemWidthBytes) != 0)

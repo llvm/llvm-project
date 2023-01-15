@@ -556,7 +556,7 @@ used by people developing LLVM.
 | CMAKE_INSTALL_PREFIX    | Specifies the install directory to target when     |
 |                         | running the install action of the build files.     |
 +-------------------------+----------------------------------------------------+
-| PYTHON_EXECUTABLE       | Forces CMake to use a specific Python version by   |
+| Python3_EXECUTABLE      | Forces CMake to use a specific Python version by   |
 |                         | passing a path to a Python interpreter. By default |
 |                         | the Python version of the interpreter in your PATH |
 |                         | is used.                                           |
@@ -902,7 +902,7 @@ share code among the `tools`_.
 Contains bindings for the LLVM compiler infrastructure to allow
 programs written in languages other than C or C++ to take advantage of the LLVM
 infrastructure.
-LLVM project provides language bindings for Go, OCaml and Python.
+LLVM project provides language bindings for OCaml and Python.
 
 ``llvm/projects``
 -----------------

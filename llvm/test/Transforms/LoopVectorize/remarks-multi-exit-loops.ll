@@ -2,7 +2,7 @@
 
 ; Make sure LV does not crash when generating remarks for loops with non-unique
 ; exit blocks.
-define i32 @test_non_unique_exit_blocks(i32* nocapture readonly align 4 dereferenceable(1024) %data, i32 %x) {
+define i32 @test_non_unique_exit_blocks(ptr nocapture readonly align 4 dereferenceable(1024) %data, i32 %x) {
 ; CHECK: loop not vectorized: could not determine number of loop iterations
 ;
 entry:
@@ -15,8 +15,8 @@ for.header:                                         ; preds = %for.cond.lr.ph, %
   br i1 %exitcond.not, label %header.exit, label %for.latch
 
 for.latch:
-  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %iv
-  %lv = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %data, i64 %iv
+  %lv = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp eq i32 %lv, %x
   br i1 %cmp1, label %latch.exit, label %for.header
 

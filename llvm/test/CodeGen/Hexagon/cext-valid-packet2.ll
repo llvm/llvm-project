@@ -12,11 +12,11 @@
 ; CHECK-NEW: [[REG0:r([0-9]+)]] = add(r{{[0-9]+}},##200000)
 ; CHECK-NEW: memw(r{{[0-9]+}}+##12000) = [[REG0]].new
 
-define void @test(i32* nocapture %a, i32* nocapture %b, i32 %c) nounwind {
+define void @test(ptr nocapture %a, ptr nocapture %b, i32 %c) nounwind {
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %add1 = add nsw i32 %0, 200000
-  %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 3000
-  store i32 %add1, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %a, i32 3000
+  store i32 %add1, ptr %arrayidx2, align 4
   ret void
 }

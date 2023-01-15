@@ -6,9 +6,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @__dfsan_arg_tls = external thread_local(initialexec) global [[TLS_ARR:\[100 x i64\]]]
 ; CHECK: @__dfsan_retval_tls = external thread_local(initialexec) global [[TLS_ARR]]
-; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
-; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
-
 define i32 @AtomicRmwXchg(ptr %p, i32 %x) {
 entry:
   ; COMM: atomicrmw xchg: store clean shadow/origin, return clean shadow/origin
@@ -19,9 +16,9 @@ entry:
   ; CHECK:             %[[#INTP:]] = ptrtoint ptr %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
-  ; CHECK-NEXT:        store i[[#NUM_BITS:mul(SBITS,4)]] 0, ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:        store i[[#NUM_BITS:32]] 0, ptr %[[#SHADOW_PTR]], align 1
   ; CHECK-NEXT:        atomicrmw xchg ptr %p, i32 %x seq_cst
-  ; CHECK-NEXT:        store i[[#SBITS]] 0, ptr @__dfsan_retval_tls, align 2
+  ; CHECK-NEXT:        store i8 0, ptr @__dfsan_retval_tls, align 2
   ; CHECK_ORIGIN-NEXT: store i32 0, ptr @__dfsan_retval_origin_tls, align 4
   ; CHECK-NEXT:        ret i32
 
@@ -38,9 +35,9 @@ define i32 @AtomicRmwMax(ptr %p, i32 %x) {
   ; CHECK:             %[[#INTP:]] = ptrtoint ptr %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
-  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align 1
   ; CHECK-NEXT:        atomicrmw max ptr %p, i32 %x seq_cst
-  ; CHECK-NEXT:        store i[[#SBITS]] 0, ptr @__dfsan_retval_tls, align 2
+  ; CHECK-NEXT:        store i8 0, ptr @__dfsan_retval_tls, align 2
   ; CHECK_ORIGIN-NEXT: store i32 0, ptr @__dfsan_retval_origin_tls, align 4
   ; CHECK-NEXT:        ret i32
 
@@ -59,9 +56,9 @@ define i32 @Cmpxchg(ptr %p, i32 %a, i32 %b) {
   ; CHECK:             %[[#INTP:]] = ptrtoint ptr %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
-  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align 1
   ; CHECK-NEXT:        %pair = cmpxchg ptr %p, i32 %a, i32 %b seq_cst seq_cst
-  ; CHECK:             store i[[#SBITS]] 0, ptr @__dfsan_retval_tls, align 2
+  ; CHECK:             store i8 0, ptr @__dfsan_retval_tls, align 2
   ; CHECK_ORIGIN-NEXT: store i32 0, ptr @__dfsan_retval_origin_tls, align 4
   ; CHECK-NEXT:        ret i32
 
@@ -81,9 +78,9 @@ define i32 @CmpxchgMonotonic(ptr %p, i32 %a, i32 %b) {
   ; CHECK:             %[[#INTP:]] = ptrtoint ptr %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
-  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align 1
   ; CHECK-NEXT:        %pair = cmpxchg ptr %p, i32 %a, i32 %b release monotonic
-  ; CHECK:             store i[[#SBITS]] 0, ptr @__dfsan_retval_tls, align 2
+  ; CHECK:             store i8 0, ptr @__dfsan_retval_tls, align 2
   ; CHECK_ORIGIN-NEXT: store i32 0, ptr @__dfsan_retval_origin_tls, align 4
   ; CHECK-NEXT:        ret i32
 
@@ -100,16 +97,16 @@ define i32 @AtomicLoad(ptr %p) {
 
   ; CHECK-LABEL:  @AtomicLoad.dfsan
   ; CHECK_ORIGIN: %[[#PO:]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK:        %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align 2
+  ; CHECK:        %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK:        %a = load atomic i32, ptr %p seq_cst, align 16
   ; CHECK:        %[[#SHADOW_PTR:]] = inttoptr i64 {{.*}} to ptr
   ; CHECK_ORIGIN: %[[#ORIGIN_PTR:]] = inttoptr i64 {{.*}} to ptr
   ; CHECK_ORIGIN: %[[#AO:]] = load i32, ptr %[[#ORIGIN_PTR]], align 16
-  ; CHECK:        load i[[#NUM_BITS]], ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
-  ; CHECK:        %[[#AP_S:]] = or i[[#SBITS]] {{.*}}, %[[#PS]]
-  ; CHECK_ORIGIN: %[[#PS_NZ:]] = icmp ne i[[#SBITS]] %[[#PS]], 0
+  ; CHECK:        load i[[#NUM_BITS]], ptr %[[#SHADOW_PTR]], align 1
+  ; CHECK:        %[[#AP_S:]] = or i8 {{.*}}, %[[#PS]]
+  ; CHECK_ORIGIN: %[[#PS_NZ:]] = icmp ne i8 %[[#PS]], 0
   ; CHECK_ORIGIN: %[[#AP_O:]] = select i1 %[[#PS_NZ]], i32 %[[#PO]], i32 %[[#AO]]
-  ; CHECK:        store i[[#SBITS]] %[[#AP_S]], ptr @__dfsan_retval_tls, align 2
+  ; CHECK:        store i8 %[[#AP_S]], ptr @__dfsan_retval_tls, align 2
   ; CHECK_ORIGIN: store i32 %[[#AP_O]], ptr @__dfsan_retval_origin_tls, align 4
   ; CHECK:        ret i32 %a
 
@@ -124,16 +121,16 @@ define i32 @AtomicLoadAcquire(ptr %p) {
 
   ; CHECK-LABEL:  @AtomicLoadAcquire.dfsan
   ; CHECK_ORIGIN: %[[#PO:]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK:        %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align 2
+  ; CHECK:        %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK:        %a = load atomic i32, ptr %p acquire, align 16
   ; CHECK:        %[[#SHADOW_PTR:]] = inttoptr i64 {{.*}} to ptr
   ; CHECK_ORIGIN: %[[#ORIGIN_PTR:]] = inttoptr i64 {{.*}} to ptr
   ; CHECK_ORIGIN: %[[#AO:]] = load i32, ptr %[[#ORIGIN_PTR]], align 16
-  ; CHECK:        load i[[#NUM_BITS]], ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
-  ; CHECK:        %[[#AP_S:]] = or i[[#SBITS]] {{.*}}, %[[#PS]]
-  ; CHECK_ORIGIN: %[[#PS_NZ:]] = icmp ne i[[#SBITS]] %[[#PS]], 0
+  ; CHECK:        load i[[#NUM_BITS]], ptr %[[#SHADOW_PTR]], align 1
+  ; CHECK:        %[[#AP_S:]] = or i8 {{.*}}, %[[#PS]]
+  ; CHECK_ORIGIN: %[[#PS_NZ:]] = icmp ne i8 %[[#PS]], 0
   ; CHECK_ORIGIN: %[[#AP_O:]] = select i1 %[[#PS_NZ]], i32 %[[#PO]], i32 %[[#AO]]
-  ; CHECK:        store i[[#SBITS]] %[[#AP_S]], ptr @__dfsan_retval_tls, align 2
+  ; CHECK:        store i8 %[[#AP_S]], ptr @__dfsan_retval_tls, align 2
   ; CHECK_ORIGIN: store i32 %[[#AP_O]], ptr @__dfsan_retval_origin_tls, align 4
   ; CHECK:        ret i32 %a
 
@@ -148,16 +145,16 @@ define i32 @AtomicLoadMonotonic(ptr %p) {
 
   ; CHECK-LABEL:  @AtomicLoadMonotonic.dfsan
   ; CHECK_ORIGIN: %[[#PO:]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK:        %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align 2
+  ; CHECK:        %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK:        %a = load atomic i32, ptr %p acquire, align 16
   ; CHECK:        %[[#SHADOW_PTR:]] = inttoptr i64 {{.*}} to ptr
   ; CHECK_ORIGIN: %[[#ORIGIN_PTR:]] = inttoptr i64 {{.*}} to ptr
   ; CHECK_ORIGIN: %[[#AO:]] = load i32, ptr %[[#ORIGIN_PTR]], align 16
-  ; CHECK:        load i[[#NUM_BITS]], ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
-  ; CHECK:        %[[#AP_S:]] = or i[[#SBITS]] {{.*}}, %[[#PS]]
-  ; CHECK_ORIGIN: %[[#PS_NZ:]] = icmp ne i[[#SBITS]] %[[#PS]], 0
+  ; CHECK:        load i[[#NUM_BITS]], ptr %[[#SHADOW_PTR]], align 1
+  ; CHECK:        %[[#AP_S:]] = or i8 {{.*}}, %[[#PS]]
+  ; CHECK_ORIGIN: %[[#PS_NZ:]] = icmp ne i8 %[[#PS]], 0
   ; CHECK_ORIGIN: %[[#AP_O:]] = select i1 %[[#PS_NZ]], i32 %[[#PO]], i32 %[[#AO]]
-  ; CHECK:        store i[[#SBITS]] %[[#AP_S]], ptr @__dfsan_retval_tls, align 2
+  ; CHECK:        store i8 %[[#AP_S]], ptr @__dfsan_retval_tls, align 2
   ; CHECK_ORIGIN: store i32 %[[#AP_O]], ptr @__dfsan_retval_origin_tls, align 4
   ; CHECK:        ret i32 %a
 
@@ -171,16 +168,16 @@ define i32 @AtomicLoadUnordered(ptr %p) {
 
   ; CHECK-LABEL:  @AtomicLoadUnordered.dfsan
   ; CHECK_ORIGIN: %[[#PO:]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK:        %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align 2
+  ; CHECK:        %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK:        %a = load atomic i32, ptr %p acquire, align 16
   ; CHECK:        %[[#SHADOW_PTR:]] = inttoptr i64 {{.*}} to ptr
   ; CHECK_ORIGIN: %[[#ORIGIN_PTR:]] = inttoptr i64 {{.*}} to ptr
   ; CHECK_ORIGIN: %[[#AO:]] = load i32, ptr %[[#ORIGIN_PTR]], align 16
-  ; CHECK:        load i[[#NUM_BITS]], ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
-  ; CHECK:        %[[#AP_S:]] = or i[[#SBITS]] {{.*}}, %[[#PS]]
-  ; CHECK_ORIGIN: %[[#PS_NZ:]] = icmp ne i[[#SBITS]] %[[#PS]], 0
+  ; CHECK:        load i[[#NUM_BITS]], ptr %[[#SHADOW_PTR]], align 1
+  ; CHECK:        %[[#AP_S:]] = or i8 {{.*}}, %[[#PS]]
+  ; CHECK_ORIGIN: %[[#PS_NZ:]] = icmp ne i8 %[[#PS]], 0
   ; CHECK_ORIGIN: %[[#AP_O:]] = select i1 %[[#PS_NZ]], i32 %[[#PO]], i32 %[[#AO]]
-  ; CHECK:        store i[[#SBITS]] %[[#AP_S]], ptr @__dfsan_retval_tls, align 2
+  ; CHECK:        store i8 %[[#AP_S]], ptr @__dfsan_retval_tls, align 2
   ; CHECK_ORIGIN: store i32 %[[#AP_O]], ptr @__dfsan_retval_origin_tls, align 4
   ; CHECK:        ret i32 %a
 
@@ -199,7 +196,7 @@ define void @AtomicStore(ptr %p, i32 %x) {
   ; CHECK:             %[[#INTP:]] = ptrtoint ptr %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
-  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align 1
   ; CHECK:             store atomic i32 %x, ptr %p seq_cst, align 16
   ; CHECK:             ret void
 
@@ -218,7 +215,7 @@ define void @AtomicStoreRelease(ptr %p, i32 %x) {
   ; CHECK:             %[[#INTP:]] = ptrtoint ptr %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
-  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align 1
   ; CHECK:             store atomic i32 %x, ptr %p release, align 16
   ; CHECK:             ret void
 
@@ -237,7 +234,7 @@ define void @AtomicStoreMonotonic(ptr %p, i32 %x) {
   ; CHECK:             %[[#INTP:]] = ptrtoint ptr %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
-  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align 1
   ; CHECK:             store atomic i32 %x, ptr %p release, align 16
   ; CHECK:             ret void
 
@@ -256,7 +253,7 @@ define void @AtomicStoreUnordered(ptr %p, i32 %x) {
   ; CHECK:             %[[#INTP:]] = ptrtoint ptr %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#%.10d,MASK:]]
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
-  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, ptr %[[#SHADOW_PTR]], align 1
   ; CHECK:             store atomic i32 %x, ptr %p release, align 16
   ; CHECK:             ret void
 

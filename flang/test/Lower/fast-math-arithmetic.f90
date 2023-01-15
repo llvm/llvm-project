@@ -6,6 +6,7 @@
 ! RUN: %flang_fc1 -emit-fir -mreassociate -ffp-contract=off %s -o - 2>&1 | FileCheck --check-prefixes=REASSOC,ALL %s
 ! RUN: %flang_fc1 -emit-fir -freciprocal-math -ffp-contract=off %s -o - 2>&1 | FileCheck --check-prefixes=ARCP,ALL %s
 ! RUN: %flang_fc1 -emit-fir -ffp-contract=fast -menable-no-infs -menable-no-nans -fapprox-func -fno-signed-zeros -mreassociate -freciprocal-math %s -o - 2>&1 | FileCheck --check-prefixes=FAST,ALL %s
+! RUN: %flang_fc1 -emit-fir -ffast-math %s -o - 2>&1 | FileCheck --check-prefixes=FAST,ALL %s
 
 ! ALL-LABEL: func.func @_QPtest
 subroutine test(x)

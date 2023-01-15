@@ -22,10 +22,10 @@ define void @mod() {
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    i32.store8 0
 ; CHECK-NEXT:    # fallthrough-return
-  %tmp = load <4 x i8>, <4 x i8>* undef
+  %tmp = load <4 x i8>, ptr undef
   %tmp2 = icmp slt <4 x i8> %tmp, zeroinitializer
   %tmp3 = sub <4 x i8> zeroinitializer, %tmp
   %tmp4 = select <4 x i1> %tmp2, <4 x i8> %tmp3, <4 x i8> %tmp
-  store <4 x i8> %tmp4, <4 x i8>* undef
+  store <4 x i8> %tmp4, ptr undef
   ret void
 }

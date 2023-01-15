@@ -5,13 +5,13 @@
 
 @g0 = common global [2 x %s.0] zeroinitializer, align 8
 
-declare void @f0(%s.0*)
+declare void @f0(ptr)
 
 ; Function Attrs: nounwind readnone
 define void @f1(i32 %a0) #0 {
 b0:
-  %v0 = getelementptr inbounds [2 x %s.0], [2 x %s.0]* @g0, i32 0, i32 %a0
-  call void @f0(%s.0* %v0) #1
+  %v0 = getelementptr inbounds [2 x %s.0], ptr @g0, i32 0, i32 %a0
+  call void @f0(ptr %v0) #1
   ret void
 }
 

@@ -18,7 +18,7 @@
 
 ; No model specified
 
-define i32* @f1() nounwind {
+define ptr @f1() nounwind {
 ; RV32-PIC-LABEL: f1:
 ; RV32-PIC:       # %bb.0: # %entry
 ; RV32-PIC-NEXT:    addi sp, sp, -16
@@ -59,13 +59,13 @@ define i32* @f1() nounwind {
 ; RV64-NOPIC-NEXT:    add a0, a0, tp
 ; RV64-NOPIC-NEXT:    ret
 entry:
-  ret i32* @unspecified
+  ret ptr @unspecified
 }
 
 
 ; localdynamic specified
 
-define i32* @f2() nounwind {
+define ptr @f2() nounwind {
 ; RV32-PIC-LABEL: f2:
 ; RV32-PIC:       # %bb.0: # %entry
 ; RV32-PIC-NEXT:    addi sp, sp, -16
@@ -106,13 +106,13 @@ define i32* @f2() nounwind {
 ; RV64-NOPIC-NEXT:    add a0, a0, tp
 ; RV64-NOPIC-NEXT:    ret
 entry:
-  ret i32* @ld
+  ret ptr @ld
 }
 
 
 ; initialexec specified
 
-define i32* @f3() nounwind {
+define ptr @f3() nounwind {
 ; RV32-PIC-LABEL: f3:
 ; RV32-PIC:       # %bb.0: # %entry
 ; RV32-PIC-NEXT:  .Lpcrel_hi2:
@@ -145,13 +145,13 @@ define i32* @f3() nounwind {
 ; RV64-NOPIC-NEXT:    add a0, a0, tp
 ; RV64-NOPIC-NEXT:    ret
 entry:
-  ret i32* @ie
+  ret ptr @ie
 }
 
 
 ; localexec specified
 
-define i32* @f4() nounwind {
+define ptr @f4() nounwind {
 ; RV32-PIC-LABEL: f4:
 ; RV32-PIC:       # %bb.0: # %entry
 ; RV32-PIC-NEXT:    lui a0, %tprel_hi(le)
@@ -180,5 +180,5 @@ define i32* @f4() nounwind {
 ; RV64-NOPIC-NEXT:    addi a0, a0, %tprel_lo(le)
 ; RV64-NOPIC-NEXT:    ret
 entry:
-  ret i32* @le
+  ret ptr @le
 }

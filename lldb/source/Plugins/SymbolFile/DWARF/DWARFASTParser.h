@@ -15,6 +15,7 @@
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/lldb-enumerations.h"
+#include <optional>
 
 class DWARFDIE;
 namespace lldb_private {
@@ -55,7 +56,10 @@ public:
   virtual void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) = 0;
 
-  static llvm::Optional<lldb_private::SymbolFile::ArrayInfo>
+  virtual lldb_private::ConstString
+  GetDIEClassTemplateParams(const DWARFDIE &die) = 0;
+
+  static std::optional<lldb_private::SymbolFile::ArrayInfo>
   ParseChildArrayInfo(const DWARFDIE &parent_die,
                       const lldb_private::ExecutionContext *exe_ctx = nullptr);
 

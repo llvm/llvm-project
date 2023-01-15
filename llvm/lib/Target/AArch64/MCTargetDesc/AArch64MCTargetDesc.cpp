@@ -412,8 +412,11 @@ public:
     const auto &Desc = Info->get(Inst.getOpcode());
     for (unsigned i = 0, e = Inst.getNumOperands(); i != e; i++) {
       if (Desc.OpInfo[i].OperandType == MCOI::OPERAND_PCREL) {
-        int64_t Imm = Inst.getOperand(i).getImm() * 4;
-        Target = Addr + Imm;
+        int64_t Imm = Inst.getOperand(i).getImm();
+        if (Inst.getOpcode() == AArch64::ADRP)
+          Target = (Addr & -4096) + Imm * 4096;
+        else
+          Target = Addr + Imm * 4;
         return true;
       }
     }

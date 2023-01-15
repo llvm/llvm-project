@@ -171,6 +171,6 @@ body:             |
     CALL64r %37, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def $al, debug-location !13
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !13
     %13:gr32 = INC32r %6, implicit-def dead $eflags, debug-instr-number 1, debug-location !13
-    DBG_INSTR_REF 1, 0, !12, !DIExpression(), debug-location !13
+    DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !13
     JMP_1 %bb.1, debug-location !13
 ...

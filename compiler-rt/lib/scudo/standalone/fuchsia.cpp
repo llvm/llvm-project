@@ -97,6 +97,17 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   if (Offset)
     MapFlags |= ZX_VM_SPECIFIC;
   Status = _zx_vmar_map(Vmar, MapFlags, Offset, Vmo, VmoSize, Size, &P);
+  if (UNLIKELY(Status != ZX_OK)) {
+    if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
+      dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY ? Size : 0);
+    return nullptr;
+  }
+
+  if (Flags & MAP_PRECOMMIT) {
+    Status = _zx_vmar_op_range(Vmar, ZX_VMAR_OP_COMMIT, P, Size,
+                               /*buffer=*/nullptr, /*buffer_size=*/0);
+  }
+
   // No need to track the Vmo if we don't intend on resizing it. Close it.
   if (Flags & MAP_RESIZABLE) {
     DCHECK(Data);
@@ -112,6 +123,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
       dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY ? Size : 0);
     return nullptr;
   }
+
   if (Data)
     Data->VmoSize += Size;
 

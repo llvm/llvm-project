@@ -84,7 +84,7 @@ struct auto_await_suspend {
 
 struct DummyVoidTag {};
 DummyVoidTag no_specialization() { // expected-error {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<DummyVoidTag>' has no member named 'promise_type'}}
-  co_await a;                      // expected-warning {{support for std::experimental::coroutine_traits will be removed}}
+  co_await a;                      // expected-warning {{support for 'std::experimental::coroutine_traits' will be removed}}
 }
 
 template <typename... T>
@@ -1046,7 +1046,7 @@ struct NoCopy {
 };
 template <class T, class U>
 void test_dependent_param(T t, U) {
-  // expected-error@-1 {{call to deleted constructor of 'NoCopy<0>'}}
+  // expected-error@-1 {{call to deleted constructor of 'NoCopy<>'}}
   // expected-error@-2 {{call to deleted constructor of 'NoCopy<1>'}}
   ((void)t);
   co_return 42;

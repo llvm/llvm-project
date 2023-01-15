@@ -17,6 +17,7 @@ add_llvm_component_library(LLVMMipsDesc
   MC
   MipsInfo
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   Mips

@@ -22,7 +22,6 @@ namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
-  static const Builtin::Info BuiltinInfo[];
 
   enum SIMDEnum {
     NoSIMD,

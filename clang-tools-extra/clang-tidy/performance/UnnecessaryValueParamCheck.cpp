@@ -16,6 +16,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -150,7 +151,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
     // whether it is const or not as constness can differ between definition and
     // declaration.
     if (!CurrentParam.getType().getCanonicalType().isConstQualified()) {
-      if (llvm::Optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
+      if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
               CurrentParam, *Result.Context, DeclSpec::TQ::TQ_const))
         Diag << *Fix;
     }

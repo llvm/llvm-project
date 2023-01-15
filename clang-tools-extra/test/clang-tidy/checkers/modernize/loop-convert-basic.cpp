@@ -575,6 +575,7 @@ const dependent<NonTriviallyCopyable> Constv;
 const dependent<NonTriviallyCopyable> *Pconstv;
 
 transparent<dependent<int>> Cv;
+dependent_derived<int> VD;
 
 void f() {
   int Sum = 0;
@@ -651,6 +652,15 @@ void f() {
   }
   // CHECK-MESSAGES: :[[@LINE-4]]:3: warning: use range-based for loop instead
   // CHECK-FIXES: for (int I : V)
+  // CHECK-FIXES-NEXT: printf("Fibonacci number is %d\n", I);
+  // CHECK-FIXES-NEXT: Sum += I + 2;
+
+  for (int I = 0, E = VD.size(); E != I; ++I) {
+    printf("Fibonacci number is %d\n", VD[I]);
+    Sum += VD[I] + 2;
+  }
+  // CHECK-MESSAGES: :[[@LINE-4]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for (int I : VD)
   // CHECK-FIXES-NEXT: printf("Fibonacci number is %d\n", I);
   // CHECK-FIXES-NEXT: Sum += I + 2;
 }

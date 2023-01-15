@@ -25,18 +25,18 @@ define dso_local void @PR35763() {
 ; CHECK-NEXT:    movb %al, z+10(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i16, i16* getelementptr inbounds (%struct.S, %struct.S* bitcast ({ i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] }* @z to %struct.S*), i32 0, i32 0), align 8
+  %0 = load i16, ptr @z, align 8
   %conv = sext i16 %0 to i32
-  %bf.load = load i32, i32* bitcast (i24* getelementptr inbounds (%struct.S, %struct.S* bitcast ({ i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] }* @z to %struct.S*), i32 0, i32 1) to i32*), align 2
+  %bf.load = load i32, ptr getelementptr inbounds (%struct.S, ptr @z, i32 0, i32 1), align 2
   %bf.clear = and i32 %bf.load, 2097151
   %bf.cast = zext i32 %bf.clear to i64
   %conv1 = trunc i64 %bf.cast to i32
   %or = or i32 %conv, %conv1
   %conv2 = trunc i32 %or to i16
   %conv3 = zext i16 %conv2 to i64
-  store i64 %conv3, i64* @tf_3_var_136, align 8
-  %bf.load4 = load i40, i40* bitcast ([5 x i8]* getelementptr inbounds (%struct.S, %struct.S* bitcast ({ i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] }* @z to %struct.S*), i32 0, i32 2) to i40*), align 2
+  store i64 %conv3, ptr @tf_3_var_136, align 8
+  %bf.load4 = load i40, ptr getelementptr inbounds (%struct.S, ptr @z, i32 0, i32 2), align 2
   %bf.clear5 = and i40 %bf.load4, -8589869057
-  store i40 %bf.clear5, i40* bitcast ([5 x i8]* getelementptr inbounds (%struct.S, %struct.S* bitcast ({ i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] }* @z to %struct.S*), i32 0, i32 2) to i40*), align 2
+  store i40 %bf.clear5, ptr getelementptr inbounds (%struct.S, ptr @z, i32 0, i32 2), align 2
   ret void
 }

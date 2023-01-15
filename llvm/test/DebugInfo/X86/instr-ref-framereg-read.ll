@@ -12,17 +12,17 @@
 ; CHECK: DBG_PHI $rbp
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
-declare i8 *@llvm.frameaddress.p0i8(i32)
+declare ptr @llvm.frameaddress.p0(i32)
 
  ; Function Attrs: mustprogress nofree nosync nounwind sspstrong uwtable
-define hidden i8 * @foo() !dbg !7 {
+define hidden ptr @foo() !dbg !7 {
 entry:
   br label  %notentry
 
 notentry:
-  %0 = tail call i8* @llvm.frameaddress.p0i8(i32 0), !dbg !12
-  call void @llvm.dbg.value(metadata i8* %0, metadata !11, metadata !DIExpression()), !dbg !12
-  ret i8 *%0
+  %0 = tail call ptr @llvm.frameaddress.p0(i32 0), !dbg !12
+  call void @llvm.dbg.value(metadata ptr %0, metadata !11, metadata !DIExpression()), !dbg !12
+  ret ptr %0
 }
 
 !llvm.dbg.cu = !{!0}

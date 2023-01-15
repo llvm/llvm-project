@@ -157,7 +157,7 @@ static void generateFusedElementwiseOpRegion(
   Block &consumerBlock = consumer->getRegion(0).front();
   Block *fusedBlock = new Block();
   fusedOp.getRegion().push_back(fusedBlock);
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(fusedBlock);
 
@@ -283,7 +283,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   /// Find the results of the producer that have uses outside of the consumer.
   llvm::SmallDenseSet<int> preservedProducerResults;
   for (const auto &producerResult : llvm::enumerate(producer->getResults())) {
-    auto outputOperand = producer.getDpsInitOperand(producerResult.index());
+    auto *outputOperand = producer.getDpsInitOperand(producerResult.index());
     if (producer.payloadUsesValueFromOperand(outputOperand) ||
         !producer.canOpOperandsBeDropped(outputOperand) ||
         llvm::any_of(producerResult.value().getUsers(), [&](Operation *user) {
@@ -413,7 +413,7 @@ public:
       FailureOr<Operation *> fusedOp = fuseElementwiseOps(rewriter, &opOperand);
       if (succeeded(fusedOp)) {
         auto replacements =
-            fusedOp.value()->getResults().take_back(genericOp.getNumResults());
+            (*fusedOp)->getResults().take_back(genericOp.getNumResults());
         rewriter.replaceOp(genericOp, replacements);
         return success();
       }
@@ -1684,7 +1684,7 @@ public:
       // scalar constant.
       Region &region = genericOp->getRegion(0);
       Block &entryBlock = *region.begin();
-      BlockAndValueMapping mapping;
+      IRMapping mapping;
       mapping.map(entryBlock.getArgument(opOperand->getOperandNumber()),
                   scalarConstant);
       Region &fusedRegion = fusedOp->getRegion(0);

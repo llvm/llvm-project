@@ -8,8 +8,8 @@
 define hidden i32 @f(i32 %x) #0 {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  %0 = load i32, i32* %x.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  %0 = load i32, ptr %x.addr, align 4
   %sub = sub nsw i32 1, %0
   %call = call i32 @g(i32 %sub)
   %add = add nsw i32 1, %call

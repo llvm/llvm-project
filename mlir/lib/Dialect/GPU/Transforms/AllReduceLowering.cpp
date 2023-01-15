@@ -16,8 +16,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 
@@ -158,8 +158,8 @@ private:
   /// Adds type to funcOp's workgroup attributions.
   Value createWorkgroupBuffer() {
     // TODO: Pick a proper location for the attribution.
-    int workgroupMemoryAddressSpace =
-        gpu::GPUDialect::getWorkgroupAddressSpace();
+    auto workgroupMemoryAddressSpace = gpu::AddressSpaceAttr::get(
+        funcOp->getContext(), gpu::GPUDialect::getWorkgroupAddressSpace());
     auto bufferType = MemRefType::get({kSubgroupSize}, valueType, AffineMap{},
                                       workgroupMemoryAddressSpace);
     return funcOp.addWorkgroupAttribution(bufferType, rewriter.getUnknownLoc());
@@ -186,7 +186,7 @@ private:
       Block *split = rewriter.splitBlock(block, rewriter.getInsertionPoint());
 
       // Insert accumulator body between split block.
-      BlockAndValueMapping mapping;
+      IRMapping mapping;
       mapping.map(body.getArgument(0), lhs);
       mapping.map(body.getArgument(1), rhs);
       rewriter.cloneRegionBefore(body, *split->getParent(),
@@ -347,7 +347,7 @@ private:
                   return SmallVector<Value, 1>{
                       accumFactory(value, shuffleOp.getResult(0))};
                 },
-                [&] { return llvm::makeArrayRef(value); });
+                [&] { return llvm::ArrayRef(value); });
             value = rewriter.getInsertionBlock()->getArgument(0);
           }
           return SmallVector<Value, 1>{value};
@@ -394,14 +394,23 @@ struct GpuAllReduceConversion : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     auto funcOp = cast<gpu::GPUFuncOp>(op);
-    auto callback = [&](gpu::AllReduceOp reduceOp) {
-      GpuAllReduceRewriter(funcOp, reduceOp, rewriter).rewrite();
-      // Performing a rewrite invalidates the walk iterator. Report interrupt
-      // so that we can start a new walk until all all_reduce ops are replaced.
-      return WalkResult::interrupt();
+
+    SmallVector<gpu::AllReduceOp> reduceOps;
+    auto callback = [&](gpu::AllReduceOp reduceOp) -> WalkResult {
+      if (!reduceOp.getUniform())
+        return WalkResult::interrupt();
+
+      reduceOps.emplace_back(reduceOp);
+      return WalkResult::advance();
     };
-    while (funcOp.walk(callback).wasInterrupted()) {
-    }
+
+    if (funcOp.walk(callback).wasInterrupted() || reduceOps.empty())
+      return rewriter.notifyMatchFailure(
+          op, "Non uniform reductions are not supported yet.");
+
+    for (gpu::AllReduceOp reduceOp : reduceOps)
+      GpuAllReduceRewriter(funcOp, reduceOp, rewriter).rewrite();
+
     return success();
   }
 };

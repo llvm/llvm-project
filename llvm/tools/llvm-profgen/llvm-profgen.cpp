@@ -167,7 +167,7 @@ int main(int argc, const char *argv[]) {
     Generator->generateProfile();
     Generator->write();
   } else {
-    Optional<uint32_t> PIDFilter;
+    std::optional<uint32_t> PIDFilter;
     if (ProcessId.getNumOccurrences())
       PIDFilter = ProcessId;
     PerfInputFile PerfFile = getPerfInputFile();

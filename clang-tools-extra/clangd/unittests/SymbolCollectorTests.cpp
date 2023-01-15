@@ -22,11 +22,11 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock-matchers.h"
-#include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -132,7 +132,7 @@ protected:
   std::string HeaderName = "f.h";
   std::string FileName = "f.cpp";
   TestTU File;
-  llvm::Optional<ParsedAST> AST; // Initialized after build.
+  std::optional<ParsedAST> AST; // Initialized after build.
 };
 
 TEST_F(ShouldCollectSymbolTest, ShouldCollectSymbol) {
@@ -870,7 +870,7 @@ TEST_F(SymbolCollectorTest, RefContainers) {
   CollectorOpts.RefFilter = RefKind::All;
   CollectorOpts.CollectMainFileRefs = true;
   runSymbolCollector("", Code.code());
-  auto FindRefWithRange = [&](Range R) -> Optional<Ref> {
+  auto FindRefWithRange = [&](Range R) -> std::optional<Ref> {
     for (auto &Entry : Refs) {
       for (auto &Ref : Entry.second) {
         if (rangesMatch(Ref.Location, R))

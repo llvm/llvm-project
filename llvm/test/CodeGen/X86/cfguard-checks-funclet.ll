@@ -10,25 +10,25 @@
 declare i32 @target_func()
 
 
-%eh.ThrowInfo = type { i32, i8*, i8*, i8* }
+%eh.ThrowInfo = type { i32, ptr, ptr, ptr }
 
 declare i32 @__CxxFrameHandler3(...)
-declare void @_CxxThrowException(i8*, %eh.ThrowInfo*)
+declare void @_CxxThrowException(ptr, ptr)
 
-define i32 @func_cf_exception() personality i32 (...)* @__CxxFrameHandler3 {
+define i32 @func_cf_exception() personality ptr @__CxxFrameHandler3 {
 entry:
-  %func_ptr = alloca i32 ()*, align 8
-  store i32 ()* @target_func, i32 ()** %func_ptr, align 8
-  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #11
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  invoke void @_CxxThrowException(ptr null, ptr null) #11
           to label %unreachable unwind label %ehcleanup
 
 ehcleanup:
   %0 = cleanuppad within none []
-  %isnull = icmp eq i32 ()** %func_ptr, null
+  %isnull = icmp eq ptr %func_ptr, null
   br i1 %isnull, label %exit, label %callfn
 
 callfn:
-  %1 = load i32 ()*, i32 ()** %func_ptr, align 8
+  %1 = load ptr, ptr %func_ptr, align 8
   %2 = call i32 %1() #9 [ "funclet"(token %0) ]
   br label %exit
 
@@ -42,7 +42,7 @@ catch.dispatch:
   %3 = catchswitch within none [label %catch] unwind to caller
 
 catch:
-  %4 = catchpad within %3 [i8* null, i32 64, i8* null]
+  %4 = catchpad within %3 [ptr null, i32 64, ptr null]
   catchret from %4 to label %try.cont
 
 try.cont:

@@ -61,6 +61,7 @@ class Parser : public CodeCompletionHandler {
   friend class ColonProtectionRAIIObject;
   friend class ParsingOpenMPDirectiveRAII;
   friend class InMessageExpressionRAIIObject;
+  friend class OffsetOfStateRAIIObject;
   friend class PoisonSEHIdentifiersRAIIObject;
   friend class ObjCDeclContextSwitch;
   friend class ParenBraceBracketBalancer;
@@ -246,6 +247,8 @@ class Parser : public CodeCompletionHandler {
   /// workaround to make sure ProduceSignatureHelp is only called at the deepest
   /// function call.
   bool CalledSignatureHelp = false;
+
+  Sema::OffsetOfKind OffsetOfState = Sema::OffsetOfKind::OOK_Outside;
 
   /// The "depth" of the template parameters currently being parsed.
   unsigned TemplateParameterDepth;
@@ -1233,7 +1236,7 @@ public:
   /// returns false.
   bool SkipUntil(tok::TokenKind T,
                  SkipUntilFlags Flags = static_cast<SkipUntilFlags>(0)) {
-    return SkipUntil(llvm::makeArrayRef(T), Flags);
+    return SkipUntil(llvm::ArrayRef(T), Flags);
   }
   bool SkipUntil(tok::TokenKind T1, tok::TokenKind T2,
                  SkipUntilFlags Flags = static_cast<SkipUntilFlags>(0)) {

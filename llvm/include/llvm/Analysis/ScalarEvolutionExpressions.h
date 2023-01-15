@@ -85,24 +85,19 @@ inline unsigned short computeExpressionSize(ArrayRef<const SCEV *> Args) {
 /// This is the base class for unary cast operator classes.
 class SCEVCastExpr : public SCEV {
 protected:
-  std::array<const SCEV *, 1> Operands;
+  const SCEV *Op;
   Type *Ty;
 
   SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy, const SCEV *op,
                Type *ty);
 
 public:
-  const SCEV *getOperand() const { return Operands[0]; }
+  const SCEV *getOperand() const { return Op; }
   const SCEV *getOperand(unsigned i) const {
     assert(i == 0 && "Operand index out of range!");
-    return Operands[0];
+    return Op;
   }
-  using op_iterator = std::array<const SCEV *, 1>::const_iterator;
-  using op_range = iterator_range<op_iterator>;
-
-  op_range operands() const {
-    return make_range(Operands.begin(), Operands.end());
-  }
+  ArrayRef<const SCEV *> operands() const { return Op; }
   size_t getNumOperands() const { return 1; }
   Type *getType() const { return Ty; }
 
@@ -192,7 +187,7 @@ protected:
 
   SCEVNAryExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T,
                const SCEV *const *O, size_t N)
-      : SCEV(ID, T, computeExpressionSize(makeArrayRef(O, N))), Operands(O),
+      : SCEV(ID, T, computeExpressionSize(ArrayRef(O, N))), Operands(O),
         NumOperands(N) {}
 
 public:
@@ -203,12 +198,9 @@ public:
     return Operands[i];
   }
 
-  using op_iterator = const SCEV *const *;
-  using op_range = iterator_range<op_iterator>;
-
-  op_iterator op_begin() const { return Operands; }
-  op_iterator op_end() const { return Operands + NumOperands; }
-  op_range operands() const { return make_range(op_begin(), op_end()); }
+  ArrayRef<const SCEV *> operands() const {
+    return ArrayRef(Operands, NumOperands);
+  }
 
   NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = NoWrapMask) const {
     return (NoWrapFlags)(SubclassData & Mask);
@@ -312,11 +304,7 @@ public:
     return i == 0 ? getLHS() : getRHS();
   }
 
-  using op_iterator = std::array<const SCEV *, 2>::const_iterator;
-  using op_range = iterator_range<op_iterator>;
-  op_range operands() const {
-    return make_range(Operands.begin(), Operands.end());
-  }
+  ArrayRef<const SCEV *> operands() const { return Operands; }
 
   Type *getType() const {
     // In most cases the types of LHS and RHS will be the same, but in some
@@ -361,7 +349,7 @@ public:
     if (isAffine())
       return getOperand(1);
     return SE.getAddRecExpr(
-        SmallVector<const SCEV *, 3>(op_begin() + 1, op_end()), getLoop(),
+        SmallVector<const SCEV *, 3>(operands().drop_front()), getLoop(),
         FlagAnyWrap);
   }
 

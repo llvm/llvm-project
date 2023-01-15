@@ -9,7 +9,7 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES_H
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES_H
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Utils/DiagnosedSilenceableFailure.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
 

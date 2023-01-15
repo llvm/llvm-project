@@ -15,7 +15,7 @@
 ;   return *s;
 ; }
 ;
-define i32 @_Z1gPjP7StructAy(i32* nocapture %s, %struct.StructA* nocapture %A, i64 %count) {
+define i32 @_Z1gPjP7StructAy(ptr nocapture %s, ptr nocapture %A, i64 %count) {
 entry:
 ; CHECK-LABEL: Z1gPjP7StructAy
 ; CHECK: MayAlias: store i32 4, {{.*}} <-> store i32 1,
@@ -24,10 +24,10 @@ entry:
 ; OPT: store i32 4,
 ; OPT: %[[RET:.*]] = load i32,
 ; OPT: ret i32 %[[RET]]
-  store i32 1, i32* %s, align 4, !tbaa !2
-  %f32 = getelementptr inbounds %struct.StructA, %struct.StructA* %A, i64 0, i32 1
-  store i32 4, i32* %f32, align 4, !tbaa !6
-  %0 = load i32, i32* %s, align 4, !tbaa !2
+  store i32 1, ptr %s, align 4, !tbaa !2
+  %f32 = getelementptr inbounds %struct.StructA, ptr %A, i64 0, i32 1
+  store i32 4, ptr %f32, align 4, !tbaa !6
+  %0 = load i32, ptr %s, align 4, !tbaa !2
   ret i32 %0
 }
 
@@ -37,7 +37,7 @@ entry:
 ;   return *s;
 ; }
 ;
-define i32 @_Z2g2PjP7StructAy(i32* nocapture %s, %struct.StructA* nocapture %A, i64 %count) {
+define i32 @_Z2g2PjP7StructAy(ptr nocapture %s, ptr nocapture %A, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z2g2PjP7StructAy
 ; CHECK: NoAlias: store i16 4, {{.*}} <-> store i32 1,
@@ -46,9 +46,8 @@ entry:
 ; OPT: store i16 4,
 ; Remove a load and propagate the value from store.
 ; OPT: ret i32 1
-  store i32 1, i32* %s, align 4, !tbaa !2
-  %f16 = getelementptr inbounds %struct.StructA, %struct.StructA* %A, i64 0, i32 0
-  store i16 4, i16* %f16, align 4, !tbaa !9
+  store i32 1, ptr %s, align 4, !tbaa !2
+  store i16 4, ptr %A, align 4, !tbaa !9
   ret i32 1
 }
 
@@ -58,7 +57,7 @@ entry:
 ;   return A->f32;
 ; }
 ;
-define i32 @_Z2g3P7StructAP7StructBy(%struct.StructA* nocapture %A, %struct.StructB* nocapture %B, i64 %count) {
+define i32 @_Z2g3P7StructAP7StructBy(ptr nocapture %A, ptr nocapture %B, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z2g3P7StructAP7StructBy
 ; CHECK: MayAlias: store i32 4, {{.*}} <-> store i32 1,
@@ -67,11 +66,11 @@ entry:
 ; OPT: store i32 4
 ; OPT: %[[RET:.*]] = load i32,
 ; OPT: ret i32 %[[RET]]
-  %f32 = getelementptr inbounds %struct.StructA, %struct.StructA* %A, i64 0, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !6
-  %f321 = getelementptr inbounds %struct.StructB, %struct.StructB* %B, i64 0, i32 1, i32 1
-  store i32 4, i32* %f321, align 4, !tbaa !10
-  %0 = load i32, i32* %f32, align 4, !tbaa !6
+  %f32 = getelementptr inbounds %struct.StructA, ptr %A, i64 0, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !6
+  %f321 = getelementptr inbounds %struct.StructB, ptr %B, i64 0, i32 1, i32 1
+  store i32 4, ptr %f321, align 4, !tbaa !10
+  %0 = load i32, ptr %f32, align 4, !tbaa !6
   ret i32 %0
 }
 
@@ -81,7 +80,7 @@ entry:
 ;   return A->f32;
 ; }
 ;
-define i32 @_Z2g4P7StructAP7StructBy(%struct.StructA* nocapture %A, %struct.StructB* nocapture %B, i64 %count) {
+define i32 @_Z2g4P7StructAP7StructBy(ptr nocapture %A, ptr nocapture %B, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z2g4P7StructAP7StructBy
 ; CHECK: NoAlias: store i16 4, {{.*}} <-> store i32 1,
@@ -90,10 +89,10 @@ entry:
 ; OPT: store i16 4,
 ; Remove a load and propagate the value from store.
 ; OPT: ret i32 1
-  %f32 = getelementptr inbounds %struct.StructA, %struct.StructA* %A, i64 0, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !6
-  %f16 = getelementptr inbounds %struct.StructB, %struct.StructB* %B, i64 0, i32 1, i32 0
-  store i16 4, i16* %f16, align 4, !tbaa !12
+  %f32 = getelementptr inbounds %struct.StructA, ptr %A, i64 0, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !6
+  %f16 = getelementptr inbounds %struct.StructB, ptr %B, i64 0, i32 1, i32 0
+  store i16 4, ptr %f16, align 4, !tbaa !12
   ret i32 1
 }
 
@@ -103,7 +102,7 @@ entry:
 ;   return A->f32;
 ; }
 ;
-define i32 @_Z2g5P7StructAP7StructBy(%struct.StructA* nocapture %A, %struct.StructB* nocapture %B, i64 %count) {
+define i32 @_Z2g5P7StructAP7StructBy(ptr nocapture %A, ptr nocapture %B, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z2g5P7StructAP7StructBy
 ; CHECK: NoAlias: store i32 4, {{.*}} <-> store i32 1,
@@ -112,10 +111,10 @@ entry:
 ; OPT: store i32 4,
 ; Remove a load and propagate the value from store.
 ; OPT: ret i32 1
-  %f32 = getelementptr inbounds %struct.StructA, %struct.StructA* %A, i64 0, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !6
-  %f321 = getelementptr inbounds %struct.StructB, %struct.StructB* %B, i64 0, i32 2
-  store i32 4, i32* %f321, align 4, !tbaa !13
+  %f32 = getelementptr inbounds %struct.StructA, ptr %A, i64 0, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !6
+  %f321 = getelementptr inbounds %struct.StructB, ptr %B, i64 0, i32 2
+  store i32 4, ptr %f321, align 4, !tbaa !13
   ret i32 1
 }
 
@@ -125,7 +124,7 @@ entry:
 ;   return A->f32;
 ; }
 ;
-define i32 @_Z2g6P7StructAP7StructBy(%struct.StructA* nocapture %A, %struct.StructB* nocapture %B, i64 %count) {
+define i32 @_Z2g6P7StructAP7StructBy(ptr nocapture %A, ptr nocapture %B, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z2g6P7StructAP7StructBy
 ; CHECK: NoAlias: store i32 4, {{.*}} <-> store i32 1,
@@ -134,10 +133,10 @@ entry:
 ; OPT: store i32 4,
 ; Remove a load and propagate the value from store.
 ; OPT: ret i32 1
-  %f32 = getelementptr inbounds %struct.StructA, %struct.StructA* %A, i64 0, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !6
-  %f32_2 = getelementptr inbounds %struct.StructB, %struct.StructB* %B, i64 0, i32 1, i32 3
-  store i32 4, i32* %f32_2, align 4, !tbaa !14
+  %f32 = getelementptr inbounds %struct.StructA, ptr %A, i64 0, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !6
+  %f32_2 = getelementptr inbounds %struct.StructB, ptr %B, i64 0, i32 1, i32 3
+  store i32 4, ptr %f32_2, align 4, !tbaa !14
   ret i32 1
 }
 
@@ -147,7 +146,7 @@ entry:
 ;   return A->f32;
 ; }
 ;
-define i32 @_Z2g7P7StructAP7StructSy(%struct.StructA* nocapture %A, %struct.StructS* nocapture %S, i64 %count) {
+define i32 @_Z2g7P7StructAP7StructSy(ptr nocapture %A, ptr nocapture %S, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z2g7P7StructAP7StructSy
 ; CHECK: NoAlias: store i32 4, {{.*}} <-> store i32 1,
@@ -156,10 +155,10 @@ entry:
 ; OPT: store i32 4,
 ; Remove a load and propagate the value from store.
 ; OPT: ret i32 1
-  %f32 = getelementptr inbounds %struct.StructA, %struct.StructA* %A, i64 0, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !6
-  %f321 = getelementptr inbounds %struct.StructS, %struct.StructS* %S, i64 0, i32 1
-  store i32 4, i32* %f321, align 4, !tbaa !15
+  %f32 = getelementptr inbounds %struct.StructA, ptr %A, i64 0, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !6
+  %f321 = getelementptr inbounds %struct.StructS, ptr %S, i64 0, i32 1
+  store i32 4, ptr %f321, align 4, !tbaa !15
   ret i32 1
 }
 
@@ -169,7 +168,7 @@ entry:
 ;   return A->f32;
 ; }
 ;
-define i32 @_Z2g8P7StructAP7StructSy(%struct.StructA* nocapture %A, %struct.StructS* nocapture %S, i64 %count) {
+define i32 @_Z2g8P7StructAP7StructSy(ptr nocapture %A, ptr nocapture %S, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z2g8P7StructAP7StructSy
 ; CHECK: NoAlias: store i16 4, {{.*}} <-> store i32 1,
@@ -178,10 +177,9 @@ entry:
 ; OPT: store i16 4,
 ; Remove a load and propagate the value from store.
 ; OPT: ret i32 1
-  %f32 = getelementptr inbounds %struct.StructA, %struct.StructA* %A, i64 0, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !6
-  %f16 = getelementptr inbounds %struct.StructS, %struct.StructS* %S, i64 0, i32 0
-  store i16 4, i16* %f16, align 4, !tbaa !17
+  %f32 = getelementptr inbounds %struct.StructA, ptr %A, i64 0, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !6
+  store i16 4, ptr %S, align 4, !tbaa !17
   ret i32 1
 }
 
@@ -191,7 +189,7 @@ entry:
 ;   return S->f32;
 ; }
 ;
-define i32 @_Z2g9P7StructSP8StructS2y(%struct.StructS* nocapture %S, %struct.StructS2* nocapture %S2, i64 %count) {
+define i32 @_Z2g9P7StructSP8StructS2y(ptr nocapture %S, ptr nocapture %S2, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z2g9P7StructSP8StructS2y
 ; CHECK: NoAlias: store i32 4, {{.*}} <-> store i32 1,
@@ -200,10 +198,10 @@ entry:
 ; OPT: store i32 4,
 ; Remove a load and propagate the value from store.
 ; OPT: ret i32 1
-  %f32 = getelementptr inbounds %struct.StructS, %struct.StructS* %S, i64 0, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !15
-  %f321 = getelementptr inbounds %struct.StructS2, %struct.StructS2* %S2, i64 0, i32 1
-  store i32 4, i32* %f321, align 4, !tbaa !18
+  %f32 = getelementptr inbounds %struct.StructS, ptr %S, i64 0, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !15
+  %f321 = getelementptr inbounds %struct.StructS2, ptr %S2, i64 0, i32 1
+  store i32 4, ptr %f321, align 4, !tbaa !18
   ret i32 1
 }
 
@@ -213,7 +211,7 @@ entry:
 ;   return S->f32;
 ; }
 ;
-define i32 @_Z3g10P7StructSP8StructS2y(%struct.StructS* nocapture %S, %struct.StructS2* nocapture %S2, i64 %count) {
+define i32 @_Z3g10P7StructSP8StructS2y(ptr nocapture %S, ptr nocapture %S2, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z3g10P7StructSP8StructS2y
 ; CHECK: NoAlias: store i16 4, {{.*}} <-> store i32 1,
@@ -222,10 +220,9 @@ entry:
 ; OPT: store i16 4,
 ; Remove a load and propagate the value from store.
 ; OPT: ret i32 1
-  %f32 = getelementptr inbounds %struct.StructS, %struct.StructS* %S, i64 0, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !15
-  %f16 = getelementptr inbounds %struct.StructS2, %struct.StructS2* %S2, i64 0, i32 0
-  store i16 4, i16* %f16, align 4, !tbaa !20
+  %f32 = getelementptr inbounds %struct.StructS, ptr %S, i64 0, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !15
+  store i16 4, ptr %S2, align 4, !tbaa !20
   ret i32 1
 }
 
@@ -235,7 +232,7 @@ entry:
 ;   return C->b.a.f32;
 ; }
 ;
-define i32 @_Z3g11P7StructCP7StructDy(%struct.StructC* nocapture %C, %struct.StructD* nocapture %D, i64 %count) {
+define i32 @_Z3g11P7StructCP7StructDy(ptr nocapture %C, ptr nocapture %D, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z3g11P7StructCP7StructDy
 ; CHECK: NoAlias: store i32 4, {{.*}} <-> store i32 1,
@@ -244,10 +241,10 @@ entry:
 ; OPT: store i32 4,
 ; Remove a load and propagate the value from store.
 ; OPT: ret i32 1
-  %f32 = getelementptr inbounds %struct.StructC, %struct.StructC* %C, i64 0, i32 1, i32 1, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !21
-  %f323 = getelementptr inbounds %struct.StructD, %struct.StructD* %D, i64 0, i32 1, i32 1, i32 1
-  store i32 4, i32* %f323, align 4, !tbaa !23
+  %f32 = getelementptr inbounds %struct.StructC, ptr %C, i64 0, i32 1, i32 1, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !21
+  %f323 = getelementptr inbounds %struct.StructD, ptr %D, i64 0, i32 1, i32 1, i32 1
+  store i32 4, ptr %f323, align 4, !tbaa !23
   ret i32 1
 }
 
@@ -260,7 +257,7 @@ entry:
 ;   return b1->a.f32;
 ; }
 ;
-define i32 @_Z3g12P7StructCP7StructDy(%struct.StructC* nocapture %C, %struct.StructD* nocapture %D, i64 %count) {
+define i32 @_Z3g12P7StructCP7StructDy(ptr nocapture %C, ptr nocapture %D, i64 %count) {
 entry:
 ; CHECK-LABEL: _Z3g12P7StructCP7StructDy
 ; CHECK: MayAlias: store i32 4, {{.*}} <-> store i32 1,
@@ -269,11 +266,11 @@ entry:
 ; OPT: store i32 4,
 ; OPT: %[[RET:.*]] = load i32,
 ; OPT: ret i32 %[[RET]]
-  %f32 = getelementptr inbounds %struct.StructC, %struct.StructC* %C, i64 0, i32 1, i32 1, i32 1
-  store i32 1, i32* %f32, align 4, !tbaa !10
-  %f325 = getelementptr inbounds %struct.StructD, %struct.StructD* %D, i64 0, i32 1, i32 1, i32 1
-  store i32 4, i32* %f325, align 4, !tbaa !10
-  %0 = load i32, i32* %f32, align 4, !tbaa !10
+  %f32 = getelementptr inbounds %struct.StructC, ptr %C, i64 0, i32 1, i32 1, i32 1
+  store i32 1, ptr %f32, align 4, !tbaa !10
+  %f325 = getelementptr inbounds %struct.StructD, ptr %D, i64 0, i32 1, i32 1, i32 1
+  store i32 4, ptr %f325, align 4, !tbaa !10
+  %0 = load i32, ptr %f32, align 4, !tbaa !10
   ret i32 %0
 }
 

@@ -814,15 +814,13 @@ public:
                             Value *(ScalarExprEmitter::*F)(const BinOpInfo &));
 
   QualType getPromotionType(QualType Ty) {
-    if (CGF.getTarget().shouldEmitFloat16WithExcessPrecision()) {
-      if (Ty->isAnyComplexType()) {
-        QualType ElementType = Ty->castAs<ComplexType>()->getElementType();
-        if (ElementType->isFloat16Type())
-          return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
-      }
-      if (Ty->isFloat16Type())
-        return CGF.getContext().FloatTy;
+    if (auto *CT = Ty->getAs<ComplexType>()) {
+      QualType ElementType = CT->getElementType();
+      if (ElementType.UseExcessPrecision(CGF.getContext()))
+        return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
     }
+    if (Ty.UseExcessPrecision(CGF.getContext()))
+      return CGF.getContext().FloatTy;
     return QualType();
   }
 
@@ -1667,7 +1665,7 @@ Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
     //   newv = insert newv, x, i
     auto *RTy = llvm::FixedVectorType::get(LTy->getElementType(),
                                            MTy->getNumElements());
-    Value* NewV = llvm::UndefValue::get(RTy);
+    Value* NewV = llvm::PoisonValue::get(RTy);
     for (unsigned i = 0, e = MTy->getNumElements(); i != e; ++i) {
       Value *IIndx = llvm::ConstantInt::get(CGF.SizeTy, i);
       Value *Indx = Builder.CreateExtractElement(Mask, IIndx, "shuf_idx");
@@ -4931,8 +4929,7 @@ Value *ScalarExprEmitter::VisitBlockExpr(const BlockExpr *block) {
 static Value *ConvertVec3AndVec4(CGBuilderTy &Builder, CodeGenFunction &CGF,
                                  Value *Src, unsigned NumElementsDst) {
   static constexpr int Mask[] = {0, 1, 2, -1};
-  return Builder.CreateShuffleVector(Src,
-                                     llvm::makeArrayRef(Mask, NumElementsDst));
+  return Builder.CreateShuffleVector(Src, llvm::ArrayRef(Mask, NumElementsDst));
 }
 
 // Create cast instructions for converting LLVM value \p Src to LLVM type \p

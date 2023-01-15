@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #===- add_new_check.py - clang-tidy check generator ---------*- python -*--===#
 #
@@ -322,8 +322,7 @@ def update_checks_list(clang_tidy_path):
     lines = f.readlines()
   # Get all existing docs
   doc_files = []
-  for subdir in list(filter(lambda s: not s.endswith('.rst') and not s.endswith('.py'),
-                     os.listdir(docs_dir))):
+  for subdir in filter(lambda s: os.path.isdir(os.path.join(docs_dir, s)), os.listdir(docs_dir)):
     for file in filter(lambda s: s.endswith('.rst'), os.listdir(os.path.join(docs_dir, subdir))):
       doc_files.append([subdir, file])
   doc_files.sort()

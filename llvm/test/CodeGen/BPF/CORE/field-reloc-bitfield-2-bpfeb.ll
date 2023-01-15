@@ -26,14 +26,14 @@ target triple = "bpfeb"
 %struct.s = type <{ i8, i16 }>
 
 ; Function Attrs: nounwind readnone
-define dso_local i32 @test(%struct.s* %arg) local_unnamed_addr #0 !dbg !13 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !13 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.s* %arg, metadata !27, metadata !DIExpression()), !dbg !28
-  %0 = tail call i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg, i32 1, i32 4), !dbg !29, !llvm.preserve.access.index !18
-  %1 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 0), !dbg !30
-  %2 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 1), !dbg !31
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !27, metadata !DIExpression()), !dbg !28
+  %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr elementtype(%struct.s) %arg, i32 1, i32 4), !dbg !29, !llvm.preserve.access.index !18
+  %1 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 0), !dbg !30
+  %2 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 1), !dbg !31
   %add = add i32 %2, %1, !dbg !32
-  %3 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %0, i64 4), !dbg !33
+  %3 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 4), !dbg !33
   %add1 = add i32 %add, %3, !dbg !34
   ret i32 %add1, !dbg !35
 }
@@ -70,10 +70,10 @@ entry:
 ; CHECK-NEXT:        .long   4
 
 ; Function Attrs: nounwind readnone
-declare i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.ss(%struct.s*, i32, i32) #1
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.preserve.field.info.p0i16(i16*, i64) #1
+declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

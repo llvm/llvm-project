@@ -48,6 +48,7 @@ MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
   RegAllocHints.reserve(256);
   UsedPhysRegMask.resize(NumRegs);
   PhysRegUseDefLists.reset(new MachineOperand*[NumRegs]());
+  TheDelegates.clear();
 }
 
 /// setRegClass - Set the register class of the specified virtual register.
@@ -162,8 +163,7 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   // New virtual register number.
   Register Reg = createIncompleteVirtualRegister(Name);
   VRegInfo[Reg].first = RegClass;
-  if (TheDelegate)
-    TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  noteNewVirtualRegister(Reg);
   return Reg;
 }
 
@@ -172,8 +172,7 @@ Register MachineRegisterInfo::cloneVirtualRegister(Register VReg,
   Register Reg = createIncompleteVirtualRegister(Name);
   VRegInfo[Reg].first = VRegInfo[VReg].first;
   setType(Reg, getType(VReg));
-  if (TheDelegate)
-    TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  noteCloneVirtualRegister(Reg, VReg);
   return Reg;
 }
 
@@ -189,8 +188,7 @@ MachineRegisterInfo::createGenericVirtualRegister(LLT Ty, StringRef Name) {
   // FIXME: Should we use a dummy register class?
   VRegInfo[Reg].first = static_cast<RegisterBank *>(nullptr);
   setType(Reg, Ty);
-  if (TheDelegate)
-    TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  noteNewVirtualRegister(Reg);
   return Reg;
 }
 
@@ -204,7 +202,11 @@ void MachineRegisterInfo::clearVirtRegs() {
     if (!VRegInfo[Reg].second)
       continue;
     verifyUseList(Reg);
-    llvm_unreachable("Remaining virtual register operands");
+    errs() << "Remaining virtual register "
+           << printReg(Reg, getTargetRegisterInfo()) << "...\n";
+    for (MachineInstr &MI : reg_instructions(Reg))
+      errs() << "...in instruction: " << MI << "\n";
+    std::abort();
   }
 #endif
   VRegInfo.clear();
@@ -382,7 +384,7 @@ void MachineRegisterInfo::replaceRegWith(Register FromReg, Register ToReg) {
 
   // TODO: This could be more efficient by bulk changing the operands.
   for (MachineOperand &O : llvm::make_early_inc_range(reg_operands(FromReg))) {
-    if (Register::isPhysicalRegister(ToReg)) {
+    if (ToReg.isPhysical()) {
       O.substPhysReg(ToReg, *TRI);
     } else {
       O.setReg(ToReg);
@@ -494,7 +496,7 @@ MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
 
 LaneBitmask MachineRegisterInfo::getMaxLaneMaskForVReg(Register Reg) const {
   // Lane masks are only defined for vregs.
-  assert(Register::isVirtualRegister(Reg));
+  assert(Reg.isVirtual());
   const TargetRegisterClass &TRC = *getRegClass(Reg);
   return TRC.getLaneMask();
 }

@@ -129,11 +129,9 @@ public:
 
   unsigned size() const { return NumParams; }
 
-  ArrayRef<NamedDecl*> asArray() {
-    return llvm::makeArrayRef(begin(), end());
-  }
+  ArrayRef<NamedDecl *> asArray() { return llvm::ArrayRef(begin(), end()); }
   ArrayRef<const NamedDecl*> asArray() const {
-    return llvm::makeArrayRef(begin(), size());
+    return llvm::ArrayRef(begin(), size());
   }
 
   NamedDecl* getParam(unsigned Idx) {
@@ -289,7 +287,7 @@ public:
 
   /// Produce this as an array ref.
   ArrayRef<TemplateArgument> asArray() const {
-    return llvm::makeArrayRef(data(), size());
+    return llvm::ArrayRef(data(), size());
   }
 
   /// Retrieve the number of template arguments in this
@@ -741,7 +739,7 @@ public:
   unsigned getNumTemplateArgs() const { return NumArgs; }
 
   llvm::ArrayRef<TemplateArgumentLoc> arguments() const {
-    return llvm::makeArrayRef(getTemplateArgs(), getNumTemplateArgs());
+    return llvm::ArrayRef(getTemplateArgs(), getNumTemplateArgs());
   }
 
   /// Returns the nth template argument.

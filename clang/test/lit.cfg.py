@@ -238,6 +238,9 @@ if config.enable_shared:
 if config.clang_vendor_uti:
     config.available_features.add('clang-vendor=' + config.clang_vendor_uti)
 
+if config.have_llvm_driver:
+  config.available_features.add('llvm-driver')
+
 def exclude_unsupported_files_for_aix(dirname):
     for filename in os.listdir(dirname):
         source_path = os.path.join( dirname, filename)

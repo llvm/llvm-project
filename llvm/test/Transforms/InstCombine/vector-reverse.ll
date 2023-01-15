@@ -7,14 +7,13 @@
 
 define <vscale x 4 x i32> @binop_reverse(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: @binop_reverse(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw <vscale x 4 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
   %b.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %b)
-  %add = add <vscale x 4 x i32> %a.rev, %b.rev
+  %add = add nsw <vscale x 4 x i32> %a.rev, %b.rev
   ret <vscale x 4 x i32> %add
 }
 
@@ -22,9 +21,9 @@ define <vscale x 4 x i32> @binop_reverse(<vscale x 4 x i32> %a, <vscale x 4 x i3
 define <vscale x 4 x i32> @binop_reverse_1(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: @binop_reverse_1(
 ; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[A_REV]])
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -37,10 +36,10 @@ define <vscale x 4 x i32> @binop_reverse_1(<vscale x 4 x i32> %a, <vscale x 4 x 
 ; %b.rev has multiple uses
 define <vscale x 4 x i32> @binop_reverse_2(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: @binop_reverse_2(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[B_REV]])
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -71,8 +70,8 @@ define <vscale x 4 x i32> @binop_reverse_3(<vscale x 4 x i32> %a, <vscale x 4 x 
 ; %a.rev used as both operands
 define <vscale x 4 x i32> @binop_reverse_4(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: @binop_reverse_4(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 4 x i32> [[A_REV]], [[A_REV]]
+; CHECK-NEXT:    [[MUL1:%.*]] = mul <vscale x 4 x i32> [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[MUL:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[MUL1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[MUL]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -80,12 +79,26 @@ define <vscale x 4 x i32> @binop_reverse_4(<vscale x 4 x i32> %a) {
   ret <vscale x 4 x i32> %mul
 }
 
+; %a.rev used as both operands along with a third use
+define <vscale x 4 x i32> @binop_reverse_5(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: @binop_reverse_5(
+; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
+; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[A_REV]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 4 x i32> [[A_REV]], [[A_REV]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[MUL]]
+;
+  %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
+  call void @use_nxv4i32(<vscale x 4 x i32> %a.rev)
+  %mul = mul <vscale x 4 x i32> %a.rev, %a.rev
+  ret <vscale x 4 x i32> %mul
+}
+
 define <vscale x 4 x i32> @binop_reverse_splat_RHS(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @binop_reverse_splat_RHS(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[B_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[B_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <vscale x 4 x i32> [[A_REV]], [[B_SPLAT]]
+; CHECK-NEXT:    [[DIV1:%.*]] = udiv <vscale x 4 x i32> [[A:%.*]], [[B_SPLAT]]
+; CHECK-NEXT:    [[DIV:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[DIV1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[DIV]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -115,10 +128,10 @@ define <vscale x 4 x i32> @binop_reverse_splat_RHS_1(<vscale x 4 x i32> %a, i32 
 
 define <vscale x 4 x i32> @binop_reverse_splat_LHS(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @binop_reverse_splat_LHS(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[B_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[B_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <vscale x 4 x i32> [[B_SPLAT]], [[A_REV]]
+; CHECK-NEXT:    [[DIV1:%.*]] = udiv <vscale x 4 x i32> [[B_SPLAT]], [[A:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[DIV1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[DIV]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -173,9 +186,8 @@ define <vscale x 4 x float> @unop_reverse_1(<vscale x 4 x float> %a) {
 
 define <vscale x 4 x i1> @icmp_reverse(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: @icmp_reverse(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <vscale x 4 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[CMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[CMP]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -188,9 +200,9 @@ define <vscale x 4 x i1> @icmp_reverse(<vscale x 4 x i32> %a, <vscale x 4 x i32>
 define <vscale x 4 x i1> @icmp_reverse_1(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: @icmp_reverse_1(
 ; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[A_REV]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <vscale x 4 x i32> [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[CMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[CMP]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -203,10 +215,10 @@ define <vscale x 4 x i1> @icmp_reverse_1(<vscale x 4 x i32> %a, <vscale x 4 x i3
 ; %b.rev has multiple uses
 define <vscale x 4 x i1> @icmp_reverse_2(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: @icmp_reverse_2(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[B_REV]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <vscale x 4 x i32> [[A_REV]], [[B_REV]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <vscale x 4 x i32> [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[CMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[CMP]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -236,10 +248,10 @@ define <vscale x 4 x i1> @icmp_reverse_3(<vscale x 4 x i32> %a, <vscale x 4 x i3
 
 define <vscale x 4 x i1> @icmp_reverse_splat_RHS(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @icmp_reverse_splat_RHS(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[B_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[B_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <vscale x 4 x i32> [[A_REV]], [[B_SPLAT]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <vscale x 4 x i32> [[B_SPLAT]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[CMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[CMP]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -269,10 +281,10 @@ define <vscale x 4 x i1> @icmp_reverse_splat_RHS_1(<vscale x 4 x i32> %a, i32 %b
 
 define <vscale x 4 x i1> @icmp_reverse_splat_LHS(<vscale x 4 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @icmp_reverse_splat_LHS(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[B_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[B_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 4 x i32> [[B_SPLAT]], [[A_REV]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <vscale x 4 x i32> [[B_SPLAT]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[CMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[CMP]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
@@ -302,10 +314,8 @@ define <vscale x 4 x i1> @icmp_reverse_splat_LHS_1(<vscale x 4 x i32> %a, i32 %b
 
 define <vscale x 4 x i32> @select_reverse(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: @select_reverse(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
-; CHECK-NEXT:    [[C_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[C:%.*]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[C:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -319,10 +329,9 @@ define <vscale x 4 x i32> @select_reverse(<vscale x 4 x i1> %a, <vscale x 4 x i3
 define <vscale x 4 x i32> @select_reverse_1(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: @select_reverse_1(
 ; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
-; CHECK-NEXT:    [[C_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[C:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i1(<vscale x 4 x i1> [[A_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[C:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -336,11 +345,10 @@ define <vscale x 4 x i32> @select_reverse_1(<vscale x 4 x i1> %a, <vscale x 4 x 
 ; %b.rev has multiple uses
 define <vscale x 4 x i32> @select_reverse_2(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: @select_reverse_2(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
 ; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
-; CHECK-NEXT:    [[C_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[C:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[B_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[C:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -354,11 +362,10 @@ define <vscale x 4 x i32> @select_reverse_2(<vscale x 4 x i1> %a, <vscale x 4 x 
 ; %c.rev has multiple uses
 define <vscale x 4 x i32> @select_reverse_3(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: @select_reverse_3(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    [[C_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[C:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[C_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[C]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -374,10 +381,10 @@ define <vscale x 4 x i32> @select_reverse_4(<vscale x 4 x i1> %a, <vscale x 4 x 
 ; CHECK-LABEL: @select_reverse_4(
 ; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
 ; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
-; CHECK-NEXT:    [[C_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[C:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i1(<vscale x 4 x i1> [[A_REV]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[B_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[C:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -393,11 +400,11 @@ define <vscale x 4 x i32> @select_reverse_4(<vscale x 4 x i1> %a, <vscale x 4 x 
 define <vscale x 4 x i32> @select_reverse_5(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: @select_reverse_5(
 ; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    [[C_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[C:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i1(<vscale x 4 x i1> [[A_REV]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[C_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[C]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -412,12 +419,12 @@ define <vscale x 4 x i32> @select_reverse_5(<vscale x 4 x i1> %a, <vscale x 4 x 
 ; %b.rev and %c.rev have multiple uses
 define <vscale x 4 x i32> @select_reverse_6(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: @select_reverse_6(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
 ; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    [[C_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[C:%.*]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[B_REV]])
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[C_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[C]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -453,11 +460,10 @@ define <vscale x 4 x i32> @select_reverse_7(<vscale x 4 x i1> %a, <vscale x 4 x 
 
 define <vscale x 4 x i32> @select_reverse_splat_false(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: @select_reverse_splat_false(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    [[C_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[C_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[C_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_SPLAT]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[C_SPLAT]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -472,11 +478,11 @@ define <vscale x 4 x i32> @select_reverse_splat_false(<vscale x 4 x i1> %a, <vsc
 define <vscale x 4 x i32> @select_reverse_splat_false_1(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: @select_reverse_splat_false_1(
 ; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    [[C_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[C_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[C_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @use_nxv4i1(<vscale x 4 x i1> [[A_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_SPLAT]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[C_SPLAT]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -491,12 +497,12 @@ define <vscale x 4 x i32> @select_reverse_splat_false_1(<vscale x 4 x i1> %a, <v
 ; %b.rev has multiple uses
 define <vscale x 4 x i32> @select_reverse_splat_false_2(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: @select_reverse_splat_false_2(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
 ; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    [[C_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[C_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[C_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[B_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> [[C_SPLAT]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[C_SPLAT]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -532,11 +538,10 @@ define <vscale x 4 x i32> @select_reverse_splat_false_3(<vscale x 4 x i1> %a, <v
 
 define <vscale x 4 x i32> @select_reverse_splat_true(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: @select_reverse_splat_true(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    [[C_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[C_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[C_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[C_SPLAT]], <vscale x 4 x i32> [[B_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i32> [[C_SPLAT]], <vscale x 4 x i32> [[B:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -551,11 +556,11 @@ define <vscale x 4 x i32> @select_reverse_splat_true(<vscale x 4 x i1> %a, <vsca
 define <vscale x 4 x i32> @select_reverse_splat_true_1(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: @select_reverse_splat_true_1(
 ; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    [[C_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[C_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[C_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @use_nxv4i1(<vscale x 4 x i1> [[A_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[C_SPLAT]], <vscale x 4 x i32> [[B_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A]], <vscale x 4 x i32> [[C_SPLAT]], <vscale x 4 x i32> [[B:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -570,12 +575,12 @@ define <vscale x 4 x i32> @select_reverse_splat_true_1(<vscale x 4 x i1> %a, <vs
 ; %b.rev has multiple uses
 define <vscale x 4 x i32> @select_reverse_splat_true_2(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: @select_reverse_splat_true_2(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
 ; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B:%.*]])
 ; CHECK-NEXT:    [[C_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[C:%.*]], i64 0
 ; CHECK-NEXT:    [[C_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[C_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @use_nxv4i32(<vscale x 4 x i32> [[B_REV]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x i32> [[C_SPLAT]], <vscale x 4 x i32> [[B_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x i32> [[C_SPLAT]], <vscale x 4 x i32> [[B]]
+; CHECK-NEXT:    [[SELECT:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[SELECT1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SELECT]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
@@ -656,32 +661,25 @@ define <vscale x 4 x float> @reverse_binop_reverse_splat_LHS(<vscale x 4 x float
 
 define <vscale x 4 x i1> @reverse_fcmp_reverse(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: @reverse_fcmp_reverse(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> [[B:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <vscale x 4 x float> [[A_REV]], [[B_REV]]
-; CHECK-NEXT:    [[CMP_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[CMP]])
-; CHECK-NEXT:    ret <vscale x 4 x i1> [[CMP_REV]]
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast olt <vscale x 4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <vscale x 4 x i1> [[CMP1]]
 ;
   %a.rev = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> %a)
   %b.rev = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> %b)
-  %cmp = fcmp olt <vscale x 4 x float> %a.rev, %b.rev
+  %cmp = fcmp fast olt <vscale x 4 x float> %a.rev, %b.rev
   %cmp.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %cmp)
   ret <vscale x 4 x i1> %cmp.rev
 }
 
 define <vscale x 4 x float> @reverse_select_reverse(<vscale x 4 x i1> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c) {
 ; CHECK-LABEL: @reverse_select_reverse(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> [[B:%.*]])
-; CHECK-NEXT:    [[C_REV:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> [[C:%.*]])
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[A_REV]], <vscale x 4 x float> [[B_REV]], <vscale x 4 x float> [[C_REV]]
-; CHECK-NEXT:    [[SELECT_REV:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> [[SELECT]])
-; CHECK-NEXT:    ret <vscale x 4 x float> [[SELECT_REV]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select fast <vscale x 4 x i1> [[A:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> [[C:%.*]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[SELECT1]]
 ;
   %a.rev = tail call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %a)
   %b.rev = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> %b)
   %c.rev = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> %c)
-  %select = select <vscale x 4 x i1> %a.rev, <vscale x 4 x float> %b.rev, <vscale x 4 x float> %c.rev
+  %select = select fast <vscale x 4 x i1> %a.rev, <vscale x 4 x float> %b.rev, <vscale x 4 x float> %c.rev
   %select.rev = tail call <vscale x 4 x float> @llvm.experimental.vector.reverse.nxv4f32(<vscale x 4 x float> %select)
   ret <vscale x 4 x float> %select.rev
 }

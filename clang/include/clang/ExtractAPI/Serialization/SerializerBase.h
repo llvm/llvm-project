@@ -36,11 +36,6 @@ public:
 protected:
   const APISet &API;
 
-  /// The product name of API.
-  ///
-  /// Note: This should be used for populating metadata about the API.
-  StringRef ProductName;
-
   /// The list of symbols to ignore.
   ///
   /// Note: This should be consulted before emitting a symbol.
@@ -56,11 +51,9 @@ public:
   APISerializer &operator=(APISerializer &&) = delete;
 
 protected:
-  APISerializer(const APISet &API, StringRef ProductName,
-                const APIIgnoresList &IgnoresList,
+  APISerializer(const APISet &API, const APIIgnoresList &IgnoresList,
                 APISerializerOption Options = {})
-      : API(API), ProductName(ProductName), IgnoresList(IgnoresList),
-        Options(Options) {}
+      : API(API), IgnoresList(IgnoresList), Options(Options) {}
 
   virtual ~APISerializer() = default;
 };

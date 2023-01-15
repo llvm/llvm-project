@@ -78,9 +78,6 @@
 ; CHECK-NEXT:      - .offset:         128
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_default_queue
-; CHECK-NEXT:      - .offset:         136
-; CHECK-NEXT:        .size:           8
-; CHECK-NEXT:        .value_kind:     hidden_completion_action
 ; GFX8-NEXT:      - .offset:         216
 ; GFX8-NEXT:        .size:           4
 ; GFX8-NEXT:        .value_kind:     hidden_private_base
@@ -98,14 +95,14 @@
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 2
 define amdgpu_kernel void @test_v5(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -114,5 +111,5 @@ entry:
 !1 = !{!"1:1:4:%d\5Cn"}
 !2 = !{!"2:1:8:%g\5Cn"}
 
-attributes #0 = { optnone noinline "calls-enqueue-kernel" }
+attributes #0 = { optnone noinline }
 

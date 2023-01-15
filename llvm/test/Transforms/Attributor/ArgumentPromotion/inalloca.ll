@@ -7,23 +7,21 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 %struct.ss = type { i32, i32 }
 
 ; Argpromote + sroa should change this to passing the two integers by value.
-define internal i32 @f(%struct.ss* inalloca(%struct.ss) %s) {
+define internal i32 @f(ptr inalloca(%struct.ss) %s) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@f
-; CHECK-SAME: (%struct.ss* noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[S:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; CHECK-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[F0]], align 4
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[F1]], align 4
+; CHECK-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[S]], align 4
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[F1]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
-  %f0 = getelementptr %struct.ss, %struct.ss* %s, i32 0, i32 0
-  %f1 = getelementptr %struct.ss, %struct.ss* %s, i32 0, i32 1
-  %a = load i32, i32* %f0, align 4
-  %b = load i32, i32* %f1, align 4
+  %f1 = getelementptr %struct.ss, ptr %s, i32 0, i32 1
+  %a = load i32, ptr %s, align 4
+  %b = load i32, ptr %f1, align 4
   %r = add i32 %a, %b
   ret i32 %r
 }
@@ -34,11 +32,10 @@ define i32 @main() {
 ; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]], align 4
-; TUNIT-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; TUNIT-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; TUNIT-NEXT:    store i32 1, i32* [[F0]], align 4
-; TUNIT-NEXT:    store i32 2, i32* [[F1]], align 4
-; TUNIT-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
+; TUNIT-NEXT:    store i32 1, ptr [[S]], align 4
+; TUNIT-NEXT:    store i32 2, ptr [[F1]], align 4
+; TUNIT-NEXT:    [[R:%.*]] = call i32 @f(ptr noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
@@ -46,33 +43,31 @@ define i32 @main() {
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[S:%.*]] = alloca inalloca [[STRUCT_SS:%.*]], align 4
-; CGSCC-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
-; CGSCC-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; CGSCC-NEXT:    store i32 1, i32* [[F0]], align 4
-; CGSCC-NEXT:    store i32 2, i32* [[F1]], align 4
-; CGSCC-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR3:[0-9]+]]
+; CGSCC-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
+; CGSCC-NEXT:    store i32 1, ptr [[S]], align 4
+; CGSCC-NEXT:    store i32 2, ptr [[F1]], align 4
+; CGSCC-NEXT:    [[R:%.*]] = call i32 @f(ptr noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[R]]
 ;
 entry:
   %S = alloca inalloca %struct.ss
-  %f0 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 0
-  %f1 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
-  store i32 1, i32* %f0, align 4
-  store i32 2, i32* %f1, align 4
-  %r = call i32 @f(%struct.ss* inalloca(%struct.ss) %S)
+  %f1 = getelementptr %struct.ss, ptr %S, i32 0, i32 1
+  store i32 1, ptr %S, align 4
+  store i32 2, ptr %f1, align 4
+  %r = call i32 @f(ptr inalloca(%struct.ss) %S)
   ret i32 %r
 }
 
 ; Argpromote can't promote %a because of the icmp use.
-define internal i1 @g(%struct.ss* %a, %struct.ss* inalloca(%struct.ss) %b) nounwind  {
+define internal i1 @g(ptr %a, ptr inalloca(%struct.ss) %b) nounwind  {
 ; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@g
-; CGSCC-SAME: (%struct.ss* noalias nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], %struct.ss* noalias nocapture nofree nonnull writeonly inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], ptr noalias nocapture nofree nonnull writeonly inalloca([[STRUCT_SS:%.*]]) align 4 dereferenceable(8) [[B:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    ret i1 undef
 ;
 entry:
-  %c = icmp eq %struct.ss* %a, %b
+  %c = icmp eq ptr %a, %b
   ret i1 %c
 }
 
@@ -91,7 +86,7 @@ define i32 @test() {
 ;
 entry:
   %S = alloca inalloca %struct.ss
-  %c = call i1 @g(%struct.ss* %S, %struct.ss* inalloca(%struct.ss) %S)
+  %c = call i1 @g(ptr %S, ptr inalloca(%struct.ss) %S)
   ret i32 0
 }
 ;.

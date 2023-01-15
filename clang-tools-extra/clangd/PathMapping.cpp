@@ -12,13 +12,14 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
+#include <optional>
 #include <tuple>
 
 namespace clang {
 namespace clangd {
-llvm::Optional<std::string> doPathMapping(llvm::StringRef S,
-                                          PathMapping::Direction Dir,
-                                          const PathMappings &Mappings) {
+std::optional<std::string> doPathMapping(llvm::StringRef S,
+                                         PathMapping::Direction Dir,
+                                         const PathMappings &Mappings) {
   // Return early to optimize for the common case, wherein S is not a file URI
   if (!S.startswith("file://"))
     return std::nullopt;
@@ -53,7 +54,7 @@ void applyPathMappings(llvm::json::Value &V, PathMapping::Direction Dir,
     llvm::json::Object MappedObj;
     // 1. Map all the Keys
     for (auto &KV : *Obj) {
-      if (llvm::Optional<std::string> MappedKey =
+      if (std::optional<std::string> MappedKey =
               doPathMapping(KV.first.str(), Dir, Mappings)) {
         MappedObj.try_emplace(std::move(*MappedKey), std::move(KV.second));
       } else {
@@ -68,7 +69,7 @@ void applyPathMappings(llvm::json::Value &V, PathMapping::Direction Dir,
     for (llvm::json::Value &Val : *V.getAsArray())
       applyPathMappings(Val, Dir, Mappings);
   } else if (K == Kind::String) {
-    if (llvm::Optional<std::string> Mapped =
+    if (std::optional<std::string> Mapped =
             doPathMapping(*V.getAsString(), Dir, Mappings))
       V = std::move(*Mapped);
   }

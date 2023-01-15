@@ -10,16 +10,16 @@
 
 ; A collection of cases showing codegen for unaligned loads and stores
 
-define i8 @load_i8(i8* %p) {
+define i8 @load_i8(ptr %p) {
 ; ALL-LABEL: load_i8:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    lb a0, 0(a0)
 ; ALL-NEXT:    ret
-  %res = load i8, i8* %p, align 1
+  %res = load i8, ptr %p, align 1
   ret i8 %res
 }
 
-define i16 @load_i16(i16* %p) {
+define i16 @load_i16(ptr %p) {
 ; NOMISALIGN-LABEL: load_i16:
 ; NOMISALIGN:       # %bb.0:
 ; NOMISALIGN-NEXT:    lb a1, 1(a0)
@@ -32,19 +32,19 @@ define i16 @load_i16(i16* %p) {
 ; MISALIGN:       # %bb.0:
 ; MISALIGN-NEXT:    lh a0, 0(a0)
 ; MISALIGN-NEXT:    ret
-  %res = load i16, i16* %p, align 1
+  %res = load i16, ptr %p, align 1
   ret i16 %res
 }
 
-define i24 @load_i24(i24* %p) {
+define i24 @load_i24(ptr %p) {
 ; NOMISALIGN-LABEL: load_i24:
 ; NOMISALIGN:       # %bb.0:
 ; NOMISALIGN-NEXT:    lbu a1, 1(a0)
-; NOMISALIGN-NEXT:    lbu a2, 0(a0)
-; NOMISALIGN-NEXT:    lb a0, 2(a0)
+; NOMISALIGN-NEXT:    lb a2, 2(a0)
+; NOMISALIGN-NEXT:    lbu a0, 0(a0)
 ; NOMISALIGN-NEXT:    slli a1, a1, 8
-; NOMISALIGN-NEXT:    or a1, a1, a2
-; NOMISALIGN-NEXT:    slli a0, a0, 16
+; NOMISALIGN-NEXT:    slli a2, a2, 16
+; NOMISALIGN-NEXT:    or a0, a0, a2
 ; NOMISALIGN-NEXT:    or a0, a1, a0
 ; NOMISALIGN-NEXT:    ret
 ;
@@ -55,11 +55,11 @@ define i24 @load_i24(i24* %p) {
 ; MISALIGN-NEXT:    slli a1, a1, 16
 ; MISALIGN-NEXT:    or a0, a0, a1
 ; MISALIGN-NEXT:    ret
-  %res = load i24, i24* %p, align 1
+  %res = load i24, ptr %p, align 1
   ret i24 %res
 }
 
-define i32 @load_i32(i32* %p) {
+define i32 @load_i32(ptr %p) {
 ; RV32I-LABEL: load_i32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lbu a1, 1(a0)
@@ -70,7 +70,7 @@ define i32 @load_i32(i32* %p) {
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    slli a3, a3, 16
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    or a0, a0, a3
+; RV32I-NEXT:    or a1, a3, a1
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -84,7 +84,7 @@ define i32 @load_i32(i32* %p) {
 ; RV64I-NEXT:    or a1, a1, a2
 ; RV64I-NEXT:    slli a3, a3, 16
 ; RV64I-NEXT:    slli a0, a0, 24
-; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    or a1, a3, a1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -92,11 +92,11 @@ define i32 @load_i32(i32* %p) {
 ; MISALIGN:       # %bb.0:
 ; MISALIGN-NEXT:    lw a0, 0(a0)
 ; MISALIGN-NEXT:    ret
-  %res = load i32, i32* %p, align 1
+  %res = load i32, ptr %p, align 1
   ret i32 %res
 }
 
-define i64 @load_i64(i64* %p) {
+define i64 @load_i64(ptr %p) {
 ; RV32I-LABEL: load_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lbu a1, 1(a0)
@@ -107,8 +107,8 @@ define i64 @load_i64(i64* %p) {
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    slli a3, a3, 16
 ; RV32I-NEXT:    slli a4, a4, 24
-; RV32I-NEXT:    or a2, a4, a3
-; RV32I-NEXT:    or a2, a2, a1
+; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:    or a2, a4, a1
 ; RV32I-NEXT:    lbu a1, 5(a0)
 ; RV32I-NEXT:    lbu a3, 4(a0)
 ; RV32I-NEXT:    lbu a4, 6(a0)
@@ -117,7 +117,7 @@ define i64 @load_i64(i64* %p) {
 ; RV32I-NEXT:    or a1, a1, a3
 ; RV32I-NEXT:    slli a4, a4, 16
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    or a0, a0, a4
+; RV32I-NEXT:    or a1, a4, a1
 ; RV32I-NEXT:    or a1, a0, a1
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    ret
@@ -127,25 +127,25 @@ define i64 @load_i64(i64* %p) {
 ; RV64I-NEXT:    lbu a1, 1(a0)
 ; RV64I-NEXT:    lbu a2, 0(a0)
 ; RV64I-NEXT:    lbu a3, 2(a0)
-; RV64I-NEXT:    lbu a4, 3(a0)
 ; RV64I-NEXT:    slli a1, a1, 8
 ; RV64I-NEXT:    or a1, a1, a2
 ; RV64I-NEXT:    slli a3, a3, 16
-; RV64I-NEXT:    slli a4, a4, 24
-; RV64I-NEXT:    or a3, a4, a3
-; RV64I-NEXT:    or a1, a3, a1
 ; RV64I-NEXT:    lbu a2, 5(a0)
+; RV64I-NEXT:    lbu a4, 3(a0)
+; RV64I-NEXT:    or a1, a3, a1
 ; RV64I-NEXT:    lbu a3, 4(a0)
-; RV64I-NEXT:    lbu a4, 6(a0)
-; RV64I-NEXT:    lbu a0, 7(a0)
 ; RV64I-NEXT:    slli a2, a2, 8
+; RV64I-NEXT:    lbu a5, 6(a0)
+; RV64I-NEXT:    lbu a0, 7(a0)
 ; RV64I-NEXT:    or a2, a2, a3
-; RV64I-NEXT:    slli a4, a4, 16
+; RV64I-NEXT:    slli a4, a4, 24
+; RV64I-NEXT:    slli a5, a5, 16
 ; RV64I-NEXT:    slli a0, a0, 24
-; RV64I-NEXT:    or a0, a0, a4
+; RV64I-NEXT:    or a2, a5, a2
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    or a0, a0, a4
 ; RV64I-NEXT:    ret
 ;
 ; MISALIGN-RV32I-LABEL: load_i64:
@@ -159,20 +159,20 @@ define i64 @load_i64(i64* %p) {
 ; MISALIGN-RV64I:       # %bb.0:
 ; MISALIGN-RV64I-NEXT:    ld a0, 0(a0)
 ; MISALIGN-RV64I-NEXT:    ret
-  %res = load i64, i64* %p, align 1
+  %res = load i64, ptr %p, align 1
   ret i64 %res
 }
 
-define void @store_i8(i8* %p, i8 %v) {
+define void @store_i8(ptr %p, i8 %v) {
 ; ALL-LABEL: store_i8:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    sb a1, 0(a0)
 ; ALL-NEXT:    ret
-  store i8 %v, i8* %p, align 1
+  store i8 %v, ptr %p, align 1
   ret void
 }
 
-define void @store_i16(i16* %p, i16 %v) {
+define void @store_i16(ptr %p, i16 %v) {
 ; NOMISALIGN-LABEL: store_i16:
 ; NOMISALIGN:       # %bb.0:
 ; NOMISALIGN-NEXT:    sb a1, 0(a0)
@@ -184,11 +184,11 @@ define void @store_i16(i16* %p, i16 %v) {
 ; MISALIGN:       # %bb.0:
 ; MISALIGN-NEXT:    sh a1, 0(a0)
 ; MISALIGN-NEXT:    ret
-  store i16 %v, i16* %p, align 1
+  store i16 %v, ptr %p, align 1
   ret void
 }
 
-define void @store_i24(i24* %p, i24 %v) {
+define void @store_i24(ptr %p, i24 %v) {
 ; NOMISALIGN-LABEL: store_i24:
 ; NOMISALIGN:       # %bb.0:
 ; NOMISALIGN-NEXT:    sb a1, 0(a0)
@@ -204,11 +204,11 @@ define void @store_i24(i24* %p, i24 %v) {
 ; MISALIGN-NEXT:    srli a1, a1, 16
 ; MISALIGN-NEXT:    sb a1, 2(a0)
 ; MISALIGN-NEXT:    ret
-  store i24 %v, i24* %p, align 1
+  store i24 %v, ptr %p, align 1
   ret void
 }
 
-define void @store_i32(i32* %p, i32 %v) {
+define void @store_i32(ptr %p, i32 %v) {
 ; NOMISALIGN-LABEL: store_i32:
 ; NOMISALIGN:       # %bb.0:
 ; NOMISALIGN-NEXT:    sb a1, 0(a0)
@@ -224,11 +224,11 @@ define void @store_i32(i32* %p, i32 %v) {
 ; MISALIGN:       # %bb.0:
 ; MISALIGN-NEXT:    sw a1, 0(a0)
 ; MISALIGN-NEXT:    ret
-  store i32 %v, i32* %p, align 1
+  store i32 %v, ptr %p, align 1
   ret void
 }
 
-define void @store_i64(i64* %p, i64 %v) {
+define void @store_i64(ptr %p, i64 %v) {
 ; RV32I-LABEL: store_i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sb a2, 4(a0)
@@ -276,7 +276,7 @@ define void @store_i64(i64* %p, i64 %v) {
 ; MISALIGN-RV64I:       # %bb.0:
 ; MISALIGN-RV64I-NEXT:    sd a1, 0(a0)
 ; MISALIGN-RV64I-NEXT:    ret
-  store i64 %v, i64* %p, align 1
+  store i64 %v, ptr %p, align 1
   ret void
 }
 

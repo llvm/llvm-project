@@ -58,6 +58,7 @@ static_library("LLVMRISCVCodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/IPO",
   ]
   include_dirs = [ "." ]
@@ -84,6 +85,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVRedundantCopyElimination.cpp",
     "RISCVRegisterInfo.cpp",
     "RISCVSExtWRemoval.cpp",
+    "RISCVStripWSuffix.cpp",
     "RISCVSubtarget.cpp",
     "RISCVTargetMachine.cpp",
     "RISCVTargetObjectFile.cpp",

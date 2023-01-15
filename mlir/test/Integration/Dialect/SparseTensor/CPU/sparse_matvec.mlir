@@ -19,6 +19,10 @@
 // Do the same run, but now with direct IR generation and parallelization strategy.
 // REDEFINE: %{option} = "enable-runtime-library=false parallelization-strategy=any-storage-any-loop"
 // RUN: %{command}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{command}
 
 !Filename = !llvm.ptr<i8>
 
@@ -51,7 +55,7 @@ module {
   func.func @kernel_matvec(%arga: tensor<?x?xi32, #SparseMatrix>,
                            %argb: tensor<?xi32>,
                            %argx: tensor<?xi32>)
-		      -> tensor<?xi32> {
+                               -> tensor<?xi32> {
     %0 = linalg.generic #matvec
       ins(%arga, %argb: tensor<?x?xi32, #SparseMatrix>, tensor<?xi32>)
       outs(%argx: tensor<?xi32>) {

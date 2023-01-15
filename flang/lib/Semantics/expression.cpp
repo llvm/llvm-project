@@ -2071,6 +2071,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
       }
       if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
         if (sym->has<semantics::GenericDetails>()) {
+          auto dyType{dtExpr->GetType()};
           AdjustActuals adjustment{
               [&](const Symbol &proc, ActualArguments &actuals) {
                 if (!proc.attrs().test(semantics::Attr::NOPASS)) {
@@ -2082,6 +2083,15 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           sym = pair.first;
           if (sym) {
             // re-resolve the name to the specific binding
+            CHECK(sym->has<semantics::ProcBindingDetails>());
+            // Use the most recent override of the binding, if any
+            CHECK(dyType && dyType->category() == TypeCategory::Derived &&
+                !dyType->IsUnlimitedPolymorphic());
+            if (const Symbol *latest{
+                    DEREF(dyType->GetDerivedTypeSpec().typeSymbol().scope())
+                        .FindComponent(sym->name())}) {
+              sym = latest;
+            }
             sc.component.symbol = const_cast<Symbol *>(sym);
           } else {
             EmitGenericResolutionError(
@@ -2092,6 +2102,19 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
         std::optional<DataRef> dataRef{ExtractDataRef(std::move(*dtExpr))};
         if (dataRef && !CheckDataRef(*dataRef)) {
           return std::nullopt;
+        }
+        if (dataRef && dataRef->Rank() > 0) {
+          if (sym->has<semantics::ProcBindingDetails>() &&
+              sym->attrs().test(semantics::Attr::NOPASS)) {
+            // C1529 seems unnecessary and most compilers don't enforce it.
+            AttachDeclaration(
+                Say(sc.component.source,
+                    "Base of NOPASS type-bound procedure reference should be scalar"_port_en_US),
+                *sym);
+          } else if (IsProcedurePointer(*sym)) { // C919
+            Say(sc.component.source,
+                "Base of procedure component reference must be scalar"_err_en_US);
+          }
         }
         if (const Symbol *resolution{
                 GetBindingResolution(dtExpr->GetType(), *sym)}) {
@@ -2228,10 +2251,6 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
     }
   }
   if (const auto *details{ultimate.detailsIf<semantics::GenericDetails>()}) {
-    bool anyBareNullActual{
-        std::find_if(actuals.begin(), actuals.end(), [](auto iter) {
-          return IsBareNullPointer(iter->UnwrapExpr());
-        }) != actuals.end()};
     for (const Symbol &specific : details->specificProcs()) {
       if (isSubroutine != !IsFunction(specific)) {
         continue;
@@ -2256,14 +2275,13 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
             // 16.9.144(6): a bare NULL() is not allowed as an actual
             // argument to a generic procedure if the specific procedure
             // cannot be unambiguously distinguished
-            return {nullptr, true /* due to NULL actuals */};
+            // Underspecified external procedure actual arguments can
+            // also lead to ambiguity.
+            return {nullptr, true /* due to ambiguity */};
           }
           if (!procedure->IsElemental()) {
             // takes priority over elemental match
             nonElemental = &specific;
-            if (!anyBareNullActual) {
-              break; // unambiguous case
-            }
           } else {
             elemental = &specific;
           }
@@ -2340,9 +2358,9 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 }
 
 void ExpressionAnalyzer::EmitGenericResolutionError(
-    const Symbol &symbol, bool dueToNullActuals, bool isSubroutine) {
-  Say(dueToNullActuals
-          ? "One or more NULL() actual arguments to the generic procedure '%s' requires a MOLD= for disambiguation"_err_en_US
+    const Symbol &symbol, bool dueToAmbiguity, bool isSubroutine) {
+  Say(dueToAmbiguity
+          ? "One or more actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
           : semantics::IsGenericDefinedOp(symbol)
           ? "No specific procedure of generic operator '%s' matches the actual arguments"_err_en_US
           : isSubroutine
@@ -2378,7 +2396,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   }
   const Symbol &ultimate{DEREF(symbol).GetUltimate()};
   CheckForBadRecursion(name.source, ultimate);
-  bool dueToNullActual{false};
+  bool dueToAmbiguity{false};
   bool isGenericInterface{ultimate.has<semantics::GenericDetails>()};
   bool isExplicitIntrinsic{ultimate.attrs().test(semantics::Attr::INTRINSIC)};
   const Symbol *resolution{nullptr};
@@ -2387,7 +2405,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     auto pair{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
         mightBeStructureConstructor)};
     resolution = pair.first;
-    dueToNullActual = pair.second;
+    dueToAmbiguity = pair.second;
     if (resolution) {
       // re-resolve name to the specific procedure
       name.symbol = const_cast<Symbol *>(resolution);
@@ -2410,7 +2428,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           std::move(specificCall->arguments)};
     } else {
       if (isGenericInterface) {
-        EmitGenericResolutionError(*symbol, dueToNullActual, isSubroutine);
+        EmitGenericResolutionError(*symbol, dueToAmbiguity, isSubroutine);
       }
       return std::nullopt;
     }
@@ -3834,14 +3852,14 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
         context_.EmitGenericResolutionError(*symbol, pair.second, true);
       }
     }
-    for (std::size_t i{0}; i < actuals_.size(); ++i) {
+    for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
       const Symbol *generic{nullptr};
-      if (const Symbol *specific{FindBoundOp(oprName, i, generic, true)}) {
+      if (const Symbol *binding{FindBoundOp(oprName, i, generic, true)}) {
         if (const Symbol *resolution{
-                GetBindingResolution(GetType(i), *specific)}) {
+                GetBindingResolution(GetType(i), *binding)}) {
           proc = resolution;
         } else {
-          proc = specific;
+          proc = binding;
           passedObjectIndex = i;
         }
       }
@@ -3924,23 +3942,30 @@ bool ArgumentAnalyzer::AreConformable() const {
 const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
     int passIndex, const Symbol *&generic, bool isSubroutine) {
   const auto *type{GetDerivedTypeSpec(GetType(passIndex))};
-  if (!type || !type->scope()) {
-    return nullptr;
+  const semantics::Scope *scope{type ? type->scope() : nullptr};
+  if (scope) {
+    // Use the original type definition's scope, since PDT
+    // instantiations don't have redundant copies of bindings or
+    // generics.
+    scope = DEREF(scope->derivedTypeSpec()).typeSymbol().scope();
   }
-  generic = type->scope()->FindComponent(oprName);
-  if (!generic) {
-    return nullptr;
+  generic = scope ? scope->FindComponent(oprName) : nullptr;
+  if (generic) {
+    ExpressionAnalyzer::AdjustActuals adjustment{
+        [&](const Symbol &proc, ActualArguments &) {
+          return passIndex == GetPassIndex(proc);
+        }};
+    auto pair{
+        context_.ResolveGeneric(*generic, actuals_, adjustment, isSubroutine)};
+    if (const Symbol *binding{pair.first}) {
+      CHECK(binding->has<semantics::ProcBindingDetails>());
+      // Use the most recent override of the binding, if any
+      return scope->FindComponent(binding->name());
+    } else {
+      context_.EmitGenericResolutionError(*generic, pair.second, isSubroutine);
+    }
   }
-  ExpressionAnalyzer::AdjustActuals adjustment{
-      [&](const Symbol &proc, ActualArguments &) {
-        return passIndex == GetPassIndex(proc);
-      }};
-  auto pair{
-      context_.ResolveGeneric(*generic, actuals_, adjustment, isSubroutine)};
-  if (!pair.first) {
-    context_.EmitGenericResolutionError(*generic, pair.second, isSubroutine);
-  }
-  return pair.first;
+  return nullptr;
 }
 
 // If there is an implicit conversion between intrinsic types, make it explicit

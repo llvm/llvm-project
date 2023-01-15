@@ -28,39 +28,33 @@ define <2 x i64> @build_vec_v2i64(<2 x i64> %v0, <2 x i64> %v1) {
   ret <2 x i64> %tmp3.1
 }
 
-define void @store_chain_v2i64(i64* %a, i64* %b, i64* %c) {
+define void @store_chain_v2i64(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: @store_chain_v2i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[A:%.*]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[B:%.*]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i64> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub <2 x i64> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64* [[C:%.*]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[TMP10]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP9]], ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %a.0 = getelementptr i64, i64* %a, i64 0
-  %a.1 = getelementptr i64, i64* %a, i64 1
-  %b.0 = getelementptr i64, i64* %b, i64 0
-  %b.1 = getelementptr i64, i64* %b, i64 1
-  %c.0 = getelementptr i64, i64* %c, i64 0
-  %c.1 = getelementptr i64, i64* %c, i64 1
-  %v0.0 = load i64, i64* %a.0, align 8
-  %v0.1 = load i64, i64* %a.1, align 8
-  %v1.0 = load i64, i64* %b.0, align 8
-  %v1.1 = load i64, i64* %b.1, align 8
+  %a.1 = getelementptr i64, ptr %a, i64 1
+  %b.1 = getelementptr i64, ptr %b, i64 1
+  %c.1 = getelementptr i64, ptr %c, i64 1
+  %v0.0 = load i64, ptr %a, align 8
+  %v0.1 = load i64, ptr %a.1, align 8
+  %v1.0 = load i64, ptr %b, align 8
+  %v1.1 = load i64, ptr %b.1, align 8
   %tmp0.0 = add i64 %v0.0, %v1.0
   %tmp0.1 = add i64 %v0.1, %v1.1
   %tmp1.0 = sub i64 %v0.0, %v1.0
   %tmp1.1 = sub i64 %v0.1, %v1.1
   %tmp2.0 = add i64 %tmp0.0, %tmp0.1
   %tmp2.1 = add i64 %tmp1.0, %tmp1.1
-  store i64 %tmp2.0, i64* %c.0, align 8
-  store i64 %tmp2.1, i64* %c.1, align 8
+  store i64 %tmp2.0, ptr %c, align 8
+  store i64 %tmp2.1, ptr %c.1, align 8
   ret void
 }
 

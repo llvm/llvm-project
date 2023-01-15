@@ -11,13 +11,13 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=G_GFX9 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=G_GFX10 %s
 
-declare float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* nocapture, float, i32, i32, i1)
-declare float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* nocapture, float, i32, i32, i1)
-declare double @llvm.amdgcn.ds.fmin.f64(double addrspace(3)* nocapture, double, i32, i32, i1)
-declare double @llvm.amdgcn.ds.fmax.f64(double addrspace(3)* nocapture, double, i32, i32, i1)
+declare float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) nocapture, float, i32, i32, i1)
+declare float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) nocapture, float, i32, i32, i1)
+declare double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) nocapture, double, i32, i32, i1)
+declare double @llvm.amdgcn.ds.fmax.f64(ptr addrspace(3) nocapture, double, i32, i32, i1)
 
 
-define amdgpu_kernel void @lds_ds_fmin(float addrspace(5)* %out, float addrspace(3)* %ptrf, i32 %idx) {
+define amdgpu_kernel void @lds_ds_fmin(ptr addrspace(5) %out, ptr addrspace(3) %ptrf, i32 %idx) {
 ; SI-LABEL: lds_ds_fmin:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b32 s4, SCRATCH_RSRC_DWORD0
@@ -294,16 +294,16 @@ define amdgpu_kernel void @lds_ds_fmin(float addrspace(5)* %out, float addrspace
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 3
   %shl1 = shl i32 %idx.add, 4
-  %ptr0 = inttoptr i32 %shl0 to float addrspace(3)*
-  %ptr1 = inttoptr i32 %shl1 to float addrspace(3)*
-  %a1 = call float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a2 = call float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a3 = call float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* %ptrf, float %a1, i32 0, i32 0, i1 false)
-  store float %a3, float addrspace(5)* %out
+  %ptr0 = inttoptr i32 %shl0 to ptr addrspace(3)
+  %ptr1 = inttoptr i32 %shl1 to ptr addrspace(3)
+  %a1 = call float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a2 = call float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a3 = call float @llvm.amdgcn.ds.fmin.f32(ptr addrspace(3) %ptrf, float %a1, i32 0, i32 0, i1 false)
+  store float %a3, ptr addrspace(5) %out
   ret void
 }
 
-define amdgpu_kernel void @lds_ds_fmax(float addrspace(5)* %out, float addrspace(3)* %ptrf, i32 %idx) {
+define amdgpu_kernel void @lds_ds_fmax(ptr addrspace(5) %out, ptr addrspace(3) %ptrf, i32 %idx) {
 ; SI-LABEL: lds_ds_fmax:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b32 s4, SCRATCH_RSRC_DWORD0
@@ -580,16 +580,16 @@ define amdgpu_kernel void @lds_ds_fmax(float addrspace(5)* %out, float addrspace
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 3
   %shl1 = shl i32 %idx.add, 4
-  %ptr0 = inttoptr i32 %shl0 to float addrspace(3)*
-  %ptr1 = inttoptr i32 %shl1 to float addrspace(3)*
-  %a1 = call float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a2 = call float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a3 = call float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* %ptrf, float %a1, i32 0, i32 0, i1 false)
-  store float %a3, float addrspace(5)* %out
+  %ptr0 = inttoptr i32 %shl0 to ptr addrspace(3)
+  %ptr1 = inttoptr i32 %shl1 to ptr addrspace(3)
+  %a1 = call float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a2 = call float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a3 = call float @llvm.amdgcn.ds.fmax.f32(ptr addrspace(3) %ptrf, float %a1, i32 0, i32 0, i1 false)
+  store float %a3, ptr addrspace(5) %out
   ret void
 }
 
-define amdgpu_kernel void @lds_ds_fmin_f64(double addrspace(5)* %out, double addrspace(3)* %ptrf, i32 %idx) {
+define amdgpu_kernel void @lds_ds_fmin_f64(ptr addrspace(5) %out, ptr addrspace(3) %ptrf, i32 %idx) {
 ; SI-LABEL: lds_ds_fmin_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
@@ -920,16 +920,16 @@ define amdgpu_kernel void @lds_ds_fmin_f64(double addrspace(5)* %out, double add
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 3
   %shl1 = shl i32 %idx.add, 4
-  %ptr0 = inttoptr i32 %shl0 to double addrspace(3)*
-  %ptr1 = inttoptr i32 %shl1 to double addrspace(3)*
-  %a1 = call double @llvm.amdgcn.ds.fmin.f64(double addrspace(3)* %ptr0, double 4.2e+1, i32 0, i32 0, i1 false)
-  %a2 = call double @llvm.amdgcn.ds.fmin.f64(double addrspace(3)* %ptr1, double 4.2e+1, i32 0, i32 0, i1 false)
-  %a3 = call double @llvm.amdgcn.ds.fmin.f64(double addrspace(3)* %ptrf, double %a1, i32 0, i32 0, i1 false)
-  store double %a3, double addrspace(5)* %out
+  %ptr0 = inttoptr i32 %shl0 to ptr addrspace(3)
+  %ptr1 = inttoptr i32 %shl1 to ptr addrspace(3)
+  %a1 = call double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) %ptr0, double 4.2e+1, i32 0, i32 0, i1 false)
+  %a2 = call double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) %ptr1, double 4.2e+1, i32 0, i32 0, i1 false)
+  %a3 = call double @llvm.amdgcn.ds.fmin.f64(ptr addrspace(3) %ptrf, double %a1, i32 0, i32 0, i1 false)
+  store double %a3, ptr addrspace(5) %out
   ret void
 }
 
-define amdgpu_kernel void @lds_ds_fmax_f64(double addrspace(5)* %out, double addrspace(3)* %ptrf, i32 %idx) {
+define amdgpu_kernel void @lds_ds_fmax_f64(ptr addrspace(5) %out, ptr addrspace(3) %ptrf, i32 %idx) {
 ; SI-LABEL: lds_ds_fmax_f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
@@ -1260,11 +1260,11 @@ define amdgpu_kernel void @lds_ds_fmax_f64(double addrspace(5)* %out, double add
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 3
   %shl1 = shl i32 %idx.add, 4
-  %ptr0 = inttoptr i32 %shl0 to double addrspace(3)*
-  %ptr1 = inttoptr i32 %shl1 to double addrspace(3)*
-  %a1 = call double @llvm.amdgcn.ds.fmax.f64(double addrspace(3)* %ptr0, double 4.2e+1, i32 0, i32 0, i1 false)
-  %a2 = call double @llvm.amdgcn.ds.fmax.f64(double addrspace(3)* %ptr1, double 4.2e+1, i32 0, i32 0, i1 false)
-  %a3 = call double @llvm.amdgcn.ds.fmax.f64(double addrspace(3)* %ptrf, double %a1, i32 0, i32 0, i1 false)
-  store double %a3, double addrspace(5)* %out
+  %ptr0 = inttoptr i32 %shl0 to ptr addrspace(3)
+  %ptr1 = inttoptr i32 %shl1 to ptr addrspace(3)
+  %a1 = call double @llvm.amdgcn.ds.fmax.f64(ptr addrspace(3) %ptr0, double 4.2e+1, i32 0, i32 0, i1 false)
+  %a2 = call double @llvm.amdgcn.ds.fmax.f64(ptr addrspace(3) %ptr1, double 4.2e+1, i32 0, i32 0, i1 false)
+  %a3 = call double @llvm.amdgcn.ds.fmax.f64(ptr addrspace(3) %ptrf, double %a1, i32 0, i32 0, i1 false)
+  store double %a3, ptr addrspace(5) %out
   ret void
 }

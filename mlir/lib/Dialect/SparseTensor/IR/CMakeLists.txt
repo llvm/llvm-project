@@ -59,6 +59,7 @@ add_mlir_dialect_library(MLIRSparseTensorDialect
   DEPENDS
   MLIRSparseTensorAttrDefsIncGen
   MLIRSparseTensorOpsIncGen
+  MLIRSparseTensorTypesIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

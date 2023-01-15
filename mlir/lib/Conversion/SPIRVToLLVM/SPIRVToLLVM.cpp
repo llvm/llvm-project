@@ -184,7 +184,7 @@ static Value processCountOrOffset(Location loc, Value value, Type srcType,
 
 /// Converts SPIR-V struct with a regular (according to `VulkanLayoutUtils`)
 /// offset to LLVM struct. Otherwise, the conversion is not supported.
-static Optional<Type>
+static std::optional<Type>
 convertStructTypeWithOffset(spirv::StructType type,
                             LLVMTypeConverter &converter) {
   if (type != VulkanLayoutUtils::decorateType(type))
@@ -247,8 +247,8 @@ static LogicalResult replaceWithLoadOrStore(Operation *op, ValueRange operands,
 /// Converts SPIR-V array type to LLVM array. Natural stride (according to
 /// `VulkanLayoutUtils`) is also mapped to LLVM array. This has to be respected
 /// when converting ops that manipulate array types.
-static Optional<Type> convertArrayType(spirv::ArrayType type,
-                                       TypeConverter &converter) {
+static std::optional<Type> convertArrayType(spirv::ArrayType type,
+                                            TypeConverter &converter) {
   unsigned stride = type.getArrayStride();
   Type elementType = type.getElementType();
   auto sizeInBytes = elementType.cast<spirv::SPIRVType>().getSizeInBytes();
@@ -271,8 +271,8 @@ static Type convertPointerType(spirv::PointerType type,
 /// Converts SPIR-V runtime array to LLVM array. Since LLVM allows indexing over
 /// the bounds, the runtime array is converted to a 0-sized LLVM array. There is
 /// no modelling of array stride at the moment.
-static Optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
-                                              TypeConverter &converter) {
+static std::optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
+                                                   TypeConverter &converter) {
   if (type.getArrayStride() != 0)
     return std::nullopt;
   auto elementType = converter.convertType(type.getElementType());
@@ -281,8 +281,8 @@ static Optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
 
 /// Converts SPIR-V struct to LLVM struct. There is no support of structs with
 /// member decorations. Also, only natural offset is supported.
-static Optional<Type> convertStructType(spirv::StructType type,
-                                        LLVMTypeConverter &converter) {
+static std::optional<Type> convertStructType(spirv::StructType type,
+                                             LLVMTypeConverter &converter) {
   SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
   type.getMemberDecorations(memberDecorations);
   if (!memberDecorations.empty())

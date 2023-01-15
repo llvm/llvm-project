@@ -66,7 +66,7 @@ std::string getUnescapedName(const StringRef &Name) {
   return Output;
 }
 
-Optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes) {
+std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes) {
   uint8_t Opcode = ExprBytes[0];
   if (Opcode == dwarf::DW_CFA_def_cfa_expression)
     return std::nullopt;

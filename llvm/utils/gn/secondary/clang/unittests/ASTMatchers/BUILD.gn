@@ -10,6 +10,7 @@ unittest("ASTMatchersTests") {
     "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ASTMatchersInternalTest.cpp",

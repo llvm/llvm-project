@@ -145,9 +145,9 @@ body:             |
     %64:gr32 = PHI %24, %bb.0, %44, %bb.1, debug-location !18
 
     INLINEASM &"", 1, 12, %50, 12, %51, 12, %52, 12, %53, 12, %54, 12, %55, 12, %56, 12, %57, 12, %58, 12, %59, 12, %60, 12, %61, 12, %62, 12, %63, 12, %64
-    DBG_INSTR_REF 1, 0, !14, !DIExpression(), debug-location !12
+    DBG_INSTR_REF !14, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
     ; CHECK-NOT:  DBG_PHI
-    ; CHECK:      DBG_INSTR_REF 1, 0
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
     ; CHECK-NOT:  DBG_PHI
     $eax = COPY killed %0, debug-location !19
     RET 0, killed $eax, debug-location !19

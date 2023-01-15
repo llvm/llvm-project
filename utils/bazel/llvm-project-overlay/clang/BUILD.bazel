@@ -9,6 +9,7 @@ load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
 
 package(
     default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
 )
 
 licenses(["notice"])
@@ -475,6 +476,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -1069,6 +1071,7 @@ cc_library(
         "include/clang/Tooling/Inclusions/**/*.inc",
     ]),
     deps = [
+        ":ast",
         ":basic",
         ":lex",
         ":rewrite",
@@ -1137,6 +1140,7 @@ cc_library(
     deps = [
         ":basic",
         ":codegen",
+        ":driver",
         ":frontend",
         ":lex",
         ":serialization",
@@ -1364,11 +1368,14 @@ cc_library(
         ":parse",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
+        "//llvm:Instrumentation",
         "//llvm:MC",
+        "//llvm:Object",
         "//llvm:Option",
         "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:WindowsDriver",
         "//llvm:config",
     ],
@@ -1477,6 +1484,7 @@ builtin_headers = glob(
     ["lib/Headers/**/*.h"],
     exclude = [
         # FIXME: They are not handled in CMake side.
+        "lib/Headers/openmp_wrappers/stdlib.h",
         "lib/Headers/openmp_wrappers/time.h",
         "lib/Headers/ppc_wrappers/nmmintrin.h",
     ],
@@ -1547,6 +1555,7 @@ cc_library(
         "//llvm:MC",
         "//llvm:Option",
         "//llvm:ProfileData",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:config",
@@ -1630,6 +1639,7 @@ cc_library(
         ":type_nodes_gen",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:Analysis",
+        "//llvm:BinaryFormat",
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:BitstreamReader",
@@ -1656,6 +1666,7 @@ cc_library(
         "//llvm:Scalar",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
     ],
 )
@@ -1818,6 +1829,7 @@ cc_library(
         ":codegen",
         ":config",
         ":driver",
+        ":extract_api",
         ":frontend",
         ":index",
         ":lex",
@@ -1850,6 +1862,7 @@ cc_plugin_library(
         ":codegen",
         ":config",
         ":driver",
+        ":extract_api",
         ":frontend",
         ":index",
         ":lex",
@@ -2110,6 +2123,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":basic",
+        ":driver",
         ":tooling",
         "//llvm:BitWriter",
         "//llvm:Core",
@@ -2209,6 +2223,7 @@ cc_library(
         ":basic",
         ":frontend",
         ":index",
+        ":lex",
         "//llvm:Option",
         "//llvm:Support",
     ],

@@ -13,6 +13,7 @@
 // constexpr basic_string substr(size_type pos = 0, size_type n = npos) &&;
 
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 
 #include "constexpr_char_traits.h"
@@ -26,7 +27,7 @@ constexpr struct should_throw_exception_t {
 } should_throw_exception;
 
 template <class S>
-constexpr void test(S orig, size_t pos, ptrdiff_t n, S expected) {
+constexpr void test(S orig, typename S::size_type pos, typename S::size_type n, const S expected) {
   S str = std::move(orig).substr(pos, n);
   LIBCPP_ASSERT(orig.__invariants());
   LIBCPP_ASSERT(str.__invariants());
@@ -34,7 +35,7 @@ constexpr void test(S orig, size_t pos, ptrdiff_t n, S expected) {
 }
 
 template <class S>
-constexpr void test(S orig, size_t pos, ptrdiff_t n, should_throw_exception_t) {
+constexpr void test(S orig, typename S::size_type pos, typename S::size_type n, should_throw_exception_t) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   if (!std::is_constant_evaluated()) {
     try {

@@ -10,7 +10,7 @@
 ; Just make sure that this compiles ok.
 
 ; Function Attrs: nounwind
-define void @f0(i16* noalias nocapture readonly %a0, i16* noalias nocapture %a1, i32 %a2) #0 {
+define void @f0(ptr noalias nocapture readonly %a0, ptr noalias nocapture %a1, i32 %a2) #0 {
 ; CHECK-LABEL: f0:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
@@ -46,29 +46,27 @@ b0:
   br i1 %v0, label %b3, label %b1
 
 b1:                                               ; preds = %b0
-  %v1 = bitcast i16* %a1 to <16 x i32>*
-  %v2 = bitcast i16* %a0 to <16 x i32>*
   br label %b2
 
 b2:                                               ; preds = %b2, %b1
-  %v3 = phi <16 x i32>* [ %v16, %b2 ], [ %v1, %b1 ]
-  %v4 = phi <16 x i32>* [ %v11, %b2 ], [ %v2, %b1 ]
-  %v5 = getelementptr inbounds <16 x i32>, <16 x i32>* %v4, i32 1
-  %v6 = load <16 x i32>, <16 x i32>* %v4, align 64
-  %v7 = getelementptr inbounds <16 x i32>, <16 x i32>* %v4, i32 2
-  %v8 = load <16 x i32>, <16 x i32>* %v5, align 64
-  %v9 = getelementptr inbounds <16 x i32>, <16 x i32>* %v4, i32 3
-  %v10 = load <16 x i32>, <16 x i32>* %v7, align 64
-  %v11 = getelementptr inbounds <16 x i32>, <16 x i32>* %v4, i32 4
-  %v12 = load <16 x i32>, <16 x i32>* %v9, align 64
-  %v13 = getelementptr inbounds <16 x i32>, <16 x i32>* %v3, i32 1
-  store <16 x i32> %v6, <16 x i32>* %v3, align 64
-  %v14 = getelementptr inbounds <16 x i32>, <16 x i32>* %v3, i32 2
-  store <16 x i32> %v8, <16 x i32>* %v13, align 64
-  %v15 = getelementptr inbounds <16 x i32>, <16 x i32>* %v3, i32 3
-  store <16 x i32> %v10, <16 x i32>* %v14, align 64
-  %v16 = getelementptr inbounds <16 x i32>, <16 x i32>* %v3, i32 4
-  store <16 x i32> %v12, <16 x i32>* %v15, align 64
+  %v3 = phi ptr [ %v16, %b2 ], [ %a1, %b1 ]
+  %v4 = phi ptr [ %v11, %b2 ], [ %a0, %b1 ]
+  %v5 = getelementptr inbounds <16 x i32>, ptr %v4, i32 1
+  %v6 = load <16 x i32>, ptr %v4, align 64
+  %v7 = getelementptr inbounds <16 x i32>, ptr %v4, i32 2
+  %v8 = load <16 x i32>, ptr %v5, align 64
+  %v9 = getelementptr inbounds <16 x i32>, ptr %v4, i32 3
+  %v10 = load <16 x i32>, ptr %v7, align 64
+  %v11 = getelementptr inbounds <16 x i32>, ptr %v4, i32 4
+  %v12 = load <16 x i32>, ptr %v9, align 64
+  %v13 = getelementptr inbounds <16 x i32>, ptr %v3, i32 1
+  store <16 x i32> %v6, ptr %v3, align 64
+  %v14 = getelementptr inbounds <16 x i32>, ptr %v3, i32 2
+  store <16 x i32> %v8, ptr %v13, align 64
+  %v15 = getelementptr inbounds <16 x i32>, ptr %v3, i32 3
+  store <16 x i32> %v10, ptr %v14, align 64
+  %v16 = getelementptr inbounds <16 x i32>, ptr %v3, i32 4
+  store <16 x i32> %v12, ptr %v15, align 64
   br label %b2
 
 b3:                                               ; preds = %b0

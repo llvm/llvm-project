@@ -40,7 +40,7 @@
 source_filename = "/tmp/usemodulealias.ll"
 
 %struct_mymod_8_ = type <{ [12 x i8] }>
-%struct.struct_ul_MAIN__348 = type { i8* }
+%struct.struct_ul_MAIN__348 = type { ptr }
 
 @_mymod_8_ = global %struct_mymod_8_ <{ [12 x i8] c"\0B\00\00\00\0C\00\00\00\0D\00\00\00" }>, align 64, !dbg !0, !dbg !7, !dbg !10
 @.C330_MAIN_ = internal constant i32 0
@@ -59,18 +59,15 @@ define i32 @mymod_() {
 define void @MAIN_() !dbg !15 {
 L.entry:
   %.S0000_353 = alloca %struct.struct_ul_MAIN__348, align 8
-  %0 = bitcast i32* @.C330_MAIN_ to i8*
-  %1 = bitcast void (...)* @fort_init to void (i8*, ...)*
-  call void (i8*, ...) %1(i8* %0)
+  call void (ptr, ...) @fort_init(ptr @.C330_MAIN_)
   br label %L.LB2_357
 
 L.LB2_357:                                        ; preds = %L.entry
-  %2 = bitcast %struct.struct_ul_MAIN__348* %.S0000_353 to i64*, !dbg !23
-  call void @main_use_renamed(i64* %2), !dbg !23
+  call void @main_use_renamed(ptr %.S0000_353), !dbg !23
   ret void, !dbg !24
 }
 
-define internal void @main_use_renamed(i64* noalias %.S0000) !dbg !14 {
+define internal void @main_use_renamed(ptr noalias %.S0000) !dbg !14 {
 L.entry:
   ret void, !dbg !25
 }

@@ -21,6 +21,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include <optional>
 
 //===----------------------------------------------------------------------===//
 // BIND(C) mangling helpers
@@ -426,7 +427,7 @@ Fortran::lower::CalleeInterface::addEntryBlockAndMapArguments() {
 }
 
 bool Fortran::lower::CalleeInterface::hasHostAssociated() const {
-  return funit.parentHasHostAssoc();
+  return funit.parentHasTupleHostAssoc();
 }
 
 mlir::Type Fortran::lower::CalleeInterface::getHostAssociatedTy() const {
@@ -437,6 +438,13 @@ mlir::Type Fortran::lower::CalleeInterface::getHostAssociatedTy() const {
 mlir::Value Fortran::lower::CalleeInterface::getHostAssociatedTuple() const {
   assert(hasHostAssociated() || !funit.getHostAssoc().empty());
   return converter.hostAssocTupleValue();
+}
+
+void Fortran::lower::CalleeInterface::setFuncAttrs(
+    mlir::func::FuncOp func) const {
+  if (funit.parentHasHostAssoc())
+    func->setAttr(fir::getInternalProcedureAttrName(),
+                  mlir::UnitAttr::get(func->getContext()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -484,6 +492,7 @@ void Fortran::lower::CallInterface<T>::declare() {
       for (const auto &placeHolder : llvm::enumerate(inputs))
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
+      side().setFuncAttrs(func);
     }
   }
 }
@@ -677,7 +686,7 @@ public:
                      interface.side().getHostAssociatedTuple(), emptyValue()});
   }
 
-  static llvm::Optional<Fortran::evaluate::DynamicType> getResultDynamicType(
+  static std::optional<Fortran::evaluate::DynamicType> getResultDynamicType(
       const Fortran::evaluate::characteristics::Procedure &procedure) {
     if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
             &result = procedure.functionResult)
@@ -705,7 +714,7 @@ public:
     // array function with assumed length (f18 forbides defining such
     // interfaces). Hence, passing the length is most likely useless, but stick
     // with ifort/nag/xlf interface here.
-    if (llvm::Optional<Fortran::evaluate::DynamicType> type =
+    if (std::optional<Fortran::evaluate::DynamicType> type =
             getResultDynamicType(procedure))
       return type->category() == Fortran::common::TypeCategory::Character;
     return false;
@@ -978,7 +987,7 @@ private:
         proc.procedure.value();
     mlir::Type funcType =
         getProcedureDesignatorType(&procedure, interface.converter);
-    llvm::Optional<Fortran::evaluate::DynamicType> resultTy =
+    std::optional<Fortran::evaluate::DynamicType> resultTy =
         getResultDynamicType(procedure);
     if (resultTy && mustPassLengthWithDummyProcedure(procedure)) {
       // The result length of dummy procedures that are character functions must
@@ -1110,7 +1119,14 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeModifiedByCall()
     const {
   if (!characteristics)
     return true;
-  return characteristics->GetIntent() != Fortran::common::Intent::In;
+  if (characteristics->GetIntent() == Fortran::common::Intent::In)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  return !dummy ||
+         !dummy->attrs.test(
+             Fortran::evaluate::characteristics::DummyDataObject::Attr::Value);
 }
 template <typename T>
 bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeReadByCall() const {

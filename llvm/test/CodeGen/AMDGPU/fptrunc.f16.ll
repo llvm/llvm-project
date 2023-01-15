@@ -8,12 +8,12 @@
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptrunc_f32_to_f16(
-    half addrspace(1)* %r,
-    float addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load float, float addrspace(1)* %a
+  %a.val = load float, ptr addrspace(1) %a
   %r.val = fptrunc float %a.val to half
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -24,12 +24,12 @@ entry:
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptrunc_f64_to_f16(
-    half addrspace(1)* %r,
-    double addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load double, double addrspace(1)* %a
+  %a.val = load double, ptr addrspace(1) %a
   %r.val = fptrunc double %a.val to half
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -50,12 +50,12 @@ entry:
 ; GCN:     s_endpgm
 
 define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
-    <2 x half> addrspace(1)* %r,
-    <2 x float> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x float>, <2 x float> addrspace(1)* %a
+  %a.val = load <2 x float>, ptr addrspace(1) %a
   %r.val = fptrunc <2 x float> %a.val to <2 x half>
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -77,12 +77,12 @@ entry:
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 
 define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
-    <2 x half> addrspace(1)* %r,
-    <2 x double> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x double>, <2 x double> addrspace(1)* %a
+  %a.val = load <2 x double>, ptr addrspace(1) %a
   %r.val = fptrunc <2 x double> %a.val to <2 x half>
-  store <2 x half> %r.val, <2 x half> addrspace(1)* %r
+  store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -92,13 +92,13 @@ entry:
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
-    half addrspace(1)* %r,
-    float addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load float, float addrspace(1)* %a
+  %a.val = load float, ptr addrspace(1) %a
   %a.fneg = fneg float %a.val
   %r.val = fptrunc float %a.fneg to half
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -108,13 +108,13 @@ entry:
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
-    half addrspace(1)* %r,
-    float addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load float, float addrspace(1)* %a
+  %a.val = load float, ptr addrspace(1) %a
   %a.fabs = call float @llvm.fabs.f32(float %a.val)
   %r.val = fptrunc float %a.fabs to half
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -124,14 +124,14 @@ entry:
 ; GCN: buffer_store_short v[[R_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
-    half addrspace(1)* %r,
-    float addrspace(1)* %a) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) #0 {
 entry:
-  %a.val = load float, float addrspace(1)* %a
+  %a.val = load float, ptr addrspace(1) %a
   %a.fabs = call float @llvm.fabs.f32(float %a.val)
   %a.fneg.fabs = fneg float %a.fabs
   %r.val = fptrunc float %a.fneg.fabs to half
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -142,14 +142,14 @@ entry:
 ; GFX9-NOT: v_and_b32
 ; GCN: buffer_store_dword v[[R_F16]]
 define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
-    i32 addrspace(1)* %r,
-    float addrspace(1)* %a) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) #0 {
 entry:
-  %a.val = load float, float addrspace(1)* %a
+  %a.val = load float, ptr addrspace(1) %a
   %r.val = fptrunc float %a.val to half
   %r.i16 = bitcast half %r.val to i16
   %zext = zext i16 %r.i16 to i32
-  store i32 %zext, i32 addrspace(1)* %r
+  store i32 %zext, ptr addrspace(1) %r
   ret void
 }
 
@@ -160,15 +160,15 @@ entry:
 ; GFX9-NOT: v_and_b32
 ; GCN: buffer_store_dword v[[R_F16]]
 define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
-    i32 addrspace(1)* %r,
-    float addrspace(1)* %a) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) #0 {
 entry:
-  %a.val = load float, float addrspace(1)* %a
+  %a.val = load float, ptr addrspace(1) %a
   %a.fabs = call float @llvm.fabs.f32(float %a.val)
   %r.val = fptrunc float %a.fabs to half
   %r.i16 = bitcast half %r.val to i16
   %zext = zext i16 %r.i16 to i32
-  store i32 %zext, i32 addrspace(1)* %r
+  store i32 %zext, ptr addrspace(1) %r
   ret void
 }
 
@@ -178,14 +178,14 @@ entry:
 ; GCN: v_bfe_i32 v[[R_F16_SEXT:[0-9]+]], v[[R_F16]], 0, 16
 ; GCN: buffer_store_dword v[[R_F16_SEXT]]
 define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
-    i32 addrspace(1)* %r,
-    float addrspace(1)* %a) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) #0 {
 entry:
-  %a.val = load float, float addrspace(1)* %a
+  %a.val = load float, ptr addrspace(1) %a
   %r.val = fptrunc float %a.val to half
   %r.i16 = bitcast half %r.val to i16
   %zext = sext i16 %r.i16 to i32
-  store i32 %zext, i32 addrspace(1)* %r
+  store i32 %zext, ptr addrspace(1) %r
   ret void
 }
 

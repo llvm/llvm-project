@@ -106,13 +106,8 @@ static Instruction *findCommonDominator(ArrayRef<Instruction *> Instructions,
                                         DominatorTree &DT) {
   Instruction *CommonDom = nullptr;
   for (auto *Insn : Instructions)
-    if (!CommonDom || DT.dominates(Insn, CommonDom))
-      CommonDom = Insn;
-    else if (!DT.dominates(CommonDom, Insn))
-      // If there is no dominance relation, use common dominator.
-      CommonDom =
-          DT.findNearestCommonDominator(CommonDom->getParent(),
-                                        Insn->getParent())->getTerminator();
+    CommonDom =
+        CommonDom ? DT.findNearestCommonDominator(CommonDom, Insn) : Insn;
   assert(CommonDom && "Common dominator not found?");
   return CommonDom;
 }
@@ -1035,12 +1030,13 @@ class WidenIV {
   // context.
   DenseMap<DefUserPair, ConstantRange> PostIncRangeInfos;
 
-  Optional<ConstantRange> getPostIncRangeInfo(Value *Def,
-                                              Instruction *UseI) {
+  std::optional<ConstantRange> getPostIncRangeInfo(Value *Def,
+                                                   Instruction *UseI) {
     DefUserPair Key(Def, UseI);
     auto It = PostIncRangeInfos.find(Key);
-    return It == PostIncRangeInfos.end() ? Optional<ConstantRange>(std::nullopt)
-                                         : Optional<ConstantRange>(It->second);
+    return It == PostIncRangeInfos.end()
+               ? std::optional<ConstantRange>(std::nullopt)
+               : std::optional<ConstantRange>(It->second);
   }
 
   void calculatePostIncRanges(PHINode *OrigPhi);

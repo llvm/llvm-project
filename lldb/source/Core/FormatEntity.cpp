@@ -618,11 +618,8 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
 static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
                                              bool deref_pointer) {
   Log *log = GetLog(LLDBLog::DataFormatters);
-  const char *ptr_deref_format = "[%d]";
-  std::string ptr_deref_buffer(10, 0);
-  ::sprintf(&ptr_deref_buffer[0], ptr_deref_format, index);
-  LLDB_LOGF(log, "[ExpandIndexedExpression] name to deref: %s",
-            ptr_deref_buffer.c_str());
+  std::string name_to_deref = llvm::formatv("[{0}]", index);
+  LLDB_LOG(log, "[ExpandIndexedExpression] name to deref: {0}", name_to_deref);
   ValueObject::GetValueForExpressionPathOptions options;
   ValueObject::ExpressionPathEndResultType final_value_type;
   ValueObject::ExpressionPathScanEndReason reason_to_stop;
@@ -630,8 +627,7 @@ static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
       (deref_pointer ? ValueObject::eExpressionPathAftermathDereference
                      : ValueObject::eExpressionPathAftermathNothing);
   ValueObjectSP item = valobj->GetValueForExpressionPath(
-      ptr_deref_buffer.c_str(), &reason_to_stop, &final_value_type, options,
-      &what_next);
+      name_to_deref, &reason_to_stop, &final_value_type, options, &what_next);
   if (!item) {
     LLDB_LOGF(log,
               "[ExpandIndexedExpression] ERROR: why stopping = %d,"

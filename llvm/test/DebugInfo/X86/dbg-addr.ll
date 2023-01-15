@@ -45,17 +45,17 @@ target triple = "x86_64--linux"
 define void @use_dbg_addr() #0 !dbg !7 {
 entry:
   %o = alloca %struct.Foo, align 4
-  call void @llvm.dbg.addr(metadata %struct.Foo* %o, metadata !10, metadata !15), !dbg !16
-  call void @escape_foo(%struct.Foo* %o), !dbg !17
+  call void @llvm.dbg.addr(metadata ptr %o, metadata !10, metadata !15), !dbg !16
+  call void @escape_foo(ptr %o), !dbg !17
   ret void, !dbg !18
 }
 
 define void @test_dbg_addr_and_dbg_val_undef() #0 !dbg !117 {
 entry:
   %o = alloca %struct.Foo, align 4
-  call void @llvm.dbg.addr(metadata %struct.Foo* %o, metadata !1110, metadata !1115), !dbg !1116
-  call void @escape_foo(%struct.Foo* %o), !dbg !1117
-  call void @llvm.dbg.value(metadata %struct.Foo* undef, metadata !1110, metadata !1115), !dbg !1116
+  call void @llvm.dbg.addr(metadata ptr %o, metadata !1110, metadata !1115), !dbg !1116
+  call void @escape_foo(ptr %o), !dbg !1117
+  call void @llvm.dbg.value(metadata ptr undef, metadata !1110, metadata !1115), !dbg !1116
   ret void, !dbg !1118
 }
 
@@ -63,7 +63,7 @@ entry:
 declare void @llvm.dbg.addr(metadata, metadata, metadata) #1
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
-declare void @escape_foo(%struct.Foo*)
+declare void @escape_foo(ptr)
 
 attributes #0 = { noinline nounwind uwtable }
 attributes #1 = { nounwind readnone speculatable }

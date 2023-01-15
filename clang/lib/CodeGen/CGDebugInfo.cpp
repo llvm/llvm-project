@@ -526,7 +526,8 @@ void CGDebugInfo::CreateCompileUnit() {
 
   // Get absolute path name.
   SourceManager &SM = CGM.getContext().getSourceManager();
-  std::string MainFileName = CGM.getCodeGenOpts().MainFileName;
+  auto &CGO = CGM.getCodeGenOpts();
+  std::string MainFileName = CGO.MainFileName;
   if (MainFileName.empty())
     MainFileName = "<stdin>";
 
@@ -535,7 +536,7 @@ void CGDebugInfo::CreateCompileUnit() {
   // a relative path, so we look into the actual file entry for the main
   // file to determine the real absolute path for the file.
   std::string MainFileDir;
-  if (Optional<FileEntryRef> MainFile =
+  if (OptionalFileEntryRef MainFile =
           SM.getFileEntryRefForID(SM.getMainFileID())) {
     MainFileDir = std::string(MainFile->getDir().getName());
     if (!llvm::sys::path::is_absolute(MainFileName)) {
@@ -562,11 +563,11 @@ void CGDebugInfo::CreateCompileUnit() {
   if (LO.CPlusPlus) {
     if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
-    else if (LO.CPlusPlus14 && (!CGM.getCodeGenOpts().DebugStrictDwarf ||
-                                CGM.getCodeGenOpts().DwarfVersion >= 5))
+    else if (CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
+    else if (LO.CPlusPlus14)
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus_14;
-    else if (LO.CPlusPlus11 && (!CGM.getCodeGenOpts().DebugStrictDwarf ||
-                                CGM.getCodeGenOpts().DwarfVersion >= 5))
+    else if (LO.CPlusPlus11)
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus_11;
     else
       LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
@@ -577,6 +578,8 @@ void CGDebugInfo::CreateCompileUnit() {
     LangTag = llvm::dwarf::DW_LANG_OpenCL;
   } else if (LO.RenderScript) {
     LangTag = llvm::dwarf::DW_LANG_GOOGLE_RenderScript;
+  } else if (LO.C11 && !(CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)) {
+      LangTag = llvm::dwarf::DW_LANG_C11;
   } else if (LO.C99) {
     LangTag = llvm::dwarf::DW_LANG_C99;
   } else {
@@ -1996,35 +1999,23 @@ CGDebugInfo::CollectTemplateParams(Optional<TemplateArgs> OArgs,
     const TemplateArgument &TA = Args.Args[i];
     StringRef Name;
     bool defaultParameter = false;
-    if (Args.TList)
+    if (Args.TList) {
       Name = Args.TList->getParam(i)->getName();
+
+      NamedDecl const *ND = Args.TList->getParam(i);
+      defaultParameter = clang::isSubstitutedDefaultArgument(
+          CGM.getContext(), TA, ND, Args.Args, Args.TList->getDepth());
+    }
+
     switch (TA.getKind()) {
     case TemplateArgument::Type: {
       llvm::DIType *TTy = getOrCreateType(TA.getAsType(), Unit);
-
-      if (Args.TList)
-        if (auto *templateType =
-                dyn_cast_or_null<TemplateTypeParmDecl>(Args.TList->getParam(i)))
-          if (templateType->hasDefaultArgument())
-            defaultParameter =
-                templateType->getDefaultArgument() == TA.getAsType();
-
       TemplateParams.push_back(DBuilder.createTemplateTypeParameter(
           TheCU, Name, TTy, defaultParameter));
 
     } break;
     case TemplateArgument::Integral: {
       llvm::DIType *TTy = getOrCreateType(TA.getIntegralType(), Unit);
-      if (Args.TList && CGM.getCodeGenOpts().DwarfVersion >= 5)
-        if (auto *templateType = dyn_cast_or_null<NonTypeTemplateParmDecl>(
-                Args.TList->getParam(i)))
-          if (templateType->hasDefaultArgument() &&
-              !templateType->getDefaultArgument()->isValueDependent())
-            defaultParameter = llvm::APSInt::isSameValue(
-                templateType->getDefaultArgument()->EvaluateKnownConstInt(
-                    CGM.getContext()),
-                TA.getAsIntegral());
-
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
           TheCU, Name, TTy, defaultParameter,
           llvm::ConstantInt::get(CGM.getLLVMContext(), TA.getAsIntegral())));
@@ -2100,7 +2091,7 @@ CGDebugInfo::CollectTemplateParams(Optional<TemplateArgs> OArgs,
       TA.getAsTemplate().getAsTemplateDecl()->printQualifiedName(
           OS, getPrintingPolicy());
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
-          TheCU, Name, nullptr, OS.str()));
+          TheCU, Name, nullptr, OS.str(), defaultParameter));
       break;
     }
     case TemplateArgument::Pack:
@@ -2938,6 +2929,9 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
       Flags = llvm::DINode::FlagPrivate;
     else if (Field->getAccessControl() == ObjCIvarDecl::Public)
       Flags = llvm::DINode::FlagPublic;
+
+    if (Field->isBitField())
+      Flags |= llvm::DINode::FlagBitField;
 
     llvm::MDNode *PropertyNode = nullptr;
     if (ObjCImplementationDecl *ImpD = ID->getImplementation()) {
@@ -4212,10 +4206,28 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
-  llvm::DISubprogram *SP = DBuilder.createFunction(
-      FDContext, Name, LinkageName, Unit, LineNo,
-      getOrCreateFunctionType(D, FnType, Unit), ScopeLine, Flags, SPFlags,
-      TParamsArray.get(), getFunctionDeclaration(D), nullptr, Annotations);
+  llvm::DISubroutineType *STy = getOrCreateFunctionType(D, FnType, Unit);
+  llvm::DISubprogram *SP =
+      DBuilder.createFunction(FDContext, Name, LinkageName, Unit, LineNo, STy,
+                              ScopeLine, Flags, SPFlags, TParamsArray.get(),
+                              getFunctionDeclaration(D), nullptr, Annotations);
+
+  // Preserve btf_decl_tag attributes for parameters of extern functions
+  // for BPF target. The parameters created in this loop are attached as
+  // DISubprogram's retainedNodes in the subsequent finalizeSubprogram call.
+  if (IsDeclForCallSite && CGM.getTarget().getTriple().isBPF()) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+      llvm::DITypeRefArray ParamTypes = STy->getTypeArray();
+      unsigned ArgNo = 1;
+      for (ParmVarDecl *PD : FD->parameters()) {
+        llvm::DINodeArray ParamAnnotations = CollectBTFDeclTagAnnotations(PD);
+        DBuilder.createParameterVariable(
+            SP, PD->getName(), ArgNo, Unit, LineNo, ParamTypes[ArgNo], true,
+            llvm::DINode::FlagZero, ParamAnnotations);
+        ++ArgNo;
+      }
+    }
+  }
 
   if (IsDeclForCallSite)
     Fn->setSubprogram(SP);

@@ -1,4 +1,4 @@
-//===-- RISCVISAInfo.cpp - RISCV Arch String Parser --------------===//
+//===-- RISCVISAInfo.cpp - RISCV Arch String Parser -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,7 +37,7 @@ struct RISCVSupportedExtension {
 
 } // end anonymous namespace
 
-static constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvn";
+static constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvnh";
 
 static const RISCVSupportedExtension SupportedExtensions[] = {
     {"i", RISCVExtensionVersion{2, 0}},
@@ -47,6 +47,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"f", RISCVExtensionVersion{2, 0}},
     {"d", RISCVExtensionVersion{2, 0}},
     {"c", RISCVExtensionVersion{2, 0}},
+
+    {"h", RISCVExtensionVersion{1, 0}},
 
     {"zihintpause", RISCVExtensionVersion{2, 0}},
 
@@ -103,8 +105,10 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zicbop", RISCVExtensionVersion{1, 0}},
 
     {"svnapot", RISCVExtensionVersion{1, 0}},
+    {"svpbmt", RISCVExtensionVersion{1, 0}},
     {"svinval", RISCVExtensionVersion{1, 0}},
     {"xventanacondops", RISCVExtensionVersion{1, 0}},
+    {"xtheadvdot", RISCVExtensionVersion{1, 0}},
 };
 
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
@@ -130,8 +134,8 @@ static bool stripExperimentalPrefix(StringRef &Ext) {
 // have version numbers and no extension name. It assumes the extension name
 // will be at least more than one character.
 static size_t findFirstNonVersionCharacter(StringRef Ext) {
-   assert(!Ext.empty() &&
-          "Already guarded by if-statement in ::parseArchString");
+  assert(!Ext.empty() &&
+         "Already guarded by if-statement in ::parseArchString");
 
   int Pos = Ext.size() - 1;
   while (Pos > 0 && isDigit(Ext[Pos]))
@@ -158,8 +162,8 @@ static std::optional<RISCVExtensionVersion>
 findDefaultVersion(StringRef ExtName) {
   // Find default version of an extension.
   // TODO: We might set default version based on profile or ISA spec.
-  for (auto &ExtInfo : {makeArrayRef(SupportedExtensions),
-                        makeArrayRef(SupportedExperimentalExtensions)}) {
+  for (auto &ExtInfo : {ArrayRef(SupportedExtensions),
+                        ArrayRef(SupportedExperimentalExtensions)}) {
     auto ExtensionInfoIterator = llvm::find_if(ExtInfo, FindByName(ExtName));
 
     if (ExtensionInfoIterator == ExtInfo.end()) {
@@ -282,17 +286,14 @@ static int multiLetterExtensionRank(const std::string &ExtName) {
   case 's':
     HighOrder = 0;
     break;
-  case 'h':
-    HighOrder = 1;
-    break;
   case 'z':
-    HighOrder = 2;
+    HighOrder = 1;
     // `z` extension must be sorted by canonical order of second letter.
     // e.g. zmx has higher rank than zax.
     LowOrder = singleLetterExtensionRank(ExtName[1]);
     break;
   case 'x':
-    HighOrder = 3;
+    HighOrder = 2;
     break;
   default:
     llvm_unreachable("Unknown prefix for multi-char extension");
@@ -330,7 +331,8 @@ bool RISCVISAInfo::compareExtension(const std::string &LHS,
 
 void RISCVISAInfo::toFeatures(
     std::vector<StringRef> &Features,
-    std::function<StringRef(const Twine &)> StrAlloc) const {
+    llvm::function_ref<StringRef(const Twine &)> StrAlloc,
+    bool AddAllExtensions) const {
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
 
@@ -341,6 +343,19 @@ void RISCVISAInfo::toFeatures(
       Features.push_back(StrAlloc("+experimental-" + ExtName));
     } else {
       Features.push_back(StrAlloc("+" + ExtName));
+    }
+  }
+  if (AddAllExtensions) {
+    for (const RISCVSupportedExtension &Ext : SupportedExtensions) {
+      if (Exts.count(Ext.Name))
+        continue;
+      Features.push_back(StrAlloc(Twine("-") + Ext.Name));
+    }
+
+    for (const RISCVSupportedExtension &Ext : SupportedExperimentalExtensions) {
+      if (Exts.count(Ext.Name))
+        continue;
+      Features.push_back(StrAlloc(Twine("-experimental-") + Ext.Name));
     }
   }
 }
@@ -467,8 +482,8 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
     ExtName = ExtName.drop_front(1); // Drop '+' or '-'
     Experimental = stripExperimentalPrefix(ExtName);
     auto ExtensionInfos = Experimental
-                              ? makeArrayRef(SupportedExperimentalExtensions)
-                              : makeArrayRef(SupportedExtensions);
+                              ? ArrayRef(SupportedExperimentalExtensions)
+                              : ArrayRef(SupportedExtensions);
     auto ExtensionInfoIterator =
         llvm::find_if(ExtensionInfos, FindByName(ExtName));
 
@@ -609,8 +624,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
     // The order is OK, then push it into features.
     // TODO: Use version number when setting target features
-    // Currently LLVM supports only "mafdcv".
-    StringRef SupportedStandardExtension = "mafdcv";
+    // Currently LLVM supports only "mafdcvh".
+    StringRef SupportedStandardExtension = "mafdcvh";
     if (!SupportedStandardExtension.contains(C))
       return createStringError(errc::invalid_argument,
                                "unsupported standard user-level extension '%c'",
@@ -781,9 +796,11 @@ static const char *ImpliedExtsZvl256b[] = {"zvl128b"};
 static const char *ImpliedExtsZvl128b[] = {"zvl64b"};
 static const char *ImpliedExtsZvl64b[] = {"zvl32b"};
 static const char *ImpliedExtsZk[] = {"zkn", "zkt", "zkr"};
-static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx", "zkne", "zknd", "zknh"};
+static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx",
+                                       "zkne", "zknd", "zknh"};
 static const char *ImpliedExtsZks[] = {"zbkb", "zbkc", "zbkx", "zksed", "zksh"};
 static const char *ImpliedExtsZvfh[] = {"zve32f"};
+static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 
 struct ImpliedExtsEntry {
   StringLiteral Name;
@@ -799,6 +816,7 @@ struct ImpliedExtsEntry {
 // Note: The table needs to be sorted by name.
 static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"v"}, {ImpliedExtsV}},
+    {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
     {{"zdinx"}, {ImpliedExtsZdinx}},
     {{"zfh"}, {ImpliedExtsZfh}},
     {{"zfhmin"}, {ImpliedExtsZfhmin}},

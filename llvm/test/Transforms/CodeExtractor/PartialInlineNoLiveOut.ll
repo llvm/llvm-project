@@ -49,7 +49,7 @@ bb:
 
 ; CHECK-LABEL: define internal void @test.1.bb2()
 ; CHECK: .exitStub:
-; CHECK-NOT:  store i32 %tmp7, i32* %tmp7.out
+; CHECK-NOT:  store i32 %tmp7, ptr %tmp7.out
 ; CHECK: ret
 
 attributes #0 = { nounwind uwtable }

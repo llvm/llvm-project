@@ -495,10 +495,11 @@ public:
 
   // Override MCTargetAsmParser.
   bool ParseDirective(AsmToken DirectiveID) override;
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  bool ParseRegister(MCRegister &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
                      bool RestoreOnFailure);
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -1379,7 +1380,7 @@ bool SystemZAsmParser::ParseGNUAttribute(SMLoc L) {
   return true;
 }
 
-bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool SystemZAsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc, bool RestoreOnFailure) {
   Register Reg;
   if (parseRegister(Reg, RestoreOnFailure))
@@ -1399,12 +1400,12 @@ bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
   return false;
 }
 
-bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool SystemZAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc) {
   return ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/false);
 }
 
-OperandMatchResultTy SystemZAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy SystemZAsmParser::tryParseRegister(MCRegister &RegNo,
                                                         SMLoc &StartLoc,
                                                         SMLoc &EndLoc) {
   bool Result =

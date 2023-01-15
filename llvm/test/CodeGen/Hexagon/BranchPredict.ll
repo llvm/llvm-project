@@ -16,11 +16,11 @@ entry:
 
 if.then:                                          ; preds = %entry
   %add = add nsw i32 %a, 10
-  %call = tail call i32 bitcast (i32 (...)* @foobar to i32 (i32)*)(i32 %add) nounwind
+  %call = tail call i32 @foobar(i32 %add) nounwind
   br label %return
 
 if.else:                                          ; preds = %entry
-  %call2 = tail call i32 bitcast (i32 (...)* @foobar to i32 (i32)*)(i32 4) nounwind
+  %call2 = tail call i32 @foobar(i32 4) nounwind
   br label %return
 
 return:                                           ; preds = %if.else, %if.then
@@ -38,11 +38,11 @@ entry:
 
 if.then:                                          ; preds = %entry
   %add = add nsw i32 %a, 10
-  %call = tail call i32 bitcast (i32 (...)* @foobar to i32 (i32)*)(i32 %add) nounwind
+  %call = tail call i32 @foobar(i32 %add) nounwind
   br label %return
 
 if.else:                                          ; preds = %entry
-  %call2 = tail call i32 bitcast (i32 (...)* @foobar to i32 (i32)*)(i32 4) nounwind
+  %call2 = tail call i32 @foobar(i32 4) nounwind
   br label %return
 
 return:                                           ; preds = %if.else, %if.then
@@ -53,18 +53,18 @@ return:                                           ; preds = %if.else, %if.then
 define i32 @foo_bar(i32 %a, i16 signext %b) nounwind {
 ; CHECK: if (!cmp.eq(r{{[0-9]*}}.new,#0)) jump:nt
 entry:
-  %0 = load i32, i32* @j, align 4
+  %0 = load i32, ptr @j, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.else, label %if.then, !prof !0
 
 if.then:                                          ; preds = %entry
   %add = add nsw i32 %a, 10
-  %call = tail call i32 bitcast (i32 (...)* @foobar to i32 (i32)*)(i32 %add) nounwind
+  %call = tail call i32 @foobar(i32 %add) nounwind
   br label %return
 
 if.else:                                          ; preds = %entry
   %add1 = add nsw i32 %a, 4
-  %call2 = tail call i32 bitcast (i32 (...)* @foobar to i32 (i32)*)(i32 %add1) nounwind
+  %call2 = tail call i32 @foobar(i32 %add1) nounwind
   br label %return
 
 return:                                           ; preds = %if.else, %if.then

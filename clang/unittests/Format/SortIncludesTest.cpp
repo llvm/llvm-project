@@ -8,7 +8,6 @@
 
 #include "FormatTestUtils.h"
 #include "clang/Format/Format.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "gtest/gtest.h"

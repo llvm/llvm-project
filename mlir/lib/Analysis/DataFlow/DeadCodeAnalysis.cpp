@@ -146,7 +146,7 @@ void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
       return;
 
     // Walk the symbol table to check for non-call uses of symbols.
-    Optional<SymbolTable::UseRange> uses =
+    std::optional<SymbolTable::UseRange> uses =
         SymbolTable::getSymbolUses(&symbolTableRegion);
     if (!uses) {
       // If we couldn't gather the symbol uses, conservatively assume that

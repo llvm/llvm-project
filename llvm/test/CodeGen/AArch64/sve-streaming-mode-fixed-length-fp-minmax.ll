@@ -33,7 +33,7 @@ define <8 x half> @fmaxnm_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
   ret <8 x half> %res
 }
 
-define void @fmaxnm_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
+define void @fmaxnm_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fmaxnm_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -43,10 +43,10 @@ define void @fmaxnm_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
 ; CHECK-NEXT:    fmaxnm z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %res = call <16 x half> @llvm.maxnum.v16f16(<16 x half> %op1, <16 x half> %op2)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -76,7 +76,7 @@ define <4 x float> @fmaxnm_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
   ret <4 x float> %res
 }
 
-define void @fmaxnm_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
+define void @fmaxnm_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fmaxnm_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -86,10 +86,10 @@ define void @fmaxnm_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
 ; CHECK-NEXT:    fmaxnm z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x float>, <8 x float>* %a
-  %op2 = load <8 x float>, <8 x float>* %b
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
   %res = call <8 x float> @llvm.maxnum.v8f32(<8 x float> %op1, <8 x float> %op2)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -117,7 +117,7 @@ define <2 x double> @fmaxnm_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
   ret <2 x double> %res
 }
 
-define void @fmaxnm_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
+define void @fmaxnm_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fmaxnm_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -127,10 +127,10 @@ define void @fmaxnm_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 ; CHECK-NEXT:    fmaxnm z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x double>, <4 x double>* %a
-  %op2 = load <4 x double>, <4 x double>* %b
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
   %res = call <4 x double> @llvm.maxnum.v4f64(<4 x double> %op1, <4 x double> %op2)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
@@ -164,7 +164,7 @@ define <8 x half> @fminnm_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
   ret <8 x half> %res
 }
 
-define void @fminnm_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
+define void @fminnm_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fminnm_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -174,10 +174,10 @@ define void @fminnm_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
 ; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %res = call <16 x half> @llvm.minnum.v16f16(<16 x half> %op1, <16 x half> %op2)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -207,7 +207,7 @@ define <4 x float> @fminnm_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
   ret <4 x float> %res
 }
 
-define void @fminnm_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
+define void @fminnm_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fminnm_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -217,10 +217,10 @@ define void @fminnm_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
 ; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x float>, <8 x float>* %a
-  %op2 = load <8 x float>, <8 x float>* %b
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
   %res = call <8 x float> @llvm.minnum.v8f32(<8 x float> %op1, <8 x float> %op2)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -248,7 +248,7 @@ define <2 x double> @fminnm_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
   ret <2 x double> %res
 }
 
-define void @fminnm_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
+define void @fminnm_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fminnm_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -258,10 +258,10 @@ define void @fminnm_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 ; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x double>, <4 x double>* %a
-  %op2 = load <4 x double>, <4 x double>* %b
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
   %res = call <4 x double> @llvm.minnum.v4f64(<4 x double> %op1, <4 x double> %op2)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
@@ -295,7 +295,7 @@ define <8 x half> @fmax_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
   ret <8 x half> %res
 }
 
-define void @fmax_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
+define void @fmax_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fmax_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -305,10 +305,10 @@ define void @fmax_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
 ; CHECK-NEXT:    fmax z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %res = call <16 x half> @llvm.maximum.v16f16(<16 x half> %op1, <16 x half> %op2)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -338,7 +338,7 @@ define <4 x float> @fmax_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
   ret <4 x float> %res
 }
 
-define void @fmax_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
+define void @fmax_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fmax_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -348,10 +348,10 @@ define void @fmax_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
 ; CHECK-NEXT:    fmax z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x float>, <8 x float>* %a
-  %op2 = load <8 x float>, <8 x float>* %b
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
   %res = call <8 x float> @llvm.maximum.v8f32(<8 x float> %op1, <8 x float> %op2)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -379,7 +379,7 @@ define <2 x double> @fmax_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
   ret <2 x double> %res
 }
 
-define void @fmax_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
+define void @fmax_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fmax_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -389,10 +389,10 @@ define void @fmax_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 ; CHECK-NEXT:    fmax z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x double>, <4 x double>* %a
-  %op2 = load <4 x double>, <4 x double>* %b
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
   %res = call <4 x double> @llvm.maximum.v4f64(<4 x double> %op1, <4 x double> %op2)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 
@@ -426,7 +426,7 @@ define <8 x half> @fmin_v8f16(<8 x half> %op1, <8 x half> %op2) #0 {
   ret <8 x half> %res
 }
 
-define void @fmin_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
+define void @fmin_v16f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fmin_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -436,10 +436,10 @@ define void @fmin_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
 ; CHECK-NEXT:    fmin z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %res = call <16 x half> @llvm.minimum.v16f16(<16 x half> %op1, <16 x half> %op2)
-  store <16 x half> %res, <16 x half>* %a
+  store <16 x half> %res, ptr %a
   ret void
 }
 
@@ -469,7 +469,7 @@ define <4 x float> @fmin_v4f32(<4 x float> %op1, <4 x float> %op2) #0 {
   ret <4 x float> %res
 }
 
-define void @fmin_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
+define void @fmin_v8f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fmin_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -479,10 +479,10 @@ define void @fmin_v8f32(<8 x float>* %a, <8 x float>* %b) #0 {
 ; CHECK-NEXT:    fmin z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x float>, <8 x float>* %a
-  %op2 = load <8 x float>, <8 x float>* %b
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
   %res = call <8 x float> @llvm.minimum.v8f32(<8 x float> %op1, <8 x float> %op2)
-  store <8 x float> %res, <8 x float>* %a
+  store <8 x float> %res, ptr %a
   ret void
 }
 
@@ -510,7 +510,7 @@ define <2 x double> @fmin_v2f64(<2 x double> %op1, <2 x double> %op2) #0 {
   ret <2 x double> %res
 }
 
-define void @fmin_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
+define void @fmin_v4f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: fmin_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -520,10 +520,10 @@ define void @fmin_v4f64(<4 x double>* %a, <4 x double>* %b) #0 {
 ; CHECK-NEXT:    fmin z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x double>, <4 x double>* %a
-  %op2 = load <4 x double>, <4 x double>* %b
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
   %res = call <4 x double> @llvm.minimum.v4f64(<4 x double> %op1, <4 x double> %op2)
-  store <4 x double> %res, <4 x double>* %a
+  store <4 x double> %res, ptr %a
   ret void
 }
 

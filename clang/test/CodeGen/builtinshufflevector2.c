@@ -12,7 +12,7 @@ void clang_shufflevector_v_v( float4* A, float4 x, uint4 mask ) {
 // Here is where ToT Clang code generation makes a mistake.  
 // It uses [[I]] as the insertion index instead of 0.
 // Similarly on the remaining insertelement.
-// CHECK: [[V:%[a-zA-Z0-9._]+]] = insertelement <4 x float> undef, float [[E]], i{{[0-9]+}} 0
+// CHECK: [[V:%[a-zA-Z0-9._]+]] = insertelement <4 x float> poison, float [[E]], i{{[0-9]+}} 0
 
 // CHECK: [[I:%.*]] = extractelement <4 x i32> [[MASK]], i{{[0-9]+}} 1
 // CHECK: [[E:%.*]] = extractelement <4 x float> [[X]], i{{[0-9]+}} [[I]]

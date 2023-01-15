@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 < %s | FileCheck %s
 
-define protected amdgpu_kernel void @excess_soft_clause_reg_pressure(float addrspace(4)* %wei_ptr, float addrspace(1)* %out_ptr, float addrspace(1)* %in) {
+define protected amdgpu_kernel void @excess_soft_clause_reg_pressure(ptr addrspace(4) %wei_ptr, ptr addrspace(1) %out_ptr, ptr addrspace(1) %in) {
 ; CHECK-LABEL: excess_soft_clause_reg_pressure:
 ; CHECK:  BB0_1: ; %for.cond28.preheader
 ; CHECK:         s_load_dwordx16
@@ -24,9 +24,8 @@ define protected amdgpu_kernel void @excess_soft_clause_reg_pressure(float addrs
 ; CHECK-NOT: v_writelane_b32
 ; CHECK-NOT: v_readlane_b32
 entry:
-  %i = tail call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %i1 = bitcast i8 addrspace(4)* %i to i64 addrspace(4)*
-  %i2 = load i64, i64 addrspace(4)* %i1, align 8
+  %i = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %i2 = load i64, ptr addrspace(4) %i, align 8
   %i3 = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %i4 = shl i32 %i3, 8
   %i5 = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !5
@@ -35,8 +34,8 @@ entry:
   %conv = add i32 %i6, %i7
   %conv.frozen = freeze i32 %conv
   %div = udiv i32 %conv.frozen, 49
-  %add.ptr22 = getelementptr inbounds float, float addrspace(4)* %wei_ptr, i64 undef
-  %in.ptr1 = getelementptr inbounds float, float addrspace(1)* %in, i32 %i5
+  %add.ptr22 = getelementptr inbounds float, ptr addrspace(4) %wei_ptr, i64 undef
+  %in.ptr1 = getelementptr inbounds float, ptr addrspace(1) %in, i32 %i5
   br label %for.cond28.preheader
 
 for.cond28.preheader:                             ; preds = %for.cond28.preheader, %entry
@@ -72,272 +71,272 @@ for.cond28.preheader:                             ; preds = %for.cond28.preheade
   %accum.sroa.118.0 = phi float [ 0.000000e+00, %entry ], [ %i259, %for.cond28.preheader ]
   %accum.sroa.122.0 = phi float [ 0.000000e+00, %entry ], [ %i263, %for.cond28.preheader ]
   %accum.sroa.126.0 = phi float [ 0.000000e+00, %entry ], [ %i267, %for.cond28.preheader ]
-  %i_ptr.0288 = phi float addrspace(1)* [ %in.ptr1, %entry ], [ %add.ptr47.3, %for.cond28.preheader ]
-  %w_ptr.0287 = phi float addrspace(4)* [ %add.ptr22, %entry ], [ %add.ptr74, %for.cond28.preheader ]
+  %i_ptr.0288 = phi ptr addrspace(1) [ %in.ptr1, %entry ], [ %add.ptr47.3, %for.cond28.preheader ]
+  %w_ptr.0287 = phi ptr addrspace(4) [ %add.ptr22, %entry ], [ %add.ptr74, %for.cond28.preheader ]
   %ci.0286 = phi i32 [ 0, %entry ], [ %inc116, %for.cond28.preheader ]
-  %i8 = load float, float addrspace(1)* %i_ptr.0288, align 4
-  %add.ptr47 = getelementptr inbounds float, float addrspace(1)* %i_ptr.0288, i64 49
-  %i9 = load float, float addrspace(1)* %add.ptr47, align 4
-  %add.ptr47.1 = getelementptr inbounds float, float addrspace(1)* %i_ptr.0288, i64 98
-  %i10 = load float, float addrspace(1)* %add.ptr47.1, align 4
-  %add.ptr47.2 = getelementptr inbounds float, float addrspace(1)* %i_ptr.0288, i64 147
-  %i11 = load float, float addrspace(1)* %add.ptr47.2, align 4
-  %i12 = load float, float addrspace(4)* %w_ptr.0287, align 4
-  %add.ptr66 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1024
-  %i13 = load float, float addrspace(4)* %add.ptr66, align 4
-  %add.ptr66.1 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2048
-  %i14 = load float, float addrspace(4)* %add.ptr66.1, align 4
-  %add.ptr66.2 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3072
-  %i15 = load float, float addrspace(4)* %add.ptr66.2, align 4
-  %add.ptr70 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1
-  %i16 = load float, float addrspace(4)* %add.ptr70, align 4
-  %add.ptr66.1291 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1025
-  %i17 = load float, float addrspace(4)* %add.ptr66.1291, align 4
-  %add.ptr66.1.1 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2049
-  %i18 = load float, float addrspace(4)* %add.ptr66.1.1, align 4
-  %add.ptr66.2.1 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3073
-  %i19 = load float, float addrspace(4)* %add.ptr66.2.1, align 4
-  %add.ptr70.1 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2
-  %i20 = load float, float addrspace(4)* %add.ptr70.1, align 4
-  %add.ptr66.2293 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1026
-  %i21 = load float, float addrspace(4)* %add.ptr66.2293, align 4
-  %add.ptr66.1.2 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2050
-  %i22 = load float, float addrspace(4)* %add.ptr66.1.2, align 4
-  %add.ptr66.2.2 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3074
-  %i23 = load float, float addrspace(4)* %add.ptr66.2.2, align 4
-  %add.ptr70.2 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3
-  %i24 = load float, float addrspace(4)* %add.ptr70.2, align 4
-  %add.ptr66.3 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1027
-  %i25 = load float, float addrspace(4)* %add.ptr66.3, align 4
-  %add.ptr66.1.3 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2051
-  %i26 = load float, float addrspace(4)* %add.ptr66.1.3, align 4
-  %add.ptr66.2.3 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3075
-  %i27 = load float, float addrspace(4)* %add.ptr66.2.3, align 4
-  %add.ptr70.3 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 4
-  %i28 = load float, float addrspace(4)* %add.ptr70.3, align 4
-  %add.ptr66.4 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1028
-  %i29 = load float, float addrspace(4)* %add.ptr66.4, align 4
-  %add.ptr66.1.4 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2052
-  %i30 = load float, float addrspace(4)* %add.ptr66.1.4, align 4
-  %add.ptr66.2.4 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3076
-  %i31 = load float, float addrspace(4)* %add.ptr66.2.4, align 4
-  %add.ptr70.4 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 5
-  %i32 = load float, float addrspace(4)* %add.ptr70.4, align 4
-  %add.ptr66.5 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1029
-  %i33 = load float, float addrspace(4)* %add.ptr66.5, align 4
-  %add.ptr66.1.5 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2053
-  %i34 = load float, float addrspace(4)* %add.ptr66.1.5, align 4
-  %add.ptr66.2.5 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3077
-  %i35 = load float, float addrspace(4)* %add.ptr66.2.5, align 4
-  %add.ptr70.5 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 6
-  %i36 = load float, float addrspace(4)* %add.ptr70.5, align 4
-  %add.ptr66.6 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1030
-  %i37 = load float, float addrspace(4)* %add.ptr66.6, align 4
-  %add.ptr66.1.6 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2054
-  %i38 = load float, float addrspace(4)* %add.ptr66.1.6, align 4
-  %add.ptr66.2.6 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3078
-  %i39 = load float, float addrspace(4)* %add.ptr66.2.6, align 4
-  %add.ptr70.6 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 7
-  %i40 = load float, float addrspace(4)* %add.ptr70.6, align 4
-  %add.ptr66.7 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1031
-  %i41 = load float, float addrspace(4)* %add.ptr66.7, align 4
-  %add.ptr66.1.7 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2055
-  %i42 = load float, float addrspace(4)* %add.ptr66.1.7, align 4
-  %add.ptr66.2.7 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3079
-  %i43 = load float, float addrspace(4)* %add.ptr66.2.7, align 4
-  %add.ptr70.7 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 8
-  %i44 = load float, float addrspace(4)* %add.ptr70.7, align 4
-  %add.ptr66.8 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1032
-  %i45 = load float, float addrspace(4)* %add.ptr66.8, align 4
-  %add.ptr66.1.8 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2056
-  %i46 = load float, float addrspace(4)* %add.ptr66.1.8, align 4
-  %add.ptr66.2.8 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3080
-  %i47 = load float, float addrspace(4)* %add.ptr66.2.8, align 4
-  %add.ptr70.8 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 9
-  %i48 = load float, float addrspace(4)* %add.ptr70.8, align 4
-  %add.ptr66.9 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1033
-  %i49 = load float, float addrspace(4)* %add.ptr66.9, align 4
-  %add.ptr66.1.9 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2057
-  %i50 = load float, float addrspace(4)* %add.ptr66.1.9, align 4
-  %add.ptr66.2.9 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3081
-  %i51 = load float, float addrspace(4)* %add.ptr66.2.9, align 4
-  %add.ptr70.9 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 10
-  %i52 = load float, float addrspace(4)* %add.ptr70.9, align 4
-  %add.ptr66.10 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1034
-  %i53 = load float, float addrspace(4)* %add.ptr66.10, align 4
-  %add.ptr66.1.10 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2058
-  %i54 = load float, float addrspace(4)* %add.ptr66.1.10, align 4
-  %add.ptr66.2.10 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3082
-  %i55 = load float, float addrspace(4)* %add.ptr66.2.10, align 4
-  %add.ptr70.10 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 11
-  %i56 = load float, float addrspace(4)* %add.ptr70.10, align 4
-  %add.ptr66.11 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1035
-  %i57 = load float, float addrspace(4)* %add.ptr66.11, align 4
-  %add.ptr66.1.11 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2059
-  %i58 = load float, float addrspace(4)* %add.ptr66.1.11, align 4
-  %add.ptr66.2.11 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3083
-  %i59 = load float, float addrspace(4)* %add.ptr66.2.11, align 4
-  %add.ptr70.11 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 12
-  %i60 = load float, float addrspace(4)* %add.ptr70.11, align 4
-  %add.ptr66.12 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1036
-  %i61 = load float, float addrspace(4)* %add.ptr66.12, align 4
-  %add.ptr66.1.12 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2060
-  %i62 = load float, float addrspace(4)* %add.ptr66.1.12, align 4
-  %add.ptr66.2.12 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3084
-  %i63 = load float, float addrspace(4)* %add.ptr66.2.12, align 4
-  %add.ptr70.12 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 13
-  %i64 = load float, float addrspace(4)* %add.ptr70.12, align 4
-  %add.ptr66.13 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1037
-  %i65 = load float, float addrspace(4)* %add.ptr66.13, align 4
-  %add.ptr66.1.13 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2061
-  %i66 = load float, float addrspace(4)* %add.ptr66.1.13, align 4
-  %add.ptr66.2.13 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3085
-  %i67 = load float, float addrspace(4)* %add.ptr66.2.13, align 4
-  %add.ptr70.13 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 14
-  %i68 = load float, float addrspace(4)* %add.ptr70.13, align 4
-  %add.ptr66.14 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1038
-  %i69 = load float, float addrspace(4)* %add.ptr66.14, align 4
-  %add.ptr66.1.14 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2062
-  %i70 = load float, float addrspace(4)* %add.ptr66.1.14, align 4
-  %add.ptr66.2.14 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3086
-  %i71 = load float, float addrspace(4)* %add.ptr66.2.14, align 4
-  %add.ptr70.14 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 15
-  %i72 = load float, float addrspace(4)* %add.ptr70.14, align 4
-  %add.ptr66.15 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1039
-  %i73 = load float, float addrspace(4)* %add.ptr66.15, align 4
-  %add.ptr66.1.15 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2063
-  %i74 = load float, float addrspace(4)* %add.ptr66.1.15, align 4
-  %add.ptr66.2.15 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3087
-  %i75 = load float, float addrspace(4)* %add.ptr66.2.15, align 4
-  %add.ptr70.15 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 16
-  %i76 = load float, float addrspace(4)* %add.ptr70.15, align 4
-  %add.ptr66.16 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1040
-  %i77 = load float, float addrspace(4)* %add.ptr66.16, align 4
-  %add.ptr66.1.16 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2064
-  %i78 = load float, float addrspace(4)* %add.ptr66.1.16, align 4
-  %add.ptr66.2.16 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3088
-  %i79 = load float, float addrspace(4)* %add.ptr66.2.16, align 4
-  %add.ptr70.16 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 17
-  %i80 = load float, float addrspace(4)* %add.ptr70.16, align 4
-  %add.ptr66.17 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1041
-  %i81 = load float, float addrspace(4)* %add.ptr66.17, align 4
-  %add.ptr66.1.17 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2065
-  %i82 = load float, float addrspace(4)* %add.ptr66.1.17, align 4
-  %add.ptr66.2.17 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3089
-  %i83 = load float, float addrspace(4)* %add.ptr66.2.17, align 4
-  %add.ptr70.17 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 18
-  %i84 = load float, float addrspace(4)* %add.ptr70.17, align 4
-  %add.ptr66.18 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1042
-  %i85 = load float, float addrspace(4)* %add.ptr66.18, align 4
-  %add.ptr66.1.18 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2066
-  %i86 = load float, float addrspace(4)* %add.ptr66.1.18, align 4
-  %add.ptr66.2.18 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3090
-  %i87 = load float, float addrspace(4)* %add.ptr66.2.18, align 4
-  %add.ptr70.18 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 19
-  %i88 = load float, float addrspace(4)* %add.ptr70.18, align 4
-  %add.ptr66.19 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1043
-  %i89 = load float, float addrspace(4)* %add.ptr66.19, align 4
-  %add.ptr66.1.19 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2067
-  %i90 = load float, float addrspace(4)* %add.ptr66.1.19, align 4
-  %add.ptr66.2.19 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3091
-  %i91 = load float, float addrspace(4)* %add.ptr66.2.19, align 4
-  %add.ptr70.19 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 20
-  %i92 = load float, float addrspace(4)* %add.ptr70.19, align 4
-  %add.ptr66.20 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1044
-  %i93 = load float, float addrspace(4)* %add.ptr66.20, align 4
-  %add.ptr66.1.20 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2068
-  %i94 = load float, float addrspace(4)* %add.ptr66.1.20, align 4
-  %add.ptr66.2.20 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3092
-  %i95 = load float, float addrspace(4)* %add.ptr66.2.20, align 4
-  %add.ptr70.20 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 21
-  %i96 = load float, float addrspace(4)* %add.ptr70.20, align 4
-  %add.ptr66.21 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1045
-  %i97 = load float, float addrspace(4)* %add.ptr66.21, align 4
-  %add.ptr66.1.21 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2069
-  %i98 = load float, float addrspace(4)* %add.ptr66.1.21, align 4
-  %add.ptr66.2.21 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3093
-  %i99 = load float, float addrspace(4)* %add.ptr66.2.21, align 4
-  %add.ptr70.21 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 22
-  %i100 = load float, float addrspace(4)* %add.ptr70.21, align 4
-  %add.ptr66.22 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1046
-  %i101 = load float, float addrspace(4)* %add.ptr66.22, align 4
-  %add.ptr66.1.22 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2070
-  %i102 = load float, float addrspace(4)* %add.ptr66.1.22, align 4
-  %add.ptr66.2.22 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3094
-  %i103 = load float, float addrspace(4)* %add.ptr66.2.22, align 4
-  %add.ptr70.22 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 23
-  %i104 = load float, float addrspace(4)* %add.ptr70.22, align 4
-  %add.ptr66.23 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1047
-  %i105 = load float, float addrspace(4)* %add.ptr66.23, align 4
-  %add.ptr66.1.23 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2071
-  %i106 = load float, float addrspace(4)* %add.ptr66.1.23, align 4
-  %add.ptr66.2.23 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3095
-  %i107 = load float, float addrspace(4)* %add.ptr66.2.23, align 4
-  %add.ptr70.23 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 24
-  %i108 = load float, float addrspace(4)* %add.ptr70.23, align 4
-  %add.ptr66.24 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1048
-  %i109 = load float, float addrspace(4)* %add.ptr66.24, align 4
-  %add.ptr66.1.24 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2072
-  %i110 = load float, float addrspace(4)* %add.ptr66.1.24, align 4
-  %add.ptr66.2.24 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3096
-  %i111 = load float, float addrspace(4)* %add.ptr66.2.24, align 4
-  %add.ptr70.24 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 25
-  %i112 = load float, float addrspace(4)* %add.ptr70.24, align 4
-  %add.ptr66.25 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1049
-  %i113 = load float, float addrspace(4)* %add.ptr66.25, align 4
-  %add.ptr66.1.25 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2073
-  %i114 = load float, float addrspace(4)* %add.ptr66.1.25, align 4
-  %add.ptr66.2.25 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3097
-  %i115 = load float, float addrspace(4)* %add.ptr66.2.25, align 4
-  %add.ptr70.25 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 26
-  %i116 = load float, float addrspace(4)* %add.ptr70.25, align 4
-  %add.ptr66.26 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1050
-  %i117 = load float, float addrspace(4)* %add.ptr66.26, align 4
-  %add.ptr66.1.26 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2074
-  %i118 = load float, float addrspace(4)* %add.ptr66.1.26, align 4
-  %add.ptr66.2.26 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3098
-  %i119 = load float, float addrspace(4)* %add.ptr66.2.26, align 4
-  %add.ptr70.26 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 27
-  %i120 = load float, float addrspace(4)* %add.ptr70.26, align 4
-  %add.ptr66.27 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1051
-  %i121 = load float, float addrspace(4)* %add.ptr66.27, align 4
-  %add.ptr66.1.27 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2075
-  %i122 = load float, float addrspace(4)* %add.ptr66.1.27, align 4
-  %add.ptr66.2.27 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3099
-  %i123 = load float, float addrspace(4)* %add.ptr66.2.27, align 4
-  %add.ptr70.27 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 28
-  %i124 = load float, float addrspace(4)* %add.ptr70.27, align 4
-  %add.ptr66.28 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1052
-  %i125 = load float, float addrspace(4)* %add.ptr66.28, align 4
-  %add.ptr66.1.28 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2076
-  %i126 = load float, float addrspace(4)* %add.ptr66.1.28, align 4
-  %add.ptr66.2.28 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3100
-  %i127 = load float, float addrspace(4)* %add.ptr66.2.28, align 4
-  %add.ptr70.28 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 29
-  %i128 = load float, float addrspace(4)* %add.ptr70.28, align 4
-  %add.ptr66.29 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1053
-  %i129 = load float, float addrspace(4)* %add.ptr66.29, align 4
-  %add.ptr66.1.29 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2077
-  %i130 = load float, float addrspace(4)* %add.ptr66.1.29, align 4
-  %add.ptr66.2.29 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3101
-  %i131 = load float, float addrspace(4)* %add.ptr66.2.29, align 4
-  %add.ptr70.29 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 30
-  %i132 = load float, float addrspace(4)* %add.ptr70.29, align 4
-  %add.ptr66.30 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1054
-  %i133 = load float, float addrspace(4)* %add.ptr66.30, align 4
-  %add.ptr66.1.30 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2078
-  %i134 = load float, float addrspace(4)* %add.ptr66.1.30, align 4
-  %add.ptr66.2.30 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3102
-  %i135 = load float, float addrspace(4)* %add.ptr66.2.30, align 4
-  %add.ptr70.30 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 31
-  %i136 = load float, float addrspace(4)* %add.ptr70.30, align 4
-  %add.ptr66.31 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 1055
-  %i137 = load float, float addrspace(4)* %add.ptr66.31, align 4
-  %add.ptr66.1.31 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 2079
-  %i138 = load float, float addrspace(4)* %add.ptr66.1.31, align 4
-  %add.ptr66.2.31 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 3103
-  %i139 = load float, float addrspace(4)* %add.ptr66.2.31, align 4
-  %add.ptr47.3 = getelementptr inbounds float, float addrspace(1)* %i_ptr.0288, i64 196
+  %i8 = load float, ptr addrspace(1) %i_ptr.0288, align 4
+  %add.ptr47 = getelementptr inbounds float, ptr addrspace(1) %i_ptr.0288, i64 49
+  %i9 = load float, ptr addrspace(1) %add.ptr47, align 4
+  %add.ptr47.1 = getelementptr inbounds float, ptr addrspace(1) %i_ptr.0288, i64 98
+  %i10 = load float, ptr addrspace(1) %add.ptr47.1, align 4
+  %add.ptr47.2 = getelementptr inbounds float, ptr addrspace(1) %i_ptr.0288, i64 147
+  %i11 = load float, ptr addrspace(1) %add.ptr47.2, align 4
+  %i12 = load float, ptr addrspace(4) %w_ptr.0287, align 4
+  %add.ptr66 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1024
+  %i13 = load float, ptr addrspace(4) %add.ptr66, align 4
+  %add.ptr66.1 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2048
+  %i14 = load float, ptr addrspace(4) %add.ptr66.1, align 4
+  %add.ptr66.2 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3072
+  %i15 = load float, ptr addrspace(4) %add.ptr66.2, align 4
+  %add.ptr70 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1
+  %i16 = load float, ptr addrspace(4) %add.ptr70, align 4
+  %add.ptr66.1291 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1025
+  %i17 = load float, ptr addrspace(4) %add.ptr66.1291, align 4
+  %add.ptr66.1.1 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2049
+  %i18 = load float, ptr addrspace(4) %add.ptr66.1.1, align 4
+  %add.ptr66.2.1 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3073
+  %i19 = load float, ptr addrspace(4) %add.ptr66.2.1, align 4
+  %add.ptr70.1 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2
+  %i20 = load float, ptr addrspace(4) %add.ptr70.1, align 4
+  %add.ptr66.2293 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1026
+  %i21 = load float, ptr addrspace(4) %add.ptr66.2293, align 4
+  %add.ptr66.1.2 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2050
+  %i22 = load float, ptr addrspace(4) %add.ptr66.1.2, align 4
+  %add.ptr66.2.2 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3074
+  %i23 = load float, ptr addrspace(4) %add.ptr66.2.2, align 4
+  %add.ptr70.2 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3
+  %i24 = load float, ptr addrspace(4) %add.ptr70.2, align 4
+  %add.ptr66.3 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1027
+  %i25 = load float, ptr addrspace(4) %add.ptr66.3, align 4
+  %add.ptr66.1.3 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2051
+  %i26 = load float, ptr addrspace(4) %add.ptr66.1.3, align 4
+  %add.ptr66.2.3 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3075
+  %i27 = load float, ptr addrspace(4) %add.ptr66.2.3, align 4
+  %add.ptr70.3 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 4
+  %i28 = load float, ptr addrspace(4) %add.ptr70.3, align 4
+  %add.ptr66.4 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1028
+  %i29 = load float, ptr addrspace(4) %add.ptr66.4, align 4
+  %add.ptr66.1.4 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2052
+  %i30 = load float, ptr addrspace(4) %add.ptr66.1.4, align 4
+  %add.ptr66.2.4 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3076
+  %i31 = load float, ptr addrspace(4) %add.ptr66.2.4, align 4
+  %add.ptr70.4 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 5
+  %i32 = load float, ptr addrspace(4) %add.ptr70.4, align 4
+  %add.ptr66.5 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1029
+  %i33 = load float, ptr addrspace(4) %add.ptr66.5, align 4
+  %add.ptr66.1.5 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2053
+  %i34 = load float, ptr addrspace(4) %add.ptr66.1.5, align 4
+  %add.ptr66.2.5 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3077
+  %i35 = load float, ptr addrspace(4) %add.ptr66.2.5, align 4
+  %add.ptr70.5 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 6
+  %i36 = load float, ptr addrspace(4) %add.ptr70.5, align 4
+  %add.ptr66.6 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1030
+  %i37 = load float, ptr addrspace(4) %add.ptr66.6, align 4
+  %add.ptr66.1.6 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2054
+  %i38 = load float, ptr addrspace(4) %add.ptr66.1.6, align 4
+  %add.ptr66.2.6 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3078
+  %i39 = load float, ptr addrspace(4) %add.ptr66.2.6, align 4
+  %add.ptr70.6 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 7
+  %i40 = load float, ptr addrspace(4) %add.ptr70.6, align 4
+  %add.ptr66.7 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1031
+  %i41 = load float, ptr addrspace(4) %add.ptr66.7, align 4
+  %add.ptr66.1.7 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2055
+  %i42 = load float, ptr addrspace(4) %add.ptr66.1.7, align 4
+  %add.ptr66.2.7 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3079
+  %i43 = load float, ptr addrspace(4) %add.ptr66.2.7, align 4
+  %add.ptr70.7 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 8
+  %i44 = load float, ptr addrspace(4) %add.ptr70.7, align 4
+  %add.ptr66.8 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1032
+  %i45 = load float, ptr addrspace(4) %add.ptr66.8, align 4
+  %add.ptr66.1.8 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2056
+  %i46 = load float, ptr addrspace(4) %add.ptr66.1.8, align 4
+  %add.ptr66.2.8 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3080
+  %i47 = load float, ptr addrspace(4) %add.ptr66.2.8, align 4
+  %add.ptr70.8 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 9
+  %i48 = load float, ptr addrspace(4) %add.ptr70.8, align 4
+  %add.ptr66.9 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1033
+  %i49 = load float, ptr addrspace(4) %add.ptr66.9, align 4
+  %add.ptr66.1.9 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2057
+  %i50 = load float, ptr addrspace(4) %add.ptr66.1.9, align 4
+  %add.ptr66.2.9 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3081
+  %i51 = load float, ptr addrspace(4) %add.ptr66.2.9, align 4
+  %add.ptr70.9 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 10
+  %i52 = load float, ptr addrspace(4) %add.ptr70.9, align 4
+  %add.ptr66.10 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1034
+  %i53 = load float, ptr addrspace(4) %add.ptr66.10, align 4
+  %add.ptr66.1.10 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2058
+  %i54 = load float, ptr addrspace(4) %add.ptr66.1.10, align 4
+  %add.ptr66.2.10 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3082
+  %i55 = load float, ptr addrspace(4) %add.ptr66.2.10, align 4
+  %add.ptr70.10 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 11
+  %i56 = load float, ptr addrspace(4) %add.ptr70.10, align 4
+  %add.ptr66.11 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1035
+  %i57 = load float, ptr addrspace(4) %add.ptr66.11, align 4
+  %add.ptr66.1.11 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2059
+  %i58 = load float, ptr addrspace(4) %add.ptr66.1.11, align 4
+  %add.ptr66.2.11 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3083
+  %i59 = load float, ptr addrspace(4) %add.ptr66.2.11, align 4
+  %add.ptr70.11 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 12
+  %i60 = load float, ptr addrspace(4) %add.ptr70.11, align 4
+  %add.ptr66.12 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1036
+  %i61 = load float, ptr addrspace(4) %add.ptr66.12, align 4
+  %add.ptr66.1.12 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2060
+  %i62 = load float, ptr addrspace(4) %add.ptr66.1.12, align 4
+  %add.ptr66.2.12 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3084
+  %i63 = load float, ptr addrspace(4) %add.ptr66.2.12, align 4
+  %add.ptr70.12 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 13
+  %i64 = load float, ptr addrspace(4) %add.ptr70.12, align 4
+  %add.ptr66.13 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1037
+  %i65 = load float, ptr addrspace(4) %add.ptr66.13, align 4
+  %add.ptr66.1.13 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2061
+  %i66 = load float, ptr addrspace(4) %add.ptr66.1.13, align 4
+  %add.ptr66.2.13 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3085
+  %i67 = load float, ptr addrspace(4) %add.ptr66.2.13, align 4
+  %add.ptr70.13 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 14
+  %i68 = load float, ptr addrspace(4) %add.ptr70.13, align 4
+  %add.ptr66.14 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1038
+  %i69 = load float, ptr addrspace(4) %add.ptr66.14, align 4
+  %add.ptr66.1.14 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2062
+  %i70 = load float, ptr addrspace(4) %add.ptr66.1.14, align 4
+  %add.ptr66.2.14 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3086
+  %i71 = load float, ptr addrspace(4) %add.ptr66.2.14, align 4
+  %add.ptr70.14 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 15
+  %i72 = load float, ptr addrspace(4) %add.ptr70.14, align 4
+  %add.ptr66.15 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1039
+  %i73 = load float, ptr addrspace(4) %add.ptr66.15, align 4
+  %add.ptr66.1.15 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2063
+  %i74 = load float, ptr addrspace(4) %add.ptr66.1.15, align 4
+  %add.ptr66.2.15 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3087
+  %i75 = load float, ptr addrspace(4) %add.ptr66.2.15, align 4
+  %add.ptr70.15 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 16
+  %i76 = load float, ptr addrspace(4) %add.ptr70.15, align 4
+  %add.ptr66.16 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1040
+  %i77 = load float, ptr addrspace(4) %add.ptr66.16, align 4
+  %add.ptr66.1.16 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2064
+  %i78 = load float, ptr addrspace(4) %add.ptr66.1.16, align 4
+  %add.ptr66.2.16 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3088
+  %i79 = load float, ptr addrspace(4) %add.ptr66.2.16, align 4
+  %add.ptr70.16 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 17
+  %i80 = load float, ptr addrspace(4) %add.ptr70.16, align 4
+  %add.ptr66.17 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1041
+  %i81 = load float, ptr addrspace(4) %add.ptr66.17, align 4
+  %add.ptr66.1.17 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2065
+  %i82 = load float, ptr addrspace(4) %add.ptr66.1.17, align 4
+  %add.ptr66.2.17 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3089
+  %i83 = load float, ptr addrspace(4) %add.ptr66.2.17, align 4
+  %add.ptr70.17 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 18
+  %i84 = load float, ptr addrspace(4) %add.ptr70.17, align 4
+  %add.ptr66.18 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1042
+  %i85 = load float, ptr addrspace(4) %add.ptr66.18, align 4
+  %add.ptr66.1.18 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2066
+  %i86 = load float, ptr addrspace(4) %add.ptr66.1.18, align 4
+  %add.ptr66.2.18 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3090
+  %i87 = load float, ptr addrspace(4) %add.ptr66.2.18, align 4
+  %add.ptr70.18 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 19
+  %i88 = load float, ptr addrspace(4) %add.ptr70.18, align 4
+  %add.ptr66.19 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1043
+  %i89 = load float, ptr addrspace(4) %add.ptr66.19, align 4
+  %add.ptr66.1.19 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2067
+  %i90 = load float, ptr addrspace(4) %add.ptr66.1.19, align 4
+  %add.ptr66.2.19 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3091
+  %i91 = load float, ptr addrspace(4) %add.ptr66.2.19, align 4
+  %add.ptr70.19 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 20
+  %i92 = load float, ptr addrspace(4) %add.ptr70.19, align 4
+  %add.ptr66.20 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1044
+  %i93 = load float, ptr addrspace(4) %add.ptr66.20, align 4
+  %add.ptr66.1.20 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2068
+  %i94 = load float, ptr addrspace(4) %add.ptr66.1.20, align 4
+  %add.ptr66.2.20 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3092
+  %i95 = load float, ptr addrspace(4) %add.ptr66.2.20, align 4
+  %add.ptr70.20 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 21
+  %i96 = load float, ptr addrspace(4) %add.ptr70.20, align 4
+  %add.ptr66.21 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1045
+  %i97 = load float, ptr addrspace(4) %add.ptr66.21, align 4
+  %add.ptr66.1.21 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2069
+  %i98 = load float, ptr addrspace(4) %add.ptr66.1.21, align 4
+  %add.ptr66.2.21 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3093
+  %i99 = load float, ptr addrspace(4) %add.ptr66.2.21, align 4
+  %add.ptr70.21 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 22
+  %i100 = load float, ptr addrspace(4) %add.ptr70.21, align 4
+  %add.ptr66.22 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1046
+  %i101 = load float, ptr addrspace(4) %add.ptr66.22, align 4
+  %add.ptr66.1.22 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2070
+  %i102 = load float, ptr addrspace(4) %add.ptr66.1.22, align 4
+  %add.ptr66.2.22 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3094
+  %i103 = load float, ptr addrspace(4) %add.ptr66.2.22, align 4
+  %add.ptr70.22 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 23
+  %i104 = load float, ptr addrspace(4) %add.ptr70.22, align 4
+  %add.ptr66.23 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1047
+  %i105 = load float, ptr addrspace(4) %add.ptr66.23, align 4
+  %add.ptr66.1.23 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2071
+  %i106 = load float, ptr addrspace(4) %add.ptr66.1.23, align 4
+  %add.ptr66.2.23 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3095
+  %i107 = load float, ptr addrspace(4) %add.ptr66.2.23, align 4
+  %add.ptr70.23 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 24
+  %i108 = load float, ptr addrspace(4) %add.ptr70.23, align 4
+  %add.ptr66.24 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1048
+  %i109 = load float, ptr addrspace(4) %add.ptr66.24, align 4
+  %add.ptr66.1.24 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2072
+  %i110 = load float, ptr addrspace(4) %add.ptr66.1.24, align 4
+  %add.ptr66.2.24 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3096
+  %i111 = load float, ptr addrspace(4) %add.ptr66.2.24, align 4
+  %add.ptr70.24 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 25
+  %i112 = load float, ptr addrspace(4) %add.ptr70.24, align 4
+  %add.ptr66.25 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1049
+  %i113 = load float, ptr addrspace(4) %add.ptr66.25, align 4
+  %add.ptr66.1.25 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2073
+  %i114 = load float, ptr addrspace(4) %add.ptr66.1.25, align 4
+  %add.ptr66.2.25 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3097
+  %i115 = load float, ptr addrspace(4) %add.ptr66.2.25, align 4
+  %add.ptr70.25 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 26
+  %i116 = load float, ptr addrspace(4) %add.ptr70.25, align 4
+  %add.ptr66.26 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1050
+  %i117 = load float, ptr addrspace(4) %add.ptr66.26, align 4
+  %add.ptr66.1.26 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2074
+  %i118 = load float, ptr addrspace(4) %add.ptr66.1.26, align 4
+  %add.ptr66.2.26 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3098
+  %i119 = load float, ptr addrspace(4) %add.ptr66.2.26, align 4
+  %add.ptr70.26 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 27
+  %i120 = load float, ptr addrspace(4) %add.ptr70.26, align 4
+  %add.ptr66.27 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1051
+  %i121 = load float, ptr addrspace(4) %add.ptr66.27, align 4
+  %add.ptr66.1.27 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2075
+  %i122 = load float, ptr addrspace(4) %add.ptr66.1.27, align 4
+  %add.ptr66.2.27 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3099
+  %i123 = load float, ptr addrspace(4) %add.ptr66.2.27, align 4
+  %add.ptr70.27 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 28
+  %i124 = load float, ptr addrspace(4) %add.ptr70.27, align 4
+  %add.ptr66.28 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1052
+  %i125 = load float, ptr addrspace(4) %add.ptr66.28, align 4
+  %add.ptr66.1.28 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2076
+  %i126 = load float, ptr addrspace(4) %add.ptr66.1.28, align 4
+  %add.ptr66.2.28 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3100
+  %i127 = load float, ptr addrspace(4) %add.ptr66.2.28, align 4
+  %add.ptr70.28 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 29
+  %i128 = load float, ptr addrspace(4) %add.ptr70.28, align 4
+  %add.ptr66.29 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1053
+  %i129 = load float, ptr addrspace(4) %add.ptr66.29, align 4
+  %add.ptr66.1.29 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2077
+  %i130 = load float, ptr addrspace(4) %add.ptr66.1.29, align 4
+  %add.ptr66.2.29 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3101
+  %i131 = load float, ptr addrspace(4) %add.ptr66.2.29, align 4
+  %add.ptr70.29 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 30
+  %i132 = load float, ptr addrspace(4) %add.ptr70.29, align 4
+  %add.ptr66.30 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1054
+  %i133 = load float, ptr addrspace(4) %add.ptr66.30, align 4
+  %add.ptr66.1.30 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2078
+  %i134 = load float, ptr addrspace(4) %add.ptr66.1.30, align 4
+  %add.ptr66.2.30 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3102
+  %i135 = load float, ptr addrspace(4) %add.ptr66.2.30, align 4
+  %add.ptr70.30 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 31
+  %i136 = load float, ptr addrspace(4) %add.ptr70.30, align 4
+  %add.ptr66.31 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 1055
+  %i137 = load float, ptr addrspace(4) %add.ptr66.31, align 4
+  %add.ptr66.1.31 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 2079
+  %i138 = load float, ptr addrspace(4) %add.ptr66.1.31, align 4
+  %add.ptr66.2.31 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 3103
+  %i139 = load float, ptr addrspace(4) %add.ptr66.2.31, align 4
+  %add.ptr47.3 = getelementptr inbounds float, ptr addrspace(1) %i_ptr.0288, i64 196
   %i140 = tail call float @llvm.fmuladd.f32(float %i8, float %i12, float %accum.sroa.0.0)
   %i141 = tail call float @llvm.fmuladd.f32(float %i9, float %i13, float %i140)
   %i142 = tail call float @llvm.fmuladd.f32(float %i10, float %i14, float %i141)
@@ -466,7 +465,7 @@ for.cond28.preheader:                             ; preds = %for.cond28.preheade
   %i265 = tail call float @llvm.fmuladd.f32(float %i9, float %i137, float %i264)
   %i266 = tail call float @llvm.fmuladd.f32(float %i10, float %i138, float %i265)
   %i267 = tail call float @llvm.fmuladd.f32(float %i11, float %i139, float %i266)
-  %add.ptr74 = getelementptr inbounds float, float addrspace(4)* %w_ptr.0287, i64 4096
+  %add.ptr74 = getelementptr inbounds float, ptr addrspace(4) %w_ptr.0287, i64 4096
   %inc116 = add nuw nsw i32 %ci.0286, 1
   %exitcond.not = icmp eq i32 %inc116, 512
   br i1 %exitcond.not, label %for.cond.cleanup26, label %for.cond28.preheader
@@ -480,96 +479,96 @@ for.cond.cleanup26:                               ; preds = %for.cond28.preheade
   %add124 = add i32 %add122, %mul123
   %add126 = add i32 %add124, %mul119
   %idx.ext127 = zext i32 %add126 to i64
-  %add.ptr128 = getelementptr inbounds float, float addrspace(1)* %out_ptr, i64 %idx.ext127
-  store float %i143, float addrspace(1)* %add.ptr128, align 4
-  %add.ptr184 = getelementptr inbounds float, float addrspace(1)* %add.ptr128, i64 196
-  store float %i147, float addrspace(1)* %add.ptr184, align 4
-  %add.ptr167.1 = getelementptr inbounds float, float addrspace(1)* %add.ptr184, i64 14
-  store float 0.000000e+00, float addrspace(1)* %add.ptr167.1, align 4
-  %add.ptr175.1.1 = getelementptr inbounds float, float addrspace(1)* %add.ptr167.1, i64 1
-  store float 0.000000e+00, float addrspace(1)* %add.ptr175.1.1, align 4
-  %add.ptr184.1 = getelementptr inbounds float, float addrspace(1)* %add.ptr184, i64 196
-  store float %i151, float addrspace(1)* %add.ptr184.1, align 4
-  %add.ptr184.2 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.1, i64 196
-  store float %i155, float addrspace(1)* %add.ptr184.2, align 4
-  %add.ptr184.3 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.2, i64 196
-  store float %i159, float addrspace(1)* %add.ptr184.3, align 4
-  %add.ptr184.4 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.3, i64 196
-  store float %i163, float addrspace(1)* %add.ptr184.4, align 4
-  %add.ptr154.5 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.4, i64 1
-  store float 0.000000e+00, float addrspace(1)* %add.ptr154.5, align 4
-  %add.ptr184.5 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.4, i64 196
-  store float %i167, float addrspace(1)* %add.ptr184.5, align 4
-  %add.ptr154.6 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.5, i64 1
-  store float 0.000000e+00, float addrspace(1)* %add.ptr154.6, align 4
-  %add.ptr184.6 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.5, i64 196
-  store float %i171, float addrspace(1)* %add.ptr184.6, align 4
-  %add.ptr184.7 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.6, i64 196
-  store float %i175, float addrspace(1)* %add.ptr184.7, align 4
-  %add.ptr167.8 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.7, i64 14
-  store float 0.000000e+00, float addrspace(1)* %add.ptr167.8, align 4
-  %add.ptr175.1.8 = getelementptr inbounds float, float addrspace(1)* %add.ptr167.8, i64 1
-  store float 0.000000e+00, float addrspace(1)* %add.ptr175.1.8, align 4
-  %add.ptr184.8 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.7, i64 196
-  store float %i179, float addrspace(1)* %add.ptr184.8, align 4
-  %add.ptr184.9 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.8, i64 196
-  store float %i183, float addrspace(1)* %add.ptr184.9, align 4
-  %add.ptr184.10 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.9, i64 196
-  store float %i187, float addrspace(1)* %add.ptr184.10, align 4
-  %add.ptr184.11 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.10, i64 196
-  store float %i191, float addrspace(1)* %add.ptr184.11, align 4
-  %add.ptr184.12 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.11, i64 196
-  store float %i195, float addrspace(1)* %add.ptr184.12, align 4
-  %add.ptr184.13 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.12, i64 196
-  store float %i199, float addrspace(1)* %add.ptr184.13, align 4
-  %add.ptr184.14 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.13, i64 196
-  store float %i203, float addrspace(1)* %add.ptr184.14, align 4
-  %add.ptr184.15 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.14, i64 196
-  store float %i207, float addrspace(1)* %add.ptr184.15, align 4
-  %add.ptr184.16 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.15, i64 196
-  store float %i211, float addrspace(1)* %add.ptr184.16, align 4
-  %add.ptr184.17 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.16, i64 196
-  store float %i215, float addrspace(1)* %add.ptr184.17, align 4
-  %add.ptr184.18 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.17, i64 196
-  store float %i219, float addrspace(1)* %add.ptr184.18, align 4
-  %add.ptr184.19 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.18, i64 196
-  store float %i223, float addrspace(1)* %add.ptr184.19, align 4
-  %add.ptr184.20 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.19, i64 196
-  store float %i227, float addrspace(1)* %add.ptr184.20, align 4
-  %add.ptr184.21 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.20, i64 196
-  store float %i231, float addrspace(1)* %add.ptr184.21, align 4
-  %add.ptr184.22 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.21, i64 196
-  store float %i235, float addrspace(1)* %add.ptr184.22, align 4
-  %add.ptr184.23 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.22, i64 196
-  store float %i239, float addrspace(1)* %add.ptr184.23, align 4
-  %add.ptr184.24 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.23, i64 196
-  store float %i243, float addrspace(1)* %add.ptr184.24, align 4
-  %add.ptr184.25 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.24, i64 196
-  store float %i247, float addrspace(1)* %add.ptr184.25, align 4
-  %add.ptr184.26 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.25, i64 196
-  store float %i251, float addrspace(1)* %add.ptr184.26, align 4
-  %add.ptr184.27 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.26, i64 196
-  store float %i255, float addrspace(1)* %add.ptr184.27, align 4
-  %add.ptr184.28 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.27, i64 196
-  store float %i259, float addrspace(1)* %add.ptr184.28, align 4
-  %add.ptr184.29 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.28, i64 196
-  store float %i263, float addrspace(1)* %add.ptr184.29, align 4
-  %add.ptr184.30 = getelementptr inbounds float, float addrspace(1)* %add.ptr184.29, i64 196
-  store float %i267, float addrspace(1)* %add.ptr184.30, align 4
+  %add.ptr128 = getelementptr inbounds float, ptr addrspace(1) %out_ptr, i64 %idx.ext127
+  store float %i143, ptr addrspace(1) %add.ptr128, align 4
+  %add.ptr184 = getelementptr inbounds float, ptr addrspace(1) %add.ptr128, i64 196
+  store float %i147, ptr addrspace(1) %add.ptr184, align 4
+  %add.ptr167.1 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184, i64 14
+  store float 0.000000e+00, ptr addrspace(1) %add.ptr167.1, align 4
+  %add.ptr175.1.1 = getelementptr inbounds float, ptr addrspace(1) %add.ptr167.1, i64 1
+  store float 0.000000e+00, ptr addrspace(1) %add.ptr175.1.1, align 4
+  %add.ptr184.1 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184, i64 196
+  store float %i151, ptr addrspace(1) %add.ptr184.1, align 4
+  %add.ptr184.2 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.1, i64 196
+  store float %i155, ptr addrspace(1) %add.ptr184.2, align 4
+  %add.ptr184.3 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.2, i64 196
+  store float %i159, ptr addrspace(1) %add.ptr184.3, align 4
+  %add.ptr184.4 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.3, i64 196
+  store float %i163, ptr addrspace(1) %add.ptr184.4, align 4
+  %add.ptr154.5 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.4, i64 1
+  store float 0.000000e+00, ptr addrspace(1) %add.ptr154.5, align 4
+  %add.ptr184.5 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.4, i64 196
+  store float %i167, ptr addrspace(1) %add.ptr184.5, align 4
+  %add.ptr154.6 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.5, i64 1
+  store float 0.000000e+00, ptr addrspace(1) %add.ptr154.6, align 4
+  %add.ptr184.6 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.5, i64 196
+  store float %i171, ptr addrspace(1) %add.ptr184.6, align 4
+  %add.ptr184.7 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.6, i64 196
+  store float %i175, ptr addrspace(1) %add.ptr184.7, align 4
+  %add.ptr167.8 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.7, i64 14
+  store float 0.000000e+00, ptr addrspace(1) %add.ptr167.8, align 4
+  %add.ptr175.1.8 = getelementptr inbounds float, ptr addrspace(1) %add.ptr167.8, i64 1
+  store float 0.000000e+00, ptr addrspace(1) %add.ptr175.1.8, align 4
+  %add.ptr184.8 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.7, i64 196
+  store float %i179, ptr addrspace(1) %add.ptr184.8, align 4
+  %add.ptr184.9 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.8, i64 196
+  store float %i183, ptr addrspace(1) %add.ptr184.9, align 4
+  %add.ptr184.10 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.9, i64 196
+  store float %i187, ptr addrspace(1) %add.ptr184.10, align 4
+  %add.ptr184.11 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.10, i64 196
+  store float %i191, ptr addrspace(1) %add.ptr184.11, align 4
+  %add.ptr184.12 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.11, i64 196
+  store float %i195, ptr addrspace(1) %add.ptr184.12, align 4
+  %add.ptr184.13 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.12, i64 196
+  store float %i199, ptr addrspace(1) %add.ptr184.13, align 4
+  %add.ptr184.14 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.13, i64 196
+  store float %i203, ptr addrspace(1) %add.ptr184.14, align 4
+  %add.ptr184.15 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.14, i64 196
+  store float %i207, ptr addrspace(1) %add.ptr184.15, align 4
+  %add.ptr184.16 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.15, i64 196
+  store float %i211, ptr addrspace(1) %add.ptr184.16, align 4
+  %add.ptr184.17 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.16, i64 196
+  store float %i215, ptr addrspace(1) %add.ptr184.17, align 4
+  %add.ptr184.18 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.17, i64 196
+  store float %i219, ptr addrspace(1) %add.ptr184.18, align 4
+  %add.ptr184.19 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.18, i64 196
+  store float %i223, ptr addrspace(1) %add.ptr184.19, align 4
+  %add.ptr184.20 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.19, i64 196
+  store float %i227, ptr addrspace(1) %add.ptr184.20, align 4
+  %add.ptr184.21 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.20, i64 196
+  store float %i231, ptr addrspace(1) %add.ptr184.21, align 4
+  %add.ptr184.22 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.21, i64 196
+  store float %i235, ptr addrspace(1) %add.ptr184.22, align 4
+  %add.ptr184.23 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.22, i64 196
+  store float %i239, ptr addrspace(1) %add.ptr184.23, align 4
+  %add.ptr184.24 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.23, i64 196
+  store float %i243, ptr addrspace(1) %add.ptr184.24, align 4
+  %add.ptr184.25 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.24, i64 196
+  store float %i247, ptr addrspace(1) %add.ptr184.25, align 4
+  %add.ptr184.26 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.25, i64 196
+  store float %i251, ptr addrspace(1) %add.ptr184.26, align 4
+  %add.ptr184.27 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.26, i64 196
+  store float %i255, ptr addrspace(1) %add.ptr184.27, align 4
+  %add.ptr184.28 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.27, i64 196
+  store float %i259, ptr addrspace(1) %add.ptr184.28, align 4
+  %add.ptr184.29 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.28, i64 196
+  store float %i263, ptr addrspace(1) %add.ptr184.29, align 4
+  %add.ptr184.30 = getelementptr inbounds float, ptr addrspace(1) %add.ptr184.29, i64 196
+  store float %i267, ptr addrspace(1) %add.ptr184.30, align 4
   ret void
 }
 
 declare float @llvm.fmuladd.f32(float, float, float) #0
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
-declare align 4 i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #1
+declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
 
 attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #1 = { nounwind readnone speculatable willreturn }
 
 !0 = !{i32 1, i32 2, i32 1, i32 0}
 !1 = !{!"none", !"none", !"none", !"none"}
-!2 = !{!"float*", !"float*", !"float*", !"float"}
+!2 = !{!"ptr", !"ptr", !"ptr", !"float"}
 !3 = !{!"restrict const", !"restrict const", !"restrict", !""}
 !4 = !{i32 256, i32 1, i32 1}
 !5 = !{i32 0, i32 1024}

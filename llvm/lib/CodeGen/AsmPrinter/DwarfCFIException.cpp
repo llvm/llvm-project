@@ -23,18 +23,7 @@
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
-DwarfCFIExceptionBase::DwarfCFIExceptionBase(AsmPrinter *A) : EHStreamer(A) {}
-
-void DwarfCFIExceptionBase::markFunctionEnd() {
-  // Map all labels and get rid of any dead landing pads.
-  if (!Asm->MF->getLandingPads().empty()) {
-    MachineFunction *NonConstMF = const_cast<MachineFunction*>(Asm->MF);
-    NonConstMF->tidyLandingPads();
-  }
-}
-
-DwarfCFIException::DwarfCFIException(AsmPrinter *A)
-    : DwarfCFIExceptionBase(A) {}
+DwarfCFIException::DwarfCFIException(AsmPrinter *A) : EHStreamer(A) {}
 
 DwarfCFIException::~DwarfCFIException() = default;
 

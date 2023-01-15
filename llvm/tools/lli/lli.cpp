@@ -490,9 +490,9 @@ int main(int argc, char **argv, char * const *envp) {
   builder.setMCPU(codegen::getCPUStr());
   builder.setMAttrs(codegen::getFeatureList());
   if (auto RM = codegen::getExplicitRelocModel())
-    builder.setRelocationModel(RM.value());
+    builder.setRelocationModel(*RM);
   if (auto CM = codegen::getExplicitCodeModel())
-    builder.setCodeModel(CM.value());
+    builder.setCodeModel(*CM);
   builder.setErrorStr(&ErrorMsg);
   builder.setEngineKind(ForceInterpreter
                         ? EngineKind::Interpreter
@@ -846,7 +846,7 @@ int runOrcJIT(const char *ProgName) {
   // Get TargetTriple and DataLayout from the main module if they're explicitly
   // set.
   std::optional<Triple> TT;
-  Optional<DataLayout> DL;
+  std::optional<DataLayout> DL;
   MainModule.withModuleDo([&](Module &M) {
       if (!M.getTargetTriple().empty())
         TT = Triple(M.getTargetTriple());

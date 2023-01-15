@@ -38,7 +38,7 @@ namespace {
 
 // Query apple's `xcrun` launcher, which is the source of truth for "how should"
 // clang be invoked on this system.
-llvm::Optional<std::string> queryXcrun(llvm::ArrayRef<llvm::StringRef> Argv) {
+std::optional<std::string> queryXcrun(llvm::ArrayRef<llvm::StringRef> Argv) {
   auto Xcrun = llvm::sys::findProgramByName("xcrun");
   if (!Xcrun) {
     log("Couldn't find xcrun. Hopefully you have a non-apple toolchain...");
@@ -118,7 +118,7 @@ std::string detectClangPath() {
 
 // On mac, /usr/bin/clang sets SDKROOT and then invokes the real clang.
 // The effect of this is to set -isysroot correctly. We do the same.
-llvm::Optional<std::string> detectSysroot() {
+std::optional<std::string> detectSysroot() {
 #ifndef __APPLE__
   return std::nullopt;
 #endif
@@ -141,7 +141,7 @@ std::string detectStandardResourceDir() {
 // Where possible it should be an absolute path with sensible directory, but
 // with the original basename.
 static std::string resolveDriver(llvm::StringRef Driver, bool FollowSymlink,
-                                 llvm::Optional<std::string> ClangPath) {
+                                 std::optional<std::string> ClangPath) {
   auto SiblingOf = [&](llvm::StringRef AbsPath) {
     llvm::SmallString<128> Result = llvm::sys::path::parent_path(AbsPath);
     llvm::sys::path::append(Result, llvm::sys::path::filename(Driver));
@@ -211,7 +211,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   for (const auto &S : Cmd)
     OriginalArgs.push_back(S.c_str());
   bool IsCLMode = driver::IsClangCL(driver::getDriverMode(
-      OriginalArgs[0], llvm::makeArrayRef(OriginalArgs).slice(1)));
+      OriginalArgs[0], llvm::ArrayRef(OriginalArgs).slice(1)));
   // ParseArgs propagates missig arg/opt counts on error, but preserves
   // everything it could parse in ArgList. So we just ignore those counts.
   unsigned IgnoredCount;
@@ -219,7 +219,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   // indices are actually of by one between ArgList and OriginalArgs.
   llvm::opt::InputArgList ArgList;
   ArgList = OptTable.ParseArgs(
-      llvm::makeArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
+      llvm::ArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
       /*FlagsToInclude=*/
       IsCLMode ? (driver::options::CLOption | driver::options::CoreOption |
                   driver::options::CLDXCOption)
@@ -256,7 +256,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   // In practice only the extension of the file matters, so do this only when
   // it differs.
   llvm::StringRef FileExtension = llvm::sys::path::extension(File);
-  llvm::Optional<std::string> TransferFrom;
+  std::optional<std::string> TransferFrom;
   auto SawInput = [&](llvm::StringRef Input) {
     if (llvm::sys::path::extension(Input) != FileExtension)
       TransferFrom.emplace(Input);
@@ -466,8 +466,12 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       NextAlias[T] = Self;
     };
     // Also grab prefixes for each option, these are not fully exposed.
-    const char *const *Prefixes[DriverID::LastOption] = {nullptr};
-#define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
+    llvm::ArrayRef<llvm::StringLiteral> Prefixes[DriverID::LastOption];
+
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELP, METAVAR, VALUES)                                          \
   Prefixes[DriverID::OPT_##ID] = PREFIX;
@@ -499,7 +503,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       llvm::SmallVector<Rule> Rules;
       // Iterate over each alias, to add rules for parsing it.
       for (unsigned A = ID; A != DriverID::OPT_INVALID; A = NextAlias[A]) {
-        if (Prefixes[A] == nullptr) // option groups.
+        if (!Prefixes[A].size()) // option groups.
           continue;
         auto Opt = DriverTable.getOption(A);
         // Exclude - and -foo pseudo-options.
@@ -508,8 +512,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
         auto Modes = getModes(Opt);
         std::pair<unsigned, unsigned> ArgCount = getArgCount(Opt);
         // Iterate over each spelling of the alias, e.g. -foo vs --foo.
-        for (auto *Prefix = Prefixes[A]; *Prefix != nullptr; ++Prefix) {
-          llvm::SmallString<64> Buf(*Prefix);
+        for (StringRef Prefix : Prefixes[A]) {
+          llvm::SmallString<64> Buf(Prefix);
           Buf.append(Opt.getName());
           llvm::StringRef Spelling = Result->try_emplace(Buf).first->getKey();
           Rules.emplace_back();

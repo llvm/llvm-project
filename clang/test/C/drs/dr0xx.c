@@ -70,6 +70,9 @@
  * WG14 DR080: yes
  * Merging of string constants
  *
+ * WG14 DR085: yes
+ * Returning from main
+ *
  * WG14 DR086: yes
  * Object-like macros in system headers
  *

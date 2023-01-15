@@ -15,6 +15,7 @@
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Utility/ConstString.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
+#include <optional>
 
 namespace lldb_private {
 class DebugNamesDWARFIndex : public DWARFIndex {
@@ -77,7 +78,7 @@ private:
   std::unique_ptr<DebugNames> m_debug_names_up;
   ManualDWARFIndex m_fallback;
 
-  llvm::Optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
+  std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback,
                     llvm::StringRef name);

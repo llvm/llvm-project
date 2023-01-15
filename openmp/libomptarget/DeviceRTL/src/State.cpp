@@ -17,7 +17,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-using namespace _OMP;
+using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -221,8 +221,8 @@ void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ASSERT(HasThreadState == Other.HasThreadState);
 }
 
-state::TeamStateTy SHARED(_OMP::state::TeamState);
-state::ThreadStateTy **SHARED(_OMP::state::ThreadStates);
+state::TeamStateTy SHARED(ompx::state::TeamState);
+state::ThreadStateTy **SHARED(ompx::state::ThreadStates);
 
 namespace {
 
@@ -357,7 +357,7 @@ int omp_get_num_threads(void) {
   return omp_get_level() > 1 ? 1 : state::ParallelTeamSize;
 }
 
-int omp_get_thread_limit(void) { return mapping::getKernelSize(); }
+int omp_get_thread_limit(void) { return mapping::getBlockSize(); }
 
 int omp_get_num_procs(void) { return mapping::getNumberOfProcessorElements(); }
 

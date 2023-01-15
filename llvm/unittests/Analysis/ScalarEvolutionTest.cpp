@@ -58,11 +58,11 @@ protected:
     Test(*F, *LI, SE);
   }
 
-  static Optional<APInt> computeConstantDifference(ScalarEvolution &SE,
-                                                   const SCEV *LHS,
-                                                   const SCEV *RHS) {
-    return SE.computeConstantDifference(LHS, RHS);
-  }
+static std::optional<APInt> computeConstantDifference(ScalarEvolution &SE,
+                                                      const SCEV *LHS,
+                                                      const SCEV *RHS) {
+  return SE.computeConstantDifference(LHS, RHS);
+}
 
   static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, const SCEV *&LHS,
                         const SCEV *&RHS) {
@@ -1148,7 +1148,7 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     auto *ScevXB = SE.getSCEV(getInstructionByName(F, "xb")); // {%pp,+,1}
     auto *ScevIVNext = SE.getSCEV(getInstructionByName(F, "iv.next")); // {1,+,1}
 
-    auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> Optional<int> {
+    auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> std::optional<int> {
       auto ConstantDiffOrNone = computeConstantDifference(SE, LHS, RHS);
       if (!ConstantDiffOrNone)
         return std::nullopt;

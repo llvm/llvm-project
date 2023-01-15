@@ -4,49 +4,49 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
-define <4 x i32> @load_v4i32_align1(<4 x i32>* %ptr) {
+define <4 x i32> @load_v4i32_align1(ptr %ptr) {
 ; CHECK-LABEL: load_v4i32_align1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %z = load <4 x i32>, <4 x i32>* %ptr, align 1
+  %z = load <4 x i32>, ptr %ptr, align 1
   ret <4 x i32> %z
 }
 
-define <4 x i32> @load_v4i32_align2(<4 x i32>* %ptr) {
+define <4 x i32> @load_v4i32_align2(ptr %ptr) {
 ; CHECK-LABEL: load_v4i32_align2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %z = load <4 x i32>, <4 x i32>* %ptr, align 2
+  %z = load <4 x i32>, ptr %ptr, align 2
   ret <4 x i32> %z
 }
 
-define void @store_v4i32_align1(<4 x i32> %x, <4 x i32>* %ptr) {
+define void @store_v4i32_align1(<4 x i32> %x, ptr %ptr) {
 ; CHECK-LABEL: store_v4i32_align1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <4 x i32> %x, <4 x i32>* %ptr, align 1
+  store <4 x i32> %x, ptr %ptr, align 1
   ret void
 }
 
-define void @store_v4i32_align2(<4 x i32> %x, <4 x i32>* %ptr) {
+define void @store_v4i32_align2(<4 x i32> %x, ptr %ptr) {
 ; CHECK-LABEL: store_v4i32_align2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <4 x i32> %x, <4 x i32>* %ptr, align 2
+  store <4 x i32> %x, ptr %ptr, align 2
   ret void
 }
 
-declare <2 x i16> @llvm.masked.gather.v2i16.v2p0i16(<2 x i16*>, i32, <2 x i1>, <2 x i16>)
+declare <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i16>)
 
-define <2 x i16> @mgather_v2i16_align1(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
+define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32-LABEL: mgather_v2i16_align1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
@@ -79,7 +79,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> 
 ; RV32-NEXT:    slli a1, a1, 8
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    vmv.s.x v8, a0
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV32-NEXT:    vslideup.vi v9, v8, 1
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -116,17 +116,17 @@ define <2 x i16> @mgather_v2i16_align1(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> 
 ; RV64-NEXT:    slli a1, a1, 8
 ; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    vmv.s.x v8, a0
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV64-NEXT:    vslideup.vi v9, v8, 1
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
-  %v = call <2 x i16> @llvm.masked.gather.v2i16.v2p0i16(<2 x i16*> %ptrs, i32 1, <2 x i1> %m, <2 x i16> %passthru)
+  %v = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> %ptrs, i32 1, <2 x i1> %m, <2 x i16> %passthru)
   ret <2 x i16> %v
 }
 
-declare <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*>, i32, <2 x i1>, <2 x i64>)
+declare <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i64>)
 
-define <2 x i64> @mgather_v2i64_align4(<2 x i64*> %ptrs, <2 x i1> %m, <2 x i64> %passthru) {
+define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %passthru) {
 ; RV32-LABEL: mgather_v2i64_align4:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
@@ -158,7 +158,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x i64*> %ptrs, <2 x i1> %m, <2 x i64> 
 ; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vslideup.vi v9, v8, 1
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
@@ -195,17 +195,17 @@ define <2 x i64> @mgather_v2i64_align4(<2 x i64*> %ptrs, <2 x i1> %m, <2 x i64> 
 ; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    vmv.s.x v8, a0
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vslideup.vi v9, v8, 1
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
-  %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> %ptrs, i32 4, <2 x i1> %m, <2 x i64> %passthru)
+  %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> %m, <2 x i64> %passthru)
   ret <2 x i64> %v
 }
 
-declare void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16>, <4 x i16*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4i16.v4p0(<4 x i16>, <4 x ptr>, i32, <4 x i1>)
 
-define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m) {
+define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32-LABEL: mscatter_v4i16_align1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
@@ -331,13 +331,13 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m
 ; RV64-NEXT:    srli a0, a0, 8
 ; RV64-NEXT:    sb a0, 1(a1)
 ; RV64-NEXT:    ret
-  call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> %val, <4 x i16*> %ptrs, i32 1, <4 x i1> %m)
+  call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32>, <2 x i32*>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v2i32.v2p0(<2 x i32>, <2 x ptr>, i32, <2 x i1>)
 
-define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32-LABEL: mscatter_v2i32_align2:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 0, e8, mf8, ta, ma
@@ -401,13 +401,13 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m
 ; RV64-NEXT:    srli a0, a0, 16
 ; RV64-NEXT:    sh a0, 2(a1)
 ; RV64-NEXT:    ret
-  call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %val, <2 x i32*> %ptrs, i32 2, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> %val, <2 x ptr> %ptrs, i32 2, <2 x i1> %m)
   ret void
 }
 
-declare <2 x i32> @llvm.masked.load.v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
+declare <2 x i32> @llvm.masked.load.v2i32(ptr, i32, <2 x i1>, <2 x i32>)
 
-define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %res_ptr) nounwind {
+define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwind {
 ; RV32-LABEL: masked_load_v2i32_align1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -425,8 +425,8 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV32-NEXT:    or a3, a3, a4
 ; RV32-NEXT:    slli a5, a5, 16
 ; RV32-NEXT:    slli a6, a6, 24
-; RV32-NEXT:    or a4, a6, a5
-; RV32-NEXT:    or a3, a4, a3
+; RV32-NEXT:    or a3, a5, a3
+; RV32-NEXT:    or a3, a6, a3
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vmv.v.x v8, a3
 ; RV32-NEXT:    andi a2, a2, 2
@@ -446,13 +446,11 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV32-NEXT:    or a2, a2, a3
 ; RV32-NEXT:    slli a4, a4, 16
 ; RV32-NEXT:    slli a0, a0, 24
-; RV32-NEXT:    or a0, a0, a4
+; RV32-NEXT:    or a2, a4, a2
 ; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    vmv.s.x v9, a0
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
 ; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:  .LBB8_4: # %else2
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vse32.v v8, (a1)
 ; RV32-NEXT:    ret
 ;
@@ -473,8 +471,8 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV64-NEXT:    or a3, a3, a4
 ; RV64-NEXT:    slli a5, a5, 16
 ; RV64-NEXT:    slli a6, a6, 24
-; RV64-NEXT:    or a4, a6, a5
-; RV64-NEXT:    or a3, a4, a3
+; RV64-NEXT:    or a3, a5, a3
+; RV64-NEXT:    or a3, a6, a3
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a3
 ; RV64-NEXT:    andi a2, a2, 2
@@ -494,24 +492,22 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV64-NEXT:    or a2, a2, a3
 ; RV64-NEXT:    slli a4, a4, 16
 ; RV64-NEXT:    slli a0, a0, 24
-; RV64-NEXT:    or a0, a0, a4
+; RV64-NEXT:    or a2, a4, a2
 ; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    vmv.s.x v9, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:  .LBB8_4: # %else2
-; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a1)
 ; RV64-NEXT:    ret
   %mask = icmp eq <2 x i32> %m, zeroinitializer
-  %load = call <2 x i32> @llvm.masked.load.v2i32(<2 x i32>* %a, i32 1, <2 x i1> %mask, <2 x i32> undef)
-  store <2 x i32> %load, <2 x i32>* %res_ptr
+  %load = call <2 x i32> @llvm.masked.load.v2i32(ptr %a, i32 1, <2 x i1> %mask, <2 x i32> undef)
+  store <2 x i32> %load, ptr %res_ptr
   ret void
 }
 
-declare void @llvm.masked.store.v2i32.p0v2i32(<2 x i32>, <2 x i32>*, i32, <2 x i1>)
+declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)
 
-define void @masked_store_v2i32_align2(<2 x i32> %val, <2 x i32>* %a, <2 x i32> %m) nounwind {
+define void @masked_store_v2i32_align2(<2 x i32> %val, ptr %a, <2 x i32> %m) nounwind {
 ; CHECK-LABEL: masked_store_v2i32_align2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -542,6 +538,6 @@ define void @masked_store_v2i32_align2(<2 x i32> %val, <2 x i32>* %a, <2 x i32> 
 ; CHECK-NEXT:    sh a1, 6(a0)
 ; CHECK-NEXT:    ret
   %mask = icmp eq <2 x i32> %m, zeroinitializer
-  call void @llvm.masked.store.v2i32.p0v2i32(<2 x i32> %val, <2 x i32>* %a, i32 2, <2 x i1> %mask)
+  call void @llvm.masked.store.v2i32.p0(<2 x i32> %val, ptr %a, i32 2, <2 x i1> %mask)
   ret void
 }

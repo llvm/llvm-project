@@ -1,5 +1,5 @@
 ; Test that we can produce a log if we have or do not have a model, in development mode.
-; REQUIRES: have_tf_api
+; REQUIRES: have_tflite
 ; Generate mock model
 ; RUN: rm -rf %t_savedmodel %t
 ; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t_savedmodel

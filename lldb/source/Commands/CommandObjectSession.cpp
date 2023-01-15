@@ -117,7 +117,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_history_options);
+      return llvm::ArrayRef(g_history_options);
     }
 
     // Instance variables to hold the values for command options.

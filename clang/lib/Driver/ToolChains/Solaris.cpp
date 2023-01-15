@@ -115,6 +115,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(getToolChain().GetFilePath(values_xpg)));
     CmdArgs.push_back(
         Args.MakeArgString(getToolChain().GetFilePath("crtbegin.o")));
+    // Add crtfastmath.o if available and fast math is enabled.
+    getToolChain().addFastMathRuntimeIfAvailable(Args, CmdArgs);
   }
 
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);

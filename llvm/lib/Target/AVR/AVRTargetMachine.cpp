@@ -19,6 +19,7 @@
 #include "llvm/MC/TargetRegistry.h"
 
 #include "AVR.h"
+#include "AVRMachineFunctionInfo.h"
 #include "AVRTargetObjectFile.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
@@ -95,6 +96,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeAVRExpandPseudoPass(PR);
   initializeAVRShiftExpandPass(PR);
+  initializeAVRDAGToDAGISelPass(PR);
 }
 
 const AVRSubtarget *AVRTargetMachine::getSubtargetImpl() const {
@@ -103,6 +105,13 @@ const AVRSubtarget *AVRTargetMachine::getSubtargetImpl() const {
 
 const AVRSubtarget *AVRTargetMachine::getSubtargetImpl(const Function &) const {
   return &SubTarget;
+}
+
+MachineFunctionInfo *AVRTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return AVRMachineFunctionInfo::create<AVRMachineFunctionInfo>(Allocator, F,
+                                                                STI);
 }
 
 //===----------------------------------------------------------------------===//

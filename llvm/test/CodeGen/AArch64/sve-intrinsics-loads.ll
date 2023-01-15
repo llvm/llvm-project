@@ -5,99 +5,98 @@
 ; LD1RQB
 ;
 
-define <vscale x 16 x i8> @ld1rqb_i8(<vscale x 16 x i1> %pred, i8* %addr) {
+define <vscale x 16 x i8> @ld1rqb_i8(<vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqb_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, i8* %addr)
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, ptr %addr)
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @ld1rqb_i8_imm(<vscale x 16 x i1> %pred, i8* %addr) {
+define <vscale x 16 x i8> @ld1rqb_i8_imm(<vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqb_i8_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, #16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %addr, i8 16
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, i8* %ptr)
+  %ptr = getelementptr inbounds i8, ptr %addr, i8 16
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, ptr %ptr)
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @ld1rqb_i8_scalar(<vscale x 16 x i1> %pred, i8* %addr, i64 %idx) {
+define <vscale x 16 x i8> @ld1rqb_i8_scalar(<vscale x 16 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqb_i8_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %addr, i64 %idx
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, i8* %ptr)
+  %ptr = getelementptr inbounds i8, ptr %addr, i64 %idx
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, ptr %ptr)
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @ld1rqb_i8_imm_lower_bound(<vscale x 16 x i1> %pred, i8* %addr) {
+define <vscale x 16 x i8> @ld1rqb_i8_imm_lower_bound(<vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqb_i8_imm_lower_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, #-128]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %addr, i8 -128
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, i8* %ptr)
+  %ptr = getelementptr inbounds i8, ptr %addr, i8 -128
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, ptr %ptr)
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @ld1rqb_i8_imm_upper_bound(<vscale x 16 x i1> %pred, i8* %addr) {
+define <vscale x 16 x i8> @ld1rqb_i8_imm_upper_bound(<vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqb_i8_imm_upper_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, #112]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %addr, i8 112
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, i8* %ptr)
+  %ptr = getelementptr inbounds i8, ptr %addr, i8 112
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, ptr %ptr)
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @ld1rqb_i8_imm_out_of_lower_bound(<vscale x 16 x i1> %pred, i8* %addr) {
+define <vscale x 16 x i8> @ld1rqb_i8_imm_out_of_lower_bound(<vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqb_i8_imm_out_of_lower_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-129
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %addr, i64 -129
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, i8* %ptr)
+  %ptr = getelementptr inbounds i8, ptr %addr, i64 -129
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, ptr %ptr)
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @ld1rqb_i8_imm_out_of_upper_bound(<vscale x 16 x i1> %pred, i8* %addr) {
+define <vscale x 16 x i8> @ld1rqb_i8_imm_out_of_upper_bound(<vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqb_i8_imm_out_of_upper_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #113
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %addr, i64 113
-  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, i8* %ptr)
+  %ptr = getelementptr inbounds i8, ptr %addr, i64 113
+  %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1> %pred, ptr %ptr)
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @ld1rqb_i8_imm_dupqlane(<vscale x 8 x i1> %pred, <16 x i8>* %addr) {
+define <vscale x 16 x i8> @ld1rqb_i8_imm_dupqlane(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqb_i8_imm_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, #-16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds <16 x i8>, <16 x i8>* %addr, i16 -1
-  %load = load <16 x i8>, <16 x i8>* %ptr
+  %ptr = getelementptr inbounds <16 x i8>, ptr %addr, i16 -1
+  %load = load <16 x i8>, ptr %ptr
   %1 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> %load, i64 0)
   %2 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %1, i64 0)
   ret <vscale x 16 x i8> %2
 }
 
-define <vscale x 16 x i8> @ld1rqb_i8_scalar_dupqlane(<vscale x 8 x i1> %pred, i8* %addr, i64 %idx) {
+define <vscale x 16 x i8> @ld1rqb_i8_scalar_dupqlane(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqb_i8_scalar_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i8, i8* %addr, i64 %idx
-  %ptr_bitcast = bitcast i8* %ptr to <16 x i8>*
-  %load = load <16 x i8>, <16 x i8>* %ptr_bitcast
+  %ptr = getelementptr inbounds i8, ptr %addr, i64 %idx
+  %load = load <16 x i8>, ptr %ptr
   %1 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> %load, i64 0)
   %2 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %1, i64 0)
   ret <vscale x 16 x i8> %2
@@ -107,169 +106,166 @@ define <vscale x 16 x i8> @ld1rqb_i8_scalar_dupqlane(<vscale x 8 x i1> %pred, i8
 ; LD1RQH
 ;
 
-define <vscale x 8 x i16> @ld1rqh_i16(<vscale x 8 x i1> %pred, i16* %addr) {
+define <vscale x 8 x i16> @ld1rqh_i16(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1rq.nxv8i16(<vscale x 8 x i1> %pred, i16* %addr)
+  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1rq.nxv8i16(<vscale x 8 x i1> %pred, ptr %addr)
   ret <vscale x 8 x i16> %res
 }
 
-define <vscale x 8 x half> @ld1rqh_f16(<vscale x 8 x i1> %pred, half* %addr) {
+define <vscale x 8 x half> @ld1rqh_f16(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ld1rq.nxv8f16(<vscale x 8 x i1> %pred, half* %addr)
+  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ld1rq.nxv8f16(<vscale x 8 x i1> %pred, ptr %addr)
   ret <vscale x 8 x half> %res
 }
 
-define <vscale x 8 x i16> @ld1rqh_i16_imm(<vscale x 8 x i1> %pred, i16* %addr) {
+define <vscale x 8 x i16> @ld1rqh_i16_imm(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_i16_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, #-64]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i16, i16* %addr, i16 -32
-  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1rq.nxv8i16(<vscale x 8 x i1> %pred, i16* %ptr)
+  %ptr = getelementptr inbounds i16, ptr %addr, i16 -32
+  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1rq.nxv8i16(<vscale x 8 x i1> %pred, ptr %ptr)
   ret <vscale x 8 x i16> %res
 }
 
-define <vscale x 8 x half> @ld1rqh_f16_imm(<vscale x 8 x i1> %pred, half* %addr) {
+define <vscale x 8 x half> @ld1rqh_f16_imm(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_f16_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, #-16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds half, half* %addr, i16 -8
-  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ld1rq.nxv8f16(<vscale x 8 x i1> %pred, half* %ptr)
+  %ptr = getelementptr inbounds half, ptr %addr, i16 -8
+  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ld1rq.nxv8f16(<vscale x 8 x i1> %pred, ptr %ptr)
   ret <vscale x 8 x half> %res
 }
 
-define <vscale x 8 x i16> @ld1rqh_i16_scalar(<vscale x 8 x i1> %pred, i16* %addr, i64 %idx) {
+define <vscale x 8 x i16> @ld1rqh_i16_scalar(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqh_i16_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i16, i16* %addr, i64 %idx
-  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1rq.nxv8i16(<vscale x 8 x i1> %pred, i16* %ptr)
+  %ptr = getelementptr inbounds i16, ptr %addr, i64 %idx
+  %res = call <vscale x 8 x i16> @llvm.aarch64.sve.ld1rq.nxv8i16(<vscale x 8 x i1> %pred, ptr %ptr)
   ret <vscale x 8 x i16> %res
 }
 
-define <vscale x 8 x half> @ld1rqh_f16_scalar(<vscale x 8 x i1> %pred, half* %addr, i64 %idx) {
+define <vscale x 8 x half> @ld1rqh_f16_scalar(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqh_f16_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds half, half* %addr, i64 %idx
-  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ld1rq.nxv8f16(<vscale x 8 x i1> %pred, half* %ptr)
+  %ptr = getelementptr inbounds half, ptr %addr, i64 %idx
+  %res = call <vscale x 8 x half> @llvm.aarch64.sve.ld1rq.nxv8f16(<vscale x 8 x i1> %pred, ptr %ptr)
   ret <vscale x 8 x half> %res
 }
 
-define <vscale x 8 x bfloat> @ld1rqh_bf16(<vscale x 8 x i1> %pred, bfloat* %addr) {
+define <vscale x 8 x bfloat> @ld1rqh_bf16(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1> %pred, bfloat* %addr)
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1> %pred, ptr %addr)
   ret <vscale x 8 x bfloat> %res
 }
 
-define <vscale x 8 x bfloat> @ld1rqh_bf16_imm(<vscale x 8 x i1> %pred, bfloat* %addr) {
+define <vscale x 8 x bfloat> @ld1rqh_bf16_imm(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_bf16_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, #-16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds bfloat, bfloat* %addr, i16 -8
-  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1> %pred, bfloat* %ptr)
+  %ptr = getelementptr inbounds bfloat, ptr %addr, i16 -8
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1> %pred, ptr %ptr)
   ret <vscale x 8 x bfloat> %res
 }
 
-define <vscale x 8 x bfloat> @ld1rqh_bf16_scalar(<vscale x 8 x i1> %pred, bfloat* %addr, i64 %idx) {
+define <vscale x 8 x bfloat> @ld1rqh_bf16_scalar(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqh_bf16_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds bfloat, bfloat* %addr, i64 %idx
-  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1> %pred, bfloat* %ptr)
+  %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %idx
+  %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1> %pred, ptr %ptr)
   ret <vscale x 8 x bfloat> %res
 }
 
-define <vscale x 8 x i16> @ld1rqh_i16_imm_dupqlane(<vscale x 8 x i1> %pred, <8 x i16>* %addr) {
+define <vscale x 8 x i16> @ld1rqh_i16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_i16_imm_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, #-16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds <8 x i16>, <8 x i16>* %addr, i16 -1
-  %load = load <8 x i16>, <8 x i16>* %ptr
+  %ptr = getelementptr inbounds <8 x i16>, ptr %addr, i16 -1
+  %load = load <8 x i16>, ptr %ptr
   %1 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> %load, i64 0)
   %2 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %1, i64 0)
   ret <vscale x 8 x i16> %2
 }
 
-define <vscale x 8 x i16> @ld1rqh_i16_scalar_dupqlane(<vscale x 8 x i1> %pred, i16* %addr, i64 %idx) {
+define <vscale x 8 x i16> @ld1rqh_i16_scalar_dupqlane(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqh_i16_scalar_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i16, i16* %addr, i64 %idx
-  %ptr_bitcast = bitcast i16* %ptr to <8 x i16>*
-  %load = load <8 x i16>, <8 x i16>* %ptr_bitcast
+  %ptr = getelementptr inbounds i16, ptr %addr, i64 %idx
+  %load = load <8 x i16>, ptr %ptr
   %1 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> %load, i64 0)
   %2 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %1, i64 0)
   ret <vscale x 8 x i16> %2
 }
 
-define <vscale x 8 x half> @ld1rqh_f16_imm_dupqlane(<vscale x 8 x i1> %pred, <8 x half>* %addr) {
+define <vscale x 8 x half> @ld1rqh_f16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_f16_imm_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, #-16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds <8 x half>, <8 x half>* %addr, i16 -1
-  %load = load <8 x half>, <8 x half>* %ptr
+  %ptr = getelementptr inbounds <8 x half>, ptr %addr, i16 -1
+  %load = load <8 x half>, ptr %ptr
   %1 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %load, i64 0)
   %2 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %1, i64 0)
   ret <vscale x 8 x half> %2
 }
 
-define <vscale x 8 x half> @ld1rqh_f16_scalar_dupqlane(<vscale x 8 x i1> %pred, half* %addr, i64 %idx) {
+define <vscale x 8 x half> @ld1rqh_f16_scalar_dupqlane(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqh_f16_scalar_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds half, half* %addr, i64 %idx
-  %ptr_bitcast = bitcast half* %ptr to <8 x half>*
-  %load = load <8 x half>, <8 x half>* %ptr_bitcast
+  %ptr = getelementptr inbounds half, ptr %addr, i64 %idx
+  %load = load <8 x half>, ptr %ptr
   %1 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %load, i64 0)
   %2 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %1, i64 0)
   ret <vscale x 8 x half> %2
 }
 
-define <vscale x 8 x bfloat> @ld1rqh_bf16_imm_dupqlane(<vscale x 8 x i1> %pred, <8 x bfloat>* %addr) {
+define <vscale x 8 x bfloat> @ld1rqh_bf16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_bf16_imm_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, #-16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds <8 x bfloat>, <8 x bfloat>* %addr, i16 -1
-  %load = load <8 x bfloat>, <8 x bfloat>* %ptr
+  %ptr = getelementptr inbounds <8 x bfloat>, ptr %addr, i16 -1
+  %load = load <8 x bfloat>, ptr %ptr
   %1 = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> %load, i64 0)
   %2 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %1, i64 0)
   ret <vscale x 8 x bfloat> %2
 }
 
-define <vscale x 8 x bfloat> @ld1rqh_bf16_scalar_dupqlane(<vscale x 8 x i1> %pred, bfloat* %addr, i64 %idx) {
+define <vscale x 8 x bfloat> @ld1rqh_bf16_scalar_dupqlane(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqh_bf16_scalar_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds bfloat, bfloat* %addr, i64 %idx
-  %ptr_bitcast = bitcast bfloat* %ptr to <8 x bfloat>*
-  %load = load <8 x bfloat>, <8 x bfloat>* %ptr_bitcast
+  %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %idx
+  %load = load <8 x bfloat>, ptr %ptr
   %1 = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> %load, i64 0)
   %2 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %1, i64 0)
   ret <vscale x 8 x bfloat> %2
@@ -279,113 +275,111 @@ define <vscale x 8 x bfloat> @ld1rqh_bf16_scalar_dupqlane(<vscale x 8 x i1> %pre
 ; LD1RQW
 ;
 
-define <vscale x 4 x i32> @ld1rqw_i32(<vscale x 4 x i1> %pred, i32* %addr) {
+define <vscale x 4 x i32> @ld1rqw_i32(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqw_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1rq.nxv4i32(<vscale x 4 x i1> %pred, i32* %addr)
+  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1rq.nxv4i32(<vscale x 4 x i1> %pred, ptr %addr)
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x float> @ld1rqw_f32(<vscale x 4 x i1> %pred, float* %addr) {
+define <vscale x 4 x float> @ld1rqw_f32(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqw_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ld1rq.nxv4f32(<vscale x 4 x i1> %pred, float* %addr)
+  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ld1rq.nxv4f32(<vscale x 4 x i1> %pred, ptr %addr)
   ret <vscale x 4 x float> %res
 }
 
-define <vscale x 4 x i32> @ld1rqw_i32_imm(<vscale x 4 x i1> %pred, i32* %addr) {
+define <vscale x 4 x i32> @ld1rqw_i32_imm(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqw_i32_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, #112]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i32, i32* %addr, i32 28
-  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1rq.nxv4i32(<vscale x 4 x i1> %pred, i32* %ptr)
+  %ptr = getelementptr inbounds i32, ptr %addr, i32 28
+  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1rq.nxv4i32(<vscale x 4 x i1> %pred, ptr %ptr)
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x float> @ld1rqw_f32_imm(<vscale x 4 x i1> %pred, float* %addr) {
+define <vscale x 4 x float> @ld1rqw_f32_imm(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqw_f32_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, #32]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds float, float* %addr, i32 8
-  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ld1rq.nxv4f32(<vscale x 4 x i1> %pred, float* %ptr)
+  %ptr = getelementptr inbounds float, ptr %addr, i32 8
+  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ld1rq.nxv4f32(<vscale x 4 x i1> %pred, ptr %ptr)
   ret <vscale x 4 x float> %res
 }
 
-define <vscale x 4 x i32> @ld1rqw_i32_scalar(<vscale x 4 x i1> %pred, i32* %base, i64 %idx) {
+define <vscale x 4 x i32> @ld1rqw_i32_scalar(<vscale x 4 x i1> %pred, ptr %base, i64 %idx) {
 ; CHECK-LABEL: ld1rqw_i32_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i32, i32* %base, i64 %idx
-  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1rq.nxv4i32(<vscale x 4 x i1> %pred, i32* %ptr)
+  %ptr = getelementptr inbounds i32, ptr %base, i64 %idx
+  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1rq.nxv4i32(<vscale x 4 x i1> %pred, ptr %ptr)
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x float> @ld1rqw_f32_scalar(<vscale x 4 x i1> %pred, float* %base, i64 %idx) {
+define <vscale x 4 x float> @ld1rqw_f32_scalar(<vscale x 4 x i1> %pred, ptr %base, i64 %idx) {
 ; CHECK-LABEL: ld1rqw_f32_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds float, float* %base, i64 %idx
-  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ld1rq.nxv4f32(<vscale x 4 x i1> %pred, float* %ptr)
+  %ptr = getelementptr inbounds float, ptr %base, i64 %idx
+  %res = call <vscale x 4 x float> @llvm.aarch64.sve.ld1rq.nxv4f32(<vscale x 4 x i1> %pred, ptr %ptr)
   ret <vscale x 4 x float> %res
 }
 
-define <vscale x 4 x i32> @ld1rqw_i32_imm_dupqlane(<vscale x 4 x i1> %pred, <4 x i32>* %addr) {
+define <vscale x 4 x i32> @ld1rqw_i32_imm_dupqlane(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqw_i32_imm_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, #16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds <4 x i32>, <4 x i32>* %addr, i32 1
-  %load = load <4 x i32>, <4 x i32>* %ptr
+  %ptr = getelementptr inbounds <4 x i32>, ptr %addr, i32 1
+  %load = load <4 x i32>, ptr %ptr
   %1 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> %load, i64 0)
   %2 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %1, i64 0)
   ret <vscale x 4 x i32> %2
 }
 
-define <vscale x 4 x i32> @ld1rqw_i32_scalar_dupqlane(<vscale x 4 x i1> %pred, i32* %addr, i64 %idx) {
+define <vscale x 4 x i32> @ld1rqw_i32_scalar_dupqlane(<vscale x 4 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqw_i32_scalar_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i32, i32* %addr, i64 %idx
-  %ptr_bitcast = bitcast i32* %ptr to <4 x i32>*
-  %load = load <4 x i32>, <4 x i32>* %ptr_bitcast
+  %ptr = getelementptr inbounds i32, ptr %addr, i64 %idx
+  %load = load <4 x i32>, ptr %ptr
   %1 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> %load, i64 0)
   %2 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %1, i64 0)
   ret <vscale x 4 x i32> %2
 }
 
-define <vscale x 4 x float> @ld1rqw_f32_imm_dupqlane(<vscale x 4 x i1> %pred, <4 x float>* %addr) {
+define <vscale x 4 x float> @ld1rqw_f32_imm_dupqlane(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqw_f32_imm_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, #16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds <4 x float>, <4 x float>* %addr, i32 1
-  %load = load <4 x float>, <4 x float>* %ptr
+  %ptr = getelementptr inbounds <4 x float>, ptr %addr, i32 1
+  %load = load <4 x float>, ptr %ptr
   %1 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %load, i64 0)
   %2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %1, i64 0)
   ret <vscale x 4 x float> %2
 }
 
-define <vscale x 4 x float> @ld1rqw_f32_scalar_dupqlane(<vscale x 4 x i1> %pred, float* %addr, i64 %idx) {
+define <vscale x 4 x float> @ld1rqw_f32_scalar_dupqlane(<vscale x 4 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqw_f32_scalar_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds float, float* %addr, i64 %idx
-  %ptr_bitcast = bitcast float* %ptr to <4 x float>*
-  %load = load <4 x float>, <4 x float>* %ptr_bitcast
+  %ptr = getelementptr inbounds float, ptr %addr, i64 %idx
+  %load = load <4 x float>, ptr %ptr
   %1 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %load, i64 0)
   %2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %1, i64 0)
   ret <vscale x 4 x float> %2
@@ -395,113 +389,111 @@ define <vscale x 4 x float> @ld1rqw_f32_scalar_dupqlane(<vscale x 4 x i1> %pred,
 ; LD1RQD
 ;
 
-define <vscale x 2 x i64> @ld1rqd_i64(<vscale x 2 x i1> %pred, i64* %addr) {
+define <vscale x 2 x i64> @ld1rqd_i64(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqd_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.ld1rq.nxv2i64(<vscale x 2 x i1> %pred, i64* %addr)
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.ld1rq.nxv2i64(<vscale x 2 x i1> %pred, ptr %addr)
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 2 x double> @ld1rqd_f64(<vscale x 2 x i1> %pred, double* %addr) {
+define <vscale x 2 x double> @ld1rqd_f64(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqd_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
-  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ld1rq.nxv2f64(<vscale x 2 x i1> %pred, double* %addr)
+  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ld1rq.nxv2f64(<vscale x 2 x i1> %pred, ptr %addr)
   ret <vscale x 2 x double> %res
 }
 
-define <vscale x 2 x i64> @ld1rqd_i64_imm(<vscale x 2 x i1> %pred, i64* %addr) {
+define <vscale x 2 x i64> @ld1rqd_i64_imm(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqd_i64_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, #64]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i64, i64* %addr, i64 8
-  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.ld1rq.nxv2i64(<vscale x 2 x i1> %pred, i64* %ptr)
+  %ptr = getelementptr inbounds i64, ptr %addr, i64 8
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.ld1rq.nxv2i64(<vscale x 2 x i1> %pred, ptr %ptr)
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 2 x double> @ld1rqd_f64_imm(<vscale x 2 x i1> %pred, double* %addr) {
+define <vscale x 2 x double> @ld1rqd_f64_imm(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqd_f64_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, #-128]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds double, double* %addr, i64 -16
-  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ld1rq.nxv2f64(<vscale x 2 x i1> %pred, double* %ptr)
+  %ptr = getelementptr inbounds double, ptr %addr, i64 -16
+  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ld1rq.nxv2f64(<vscale x 2 x i1> %pred, ptr %ptr)
   ret <vscale x 2 x double> %res
 }
 
-define <vscale x 2 x i64> @ld1rqd_i64_scalar(<vscale x 2 x i1> %pred, i64* %base, i64 %idx) {
+define <vscale x 2 x i64> @ld1rqd_i64_scalar(<vscale x 2 x i1> %pred, ptr %base, i64 %idx) {
 ; CHECK-LABEL: ld1rqd_i64_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i64, i64* %base, i64 %idx
-  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.ld1rq.nxv2i64(<vscale x 2 x i1> %pred, i64* %ptr)
+  %ptr = getelementptr inbounds i64, ptr %base, i64 %idx
+  %res = call <vscale x 2 x i64> @llvm.aarch64.sve.ld1rq.nxv2i64(<vscale x 2 x i1> %pred, ptr %ptr)
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 2 x double> @ld1rqd_f64_scalar(<vscale x 2 x i1> %pred, double* %base, i64 %idx) {
+define <vscale x 2 x double> @ld1rqd_f64_scalar(<vscale x 2 x i1> %pred, ptr %base, i64 %idx) {
 ; CHECK-LABEL: ld1rqd_f64_scalar:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds double, double* %base, i64 %idx
-  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ld1rq.nxv2f64(<vscale x 2 x i1> %pred, double* %ptr)
+  %ptr = getelementptr inbounds double, ptr %base, i64 %idx
+  %res = call <vscale x 2 x double> @llvm.aarch64.sve.ld1rq.nxv2f64(<vscale x 2 x i1> %pred, ptr %ptr)
   ret <vscale x 2 x double> %res
 }
 
-define <vscale x 2 x i64> @ld1rqd_i64_imm_dupqlane(<vscale x 2 x i1> %pred, <2 x i64>* %addr) {
+define <vscale x 2 x i64> @ld1rqd_i64_imm_dupqlane(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqd_i64_imm_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, #16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds <2 x i64>, <2 x i64>* %addr, i64 1
-  %load = load <2 x i64>, <2 x i64>* %ptr
+  %ptr = getelementptr inbounds <2 x i64>, ptr %addr, i64 1
+  %load = load <2 x i64>, ptr %ptr
   %1 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> %load, i64 0)
   %2 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %1, i64 0)
   ret <vscale x 2 x i64> %2
 }
 
-define <vscale x 2 x i64> @ld1rqd_i64_scalar_dupqlane(<vscale x 2 x i1> %pred, i64* %addr, i64 %idx) {
+define <vscale x 2 x i64> @ld1rqd_i64_scalar_dupqlane(<vscale x 2 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqd_i64_scalar_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds i64, i64* %addr, i64 %idx
-  %ptr_bitcast = bitcast i64* %ptr to <2 x i64>*
-  %load = load <2 x i64>, <2 x i64>* %ptr_bitcast
+  %ptr = getelementptr inbounds i64, ptr %addr, i64 %idx
+  %load = load <2 x i64>, ptr %ptr
   %1 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> %load, i64 0)
   %2 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %1, i64 0)
   ret <vscale x 2 x i64> %2
 }
 
-define <vscale x 2 x double> @ld1rqd_f64_imm_dupqlane(<vscale x 2 x i1> %pred, <2 x double>* %addr) {
+define <vscale x 2 x double> @ld1rqd_f64_imm_dupqlane(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqd_f64_imm_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, #16]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds <2 x double>, <2 x double>* %addr, i64 1
-  %load = load <2 x double>, <2 x double>* %ptr
+  %ptr = getelementptr inbounds <2 x double>, ptr %addr, i64 1
+  %load = load <2 x double>, ptr %ptr
   %1 = tail call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> %load, i64 0)
   %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %1, i64 0)
   ret <vscale x 2 x double> %2
 }
 
-define <vscale x 2 x double> @ld1rqd_f64_scalar_dupqlane(<vscale x 2 x i1> %pred, double* %addr, i64 %idx) {
+define <vscale x 2 x double> @ld1rqd_f64_scalar_dupqlane(<vscale x 2 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqd_f64_scalar_dupqlane:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
-  %ptr = getelementptr inbounds double, double* %addr, i64 %idx
-  %ptr_bitcast = bitcast double* %ptr to <2 x double>*
-  %load = load <2 x double>, <2 x double>* %ptr_bitcast
+  %ptr = getelementptr inbounds double, ptr %addr, i64 %idx
+  %load = load <2 x double>, ptr %ptr
   %1 = tail call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> %load, i64 0)
   %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %1, i64 0)
   ret <vscale x 2 x double> %2
@@ -511,13 +503,13 @@ define <vscale x 2 x double> @ld1rqd_f64_scalar_dupqlane(<vscale x 2 x i1> %pred
 ; LDNT1B
 ;
 
-define <vscale x 16 x i8> @ldnt1b_i8(<vscale x 16 x i1> %pred, i8* %addr) {
+define <vscale x 16 x i8> @ldnt1b_i8(<vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ldnt1b_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldnt1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1> %pred,
-                                                                 i8* %addr)
+                                                                 ptr %addr)
   ret <vscale x 16 x i8> %res
 }
 
@@ -525,33 +517,33 @@ define <vscale x 16 x i8> @ldnt1b_i8(<vscale x 16 x i1> %pred, i8* %addr) {
 ; LDNT1H
 ;
 
-define <vscale x 8 x i16> @ldnt1h_i16(<vscale x 8 x i1> %pred, i16* %addr) {
+define <vscale x 8 x i16> @ldnt1h_i16(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ldnt1h_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldnt1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i16> @llvm.aarch64.sve.ldnt1.nxv8i16(<vscale x 8 x i1> %pred,
-                                                                 i16* %addr)
+                                                                 ptr %addr)
   ret <vscale x 8 x i16> %res
 }
 
-define <vscale x 8 x half> @ldnt1h_f16(<vscale x 8 x i1> %pred, half* %addr) {
+define <vscale x 8 x half> @ldnt1h_f16(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ldnt1h_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldnt1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x half> @llvm.aarch64.sve.ldnt1.nxv8f16(<vscale x 8 x i1> %pred,
-                                                                  half* %addr)
+                                                                  ptr %addr)
   ret <vscale x 8 x half> %res
 }
 
-define <vscale x 8 x bfloat> @ldnt1h_bf16(<vscale x 8 x i1> %pred, bfloat* %addr) {
+define <vscale x 8 x bfloat> @ldnt1h_bf16(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ldnt1h_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldnt1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnt1.nxv8bf16(<vscale x 8 x i1> %pred,
-                                                                     bfloat* %addr)
+                                                                     ptr %addr)
   ret <vscale x 8 x bfloat> %res
 }
 
@@ -559,23 +551,23 @@ define <vscale x 8 x bfloat> @ldnt1h_bf16(<vscale x 8 x i1> %pred, bfloat* %addr
 ; LDNT1W
 ;
 
-define <vscale x 4 x i32> @ldnt1w_i32(<vscale x 4 x i1> %pred, i32* %addr) {
+define <vscale x 4 x i32> @ldnt1w_i32(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ldnt1w_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.nxv4i32(<vscale x 4 x i1> %pred,
-                                                                 i32* %addr)
+                                                                 ptr %addr)
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x float> @ldnt1w_f32(<vscale x 4 x i1> %pred, float* %addr) {
+define <vscale x 4 x float> @ldnt1w_f32(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ldnt1w_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x float> @llvm.aarch64.sve.ldnt1.nxv4f32(<vscale x 4 x i1> %pred,
-                                                                   float* %addr)
+                                                                   ptr %addr)
   ret <vscale x 4 x float> %res
 }
 
@@ -583,44 +575,44 @@ define <vscale x 4 x float> @ldnt1w_f32(<vscale x 4 x i1> %pred, float* %addr) {
 ; LDNT1D
 ;
 
-define <vscale x 2 x i64> @ldnt1d_i64(<vscale x 2 x i1> %pred, i64* %addr) {
+define <vscale x 2 x i64> @ldnt1d_i64(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ldnt1d_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldnt1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i64> @llvm.aarch64.sve.ldnt1.nxv2i64(<vscale x 2 x i1> %pred,
-                                                                 i64* %addr)
+                                                                 ptr %addr)
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 2 x double> @ldnt1d_f64(<vscale x 2 x i1> %pred, double* %addr) {
+define <vscale x 2 x double> @ldnt1d_f64(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ldnt1d_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldnt1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x double> @llvm.aarch64.sve.ldnt1.nxv2f64(<vscale x 2 x i1> %pred,
-                                                                    double* %addr)
+                                                                    ptr %addr)
   ret <vscale x 2 x double> %res
 }
 
 
-declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1>, i8*)
-declare <vscale x 8 x i16> @llvm.aarch64.sve.ld1rq.nxv8i16(<vscale x 8 x i1>, i16*)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1rq.nxv4i32(<vscale x 4 x i1>, i32*)
-declare <vscale x 2 x i64> @llvm.aarch64.sve.ld1rq.nxv2i64(<vscale x 2 x i1>, i64*)
-declare <vscale x 8 x half> @llvm.aarch64.sve.ld1rq.nxv8f16(<vscale x 8 x i1>, half*)
-declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1>, bfloat*)
-declare <vscale x 4 x float> @llvm.aarch64.sve.ld1rq.nxv4f32(<vscale x 4 x i1>, float*)
-declare <vscale x 2 x double> @llvm.aarch64.sve.ld1rq.nxv2f64(<vscale x 2 x i1>, double*)
+declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1rq.nxv16i8(<vscale x 16 x i1>, ptr)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.ld1rq.nxv8i16(<vscale x 8 x i1>, ptr)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1rq.nxv4i32(<vscale x 4 x i1>, ptr)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.ld1rq.nxv2i64(<vscale x 2 x i1>, ptr)
+declare <vscale x 8 x half> @llvm.aarch64.sve.ld1rq.nxv8f16(<vscale x 8 x i1>, ptr)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1>, ptr)
+declare <vscale x 4 x float> @llvm.aarch64.sve.ld1rq.nxv4f32(<vscale x 4 x i1>, ptr)
+declare <vscale x 2 x double> @llvm.aarch64.sve.ld1rq.nxv2f64(<vscale x 2 x i1>, ptr)
 
-declare <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1>, i8*)
-declare <vscale x 8 x i16> @llvm.aarch64.sve.ldnt1.nxv8i16(<vscale x 8 x i1>, i16*)
-declare <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.nxv4i32(<vscale x 4 x i1>, i32*)
-declare <vscale x 2 x i64> @llvm.aarch64.sve.ldnt1.nxv2i64(<vscale x 2 x i1>, i64*)
-declare <vscale x 8 x half> @llvm.aarch64.sve.ldnt1.nxv8f16(<vscale x 8 x i1>, half*)
-declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnt1.nxv8bf16(<vscale x 8 x i1>, bfloat*)
-declare <vscale x 4 x float> @llvm.aarch64.sve.ldnt1.nxv4f32(<vscale x 4 x i1>, float*)
-declare <vscale x 2 x double> @llvm.aarch64.sve.ldnt1.nxv2f64(<vscale x 2 x i1>, double*)
+declare <vscale x 16 x i8> @llvm.aarch64.sve.ldnt1.nxv16i8(<vscale x 16 x i1>, ptr)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.ldnt1.nxv8i16(<vscale x 8 x i1>, ptr)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ldnt1.nxv4i32(<vscale x 4 x i1>, ptr)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.ldnt1.nxv2i64(<vscale x 2 x i1>, ptr)
+declare <vscale x 8 x half> @llvm.aarch64.sve.ldnt1.nxv8f16(<vscale x 8 x i1>, ptr)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ldnt1.nxv8bf16(<vscale x 8 x i1>, ptr)
+declare <vscale x 4 x float> @llvm.aarch64.sve.ldnt1.nxv4f32(<vscale x 4 x i1>, ptr)
+declare <vscale x 2 x double> @llvm.aarch64.sve.ldnt1.nxv2f64(<vscale x 2 x i1>, ptr)
 
 declare <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64>, <2 x i64>, i64)
 declare <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double>, <2 x double>, i64)

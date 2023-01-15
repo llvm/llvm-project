@@ -122,9 +122,10 @@ namespace {
 struct NonTrivialUnswitchCandidate {
   Instruction *TI = nullptr;
   TinyPtrVector<Value *> Invariants;
-  Optional<InstructionCost> Cost;
-  NonTrivialUnswitchCandidate(Instruction *TI, ArrayRef<Value *> Invariants,
-                              Optional<InstructionCost> Cost = std::nullopt)
+  std::optional<InstructionCost> Cost;
+  NonTrivialUnswitchCandidate(
+      Instruction *TI, ArrayRef<Value *> Invariants,
+      std::optional<InstructionCost> Cost = std::nullopt)
       : TI(TI), Invariants(Invariants), Cost(Cost){};
 };
 } // end anonymous namespace.
@@ -254,7 +255,7 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   for (auto *Val : reverse(ToDuplicate)) {
     Instruction *Inst = cast<Instruction>(Val);
     Instruction *NewInst = Inst->clone();
-    BB.getInstList().insert(BB.end(), NewInst);
+    NewInst->insertInto(&BB, BB.end());
     RemapInstruction(NewInst, VMap,
                      RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     VMap[Val] = NewInst;
@@ -584,7 +585,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     if (MSSAU) {
       // Temporarily clone the terminator, to make MSSA update cheaper by
       // separating "insert edge" updates from "remove edge" ones.
-      ParentBB->getInstList().push_back(BI.clone());
+      BI.clone()->insertInto(ParentBB, ParentBB->end());
     } else {
       // Create a new unconditional branch that will continue the loop as a new
       // terminator.
@@ -1571,7 +1572,7 @@ static void buildClonedLoops(Loop &OrigL, ArrayRef<BasicBlock *> ExitBlocks,
   // We need a stable insertion order. We use the order of the original loop
   // order and map into the correct parent loop.
   for (auto *BB : llvm::concat<BasicBlock *const>(
-           makeArrayRef(ClonedPH), ClonedLoopBlocks, ClonedExitsInLoops))
+           ArrayRef(ClonedPH), ClonedLoopBlocks, ClonedExitsInLoops))
     if (Loop *OuterL = ExitLoopMap.lookup(BB))
       OuterL->addBasicBlockToLoop(BB, LI);
 
@@ -2187,14 +2188,26 @@ static void unswitchNontrivialInvariants(
     InsertFreeze = !SafetyInfo.isGuaranteedToExecute(TI, &DT, &L);
   }
 
+  // Perform the isGuaranteedNotToBeUndefOrPoison() query before the transform,
+  // otherwise the branch instruction will have been moved outside the loop
+  // already, and may imply that a poison condition is always UB.
+  Value *FullUnswitchCond = nullptr;
+  if (FullUnswitch) {
+    FullUnswitchCond =
+        BI ? skipTrivialSelect(BI->getCondition()) : SI->getCondition();
+    if (InsertFreeze)
+      InsertFreeze = !isGuaranteedNotToBeUndefOrPoison(
+          FullUnswitchCond, &AC, L.getLoopPreheader()->getTerminator(), &DT);
+  }
+
   // If the edge from this terminator to a successor dominates that successor,
   // store a map from each block in its dominator subtree to it. This lets us
   // tell when cloning for a particular successor if a block is dominated by
   // some *other* successor with a single data structure. We use this to
   // significantly reduce cloning.
   SmallDenseMap<BasicBlock *, BasicBlock *, 16> DominatingSucc;
-  for (auto *SuccBB : llvm::concat<BasicBlock *const>(
-           makeArrayRef(RetainedSuccBB), UnswitchedSuccBBs))
+  for (auto *SuccBB : llvm::concat<BasicBlock *const>(ArrayRef(RetainedSuccBB),
+                                                      UnswitchedSuccBBs))
     if (SuccBB->getUniquePredecessor() ||
         llvm::all_of(predecessors(SuccBB), [&](BasicBlock *PredBB) {
           return PredBB == ParentBB || DT.dominates(SuccBB, PredBB);
@@ -2254,19 +2267,17 @@ static void unswitchNontrivialInvariants(
 
     // Keep a clone of the terminator for MSSA updates.
     Instruction *NewTI = TI.clone();
-    ParentBB->getInstList().push_back(NewTI);
+    NewTI->insertInto(ParentBB, ParentBB->end());
 
     // First wire up the moved terminator to the preheaders.
     if (BI) {
       BasicBlock *ClonedPH = ClonedPHs.begin()->second;
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
-      Value *Cond = skipTrivialSelect(BI->getCondition());
-      if (InsertFreeze) {
-        if (!isGuaranteedNotToBeUndefOrPoison(Cond, &AC, BI, &DT))
-          Cond = new FreezeInst(Cond, Cond->getName() + ".fr", BI);
-      }
-      BI->setCondition(Cond);
+      if (InsertFreeze)
+        FullUnswitchCond = new FreezeInst(
+            FullUnswitchCond, FullUnswitchCond->getName() + ".fr", BI);
+      BI->setCondition(FullUnswitchCond);
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
     } else {
       assert(SI && "Must either be a branch or switch!");
@@ -2281,11 +2292,10 @@ static void unswitchNontrivialInvariants(
         else
           Case.setSuccessor(ClonedPHs.find(Case.getCaseSuccessor())->second);
 
-      if (InsertFreeze) {
-        auto Cond = SI->getCondition();
-        if (!isGuaranteedNotToBeUndefOrPoison(Cond, &AC, SI, &DT))
-          SI->setCondition(new FreezeInst(Cond, Cond->getName() + ".fr", SI));
-      }
+      if (InsertFreeze)
+        SI->setCondition(new FreezeInst(
+            FullUnswitchCond, FullUnswitchCond->getName() + ".fr", SI));
+
       // We need to use the set to populate domtree updates as even when there
       // are multiple cases pointing at the same successor we only want to
       // remove and insert one edge in the domtree.

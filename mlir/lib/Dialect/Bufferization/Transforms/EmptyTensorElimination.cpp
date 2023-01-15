@@ -127,7 +127,7 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
       // tensor::EmptyOp.
       if (maybeEmptyTensor.size() != 1 ||
           !maybeEmptyTensor.front().getDefiningOp<tensor::EmptyOp>())
-        return WalkResult::skip();
+        continue;
       Value emptyTensor = maybeEmptyTensor.front();
 
       // Replace only if the types match.
@@ -137,7 +137,7 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
       // %2 = tensor.expand_shape %1 ...
       // %3 = tensor.insert_slice %2 into ...
       if (emptyTensor.getType() != operand.get().getType())
-        return WalkResult::skip();
+        continue;
 
       // Find a suitable insertion point.
       Operation *insertionPoint =

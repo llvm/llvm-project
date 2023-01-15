@@ -61,7 +61,7 @@
 ; INSTRREF: DBG_PHI $edi, 1
 ; INSTRREF: DBG_VALUE $edi, $noreg, [[BAZVAR]]
 ; INSTRREF-LABEL: bb.1.next
-; INSTRREF: DBG_INSTR_REF 1, 0, [[XYZVAR]],
+; INSTRREF: DBG_INSTR_REF [[XYZVAR]], {{.+}}, dbg-instr-ref(1, 0)
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

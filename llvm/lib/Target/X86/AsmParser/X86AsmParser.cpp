@@ -1089,9 +1089,9 @@ private:
     return Parser.Error(L, Msg, Range);
   }
 
-  bool MatchRegisterByName(unsigned &RegNo, StringRef RegName, SMLoc StartLoc,
+  bool MatchRegisterByName(MCRegister &RegNo, StringRef RegName, SMLoc StartLoc,
                            SMLoc EndLoc);
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
+  bool ParseRegister(MCRegister &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
                      bool RestoreOnFailure);
 
   std::unique_ptr<X86Operand> DefaultMemSIOperand(SMLoc Loc);
@@ -1157,7 +1157,7 @@ private:
   bool parseDirectiveFPOEndProc(SMLoc L);
 
   /// SEH directives.
-  bool parseSEHRegisterNumber(unsigned RegClassID, unsigned &RegNo);
+  bool parseSEHRegisterNumber(unsigned RegClassID, MCRegister &RegNo);
   bool parseDirectiveSEHPushReg(SMLoc);
   bool parseDirectiveSEHSetFrame(SMLoc);
   bool parseDirectiveSEHSaveReg(SMLoc);
@@ -1268,8 +1268,9 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
@@ -1377,7 +1378,7 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
   return checkScale(Scale, ErrMsg);
 }
 
-bool X86AsmParser::MatchRegisterByName(unsigned &RegNo, StringRef RegName,
+bool X86AsmParser::MatchRegisterByName(MCRegister &RegNo, StringRef RegName,
                                        SMLoc StartLoc, SMLoc EndLoc) {
   // If we encounter a %, ignore it. This code handles registers with and
   // without the prefix, unprefixed registers can occur in cfi directives.
@@ -1477,7 +1478,7 @@ bool X86AsmParser::MatchRegisterByName(unsigned &RegNo, StringRef RegName,
   return false;
 }
 
-bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool X86AsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc, bool RestoreOnFailure) {
   MCAsmParser &Parser = getParser();
   MCAsmLexer &Lexer = getLexer();
@@ -1574,12 +1575,12 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
   return false;
 }
 
-bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool X86AsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
   return ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/false);
 }
 
-OperandMatchResultTy X86AsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy X86AsmParser::tryParseRegister(MCRegister &RegNo,
                                                     SMLoc &StartLoc,
                                                     SMLoc &EndLoc) {
   bool Result =
@@ -1977,7 +1978,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         }
       }
       // Register, or (MASM only) <register>.<field>
-      unsigned Reg;
+      MCRegister Reg;
       if (Tok.is(AsmToken::Identifier)) {
         if (!ParseRegister(Reg, IdentLoc, End, /*RestoreOnFailure=*/true)) {
           if (SM.onRegister(Reg, ErrMsg))
@@ -2528,8 +2529,8 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
     return ParseRoundingModeOp(Start, Operands);
 
   // Register operand.
-  unsigned RegNo = 0;
-  if (Tok.is(AsmToken::Identifier) && !ParseRegister(RegNo, Start, End)) {
+  MCRegister RegNo;
+  if (Tok.is(AsmToken::Identifier) && !parseRegister(RegNo, Start, End)) {
     if (RegNo == X86::RIP)
       return Error(Start, "rip can only be used as a base register");
     // A Register followed by ':' is considered a segment override
@@ -2840,9 +2841,9 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands) {
         SMLoc StartLoc = Z ? consumeToken() : consumedToken;
         // Parse an op-mask register mark ({%k<NUM>}), which is now to be
         // expected
-        unsigned RegNo;
+        MCRegister RegNo;
         SMLoc RegLoc;
-        if (!ParseRegister(RegNo, RegLoc, StartLoc) &&
+        if (!parseRegister(RegNo, RegLoc, StartLoc) &&
             X86MCRegisterClasses[X86::VK1RegClassID].contains(RegNo)) {
           if (RegNo == X86::K0)
             return Error(RegLoc, "Register k0 can't be used as write mask");
@@ -3070,8 +3071,8 @@ bool X86AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
       (isParsingIntelSyntax() && getTok().is(AsmToken::Identifier) &&
        MatchRegisterName(Parser.getTok().getString()))) {
     SMLoc StartLoc = Parser.getTok().getLoc();
-    unsigned RegNo;
-    if (ParseRegister(RegNo, StartLoc, EndLoc))
+    MCRegister RegNo;
+    if (parseRegister(RegNo, StartLoc, EndLoc))
       return true;
     Res = X86MCExpr::create(RegNo, Parser.getContext());
     return false;
@@ -4791,18 +4792,18 @@ bool X86AsmParser::parseDirectiveFPOProc(SMLoc L) {
 
 // .cv_fpo_setframe ebp
 bool X86AsmParser::parseDirectiveFPOSetFrame(SMLoc L) {
-  unsigned Reg;
+  MCRegister Reg;
   SMLoc DummyLoc;
-  if (ParseRegister(Reg, DummyLoc, DummyLoc) || parseEOL())
+  if (parseRegister(Reg, DummyLoc, DummyLoc) || parseEOL())
     return true;
   return getTargetStreamer().emitFPOSetFrame(Reg, L);
 }
 
 // .cv_fpo_pushreg ebx
 bool X86AsmParser::parseDirectiveFPOPushReg(SMLoc L) {
-  unsigned Reg;
+  MCRegister Reg;
   SMLoc DummyLoc;
-  if (ParseRegister(Reg, DummyLoc, DummyLoc) || parseEOL())
+  if (parseRegister(Reg, DummyLoc, DummyLoc) || parseEOL())
     return true;
   return getTargetStreamer().emitFPOPushReg(Reg, L);
 }
@@ -4842,14 +4843,14 @@ bool X86AsmParser::parseDirectiveFPOEndProc(SMLoc L) {
 }
 
 bool X86AsmParser::parseSEHRegisterNumber(unsigned RegClassID,
-                                          unsigned &RegNo) {
+                                          MCRegister &RegNo) {
   SMLoc startLoc = getLexer().getLoc();
   const MCRegisterInfo *MRI = getContext().getRegisterInfo();
 
   // Try parsing the argument as a register first.
   if (getLexer().getTok().isNot(AsmToken::Integer)) {
     SMLoc endLoc;
-    if (ParseRegister(RegNo, startLoc, endLoc))
+    if (parseRegister(RegNo, startLoc, endLoc))
       return true;
 
     if (!X86MCRegisterClasses[RegClassID].contains(RegNo)) {
@@ -4882,7 +4883,7 @@ bool X86AsmParser::parseSEHRegisterNumber(unsigned RegClassID,
 }
 
 bool X86AsmParser::parseDirectiveSEHPushReg(SMLoc Loc) {
-  unsigned Reg = 0;
+  MCRegister Reg;
   if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg))
     return true;
 
@@ -4895,7 +4896,7 @@ bool X86AsmParser::parseDirectiveSEHPushReg(SMLoc Loc) {
 }
 
 bool X86AsmParser::parseDirectiveSEHSetFrame(SMLoc Loc) {
-  unsigned Reg = 0;
+  MCRegister Reg;
   int64_t Off;
   if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg))
     return true;
@@ -4915,7 +4916,7 @@ bool X86AsmParser::parseDirectiveSEHSetFrame(SMLoc Loc) {
 }
 
 bool X86AsmParser::parseDirectiveSEHSaveReg(SMLoc Loc) {
-  unsigned Reg = 0;
+  MCRegister Reg;
   int64_t Off;
   if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg))
     return true;
@@ -4935,7 +4936,7 @@ bool X86AsmParser::parseDirectiveSEHSaveReg(SMLoc Loc) {
 }
 
 bool X86AsmParser::parseDirectiveSEHSaveXMM(SMLoc Loc) {
-  unsigned Reg = 0;
+  MCRegister Reg;
   int64_t Off;
   if (parseSEHRegisterNumber(X86::VR128XRegClassID, Reg))
     return true;

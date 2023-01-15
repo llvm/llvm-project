@@ -46,7 +46,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -222,7 +221,7 @@ public:
   /// Find a non-invalidated report for a given equivalence class,  and returns
   /// a PathDiagnosticBuilder able to construct bug reports for different
   /// consumers. Returns std::nullopt if no valid report is found.
-  static Optional<PathDiagnosticBuilder>
+  static std::optional<PathDiagnosticBuilder>
   findValidReport(ArrayRef<PathSensitiveBugReport *> &bugReports,
                   PathSensitiveBugReporter &Reporter);
 
@@ -1570,8 +1569,8 @@ static void simplifySimpleBranches(PathPieces &pieces) {
 /// std::nullopt.
 ///
 /// Note that this does not do a precise user-visible character or column count.
-static Optional<size_t> getLengthOnSingleLine(const SourceManager &SM,
-                                              SourceRange Range) {
+static std::optional<size_t> getLengthOnSingleLine(const SourceManager &SM,
+                                                   SourceRange Range) {
   SourceRange ExpansionRange(SM.getExpansionLoc(Range.getBegin()),
                              SM.getExpansionRange(Range.getEnd()).getEnd());
 
@@ -1599,8 +1598,8 @@ static Optional<size_t> getLengthOnSingleLine(const SourceManager &SM,
 }
 
 /// \sa getLengthOnSingleLine(SourceManager, SourceRange)
-static Optional<size_t> getLengthOnSingleLine(const SourceManager &SM,
-                                              const Stmt *S) {
+static std::optional<size_t> getLengthOnSingleLine(const SourceManager &SM,
+                                                   const Stmt *S) {
   return getLengthOnSingleLine(SM, S->getSourceRange());
 }
 
@@ -1659,9 +1658,9 @@ static void removeContextCycles(PathPieces &Path, const SourceManager &SM) {
 
     if (s1Start && s2Start && s1Start == s2End && s2Start == s1End) {
       const size_t MAX_SHORT_LINE_LENGTH = 80;
-      Optional<size_t> s1Length = getLengthOnSingleLine(SM, s1Start);
+      std::optional<size_t> s1Length = getLengthOnSingleLine(SM, s1Start);
       if (s1Length && *s1Length <= MAX_SHORT_LINE_LENGTH) {
-        Optional<size_t> s2Length = getLengthOnSingleLine(SM, s2Start);
+        std::optional<size_t> s2Length = getLengthOnSingleLine(SM, s2Start);
         if (s2Length && *s2Length <= MAX_SHORT_LINE_LENGTH) {
           Path.erase(I);
           I = Path.erase(NextI);
@@ -1720,7 +1719,7 @@ static void removePunyEdges(PathPieces &path, const SourceManager &SM,
       std::swap(SecondLoc, FirstLoc);
 
     SourceRange EdgeRange(FirstLoc, SecondLoc);
-    Optional<size_t> ByteWidth = getLengthOnSingleLine(SM, EdgeRange);
+    std::optional<size_t> ByteWidth = getLengthOnSingleLine(SM, EdgeRange);
 
     // If the statements are on different lines, continue.
     if (!ByteWidth)
@@ -2822,7 +2821,7 @@ generateVisitorsDiagnostics(PathSensitiveBugReport *R,
   return Notes;
 }
 
-Optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
+std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
     ArrayRef<PathSensitiveBugReport *> &bugReports,
     PathSensitiveBugReporter &Reporter) {
 
@@ -2881,7 +2880,7 @@ PathSensitiveBugReporter::generatePathDiagnostics(
 
   auto Out = std::make_unique<DiagnosticForConsumerMapTy>();
 
-  Optional<PathDiagnosticBuilder> PDB =
+  std::optional<PathDiagnosticBuilder> PDB =
       PathDiagnosticBuilder::findValidReport(bugReports, *this);
 
   if (PDB) {

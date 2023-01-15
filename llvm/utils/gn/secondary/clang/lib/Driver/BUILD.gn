@@ -18,6 +18,7 @@ static_library("Driver") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/WindowsDriver",
   ]
   public_deps = [

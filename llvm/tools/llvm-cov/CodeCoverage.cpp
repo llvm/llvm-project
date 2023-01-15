@@ -85,7 +85,7 @@ private:
   bool isEquivalentFile(StringRef FilePath1, StringRef FilePath2);
 
   /// Retrieve a file status with a cache.
-  Optional<sys::fs::file_status> getFileStatus(StringRef FilePath);
+  std::optional<sys::fs::file_status> getFileStatus(StringRef FilePath);
 
   /// Return a memory buffer for the given source file.
   ErrorOr<const MemoryBuffer &> getSourceFile(StringRef SourceFile);
@@ -161,7 +161,7 @@ private:
   std::optional<std::pair<std::string, std::string>> PathRemapping;
 
   /// File status cache used when finding the same file.
-  StringMap<Optional<sys::fs::file_status>> FileStatusCache;
+  StringMap<std::optional<sys::fs::file_status>> FileStatusCache;
 
   /// The architecture the coverage mapping data targets.
   std::vector<StringRef> CoverageArches;
@@ -249,7 +249,7 @@ void CodeCoverageTool::collectPaths(const std::string &Path) {
   }
 }
 
-Optional<sys::fs::file_status>
+std::optional<sys::fs::file_status>
 CodeCoverageTool::getFileStatus(StringRef FilePath) {
   auto It = FileStatusCache.try_emplace(FilePath);
   auto &CachedStatus = It.first->getValue();
@@ -1076,7 +1076,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
         FilenameFunctionMap;
     for (const auto &SourceFile : SourceFiles)
       for (const auto &Function : Coverage->getCoveredFunctions(SourceFile))
-        if (Filters.matches(*Coverage.get(), Function))
+        if (Filters.matches(*Coverage, Function))
           FilenameFunctionMap[SourceFile].push_back(&Function);
 
     // Only print filter matching functions for each file.
@@ -1165,7 +1165,7 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   if (!Coverage)
     return 1;
 
-  CoverageReport Report(ViewOpts, *Coverage.get());
+  CoverageReport Report(ViewOpts, *Coverage);
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
       Report.renderFileReports(llvm::outs(), IgnoreFilenameFilters);
@@ -1231,16 +1231,16 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
 
   switch (ViewOpts.Format) {
   case CoverageViewOptions::OutputFormat::Text:
-    Exporter = std::make_unique<CoverageExporterJson>(*Coverage.get(),
-                                                       ViewOpts, outs());
+    Exporter =
+        std::make_unique<CoverageExporterJson>(*Coverage, ViewOpts, outs());
     break;
   case CoverageViewOptions::OutputFormat::HTML:
     // Unreachable because we should have gracefully terminated with an error
     // above.
     llvm_unreachable("Export in HTML is not supported!");
   case CoverageViewOptions::OutputFormat::Lcov:
-    Exporter = std::make_unique<CoverageExporterLcov>(*Coverage.get(),
-                                                       ViewOpts, outs());
+    Exporter =
+        std::make_unique<CoverageExporterLcov>(*Coverage, ViewOpts, outs());
     break;
   }
 

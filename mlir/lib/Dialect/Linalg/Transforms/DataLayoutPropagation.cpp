@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/Support/Debug.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_LINALGDATALAYOUTPROPAGATION
@@ -29,12 +30,96 @@ using namespace mlir::linalg;
 
 namespace {
 
+// The struct contains the infomation about mapping packing information to
+// the iteration domain of Linalg ops.
+struct PackInfo {
+  int64_t getNumTiledLoops() const { return tileToPointMapping.size(); };
+  // InnerDimsPos on iteration domain, which follows the order in pack ops.
+  SmallVector<int64_t> tiledDimsPos;
+  // The sizes of tiling data dimensions on iteration domain.
+  llvm::DenseMap<int64_t, OpFoldResult> domainDimAndTileMapping;
+  // The mapping from a dimension of iteration domain to the corresponding inner
+  // tiling dimension on iteration domain.
+  llvm::DenseMap<int64_t, int64_t> tileToPointMapping;
+  // The permutation of outer dims (on domain).
+  SmallVector<int64_t> outerDimsOnDomainPerm;
+  Optional<Value> paddingValue;
+};
+
+static PackInfo getPackingInfoFromConsumer(
+    AffineMap indexingMap, ArrayRef<OpFoldResult> innerTileSizes,
+    ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm,
+    Optional<Value> paddingValue = std::nullopt) {
+  LLVM_DEBUG(
+      { llvm::dbgs() << "--- Construct PackInfo From A Consumer ---\n"; });
+  PackInfo packInfo;
+  packInfo.paddingValue = paddingValue;
+  int64_t origNumDims = indexingMap.getNumDims();
+  SmallVector<AffineExpr> exprs(indexingMap.getResults());
+  for (auto [index, innerDimPos, tileSize] :
+       llvm::zip_equal(llvm::seq<unsigned>(0, innerDimsPos.size()),
+                       innerDimsPos, innerTileSizes)) {
+    int64_t domainDimPos =
+        exprs[innerDimPos].cast<AffineDimExpr>().getPosition();
+    packInfo.tiledDimsPos.push_back(domainDimPos);
+    packInfo.domainDimAndTileMapping[domainDimPos] = tileSize;
+    packInfo.tileToPointMapping[domainDimPos] = origNumDims + index;
+    LLVM_DEBUG({
+      llvm::dbgs() << "map innerDimPos=" << innerDimPos
+                   << " to iteration dimension (d" << domainDimPos << ", d"
+                   << packInfo.tileToPointMapping[domainDimPos]
+                   << "), which has size=("
+                   << packInfo.domainDimAndTileMapping[domainDimPos] << ")\n";
+    });
+  }
+
+  for (auto dim : outerDimsPerm)
+    packInfo.outerDimsOnDomainPerm.push_back(indexingMap.getDimPosition(dim));
+  if (!packInfo.outerDimsOnDomainPerm.empty()) {
+    LLVM_DEBUG({
+      llvm::dbgs() << "map outer dimsDimsPerm to ";
+      for (auto dim : packInfo.outerDimsOnDomainPerm)
+        llvm::dbgs() << dim << " ";
+      llvm::dbgs() << "\n";
+    });
+  }
+
+  return packInfo;
+}
+
+static SmallVector<int64_t> computeOuterDims(ArrayRef<int64_t> perm,
+                                             ArrayRef<AffineExpr> exprs) {
+  // Compute `outer_dims_perm`. See example:
+  // current exprs      : (d0, d1, d2, d3) -> (d2, d3)
+  // perm               : [0, 3, 1, 2]
+  // First map d2, d3 with their position in the array as:
+  // currentPositionTileLoops: dim | pos
+  //                           d2  | 0
+  //                           d3  | 1
+  // then scan `perm` in order and get the `outer_dims_perm`
+  // to be used, here it would be [1, 0].
+  assert(!perm.empty() && "expect perm not to be empty");
+  assert(!exprs.empty() && "expect exprs not to be empty");
+  if (exprs.size() == 1)
+    return {};
+  SmallVector<int64_t> outerDimsPerm;
+  DenseMap<int64_t, int64_t> currentPositionTileLoops;
+  for (auto [pos, expr] : llvm::enumerate(exprs)) {
+    unsigned posInDomain = expr.cast<AffineDimExpr>().getPosition();
+    currentPositionTileLoops[posInDomain] = pos;
+  }
+  for (int64_t loopIdx : perm) {
+    if (currentPositionTileLoops.count(loopIdx))
+      outerDimsPerm.push_back(currentPositionTileLoops.lookup(loopIdx));
+  }
+  return outerDimsPerm;
+}
+
 /// Returns a tuple for packed operand and indexing_map with the assumptions:
 ///   1) The generic op is the producer of the pack op.
 ///   2) The generic op has only one result.
-///   3) The indexing map of the output operand is identity.
 /// If the operand is a scalar or packing dimensions are all irrelevant to the
-/// operand, the opreand and the updated indexing map will be returned.
+/// operand, the operand and the updated indexing map will be returned.
 /// Otherwise, it returns the packed operand and the updated indexing map. E.g.,
 ///
 ///   #map0 = affine_map<(d0, d1) -> (d0, d1)>
@@ -62,62 +147,67 @@ namespace {
 ///    inner_tiles = [8]
 ///    into %init : tensor<?xf32> -> tensor<?x8xf32>
 static std::tuple<Value, AffineMap>
-getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc,
-                               tensor::PackOp packOp, GenericOp genericOp,
-                               OpOperand *opOperand) {
-  int numOrigLoops = genericOp.getNumLoops();
-  int64_t numInnerLoops = packOp.getInnerDimsPos().size();
+getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
+                               GenericOp genericOp, OpOperand *opOperand) {
+  int64_t numOrigLoops = genericOp.getNumLoops();
+  int64_t numInnerLoops = packInfo.getNumTiledLoops();
   int64_t numLoops = numOrigLoops + numInnerLoops;
   AffineMap origIndexingMap = genericOp.getMatchingIndexingMap(opOperand);
+  llvm::DenseMap<int64_t, int64_t> domainDimToOperandDim;
   SmallVector<AffineExpr> exprs(origIndexingMap.getResults());
-
   if (genericOp.isScalar(opOperand))
-    return std::make_tuple(
-        opOperand->get(),
-        AffineMap::get(numLoops, 0, exprs, packOp.getContext()));
+    return std::make_tuple(opOperand->get(),
+                           AffineMap::get(numLoops, 0, exprs, b.getContext()));
 
-  llvm::SetVector<int64_t> innerDimsPosSet(packOp.getInnerDimsPos().begin(),
-                                           packOp.getInnerDimsPos().end());
-  // Mapping from AffinDimExpr of indexing maps to the operand shape dimension.
-  DenseMap<int64_t, int64_t> iterMapToDim;
-  for (auto [index, expr] : llvm::enumerate(origIndexingMap.getResults())) {
+  // Step 1. Construct the information of packing data dimensions; append inner
+  // dimensions to the indexing maps for the operand.
+  for (auto [index, expr] : llvm::enumerate(exprs)) {
     int64_t dimPos = expr.cast<AffineDimExpr>().getPosition();
-    if (!innerDimsPosSet.contains(dimPos))
-      continue;
-    iterMapToDim[dimPos] = index;
+    domainDimToOperandDim[dimPos] = index;
   }
-
-  // Construct the information of packing data dimensions and new indexing maps
-  // for the operand.
   SmallVector<int64_t> innerDimsPos;
   SmallVector<OpFoldResult> innerTileSizes;
-  for (auto [index, value] : llvm::enumerate(
-           llvm::zip(packOp.getInnerDimsPos(), packOp.getMixedTiles()))) {
-    int64_t dimPos = std::get<0>(value);
-    if (!iterMapToDim.count(dimPos))
+  for (auto dimPos : packInfo.tiledDimsPos) {
+    if (!domainDimToOperandDim.count(dimPos))
       continue;
-    innerDimsPos.push_back(iterMapToDim[dimPos]);
-    innerTileSizes.push_back(std::get<1>(value));
-    exprs.push_back(b.getAffineDimExpr(numOrigLoops + index));
+    int64_t index = domainDimToOperandDim[dimPos];
+    innerTileSizes.push_back(packInfo.domainDimAndTileMapping[dimPos]);
+    innerDimsPos.push_back(index);
+    exprs.push_back(b.getAffineDimExpr(packInfo.tileToPointMapping[dimPos]));
   }
-  auto indexingMap = AffineMap::get(numLoops, 0, exprs, packOp.getContext());
 
+  // Step 2. Handle outer dim permutations.
   SmallVector<int64_t> outerDimsPerm;
-  for (auto outDim : packOp.getOuterDimsPerm()) {
-    if (!iterMapToDim.count(outDim))
-      continue;
-    outerDimsPerm.push_back(iterMapToDim[outDim]);
+  if (!packInfo.outerDimsOnDomainPerm.empty()) {
+    outerDimsPerm = computeOuterDims(packInfo.outerDimsOnDomainPerm, exprs);
+
+    // Step 2.1: Fold transpose into the linalg.generic.
+    SmallVector<int64_t> inversedOuterPerm =
+        invertPermutationVector(packInfo.outerDimsOnDomainPerm);
+    for (auto i : llvm::seq<unsigned>(0, origIndexingMap.getNumResults())) {
+      int64_t dimPos = exprs[i].cast<AffineDimExpr>().getPosition();
+      exprs[i] = b.getAffineDimExpr(inversedOuterPerm[dimPos]);
+    }
+    // Step 2.2: Undo the transposition on `exprs` and propagate the
+    // transposition on the pack using outerDimsPerm.
+    if (!outerDimsPerm.empty()) {
+      SmallVector<AffineExpr> auxVec = exprs;
+      for (const auto &en : enumerate(outerDimsPerm))
+        auxVec[en.index()] = exprs[en.value()];
+      exprs = auxVec;
+    }
   }
+  auto indexingMap = AffineMap::get(numLoops, 0, exprs, b.getContext());
 
   // The operand does not have dimensions that relates to pack op.
-  if (innerDimsPos.empty() && outerDimsPerm.empty())
+  if (innerDimsPos.empty())
     return std::make_tuple(opOperand->get(), indexingMap);
 
   auto empty = tensor::PackOp::createDestinationTensor(
       b, loc, opOperand->get(), innerTileSizes, innerDimsPos, outerDimsPerm);
   auto packedOperand = b.create<tensor::PackOp>(
       loc, opOperand->get(), empty, innerDimsPos, innerTileSizes,
-      packOp.getPaddingValue(), outerDimsPerm);
+      packInfo.paddingValue, outerDimsPerm);
   return std::make_tuple(packedOperand, indexingMap);
 }
 
@@ -187,39 +277,42 @@ bubbleUpPackOpThroughElemGenericOp(RewriterBase &rewriter,
     return failure();
 
   OpOperand *opOperand = genericOp.getDpsInitOperand(0);
-  // TODO: Add support for all permutation indexing maps.
-  if (!genericOp.getMatchingIndexingMap(opOperand).isIdentity())
-    return rewriter.notifyMatchFailure(
-        packOp, "the result of generic op does not have identity indexing_map");
+  auto packInfo = getPackingInfoFromConsumer(
+      genericOp.getMatchingIndexingMap(opOperand), packOp.getMixedTiles(),
+      packOp.getInnerDimsPos(), packOp.getOuterDimsPerm(),
+      packOp.getPaddingValue());
 
   Location loc = packOp.getLoc();
   SmallVector<Value> inputOperands;
   SmallVector<AffineMap> indexingMaps;
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
-        rewriter, loc, packOp, genericOp, inputOperand);
+        rewriter, loc, packInfo, genericOp, inputOperand);
     inputOperands.push_back(packedOperand);
     indexingMaps.push_back(packedIndexingMap);
   }
 
-  int64_t numLoops = genericOp.getNumLoops();
-  int64_t numInnerLoops = packOp.getInnerDimsPos().size();
-  int64_t newNumLoops = numLoops + numInnerLoops;
+  int64_t numInnerLoops = packInfo.getNumTiledLoops();
   SmallVector<utils::IteratorType> iterTypes =
       genericOp.getIteratorTypesArray();
   iterTypes.append(numInnerLoops, utils::IteratorType::parallel);
 
-  SmallVector<AffineExpr> outExprs(
-      genericOp.getMatchingIndexingMap(opOperand).getResults());
-  for (int i = 0; i < numInnerLoops; ++i)
-    outExprs.push_back(rewriter.getAffineDimExpr(numLoops + i));
-  indexingMaps.push_back(
-      AffineMap::get(newNumLoops, 0, outExprs, rewriter.getContext()));
+  // Rebuild the indexing map for the corresponding init operand.
+  auto [packedOutOperand, packedOutIndexingMap] =
+      getOrCreatePackedViewOfOperand(rewriter, loc, packInfo, genericOp,
+                                     opOperand);
+  indexingMaps.push_back(packedOutIndexingMap);
 
+  // We'll replace the init operand with the destination of pack op if the init
+  // operand has not users in the body of the linalg.generic (pure elementwise).
+  // If it has users we need to pack the init operand too and replace the init
+  // with the packing result.
+  Value dest = (genericOp.getRegionOutputArgs()[0].use_empty())
+                   ? packOp.getDest()
+                   : packedOutOperand;
   auto newGenericOp = rewriter.create<linalg::GenericOp>(
-      loc, packOp.getDestType(), inputOperands, packOp.getDest(), indexingMaps,
-      iterTypes, /*bodyBuild=*/nullptr,
-      linalg::getPrunedAttributeList(genericOp));
+      loc, dest.getType(), inputOperands, dest, indexingMaps, iterTypes,
+      /*bodyBuild=*/nullptr, linalg::getPrunedAttributeList(genericOp));
   rewriter.cloneRegionBefore(genericOp.getRegion(), newGenericOp.getRegion(),
                              newGenericOp.getRegion().begin());
   return newGenericOp;
@@ -235,7 +328,7 @@ struct BubbleUpPackOpThroughElemGenericOpPattern
     auto genericOp = bubbleUpPackOpThroughElemGenericOp(rewriter, packOp);
     if (failed(genericOp))
       return failure();
-    rewriter.replaceOp(packOp, genericOp.value().getResults());
+    rewriter.replaceOp(packOp, genericOp->getResults());
     return success();
   }
 };

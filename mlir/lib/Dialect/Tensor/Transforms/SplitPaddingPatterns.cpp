@@ -26,7 +26,7 @@ using namespace mlir;
 
 /// Returns true if the the given `attrOrValue` is a constant zero.
 static bool isZero(OpFoldResult attrOrValue) {
-  if (Optional<int64_t> val = getConstantIntValue(attrOrValue))
+  if (std::optional<int64_t> val = getConstantIntValue(attrOrValue))
     return *val == 0;
   return false;
 }
@@ -69,7 +69,7 @@ struct SplitPadding final : public OpRewritePattern<tensor::PadOp> {
             cstZero));
     }
     Value ifCond = eqZeroCmpVals.front();
-    for (Value cmp : llvm::makeArrayRef(eqZeroCmpVals).drop_front())
+    for (Value cmp : llvm::ArrayRef(eqZeroCmpVals).drop_front())
       ifCond = rewriter.create<arith::AndIOp>(loc, ifCond, cmp);
 
     // Build the scf.if op itself. For the "then" branch, we can elide the

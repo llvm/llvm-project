@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cmath>
+#include <optional>
 
 #include "DurationRewriter.h"
 #include "clang/Tooling/FixIt.h"
@@ -26,7 +27,7 @@ struct DurationScale2IndexFunctor {
 };
 
 /// Returns an integer if the fractional part of a `FloatingLiteral` is `0`.
-static llvm::Optional<llvm::APSInt>
+static std::optional<llvm::APSInt>
 truncateIfIntegral(const FloatingLiteral &FloatLiteral) {
   double Value = FloatLiteral.getValueAsApproximateDouble();
   if (std::fmod(Value, 1) == 0) {
@@ -69,7 +70,7 @@ getDurationInverseForScale(DurationScale Scale) {
 
 /// If `Node` is a call to the inverse of `Scale`, return that inverse's
 /// argument, otherwise std::nullopt.
-static llvm::Optional<std::string>
+static std::optional<std::string>
 rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
                            DurationScale Scale, const Expr &Node) {
   const std::pair<llvm::StringRef, llvm::StringRef> &InverseFunctions =
@@ -88,7 +89,7 @@ rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
 
 /// If `Node` is a call to the inverse of `Scale`, return that inverse's
 /// argument, otherwise std::nullopt.
-static llvm::Optional<std::string>
+static std::optional<std::string>
 rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
                        DurationScale Scale, const Expr &Node) {
   llvm::StringRef InverseFunction = getTimeInverseForScale(Scale);
@@ -184,7 +185,7 @@ bool isLiteralZero(const MatchFinder::MatchResult &Result, const Expr &Node) {
   return false;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 stripFloatCast(const ast_matchers::MatchFinder::MatchResult &Result,
                const Expr &Node) {
   if (const Expr *MaybeCastArg = selectFirst<const Expr>(
@@ -204,12 +205,12 @@ stripFloatCast(const ast_matchers::MatchFinder::MatchResult &Result,
   return std::nullopt;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 stripFloatLiteralFraction(const MatchFinder::MatchResult &Result,
                           const Expr &Node) {
   if (const auto *LitFloat = llvm::dyn_cast<FloatingLiteral>(&Node))
     // Attempt to simplify a `Duration` factory call with a literal argument.
-    if (llvm::Optional<llvm::APSInt> IntValue = truncateIfIntegral(*LitFloat))
+    if (std::optional<llvm::APSInt> IntValue = truncateIfIntegral(*LitFloat))
       return toString(*IntValue, /*radix=*/10);
 
   return std::nullopt;
@@ -218,11 +219,11 @@ stripFloatLiteralFraction(const MatchFinder::MatchResult &Result,
 std::string simplifyDurationFactoryArg(const MatchFinder::MatchResult &Result,
                                        const Expr &Node) {
   // Check for an explicit cast to `float` or `double`.
-  if (llvm::Optional<std::string> MaybeArg = stripFloatCast(Result, Node))
+  if (std::optional<std::string> MaybeArg = stripFloatCast(Result, Node))
     return *MaybeArg;
 
   // Check for floats without fractional components.
-  if (llvm::Optional<std::string> MaybeArg =
+  if (std::optional<std::string> MaybeArg =
           stripFloatLiteralFraction(Result, Node))
     return *MaybeArg;
 
@@ -230,7 +231,7 @@ std::string simplifyDurationFactoryArg(const MatchFinder::MatchResult &Result,
   return tooling::fixit::getText(Node, *Result.Context).str();
 }
 
-llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
+std::optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
   static const llvm::StringMap<DurationScale> ScaleMap(
       {{"ToDoubleHours", DurationScale::Hours},
        {"ToInt64Hours", DurationScale::Hours},
@@ -252,7 +253,7 @@ llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
   return ScaleIter->second;
 }
 
-llvm::Optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name) {
+std::optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name) {
   static const llvm::StringMap<DurationScale> ScaleMap(
       {{"ToUnixHours", DurationScale::Hours},
        {"ToUnixMinutes", DurationScale::Minutes},
@@ -273,8 +274,8 @@ std::string rewriteExprFromNumberToDuration(
     const Expr *Node) {
   const Expr &RootNode = *Node->IgnoreParenImpCasts();
 
-  // First check to see if we can undo a complimentary function call.
-  if (llvm::Optional<std::string> MaybeRewrite =
+  // First check to see if we can undo a complementary function call.
+  if (std::optional<std::string> MaybeRewrite =
           rewriteInverseDurationCall(Result, Scale, RootNode))
     return *MaybeRewrite;
 
@@ -291,8 +292,8 @@ std::string rewriteExprFromNumberToTime(
     const Expr *Node) {
   const Expr &RootNode = *Node->IgnoreParenImpCasts();
 
-  // First check to see if we can undo a complimentary function call.
-  if (llvm::Optional<std::string> MaybeRewrite =
+  // First check to see if we can undo a complementary function call.
+  if (std::optional<std::string> MaybeRewrite =
           rewriteInverseTimeCall(Result, Scale, RootNode))
     return *MaybeRewrite;
 

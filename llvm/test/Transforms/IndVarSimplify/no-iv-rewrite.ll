@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; We should only have 2 IVs.
 ; sext should be eliminated while preserving gep inboundsness.
-define i32 @sum(i32* %arr, i32 %n) nounwind {
+define i32 @sum(ptr %arr, i32 %n) nounwind {
 ; CHECK-LABEL: @sum(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp slt i32 0, [[N:%.*]]
@@ -19,8 +19,8 @@ define i32 @sum(i32* %arr, i32 %n) nounwind {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[PH]] ]
 ; CHECK-NEXT:    [[S_01:%.*]] = phi i32 [ 0, [[PH]] ], [ [[SINC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[ADR:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[ADR]], align 4
+; CHECK-NEXT:    [[ADR:%.*]] = getelementptr inbounds i32, ptr [[ARR:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ADR]], align 4
 ; CHECK-NEXT:    [[SINC]] = add nsw i32 [[S_01]], [[VAL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -43,8 +43,8 @@ loop:
   %i.02 = phi i32 [ 0, %ph ], [ %iinc, %loop ]
   %s.01 = phi i32 [ 0, %ph ], [ %sinc, %loop ]
   %ofs = sext i32 %i.02 to i64
-  %adr = getelementptr inbounds i32, i32* %arr, i64 %ofs
-  %val = load i32, i32* %adr
+  %adr = getelementptr inbounds i32, ptr %arr, i64 %ofs
+  %val = load i32, ptr %adr
   %sinc = add nsw i32 %s.01, %val
   %iinc = add nsw i32 %i.02, 1
   %cond = icmp slt i32 %iinc, %n
@@ -62,7 +62,7 @@ return:
 ; We should only have 2 IVs.
 ; %ofs sext should be eliminated while preserving gep inboundsness.
 ; %vall sext should obviously not be eliminated
-define i64 @suml(i32* %arr, i32 %n) nounwind {
+define i64 @suml(ptr %arr, i32 %n) nounwind {
 ; CHECK-LABEL: @suml(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp slt i32 0, [[N:%.*]]
@@ -73,8 +73,8 @@ define i64 @suml(i32* %arr, i32 %n) nounwind {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[PH]] ]
 ; CHECK-NEXT:    [[S_01:%.*]] = phi i64 [ 0, [[PH]] ], [ [[SINC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[ADR:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[ADR]], align 4
+; CHECK-NEXT:    [[ADR:%.*]] = getelementptr inbounds i32, ptr [[ARR:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ADR]], align 4
 ; CHECK-NEXT:    [[VALL:%.*]] = sext i32 [[VAL]] to i64
 ; CHECK-NEXT:    [[SINC]] = add nsw i64 [[S_01]], [[VALL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -98,8 +98,8 @@ loop:
   %i.02 = phi i32 [ 0, %ph ], [ %iinc, %loop ]
   %s.01 = phi i64 [ 0, %ph ], [ %sinc, %loop ]
   %ofs = sext i32 %i.02 to i64
-  %adr = getelementptr inbounds i32, i32* %arr, i64 %ofs
-  %val = load i32, i32* %adr
+  %adr = getelementptr inbounds i32, ptr %arr, i64 %ofs
+  %val = load i32, ptr %adr
   %vall = sext i32 %val to i64
   %sinc = add nsw i64 %s.01, %vall
   %iinc = add nsw i32 %i.02, 1
@@ -119,38 +119,38 @@ return:
 ; Preserve exactly one pointer type IV.
 ; Don't create any extra adds.
 ; Preserve gep inboundsness, and don't factor it.
-define void @outofbounds(i32* %first, i32* %last, i32 %idx) nounwind {
+define void @outofbounds(ptr %first, ptr %last, i32 %idx) nounwind {
 ; CHECK-LABEL: @outofbounds(
-; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ne i32* [[FIRST:%.*]], [[LAST:%.*]]
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ne ptr [[FIRST:%.*]], [[LAST:%.*]]
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[PH:%.*]], label [[RETURN:%.*]]
 ; CHECK:       ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PTRIV:%.*]] = phi i32* [ [[FIRST]], [[PH]] ], [ [[PTRPOST:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PTRIV:%.*]] = phi ptr [ [[FIRST]], [[PH]] ], [ [[PTRPOST:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFS:%.*]] = sext i32 [[IDX:%.*]] to i64
-; CHECK-NEXT:    [[ADR:%.*]] = getelementptr inbounds i32, i32* [[PTRIV]], i64 [[OFS]]
-; CHECK-NEXT:    store i32 3, i32* [[ADR]], align 4
-; CHECK-NEXT:    [[PTRPOST]] = getelementptr inbounds i32, i32* [[PTRIV]], i32 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32* [[PTRPOST]], [[LAST]]
+; CHECK-NEXT:    [[ADR:%.*]] = getelementptr inbounds i32, ptr [[PTRIV]], i64 [[OFS]]
+; CHECK-NEXT:    store i32 3, ptr [[ADR]], align 4
+; CHECK-NEXT:    [[PTRPOST]] = getelementptr inbounds i32, ptr [[PTRIV]], i32 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne ptr [[PTRPOST]], [[LAST]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
-  %precond = icmp ne i32* %first, %last
+  %precond = icmp ne ptr %first, %last
   br i1 %precond, label %ph, label %return
 
 ph:
   br label %loop
 
 loop:
-  %ptriv = phi i32* [ %first, %ph ], [ %ptrpost, %loop ]
+  %ptriv = phi ptr [ %first, %ph ], [ %ptrpost, %loop ]
   %ofs = sext i32 %idx to i64
-  %adr = getelementptr inbounds i32, i32* %ptriv, i64 %ofs
-  store i32 3, i32* %adr
-  %ptrpost = getelementptr inbounds i32, i32* %ptriv, i32 1
-  %cond = icmp ne i32* %ptrpost, %last
+  %adr = getelementptr inbounds i32, ptr %ptriv, i64 %ofs
+  store i32 3, ptr %adr
+  %ptrpost = getelementptr inbounds i32, ptr %ptriv, i32 1
+  %cond = icmp ne ptr %ptrpost, %last
   br i1 %cond, label %loop, label %exit
 
 exit:
@@ -163,18 +163,16 @@ return:
 %structI = type { i32 }
 
 ; Preserve casts
-define void @bitcastiv(i32 %start, i32 %limit, i32 %step, %structI* %base)
+define void @bitcastiv(i32 %start, i32 %limit, i32 %step, ptr %base)
 ; CHECK-LABEL: @bitcastiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[P:%.*]] = phi %structI* [ [[BASE:%.*]], [[ENTRY]] ], [ [[PINC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[ADR:%.*]] = getelementptr [[STRUCTI:%.*]], %structI* [[P]], i32 0, i32 0
-; CHECK-NEXT:    store i32 3, i32* [[ADR]], align 4
-; CHECK-NEXT:    [[PP:%.*]] = bitcast %structI* [[P]] to i32*
-; CHECK-NEXT:    store i32 4, i32* [[PP]], align 4
-; CHECK-NEXT:    [[PINC]] = getelementptr [[STRUCTI]], %structI* [[P]], i32 1
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[BASE:%.*]], [[ENTRY]] ], [ [[PINC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 3, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[P]], align 4
+; CHECK-NEXT:    [[PINC]] = getelementptr [[STRUCTI:%.*]], ptr [[P]], i32 1
 ; CHECK-NEXT:    [[NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[NEXT]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -188,12 +186,10 @@ entry:
 
 loop:
   %iv = phi i32 [%start, %entry], [%next, %loop]
-  %p = phi %structI* [%base, %entry], [%pinc, %loop]
-  %adr = getelementptr %structI, %structI* %p, i32 0, i32 0
-  store i32 3, i32* %adr
-  %pp = bitcast %structI* %p to i32*
-  store i32 4, i32* %pp
-  %pinc = getelementptr %structI, %structI* %p, i32 1
+  %p = phi ptr [%base, %entry], [%pinc, %loop]
+  store i32 3, ptr %p
+  store i32 4, ptr %p
+  %pinc = getelementptr %structI, ptr %p, i32 1
   %next = add i32 %iv, 1
   %cond = icmp ne i32 %next, %limit
   br i1 %cond, label %loop, label %exit
@@ -203,7 +199,7 @@ exit:
 }
 
 ; Test inserting a truncate at a phi use.
-define void @maxvisitor(i32 %limit, i32* %base) nounwind {
+define void @maxvisitor(i32 %limit, ptr %base) nounwind {
 ; CHECK-LABEL: @maxvisitor(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 1)
@@ -212,8 +208,8 @@ define void @maxvisitor(i32 %limit, i32* %base) nounwind {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[MAX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[MAX_NEXT:%.*]], [[LOOP_INC]] ]
-; CHECK-NEXT:    [[ADR:%.*]] = getelementptr inbounds i32, i32* [[BASE:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[ADR]], align 4
+; CHECK-NEXT:    [[ADR:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[ADR]], align 4
 ; CHECK-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[VAL]], [[MAX]]
 ; CHECK-NEXT:    br i1 [[CMP19]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
@@ -236,8 +232,8 @@ loop:
   %idx = phi i32 [ 0, %entry ], [ %idx.next, %loop.inc ]
   %max = phi i32 [ 0, %entry ], [ %max.next, %loop.inc ]
   %idxprom = sext i32 %idx to i64
-  %adr = getelementptr inbounds i32, i32* %base, i64 %idxprom
-  %val = load i32, i32* %adr
+  %adr = getelementptr inbounds i32, ptr %base, i64 %idxprom
+  %val = load i32, ptr %adr
   %cmp19 = icmp sgt i32 %val, %max
   br i1 %cmp19, label %if.then, label %if.else
 
@@ -293,7 +289,7 @@ exit:
 }
 
 ; Test cloning an or, which is not an OverflowBinaryOperator.
-define i64 @cloneOr(i32 %limit, i64* %base) nounwind {
+define i64 @cloneOr(i32 %limit, ptr %base) nounwind {
 ; CHECK-LABEL: @cloneOr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[HALFLIM:%.*]] = ashr i32 [[LIMIT:%.*]], 2
@@ -301,8 +297,8 @@ define i64 @cloneOr(i32 %limit, i64* %base) nounwind {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[ADR:%.*]] = getelementptr i64, i64* [[BASE:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i64, i64* [[ADR]], align 8
+; CHECK-NEXT:    [[ADR:%.*]] = getelementptr i64, ptr [[BASE:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[ADR]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP0]]
@@ -321,8 +317,8 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry], [ %iv.next, %loop ]
   %t1 = sext i32 %iv to i64
-  %adr = getelementptr i64, i64* %base, i64 %t1
-  %val = load i64, i64* %adr
+  %adr = getelementptr i64, ptr %base, i64 %t1
+  %val = load i64, ptr %adr
   %t2 = or i32 %iv, 1
   %t3 = sext i32 %t2 to i64
   %iv.next = add i32 %iv, 2
@@ -431,13 +427,12 @@ return:
 ; lowers the type without changing the expression.
 %structIF = type { i32, float }
 
-define void @congruentgepiv(%structIF* %base) nounwind uwtable ssp {
+define void @congruentgepiv(ptr %base) nounwind uwtable ssp {
 ; CHECK-LABEL: @congruentgepiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS1:%.*]] = bitcast %structIF* [[BASE:%.*]] to i32*
-; CHECK-NEXT:    store i32 4, i32* [[INDVARS1]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[BASE:%.*]], align 4
 ; CHECK-NEXT:    br i1 false, label [[LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -445,18 +440,16 @@ define void @congruentgepiv(%structIF* %base) nounwind uwtable ssp {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %first = getelementptr inbounds %structIF, %structIF* %base, i64 0, i32 0
   br label %loop
 
 loop:
-  %ptr.iv = phi %structIF* [ %ptr.inc, %latch ], [ %base, %entry ]
-  %next = phi i32* [ %next.inc, %latch ], [ %first, %entry ]
-  store i32 4, i32* %next
+  %ptr.iv = phi ptr [ %ptr.inc, %latch ], [ %base, %entry ]
+  %next = phi ptr [ %next, %latch ], [ %base, %entry ]
+  store i32 4, ptr %next
   br i1 undef, label %latch, label %exit
 
 latch:                         ; preds = %for.inc50.i
-  %ptr.inc = getelementptr inbounds %structIF, %structIF* %ptr.iv, i64 1
-  %next.inc = getelementptr inbounds %structIF, %structIF* %ptr.inc, i64 0, i32 0
+  %ptr.inc = getelementptr inbounds %structIF, ptr %ptr.iv, i64 1
   br label %loop
 
 exit:

@@ -31,6 +31,7 @@ static_library("Core") {
     "//lldb/source/Utility",
     "//llvm/lib/Demangle",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
 
     #"//lldb/source/Plugins/Language/CPlusPlus", # 3-hop dependency cycle.
     #"//lldb/source/Plugins/Language/ObjC",  # Many-hop dependency cycle.

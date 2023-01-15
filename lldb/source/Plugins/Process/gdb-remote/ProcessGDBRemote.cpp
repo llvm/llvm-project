@@ -68,6 +68,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <thread>
 
@@ -1032,7 +1033,7 @@ void ProcessGDBRemote::MaybeLoadExecutableModule() {
   if (!module_sp)
     return;
 
-  llvm::Optional<QOffsets> offsets = m_gdb_comm.GetQOffsets();
+  std::optional<QOffsets> offsets = m_gdb_comm.GetQOffsets();
   if (!offsets)
     return;
 
@@ -3815,6 +3816,29 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos_sender(
     StringExtractorGDBRemote response;
     response.SetResponseValidatorToJSON();
     if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) ==
+        GDBRemoteCommunication::PacketResult::Success) {
+      StringExtractorGDBRemote::ResponseType response_type =
+          response.GetResponseType();
+      if (response_type == StringExtractorGDBRemote::eResponse) {
+        if (!response.Empty()) {
+          object_sp =
+              StructuredData::ParseJSON(std::string(response.GetStringRef()));
+        }
+      }
+    }
+  }
+  return object_sp;
+}
+
+StructuredData::ObjectSP ProcessGDBRemote::GetDynamicLoaderProcessState() {
+  StructuredData::ObjectSP object_sp;
+  StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
+
+  if (m_gdb_comm.GetDynamicLoaderProcessStateSupported()) {
+    StringExtractorGDBRemote response;
+    response.SetResponseValidatorToJSON();
+    if (m_gdb_comm.SendPacketAndWaitForResponse("jGetDyldProcessState",
+                                                response) ==
         GDBRemoteCommunication::PacketResult::Success) {
       StringExtractorGDBRemote::ResponseType response_type =
           response.GetResponseType();

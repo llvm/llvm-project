@@ -11,20 +11,20 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare void @bar(...) local_unnamed_addr #2
 
 ; Function Attrs: nounwind uwtable
-define i8* @f() #3 !dbg !16 {
+define ptr @f() #3 !dbg !16 {
 entry:
-  %0 = tail call token @llvm.coro.id(i32 0, i8* null, i8* bitcast (i8* ()* @f to i8*), i8* null), !dbg !26
+  %0 = tail call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null), !dbg !26
   %1 = tail call i64 @llvm.coro.size.i64(), !dbg !26
-  %call = tail call i8* @malloc(i64 %1), !dbg !26
-  %2 = tail call i8* @llvm.coro.begin(token %0, i8* %call) #9, !dbg !26
-  tail call void @llvm.dbg.value(metadata i8* %2, metadata !21, metadata !12), !dbg !26
+  %call = tail call ptr @malloc(i64 %1), !dbg !26
+  %2 = tail call ptr @llvm.coro.begin(token %0, ptr %call) #9, !dbg !26
+  tail call void @llvm.dbg.value(metadata ptr %2, metadata !21, metadata !12), !dbg !26
   br label %for.cond, !dbg !27
 
 for.cond:                                         ; preds = %for.cond, %entry
   tail call void @llvm.dbg.value(metadata i32 undef, metadata !22, metadata !12), !dbg !28
   tail call void @llvm.dbg.value(metadata i32 undef, metadata !11, metadata !12) #7, !dbg !29
   tail call void (...) @bar() #7, !dbg !33
-  %3 = tail call token @llvm.coro.save(i8* null), !dbg !34
+  %3 = tail call token @llvm.coro.save(ptr null), !dbg !34
   %4 = tail call i8 @llvm.coro.suspend(token %3, i1 false), !dbg !34
   %conv = sext i8 %4 to i32, !dbg !34
   switch i32 %conv, label %coro_Suspend [
@@ -33,32 +33,32 @@ for.cond:                                         ; preds = %for.cond, %entry
   ], !dbg !34
 
 coro_Cleanup:                                     ; preds = %for.cond
-  %5 = tail call i8* @llvm.coro.free(token %0, i8* %2), !dbg !35
-  tail call void @free(i8* nonnull %5), !dbg !36
+  %5 = tail call ptr @llvm.coro.free(token %0, ptr %2), !dbg !35
+  tail call void @free(ptr nonnull %5), !dbg !36
   br label %coro_Suspend, !dbg !36
 
 coro_Suspend:                                     ; preds = %for.cond, %if.then, %coro_Cleanup
-  tail call i1 @llvm.coro.end(i8* null, i1 false) #9, !dbg !38
-  ret i8* %2, !dbg !39
+  tail call i1 @llvm.coro.end(ptr null, i1 false) #9, !dbg !38
+  ret ptr %2, !dbg !39
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #4
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #4
 
 ; Function Attrs: argmemonly nounwind readonly
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #5
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #5
 
 ; Function Attrs: nounwind
-declare noalias i8* @malloc(i64) local_unnamed_addr #6
+declare noalias ptr @malloc(i64) local_unnamed_addr #6
 declare i64 @llvm.coro.size.i64() #1
-declare i8* @llvm.coro.begin(token, i8* writeonly) #7
-declare token @llvm.coro.save(i8*) #7
+declare ptr @llvm.coro.begin(token, ptr writeonly) #7
+declare token @llvm.coro.save(ptr) #7
 declare i8 @llvm.coro.suspend(token, i1) #7
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #4
-declare i8* @llvm.coro.free(token, i8* nocapture readonly) #5
-declare void @free(i8* nocapture) local_unnamed_addr #6
-declare i1 @llvm.coro.end(i8*, i1) #7
-declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #5
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #4
+declare ptr @llvm.coro.free(token, ptr nocapture readonly) #5
+declare void @free(ptr nocapture) local_unnamed_addr #6
+declare i1 @llvm.coro.end(ptr, i1) #7
+declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #5
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 

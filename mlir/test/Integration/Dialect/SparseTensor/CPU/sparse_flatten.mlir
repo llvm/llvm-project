@@ -3,13 +3,17 @@
 // DEFINE: TENSOR0="%mlir_src_dir/test/Integration/data/test.tns" \
 // DEFINE: mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // DEFINE: FileCheck %s
 //
 // RUN: %{command}
 //
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{command}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
 // RUN: %{command}
 
 !Filename = !llvm.ptr<i8>
@@ -44,7 +48,7 @@ module {
   //
   func.func @kernel_flatten(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>,
                             %argx: tensor<7x3xf64>)
-		       -> tensor<7x3xf64> {
+                                -> tensor<7x3xf64> {
     %0 = linalg.generic #trait_flatten
       ins(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>)
       outs(%argx: tensor<7x3xf64>) {
@@ -56,6 +60,7 @@ module {
   }
 
   func.func private @getTensorFilename(index) -> (!Filename)
+  func.func private @printMemrefF64(%ptr : tensor<*xf64>)
 
   //
   // Main driver that reads tensor from file and calls the sparse kernel.
@@ -80,18 +85,16 @@ module {
 
     // Print the result for verification.
     //
-    // CHECK: ( 6.25, 0, 0 )
-    // CHECK: ( 4.224, 6.21, 0 )
-    // CHECK: ( 0, 0, 15.455 )
-    // CHECK: ( 0, 0, 0 )
-    // CHECK: ( 0, 0, 0 )
-    // CHECK: ( 0, 0, 0 )
-    // CHECK: ( 7, 0, 0 )
+    // CHECK:      {{\[}}[6.25,   0,   0],
+    // CHECK-NEXT: [4.224,   6.21,   0],
+    // CHECK-NEXT: [0,   0,   15.455],
+    // CHECK-NEXT: [0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0],
+    // CHECK-NEXT: [7,   0,   0]]
     //
-    scf.for %i = %c0 to %c7 step %c1 {
-      %v = vector.transfer_read %0[%i, %c0], %d0: tensor<7x3xf64>, vector<3xf64>
-      vector.print %v : vector<3xf64>
-    }
+    %1 = tensor.cast %0 : tensor<7x3xf64> to tensor<*xf64>
+    call @printMemrefF64(%1) : (tensor<*xf64>) -> ()
 
     // Release the resources.
     bufferization.dealloc_tensor %a : tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>

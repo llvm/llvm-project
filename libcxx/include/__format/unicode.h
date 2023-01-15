@@ -13,6 +13,7 @@
 #include <__assert>
 #include <__config>
 #include <__format/extended_grapheme_cluster_table.h>
+#include <__type_traits/make_unsigned.h>
 #include <__utility/unreachable.h>
 #include <bit>
 

@@ -307,7 +307,7 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
 
   // Add the a section into an existing segment.
   for (LoadCommand &LC : Obj.LoadCommands) {
-    Optional<StringRef> SegName = LC.getSegmentName();
+    std::optional<StringRef> SegName = LC.getSegmentName();
     if (SegName && SegName == TargetSegName) {
       uint64_t Addr = *LC.getSegmentVMAddr();
       for (const std::unique_ptr<Section> &S : LC.Sections)
@@ -348,7 +348,7 @@ static Expected<Section &> findSection(StringRef SecName, Object &O) {
                              SecName.str().c_str());
 
   assert(FoundSec->get()->CanonicalName == (SegName + "," + SecName).str());
-  return *FoundSec->get();
+  return **FoundSec;
 }
 
 static Error updateSection(const NewSectionInfo &NewSection, Object &O) {

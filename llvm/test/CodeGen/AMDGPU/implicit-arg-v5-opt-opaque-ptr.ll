@@ -2,7 +2,7 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=5 -S -opaque-pointers -passes=amdgpu-lower-kernel-attributes,instcombine %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_local_size_x_opaque_pointer(i16 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @get_local_size_x_opaque_pointer(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: @get_local_size_x_opaque_pointer(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 12
@@ -17,12 +17,12 @@ define amdgpu_kernel void @get_local_size_x_opaque_pointer(i16 addrspace(1)* %ou
   %local.size.offset = select i1 %cmp.id.count, i64 12, i64 18
   %gep.local.size = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 %local.size.offset
   %local.size = load i16, ptr addrspace(4) %gep.local.size, align 2
-  store i16 %local.size, i16 addrspace(1)* %out
+  store i16 %local.size, ptr addrspace(1) %out
   ret void
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_local_size_y_opaque_pointer(i16 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @get_local_size_y_opaque_pointer(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: @get_local_size_y_opaque_pointer(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 14
@@ -38,12 +38,12 @@ define amdgpu_kernel void @get_local_size_y_opaque_pointer(i16 addrspace(1)* %ou
   %local.size.offset = select i1 %cmp.id.count, i64 14, i64 20
   %gep.local.size = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 %local.size.offset
   %local.size = load i16, ptr addrspace(4) %gep.local.size, align 2
-  store i16 %local.size, i16 addrspace(1)* %out
+  store i16 %local.size, ptr addrspace(1) %out
   ret void
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define amdgpu_kernel void @get_local_size_z_opaque_pointer(i16 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @get_local_size_z_opaque_pointer(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: @get_local_size_z_opaque_pointer(
 ; GCN-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; GCN-NEXT:    [[GEP_LOCAL_SIZE:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 16
@@ -59,7 +59,7 @@ define amdgpu_kernel void @get_local_size_z_opaque_pointer(i16 addrspace(1)* %ou
   %local.size.offset = select i1 %cmp.id.count, i64 16, i64 22
   %gep.local.size = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 %local.size.offset
   %local.size = load i16, ptr addrspace(4) %gep.local.size, align 2
-  store i16 %local.size, i16 addrspace(1)* %out
+  store i16 %local.size, ptr addrspace(1) %out
   ret void
 }
 

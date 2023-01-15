@@ -6,7 +6,7 @@
 ; Enable tailcall optimization for iOS 5.0
 ; rdar://9120031
 
-@t = weak global i32 ()* null           ; <i32 ()**> [#uses=1]
+@t = weak global ptr null           ; <ptr> [#uses=1]
 
 declare void @g(i32, i32, i32, i32)
 
@@ -24,7 +24,7 @@ define void @t2() "frame-pointer"="all" {
 ; CHECKT2D: ldr
 ; CHECKT2D-NEXT: ldr
 ; CHECKT2D-NEXT: bx r0
-        %tmp = load i32 ()*, i32 ()** @t         ; <i32 ()*> [#uses=1]
+        %tmp = load ptr, ptr @t         ; <ptr> [#uses=1]
         %tmp.upgrd.2 = tail call i32 %tmp( )            ; <i32> [#uses=0]
         ret void
 }
@@ -155,27 +155,27 @@ define i32 @t9() nounwind "frame-pointer"="all" {
 ; CHECKT2D: bl __ZN9MutexLockD1Ev
 ; CHECKT2D: b.w ___divsi3
   %lock = alloca %class.MutexLock, align 1
-  %1 = call %class.MutexLock* @_ZN9MutexLockC1Ev(%class.MutexLock* %lock)
-  %2 = load i32, i32* @x, align 4
+  %1 = call ptr @_ZN9MutexLockC1Ev(ptr %lock)
+  %2 = load i32, ptr @x, align 4
   %3 = sdiv i32 1000, %2
-  %4 = call %class.MutexLock* @_ZN9MutexLockD1Ev(%class.MutexLock* %lock)
+  %4 = call ptr @_ZN9MutexLockD1Ev(ptr %lock)
   ret i32 %3
 }
 
-declare %class.MutexLock* @_ZN9MutexLockC1Ev(%class.MutexLock*) unnamed_addr nounwind align 2
+declare ptr @_ZN9MutexLockC1Ev(ptr) unnamed_addr nounwind align 2
 
-declare %class.MutexLock* @_ZN9MutexLockD1Ev(%class.MutexLock*) unnamed_addr nounwind align 2
+declare ptr @_ZN9MutexLockD1Ev(ptr) unnamed_addr nounwind align 2
 
 ; rdar://13827621
 ; Correctly preserve the input chain for the tailcall node in the bitcast case,
 ; otherwise the call to floorf is lost.
-define float @libcall_tc_test2(float* nocapture %a, float %b) "frame-pointer"="all" {
+define float @libcall_tc_test2(ptr nocapture %a, float %b) "frame-pointer"="all" {
 ; CHECKT2D-LABEL: libcall_tc_test2:
 ; CHECKT2D: bl _floorf
 ; CHECKT2D: b.w _truncf
-  %1 = load float, float* %a, align 4
+  %1 = load float, ptr %a, align 4
   %call = tail call float @floorf(float %1)
-  store float %call, float* %a, align 4
+  store float %call, ptr %a, align 4
   %call1 = tail call float @truncf(float %b)
   ret float %call1
 }

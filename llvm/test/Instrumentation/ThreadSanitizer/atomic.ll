@@ -1645,7 +1645,7 @@ entry:
 ; CHECK-NEXT: {{.*}} = call i64 @__tsan_atomic64_compare_exchange_val(ptr {{.*}}, i64 {{.*}}, i64 {{.*}}, i32 5, i32 5), !dbg
 ; CHECK-NEXT: {{.*}} = icmp eq i64
 ; CHECK-NEXT: {{.*}} = inttoptr i64 {{.*}} to ptr
-; CHECK-NEXT: {{.*}} = insertvalue { ptr, i1 } undef, ptr {{.*}}, 0
+; CHECK-NEXT: {{.*}} = insertvalue { ptr, i1 } poison, ptr {{.*}}, 0
 ; CHECK-NEXT: {{.*}} = insertvalue { ptr, i1 } {{.*}}, i1 {{.*}}, 1
 
 define i128 @atomic128_load_unordered(ptr %a) nounwind uwtable {

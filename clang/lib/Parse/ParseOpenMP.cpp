@@ -1881,11 +1881,11 @@ void Parser::ParseOMPDeclareTargetClauses(
         if (DevTypeData) {
           if (DeviceTypeLoc.isValid()) {
             // We already saw another device_type clause, diagnose it.
-            Diag(DevTypeData.value().Loc,
+            Diag(DevTypeData->Loc,
                  diag::warn_omp_more_one_device_type_clause);
             break;
           }
-          switch (static_cast<OpenMPDeviceType>(DevTypeData.value().Type)) {
+          switch (static_cast<OpenMPDeviceType>(DevTypeData->Type)) {
           case OMPC_DEVICE_TYPE_any:
             DTCI.DT = OMPDeclareTargetDeclAttr::DT_Any;
             break;
@@ -3240,7 +3240,6 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_atomic_default_mem_order:
   case OMPC_at:
   case OMPC_severity:
-  case OMPC_order:
   case OMPC_bind:
     // OpenMP [2.14.3.1, Restrictions]
     //  Only a single default clause may be specified on a parallel, task or
@@ -3255,7 +3254,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     //  At most one severity clause can appear on the directive
     // OpenMP 5.1, 2.11.7 loop Construct, Restrictions.
     // At most one bind clause can appear on a loop directive.
-    if (!FirstClause && CKind != OMPC_order) {
+    if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
       ErrorFound = true;
@@ -3267,14 +3266,17 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_schedule:
   case OMPC_dist_schedule:
   case OMPC_defaultmap:
+  case OMPC_order:
     // OpenMP [2.7.1, Restrictions, p. 3]
     //  Only one schedule clause can appear on a loop directive.
     // OpenMP 4.5 [2.10.4, Restrictions, p. 106]
     //  At most one defaultmap clause can appear on the directive.
     // OpenMP 5.0 [2.12.5, target construct, Restrictions]
     //  At most one device clause can appear on the directive.
+    // OpenMP 5.1 [2.11.3, order clause, Restrictions]
+    //  At most one order clause may appear on a construct.
     if ((getLangOpts().OpenMP < 50 || CKind != OMPC_defaultmap) &&
-        !FirstClause) {
+        (CKind != OMPC_order || getLangOpts().OpenMP >= 51) && !FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
       ErrorFound = true;
@@ -3695,20 +3697,20 @@ OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
   if (!Val || ParseOnly)
     return nullptr;
   if (getLangOpts().OpenMP < 51 && Kind == OMPC_default &&
-      (static_cast<DefaultKind>(Val.value().Type) == OMP_DEFAULT_private ||
-       static_cast<DefaultKind>(Val.value().Type) ==
+      (static_cast<DefaultKind>(Val->Type) == OMP_DEFAULT_private ||
+       static_cast<DefaultKind>(Val->Type) ==
            OMP_DEFAULT_firstprivate)) {
-    Diag(Val.value().LOpen, diag::err_omp_invalid_dsa)
-        << getOpenMPClauseName(static_cast<DefaultKind>(Val.value().Type) ==
+    Diag(Val->LOpen, diag::err_omp_invalid_dsa)
+        << getOpenMPClauseName(static_cast<DefaultKind>(Val->Type) ==
                                        OMP_DEFAULT_private
                                    ? OMPC_private
                                    : OMPC_firstprivate)
         << getOpenMPClauseName(OMPC_default) << "5.1";
     return nullptr;
   }
-  return Actions.ActOnOpenMPSimpleClause(Kind, Val.value().Type,
-                                         Val.value().TypeLoc, Val.value().LOpen,
-                                         Val.value().Loc, Val.value().RLoc);
+  return Actions.ActOnOpenMPSimpleClause(Kind, Val->Type,
+                                         Val->TypeLoc, Val->LOpen,
+                                         Val->Loc, Val->RLoc);
 }
 
 /// Parsing of OpenMP clauses like 'ordered'.
@@ -3862,6 +3864,34 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
       Arg.push_back(OMPC_DEFAULTMAP_unknown);
       KLoc.push_back(SourceLocation());
     }
+  } else if (Kind == OMPC_order) {
+    enum { Modifier, OrderKind, NumberOfElements };
+    Arg.resize(NumberOfElements);
+    KLoc.resize(NumberOfElements);
+    Arg[Modifier] = OMPC_ORDER_MODIFIER_unknown;
+    Arg[OrderKind] = OMPC_ORDER_unknown;
+    unsigned KindModifier = getOpenMPSimpleClauseType(
+        Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok), getLangOpts());
+    if (KindModifier > OMPC_ORDER_unknown) {
+      // Parse 'modifier'
+      Arg[Modifier] = KindModifier;
+      KLoc[Modifier] = Tok.getLocation();
+      if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
+          Tok.isNot(tok::annot_pragma_openmp_end))
+        ConsumeAnyToken();
+      // Parse ':'
+      if (Tok.is(tok::colon))
+        ConsumeAnyToken();
+      else
+        Diag(Tok, diag::warn_pragma_expected_colon) << "order modifier";
+      KindModifier = getOpenMPSimpleClauseType(
+          Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok), getLangOpts());
+    }
+    Arg[OrderKind] = KindModifier;
+    KLoc[OrderKind] = Tok.getLocation();
+    if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
+        Tok.isNot(tok::annot_pragma_openmp_end))
+      ConsumeAnyToken();
   } else if (Kind == OMPC_device) {
     // Only target executable directives support extended device construct.
     if (isOpenMPTargetExecutionDirective(DKind) && getLangOpts().OpenMP >= 50 &&

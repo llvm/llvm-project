@@ -381,12 +381,12 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       InferredTarget = BaseMethodTarget;
     } else {
       bool ResolutionError = resolveCalleeCUDATargetConflict(
-          InferredTarget.value(), BaseMethodTarget, &*InferredTarget);
+          *InferredTarget, BaseMethodTarget, &*InferredTarget);
       if (ResolutionError) {
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << InferredTarget.value() << BaseMethodTarget;
+              << (unsigned)CSM << *InferredTarget << BaseMethodTarget;
         }
         MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(Context));
         return true;
@@ -424,12 +424,12 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       InferredTarget = FieldMethodTarget;
     } else {
       bool ResolutionError = resolveCalleeCUDATargetConflict(
-          InferredTarget.value(), FieldMethodTarget, &*InferredTarget);
+          *InferredTarget, FieldMethodTarget, &*InferredTarget);
       if (ResolutionError) {
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << InferredTarget.value() << FieldMethodTarget;
+              << (unsigned)CSM << *InferredTarget << FieldMethodTarget;
         }
         MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(Context));
         return true;
@@ -442,9 +442,9 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
   // it's the least restrictive option that can be invoked from any target.
   bool NeedsH = true, NeedsD = true;
   if (InferredTarget) {
-    if (InferredTarget.value() == CFT_Device)
+    if (*InferredTarget == CFT_Device)
       NeedsH = false;
-    else if (InferredTarget.value() == CFT_Host)
+    else if (*InferredTarget == CFT_Host)
       NeedsD = false;
   }
 

@@ -206,9 +206,8 @@ void NVPTXAsmPrinter::lowerImageHandleSymbol(unsigned Index, MCOperand &MCOp) {
   NVPTXTargetMachine &nvTM = static_cast<NVPTXTargetMachine&>(TM);
   const NVPTXMachineFunctionInfo *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
   const char *Sym = MFI->getImageHandleSymbol(Index);
-  std::string *SymNamePtr =
-    nvTM.getManagedStrPool()->getManagedString(Sym);
-  MCOp = GetSymbolRef(OutContext.getOrCreateSymbol(StringRef(*SymNamePtr)));
+  StringRef SymName = nvTM.getStrPool().save(Sym);
+  MCOp = GetSymbolRef(OutContext.getOrCreateSymbol(SymName));
 }
 
 void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
@@ -472,6 +471,9 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
 
+  if (shouldEmitPTXNoReturn(F, TM))
+    O << ".noreturn";
+
   OutStreamer->emitRawText(O.str());
 
   VRegMapping.clear();
@@ -615,6 +617,8 @@ void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
   getSymbol(F)->print(O, MAI);
   O << "\n";
   emitFunctionParamList(F, O);
+  if (shouldEmitPTXNoReturn(F, TM))
+    O << ".noreturn";
   O << ";\n";
 }
 
@@ -913,15 +917,6 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   TS->outputDwarfFileDirectives();
 
   return ret;
-
-  //bool Result = AsmPrinter::doFinalization(M);
-  // Instead of calling the parents doFinalization, we may
-  // clone parents doFinalization and customize here.
-  // Currently, we if NVISA out the EmitGlobals() in
-  // parent's doFinalization, which is too intrusive.
-  //
-  // Same for the doInitialization.
-  //return Result;
 }
 
 // This function emits appropriate linkage directives for
@@ -1117,7 +1112,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   if (MaybeAlign A = GVar->getAlign())
     O << " .align " << A->value();
   else
-    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
+    O << " .align " << (int)DL.getPrefTypeAlign(ETy).value();
 
   if (ETy->isFloatingPointTy() || ETy->isPointerTy() ||
       (ETy->isIntegerTy() && ETy->getScalarSizeInBits() <= 64)) {
@@ -1405,7 +1400,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
   if (MaybeAlign A = GVar->getAlign())
     O << " .align " << A->value();
   else
-    O << " .align " << (int)DL.getPrefTypeAlignment(ETy);
+    O << " .align " << (int)DL.getPrefTypeAlign(ETy).value();
 
   // Special case for i128
   if (ETy->isIntegerTy(128)) {
@@ -1466,7 +1461,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   bool isABI = (STI.getSmVersion() >= 20);
   bool hasImageHandles = STI.hasImageHandles();
 
-  if (F->arg_empty()) {
+  if (F->arg_empty() && !F->isVarArg()) {
     O << "()\n";
     return;
   }
@@ -1617,21 +1612,12 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // <a>  = optimal alignment for the element type; always multiple of
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
-      Align OptimalAlign = getOptimalAlignForParam(ETy);
+      Align OptimalAlign =
+          isKernelFunc
+              ? getOptimalAlignForParam(ETy)
+              : TLI->getFunctionByValParamAlign(
+                    F, ETy, PAL.getParamAlignment(paramIndex).valueOrOne(), DL);
 
-      // Work around a bug in ptxas. When PTX code takes address of
-      // byval parameter with alignment < 4, ptxas generates code to
-      // spill argument into memory. Alas on sm_50+ ptxas generates
-      // SASS code that fails with misaligned access. To work around
-      // the problem, make sure that we align byval parameters by at
-      // least 4. Matching change must be made in LowerCall() where we
-      // prepare parameters for the call.
-      //
-      // TODO: this will need to be undone when we get to support multi-TU
-      // device-side compilation as it breaks ABI compatibility with nvcc.
-      // Hopefully ptxas bug is fixed by then.
-      if (!isKernelFunc && OptimalAlign < Align(4))
-        OptimalAlign = Align(4);
       unsigned sz = DL.getTypeAllocSize(ETy);
       O << "\t.param .align " << OptimalAlign.value() << " .b8 ";
       printParamName(I, paramIndex, O);
@@ -1668,6 +1654,15 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       --paramIndex;
       continue;
     }
+  }
+
+  if (F->isVarArg()) {
+    if (!first)
+      O << ",\n";
+    O << "\t.param .align " << STI.getMaxRequiredAlignment();
+    O << " .b8 ";
+    getSymbol(F)->print(O, MAI);
+    O << "_vararg[]";
   }
 
   O << "\n)\n";

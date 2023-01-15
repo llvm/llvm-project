@@ -46,7 +46,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -206,8 +205,8 @@ static bool hasVisibleUpdate(const ExplodedNode *LeftNode, SVal LeftVal,
     RLCV->getStore() == RightNode->getState()->getStore();
 }
 
-static Optional<SVal> getSValForVar(const Expr *CondVarExpr,
-                                    const ExplodedNode *N) {
+static std::optional<SVal> getSValForVar(const Expr *CondVarExpr,
+                                         const ExplodedNode *N) {
   ProgramStateRef State = N->getState();
   const LocationContext *LCtx = N->getLocationContext();
 
@@ -230,10 +229,10 @@ static Optional<SVal> getSValForVar(const Expr *CondVarExpr,
   return std::nullopt;
 }
 
-static Optional<const llvm::APSInt *>
+static std::optional<const llvm::APSInt *>
 getConcreteIntegerValue(const Expr *CondVarExpr, const ExplodedNode *N) {
 
-  if (Optional<SVal> V = getSValForVar(CondVarExpr, N))
+  if (std::optional<SVal> V = getSValForVar(CondVarExpr, N))
     if (auto CI = V->getAs<nonloc::ConcreteInt>())
       return &CI->getValue();
   return std::nullopt;
@@ -248,7 +247,7 @@ static bool isVarAnInterestingCondition(const Expr *CondVarExpr,
   if (!B->getErrorNode()->getStackFrame()->isParentOf(N->getStackFrame()))
     return false;
 
-  if (Optional<SVal> V = getSValForVar(CondVarExpr, N))
+  if (std::optional<SVal> V = getSValForVar(CondVarExpr, N))
     if (Optional<bugreporter::TrackingKind> K = B->getInterestingnessKind(*V))
       return *K == bugreporter::TrackingKind::Condition;
 
@@ -257,7 +256,7 @@ static bool isVarAnInterestingCondition(const Expr *CondVarExpr,
 
 static bool isInterestingExpr(const Expr *E, const ExplodedNode *N,
                               const PathSensitiveBugReport *B) {
-  if (Optional<SVal> V = getSValForVar(E, N))
+  if (std::optional<SVal> V = getSValForVar(E, N))
     return B->getInterestingnessKind(*V).has_value();
   return false;
 }
@@ -1187,8 +1186,6 @@ public:
   }
 };
 
-} // end of anonymous namespace
-
 //===----------------------------------------------------------------------===//
 //                               StoreSiteFinder
 //===----------------------------------------------------------------------===//
@@ -1228,6 +1225,7 @@ public:
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
 };
+} // namespace
 
 void StoreSiteFinder::Profile(llvm::FoldingSetNodeID &ID) const {
   static int tag = 0;
@@ -2217,6 +2215,7 @@ PathDiagnosticPieceRef StoreHandler::constructNote(StoreInfo SI,
   return std::make_shared<PathDiagnosticEventPiece>(L, NodeText);
 }
 
+namespace {
 class DefaultStoreHandler final : public StoreHandler {
 public:
   using StoreHandler::StoreHandler;
@@ -2601,6 +2600,7 @@ public:
     return CombinedResult;
   }
 };
+} // namespace
 
 Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
   // Default expression handlers.
@@ -3122,7 +3122,7 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   PathDiagnosticLocation Loc(Cond, SM, LCtx);
   auto event = std::make_shared<PathDiagnosticEventPiece>(Loc, Message);
   if (shouldPrune)
-    event->setPrunable(shouldPrune.value());
+    event->setPrunable(*shouldPrune);
   return event;
 }
 
@@ -3245,7 +3245,7 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
   if (!Ty->isIntegralOrEnumerationType())
     return false;
 
-  Optional<const llvm::APSInt *> IntValue;
+  std::optional<const llvm::APSInt *> IntValue;
   if (!IsAssuming)
     IntValue = getConcreteIntegerValue(CondVarExpr, N);
 
@@ -3256,9 +3256,9 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
       Out << (TookTrue ? "not equal to 0" : "0");
   } else {
     if (Ty->isBooleanType())
-      Out << (IntValue.value()->getBoolValue() ? "true" : "false");
+      Out << ((*IntValue)->getBoolValue() ? "true" : "false");
     else
-      Out << *IntValue.value();
+      Out << **IntValue;
   }
 
   return true;
@@ -3450,11 +3450,11 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
   }
 
   // And check for satisfiability
-  Optional<bool> IsSAT = RefutationSolver->check();
+  std::optional<bool> IsSAT = RefutationSolver->check();
   if (!IsSAT)
     return;
 
-  if (!IsSAT.value())
+  if (!*IsSAT)
     BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
 }
 

@@ -105,7 +105,7 @@ FunctionPass *createBitTrackingDCEPass();
 //
 // SROA - Replace aggregates or pieces of aggregates with scalar SSA values.
 //
-FunctionPass *createSROAPass();
+FunctionPass *createSROAPass(bool PreserveCFG = true);
 
 //===----------------------------------------------------------------------===//
 //
@@ -339,13 +339,6 @@ Pass *createLoopDeletionPass();
 // ConstantHoisting - This pass prepares a function for expensive constants.
 //
 FunctionPass *createConstantHoistingPass();
-
-//===----------------------------------------------------------------------===//
-//
-// ConstraintElimination - This pass eliminates conditions based on found
-//                         constraints.
-//
-FunctionPass *createConstraintEliminationPass();
 
 //===----------------------------------------------------------------------===//
 //

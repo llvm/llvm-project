@@ -6,16 +6,16 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 
 ; CHECK: cost of 1 for VF 1 For instruction:   %conv = fptosi float %tmp to i8
-define void @float_to_sint8_cost(i8* noalias nocapture %a, float* noalias nocapture readonly %b) nounwind {
+define void @float_to_sint8_cost(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) nounwind {
 entry:
   br label %for.body
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %b, i64 %indvars.iv
-  %tmp = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
+  %tmp = load float, ptr %arrayidx, align 4
   %conv = fptosi float %tmp to i8
-  %arrayidx2 = getelementptr inbounds i8, i8* %a, i64 %indvars.iv
-  store i8 %conv, i8* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i8, ptr %a, i64 %indvars.iv
+  store i8 %conv, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 256
   br i1 %exitcond, label %for.end, label %for.body

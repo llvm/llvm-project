@@ -57,7 +57,7 @@ fir::FortranVariableOpInterface::verifyDeclareLikeOpImpl(mlir::Value memref) {
         shapeRank = shape.getType().cast<fir::ShiftType>().getRank();
       }
 
-      llvm::Optional<unsigned> rank = getRank();
+      std::optional<unsigned> rank = getRank();
       if (!rank || *rank != shapeRank)
         return emitOpError("has conflicting shape and base operand ranks");
     } else if (!sourceIsBox) {

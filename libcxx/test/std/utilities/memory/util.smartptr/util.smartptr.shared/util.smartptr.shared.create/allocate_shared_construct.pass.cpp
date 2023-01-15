@@ -21,6 +21,7 @@
 #include "test_macros.h"
 
 #include <cassert>
+#include <cstdint>
 #include <memory>
 #include <new>
 #include <utility>

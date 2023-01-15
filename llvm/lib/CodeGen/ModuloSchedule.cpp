@@ -624,8 +624,7 @@ void ModuloScheduleExpander::generatePhis(
        BBI != BBE; ++BBI) {
     for (unsigned i = 0, e = BBI->getNumOperands(); i != e; ++i) {
       MachineOperand &MO = BBI->getOperand(i);
-      if (!MO.isReg() || !MO.isDef() ||
-          !Register::isVirtualRegister(MO.getReg()))
+      if (!MO.isReg() || !MO.isDef() || !MO.getReg().isVirtual())
         continue;
 
       int StageScheduled = Schedule.getStage(&*BBI);
@@ -749,7 +748,7 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
           continue;
         Register reg = MO.getReg();
         // Assume physical registers are used, unless they are marked dead.
-        if (Register::isPhysicalRegister(reg)) {
+        if (reg.isPhysical()) {
           used = !MO.isDead();
           if (used)
             break;
@@ -1032,7 +1031,7 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
                                                unsigned InstrStageNum,
                                                ValueMapTy *VRMap) {
   for (MachineOperand &MO : NewMI->operands()) {
-    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
     Register reg = MO.getReg();
     if (MO.isDef()) {
@@ -1281,7 +1280,7 @@ class KernelRewriter {
   // Insert a phi that carries LoopReg from the loop body and InitReg otherwise.
   // If InitReg is not given it is chosen arbitrarily. It will either be undef
   // or will be chosen so as to share another phi.
-  Register phi(Register LoopReg, Optional<Register> InitReg = {},
+  Register phi(Register LoopReg, std::optional<Register> InitReg = {},
                const TargetRegisterClass *RC = nullptr);
   // Create an undef register of the given register class.
   Register undef(const TargetRegisterClass *RC);
@@ -1389,7 +1388,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
 
   // First, dive through the phi chain to find the defaults for the generated
   // phis.
-  SmallVector<Optional<Register>, 4> Defaults;
+  SmallVector<std::optional<Register>, 4> Defaults;
   Register LoopReg = Reg;
   auto LoopProducer = Producer;
   while (LoopProducer->isPHI() && LoopProducer->getParent() == BB) {
@@ -1400,7 +1399,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
   }
   int LoopProducerStage = S.getStage(LoopProducer);
 
-  Optional<Register> IllegalPhiDefault;
+  std::optional<Register> IllegalPhiDefault;
 
   if (LoopProducerStage == -1) {
     // Do nothing.
@@ -1432,9 +1431,9 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
       // If we need more phis than we have defaults for, pad out with undefs for
       // the earliest phis, which are at the end of the defaults chain (the
       // chain is in reverse order).
-      Defaults.resize(Defaults.size() + StageDiff, Defaults.empty()
-                                                       ? Optional<Register>()
-                                                       : Defaults.back());
+      Defaults.resize(Defaults.size() + StageDiff,
+                      Defaults.empty() ? std::optional<Register>()
+                                       : Defaults.back());
     }
   }
 
@@ -1466,11 +1465,11 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
   return LoopReg;
 }
 
-Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
+Register KernelRewriter::phi(Register LoopReg, std::optional<Register> InitReg,
                              const TargetRegisterClass *RC) {
   // If the init register is not undef, try and find an existing phi.
   if (InitReg) {
-    auto I = Phis.find({LoopReg, InitReg.value()});
+    auto I = Phis.find({LoopReg, *InitReg});
     if (I != Phis.end())
       return I->second;
   } else {
@@ -1491,10 +1490,10 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
       return R;
     // Found a phi taking undef as input, so rewrite it to take InitReg.
     MachineInstr *MI = MRI.getVRegDef(R);
-    MI->getOperand(1).setReg(InitReg.value());
-    Phis.insert({{LoopReg, InitReg.value()}, R});
+    MI->getOperand(1).setReg(*InitReg);
+    Phis.insert({{LoopReg, *InitReg}, R});
     const TargetRegisterClass *ConstrainRegClass =
-        MRI.constrainRegClass(R, MRI.getRegClass(InitReg.value()));
+        MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
     assert(ConstrainRegClass && "Expected a valid constrained register class!");
     (void)ConstrainRegClass;
     UndefPhis.erase(I);

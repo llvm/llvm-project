@@ -602,7 +602,7 @@ define <2 x i32> @shl_nuw_nsw_splat_vec(<2 x i8> %x) {
 define i32 @test38(i32 %x) nounwind readnone {
 ; CHECK-LABEL: @test38(
 ; CHECK-NEXT:    [[REM1:%.*]] = and i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[REM1]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[REM1]]
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;
   %rem = srem i32 %x, 32
@@ -613,7 +613,7 @@ define i32 @test38(i32 %x) nounwind readnone {
 define <2 x i32> @test38_uniform(<2 x i32> %x) nounwind readnone {
 ; CHECK-LABEL: @test38_uniform(
 ; CHECK-NEXT:    [[REM1:%.*]] = and <2 x i32> [[X:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[REM1]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[REM1]]
 ; CHECK-NEXT:    ret <2 x i32> [[SHL]]
 ;
   %rem = srem <2 x i32> %x, <i32 32, i32 32>
@@ -624,7 +624,7 @@ define <2 x i32> @test38_uniform(<2 x i32> %x) nounwind readnone {
 define <3 x i32> @test38_nonuniform(<3 x i32> %x) nounwind readnone {
 ; CHECK-LABEL: @test38_nonuniform(
 ; CHECK-NEXT:    [[REM1:%.*]] = and <3 x i32> [[X:%.*]], <i32 31, i32 15, i32 0>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i32> <i32 1, i32 1, i32 1>, [[REM1]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <3 x i32> <i32 1, i32 1, i32 1>, [[REM1]]
 ; CHECK-NEXT:    ret <3 x i32> [[SHL]]
 ;
   %rem = srem <3 x i32> %x, <i32 32, i32 16, i32 1>
@@ -1360,8 +1360,8 @@ define <2 x i8> @ashr_demanded_bits_splat(<2 x i8> %x) {
 
 define <vscale x 8 x i8> @ashr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
 ; CHECK-LABEL: @ashr_demanded_bits_splat2(
-; CHECK-NEXT:    [[AND:%.*]] = ashr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 8 x i8> [[AND]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 8 x i8> [[SHR]]
 ;
   %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
   %shr = ashr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
@@ -1380,8 +1380,8 @@ define <2 x i8> @lshr_demanded_bits_splat(<2 x i8> %x) {
 
 define <vscale x 8 x i8> @lshr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
 ; CHECK-LABEL: @lshr_demanded_bits_splat2(
-; CHECK-NEXT:    [[AND:%.*]] = lshr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 8 x i8> [[AND]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 8 x i8> [[SHR]]
 ;
   %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
   %shr = lshr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)

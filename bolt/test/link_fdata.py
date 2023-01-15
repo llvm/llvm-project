@@ -18,6 +18,7 @@ parser.add_argument("objfile", help="Object file to extract symbol values from")
 parser.add_argument("output")
 parser.add_argument("prefix", nargs="?", default="FDATA", help="Custom FDATA prefix")
 parser.add_argument("--nmtool", default="nm", help="Path to nm tool")
+parser.add_argument("--no-lbr", action='store_true')
 
 args = parser.parse_args()
 
@@ -36,6 +37,10 @@ fdata_pat = re.compile(r"([01].*) (?P<exec>\d+) (?P<mispred>\d+)")
 # [<mispred_count>]
 preagg_pat = re.compile(r"(?P<type>[BFf]) (?P<offsets_count>.*)")
 
+# No-LBR profile:
+# <is symbol?> <closest elf symbol or DSO name> <relative address> <count>
+nolbr_pat = re.compile(r"([01].*) (?P<count>\d+)")
+
 # Replacement symbol: #symname#
 replace_pat = re.compile(r"#(?P<symname>[^#]+)#")
 
@@ -51,6 +56,7 @@ with open(args.input, 'r') as f:
         profile_line = prefix_match.group(1)
         fdata_match = fdata_pat.match(profile_line)
         preagg_match = preagg_pat.match(profile_line)
+        nolbr_match = nolbr_pat.match(profile_line)
         if fdata_match:
             src_dst, execnt, mispred = fdata_match.groups()
             # Split by whitespaces not preceded by a backslash (negative lookbehind)
@@ -59,6 +65,14 @@ with open(args.input, 'r') as f:
             # exactly matches the format.
             assert len(chunks) == 6, f"ERROR: wrong format/whitespaces must be escaped:\n{line}"
             exprs.append(('FDATA', (*chunks, execnt, mispred)))
+        elif nolbr_match:
+            loc, count = nolbr_match.groups()
+            # Split by whitespaces not preceded by a backslash (negative lookbehind)
+            chunks = re.split(r'(?<!\\) +', loc)
+            # Check if the number of records separated by non-escaped whitespace
+            # exactly matches the format.
+            assert len(chunks) == 3, f"ERROR: wrong format/whitespaces must be escaped:\n{line}"
+            exprs.append(('NOLBR', (*chunks, count)))
         elif preagg_match:
             exprs.append(('PREAGG', preagg_match.groups()))
         else:
@@ -99,12 +113,17 @@ def replace_symbol(matchobj):
     return symbols[symname]
 
 with open(args.output, 'w', newline='\n') as f:
+    if args.no_lbr:
+        print('no_lbr', file = f)
     for etype, expr in exprs:
         if etype == 'FDATA':
             issym1, anchor1, offsym1, issym2, anchor2, offsym2, execnt, mispred = expr
             print(evaluate_symbol(issym1, anchor1, offsym1),
                   evaluate_symbol(issym2, anchor2, offsym2),
                   execnt, mispred, file = f)
+        elif etype == 'NOLBR':
+            issym, anchor, offsym, count = expr
+            print(evaluate_symbol(issym, anchor, offsym), count, file = f)
         elif etype == 'PREAGG':
             # Replace all symbols enclosed in ##
             print(expr[0], re.sub(replace_pat, replace_symbol, expr[1]),

@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -40,6 +41,10 @@ void appendToGlobalCtors(Module &M, Function *F, int Priority,
 /// Same as appendToGlobalCtors(), but for global dtors.
 void appendToGlobalDtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
+
+/// Sets the KCFI type for the function. Used for compiler-generated functions
+/// that are indirectly called in instrumented code.
+void setKCFIType(Module &M, Function &F, StringRef MangledType);
 
 FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
                                             ArrayRef<Type *> InitArgTypes);
@@ -79,6 +84,12 @@ void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
 
 /// Adds global values to the llvm.compiler.used list.
 void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
+
+/// Removes global values from the llvm.used and llvm.compiler.used arrays. \p
+/// ShouldRemove should return true for any initializer field that should not be
+/// included in the replacement global.
+void removeFromUsedLists(Module &M,
+                         function_ref<bool(Constant *)> ShouldRemove);
 
 /// Filter out potentially dead comdat functions where other entries keep the
 /// entire comdat group alive.

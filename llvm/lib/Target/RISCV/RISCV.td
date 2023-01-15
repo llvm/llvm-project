@@ -51,6 +51,14 @@ def HasStdExtD : Predicate<"Subtarget->hasStdExtD()">,
                            AssemblerPredicate<(all_of FeatureStdExtD),
                            "'D' (Double-Precision Floating-Point)">;
 
+def FeatureStdExtH
+    : SubtargetFeature<"h", "HasStdExtH", "true",
+                       "'H' (Hypervisor)">;
+
+def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
+                           AssemblerPredicate<(all_of FeatureStdExtH),
+                           "'H' (Hypervisor)">;
+
 def FeatureStdExtZihintpause
     : SubtargetFeature<"zihintpause", "HasStdExtZihintpause", "true",
                        "'zihintpause' (Pause Hint)">;
@@ -323,7 +331,7 @@ def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
 def FeatureStdExtZvl32b : SubtargetFeature<"zvl32b", "ZvlLen", "32",
                                            "'Zvl' (Minimum Vector Length) 32">;
 
-foreach i = { 6-15 } in {
+foreach i = { 6-16 } in {
   defvar I = !shl(1, i);
   def FeatureStdExtZvl#I#b :
       SubtargetFeature<"zvl"#I#"b", "ZvlLen", !cast<string>(I),
@@ -413,6 +421,10 @@ def FeatureStdExtSvnapot
     : SubtargetFeature<"svnapot", "HasStdExtSvnapot", "true",
                        "'Svnapot' (NAPOT Translation Contiguity)">;
 
+def FeatureStdExtSvpbmt
+    : SubtargetFeature<"svpbmt", "HasStdExtSvpbmt", "true",
+                       "'Svpbmt' (Page-Based Memory Types)">;
+
 def FeatureStdExtSvinval
     : SubtargetFeature<"svinval", "HasStdExtSvinval", "true",
                        "'Svinval' (Fine-Grained Address-Translation Cache Invalidation)">;
@@ -444,6 +456,14 @@ def FeatureVendorXVentanaCondOps
 def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()">,
                                 AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
                                 "'XVentanaCondOps' (Ventana Conditional Ops)">;
+
+def FeatureVendorXTHeadVdot
+    : SubtargetFeature<"xtheadvdot", "HasVendorXTHeadVdot", "true",
+                       "'xtheadvdot' (T-Head Vector Extensions for Dot)",
+                       [FeatureStdExtV]>;
+def HasVendorXTHeadVdot : Predicate<"Subtarget->hasVendorXTHeadVdot()">,
+                                    AssemblerPredicate<(all_of FeatureVendorXTHeadVdot),
+                                    "'xtheadvdot' (T-Head Vector Extensions for Dot)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
@@ -525,6 +545,11 @@ def FeatureForcedAtomics : SubtargetFeature<
 def HasAtomicLdSt
     : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasForcedAtomics()">;
 
+def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
+    "AllowTaggedGlobals",
+    "true", "Use an instruction sequence for taking the address of a global "
+    "that allows a memory tag in the upper address bits">;
+
 //===----------------------------------------------------------------------===//
 // Named operands for CSR instructions.
 //===----------------------------------------------------------------------===//
@@ -542,96 +567,173 @@ include "RISCVInstrInfo.td"
 include "GISel/RISCVRegisterBanks.td"
 include "RISCVSchedRocket.td"
 include "RISCVSchedSiFive7.td"
+include "RISCVSchedSyntacoreSCR1.td"
 
 //===----------------------------------------------------------------------===//
 // RISC-V processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"generic-rv32", NoSchedModel, [Feature32Bit]>;
-def : ProcessorModel<"generic-rv64", NoSchedModel, [Feature64Bit]>;
+class RISCVProcessorModel<string n,
+                          SchedMachineModel m,
+                          list<SubtargetFeature> f,
+                          string default_march = "",
+                          list<SubtargetFeature> tunef = []>
+      :  ProcessorModel<n, m, f, tunef> {
+  string DefaultMarch = default_march;
+}
+
+class RISCVTuneProcessorModel<string n,
+                              SchedMachineModel m,
+                              list<SubtargetFeature> tunef = [],
+                              list<SubtargetFeature> f = []>
+      : ProcessorModel<n, m, f,tunef>;
+
+def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
+                                       NoSchedModel,
+                                       [Feature32Bit]>;
+def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
+                                       NoSchedModel,
+                                       [Feature64Bit]>;
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
 def : ProcessorModel<"generic", NoSchedModel, []>;
 
-def : ProcessorModel<"rocket-rv32", RocketModel, [Feature32Bit]>;
-def : ProcessorModel<"rocket-rv64", RocketModel, [Feature64Bit]>;
-def : ProcessorModel<"rocket", RocketModel, []>;
+def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
+                                      RocketModel,
+                                      [Feature32Bit]>;
+def ROCKET_RV64 : RISCVProcessorModel<"rocket-rv64",
+                                      RocketModel,
+                                      [Feature64Bit]>;
+def ROCKET : RISCVTuneProcessorModel<"rocket",
+                                     RocketModel>;
 
-def : ProcessorModel<"sifive-7-series", SiFive7Model, [],
-                     [TuneSiFive7]>;
+def SIFIVE_7 : RISCVTuneProcessorModel<"sifive-7-series",
+                                       SiFive7Model,
+                                       [TuneSiFive7]>;
 
-def : ProcessorModel<"sifive-e20", RocketModel, [Feature32Bit,
-                                                 FeatureStdExtM,
-                                                 FeatureStdExtC]>;
+def SIFIVE_E20 : RISCVProcessorModel<"sifive-e20",
+                                     RocketModel,
+                                     [Feature32Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtC],
+                                     "rv32imc">;
 
-def : ProcessorModel<"sifive-e21", RocketModel, [Feature32Bit,
-                                                 FeatureStdExtM,
-                                                 FeatureStdExtA,
-                                                 FeatureStdExtC]>;
+def SIFIVE_E21 : RISCVProcessorModel<"sifive-e21",
+                                     RocketModel,
+                                     [Feature32Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtC],
+                                     "rv32imac">;
 
-def : ProcessorModel<"sifive-e24", RocketModel, [Feature32Bit,
-                                                 FeatureStdExtM,
-                                                 FeatureStdExtA,
-                                                 FeatureStdExtF,
-                                                 FeatureStdExtC]>;
+def SIFIVE_E24 : RISCVProcessorModel<"sifive-e24",
+                                     RocketModel,
+                                     [Feature32Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtC],
+                                     "rv32imafc">;
 
-def : ProcessorModel<"sifive-e31", RocketModel, [Feature32Bit,
-                                                 FeatureStdExtM,
-                                                 FeatureStdExtA,
-                                                 FeatureStdExtC]>;
+def SIFIVE_E31 : RISCVProcessorModel<"sifive-e31",
+                                     RocketModel,
+                                     [Feature32Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtC],
+                                     "rv32imac">;
 
-def : ProcessorModel<"sifive-e34", RocketModel, [Feature32Bit,
-                                                 FeatureStdExtM,
-                                                 FeatureStdExtA,
-                                                 FeatureStdExtF,
-                                                 FeatureStdExtC]>;
+def SIFIVE_E34 : RISCVProcessorModel<"sifive-e34",
+                                     RocketModel,
+                                     [Feature32Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtC],
+                                     "rv32imafc">;
 
-def : ProcessorModel<"sifive-e76", SiFive7Model, [Feature32Bit,
-                                                  FeatureStdExtM,
-                                                  FeatureStdExtA,
-                                                  FeatureStdExtF,
-                                                  FeatureStdExtC],
-                     [TuneSiFive7]>;
+def SIFIVE_E76 : RISCVProcessorModel<"sifive-e76",
+                                     SiFive7Model,
+                                     [Feature32Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtC],
+                                     "rv32imafc",
+                                     [TuneSiFive7]>;
 
-def : ProcessorModel<"sifive-s21", RocketModel, [Feature64Bit,
-                                                 FeatureStdExtM,
-                                                 FeatureStdExtA,
-                                                 FeatureStdExtC]>;
+def SIFIVE_S21 : RISCVProcessorModel<"sifive-s21",
+                                     RocketModel,
+                                     [Feature64Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtC],
+                                     "rv64imac">;
 
-def : ProcessorModel<"sifive-s51", RocketModel, [Feature64Bit,
-                                                 FeatureStdExtM,
-                                                 FeatureStdExtA,
-                                                 FeatureStdExtC]>;
+def SIFIVE_S51 : RISCVProcessorModel<"sifive-s51",
+                                     RocketModel,
+                                     [Feature64Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtC],
+                                     "rv64imac">;
 
-def : ProcessorModel<"sifive-s54", RocketModel, [Feature64Bit,
-                                                 FeatureStdExtM,
-                                                 FeatureStdExtA,
-                                                 FeatureStdExtF,
-                                                 FeatureStdExtD,
-                                                 FeatureStdExtC]>;
+def SIFIVE_S54 : RISCVProcessorModel<"sifive-s54",
+                                      RocketModel,
+                                      [Feature64Bit,
+                                       FeatureStdExtM,
+                                       FeatureStdExtA,
+                                       FeatureStdExtF,
+                                       FeatureStdExtD,
+                                       FeatureStdExtC],
+                                      "rv64gc">;
 
-def : ProcessorModel<"sifive-s76", SiFive7Model, [Feature64Bit,
-                                                  FeatureStdExtM,
-                                                  FeatureStdExtA,
-                                                  FeatureStdExtF,
-                                                  FeatureStdExtD,
-                                                  FeatureStdExtC],
-                     [TuneSiFive7]>;
+def SIFIVE_S76 : RISCVProcessorModel<"sifive-s76",
+                                     SiFive7Model,
+                                     [Feature64Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtD,
+                                      FeatureStdExtC],
+                                     "rv64gc",
+                                     [TuneSiFive7]>;
 
-def : ProcessorModel<"sifive-u54", RocketModel, [Feature64Bit,
-                                                 FeatureStdExtM,
-                                                 FeatureStdExtA,
-                                                 FeatureStdExtF,
-                                                 FeatureStdExtD,
-                                                 FeatureStdExtC]>;
+def SIFIVE_U54 : RISCVProcessorModel<"sifive-u54",
+                                     RocketModel,
+                                     [Feature64Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtD,
+                                      FeatureStdExtC],
+                                     "rv64gc">;
 
-def : ProcessorModel<"sifive-u74", SiFive7Model, [Feature64Bit,
-                                                  FeatureStdExtM,
-                                                  FeatureStdExtA,
-                                                  FeatureStdExtF,
-                                                  FeatureStdExtD,
-                                                  FeatureStdExtC],
-                     [TuneSiFive7]>;
+def SIFIVE_U74 : RISCVProcessorModel<"sifive-u74",
+                                     SiFive7Model,
+                                     [Feature64Bit,
+                                      FeatureStdExtM,
+                                      FeatureStdExtA,
+                                      FeatureStdExtF,
+                                      FeatureStdExtD,
+                                      FeatureStdExtC],
+                                     "rv64gc",
+                                     [TuneSiFive7] >;
+
+def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
+                                              SyntacoreSCR1Model,
+                                              [Feature32Bit,
+                                               FeatureStdExtC],
+                                              "rv32ic",
+                                              [TuneNoDefaultUnroll]>;
+
+def SYNTACORE_SCR1_MAX : RISCVProcessorModel<"syntacore-scr1-max",
+                                             SyntacoreSCR1Model,
+                                             [Feature32Bit,
+                                              FeatureStdExtM,
+                                              FeatureStdExtC],
+                                             "rv32imc",
+                                             [TuneNoDefaultUnroll]>;
 
 //===----------------------------------------------------------------------===//
 // Define the RISC-V target.

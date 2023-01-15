@@ -10,12 +10,12 @@
 #define LLDB_TARGET_UNIXSIGNALS_H
 
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 
 namespace lldb_private {
@@ -101,12 +101,12 @@ public:
   uint64_t GetVersion() const;
 
   // Returns a vector of signals that meet criteria provided in arguments. Each
-  // should_[suppress|stop|notify] flag can be None  - no filtering by this
-  // flag true  - only signals that have it set to true are returned false -
+  // should_[suppress|stop|notify] flag can be std::nullopt - no filtering by
+  // this flag true - only signals that have it set to true are returned false -
   // only signals that have it set to true are returned
-  std::vector<int32_t> GetFilteredSignals(llvm::Optional<bool> should_suppress,
-                                          llvm::Optional<bool> should_stop,
-                                          llvm::Optional<bool> should_notify);
+  std::vector<int32_t> GetFilteredSignals(std::optional<bool> should_suppress,
+                                          std::optional<bool> should_stop,
+                                          std::optional<bool> should_notify);
 
 protected:
   // Classes that inherit from UnixSignals can see and modify these

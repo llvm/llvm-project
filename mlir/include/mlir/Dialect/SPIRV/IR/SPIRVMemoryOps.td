@@ -147,11 +147,11 @@ def SPIRV_InBoundsPtrAccessChainOp : SPIRV_Op<"InBoundsPtrAccessChain", [Pure]> 
     access-chain-op ::= ssa-id `=` `spirv.InBoundsPtrAccessChain` ssa-use
                         `[` ssa-use (',' ssa-use)* `]`
                         `:` pointer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     func @inbounds_ptr_access_chain(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
       %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
       ...
@@ -273,11 +273,11 @@ def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [Pure]> {
     [access-chain-op ::= ssa-id `=` `spirv.PtrAccessChain` ssa-use
                         `[` ssa-use (',' ssa-use)* `]`
                         `:` pointer-type
-    ```mlir
+    ```
 
     #### Example:
 
-    ```
+    ```mlir
     func @ptr_access_chain(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
       %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
       ...

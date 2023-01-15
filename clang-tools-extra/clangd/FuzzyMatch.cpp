@@ -56,8 +56,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzyMatch.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Format.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -89,7 +89,7 @@ FuzzyMatcher::FuzzyMatcher(llvm::StringRef Pattern)
                               llvm::makeMutableArrayRef(PatRole, PatN));
 }
 
-llvm::Optional<float> FuzzyMatcher::match(llvm::StringRef Word) {
+std::optional<float> FuzzyMatcher::match(llvm::StringRef Word) {
   if (!(WordContainsPattern = init(Word)))
     return std::nullopt;
   if (!PatN)

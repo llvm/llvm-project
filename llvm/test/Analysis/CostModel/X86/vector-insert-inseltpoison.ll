@@ -382,58 +382,58 @@ define i32 @insert_i64(i32 %arg) {
 define i32 @insert_i32(i32 %arg) {
 ; SSE2-LABEL: 'insert_i32'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_a = insertelement <2 x i32> poison, i32 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_0 = insertelement <2 x i32> poison, i32 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_0 = insertelement <2 x i32> poison, i32 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_1 = insertelement <2 x i32> poison, i32 undef, i32 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_a = insertelement <4 x i32> poison, i32 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_0 = insertelement <4 x i32> poison, i32 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32_0 = insertelement <4 x i32> poison, i32 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_3 = insertelement <4 x i32> poison, i32 undef, i32 3
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i32_a = insertelement <8 x i32> poison, i32 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_0 = insertelement <8 x i32> poison, i32 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_0 = insertelement <8 x i32> poison, i32 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_3 = insertelement <8 x i32> poison, i32 undef, i32 3
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_4 = insertelement <8 x i32> poison, i32 undef, i32 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_4 = insertelement <8 x i32> poison, i32 undef, i32 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_7 = insertelement <8 x i32> poison, i32 undef, i32 7
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16i32_a = insertelement <16 x i32> poison, i32 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_0 = insertelement <16 x i32> poison, i32 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32_0 = insertelement <16 x i32> poison, i32 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_3 = insertelement <16 x i32> poison, i32 undef, i32 3
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_8 = insertelement <16 x i32> poison, i32 undef, i32 8
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32_8 = insertelement <16 x i32> poison, i32 undef, i32 8
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_15 = insertelement <16 x i32> poison, i32 undef, i32 15
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'insert_i32'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_a = insertelement <2 x i32> poison, i32 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_0 = insertelement <2 x i32> poison, i32 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_0 = insertelement <2 x i32> poison, i32 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_1 = insertelement <2 x i32> poison, i32 undef, i32 1
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_a = insertelement <4 x i32> poison, i32 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_0 = insertelement <4 x i32> poison, i32 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32_0 = insertelement <4 x i32> poison, i32 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_3 = insertelement <4 x i32> poison, i32 undef, i32 3
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i32_a = insertelement <8 x i32> poison, i32 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_0 = insertelement <8 x i32> poison, i32 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_0 = insertelement <8 x i32> poison, i32 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_3 = insertelement <8 x i32> poison, i32 undef, i32 3
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_4 = insertelement <8 x i32> poison, i32 undef, i32 4
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_4 = insertelement <8 x i32> poison, i32 undef, i32 4
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_7 = insertelement <8 x i32> poison, i32 undef, i32 7
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16i32_a = insertelement <16 x i32> poison, i32 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_0 = insertelement <16 x i32> poison, i32 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32_0 = insertelement <16 x i32> poison, i32 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_3 = insertelement <16 x i32> poison, i32 undef, i32 3
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_8 = insertelement <16 x i32> poison, i32 undef, i32 8
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32_8 = insertelement <16 x i32> poison, i32 undef, i32 8
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_15 = insertelement <16 x i32> poison, i32 undef, i32 15
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'insert_i32'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_a = insertelement <2 x i32> poison, i32 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_0 = insertelement <2 x i32> poison, i32 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i32_0 = insertelement <2 x i32> poison, i32 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i32_1 = insertelement <2 x i32> poison, i32 undef, i32 1
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_a = insertelement <4 x i32> poison, i32 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_0 = insertelement <4 x i32> poison, i32 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32_0 = insertelement <4 x i32> poison, i32 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i32_3 = insertelement <4 x i32> poison, i32 undef, i32 3
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v8i32_a = insertelement <8 x i32> poison, i32 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_0 = insertelement <8 x i32> poison, i32 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_0 = insertelement <8 x i32> poison, i32 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_3 = insertelement <8 x i32> poison, i32 undef, i32 3
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_4 = insertelement <8 x i32> poison, i32 undef, i32 4
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32_4 = insertelement <8 x i32> poison, i32 undef, i32 4
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i32_7 = insertelement <8 x i32> poison, i32 undef, i32 7
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16i32_a = insertelement <16 x i32> poison, i32 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_0 = insertelement <16 x i32> poison, i32 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32_0 = insertelement <16 x i32> poison, i32 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_3 = insertelement <16 x i32> poison, i32 undef, i32 3
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_8 = insertelement <16 x i32> poison, i32 undef, i32 8
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i32_8 = insertelement <16 x i32> poison, i32 undef, i32 8
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i32_15 = insertelement <16 x i32> poison, i32 undef, i32 15
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
@@ -664,100 +664,100 @@ define i32 @insert_i16(i32 %arg) {
 define i32 @insert_i8(i32 %arg) {
 ; SSE2-LABEL: 'insert_i8'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_3 = insertelement <2 x i8> poison, i8 undef, i32 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8_3 = insertelement <4 x i8> poison, i8 undef, i32 3
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i8_a = insertelement <8 x i8> poison, i8 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i8_7 = insertelement <8 x i8> poison, i8 undef, i32 7
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i8_a = insertelement <16 x i8> poison, i8 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_8 = insertelement <16 x i8> poison, i8 undef, i32 8
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_15 = insertelement <16 x i8> poison, i8 undef, i32 15
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v32i8_a = insertelement <32 x i8> poison, i8 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_7 = insertelement <32 x i8> poison, i8 undef, i32 7
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_8 = insertelement <32 x i8> poison, i8 undef, i32 8
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_15 = insertelement <32 x i8> poison, i8 undef, i32 15
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_24 = insertelement <32 x i8> poison, i8 undef, i32 24
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_31 = insertelement <32 x i8> poison, i8 undef, i32 31
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v64i8_a = insertelement <64 x i8> poison, i8 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_7 = insertelement <64 x i8> poison, i8 undef, i32 7
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_8 = insertelement <64 x i8> poison, i8 undef, i32 8
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_15 = insertelement <64 x i8> poison, i8 undef, i32 15
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_24 = insertelement <64 x i8> poison, i8 undef, i32 24
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_31 = insertelement <64 x i8> poison, i8 undef, i32 31
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 undef, i32 32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 undef, i32 48
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 undef, i32 32
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 undef, i32 48
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_63 = insertelement <64 x i8> poison, i8 undef, i32 63
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'insert_i8'
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_3 = insertelement <2 x i8> poison, i8 undef, i32 1
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v4i8_3 = insertelement <4 x i8> poison, i8 undef, i32 3
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i8_a = insertelement <8 x i8> poison, i8 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i8_7 = insertelement <8 x i8> poison, i8 undef, i32 7
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i8_a = insertelement <16 x i8> poison, i8 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_8 = insertelement <16 x i8> poison, i8 undef, i32 8
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i8_15 = insertelement <16 x i8> poison, i8 undef, i32 15
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v32i8_a = insertelement <32 x i8> poison, i8 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_7 = insertelement <32 x i8> poison, i8 undef, i32 7
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_8 = insertelement <32 x i8> poison, i8 undef, i32 8
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_15 = insertelement <32 x i8> poison, i8 undef, i32 15
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_24 = insertelement <32 x i8> poison, i8 undef, i32 24
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i8_31 = insertelement <32 x i8> poison, i8 undef, i32 31
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v64i8_a = insertelement <64 x i8> poison, i8 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_7 = insertelement <64 x i8> poison, i8 undef, i32 7
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_8 = insertelement <64 x i8> poison, i8 undef, i32 8
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_15 = insertelement <64 x i8> poison, i8 undef, i32 15
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_24 = insertelement <64 x i8> poison, i8 undef, i32 24
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_31 = insertelement <64 x i8> poison, i8 undef, i32 31
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 undef, i32 32
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 undef, i32 48
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 undef, i32 32
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 undef, i32 48
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i8_63 = insertelement <64 x i8> poison, i8 undef, i32 63
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'insert_i8'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v2i8_a = insertelement <2 x i8> poison, i8 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8_0 = insertelement <2 x i8> poison, i8 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i8_3 = insertelement <2 x i8> poison, i8 undef, i32 1
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i8_a = insertelement <4 x i8> poison, i8 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8_0 = insertelement <4 x i8> poison, i8 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i8_3 = insertelement <4 x i8> poison, i8 undef, i32 3
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i8_a = insertelement <8 x i8> poison, i8 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8_0 = insertelement <8 x i8> poison, i8 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i8_7 = insertelement <8 x i8> poison, i8 undef, i32 7
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i8_a = insertelement <16 x i8> poison, i8 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8_0 = insertelement <16 x i8> poison, i8 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i8_8 = insertelement <16 x i8> poison, i8 undef, i32 8
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i8_15 = insertelement <16 x i8> poison, i8 undef, i32 15
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v32i8_a = insertelement <32 x i8> poison, i8 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i8_0 = insertelement <32 x i8> poison, i8 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i8_7 = insertelement <32 x i8> poison, i8 undef, i32 7
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i8_8 = insertelement <32 x i8> poison, i8 undef, i32 8
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i8_15 = insertelement <32 x i8> poison, i8 undef, i32 15
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i8_24 = insertelement <32 x i8> poison, i8 undef, i32 24
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i8_31 = insertelement <32 x i8> poison, i8 undef, i32 31
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v64i8_a = insertelement <64 x i8> poison, i8 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_0 = insertelement <64 x i8> poison, i8 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8_7 = insertelement <64 x i8> poison, i8 undef, i32 7
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8_8 = insertelement <64 x i8> poison, i8 undef, i32 8
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8_15 = insertelement <64 x i8> poison, i8 undef, i32 15
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8_24 = insertelement <64 x i8> poison, i8 undef, i32 24
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8_31 = insertelement <64 x i8> poison, i8 undef, i32 31
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 undef, i32 32
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 undef, i32 48
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_32 = insertelement <64 x i8> poison, i8 undef, i32 32
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i8_48 = insertelement <64 x i8> poison, i8 undef, i32 48
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i8_63 = insertelement <64 x i8> poison, i8 undef, i32 63
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
@@ -971,31 +971,31 @@ define i32 @insert_i1(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_0 = insertelement <2 x i1> poison, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_1 = insertelement <2 x i1> poison, i1 undef, i32 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> poison, i1 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_0 = insertelement <4 x i1> poison, i1 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i1_0 = insertelement <4 x i1> poison, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_2 = insertelement <4 x i1> poison, i1 undef, i32 2
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> poison, i1 undef, i32 %arg
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> poison, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> poison, i1 undef, i32 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> poison, i1 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_0 = insertelement <16 x i1> poison, i1 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i1_0 = insertelement <16 x i1> poison, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_8 = insertelement <16 x i1> poison, i1 undef, i32 8
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_15 = insertelement <16 x i1> poison, i1 undef, i32 15
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i1_a = insertelement <32 x i1> poison, i1 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_0 = insertelement <32 x i1> poison, i1 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i1_0 = insertelement <32 x i1> poison, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_7 = insertelement <32 x i1> poison, i1 undef, i32 7
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_8 = insertelement <32 x i1> poison, i1 undef, i32 8
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_15 = insertelement <32 x i1> poison, i1 undef, i32 15
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_24 = insertelement <32 x i1> poison, i1 undef, i32 24
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_31 = insertelement <32 x i1> poison, i1 undef, i32 31
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i1_a = insertelement <64 x i1> poison, i1 undef, i32 %arg
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_0 = insertelement <64 x i1> poison, i1 undef, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_0 = insertelement <64 x i1> poison, i1 undef, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_7 = insertelement <64 x i1> poison, i1 undef, i32 7
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_8 = insertelement <64 x i1> poison, i1 undef, i32 8
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_15 = insertelement <64 x i1> poison, i1 undef, i32 15
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_24 = insertelement <64 x i1> poison, i1 undef, i32 24
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_31 = insertelement <64 x i1> poison, i1 undef, i32 31
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_32 = insertelement <64 x i1> poison, i1 undef, i32 32
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_48 = insertelement <64 x i1> poison, i1 undef, i32 48
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_32 = insertelement <64 x i1> poison, i1 undef, i32 32
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_48 = insertelement <64 x i1> poison, i1 undef, i32 48
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_63 = insertelement <64 x i1> poison, i1 undef, i32 63
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
@@ -1004,31 +1004,31 @@ define i32 @insert_i1(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_0 = insertelement <2 x i1> poison, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_1 = insertelement <2 x i1> poison, i1 undef, i32 1
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> poison, i1 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_0 = insertelement <4 x i1> poison, i1 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i1_0 = insertelement <4 x i1> poison, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_2 = insertelement <4 x i1> poison, i1 undef, i32 2
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> poison, i1 undef, i32 %arg
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> poison, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> poison, i1 undef, i32 4
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> poison, i1 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_0 = insertelement <16 x i1> poison, i1 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i1_0 = insertelement <16 x i1> poison, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_8 = insertelement <16 x i1> poison, i1 undef, i32 8
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16i1_15 = insertelement <16 x i1> poison, i1 undef, i32 15
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i1_a = insertelement <32 x i1> poison, i1 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_0 = insertelement <32 x i1> poison, i1 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i1_0 = insertelement <32 x i1> poison, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_7 = insertelement <32 x i1> poison, i1 undef, i32 7
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_8 = insertelement <32 x i1> poison, i1 undef, i32 8
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_15 = insertelement <32 x i1> poison, i1 undef, i32 15
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_24 = insertelement <32 x i1> poison, i1 undef, i32 24
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v32i1_31 = insertelement <32 x i1> poison, i1 undef, i32 31
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i1_a = insertelement <64 x i1> poison, i1 undef, i32 %arg
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_0 = insertelement <64 x i1> poison, i1 undef, i32 0
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_0 = insertelement <64 x i1> poison, i1 undef, i32 0
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_7 = insertelement <64 x i1> poison, i1 undef, i32 7
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_8 = insertelement <64 x i1> poison, i1 undef, i32 8
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_15 = insertelement <64 x i1> poison, i1 undef, i32 15
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_24 = insertelement <64 x i1> poison, i1 undef, i32 24
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_31 = insertelement <64 x i1> poison, i1 undef, i32 31
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_32 = insertelement <64 x i1> poison, i1 undef, i32 32
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_48 = insertelement <64 x i1> poison, i1 undef, i32 48
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_32 = insertelement <64 x i1> poison, i1 undef, i32 32
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_48 = insertelement <64 x i1> poison, i1 undef, i32 48
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v64i1_63 = insertelement <64 x i1> poison, i1 undef, i32 63
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
@@ -1037,31 +1037,31 @@ define i32 @insert_i1(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_0 = insertelement <2 x i1> poison, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i1_1 = insertelement <2 x i1> poison, i1 undef, i32 1
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_a = insertelement <4 x i1> poison, i1 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_0 = insertelement <4 x i1> poison, i1 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i1_0 = insertelement <4 x i1> poison, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4i1_2 = insertelement <4 x i1> poison, i1 undef, i32 2
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v8i1_a = insertelement <8 x i1> poison, i1 undef, i32 %arg
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_0 = insertelement <8 x i1> poison, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i1_4 = insertelement <8 x i1> poison, i1 undef, i32 4
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v16i1_a = insertelement <16 x i1> poison, i1 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i1_0 = insertelement <16 x i1> poison, i1 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i1_0 = insertelement <16 x i1> poison, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i1_8 = insertelement <16 x i1> poison, i1 undef, i32 8
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i1_15 = insertelement <16 x i1> poison, i1 undef, i32 15
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v32i1_a = insertelement <32 x i1> poison, i1 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_0 = insertelement <32 x i1> poison, i1 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v32i1_0 = insertelement <32 x i1> poison, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_7 = insertelement <32 x i1> poison, i1 undef, i32 7
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_8 = insertelement <32 x i1> poison, i1 undef, i32 8
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_15 = insertelement <32 x i1> poison, i1 undef, i32 15
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_24 = insertelement <32 x i1> poison, i1 undef, i32 24
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i1_31 = insertelement <32 x i1> poison, i1 undef, i32 31
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v64i1_a = insertelement <64 x i1> poison, i1 undef, i32 %arg
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i1_0 = insertelement <64 x i1> poison, i1 undef, i32 0
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_0 = insertelement <64 x i1> poison, i1 undef, i32 0
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i1_7 = insertelement <64 x i1> poison, i1 undef, i32 7
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i1_8 = insertelement <64 x i1> poison, i1 undef, i32 8
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i1_15 = insertelement <64 x i1> poison, i1 undef, i32 15
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i1_24 = insertelement <64 x i1> poison, i1 undef, i32 24
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i1_31 = insertelement <64 x i1> poison, i1 undef, i32 31
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i1_32 = insertelement <64 x i1> poison, i1 undef, i32 32
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i1_48 = insertelement <64 x i1> poison, i1 undef, i32 48
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_32 = insertelement <64 x i1> poison, i1 undef, i32 32
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v64i1_48 = insertelement <64 x i1> poison, i1 undef, i32 48
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i1_63 = insertelement <64 x i1> poison, i1 undef, i32 63
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;

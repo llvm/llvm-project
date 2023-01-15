@@ -37,8 +37,8 @@ define i32 @Prefer_M4_mpyri_addi(i32 %a0) #0 {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 b1:
-  %v2 = getelementptr inbounds [2 x [31 x i8]], [2 x [31 x i8]]* @data1, i32 0, i32 %a0
-  %v3 = ptrtoint [31 x i8]* %v2 to i32
+  %v2 = getelementptr inbounds [2 x [31 x i8]], ptr @data1, i32 0, i32 %a0
+  %v3 = ptrtoint ptr %v2 to i32
   ret i32 %v3
 }
 
@@ -55,8 +55,8 @@ define i32 @Prefer_M4_mpyrr_addi(i32 %a0) #0 {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 b1:
-  %v2 = getelementptr inbounds [2 x [91 x i8]], [2 x [91 x i8]]* @data2, i32 0, i32 %a0
-  %v3 = ptrtoint [91 x i8]* %v2 to i32
+  %v2 = getelementptr inbounds [2 x [91 x i8]], ptr @data2, i32 0, i32 %a0
+  %v3 = ptrtoint ptr %v2 to i32
   ret i32 %v3
 }
 
@@ -100,7 +100,7 @@ b2:
   ret i32 %v6
 }
 
-define i64 @Prefer_L2_loadrub_io(i8* %a0) #0 {
+define i64 @Prefer_L2_loadrub_io(ptr %a0) #0 {
 ; CHECK-LABEL: Prefer_L2_loadrub_io:
 ; CHECK:       // %bb.0: // %b1
 ; CHECK-NEXT:    {
@@ -113,8 +113,8 @@ define i64 @Prefer_L2_loadrub_io(i8* %a0) #0 {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 b1:
-  %v2 = getelementptr i8, i8* %a0, i32 65
-  %v3 = load i8, i8* %v2
+  %v2 = getelementptr i8, ptr %a0, i32 65
+  %v3 = load i8, ptr %v2
   %v4 = zext i8 %v3 to i64
   ret i64 %v4
 }

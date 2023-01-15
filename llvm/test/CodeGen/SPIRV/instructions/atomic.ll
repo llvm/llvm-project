@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpName [[ADD:%.*]] "test_add"
 ; CHECK-DAG: OpName [[SUB:%.*]] "test_sub"

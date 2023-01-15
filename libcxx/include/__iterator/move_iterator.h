@@ -24,8 +24,14 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_sentinel.h>
 #include <__iterator/readable_traits.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_same.h>
+#include <__utility/declval.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -49,7 +55,7 @@ struct __move_iter_category_base<_Iter> {
 
 template<class _Iter, class _Sent>
 concept __move_iter_comparable = requires {
-    { declval<const _Iter&>() == declval<_Sent>() } -> convertible_to<bool>;
+    { std::declval<const _Iter&>() == std::declval<_Sent>() } -> convertible_to<bool>;
 };
 #endif // _LIBCPP_STD_VER > 17
 

@@ -26,7 +26,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -366,7 +365,7 @@ ArrayRef<TemplateArgument> RedeclarableTemplateDecl::getInjectedTemplateArgs() {
               CommonPtr->InjectedArgs);
   }
 
-  return llvm::makeArrayRef(CommonPtr->InjectedArgs, Params->size());
+  return llvm::ArrayRef(CommonPtr->InjectedArgs, Params->size());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1516,8 +1515,8 @@ createTypePackElementParameterList(const ASTContext &C, DeclContext *DC) {
   // template <std::size_t Index, typename ...T>
   NamedDecl *Params[] = {Index, Ts};
   return TemplateParameterList::Create(C, SourceLocation(), SourceLocation(),
-                                       llvm::makeArrayRef(Params),
-                                       SourceLocation(), nullptr);
+                                       llvm::ArrayRef(Params), SourceLocation(),
+                                       nullptr);
 }
 
 static TemplateParameterList *createBuiltinTemplateParameterList(

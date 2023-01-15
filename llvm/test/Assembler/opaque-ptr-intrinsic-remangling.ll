@@ -5,11 +5,11 @@
 
 %int8x16x2_t = type { <16 x i8>, <16 x i8> }
 
-declare i32* @fake_personality_function()
+declare ptr @fake_personality_function()
 declare void @func()
 
 ; Upgrading of invoked intrinsic.
-define void @test_invoke(i32 addrspace(1)* %b) gc "statepoint-example" personality i32* ()* @fake_personality_function {
+define void @test_invoke(ptr addrspace(1) %b) gc "statepoint-example" personality ptr @fake_personality_function {
 ; CHECK-LABEL: @test_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D:%.*]] = getelementptr i32, ptr addrspace(1) [[B:%.*]], i64 16
@@ -23,8 +23,8 @@ define void @test_invoke(i32 addrspace(1)* %b) gc "statepoint-example" personali
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %d = getelementptr i32, i32 addrspace(1)* %b, i64 16
-  %safepoint_token = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %b, i32 addrspace(1)* %b, i32 addrspace(1)* %d, i32 addrspace(1)* %d)]
+  %d = getelementptr i32, ptr addrspace(1) %b, i64 16
+  %safepoint_token = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %b, ptr addrspace(1) %b, ptr addrspace(1) %d, ptr addrspace(1) %d)]
   to label %normal_dest unwind label %unwind_dest
 
 normal_dest:
@@ -36,17 +36,17 @@ unwind_dest:
   ret void
 }
 
-define i8* @test_ptr_annotation(i8* %p) {
+define ptr @test_ptr_annotation(ptr %p) {
 ; CHECK-LABEL: @test_ptr_annotation(
 ; CHECK-NEXT:    [[P2:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr [[P:%.*]], ptr undef, ptr undef, i32 undef, ptr undef)
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
-  %p2 = call i8* @llvm.ptr.annotation.p0i8(i8* %p, i8* undef, i8* undef, i32 undef, i8* undef)
-  ret i8* %p2
+  %p2 = call ptr @llvm.ptr.annotation.p0(ptr %p, ptr undef, ptr undef, i32 undef, ptr undef)
+  ret ptr %p2
 }
 
 
-define void @test_struct_return(%int8x16x2_t* %res.p, i8* %a) {
+define void @test_struct_return(ptr %res.p, ptr %a) {
 ; CHECK-LABEL: @test_struct_return(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x2.v16i8.p0(ptr [[A:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[TMP1]], 0
@@ -56,11 +56,11 @@ define void @test_struct_return(%int8x16x2_t* %res.p, i8* %a) {
 ; CHECK-NEXT:    store [[INT8X16X2_T]] [[TMP5]], ptr [[RES_P:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
-  %res = call %int8x16x2_t @llvm.aarch64.neon.ld1x2.v16i8.p0i8(i8* %a)
-  store %int8x16x2_t %res, %int8x16x2_t* %res.p
+  %res = call %int8x16x2_t @llvm.aarch64.neon.ld1x2.v16i8.p0(ptr %a)
+  store %int8x16x2_t %res, ptr %res.p
   ret void
 }
 
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare i8* @llvm.ptr.annotation.p0i8(i8*, i8*, i8*, i32, i8*)
-declare %int8x16x2_t @llvm.aarch64.neon.ld1x2.v16i8.p0i8(i8*)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
+declare ptr @llvm.ptr.annotation.p0(ptr, ptr, ptr, i32, ptr)
+declare %int8x16x2_t @llvm.aarch64.neon.ld1x2.v16i8.p0(ptr)

@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -444,7 +445,7 @@ static bool arrayMatchesBoundExpr(ASTContext *Context,
       Context->getAsConstantArrayType(ArrayType);
   if (!ConstType)
     return false;
-  Optional<llvm::APSInt> ConditionSize =
+  std::optional<llvm::APSInt> ConditionSize =
       ConditionExpr->getIntegerConstantExpr(*Context);
   if (!ConditionSize)
     return false;

@@ -80,7 +80,7 @@ public:
   static Expected<std::unique_ptr<MachOPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
-         Optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
+         std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
@@ -127,11 +127,11 @@ private:
       return Error::success();
     }
 
-    Error notifyRemovingResources(ResourceKey K) override {
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
       return Error::success();
     }
 
-    void notifyTransferringResources(ResourceKey DstKey,
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                      ResourceKey SrcKey) override {}
 
   private:
@@ -209,15 +209,30 @@ private:
   SymbolStringPtr MachOHeaderStartSymbol;
   std::atomic<PlatformState> State{BootstrapPhase1};
 
-  ExecutorAddr orc_rt_macho_platform_bootstrap;
-  ExecutorAddr orc_rt_macho_platform_shutdown;
-  ExecutorAddr orc_rt_macho_register_ehframe_section;
-  ExecutorAddr orc_rt_macho_deregister_ehframe_section;
-  ExecutorAddr orc_rt_macho_register_jitdylib;
-  ExecutorAddr orc_rt_macho_deregister_jitdylib;
-  ExecutorAddr orc_rt_macho_register_object_platform_sections;
-  ExecutorAddr orc_rt_macho_deregister_object_platform_sections;
-  ExecutorAddr orc_rt_macho_create_pthread_key;
+  struct RuntimeFunction {
+    RuntimeFunction(SymbolStringPtr Name) : Name(std::move(Name)) {}
+    SymbolStringPtr Name;
+    ExecutorAddr Addr;
+  };
+
+  RuntimeFunction PlatformBootstrap{
+      ES.intern("___orc_rt_macho_platform_bootstrap")};
+  RuntimeFunction PlatformShutdown{
+      ES.intern("___orc_rt_macho_platform_shutdown")};
+  RuntimeFunction RegisterEHFrameSection{
+      ES.intern("___orc_rt_macho_register_ehframe_section")};
+  RuntimeFunction DeregisterEHFrameSection{
+      ES.intern("___orc_rt_macho_deregister_ehframe_section")};
+  RuntimeFunction RegisterJITDylib{
+      ES.intern("___orc_rt_macho_register_jitdylib")};
+  RuntimeFunction DeregisterJITDylib{
+      ES.intern("___orc_rt_macho_deregister_jitdylib")};
+  RuntimeFunction RegisterObjectPlatformSections{
+      ES.intern("___orc_rt_macho_register_object_platform_sections")};
+  RuntimeFunction DeregisterObjectPlatformSections{
+      ES.intern("___orc_rt_macho_deregister_object_platform_sections")};
+  RuntimeFunction CreatePThreadKey{
+      ES.intern("___orc_rt_macho_create_pthread_key")};
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 

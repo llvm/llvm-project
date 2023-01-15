@@ -20,11 +20,12 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 using namespace llvm;
 
-static Optional<OptimizationLevel> mapToLevel(unsigned optLevel,
-                                              unsigned sizeLevel) {
+static std::optional<OptimizationLevel> mapToLevel(unsigned optLevel,
+                                                   unsigned sizeLevel) {
   switch (optLevel) {
   case 0:
     return OptimizationLevel::O0;
@@ -55,7 +56,7 @@ std::function<Error(Module *)>
 mlir::makeOptimizingTransformer(unsigned optLevel, unsigned sizeLevel,
                                 TargetMachine *targetMachine) {
   return [optLevel, sizeLevel, targetMachine](Module *m) -> Error {
-    Optional<OptimizationLevel> ol = mapToLevel(optLevel, sizeLevel);
+    std::optional<OptimizationLevel> ol = mapToLevel(optLevel, sizeLevel);
     if (!ol) {
       return make_error<StringError>(
           formatv("invalid optimization/size level {0}/{1}", optLevel,

@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SIRegisterInfo.h"
 #include "AMDGPU.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -123,7 +123,7 @@ struct SGPRSpillBuilder {
         Index(Index), RS(RS), MBB(MI->getParent()), MF(*MBB->getParent()),
         MFI(*MF.getInfo<SIMachineFunctionInfo>()), TII(TII), TRI(TRI),
         IsWave32(IsWave32) {
-    const TargetRegisterClass *RC = TRI.getPhysRegClass(SuperReg);
+    const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(SuperReg);
     SplitParts = TRI.getRegSplitParts(RC, EltSize);
     NumSubRegs = SplitParts.empty() ? 1 : SplitParts.size();
 
@@ -702,7 +702,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, MFI->getVGPRForAGPRCopy());
   }
 
-  for (Register Reg : MFI->WWMReservedRegs)
+  for (Register Reg : MFI->getWWMReservedRegs())
     reserveRegisterTuples(Reserved, Reg);
 
   // FIXME: Stop using reserved registers for this.
@@ -712,8 +712,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (MCPhysReg Reg : MFI->getVGPRSpillAGPRs())
     reserveRegisterTuples(Reserved, Reg);
 
-  for (auto SSpill : MFI->getSGPRSpillVGPRs())
-    reserveRegisterTuples(Reserved, SSpill.VGPR);
+  for (auto Reg : MFI->getSGPRSpillVGPRs())
+    reserveRegisterTuples(Reserved, Reg);
 
   return Reserved;
 }
@@ -1611,6 +1611,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     unsigned SOffsetRegState = 0;
     unsigned SrcDstRegState = getDefRegState(!IsStore);
     const bool IsLastSubReg = i + 1 == e;
+    const bool IsFirstSubReg = i == 0;
     if (IsLastSubReg) {
       SOffsetRegState |= getKillRegState(Scavenged);
       // The last implicit use carries the "Kill" flag.
@@ -1619,7 +1620,7 @@ void SIRegisterInfo::buildSpillLoadStore(
 
     // Make sure the whole register is defined if there are undef components by
     // adding an implicit def of the super-reg on the first instruction.
-    bool NeedSuperRegDef = e > 1 && IsStore && i == 0;
+    bool NeedSuperRegDef = e > 1 && IsStore && IsFirstSubReg;
     bool NeedSuperRegImpOperand = e > 1;
 
     // Remaining element size to spill into memory after some parts of it
@@ -1646,11 +1647,13 @@ void SIRegisterInfo::buildSpillLoadStore(
         MIB.addReg(ValueReg, RegState::ImplicitDefine);
         NeedSuperRegDef = false;
       }
-      if (IsSubReg || NeedSuperRegImpOperand) {
+      if ((IsSubReg || NeedSuperRegImpOperand) && (IsFirstSubReg || IsLastSubReg)) {
         NeedSuperRegImpOperand = true;
         unsigned State = SrcDstRegState;
-        if (Lane != LaneE)
+        if (!IsLastSubReg || (Lane != LaneE))
           State &= ~RegState::Kill;
+        if (!IsFirstSubReg || (Lane != LaneS))
+          State &= ~RegState::Define;
         MIB.addReg(ValueReg, RegState::Implicit | State);
       }
       RemEltSize -= 4;
@@ -1795,7 +1798,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
                                LiveIntervals *LIS, bool OnlyToVGPR) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
-  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRToVGPRSpills(Index);
+  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRSpillToVGPRLanes(Index);
   bool SpillToVGPR = !VGPRSpills.empty();
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
@@ -1912,7 +1915,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI, int Index,
                                  LiveIntervals *LIS, bool OnlyToVGPR) const {
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
-  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRToVGPRSpills(Index);
+  ArrayRef<SpilledReg> VGPRSpills = SB.MFI.getSGPRSpillToVGPRLanes(Index);
   bool SpillToVGPR = !VGPRSpills.empty();
   if (OnlyToVGPR && !SpillToVGPR)
     return false;
@@ -2898,104 +2901,13 @@ SIRegisterInfo::getSGPRClassForBitWidth(unsigned BitWidth) {
   return nullptr;
 }
 
-// FIXME: This is very slow. It might be worth creating a map from physreg to
-// register class.
-const TargetRegisterClass *
-SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
-  static const TargetRegisterClass *const BaseClasses[] = {
-    &AMDGPU::VGPR_LO16RegClass,
-    &AMDGPU::VGPR_HI16RegClass,
-    &AMDGPU::SReg_LO16RegClass,
-    &AMDGPU::AGPR_LO16RegClass,
-    &AMDGPU::VGPR_32RegClass,
-    &AMDGPU::SReg_32RegClass,
-    &AMDGPU::AGPR_32RegClass,
-    &AMDGPU::AGPR_32RegClass,
-    &AMDGPU::VReg_64_Align2RegClass,
-    &AMDGPU::VReg_64RegClass,
-    &AMDGPU::SReg_64RegClass,
-    &AMDGPU::AReg_64_Align2RegClass,
-    &AMDGPU::AReg_64RegClass,
-    &AMDGPU::VReg_96_Align2RegClass,
-    &AMDGPU::VReg_96RegClass,
-    &AMDGPU::SReg_96RegClass,
-    &AMDGPU::AReg_96_Align2RegClass,
-    &AMDGPU::AReg_96RegClass,
-    &AMDGPU::VReg_128_Align2RegClass,
-    &AMDGPU::VReg_128RegClass,
-    &AMDGPU::SReg_128RegClass,
-    &AMDGPU::AReg_128_Align2RegClass,
-    &AMDGPU::AReg_128RegClass,
-    &AMDGPU::VReg_160_Align2RegClass,
-    &AMDGPU::VReg_160RegClass,
-    &AMDGPU::SReg_160RegClass,
-    &AMDGPU::AReg_160_Align2RegClass,
-    &AMDGPU::AReg_160RegClass,
-    &AMDGPU::VReg_192_Align2RegClass,
-    &AMDGPU::VReg_192RegClass,
-    &AMDGPU::SReg_192RegClass,
-    &AMDGPU::AReg_192_Align2RegClass,
-    &AMDGPU::AReg_192RegClass,
-    &AMDGPU::VReg_224_Align2RegClass,
-    &AMDGPU::VReg_224RegClass,
-    &AMDGPU::SReg_224RegClass,
-    &AMDGPU::AReg_224_Align2RegClass,
-    &AMDGPU::AReg_224RegClass,
-    &AMDGPU::VReg_256_Align2RegClass,
-    &AMDGPU::VReg_256RegClass,
-    &AMDGPU::SReg_256RegClass,
-    &AMDGPU::AReg_256_Align2RegClass,
-    &AMDGPU::AReg_256RegClass,
-    &AMDGPU::VReg_288_Align2RegClass,
-    &AMDGPU::VReg_288RegClass,
-    &AMDGPU::SReg_288RegClass,
-    &AMDGPU::AReg_288_Align2RegClass,
-    &AMDGPU::AReg_288RegClass,
-    &AMDGPU::VReg_320_Align2RegClass,
-    &AMDGPU::VReg_320RegClass,
-    &AMDGPU::SReg_320RegClass,
-    &AMDGPU::AReg_320_Align2RegClass,
-    &AMDGPU::AReg_320RegClass,
-    &AMDGPU::VReg_352_Align2RegClass,
-    &AMDGPU::VReg_352RegClass,
-    &AMDGPU::SReg_352RegClass,
-    &AMDGPU::AReg_352_Align2RegClass,
-    &AMDGPU::AReg_352RegClass,
-    &AMDGPU::VReg_384_Align2RegClass,
-    &AMDGPU::VReg_384RegClass,
-    &AMDGPU::SReg_384RegClass,
-    &AMDGPU::AReg_384_Align2RegClass,
-    &AMDGPU::AReg_384RegClass,
-    &AMDGPU::VReg_512_Align2RegClass,
-    &AMDGPU::VReg_512RegClass,
-    &AMDGPU::SReg_512RegClass,
-    &AMDGPU::AReg_512_Align2RegClass,
-    &AMDGPU::AReg_512RegClass,
-    &AMDGPU::SReg_1024RegClass,
-    &AMDGPU::VReg_1024_Align2RegClass,
-    &AMDGPU::VReg_1024RegClass,
-    &AMDGPU::AReg_1024_Align2RegClass,
-    &AMDGPU::AReg_1024RegClass,
-    &AMDGPU::SCC_CLASSRegClass,
-    &AMDGPU::Pseudo_SReg_32RegClass,
-    &AMDGPU::Pseudo_SReg_128RegClass,
-  };
-
-  for (const TargetRegisterClass *BaseClass : BaseClasses) {
-    if (BaseClass->contains(Reg)) {
-      return BaseClass;
-    }
-  }
-  return nullptr;
-}
-
 bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
                                Register Reg) const {
   const TargetRegisterClass *RC;
   if (Reg.isVirtual())
     RC = MRI.getRegClass(Reg);
   else
-    RC = getPhysRegClass(Reg);
+    RC = getPhysRegBaseClass(Reg);
   return RC ? isSGPRClass(RC) : false;
 }
 
@@ -3106,13 +3018,13 @@ ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC
   const std::vector<int16_t> &Parts = RegSplitParts[EltDWORDs - 1];
   const unsigned NumParts = RegDWORDs / EltDWORDs;
 
-  return makeArrayRef(Parts.data(), NumParts);
+  return ArrayRef(Parts.data(), NumParts);
 }
 
 const TargetRegisterClass*
 SIRegisterInfo::getRegClassForReg(const MachineRegisterInfo &MRI,
                                   Register Reg) const {
-  return Reg.isVirtual() ? MRI.getRegClass(Reg) : getPhysRegClass(Reg);
+  return Reg.isVirtual() ? MRI.getRegClass(Reg) : getPhysRegBaseClass(Reg);
 }
 
 const TargetRegisterClass *
@@ -3350,7 +3262,7 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
 }
 
 MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
-  assert(getRegSizeInBits(*getPhysRegClass(Reg)) <= 32);
+  assert(getRegSizeInBits(*getPhysRegBaseClass(Reg)) <= 32);
 
   for (const TargetRegisterClass &RC : { AMDGPU::VGPR_32RegClass,
                                          AMDGPU::SReg_32RegClass,
@@ -3402,17 +3314,15 @@ SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
 
 ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR128(const MachineFunction &MF) const {
-  return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
-                      ST.getMaxNumSGPRs(MF) / 4);
+  return ArrayRef(AMDGPU::SGPR_128RegClass.begin(), ST.getMaxNumSGPRs(MF) / 4);
 }
 
 ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR64(const MachineFunction &MF) const {
-  return makeArrayRef(AMDGPU::SGPR_64RegClass.begin(),
-                      ST.getMaxNumSGPRs(MF) / 2);
+  return ArrayRef(AMDGPU::SGPR_64RegClass.begin(), ST.getMaxNumSGPRs(MF) / 2);
 }
 
 ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR32(const MachineFunction &MF) const {
-  return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
+  return ArrayRef(AMDGPU::SGPR_32RegClass.begin(), ST.getMaxNumSGPRs(MF));
 }

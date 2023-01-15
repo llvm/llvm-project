@@ -733,14 +733,14 @@ static bool isReferencePrefixOf(SymbolRefAttr subRef, SymbolRefAttr ref) {
 
 /// The implementation of SymbolTable::getSymbolUses below.
 template <typename FromT>
-static Optional<SymbolTable::UseRange> getSymbolUsesImpl(FromT from) {
+static std::optional<SymbolTable::UseRange> getSymbolUsesImpl(FromT from) {
   std::vector<SymbolTable::SymbolUse> uses;
   auto walkFn = [&](SymbolTable::SymbolUse symbolUse) {
     uses.push_back(symbolUse);
     return WalkResult::advance();
   };
   auto result = walkSymbolUses(from, walkFn);
-  return result ? Optional<SymbolTable::UseRange>(std::move(uses))
+  return result ? std::optional<SymbolTable::UseRange>(std::move(uses))
                 : std::nullopt;
 }
 
@@ -749,12 +749,12 @@ static Optional<SymbolTable::UseRange> getSymbolUsesImpl(FromT from) {
 /// symbol tables, and will also only return uses on 'from' if it does not
 /// also define a symbol table. This is because we treat the region as the
 /// boundary of the symbol table, and not the op itself. This function returns
-/// None if there are any unknown operations that may potentially be symbol
-/// tables.
-auto SymbolTable::getSymbolUses(Operation *from) -> Optional<UseRange> {
+/// std::nullopt if there are any unknown operations that may potentially be
+/// symbol tables.
+auto SymbolTable::getSymbolUses(Operation *from) -> std::optional<UseRange> {
   return getSymbolUsesImpl(from);
 }
-auto SymbolTable::getSymbolUses(Region *from) -> Optional<UseRange> {
+auto SymbolTable::getSymbolUses(Region *from) -> std::optional<UseRange> {
   return getSymbolUsesImpl(MutableArrayRef<Region>(*from));
 }
 
@@ -763,8 +763,8 @@ auto SymbolTable::getSymbolUses(Region *from) -> Optional<UseRange> {
 
 /// The implementation of SymbolTable::getSymbolUses below.
 template <typename SymbolT, typename IRUnitT>
-static Optional<SymbolTable::UseRange> getSymbolUsesImpl(SymbolT symbol,
-                                                         IRUnitT *limit) {
+static std::optional<SymbolTable::UseRange> getSymbolUsesImpl(SymbolT symbol,
+                                                              IRUnitT *limit) {
   std::vector<SymbolTable::SymbolUse> uses;
   for (SymbolScope &scope : collectSymbolScopes(symbol, limit)) {
     if (!scope.walk([&](SymbolTable::SymbolUse symbolUse) {
@@ -781,19 +781,19 @@ static Optional<SymbolTable::UseRange> getSymbolUsesImpl(SymbolT symbol,
 /// traverse into any nested symbol tables. This function returns std::nullopt
 /// if there are any unknown operations that may potentially be symbol tables.
 auto SymbolTable::getSymbolUses(StringAttr symbol, Operation *from)
-    -> Optional<UseRange> {
+    -> std::optional<UseRange> {
   return getSymbolUsesImpl(symbol, from);
 }
 auto SymbolTable::getSymbolUses(Operation *symbol, Operation *from)
-    -> Optional<UseRange> {
+    -> std::optional<UseRange> {
   return getSymbolUsesImpl(symbol, from);
 }
 auto SymbolTable::getSymbolUses(StringAttr symbol, Region *from)
-    -> Optional<UseRange> {
+    -> std::optional<UseRange> {
   return getSymbolUsesImpl(symbol, from);
 }
 auto SymbolTable::getSymbolUses(Operation *symbol, Region *from)
-    -> Optional<UseRange> {
+    -> std::optional<UseRange> {
   return getSymbolUsesImpl(symbol, from);
 }
 

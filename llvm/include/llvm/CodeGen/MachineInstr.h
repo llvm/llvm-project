@@ -188,7 +188,7 @@ private:
     }
 
     ArrayRef<MachineMemOperand *> getMMOs() const {
-      return makeArrayRef(getTrailingObjects<MachineMemOperand *>(), NumMMOs);
+      return ArrayRef(getTrailingObjects<MachineMemOperand *>(), NumMMOs);
     }
 
     MCSymbol *getPreInstrSymbol() const {
@@ -661,17 +661,17 @@ public:
   /// Returns a range over all operands that are used to determine the variable
   /// location for this DBG_VALUE instruction.
   iterator_range<mop_iterator> debug_operands() {
-    assert(isDebugValue() && "Must be a debug value instruction.");
-    return isDebugValueList()
-               ? make_range(operands_begin() + 2, operands_end())
-               : make_range(operands_begin(), operands_begin() + 1);
+    assert((isDebugValueLike()) && "Must be a debug value instruction.");
+    return isNonListDebugValue()
+               ? make_range(operands_begin(), operands_begin() + 1)
+               : make_range(operands_begin() + 2, operands_end());
   }
   /// \copydoc debug_operands()
   iterator_range<const_mop_iterator> debug_operands() const {
-    assert(isDebugValue() && "Must be a debug value instruction.");
-    return isDebugValueList()
-               ? make_range(operands_begin() + 2, operands_end())
-               : make_range(operands_begin(), operands_begin() + 1);
+    assert((isDebugValueLike()) && "Must be a debug value instruction.");
+    return isNonListDebugValue()
+               ? make_range(operands_begin(), operands_begin() + 1)
+               : make_range(operands_begin() + 2, operands_end());
   }
   /// Returns a range over all explicit operands that are register definitions.
   /// Implicit definition are not included!
@@ -715,7 +715,7 @@ public:
       return {};
 
     if (Info.is<EIIK_MMO>())
-      return makeArrayRef(Info.getAddrOfZeroTagPointer(), 1);
+      return ArrayRef(Info.getAddrOfZeroTagPointer(), 1);
 
     if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
       return EI->getMMOs();
@@ -1203,6 +1203,13 @@ public:
   bool isIdenticalTo(const MachineInstr &Other,
                      MICheckType Check = CheckDefs) const;
 
+  /// Returns true if this instruction is a debug instruction that represents an
+  /// identical debug value to \p Other.
+  /// This function considers these debug instructions equivalent if they have
+  /// identical variables, debug locations, and debug operands, and if the
+  /// DIExpressions combined with the directness flags are equivalent.
+  bool isEquivalentDbgInstr(const MachineInstr &Other) const;
+
   /// Unlink 'this' from the containing basic block, and return it without
   /// deleting it.
   ///
@@ -1263,6 +1270,7 @@ public:
   }
   bool isDebugLabel() const { return getOpcode() == TargetOpcode::DBG_LABEL; }
   bool isDebugRef() const { return getOpcode() == TargetOpcode::DBG_INSTR_REF; }
+  bool isDebugValueLike() const { return isDebugValue() || isDebugRef(); }
   bool isDebugPHI() const { return getOpcode() == TargetOpcode::DBG_PHI; }
   bool isDebugInstr() const {
     return isDebugValue() || isDebugLabel() || isDebugRef() || isDebugPHI();
@@ -1686,16 +1694,16 @@ public:
   bool allDefsAreDead() const;
 
   /// Return a valid size if the instruction is a spill instruction.
-  Optional<unsigned> getSpillSize(const TargetInstrInfo *TII) const;
+  std::optional<unsigned> getSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded spill instruction.
-  Optional<unsigned> getFoldedSpillSize(const TargetInstrInfo *TII) const;
+  std::optional<unsigned> getFoldedSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a restore instruction.
-  Optional<unsigned> getRestoreSize(const TargetInstrInfo *TII) const;
+  std::optional<unsigned> getRestoreSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded restore instruction.
-  Optional<unsigned>
+  std::optional<unsigned>
   getFoldedRestoreSize(const TargetInstrInfo *TII) const;
 
   /// Copy implicit register operands from specified

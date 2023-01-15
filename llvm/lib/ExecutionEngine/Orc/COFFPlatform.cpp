@@ -164,7 +164,7 @@ COFFPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                      JITDylib &PlatformJD, const char *OrcRuntimePath,
                      LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
                      const char *VCRuntimePath,
-                     Optional<SymbolAliasMap> RuntimeAliases) {
+                     std::optional<SymbolAliasMap> RuntimeAliases) {
   auto &EPC = ES.getExecutorProcessControl();
 
   // If the target is not supported then bail out immediately.

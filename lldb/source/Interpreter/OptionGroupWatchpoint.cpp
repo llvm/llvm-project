@@ -111,5 +111,5 @@ void OptionGroupWatchpoint::OptionParsingStarting(
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupWatchpoint::GetDefinitions() {
-  return llvm::makeArrayRef(g_option_table);
+  return llvm::ArrayRef(g_option_table);
 }

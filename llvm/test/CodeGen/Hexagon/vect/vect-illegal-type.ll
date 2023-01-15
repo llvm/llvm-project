@@ -42,9 +42,9 @@ sw.epilog:                                        ; preds = %for.end670, %for.en
   ret void
 
 polly.loop_header228:                             ; preds = %polly.loop_header228, %for.cond375.preheader
-  %_p_splat_one = load <1 x i16>, <1 x i16>* undef, align 8
+  %_p_splat_one = load <1 x i16>, ptr undef, align 8
   %_p_splat = shufflevector <1 x i16> %_p_splat_one, <1 x i16> %_p_splat_one, <4 x i32> zeroinitializer
   %0 = trunc <4 x i16> %_p_splat to <4 x i8>
-  store <4 x i8> %0, <4 x i8>* undef, align 8
+  store <4 x i8> %0, ptr undef, align 8
   br label %polly.loop_header228
 }

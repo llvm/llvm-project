@@ -147,21 +147,21 @@ define <8 x i16> @combine_vec_udiv_nonuniform3(<8 x i16> %x) {
 ; GISEL-LABEL: combine_vec_udiv_nonuniform3:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    adrp x8, .LCPI3_2
-; GISEL-NEXT:    adrp x9, .LCPI3_3
+; GISEL-NEXT:    adrp x9, .LCPI3_1
 ; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI3_2]
-; GISEL-NEXT:    adrp x8, .LCPI3_1
-; GISEL-NEXT:    ldr q4, [x9, :lo12:.LCPI3_3]
+; GISEL-NEXT:    adrp x8, .LCPI3_3
+; GISEL-NEXT:    ldr q3, [x9, :lo12:.LCPI3_1]
 ; GISEL-NEXT:    umull2 v2.4s, v0.8h, v1.8h
 ; GISEL-NEXT:    umull v1.4s, v0.4h, v1.4h
+; GISEL-NEXT:    neg v3.8h, v3.8h
 ; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI3_1]
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI3_3]
 ; GISEL-NEXT:    adrp x8, .LCPI3_0
-; GISEL-NEXT:    neg v2.8h, v2.8h
-; GISEL-NEXT:    sub v3.8h, v0.8h, v1.8h
-; GISEL-NEXT:    usra v1.8h, v3.8h, #1
-; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI3_0]
-; GISEL-NEXT:    ushl v1.8h, v1.8h, v2.8h
-; GISEL-NEXT:    cmeq v2.8h, v4.8h, v3.8h
+; GISEL-NEXT:    sub v4.8h, v0.8h, v1.8h
+; GISEL-NEXT:    ldr q5, [x8, :lo12:.LCPI3_0]
+; GISEL-NEXT:    usra v1.8h, v4.8h, #1
+; GISEL-NEXT:    cmeq v2.8h, v2.8h, v5.8h
+; GISEL-NEXT:    ushl v1.8h, v1.8h, v3.8h
 ; GISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; GISEL-NEXT:    ret
   %1 = udiv <8 x i16> %x, <i16 7, i16 23, i16 25, i16 27, i16 31, i16 47, i16 63, i16 127>
@@ -171,20 +171,17 @@ define <8 x i16> @combine_vec_udiv_nonuniform3(<8 x i16> %x) {
 define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; SDAG-LABEL: combine_vec_udiv_nonuniform4:
 ; SDAG:       // %bb.0:
+; SDAG-NEXT:    movi v1.16b, #171
 ; SDAG-NEXT:    adrp x8, .LCPI4_0
-; SDAG-NEXT:    adrp x9, .LCPI4_2
-; SDAG-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
-; SDAG-NEXT:    adrp x8, .LCPI4_1
-; SDAG-NEXT:    ldr q3, [x9, :lo12:.LCPI4_2]
+; SDAG-NEXT:    adrp x9, .LCPI4_1
 ; SDAG-NEXT:    umull2 v2.8h, v0.16b, v1.16b
+; SDAG-NEXT:    ldr q3, [x9, :lo12:.LCPI4_1]
 ; SDAG-NEXT:    umull v1.8h, v0.8b, v1.8b
+; SDAG-NEXT:    and v0.16b, v0.16b, v3.16b
 ; SDAG-NEXT:    uzp2 v1.16b, v1.16b, v2.16b
-; SDAG-NEXT:    ldr q2, [x8, :lo12:.LCPI4_1]
-; SDAG-NEXT:    adrp x8, .LCPI4_3
-; SDAG-NEXT:    ushl v1.16b, v1.16b, v2.16b
-; SDAG-NEXT:    ldr q2, [x8, :lo12:.LCPI4_3]
-; SDAG-NEXT:    and v1.16b, v1.16b, v3.16b
-; SDAG-NEXT:    and v0.16b, v0.16b, v2.16b
+; SDAG-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
+; SDAG-NEXT:    ushr v1.16b, v1.16b, #7
+; SDAG-NEXT:    and v1.16b, v1.16b, v2.16b
 ; SDAG-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; SDAG-NEXT:    ret
 ;

@@ -6,85 +6,80 @@ target datalayout = "p:64:64:64"
 %async.actor = type { i64 }
 %async.fp = type <{ i32, i32 }>
 
-%async.ctxt = type { i8*, void (i8*, %async.task*, %async.actor*)* }
+%async.ctxt = type { ptr, ptr }
 
 ; The async callee.
 @my_other_async_function_fp = external global <{ i32, i32 }>
-declare void @my_other_async_function(i8* %async.ctxt)
+declare void @my_other_async_function(ptr %async.ctxt)
 
 @my_async_function_fp = constant <{ i32, i32 }>
   <{ i32 trunc ( ; Relative pointer to async function
        i64 sub (
-         i64 ptrtoint (void (i8*)* @my_async_function to i64),
-         i64 ptrtoint (i32* getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @my_async_function_fp, i32 0, i32 1) to i64)
+         i64 ptrtoint (ptr @my_async_function to i64),
+         i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @my_async_function_fp, i32 0, i32 1) to i64)
        )
      to i32),
      i32 128    ; Initial async context size without space for frame
 }>
 
-define swiftcc void @my_other_async_function_fp.apply(i8* %fnPtr, i8* %async.ctxt) {
-  %callee = bitcast i8* %fnPtr to void(i8*)*
-  tail call swiftcc void %callee(i8* %async.ctxt)
+define swiftcc void @my_other_async_function_fp.apply(ptr %fnPtr, ptr %async.ctxt) {
+  tail call swiftcc void %fnPtr(ptr %async.ctxt)
   ret void
 }
 
-declare void @escape(i64*)
-declare void @store_resume(i8*)
-define i8* @resume_context_projection(i8* %ctxt) {
+declare void @escape(ptr)
+declare void @store_resume(ptr)
+define ptr @resume_context_projection(ptr %ctxt) {
 entry:
-  %resume_ctxt_addr = bitcast i8* %ctxt to i8**
-  %resume_ctxt = load i8*, i8** %resume_ctxt_addr, align 8
-  ret i8* %resume_ctxt
+  %resume_ctxt = load ptr, ptr %ctxt, align 8
+  ret ptr %resume_ctxt
 }
 
 ; The address of alloca escapes but the analysis based on lifetimes fails to see
 ; that it can't localize this alloca.
-; CHECK: define swiftcc void @my_async_function(i8* swiftasync %async.ctxt) {
+; CHECK: define swiftcc void @my_async_function(ptr swiftasync %async.ctxt) {
 ; CHECK: entry:
 ; CHECK-NOT: ret
 ; CHECK-NOT:   [[ESCAPED_ADDR:%.*]] = alloca i64, align 8
 ; CHECK: ret
-define swiftcc void @my_async_function(i8* swiftasync %async.ctxt) {
+define swiftcc void @my_async_function(ptr swiftasync %async.ctxt) {
 entry:
   %escaped_addr = alloca i64
 
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
-          i8* bitcast (<{i32, i32}>* @my_async_function_fp to i8*))
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
-  %ltb = bitcast i64* %escaped_addr to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %ltb)
-  call void @escape(i64* %escaped_addr)
+          ptr bitcast (<{i32, i32}>* @my_async_function_fp to ptr))
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %escaped_addr)
+  call void @escape(ptr %escaped_addr)
   br label %callblock
 
 
 callblock:
 
-  %callee_context = call i8* @context_alloc()
+  %callee_context = call ptr @context_alloc()
 
-  %resume.func_ptr = call i8* @llvm.coro.async.resume()
-  call void @store_resume(i8* %resume.func_ptr)
-  %resume_proj_fun = bitcast i8*(i8*)* @resume_context_projection to i8*
-  %callee = bitcast void(i8*)* @asyncSuspend to i8*
-  %res = call {i8*, i8*, i8*} (i32, i8*, i8*, ...) @llvm.coro.suspend.async(i32 0,
-                                                  i8* %resume.func_ptr,
-                                                  i8* %resume_proj_fun,
-                                                  void (i8*, i8*)* @my_other_async_function_fp.apply,
-                                                  i8* %callee, i8* %callee_context)
+  %resume.func_ptr = call ptr @llvm.coro.async.resume()
+  call void @store_resume(ptr %resume.func_ptr)
+  %res = call {ptr, ptr, ptr} (i32, ptr, ptr, ...) @llvm.coro.suspend.async(i32 0,
+                                                  ptr %resume.func_ptr,
+                                                  ptr @resume_context_projection,
+                                                  ptr @my_other_async_function_fp.apply,
+                                                  ptr @asyncSuspend, ptr %callee_context)
   br label %callblock
 }
 
-declare { i8*, i8*, i8*, i8* } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, i8*, i8*, ...)
-declare i8* @llvm.coro.prepare.async(i8*)
-declare token @llvm.coro.id.async(i32, i32, i32, i8*)
-declare i8* @llvm.coro.begin(token, i8*)
-declare i1 @llvm.coro.end.async(i8*, i1, ...)
-declare i1 @llvm.coro.end(i8*, i1)
-declare {i8*, i8*, i8*} @llvm.coro.suspend.async(i32, i8*, i8*, ...)
-declare i8* @context_alloc()
-declare void @llvm.coro.async.context.dealloc(i8*)
-declare swiftcc void @asyncSuspend(i8*)
-declare i8* @llvm.coro.async.resume()
-declare void @llvm.coro.async.size.replace(i8*, i8*)
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #0
+declare { ptr, ptr, ptr, ptr } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, ptr, ptr, ...)
+declare ptr @llvm.coro.prepare.async(ptr)
+declare token @llvm.coro.id.async(i32, i32, i32, ptr)
+declare ptr @llvm.coro.begin(token, ptr)
+declare i1 @llvm.coro.end.async(ptr, i1, ...)
+declare i1 @llvm.coro.end(ptr, i1)
+declare {ptr, ptr, ptr} @llvm.coro.suspend.async(i32, ptr, ptr, ...)
+declare ptr @context_alloc()
+declare void @llvm.coro.async.context.dealloc(ptr)
+declare swiftcc void @asyncSuspend(ptr)
+declare ptr @llvm.coro.async.resume()
+declare void @llvm.coro.async.size.replace(ptr, ptr)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
 attributes #0 = { argmemonly nofree nosync nounwind willreturn }

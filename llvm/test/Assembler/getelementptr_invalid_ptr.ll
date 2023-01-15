@@ -3,8 +3,8 @@
 
 ; CHECK: base of getelementptr must be a pointer
 
-define i32* @foo(i32 %a) {
+define ptr @foo(i32 %a) {
   %gep = getelementptr i32, i32 %a, i32 1
-  return i32* %gep
+  return ptr %gep
 }
 

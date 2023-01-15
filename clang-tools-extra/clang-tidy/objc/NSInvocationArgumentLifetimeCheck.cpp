@@ -23,9 +23,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -52,7 +51,7 @@ AST_POLYMORPHIC_MATCHER(isObjCManagedLifetime,
          QT.getQualifiers().getObjCLifetime() > Qualifiers::OCL_ExplicitNone;
 }
 
-static llvm::Optional<FixItHint>
+static std::optional<FixItHint>
 fixItHintReplacementForOwnershipString(StringRef Text, CharSourceRange Range,
                                        StringRef Ownership) {
   size_t Index = Text.find(Ownership);
@@ -65,7 +64,7 @@ fixItHintReplacementForOwnershipString(StringRef Text, CharSourceRange Range,
                                       UnsafeUnretainedText);
 }
 
-static llvm::Optional<FixItHint>
+static std::optional<FixItHint>
 fixItHintForVarDecl(const VarDecl *VD, const SourceManager &SM,
                     const LangOptions &LangOpts) {
   assert(VD && "VarDecl parameter must not be null");
@@ -85,11 +84,11 @@ fixItHintForVarDecl(const VarDecl *VD, const SourceManager &SM,
   }
 
   StringRef VarDeclText = Lexer::getSourceText(Range, SM, LangOpts);
-  if (llvm::Optional<FixItHint> Hint =
+  if (std::optional<FixItHint> Hint =
           fixItHintReplacementForOwnershipString(VarDeclText, Range, WeakText))
     return Hint;
 
-  if (llvm::Optional<FixItHint> Hint = fixItHintReplacementForOwnershipString(
+  if (std::optional<FixItHint> Hint = fixItHintReplacementForOwnershipString(
           VarDeclText, Range, StrongText))
     return Hint;
 

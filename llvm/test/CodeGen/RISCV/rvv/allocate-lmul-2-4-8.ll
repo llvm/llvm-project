@@ -268,7 +268,7 @@ define void @gpr_and_lmul1_and_2() nounwind {
   %x1 = alloca i64
   %v1 = alloca <vscale x 1 x i64>
   %v2 = alloca <vscale x 2 x i64>
-  store volatile i64 3, i64* %x1
+  store volatile i64 3, ptr %x1
   ret void
 }
 
@@ -293,7 +293,7 @@ define void @gpr_and_lmul1_and_4() nounwind {
   %x1 = alloca i64
   %v1 = alloca <vscale x 1 x i64>
   %v2 = alloca <vscale x 4 x i64>
-  store volatile i64 3, i64* %x1
+  store volatile i64 3, ptr %x1
   ret void
 }
 

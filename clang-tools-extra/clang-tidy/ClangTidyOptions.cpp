@@ -124,7 +124,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("Checks", Options.Checks);
     IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
     IO.mapOptional("HeaderFilterRegex", Options.HeaderFilterRegex);
-    IO.mapOptional("AnalyzeTemporaryDtors", Ignored); // legacy compatibility
+    IO.mapOptional("AnalyzeTemporaryDtors", Ignored); // deprecated
     IO.mapOptional("FormatStyle", Options.FormatStyle);
     IO.mapOptional("User", Options.User);
     IO.mapOptional("CheckOptions", Options.CheckOptions);
@@ -290,7 +290,7 @@ void FileOptionsBaseProvider::addRawFileOptions(
   StringRef Path = llvm::sys::path::parent_path(AbsolutePath);
   for (StringRef CurrentPath = Path; !CurrentPath.empty();
        CurrentPath = llvm::sys::path::parent_path(CurrentPath)) {
-    llvm::Optional<OptionsSource> Result;
+    std::optional<OptionsSource> Result;
 
     auto Iter = CachedOptions.find(CurrentPath);
     if (Iter != CachedOptions.end())
@@ -360,7 +360,7 @@ FileOptionsProvider::getRawOptions(StringRef FileName) {
   return RawOptions;
 }
 
-llvm::Optional<OptionsSource>
+std::optional<OptionsSource>
 FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
   assert(!Directory.empty());
 

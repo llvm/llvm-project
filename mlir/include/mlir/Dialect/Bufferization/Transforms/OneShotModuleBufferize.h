@@ -15,12 +15,14 @@ struct LogicalResult;
 class ModuleOp;
 
 namespace bufferization {
+struct BufferizationStatistics;
 class OneShotAnalysisState;
 struct OneShotBufferizationOptions;
 
 /// Analyze `moduleOp` and its nested ops. Bufferization decisions are stored in
 /// `state`.
-LogicalResult analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state);
+LogicalResult analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state,
+                              BufferizationStatistics *statistics = nullptr);
 
 /// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
 ///
@@ -28,7 +30,8 @@ LogicalResult analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state);
 /// inserted unless `options.copyBeforeWrite` is set, in which case buffers are
 /// copied before every write.
 LogicalResult bufferizeModuleOp(ModuleOp moduleOp,
-                                const OneShotBufferizationOptions &options);
+                                const OneShotBufferizationOptions &options,
+                                BufferizationStatistics *statistics = nullptr);
 
 /// Remove bufferization attributes on every FuncOp arguments in the ModuleOp.
 void removeBufferizationAttributesInModule(ModuleOp moduleOp);
@@ -39,7 +42,8 @@ void removeBufferizationAttributesInModule(ModuleOp moduleOp);
 /// Bufferize.
 LogicalResult runOneShotModuleBufferize(
     ModuleOp moduleOp,
-    const bufferization::OneShotBufferizationOptions &options);
+    const bufferization::OneShotBufferizationOptions &options,
+    BufferizationStatistics *statistics = nullptr);
 
 } // namespace bufferization
 } // namespace mlir

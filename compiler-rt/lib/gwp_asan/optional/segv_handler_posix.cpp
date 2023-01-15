@@ -47,15 +47,12 @@ void printHeader(Error E, uintptr_t AccessPtr,
   // appended to a log file automatically per Printf() call.
   constexpr size_t kDescriptionBufferLen = 128;
   char DescriptionBuffer[kDescriptionBufferLen] = "";
+
+  bool AccessWasInBounds = false;
   if (E != Error::UNKNOWN && Metadata != nullptr) {
     uintptr_t Address = __gwp_asan_get_allocation_address(Metadata);
     size_t Size = __gwp_asan_get_allocation_size(Metadata);
-    if (E == Error::USE_AFTER_FREE) {
-      snprintf(DescriptionBuffer, kDescriptionBufferLen,
-               "(%zu byte%s into a %zu-byte allocation at 0x%zx) ",
-               AccessPtr - Address, (AccessPtr - Address == 1) ? "" : "s", Size,
-               Address);
-    } else if (AccessPtr < Address) {
+    if (AccessPtr < Address) {
       snprintf(DescriptionBuffer, kDescriptionBufferLen,
                "(%zu byte%s to the left of a %zu-byte allocation at 0x%zx) ",
                Address - AccessPtr, (Address - AccessPtr == 1) ? "" : "s", Size,
@@ -65,9 +62,15 @@ void printHeader(Error E, uintptr_t AccessPtr,
                "(%zu byte%s to the right of a %zu-byte allocation at 0x%zx) ",
                AccessPtr - Address, (AccessPtr - Address == 1) ? "" : "s", Size,
                Address);
-    } else {
+    } else if (E == Error::DOUBLE_FREE) {
       snprintf(DescriptionBuffer, kDescriptionBufferLen,
                "(a %zu-byte allocation) ", Size);
+    } else {
+      AccessWasInBounds = true;
+      snprintf(DescriptionBuffer, kDescriptionBufferLen,
+               "(%zu byte%s into a %zu-byte allocation at 0x%zx) ",
+               AccessPtr - Address, (AccessPtr - Address == 1) ? "" : "s", Size,
+               Address);
     }
   }
 
@@ -81,8 +84,19 @@ void printHeader(Error E, uintptr_t AccessPtr,
   else
     snprintf(ThreadBuffer, kThreadBufferLen, "%" PRIu64, ThreadID);
 
-  Printf("%s at 0x%zx %sby thread %s here:\n", gwp_asan::ErrorToString(E),
-         AccessPtr, DescriptionBuffer, ThreadBuffer);
+  const char *OutOfBoundsAndUseAfterFreeWarning = "";
+  if (E == Error::USE_AFTER_FREE && !AccessWasInBounds) {
+    OutOfBoundsAndUseAfterFreeWarning =
+        " (warning: buffer overflow/underflow detected on a free()'d "
+        "allocation. This either means you have a buffer-overflow and a "
+        "use-after-free at the same time, or you have a long-lived "
+        "use-after-free bug where the allocation/deallocation metadata below "
+        "has already been overwritten and is likely bogus)";
+  }
+
+  Printf("%s%s at 0x%zx %sby thread %s here:\n", gwp_asan::ErrorToString(E),
+         OutOfBoundsAndUseAfterFreeWarning, AccessPtr, DescriptionBuffer,
+         ThreadBuffer);
 }
 
 void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,

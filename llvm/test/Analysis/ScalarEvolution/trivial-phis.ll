@@ -4,15 +4,15 @@
 ; CHECK:       %add.lcssa.wide = phi i64 [ %indvars.iv.next, %do.body ]
 ; CHECK-NEXT:  -->  {1,+,1}<nuw><nsw><%do.body> U: [1,2147483648) S: [1,2147483648)
 
-define i64 @test1(i32 signext %n, float* %A) {
+define i64 @test1(i32 signext %n, ptr %A) {
 entry:
   %0 = sext i32 %n to i64
   br label %do.body
 
 do.body:                                          ; preds = %do.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %do.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  store float 1.000000e+00, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  store float 1.000000e+00, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %cmp = icmp slt i64 %indvars.iv.next, %0
   br i1 %cmp, label %do.body, label %do.end
@@ -26,7 +26,7 @@ do.end:                                           ; preds = %do.body
 ; CHECK:      %tmp24 = phi i64 [ %tmp14, %bb22 ], [ %tmp14, %bb13 ]
 ; CHECK-NEXT: -->  %tmp24 U: full-set S: full-set       Exits: <<Unknown>>      LoopDispositions: { %bb13: Variant, %bb8: Variant, %bb17: Invariant, %bb27: Invariant }
 
-define void @test2(i64 %arg, i32* noalias %arg1) {
+define void @test2(i64 %arg, ptr noalias %arg1) {
 bb:
   %tmp = icmp slt i64 0, %arg
   br i1 %tmp, label %bb7, label %bb48
@@ -74,9 +74,9 @@ bb26:                                             ; preds = %bb23
 bb27:                                             ; preds = %bb33, %bb26
   %tmp28 = phi i64 [ 0, %bb26 ], [ %tmp34, %bb33 ]
   %tmp29 = mul nsw i64 %tmp9, %arg
-  %tmp30 = getelementptr inbounds i32, i32* %arg1, i64 %tmp24
-  %tmp31 = getelementptr inbounds i32, i32* %tmp30, i64 %tmp29
-  %tmp32 = load i32, i32* %tmp31, align 4
+  %tmp30 = getelementptr inbounds i32, ptr %arg1, i64 %tmp24
+  %tmp31 = getelementptr inbounds i32, ptr %tmp30, i64 %tmp29
+  %tmp32 = load i32, ptr %tmp31, align 4
   br label %bb33
 
 bb33:                                             ; preds = %bb27
@@ -134,7 +134,7 @@ bb48:                                             ; preds = %bb47, %bb
 ; CHECK-NEXT: -->  {1,+,1}<%bb13> U: [1,9223372036854775807) S: [1,9223372036854775807)
 ; CHECK-SAME:      Exits: (-2 + %arg)       LoopDispositions: { %bb13: Computable, %bb8: Variant, %bb17_a: Invariant, %bb27: Invariant }
 
-define void @test3(i64 %arg, i32* %arg1) {
+define void @test3(i64 %arg, ptr %arg1) {
 bb:
   %tmp = icmp slt i64 0, %arg
   br i1 %tmp, label %bb8, label %bb48
@@ -168,9 +168,9 @@ bb23:                                             ; preds = %bb17, %bb13
 bb27:                                             ; preds = %bb23, %bb27
   %tmp28 = phi i64 [ %tmp34, %bb27 ], [ 0, %bb23 ]
   %tmp29 = mul nsw i64 %tmp9, %arg
-  %tmp30 = getelementptr inbounds i32, i32* %arg1, i64 %tmp24
-  %tmp31 = getelementptr inbounds i32, i32* %tmp30, i64 %tmp29
-  %tmp32 = load i32, i32* %tmp31, align 4
+  %tmp30 = getelementptr inbounds i32, ptr %arg1, i64 %tmp24
+  %tmp31 = getelementptr inbounds i32, ptr %tmp30, i64 %tmp29
+  %tmp32 = load i32, ptr %tmp31, align 4
   %tmp34 = add nuw nsw i64 %tmp28, 1
   %tmp35 = icmp slt i64 %tmp34, %arg
   br i1 %tmp35, label %bb27, label %bb39

@@ -12,6 +12,7 @@
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
 
+#include "src/stdio/scanf_core/int_converter.h"
 #include "src/stdio/scanf_core/string_converter.h"
 
 #include <stddef.h>
@@ -32,16 +33,16 @@ int convert(Reader *reader, const FormatSection &to_conv) {
   case 'c':
   case '[':
     return convert_string(reader, to_conv);
-    //   case 'd':
-    //   case 'i':
-    //   case 'u':
-    //   case 'o':
-    //   case 'x':
-    //   case 'X':
-    //     ret_val = raw_match(reader, " ");
-    //     if (ret_val != READ_OK)
-    //       return ret_val;
-    //     return convert_int(reader, to_conv);
+  case 'd':
+  case 'i':
+  case 'u':
+  case 'o':
+  case 'x':
+  case 'X':
+    ret_val = raw_match(reader, " ");
+    if (ret_val != READ_OK)
+      return ret_val;
+    return convert_int(reader, to_conv);
     // #ifndef LLVM_LIBC_SCANF_DISABLE_FLOAT
     //   case 'f':
     //   case 'F':

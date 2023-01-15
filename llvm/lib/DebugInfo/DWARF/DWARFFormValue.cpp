@@ -213,7 +213,7 @@ bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
 
 bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
   // First, check DWARF5 form classes.
-  if (Form < makeArrayRef(DWARF5FormClasses).size() &&
+  if (Form < ArrayRef(DWARF5FormClasses).size() &&
       DWARF5FormClasses[Form] == FC)
     return true;
   // Check more forms from extensions and proposals.
@@ -757,7 +757,7 @@ std::optional<ArrayRef<uint8_t>> DWARFFormValue::getAsBlock() const {
   if (!isFormClass(FC_Block) && !isFormClass(FC_Exprloc) &&
       Form != DW_FORM_data16)
     return std::nullopt;
-  return makeArrayRef(Value.data, Value.uval);
+  return ArrayRef(Value.data, Value.uval);
 }
 
 std::optional<uint64_t> DWARFFormValue::getAsCStringOffset() const {

@@ -80,6 +80,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
   initializeWebAssemblyMCLowerPrePassPass(PR);
+  initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
+  initializeWebAssemblyFixBrTableDefaultsPass(PR);
+  initializeWebAssemblyDAGToDAGISelPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -338,6 +341,13 @@ public:
 };
 } // end anonymous namespace
 
+MachineFunctionInfo *WebAssemblyTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return WebAssemblyFunctionInfo::create<WebAssemblyFunctionInfo>(Allocator, F,
+                                                                  STI);
+}
+
 TargetTransformInfo
 WebAssemblyTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(WebAssemblyTTIImpl(this, F));
@@ -507,7 +517,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   disablePass(&PostRASchedulerID);
   disablePass(&FuncletLayoutID);
   disablePass(&StackMapLivenessID);
-  disablePass(&LiveDebugValuesID);
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
 

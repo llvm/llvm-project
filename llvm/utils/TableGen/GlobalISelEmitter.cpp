@@ -183,11 +183,12 @@ public:
            "Unexpected mismatch of scalable property");
     return Ty.isVector()
                ? std::make_tuple(Ty.isScalable(),
-                                 Ty.getSizeInBits().getKnownMinSize()) <
-                     std::make_tuple(Other.Ty.isScalable(),
-                                     Other.Ty.getSizeInBits().getKnownMinSize())
-               : Ty.getSizeInBits().getFixedSize() <
-                     Other.Ty.getSizeInBits().getFixedSize();
+                                 Ty.getSizeInBits().getKnownMinValue()) <
+                     std::make_tuple(
+                         Other.Ty.isScalable(),
+                         Other.Ty.getSizeInBits().getKnownMinValue())
+               : Ty.getSizeInBits().getFixedValue() <
+                     Other.Ty.getSizeInBits().getFixedValue();
   }
 
   bool operator==(const LLTCodeGen &B) const { return Ty == B.Ty; }
@@ -2976,7 +2977,7 @@ public:
           << MatchTable::IntValue(RendererID);
     if (SubOperand)
       Table << MatchTable::Comment("SubOperand")
-            << MatchTable::IntValue(SubOperand.value());
+            << MatchTable::IntValue(*SubOperand);
     Table << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
   }
 };
@@ -4423,7 +4424,7 @@ Error GlobalISelEmitter::importChildMatcher(
       // Treat G_BUILD_VECTOR as the canonical opcode, and G_BUILD_VECTOR_TRUNC
       // as an alternative.
       InsnOperand.getInsnMatcher().addPredicate<InstructionOpcodeMatcher>(
-      makeArrayRef({&BuildVector, &BuildVectorTrunc}));
+          ArrayRef({&BuildVector, &BuildVectorTrunc}));
 
       // TODO: Handle both G_BUILD_VECTOR and G_BUILD_VECTOR_TRUNC We could
       // theoretically not emit any opcode check, but getOpcodeMatcher currently
@@ -4995,7 +4996,7 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
       auto Def = DefaultDefOp->getDef();
       if (Def->getName() == "undef_tied_input") {
         unsigned TempRegID = M.allocateTempRegID();
-        M.insertAction<MakeTempRegisterAction>(InsertPt, OpTyOrNone.value(),
+        M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone,
                                                TempRegID);
         InsertPt = M.insertAction<BuildMIAction>(
           InsertPt, M.allocateOutputInsnID(),

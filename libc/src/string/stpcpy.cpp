@@ -11,7 +11,6 @@
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
-#include "src/__support/sanitizer.h"
 
 namespace __llvm_libc {
 

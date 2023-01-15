@@ -44,7 +44,7 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         memref::AllocOp target,
-        ::llvm::SmallVector<::mlir::Operation *> &results,
+        ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
 }

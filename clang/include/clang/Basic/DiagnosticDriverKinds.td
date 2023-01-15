@@ -77,9 +77,9 @@ def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to "
   "SPIR-V%select{| unless %1 is given}0.">;
 
-def err_drv_undetermined_amdgpu_arch : Error<
-  "cannot determine AMDGPU architecture: %0; consider passing it via "
-  "'--march'">;
+def err_drv_undetermined_gpu_arch : Error<
+  "cannot determine %0 architecture: %1; consider passing it via "
+  "'%2'">;
 def err_drv_cuda_version_unsupported : Error<
   "GPU arch %0 is supported by CUDA versions between %1 and %2 (inclusive), "
   "but installation at %3 is %4; use '--cuda-path' to specify a different CUDA "
@@ -126,6 +126,8 @@ def err_drv_invalid_unwindlib_name : Error<
   "invalid unwind library name in argument '%0'">;
 def err_drv_incompatible_unwindlib : Error<
   "--rtlib=libgcc requires --unwindlib=libgcc">;
+def err_drv_incompatible_options : Error<
+  "The combination of '%0' and '%1' is incompatible">;
 def err_drv_invalid_stdlib_name : Error<
   "invalid library name in argument '%0'">;
 def err_drv_invalid_output_with_multiple_archs : Error<
@@ -203,8 +205,6 @@ def warn_drv_missing_plugin_name : Warning<
 def warn_drv_missing_plugin_arg : Warning<
   "missing plugin argument for plugin %0 in %1">,
   InGroup<InvalidCommandLineArgument>;
-def err_drv_invalid_libcxx_deployment : Error<
-  "invalid deployment target for -stdlib=libc++ (requires %0 or later)">;
 def err_drv_invalid_argument_to_option : Error<
   "invalid argument '%0' to -%1">;
 def err_drv_missing_sanitizer_ignorelist : Error<

@@ -18,8 +18,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -411,7 +409,7 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
     }
 
     auto CalculateAddressOfSymbolInDwarfSegment =
-        [&]() -> llvm::Optional<int64_t> {
+        [&]() -> std::optional<int64_t> {
       auto Symbol = It->getSymbol();
       auto SymbolAbsoluteAddress = Symbol->getAddress();
       if (!SymbolAbsoluteAddress)
@@ -447,7 +445,7 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
 
     bool ShouldSubtractDwarfVM = false;
     // For the second symbol there are two possibilities.
-    llvm::Optional<int64_t> SecondSymbolAddress;
+    std::optional<int64_t> SecondSymbolAddress;
     auto Sym = It->getSymbol();
     if (Sym != MO->symbol_end()) {
       Expected<StringRef> SymbolName = Sym->getName();
@@ -544,7 +542,7 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
       // place.
       SectionToOffsetInDwarf[SectionKind] += Section.getSize();
       Streamer->emitSwiftReflectionSection(SectionKind, *SectionContents,
-                                           Section.getAlignment(),
+                                           Section.getAlignment().value(),
                                            Section.getSize());
     }
   }

@@ -823,7 +823,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         Dir = *DirOrErr;
       SmallVector<std::pair<const FileEntry *, const DirectoryEntry *>, 1> CWD;
       CWD.push_back({nullptr, Dir});
-      Optional<FileEntryRef> FE =
+      OptionalFileEntryRef FE =
           HS.LookupFile(FileName, SourceLocation(),
                         /*Angled*/ Input.getKind().getHeaderUnitKind() ==
                             InputKind::HeaderUnit_System,

@@ -2,7 +2,7 @@
 ; RUN: opt -S -passes=openmp-opt < %s | FileCheck %s
 target triple = "nvptx64"
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 @kernel0_exec_mode = weak constant i8 1
 
@@ -16,18 +16,18 @@ target triple = "nvptx64"
 define weak void @kernel0() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i1 true, i1 false)
 ; CHECK-NEXT:    call void @helper0()
 ; CHECK-NEXT:    call void @helper1()
 ; CHECK-NEXT:    call void @helper2()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 true, i1 false)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i1 true)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
+  %i = call i32 @__kmpc_target_init(ptr null, i1 true, i1 false)
   call void @helper0()
   call void @helper1()
   call void @helper2()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 true, i1 false)
+  call void @__kmpc_target_deinit(ptr null, i1 true)
   ret void
 }
 
@@ -36,14 +36,14 @@ define weak void @kernel0() #0 {
 define weak void @kernel1() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel1
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i1 true, i1 false)
 ; CHECK-NEXT:    call void @helper1()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 true, i1 false, i1 false)
+  %i = call i32 @__kmpc_target_init(ptr null, i1 true, i1 false)
   call void @helper1()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
+  call void @__kmpc_target_deinit(ptr null, i1 false)
   ret void
 }
 
@@ -52,18 +52,18 @@ define weak void @kernel1() #0 {
 define weak void @kernel2() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel2
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i1 false, i1 false)
 ; CHECK-NEXT:    call void @helper0()
 ; CHECK-NEXT:    call void @helper1()
 ; CHECK-NEXT:    call void @helper2()
-; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(%struct.ident_t* null, i1 false, i1 false, i1 false)
+  %i = call i32 @__kmpc_target_init(ptr null, i1 false, i1 false)
   call void @helper0()
   call void @helper1()
   call void @helper2()
-  call void @__kmpc_target_deinit(%struct.ident_t* null, i1 false, i1 false)
+  call void @__kmpc_target_deinit(ptr null, i1 false)
   ret void
 }
 
@@ -71,11 +71,11 @@ define internal void @helper0() {
 ; CHECK-LABEL: define {{[^@]+}}@helper0
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[THREADLIMIT:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block() #[[ATTR1]]
-; CHECK-NEXT:    store i32 [[THREADLIMIT]], i32* @G, align 4
+; CHECK-NEXT:    store i32 [[THREADLIMIT]], ptr @G, align 4
 ; CHECK-NEXT:    ret void
 ;
   %threadLimit = call i32 @__kmpc_get_hardware_num_threads_in_block()
-  store i32 %threadLimit, i32* @G
+  store i32 %threadLimit, ptr @G
   ret void
 }
 
@@ -103,17 +103,17 @@ f:
 define internal void @helper2() {
 ; CHECK-LABEL: define {{[^@]+}}@helper2() {
 ; CHECK-NEXT:    [[THREADLIMIT:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block() #[[ATTR1]]
-; CHECK-NEXT:    store i32 [[THREADLIMIT]], i32* @G, align 4
+; CHECK-NEXT:    store i32 [[THREADLIMIT]], ptr @G, align 4
 ; CHECK-NEXT:    ret void
 ;
   %threadLimit = call i32 @__kmpc_get_hardware_num_threads_in_block()
-  store i32 %threadLimit, i32* @G
+  store i32 %threadLimit, ptr @G
   ret void
 }
 
 declare i32 @__kmpc_get_hardware_num_threads_in_block()
-declare i32 @__kmpc_target_init(%struct.ident_t*, i1 zeroext, i1 zeroext, i1 zeroext) #1
-declare void @__kmpc_target_deinit(%struct.ident_t* nocapture readnone, i1 zeroext, i1 zeroext) #1
+declare i32 @__kmpc_target_init(ptr, i1 zeroext, i1 zeroext) #1
+declare void @__kmpc_target_deinit(ptr nocapture readnone, i1 zeroext) #1
 
 
 !llvm.module.flags = !{!0, !1}
@@ -123,9 +123,9 @@ attributes #0 = { optnone noinline "omp_target_thread_limit"="666" "omp_target_n
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
-!2 = !{void ()* @kernel0, !"kernel", i32 1}
-!3 = !{void ()* @kernel1, !"kernel", i32 1}
-!4 = !{void ()* @kernel2, !"kernel", i32 1}
+!2 = !{ptr @kernel0, !"kernel", i32 1}
+!3 = !{ptr @kernel1, !"kernel", i32 1}
+!4 = !{ptr @kernel2, !"kernel", i32 1}
 ;
 ;.
 ; CHECK: attributes #[[ATTR0]] = { noinline optnone "omp_target_num_teams"="777" "omp_target_thread_limit"="666" }
@@ -133,7 +133,7 @@ attributes #0 = { optnone noinline "omp_target_thread_limit"="666" "omp_target_n
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META2:![0-9]+]] = !{void ()* @kernel0, !"kernel", i32 1}
-; CHECK: [[META3:![0-9]+]] = !{void ()* @kernel1, !"kernel", i32 1}
-; CHECK: [[META4:![0-9]+]] = !{void ()* @kernel2, !"kernel", i32 1}
+; CHECK: [[META2:![0-9]+]] = !{ptr @kernel0, !"kernel", i32 1}
+; CHECK: [[META3:![0-9]+]] = !{ptr @kernel1, !"kernel", i32 1}
+; CHECK: [[META4:![0-9]+]] = !{ptr @kernel2, !"kernel", i32 1}
 ;.

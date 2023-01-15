@@ -4,7 +4,7 @@
 ; CHECK: memd(r{{[0-9]+}}++#8) = r
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0, i16* nocapture %a1, i16 signext %a2) #0 {
+define void @f0(i32 %a0, ptr nocapture %a1, i16 signext %a2) #0 {
 b0:
   %v0 = icmp eq i32 %a0, 0
   br i1 %v0, label %b2, label %b3
@@ -46,21 +46,20 @@ b8:                                               ; preds = %b7
 b9:                                               ; preds = %b9, %b5
   %v11 = phi i32 [ 0, %b5 ], [ %v12, %b9 ]
   %v12 = add nsw i32 %v11, 4
-  %v13 = getelementptr i16, i16* %a1, i32 %v11
-  %v14 = bitcast i16* %v13 to <4 x i16>*
-  %v15 = load <4 x i16>, <4 x i16>* %v14, align 16
+  %v13 = getelementptr i16, ptr %a1, i32 %v11
+  %v15 = load <4 x i16>, ptr %v13, align 16
   %v16 = add <4 x i16> %v15, %v8
-  store <4 x i16> %v16, <4 x i16>* %v14, align 16
+  store <4 x i16> %v16, ptr %v13, align 16
   %v17 = icmp slt i32 %v12, %v3
   br i1 %v17, label %b9, label %b6
 
 b10:                                              ; preds = %b10, %b8
   %v18 = phi i32 [ %v19, %b10 ], [ %v9, %b8 ]
   %v19 = add nsw i32 %v18, 1
-  %v20 = getelementptr i16, i16* %a1, i32 %v18
-  %v21 = load i16, i16* %v20, align 2
+  %v20 = getelementptr i16, ptr %a1, i32 %v18
+  %v21 = load i16, ptr %v20, align 2
   %v22 = add i16 %v21, %a2
-  store i16 %v22, i16* %v20, align 2
+  store i16 %v22, ptr %v20, align 2
   %v23 = icmp eq i32 %v19, %a0
   br i1 %v23, label %b1, label %b10
 }

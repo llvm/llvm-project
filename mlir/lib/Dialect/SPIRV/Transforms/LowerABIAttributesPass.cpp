@@ -26,7 +26,7 @@
 
 namespace mlir {
 namespace spirv {
-#define GEN_PASS_DEF_SPIRVLOWERABIATTRIBUTES
+#define GEN_PASS_DEF_SPIRVLOWERABIATTRIBUTESPASS
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 } // namespace spirv
 } // namespace mlir
@@ -143,12 +143,12 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     return funcOp.emitRemark("lower entry point failure: could not select "
                              "execution model based on 'spirv.target_env'");
 
-  builder.create<spirv::EntryPointOp>(funcOp.getLoc(), executionModel.value(),
-                                      funcOp, interfaceVars);
+  builder.create<spirv::EntryPointOp>(funcOp.getLoc(), *executionModel, funcOp,
+                                      interfaceVars);
 
   // Specifies the spirv.ExecutionModeOp.
   if (DenseI32ArrayAttr workgroupSizeAttr = entryPointAttr.getWorkgroupSize()) {
-    Optional<ArrayRef<spirv::Capability>> caps =
+    std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::LocalSize);
     if (!caps || targetEnv.allows(*caps)) {
       builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
@@ -160,8 +160,8 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
           entryPointAttr.getSubgroupSize());
     }
   }
-  if (Optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
-    Optional<ArrayRef<spirv::Capability>> caps =
+  if (std::optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
+    std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::SubgroupSize);
     if (!caps || targetEnv.allows(*caps)) {
       builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
@@ -199,7 +199,8 @@ public:
 
 /// Pass to implement the ABI information specified as attributes.
 class LowerABIAttributesPass final
-    : public spirv::impl::SPIRVLowerABIAttributesBase<LowerABIAttributesPass> {
+    : public spirv::impl::SPIRVLowerABIAttributesPassBase<
+          LowerABIAttributesPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -273,7 +274,12 @@ void LowerABIAttributesPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
   MLIRContext *context = &getContext();
 
-  spirv::TargetEnv targetEnv(spirv::lookupTargetEnv(module));
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(module);
+  if (!targetEnvAttr) {
+    module->emitOpError("missing SPIR-V target env attribute");
+    return signalPassFailure();
+  }
+  spirv::TargetEnv targetEnv(targetEnvAttr);
 
   SPIRVTypeConverter typeConverter(targetEnv);
 
@@ -321,9 +327,4 @@ void LowerABIAttributesPass::runOnOperation() {
       return signalPassFailure();
     }
   }
-}
-
-std::unique_ptr<OperationPass<spirv::ModuleOp>>
-mlir::spirv::createLowerABIAttributesPass() {
-  return std::make_unique<LowerABIAttributesPass>();
 }

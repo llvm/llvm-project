@@ -61,7 +61,7 @@ class InstructionInfoView : public InstructionView {
   struct InstructionInfoViewData {
     unsigned NumMicroOpcodes = 0;
     unsigned Latency = 0;
-    Optional<double> RThroughput = 0.0;
+    std::optional<double> RThroughput = 0.0;
     bool mayLoad = false;
     bool mayStore = false;
     bool hasUnmodeledSideEffects = false;

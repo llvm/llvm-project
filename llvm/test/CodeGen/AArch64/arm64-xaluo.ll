@@ -6,7 +6,7 @@
 ;
 ; Get the actual value of the overflow bit.
 ;
-define zeroext i1 @saddo1.i32(i32 %v1, i32 %v2, i32* %res) {
+define zeroext i1 @saddo1.i32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: saddo1.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds w8, w0, w1
@@ -32,12 +32,12 @@ entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Test the immediate version.
-define zeroext i1 @saddo2.i32(i32 %v1, i32* %res) {
+define zeroext i1 @saddo2.i32(i32 %v1, ptr %res) {
 ; SDAG-LABEL: saddo2.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds w8, w0, #4
@@ -63,12 +63,12 @@ entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 4)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Test negative immediates.
-define zeroext i1 @saddo3.i32(i32 %v1, i32* %res) {
+define zeroext i1 @saddo3.i32(i32 %v1, ptr %res) {
 ; SDAG-LABEL: saddo3.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    subs w8, w0, #4
@@ -94,12 +94,12 @@ entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 -4)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Test immediates that are too large to be encoded.
-define zeroext i1 @saddo4.i32(i32 %v1, i32* %res) {
+define zeroext i1 @saddo4.i32(i32 %v1, ptr %res) {
 ; SDAG-LABEL: saddo4.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    mov w8, #16777215
@@ -128,12 +128,12 @@ entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 16777215)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Test shift folding.
-define zeroext i1 @saddo5.i32(i32 %v1, i32 %v2, i32* %res) {
+define zeroext i1 @saddo5.i32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: saddo5.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds w8, w0, w1, lsl #16
@@ -160,11 +160,11 @@ entry:
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 %lsl)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @saddo1.i64(i64 %v1, i64 %v2, i64* %res) {
+define zeroext i1 @saddo1.i64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: saddo1.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds x8, x0, x1
@@ -190,11 +190,11 @@ entry:
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @saddo2.i64(i64 %v1, i64* %res) {
+define zeroext i1 @saddo2.i64(i64 %v1, ptr %res) {
 ; SDAG-LABEL: saddo2.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds x8, x0, #4
@@ -220,11 +220,11 @@ entry:
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 4)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @saddo3.i64(i64 %v1, i64* %res) {
+define zeroext i1 @saddo3.i64(i64 %v1, ptr %res) {
 ; SDAG-LABEL: saddo3.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    subs x8, x0, #4
@@ -250,11 +250,11 @@ entry:
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 -4)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @uaddo.i32(i32 %v1, i32 %v2, i32* %res) {
+define zeroext i1 @uaddo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: uaddo.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds w8, w0, w1
@@ -280,11 +280,11 @@ entry:
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @uaddo.i64(i64 %v1, i64 %v2, i64* %res) {
+define zeroext i1 @uaddo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: uaddo.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds x8, x0, x1
@@ -310,11 +310,11 @@ entry:
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @ssubo1.i32(i32 %v1, i32 %v2, i32* %res) {
+define zeroext i1 @ssubo1.i32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: ssubo1.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    subs w8, w0, w1
@@ -340,11 +340,11 @@ entry:
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @ssubo2.i32(i32 %v1, i32* %res) {
+define zeroext i1 @ssubo2.i32(i32 %v1, ptr %res) {
 ; SDAG-LABEL: ssubo2.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds w8, w0, #4
@@ -370,11 +370,11 @@ entry:
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %v1, i32 -4)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @ssubo.i64(i64 %v1, i64 %v2, i64* %res) {
+define zeroext i1 @ssubo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: ssubo.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    subs x8, x0, x1
@@ -400,11 +400,11 @@ entry:
   %t = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @usubo.i32(i32 %v1, i32 %v2, i32* %res) {
+define zeroext i1 @usubo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: usubo.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    subs w8, w0, w1
@@ -430,11 +430,11 @@ entry:
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @usubo.i64(i64 %v1, i64 %v2, i64* %res) {
+define zeroext i1 @usubo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: usubo.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    subs x8, x0, x1
@@ -460,11 +460,11 @@ entry:
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smulo.i32(i32 %v1, i32 %v2, i32* %res) {
+define zeroext i1 @smulo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: smulo.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    smull x8, w0, w1
@@ -495,11 +495,11 @@ entry:
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, i64* %res) {
+define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: smulo.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    mul x8, x0, x1
@@ -531,11 +531,11 @@ entry:
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smulo2.i64(i64 %v1, i64* %res) {
+define zeroext i1 @smulo2.i64(i64 %v1, ptr %res) {
 ; SDAG-LABEL: smulo2.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds x8, x0, x0
@@ -561,11 +561,11 @@ entry:
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umulo.i32(i32 %v1, i32 %v2, i32* %res) {
+define zeroext i1 @umulo.i32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: umulo.i32:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    umull x8, w0, w1
@@ -597,11 +597,11 @@ entry:
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, i64* %res) {
+define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: umulo.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    umulh x8, x0, x1
@@ -636,11 +636,11 @@ entry:
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umulo2.i64(i64 %v1, i64* %res) {
+define zeroext i1 @umulo2.i64(i64 %v1, ptr %res) {
 ; SDAG-LABEL: umulo2.i64:
 ; SDAG:       // %bb.0: // %entry
 ; SDAG-NEXT:    adds x8, x0, x0
@@ -666,7 +666,7 @@ entry:
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 

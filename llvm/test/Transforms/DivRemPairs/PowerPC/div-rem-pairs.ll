@@ -331,8 +331,8 @@ end:
   ret i128 %ret
 }
 
-; We don't hoist if one op does not dominate the other,
-; but we could hoist both ops to the common predecessor block?
+; Do not hoist to the common predecessor block since we don't
+; have a div-rem operation.
 
 define i32 @no_domination(i1 %cmp, i32 %a, i32 %b) {
 ; CHECK-LABEL: @no_domination(

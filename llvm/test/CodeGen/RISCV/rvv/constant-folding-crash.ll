@@ -15,7 +15,7 @@
 ; visited while it wasn't "dead". At the point of visiting the constant, we
 ; crashed.
 
-define void @constant_folding_crash(i8* %v54, <4 x <4 x i32>*> %lanes.a, <4 x <4 x i32>*> %lanes.b, <4 x i1> %sel) {
+define void @constant_folding_crash(ptr %v54, <4 x ptr> %lanes.a, <4 x ptr> %lanes.b, <4 x i1> %sel) {
 ; RV32-LABEL: constant_folding_crash:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a0, 8(a0)
@@ -27,15 +27,10 @@ define void @constant_folding_crash(i8* %v54, <4 x <4 x i32>*> %lanes.a, <4 x <4
 ; RV32-NEXT:    vmsne.vi v0, v11, 0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vmerge.vvm v8, v9, v8, v0
-; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; RV32-NEXT:    vmv.v.i v9, 0
-; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vmv1r.v v0, v10
-; RV32-NEXT:    vmerge.vim v8, v9, 1, v0
-; RV32-NEXT:    vmv.x.s a1, v8
-; RV32-NEXT:    andi a1, a1, 1
+; RV32-NEXT:    vfirst.m a1, v10
+; RV32-NEXT:    seqz a1, a1
+; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv.v.x v8, a1
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
 ; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
@@ -54,15 +49,10 @@ define void @constant_folding_crash(i8* %v54, <4 x <4 x i32>*> %lanes.a, <4 x <4
 ; RV64-NEXT:    vmsne.vi v0, v13, 0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vmerge.vvm v8, v10, v8, v0
-; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vmv1r.v v0, v12
-; RV64-NEXT:    vmerge.vim v8, v10, 1, v0
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    andi a1, a1, 1
+; RV64-NEXT:    vfirst.m a1, v12
+; RV64-NEXT:    seqz a1, a1
+; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a1
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
@@ -70,16 +60,15 @@ define void @constant_folding_crash(i8* %v54, <4 x <4 x i32>*> %lanes.a, <4 x <4
 ; RV64-NEXT:    vse32.v v8, (a0), v0.t
 ; RV64-NEXT:    ret
 entry:
-  %sunkaddr = getelementptr i8, i8* %v54, i64 8
-  %v55 = bitcast i8* %sunkaddr to i64*
-  %v56 = load i64, i64* %v55, align 8
+  %sunkaddr = getelementptr i8, ptr %v54, i64 8
+  %v56 = load i64, ptr %sunkaddr, align 8
   %trunc = and i64 %v56, 1
   %cmp = icmp eq i64 %trunc, 0
-  %ptrs = select i1 %cmp, <4 x <4 x i32>*> %lanes.a, <4 x <4 x i32>*> %lanes.b
-  %v67 = extractelement <4 x <4 x i32>*> %ptrs, i64 0
+  %ptrs = select i1 %cmp, <4 x ptr> %lanes.a, <4 x ptr> %lanes.b
+  %v67 = extractelement <4 x ptr> %ptrs, i64 0
   %mask = shufflevector <4 x i1> %sel, <4 x i1> undef, <4 x i32> zeroinitializer
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> <i32 10, i32 10, i32 10, i32 10>, <4 x i32>* %v67, i32 16, <4 x i1> %mask)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> <i32 10, i32 10, i32 10, i32 10>, ptr %v67, i32 16, <4 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)

@@ -2,7 +2,7 @@
 ; Test which corresponding x and y are merged and that unnamed_addr
 ; is correctly set.
 
-declare void @zed(%struct.foobar*, %struct.foobar*)
+declare void @zed(ptr, ptr)
 
 %struct.foobar = type { i32 }
 
@@ -27,14 +27,14 @@ declare void @zed(%struct.foobar*, %struct.foobar*)
 ; CHECK-NEXT: @test3.y = constant %struct.foobar { i32 3 }
 ; CHECK-NEXT: @test4.y = unnamed_addr constant %struct.foobar { i32 4 }
 ; CHECK-NOT: @
-; CHECK: declare void @zed(%struct.foobar*, %struct.foobar*)
+; CHECK: declare void @zed(ptr, ptr)
 
 define i32 @main() {
 entry:
-  call void @zed(%struct.foobar* @test1.x, %struct.foobar* @test1.y)
-  call void @zed(%struct.foobar* @test2.x, %struct.foobar* @test2.y)
-  call void @zed(%struct.foobar* @test3.x, %struct.foobar* @test3.y)
-  call void @zed(%struct.foobar* @test4.x, %struct.foobar* @test4.y)
+  call void @zed(ptr @test1.x, ptr @test1.y)
+  call void @zed(ptr @test2.x, ptr @test2.y)
+  call void @zed(ptr @test3.x, ptr @test3.y)
+  call void @zed(ptr @test4.x, ptr @test4.y)
   ret i32 0
 }
 

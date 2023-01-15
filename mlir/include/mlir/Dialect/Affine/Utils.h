@@ -359,6 +359,10 @@ struct AffineBuilder {
   OpFoldResult mul(AffineValueExpr lhs, AffineValueExpr rhs) {
     return makeComposedFoldedAffineApply(b, loc, {lhs.e * rhs.e}, {lhs, rhs});
   }
+  OpFoldResult floor(AffineValueExpr lhs, AffineValueExpr rhs) {
+    return makeComposedFoldedAffineApply(b, loc, {lhs.e.floorDiv(rhs.e)},
+                                         {lhs, rhs});
+  }
   OpFoldResult ceil(AffineValueExpr lhs, AffineValueExpr rhs) {
     return makeComposedFoldedAffineApply(b, loc, {lhs.e.ceilDiv(rhs.e)},
                                          {lhs, rhs});

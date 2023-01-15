@@ -15,7 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <unordered_map>
@@ -26,7 +26,6 @@ namespace clang::include_cleaner {
 namespace {
 
 // Specifies a test of which symbols are referenced by a piece of code.
-// If `// c++-header` is present, treats referencing code as a header file.
 // Target should contain points annotated with the reference kind.
 // Example:
 //   Target:      int $explicit^foo();
@@ -41,8 +40,6 @@ void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
   Inputs.ExtraArgs.push_back("-include");
   Inputs.ExtraArgs.push_back("target.h");
   Inputs.ExtraArgs.push_back("-std=c++17");
-  if (Referencing.code().contains("// c++-header\n"))
-    Inputs.ExtraArgs.push_back("-xc++-header");
   TestAST AST(Inputs);
   const auto &SM = AST.sourceManager();
 
@@ -88,12 +85,10 @@ void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
     auto RTStr = llvm::to_string(RT);
     for (auto Expected : Target.points(RTStr))
       if (!llvm::is_contained(ReferencedOffsets[RT], Expected))
-        DiagnosePoint("location not marked used with type " + RTStr,
-                      Expected);
+        DiagnosePoint("location not marked used with type " + RTStr, Expected);
     for (auto Actual : ReferencedOffsets[RT])
       if (!llvm::is_contained(Target.points(RTStr), Actual))
-        DiagnosePoint("location unexpectedly used with type " + RTStr,
-                      Actual);
+        DiagnosePoint("location unexpectedly used with type " + RTStr, Actual);
   }
 
   // If there were any differences, we print the entire referencing code once.
@@ -129,19 +124,32 @@ TEST(WalkAST, Alias) {
 }
 
 TEST(WalkAST, Using) {
-  // Make sure we ignore unused overloads.
+  // We should report unused overloads as ambiguous.
   testWalk(R"cpp(
     namespace ns {
-      void $explicit^x(); void x(int); void x(char);
+      void $explicit^x(); void $ambiguous^x(int); void $ambiguous^x(char);
     })cpp",
            "using ns::^x; void foo() { x(); }");
-  // We should report unused overloads if main file is a header.
   testWalk(R"cpp(
     namespace ns {
       void $ambiguous^x(); void $ambiguous^x(int); void $ambiguous^x(char);
     })cpp",
-           "// c++-header\n using ns::^x;");
+           "using ns::^x;");
   testWalk("namespace ns { struct S; } using ns::$explicit^S;", "^S *s;");
+
+  testWalk(R"cpp(
+    namespace ns {
+      template<class T>
+      class $ambiguous^Y {};
+    })cpp",
+           "using ns::^Y;");
+  testWalk(R"cpp(
+    namespace ns {
+      template<class T>
+      class Y {};
+    }
+    using ns::$explicit^Y;)cpp",
+           "^Y<int> x;");
 }
 
 TEST(WalkAST, Namespaces) {
@@ -172,17 +180,80 @@ TEST(WalkAST, TemplateNames) {
 }
 
 TEST(WalkAST, MemberExprs) {
-  testWalk("struct S { void $explicit^foo(); };", "void foo() { S{}.^foo(); }");
+  testWalk("struct $implicit^S { void foo(); };", "void foo() { S{}.^foo(); }");
   testWalk(
-      "struct S { void foo(); }; struct X : S { using S::$explicit^foo; };",
+      "struct S { void foo(); }; struct $implicit^X : S { using S::foo; };",
       "void foo() { X{}.^foo(); }");
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
+           "void fun(Derived d) { d.^a; }");
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
+           "void fun(Derived* d) { d->^a; }");
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
+           "void fun(Derived& d) { d.^a; }");
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
+           "void fun() { Derived().^a; }");
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
+           "Derived foo(); void fun() { foo().^a; }");
+  testWalk("struct Base { int a; }; struct $implicit^Derived : public Base {};",
+           "Derived& foo(); void fun() { foo().^a; }");
+  testWalk(R"cpp(
+      template <typename T>
+      struct unique_ptr {
+        T *operator->();
+      };
+      struct $implicit^Foo { int a; };)cpp",
+           "void test(unique_ptr<Foo> &V) { V->^a; }");
+  testWalk(R"cpp(
+      template <typename T>
+      struct $implicit^unique_ptr {
+        void release();
+      };
+      struct Foo {};)cpp",
+           "void test(unique_ptr<Foo> &V) { V.^release(); }");
+  // Respect the sugar type (typedef, using-type).
+  testWalk(R"cpp(
+      namespace ns { struct Foo { int a; }; }
+      using $implicit^Bar = ns::Foo;)cpp",
+           "void test(Bar b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { struct Foo { int a; }; }
+      using ns::$implicit^Foo;)cpp",
+           "void test(Foo b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { struct Foo { int a; }; }
+      namespace ns2 { using Bar = ns::Foo; }
+      using ns2::$implicit^Bar;
+      )cpp",
+           "void test(Bar b) { b.^a; }");
+  testWalk(R"cpp(
+      namespace ns { template<typename> struct Foo { int a; }; }
+      using ns::$implicit^Foo;)cpp",
+           "void k(Foo<int> b) { b.^a; }");
+  // Test the dependent-type case (CXXDependentScopeMemberExpr)
+  testWalk("template<typename T> struct $implicit^Base { void method(); };",
+           "template<typename T> void k(Base<T> t) { t.^method(); }");
+  testWalk("template<typename T> struct $implicit^Base { void method(); };",
+           "template<typename T> void k(Base<T>& t) { t.^method(); }");
+  testWalk("template<typename T> struct $implicit^Base { void method(); };",
+           "template<typename T> void k(Base<T>* t) { t->^method(); }");
 }
 
 TEST(WalkAST, ConstructExprs) {
   testWalk("struct $implicit^S {};", "S ^t;");
-  testWalk("struct S { $implicit^S(); };", "S ^t;");
-  testWalk("struct S { $explicit^S(int); };", "S ^t(42);");
-  testWalk("struct S { $implicit^S(int); };", "S t = ^42;");
+  testWalk("struct $implicit^S { S(); };", "S ^t;");
+  testWalk("struct $explicit^S { S(int); };", "S ^t(42);");
+  testWalk("struct $implicit^S { S(int); };", "S t = ^42;");
+  testWalk("namespace ns { struct S{}; } using ns::$implicit^S;", "S ^t;");
+}
+
+TEST(WalkAST, Operator) {
+  // References to operators are not counted as uses.
+  testWalk("struct string {}; int operator+(string, string);",
+           "int k = string() ^+ string();");
+  testWalk("struct string {int operator+(string); }; ",
+           "int k = string() ^+ string();");
+  testWalk("struct string { friend int operator+(string, string); }; ",
+           "int k = string() ^+ string();");
 }
 
 TEST(WalkAST, Functions) {

@@ -63,7 +63,7 @@ ArrayRef<uint32_t>
 PhysicalRegisterUsageInfo::getRegUsageInfo(const Function &FP) {
   auto It = RegMasks.find(&FP);
   if (It != RegMasks.end())
-    return makeArrayRef<uint32_t>(It->second);
+    return ArrayRef<uint32_t>(It->second);
   return ArrayRef<uint32_t>();
 }
 

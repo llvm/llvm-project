@@ -40,7 +40,7 @@ define void @test2() {
 ; CHECK-NEXT:    [[DOTI2:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 2
 ; CHECK-NEXT:    [[DOTI3:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 3
 ; CHECK-NEXT:    [[INDEX:%.*]] = load i16, ptr @index, align 2
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[INDEX]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i16> [[DOTSPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLAT_I0:%.*]] = extractelement <4 x i16> [[DOTSPLAT]], i32 0
 ; CHECK-NEXT:    [[DOTI01:%.*]] = getelementptr i16, ptr [[DOTI0]], i16 [[DOTSPLAT_I0]]
@@ -77,7 +77,7 @@ define <4 x ptr> @test3_constbase(i16 %idx) {
 ; CHECK-LABEL: @test3_constbase(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr [4 x i16], ptr @ptr, i16 0, i16 [[IDX:%.*]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[OFFSET]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[OFFSET]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x ptr> [[DOTSPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLAT_I0:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 0
 ; CHECK-NEXT:    [[GEP_I0:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I0]], i16 0
@@ -127,7 +127,7 @@ define void @test4() {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @ptrptr, align 8
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x ptr> [[DOTSPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLAT_I0:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 0
 ; CHECK-NEXT:    [[DOTI0:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I0]], i16 0

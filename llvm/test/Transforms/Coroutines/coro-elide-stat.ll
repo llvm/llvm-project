@@ -17,65 +17,61 @@
 declare void @print(i32) nounwind
 
 ; resume part of the coroutine
-define fastcc void @f.resume(i8* dereferenceable(1)) {
+define fastcc void @f.resume(ptr dereferenceable(1)) {
   tail call void @print(i32 0)
   ret void
 }
 
 ; destroy part of the coroutine
-define fastcc void @f.destroy(i8*) {
+define fastcc void @f.destroy(ptr) {
   tail call void @print(i32 1)
   ret void
 }
 
 ; cleanup part of the coroutine
-define fastcc void @f.cleanup(i8*) {
+define fastcc void @f.cleanup(ptr) {
   tail call void @print(i32 2)
   ret void
 }
 
-@f.resumers = internal constant [3 x void (i8*)*] [void (i8*)* @f.resume,
-                                                   void (i8*)* @f.destroy,
-                                                   void (i8*)* @f.cleanup]
+@f.resumers = internal constant [3 x ptr] [ptr @f.resume,
+                                                   ptr @f.destroy,
+                                                   ptr @f.cleanup]
 
 ; a coroutine start function
-define i8* @f() {
+define ptr @f() {
 entry:
-  %id = call token @llvm.coro.id(i32 0, i8* null,
-                          i8* bitcast (i8*()* @f to i8*),
-                          i8* bitcast ([3 x void (i8*)*]* @f.resumers to i8*))
+  %id = call token @llvm.coro.id(i32 0, ptr null,
+                          ptr @f,
+                          ptr @f.resumers)
   %alloc = call i1 @llvm.coro.alloc(token %id)
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
-  ret i8* %hdl
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
+  ret ptr %hdl
 }
 
 define void @callResume() {
 entry:
-  %hdl = call i8* @f()
+  %hdl = call ptr @f()
 
-  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
-  %1 = bitcast i8* %0 to void (i8*)*
-  call fastcc void %1(i8* %hdl)
+  %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+  call fastcc void %0(ptr %hdl)
 
-  %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
-  %3 = bitcast i8* %2 to void (i8*)*
-  call fastcc void %3(i8* %hdl)
+  %1 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
+  call fastcc void %1(ptr %hdl)
 
   ret void
 }
 
 define void @callResumeMultiRet(i1 %b) {
 entry:
-  %hdl = call i8* @f()
-  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
-  %1 = bitcast i8* %0 to void (i8*)*
-  call fastcc void %1(i8* %hdl)
+  %hdl = call ptr @f()
+  %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+  call fastcc void %0(ptr %hdl)
   br i1 %b, label %destroy, label %ret
 
 destroy:
-  %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
-  %3 = bitcast i8* %2 to void (i8*)*
-  call fastcc void %3(i8* %hdl)
+  %1 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
+  call fastcc void %1(ptr %hdl)
   ret void
 
 ret:
@@ -84,13 +80,11 @@ ret:
 
 define void @callResumeMultiRetDommmed(i1 %b) {
 entry:
-  %hdl = call i8* @f()
-  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
-  %1 = bitcast i8* %0 to void (i8*)*
-  call fastcc void %1(i8* %hdl)
-  %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
-  %3 = bitcast i8* %2 to void (i8*)*
-  call fastcc void %3(i8* %hdl)
+  %hdl = call ptr @f()
+  %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+  call fastcc void %0(ptr %hdl)
+  %1 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
+  call fastcc void %1(ptr %hdl)
   br i1 %b, label %destroy, label %ret
 
 destroy:
@@ -100,13 +94,12 @@ ret:
   ret void
 }
 
-define void @eh() personality i8* null {
+define void @eh() personality ptr null {
 entry:
-  %hdl = call i8* @f()
+  %hdl = call ptr @f()
 
-  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
-  %1 = bitcast i8* %0 to void (i8*)*
-  invoke void %1(i8* %hdl)
+  %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+  invoke void %0(ptr %hdl)
           to label %cont unwind label %ehcleanup
 cont:
   ret void
@@ -119,37 +112,33 @@ ehcleanup:
 ; no devirtualization here, since coro.begin info parameter is null
 define void @no_devirt_info_null() {
 entry:
-  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
 
-  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
-  %1 = bitcast i8* %0 to void (i8*)*
-  call fastcc void %1(i8* %hdl)
+  %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+  call fastcc void %0(ptr %hdl)
 
-  %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
-  %3 = bitcast i8* %2 to void (i8*)*
-  call fastcc void %3(i8* %hdl)
+  %1 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
+  call fastcc void %1(ptr %hdl)
 
   ret void
 }
 
 ; no devirtualization here, since coro.begin is not visible
-define void @no_devirt_no_begin(i8* %hdl) {
+define void @no_devirt_no_begin(ptr %hdl) {
 entry:
 
-  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
-  %1 = bitcast i8* %0 to void (i8*)*
-  call fastcc void %1(i8* %hdl)
+  %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+  call fastcc void %0(ptr %hdl)
 
-  %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
-  %3 = bitcast i8* %2 to void (i8*)*
-  call fastcc void %3(i8* %hdl)
+  %1 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
+  call fastcc void %1(ptr %hdl)
 
   ret void
 }
 
-declare token @llvm.coro.id(i32, i8*, i8*, i8*)
-declare i8* @llvm.coro.begin(token, i8*)
-declare i8* @llvm.coro.frame()
-declare i8* @llvm.coro.subfn.addr(i8*, i8)
+declare token @llvm.coro.id(i32, ptr, ptr, ptr)
+declare ptr @llvm.coro.begin(token, ptr)
+declare ptr @llvm.coro.frame()
+declare ptr @llvm.coro.subfn.addr(ptr, i8)
 declare i1 @llvm.coro.alloc(token)

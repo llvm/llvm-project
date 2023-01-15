@@ -249,13 +249,21 @@ SANITIZER_WEAK_CXX_DEFAULT_IMPL void OnPotentiallyBlockingRegionEnd() {}
 }  // namespace __tsan
 
 static ThreadSignalContext *SigCtx(ThreadState *thr) {
-  ThreadSignalContext *ctx = (ThreadSignalContext*)thr->signal_ctx;
+  // This function may be called reentrantly if it is interrupted by a signal
+  // handler. Use CAS to handle the race.
+  uptr ctx = atomic_load(&thr->signal_ctx, memory_order_relaxed);
   if (ctx == 0 && !thr->is_dead) {
-    ctx = (ThreadSignalContext*)MmapOrDie(sizeof(*ctx), "ThreadSignalContext");
-    MemoryResetRange(thr, (uptr)&SigCtx, (uptr)ctx, sizeof(*ctx));
-    thr->signal_ctx = ctx;
+    uptr pctx =
+        (uptr)MmapOrDie(sizeof(ThreadSignalContext), "ThreadSignalContext");
+    MemoryResetRange(thr, (uptr)&SigCtx, pctx, sizeof(ThreadSignalContext));
+    if (atomic_compare_exchange_strong(&thr->signal_ctx, &ctx, pctx,
+                                       memory_order_relaxed)) {
+      ctx = pctx;
+    } else {
+      UnmapOrDie((ThreadSignalContext *)pctx, sizeof(ThreadSignalContext));
+    }
   }
-  return ctx;
+  return (ThreadSignalContext *)ctx;
 }
 
 ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
@@ -970,9 +978,10 @@ void DestroyThreadState() {
 }
 
 void PlatformCleanUpThreadState(ThreadState *thr) {
-  ThreadSignalContext *sctx = thr->signal_ctx;
+  ThreadSignalContext *sctx = (ThreadSignalContext *)atomic_load(
+      &thr->signal_ctx, memory_order_relaxed);
   if (sctx) {
-    thr->signal_ctx = 0;
+    atomic_store(&thr->signal_ctx, 0, memory_order_relaxed);
     UnmapOrDie(sctx, sizeof(*sctx));
   }
 }
@@ -1353,6 +1362,19 @@ TSAN_INTERCEPTOR(int, pthread_mutex_destroy, void *m) {
   return res;
 }
 
+TSAN_INTERCEPTOR(int, pthread_mutex_lock, void *m) {
+  SCOPED_TSAN_INTERCEPTOR(pthread_mutex_lock, m);
+  MutexPreLock(thr, pc, (uptr)m);
+  int res = REAL(pthread_mutex_lock)(m);
+  if (res == errno_EOWNERDEAD)
+    MutexRepair(thr, pc, (uptr)m);
+  if (res == 0 || res == errno_EOWNERDEAD)
+    MutexPostLock(thr, pc, (uptr)m);
+  if (res == errno_EINVAL)
+    MutexInvalidAccess(thr, pc, (uptr)m);
+  return res;
+}
+
 TSAN_INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_trylock, m);
   int res = REAL(pthread_mutex_trylock)(m);
@@ -1372,6 +1394,43 @@ TSAN_INTERCEPTOR(int, pthread_mutex_timedlock, void *m, void *abstime) {
   }
   return res;
 }
+#endif
+
+TSAN_INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
+  SCOPED_TSAN_INTERCEPTOR(pthread_mutex_unlock, m);
+  MutexUnlock(thr, pc, (uptr)m);
+  int res = REAL(pthread_mutex_unlock)(m);
+  if (res == errno_EINVAL)
+    MutexInvalidAccess(thr, pc, (uptr)m);
+  return res;
+}
+
+#if SANITIZER_GLIBC
+#  if !__GLIBC_PREREQ(2, 34)
+// glibc 2.34 applies a non-default version for the two functions. They are no
+// longer expected to be intercepted by programs.
+TSAN_INTERCEPTOR(int, __pthread_mutex_lock, void *m) {
+  SCOPED_TSAN_INTERCEPTOR(__pthread_mutex_lock, m);
+  MutexPreLock(thr, pc, (uptr)m);
+  int res = REAL(__pthread_mutex_lock)(m);
+  if (res == errno_EOWNERDEAD)
+    MutexRepair(thr, pc, (uptr)m);
+  if (res == 0 || res == errno_EOWNERDEAD)
+    MutexPostLock(thr, pc, (uptr)m);
+  if (res == errno_EINVAL)
+    MutexInvalidAccess(thr, pc, (uptr)m);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, __pthread_mutex_unlock, void *m) {
+  SCOPED_TSAN_INTERCEPTOR(__pthread_mutex_unlock, m);
+  MutexUnlock(thr, pc, (uptr)m);
+  int res = REAL(__pthread_mutex_unlock)(m);
+  if (res == errno_EINVAL)
+    MutexInvalidAccess(thr, pc, (uptr)m);
+  return res;
+}
+#  endif
 #endif
 
 #if !SANITIZER_APPLE
@@ -2470,26 +2529,6 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPTOR_ON_EXIT(ctx) \
   OnExit(((TsanInterceptorContext *) ctx)->thr)
 
-#define COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m) \
-  MutexPreLock(((TsanInterceptorContext *)ctx)->thr, \
-            ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
-
-#define COMMON_INTERCEPTOR_MUTEX_POST_LOCK(ctx, m) \
-  MutexPostLock(((TsanInterceptorContext *)ctx)->thr, \
-            ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
-
-#define COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m) \
-  MutexUnlock(((TsanInterceptorContext *)ctx)->thr, \
-            ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
-
-#define COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m) \
-  MutexRepair(((TsanInterceptorContext *)ctx)->thr, \
-            ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
-
-#define COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m) \
-  MutexInvalidAccess(((TsanInterceptorContext *)ctx)->thr, \
-                     ((TsanInterceptorContext *)ctx)->pc, (uptr)m)
-
 #define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, sz, prot, flags, fd,  \
                                      off)                                   \
   do {                                                                      \
@@ -2786,7 +2825,9 @@ TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_wait, void *c, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, cond_destroy, void *c)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_init, void *m, void *a)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_destroy, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_lock, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_trylock, void *m)
+TSAN_INTERCEPTOR_NETBSD_ALIAS(int, mutex_unlock, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_init, void *m, void *a)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_destroy, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_rdlock, void *m)
@@ -2888,8 +2929,16 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(pthread_mutex_init);
   TSAN_INTERCEPT(pthread_mutex_destroy);
+  TSAN_INTERCEPT(pthread_mutex_lock);
   TSAN_INTERCEPT(pthread_mutex_trylock);
   TSAN_INTERCEPT(pthread_mutex_timedlock);
+  TSAN_INTERCEPT(pthread_mutex_unlock);
+#if SANITIZER_GLIBC
+#  if !__GLIBC_PREREQ(2, 34)
+  TSAN_INTERCEPT(__pthread_mutex_lock);
+  TSAN_INTERCEPT(__pthread_mutex_unlock);
+#  endif
+#endif
 
   TSAN_INTERCEPT(pthread_spin_init);
   TSAN_INTERCEPT(pthread_spin_destroy);
@@ -3034,7 +3083,9 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(cond_destroy);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_init);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_destroy);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_lock);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_trylock);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(mutex_unlock);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_init);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_destroy);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_rdlock);

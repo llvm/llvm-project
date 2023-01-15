@@ -138,7 +138,7 @@ define i32 @n10(i64 %x) {
 ; CHECK-LABEL: @n10(
 ; CHECK-NEXT:    [[T0_NEG:%.*]] = ashr i64 [[X:%.*]], 63
 ; CHECK-NEXT:    [[T1_NEG:%.*]] = trunc i64 [[T0_NEG]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[T1_NEG]], 1
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[T1_NEG]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = lshr i64 %x, 63

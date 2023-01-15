@@ -17,7 +17,7 @@ define hidden i32 @f0() {
 ; CHECK-NEXT:    pop {r7}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    b h0
-  %1 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
+  %1 = tail call i32 @g()
   %2 = tail call i32 @h0(i32 %1, i32 1, i32 2, i32 3)
   ret i32 %2
 }
@@ -32,7 +32,7 @@ define hidden i32 @f1() {
 ; CHECK-NEXT:    pop {r1}
 ; CHECK-NEXT:    mov lr, r1
 ; CHECK-NEXT:    b h1
-  %1 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
+  %1 = tail call i32 @g()
   %2 = tail call i32 @h1(i32 %1)
   ret i32 %2
 }
@@ -65,7 +65,7 @@ define hidden i32 @f2(i32, i32, i32, i32, i32) {
 ; CHECK-NEXT:    mvns r0, r0
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
-  %6 = tail call i32 bitcast (i32 (...)* @g to i32 ()*)()
+  %6 = tail call i32 @g()
   %7 = icmp eq i32 %6, 0
   br i1 %7, label %10, label %8
 
@@ -78,7 +78,7 @@ define hidden i32 @f2(i32, i32, i32, i32, i32) {
 
 ; Make sure that tail calls to function pointers that require r0-r3 for argument
 ; passing do not break the compiler.
-@fnptr = global i32 (i32, i32, i32, i32)* null
+@fnptr = global ptr null
 define i32 @test3() {
 ; CHECK-LABEL: test3:
 ; CHECK:       @ %bb.0:
@@ -92,12 +92,12 @@ define i32 @test3() {
 ; CHECK-NEXT:    movs r3, #4
 ; CHECK-NEXT:    blx r4
 ; CHECK-NEXT:    pop {r4, pc}
-  %1 = load i32 (i32, i32, i32, i32)*, i32 (i32, i32, i32, i32)** @fnptr
+  %1 = load ptr, ptr @fnptr
   %2 = tail call i32 %1(i32 1, i32 2, i32 3, i32 4)
   ret i32 %2
 }
 
-@fnptr2 = global i32 (i32, i32, i64)* null
+@fnptr2 = global ptr null
 define i32 @test4() {
 ; CHECK-LABEL: test4:
 ; CHECK:       @ %bb.0:
@@ -111,7 +111,7 @@ define i32 @test4() {
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    blx r4
 ; CHECK-NEXT:    pop {r4, pc}
-  %1 = load i32 (i32, i32, i64)*, i32 (i32, i32, i64)** @fnptr2
+  %1 = load ptr, ptr @fnptr2
   %2 = tail call i32 %1(i32 1, i32 2, i64 3)
   ret i32 %2
 }
@@ -119,7 +119,7 @@ define i32 @test4() {
 ; Check that tail calls to function pointers where not all of r0-r3 are used for
 ; parameter passing are tail-call optimized.
 ; test5: params in r0, r1. r2 & r3 are free.
-@fnptr3 = global i32 (i32, i32)* null
+@fnptr3 = global ptr null
 define i32 @test5() {
 ; CHECK-LABEL: test5:
 ; CHECK:       @ %bb.0:
@@ -129,13 +129,13 @@ define i32 @test5() {
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    movs r1, #2
 ; CHECK-NEXT:    bx r2
-  %1 = load i32 (i32, i32)*, i32 (i32, i32)** @fnptr3
+  %1 = load ptr, ptr @fnptr3
   %2 = tail call i32 %1(i32 1, i32 2)
   ret i32 %2
 }
 
 ; test6: params in r0 and r2-r3. r1 is free.
-@fnptr4 = global i32 (i32, i64)* null
+@fnptr4 = global ptr null
 define i32 @test6() {
 ; CHECK-LABEL: test6:
 ; CHECK:       @ %bb.0:
@@ -146,7 +146,7 @@ define i32 @test6() {
 ; CHECK-NEXT:    movs r2, #2
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    bx r1
-  %1 = load i32 (i32, i64)*, i32 (i32, i64)** @fnptr4
+  %1 = load ptr, ptr @fnptr4
   %2 = tail call i32 %1(i32 1, i64 2)
   ret i32 %2
 }
@@ -171,7 +171,7 @@ declare i32 @bar(i32, i32, i32, i32)
 ; a stack slot.
 %struct.S = type { i32 }
 
-define void @test8(i32 (i32, i32, i32)* nocapture %fn, i32 %x) local_unnamed_addr {
+define void @test8(ptr nocapture %fn, i32 %x) local_unnamed_addr {
 ; CHECK-LABEL: test8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
@@ -200,17 +200,16 @@ define void @test8(i32 (i32, i32, i32)* nocapture %fn, i32 %x) local_unnamed_add
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx r3
 entry:
-  %call = tail call %struct.S* bitcast (%struct.S* (...)* @test8_u to %struct.S* ()*)()
-  %a = getelementptr inbounds %struct.S, %struct.S* %call, i32 0, i32 0
-  %0 = load i32, i32* %a, align 4
+  %call = tail call ptr @test8_u()
+  %0 = load i32, ptr %call, align 4
   %call1 = tail call i32 @test8_h(i32 0)
   %call2 = tail call i32 @test8_g(i32 %0, i32 %call1, i32 0)
-  store i32 %x, i32* %a, align 4
+  store i32 %x, ptr %call, align 4
   %call4 = tail call i32 %fn(i32 1, i32 2, i32 3)
   ret void
 }
 
-declare %struct.S* @test8_u(...)
+declare ptr @test8_u(...)
 
 declare i32 @test8_g(i32, i32, i32)
 
@@ -218,7 +217,7 @@ declare i32 @test8_h(i32)
 
 ; Check that we don't introduce an unnecessary spill of lr.
 declare i32 @h9(i32, i32, i32, i32)
-define i32 @test9(i32* %x, i32* %y, i32* %z, i32* %a) {
+define i32 @test9(ptr %x, ptr %y, ptr %z, ptr %a) {
 ; CHECK-LABEL: test9:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, r7}
@@ -230,12 +229,12 @@ define i32 @test9(i32* %x, i32* %y, i32* %z, i32* %a) {
 ; CHECK-NEXT:    ldr r2, [r2]
 ; CHECK-NEXT:    pop {r4, r7}
 ; CHECK-NEXT:    b h9
-  %zz = load i32, i32* %z
-  %xx = load i32, i32* %x
-  %yy = load i32, i32* %y
-  %aa1 = load i32, i32* %a
-  %a2 = getelementptr i32, i32* %a, i32 1
-  %aa2 = load i32, i32* %a2
+  %zz = load i32, ptr %z
+  %xx = load i32, ptr %x
+  %yy = load i32, ptr %y
+  %aa1 = load i32, ptr %a
+  %a2 = getelementptr i32, ptr %a, i32 1
+  %aa2 = load i32, ptr %a2
   %aa = add i32 %aa1, %aa2
   %r = tail call i32 @h9(i32 %xx, i32 %yy, i32 %zz, i32 %aa)
   ret i32 %r

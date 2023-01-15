@@ -1790,9 +1790,8 @@ void CHR::cloneScopeBlocks(CHRScope *Scope,
   // Place the cloned blocks right after the original blocks (right before the
   // exit block of.)
   if (ExitBlock)
-    F.getBasicBlockList().splice(ExitBlock->getIterator(),
-                                 F.getBasicBlockList(),
-                                 NewBlocks[0]->getIterator(), F.end());
+    F.splice(ExitBlock->getIterator(), &F, NewBlocks[0]->getIterator(),
+             F.end());
 
   // Update the cloned blocks/instructions to refer to themselves.
   for (BasicBlock *NewBB : NewBlocks)
@@ -1838,7 +1837,7 @@ BranchInst *CHR::createMergedBranch(BasicBlock *PreEntryBlock,
   BranchInst *NewBR = BranchInst::Create(NewEntryBlock,
                                          cast<BasicBlock>(VMap[NewEntryBlock]),
                                          ConstantInt::getTrue(F.getContext()));
-  PreEntryBlock->getInstList().push_back(NewBR);
+  NewBR->insertInto(PreEntryBlock, PreEntryBlock->end());
   assert(NewEntryBlock->getSinglePredecessor() == EntryBlock &&
          "NewEntryBlock's only pred must be EntryBlock");
   return NewBR;

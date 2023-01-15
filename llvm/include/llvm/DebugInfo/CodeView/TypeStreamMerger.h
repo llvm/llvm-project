@@ -14,7 +14,6 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
-template <typename T> class Optional;
 template <typename T> class SmallVectorImpl;
 namespace codeview {
 

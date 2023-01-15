@@ -99,7 +99,7 @@ class ParentMapContext::ParentMap {
       return llvm::ArrayRef<DynTypedNode>();
     }
     if (const auto *V = I->second.template dyn_cast<ParentVector *>()) {
-      return llvm::makeArrayRef(*V);
+      return llvm::ArrayRef(*V);
     }
     return getSingleDynTypedNodeFromParentMap(I->second);
   }
@@ -252,7 +252,7 @@ public:
       const auto *S = It->second.dyn_cast<const Stmt *>();
       if (!S) {
         if (auto *Vec = It->second.dyn_cast<ParentVector *>())
-          return llvm::makeArrayRef(*Vec);
+          return llvm::ArrayRef(*Vec);
         return getSingleDynTypedNodeFromParentMap(It->second);
       }
       const auto *P = dyn_cast<Expr>(S);

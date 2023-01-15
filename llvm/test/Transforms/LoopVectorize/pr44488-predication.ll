@@ -16,8 +16,8 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SREM_CONTINUE2:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* @v_38, align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @v_38, align 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i16> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i1> [[TMP1]], <i1 true, i1 true>
@@ -39,7 +39,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ [[TMP6]], [[PRED_SREM_CONTINUE]] ], [ [[TMP9]], [[PRED_SREM_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> <i16 5786, i16 5786>, <2 x i16> [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
-; CHECK-NEXT:    store i16 [[TMP11]], i16* @v_39, align 1
+; CHECK-NEXT:    store i16 [[TMP11]], ptr @v_39, align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -51,7 +51,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC7:%.*]], [[FOR_LATCH:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i16, i16* @v_38, align 1
+; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr @v_38, align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i16 [[LV]], 32767
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[COND_END:%.*]], label [[COND_END]]
 ; CHECK:       cond.end:
@@ -62,12 +62,12 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    br label [[FOR_LATCH]]
 ; CHECK:       for.latch:
 ; CHECK-NEXT:    [[COND6:%.*]] = phi i16 [ [[REM]], [[COND_FALSE4]] ], [ 5786, [[COND_END]] ]
-; CHECK-NEXT:    store i16 [[COND6]], i16* @v_39, align 1
+; CHECK-NEXT:    store i16 [[COND6]], ptr @v_39, align 1
 ; CHECK-NEXT:    [[INC7]] = add nsw i16 [[I_07]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC7]], 111
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RV:%.*]] = load i16, i16* @v_39, align 1
+; CHECK-NEXT:    [[RV:%.*]] = load i16, ptr @v_39, align 1
 ; CHECK-NEXT:    ret i16 [[RV]]
 ;
 entry:
@@ -75,7 +75,7 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.latch
   %i.07 = phi i16 [ 99, %entry ], [ %inc7, %for.latch ]
-  %lv = load i16, i16* @v_38, align 1
+  %lv = load i16, ptr @v_38, align 1
   %cmp1 = icmp eq i16 %lv, 32767
   br i1 %cmp1, label %cond.end, label %cond.end
 
@@ -89,12 +89,12 @@ cond.false4:                                      ; preds = %cond.end
 
 for.latch:                                        ; preds = %cond.end, %cond.false4
   %cond6 = phi i16 [ %rem, %cond.false4 ], [ 5786, %cond.end ]
-  store i16 %cond6, i16* @v_39, align 1
+  store i16 %cond6, ptr @v_39, align 1
   %inc7 = add nsw i16 %i.07, 1
   %cmp = icmp slt i16 %inc7, 111
   br i1 %cmp, label %for.body, label %exit
 
 exit:                                 ; preds = %for.latch
-  %rv = load i16, i16* @v_39, align 1
+  %rv = load i16, ptr @v_39, align 1
   ret i16 %rv
 }

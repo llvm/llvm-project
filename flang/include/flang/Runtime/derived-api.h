@@ -46,6 +46,12 @@ void RTNAME(Assign)(const Descriptor &, const Descriptor &,
 // construct.
 bool RTNAME(ClassIs)(const Descriptor &, const typeInfo::DerivedType &);
 
+// Perform the test of the SAME_TYPE_AS intrinsic.
+bool RTNAME(SameTypeAs)(const Descriptor &, const Descriptor &);
+
+// Perform the test of the EXTENDS_TYPE_OF intrinsic.
+bool RTNAME(ExtendsTypeOf)(const Descriptor &, const Descriptor &);
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_DERIVED_API_H_

@@ -31,7 +31,7 @@ define <16 x i8> @and_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @and_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+define void @and_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: and_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -40,10 +40,10 @@ define void @and_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = and <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -71,7 +71,7 @@ define <8 x i16> @and_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @and_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @and_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: and_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -80,10 +80,10 @@ define void @and_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = and <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -111,7 +111,7 @@ define <4 x i32> @and_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
   ret <4 x i32> %res
 }
 
-define void @and_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+define void @and_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: and_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -120,10 +120,10 @@ define void @and_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = and <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -151,7 +151,7 @@ define <2 x i64> @and_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
-define void @and_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+define void @and_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: and_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -160,10 +160,10 @@ define void @and_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-NEXT:    and z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = and <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
@@ -195,7 +195,7 @@ define <16 x i8> @or_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @or_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+define void @or_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: or_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -204,10 +204,10 @@ define void @or_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    orr z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = or <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -235,7 +235,7 @@ define <8 x i16> @or_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @or_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @or_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: or_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -244,10 +244,10 @@ define void @or_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-NEXT:    orr z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = or <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -275,7 +275,7 @@ define <4 x i32> @or_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
   ret <4 x i32> %res
 }
 
-define void @or_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+define void @or_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: or_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -284,10 +284,10 @@ define void @or_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-NEXT:    orr z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = or <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -315,7 +315,7 @@ define <2 x i64> @or_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
-define void @or_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+define void @or_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: or_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -324,10 +324,10 @@ define void @or_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-NEXT:    orr z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = or <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
@@ -359,7 +359,7 @@ define <16 x i8> @xor_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @xor_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+define void @xor_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: xor_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -368,10 +368,10 @@ define void @xor_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    eor z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = xor <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -399,7 +399,7 @@ define <8 x i16> @xor_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @xor_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @xor_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: xor_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -408,10 +408,10 @@ define void @xor_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-NEXT:    eor z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = xor <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -439,7 +439,7 @@ define <4 x i32> @xor_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
   ret <4 x i32> %res
 }
 
-define void @xor_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+define void @xor_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: xor_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -448,10 +448,10 @@ define void @xor_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-NEXT:    eor z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = xor <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -479,7 +479,7 @@ define <2 x i64> @xor_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
-define void @xor_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+define void @xor_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: xor_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -488,10 +488,10 @@ define void @xor_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-NEXT:    eor z1.d, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = xor <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 

@@ -14,7 +14,7 @@
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/Tosa/Utils/CoversionUtils.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -88,27 +88,26 @@ struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
   LogicalResult matchAndRewrite(tosa::ReshapeOp op,
                                 PatternRewriter &rewriter) const override {
     Value input = op.getInput1();
-    ArrayAttr newShape = op.getNewShape();
+    ShapedType inputTy = input.getType().cast<ShapedType>();
+    ShapedType resultTy = op.getType().cast<ShapedType>();
+
+    if (inputTy.getElementType() != resultTy.getElementType())
+      return rewriter.notifyMatchFailure(op, "element type does not match.");
 
     // Check if input is constant
     DenseElementsAttr inputAttr;
     if (!matchPattern(input, m_Constant(&inputAttr)))
-      return failure();
+      return rewriter.notifyMatchFailure(op, "Non-constant input.");
 
     // Check if has >1 consumer and is not splat
     if (!input.hasOneUse() && !inputAttr.isSplat())
-      return failure();
-
-    // Grab the new shape
-    SmallVector<int64_t> newShapeValues = llvm::to_vector<6>(
-        llvm::map_range(newShape.getValue(), [](const Attribute &val) {
-          return val.cast<IntegerAttr>().getValue().getSExtValue();
-        }));
+      return rewriter.notifyMatchFailure(op,
+                                         "Used more than once or not-splat");
 
     // Build new const op with correct output shape
     ShapedType inputShape = input.getType().cast<ShapedType>();
     DenseElementsAttr outputAttr =
-        inputAttr.reshape(inputShape.clone(newShapeValues));
+        inputAttr.reshape(inputShape.clone(op.getNewShape()));
     rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, outputAttr.getType(),
                                                outputAttr);
     return success();
@@ -132,36 +131,108 @@ LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
   return success();
 }
 
-struct NoOpOptimization : public OpRewritePattern<tosa::TransposeOp> {
+struct ConsolidateTransposeOptimization
+    : public OpRewritePattern<tosa::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    // Input is also TransposeOp - transpose(transpose(A)).
+    auto innerTranspose =
+        transposeOp.getInput1().getDefiningOp<tosa::TransposeOp>();
+    if (!innerTranspose)
+      return rewriter.notifyMatchFailure(transposeOp,
+                                         "input must be transpose operation");
+
+    SmallVector<int64_t> transposePerms, innerTransposePerms;
+    if (transposeOp.getConstantPerms(transposePerms).failed())
+      return rewriter.notifyMatchFailure(transposeOp,
+                                         "transpose perms must be constant");
+    if (innerTranspose.getConstantPerms(innerTransposePerms).failed())
+      return rewriter.notifyMatchFailure(
+          transposeOp, "inner transpose perms must be constant");
+    if (transposePerms.size() != innerTransposePerms.size())
+      return rewriter.notifyMatchFailure(
+          transposeOp,
+          "transpose and inner transpose perms sizes must be equal");
+    if (transposePerms.empty())
+      return rewriter.notifyMatchFailure(
+          transposeOp, "transpose perms sizes must be positive");
+
+    // Consolidate transposes into one transpose.
+    SmallVector<int32_t> perms(transposePerms.size());
+    for (int i = 0, s = transposePerms.size(); i < s; ++i)
+      perms[i] = innerTransposePerms[transposePerms[i]];
+
+    auto permsTy =
+        RankedTensorType::get(transposePerms.size(), rewriter.getI32Type());
+    auto permsAttr = DenseIntElementsAttr::get(permsTy, perms);
+    Value permsValue =
+        rewriter.create<arith::ConstantOp>(transposeOp.getLoc(), permsAttr);
+
+    rewriter.replaceOpWithNewOp<tosa::TransposeOp>(
+        transposeOp, transposeOp.getResult().getType(),
+        innerTranspose.getInput1(), permsValue);
+
+    return success();
+  }
+};
+
+// Determines the case when tosa.transpose is a tosa.reshape operation.
+struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
-    auto perm = op.getPerms();
-
     DenseIntElementsAttr permAttr;
-    if (!matchPattern(perm, m_Constant(&permAttr))) {
-      return failure();
-    }
+    if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
+      return rewriter.notifyMatchFailure(op, "Non-constant permutation");
+
+    auto input = op.getInput1();
+    auto inputTy = input.getType().cast<ShapedType>();
+    if (!inputTy.hasRank())
+      return rewriter.notifyMatchFailure(op, "Unranked input.");
+
+    int64_t numDynDims = 0;
+    for (int i = 0; i < inputTy.getRank(); ++i)
+      if (inputTy.isDynamicDim(i))
+        numDynDims++;
+
+    if (numDynDims > 1)
+      return rewriter.notifyMatchFailure(op, "Has more than one dynamic dim.");
 
     SmallVector<int64_t> permValues = llvm::to_vector<6>(
         llvm::map_range(permAttr.getValues<APInt>(),
                         [](const APInt &val) { return val.getSExtValue(); }));
 
-    for (int i = 0, s = permValues.size(); i < s; i++) {
-      if (i != permValues[i]) {
-        return failure();
-      }
+    SmallVector<int64_t> nonZeroPerms;
+    nonZeroPerms.reserve(permValues.size());
+    for (auto idx : permValues) {
+      auto sz = inputTy.getDimSize(idx);
+      if (sz != 1)
+        nonZeroPerms.push_back(idx);
     }
 
-    rewriter.replaceOp(op, op.getInput1());
+    for (int i = 1, s = nonZeroPerms.size(); i < s; ++i)
+      if (nonZeroPerms[i - 1] > nonZeroPerms[i])
+        return rewriter.notifyMatchFailure(op,
+                                           "Transpose changes memeory layout.");
+
+    SmallVector<int64_t> newShape;
+    newShape.reserve(inputTy.getRank());
+    for (int i = 0, s = inputTy.getRank(); i < s; ++i)
+      newShape.push_back(inputTy.getDimSize(permValues[i]));
+
+    rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
+        op, op.getType(), op.getInput1(),
+        rewriter.getDenseI64ArrayAttr(newShape));
     return success();
   }
 };
 
 void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.add<NoOpOptimization>(context);
+  results.add<ConsolidateTransposeOptimization, TransposeIsReshape>(context);
 }
 
 struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
@@ -468,7 +539,7 @@ DenseElementsAttr binaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
   return {};
 }
 
-OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
   auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
   auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
   auto resultTy = getType().dyn_cast<RankedTensorType>();
@@ -478,8 +549,8 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
     return {};
 
   auto resultETy = resultTy.getElementType();
-  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
-  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
 
   if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<FloatType>()) {
     if (lhsAttr.getSplatValue<APFloat>().isZero())
@@ -508,7 +579,7 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
                                                             lhsTy);
 }
 
-OpFoldResult DivOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
   auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
   auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
   auto resultTy = getType().dyn_cast<RankedTensorType>();
@@ -518,8 +589,8 @@ OpFoldResult DivOp::fold(ArrayRef<Attribute> operands) {
     return {};
 
   auto resultETy = resultTy.getElementType();
-  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
-  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
   if (lhsAttr && lhsAttr.isSplat()) {
     if (resultETy.isa<IntegerType>() && lhsAttr.getSplatValue<APInt>().isZero())
       return lhsAttr;
@@ -575,7 +646,7 @@ DenseElementsAttr mulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
 }
 } // namespace
 
-OpFoldResult MulOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   auto lhs = getInput1();
   auto rhs = getInput2();
   auto lhsTy = lhs.getType().dyn_cast<RankedTensorType>();
@@ -587,8 +658,8 @@ OpFoldResult MulOp::fold(ArrayRef<Attribute> operands) {
     return {};
 
   auto resultETy = resultTy.getElementType();
-  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
-  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
 
   if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<FloatType>()) {
     auto val = lhsAttr.getSplatValue<APFloat>();
@@ -629,7 +700,7 @@ OpFoldResult MulOp::fold(ArrayRef<Attribute> operands) {
   return mulBinaryFolder(lhsAttr, rhsAttr, lhsTy, getShift());
 }
 
-OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
   auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
   auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
   auto resultTy = getType().dyn_cast<RankedTensorType>();
@@ -639,8 +710,8 @@ OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
     return {};
 
   auto resultETy = resultTy.getElementType();
-  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
-  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
 
   if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<FloatType>()) {
     if (rhsAttr.getSplatValue<APFloat>().isZero())
@@ -660,8 +731,7 @@ OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
 }
 
 namespace {
-template <typename Cmp>
-struct ComparisonFold {
+template <typename Cmp> struct ComparisonFold {
   ComparisonFold() = default;
   APInt operator()(const APInt &l, const APInt &r) {
     return APInt(1, Cmp()(l, r));
@@ -687,10 +757,10 @@ struct APIntFoldGreaterEqual {
 };
 } // namespace
 
-OpFoldResult GreaterOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult GreaterOp::fold(FoldAdaptor adaptor) {
   auto resultTy = getType().dyn_cast<RankedTensorType>();
-  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
-  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
 
   if (!lhsAttr || !rhsAttr)
     return {};
@@ -699,10 +769,10 @@ OpFoldResult GreaterOp::fold(ArrayRef<Attribute> operands) {
       lhsAttr, rhsAttr, resultTy);
 }
 
-OpFoldResult GreaterEqualOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult GreaterEqualOp::fold(FoldAdaptor adaptor) {
   auto resultTy = getType().dyn_cast<RankedTensorType>();
-  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
-  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
 
   if (!lhsAttr || !rhsAttr)
     return {};
@@ -712,10 +782,10 @@ OpFoldResult GreaterEqualOp::fold(ArrayRef<Attribute> operands) {
       lhsAttr, rhsAttr, resultTy);
 }
 
-OpFoldResult EqualOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult EqualOp::fold(FoldAdaptor adaptor) {
   auto resultTy = getType().dyn_cast<RankedTensorType>();
-  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
-  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  auto lhsAttr = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = adaptor.getInput2().dyn_cast_or_null<DenseElementsAttr>();
   Value lhs = getInput1();
   Value rhs = getInput2();
   auto lhsTy = lhs.getType().cast<ShapedType>();
@@ -735,11 +805,11 @@ OpFoldResult EqualOp::fold(ArrayRef<Attribute> operands) {
                                                               resultTy);
 }
 
-OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   if (getInput().getType() == getType())
     return getInput();
 
-  auto operand = operands[0].dyn_cast_or_null<ElementsAttr>();
+  auto operand = adaptor.getInput().dyn_cast_or_null<ElementsAttr>();
   if (!operand)
     return {};
 
@@ -798,13 +868,10 @@ OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "constant has no operands");
-  return getValueAttr();
-}
+OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
 
 #define REDUCE_FOLDER(OP)                                                      \
-  OpFoldResult OP::fold(ArrayRef<Attribute> operands) {                        \
+  OpFoldResult OP::fold(FoldAdaptor adaptor) {                                 \
     ShapedType inputTy = getInput().getType().cast<ShapedType>();              \
     if (!inputTy.hasRank())                                                    \
       return {};                                                               \
@@ -821,7 +888,7 @@ REDUCE_FOLDER(ReduceProdOp)
 REDUCE_FOLDER(ReduceSumOp)
 #undef REDUCE_FOLDER
 
-OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   auto inputTy = getInput1().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
 
@@ -831,7 +898,7 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   if (inputTy == outputTy)
     return getInput1();
 
-  auto operand = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto operand = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>();
   if (operand && outputTy.hasStaticShape() && operand.isSplat()) {
     return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
   }
@@ -839,10 +906,10 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult PadOp::fold(FoldAdaptor adaptor) {
   // If the pad is all zeros we can fold this operation away.
-  if (operands[1]) {
-    auto densePad = operands[1].cast<DenseElementsAttr>();
+  if (adaptor.getPadding()) {
+    auto densePad = adaptor.getPadding().cast<DenseElementsAttr>();
     if (densePad.isSplat() && densePad.getSplatValue<APInt>().isZero()) {
       return getInput1();
     }
@@ -853,11 +920,10 @@ OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
 
 // Fold away cases where a tosa.resize operation returns a copy
 // of the input image.
-OpFoldResult ResizeOp::fold(ArrayRef<Attribute> operands) {
-  SmallVector<int32_t> scale, offset, border;
-  getValuesFromIntArrayAttribute(getScale(), scale);
-  getValuesFromIntArrayAttribute(getOffset(), offset);
-  getValuesFromIntArrayAttribute(getBorder(), border);
+OpFoldResult ResizeOp::fold(FoldAdaptor adaptor) {
+  ArrayRef<int64_t> offset = getOffset();
+  ArrayRef<int64_t> border = getBorder();
+  ArrayRef<int64_t> scale = getScale();
 
   // Check unit scaling.
   if (scale[0] != scale[1] || scale[2] != scale[3]) {
@@ -883,11 +949,11 @@ OpFoldResult ResizeOp::fold(ArrayRef<Attribute> operands) {
   return input;
 }
 
-OpFoldResult ReverseOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
   auto operand = getInput();
   auto operandTy = operand.getType().cast<ShapedType>();
   auto axis = getAxis();
-  auto operandAttr = operands[0].dyn_cast_or_null<SplatElementsAttr>();
+  auto operandAttr = adaptor.getInput().dyn_cast_or_null<SplatElementsAttr>();
   if (operandAttr)
     return operandAttr;
 
@@ -898,7 +964,7 @@ OpFoldResult ReverseOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
   auto inputTy = getInput().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
 
@@ -908,20 +974,17 @@ OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
   if (inputTy == outputTy && inputTy.hasStaticShape())
     return getInput();
 
-  if (!operands[0])
+  if (!adaptor.getInput())
     return {};
 
-  auto operand = operands[0].cast<ElementsAttr>();
+  auto operand = adaptor.getInput().cast<ElementsAttr>();
   if (operand.isSplat() && outputTy.hasStaticShape()) {
     return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
   }
 
   if (inputTy.hasStaticShape() && outputTy.hasStaticShape() &&
       outputTy.getNumElements() == 1) {
-    llvm::SmallVector<uint64_t> indices;
-    for (auto val : getStart()) {
-      indices.push_back(val.cast<IntegerAttr>().getInt());
-    }
+    llvm::SmallVector<uint64_t> indices(getStart());
     auto value = operand.getValues<Attribute>()[indices];
     return SplatElementsAttr::get(outputTy, value);
   }
@@ -929,11 +992,11 @@ OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-OpFoldResult tosa::SelectOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
   if (getOnTrue() == getOnFalse())
     return getOnTrue();
 
-  auto predicate = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
+  auto predicate = adaptor.getPred().dyn_cast_or_null<DenseIntElementsAttr>();
   if (!predicate)
     return {};
 
@@ -943,33 +1006,35 @@ OpFoldResult tosa::SelectOp::fold(ArrayRef<Attribute> operands) {
                                                          : getOnFalse();
 }
 
-OpFoldResult TileOp::fold(ArrayRef<Attribute> operands) {
-  bool allOnes = true;
-  for (Attribute val : getMultiples().getValue()) {
-    allOnes = allOnes && val.cast<IntegerAttr>().getValue().getSExtValue() == 1;
-  }
-
+OpFoldResult TileOp::fold(FoldAdaptor adaptor) {
+  bool allOnes = llvm::all_of(getMultiples(), [](int64_t v) { return v == 1; });
   if (allOnes && getInput1().getType() == getType())
     return getInput1();
   return {};
 }
 
-OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
-  if (!operands[1])
-    return {};
+OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
+  auto inputTy = getInput1().getType().cast<ShapedType>();
+  auto resultTy = getType().cast<ShapedType>();
 
   // Transposing splat values just means reshaping.
-  if (auto input = operands[0].dyn_cast_or_null<DenseElementsAttr>()) {
-    if (input.isSplat())
-      return input.reshape(getType().cast<ShapedType>());
+  if (auto input = adaptor.getInput1().dyn_cast_or_null<DenseElementsAttr>()) {
+    if (input.isSplat() && resultTy.hasStaticShape() &&
+        inputTy.getElementType() == resultTy.getElementType())
+      return input.reshape(resultTy);
   }
 
-  auto perms = llvm::to_vector<6>(llvm::map_range(
-      operands[1].cast<DenseIntElementsAttr>().getValues<APInt>(),
-      [](const APInt &val) { return val.getSExtValue(); }));
+  // Transpose does not change the input type.
+  if (getInput1().getType() != getType())
+    return {};
 
-  if (llvm::equal(llvm::seq<int64_t>(0, perms.size()), perms) &&
-      getInput1().getType() == getType())
-    return getInput1();
-  return {};
+  // Transpose is not the identity transpose.
+  SmallVector<int64_t> perms;
+  if (getConstantPerms(perms).failed())
+    return {};
+
+  if (!llvm::equal(llvm::seq<int64_t>(0, perms.size()), perms))
+    return {};
+
+  return getInput1();
 }

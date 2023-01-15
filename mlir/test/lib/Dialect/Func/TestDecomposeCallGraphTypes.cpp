@@ -73,7 +73,7 @@ struct TestDecomposeCallGraphTypes
 
     typeConverter.addArgumentMaterialization(
         [](OpBuilder &builder, TupleType resultType, ValueRange inputs,
-           Location loc) -> Optional<Value> {
+           Location loc) -> std::optional<Value> {
           if (inputs.size() == 1)
             return std::nullopt;
           TupleType tuple = builder.getTupleType(inputs.getTypes());

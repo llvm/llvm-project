@@ -157,8 +157,8 @@ public:
                                      const Instruction *I = nullptr);
 
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     unsigned Index);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index,
+                                     Value *Op0, Value *Op1);
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -186,7 +186,7 @@ public:
       return false;
 
     if (Alignment <
-        DL.getTypeStoreSize(DataType->getScalarType()).getFixedSize())
+        DL.getTypeStoreSize(DataType->getScalarType()).getFixedValue())
       return false;
 
     return TLI->isLegalElementTypeForRVV(DataType->getScalarType());
@@ -214,7 +214,7 @@ public:
       return false;
 
     if (Alignment <
-        DL.getTypeStoreSize(DataType->getScalarType()).getFixedSize())
+        DL.getTypeStoreSize(DataType->getScalarType()).getFixedValue())
       return false;
 
     return TLI->isLegalElementTypeForRVV(DataType->getScalarType());
@@ -242,6 +242,12 @@ public:
   TargetTransformInfo::VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
     using VPLegalization = TargetTransformInfo::VPLegalization;
+    if (!ST->hasVInstructions() ||
+        (PI.getIntrinsicID() == Intrinsic::vp_reduce_mul &&
+         cast<VectorType>(PI.getArgOperand(1)->getType())
+                 ->getElementType()
+                 ->getIntegerBitWidth() != 1))
+      return VPLegalization(VPLegalization::Discard, VPLegalization::Convert);
     return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
   }
 

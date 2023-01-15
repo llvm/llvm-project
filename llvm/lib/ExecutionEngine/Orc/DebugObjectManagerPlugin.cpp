@@ -492,7 +492,8 @@ Error DebugObjectManagerPlugin::notifyFailed(
   return Error::success();
 }
 
-void DebugObjectManagerPlugin::notifyTransferringResources(ResourceKey DstKey,
+void DebugObjectManagerPlugin::notifyTransferringResources(JITDylib &JD,
+                                                           ResourceKey DstKey,
                                                            ResourceKey SrcKey) {
   // Debug objects are stored by ResourceKey only after registration.
   // Thus, pending objects don't need to be updated here.
@@ -507,7 +508,8 @@ void DebugObjectManagerPlugin::notifyTransferringResources(ResourceKey DstKey,
   }
 }
 
-Error DebugObjectManagerPlugin::notifyRemovingResources(ResourceKey Key) {
+Error DebugObjectManagerPlugin::notifyRemovingResources(JITDylib &JD,
+                                                        ResourceKey Key) {
   // Removing the resource for a pending object fails materialization, so they
   // get cleaned up in the notifyFailed() handler.
   std::lock_guard<std::mutex> Lock(RegisteredObjsLock);

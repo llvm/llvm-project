@@ -57,10 +57,10 @@ target triple = "x86_64-pc-windows-msvc"
 ; Function Attrs: norecurse nounwind
 define i32 @main() #0 !dbg !6 {
 entry:
-  store volatile i32 0, i32* @x, align 4, !dbg !11, !tbaa !16
-  store volatile i32 0, i32* @x, align 4, !dbg !20, !tbaa !16
-  store volatile i32 0, i32* @x, align 4, !dbg !23, !tbaa !16
-  store volatile i32 0, i32* @x, align 4, !dbg !26, !tbaa !16
+  store volatile i32 0, ptr @x, align 4, !dbg !11, !tbaa !16
+  store volatile i32 0, ptr @x, align 4, !dbg !20, !tbaa !16
+  store volatile i32 0, ptr @x, align 4, !dbg !23, !tbaa !16
+  store volatile i32 0, ptr @x, align 4, !dbg !26, !tbaa !16
   ret i32 0, !dbg !29
 }
 

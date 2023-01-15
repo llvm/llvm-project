@@ -95,7 +95,7 @@ template <> Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysis>() {
     Ret = new DefaultEvictionAdvisorAnalysis(/*NotAsRequested*/ false);
     break;
   case RegAllocEvictionAdvisorAnalysis::AdvisorMode::Development:
-#if defined(LLVM_HAVE_TF_API)
+#if defined(LLVM_HAVE_TFLITE)
     Ret = createDevelopmentModeAdvisor();
 #endif
     break;
@@ -210,7 +210,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
 
     // Check if any interfering live range is heavier than MaxWeight.
     for (const LiveInterval *Intf : reverse(Interferences)) {
-      assert(Register::isVirtualRegister(Intf->reg()) &&
+      assert(Intf->reg().isVirtual() &&
              "Only expecting virtual register interference from query");
 
       // Do not allow eviction of a virtual register if we are in the middle

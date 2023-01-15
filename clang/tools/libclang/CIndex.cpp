@@ -538,7 +538,7 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
             const Optional<bool> V = handleDeclForVisitation(*TL);
             if (!V)
               continue;
-            return V.value();
+            return *V;
           }
         } else if (VisitDeclContext(
                        CXXUnit->getASTContext().getTranslationUnitDecl()))
@@ -643,7 +643,7 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
     const Optional<bool> V = handleDeclForVisitation(D);
     if (!V)
       continue;
-    return V.value();
+    return *V;
   }
   return false;
 }
@@ -677,7 +677,7 @@ Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
   const Optional<bool> V = shouldVisitCursor(Cursor);
   if (!V)
     return std::nullopt;
-  if (!V.value())
+  if (!*V)
     return false;
   if (Visit(Cursor, true))
     return true;
@@ -1076,7 +1076,7 @@ bool CursorVisitor::VisitObjCContainerDecl(ObjCContainerDecl *D) {
     const Optional<bool> &V = shouldVisitCursor(Cursor);
     if (!V)
       continue;
-    if (!V.value())
+    if (!*V)
       return false;
     if (Visit(Cursor, true))
       return true;
@@ -1374,7 +1374,7 @@ bool CursorVisitor::VisitConceptRequirement(const concepts::Requirement &R) {
   }
   case Requirement::RK_Nested: {
     const NestedRequirement &NR = cast<NestedRequirement>(R);
-    if (!NR.isSubstitutionFailure()) {
+    if (!NR.hasInvalidConstraint()) {
       if (Visit(NR.getConstraintExpr()))
         return true;
     }
@@ -2139,6 +2139,7 @@ public:
   void VisitLambdaExpr(const LambdaExpr *E);
   void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
   void VisitRequiresExpr(const RequiresExpr *E);
+  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -3006,6 +3007,9 @@ void EnqueueVisitor::VisitRequiresExpr(const RequiresExpr *E) {
   for (ParmVarDecl *VD : E->getLocalParameters())
     AddDecl(VD);
 }
+void EnqueueVisitor::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E) {
+  EnqueueChildren(E);
+}
 void EnqueueVisitor::VisitPseudoObjectExpr(const PseudoObjectExpr *E) {
   // Treat the expression like its syntactic form.
   Visit(E->getSyntacticForm());
@@ -3798,7 +3802,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   // Configure the diagnostics.
   std::unique_ptr<DiagnosticOptions> DiagOpts = CreateAndPopulateDiagOpts(
-      llvm::makeArrayRef(command_line_args, num_command_line_args));
+      llvm::ArrayRef(command_line_args, num_command_line_args));
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       CompilerInstance::createDiagnostics(DiagOpts.release()));
 
@@ -3881,7 +3885,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
 
   LibclangInvocationReporter InvocationReporter(
       *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
-      options, llvm::makeArrayRef(*Args), /*InvocationArgs=*/std::nullopt,
+      options, llvm::ArrayRef(*Args), /*InvocationArgs=*/std::nullopt,
       unsaved_files);
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
@@ -3968,7 +3972,7 @@ enum CXErrorCode clang_parseTranslationUnit2FullArgv(
     noteBottomOfStack();
     result = clang_parseTranslationUnit_Impl(
         CIdx, source_filename, command_line_args, num_command_line_args,
-        llvm::makeArrayRef(unsaved_files, num_unsaved_files), options, out_TU);
+        llvm::ArrayRef(unsaved_files, num_unsaved_files), options, out_TU);
   };
 
   llvm::CrashRecoveryContext CRC;
@@ -4499,7 +4503,7 @@ int clang_reparseTranslationUnit(CXTranslationUnit TU,
   CXErrorCode result;
   auto ReparseTranslationUnitImpl = [=, &result]() {
     result = clang_reparseTranslationUnit_Impl(
-        TU, llvm::makeArrayRef(unsaved_files, num_unsaved_files), options);
+        TU, llvm::ArrayRef(unsaved_files, num_unsaved_files), options);
   };
 
   llvm::CrashRecoveryContext CRC;
@@ -5587,6 +5591,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("ConceptSpecializationExpr");
   case CXCursor_RequiresExpr:
     return cxstring::createRef("RequiresExpr");
+  case CXCursor_CXXParenListInitExpr:
+    return cxstring::createRef("CXXParenListInitExpr");
   case CXCursor_UnexposedStmt:
     return cxstring::createRef("UnexposedStmt");
   case CXCursor_DeclStmt:
@@ -7026,7 +7032,7 @@ void clang_enableStackTraces(void) {
 void clang_executeOnThread(void (*fn)(void *), void *user_data,
                            unsigned stack_size) {
   llvm::thread Thread(stack_size == 0 ? clang::DesiredStackSize
-                                      : llvm::Optional<unsigned>(stack_size),
+                                      : std::optional<unsigned>(stack_size),
                       fn, user_data);
   Thread.join();
 }
@@ -8230,13 +8236,13 @@ static CXVersion convertVersion(VersionTuple In) {
 
   Out.Major = In.getMajor();
 
-  Optional<unsigned> Minor = In.getMinor();
+  std::optional<unsigned> Minor = In.getMinor();
   if (Minor)
     Out.Minor = *Minor;
   else
     return Out;
 
-  Optional<unsigned> Subminor = In.getSubminor();
+  std::optional<unsigned> Subminor = In.getSubminor();
   if (Subminor)
     Out.Subminor = *Subminor;
 
@@ -8387,9 +8393,8 @@ int clang_getCursorPlatformAvailability(CXCursor cursor, int *always_deprecated,
   getCursorPlatformAvailabilityForDecl(D, always_deprecated, deprecated_message,
                                        always_unavailable, unavailable_message,
                                        AvailabilityAttrs);
-  for (const auto &Avail :
-       llvm::enumerate(llvm::makeArrayRef(AvailabilityAttrs)
-                           .take_front(availability_size))) {
+  for (const auto &Avail : llvm::enumerate(
+           llvm::ArrayRef(AvailabilityAttrs).take_front(availability_size))) {
     availability[Avail.index()].Platform =
         cxstring::createDup(Avail.value()->getPlatform()->getName());
     availability[Avail.index()].Introduced =
@@ -8525,7 +8530,7 @@ CXFile clang_getIncludedFile(CXCursor cursor) {
     return nullptr;
 
   const InclusionDirective *ID = getCursorInclusionDirective(cursor);
-  Optional<FileEntryRef> File = ID->getFile();
+  OptionalFileEntryRef File = ID->getFile();
   return const_cast<FileEntry *>(File ? &File->getFileEntry() : nullptr);
 }
 

@@ -168,7 +168,7 @@
 
     ! CHECK:     %[[V_8:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
     ! CHECK:     %[[V_9:[0-9]+]] = arith.cmpi sge, %[[V_8]], %c0{{.*}} : i32
-    ! CHECK:     cond_br %[[V_9]], ^bb1, ^bb15
+    ! CHECK:     cond_br %[[V_9]], ^bb1, ^bb16
     ! CHECK:   ^bb1:  // pred: ^bb0
     if (lge(s,'00')) then
 
@@ -245,7 +245,7 @@
       ! CHECK: ^bb13:  // pred: ^bb12
       ! CHECK: ^bb14:  // 3 preds: ^bb9, ^bb11, ^bb12
       ! CHECK:   fir.store %c4{{.*}} to %[[V_1]] : !fir.ref<i32>
-      ! CHECK: ^bb15:  // 6 preds: ^bb0, ^bb3, ^bb4, ^bb6, ^bb8, ^bb14
+      ! CHECK: ^bb15:  // 5 preds: ^bb3, ^bb4, ^bb6, ^bb8, ^bb14
       end select
     end if
     ! CHECK:     %[[V_89:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<i32>
@@ -347,7 +347,7 @@
       ! CHECK:   fir.select_case %[[selector]] : i32 [#fir.upper, %c2{{.*}}, ^bb3, #fir.lower, %c5{{.*}}, ^bb4, unit, ^bb7]
       ! CHECK: ^bb3:  // pred: ^bb2
       ! CHECK:   arith.muli %c10{{[^0]}}
-      ! CHECK:   br ^bb9
+      ! CHECK:   br ^bb8
       ! CHECK: ^bb4:  // pred: ^bb2
       ! CHECK:   arith.muli %c1000{{[^0]}}
       ! CHECK:   cond_br {{.*}}, ^bb5, ^bb6
@@ -355,14 +355,14 @@
       ! CHECK:   br ^bb8
       ! CHECK: ^bb6:  // pred: ^bb4
       ! CHECK:   arith.muli %c10000{{[^0]}}
-      ! CHECK:   br ^bb9
+      ! CHECK:   br ^bb8
       ! CHECK: ^bb7:  // pred: ^bb2
       ! CHECK:   arith.muli %c100{{[^0]}}
       ! CHECK:   br ^bb8
-      ! CHECK: ^bb8:  // 2 preds: ^bb5, ^bb7
-      ! CHECK:   br ^bb9
-      ! CHECK: ^bb9:  // 3 preds: ^bb3, ^bb6, ^bb8
+      ! CHECK: ^bb8:  // 4 preds: ^bb3, ^bb5, ^bb6, ^bb7
       ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+      ! CHECK:   br ^bb1
+      ! CHECK: ^bb9:  // pred: ^bb1
       select case(i)
       case (:2)
         n = i * 10

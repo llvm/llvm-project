@@ -5,6 +5,15 @@
 // RUN: %clang -### -c -target powerpc64 %s -mcpu=native 2>&1 | FileCheck --check-prefix=MCPU_NATIVE %s
 // MCPU_NATIVE-NOT: "-target-cpu" "native"
 
+/// Check that we are passing unknown mcpu options to the backend so an error
+/// can be triggered.
+// RUN: %clang -### -c -target powerpc64 %s -mcpu=asdf1234 2>&1 | FileCheck --check-prefix=MCPU_UNKNOWN %s
+// MCPU_UNKNOWN: "-target-cpu" "asdf1234"
+
+/// Check for the unknown target error if an unknown mcpu option is used.
+// RUN: not %clang -c -target powerpc64 %s -mcpu=asdf1234 2>&1 | FileCheck --check-prefix=MCPU_ERR %s
+// MCPU_ERR: unknown target CPU 'asdf1234'
+
 // RUN: %clang -### -c -target powerpc64 %s -mcpu=7400 2>&1 | FileCheck --check-prefix=MCPU_7400 %s
 // MCPU_7400: "-target-cpu" "7400"
 
@@ -22,3 +31,9 @@
 
 // RUN: %clang -### -c --target=powerpc64 %s -mcpu=generic -mtune=pwr9 2>&1 | FileCheck %s --check-prefix=TUNE
 // TUNE: "-target-cpu" "ppc64" "-tune-cpu" "pwr9"
+
+/// Test mcpu options that are equivalent to "generic"
+// RUN: %clang -### -c -target powerpc64 %s -mcpu=generic 2>&1 | FileCheck %s --check-prefix=GENERIC
+// RUN: %clang -### -c -target powerpc64 %s -mcpu=405     2>&1 | FileCheck %s --check-prefix=GENERIC
+//
+// GENERIC: "-target-cpu" "ppc64"

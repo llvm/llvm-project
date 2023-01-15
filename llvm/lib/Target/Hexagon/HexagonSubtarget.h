@@ -324,8 +324,8 @@ public:
     static MVT TypesV68[] = {MVT::i8, MVT::i16, MVT::i32, MVT::f16, MVT::f32};
 
     if (useHVXV68Ops() && useHVXFloatingPoint())
-      return makeArrayRef(TypesV68);
-    return makeArrayRef(Types);
+      return ArrayRef(TypesV68);
+    return ArrayRef(Types);
   }
 
   bool isHVXElementType(MVT Ty, bool IncludeBool = false) const;

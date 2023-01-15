@@ -8,13 +8,13 @@ define i32 @test(i1 %c.0, i32 %m) {
 ; COMMON-NEXT:  entry:
 ; COMMON-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; COMMON:       outer.header:
-; DEFAULT-NEXT:   [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ], [ 2, [[ENTRY:%.*]] ]
-; COMMON-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; COMMON-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT2:%.*]], [[OUTER_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[OUTER_LATCH]] ], [ 2, [[ENTRY]] ]
+; COMMON-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_1_NEXT:%.*]], [[OUTER_LATCH]] ]
 ; COMMON-NEXT:    [[MAX_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[MAX_1:%.*]], [[OUTER_LATCH]] ]
-; COMMON-NEXT:    [[TMP0:%.*]] = sext i32 [[IV_1]] to i64
 ; COMMON-NEXT:    br label [[INNER_1:%.*]]
 ; COMMON:       inner.1:
-; COMMON-NEXT:    [[C_1:%.*]] = icmp slt i64 0, [[TMP0]]
+; COMMON-NEXT:    [[C_1:%.*]] = icmp ult i64 0, [[INDVARS_IV1]]
 ; COMMON-NEXT:    br i1 [[C_1]], label [[INNER_1]], label [[INNER_2_HEADER_PREHEADER:%.*]]
 ; COMMON:       inner.2.header.preheader:
 ; COMMON-NEXT:    br label [[INNER_2_HEADER:%.*]]
@@ -28,6 +28,7 @@ define i32 @test(i1 %c.0, i32 %m) {
 ; COMMON-NEXT:    br i1 [[EXITCOND]], label [[OUTER_LATCH]], label [[INNER_2_HEADER]]
 ; COMMON:       outer.latch:
 ; COMMON-NEXT:    [[MAX_1]] = phi i32 [ [[M:%.*]], [[INNER_2_LATCH]] ], [ 0, [[INNER_2_HEADER]] ]
+; COMMON-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; COMMON-NEXT:    [[IV_1_NEXT]] = add nuw i32 [[IV_1]], 1
 ; COMMON-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[IV_1]], [[MAX_0]]
 ; DEFAULT-NEXT:   [[INDVARS_IV_NEXT]] = add i32 [[INDVARS_IV]], 1

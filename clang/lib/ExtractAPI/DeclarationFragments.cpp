@@ -109,7 +109,7 @@ DeclarationFragmentsBuilder::getFragmentsForNNS(const NestedNameSpecifier *NNS,
     SmallString<128> USR;
     index::generateUSRForDecl(NS, USR);
     Fragments.append(NS->getName(),
-                     DeclarationFragments::FragmentKind::Identifier, USR);
+                     DeclarationFragments::FragmentKind::Identifier, USR, NS);
     break;
   }
 
@@ -118,7 +118,8 @@ DeclarationFragmentsBuilder::getFragmentsForNNS(const NestedNameSpecifier *NNS,
     SmallString<128> USR;
     index::generateUSRForDecl(Alias, USR);
     Fragments.append(Alias->getName(),
-                     DeclarationFragments::FragmentKind::Identifier, USR);
+                     DeclarationFragments::FragmentKind::Identifier, USR,
+                     Alias);
     break;
   }
 
@@ -255,11 +256,11 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   // direct reference to the typedef instead of the wrapped type.
   if (const TypedefType *TypedefTy = dyn_cast<TypedefType>(T)) {
     const TypedefNameDecl *Decl = TypedefTy->getDecl();
-    std::string USR =
-        TypedefUnderlyingTypeResolver(Context).getUSRForType(QualType(T, 0));
-    return Fragments.append(Decl->getName(),
-                            DeclarationFragments::FragmentKind::TypeIdentifier,
-                            USR);
+    TypedefUnderlyingTypeResolver TypedefResolver(Context);
+    std::string USR = TypedefResolver.getUSRForType(QualType(T, 0));
+    return Fragments.append(
+        Decl->getName(), DeclarationFragments::FragmentKind::TypeIdentifier,
+        USR, TypedefResolver.getUnderlyingTypeDecl(QualType(T, 0)));
   }
 
   // If the base type is a TagType (struct/interface/union/class/enum), let's
@@ -273,7 +274,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
     clang::index::generateUSRForDecl(Decl, TagUSR);
     return Fragments.append(Decl->getName(),
                             DeclarationFragments::FragmentKind::TypeIdentifier,
-                            TagUSR);
+                            TagUSR, Decl);
   }
 
   // If the base type is an ObjCInterfaceType, use the underlying
@@ -284,7 +285,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
     index::generateUSRForDecl(Decl, USR);
     return Fragments.append(Decl->getName(),
                             DeclarationFragments::FragmentKind::TypeIdentifier,
-                            USR);
+                            USR, Decl);
   }
 
   // Default fragment builder for other kinds of types (BuiltinType etc.)
@@ -530,13 +531,15 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCCategory(
     const ObjCCategoryDecl *Category) {
   DeclarationFragments Fragments;
 
+  auto *Interface = Category->getClassInterface();
   SmallString<128> InterfaceUSR;
-  index::generateUSRForDecl(Category->getClassInterface(), InterfaceUSR);
+  index::generateUSRForDecl(Interface, InterfaceUSR);
 
   Fragments.append("@interface", DeclarationFragments::FragmentKind::Keyword)
       .appendSpace()
       .append(Category->getClassInterface()->getName(),
-              DeclarationFragments::FragmentKind::TypeIdentifier, InterfaceUSR)
+              DeclarationFragments::FragmentKind::TypeIdentifier, InterfaceUSR,
+              Interface)
       .append(" (", DeclarationFragments::FragmentKind::Text)
       .append(Category->getName(),
               DeclarationFragments::FragmentKind::Identifier)
@@ -560,7 +563,8 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCInterface(
     index::generateUSRForDecl(SuperClass, SuperUSR);
     Fragments.append(" : ", DeclarationFragments::FragmentKind::Text)
         .append(SuperClass->getName(),
-                DeclarationFragments::FragmentKind::TypeIdentifier, SuperUSR);
+                DeclarationFragments::FragmentKind::TypeIdentifier, SuperUSR,
+                SuperClass);
   }
 
   return Fragments;
@@ -719,7 +723,8 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProtocol(
       SmallString<128> USR;
       index::generateUSRForDecl(*It, USR);
       Fragments.append((*It)->getName(),
-                       DeclarationFragments::FragmentKind::TypeIdentifier, USR);
+                       DeclarationFragments::FragmentKind::TypeIdentifier, USR,
+                       *It);
     }
     Fragments.append(">", DeclarationFragments::FragmentKind::Text);
   }

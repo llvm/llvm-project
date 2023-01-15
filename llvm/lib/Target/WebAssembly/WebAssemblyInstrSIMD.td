@@ -54,15 +54,6 @@ def ImmI#SIZE : ImmLeaf<i32,
 foreach SIZE = [2, 4, 8, 16, 32] in
 def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;
 
-// Create vector with identical lanes: splat
-def splat2 : PatFrag<(ops node:$x), (build_vector $x, $x)>;
-def splat4 : PatFrag<(ops node:$x), (build_vector $x, $x, $x, $x)>;
-def splat8 : PatFrag<(ops node:$x), (build_vector $x, $x, $x, $x,
-                                                  $x, $x, $x, $x)>;
-def splat16 : PatFrag<(ops node:$x),
-                      (build_vector $x, $x, $x, $x, $x, $x, $x, $x,
-                                    $x, $x, $x, $x, $x, $x, $x, $x)>;
-
 class Vec {
   ValueType vt;
   ValueType int_vt;
@@ -70,6 +61,7 @@ class Vec {
   WebAssemblyRegClass lane_rc;
   int lane_bits;
   ImmLeaf lane_idx;
+  SDPatternOperator lane_load;
   PatFrag splat;
   string prefix;
   Vec split;
@@ -82,7 +74,8 @@ def I8x16 : Vec {
   let lane_rc = I32;
   let lane_bits = 8;
   let lane_idx = LaneIdx16;
-  let splat = splat16;
+  let lane_load = extloadi8;
+  let splat = PatFrag<(ops node:$x), (v16i8 (splat_vector (i8 $x)))>;
   let prefix = "i8x16";
 }
 
@@ -93,7 +86,8 @@ def I16x8 : Vec {
   let lane_rc = I32;
   let lane_bits = 16;
   let lane_idx = LaneIdx8;
-  let splat = splat8;
+  let lane_load = extloadi16;
+  let splat = PatFrag<(ops node:$x), (v8i16 (splat_vector (i16 $x)))>;
   let prefix = "i16x8";
   let split = I8x16;
 }
@@ -105,7 +99,8 @@ def I32x4 : Vec {
   let lane_rc = I32;
   let lane_bits = 32;
   let lane_idx = LaneIdx4;
-  let splat = splat4;
+  let lane_load = load;
+  let splat = PatFrag<(ops node:$x), (v4i32 (splat_vector (i32 $x)))>;
   let prefix = "i32x4";
   let split = I16x8;
 }
@@ -117,7 +112,8 @@ def I64x2 : Vec {
   let lane_rc = I64;
   let lane_bits = 64;
   let lane_idx = LaneIdx2;
-  let splat = splat2;
+  let lane_load = load;
+  let splat = PatFrag<(ops node:$x), (v2i64 (splat_vector (i64 $x)))>;
   let prefix = "i64x2";
   let split = I32x4;
 }
@@ -129,7 +125,8 @@ def F32x4 : Vec {
   let lane_rc = F32;
   let lane_bits = 32;
   let lane_idx = LaneIdx4;
-  let splat = splat4;
+  let lane_load = load;
+  let splat = PatFrag<(ops node:$x), (v4f32 (splat_vector (f32 $x)))>;
   let prefix = "f32x4";
 }
 
@@ -140,7 +137,8 @@ def F64x2 : Vec {
   let lane_rc = F64;
   let lane_bits = 64;
   let lane_idx = LaneIdx2;
-  let splat = splat2;
+  let lane_load = load;
+  let splat = PatFrag<(ops node:$x), (v2f64 (splat_vector (f64 $x)))>;
   let prefix = "f64x2";
 }
 
@@ -167,11 +165,7 @@ defm LOAD_V128_A64 :
 
 // Def load patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec = AllVecs in {
-defm : LoadPatNoOffset<vec.vt, load, "LOAD_V128">;
-defm : LoadPatImmOff<vec.vt, load, regPlusImm, "LOAD_V128">;
-defm : LoadPatImmOff<vec.vt, load, or_is_add, "LOAD_V128">;
-defm : LoadPatOffsetOnly<vec.vt, load, "LOAD_V128">;
-defm : LoadPatGlobalAddrOffOnly<vec.vt, load, "LOAD_V128">;
+defm : LoadPat<vec.vt, load, "LOAD_V128">;
 }
 
 // v128.loadX_splat
@@ -199,18 +193,11 @@ defm "" : SIMDLoadSplat<16, 8>;
 defm "" : SIMDLoadSplat<32, 9>;
 defm "" : SIMDLoadSplat<64, 10>;
 
-def wasm_load_splat_t : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
-def wasm_load_splat : SDNode<"WebAssemblyISD::LOAD_SPLAT", wasm_load_splat_t,
-                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def load_splat : PatFrag<(ops node:$addr), (wasm_load_splat node:$addr)>;
-
 foreach vec = AllVecs in {
-defvar inst = "LOAD"#vec.lane_bits#"_SPLAT";
-defm : LoadPatNoOffset<vec.vt, load_splat, inst>;
-defm : LoadPatImmOff<vec.vt, load_splat, regPlusImm, inst>;
-defm : LoadPatImmOff<vec.vt, load_splat, or_is_add, inst>;
-defm : LoadPatOffsetOnly<vec.vt, load_splat, inst>;
-defm : LoadPatGlobalAddrOffOnly<vec.vt, load_splat, inst>;
+  defvar inst = "LOAD"#vec.lane_bits#"_SPLAT";
+  defm : LoadPat<vec.vt,
+                 PatFrag<(ops node:$addr), (splat_vector (vec.lane_vt (vec.lane_load node:$addr)))>,
+                 inst>;
 }
 
 // Load and extend
@@ -255,11 +242,7 @@ foreach exts = [["sextloadvi", "_S"],
                 ["extloadvi", "_U"]] in {
 defvar loadpat = !cast<PatFrag>(exts[0]#vec.split.lane_bits);
 defvar inst = "LOAD_EXTEND"#exts[1]#"_"#vec;
-defm : LoadPatNoOffset<vec.vt, loadpat, inst>;
-defm : LoadPatImmOff<vec.vt, loadpat, regPlusImm, inst>;
-defm : LoadPatImmOff<vec.vt, loadpat, or_is_add, inst>;
-defm : LoadPatOffsetOnly<vec.vt, loadpat, inst>;
-defm : LoadPatGlobalAddrOffOnly<vec.vt, loadpat, inst>;
+defm : LoadPat<vec.vt, loadpat, inst>;
 }
 
 // Load lane into zero vector
@@ -289,11 +272,7 @@ defm "" : SIMDLoadZero<I64x2, 0x5d>;
 foreach vec = [I32x4, I64x2] in {
   defvar inst = "LOAD_ZERO_"#vec;
   defvar pat = PatFrag<(ops node:$addr), (scalar_to_vector (vec.lane_vt (load $addr)))>;
-  defm : LoadPatNoOffset<vec.vt, pat, inst>;
-  defm : LoadPatImmOff<vec.vt, pat, regPlusImm, inst>;
-  defm : LoadPatImmOff<vec.vt, pat, or_is_add, inst>;
-  defm : LoadPatOffsetOnly<vec.vt, pat, inst>;
-  defm : LoadPatGlobalAddrOffOnly<vec.vt, pat, inst>;
+  defm : LoadPat<vec.vt, pat, inst>;
 }
 
 // TODO: f32x4 and f64x2 as well
@@ -301,11 +280,7 @@ foreach vec = [I32x4, I64x2] in {
   defvar inst = "LOAD_ZERO_"#vec;
   defvar pat = PatFrag<(ops node:$ptr),
     (vector_insert (vec.splat (vec.lane_vt 0)), (vec.lane_vt (load $ptr)), 0)>;
-  defm : LoadPatNoOffset<vec.vt, pat, inst>;
-  defm : LoadPatImmOff<vec.vt, pat, regPlusImm, inst>;
-  defm : LoadPatImmOff<vec.vt, pat, or_is_add, inst>;
-  defm : LoadPatOffsetOnly<vec.vt, pat, inst>;
-  defm : LoadPatGlobalAddrOffOnly<vec.vt, pat, inst>;
+  defm : LoadPat<vec.vt, pat, inst>;
 }
 
 // Load lane
@@ -386,11 +361,7 @@ defm STORE_V128_A64 :
 
 // Def store patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec = AllVecs in {
-defm : StorePatNoOffset<vec.vt, store, "STORE_V128">;
-defm : StorePatImmOff<vec.vt, store, regPlusImm, "STORE_V128">;
-defm : StorePatImmOff<vec.vt, store, or_is_add, "STORE_V128">;
-defm : StorePatOffsetOnly<vec.vt, store, "STORE_V128">;
-defm : StorePatGlobalAddrOffOnly<vec.vt, store, "STORE_V128">;
+defm : StorePat<vec.vt, store, "STORE_V128">;
 }
 
 // Store lane
@@ -419,13 +390,16 @@ defm "" : SIMDStoreLane<I16x8, 0x59>;
 defm "" : SIMDStoreLane<I32x4, 0x5a>;
 defm "" : SIMDStoreLane<I64x2, 0x5b>;
 
-// Select stores with no constant offset.
-multiclass StoreLanePatNoOffset<Vec vec, SDPatternOperator kind> {
-  def : Pat<(kind (i32 I32:$addr), (vec.vt V128:$vec), (i32 vec.lane_idx:$idx)),
-            (!cast<NI>("STORE_LANE_"#vec#"_A32") 0, 0, imm:$idx, $addr, $vec)>,
+multiclass StoreLanePat<Vec vec, SDPatternOperator kind> {
+  def : Pat<(kind (AddrOps32 offset32_op:$offset, I32:$addr),
+                  (vec.vt V128:$vec),
+                  (i32 vec.lane_idx:$idx)),
+            (!cast<NI>("STORE_LANE_"#vec#"_A32") 0, $offset, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr32]>;
-  def : Pat<(kind (i64 I64:$addr), (vec.vt V128:$vec), (i32 vec.lane_idx:$idx)),
-            (!cast<NI>("STORE_LANE_"#vec#"_A64") 0, 0, imm:$idx, $addr, $vec)>,
+  def : Pat<(kind (AddrOps64 offset64_op:$offset, I64:$addr),
+                  (vec.vt V128:$vec),
+                  (i32 vec.lane_idx:$idx)),
+            (!cast<NI>("STORE_LANE_"#vec#"_A64") 0, $offset, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr64]>;
 }
 
@@ -444,10 +418,10 @@ def store64_lane :
 // TODO: floating point lanes as well
 
 let AddedComplexity = 1 in {
-defm : StoreLanePatNoOffset<I8x16, store8_lane>;
-defm : StoreLanePatNoOffset<I16x8, store16_lane>;
-defm : StoreLanePatNoOffset<I32x4, store32_lane>;
-defm : StoreLanePatNoOffset<I64x2, store64_lane>;
+defm : StoreLanePat<I8x16, store8_lane>;
+defm : StoreLanePat<I16x8, store16_lane>;
+defm : StoreLanePat<I32x4, store32_lane>;
+defm : StoreLanePat<I64x2, store64_lane>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -508,6 +482,17 @@ defm "" : ConstVec<F64x2,
                   (ins f64imm_op:$i0, f64imm_op:$i1),
                   (build_vector (f64 fpimm:$i0), (f64 fpimm:$i1)),
                   "$i0, $i1">;
+
+// Match splat(x) -> const.v128(x, ..., x)
+foreach vec = AllVecs in {
+  defvar numEls = !div(vec.vt.Size, vec.lane_bits);
+  defvar isFloat = !or(!eq(vec.lane_vt, f32), !eq(vec.lane_vt, f64));
+  defvar immKind = !if(isFloat, fpimm, imm);
+  def : Pat<(vec.splat (vec.lane_vt immKind:$x)),
+            !dag(!cast<NI>("CONST_V128_"#vec),
+                 !listsplat((vec.lane_vt immKind:$x), numEls),
+                 ?)>;
+}
 
 // Shuffle lanes: shuffle
 defm SHUFFLE :

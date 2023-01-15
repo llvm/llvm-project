@@ -1,5 +1,12 @@
 # This file handles building LLVM runtime sub-projects.
 cmake_minimum_required(VERSION 3.13.4)
+if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
+    "minimum version of CMake required to build LLVM will become 3.20.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.20.0 now to avoid issues in the future!")
+endif()
 project(Runtimes C CXX ASM)
 
 # Add path for custom and the LLVM build's modules to the CMake module path.
@@ -168,6 +175,9 @@ endif()
 
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
+
+include(SetTargetTriple)
+set_llvm_target_triple()
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)

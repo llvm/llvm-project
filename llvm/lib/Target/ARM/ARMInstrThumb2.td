@@ -4089,6 +4089,10 @@ def : t2InstAlias<"bti$p", (t2HINT 15, pred:$p), 1>;
 def : t2InstAlias<"pac$p r12,lr,sp", (t2HINT 29, pred:$p), 1>;
 def : t2InstAlias<"aut$p r12,lr,sp", (t2HINT 45, pred:$p), 1>;
 
+// Clear BHB instruction
+def : InstAlias<"clrbhb$p", (t2HINT 22, pred:$p), 0>, Requires<[IsThumb2, HasV8]>;
+def : InstAlias<"clrbhb$p", (t2HINT 22, pred:$p), 1>, Requires<[IsThumb2, HasV8, HasCLRBHB]>;
+
 def t2DBG : T2I<(outs), (ins imm0_15:$opt), NoItinerary, "dbg", "\t$opt",
                 [(int_arm_dbg imm0_15:$opt)]> {
   bits<4> opt;
@@ -5617,6 +5621,10 @@ def t2CSINC : CS<"csinc", 0b1001>;
 def t2CSINV : CS<"csinv", 0b1010>;
 def t2CSNEG : CS<"csneg", 0b1011>;
 
+def ARMcsinc_su : PatFrag<(ops node:$lhs, node:$rhs, node:$cond),
+                          (ARMcsinc node:$lhs, node:$rhs, node:$cond), [{
+  return N->hasOneUse();
+}]>;
 
 let Predicates = [HasV8_1MMainline] in {
   multiclass CSPats<SDNode Node, Instruction Insn> {
@@ -5653,6 +5661,11 @@ let Predicates = [HasV8_1MMainline] in {
   defm : ModifiedV8_1CSEL<t2CSINC, (add rGPR:$fval, 1)>;
   defm : ModifiedV8_1CSEL<t2CSINV, (xor rGPR:$fval, -1)>;
   defm : ModifiedV8_1CSEL<t2CSNEG, (sub 0, rGPR:$fval)>;
+
+  def : T2Pat<(ARMcmov (topbitsallzero32:$Rn), (i32 1), cmovpred:$imm),
+              (t2CSINC $Rn, ZR, $imm)>;
+  def : T2Pat<(and (topbitsallzero32:$Rn), (ARMcsinc_su (i32 0), (i32 0), cmovpred:$imm)),
+              (t2CSEL ZR, $Rn, $imm)>;
 }
 
 // CS aliases.

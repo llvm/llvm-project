@@ -1200,10 +1200,9 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (auto *GEPI = dyn_cast<GetElementPtrInst>(I)) {
-    Value *V =
-        simplifyGEPInst(GEPI->getSourceElementType(), *E->op_begin(),
-                        makeArrayRef(std::next(E->op_begin()), E->op_end()),
-                        GEPI->isInBounds(), Q);
+    Value *V = simplifyGEPInst(GEPI->getSourceElementType(), *E->op_begin(),
+                               ArrayRef(std::next(E->op_begin()), E->op_end()),
+                               GEPI->isInBounds(), Q);
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (AllConstant) {
@@ -1563,7 +1562,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
 
   LLVM_DEBUG(dbgs() << "Found predicate info from instruction !\n");
 
-  const Optional<PredicateConstraint> &Constraint = PI->getConstraint();
+  const std::optional<PredicateConstraint> &Constraint = PI->getConstraint();
   if (!Constraint)
     return ExprResult::none();
 

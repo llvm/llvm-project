@@ -15,6 +15,7 @@
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/IntegerSet.h"
+#include "llvm/ADT/Hashing.h"
 
 namespace py = pybind11;
 using namespace mlir;

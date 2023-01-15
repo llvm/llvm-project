@@ -320,12 +320,12 @@ func.func private @struct_type_missing_comma2(!spirv.struct<(f32 [0] i32)>) -> (
 
 // -----
 
-//  expected-error @+1 {{unbalanced ')' character in pretty dialect name}}
+//  expected-error @+1 {{unbalanced '[' character in pretty dialect name}}
 func.func private @struct_type_neg_offset(!spirv.struct<(f32 [0)>) -> ()
 
 // -----
 
-//  expected-error @+1 {{unbalanced ']' character in pretty dialect name}}
+//  expected-error @+1 {{unbalanced '(' character in pretty dialect name}}
 func.func private @struct_type_neg_offset(!spirv.struct<(f32 0])>) -> ()
 
 // -----
@@ -497,7 +497,7 @@ func.func private @matrix_invalid_format(!spirv.matrix 3 x vector<3xf32>>) -> ()
 
 // -----
 
-// expected-error @+1 {{unbalanced ')' character in pretty dialect name}}
+// expected-error @+1 {{unbalanced '<' character in pretty dialect name}}
 func.func private @matrix_invalid_format(!spirv.matrix< 3 x vector<3xf32>) -> ()
 
 // -----

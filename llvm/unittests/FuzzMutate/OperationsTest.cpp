@@ -214,17 +214,17 @@ TEST(OperationsTest, SplitEHBlock) {
 
   LLVMContext Ctx;
   const char *SourceCode =
-      "declare i32* @f()"
+      "declare ptr @f()"
       "declare i32 @personality_function()"
-      "define i32* @test() personality i32 ()* @personality_function {\n"
+      "define ptr @test() personality ptr @personality_function {\n"
       "entry:\n"
-      "  %val = invoke i32* @f()\n"
+      "  %val = invoke ptr @f()\n"
       "          to label %normal unwind label %exceptional\n"
       "normal:\n"
-      "  ret i32* %val\n"
+      "  ret ptr %val\n"
       "exceptional:\n"
       "  %landing_pad4 = landingpad token cleanup\n"
-      "  ret i32* undef\n"
+      "  ret ptr undef\n"
       "}";
   auto M = parseAssembly(SourceCode, Ctx);
 
@@ -302,9 +302,9 @@ TEST(OperationsTest, GEPPointerOperand) {
 
   LLVMContext Ctx;
   const char *SourceCode =
+      "%opaque = type opaque\n"
       "declare void @f()\n"
-      "define void @test() {\n"
-      "  %v = bitcast void ()* @f to i64 (i8 addrspace(4)*)*\n"
+      "define void @test(%opaque %o) {\n"
       "  %a = alloca i64, i32 10\n"
       "  ret void\n"
       "}";
@@ -316,11 +316,11 @@ TEST(OperationsTest, GEPPointerOperand) {
   Function &F = *M->getFunction("test");
   BasicBlock &BB = *F.begin();
 
-  // Don't match %v
-  ASSERT_FALSE(Descr.SourcePreds[0].matches({}, &*BB.begin()));
+  // Don't match %o
+  ASSERT_FALSE(Descr.SourcePreds[0].matches({}, &*F.arg_begin()));
 
   // Match %a
-  ASSERT_TRUE(Descr.SourcePreds[0].matches({}, &*std::next(BB.begin())));
+  ASSERT_TRUE(Descr.SourcePreds[0].matches({}, &*BB.begin()));
 }
 
 TEST(OperationsTest, ExtractAndInsertValue) {

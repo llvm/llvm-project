@@ -12,6 +12,7 @@
 #include <string>
 
 #include <cstdint>
+#include <optional>
 #include <tuple>
 
 using namespace lldb_private;
@@ -24,7 +25,7 @@ llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &OS,
   return OS << U.path;
 }
 
-llvm::Optional<URI> URI::Parse(llvm::StringRef uri) {
+std::optional<URI> URI::Parse(llvm::StringRef uri) {
   URI ret;
 
   const llvm::StringRef kSchemeSep("://");

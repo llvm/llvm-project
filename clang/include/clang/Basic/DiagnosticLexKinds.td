@@ -127,11 +127,14 @@ def ext_unicode_whitespace : ExtWarn<
   "treating Unicode character as whitespace">,
   InGroup<DiagGroup<"unicode-whitespace">>;
 def warn_utf8_symbol_homoglyph : Warning<
-  "treating Unicode character <U+%0> as identifier character rather than "
+  "treating Unicode character <U+%0> as an identifier character rather than "
   "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
 def warn_utf8_symbol_zero_width : Warning<
   "identifier contains Unicode character <U+%0> that is invisible in "
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
+def ext_mathematical_notation : ExtWarn<
+  "mathematical notation character <U+%0> in an identifier is a Clang extension">,
+  InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;
 
 def ext_delimited_escape_sequence : Extension<
   "%select{delimited|named}0 escape sequences are a "

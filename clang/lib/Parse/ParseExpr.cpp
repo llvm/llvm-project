@@ -2591,10 +2591,21 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
   }
   case tok::kw___builtin_offsetof: {
     SourceLocation TypeLoc = Tok.getLocation();
-    TypeResult Ty = ParseTypeName();
-    if (Ty.isInvalid()) {
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
+    auto K = Sema::OffsetOfKind::OOK_Builtin;
+    if (Tok.getLocation().isMacroID()) {
+      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
+          Tok.getLocation(), PP.getSourceManager(), getLangOpts());
+      if (MacroName == "offsetof")
+        K = Sema::OffsetOfKind::OOK_Macro;
+    }
+    TypeResult Ty;
+    {
+      OffsetOfStateRAIIObject InOffsetof(*this, K);
+      Ty = ParseTypeName();
+      if (Ty.isInvalid()) {
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return ExprError();
+      }
     }
 
     if (ExpectAndConsume(tok::comma)) {

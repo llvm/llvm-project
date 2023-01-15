@@ -188,10 +188,12 @@ Value *simplifyFMAFMul(Value *LHS, Value *RHS, FastMathFlags FMF,
 Value *simplifyMulInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
 
 /// Given operands for an SDiv, fold the result or return null.
-Value *simplifySDivInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
+Value *simplifySDivInst(Value *LHS, Value *RHS, bool IsExact,
+                        const SimplifyQuery &Q);
 
 /// Given operands for a UDiv, fold the result or return null.
-Value *simplifyUDivInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
+Value *simplifyUDivInst(Value *LHS, Value *RHS, bool IsExact,
+                        const SimplifyQuery &Q);
 
 /// Given operands for an FDiv, fold the result or return null.
 Value *

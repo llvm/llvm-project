@@ -63,7 +63,7 @@ createAndPopulateDiagOpts(llvm::ArrayRef<const char *> argv) {
 static int executeFC1Tool(llvm::SmallVectorImpl<const char *> &argV) {
   llvm::StringRef tool = argV[1];
   if (tool == "-fc1")
-    return fc1_main(makeArrayRef(argV).slice(2), argV[0]);
+    return fc1_main(llvm::ArrayRef(argV).slice(2), argV[0]);
 
   // Reject unknown tools.
   // ATM it only supports fc1. Any fc1[*] is rejected.

@@ -277,6 +277,16 @@ bool DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(
           m_dyld_all_image_infos_addr = symbol->GetLoadAddress(&target);
       }
 
+      if (m_dyld_all_image_infos_addr == LLDB_INVALID_ADDRESS) {
+        ConstString g_sect_name("__all_image_info");
+        SectionSP dyld_aii_section_sp =
+            dyld_module_sp->GetSectionList()->FindSectionByName(g_sect_name);
+        if (dyld_aii_section_sp) {
+          Address dyld_aii_addr(dyld_aii_section_sp, 0);
+          m_dyld_all_image_infos_addr = dyld_aii_addr.GetLoadAddress(&target);
+        }
+      }
+
       // Update all image infos
       InitializeFromAllImageInfos();
 
@@ -347,19 +357,19 @@ bool DynamicLoaderMacOSXDYLD::NotifyBreakpointHit(
     // Build up the value array to store the three arguments given above, then
     // get the values from the ABI:
 
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process->GetTarget());
-    if (!clang_ast_context)
+    if (!scratch_ts_sp)
       return false;
 
     ValueList argument_values;
     Value input_value;
 
     CompilerType clang_void_ptr_type =
-        clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
     CompilerType clang_uint32_type =
-        clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
-            lldb::eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint,
+                                                           32);
     input_value.SetValueType(Value::ValueType::Scalar);
     input_value.SetCompilerType(clang_uint32_type);
     //        input_value.SetContext (Value::eContextTypeClangType,

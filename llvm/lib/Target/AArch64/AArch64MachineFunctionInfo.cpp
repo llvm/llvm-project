@@ -66,12 +66,12 @@ static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
   return {true, false};
 }
 
-static bool ShouldSignWithBKey(const Function &F, const MachineFunction &MF) {
+static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   if (!F.hasFnAttribute("sign-return-address-key")) {
     if (const auto *BKey = mdconst::extract_or_null<ConstantInt>(
             F.getParent()->getModuleFlag("sign-return-address-with-bkey")))
       return BKey->getZExtValue();
-    if (MF.getTarget().getTargetTriple().isOSWindows())
+    if (STI.getTargetTriple().isOSWindows())
       return true;
     return false;
   }
@@ -82,15 +82,14 @@ static bool ShouldSignWithBKey(const Function &F, const MachineFunction &MF) {
   return Key.equals_insensitive("b_key");
 }
 
-AArch64FunctionInfo::AArch64FunctionInfo(MachineFunction &MF_) : MF(&MF_) {
+AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
+                                         const AArch64Subtarget *STI) {
   // If we already know that the function doesn't have a redzone, set
   // HasRedZone here.
-  if (MF->getFunction().hasFnAttribute(Attribute::NoRedZone))
+  if (F.hasFnAttribute(Attribute::NoRedZone))
     HasRedZone = false;
-
-  const Function &F = MF->getFunction();
   std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
-  SignWithBKey = ShouldSignWithBKey(F, *MF);
+  SignWithBKey = ShouldSignWithBKey(F, *STI);
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
@@ -112,9 +111,7 @@ MachineFunctionInfo *AArch64FunctionInfo::clone(
     BumpPtrAllocator &Allocator, MachineFunction &DestMF,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
     const {
-  AArch64FunctionInfo *InfoClone = DestMF.cloneInfo<AArch64FunctionInfo>(*this);
-  InfoClone->MF = &DestMF;
-  return InfoClone;
+  return DestMF.cloneInfo<AArch64FunctionInfo>(*this);
 }
 
 bool AArch64FunctionInfo::shouldSignReturnAddress(bool SpillsLR) const {
@@ -125,27 +122,30 @@ bool AArch64FunctionInfo::shouldSignReturnAddress(bool SpillsLR) const {
   return SpillsLR;
 }
 
-bool AArch64FunctionInfo::shouldSignReturnAddress() const {
+bool AArch64FunctionInfo::shouldSignReturnAddress(
+    const MachineFunction &MF) const {
   return shouldSignReturnAddress(llvm::any_of(
-      MF->getFrameInfo().getCalleeSavedInfo(),
+      MF.getFrameInfo().getCalleeSavedInfo(),
       [](const auto &Info) { return Info.getReg() == AArch64::LR; }));
 }
 
-bool AArch64FunctionInfo::needsDwarfUnwindInfo() const {
+bool AArch64FunctionInfo::needsDwarfUnwindInfo(
+    const MachineFunction &MF) const {
   if (!NeedsDwarfUnwindInfo)
-    NeedsDwarfUnwindInfo = MF->needsFrameMoves() &&
-                           !MF->getTarget().getMCAsmInfo()->usesWindowsCFI();
+    NeedsDwarfUnwindInfo = MF.needsFrameMoves() &&
+                           !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 
   return *NeedsDwarfUnwindInfo;
 }
 
-bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo() const {
+bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo(
+    const MachineFunction &MF) const {
   if (!NeedsAsyncDwarfUnwindInfo) {
-    const Function &F = MF->getFunction();
+    const Function &F = MF.getFunction();
     //  The check got "minsize" is because epilogue unwind info is not emitted
     //  (yet) for homogeneous epilogues, outlined functions, and functions
     //  outlined from.
-    NeedsAsyncDwarfUnwindInfo = needsDwarfUnwindInfo() &&
+    NeedsAsyncDwarfUnwindInfo = needsDwarfUnwindInfo(MF) &&
                                 F.getUWTableKind() == UWTableKind::Async &&
                                 !F.hasMinSize();
   }

@@ -11,7 +11,7 @@
 
 ; Update me: Until dead store elimination is improved in DAGCombine, this will contain a redundant store.
 ;
-define void @redundant_store(i32* nocapture %p, <vscale x 4 x i32> %v) {
+define void @redundant_store(ptr nocapture %p, <vscale x 4 x i32> %v) {
 ; CHECK-LABEL: redundant_store:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1
@@ -19,8 +19,7 @@ define void @redundant_store(i32* nocapture %p, <vscale x 4 x i32> %v) {
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  store i32 1, i32* %p, align 4
-  %1 = bitcast i32* %p to <vscale x 4 x i32>*
-  store <vscale x 4 x i32> %v, <vscale x 4 x i32>* %1, align 16
+  store i32 1, ptr %p, align 4
+  store <vscale x 4 x i32> %v, <vscale x 4 x i32>* %p, align 16
   ret void
 }

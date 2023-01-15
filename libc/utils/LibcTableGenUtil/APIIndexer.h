@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -48,7 +49,7 @@ public:
   using NameSet = std::unordered_set<std::string>;
 
   // This indexes all headers, not just a specified one.
-  explicit APIIndexer(llvm::RecordKeeper &Records) : StdHeader(llvm::None) {
+  explicit APIIndexer(llvm::RecordKeeper &Records) : StdHeader(std::nullopt) {
     index(Records);
   }
 

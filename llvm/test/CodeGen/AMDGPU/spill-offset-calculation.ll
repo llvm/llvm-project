@@ -43,18 +43,17 @@ entry:
   ; Occupy 4092 bytes of scratch, so the offset of the spill of %a just fits in
   ; the instruction offset field.
   %alloca = alloca i8, i32 4088, align 4, addrspace(5)
-  %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
 
-  %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
+  %aptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
 
 
-  %a = load volatile i32, i32 addrspace(5)* %aptr
+  %a = load volatile i32, ptr addrspace(5) %aptr
 
   ; Force %a to spill.
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}" ()
 
-  %outptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
-  store volatile i32 %a, i32 addrspace(5)* %outptr
+  %outptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+  store volatile i32 %a, ptr addrspace(5) %outptr
 
   ret void
 }
@@ -97,16 +96,15 @@ entry:
   ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
   ; fit in the instruction, and has to live in the SGPR offset.
   %alloca = alloca i8, i32 4092, align 4, addrspace(5)
-  %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
 
-  %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
+  %aptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
   ; 0x40000 / 64 = 4096 (for wave64)
-  %a = load volatile i32, i32 addrspace(5)* %aptr
+  %a = load volatile i32, ptr addrspace(5) %aptr
   ; Force %a to spill
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}" ()
 
-  %outptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
-  store volatile i32 %a, i32 addrspace(5)* %outptr
+  %outptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+  store volatile i32 %a, ptr addrspace(5) %outptr
 
   ret void
 }
@@ -159,9 +157,8 @@ entry:
   ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
   ; fit in the instruction, and has to live in the SGPR offset.
   %alloca = alloca i8, i32 4096, align 4, addrspace(5)
-  %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
 
-  %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
+  %aptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
 
   %asm.0 = call { i32, i32, i32, i32, i32, i32, i32, i32 } asm sideeffect "", "=s,=s,=s,=s,=s,=s,=s,=s"()
   %asm0.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 0
@@ -174,7 +171,7 @@ entry:
   %asm7.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 7
 
   ; 0x40000 / 64 = 4096 (for wave64)
-  %a = load volatile i32, i32 addrspace(5)* %aptr
+  %a = load volatile i32, ptr addrspace(5) %aptr
   call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0.0, i32 %asm1.0, i32 %asm2.0, i32 %asm3.0, i32 %asm4.0, i32 %asm5.0, i32 %asm6.0, i32 %asm7.0, i32 %a)
 
   %asm = call { i32, i32, i32, i32, i32, i32, i32, i32 } asm sideeffect "", "=s,=s,=s,=s,=s,=s,=s,=s"()
@@ -243,9 +240,8 @@ entry:
   ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
   ; fit in the instruction, and has to live in the SGPR offset.
   %alloca = alloca i8, i32 4096, align 4, addrspace(5)
-  %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
 
-  %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
+  %aptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
 
   %asm.0 = call { i32, i32, i32, i32, i32, i32, i32, i32 } asm sideeffect "", "=s,=s,=s,=s,=s,=s,=s,=s"()
   %asm0.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 0
@@ -258,7 +254,7 @@ entry:
   %asm7.0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm.0, 7
 
   ; 0x40000 / 64 = 4096 (for wave64)
-  %a = load volatile i32, i32 addrspace(5)* %aptr
+  %a = load volatile i32, ptr addrspace(5) %aptr
   call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0.0, i32 %asm1.0, i32 %asm2.0, i32 %asm3.0, i32 %asm4.0, i32 %asm5.0, i32 %asm6.0, i32 %asm7.0, i32 %a)
 
   %asm = call { i32, i32, i32, i32, i32, i32, i32, i32 } asm sideeffect "", "=s,=s,=s,=s,=s,=s,=s,=s"()
@@ -327,17 +323,15 @@ entry:
   ; still fits below offset 4096 (4088 + 8 - 4 = 4092), and can be placed in
   ; the instruction offset field.
   %alloca = alloca i8, i32 4084, align 4, addrspace(5)
-  %bufv1 = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
-  %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
-  %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
-  %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
+  %aptr = getelementptr <2 x i32>, ptr addrspace(5) %alloca, i32 1
+  %a = load volatile <2 x i32>, ptr addrspace(5) %aptr
 
   ; Force %a to spill.
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}" ()
 
   ; Ensure the alloca sticks around.
-  %bptr = getelementptr i32, i32 addrspace(5)* %bufv1, i32 1
-  %b = load volatile i32, i32 addrspace(5)* %bptr
+  %bptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+  %b = load volatile i32, ptr addrspace(5) %bptr
 
   ; Ensure the spill is of the full super-reg.
   call void asm sideeffect "; $0", "r"(<2 x i32> %a)
@@ -396,19 +390,17 @@ entry:
   ; does not fit below offset 4096 (4092 + 8 - 4 = 4096), and has to live
   ; in the SGPR offset.
   %alloca = alloca i8, i32 4088, align 4, addrspace(5)
-  %bufv1 = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
-  %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
 
   ; 0x3ff00 / 64 = 4092 (for wave64)
-  %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
-  %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
+  %aptr = getelementptr <2 x i32>, ptr addrspace(5) %alloca, i32 1
+  %a = load volatile <2 x i32>, ptr addrspace(5) %aptr
 
   ; Force %a to spill.
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}" ()
 
   ; Ensure the alloca sticks around.
-  %bptr = getelementptr i32, i32 addrspace(5)* %bufv1, i32 1
-  %b = load volatile i32, i32 addrspace(5)* %bptr
+  %bptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+  %b = load volatile i32, ptr addrspace(5) %bptr
 
   ; Ensure the spill is of the full super-reg.
   call void asm sideeffect "; $0", "r"(<2 x i32> %a)
@@ -450,18 +442,17 @@ entry:
   ; slot is added. It's hard to hit the actual limit since we're also
   ; going to insert the emergency stack slot for large frames.
   %alloca = alloca i8, i32 4088, align 4, addrspace(5)
-  %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
 
-  %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
+  %aptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
 
 
-  %a = load volatile i32, i32 addrspace(5)* %aptr
+  %a = load volatile i32, ptr addrspace(5) %aptr
 
   ; Force %a to spill.
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}" ()
 
-  %outptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
-  store volatile i32 %a, i32 addrspace(5)* %outptr
+  %outptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+  store volatile i32 %a, ptr addrspace(5) %outptr
 
   ret void
 }
@@ -502,17 +493,16 @@ entry:
   ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
   ; fit in the instruction, and has to live in the SGPR offset.
   %alloca = alloca i8, i32 4096, align 4, addrspace(5)
-  %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
 
-  %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
+  %aptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
   ; 0x40000 / 64 = 4096 (for wave64)
-  %a = load volatile i32, i32 addrspace(5)* %aptr
+  %a = load volatile i32, ptr addrspace(5) %aptr
 
   ; Force %a to spill
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}" ()
 
-  %outptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
-  store volatile i32 %a, i32 addrspace(5)* %outptr
+  %outptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+  store volatile i32 %a, ptr addrspace(5) %outptr
 
   ret void
 }
@@ -566,17 +556,15 @@ entry:
   ; still fits below offset 4096 (4084 + 8 - 4 = 4092), and can be placed in
   ; the instruction offset field.
   %alloca = alloca i8, i32 4084, align 4, addrspace(5)
-  %bufv1 = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
-  %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
-  %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
-  %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
+  %aptr = getelementptr <2 x i32>, ptr addrspace(5) %alloca, i32 1
+  %a = load volatile <2 x i32>, ptr addrspace(5) %aptr
 
   ; Force %a to spill.
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}" ()
 
   ; Ensure the alloca sticks around.
-  %bptr = getelementptr i32, i32 addrspace(5)* %bufv1, i32 1
-  %b = load volatile i32, i32 addrspace(5)* %bptr
+  %bptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+  %b = load volatile i32, ptr addrspace(5) %bptr
 
   ; Ensure the spill is of the full super-reg.
   call void asm sideeffect "; $0", "r"(<2 x i32> %a)
@@ -631,19 +619,17 @@ entry:
   ; does not fit below offset 4096 (408 + 4 + 8 - 4 = 4096), and has to live
   ; in the SGPR offset.
   %alloca = alloca i8, i32 4088, align 4, addrspace(5)
-  %bufv1 = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
-  %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
 
   ; 0x3ff0000 / 64 = 4092 (for wave64)
-  %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
-  %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
+  %aptr = getelementptr <2 x i32>, ptr addrspace(5) %alloca, i32 1
+  %a = load volatile <2 x i32>, ptr addrspace(5) %aptr
 
   ; Force %a to spill.
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}" ()
 
   ; Ensure the alloca sticks around.
-  %bptr = getelementptr i32, i32 addrspace(5)* %bufv1, i32 1
-  %b = load volatile i32, i32 addrspace(5)* %bptr
+  %bptr = getelementptr i32, ptr addrspace(5) %alloca, i32 1
+  %b = load volatile i32, ptr addrspace(5) %bptr
 
   ; Ensure the spill is of the full super-reg.
   call void asm sideeffect "; $0", "r"(<2 x i32> %a)

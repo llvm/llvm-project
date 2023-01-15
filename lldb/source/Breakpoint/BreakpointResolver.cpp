@@ -28,6 +28,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -180,7 +181,7 @@ namespace {
 struct SourceLoc {
   uint32_t line = UINT32_MAX;
   uint16_t column;
-  SourceLoc(uint32_t l, llvm::Optional<uint16_t> c)
+  SourceLoc(uint32_t l, std::optional<uint16_t> c)
       : line(l), column(c ? *c : LLDB_INVALID_COLUMN_NUMBER) {}
   SourceLoc(const SymbolContext &sc)
       : line(sc.line_entry.line),
@@ -201,7 +202,7 @@ bool operator<(const SourceLoc lhs, const SourceLoc rhs) {
 
 void BreakpointResolver::SetSCMatchesByLine(
     SearchFilter &filter, SymbolContextList &sc_list, bool skip_prologue,
-    llvm::StringRef log_ident, uint32_t line, llvm::Optional<uint16_t> column) {
+    llvm::StringRef log_ident, uint32_t line, std::optional<uint16_t> column) {
   llvm::SmallVector<SymbolContext, 16> all_scs;
   for (uint32_t i = 0; i < sc_list.GetSize(); ++i)
     all_scs.push_back(sc_list[i]);

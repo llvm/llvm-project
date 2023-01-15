@@ -33,6 +33,7 @@ add_llvm_component_library(LLVMInstrumentation
   Demangle
   MC
   Support
+  TargetParser
   TransformUtils
   ProfileData
   )

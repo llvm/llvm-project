@@ -36,6 +36,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 
 using namespace Fortran::frontend;
 
@@ -132,7 +133,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (const llvm::opt::Arg *A =
           args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {
     llvm::StringRef ModelName = A->getValue();
-    auto RM = llvm::StringSwitch<llvm::Optional<llvm::Reloc::Model>>(ModelName)
+    auto RM = llvm::StringSwitch<std::optional<llvm::Reloc::Model>>(ModelName)
                   .Case("static", llvm::Reloc::Static)
                   .Case("pic", llvm::Reloc::PIC_)
                   .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC)
@@ -726,6 +727,16 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
 
   if (args.getLastArg(clang::driver::options::OPT_freciprocal_math)) {
     opts.ReciprocalMath = true;
+  }
+
+  if (args.getLastArg(clang::driver::options::OPT_ffast_math)) {
+    opts.NoHonorInfs = true;
+    opts.NoHonorNaNs = true;
+    opts.AssociativeMath = true;
+    opts.ReciprocalMath = true;
+    opts.ApproxFunc = true;
+    opts.NoSignedZeros = true;
+    opts.setFPContractMode(LangOptions::FPM_Fast);
   }
 
   return true;

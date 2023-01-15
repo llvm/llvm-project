@@ -6,7 +6,7 @@ declare i32 @__CxxFrameHandler3(...)
 
 declare void @fn_2()
 
-define void @fn_1(i1 %B) personality i32 (...)* @__CxxFrameHandler3 {
+define void @fn_1(i1 %B) personality ptr @__CxxFrameHandler3 {
 entry:
   br i1 %B, label %__Ea.exit, label %lor.lhs.false.i.i
 
@@ -22,7 +22,7 @@ ehcleanup.i:
   br label %arraydestroy.body.i
 
 arraydestroy.body.i:
-  %gep = getelementptr i8, i8* null, i32 -1
+  %gep = getelementptr i8, ptr null, i32 -1
   br label %dtor.exit.i
 
 dtor.exit.i:

@@ -765,10 +765,8 @@ define <vscale x 16 x double> @vp_round_nxv16f64(<vscale x 16 x double> %va, <vs
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vs8r.v v24, (a2) # Unknown-size Folded Spill
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vl8r.v v24, (a2) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfsgnj.vv v16, v24, v16, v0.t
-; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
 ; CHECK-NEXT:    bltu a0, a1, .LBB32_2
 ; CHECK-NEXT:  # %bb.1:

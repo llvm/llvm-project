@@ -1378,13 +1378,13 @@ void IntegerRelation::constantFoldVarRange(unsigned pos, unsigned num) {
 
 /// Returns a non-negative constant bound on the extent (upper bound - lower
 /// bound) of the specified variable if it is found to be a constant; returns
-/// None if it's not a constant. This methods treats symbolic variables
+/// std::nullopt if it's not a constant. This methods treats symbolic variables
 /// specially, i.e., it looks for constant differences between affine
-/// expressions involving only the symbolic variables. See comments at
-/// function definition for example. 'lb', if provided, is set to the lower
-/// bound associated with the constant difference. Note that 'lb' is purely
-/// symbolic and thus will contain the coefficients of the symbolic variables
-/// and the constant coefficient.
+/// expressions involving only the symbolic variables. See comments at function
+/// definition for example. 'lb', if provided, is set to the lower bound
+/// associated with the constant difference. Note that 'lb' is purely symbolic
+/// and thus will contain the coefficients of the symbolic variables and the
+/// constant coefficient.
 //  Egs: 0 <= i <= 15, return 16.
 //       s0 + 2 <= i <= s0 + 17, returns 16. (s0 has to be a symbol)
 //       s0 + s1 + 16 <= d0 <= s0 + s1 + 31, returns 16.
@@ -2030,7 +2030,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       if (!constLb.has_value() || !constOtherLb.has_value())
         return failure();
       std::fill(minLb.begin(), minLb.end(), 0);
-      minLb.back() = std::min(constLb.value(), constOtherLb.value());
+      minLb.back() = std::min(*constLb, *constOtherLb);
     }
 
     // Do the same for ub's but max of upper bounds. Identify max.
@@ -2046,7 +2046,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       if (!constUb.has_value() || !constOtherUb.has_value())
         return failure();
       std::fill(maxUb.begin(), maxUb.end(), 0);
-      maxUb.back() = std::max(constUb.value(), constOtherUb.value());
+      maxUb.back() = std::max(*constUb, *constOtherUb);
     }
 
     std::fill(newLb.begin(), newLb.end(), 0);

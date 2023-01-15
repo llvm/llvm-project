@@ -86,6 +86,8 @@ mlir::Type translateVariableToFIRType(Fortran::lower::AbstractConverter &,
 /// Translate a REAL of KIND to the mlir::Type.
 mlir::Type convertReal(mlir::MLIRContext *ctxt, int KIND);
 
+bool isDerivedTypeWithLenParameters(const semantics::Symbol &);
+
 template <typename T>
 class TypeBuilder {
 public:

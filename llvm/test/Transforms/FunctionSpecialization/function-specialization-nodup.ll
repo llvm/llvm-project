@@ -1,4 +1,4 @@
-; RUN: opt -passes=function-specialization -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization -S < %s | FileCheck %s
 
 ; Function @foo has function attribute 'noduplicate', so check that we don't
 ; specialize it:

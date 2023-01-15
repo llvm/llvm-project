@@ -16,6 +16,7 @@ static_library("Format") {
     "Format.cpp",
     "FormatToken.cpp",
     "FormatTokenLexer.cpp",
+    "IntegerLiteralSeparatorFixer.cpp",
     "MacroCallReconstructor.cpp",
     "MacroExpander.cpp",
     "NamespaceEndCommentsFixer.cpp",

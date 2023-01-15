@@ -93,16 +93,11 @@ protected:
     propagateIfChanged(lhs, lhs->join(rhs));
   }
 
-private:
   /// Visit an operation. If this is a call operation or region control-flow
   /// operation, then the state after the execution of the operation is set by
   /// control-flow or the callgraph. Otherwise, this function invokes the
   /// operation transfer function.
-  void visitOperation(Operation *op);
-
-  /// Visit a block. The state at the start of the block is propagated from
-  /// control-flow predecessors or callsites
-  void visitBlock(Block *block);
+  virtual void processOperation(Operation *op);
 
   /// Visit a program point within a region branch operation with predecessors
   /// in it. This can either be an entry block of one of the regions of the
@@ -110,6 +105,11 @@ private:
   void visitRegionBranchOperation(ProgramPoint point,
                                   RegionBranchOpInterface branch,
                                   AbstractDenseLattice *after);
+
+private:
+  /// Visit a block. The state at the start of the block is propagated from
+  /// control-flow predecessors or callsites
+  void visitBlock(Block *block);
 };
 
 //===----------------------------------------------------------------------===//
@@ -148,7 +148,6 @@ protected:
     setToEntryState(static_cast<LatticeT *>(lattice));
   }
 
-private:
   /// Type-erased wrappers that convert the abstract dense lattice to a derived
   /// lattice and invoke the virtual hooks operating on the derived lattice.
   void visitOperationImpl(Operation *op, const AbstractDenseLattice &before,

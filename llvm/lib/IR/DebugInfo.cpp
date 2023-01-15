@@ -1800,7 +1800,7 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
     auto R = DIExpression::createFragmentExpression(Expr, Info.OffsetInBits,
                                                     Info.SizeInBits);
     assert(R.has_value() && "failed to create fragment expression");
-    Expr = R.value();
+    Expr = *R;
   }
   DIExpression *AddrExpr =
       DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
@@ -1830,7 +1830,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
   for (auto BBI = Start; BBI != End; ++BBI) {
     for (Instruction &I : *BBI) {
 
-      std::optional<AssignmentInfo> Info = std::nullopt;
+      std::optional<AssignmentInfo> Info;
       Value *ValueComponent = nullptr;
       Value *DestComponent = nullptr;
       if (auto *AI = dyn_cast<AllocaInst>(&I)) {

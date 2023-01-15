@@ -113,6 +113,7 @@ LLVMContextImpl::~LLVMContextImpl() {
 
   CAZConstants.clear();
   CPNConstants.clear();
+  CTNConstants.clear();
   UVConstants.clear();
   PVConstants.clear();
   IntConstants.clear();
@@ -259,7 +260,7 @@ bool LLVMContextImpl::getOpaquePointers() {
 }
 
 void LLVMContextImpl::setOpaquePointers(bool OP) {
-  assert((!OpaquePointers || OpaquePointers.value() == OP) &&
+  assert((!OpaquePointers || *OpaquePointers == OP) &&
          "Cannot change opaque pointers mode once set");
   OpaquePointers = OP;
 }

@@ -2,7 +2,7 @@
 ; RUN:   -relocation-model=pic -code-model=small %s > /dev/null
 ; XFAIL: target={{(mips|mipsel)-.*}}, target={{(aarch64|arm).*}}, target={{(i686|i386).*}}
 ; XFAIL: target={{.*-windows-(gnu|msvc)}}
-; UNSUPPORTED: target=powerpc64-unknown-linux-gnu
+; UNSUPPORTED: target=target=powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 
 @count = global i32 1, align 4

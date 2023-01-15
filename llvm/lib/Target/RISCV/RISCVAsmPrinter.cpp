@@ -15,6 +15,7 @@
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "RISCV.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVTargetMachine.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -81,6 +82,8 @@ public:
   void emitStartOfAsmFile(Module &M) override;
   void emitEndOfAsmFile(Module &M) override;
 
+  void emitFunctionEntryLabel() override;
+
 private:
   void emitAttributes();
 };
@@ -108,13 +111,14 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;
 
-  MCInst TmpInst;
 
-  if (MI->getOpcode() == RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES) {
+  switch (MI->getOpcode()) {
+  case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
   }
 
+  MCInst TmpInst;
   if (!lowerRISCVMachineInstrToMCInst(MI, TmpInst, *this))
     EmitToStreamer(*OutStreamer, TmpInst);
 }
@@ -225,6 +229,16 @@ void RISCVAsmPrinter::emitAttributes() {
   RTS.emitTargetAttributes(*MCSTI);
 }
 
+void RISCVAsmPrinter::emitFunctionEntryLabel() {
+  const auto *RMFI = MF->getInfo<RISCVMachineFunctionInfo>();
+  if (RMFI->isVectorCall()) {
+    auto &RTS =
+        static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    RTS.emitDirectiveVariantCC(*CurrentFnSym);
+  }
+  return AsmPrinter::emitFunctionEntryLabel();
+}
+
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVAsmPrinter() {
   RegisterAsmPrinter<RISCVAsmPrinter> X(getTheRISCV32Target());
@@ -259,14 +273,20 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
   MCSymbol *HwasanTagMismatchV2Sym =
       OutContext.getOrCreateSymbol("__hwasan_tag_mismatch_v2");
+  // Annotate symbol as one having incompatible calling convention, so
+  // run-time linkers can instead eagerly bind this function.
+  auto &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RTS.emitDirectiveVariantCC(*HwasanTagMismatchV2Sym);
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
       MCSymbolRefExpr::create(HwasanTagMismatchV2Sym, OutContext);
+  auto Expr = RISCVMCExpr::create(HwasanTagMismatchV2Ref,
+                                  RISCVMCExpr::VK_RISCV_CALL, OutContext);
 
   for (auto &P : HwasanMemaccessSymbols) {
     unsigned Reg = std::get<0>(P.first);
     uint32_t AccessInfo = std::get<1>(P.first);
-    const MCSymbolRefExpr *HwasanTagMismatchRef = HwasanTagMismatchV2Ref;
     MCSymbol *Sym = P.second;
 
     unsigned Size =
@@ -443,39 +463,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
             .addImm(AccessInfo & HWASanAccessInfo::RuntimeMask),
         *STI);
 
-    // Intentionally load the GOT entry and branch to it, rather than possibly
-    // late binding the function, which may clobber the registers before we have
-    // a chance to save them.
-    RISCVMCExpr::VariantKind VKHi;
-    unsigned SecondOpcode;
-    if (OutContext.getObjectFileInfo()->isPositionIndependent()) {
-      SecondOpcode = RISCV::LD;
-      VKHi = RISCVMCExpr::VK_RISCV_GOT_HI;
-    } else {
-      SecondOpcode = RISCV::ADDI;
-      VKHi = RISCVMCExpr::VK_RISCV_PCREL_HI;
-    }
-    auto ExprHi = RISCVMCExpr::create(HwasanTagMismatchRef, VKHi, OutContext);
-
-    MCSymbol *TmpLabel =
-        OutContext.createTempSymbol("pcrel_hi", /* AlwaysAddSuffix */ true);
-    OutStreamer->emitLabel(TmpLabel);
-    const MCExpr *ExprLo =
-        RISCVMCExpr::create(MCSymbolRefExpr::create(TmpLabel, OutContext),
-                            RISCVMCExpr::VK_RISCV_PCREL_LO, OutContext);
-
-    OutStreamer->emitInstruction(
-        MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X6).addExpr(ExprHi), *STI);
-    OutStreamer->emitInstruction(MCInstBuilder(SecondOpcode)
-                                     .addReg(RISCV::X6)
-                                     .addReg(RISCV::X6)
-                                     .addExpr(ExprLo),
-                                 *STI);
-
-    OutStreamer->emitInstruction(MCInstBuilder(RISCV::JALR)
-                                     .addReg(RISCV::X0)
-                                     .addReg(RISCV::X6)
-                                     .addImm(0),
+    OutStreamer->emitInstruction(MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr),
                                  *STI);
   }
 }

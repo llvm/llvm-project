@@ -98,9 +98,9 @@ FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
   }
   if (!candidateLoop)
     return failure();
-  llvm::Optional<Value> inductionVar = candidateLoop.getSingleInductionVar();
-  llvm::Optional<OpFoldResult> lowerBound = candidateLoop.getSingleLowerBound();
-  llvm::Optional<OpFoldResult> singleStep = candidateLoop.getSingleStep();
+  std::optional<Value> inductionVar = candidateLoop.getSingleInductionVar();
+  std::optional<OpFoldResult> lowerBound = candidateLoop.getSingleLowerBound();
+  std::optional<OpFoldResult> singleStep = candidateLoop.getSingleStep();
   if (!inductionVar || !lowerBound || !singleStep)
     return failure();
 
@@ -125,13 +125,12 @@ FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
   AffineExpr induc = getAffineDimExpr(0, allocOp.getContext());
   unsigned dimCount = 1;
   auto getAffineExpr = [&](OpFoldResult e) -> AffineExpr {
-    if (Optional<int64_t> constValue = getConstantIntValue(e)) {
+    if (std::optional<int64_t> constValue = getConstantIntValue(e)) {
       return getAffineConstantExpr(*constValue, allocOp.getContext());
     }
     auto value = getOrCreateValue(e, builder, candidateLoop->getLoc());
     operands.push_back(value);
     return getAffineDimExpr(dimCount++, allocOp.getContext());
-   
   };
   auto init = getAffineExpr(*lowerBound);
   auto step = getAffineExpr(*singleStep);

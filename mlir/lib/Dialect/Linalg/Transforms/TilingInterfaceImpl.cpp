@@ -47,7 +47,7 @@ static SmallVector<Value> getIndicesForAccess(OpBuilder &b, Location loc,
 static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
                                    ValueRange ivs, ValueRange argValues) {
   Block *body = linalgOp.getBlock();
-  BlockAndValueMapping map;
+  IRMapping map;
   map.map(body->getArguments(), argValues);
   for (auto &op : body->without_terminator()) {
     if (auto indexOp = dyn_cast<IndexOp>(&op)) {
@@ -258,6 +258,8 @@ struct LinalgOpPartialReductionInterface
     // Insert the new parallel dimension based on the index of the reduction
     // loop. This could be controlled by user for more flexibility.
     int64_t insertSplitDimension = reductionDims[0];
+    assert(sizes.size() >= static_cast<size_t>(insertSplitDimension) &&
+           "reduction dimension must be tiled");
 
     SmallVector<Operation *, 4> combinerOps;
     if (!matchReduction(linalgOp.getRegionOutputArgs(), 0, combinerOps) ||
@@ -278,8 +280,7 @@ struct LinalgOpPartialReductionInterface
     SmallVector<Value> dynamicDims;
     for (int64_t idx : llvm::seq<int64_t>(0, oldShape.size() + 1)) {
       if (idx == insertSplitDimension) {
-        dispatchIndexOpFoldResults(sizes[idx], dynamicDims, newOutputShape,
-                                   ShapedType::kDynamic);
+        dispatchIndexOpFoldResults(sizes[idx], dynamicDims, newOutputShape);
         continue;
       }
       int64_t oldIdx = idx < insertSplitDimension ? idx : idx - 1;
@@ -344,7 +345,7 @@ struct LinalgOpPartialReductionInterface
     auto genericOp =
         b.create<GenericOp>(loc, TypeRange({out.getType()}), tiledOperands,
                             ValueRange({out}), newMaps, newIteratorTypes);
-    BlockAndValueMapping mapping;
+    IRMapping mapping;
     op->getRegion(0).cloneInto(&genericOp.getRegion(),
                                genericOp.getRegion().begin(), mapping);
     return genericOp.getOperation();

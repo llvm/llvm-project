@@ -6,17 +6,17 @@
 ; The %p argument should be removed, and the use of it in dbg.value should be
 ; changed to undef.
 
-%fun_t = type void (i16*)*
+%fun_t = type ptr
 define void @foo() {
   %a = alloca i16
-  call void @bar(i16* %a)
+  call void @bar(ptr %a)
   ret void
 }
 
-define internal void @bar(i16* %p) {
+define internal void @bar(ptr %p) {
 ; CHECK-LABEL: define {{.*}}void @bar()
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16* undef, metadata !3, metadata !DIExpression()), !dbg !5
-  call void @llvm.dbg.value(metadata i16* %p, metadata !3, metadata !DIExpression()), !dbg !5
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata !3, metadata !DIExpression()), !dbg !5
+  call void @llvm.dbg.value(metadata ptr %p, metadata !3, metadata !DIExpression()), !dbg !5
   ret void
 }
 

@@ -21,8 +21,21 @@
 #include <__fwd/pair.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/readable_traits.h>
+#include <__type_traits/add_const.h>
+#include <__type_traits/common_reference.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/disjunction.h>
+#include <__type_traits/is_convertible.h>
+#include <__type_traits/is_object.h>
+#include <__type_traits/is_primary_template.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/is_valid_expansion.h>
+#include <__type_traits/remove_const.h>
+#include <__type_traits/remove_cv.h>
+#include <__type_traits/remove_cvref.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <cstddef>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -47,7 +60,7 @@ concept __dereferenceable = requires(_Tp& __t) {
 
 // [iterator.traits]
 template<__dereferenceable _Tp>
-using iter_reference_t = decltype(*declval<_Tp&>());
+using iter_reference_t = decltype(*std::declval<_Tp&>());
 
 #endif // _LIBCPP_STD_VER > 17
 
@@ -260,7 +273,7 @@ struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> { using type = typ
 template<class _Ip>
   requires requires(_Ip& __i) { __i.operator->(); } && (!__has_member_pointer<_Ip>)
 struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> {
-  using type = decltype(declval<_Ip&>().operator->());
+  using type = decltype(std::declval<_Ip&>().operator->());
 };
 
 // Otherwise, `reference` names `iter-reference-t<I>`.

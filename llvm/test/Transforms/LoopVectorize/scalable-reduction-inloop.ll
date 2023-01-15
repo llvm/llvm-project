@@ -3,16 +3,16 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-define i8 @reduction_add_trunc(i8* noalias nocapture %A) {
+define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-LABEL: @reduction_add_trunc(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i32> [ insertelement (<vscale x 8 x i32> zeroinitializer, i32 255, i32 0), %vector.ph ], [ [[TMP34:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, %vector.ph ], [ [[TMP36:%.*]], %vector.body ]
-; CHECK:         [[TMP14:%.*]] = and <vscale x 8 x i32> [[VEC_PHI]], shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 255, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP15:%.*]] = and <vscale x 8 x i32> [[VEC_PHI1]], shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 255, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK:         [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, <vscale x 8 x i8>*
-; CHECK:         [[WIDE_LOAD2:%.*]] = load <vscale x 8 x i8>, <vscale x 8 x i8>*
+; CHECK:         [[TMP14:%.*]] = and <vscale x 8 x i32> [[VEC_PHI]], shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 255, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP15:%.*]] = and <vscale x 8 x i32> [[VEC_PHI1]], shufflevector (<vscale x 8 x i32> insertelement (<vscale x 8 x i32> poison, i32 255, i64 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK:         [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr
+; CHECK:         [[WIDE_LOAD2:%.*]] = load <vscale x 8 x i8>, ptr
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[TMP27:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD2]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    [[TMP28:%.*]] = add <vscale x 8 x i32> [[TMP14]], [[TMP26]]
@@ -39,8 +39,8 @@ loop:                                           ; preds = %entry, %loop
   %indvars.iv = phi i32 [ %indvars.iv.next, %loop ], [ 0, %entry ]
   %sum.02p = phi i32 [ %l9, %loop ], [ 255, %entry ]
   %sum.02 = and i32 %sum.02p, 255
-  %l2 = getelementptr inbounds i8, i8* %A, i32 %indvars.iv
-  %l3 = load i8, i8* %l2, align 4
+  %l2 = getelementptr inbounds i8, ptr %A, i32 %indvars.iv
+  %l3 = load i8, ptr %l2, align 4
   %l3e = zext i8 %l3 to i32
   %l9 = add i32 %sum.02, %l3e
   %indvars.iv.next = add i32 %indvars.iv, 1

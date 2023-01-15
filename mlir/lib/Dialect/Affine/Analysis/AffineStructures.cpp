@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define DEBUG_TYPE "affine-structures"
 
@@ -149,15 +150,20 @@ FlatAffineValueConstraints::clone() const {
 }
 
 // Construct from an IntegerSet.
-FlatAffineValueConstraints::FlatAffineValueConstraints(IntegerSet set)
+FlatAffineValueConstraints::FlatAffineValueConstraints(IntegerSet set,
+                                                       ValueRange operands)
     : IntegerPolyhedron(set.getNumInequalities(), set.getNumEqualities(),
                         set.getNumDims() + set.getNumSymbols() + 1,
                         PresburgerSpace::getSetSpace(set.getNumDims(),
                                                      set.getNumSymbols(),
                                                      /*numLocals=*/0)) {
-
-  // Resize values.
-  values.resize(getNumDimAndSymbolVars(), std::nullopt);
+  // Populate values.
+  if (operands.empty()) {
+    values.resize(getNumDimAndSymbolVars(), std::nullopt);
+  } else {
+    assert(set.getNumInputs() == operands.size() && "operand count mismatch");
+    values.assign(operands.begin(), operands.end());
+  }
 
   // Flatten expressions and add them to the constraint system.
   std::vector<SmallVector<int64_t, 8>> flatExprs;
@@ -570,7 +576,7 @@ void FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
     return;
 
   // Caller is expected to fully compose map/operands if necessary.
-  assert((isTopLevelValue(val) || isForInductionVar(val)) &&
+  assert((isTopLevelValue(val) || isAffineForInductionVar(val)) &&
          "non-terminal symbol / loop IV expected");
   // Outer loop IVs could be used in forOp's bounds.
   if (auto loop = getForInductionVarOwner(val)) {
@@ -717,12 +723,14 @@ FlatAffineValueConstraints::addDomainFromSliceMaps(ArrayRef<AffineMap> lbMaps,
 }
 
 void FlatAffineValueConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
-  // Create the base constraints from the integer set attached to ifOp.
-  FlatAffineValueConstraints cst(ifOp.getIntegerSet());
+  IntegerSet set = ifOp.getIntegerSet();
+  // Canonicalize set and operands to ensure unique values for
+  // FlatAffineValueConstraints below and for early simplification.
+  SmallVector<Value> operands(ifOp.getOperands());
+  canonicalizeSetAndOperands(&set, &operands);
 
-  // Bind vars in the constraints to ifOp operands.
-  SmallVector<Value, 4> operands = ifOp.getOperands();
-  cst.setValues(0, cst.getNumDimAndSymbolVars(), operands);
+  // Create the base constraints from the integer set attached to ifOp.
+  FlatAffineValueConstraints cst(set, operands);
 
   // Merge the constraints from ifOp to the current domain. We need first merge
   // and align the IDs from both constraints, and then append the constraints
@@ -1035,16 +1043,15 @@ void FlatAffineValueConstraints::getSliceBounds(
       auto ubConst = getConstantBound64(BoundType::UB, pos);
       if (lbConst.has_value() && ubConst.has_value()) {
         // Detect equality to a constant.
-        if (lbConst.value() == ubConst.value()) {
-          memo[pos] = getAffineConstantExpr(lbConst.value(), context);
+        if (*lbConst == *ubConst) {
+          memo[pos] = getAffineConstantExpr(*lbConst, context);
           changed = true;
           continue;
         }
 
         // Detect an variable as modulo of another variable w.r.t a
         // constant.
-        if (detectAsMod(*this, pos, lbConst.value(), ubConst.value(), memo,
-                        context)) {
+        if (detectAsMod(*this, pos, *lbConst, *ubConst, memo, context)) {
           changed = true;
           continue;
         }
@@ -1105,7 +1112,7 @@ void FlatAffineValueConstraints::getSliceBounds(
   // Set the lower and upper bound maps for all the variables that were
   // computed as affine expressions of the rest as the "detected expr" and
   // "detected expr + 1" respectively; set the undetected ones to null.
-  Optional<FlatAffineValueConstraints> tmpClone;
+  std::optional<FlatAffineValueConstraints> tmpClone;
   for (unsigned pos = 0; pos < num; pos++) {
     unsigned numMapDims = getNumDimVars() - num;
     unsigned numMapSymbols = getNumSymbolVars();
@@ -1145,9 +1152,8 @@ void FlatAffineValueConstraints::getSliceBounds(
                    << "WARNING: Potentially over-approximating slice lb\n");
         auto lbConst = getConstantBound64(BoundType::LB, pos + offset);
         if (lbConst.has_value()) {
-          lbMap =
-              AffineMap::get(numMapDims, numMapSymbols,
-                             getAffineConstantExpr(lbConst.value(), context));
+          lbMap = AffineMap::get(numMapDims, numMapSymbols,
+                                 getAffineConstantExpr(*lbConst, context));
         }
       }
       if (!ubMap || ubMap.getNumResults() > 1) {
@@ -1157,7 +1163,7 @@ void FlatAffineValueConstraints::getSliceBounds(
         if (ubConst.has_value()) {
           ubMap = AffineMap::get(
               numMapDims, numMapSymbols,
-              getAffineConstantExpr(ubConst.value() + ubAdjustment, context));
+              getAffineConstantExpr(*ubConst + ubAdjustment, context));
         }
       }
     }
@@ -1697,12 +1703,12 @@ void FlatAffineRelation::compose(const FlatAffineRelation &other) {
   // Add and match domain of `rel` to domain of `this`.
   for (unsigned i = 0, e = rel.getNumDomainDims(); i < e; ++i)
     if (relMaybeValues[i].has_value())
-      setValue(i, relMaybeValues[i].value());
+      setValue(i, *relMaybeValues[i]);
   // Add and match range of `this` to range of `rel`.
   for (unsigned i = 0, e = getNumRangeDims(); i < e; ++i) {
     unsigned rangeIdx = rel.getNumDomainDims() + i;
     if (thisMaybeValues[rangeIdx].has_value())
-      rel.setValue(rangeIdx, thisMaybeValues[rangeIdx].value());
+      rel.setValue(rangeIdx, *thisMaybeValues[rangeIdx]);
   }
 
   // Append `this` to `rel` and simplify constraints.

@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 
@@ -85,7 +86,7 @@ KnownBits ConstantRange::toKnownBits() const {
   APInt Min = getUnsignedMin();
   APInt Max = getUnsignedMax();
   KnownBits Known = KnownBits::makeConstant(Min);
-  if (Optional<unsigned> DifferentBit =
+  if (std::optional<unsigned> DifferentBit =
           APIntOps::GetMostSignificantDifferentBit(Min, Max)) {
     Known.Zero.clearLowBits(*DifferentBit + 1);
     Known.One.clearLowBits(*DifferentBit + 1);
@@ -1655,15 +1656,15 @@ ConstantRange ConstantRange::abs(bool IntMinIsPoison) const {
 
   // All non-negative.
   if (SMin.isNonNegative())
-    return *this;
+    return ConstantRange(SMin, SMax + 1);
 
   // All negative.
   if (SMax.isNegative())
     return ConstantRange(-SMax, -SMin + 1);
 
   // Range crosses zero.
-  return ConstantRange(APInt::getZero(getBitWidth()),
-                       APIntOps::umax(-SMin, SMax) + 1);
+  return ConstantRange::getNonEmpty(APInt::getZero(getBitWidth()),
+                                    APIntOps::umax(-SMin, SMax) + 1);
 }
 
 ConstantRange::OverflowResult ConstantRange::unsignedAddMayOverflow(

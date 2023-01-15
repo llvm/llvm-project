@@ -13,6 +13,7 @@
 #include "lldb/Utility/Status.h"
 #include "llvm/Support/JSON.h"
 #include <map>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -89,8 +90,8 @@ public:
   ///
   /// \return
   ///     The remapped filespec that may or may not exist on disk.
-  llvm::Optional<FileSpec> RemapPath(llvm::StringRef path,
-                                     bool only_if_exists = false) const;
+  std::optional<FileSpec> RemapPath(llvm::StringRef path,
+                                    bool only_if_exists = false) const;
   bool RemapPath(const char *, std::string &) const = delete;
 
   /// Perform reverse source path remap for input \a file.
@@ -107,8 +108,8 @@ public:
   ///     std::nullopt if no remapping happens, otherwise, the matching source
   ///     map entry's ""to_new_pathto"" part (which is the prefix of \a file) is
   ///     returned.
-  llvm::Optional<llvm::StringRef> ReverseRemapPath(const FileSpec &file,
-                                                   FileSpec &fixed) const;
+  std::optional<llvm::StringRef> ReverseRemapPath(const FileSpec &file,
+                                                  FileSpec &fixed) const;
 
   /// Finds a source file given a file spec using the path remappings.
   ///
@@ -123,7 +124,7 @@ public:
   ///
   /// \return
   ///     The newly remapped filespec that is guaranteed to exist.
-  llvm::Optional<FileSpec> FindFile(const FileSpec &orig_spec) const;
+  std::optional<FileSpec> FindFile(const FileSpec &orig_spec) const;
 
   uint32_t FindIndexForPath(llvm::StringRef path) const;
 

@@ -16,9 +16,9 @@ entry:
 ; CHECK-LABEL: name: test
 ; CHECK: body:
 ; CHECK-NEXT: bb.1.entry
-; CHECK-NOT: EH_LABEL
+; CHECK: EH_LABEL
 ; CHECK: INLINEASM
-; CHECK-NOT: EH_LABEL
+; CHECK: EH_LABEL
 
   invoke void asm sideeffect "bl trap", ""()
           to label %invoke.cont unwind label %lpad

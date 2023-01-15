@@ -784,6 +784,7 @@ template<typename T> class TestFriendDecl {
 // CHECK-NEXT:   FriendDecl
 // CHECK-NEXT:     FunctionDecl{{.*}} foo
 // CHECK-NEXT:   FriendDecl{{.*}} 'class A':'A'
+// CHECK-NEXT:     CXXRecordDecl{{.*}} class A
 // CHECK-NEXT:   FriendDecl{{.*}} 'T'
 
 namespace TestFileScopeAsmDecl {

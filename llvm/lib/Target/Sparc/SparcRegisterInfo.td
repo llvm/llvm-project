@@ -126,7 +126,9 @@ def OTHERWIN : SparcCtrlReg<13, "OTHERWIN">;
 def WSTATE : SparcCtrlReg<14, "WSTATE">;
 
 // Integer registers
-def G0 : Ri< 0, "G0">, DwarfRegNum<[0]>;
+def G0 : Ri< 0, "G0">, DwarfRegNum<[0]> {
+  let isConstant = true;
+}
 def G1 : Ri< 1, "G1">, DwarfRegNum<[1]>;
 def G2 : Ri< 2, "G2">, DwarfRegNum<[2]>;
 def G3 : Ri< 3, "G3">, DwarfRegNum<[3]>;
@@ -378,3 +380,4 @@ let isAllocatable = 0 in {
 def PRRegs : RegisterClass<"SP", [i64], 64,
     (add TPC, TNPC, TSTATE, TT, TICK, TBA, PSTATE, TL, PIL, CWP,
          CANSAVE, CANRESTORE, CLEANWIN, OTHERWIN, WSTATE)>;
+

@@ -16,7 +16,6 @@
 #include "DwarfExpression.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
@@ -219,7 +218,7 @@ void DwarfUnit::addFlag(DIE &Die, dwarf::Attribute Attribute) {
 }
 
 void DwarfUnit::addUInt(DIEValueList &Die, dwarf::Attribute Attribute,
-                        Optional<dwarf::Form> Form, uint64_t Integer) {
+                        std::optional<dwarf::Form> Form, uint64_t Integer) {
   if (!Form)
     Form = DIEInteger::BestForm(false, Integer);
   assert(Form != dwarf::DW_FORM_implicit_const &&
@@ -233,13 +232,13 @@ void DwarfUnit::addUInt(DIEValueList &Block, dwarf::Form Form,
 }
 
 void DwarfUnit::addSInt(DIEValueList &Die, dwarf::Attribute Attribute,
-                        Optional<dwarf::Form> Form, int64_t Integer) {
+                        std::optional<dwarf::Form> Form, int64_t Integer) {
   if (!Form)
     Form = DIEInteger::BestForm(true, Integer);
   addAttribute(Die, Attribute, *Form, DIEInteger(Integer));
 }
 
-void DwarfUnit::addSInt(DIELoc &Die, Optional<dwarf::Form> Form,
+void DwarfUnit::addSInt(DIELoc &Die, std::optional<dwarf::Form> Form,
                         int64_t Integer) {
   addSInt(Die, (dwarf::Attribute)0, Form, Integer);
 }
@@ -835,10 +834,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
 
   // Add prototype flag if we're dealing with a C language and the function has
   // been prototyped.
-  uint16_t Language = getLanguage();
-  if (isPrototyped &&
-      (Language == dwarf::DW_LANG_C89 || Language == dwarf::DW_LANG_C99 ||
-       Language == dwarf::DW_LANG_ObjC))
+  if (isPrototyped && dwarf::isC((dwarf::SourceLanguage)getLanguage()))
     addFlag(Buffer, dwarf::DW_AT_prototyped);
 
   // Add a DW_AT_calling_convention if this has an explicit convention.
@@ -1060,7 +1056,7 @@ void DwarfUnit::constructTemplateTypeParameterDIE(
     addType(ParamDIE, TP->getType());
   if (!TP->getName().empty())
     addString(ParamDIE, dwarf::DW_AT_name, TP->getName());
-  if (TP->isDefault() && (DD->getDwarfVersion() >= 5))
+  if (TP->isDefault() && isCompatibleWithVersion(5))
     addFlag(ParamDIE, dwarf::DW_AT_default_value);
 }
 
@@ -1074,7 +1070,7 @@ void DwarfUnit::constructTemplateValueParameterDIE(
     addType(ParamDIE, VP->getType());
   if (!VP->getName().empty())
     addString(ParamDIE, dwarf::DW_AT_name, VP->getName());
-  if (VP->isDefault() && (DD->getDwarfVersion() >= 5))
+  if (VP->isDefault() && isCompatibleWithVersion(5))
     addFlag(ParamDIE, dwarf::DW_AT_default_value);
   if (Metadata *Val = VP->getValue()) {
     if (ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Val))
@@ -1264,10 +1260,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   // Add the prototype if we have a prototype and we have a C like
   // language.
-  uint16_t Language = getLanguage();
-  if (SP->isPrototyped() &&
-      (Language == dwarf::DW_LANG_C89 || Language == dwarf::DW_LANG_C99 ||
-       Language == dwarf::DW_LANG_ObjC))
+  if (SP->isPrototyped() && dwarf::isC((dwarf::SourceLanguage)getLanguage()))
     addFlag(SPDie, dwarf::DW_AT_prototyped);
 
   if (SP->isObjCDirect())
@@ -1630,7 +1623,7 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     uint32_t AlignInBytes = DT->getAlignInBytes();
     uint64_t OffsetInBytes;
 
-    bool IsBitfield = FieldSize && Size != FieldSize;
+    bool IsBitfield = DT->isBitField();
     if (IsBitfield) {
       // Handle bitfield, assume bytes are 8 bits.
       if (DD->useDWARF2Bitfields())
@@ -1851,4 +1844,8 @@ void DwarfUnit::addRnglistsBase() {
 
 void DwarfTypeUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) {
   DD->getAddressPool().resetUsedFlag(true);
+}
+
+bool DwarfUnit::isCompatibleWithVersion(uint16_t Version) const {
+  return !Asm->TM.Options.DebugStrictDwarf || DD->getDwarfVersion() >= Version;
 }

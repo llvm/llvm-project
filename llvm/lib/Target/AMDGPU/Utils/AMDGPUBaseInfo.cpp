@@ -98,7 +98,7 @@ namespace llvm {
 
 namespace AMDGPU {
 
-Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
+std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
   if (STI && STI->getTargetTriple().getOS() != Triple::AMDHSA)
     return std::nullopt;
 
@@ -118,25 +118,25 @@ Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
 }
 
 bool isHsaAbiVersion2(const MCSubtargetInfo *STI) {
-  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
     return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V2;
   return false;
 }
 
 bool isHsaAbiVersion3(const MCSubtargetInfo *STI) {
-  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
     return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
   return false;
 }
 
 bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
-  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
     return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   return false;
 }
 
 bool isHsaAbiVersion5(const MCSubtargetInfo *STI) {
-  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
     return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V5;
   return false;
 }
@@ -178,6 +178,30 @@ unsigned getHostcallImplicitArgPosition() {
   default:
     llvm_unreachable("Unexpected code object version");
     return 0;
+  }
+}
+
+unsigned getDefaultQueueImplicitArgPosition() {
+  switch (AmdhsaCodeObjectVersion) {
+  case 2:
+  case 3:
+  case 4:
+    return 32;
+  case 5:
+  default:
+    return AMDGPU::ImplicitArg::DEFAULT_QUEUE_OFFSET;
+  }
+}
+
+unsigned getCompletionActionImplicitArgPosition() {
+  switch (AmdhsaCodeObjectVersion) {
+  case 2:
+  case 3:
+  case 4:
+    return 40;
+  case 5:
+  default:
+    return AMDGPU::ImplicitArg::COMPLETION_ACTION_OFFSET;
   }
 }
 
@@ -536,7 +560,7 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
   return 0;
 }
 
-Optional<unsigned> InstInfo::getInvalidCompOperandIndex(
+std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
@@ -711,7 +735,7 @@ std::string AMDGPUTargetID::toString() const {
                     .str();
 
   std::string Features;
-  if (Optional<uint8_t> HsaAbiVersion = getHsaAbiVersion(&STI)) {
+  if (std::optional<uint8_t> HsaAbiVersion = getHsaAbiVersion(&STI)) {
     switch (*HsaAbiVersion) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
       // Code object V2 only supported specific processors and had fixed
@@ -972,7 +996,7 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs) {
 }
 
 unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
-                             Optional<bool> EnableWavefrontSize32) {
+                             std::optional<bool> EnableWavefrontSize32) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
@@ -990,7 +1014,7 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
 }
 
 unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
-                                Optional<bool> EnableWavefrontSize32) {
+                                std::optional<bool> EnableWavefrontSize32) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
@@ -1062,7 +1086,7 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
 }
 
 unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumVGPRs,
-                          Optional<bool> EnableWavefrontSize32) {
+                          std::optional<bool> EnableWavefrontSize32) {
   NumVGPRs = alignTo(std::max(1u, NumVGPRs),
                      getVGPREncodingGranule(STI, EnableWavefrontSize32));
   // VGPRBlocks is actual number of VGPR blocks minus 1.
@@ -1157,21 +1181,6 @@ bool isReadOnlySegment(const GlobalValue *GV) {
 
 bool shouldEmitConstantsToTextSection(const Triple &TT) {
   return TT.getArch() == Triple::r600;
-}
-
-int getIntegerAttribute(const Function &F, StringRef Name, int Default) {
-  Attribute A = F.getFnAttribute(Name);
-  int Result = Default;
-
-  if (A.isStringAttribute()) {
-    StringRef Str = A.getValueAsString();
-    if (Str.getAsInteger(0, Result)) {
-      LLVMContext &Ctx = F.getContext();
-      Ctx.emitError("can't parse integer attribute " + Name);
-    }
-  }
-
-  return Result;
 }
 
 std::pair<int, int> getIntegerPairAttribute(const Function &F,
@@ -1814,18 +1823,18 @@ uint64_t encodeMsg(uint64_t MsgId,
 //===----------------------------------------------------------------------===//
 
 unsigned getInitialPSInputAddr(const Function &F) {
-  return getIntegerAttribute(F, "InitialPSInputAddr", 0);
+  return F.getFnAttributeAsParsedInteger("InitialPSInputAddr", 0);
 }
 
 bool getHasColorExport(const Function &F) {
   // As a safe default always respond as if PS has color exports.
-  return getIntegerAttribute(
-             F, "amdgpu-color-export",
+  return F.getFnAttributeAsParsedInteger(
+             "amdgpu-color-export",
              F.getCallingConv() == CallingConv::AMDGPU_PS ? 1 : 0) != 0;
 }
 
 bool getHasDepthExport(const Function &F) {
-  return getIntegerAttribute(F, "amdgpu-depth-export", 0) != 0;
+  return F.getFnAttributeAsParsedInteger("amdgpu-depth-export", 0) != 0;
 }
 
 bool isShader(CallingConv::ID cc) {
@@ -1893,8 +1902,8 @@ bool hasMIMG_R128(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureMIMG_R128] && !STI.getFeatureBits()[AMDGPU::FeatureR128A16];
 }
 
-bool hasGFX10A16(const MCSubtargetInfo &STI) {
-  return STI.getFeatureBits()[AMDGPU::FeatureGFX10A16];
+bool hasA16(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureA16];
 }
 
 bool hasG16(const MCSubtargetInfo &STI) {
@@ -2091,6 +2100,29 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 
 unsigned mc2PseudoReg(unsigned Reg) {
   MAP_REG2REG
+}
+
+bool isInlineValue(unsigned Reg) {
+  switch (Reg) {
+  case AMDGPU::SRC_SHARED_BASE_LO:
+  case AMDGPU::SRC_SHARED_BASE:
+  case AMDGPU::SRC_SHARED_LIMIT_LO:
+  case AMDGPU::SRC_SHARED_LIMIT:
+  case AMDGPU::SRC_PRIVATE_BASE_LO:
+  case AMDGPU::SRC_PRIVATE_BASE:
+  case AMDGPU::SRC_PRIVATE_LIMIT_LO:
+  case AMDGPU::SRC_PRIVATE_LIMIT:
+  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+    return true;
+  case AMDGPU::SRC_VCCZ:
+  case AMDGPU::SRC_EXECZ:
+  case AMDGPU::SRC_SCC:
+    return true;
+  case AMDGPU::SGPR_NULL:
+    return true;
+  default:
+    return false;
+  }
 }
 
 #undef CASE_CI_VI
@@ -2466,12 +2498,13 @@ uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
   return ByteOffset >> 2;
 }
 
-Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
-                                       int64_t ByteOffset, bool IsBuffer) {
+std::optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
+                                            int64_t ByteOffset, bool IsBuffer) {
   // The signed version is always a byte offset.
   if (!IsBuffer && hasSMRDSignedImmOffset(ST)) {
     assert(hasSMEMByteOffset(ST));
-    return isInt<20>(ByteOffset) ? Optional<int64_t>(ByteOffset) : std::nullopt;
+    return isInt<20>(ByteOffset) ? std::optional<int64_t>(ByteOffset)
+                                 : std::nullopt;
   }
 
   if (!isDwordAligned(ByteOffset) && !hasSMEMByteOffset(ST))
@@ -2479,26 +2512,26 @@ Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
 
   int64_t EncodedOffset = convertSMRDOffsetUnits(ST, ByteOffset);
   return isLegalSMRDEncodedUnsignedOffset(ST, EncodedOffset)
-             ? Optional<int64_t>(EncodedOffset)
+             ? std::optional<int64_t>(EncodedOffset)
              : std::nullopt;
 }
 
-Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
-                                                int64_t ByteOffset) {
+std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
+                                                     int64_t ByteOffset) {
   if (!isCI(ST) || !isDwordAligned(ByteOffset))
     return std::nullopt;
 
   int64_t EncodedOffset = convertSMRDOffsetUnits(ST, ByteOffset);
-  return isUInt<32>(EncodedOffset) ? Optional<int64_t>(EncodedOffset)
+  return isUInt<32>(EncodedOffset) ? std::optional<int64_t>(EncodedOffset)
                                    : std::nullopt;
 }
 
-unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed) {
+unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
   // Address offset is 12-bit signed for GFX10, 13-bit for GFX9 and GFX11+.
   if (AMDGPU::isGFX10(ST))
-    return Signed ? 12 : 11;
+    return 12;
 
-  return Signed ? 13 : 12;
+  return 13;
 }
 
 // Given Imm, split it into the values to put into the SOffset and ImmOffset
@@ -2560,23 +2593,15 @@ SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
     DX10Clamp = DX10ClampAttr == "true";
 
   StringRef DenormF32Attr = F.getFnAttribute("denormal-fp-math-f32").getValueAsString();
-  if (!DenormF32Attr.empty()) {
-    DenormalMode DenormMode = parseDenormalFPAttribute(DenormF32Attr);
-    FP32InputDenormals = DenormMode.Input == DenormalMode::IEEE;
-    FP32OutputDenormals = DenormMode.Output == DenormalMode::IEEE;
-  }
+  if (!DenormF32Attr.empty())
+    FP32Denormals = parseDenormalFPAttribute(DenormF32Attr);
 
   StringRef DenormAttr = F.getFnAttribute("denormal-fp-math").getValueAsString();
   if (!DenormAttr.empty()) {
     DenormalMode DenormMode = parseDenormalFPAttribute(DenormAttr);
-
-    if (DenormF32Attr.empty()) {
-      FP32InputDenormals = DenormMode.Input == DenormalMode::IEEE;
-      FP32OutputDenormals = DenormMode.Output == DenormalMode::IEEE;
-    }
-
-    FP64FP16InputDenormals = DenormMode.Input == DenormalMode::IEEE;
-    FP64FP16OutputDenormals = DenormMode.Output == DenormalMode::IEEE;
+    if (DenormF32Attr.empty())
+      FP32Denormals = DenormMode;
+    FP64FP16Denormals = DenormMode;
   }
 }
 

@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; A call whose argument must be widened. We check that tail folding uses the
 ; primary mask, and that without tail folding we synthesize an all-true mask.
-define void @test_widen(i64* noalias %a, i64* readnone %b) #4 {
+define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_widen(
 ; TFNONE-NEXT:  entry:
 ; TFNONE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -15,18 +15,16 @@ define void @test_widen(i64* noalias %a, i64* readnone %b) #4 {
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFNONE-NEXT:    [[TMP0:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[INDEX]]
-; TFNONE-NEXT:    [[TMP1:%.*]] = bitcast i64* [[TMP0]] to <2 x i64>*
-; TFNONE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 4
+; TFNONE-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFNONE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 4
 ; TFNONE-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
 ; TFNONE-NEXT:    [[TMP3:%.*]] = call i64 @foo(i64 [[TMP2]]) #[[ATTR2:[0-9]+]]
 ; TFNONE-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
 ; TFNONE-NEXT:    [[TMP5:%.*]] = call i64 @foo(i64 [[TMP4]]) #[[ATTR2]]
 ; TFNONE-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i32 0
 ; TFNONE-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[TMP5]], i32 1
-; TFNONE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDEX]]
-; TFNONE-NEXT:    [[TMP9:%.*]] = bitcast i64* [[TMP8]] to <2 x i64>*
-; TFNONE-NEXT:    store <2 x i64> [[TMP7]], <2 x i64>* [[TMP9]], align 4
+; TFNONE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFNONE-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP8]], align 4
 ; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; TFNONE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; TFNONE-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -37,11 +35,11 @@ define void @test_widen(i64* noalias %a, i64* readnone %b) #4 {
 ; TFNONE-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFNONE:       for.body:
 ; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    [[LOAD:%.*]] = load i64, i64* [[GEP]], align 4
+; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; TFNONE-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR2]]
-; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    store i64 [[CALL]], i64* [[ARRAYIDX]], align 4
+; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
@@ -53,11 +51,11 @@ define void @test_widen(i64* noalias %a, i64* readnone %b) #4 {
 ; TFALWAYS-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFALWAYS:       for.body:
 ; TFALWAYS-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; TFALWAYS-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    [[LOAD:%.*]] = load i64, i64* [[GEP]], align 4
+; TFALWAYS-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; TFALWAYS-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR1:[0-9]+]]
-; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    store i64 [[CALL]], i64* [[ARRAYIDX]], align 4
+; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -71,18 +69,16 @@ define void @test_widen(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFFALLBACK:       vector.body:
 ; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[TMP0:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[TMP0]] to <2 x i64>*
-; TFFALLBACK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 4
+; TFFALLBACK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 4
 ; TFFALLBACK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
 ; TFFALLBACK-NEXT:    [[TMP3:%.*]] = call i64 @foo(i64 [[TMP2]]) #[[ATTR2:[0-9]+]]
 ; TFFALLBACK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
 ; TFFALLBACK-NEXT:    [[TMP5:%.*]] = call i64 @foo(i64 [[TMP4]]) #[[ATTR2]]
 ; TFFALLBACK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP3]], i32 0
 ; TFFALLBACK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[TMP5]], i32 1
-; TFFALLBACK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[TMP9:%.*]] = bitcast i64* [[TMP8]] to <2 x i64>*
-; TFFALLBACK-NEXT:    store <2 x i64> [[TMP7]], <2 x i64>* [[TMP9]], align 4
+; TFFALLBACK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP8]], align 4
 ; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; TFFALLBACK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; TFFALLBACK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -93,11 +89,11 @@ define void @test_widen(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFFALLBACK:       for.body:
 ; TFFALLBACK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    [[LOAD:%.*]] = load i64, i64* [[GEP]], align 4
+; TFFALLBACK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; TFFALLBACK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR2]]
-; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    store i64 [[CALL]], i64* [[ARRAYIDX]], align 4
+; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
@@ -109,11 +105,11 @@ entry:
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %gep = getelementptr i64, i64* %b, i64 %indvars.iv
-  %load = load i64, i64* %gep
+  %gep = getelementptr i64, ptr %b, i64 %indvars.iv
+  %load = load i64, ptr %gep
   %call = call i64 @foo(i64 %load) #1
-  %arrayidx = getelementptr inbounds i64, i64* %a, i64 %indvars.iv
-  store i64 %call, i64* %arrayidx
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %indvars.iv
+  store i64 %call, ptr %arrayidx
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -123,14 +119,14 @@ for.cond.cleanup:
 }
 
 ; Check that a simple conditional call can be vectorized.
-define void @test_if_then(i64* noalias %a, i64* readnone %b) #4 {
+define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_if_then(
 ; TFNONE-NEXT:  entry:
 ; TFNONE-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFNONE:       for.body:
 ; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]], align 8
+; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; TFNONE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], 50
 ; TFNONE-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; TFNONE:       if.then:
@@ -138,8 +134,8 @@ define void @test_if_then(i64* noalias %a, i64* readnone %b) #4 {
 ; TFNONE-NEXT:    br label [[IF_END]]
 ; TFNONE:       if.end:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP1]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
-; TFNONE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[B:%.*]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    store i64 [[TMP2]], i64* [[ARRAYIDX1]], align 8
+; TFNONE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    store i64 [[TMP2]], ptr [[ARRAYIDX1]], align 8
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -151,8 +147,8 @@ define void @test_if_then(i64* noalias %a, i64* readnone %b) #4 {
 ; TFALWAYS-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFALWAYS:       for.body:
 ; TFALWAYS-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]], align 8
+; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; TFALWAYS-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], 50
 ; TFALWAYS-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; TFALWAYS:       if.then:
@@ -160,8 +156,8 @@ define void @test_if_then(i64* noalias %a, i64* readnone %b) #4 {
 ; TFALWAYS-NEXT:    br label [[IF_END]]
 ; TFALWAYS:       if.end:
 ; TFALWAYS-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP1]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
-; TFALWAYS-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[B:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    store i64 [[TMP2]], i64* [[ARRAYIDX1]], align 8
+; TFALWAYS-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    store i64 [[TMP2]], ptr [[ARRAYIDX1]], align 8
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -173,8 +169,8 @@ define void @test_if_then(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFFALLBACK:       for.body:
 ; TFFALLBACK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]], align 8
+; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; TFFALLBACK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], 50
 ; TFFALLBACK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; TFFALLBACK:       if.then:
@@ -182,8 +178,8 @@ define void @test_if_then(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[IF_END]]
 ; TFFALLBACK:       if.end:
 ; TFFALLBACK-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP1]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[B:%.*]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    store i64 [[TMP2]], i64* [[ARRAYIDX1]], align 8
+; TFFALLBACK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    store i64 [[TMP2]], ptr [[ARRAYIDX1]], align 8
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -195,8 +191,8 @@ entry:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %if.end ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i64, i64* %a, i64 %indvars.iv
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %indvars.iv
+  %0 = load i64, ptr %arrayidx, align 8
   %cmp = icmp ugt i64 %0, 50
   br i1 %cmp, label %if.then, label %if.end
 
@@ -206,8 +202,8 @@ if.then:
 
 if.end:
   %2 = phi i64 [%1, %if.then], [0, %for.body]
-  %arrayidx1 = getelementptr inbounds i64, i64* %b, i64 %indvars.iv
-  store i64 %2, i64* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %b, i64 %indvars.iv
+  store i64 %2, ptr %arrayidx1, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -220,14 +216,14 @@ for.cond.cleanup:
 ; calls inside the conditional blocks. Although one of the calls has a
 ; uniform parameter and the metadata lists a uniform variant, right now
 ; we just see a splat of the parameter instead. More work needed.
-define void @test_widen_if_then_else(i64* noalias %a, i64* readnone %b) #4 {
+define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_widen_if_then_else(
 ; TFNONE-NEXT:  entry:
 ; TFNONE-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFNONE:       for.body:
 ; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]], align 8
+; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; TFNONE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], 50
 ; TFNONE-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; TFNONE:       if.then:
@@ -238,8 +234,8 @@ define void @test_widen_if_then_else(i64* noalias %a, i64* readnone %b) #4 {
 ; TFNONE-NEXT:    br label [[IF_END]]
 ; TFNONE:       if.end:
 ; TFNONE-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP1]], [[IF_THEN]] ], [ [[TMP2]], [[IF_ELSE]] ]
-; TFNONE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[B:%.*]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    store i64 [[TMP3]], i64* [[ARRAYIDX1]], align 8
+; TFNONE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    store i64 [[TMP3]], ptr [[ARRAYIDX1]], align 8
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -251,8 +247,8 @@ define void @test_widen_if_then_else(i64* noalias %a, i64* readnone %b) #4 {
 ; TFALWAYS-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFALWAYS:       for.body:
 ; TFALWAYS-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]], align 8
+; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; TFALWAYS-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], 50
 ; TFALWAYS-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; TFALWAYS:       if.then:
@@ -263,8 +259,8 @@ define void @test_widen_if_then_else(i64* noalias %a, i64* readnone %b) #4 {
 ; TFALWAYS-NEXT:    br label [[IF_END]]
 ; TFALWAYS:       if.end:
 ; TFALWAYS-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP1]], [[IF_THEN]] ], [ [[TMP2]], [[IF_ELSE]] ]
-; TFALWAYS-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[B:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    store i64 [[TMP3]], i64* [[ARRAYIDX1]], align 8
+; TFALWAYS-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    store i64 [[TMP3]], ptr [[ARRAYIDX1]], align 8
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -276,8 +272,8 @@ define void @test_widen_if_then_else(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFFALLBACK:       for.body:
 ; TFFALLBACK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[IF_END:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]], align 8
+; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; TFFALLBACK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], 50
 ; TFFALLBACK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; TFFALLBACK:       if.then:
@@ -288,8 +284,8 @@ define void @test_widen_if_then_else(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[IF_END]]
 ; TFFALLBACK:       if.end:
 ; TFFALLBACK-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP1]], [[IF_THEN]] ], [ [[TMP2]], [[IF_ELSE]] ]
-; TFFALLBACK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[B:%.*]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    store i64 [[TMP3]], i64* [[ARRAYIDX1]], align 8
+; TFFALLBACK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    store i64 [[TMP3]], ptr [[ARRAYIDX1]], align 8
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -301,8 +297,8 @@ entry:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %if.end ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i64, i64* %a, i64 %indvars.iv
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %indvars.iv
+  %0 = load i64, ptr %arrayidx, align 8
   %cmp = icmp ugt i64 %0, 50
   br i1 %cmp, label %if.then, label %if.else
 
@@ -316,8 +312,8 @@ if.else:
 
 if.end:
   %3 = phi i64 [%1, %if.then], [%2, %if.else]
-  %arrayidx1 = getelementptr inbounds i64, i64* %b, i64 %indvars.iv
-  store i64 %3, i64* %arrayidx1, align 8
+  %arrayidx1 = getelementptr inbounds i64, ptr %b, i64 %indvars.iv
+  store i64 %3, ptr %arrayidx1, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -329,7 +325,7 @@ for.cond.cleanup:
 ; A call whose argument must be widened, where the vector variant does not have
 ; a mask. Forcing tail folding results in no vectorized call, whereas an
 ; unpredicated body with scalar tail can use the unmasked variant.
-define void @test_widen_nomask(i64* noalias %a, i64* readnone %b) #4 {
+define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_widen_nomask(
 ; TFNONE-NEXT:  entry:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -344,13 +340,11 @@ define void @test_widen_nomask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFNONE-NEXT:    [[TMP4:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[INDEX]]
-; TFNONE-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP4]] to <vscale x 2 x i64>*
-; TFNONE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP5]], align 4
+; TFNONE-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFNONE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP4]], align 4
 ; TFNONE-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
-; TFNONE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDEX]]
-; TFNONE-NEXT:    [[TMP8:%.*]] = bitcast i64* [[TMP7]] to <vscale x 2 x i64>*
-; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64>* [[TMP8]], align 4
+; TFNONE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], align 4
 ; TFNONE-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 2
 ; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
@@ -364,11 +358,11 @@ define void @test_widen_nomask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFNONE-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFNONE:       for.body:
 ; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    [[LOAD:%.*]] = load i64, i64* [[GEP]], align 4
+; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; TFNONE-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR4:[0-9]+]]
-; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    store i64 [[CALL]], i64* [[ARRAYIDX]], align 4
+; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -380,11 +374,11 @@ define void @test_widen_nomask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFALWAYS-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFALWAYS:       for.body:
 ; TFALWAYS-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; TFALWAYS-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    [[LOAD:%.*]] = load i64, i64* [[GEP]], align 4
+; TFALWAYS-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; TFALWAYS-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR3:[0-9]+]]
-; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    store i64 [[CALL]], i64* [[ARRAYIDX]], align 4
+; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -405,13 +399,11 @@ define void @test_widen_nomask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFFALLBACK:       vector.body:
 ; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[TMP4:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP4]] to <vscale x 2 x i64>*
-; TFFALLBACK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP5]], align 4
+; TFFALLBACK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP4]], align 4
 ; TFFALLBACK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
-; TFFALLBACK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[TMP8:%.*]] = bitcast i64* [[TMP7]] to <vscale x 2 x i64>*
-; TFFALLBACK-NEXT:    store <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64>* [[TMP8]], align 4
+; TFFALLBACK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    store <vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], align 4
 ; TFFALLBACK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; TFFALLBACK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 2
 ; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
@@ -425,11 +417,11 @@ define void @test_widen_nomask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFFALLBACK:       for.body:
 ; TFFALLBACK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    [[LOAD:%.*]] = load i64, i64* [[GEP]], align 4
+; TFFALLBACK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; TFFALLBACK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR4:[0-9]+]]
-; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    store i64 [[CALL]], i64* [[ARRAYIDX]], align 4
+; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -441,11 +433,11 @@ entry:
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %gep = getelementptr i64, i64* %b, i64 %indvars.iv
-  %load = load i64, i64* %gep
+  %gep = getelementptr i64, ptr %b, i64 %indvars.iv
+  %load = load i64, ptr %gep
   %call = call i64 @foo(i64 %load) #2
-  %arrayidx = getelementptr inbounds i64, i64* %a, i64 %indvars.iv
-  store i64 %call, i64* %arrayidx
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %indvars.iv
+  store i64 %call, ptr %arrayidx
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -457,7 +449,7 @@ for.cond.cleanup:
 ; If both masked and unmasked options are present, we expect to see tail folding
 ; use the masked version and unpredicated body with scalar tail use the unmasked
 ; version.
-define void @test_widen_optmask(i64* noalias %a, i64* readnone %b) #4 {
+define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-LABEL: @test_widen_optmask(
 ; TFNONE-NEXT:  entry:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -472,13 +464,11 @@ define void @test_widen_optmask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFNONE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFNONE:       vector.body:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFNONE-NEXT:    [[TMP4:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[INDEX]]
-; TFNONE-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP4]] to <vscale x 2 x i64>*
-; TFNONE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP5]], align 4
+; TFNONE-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFNONE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP4]], align 4
 ; TFNONE-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
-; TFNONE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDEX]]
-; TFNONE-NEXT:    [[TMP8:%.*]] = bitcast i64* [[TMP7]] to <vscale x 2 x i64>*
-; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64>* [[TMP8]], align 4
+; TFNONE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], align 4
 ; TFNONE-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; TFNONE-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 2
 ; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
@@ -492,11 +482,11 @@ define void @test_widen_optmask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFNONE-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFNONE:       for.body:
 ; TFNONE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    [[LOAD:%.*]] = load i64, i64* [[GEP]], align 4
+; TFNONE-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; TFNONE-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR5:[0-9]+]]
-; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDVARS_IV]]
-; TFNONE-NEXT:    store i64 [[CALL]], i64* [[ARRAYIDX]], align 4
+; TFNONE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
+; TFNONE-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFNONE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFNONE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -508,11 +498,11 @@ define void @test_widen_optmask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFALWAYS-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFALWAYS:       for.body:
 ; TFALWAYS-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; TFALWAYS-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    [[LOAD:%.*]] = load i64, i64* [[GEP]], align 4
+; TFALWAYS-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; TFALWAYS-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR4:[0-9]+]]
-; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDVARS_IV]]
-; TFALWAYS-NEXT:    store i64 [[CALL]], i64* [[ARRAYIDX]], align 4
+; TFALWAYS-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; TFALWAYS-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFALWAYS-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFALWAYS-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFALWAYS-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
@@ -533,13 +523,11 @@ define void @test_widen_optmask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TFFALLBACK:       vector.body:
 ; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[TMP4:%.*]] = getelementptr i64, i64* [[B:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP4]] to <vscale x 2 x i64>*
-; TFFALLBACK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP5]], align 4
+; TFFALLBACK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP4]], align 4
 ; TFFALLBACK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
-; TFFALLBACK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[INDEX]]
-; TFFALLBACK-NEXT:    [[TMP8:%.*]] = bitcast i64* [[TMP7]] to <vscale x 2 x i64>*
-; TFFALLBACK-NEXT:    store <vscale x 2 x i64> [[TMP6]], <vscale x 2 x i64>* [[TMP8]], align 4
+; TFFALLBACK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
+; TFFALLBACK-NEXT:    store <vscale x 2 x i64> [[TMP6]], ptr [[TMP7]], align 4
 ; TFFALLBACK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; TFFALLBACK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 2
 ; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP10]]
@@ -553,11 +541,11 @@ define void @test_widen_optmask(i64* noalias %a, i64* readnone %b) #4 {
 ; TFFALLBACK-NEXT:    br label [[FOR_BODY:%.*]]
 ; TFFALLBACK:       for.body:
 ; TFFALLBACK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; TFFALLBACK-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    [[LOAD:%.*]] = load i64, i64* [[GEP]], align 4
+; TFFALLBACK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 4
 ; TFFALLBACK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR5:[0-9]+]]
-; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 [[INDVARS_IV]]
-; TFFALLBACK-NEXT:    store i64 [[CALL]], i64* [[ARRAYIDX]], align 4
+; TFFALLBACK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
+; TFFALLBACK-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 4
 ; TFFALLBACK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; TFFALLBACK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
 ; TFFALLBACK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -569,11 +557,11 @@ entry:
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %gep = getelementptr i64, i64* %b, i64 %indvars.iv
-  %load = load i64, i64* %gep
+  %gep = getelementptr i64, ptr %b, i64 %indvars.iv
+  %load = load i64, ptr %gep
   %call = call i64 @foo(i64 %load) #3
-  %arrayidx = getelementptr inbounds i64, i64* %a, i64 %indvars.iv
-  store i64 %call, i64* %arrayidx
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %indvars.iv
+  store i64 %call, ptr %arrayidx
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body

@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDWO_H
 
 #include "SymbolFileDWARF.h"
+#include <optional>
 
 class SymbolFileDWARFDwo : public SymbolFileDWARF {
   /// LLVM RTTI support.
@@ -40,7 +41,7 @@ public:
   DWARFDIE
   GetDIE(const DIERef &die_ref) override;
 
-  llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
+  std::optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 
   lldb::offset_t
   GetVendorDWARFOpcodeSize(const lldb_private::DataExtractor &data,

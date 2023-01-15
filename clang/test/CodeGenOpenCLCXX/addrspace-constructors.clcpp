@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=clc++1.0 -DGENERIC -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=clc++2021 -DGENERIC -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=clc++1.0 -DGENERIC -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=clc++2021 -DGENERIC -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=clc++2021 -cl-ext=-all,+__opencl_c_program_scope_global_variables -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
 
 // CHECK: %struct.X = type { i32 }
 
@@ -35,7 +35,7 @@ __global X gx;
 kernel void k() {
   // Check that the constructor for px calls the __private constructor.
   // CHECK: %px = alloca %struct.X
-  // CHECK-NEXT: call spir_func void @_ZN1XC1Ev(%struct.X* {{.*}}%px)
+  // CHECK-NEXT: call spir_func void @_ZN1XC1Ev(ptr {{.*}}%px)
   __private X px;
 
   __constant X cx1;

@@ -2,8 +2,8 @@
 
 target triple = "aarch64-unknown-linux-gnueabi"
 
-@global_function = internal unnamed_addr global void ()* null, align 8
-@global_array = common unnamed_addr global i64* null, align 8
+@global_function = internal unnamed_addr global ptr null, align 8
+@global_array = common unnamed_addr global ptr null, align 8
 
 ; This test checks that we propagate the functions through an internal global
 ; variable, and attach !callees metadata to the call. Such metadata can enable
@@ -15,18 +15,18 @@ target triple = "aarch64-unknown-linux-gnueabi"
 ; vectorizer to vectorize the sum reduction.
 ;
 ; CHECK: call void %tmp0(), !callees ![[MD:[0-9]+]]
-; CHECK: ![[MD]] = !{void ()* @invariant_1, void ()* @invariant_2}
+; CHECK: ![[MD]] = !{ptr @invariant_1, ptr @invariant_2}
 ;
 define i64 @test_memory_entry(i64 %n, i1 %flag) {
 entry:
   br i1 %flag, label %then, label %else
 
 then:
-  store void ()* @invariant_1, void ()** @global_function
+  store ptr @invariant_1, ptr @global_function
   br label %merge
 
 else:
-  store void ()* @invariant_2, void ()** @global_function
+  store ptr @invariant_2, ptr @global_function
   br label %merge
 
 merge:
@@ -36,16 +36,16 @@ merge:
 
 define internal i64 @test_memory(i64 %n) {
 entry:
-  %array = load i64*, i64** @global_array
+  %array = load ptr, ptr @global_array
   br label %for.body
 
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
   %r = phi i64 [ 0, %entry ], [ %tmp3, %for.body ]
-  %tmp0 = load void ()*, void ()** @global_function
+  %tmp0 = load ptr, ptr @global_function
   call void %tmp0()
-  %tmp1 = getelementptr inbounds i64, i64* %array, i64 %i
-  %tmp2 = load i64, i64* %tmp1
+  %tmp1 = getelementptr inbounds i64, ptr %array, i64 %i
+  %tmp2 = load i64, ptr %tmp1
   %tmp3 = add i64 %tmp2, %r
   %i.next = add nuw nsw i64 %i, 1
   %cond = icmp slt i64 %i.next, %n

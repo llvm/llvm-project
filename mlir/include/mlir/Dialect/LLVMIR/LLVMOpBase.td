@@ -31,12 +31,14 @@ def LLVM_Dialect : Dialect {
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getAlignAttrName() { return "llvm.align"; }
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
+    static StringRef getReadonlyAttrName() { return "llvm.readonly"; }
     static StringRef getNoAliasScopesAttrName() { return "noalias_scopes"; }
     static StringRef getAliasScopesAttrName() { return "alias_scopes"; }
     static StringRef getLoopAttrName() { return "llvm.loop"; }
@@ -51,6 +53,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoUndefAttrName() { return "llvm.noundef"; }
     static StringRef getSExtAttrName() { return "llvm.signext"; }
     static StringRef getZExtAttrName() { return "llvm.zeroext"; }
+    static StringRef getTBAAAttrName() { return "llvm.tbaa"; }
 
     /// Verifies if the attribute is a well-formed value for "llvm.struct_attrs"
     static LogicalResult verifyStructAttr(
@@ -233,12 +236,16 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //             of the MLIR operation argument with the given name, or if the
   //             name matches the result name, by a reference to store the
   //             result of the newly created MLIR operation to;
+  //   - $_op - substituted by a reference to store the newly created MLIR
+  //            operation (only for MLIR operations that return no result);
   //   - $_int_attr - substituted by a call to an integer attribute matcher;
   //   - $_var_attr - substituted by a call to a variable attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;
   //   - $_builder - substituted with the MLIR builder;
   //   - $_qualCppClassName - substitiuted with the MLIR operation class name.
+  // Always either store a reference to the result of the newly created
+  // operation, or to the operation itself if it does not return a result.
   // Additionally, `$$` can be used to produce the dollar character.
   string mlirBuilder = "";
 
@@ -344,8 +351,13 @@ def LLVM_IntrPatterns {
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<Trait> traits, int numResults,
-                      bit requiresAccessGroup = 0, bit requiresAliasScope = 0>
-    : LLVM_OpBase<dialect, opName, traits>,
+                      bit requiresAccessGroup = 0, bit requiresAliasScope = 0,
+                      bit requiresFastmath = 0>
+    : LLVM_OpBase<dialect, opName, !listconcat(
+        !if(!gt(requiresFastmath, 0),
+            [DeclareOpInterfaceMethods<FastmathFlagsInterface>],
+            []),
+        traits)>,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
   string resultPattern = !if(!gt(numResults, 1),
                              LLVM_IntrPatterns.structResult,
@@ -372,13 +384,17 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     # !if(!gt(numResults, 0), "$res = inst;", "");
 
   string mlirBuilder = [{
+    FailureOr<SmallVector<Value>> mlirOperands =
+      moduleImport.convertValues(llvmOperands);
+    if (failed(mlirOperands))
+      return failure();
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
-    Operation *op = $_builder.create<$_qualCppClassName>(
-      $_location,
-      resultTypes,
-      convertValues(llvmOperands));
-    }] # !if(!gt(numResults, 0), "$res = op->getResult(0);", "(void)op;");
+    auto op = $_builder.create<$_qualCppClassName>(
+      $_location, resultTypes, *mlirOperands);
+    }] # !if(!gt(requiresFastmath, 0),
+      "moduleImport.setFastmathFlagsAttr(inst, op);", "")
+    # !if(!gt(numResults, 0), "$res = op;", "$_op = op;");
 }
 
 // Base class for LLVM intrinsic operations, should not be used directly. Places
@@ -386,10 +402,11 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<Trait> traits,
                   int numResults, bit requiresAccessGroup = 0,
-                  bit requiresAliasScope = 0>
+                  bit requiresAliasScope = 0, bit requiresFastmath = 0>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
-                      numResults, requiresAccessGroup, requiresAliasScope>;
+                      numResults, requiresAccessGroup, requiresAliasScope,
+                      requiresFastmath>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
@@ -417,8 +434,11 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
 // empty otherwise.
 class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
-                           list<Trait> traits = []>
-    : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1>;
+                           list<Trait> traits = [],
+                           bit requiresFastmath = 0>
+    : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
+                  /*requiresAccessGroup=*/0, /*requiresAliasScope=*/0,
+                  requiresFastmath>;
 
 def LLVM_OneResultOpBuilder :
   OpBuilder<(ins "Type":$resultType, "ValueRange":$operands,

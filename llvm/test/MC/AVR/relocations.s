@@ -35,98 +35,66 @@ brcs foo+2
 
 ; CHECK-NEXT: R_AVR_LO8_LDI bar+0x3
 ; CHECK-NEXT: R_AVR_LO8_LDI abc
-; CHECK-NEXT: R_AVR_LO8_LDI abc
 ldi r24, lo8(bar+3)
-ldi r16, +lo8(abc)
 ldi r16, lo8(+(abc))
 
 ; CHECK-NEXT: R_AVR_HI8_LDI abc
 ; CHECK-NEXT: R_AVR_HI8_LDI abc
-; CHECK-NEXT: R_AVR_HI8_LDI abc
 ldi r30, hi8(abc)
-ldi r16, +hi8(abc)
 ldi r16, hi8(+(abc))
 
 ; CHECK-NEXT: R_AVR_LO8_LDI_NEG abc
-; CHECK-NEXT: R_AVR_LO8_LDI_NEG abc
-ldi r16, -lo8(abc)
 ldi r16, lo8(-(abc))
 
 ; CHECK-NEXT: R_AVR_HI8_LDI_NEG abc
-; CHECK-NEXT: R_AVR_HI8_LDI_NEG abc
-ldi r16, -hi8(abc)
 ldi r16, hi8(-(abc))
 
 ; CHECK-NEXT: R_AVR_HH8_LDI foo
 ; CHECK-NEXT: R_AVR_HH8_LDI foo
-; CHECK-NEXT: R_AVR_HH8_LDI foo
 ldi r16, hh8(foo)
-ldi r16, +hh8(foo)
 ldi r16, hh8(+(foo))
 
 ; CHECK-NEXT: R_AVR_HH8_LDI_NEG foo
-; CHECK-NEXT: R_AVR_HH8_LDI_NEG foo
-ldi r16, -hh8(foo)
 ldi r16, hh8(-(foo))
 
 ; CHECK-NEXT: R_AVR_HH8_LDI foo
 ; CHECK-NEXT: R_AVR_HH8_LDI foo
-; CHECK-NEXT: R_AVR_HH8_LDI foo
 ldi r24, hlo8(foo)
-ldi r24, +hlo8(foo)
 ldi r24, hlo8(+(foo))
 
 ; CHECK-NEXT: R_AVR_HH8_LDI_NEG foo
-; CHECK-NEXT: R_AVR_HH8_LDI_NEG foo
-ldi r24, -hlo8(foo)
 ldi r24, hlo8(-(foo))
 
 ; CHECK-NEXT: R_AVR_MS8_LDI bar
 ; CHECK-NEXT: R_AVR_MS8_LDI bar
-; CHECK-NEXT: R_AVR_MS8_LDI bar
 ldi r24, hhi8(bar)
-ldi r24, +hhi8(bar)
 ldi r24, hhi8(+(bar))
 
 ; CHECK-NEXT: R_AVR_MS8_LDI_NEG bar
-; CHECK-NEXT: R_AVR_MS8_LDI_NEG bar
-ldi r24, -hhi8(bar)
 ldi r24, hhi8(-(bar))
 
 ; CHECK-NEXT: R_AVR_LO8_LDI_PM foo
 ; CHECK-NEXT: R_AVR_LO8_LDI_PM foo
-; CHECK-NEXT: R_AVR_LO8_LDI_PM foo
 ldi r17, pm_lo8(foo)
-ldi r25, +pm_lo8(foo)
 ldi r25, pm_lo8(+(foo))
 
 ; CHECK-NEXT: R_AVR_HI8_LDI_PM bar
 ; CHECK-NEXT: R_AVR_HI8_LDI_PM foo
-; CHECK-NEXT: R_AVR_HI8_LDI_PM foo
 ldi r22, pm_hi8(bar)
-ldi r25, +pm_hi8(foo)
 ldi r25, pm_hi8(+(foo))
 
 ; CHECK-NEXT: R_AVR_HH8_LDI_PM baz
 ; CHECK-NEXT: R_AVR_HH8_LDI_PM foo
-; CHECK-NEXT: R_AVR_HH8_LDI_PM foo
 ldi r25, pm_hh8(baz)
-ldi r25, +pm_hh8(foo)
 ldi r25, pm_hh8(+(foo))
 
 ; CHECK-NEXT: R_AVR_LO8_LDI_PM_NEG foo
-; CHECK-NEXT: R_AVR_LO8_LDI_PM_NEG foo
-ldi r25, -pm_lo8(foo)
 ldi r25, pm_lo8(-(foo))
 
 ; CHECK-NEXT: R_AVR_HI8_LDI_PM_NEG foo
-; CHECK-NEXT: R_AVR_HI8_LDI_PM_NEG foo
-ldi r25, -pm_hi8(foo)
 ldi r25, pm_hi8(-(foo))
 
 ; CHECK-NEXT: R_AVR_HH8_LDI_PM_NEG foo
-; CHECK-NEXT: R_AVR_HH8_LDI_PM_NEG foo
-ldi r25, -pm_hh8(foo)
 ldi r25, pm_hh8(-(foo))
 
 ; CHECK-NEXT: R_AVR_LO8_LDI_GS foo

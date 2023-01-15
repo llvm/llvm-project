@@ -10,19 +10,17 @@
 ; CHECK: @fptr1 = external global ptr
 ; CHECK: @fptr2 = external global ptr addrspace(1)
 ; CHECK: @fptr3 = external global ptr addrspace(2)
-@fptr1 = external global ptr ()*
-@fptr2 = external global ptr () addrspace(1)*
-@fptr3 = external global ptr () addrspace(1)* addrspace(2)*
+@fptr1 = external global ptr
+@fptr2 = external global ptr addrspace(1)
+@fptr3 = external global ptr addrspace(2)
 
 ; CHECK: @ifunc = ifunc void (), ptr @f
 @ifunc = ifunc void (), ptr @f
 
 ; CHECK: define ptr @f(ptr %a) {
-; CHECK:     %b = bitcast ptr %a to ptr
-; CHECK:     ret ptr %b
+; CHECK:     ret ptr %a
 define ptr @f(ptr %a) {
-    %b = bitcast ptr %a to ptr
-    ret ptr %b
+    ret ptr %a
 }
 
 ; CHECK: define ptr @g(ptr addrspace(2) %a) {
@@ -123,6 +121,14 @@ define void @atomicrmw(ptr %a, i32 %i) {
     ret void
 }
 
+; CHECK: define void @atomicrmw_ptr(ptr %a, ptr %b)
+; CHECK:     %c = atomicrmw xchg ptr %a, ptr %b acquire
+; CHECK:     ret void
+define void @atomicrmw_ptr(ptr %a, ptr %b) {
+    %c = atomicrmw xchg ptr %a, ptr %b acquire
+    ret void
+}
+
 ; CHECK: define void @call(ptr %p)
 ; CHECK:     call void %p()
 ; CHECK:     ret void
@@ -143,7 +149,7 @@ define void @call_arg(ptr %p, i32 %a) {
 ; CHECK:   invoke void %p()
 ; CHECK:     to label %continue unwind label %cleanup
 declare void @personality()
-define void @invoke(ptr %p) personality void ()* @personality {
+define void @invoke(ptr %p) personality ptr @personality {
   invoke void %p()
     to label %continue unwind label %cleanup
 

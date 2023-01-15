@@ -39,7 +39,8 @@ static cl::opt<std::string> TargetTriple("mtriple",
                                          cl::desc("Set the target triple"),
                                          cl::cat(LLVMReduceOptions));
 
-void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx, const char *ToolName);
+void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
+                 StringRef ToolName);
 
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
@@ -387,9 +388,8 @@ static void initializeTargetInfo() {
 }
 
 std::pair<std::unique_ptr<ReducerWorkItem>, bool>
-parseReducerWorkItem(const char *ToolName, StringRef Filename,
-                     LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
-                     bool IsMIR) {
+parseReducerWorkItem(StringRef ToolName, StringRef Filename, LLVMContext &Ctxt,
+                     std::unique_ptr<TargetMachine> &TM, bool IsMIR) {
   bool IsBitcode = false;
   Triple TheTriple;
 
@@ -407,8 +407,8 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
     std::unique_ptr<MIRParser> MParser =
         createMIRParser(std::move(FileOrErr.get()), Ctxt);
 
-    auto SetDataLayout =
-        [&](StringRef DataLayoutTargetTriple) -> std::optional<std::string> {
+    auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
+                             StringRef OldDLStr) -> std::optional<std::string> {
       // If we are supposed to override the target triple, do so now.
       std::string IRTargetTriple = DataLayoutTargetTriple.str();
       if (!TargetTriple.empty())
@@ -456,7 +456,7 @@ parseReducerWorkItem(const char *ToolName, StringRef Filename,
                   (const unsigned char *)(*MB)->getBufferEnd())) {
       std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
       if (!Result) {
-        Err.print(ToolName, errs());
+        Err.print(ToolName.data(), errs());
         return {nullptr, false};
       }
       MMM->M = std::move(Result);

@@ -63,6 +63,10 @@ public:
     return Inst.getOpcode() == AArch64::ADR;
   }
 
+  bool isAddXri(const MCInst &Inst) const {
+    return Inst.getOpcode() == AArch64::ADDXri;
+  }
+
   void getADRReg(const MCInst &Inst, MCPhysReg &RegName) const override {
     assert((isADR(Inst) || isADRP(Inst)) && "Not an ADR instruction");
     assert(MCPlus::getNumPrimeOperands(Inst) != 0 &&
@@ -365,12 +369,11 @@ public:
 
     // Auto-select correct operand number
     if (OpNum == 0) {
-      if (isConditionalBranch(Inst) || isADR(Inst) || isADRP(Inst))
+      if (isConditionalBranch(Inst) || isADR(Inst) || isADRP(Inst) ||
+          isMOVW(Inst))
         OpNum = 1;
-      if (isTB(Inst))
+      if (isTB(Inst) || isAddXri(Inst))
         OpNum = 2;
-      if (isMOVW(Inst))
-        OpNum = 1;
     }
 
     return true;
@@ -1070,6 +1073,19 @@ public:
             0xFFFFFFFFFFFFF000ULL;
     Target = Addr;
     return 3;
+  }
+
+  bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const override {
+    if (!isADRP(Adrp) || !isAddXri(Add))
+      return false;
+
+    assert(Adrp.getOperand(0).isReg() &&
+           "Unexpected operand in ADRP instruction");
+    MCPhysReg AdrpReg = Adrp.getOperand(0).getReg();
+    assert(Add.getOperand(1).isReg() &&
+           "Unexpected operand in ADDXri instruction");
+    MCPhysReg AddReg = Add.getOperand(1).getReg();
+    return AdrpReg == AddReg;
   }
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,

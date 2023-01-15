@@ -4,7 +4,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 ; CHECK-LABEL: @memset(
 ; CHECK-NOT: llvm.memset
-define i8* @memset(i8* %b, i32 %c, i64 %len) nounwind uwtable ssp {
+define ptr @memset(ptr %b, i32 %c, i64 %len) nounwind uwtable ssp {
 entry:
   %cmp1 = icmp ult i64 0, %len
   br i1 %cmp1, label %for.body.lr.ph, label %for.end
@@ -15,8 +15,8 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %indvar = phi i64 [ 0, %for.body.lr.ph ], [ %indvar.next, %for.body ]
-  %p.02 = getelementptr i8, i8* %b, i64 %indvar
-  store i8 %conv6, i8* %p.02, align 1
+  %p.02 = getelementptr i8, ptr %b, i64 %indvar
+  store i8 %conv6, ptr %p.02, align 1
   %indvar.next = add i64 %indvar, 1
   %exitcond = icmp ne i64 %indvar.next, %len
   br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge
@@ -25,6 +25,6 @@ for.cond.for.end_crit_edge:                       ; preds = %for.body
   br label %for.end
 
 for.end:                                          ; preds = %for.cond.for.end_crit_edge, %entry
-  ret i8* %b
+  ret ptr %b
 }
 

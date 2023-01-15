@@ -228,6 +228,7 @@
     __kmpc_for_static_init_4                136
     __kmpc_for_static_init_8                137
     __kmpc_fork_call                        138
+    __kmpc_fork_call_if                     294
     __kmpc_global_num_threads               140
     __kmpc_global_thread_num                141
     __kmpc_in_parallel                      142
@@ -345,6 +346,7 @@ kmpc_set_defaults                           224
         __kmpc_fork_teams                   241
         __kmpc_omp_task_with_deps           242
         __kmpc_omp_wait_deps                243
+        __kmpc_omp_taskwait_deps_51         292
         __kmpc_cancel                       244
         __kmpc_cancellationpoint            245
         __kmpc_cancel_barrier               246

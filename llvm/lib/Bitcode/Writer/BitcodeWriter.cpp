@@ -16,7 +16,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1051,6 +1050,18 @@ void ModuleBitcodeWriter::writeTypeTable() {
       TypeVals.push_back(VE.getTypeID(VT->getElementType()));
       if (isa<ScalableVectorType>(VT))
         TypeVals.push_back(true);
+      break;
+    }
+    case Type::TargetExtTyID: {
+      TargetExtType *TET = cast<TargetExtType>(T);
+      Code = bitc::TYPE_CODE_TARGET_TYPE;
+      writeStringRecord(Stream, bitc::TYPE_CODE_STRUCT_NAME, TET->getName(),
+                        StructNameAbbrev);
+      TypeVals.push_back(TET->getNumTypeParameters());
+      for (Type *InnerTy : TET->type_params())
+        TypeVals.push_back(VE.getTypeID(InnerTy));
+      for (unsigned IntParam : TET->int_params())
+        TypeVals.push_back(IntParam);
       break;
     }
     case Type::TypedPointerTyID:

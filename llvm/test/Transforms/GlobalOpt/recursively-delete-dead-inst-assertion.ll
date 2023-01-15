@@ -5,16 +5,16 @@
 ; a constant in the meantime. Make sure this does not cause an assertion
 ; failure.
 
-@a = internal global i32** null
-@b = internal global i32*** @a
+@a = internal global ptr null
+@b = internal global ptr @a
 
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    ret void
 ;
-  %v1 = load i32***, i32**** @b
-  %v2 = load i32**, i32*** %v1
-  store i32** %v2, i32*** @a
+  %v1 = load ptr, ptr @b
+  %v2 = load ptr, ptr %v1
+  store ptr %v2, ptr @a
   ret void
 }
 

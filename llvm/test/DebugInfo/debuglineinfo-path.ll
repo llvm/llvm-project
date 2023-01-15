@@ -2,7 +2,7 @@
 
 ; On powerpc llvm-nm describes win_func as a global variable, not a function. It breaks the test.
 ; It is not essential to DWARF path handling code we're testing here.
-; UNSUPPORTED: powerpc
+; UNSUPPORTED: target=powerpc{{.*}}
 ; REQUIRES: object-emission
 ; RUN: %llc_dwarf -O0 -filetype=obj -o %t < %s
 ; RUN: llvm-nm --radix=o %t | grep posix_absolute_func > %t.posix_absolute_func

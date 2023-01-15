@@ -75,14 +75,14 @@ public:
   // Returns the state after we reduce a nonterminal.
   // Expected to be called by LR parsers.
   // If the nonterminal is invalid here, returns std::nullopt.
-  llvm::Optional<StateID> getGoToState(StateID State,
+  std::optional<StateID> getGoToState(StateID State,
                                        SymbolID Nonterminal) const {
     return Gotos.get(gotoIndex(State, Nonterminal, numStates()));
   }
   // Returns the state after we shift a terminal.
   // Expected to be called by LR parsers.
   // If the terminal is invalid here, returns std::nullopt.
-  llvm::Optional<StateID> getShiftState(StateID State,
+  std::optional<StateID> getShiftState(StateID State,
                                         SymbolID Terminal) const {
     return Shifts.get(shiftIndex(State, Terminal, numStates()));
   }
@@ -98,8 +98,8 @@ public:
   //   }
   llvm::ArrayRef<RuleID> getReduceRules(StateID State) const {
     assert(State + 1u < ReduceOffset.size());
-    return llvm::makeArrayRef(Reduces.data() + ReduceOffset[State],
-                              Reduces.data() + ReduceOffset[State+1]);
+    return llvm::ArrayRef(Reduces.data() + ReduceOffset[State],
+                          Reduces.data() + ReduceOffset[State + 1]);
   }
   // Returns whether Terminal can follow Nonterminal in a valid source file.
   bool canFollow(SymbolID Nonterminal, SymbolID Terminal) const {
@@ -113,8 +113,8 @@ public:
 
   // Looks up available recovery actions if we stopped parsing in this state.
   llvm::ArrayRef<Recovery> getRecovery(StateID State) const {
-    return llvm::makeArrayRef(Recoveries.data() + RecoveryOffset[State],
-                              Recoveries.data() + RecoveryOffset[State + 1]);
+    return llvm::ArrayRef(Recoveries.data() + RecoveryOffset[State],
+                          Recoveries.data() + RecoveryOffset[State + 1]);
   }
 
   // Returns the state from which the LR parser should start to parse the input
@@ -217,7 +217,7 @@ private:
       }
     }
 
-    llvm::Optional<StateID> get(unsigned Key) const {
+    std::optional<StateID> get(unsigned Key) const {
       // Do we have a value for this key?
       Word KeyMask = Word(1) << (Key % WordBits);
       unsigned KeyWord = Key / WordBits;

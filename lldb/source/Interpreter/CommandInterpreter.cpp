@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -2006,7 +2007,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     // repeat command, even though we don't add repeat commands to the history.
     if (add_to_history || empty_command) {
       Args command_args(command_string);
-      llvm::Optional<std::string> repeat_command =
+      std::optional<std::string> repeat_command =
           cmd_obj->GetRepeatCommand(command_args, 0);
       if (repeat_command)
         m_repeat_command.assign(*repeat_command);
@@ -2110,7 +2111,7 @@ void CommandInterpreter::HandleCompletion(CompletionRequest &request) {
   HandleCompletionMatches(request);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 CommandInterpreter::GetAutoSuggestionForCommand(llvm::StringRef line) {
   if (line.empty())
     return std::nullopt;
@@ -3191,7 +3192,7 @@ bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
 }
 
 bool CommandInterpreter::SaveTranscript(
-    CommandReturnObject &result, llvm::Optional<std::string> output_file) {
+    CommandReturnObject &result, std::optional<std::string> output_file) {
   if (output_file == std::nullopt || output_file->empty()) {
     std::string now = llvm::to_string(std::chrono::system_clock::now());
     std::replace(now.begin(), now.end(), ' ', '_');

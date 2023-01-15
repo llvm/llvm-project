@@ -3,7 +3,7 @@
 // CHECK-LABEL: @slice
 func.func @slice(%arg0: tensor<6xf32>) ->() {
   // CHECK: [[SLICE:%.+]] = tensor.extract_slice %arg0[2] [1] [1]
-  %0 = "tosa.slice"(%arg0) {start = [2], size = [1]} : (tensor<6xf32>)  -> (tensor<1xf32>)
+  %0 = "tosa.slice"(%arg0) {start = array<i64: 2>, size = array<i64: 1>} : (tensor<6xf32>)  -> (tensor<1xf32>)
   return
 }
 
@@ -16,7 +16,7 @@ func.func @slice_dyn(%arg0: tensor<?xf32>) -> (tensor<?xf32>) {
   // CHECK: %[[C2:.+]] = arith.constant 2 : index
   // CHECK: %[[SUB:.+]] = arith.subi %[[DIM]], %[[C2]]
   // CHECK: tensor.extract_slice %arg0[2] [%[[SUB]]] [1]
-  %0 = "tosa.slice"(%arg0) {start = [2], size = [-1]} : (tensor<?xf32>)  -> (tensor<?xf32>)
+  %0 = "tosa.slice"(%arg0) {start = array<i64: 2>, size = array<i64: -1>} : (tensor<?xf32>)  -> (tensor<?xf32>)
   return %0 : tensor<?xf32>
 }
 

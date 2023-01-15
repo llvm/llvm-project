@@ -39,7 +39,7 @@
   target triple = "x86_64-unknown-windows-msvc19.11.0"
 
   ; Function Attrs: uwtable
-  define dso_local i32 @"?multi_throw@@YAH_N00@Z"(i1 zeroext %c1, i1 zeroext %c2, i1 zeroext %c3) local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+  define dso_local i32 @"?multi_throw@@YAH_N00@Z"(i1 zeroext %c1, i1 zeroext %c2, i1 zeroext %c3) local_unnamed_addr #0 personality ptr @__CxxFrameHandler3 {
   entry:
     br i1 %c1, label %if.then, label %if.end
 
@@ -68,7 +68,7 @@
     %0 = catchswitch within none [label %catch] unwind to caller
 
   catch:                                            ; preds = %catch.dispatch
-    %1 = catchpad within %0 [i8* null, i32 64, i8* null]
+    %1 = catchpad within %0 [ptr null, i32 64, ptr null]
     catchret from %1 to label %return
 
   return:                                           ; preds = %catch, %if.end6

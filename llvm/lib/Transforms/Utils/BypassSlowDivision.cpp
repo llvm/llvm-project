@@ -16,7 +16,6 @@
 
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -86,7 +85,7 @@ class FastDivInsertionTask {
   QuotRemPair createDivRemPhiNodes(QuotRemWithBB &LHS, QuotRemWithBB &RHS,
                                    BasicBlock *PhiBB);
   Value *insertOperandRuntimeCheck(Value *Op1, Value *Op2);
-  Optional<QuotRemPair> insertFastDivAndRem();
+  std::optional<QuotRemPair> insertFastDivAndRem();
 
   bool isSignedOp() {
     return SlowDivOrRem->getOpcode() == Instruction::SDiv ||
@@ -160,7 +159,7 @@ Value *FastDivInsertionTask::getReplacement(DivCacheTy &Cache) {
 
   if (CacheI == Cache.end()) {
     // If previous instance does not exist, try to insert fast div.
-    Optional<QuotRemPair> OptResult = insertFastDivAndRem();
+    std::optional<QuotRemPair> OptResult = insertFastDivAndRem();
     // Bail out if insertFastDivAndRem has failed.
     if (!OptResult)
       return nullptr;
@@ -349,7 +348,7 @@ Value *FastDivInsertionTask::insertOperandRuntimeCheck(Value *Op1, Value *Op2) {
 
 /// Substitutes the div/rem instruction with code that checks the value of the
 /// operands and uses a shorter-faster div/rem instruction when possible.
-Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
+std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   Value *Dividend = SlowDivOrRem->getOperand(0);
   Value *Divisor = SlowDivOrRem->getOperand(1);
 

@@ -21,7 +21,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -193,7 +193,7 @@ static AffineForOp generateShiftedLoop(
   auto loopChunkIV = loopChunk.getInductionVar();
   auto srcIV = srcForOp.getInductionVar();
 
-  BlockAndValueMapping operandMap;
+  IRMapping operandMap;
 
   auto bodyBuilder = OpBuilder::atBlockTerminator(loopChunk.getBody());
   for (const auto &it : llvm::drop_begin(opGroupQueue, offset)) {
@@ -405,12 +405,10 @@ checkTilingLegalityImpl(MutableArrayRef<mlir::AffineForOp> origLoops) {
         for (unsigned k = 0, e = depComps.size(); k < e; k++) {
           DependenceComponent depComp = depComps[k];
           if (depComp.lb.has_value() && depComp.ub.has_value() &&
-              depComp.lb.value() < depComp.ub.value() &&
-              depComp.ub.value() < 0) {
+              *depComp.lb < *depComp.ub && *depComp.ub < 0) {
             LLVM_DEBUG(llvm::dbgs()
-                       << "Dependence component lb = "
-                       << Twine(depComp.lb.value())
-                       << " ub = " << Twine(depComp.ub.value())
+                       << "Dependence component lb = " << Twine(*depComp.lb)
+                       << " ub = " << Twine(*depComp.ub)
                        << " is negative  at depth: " << Twine(d)
                        << " and thus violates the legality rule.\n");
             return false;
@@ -801,11 +799,11 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
     newLoops[width + i].setStep(origLoops[i].getStep());
 
     // Set the upper bound.
-    if (mayBeConstantCount && mayBeConstantCount.value() < tileSizes[i]) {
+    if (mayBeConstantCount && *mayBeConstantCount < tileSizes[i]) {
       // Trip count is less than the tile size: upper bound is lower bound +
       // trip count * stepSize.
-      AffineMap ubMap = b.getSingleDimShiftAffineMap(
-          mayBeConstantCount.value() * origLoops[i].getStep());
+      AffineMap ubMap = b.getSingleDimShiftAffineMap(*mayBeConstantCount *
+                                                     origLoops[i].getStep());
       newLoops[width + i].setUpperBound(
           /*operands=*/newLoops[i].getInductionVar(), ubMap);
     } else if (largestDiv % tileSizes[i] != 0) {
@@ -974,7 +972,7 @@ void mlir::getTileableBands(func::FuncOp f,
 LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.has_value()) {
-    uint64_t tripCount = mayBeConstantTripCount.value();
+    uint64_t tripCount = *mayBeConstantTripCount;
     if (tripCount == 0)
       return success();
     if (tripCount == 1)
@@ -990,8 +988,8 @@ LogicalResult mlir::loopUnrollUpToFactor(AffineForOp forOp,
                                          uint64_t unrollFactor) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.has_value() &&
-      mayBeConstantTripCount.value() < unrollFactor)
-    return loopUnrollByFactor(forOp, mayBeConstantTripCount.value());
+      *mayBeConstantTripCount < unrollFactor)
+    return loopUnrollByFactor(forOp, *mayBeConstantTripCount);
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 
@@ -1019,7 +1017,7 @@ static void generateUnrolledLoop(
   SmallVector<Value, 4> lastYielded(yieldedValues);
 
   for (unsigned i = 1; i < unrollFactor; i++) {
-    BlockAndValueMapping operandMap;
+    IRMapping operandMap;
 
     // Prepare operand map.
     operandMap.map(iterArgs, lastYielded);
@@ -1159,8 +1157,8 @@ LogicalResult mlir::loopUnrollJamUpToFactor(AffineForOp forOp,
                                             uint64_t unrollJamFactor) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.has_value() &&
-      mayBeConstantTripCount.value() < unrollJamFactor)
-    return loopUnrollJamByFactor(forOp, mayBeConstantTripCount.value());
+      *mayBeConstantTripCount < unrollJamFactor)
+    return loopUnrollJamByFactor(forOp, *mayBeConstantTripCount);
   return loopUnrollJamByFactor(forOp, unrollJamFactor);
 }
 
@@ -1267,7 +1265,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
 
   // `operandMaps[i - 1]` carries old->new operand mapping for the ith unrolled
   // iteration. There are (`unrollJamFactor` - 1) iterations.
-  SmallVector<BlockAndValueMapping, 4> operandMaps(unrollJamFactor - 1);
+  SmallVector<IRMapping, 4> operandMaps(unrollJamFactor - 1);
 
   // For any loop with iter_args, replace it with a new loop that has
   // `unrollJamFactor` copies of its iterOperands, iter_args and yield
@@ -1582,7 +1580,7 @@ AffineForOp mlir::sinkSequentialLoops(AffineForOp forOp) {
     for (unsigned j = 0; j < maxLoopDepth; ++j) {
       DependenceComponent &depComp = depComps[j];
       assert(depComp.lb.has_value() && depComp.ub.has_value());
-      if (depComp.lb.value() != 0 || depComp.ub.value() != 0)
+      if (*depComp.lb != 0 || *depComp.ub != 0)
         isParallelLoop[j] = false;
     }
   }
@@ -1884,7 +1882,7 @@ findHighestBlockForPlacement(const MemRefRegion &region, Block &block,
   cst->getValues(cst->getNumDimVars(), cst->getNumDimAndSymbolVars(), &symbols);
 
   SmallVector<AffineForOp, 4> enclosingFors;
-  getLoopIVs(*block.begin(), &enclosingFors);
+  getAffineForIVs(*block.begin(), &enclosingFors);
   // Walk up loop parents till we find an IV on which this region is
   // symbolic/variant.
   auto it = enclosingFors.rbegin();
@@ -2357,7 +2355,7 @@ static bool getFullMemRefAsRegion(Operation *op, unsigned numParamLoopIVs,
   // Just get the first numSymbols IVs, which the memref region is parametric
   // on.
   SmallVector<AffineForOp, 4> ivs;
-  getLoopIVs(*op, &ivs);
+  getAffineForIVs(*op, &ivs);
   ivs.resize(numParamLoopIVs);
   SmallVector<Value, 4> symbols;
   extractForInductionVars(ivs, &symbols);
@@ -2779,7 +2777,7 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
   }
 
   // Add the body for the full tile loop nest.
-  BlockAndValueMapping operandMap;
+  IRMapping operandMap;
   for (const auto &loopEn : llvm::enumerate(inputNest))
     operandMap.map(loopEn.value().getInductionVar(),
                    fullTileLoops[loopEn.index()].getInductionVar());

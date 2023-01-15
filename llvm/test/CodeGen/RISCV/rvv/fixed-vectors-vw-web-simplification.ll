@@ -15,7 +15,7 @@
 ; vw counterpart when the folding of the web size is increased to 3.
 ; We need the web size to be at least 3 for the folding to happen, because
 ; %c has 3 uses.
-define <2 x i16> @vwmul_v2i16_multiple_users(<2 x i8>* %x, <2 x i8>* %y, <2 x i8> *%z) {
+define <2 x i16> @vwmul_v2i16_multiple_users(ptr %x, ptr %y, ptr %z) {
 ; NO_FOLDING-LABEL: vwmul_v2i16_multiple_users:
 ; NO_FOLDING:       # %bb.0:
 ; NO_FOLDING-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -45,9 +45,9 @@ define <2 x i16> @vwmul_v2i16_multiple_users(<2 x i8>* %x, <2 x i8>* %y, <2 x i8
 ; FOLDING-NEXT:    vor.vv v8, v11, v9
 ; FOLDING-NEXT:    vor.vv v8, v8, v12
 ; FOLDING-NEXT:    ret
-  %a = load <2 x i8>, <2 x i8>* %x
-  %b = load <2 x i8>, <2 x i8>* %y
-  %b2 = load <2 x i8>, <2 x i8>* %z
+  %a = load <2 x i8>, ptr %x
+  %b = load <2 x i8>, ptr %y
+  %b2 = load <2 x i8>, ptr %z
   %c = sext <2 x i8> %a to <2 x i16>
   %d = sext <2 x i8> %b to <2 x i16>
   %d2 = sext <2 x i8> %b2 to <2 x i16>

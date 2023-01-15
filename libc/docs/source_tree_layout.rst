@@ -13,7 +13,7 @@ directories::
         - fuzzing
         - include
         - lib
-        - loader
+        - startup
         - src
         - test
         - utils
@@ -58,11 +58,11 @@ The ``lib`` directory
 This directory contains a ``CMakeLists.txt`` file listing the targets for the
 public libraries ``libc.a``, ``libm.a`` etc.
 
-The ``loader`` directory
-------------------------
+The ``startup`` directory
+-------------------------
 
-This directory contains the implementations of the application loaders like
-``crt1.o`` etc.
+This directory contains the implementations of the application startup objects
+like ``crt1.o`` etc.
 
 The ``src`` directory
 ---------------------

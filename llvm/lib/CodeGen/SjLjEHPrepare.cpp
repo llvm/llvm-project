@@ -164,7 +164,7 @@ void SjLjEHPrepare::substituteLPadValues(LandingPadInst *LPI, Value *ExnVal,
   // There are still some uses of LPI. Construct an aggregate with the exception
   // values and replace the LPI with that aggregate.
   Type *LPadType = LPI->getType();
-  Value *LPadVal = UndefValue::get(LPadType);
+  Value *LPadVal = PoisonValue::get(LPadType);
   auto *SelI = cast<Instruction>(SelVal);
   IRBuilder<> Builder(SelI->getParent(), std::next(SelI->getIterator()));
   LPadVal = Builder.CreateInsertValue(LPadVal, ExnVal, 0, "lpad.val");
@@ -183,7 +183,7 @@ Value *SjLjEHPrepare::setupFunctionContext(Function &F,
   // that needs to be restored on all exits from the function. This is an alloca
   // because the value needs to be added to the global context list.
   auto &DL = F.getParent()->getDataLayout();
-  const Align Alignment(DL.getPrefTypeAlignment(FunctionContextTy));
+  const Align Alignment = DL.getPrefTypeAlign(FunctionContextTy);
   FuncCtx = new AllocaInst(FunctionContextTy, DL.getAllocaAddrSpace(), nullptr,
                            Alignment, "fn_context", &EntryBB->front());
 
@@ -391,7 +391,7 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
   lowerAcrossUnwindEdges(F, Invokes);
 
   Value *FuncCtx =
-      setupFunctionContext(F, makeArrayRef(LPads.begin(), LPads.end()));
+      setupFunctionContext(F, ArrayRef(LPads.begin(), LPads.end()));
   BasicBlock *EntryBB = &F.front();
   IRBuilder<> Builder(EntryBB->getTerminator());
 

@@ -48,5 +48,6 @@ add_llvm_component_library(LLVMObject
   BinaryFormat
   MCParser
   Support
+  TargetParser
   TextAPI
   )

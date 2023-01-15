@@ -21,7 +21,7 @@ define void @call_llvm.test.immarg.intrinsic.i32() {
   call void @llvm.test.immarg.intrinsic.i32(i32 add (i32 2, i32 3))
 
   ; CHECK: call void @llvm.test.immarg.intrinsic.i32(i32 0)
-  call void @llvm.test.immarg.intrinsic.i32(i32 ptrtoint (i32* null to i32))
+  call void @llvm.test.immarg.intrinsic.i32(i32 ptrtoint (ptr null to i32))
   ret void
 }
 

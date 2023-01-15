@@ -208,11 +208,11 @@ define amdgpu_ps void @raw_buffer_atomic_min_rtn_f32(<4 x i32> inreg %rsrc, floa
 ; G_GFX1100-NEXT:    s_endpgm
 main_body:
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fmin.f32(float %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
-  store float %ret, float addrspace(1)* undef
+  store float %ret, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f32_off4_slc(<4 x i32> inreg %rsrc, float %data, i32 %vindex, float addrspace(3)* %out) {
+define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f32_off4_slc(<4 x i32> inreg %rsrc, float %data, i32 %vindex, ptr addrspace(3) %out) {
 ; SI-LABEL: raw_buffer_atomic_min_rtn_f32_off4_slc:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xd
@@ -365,7 +365,7 @@ define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f32_off4_slc(<4 x i32> inre
 ; GFX1010-LABEL: raw_buffer_atomic_min_rtn_f32_off4_slc:
 main_body:
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fmin.f32(float %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 2)
-  store float %ret, float addrspace(3)* %out, align 8
+  store float %ret, ptr addrspace(3) %out, align 8
   ret void
 }
 
@@ -562,11 +562,11 @@ define amdgpu_ps void @raw_buffer_atomic_max_rtn_f32(<4 x i32> inreg %rsrc, floa
 ; G_GFX1100-NEXT:    s_endpgm
 main_body:
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fmax.f32(float %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
-  store float %ret, float addrspace(1)* undef
+  store float %ret, ptr addrspace(1) undef
   ret void
 }
 
-define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inreg %rsrc, float %data, i32 %vindex, float addrspace(1)* %out) {
+define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inreg %rsrc, float %data, i32 %vindex, ptr addrspace(1) %out) {
 ; SI-LABEL: raw_buffer_atomic_max_rtn_f32_off4_slc:
 ; SI:       ; %bb.0: ; %main_body
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -698,6 +698,6 @@ define amdgpu_kernel void @raw_buffer_atomic_max_rtn_f32_off4_slc(<4 x i32> inre
 ; G_GFX1100-NEXT:    s_endpgm
 main_body:
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fmax.f32(float %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 2)
-  store float %ret, float addrspace(1)* %out, align 8
+  store float %ret, ptr addrspace(1) %out, align 8
   ret void
 }

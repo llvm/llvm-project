@@ -79,7 +79,7 @@ void CodeGen::generate(const ast::Module &astModule, ModuleOp module) {
   int patternIndex = 0;
   for (pdl::PatternOp pattern : module.getOps<pdl::PatternOp>()) {
     // If the pattern has a name, use that. Otherwise, generate a unique name.
-    if (Optional<StringRef> patternName = pattern.getSymName()) {
+    if (std::optional<StringRef> patternName = pattern.getSymName()) {
       patternNames.insert(patternName->str());
     } else {
       std::string name;

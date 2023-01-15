@@ -20,15 +20,15 @@ target triple = "x86_64-apple-macosx10.13.0"
 %class.anon = type { i8 }
 
 ; Function Attrs: noinline norecurse nounwind optnone ssp uwtable
-define i32 @main(i32 %argc, i8** %argv) #0 !dbg !8 {
+define i32 @main(i32 %argc, ptr %argv) #0 !dbg !8 {
 entry:
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
+  %argv.addr = alloca ptr, align 8
   %agg.tmp = alloca %class.Error, align 1
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !17, metadata !DIExpression()), !dbg !18
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !17, metadata !DIExpression()), !dbg !18
   call void @_Z12consumeError5Error(), !dbg !19
   ret i32 0, !dbg !20
 }
@@ -41,7 +41,7 @@ define linkonce_odr void @_Z12consumeError5Error() #2 !dbg !21 {
 entry:
   %Err = alloca %class.Error, align 1
   %agg.tmp = alloca %class.anon, align 1
-  call void @llvm.dbg.declare(metadata %class.Error* %Err, metadata !25, metadata !DIExpression()), !dbg !26
+  call void @llvm.dbg.declare(metadata ptr %Err, metadata !25, metadata !DIExpression()), !dbg !26
   call void @_Z15handleAllErrorsIZ12consumeError5ErrorEUlvE_EvT_(), !dbg !27
   ret void, !dbg !28
 }
@@ -50,7 +50,7 @@ entry:
 define linkonce_odr void @_Z15handleAllErrorsIZ12consumeError5ErrorEUlvE_EvT_() #2 !dbg !29 {
 entry:
   %Handlers = alloca %class.anon, align 1
-  call void @llvm.dbg.declare(metadata %class.anon* %Handlers, metadata !35, metadata !DIExpression()), !dbg !36
+  call void @llvm.dbg.declare(metadata ptr %Handlers, metadata !35, metadata !DIExpression()), !dbg !36
   ret void, !dbg !37
 }
 

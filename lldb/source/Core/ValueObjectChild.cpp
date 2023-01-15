@@ -83,7 +83,7 @@ ConstString ValueObjectChild::GetDisplayTypeName() {
 
 LazyBool ValueObjectChild::CanUpdateWithInvalidExecutionContext() {
   if (m_can_update_with_invalid_exe_ctx)
-    return m_can_update_with_invalid_exe_ctx.value();
+    return *m_can_update_with_invalid_exe_ctx;
   if (m_parent) {
     ValueObject *opinionated_parent =
         m_parent->FollowParentChain([](ValueObject *valobj) -> bool {
@@ -91,13 +91,11 @@ LazyBool ValueObjectChild::CanUpdateWithInvalidExecutionContext() {
                   eLazyBoolCalculate);
         });
     if (opinionated_parent)
-      return (m_can_update_with_invalid_exe_ctx =
-                  opinionated_parent->CanUpdateWithInvalidExecutionContext())
-          .value();
+      return *(m_can_update_with_invalid_exe_ctx =
+                   opinionated_parent->CanUpdateWithInvalidExecutionContext());
   }
-  return (m_can_update_with_invalid_exe_ctx =
-              this->ValueObject::CanUpdateWithInvalidExecutionContext())
-      .value();
+  return *(m_can_update_with_invalid_exe_ctx =
+               this->ValueObject::CanUpdateWithInvalidExecutionContext());
 }
 
 bool ValueObjectChild::UpdateValue() {

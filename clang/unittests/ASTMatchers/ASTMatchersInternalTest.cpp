@@ -63,7 +63,7 @@ static void crashTestNodeDump(MatcherT Matcher,
 
   struct CrashCallback : public MatchFinder::MatchCallback {
     void run(const MatchFinder::MatchResult &Result) override { abort(); }
-    llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+    std::optional<TraversalKind> getCheckTraversalKind() const override {
       return TK_IgnoreUnlessSpelledInSource;
     }
     StringRef getID() const override { return "CrashTester"; }

@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @max_backedge_taken_count_by_wrapping1_nsw_nuw(i8 %N, i8* %ptr) {
+define void @max_backedge_taken_count_by_wrapping1_nsw_nuw(i8 %N, ptr %ptr) {
 ; CHECK-LABEL: 'max_backedge_taken_count_by_wrapping1_nsw_nuw'
 ; CHECK-NEXT:  Determining loop execution counts for: @max_backedge_taken_count_by_wrapping1_nsw_nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%N /u 4)
@@ -19,8 +19,8 @@ entry:
 
 loop:
   %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep = getelementptr i8, i8* %ptr, i8 %iv
-  store i8 %iv, i8* %gep
+  %gep = getelementptr i8, ptr %ptr, i8 %iv
+  store i8 %iv, ptr %gep
   %iv.next = add nuw nsw i8 %iv, 4
   %ec = icmp ne i8 %iv, %N
   br i1 %ec, label %loop, label %exit
@@ -29,7 +29,7 @@ exit:
   ret void
 }
 
-define void @max_backedge_taken_count_by_wrapping1_nuw(i8 %N, i8* %ptr) {
+define void @max_backedge_taken_count_by_wrapping1_nuw(i8 %N, ptr %ptr) {
 ; CHECK-LABEL: 'max_backedge_taken_count_by_wrapping1_nuw'
 ; CHECK-NEXT:  Determining loop execution counts for: @max_backedge_taken_count_by_wrapping1_nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (%N /u 4)
@@ -44,8 +44,8 @@ entry:
 
 loop:
   %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep = getelementptr i8, i8* %ptr, i8 %iv
-  store i8 %iv, i8* %gep
+  %gep = getelementptr i8, ptr %ptr, i8 %iv
+  store i8 %iv, ptr %gep
   %iv.next = add nuw i8 %iv, 4
   %ec = icmp ne i8 %iv, %N
   br i1 %ec, label %loop, label %exit
@@ -54,7 +54,7 @@ exit:
   ret void
 }
 
-define void @max_backedge_taken_count_by_wrapping2_nsw_nuw(i8 %N, i8* %ptr) {
+define void @max_backedge_taken_count_by_wrapping2_nsw_nuw(i8 %N, ptr %ptr) {
 ; CHECK-LABEL: 'max_backedge_taken_count_by_wrapping2_nsw_nuw'
 ; CHECK-NEXT:  Determining loop execution counts for: @max_backedge_taken_count_by_wrapping2_nsw_nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-64 + %N) /u 4)
@@ -69,8 +69,8 @@ entry:
 
 loop:
   %iv = phi i8 [ 64, %entry ], [ %iv.next, %loop ]
-  %gep = getelementptr i8, i8* %ptr, i8 %iv
-  store i8 %iv, i8* %gep
+  %gep = getelementptr i8, ptr %ptr, i8 %iv
+  store i8 %iv, ptr %gep
   %iv.next = add nuw nsw i8 %iv, 4
   %ec = icmp ne i8 %iv, %N
   br i1 %ec, label %loop, label %exit
@@ -79,7 +79,7 @@ exit:
   ret void
 }
 
-define void @max_backedge_taken_count_by_wrapping2_nuw(i8 %N, i8* %ptr) {
+define void @max_backedge_taken_count_by_wrapping2_nuw(i8 %N, ptr %ptr) {
 ; CHECK-LABEL: 'max_backedge_taken_count_by_wrapping2_nuw'
 ; CHECK-NEXT:  Determining loop execution counts for: @max_backedge_taken_count_by_wrapping2_nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-64 + %N) /u 4)
@@ -94,8 +94,8 @@ entry:
 
 loop:
   %iv = phi i8 [ 64, %entry ], [ %iv.next, %loop ]
-  %gep = getelementptr i8, i8* %ptr, i8 %iv
-  store i8 %iv, i8* %gep
+  %gep = getelementptr i8, ptr %ptr, i8 %iv
+  store i8 %iv, ptr %gep
   %iv.next = add nuw i8 %iv, 4
   %ec = icmp ne i8 %iv, %N
   br i1 %ec, label %loop, label %exit

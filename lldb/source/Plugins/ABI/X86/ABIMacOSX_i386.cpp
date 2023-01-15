@@ -8,6 +8,7 @@
 
 #include "ABIMacOSX_i386.h"
 
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/STLExtras.h"
@@ -164,7 +165,7 @@ bool ABIMacOSX_i386::GetArgumentValues(Thread &thread,
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type(value->GetCompilerType());
-    llvm::Optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
     if (bit_size) {
       bool is_signed;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed))
@@ -273,7 +274,7 @@ ABIMacOSX_i386::GetReturnValueObjectImpl(Thread &thread,
   bool is_signed;
 
   if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-    llvm::Optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
     if (!bit_width)
       return return_valobj_sp;
     unsigned eax_id =

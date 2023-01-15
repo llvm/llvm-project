@@ -16,6 +16,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -24,7 +25,7 @@ using namespace lldb_private;
 BreakpointResolverFileLine::BreakpointResolverFileLine(
     const BreakpointSP &bkpt, lldb::addr_t offset, bool skip_prologue,
     const SourceLocationSpec &location_spec,
-    llvm::Optional<llvm::StringRef> removed_prefix_opt)
+    std::optional<llvm::StringRef> removed_prefix_opt)
     : BreakpointResolver(bkpt, BreakpointResolver::FileLineResolver, offset),
       m_location_spec(location_spec), m_skip_prologue(skip_prologue),
       m_removed_prefix_opt(removed_prefix_opt) {}
@@ -204,7 +205,7 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
   // of "a" after consuming "b" from the back.
   auto check_suffix =
       [path_separator](llvm::StringRef a, llvm::StringRef b,
-                       bool case_sensitive) -> llvm::Optional<llvm::StringRef> {
+                       bool case_sensitive) -> std::optional<llvm::StringRef> {
     if (case_sensitive ? a.consume_back(b) : a.consume_back_insensitive(b)) {
       if (a.empty() || a.endswith(path_separator)) {
         return a;
@@ -241,20 +242,20 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
     // Adding back any potentially reverse mapping stripped prefix.
     // for new_mapping_to.
     if (m_removed_prefix_opt.has_value())
-      llvm::sys::path::append(new_mapping_to, m_removed_prefix_opt.value());
+      llvm::sys::path::append(new_mapping_to, *m_removed_prefix_opt);
 
-    llvm::Optional<llvm::StringRef> new_mapping_from_opt =
+    std::optional<llvm::StringRef> new_mapping_from_opt =
         check_suffix(sc_file_dir, request_file_dir, case_sensitive);
     if (new_mapping_from_opt) {
-      new_mapping_from = new_mapping_from_opt.value();
+      new_mapping_from = *new_mapping_from_opt;
       if (new_mapping_to.empty())
         new_mapping_to = ".";
     } else {
-      llvm::Optional<llvm::StringRef> new_mapping_to_opt =
+      std::optional<llvm::StringRef> new_mapping_to_opt =
           check_suffix(request_file_dir, sc_file_dir, case_sensitive);
       if (new_mapping_to_opt) {
         new_mapping_from = ".";
-        llvm::sys::path::append(new_mapping_to, new_mapping_to_opt.value());
+        llvm::sys::path::append(new_mapping_to, *new_mapping_to_opt);
       }
     }
 
@@ -290,7 +291,7 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   // same file spec in their line_entry and treat each set separately.
 
   const uint32_t line = m_location_spec.GetLine().value_or(0);
-  const llvm::Optional<uint16_t> column = m_location_spec.GetColumn();
+  const std::optional<uint16_t> column = m_location_spec.GetColumn();
 
   const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
   for (size_t i = 0; i < num_comp_units; i++) {

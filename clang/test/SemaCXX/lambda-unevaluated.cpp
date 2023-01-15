@@ -61,9 +61,7 @@ void use_f() { f<int>({}); } // expected-error {{ambiguous}}
 // Same.
 template<int N> void g(const char (*)[([]{ return N; })()]) {} // expected-note {{candidate}}
 template<int N> void g(const char (*)[([]{ return N; })()]) {} // expected-note {{candidate}}
-// FIXME: We instantiate the lambdas into the context of the function template,
-//  so we think they're dependent and can't evaluate a call to them.
-void use_g() { g<6>(&"hello"); } // expected-error {{no matching function}}
+void use_g() { g<6>(&"hello"); } // expected-error {{ambiguous}}
 }
 
 namespace GH51416 {

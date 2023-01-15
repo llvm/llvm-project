@@ -3,7 +3,7 @@
 
 target triple = "riscv64"
 
-define void @trip5_i8(i8* noalias nocapture noundef %dst, i8* noalias nocapture noundef readonly %src) #0 {
+define void @trip5_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture noundef readonly %src) #0 {
 ; CHECK-LABEL: @trip5_i8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -24,21 +24,18 @@ define void @trip5_i8(i8* noalias nocapture noundef %dst, i8* noalias nocapture 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[TMP8]], i64 5)
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i8* [[TMP10]] to <vscale x 8 x i8>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0nxv8i8(<vscale x 8 x i8>* [[TMP11]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i8> poison)
-; CHECK-NEXT:    [[TMP12:%.*]] = shl <vscale x 8 x i8> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, i8* [[DST:%.*]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, i8* [[TMP13]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8* [[TMP14]] to <vscale x 8 x i8>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0nxv8i8(<vscale x 8 x i8>* [[TMP15]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i8> poison)
-; CHECK-NEXT:    [[TMP16:%.*]] = add <vscale x 8 x i8> [[TMP12]], [[WIDE_MASKED_LOAD1]]
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i8* [[TMP14]] to <vscale x 8 x i8>*
-; CHECK-NEXT:    call void @llvm.masked.store.nxv8i8.p0nxv8i8(<vscale x 8 x i8> [[TMP16]], <vscale x 8 x i8>* [[TMP17]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP19]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i32 0
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr [[TMP10]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i8> poison)
+; CHECK-NEXT:    [[TMP11:%.*]] = shl <vscale x 8 x i8> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i64 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i32 0
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr [[TMP13]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i8> poison)
+; CHECK-NEXT:    [[TMP14:%.*]] = add <vscale x 8 x i8> [[TMP11]], [[WIDE_MASKED_LOAD1]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv8i8.p0(<vscale x 8 x i8> [[TMP14]], ptr [[TMP13]], i32 1, <vscale x 8 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP16]]
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -47,13 +44,13 @@ define void @trip5_i8(i8* noalias nocapture noundef %dst, i8* noalias nocapture 
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 [[I_08]]
-; CHECK-NEXT:    [[TMP20:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP20]], 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 [[I_08]]
-; CHECK-NEXT:    [[TMP21:%.*]] = load i8, i8* [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[MUL]], [[TMP21]]
-; CHECK-NEXT:    store i8 [[ADD]], i8* [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[I_08]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP17]], 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[I_08]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[MUL]], [[TMP18]]
+; CHECK-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX1]], align 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 5
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
@@ -65,13 +62,13 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.08 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %src, i64 %i.08
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %src, i64 %i.08
+  %0 = load i8, ptr %arrayidx, align 1
   %mul = shl i8 %0, 1
-  %arrayidx1 = getelementptr inbounds i8, i8* %dst, i64 %i.08
-  %1 = load i8, i8* %arrayidx1, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %dst, i64 %i.08
+  %1 = load i8, ptr %arrayidx1, align 1
   %add = add i8 %mul, %1
-  store i8 %add, i8* %arrayidx1, align 1
+  store i8 %add, ptr %arrayidx1, align 1
   %inc = add nuw nsw i64 %i.08, 1
   %exitcond.not = icmp eq i64 %inc, 5
   br i1 %exitcond.not, label %for.end, label %for.body

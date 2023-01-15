@@ -10,6 +10,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE
   project(CompilerRT C CXX ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+  if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
+    message(WARNING
+      "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
+      "minimum version of CMake required to build LLVM will become 3.20.0, and "
+      "using an older CMake will become an error. Please upgrade your CMake to "
+      "at least 3.20.0 now to avoid issues in the future!")
+  endif()
 endif()
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
@@ -35,6 +42,8 @@ include(CMakeDependentOption)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
+option(COMPILER_RT_DISABLE_AARCH64_FMV "Disable AArch64 Function Multi Versioning support" OFF)
+mark_as_advanced(COMPILER_RT_DISABLE_AARCH64_FMV)
 option(COMPILER_RT_BUILD_CRT "Build crtbegin.o/crtend.o" ON)
 mark_as_advanced(COMPILER_RT_BUILD_CRT)
 option(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY "Use eh_frame in crtbegin.o/crtend.o" ON)
@@ -497,6 +506,21 @@ append_list_if(COMPILER_RT_HAS_WD4722_FLAG /wd4722 SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WD4800_FLAG /wd4800 SANITIZER_COMMON_CFLAGS)
 
 append_list_if(MINGW -fms-extensions SANITIZER_COMMON_CFLAGS)
+
+# When lsan scans the stack for detecting reachable pointers, it's possible for
+# a leaked pointer, which was pushed to the stack on an earlier function call,
+# to still exist on the stack when doing a leak check if that part of the stack
+# was not overwritten. In particular, if there's any uninitialized data in the
+# lsan runtime, and the SP we start from is sufficiently deep into the runtime,
+# then a leaked pointer could be marked as reachable. Such instances could be
+# mitigated by clobbering any uninitialized data. Note that this won't cover
+# all possible uninitialized stack contents, such as those used for register
+# spill slots, unused portions for alignment, or even local variables not
+# yet in scope at a certain point in the function.
+#
+# Note that this type of issue was discovered with lsan, but can apply to other
+# sanitizers.
+append_list_if(COMPILER_RT_HAS_TRIVIAL_AUTO_INIT -ftrivial-auto-var-init=pattern SANITIZER_COMMON_CFLAGS)
 
 # Set common link flags.
 # TODO: We should consider using the same model as libc++, that is use either

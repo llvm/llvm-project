@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitfields.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/DebugLoc.h"
@@ -129,10 +128,10 @@ public:
   /// specified instruction.
   void insertAfter(Instruction *InsertPos);
 
-  /// Inserts an unlinked instruction into \p BB at position \p It and returns
-  /// the iterator of the inserted instruction.
+  /// Inserts an unlinked instruction into \p ParentBB at position \p It and
+  /// returns the iterator of the inserted instruction.
   SymbolTableList<Instruction>::iterator
-  insertAt(BasicBlock *BB, SymbolTableList<Instruction>::iterator It);
+  insertInto(BasicBlock *ParentBB, SymbolTableList<Instruction>::iterator It);
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
@@ -328,7 +327,7 @@ public:
     return dropUnknownNonDebugMetadata(std::nullopt);
   }
   void dropUnknownNonDebugMetadata(unsigned ID1) {
-    return dropUnknownNonDebugMetadata(makeArrayRef(ID1));
+    return dropUnknownNonDebugMetadata(ArrayRef(ID1));
   }
   void dropUnknownNonDebugMetadata(unsigned ID1, unsigned ID2) {
     unsigned IDs[] = {ID1, ID2};

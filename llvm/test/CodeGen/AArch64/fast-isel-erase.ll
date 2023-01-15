@@ -9,8 +9,8 @@ define i32 @test() {
 ; CHECK-NOT: uxth
 
 entry:
-  store i32 undef, i32* undef, align 4
-  %t81 = load i16, i16* undef, align 2
+  store i32 undef, ptr undef, align 4
+  %t81 = load i16, ptr undef, align 2
   call void @callee()
   %t82 = zext i16 %t81 to i32
   %t83 = shl i32 %t82, 16

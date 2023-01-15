@@ -466,7 +466,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   is *Debug*.
 
 **LLVM_ENABLE_BINDINGS**:BOOL
-  If disabled, do not try to build the OCaml and go bindings.
+  If disabled, do not try to build the OCaml bindings.
 
 **LLVM_ENABLE_DIA_SDK**:BOOL
   Enable building with MSVC DIA SDK for PDB debugging support. Available

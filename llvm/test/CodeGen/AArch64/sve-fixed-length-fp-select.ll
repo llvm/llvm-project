@@ -40,7 +40,6 @@ define void @select_v16f16(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p1.h, p1/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
@@ -56,15 +55,14 @@ define void @select_v32f16(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
-; VBITS_GE_256-NEXT:    and w9, w2, #0x1
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    and w9, w2, #0x1
 ; VBITS_GE_256-NEXT:    ptrue p1.h
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    mov z4.h, w9
-; VBITS_GE_256-NEXT:    and z4.h, z4.h, #0x1
 ; VBITS_GE_256-NEXT:    cmpne p1.h, p1/z, z4.h, #0
 ; VBITS_GE_256-NEXT:    sel z1.h, p1, z1.h, z3.h
 ; VBITS_GE_256-NEXT:    sel z0.h, p1, z0.h, z2.h
@@ -80,7 +78,6 @@ define void @select_v32f16(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    ptrue p1.h
 ; VBITS_GE_512-NEXT:    mov z2.h, w8
-; VBITS_GE_512-NEXT:    and z2.h, z2.h, #0x1
 ; VBITS_GE_512-NEXT:    cmpne p1.h, p1/z, z2.h, #0
 ; VBITS_GE_512-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
@@ -101,7 +98,6 @@ define void @select_v64f16(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p1.h, p1/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
@@ -122,7 +118,6 @@ define void @select_v128f16(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    and z2.h, z2.h, #0x1
 ; CHECK-NEXT:    cmpne p1.h, p1/z, z2.h, #0
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]

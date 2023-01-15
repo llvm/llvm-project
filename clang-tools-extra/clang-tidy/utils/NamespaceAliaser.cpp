@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 namespace clang {
 namespace tidy {
 namespace utils {
@@ -26,7 +27,7 @@ AST_MATCHER_P(NamespaceAliasDecl, hasTargetNamespace,
   return innerMatcher.matches(*Node.getNamespace(), Finder, Builder);
 }
 
-Optional<FixItHint>
+std::optional<FixItHint>
 NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
                               StringRef Namespace,
                               const std::vector<std::string> &Abbreviations) {

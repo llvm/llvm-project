@@ -140,7 +140,7 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    lui a1, 28087
 ; RV64M-NEXT:    addiw a1, a1, -585
-; RV64M-NEXT:    mul a0, a0, a1
+; RV64M-NEXT:    mulw a0, a0, a1
 ; RV64M-NEXT:    slli a1, a0, 26
 ; RV64M-NEXT:    slli a0, a0, 37
 ; RV64M-NEXT:    srli a0, a0, 38
@@ -172,7 +172,7 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; RV64MV:       # %bb.0:
 ; RV64MV-NEXT:    lui a1, 28087
 ; RV64MV-NEXT:    addiw a1, a1, -585
-; RV64MV-NEXT:    mul a0, a0, a1
+; RV64MV-NEXT:    mulw a0, a0, a1
 ; RV64MV-NEXT:    slli a1, a0, 26
 ; RV64MV-NEXT:    slli a0, a0, 37
 ; RV64MV-NEXT:    srli a0, a0, 38
@@ -192,8 +192,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; RV32-LABEL: test_urem_odd_setne:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a1, a0, 1
-; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    sub a0, a0, a1
 ; RV32-NEXT:    andi a0, a0, 15
 ; RV32-NEXT:    sltiu a0, a0, 4
 ; RV32-NEXT:    xori a0, a0, 1
@@ -201,9 +201,9 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ;
 ; RV64-LABEL: test_urem_odd_setne:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slliw a1, a0, 1
-; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    slli a1, a0, 1
 ; RV64-NEXT:    negw a0, a0
+; RV64-NEXT:    subw a0, a0, a1
 ; RV64-NEXT:    andi a0, a0, 15
 ; RV64-NEXT:    sltiu a0, a0, 4
 ; RV64-NEXT:    xori a0, a0, 1
@@ -212,8 +212,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; RV32M-LABEL: test_urem_odd_setne:
 ; RV32M:       # %bb.0:
 ; RV32M-NEXT:    slli a1, a0, 1
-; RV32M-NEXT:    add a0, a1, a0
 ; RV32M-NEXT:    neg a0, a0
+; RV32M-NEXT:    sub a0, a0, a1
 ; RV32M-NEXT:    andi a0, a0, 15
 ; RV32M-NEXT:    sltiu a0, a0, 4
 ; RV32M-NEXT:    xori a0, a0, 1
@@ -221,9 +221,9 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ;
 ; RV64M-LABEL: test_urem_odd_setne:
 ; RV64M:       # %bb.0:
-; RV64M-NEXT:    slliw a1, a0, 1
-; RV64M-NEXT:    addw a0, a1, a0
+; RV64M-NEXT:    slli a1, a0, 1
 ; RV64M-NEXT:    negw a0, a0
+; RV64M-NEXT:    subw a0, a0, a1
 ; RV64M-NEXT:    andi a0, a0, 15
 ; RV64M-NEXT:    sltiu a0, a0, 4
 ; RV64M-NEXT:    xori a0, a0, 1
@@ -232,8 +232,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; RV32MV-LABEL: test_urem_odd_setne:
 ; RV32MV:       # %bb.0:
 ; RV32MV-NEXT:    slli a1, a0, 1
-; RV32MV-NEXT:    add a0, a1, a0
 ; RV32MV-NEXT:    neg a0, a0
+; RV32MV-NEXT:    sub a0, a0, a1
 ; RV32MV-NEXT:    andi a0, a0, 15
 ; RV32MV-NEXT:    sltiu a0, a0, 4
 ; RV32MV-NEXT:    xori a0, a0, 1
@@ -241,9 +241,9 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ;
 ; RV64MV-LABEL: test_urem_odd_setne:
 ; RV64MV:       # %bb.0:
-; RV64MV-NEXT:    slliw a1, a0, 1
-; RV64MV-NEXT:    addw a0, a1, a0
+; RV64MV-NEXT:    slli a1, a0, 1
 ; RV64MV-NEXT:    negw a0, a0
+; RV64MV-NEXT:    subw a0, a0, a1
 ; RV64MV-NEXT:    andi a0, a0, 15
 ; RV64MV-NEXT:    sltiu a0, a0, 4
 ; RV64MV-NEXT:    xori a0, a0, 1
@@ -320,7 +320,7 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
   ret i1 %cmp
 }
 
-define void @test_urem_vec(<3 x i11>* %X) nounwind {
+define void @test_urem_vec(ptr %X) nounwind {
 ; RV32-LABEL: test_urem_vec:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
@@ -366,9 +366,9 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV32-NEXT:    andi a1, s3, 2047
 ; RV32-NEXT:    andi a0, a0, 2047
 ; RV32-NEXT:    slli a0, a0, 11
-; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    slli s1, s1, 22
 ; RV32-NEXT:    or a0, a0, s1
+; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    sw a0, 0(s0)
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -420,8 +420,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64-NEXT:    andi a1, s3, 2047
 ; RV64-NEXT:    andi a2, s2, 2047
 ; RV64-NEXT:    slli a2, a2, 11
-; RV64-NEXT:    or a1, a1, a2
 ; RV64-NEXT:    slli a0, a0, 22
+; RV64-NEXT:    or a0, a2, a0
 ; RV64-NEXT:    or a0, a1, a0
 ; RV64-NEXT:    sw a0, 0(s0)
 ; RV64-NEXT:    slli a0, a0, 31
@@ -471,8 +471,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV32M-NEXT:    andi a2, a2, 2047
 ; RV32M-NEXT:    andi a3, a3, 2047
 ; RV32M-NEXT:    slli a3, a3, 11
-; RV32M-NEXT:    or a2, a2, a3
 ; RV32M-NEXT:    slli a1, a1, 22
+; RV32M-NEXT:    or a1, a3, a1
 ; RV32M-NEXT:    or a1, a2, a1
 ; RV32M-NEXT:    sw a1, 0(a0)
 ; RV32M-NEXT:    ret
@@ -487,7 +487,7 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64M-NEXT:    srli a3, a1, 11
 ; RV64M-NEXT:    andi a1, a1, 2047
 ; RV64M-NEXT:    li a4, 683
-; RV64M-NEXT:    mul a1, a1, a4
+; RV64M-NEXT:    mulw a1, a1, a4
 ; RV64M-NEXT:    slli a4, a1, 10
 ; RV64M-NEXT:    slli a1, a1, 53
 ; RV64M-NEXT:    srli a1, a1, 54
@@ -510,8 +510,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64M-NEXT:    andi a1, a1, 2047
 ; RV64M-NEXT:    andi a3, a3, 2047
 ; RV64M-NEXT:    slli a3, a3, 11
-; RV64M-NEXT:    or a1, a1, a3
 ; RV64M-NEXT:    slli a2, a2, 22
+; RV64M-NEXT:    or a2, a3, a2
 ; RV64M-NEXT:    or a1, a1, a2
 ; RV64M-NEXT:    sw a1, 0(a0)
 ; RV64M-NEXT:    slli a1, a1, 31
@@ -578,8 +578,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV32MV-NEXT:    vmv.x.s a3, v8
 ; RV32MV-NEXT:    andi a3, a3, 2047
 ; RV32MV-NEXT:    slli a3, a3, 11
-; RV32MV-NEXT:    or a2, a2, a3
 ; RV32MV-NEXT:    slli a1, a1, 22
+; RV32MV-NEXT:    or a1, a3, a1
 ; RV32MV-NEXT:    or a1, a2, a1
 ; RV32MV-NEXT:    sw a1, 0(a0)
 ; RV32MV-NEXT:    addi sp, sp, 16
@@ -638,10 +638,10 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64MV-NEXT:    vmv.x.s a2, v9
 ; RV64MV-NEXT:    andi a2, a2, 2047
 ; RV64MV-NEXT:    slli a2, a2, 11
-; RV64MV-NEXT:    or a1, a1, a2
 ; RV64MV-NEXT:    vslidedown.vi v8, v8, 2
-; RV64MV-NEXT:    vmv.x.s a2, v8
-; RV64MV-NEXT:    slli a2, a2, 22
+; RV64MV-NEXT:    vmv.x.s a3, v8
+; RV64MV-NEXT:    slli a3, a3, 22
+; RV64MV-NEXT:    or a2, a2, a3
 ; RV64MV-NEXT:    or a1, a1, a2
 ; RV64MV-NEXT:    sw a1, 0(a0)
 ; RV64MV-NEXT:    slli a1, a1, 31
@@ -649,10 +649,10 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64MV-NEXT:    sb a1, 4(a0)
 ; RV64MV-NEXT:    addi sp, sp, 16
 ; RV64MV-NEXT:    ret
-  %ld = load <3 x i11>, <3 x i11>* %X
+  %ld = load <3 x i11>, ptr %X
   %urem = urem <3 x i11> %ld, <i11 6, i11 7, i11 -5>
   %cmp = icmp ne <3 x i11> %urem, <i11 0, i11 1, i11 2>
   %ext = sext <3 x i1> %cmp to <3 x i11>
-  store <3 x i11> %ext, <3 x i11>* %X
+  store <3 x i11> %ext, ptr %X
   ret void
 }

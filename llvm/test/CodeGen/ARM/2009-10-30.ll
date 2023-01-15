@@ -8,10 +8,9 @@ entry:
 ;CHECK: add	r{{[0-9]+}}, sp, #8
 ;CHECK: str	r{{[0-9]+}}, [sp], #4
 ;CHECK: bx	lr
-	%ap = alloca i8*, align 4
-	%ap1 = bitcast i8** %ap to i8*
-	call void @llvm.va_start(i8* %ap1)
+	%ap = alloca ptr, align 4
+	call void @llvm.va_start(ptr %ap)
 	ret void
 }
 
-declare void @llvm.va_start(i8*) nounwind
+declare void @llvm.va_start(ptr) nounwind

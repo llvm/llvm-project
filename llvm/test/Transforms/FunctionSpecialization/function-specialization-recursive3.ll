@@ -1,4 +1,4 @@
-; RUN: opt -passes=function-specialization -force-function-specialization -func-specialization-max-iters=2 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization -func-specialization-max-iters=2 -S < %s | FileCheck %s
 
 ; Duplicate store preventing recursive specialisation:
 ;

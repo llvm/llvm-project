@@ -6,7 +6,7 @@
 ; SI: test:
 ; SI: BB0_0:
 ; SI: s_endpgm
-define amdgpu_kernel void @test(i32 addrspace(1)* %out) {
-  store i32 0, i32 addrspace(1)* %out
+define amdgpu_kernel void @test(ptr addrspace(1) %out) {
+  store i32 0, ptr addrspace(1) %out
   ret void
 }

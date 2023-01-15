@@ -14,6 +14,7 @@
 #include "clang/Tooling/NodeIntrospection.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <optional>
 #include <set>
 
 using namespace llvm;
@@ -275,7 +276,7 @@ QueryRef QueryParser::doParse() {
     Diagnostics Diag;
     auto MatcherSource = Line.ltrim();
     auto OrigMatcherSource = MatcherSource;
-    Optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
+    std::optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
         MatcherSource, nullptr, &QS.NamedValues, &Diag);
     if (!Matcher) {
       return makeInvalidQueryFromDiagnostics(Diag);

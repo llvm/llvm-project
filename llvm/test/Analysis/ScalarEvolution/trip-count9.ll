@@ -4,7 +4,7 @@
 ; Every combination of
 ;  - starting at 0, 1, or %x
 ;  - steping by 1 or 2
-;  - stopping at %n or %n*2
+;  - stopping at %n or ptr2
 ;  - using nsw, or not
 
 ; Some of these represent missed opportunities.

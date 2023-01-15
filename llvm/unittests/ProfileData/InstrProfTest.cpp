@@ -551,7 +551,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   // Annotate with 4 records.
   InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4}, {4000, 3},
                               {5000, 2}, {6000, 1}};
-  annotateValueSite(*M, *Inst, makeArrayRef(VD0Sorted).slice(2), 10,
+  annotateValueSite(*M, *Inst, ArrayRef(VD0Sorted).slice(2), 10,
                     IPVK_IndirectCallTarget, 5);
   Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
                                       ValueData, N, T);

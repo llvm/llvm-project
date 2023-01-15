@@ -1527,7 +1527,7 @@ std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
   return AllFunctions;
 }
 
-Optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
+std::optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
   auto Iter = DWOCUs.find(DWOId);
   if (Iter == DWOCUs.end())
     return std::nullopt;
@@ -1886,7 +1886,7 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   }
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
                                         uint64_t FileOffset) const {
   // Find a segment with a matching file offset.

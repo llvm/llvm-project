@@ -2,30 +2,26 @@
 ; though their pointers are stored.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-%handle = type { i8* }
+%handle = type { ptr }
 
-define i8* @f() presplitcoroutine {
+define ptr @f() presplitcoroutine {
 entry:
   %0 = alloca %"handle", align 8
-  %1 = alloca %"handle"*, align 8
-  %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
+  %1 = alloca ptr, align 8
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %size = call i32 @llvm.coro.size.i32()
-  %alloc = call i8* @malloc(i32 %size)
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* %alloc)
+  %alloc = call ptr @malloc(i32 %size)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
   br label %tricky
 
 tricky:
-  %2 = call i8* @await_suspend()
-  %3 = getelementptr inbounds %"handle", %"handle"* %0, i32 0, i32 0
-  store i8* %2, i8** %3, align 8
-  %4 = bitcast %"handle"** %1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %4)
-  store %"handle"* %0, %"handle"** %1, align 8
-  %5 = load %"handle"*, %"handle"** %1, align 8
-  %6 = getelementptr inbounds %"handle", %"handle"* %5, i32 0, i32 0
-  %7 = load i8*, i8** %6, align 8
-  %8 = bitcast %"handle"** %1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %8)
+  %2 = call ptr @await_suspend()
+  store ptr %2, ptr %0, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr %1)
+  store ptr %0, ptr %1, align 8
+  %3 = load ptr, ptr %1, align 8
+  %4 = load ptr, ptr %3, align 8
+  call void @llvm.lifetime.end.p0(i64 8, ptr %1)
   br label %finish
 
 finish:
@@ -36,45 +32,43 @@ resume:
   br label %cleanup
 
 cleanup:
-  %mem = call i8* @llvm.coro.free(token %id, i8* %hdl)
-  call void @free(i8* %mem)
+  %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
+  call void @free(ptr %mem)
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)
-  ret i8* %hdl
+  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  ret ptr %hdl
 }
 
-; CHECK:        %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i1 }
+; CHECK:        %f.Frame = type { ptr, ptr, i1 }
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca [[HANDLE:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca %handle*, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca ptr, align 8
 
-; CHECK:         [[TMP2:%.*]] = call i8* @await_suspend()
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[HANDLE]], %handle* [[TMP0]], i32 0, i32 0
-; CHECK-NEXT:    store i8* [[TMP2]], i8** [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast %handle** [[TMP1]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* [[TMP4]])
-; CHECK-NEXT:    store %handle* [[TMP0]], %handle** [[TMP1]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* [[TMP4]])
+; CHECK:         [[TMP2:%.*]] = call ptr @await_suspend()
+; CHECK-NEXT:    store ptr [[TMP2]], ptr [[TMP0]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[TMP1]])
+; CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP1]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[TMP1]])
 ;
 
-declare i8* @llvm.coro.free(token, i8*)
+declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)
-declare void @llvm.coro.resume(i8*)
-declare void @llvm.coro.destroy(i8*)
+declare void @llvm.coro.resume(ptr)
+declare void @llvm.coro.destroy(ptr)
 
-declare token @llvm.coro.id(i32, i8*, i8*, i8*)
+declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
-declare i8* @llvm.coro.begin(token, i8*)
-declare i1 @llvm.coro.end(i8*, i1)
+declare ptr @llvm.coro.begin(token, ptr)
+declare i1 @llvm.coro.end(ptr, i1)
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
-declare i8* @await_suspend()
-declare void @print(i32* nocapture)
-declare noalias i8* @malloc(i32)
-declare void @free(i8*)
+declare ptr @await_suspend()
+declare void @print(ptr nocapture)
+declare noalias ptr @malloc(i32)
+declare void @free(ptr)

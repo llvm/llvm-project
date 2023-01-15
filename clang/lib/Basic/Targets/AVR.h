@@ -76,7 +76,7 @@ public:
         "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",  "r8",  "r9",
         "r10", "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19",
         "r20", "r21", "r22", "r23", "r24", "r25", "X",   "Y",   "Z",   "SP"};
-    return llvm::makeArrayRef(GCCRegNames);
+    return llvm::ArrayRef(GCCRegNames);
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
@@ -90,7 +90,7 @@ public:
         {{"r30", "r31"}, 28},
         {{"SPL", "SPH"}, 29},
     };
-    return llvm::makeArrayRef(AddlRegNames);
+    return llvm::ArrayRef(AddlRegNames);
   }
 
   bool validateAsmConstraint(const char *&Name,

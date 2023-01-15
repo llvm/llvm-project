@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=deadargelim -S | FileCheck %s
 
 declare token @llvm.call.preallocated.setup(i32)
-declare i8* @llvm.call.preallocated.arg(token, i32)
+declare ptr @llvm.call.preallocated.arg(token, i32)
 
 %Ty = type <{ i32, i32 }>
 
@@ -39,43 +39,42 @@ define void @caller() {
 
 ; We can't remove 'this' here, as that would put argmem in ecx instead of
 ; memory.
-define internal x86_thiscallcc i32 @unused_this(i32* %this, i32* inalloca(i32) %argmem) {
+define internal x86_thiscallcc i32 @unused_this(ptr %this, ptr inalloca(i32) %argmem) {
 ;
 ;
-  %v = load i32, i32* %argmem
+  %v = load i32, ptr %argmem
   ret i32 %v
 }
-; CHECK-LABEL: define internal x86_thiscallcc i32 @unused_this(i32* %this, i32* inalloca(i32) %argmem)
+; CHECK-LABEL: define internal x86_thiscallcc i32 @unused_this(ptr %this, ptr inalloca(i32) %argmem)
 
 define i32 @caller2() {
 ;
 ;
   %t = alloca i32
   %m = alloca inalloca i32
-  store i32 42, i32* %m
-  %v = call x86_thiscallcc i32 @unused_this(i32* %t, i32* inalloca(i32) %m)
+  store i32 42, ptr %m
+  %v = call x86_thiscallcc i32 @unused_this(ptr %t, ptr inalloca(i32) %m)
   ret i32 %v
 }
 
 ; We can't remove 'this' here, as that would put argmem in ecx instead of
 ; memory.
-define internal x86_thiscallcc i32 @unused_this_preallocated(i32* %this, i32* preallocated(i32) %argmem) {
+define internal x86_thiscallcc i32 @unused_this_preallocated(ptr %this, ptr preallocated(i32) %argmem) {
 ;
 ;
-  %v = load i32, i32* %argmem
+  %v = load i32, ptr %argmem
   ret i32 %v
 }
-; CHECK-LABEL: define internal x86_thiscallcc i32 @unused_this_preallocated(i32* %this, i32* preallocated(i32) %argmem)
+; CHECK-LABEL: define internal x86_thiscallcc i32 @unused_this_preallocated(ptr %this, ptr preallocated(i32) %argmem)
 
 define i32 @caller3() {
 ;
 ;
   %t = alloca i32
   %c = call token @llvm.call.preallocated.setup(i32 1)
-  %M = call i8* @llvm.call.preallocated.arg(token %c, i32 0) preallocated(i32)
-  %m = bitcast i8* %M to i32*
-  store i32 42, i32* %m
-  %v = call x86_thiscallcc i32 @unused_this_preallocated(i32* %t, i32* preallocated(i32) %m) ["preallocated"(token %c)]
+  %M = call ptr @llvm.call.preallocated.arg(token %c, i32 0) preallocated(i32)
+  store i32 42, ptr %M
+  %v = call x86_thiscallcc i32 @unused_this_preallocated(ptr %t, ptr preallocated(i32) %M) ["preallocated"(token %c)]
   ret i32 %v
 }
 

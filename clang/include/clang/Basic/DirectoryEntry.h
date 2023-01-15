@@ -14,12 +14,13 @@
 #ifndef LLVM_CLANG_BASIC_DIRECTORYENTRY_H
 #define LLVM_CLANG_BASIC_DIRECTORYENTRY_H
 
+#include "clang/Basic/CustomizableOptional.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorOr.h"
 
 #include <utility>
@@ -115,6 +116,8 @@ private:
   const MapEntry *ME;
 };
 
+using OptionalDirectoryEntryRef = CustomizableOptional<DirectoryEntryRef>;
+
 namespace FileMgr {
 
 /// Customized storage for refs derived from map entires in FileManager, using
@@ -158,9 +161,7 @@ public:
 };
 
 } // end namespace FileMgr
-} // end namespace clang
 
-namespace llvm {
 namespace optional_detail {
 
 /// Customize OptionalStorage<DirectoryEntryRef> to use DirectoryEntryRef and
@@ -184,16 +185,16 @@ public:
   }
 };
 
-static_assert(sizeof(Optional<clang::DirectoryEntryRef>) ==
-                  sizeof(clang::DirectoryEntryRef),
-              "Optional<DirectoryEntryRef> must avoid size overhead");
+static_assert(sizeof(OptionalDirectoryEntryRef) == sizeof(DirectoryEntryRef),
+              "OptionalDirectoryEntryRef must avoid size overhead");
 
-static_assert(
-    std::is_trivially_copyable<Optional<clang::DirectoryEntryRef>>::value,
-    "Optional<DirectoryEntryRef> should be trivially copyable");
+static_assert(std::is_trivially_copyable<OptionalDirectoryEntryRef>::value,
+              "OptionalDirectoryEntryRef should be trivially copyable");
 
 } // end namespace optional_detail
+} // namespace clang
 
+namespace llvm {
 /// Specialisation of DenseMapInfo for DirectoryEntryRef.
 template <> struct DenseMapInfo<clang::DirectoryEntryRef> {
   static inline clang::DirectoryEntryRef getEmptyKey() {
@@ -229,19 +230,19 @@ template <> struct DenseMapInfo<clang::DirectoryEntryRef> {
 
 namespace clang {
 
-/// Wrapper around Optional<DirectoryEntryRef> that degrades to 'const
+/// Wrapper around OptionalDirectoryEntryRef that degrades to 'const
 /// DirectoryEntry*', facilitating incremental patches to propagate
 /// DirectoryEntryRef.
 ///
 /// This class can be used as return value or field where it's convenient for
-/// an Optional<DirectoryEntryRef> to degrade to a 'const DirectoryEntry*'. The
+/// an OptionalDirectoryEntryRef to degrade to a 'const DirectoryEntry*'. The
 /// purpose is to avoid code churn due to dances like the following:
 /// \code
 /// // Old code.
 /// lvalue = rvalue;
 ///
 /// // Temporary code from an incremental patch.
-/// Optional<DirectoryEntryRef> MaybeF = rvalue;
+/// OptionalDirectoryEntryRef MaybeF = rvalue;
 /// lvalue = MaybeF ? &MaybeF.getDirectoryEntry() : nullptr;
 ///
 /// // Final code.
@@ -250,9 +251,9 @@ namespace clang {
 ///
 /// FIXME: Once DirectoryEntryRef is "everywhere" and DirectoryEntry::LastRef
 /// and DirectoryEntry::getName have been deleted, delete this class and
-/// replace instances with Optional<DirectoryEntryRef>.
+/// replace instances with OptionalDirectoryEntryRef.
 class OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr
-    : public Optional<DirectoryEntryRef> {
+    : public OptionalDirectoryEntryRef {
 public:
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr() = default;
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(
@@ -266,30 +267,31 @@ public:
 
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(std::nullopt_t) {}
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(DirectoryEntryRef Ref)
-      : Optional<DirectoryEntryRef>(Ref) {}
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(Optional<DirectoryEntryRef> MaybeRef)
-      : Optional<DirectoryEntryRef>(MaybeRef) {}
+      : OptionalDirectoryEntryRef(Ref) {}
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr(
+      OptionalDirectoryEntryRef MaybeRef)
+      : OptionalDirectoryEntryRef(MaybeRef) {}
 
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &
   operator=(std::nullopt_t) {
-    Optional<DirectoryEntryRef>::operator=(std::nullopt);
+    OptionalDirectoryEntryRef::operator=(std::nullopt);
     return *this;
   }
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &operator=(DirectoryEntryRef Ref) {
-    Optional<DirectoryEntryRef>::operator=(Ref);
+    OptionalDirectoryEntryRef::operator=(Ref);
     return *this;
   }
   OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr &
-  operator=(Optional<DirectoryEntryRef> MaybeRef) {
-    Optional<DirectoryEntryRef>::operator=(MaybeRef);
+  operator=(OptionalDirectoryEntryRef MaybeRef) {
+    OptionalDirectoryEntryRef::operator=(MaybeRef);
     return *this;
   }
 
   /// Degrade to 'const DirectoryEntry *' to allow  DirectoryEntry::LastRef and
   /// DirectoryEntry::getName have been deleted, delete this class and replace
-  /// instances with Optional<DirectoryEntryRef>
+  /// instances with OptionalDirectoryEntryRef
   operator const DirectoryEntry *() const {
-    return has_value() ? &value().getDirEntry() : nullptr;
+    return has_value() ? &(*this)->getDirEntry() : nullptr;
   }
 };
 

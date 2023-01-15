@@ -221,7 +221,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
     ST.makeLIDRangeMetadata(LocalSizeY);
     ST.makeLIDRangeMetadata(LocalSizeZ);
 
-    return std::make_pair(LocalSizeY, LocalSizeZ);
+    return std::pair(LocalSizeY, LocalSizeZ);
   }
 
   // We must read the size out of the dispatch pointer.
@@ -290,7 +290,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   // Extract y component. Upper half of LoadZU should be zero already.
   Value *Y = Builder.CreateLShr(LoadXY, 16);
 
-  return std::make_pair(Y, LoadZU);
+  return std::pair(Y, LoadZU);
 }
 
 Value *AMDGPUPromoteAllocaImpl::getWorkitemID(IRBuilder<> &Builder,
@@ -379,6 +379,11 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   return ConstantInt::get(GEP->getContext(), Quot);
 }
 
+struct MemTransferInfo {
+  ConstantInt *SrcIndex = nullptr;
+  ConstantInt *DestIndex = nullptr;
+};
+
 static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
                                      unsigned MaxVGPRs) {
 
@@ -419,14 +424,18 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
 
   std::map<GetElementPtrInst*, Value*> GEPVectorIdx;
   SmallVector<Instruction *> WorkList;
+  SmallVector<Instruction *> DeferredInsts;
   SmallVector<Use *, 8> Uses;
+  DenseMap<MemTransferInst *, MemTransferInfo> TransferInfo;
+
   for (Use &U : Alloca->uses())
     Uses.push_back(&U);
 
   Type *VecEltTy = VectorTy->getElementType();
+  unsigned ElementSize = DL.getTypeSizeInBits(VecEltTy) / 8;
   while (!Uses.empty()) {
     Use *U = Uses.pop_back_val();
-    Instruction *Inst = dyn_cast<Instruction>(U->getUser());
+    Instruction *Inst = cast<Instruction>(U->getUser());
 
     if (Value *Ptr = getLoadStorePointerOperand(Inst)) {
       // This is a store of the pointer, not to the pointer.
@@ -476,6 +485,47 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
       continue;
     }
 
+    if (MemTransferInst *TransferInst = dyn_cast<MemTransferInst>(Inst)) {
+      if (TransferInst->isVolatile())
+        return false;
+
+      ConstantInt *Len = dyn_cast<ConstantInt>(TransferInst->getLength());
+      if (!Len || !!(Len->getZExtValue() % ElementSize))
+        return false;
+
+      if (!TransferInfo.count(TransferInst)) {
+        DeferredInsts.push_back(Inst);
+        WorkList.push_back(Inst);
+        TransferInfo[TransferInst] = MemTransferInfo();
+      }
+
+      auto getPointerIndexOfAlloca = [&](Value *Ptr) -> ConstantInt * {
+        GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+        if (Ptr != Alloca && !GEPVectorIdx.count(GEP))
+          return nullptr;
+
+        return dyn_cast<ConstantInt>(calculateVectorIndex(Ptr, GEPVectorIdx));
+      };
+
+      unsigned OpNum = U->getOperandNo();
+      MemTransferInfo *TI = &TransferInfo[TransferInst];
+      if (OpNum == 0) {
+        Value *Dest = TransferInst->getDest();
+        ConstantInt *Index = getPointerIndexOfAlloca(Dest);
+        if (!Index)
+          return false;
+        TI->DestIndex = Index;
+      } else {
+        assert(OpNum == 1);
+        Value *Src = TransferInst->getSource();
+        ConstantInt *Index = getPointerIndexOfAlloca(Src);
+        if (!Index)
+          return false;
+        TI->SrcIndex = Index;
+      }
+      continue;
+    }
+
     // Ignore assume-like intrinsics and comparisons used in assumes.
     if (isAssumeLikeIntrinsic(Inst))
       continue;
@@ -489,6 +539,16 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
     return false;
   }
 
+  while (!DeferredInsts.empty()) {
+    Instruction *Inst = DeferredInsts.pop_back_val();
+    MemTransferInst *TransferInst = cast<MemTransferInst>(Inst);
+    // TODO: Support the case if the pointers are from different alloca or
+    // from different address spaces.
+    MemTransferInfo &Info = TransferInfo[TransferInst];
+    if (!Info.SrcIndex || !Info.DestIndex)
+      return false;
+  }
+
   LLVM_DEBUG(dbgs() << "  Converting alloca to vector " << *AllocaTy << " -> "
                     << *VectorTy << '\n');
 
@@ -500,7 +560,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
       Type *VecPtrTy = VectorTy->getPointerTo(Alloca->getAddressSpace());
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
-      Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
+      Value *VecValue =
+          Builder.CreateAlignedLoad(VectorTy, BitCast, Alloca->getAlign());
       Value *ExtractElement = Builder.CreateExtractElement(VecValue, Index);
       if (Inst->getType() != VecEltTy)
         ExtractElement = Builder.CreateBitOrPointerCast(ExtractElement, Inst->getType());
@@ -514,13 +575,43 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, const DataLayout &DL,
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
       Type *VecPtrTy = VectorTy->getPointerTo(Alloca->getAddressSpace());
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
-      Value *VecValue = Builder.CreateLoad(VectorTy, BitCast);
+      Value *VecValue =
+          Builder.CreateAlignedLoad(VectorTy, BitCast, Alloca->getAlign());
       Value *Elt = SI->getValueOperand();
       if (Elt->getType() != VecEltTy)
         Elt = Builder.CreateBitOrPointerCast(Elt, VecEltTy);
       Value *NewVecValue = Builder.CreateInsertElement(VecValue, Elt, Index);
-      Builder.CreateStore(NewVecValue, BitCast);
+      Builder.CreateAlignedStore(NewVecValue, BitCast, Alloca->getAlign());
       Inst->eraseFromParent();
+      break;
+    }
+    case Instruction::Call: {
+      if (const MemTransferInst *MTI = dyn_cast<MemTransferInst>(Inst)) {
+        ConstantInt *Length = cast<ConstantInt>(MTI->getLength());
+        unsigned NumCopied = Length->getZExtValue() / ElementSize;
+        MemTransferInfo *TI = &TransferInfo[cast<MemTransferInst>(Inst)];
+        unsigned SrcBegin = TI->SrcIndex->getZExtValue();
+        unsigned DestBegin = TI->DestIndex->getZExtValue();
+
+        SmallVector<int> Mask;
+        for (unsigned Idx = 0; Idx < VectorTy->getNumElements(); ++Idx) {
+          if (Idx >= DestBegin && Idx < DestBegin + NumCopied) {
+            Mask.push_back(SrcBegin++);
+          } else {
+            Mask.push_back(Idx);
+          }
+        }
+        Type *VecPtrTy = VectorTy->getPointerTo(Alloca->getAddressSpace());
+        Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
+        Value *VecValue =
+            Builder.CreateAlignedLoad(VectorTy, BitCast, Alloca->getAlign());
+        Value *NewVecValue = Builder.CreateShuffleVector(VecValue, Mask);
+        Builder.CreateAlignedStore(NewVecValue, BitCast, Alloca->getAlign());
+
+        Inst->eraseFromParent();
+      } else {
+        llvm_unreachable("Unsupported call when promoting alloca to vector");
+      }
       break;
     }
 

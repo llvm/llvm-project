@@ -171,7 +171,7 @@ void HeaderSearch::getHeaderMapFileNames(
 }
 
 std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
-  Optional<FileEntryRef> ModuleMap =
+  OptionalFileEntryRef ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
   // The ModuleMap maybe a nullptr, when we load a cached C++ module without
   // *.modulemap file. In this case, just return an empty string.
@@ -212,7 +212,7 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
 }
 
 std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
-  Optional<FileEntryRef> ModuleMap =
+  OptionalFileEntryRef ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
   StringRef ModuleName = Module->Name;
   StringRef ModuleMapPath = ModuleMap->getName();
@@ -415,7 +415,7 @@ StringRef DirectoryLookup::getName() const {
   return getHeaderMap()->getFileName();
 }
 
-Optional<FileEntryRef> HeaderSearch::getFileAndSuggestModule(
+OptionalFileEntryRef HeaderSearch::getFileAndSuggestModule(
     StringRef FileName, SourceLocation IncludeLoc, const DirectoryEntry *Dir,
     bool IsSystemHeaderDir, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule, bool OpenFile /*=true*/,
@@ -447,7 +447,7 @@ Optional<FileEntryRef> HeaderSearch::getFileAndSuggestModule(
 
 /// LookupFile - Lookup the specified file in this search path, returning it
 /// if it exists or returning null if not.
-Optional<FileEntryRef> DirectoryLookup::LookupFile(
+OptionalFileEntryRef DirectoryLookup::LookupFile(
     StringRef &Filename, HeaderSearch &HS, SourceLocation IncludeLoc,
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
@@ -532,7 +532,7 @@ Optional<FileEntryRef> DirectoryLookup::LookupFile(
 /// \param DirName The name of the framework directory.
 /// \param SubmodulePath Will be populated with the submodule path from the
 /// returned top-level module to the originally named framework.
-static Optional<DirectoryEntryRef>
+static OptionalDirectoryEntryRef
 getTopFrameworkDir(FileManager &FileMgr, StringRef DirName,
                    SmallVectorImpl<std::string> &SubmodulePath) {
   assert(llvm::sys::path::extension(DirName) == ".framework" &&
@@ -586,7 +586,7 @@ static bool needModuleLookup(Module *RequestingModule,
 
 /// DoFrameworkLookup - Do a lookup of the specified file in the current
 /// DirectoryLookup, which is a framework directory.
-Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
+OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     StringRef Filename, HeaderSearch &HS, SmallVectorImpl<char> *SearchPath,
     SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule,
@@ -855,7 +855,7 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
 /// for system \#include's or not (i.e. using <> instead of ""). Includers, if
 /// non-empty, indicates where the \#including file(s) are, in case a relative
 /// search is needed. Microsoft mode will pass all \#including files.
-Optional<FileEntryRef> HeaderSearch::LookupFile(
+OptionalFileEntryRef HeaderSearch::LookupFile(
     StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
     ConstSearchDirIterator FromDir, ConstSearchDirIterator *CurDirArg,
     ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
@@ -898,7 +898,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
 
   // This is the header that MSVC's header search would have found.
   ModuleMap::KnownHeader MSSuggestedModule;
-  Optional<FileEntryRef> MSFE;
+  OptionalFileEntryRef MSFE;
 
   // Unless disabled, check to see if the file is in the #includer's
   // directory.  This cannot be based on CurDir, because each includer could be
@@ -927,7 +927,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
       bool IncluderIsSystemHeader =
           Includer ? getFileInfo(Includer).DirInfo != SrcMgr::C_User :
           BuildSystemModule;
-      if (Optional<FileEntryRef> FE = getFileAndSuggestModule(
+      if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
         if (!Includer) {
@@ -1043,7 +1043,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
     bool InUserSpecifiedSystemFramework = false;
     bool IsInHeaderMap = false;
     bool IsFrameworkFoundInDir = false;
-    Optional<FileEntryRef> File = It->LookupFile(
+    OptionalFileEntryRef File = It->LookupFile(
         Filename, *this, IncludeLoc, SearchPath, RelativePath, RequestingModule,
         SuggestedModule, InUserSpecifiedSystemFramework, IsFrameworkFoundInDir,
         IsInHeaderMap, MappedName, OpenFile);
@@ -1138,7 +1138,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
       ScratchFilename += '/';
       ScratchFilename += Filename;
 
-      Optional<FileEntryRef> File = LookupFile(
+      OptionalFileEntryRef File = LookupFile(
           ScratchFilename, IncludeLoc, /*isAngled=*/true, FromDir, &CurDir,
           Includers.front(), SearchPath, RelativePath, RequestingModule,
           SuggestedModule, IsMapped, /*IsFrameworkFound=*/nullptr);
@@ -1175,7 +1175,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
 /// within ".../Carbon.framework/Headers/Carbon.h", check to see if HIToolbox
 /// is a subframework within Carbon.framework.  If so, return the FileEntry
 /// for the designated file, otherwise return null.
-Optional<FileEntryRef> HeaderSearch::LookupSubframeworkHeader(
+OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
     StringRef Filename, const FileEntry *ContextFileEnt,
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule) {
@@ -1628,7 +1628,7 @@ bool HeaderSearch::findUsableModuleForFrameworkHeader(
   if (needModuleLookup(RequestingModule, SuggestedModule)) {
     // Find the top-level framework based on this framework.
     SmallVector<std::string, 4> SubmodulePath;
-    Optional<DirectoryEntryRef> TopFrameworkDir =
+    OptionalDirectoryEntryRef TopFrameworkDir =
         ::getTopFrameworkDir(FileMgr, FrameworkName, SubmodulePath);
     assert(TopFrameworkDir && "Could not find the top-most framework dir");
 
@@ -1668,7 +1668,7 @@ bool HeaderSearch::loadModuleMapFile(const FileEntry *File, bool IsSystem,
                                      StringRef OriginalModuleMapFile) {
   // Find the directory for the module. For frameworks, that may require going
   // up from the 'Modules' directory.
-  Optional<DirectoryEntryRef> Dir;
+  OptionalDirectoryEntryRef Dir;
   if (getHeaderSearchOpts().ModuleMapFileHomeIsCwd) {
     Dir = FileMgr.getOptionalDirectoryRef(".");
   } else {

@@ -43,8 +43,9 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   using InstSeq = SmallVector<Inst>;
 
   /// Parse a register as used in CFI directives.
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -78,6 +79,7 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseImmediate(OperandVector &Operands);
   OperandMatchResultTy parseOperandWithModifier(OperandVector &Operands);
   OperandMatchResultTy parseSImm26Operand(OperandVector &Operands);
+  OperandMatchResultTy parseAtomicMemOp(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -180,6 +182,11 @@ public:
   bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isMem() const override { return false; }
   void setReg(MCRegister PhysReg) { Reg.RegNum = PhysReg; }
+  bool isGPR() const {
+    return Kind == KindTy::Register &&
+           LoongArchMCRegisterClasses[LoongArch::GPRRegClassID].contains(
+               Reg.RegNum);
+  }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   LoongArchMCExpr::VariantKind &VK) {
@@ -529,12 +536,12 @@ static bool matchRegisterNameHelper(MCRegister &RegNo, StringRef Name) {
   return RegNo == LoongArch::NoRegister;
 }
 
-bool LoongArchAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool LoongArchAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                        SMLoc &EndLoc) {
   return Error(getLoc(), "invalid register number");
 }
 
-OperandMatchResultTy LoongArchAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy LoongArchAsmParser::tryParseRegister(MCRegister &RegNo,
                                                           SMLoc &StartLoc,
                                                           SMLoc &EndLoc) {
   llvm_unreachable("Unimplemented function.");
@@ -674,6 +681,28 @@ LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
+OperandMatchResultTy
+LoongArchAsmParser::parseAtomicMemOp(OperandVector &Operands) {
+  // Parse "$r*".
+  if (parseRegister(Operands) != MatchOperand_Success)
+    return MatchOperand_NoMatch;
+
+  // If there is a next operand and it is 0, ignore it. Otherwise print a
+  // diagnostic message.
+  if (getLexer().is(AsmToken::Comma)) {
+    getLexer().Lex(); // Consume comma token.
+    int64_t ImmVal;
+    SMLoc ImmStart = getLoc();
+    if (getParser().parseIntToken(ImmVal, "expected optional integer offset"))
+      return MatchOperand_ParseFail;
+    if (ImmVal) {
+      Error(ImmStart, "optional integer offset must be 0");
+      return MatchOperand_ParseFail;
+    }
+  }
+
+  return MatchOperand_Success;
+}
 /// Looks at a token type and creates the relevant operand from this
 /// information, adding to Operands. Return true upon an error.
 bool LoongArchAsmParser::parseOperand(OperandVector &Operands,
@@ -1148,7 +1177,7 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       unsigned Rd = Inst.getOperand(0).getReg();
       unsigned Rk = Inst.getOperand(1).getReg();
       unsigned Rj = Inst.getOperand(2).getReg();
-      if (Rd == Rk || Rd == Rj)
+      if ((Rd == Rk || Rd == Rj) && Rd != LoongArch::R0)
         return Match_RequiresAMORdDifferRkRj;
     }
     break;

@@ -9,9 +9,9 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @func() noreturn nounwind uwtable {
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %tobool = icmp eq i32 %0, 0
-  %1 = load i32, i32* @b, align 4
+  %1 = load i32, ptr @b, align 4
   br label %while.body
 
 while.body:                                       ; preds = %while.body, %entry

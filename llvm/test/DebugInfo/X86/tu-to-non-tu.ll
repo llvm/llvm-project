@@ -150,39 +150,39 @@
 %class.ref_internal_template = type { %"struct.(anonymous namespace)::internal_template" }
 %"struct.(anonymous namespace)::internal_template" = type { i8 }
 %class.ref_from_ref_internal_template = type { i8 }
-%struct.non_tu = type { i32 (...)** }
-%struct.templ_non_tu = type { i32 (...)** }
-%struct.templ_non_tu.0 = type { i32 (...)** }
-%struct.templ_non_tu.1 = type { i32 (...)** }
+%struct.non_tu = type { ptr }
+%struct.templ_non_tu = type { ptr }
+%struct.templ_non_tu.0 = type { ptr }
+%struct.templ_non_tu.1 = type { ptr }
 
-@_ZTV6non_tu = dso_local unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI6non_tu to i8*), i8* bitcast (void (%struct.non_tu*)* @_ZN6non_tu2f1Ev to i8*)] }, align 8
-@v1 = dso_local global { { i8** } } { { i8** } { i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV6non_tu, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !0
+@_ZTV6non_tu = dso_local unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI6non_tu, ptr @_ZN6non_tu2f1Ev] }, align 8
+@v1 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV6non_tu, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !0
 @v5 = dso_local global %struct.ref_internal zeroinitializer, align 1, !dbg !5
-@_ZTV12templ_non_tuIiE = dso_local unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI12templ_non_tuIiE to i8*), i8* bitcast (void (%struct.templ_non_tu*)* @_ZN12templ_non_tuIiE2f1Ev to i8*)] }, align 8
-@v2 = dso_local global { { i8** } } { { i8** } { i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV12templ_non_tuIiE, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !13
-@_ZTV12templ_non_tuIlE = dso_local unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI12templ_non_tuIlE to i8*), i8* bitcast (void (%struct.templ_non_tu.0*)* @_ZN12templ_non_tuIlE2f1Ev to i8*)] }, align 8
-@v3 = dso_local global { { i8** } } { { i8** } { i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV12templ_non_tuIlE, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !32
-@_ZTV12templ_non_tuIbE = dso_local unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI12templ_non_tuIbE to i8*), i8* bitcast (void (%struct.templ_non_tu.1*)* @_ZN12templ_non_tuIbE2f1Ev to i8*)] }, align 8
-@v4 = dso_local global { { i8** } } { { i8** } { i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV12templ_non_tuIbE, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !46
+@_ZTV12templ_non_tuIiE = dso_local unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI12templ_non_tuIiE, ptr @_ZN12templ_non_tuIiE2f1Ev] }, align 8
+@v2 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV12templ_non_tuIiE, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !13
+@_ZTV12templ_non_tuIlE = dso_local unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI12templ_non_tuIlE, ptr @_ZN12templ_non_tuIlE2f1Ev] }, align 8
+@v3 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV12templ_non_tuIlE, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !32
+@_ZTV12templ_non_tuIbE = dso_local unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI12templ_non_tuIbE, ptr @_ZN12templ_non_tuIbE2f1Ev] }, align 8
+@v4 = dso_local global { { ptr } } { { ptr } { ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV12templ_non_tuIbE, i32 0, inrange i32 0, i32 2) } }, align 8, !dbg !46
 @v6 = dso_local global %class.ref_internal_template zeroinitializer, align 1, !dbg !60
 @v7 = dso_local global %class.ref_from_ref_internal_template zeroinitializer, align 1, !dbg !69
-@_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global i8*
+@_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global ptr
 @_ZTS6non_tu = dso_local constant [8 x i8] c"6non_tu\00", align 1
-@_ZTI6non_tu = dso_local constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @_ZTS6non_tu, i32 0, i32 0) }, align 8
+@_ZTI6non_tu = dso_local constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS6non_tu }, align 8
 @_ZTS12templ_non_tuIiE = dso_local constant [18 x i8] c"12templ_non_tuIiE\00", align 1
-@_ZTI12templ_non_tuIiE = dso_local constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([18 x i8], [18 x i8]* @_ZTS12templ_non_tuIiE, i32 0, i32 0) }, align 8
+@_ZTI12templ_non_tuIiE = dso_local constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS12templ_non_tuIiE }, align 8
 @_ZTS12templ_non_tuIlE = dso_local constant [18 x i8] c"12templ_non_tuIlE\00", align 1
-@_ZTI12templ_non_tuIlE = dso_local constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([18 x i8], [18 x i8]* @_ZTS12templ_non_tuIlE, i32 0, i32 0) }, align 8
+@_ZTI12templ_non_tuIlE = dso_local constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS12templ_non_tuIlE }, align 8
 @_ZTS12templ_non_tuIbE = dso_local constant [18 x i8] c"12templ_non_tuIbE\00", align 1
-@_ZTI12templ_non_tuIbE = dso_local constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([18 x i8], [18 x i8]* @_ZTS12templ_non_tuIbE, i32 0, i32 0) }, align 8
+@_ZTI12templ_non_tuIbE = dso_local constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS12templ_non_tuIbE }, align 8
 
 ; Function Attrs: mustprogress noinline nounwind optnone uwtable
-define dso_local void @_ZN6non_tu2f1Ev(%struct.non_tu* noundef nonnull align 8 dereferenceable(8) %this) unnamed_addr #0 align 2 !dbg !87 {
+define dso_local void @_ZN6non_tu2f1Ev(ptr noundef nonnull align 8 dereferenceable(8) %this) unnamed_addr #0 align 2 !dbg !87 {
 entry:
-  %this.addr = alloca %struct.non_tu*, align 8
-  store %struct.non_tu* %this, %struct.non_tu** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.non_tu** %this.addr, metadata !88, metadata !DIExpression()), !dbg !90
-  %this1 = load %struct.non_tu*, %struct.non_tu** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !88, metadata !DIExpression()), !dbg !90
+  %this1 = load ptr, ptr %this.addr, align 8
   ret void, !dbg !91
 }
 
@@ -190,32 +190,32 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: mustprogress noinline nounwind optnone uwtable
-define dso_local void @_ZN12templ_non_tuIiE2f1Ev(%struct.templ_non_tu* noundef nonnull align 8 dereferenceable(8) %this) unnamed_addr #0 align 2 !dbg !92 {
+define dso_local void @_ZN12templ_non_tuIiE2f1Ev(ptr noundef nonnull align 8 dereferenceable(8) %this) unnamed_addr #0 align 2 !dbg !92 {
 entry:
-  %this.addr = alloca %struct.templ_non_tu*, align 8
-  store %struct.templ_non_tu* %this, %struct.templ_non_tu** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.templ_non_tu** %this.addr, metadata !93, metadata !DIExpression()), !dbg !95
-  %this1 = load %struct.templ_non_tu*, %struct.templ_non_tu** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !93, metadata !DIExpression()), !dbg !95
+  %this1 = load ptr, ptr %this.addr, align 8
   ret void, !dbg !96
 }
 
 ; Function Attrs: mustprogress noinline nounwind optnone uwtable
-define dso_local void @_ZN12templ_non_tuIlE2f1Ev(%struct.templ_non_tu.0* noundef nonnull align 8 dereferenceable(8) %this) unnamed_addr #0 align 2 !dbg !97 {
+define dso_local void @_ZN12templ_non_tuIlE2f1Ev(ptr noundef nonnull align 8 dereferenceable(8) %this) unnamed_addr #0 align 2 !dbg !97 {
 entry:
-  %this.addr = alloca %struct.templ_non_tu.0*, align 8
-  store %struct.templ_non_tu.0* %this, %struct.templ_non_tu.0** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.templ_non_tu.0** %this.addr, metadata !98, metadata !DIExpression()), !dbg !100
-  %this1 = load %struct.templ_non_tu.0*, %struct.templ_non_tu.0** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !98, metadata !DIExpression()), !dbg !100
+  %this1 = load ptr, ptr %this.addr, align 8
   ret void, !dbg !101
 }
 
 ; Function Attrs: mustprogress noinline nounwind optnone uwtable
-define dso_local void @_ZN12templ_non_tuIbE2f1Ev(%struct.templ_non_tu.1* noundef nonnull align 8 dereferenceable(8) %this) unnamed_addr #0 align 2 !dbg !102 {
+define dso_local void @_ZN12templ_non_tuIbE2f1Ev(ptr noundef nonnull align 8 dereferenceable(8) %this) unnamed_addr #0 align 2 !dbg !102 {
 entry:
-  %this.addr = alloca %struct.templ_non_tu.1*, align 8
-  store %struct.templ_non_tu.1* %this, %struct.templ_non_tu.1** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.templ_non_tu.1** %this.addr, metadata !103, metadata !DIExpression()), !dbg !105
-  %this1 = load %struct.templ_non_tu.1*, %struct.templ_non_tu.1** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !103, metadata !DIExpression()), !dbg !105
+  %this1 = load ptr, ptr %this.addr, align 8
   ret void, !dbg !106
 }
 

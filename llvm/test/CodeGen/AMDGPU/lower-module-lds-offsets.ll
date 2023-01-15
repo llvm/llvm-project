@@ -17,18 +17,14 @@
 ; GCN:     ds_write_b8 [[NULL]], [[TWO]] offset:16
 define amdgpu_kernel void @k0() {
 ; OPT-LABEL: @k0(
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"([[LLVM_AMDGCN_MODULE_LDS_T:%.*]] addrspace(3)* @llvm.amdgcn.module.lds) ]
-; OPT-NEXT:    [[LDS_SIZE_1_ALIGN_1_BC:%.*]] = bitcast [1 x i8] addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0) to i8 addrspace(3)*
-; OPT-NEXT:    store i8 1, i8 addrspace(3)* [[LDS_SIZE_1_ALIGN_1_BC]], align 1
-; OPT-NEXT:    [[LDS_SIZE_16_ALIGN_16_BC:%.*]] = bitcast [16 x i8] addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K0_LDS_T:%.*]], [[LLVM_AMDGCN_KERNEL_K0_LDS_T]] addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 0) to i8 addrspace(3)*
-; OPT-NEXT:    store i8 2, i8 addrspace(3)* [[LDS_SIZE_16_ALIGN_16_BC]], align 16
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
+; OPT-NEXT:    store i8 1, ptr addrspace(3) @llvm.amdgcn.module.lds, align 1
+; OPT-NEXT:    store i8 2, ptr addrspace(3) @llvm.amdgcn.kernel.k0.lds, align 16
 ; OPT-NEXT:    call void @f0()
 ; OPT-NEXT:    ret void
 ;
-  %lds.size.1.align.1.bc = bitcast [1 x i8] addrspace(3)* @lds.size.1.align.1 to i8 addrspace(3)*
-  store i8 1, i8 addrspace(3)* %lds.size.1.align.1.bc, align 1
-  %lds.size.16.align.16.bc = bitcast [16 x i8] addrspace(3)* @lds.size.16.align.16 to i8 addrspace(3)*
-  store i8 2, i8 addrspace(3)* %lds.size.16.align.16.bc, align 16
+  store i8 1, ptr addrspace(3) @lds.size.1.align.1, align 1
+  store i8 2, ptr addrspace(3) @lds.size.16.align.16, align 16
   call void @f0()
   ret void
 }
@@ -39,12 +35,10 @@ define amdgpu_kernel void @k0() {
 ; GCN:     ds_write_b8 [[NULL]], [[TREE]]
 define void @f0() {
 ; OPT-LABEL: @f0() {
-; OPT-NEXT:    [[LDS_SIZE_1_ALIGN_1_BC:%.*]] = bitcast [1 x i8] addrspace(3)* getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], [[LLVM_AMDGCN_MODULE_LDS_T]] addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0) to i8 addrspace(3)*
-; OPT-NEXT:    store i8 3, i8 addrspace(3)* [[LDS_SIZE_1_ALIGN_1_BC]], align 1
+; OPT-NEXT:    store i8 3, ptr addrspace(3) @llvm.amdgcn.module.lds, align 1
 ; OPT-NEXT:    ret void
 ;
-  %lds.size.1.align.1.bc = bitcast [1 x i8] addrspace(3)* @lds.size.1.align.1 to i8 addrspace(3)*
-  store i8 3, i8 addrspace(3)* %lds.size.1.align.1.bc, align 1
+  store i8 3, ptr addrspace(3) @lds.size.1.align.1, align 1
   ret void
 }
 

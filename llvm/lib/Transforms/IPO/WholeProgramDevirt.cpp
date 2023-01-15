@@ -1836,10 +1836,9 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
 bool DevirtModule::areRemarksEnabled() {
   const auto &FL = M.getFunctionList();
   for (const Function &Fn : FL) {
-    const auto &BBL = Fn.getBasicBlockList();
-    if (BBL.empty())
+    if (Fn.empty())
       continue;
-    auto DI = OptimizationRemark(DEBUG_TYPE, "", DebugLoc(), &BBL.front());
+    auto DI = OptimizationRemark(DEBUG_TYPE, "", DebugLoc(), &Fn.front());
     return DI.isEnabled();
   }
   return false;

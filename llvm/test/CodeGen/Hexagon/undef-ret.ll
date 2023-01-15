@@ -3,11 +3,11 @@
 ; CHECK: = add(r0,add(r1,#2))
 
 ; Function Attrs: nounwind
-define i32 @f0(i32 %a0, i32 %a1, i32* nocapture %a2) #0 {
+define i32 @f0(i32 %a0, i32 %a1, ptr nocapture %a2) #0 {
 b0:
   %v0 = add nsw i32 %a0, 2
   %v1 = add nsw i32 %v0, %a1
-  store i32 %v1, i32* %a2, align 4, !tbaa !0
+  store i32 %v1, ptr %a2, align 4, !tbaa !0
   ret i32 undef
 }
 

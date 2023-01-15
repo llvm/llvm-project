@@ -5,7 +5,7 @@
 ; RUN: llvm-lto2 run %t.o %loadbye %loadnewpmbye -wave-goodbye -o %t -r %t.o,somefunk,plx -r %t.o,junk,plx 2>&1 | FileCheck %s
 ; RUN: llvm-lto2 run %t.o %loadbye %loadnewpmbye -opt-pipeline="goodbye" -wave-goodbye -o %t -r %t.o,somefunk,plx -r %t.o,junk,plx 2>&1 | FileCheck %s
 ; REQUIRES: plugins, examples
-; UNSUPPORTED: windows
+; UNSUPPORTED: target={{.*windows.*}}
 ; CHECK: Bye
 ;
 ; Specifying a new PM pass plugin with the old PM is an error.
@@ -16,7 +16,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 @junk = global i32 0
 
-define i32* @somefunk() {
-  ret i32* @junk
+define ptr @somefunk() {
+  ret ptr @junk
 }
 

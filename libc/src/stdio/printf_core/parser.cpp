@@ -50,10 +50,9 @@ FormatSection Parser::get_next_section() {
 
       section.min_width = GET_ARG_VAL_SIMPLEST(int, parse_index(&cur_pos));
     } else if (internal::isdigit(str[cur_pos])) {
-      char *int_end;
-      section.min_width =
-          internal::strtointeger<int>(str + cur_pos, &int_end, 10);
-      cur_pos = int_end - str;
+      auto result = internal::strtointeger<int>(str + cur_pos, 10);
+      section.min_width = result.value;
+      cur_pos = cur_pos + result.parsed_len;
     }
     if (section.min_width < 0) {
       section.min_width = -section.min_width;
@@ -73,10 +72,9 @@ FormatSection Parser::get_next_section() {
         section.precision = GET_ARG_VAL_SIMPLEST(int, parse_index(&cur_pos));
 
       } else if (internal::isdigit(str[cur_pos])) {
-        char *int_end;
-        section.precision =
-            internal::strtointeger<int>(str + cur_pos, &int_end, 10);
-        cur_pos = int_end - str;
+        auto result = internal::strtointeger<int>(str + cur_pos, 10);
+        section.precision = result.value;
+        cur_pos = cur_pos + result.parsed_len;
       }
     }
 
@@ -238,12 +236,11 @@ LengthModifier Parser::parse_length_modifier(size_t *local_pos) {
 
 size_t Parser::parse_index(size_t *local_pos) {
   if (internal::isdigit(str[*local_pos])) {
-    char *int_end;
-    size_t index =
-        internal::strtointeger<size_t>(str + *local_pos, &int_end, 10);
-    if (int_end[0] != '$')
+    auto result = internal::strtointeger<int>(str + *local_pos, 10);
+    size_t index = result.value;
+    if (str[*local_pos + result.parsed_len] != '$')
       return 0;
-    *local_pos = 1 + int_end - str;
+    *local_pos = 1 + result.parsed_len + *local_pos;
     return index;
   }
   return 0;
@@ -269,9 +266,9 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
         ++local_pos;
 
         size_t width_index = parse_index(&local_pos);
-        set_type_desc(width_index, TYPE_DESC<int>);
+        set_type_desc(width_index, get_type_desc<int>());
         if (width_index == index)
-          return TYPE_DESC<int>;
+          return get_type_desc<int>();
 
       } else if (internal::isdigit(str[local_pos])) {
         while (internal::isdigit(str[local_pos]))
@@ -285,9 +282,9 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
           ++local_pos;
 
           size_t precision_index = parse_index(&local_pos);
-          set_type_desc(precision_index, TYPE_DESC<int>);
+          set_type_desc(precision_index, get_type_desc<int>());
           if (precision_index == index)
-            return TYPE_DESC<int>;
+            return get_type_desc<int>();
 
         } else if (internal::isdigit(str[local_pos])) {
           while (internal::isdigit(str[local_pos]))
@@ -306,13 +303,13 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
         continue;
       }
 
-      TypeDesc conv_size = TYPE_DESC<void>;
+      TypeDesc conv_size = get_type_desc<void>();
       switch (str[local_pos]) {
       case ('%'):
-        conv_size = TYPE_DESC<void>;
+        conv_size = get_type_desc<void>();
         break;
       case ('c'):
-        conv_size = TYPE_DESC<int>;
+        conv_size = get_type_desc<int>();
         break;
       case ('d'):
       case ('i'):
@@ -324,24 +321,24 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
         case (LengthModifier::hh):
         case (LengthModifier::h):
         case (LengthModifier::none):
-          conv_size = TYPE_DESC<int>;
+          conv_size = get_type_desc<int>();
           break;
         case (LengthModifier::l):
-          conv_size = TYPE_DESC<long>;
+          conv_size = get_type_desc<long>();
           break;
         case (LengthModifier::ll):
         case (LengthModifier::L): // This isn't in the standard, but is in other
                                   // libc implementations.
-          conv_size = TYPE_DESC<long long>;
+          conv_size = get_type_desc<long long>();
           break;
         case (LengthModifier::j):
-          conv_size = TYPE_DESC<intmax_t>;
+          conv_size = get_type_desc<intmax_t>();
           break;
         case (LengthModifier::z):
-          conv_size = TYPE_DESC<size_t>;
+          conv_size = get_type_desc<size_t>();
           break;
         case (LengthModifier::t):
-          conv_size = TYPE_DESC<ptrdiff_t>;
+          conv_size = get_type_desc<ptrdiff_t>();
           break;
         }
         break;
@@ -355,9 +352,9 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
       case ('g'):
       case ('G'):
         if (lm != LengthModifier::L)
-          conv_size = TYPE_DESC<double>;
+          conv_size = get_type_desc<double>();
         else
-          conv_size = TYPE_DESC<long double>;
+          conv_size = get_type_desc<long double>();
         break;
 #endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
 #ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
@@ -365,10 +362,10 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
 #endif // LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
       case ('p'):
       case ('s'):
-        conv_size = TYPE_DESC<void *>;
+        conv_size = get_type_desc<void *>();
         break;
       default:
-        conv_size = TYPE_DESC<int>;
+        conv_size = get_type_desc<int>();
         break;
       }
 
@@ -384,7 +381,7 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
 
   // If there is no size for the requested index, then just guess that it's an
   // int.
-  return TYPE_DESC<int>;
+  return get_type_desc<int>();
 }
 
 void Parser::args_to_index(size_t index) {
@@ -394,26 +391,26 @@ void Parser::args_to_index(size_t index) {
   }
 
   while (args_index < index) {
-    Parser::TypeDesc cur_type_desc = TYPE_DESC<void>;
+    Parser::TypeDesc cur_type_desc = get_type_desc<void>();
     if (args_index <= DESC_ARR_LEN)
       cur_type_desc = desc_arr[args_index - 1];
 
-    if (cur_type_desc == TYPE_DESC<void>)
+    if (cur_type_desc == get_type_desc<void>())
       cur_type_desc = get_type_desc(args_index);
 
-    if (cur_type_desc == TYPE_DESC<uint32_t>)
+    if (cur_type_desc == get_type_desc<uint32_t>())
       args_cur.next_var<uint32_t>();
-    else if (cur_type_desc == TYPE_DESC<uint64_t>)
+    else if (cur_type_desc == get_type_desc<uint64_t>())
       args_cur.next_var<uint64_t>();
 #ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
     // Floating point numbers are stored separately from the other arguments.
-    else if (cur_type_desc == TYPE_DESC<double>)
+    else if (cur_type_desc == get_type_desc<double>())
       args_cur.next_var<double>();
-    else if (cur_type_desc == TYPE_DESC<long double>)
+    else if (cur_type_desc == get_type_desc<long double>())
       args_cur.next_var<long double>();
 #endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
     // pointers may be stored separately from normal values.
-    else if (cur_type_desc == TYPE_DESC<void *>)
+    else if (cur_type_desc == get_type_desc<void *>())
       args_cur.next_var<void *>();
     else
       args_cur.next_var<uint32_t>();

@@ -1061,8 +1061,8 @@ define i8 @not_lshr(i8 %x) {
 
 define <2 x i8> @not_lshr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @not_lshr_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[TMP1]], <i8 7, i8 7>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[ISNOTNEG]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = lshr <2 x i8> %x, <i8 7, i8 7>
@@ -1352,7 +1352,7 @@ define i32 @ctlz_pow2(i32 %x) {
 
 define <2 x i8> @cttz_pow2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @cttz_pow2(
-; CHECK-NEXT:    [[S:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i8> <i8 1, i8 1>, [[X:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i8> [[S]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[D]], i1 true)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]

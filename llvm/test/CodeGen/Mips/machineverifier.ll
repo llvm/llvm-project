@@ -6,13 +6,13 @@
 
 define void @foo() nounwind {
 entry:
-  %0 = load i32, i32* @g, align 4
+  %0 = load i32, ptr @g, align 4
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
   %add = add nsw i32 %0, 10
-  store i32 %add, i32* @g, align 4
+  store i32 %add, ptr @g, align 4
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then

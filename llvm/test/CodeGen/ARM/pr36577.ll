@@ -8,7 +8,7 @@
 
 @a = common dso_local local_unnamed_addr global i16 0, align 2
 
-define dso_local arm_aapcscc i32** @pr36577() {
+define dso_local arm_aapcscc ptr @pr36577() {
 ; CHECK-LABEL: pr36577:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movw r0, :lower16:a
@@ -29,12 +29,12 @@ define dso_local arm_aapcscc i32** @pr36577() {
 ; CHECK-T2-NEXT:    orr.w r0, r1, r0, lsl #2
 ; CHECK-T2-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* @a, align 2
+  %0 = load i16, ptr @a, align 2
   %1 = lshr i16 %0, 7
   %2 = and i16 %1, 1
   %3 = zext i16 %2 to i32
   %4 = xor i32 %3, -1
-  %add.ptr = getelementptr inbounds i32*, i32** null, i32 %4
-  ret i32** %add.ptr
+  %add.ptr = getelementptr inbounds ptr, ptr null, i32 %4
+  ret ptr %add.ptr
 }
 

@@ -35,6 +35,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-isel"
+#define PASS_NAME "X86 DAG->DAG Instruction Selection"
 
 STATISTIC(NumLoadMoved, "Number of loads moved below TokenFactor");
 
@@ -168,13 +169,13 @@ namespace {
     bool IndirectTlsSegRefs;
 
   public:
-    explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
-        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr),
-          OptForMinSize(false), IndirectTlsSegRefs(false) {}
+    static char ID;
 
-    StringRef getPassName() const override {
-      return "X86 DAG->DAG Instruction Selection";
-    }
+    X86DAGToDAGISel() = delete;
+
+    explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
+        : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr),
+          OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
       // Reset the subtarget each time through.
@@ -574,6 +575,9 @@ namespace {
   };
 }
 
+char X86DAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(X86DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 // Returns true if this masked compare can be implemented legally with this
 // type.
@@ -3991,17 +3995,35 @@ bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
   // so we are not afraid that we might mess up BZHI/BEXTR pattern.
 
   SDValue NewShiftAmt;
-  if (ShiftAmt->getOpcode() == ISD::ADD || ShiftAmt->getOpcode() == ISD::SUB) {
+  if (ShiftAmt->getOpcode() == ISD::ADD || ShiftAmt->getOpcode() == ISD::SUB ||
+      ShiftAmt->getOpcode() == ISD::XOR) {
     SDValue Add0 = ShiftAmt->getOperand(0);
     SDValue Add1 = ShiftAmt->getOperand(1);
     auto *Add0C = dyn_cast<ConstantSDNode>(Add0);
     auto *Add1C = dyn_cast<ConstantSDNode>(Add1);
-    // If we are shifting by X+/-N where N == 0 mod Size, then just shift by X
-    // to avoid the ADD/SUB.
+    // If we are shifting by X+/-/^N where N == 0 mod Size, then just shift by X
+    // to avoid the ADD/SUB/XOR.
     if (Add1C && Add1C->getAPIntValue().urem(Size) == 0) {
       NewShiftAmt = Add0;
-      // If we are shifting by N-X where N == 0 mod Size, then just shift by -X
-      // to generate a NEG instead of a SUB of a constant.
+
+    } else if (ShiftAmt->getOpcode() != ISD::ADD &&
+               ((Add0C && Add0C->getAPIntValue().urem(Size) == Size - 1) ||
+                (Add1C && Add1C->getAPIntValue().urem(Size) == Size - 1))) {
+      // If we are doing a NOT on just the lower bits with (Size*N-1) -/^ X
+      // we can replace it with a NOT. In the XOR case it may save some code
+      // size, in the SUB case it also may save a move.
+      assert(Add0C == nullptr || Add1C == nullptr);
+
+      // We can only do N-X, not X-N
+      if (ShiftAmt->getOpcode() == ISD::SUB && Add0C == nullptr)
+        return false;
+
+      EVT OpVT = ShiftAmt.getValueType();
+
+      NewShiftAmt = CurDAG->getNOT(DL, Add0C == nullptr ? Add0 : Add1, OpVT);
+      insertDAGNode(*CurDAG, OrigShiftAmt, NewShiftAmt);
+      // If we are shifting by N-X where N == 0 mod Size, then just shift by
+      // -X to generate a NEG instead of a SUB of a constant.
     } else if (ShiftAmt->getOpcode() == ISD::SUB && Add0C &&
                Add0C->getZExtValue() != 0) {
       EVT SubVT = ShiftAmt.getValueType();

@@ -205,6 +205,14 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     coordinate work items. Declarations of GPU functions, i.e. not having the
     body region, are not supported.
 
+    A function may optionally be annotated with the block and/or grid sizes
+    that will be used when it is launched using the `gpu.known_block_size` and
+    `gpu.known_grid_size` attributes, respectively. If set, these attributes must
+    be arrays of three 32-bit integers giving the x, y, and z launch dimensions.
+    Launching a kernel that has these annotations, or that calls a function with
+    these annotations, using a block size or grid size other than what is specified
+    is undefined behavior.
+
     Syntax:
 
     ```
@@ -242,7 +250,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     attribution.
   }];
 
-  let arguments = (ins TypeAttrOf<FunctionType>:$function_type);
+  let arguments = (ins TypeAttrOf<FunctionType>:$function_type,
+                       OptionalAttr<DictArrayAttr>:$arg_attrs,
+                       OptionalAttr<DictArrayAttr>:$res_attrs);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -309,6 +319,36 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
       return "workgroup_attributions";
     }
 
+    static constexpr StringLiteral getKnownBlockSizeAttrName() {
+      return StringLiteral("gpu.known_block_size");
+    }
+
+    static constexpr StringLiteral getKnownGridSizeAttrName() {
+      return StringLiteral("gpu.known_grid_size");
+    }
+
+    /// Returns the block size this kernel will be launched with along
+    /// dimension `dim` if known. The value of gpu.thread_id dim will be strictly
+    /// less than this size.
+    Optional<uint32_t> getKnownBlockSize(gpu::Dimension dim) {
+      if (auto array =
+        (*this)->getAttrOfType<DenseI32ArrayAttr>(getKnownBlockSizeAttrName())) {
+        return array[static_cast<uint32_t>(dim)];
+      }
+      return std::nullopt;
+    }
+
+    /// Returns the grid size this kernel will be launched with along
+    /// dimension `dim` if known. The value of gpu.block_id dim will be strictly
+    /// less than this size.
+    Optional<uint32_t> getKnownGridSize(gpu::Dimension dim) {
+      if (auto array =
+        (*this)->getAttrOfType<DenseI32ArrayAttr>(getKnownGridSizeAttrName())) {
+        return array[static_cast<uint32_t>(dim)];
+      }
+      return std::nullopt;
+    }
+
     /// Returns the argument types of this function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
@@ -327,6 +367,8 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     LogicalResult verifyBody();
   }];
   let hasCustomAssemblyFormat = 1;
+
+  let hasVerifier = 1;
 }
 
 def GPU_LaunchFuncOp : GPU_Op<"launch_func",
@@ -686,7 +728,8 @@ def GPU_AllReduceOperationAttr : EnumAttr<GPU_Dialect, GPU_AllReduceOperation,
 def GPU_AllReduceOp : GPU_Op<"all_reduce",
     [SameOperandsAndResultType, IsolatedFromAbove]>,
     Arguments<(ins AnyType:$value,
-               OptionalAttr<GPU_AllReduceOperationAttr>:$op)>,
+               OptionalAttr<GPU_AllReduceOperationAttr>:$op,
+               UnitAttr:$uniform)>,
     Results<(outs AnyType)> {
   let summary = "Reduce values among workgroup.";
   let description = [{
@@ -709,11 +752,12 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
     accumulation as code region. The accumulation operation must be one of:
     `add`, `and`, `max`, `min`, `mul`, `or`, `xor`.
 
-    Either none or all work items of a workgroup need to execute this op
-    in convergence.
+    If `uniform` flag is set either none or all work items of a workgroup
+    need to execute this op in convergence.
   }];
   let regions = (region AnyRegion:$body);
-  let assemblyFormat = [{ custom<AllReduceOperation>($op) $value $body attr-dict
+  let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
+                          (`uniform` $uniform^)? $body attr-dict
                           `:` functional-type(operands, results) }];
   let hasRegionVerifier = 1;
 }
@@ -721,7 +765,8 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
 def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce",
     [SameOperandsAndResultType]>,
     Arguments<(ins AnyType:$value,
-               GPU_AllReduceOperationAttr:$op)>,
+               GPU_AllReduceOperationAttr:$op,
+               UnitAttr:$uniform)>,
     Results<(outs AnyType)> {
   let summary = "Reduce values among subgroup.";
   let description = [{
@@ -734,10 +779,11 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce",
     %1 = gpu.subgroup_reduce add %0 : (f32) -> (f32)
     ```
 
-    Either none or all work items of a subgroup need to execute this op
-    in convergence.
+    If `uniform` flag is set either none or all work items of a subgroup
+    need to execute this op in convergence.
   }];
-  let assemblyFormat = [{ custom<AllReduceOperation>($op) $value attr-dict
+  let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
+                          (`uniform` $uniform^)? attr-dict
                           `:` functional-type(operands, results) }];
   let hasVerifier = 1;
 }

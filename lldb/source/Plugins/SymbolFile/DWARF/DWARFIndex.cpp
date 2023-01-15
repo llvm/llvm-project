@@ -102,6 +102,6 @@ bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
 void DWARFIndex::ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const {
   m_module.ReportErrorIfModifyDetected(
       "the DWARF debug information has been modified (accelerator table had "
-      "bad die 0x%8.8x for '%s')\n",
+      "bad die {0:x16} for '{1}')\n",
       ref.die_offset(), name.str().c_str());
 }

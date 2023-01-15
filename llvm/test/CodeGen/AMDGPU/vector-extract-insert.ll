@@ -7,7 +7,7 @@
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 ; No dynamic indexing required
-define amdgpu_kernel void @extract_insert_same_dynelt_v4i32(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %val, i32 %idx) #1 {
+define amdgpu_kernel void @extract_insert_same_dynelt_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx) #1 {
 ; GCN-LABEL: extract_insert_same_dynelt_v4i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -22,16 +22,16 @@ define amdgpu_kernel void @extract_insert_same_dynelt_v4i32(i32 addrspace(1)* %o
 ; GCN-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %id.ext = sext i32 %id to i64
-  %gep.in = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %in, i64 %id.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %id.ext
-  %vec = load <4 x i32>, <4 x i32> addrspace(1)* %gep.in
+  %gep.in = getelementptr inbounds <4 x i32>, ptr addrspace(1) %in, i64 %id.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %id.ext
+  %vec = load <4 x i32>, ptr addrspace(1) %gep.in
   %insert = insertelement <4 x i32> %vec, i32 %val, i32 %idx
   %extract = extractelement <4 x i32> %insert, i32 %idx
-  store i32 %extract, i32 addrspace(1)* %gep.out
+  store i32 %extract, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @extract_insert_different_dynelt_v4i32(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %val, i32 %idx0, i32 %idx1) #1 {
+define amdgpu_kernel void @extract_insert_different_dynelt_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx0, i32 %idx1) #1 {
 ; GCN-LABEL: extract_insert_different_dynelt_v4i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
@@ -75,16 +75,16 @@ define amdgpu_kernel void @extract_insert_different_dynelt_v4i32(i32 addrspace(1
 ; GCN-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %id.ext = sext i32 %id to i64
-  %gep.in = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %in, i64 %id.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %id.ext
-  %vec = load <4 x i32>, <4 x i32> addrspace(1)* %gep.in
+  %gep.in = getelementptr inbounds <4 x i32>, ptr addrspace(1) %in, i64 %id.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %id.ext
+  %vec = load <4 x i32>, ptr addrspace(1) %gep.in
   %insert = insertelement <4 x i32> %vec, i32 %val, i32 %idx0
   %extract = extractelement <4 x i32> %insert, i32 %idx1
-  store i32 %extract, i32 addrspace(1)* %gep.out
+  store i32 %extract, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @extract_insert_same_elt2_v4i32(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %val, i32 %idx) #1 {
+define amdgpu_kernel void @extract_insert_same_elt2_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %val, i32 %idx) #1 {
 ; GCN-LABEL: extract_insert_same_elt2_v4i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -99,16 +99,16 @@ define amdgpu_kernel void @extract_insert_same_elt2_v4i32(i32 addrspace(1)* %out
 ; GCN-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %id.ext = sext i32 %id to i64
-  %gep.in = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %in, i64 %id.ext
-  %gep.out = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 %id.ext
-  %vec = load <4 x i32>, <4 x i32> addrspace(1)* %gep.in
+  %gep.in = getelementptr inbounds <4 x i32>, ptr addrspace(1) %in, i64 %id.ext
+  %gep.out = getelementptr inbounds i32, ptr addrspace(1) %out, i64 %id.ext
+  %vec = load <4 x i32>, ptr addrspace(1) %gep.in
   %insert = insertelement <4 x i32> %vec, i32 %val, i32 %idx
   %extract = extractelement <4 x i32> %insert, i32 %idx
-  store i32 %extract, i32 addrspace(1)* %gep.out
+  store i32 %extract, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @extract_insert_same_dynelt_v4f32(float addrspace(1)* %out, <4 x float> addrspace(1)* %in, float %val, i32 %idx) #1 {
+define amdgpu_kernel void @extract_insert_same_dynelt_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in, float %val, i32 %idx) #1 {
 ; GCN-LABEL: extract_insert_same_dynelt_v4f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -128,12 +128,12 @@ define amdgpu_kernel void @extract_insert_same_dynelt_v4f32(float addrspace(1)* 
 ; GCN-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %id.ext = sext i32 %id to i64
-  %gep.in = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %in, i64 %id.ext
-  %gep.out = getelementptr inbounds float, float addrspace(1)* %out, i64 %id.ext
-  %vec = load volatile <4 x float>, <4 x float> addrspace(1)* %gep.in
+  %gep.in = getelementptr inbounds <4 x float>, ptr addrspace(1) %in, i64 %id.ext
+  %gep.out = getelementptr inbounds float, ptr addrspace(1) %out, i64 %id.ext
+  %vec = load volatile <4 x float>, ptr addrspace(1) %gep.in
   %insert = insertelement <4 x float> %vec, float %val, i32 %idx
   %extract = extractelement <4 x float> %insert, i32 %idx
-  store float %extract, float addrspace(1)* %gep.out
+  store float %extract, ptr addrspace(1) %gep.out
   ret void
 }
 

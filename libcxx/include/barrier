@@ -125,7 +125,7 @@ public:
 
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     __barrier_base(ptrdiff_t __expected, _CompletionF __completion = _CompletionF())
-            : __expected_(__expected), __base_(__construct_barrier_algorithm_base(this->__expected_),
+            : __expected_(__expected), __base_(std::__construct_barrier_algorithm_base(this->__expected_),
                                                &__destroy_barrier_algorithm_base),
               __expected_adjustment_(0), __completion_(std::move(__completion)), __phase_(0)
     {
@@ -150,7 +150,7 @@ public:
         auto const __test_fn = [this, __old_phase]() -> bool {
             return __phase_.load(memory_order_acquire) != __old_phase;
         };
-        __libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy());
+        std::__libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy());
     }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_drop()

@@ -11,6 +11,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace lldb_private;
 
@@ -40,9 +41,9 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "", "operator delete[]",
        "(void*, clang::ASTContext const&, unsigned long)", "",
        "operator delete[]"},
-      {"llvm::Optional<clang::PostInitializer>::operator bool() const", "",
-       "llvm::Optional<clang::PostInitializer>", "operator bool", "()", "const",
-       "llvm::Optional<clang::PostInitializer>::operator bool"},
+      {"std::optional<clang::PostInitializer>::operator bool() const", "",
+       "std::optional<clang::PostInitializer>", "operator bool", "()", "const",
+       "std::optional<clang::PostInitializer>::operator bool"},
       {"(anonymous namespace)::FactManager::operator[](unsigned short)", "",
        "(anonymous namespace)::FactManager", "operator[]", "(unsigned short)",
        "", "(anonymous namespace)::FactManager::operator[]"},
@@ -52,9 +53,9 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"CompareInsn::operator()(llvm::StringRef, InsnMatchEntry const&)", "",
        "CompareInsn", "operator()", "(llvm::StringRef, InsnMatchEntry const&)",
        "", "CompareInsn::operator()"},
-      {"llvm::Optional<llvm::MCFixupKind>::operator*() const &", "",
-       "llvm::Optional<llvm::MCFixupKind>", "operator*", "()", "const &",
-       "llvm::Optional<llvm::MCFixupKind>::operator*"},
+      {"std::optional<llvm::MCFixupKind>::operator*() const &", "",
+       "std::optional<llvm::MCFixupKind>", "operator*", "()", "const &",
+       "std::optional<llvm::MCFixupKind>::operator*"},
       {"auto std::__1::ranges::__begin::__fn::operator()[abi:v160000]<char "
        "const, 18ul>(char const (&) [18ul]) const",
        "auto", "std::__1::ranges::__begin::__fn",
@@ -82,13 +83,13 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "main::{lambda()#1}::operator()() const::{lambda()#1}::operator()"},
 
       // Function pointers
-      {"string (*f(vector<int>&&))(float)", "", "", "f",
-       "(vector<int>&&)", "", "f"},
+      {"string (*f(vector<int>&&))(float)", "", "", "f", "(vector<int>&&)", "",
+       "f"},
       {"void (*&std::_Any_data::_M_access<void (*)()>())()", "",
        "std::_Any_data", "_M_access<void (*)()>", "()", "",
        "std::_Any_data::_M_access<void (*)()>"},
-      {"void (*(*(*(*(*(*(*(* const&func1(int))())())())())())())())()", "",
-       "", "func1", "(int)", "", "func1"},
+      {"void (*(*(*(*(*(*(*(* const&func1(int))())())())())())())())()", "", "",
+       "func1", "(int)", "", "func1"},
 
       // Decltype
       {"decltype(nullptr)&& std::forward<decltype(nullptr)>"
@@ -122,9 +123,9 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>()", "", "",
        "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>", "()", "",
        "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>"},
-      {"llvm::Optional<llvm::MCFixupKind>::operator*() const volatile &&", "",
-       "llvm::Optional<llvm::MCFixupKind>", "operator*", "()",
-       "const volatile &&", "llvm::Optional<llvm::MCFixupKind>::operator*"},
+      {"std::optional<llvm::MCFixupKind>::operator*() const volatile &&", "",
+       "std::optional<llvm::MCFixupKind>", "operator*", "()",
+       "const volatile &&", "std::optional<llvm::MCFixupKind>::operator*"},
       {"void foo<Dummy<char [10]>>()", "void", "", "foo<Dummy<char [10]>>",
        "()", "", "foo<Dummy<char [10]>>"},
       {"void foo<Bar<Bar<int>[10]>>()", "void", "", "foo<Bar<Bar<int>[10]>>",

@@ -485,7 +485,7 @@ static bool isTsanAtomic(const Instruction *I) {
   if (!SSID)
     return false;
   if (isa<LoadInst>(I) || isa<StoreInst>(I))
-    return SSID.value() != SyncScope::SingleThread;
+    return *SSID != SyncScope::SingleThread;
   return true;
 }
 
@@ -801,7 +801,7 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     }
 
     Value *Res =
-      IRB.CreateInsertValue(UndefValue::get(CASI->getType()), OldVal, 0);
+      IRB.CreateInsertValue(PoisonValue::get(CASI->getType()), OldVal, 0);
     Res = IRB.CreateInsertValue(Res, Success, 1);
 
     I->replaceAllUsesWith(Res);

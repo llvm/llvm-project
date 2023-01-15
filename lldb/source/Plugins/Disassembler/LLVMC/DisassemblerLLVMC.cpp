@@ -42,6 +42,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -253,7 +254,7 @@ MapOpcodeIntoControlFlowKind(InstructionOpcodeAndModrm opcode_and_modrm) {
 ///    primary_opcode, opcode_len and modrm byte. Refer to the struct definition
 ///    for more details.
 ///    Otherwise if the given instruction is invalid, returns std::nullopt.
-llvm::Optional<InstructionOpcodeAndModrm>
+std::optional<InstructionOpcodeAndModrm>
 InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
                         bool is_exec_mode_64b) {
   int op_idx = 0;
@@ -384,7 +385,7 @@ InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
 
 lldb::InstructionControlFlowKind GetControlFlowKind(bool is_exec_mode_64b,
                                                     Opcode m_opcode) {
-  llvm::Optional<InstructionOpcodeAndModrm> ret;
+  std::optional<InstructionOpcodeAndModrm> ret;
 
   if (m_opcode.GetOpcodeBytes() == nullptr || m_opcode.GetByteSize() <= 0) {
     // x86_64 and i386 instructions are categorized as Opcode::Type::eTypeBytes
@@ -398,7 +399,7 @@ lldb::InstructionControlFlowKind GetControlFlowKind(bool is_exec_mode_64b,
   if (!ret)
     return lldb::eInstructionControlFlowKindUnknown;
   else
-    return MapOpcodeIntoControlFlowKind(ret.value());
+    return MapOpcodeIntoControlFlowKind(*ret);
 }
 
 } // namespace x86
@@ -1710,13 +1711,13 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
         // then this is a pc-relative address calculation.
         if (*type_ptr == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
             m_adrp_insn && m_adrp_address == pc - 4 &&
-            (m_adrp_insn.value() & 0x1f) == ((value >> 5) & 0x1f)) {
+            (*m_adrp_insn & 0x1f) == ((value >> 5) & 0x1f)) {
           uint32_t addxri_inst;
           uint64_t adrp_imm, addxri_imm;
           // Get immlo and immhi bits, OR them together to get the ADRP imm
           // value.
-          adrp_imm = ((m_adrp_insn.value() & 0x00ffffe0) >> 3) |
-                     ((m_adrp_insn.value() >> 29) & 0x3);
+          adrp_imm =
+              ((*m_adrp_insn & 0x00ffffe0) >> 3) | ((*m_adrp_insn >> 29) & 0x3);
           // if high bit of immhi after right-shifting set, sign extend
           if (adrp_imm & (1ULL << 20))
             adrp_imm |= ~((1ULL << 21) - 1);

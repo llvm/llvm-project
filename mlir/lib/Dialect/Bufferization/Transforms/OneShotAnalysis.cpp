@@ -143,15 +143,19 @@ bool BufferizationAliasInfo::isInPlace(OpOperand &operand) const {
 /// Set the inPlace bufferization spec to true.
 void BufferizationAliasInfo::bufferizeInPlace(OpOperand &operand,
                                               AnalysisState &state) {
+  if (inplaceBufferized.contains(&operand))
+    return;
   markInPlace(operand);
   for (OpResult result : state.getAliasingOpResult(operand))
     aliasInfo.unionSets(result, operand.get());
+  ++statNumTensorInPlace;
 }
 
 /// Set the inPlace bufferization spec to false.
 void BufferizationAliasInfo::bufferizeOutOfPlace(OpOperand &operand) {
   assert(!inplaceBufferized.contains(&operand) &&
          "OpOperand was already decided to bufferize inplace");
+  ++statNumTensorOutOfPlace;
 }
 
 /// Apply `fun` to all the members of the equivalence class of `v`.
@@ -198,15 +202,10 @@ OneShotAnalysisState::OneShotAnalysisState(
   op->walk([&](BufferizableOpInterface bufferizableOp) {
     if (!options.isOpAllowed(bufferizableOp))
       return WalkResult::skip();
-    for (OpOperand &opOperand : bufferizableOp->getOpOperands()) {
+    for (OpOperand &opOperand : bufferizableOp->getOpOperands())
       if (opOperand.get().getType().isa<TensorType>())
-        if (bufferizableOp.mustBufferizeInPlace(opOperand, *this)) {
-          for (OpResult opResult :
-               bufferizableOp.getAliasingOpResult(opOperand, *this))
-            aliasInfo.unionAliasSets(opOperand.get(), opResult);
-          aliasInfo.markInPlace(opOperand);
-        }
-    }
+        if (bufferizableOp.mustBufferizeInPlace(opOperand, *this))
+          aliasInfo.bufferizeInPlace(opOperand, *this);
     return WalkResult::advance();
   });
 }
@@ -354,31 +353,6 @@ static bool happensBefore(Operation *a, Operation *b,
       return true;
   } while ((a = a->getParentOp()));
   return false;
-}
-
-static Region *
-getEnclosingRepetitiveRegion(Operation *op,
-                             const BufferizationOptions &options) {
-  while (Region *region = op->getParentRegion()) {
-    op = region->getParentOp();
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
-        return region;
-  }
-  return nullptr;
-}
-
-static Region *
-getEnclosingRepetitiveRegion(Value value, const BufferizationOptions &options) {
-  Region *region = value.getParentRegion();
-  while (region) {
-    Operation *op = region->getParentOp();
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
-        return region;
-    region = op->getParentRegion();
-  }
-  return nullptr;
 }
 
 /// Return `true` if the given tensor value is a memory write. Most values are
@@ -804,6 +778,23 @@ static bool wouldCreateReadAfterWriteInterference(
                                        aliasInfo);
 }
 
+/// Annotate IR with details about the detected non-writability conflict.
+static void annotateNonWritableTensor(Value value) {
+  static int64_t counter = 0;
+  OpBuilder b(value.getContext());
+  std::string id = "W_" + std::to_string(counter++);
+  if (auto opResult = value.dyn_cast<OpResult>()) {
+    std::string attr = id + "[NOT-WRITABLE: result " +
+                       std::to_string(opResult.getResultNumber()) + "]";
+    opResult.getDefiningOp()->setAttr(attr, b.getUnitAttr());
+  } else {
+    auto bbArg = value.cast<BlockArgument>();
+    std::string attr = id + "[NOT-WRITABLE: bbArg " +
+                       std::to_string(bbArg.getArgNumber()) + "]";
+    bbArg.getOwner()->getParentOp()->setAttr(attr, b.getUnitAttr());
+  }
+}
+
 /// Check the reverse SSA use-def chain (following aliasing OpOperands) for
 /// non-writable tensor values. Stop searching when an out-of-place bufferized
 /// OpOperand was found (or when the OpOperand was not bufferized yet).
@@ -817,8 +808,11 @@ hasPrecedingAliasingNonWritableTensor(Value value, OpOperand *currentOpOperand,
   worklist.push_back(value);
   while (!worklist.empty()) {
     Value nextVal = worklist.pop_back_val();
-    if (!state.isWritable(nextVal))
+    if (!state.isWritable(nextVal)) {
+      if (state.getOptions().printConflicts)
+        annotateNonWritableTensor(nextVal);
       return true;
+    }
 
     // If `nextVal` is not a BlockArgument: End of use-def chain reached.
     auto opResult = nextVal.dyn_cast<OpResult>();
@@ -1139,7 +1133,8 @@ static LogicalResult assertNoAllocsReturned(Operation *op,
 }
 
 LogicalResult bufferization::analyzeOp(Operation *op,
-                                       OneShotAnalysisState &state) {
+                                       OneShotAnalysisState &state,
+                                       BufferizationStatistics *statistics) {
   DominanceInfo domInfo(op);
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
   const OneShotBufferizationOptions &options = state.getOptions();
@@ -1151,6 +1146,12 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   if (failed(inPlaceAnalysis(op, aliasInfo, state, domInfo,
                              options.analysisFuzzerSeed)))
     return failure();
+
+  if (statistics) {
+    statistics->numTensorInPlace = aliasInfo.getStatNumTensorInPlace();
+    statistics->numTensorOutOfPlace = aliasInfo.getStatNumTensorOutOfPlace();
+  }
+
   equivalenceAnalysis(op, aliasInfo, state);
 
   bool failedAnalysis = false;
@@ -1179,15 +1180,17 @@ LogicalResult bufferization::analyzeOp(Operation *op,
 
 LogicalResult
 bufferization::runOneShotBufferize(Operation *op,
-                                   const OneShotBufferizationOptions &options) {
+                                   const OneShotBufferizationOptions &options,
+                                   BufferizationStatistics *statistics) {
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
     // If a buffer is copied before every write, no analysis is needed.
-    if (failed(insertTensorCopies(op, options)))
+    if (failed(insertTensorCopies(op, options, statistics)))
       return failure();
   }
   if (options.testAnalysisOnly)
     return success();
-  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite);
+  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite,
+                     /*opFilter=*/nullptr, statistics);
 }

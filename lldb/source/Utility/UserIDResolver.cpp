@@ -8,14 +8,15 @@
 
 #include "lldb/Utility/UserIDResolver.h"
 #include "llvm/Support/ManagedStatic.h"
+#include <optional>
 
 using namespace lldb_private;
 
 UserIDResolver::~UserIDResolver() = default;
 
-llvm::Optional<llvm::StringRef> UserIDResolver::Get(
+std::optional<llvm::StringRef> UserIDResolver::Get(
     id_t id, Map &cache,
-    llvm::Optional<std::string> (UserIDResolver::*do_get)(id_t)) {
+    std::optional<std::string> (UserIDResolver::*do_get)(id_t)) {
 
   std::lock_guard<std::mutex> guard(m_mutex);
   auto iter_bool = cache.try_emplace(id, std::nullopt);
@@ -29,11 +30,11 @@ llvm::Optional<llvm::StringRef> UserIDResolver::Get(
 namespace {
 class NoopResolver : public UserIDResolver {
 protected:
-  llvm::Optional<std::string> DoGetUserName(id_t uid) override {
+  std::optional<std::string> DoGetUserName(id_t uid) override {
     return std::nullopt;
   }
 
-  llvm::Optional<std::string> DoGetGroupName(id_t gid) override {
+  std::optional<std::string> DoGetGroupName(id_t gid) override {
     return std::nullopt;
   }
 };

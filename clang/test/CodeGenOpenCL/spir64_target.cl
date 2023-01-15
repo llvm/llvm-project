@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple "spir64-unknown-unknown" -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple "spir64-unknown-unknown" -emit-llvm -o - | FileCheck %s
 
 // CHECK: target triple = "spir64-unknown-unknown"
 
@@ -15,7 +15,7 @@ kernel void foo(global long *arg) {
 
   my_st *tmp = 0;
   arg[3] = (long)(&tmp->v);
-//CHECK: store i64 8, i64 addrspace(1)*
+//CHECK: store i64 8, ptr addrspace(1)
   arg[4] = (long)(&tmp->v2);
-//CHECK: store i64 16, i64 addrspace(1)*
+//CHECK: store i64 16, ptr addrspace(1)
 }

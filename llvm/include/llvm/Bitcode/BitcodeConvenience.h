@@ -33,6 +33,7 @@
 #include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 namespace detail {
@@ -205,7 +206,7 @@ public:
   }
 
   template <typename T, typename... DataTy>
-  static void read(ArrayRef<T> buffer, NoneType, DataTy &&...data) {
+  static void read(ArrayRef<T> buffer, std::nullopt_t, DataTy &&...data) {
     assert(!buffer.empty() && "too few elements in buffer");
     BCRecordCoding<Fields...>::read(buffer.slice(1),
                                     std::forward<DataTy>(data)...);
@@ -237,7 +238,7 @@ public:
     data = ElementTy::convert(buffer.front());
   }
 
-  template <typename T> static void read(ArrayRef<T> buffer, NoneType) {
+  template <typename T> static void read(ArrayRef<T> buffer, std::nullopt_t) {
     assert(buffer.size() == 1 && "record data does not match layout");
     (void)buffer;
   }
@@ -278,7 +279,7 @@ public:
 
   template <typename BufferTy>
   static void emit(llvm::BitstreamWriter &Stream, BufferTy &Buffer,
-                   unsigned code, NoneType) {
+                   unsigned code, std::nullopt_t) {
     Stream.EmitRecordWithAbbrev(code, Buffer);
   }
 
@@ -293,7 +294,7 @@ public:
                  llvm::map_iterator(buffer.end(), T::convert));
   }
 
-  template <typename T> static void read(ArrayRef<T> buffer, NoneType) {
+  template <typename T> static void read(ArrayRef<T> buffer, std::nullopt_t) {
     (void)buffer;
   }
 
@@ -428,7 +429,7 @@ public:
   /// in the buffer and should be handled separately by the caller.
   template <typename BufferTy, typename... Data>
   static void readRecord(BufferTy &buffer, Data &&...data) {
-    return readRecord(llvm::makeArrayRef(buffer), std::forward<Data>(data)...);
+    return readRecord(llvm::ArrayRef(buffer), std::forward<Data>(data)...);
   }
 };
 

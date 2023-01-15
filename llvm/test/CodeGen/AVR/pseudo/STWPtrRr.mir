@@ -1,4 +1,5 @@
 # RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mattr=avrtiny %s -o - | FileCheck %s --check-prefix=CHECK-TINY
 
 # This test checks the expansion of the 16-bit STSWRdK pseudo instruction.
 
@@ -20,6 +21,11 @@ body: |
 
     ; CHECK:      STPtrRr $r31r30, $r16
     ; CHECK-NEXT: STDPtrQRr $r31r30, 1, $r17
+
+    ; CHECK-TINY:      $r31r30 = STPtrPiRr killed $r31r30, $r16, 0
+    ; CHECK-TINY-NEXT: $r31r30 = STPtrPiRr killed $r31r30, $r17, 0
+    ; CHECK-TINY-NEXT: $r30 = SUBIRdK killed $r30, 2, implicit-def $sreg
+    ; CHECK-TINY-NEXT: $r31 = SBCIRdK killed $r31, 0, implicit-def $sreg, implicit killed $sreg
 
     STWPtrRr $r31r30, $r17r16
 ...

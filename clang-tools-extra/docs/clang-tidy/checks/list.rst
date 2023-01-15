@@ -115,6 +115,7 @@ Clang-Tidy Checks
    `bugprone-sizeof-container <bugprone/sizeof-container.html>`_,
    `bugprone-sizeof-expression <bugprone/sizeof-expression.html>`_,
    `bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions.html>`_,
+   `bugprone-standalone-empty <bugprone/standalone-empty.html>`_, "Yes"
    `bugprone-string-constructor <bugprone/string-constructor.html>`_, "Yes"
    `bugprone-string-integer-assignment <bugprone/string-integer-assignment.html>`_, "Yes"
    `bugprone-string-literal-with-embedded-nul <bugprone/string-literal-with-embedded-nul.html>`_,
@@ -181,6 +182,7 @@ Clang-Tidy Checks
    `cppcoreguidelines-avoid-do-while <cppcoreguidelines/avoid-do-while.html>`_,
    `cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto.html>`_,
    `cppcoreguidelines-avoid-non-const-global-variables <cppcoreguidelines/avoid-non-const-global-variables.html>`_,
+   `cppcoreguidelines-avoid-reference-coroutine-parameters <cppcoreguidelines/avoid-reference-coroutine-parameters.html>`_,
    `cppcoreguidelines-init-variables <cppcoreguidelines/init-variables.html>`_, "Yes"
    `cppcoreguidelines-interfaces-global-init <cppcoreguidelines/interfaces-global-init.html>`_,
    `cppcoreguidelines-macro-usage <cppcoreguidelines/macro-usage.html>`_,

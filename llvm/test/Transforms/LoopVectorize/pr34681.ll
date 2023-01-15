@@ -32,7 +32,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: scalar.ph
 
 
-define i32 @foo1(i32 %N, i16* nocapture readnone %A, i16* nocapture readonly %B, i32 %i, i32 %j)  {
+define i32 @foo1(i32 %N, ptr nocapture readnone %A, ptr nocapture readonly %B, i32 %i, i32 %j)  {
 entry:
   %cmp8 = icmp eq i32 %N, 0
   br i1 %cmp8, label %for.end, label %for.body.lr.ph
@@ -45,8 +45,8 @@ for.body:
   %k.09 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %mul = mul i32 %k.09, %N
   %add = add i32 %mul, %j
-  %arrayidx = getelementptr inbounds i16, i16* %B, i32 %add
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
   %conv = sext i16 %0 to i32
   %add1 = add nsw i32 %tmp.010, %conv
   %inc = add nuw i32 %k.09, 1
@@ -92,7 +92,7 @@ for.end:
 ; CHECK: middle.block
 ; CHECK: scalar.ph
 
-define i32 @foo2(i16 zeroext %N, i16* nocapture readnone %A, i16* nocapture readonly %B, i32 %i, i32 %j) {
+define i32 @foo2(i16 zeroext %N, ptr nocapture readnone %A, ptr nocapture readonly %B, i32 %i, i32 %j) {
 entry:
   %conv = zext i16 %N to i32
   %cmp11 = icmp eq i16 %N, 0
@@ -106,8 +106,8 @@ for.body:
   %k.012 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %mul = mul nuw i32 %k.012, %conv
   %add = add i32 %mul, %j
-  %arrayidx = getelementptr inbounds i16, i16* %B, i32 %add
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
   %conv3 = sext i16 %0 to i32
   %add4 = add nsw i32 %tmp.013, %conv3
   %inc = add nuw nsw i32 %k.012, 1

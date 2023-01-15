@@ -9,7 +9,7 @@ target triple = "thumbv7-apple-ios9.0.0"
 %struct.ham = type { [1024 x i32], %struct.zot }
 %struct.zot = type { [1 x i32], [1 x [32 x i32]] }
 
-define i32 @test(%struct.ham* %arg, %struct.zot* %arg1, i32* %arg2) #0 !dbg !6 {
+define i32 @test(ptr %arg, ptr %arg1, ptr %arg2) #0 !dbg !6 {
 ; CHECK-LABEL: test:
 ; CHECK:       Lfunc_begin0:
 ; CHECK-NEXT:    .file 1 "/" "test.cpp"
@@ -53,25 +53,25 @@ bb3:                                              ; preds = %bb14, %bb
   %tmp5 = add i32 %tmp4, 1
   %tmp6 = shl nuw i32 1, %tmp4
   %tmp8 = and i32 %tmp4, %tmp6
-  store i32 0, i32* %arg2, align 4
-  %tmp10 = getelementptr inbounds %struct.ham, %struct.ham* %arg, i32 0, i32 1, i32 1, i32 0, i32 %tmp5
+  store i32 0, ptr %arg2, align 4
+  %tmp10 = getelementptr inbounds %struct.ham, ptr %arg, i32 0, i32 1, i32 1, i32 0, i32 %tmp5
   br i1 undef, label %bb11, label %bb13
 
 bb11:                                             ; preds = %bb3
-  %tmp12 = load i32, i32* null, align 4
+  %tmp12 = load i32, ptr null, align 4
   br label %bb14
 
 bb13:                                             ; preds = %bb3
-  call void @llvm.dbg.value(metadata !DIArgList(%struct.ham* %arg, i32 %tmp5), metadata !11, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 135168, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst, 4, DW_OP_stack_value)), !dbg !14
-  store i32 0, i32* %tmp10, align 4, !dbg !16
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %arg, i32 %tmp5), metadata !11, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 135168, DW_OP_LLVM_arg, 1, DW_OP_constu, 4, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst, 4, DW_OP_stack_value)), !dbg !14
+  store i32 0, ptr %tmp10, align 4, !dbg !16
   br label %bb14
 
 bb14:                                             ; preds = %bb13, %bb11
   %tmp15 = phi i32 [ 1, %bb11 ], [ 0, %bb13 ]
-  %tmp16 = getelementptr inbounds %struct.zot, %struct.zot* %arg1, i32 0, i32 1, i32 0, i32 %tmp5
-  %tmp17 = load i32, i32* %tmp16, align 4
+  %tmp16 = getelementptr inbounds %struct.zot, ptr %arg1, i32 0, i32 1, i32 0, i32 %tmp5
+  %tmp17 = load i32, ptr %tmp16, align 4
   %tmp18 = or i32 %tmp17, %tmp15
-  store i32 %tmp18, i32* %tmp10, align 4
+  store i32 %tmp18, ptr %tmp10, align 4
   br label %bb3
 }
 

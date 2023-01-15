@@ -39,9 +39,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-LABEL: define dso_local noundef ptr @_Z3foov
 define dso_local noundef ptr @_Z3foov() #0 !dbg !39 {
 entry:
-  ; CHECK: call {{.*}} @_Znam
-  ; CHECK-NOT: !memprof
-  ; CHECK-NOT: !callsite
+  ;; We should keep the original memprof metadata intact.
+  ; CHECK: call {{.*}} @_Znam{{.*}} !memprof ![[ORIGMEMPROF:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !42, !memprof !43, !callsite !50
   ; CHECK-NEXT: ret
   ret ptr %call, !dbg !51
@@ -188,10 +187,17 @@ attributes #7 = { builtin nounwind }
 !43 = !{!44, !46, !48}
 !44 = !{!45, !"cold"}
 !45 = !{i64 -2458008693472584243, i64 7394638144382192936}
-!46 = !{!47, !"noncold"}
+!46 = !{!47, !"notcold"}
 !47 = !{i64 -2458008693472584243, i64 -8908997186479157179}
 !48 = !{!49, !"cold"}
 !49 = !{i64 -2458008693472584243, i64 -8079659623765193173}
+; CHECK: ![[ORIGMEMPROF]] = !{![[ORIGMIB1:[0-9]+]], ![[ORIGMIB2:[0-9]+]], ![[ORIGMIB3:[0-9]+]]}
+; CHECK: ![[ORIGMIB1]] = !{![[ORIGMIBSTACK1:[0-9]+]], !"cold"}
+; CHECK: ![[ORIGMIBSTACK1]] = !{i64 -2458008693472584243, i64 7394638144382192936}
+; CHECK: ![[ORIGMIB2]] = !{![[ORIGMIBSTACK2:[0-9]+]], !"notcold"}
+; CHECK: ![[ORIGMIBSTACK2]] = !{i64 -2458008693472584243, i64 -8908997186479157179}
+; CHECK: ![[ORIGMIB3]] = !{![[ORIGMIBSTACK3:[0-9]+]], !"cold"}
+; CHECK: ![[ORIGMIBSTACK3]] = !{i64 -2458008693472584243, i64 -8079659623765193173}
 !50 = !{i64 -2458008693472584243}
 !51 = !DILocation(line: 5, column: 3, scope: !39)
 !52 = distinct !DISubprogram(name: "foo2", linkageName: "_Z4foo2v", scope: !1, file: !1, line: 7, type: !40, scopeLine: 7, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !41)

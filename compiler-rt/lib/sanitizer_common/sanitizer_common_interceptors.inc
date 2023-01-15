@@ -23,10 +23,6 @@
 //   COMMON_INTERCEPTOR_SET_THREAD_NAME
 //   COMMON_INTERCEPTOR_DLOPEN
 //   COMMON_INTERCEPTOR_ON_EXIT
-//   COMMON_INTERCEPTOR_MUTEX_PRE_LOCK
-//   COMMON_INTERCEPTOR_MUTEX_POST_LOCK
-//   COMMON_INTERCEPTOR_MUTEX_UNLOCK
-//   COMMON_INTERCEPTOR_MUTEX_REPAIR
 //   COMMON_INTERCEPTOR_SET_PTHREAD_NAME
 //   COMMON_INTERCEPTOR_HANDLE_RECVMSG
 //   COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED
@@ -221,26 +217,6 @@ extern const short *_tolower_tab_;
 
 #ifndef COMMON_INTERCEPTOR_FD_ACCESS
 #define COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_PRE_LOCK
-#define COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_POST_LOCK
-#define COMMON_INTERCEPTOR_MUTEX_POST_LOCK(ctx, m) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_UNLOCK
-#define COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_REPAIR
-#define COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_INVALID
-#define COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m) {}
 #endif
 
 #ifndef COMMON_INTERCEPTOR_HANDLE_RECVMSG
@@ -4475,90 +4451,13 @@ INTERCEPTOR(void, _exit, int status) {
 #define INIT__EXIT
 #endif
 
-#if SANITIZER_INTERCEPT_PTHREAD_MUTEX
-INTERCEPTOR(int, pthread_mutex_lock, void *m) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, pthread_mutex_lock, m);
-  COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m);
-  int res = REAL(pthread_mutex_lock)(m);
-  if (res == errno_EOWNERDEAD)
-    COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m);
-  if (res == 0 || res == errno_EOWNERDEAD)
-    COMMON_INTERCEPTOR_MUTEX_POST_LOCK(ctx, m);
-  if (res == errno_EINVAL)
-    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
-  return res;
-}
-
-INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, pthread_mutex_unlock, m);
-  COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m);
-  int res = REAL(pthread_mutex_unlock)(m);
-  if (res == errno_EINVAL)
-    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
-  return res;
-}
-
-#define INIT_PTHREAD_MUTEX_LOCK COMMON_INTERCEPT_FUNCTION(pthread_mutex_lock)
-#define INIT_PTHREAD_MUTEX_UNLOCK \
-  COMMON_INTERCEPT_FUNCTION(pthread_mutex_unlock)
-#else
-#define INIT_PTHREAD_MUTEX_LOCK
-#define INIT_PTHREAD_MUTEX_UNLOCK
-#endif
-
-#if SANITIZER_INTERCEPT___PTHREAD_MUTEX
-INTERCEPTOR(int, __pthread_mutex_lock, void *m) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, __pthread_mutex_lock, m);
-  COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m);
-  int res = REAL(__pthread_mutex_lock)(m);
-  if (res == errno_EOWNERDEAD)
-    COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m);
-  if (res == 0 || res == errno_EOWNERDEAD)
-    COMMON_INTERCEPTOR_MUTEX_POST_LOCK(ctx, m);
-  if (res == errno_EINVAL)
-    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
-  return res;
-}
-
-INTERCEPTOR(int, __pthread_mutex_unlock, void *m) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, __pthread_mutex_unlock, m);
-  COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m);
-  int res = REAL(__pthread_mutex_unlock)(m);
-  if (res == errno_EINVAL)
-    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
-  return res;
-}
-
-#define INIT___PTHREAD_MUTEX_LOCK \
-  COMMON_INTERCEPT_FUNCTION(__pthread_mutex_lock)
-#define INIT___PTHREAD_MUTEX_UNLOCK \
-  COMMON_INTERCEPT_FUNCTION(__pthread_mutex_unlock)
-#else
-#define INIT___PTHREAD_MUTEX_LOCK
-#define INIT___PTHREAD_MUTEX_UNLOCK
-#endif
-
 #if SANITIZER_INTERCEPT___LIBC_MUTEX
-INTERCEPTOR(int, __libc_mutex_lock, void *m)
-ALIAS(WRAPPER_NAME(pthread_mutex_lock));
-
-INTERCEPTOR(int, __libc_mutex_unlock, void *m)
-ALIAS(WRAPPER_NAME(pthread_mutex_unlock));
-
 INTERCEPTOR(int, __libc_thr_setcancelstate, int state, int *oldstate)
 ALIAS(WRAPPER_NAME(pthread_setcancelstate));
 
-#define INIT___LIBC_MUTEX_LOCK COMMON_INTERCEPT_FUNCTION(__libc_mutex_lock)
-#define INIT___LIBC_MUTEX_UNLOCK COMMON_INTERCEPT_FUNCTION(__libc_mutex_unlock)
 #define INIT___LIBC_THR_SETCANCELSTATE \
   COMMON_INTERCEPT_FUNCTION(__libc_thr_setcancelstate)
 #else
-#define INIT___LIBC_MUTEX_LOCK
-#define INIT___LIBC_MUTEX_UNLOCK
 #define INIT___LIBC_THR_SETCANCELSTATE
 #endif
 
@@ -10604,12 +10503,6 @@ static void InitializeCommonInterceptors() {
   INIT_PTHREAD_SIGMASK;
   INIT_BACKTRACE;
   INIT__EXIT;
-  INIT_PTHREAD_MUTEX_LOCK;
-  INIT_PTHREAD_MUTEX_UNLOCK;
-  INIT___PTHREAD_MUTEX_LOCK;
-  INIT___PTHREAD_MUTEX_UNLOCK;
-  INIT___LIBC_MUTEX_LOCK;
-  INIT___LIBC_MUTEX_UNLOCK;
   INIT___LIBC_THR_SETCANCELSTATE;
   INIT_GETMNTENT;
   INIT_GETMNTENT_R;

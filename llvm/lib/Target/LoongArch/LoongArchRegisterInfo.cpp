@@ -38,6 +38,8 @@ const MCPhysReg *
 LoongArchRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   auto &Subtarget = MF->getSubtarget<LoongArchSubtarget>();
 
+  if (MF->getFunction().getCallingConv() == CallingConv::GHC)
+    return CSR_NoRegs_SaveList;
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
@@ -58,6 +60,8 @@ LoongArchRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                             CallingConv::ID CC) const {
   auto &Subtarget = MF.getSubtarget<LoongArchSubtarget>();
 
+  if (CC == CallingConv::GHC)
+    return CSR_NoRegs_RegMask;
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");

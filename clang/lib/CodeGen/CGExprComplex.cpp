@@ -275,18 +275,13 @@ public:
                                         const BinOpInfo &Op);
 
   QualType getPromotionType(QualType Ty) {
-    if (CGF.getTarget().shouldEmitFloat16WithExcessPrecision()) {
-      if (Ty->isRealFloatingType()) {
-        if (Ty->isFloat16Type())
-          return CGF.getContext().FloatTy;
-      } else {
-        assert(Ty->isAnyComplexType() &&
-               "Expecting to promote a complex type!");
-        QualType ElementType = Ty->castAs<ComplexType>()->getElementType();
-        if (ElementType->isFloat16Type())
-          return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
-      }
+    if (auto *CT = Ty->getAs<ComplexType>()) {
+      QualType ElementType = CT->getElementType();
+      if (ElementType.UseExcessPrecision(CGF.getContext()))
+        return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
     }
+    if (Ty.UseExcessPrecision(CGF.getContext()))
+      return CGF.getContext().FloatTy;
     return QualType();
   }
 

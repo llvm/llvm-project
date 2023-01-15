@@ -17,10 +17,24 @@
 #include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/Object/ELFObjectFile.h"
 
+#include "DefineExternalSectionStartAndEndSymbols.h"
+
 #define DEBUG_TYPE "jitlink"
 
 using namespace llvm;
 using namespace llvm::jitlink;
+
+namespace {
+constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
+
+Error buildTables_ELF_i386(LinkGraph &G) {
+  LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
+
+  i386::GOTTableManager GOT;
+  visitExistingEdges(G, GOT);
+  return Error::success();
+}
+} // namespace
 
 namespace llvm::jitlink {
 
@@ -30,11 +44,68 @@ class ELFJITLinker_i386 : public JITLinker<ELFJITLinker_i386> {
 public:
   ELFJITLinker_i386(std::unique_ptr<JITLinkContext> Ctx,
                     std::unique_ptr<LinkGraph> G, PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    getPassConfig().PostAllocationPasses.push_back(
+        [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
+  }
 
 private:
+  Symbol *GOTSymbol = nullptr;
+
+  Error getOrCreateGOTSymbol(LinkGraph &G) {
+    auto DefineExternalGOTSymbolIfPresent =
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
+              if (Sym.getName() == ELFGOTSymbolName)
+                if (auto *GOTSection = G.findSectionByName(
+                        i386::GOTTableManager::getSectionName())) {
+                  GOTSymbol = &Sym;
+                  return {*GOTSection, true};
+                }
+              return {};
+            });
+
+    // Try to attach _GLOBAL_OFFSET_TABLE_ to the GOT if it's defined as an
+    // external.
+    if (auto Err = DefineExternalGOTSymbolIfPresent(G))
+      return Err;
+
+    // If we succeeded then we're done.
+    if (GOTSymbol)
+      return Error::success();
+
+    // Otherwise look for a GOT section: If it already has a start symbol we'll
+    // record it, otherwise we'll create our own.
+    // If there's a GOT section but we didn't find an external GOT symbol...
+    if (auto *GOTSection =
+            G.findSectionByName(i386::GOTTableManager::getSectionName())) {
+
+      // Check for an existing defined symbol.
+      for (auto *Sym : GOTSection->symbols())
+        if (Sym->getName() == ELFGOTSymbolName) {
+          GOTSymbol = Sym;
+          return Error::success();
+        }
+
+      // If there's no defined symbol then create one.
+      SectionRange SR(*GOTSection);
+
+      if (SR.empty()) {
+        GOTSymbol =
+            &G.addAbsoluteSymbol(ELFGOTSymbolName, orc::ExecutorAddr(), 0,
+                                 Linkage::Strong, Scope::Local, true);
+      } else {
+        GOTSymbol =
+            &G.addDefinedSymbol(*SR.getFirstBlock(), 0, ELFGOTSymbolName, 0,
+                                Linkage::Strong, Scope::Local, false, true);
+      }
+    }
+
+    return Error::success();
+  }
+
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return i386::applyFixup(G, B, E);
+    return i386::applyFixup(G, B, E, GOTSymbol);
   }
 };
 
@@ -54,7 +125,11 @@ private:
       return EdgeKind_i386::Pointer16;
     case ELF::R_386_PC16:
       return EdgeKind_i386::PCRel16;
+    case ELF::R_386_GOT32:
+      return EdgeKind_i386::RequestGOTAndTransformToDelta32FromGOT;
     case ELF::R_386_GOTPC:
+      return EdgeKind_i386::Delta32;
+    case ELF::R_386_GOTOFF:
       return EdgeKind_i386::Delta32FromGOT;
     }
 
@@ -105,10 +180,6 @@ private:
     if (!Kind)
       return Kind.takeError();
 
-    // TODO: To be removed when GOT relative relocations are supported.
-    if (*Kind == i386::EdgeKind_i386::Delta32FromGOT)
-      return Error::success();
-
     int64_t Addend = 0;
 
     auto FixupAddress = orc::ExecutorAddr(FixupSection.sh_addr) + Rel.r_offset;
@@ -121,7 +192,6 @@ private:
     });
 
     BlockToFix.addEdge(std::move(GE));
-
     return Error::success();
   }
 
@@ -162,6 +232,9 @@ void link_ELF_i386(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
+
+    // Add an in-place GOT build pass.
+    Config.PostPrunePasses.push_back(buildTables_ELF_i386);
   }
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));

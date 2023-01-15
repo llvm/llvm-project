@@ -21,6 +21,7 @@ static_library("PECOFF") {
     "//lldb/source/Target",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Reaches into Plugins/Process/Utility.

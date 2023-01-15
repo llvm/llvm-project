@@ -123,6 +123,7 @@ void TargetRegistry::printRegisteredTargetsForVersion(raw_ostream &OS) {
   }
   array_pod_sort(Targets.begin(), Targets.end(), TargetArraySortFn);
 
+  OS << "\n";
   OS << "  Registered Targets:\n";
   for (const auto &Target : Targets) {
     OS << "    " << Target.first;

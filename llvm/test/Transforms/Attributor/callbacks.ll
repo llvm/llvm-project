@@ -13,191 +13,182 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; arguments 2-4 of the callback callee. Here we should see information and value
 ; transfer in both directions.
 
-define void @t0_caller(i32* %a) {
+define void @t0_caller(ptr %a) {
 ; TUNIT-LABEL: define {{[^@]+}}@t0_caller
-; TUNIT-SAME: (i32* align 256 [[A:%.*]]) {
+; TUNIT-SAME: (ptr align 256 [[A:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 32
-; TUNIT-NEXT:    [[C:%.*]] = alloca i32*, align 64
+; TUNIT-NEXT:    [[C:%.*]] = alloca ptr, align 64
 ; TUNIT-NEXT:    [[PTR:%.*]] = alloca i32, align 128
-; TUNIT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
-; TUNIT-NEXT:    store i32 42, i32* [[B]], align 32
-; TUNIT-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; TUNIT-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; TUNIT-NEXT:    store i32 42, ptr [[B]], align 32
+; TUNIT-NEXT:    store ptr [[B]], ptr [[C]], align 64
+; TUNIT-NEXT:    call void (ptr, ptr, ptr, ...) @t0_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr noundef @t0_callback_callee, ptr align 256 [[A]], i64 undef, ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@t0_caller
-; CGSCC-SAME: (i32* align 256 [[A:%.*]]) {
+; CGSCC-SAME: (ptr align 256 [[A:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 32
-; CGSCC-NEXT:    [[C:%.*]] = alloca i32*, align 64
+; CGSCC-NEXT:    [[C:%.*]] = alloca ptr, align 64
 ; CGSCC-NEXT:    [[PTR:%.*]] = alloca i32, align 128
-; CGSCC-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
-; CGSCC-NEXT:    store i32 42, i32* [[B]], align 32
-; CGSCC-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; CGSCC-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 noundef 99, i32** nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; CGSCC-NEXT:    store i32 42, ptr [[B]], align 32
+; CGSCC-NEXT:    store ptr [[B]], ptr [[C]], align 64
+; CGSCC-NEXT:    call void (ptr, ptr, ptr, ...) @t0_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr noundef @t0_callback_callee, ptr align 256 [[A]], i64 noundef 99, ptr nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %b = alloca i32, align 32
-  %c = alloca i32*, align 64
+  %c = alloca ptr, align 64
   %ptr = alloca i32, align 128
-  %0 = bitcast i32* %b to i8*
-  store i32 42, i32* %b, align 4
-  store i32* %b, i32** %c, align 8
-  call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* null, i32* %ptr, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* %a, i64 99, i32** %c)
+  store i32 42, ptr %b, align 4
+  store ptr %b, ptr %c, align 8
+  call void (ptr, ptr, ptr, ...) @t0_callback_broker(ptr null, ptr %ptr, ptr @t0_callback_callee, ptr %a, i64 99, ptr %c)
   ret void
 }
 
 ; Note that the first two arguments are provided by the callback_broker according to the callback in !1 below!
 ; The others are annotated with alignment information, amongst others, or even replaced by the constants passed to the call.
-define internal void @t0_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, i64 %b, i32** %c) {
+define internal void @t0_callback_callee(ptr %is_not_null, ptr %ptr, ptr %a, i64 %b, ptr %c) {
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@t0_callback_callee
-; TUNIT-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; TUNIT-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], ptr align 256 [[A:%.*]], i64 [[B:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
-; TUNIT-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; TUNIT-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* nonnull align 32 [[TMP0]])
+; TUNIT-NEXT:    [[PTR_VAL:%.*]] = load i32, ptr [[PTR]], align 8
+; TUNIT-NEXT:    store i32 [[PTR_VAL]], ptr [[IS_NOT_NULL]], align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 64
+; TUNIT-NEXT:    tail call void @t0_check(ptr align 256 [[A]], i64 noundef 99, ptr nonnull align 32 [[TMP0]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@t0_callback_callee
-; CGSCC-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], ptr align 256 [[A:%.*]], i64 [[B:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
-; CGSCC-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; CGSCC-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* [[TMP0]])
+; CGSCC-NEXT:    [[PTR_VAL:%.*]] = load i32, ptr [[PTR]], align 8
+; CGSCC-NEXT:    store i32 [[PTR_VAL]], ptr [[IS_NOT_NULL]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 64
+; CGSCC-NEXT:    tail call void @t0_check(ptr align 256 [[A]], i64 noundef 99, ptr [[TMP0]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  %ptr_val = load i32, i32* %ptr, align 8
-  store i32 %ptr_val, i32* %is_not_null
-  %0 = load i32*, i32** %c, align 8
-  tail call void @t0_check(i32* %a, i64 %b, i32* %0)
+  %ptr_val = load i32, ptr %ptr, align 8
+  store i32 %ptr_val, ptr %is_not_null
+  %0 = load ptr, ptr %c, align 8
+  tail call void @t0_check(ptr %a, i64 %b, ptr %0)
   ret void
 }
 
-declare void @t0_check(i32* align 256, i64, i32*)
+declare void @t0_check(ptr align 256, i64, ptr)
 
-declare !callback !0 void @t0_callback_broker(i32*, i32*, void (i32*, i32*, ...)*, ...)
+declare !callback !0 void @t0_callback_broker(ptr, ptr, ptr, ...)
 
 ; Test 1
 ;
 ; Similar to test 0 but with some additional annotations (noalias/nocapute) to make sure
 ; we deduce and propagate noalias and others properly.
 
-define void @t1_caller(i32* noalias %a) {
+define void @t1_caller(ptr noalias %a) {
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@t1_caller
-; TUNIT-SAME: (i32* noalias nocapture align 256 [[A:%.*]]) {
+; TUNIT-SAME: (ptr noalias nocapture align 256 [[A:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 32
-; TUNIT-NEXT:    [[C:%.*]] = alloca i32*, align 64
+; TUNIT-NEXT:    [[C:%.*]] = alloca ptr, align 64
 ; TUNIT-NEXT:    [[PTR:%.*]] = alloca i32, align 128
-; TUNIT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
-; TUNIT-NEXT:    store i32 42, i32* [[B]], align 32
-; TUNIT-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; TUNIT-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; TUNIT-NEXT:    store i32 42, ptr [[B]], align 32
+; TUNIT-NEXT:    store ptr [[B]], ptr [[C]], align 64
+; TUNIT-NEXT:    call void (ptr, ptr, ptr, ...) @t1_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr nocapture noundef @t1_callback_callee, ptr nocapture align 256 [[A]], i64 undef, ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@t1_caller
-; CGSCC-SAME: (i32* noalias align 256 [[A:%.*]]) {
+; CGSCC-SAME: (ptr noalias align 256 [[A:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 32
-; CGSCC-NEXT:    [[C:%.*]] = alloca i32*, align 64
+; CGSCC-NEXT:    [[C:%.*]] = alloca ptr, align 64
 ; CGSCC-NEXT:    [[PTR:%.*]] = alloca i32, align 128
-; CGSCC-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
-; CGSCC-NEXT:    store i32 42, i32* [[B]], align 32
-; CGSCC-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; CGSCC-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 noundef 99, i32** nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; CGSCC-NEXT:    store i32 42, ptr [[B]], align 32
+; CGSCC-NEXT:    store ptr [[B]], ptr [[C]], align 64
+; CGSCC-NEXT:    call void (ptr, ptr, ptr, ...) @t1_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr nocapture noundef @t1_callback_callee, ptr align 256 [[A]], i64 noundef 99, ptr nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %b = alloca i32, align 32
-  %c = alloca i32*, align 64
+  %c = alloca ptr, align 64
   %ptr = alloca i32, align 128
-  %0 = bitcast i32* %b to i8*
-  store i32 42, i32* %b, align 4
-  store i32* %b, i32** %c, align 8
-  call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t1_callback_broker(i32* null, i32* %ptr, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i32**)* @t1_callback_callee to void (i32*, i32*, ...)*), i32* %a, i64 99, i32** %c)
+  store i32 42, ptr %b, align 4
+  store ptr %b, ptr %c, align 8
+  call void (ptr, ptr, ptr, ...) @t1_callback_broker(ptr null, ptr %ptr, ptr @t1_callback_callee, ptr %a, i64 99, ptr %c)
   ret void
 }
 
 ; Note that the first two arguments are provided by the callback_broker according to the callback in !1 below!
 ; The others are annotated with alignment information, amongst others, or even replaced by the constants passed to the call.
-define internal void @t1_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, i64 %b, i32** %c) {
+define internal void @t1_callback_callee(ptr %is_not_null, ptr %ptr, ptr %a, i64 %b, ptr %c) {
 ;
 ; TUNIT: Function Attrs: nosync
 ; TUNIT-LABEL: define {{[^@]+}}@t1_callback_callee
-; TUNIT-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], ptr nocapture align 256 [[A:%.*]], i64 [[B:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
-; TUNIT-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; TUNIT-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture nonnull align 32 [[TMP0]])
+; TUNIT-NEXT:    [[PTR_VAL:%.*]] = load i32, ptr [[PTR]], align 8
+; TUNIT-NEXT:    store i32 [[PTR_VAL]], ptr [[IS_NOT_NULL]], align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 64
+; TUNIT-NEXT:    tail call void @t1_check(ptr nocapture align 256 [[A]], i64 noundef 99, ptr nocapture nonnull align 32 [[TMP0]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nosync
 ; CGSCC-LABEL: define {{[^@]+}}@t1_callback_callee
-; CGSCC-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], ptr nocapture align 256 [[A:%.*]], i64 [[B:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
-; CGSCC-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; CGSCC-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture [[TMP0]])
+; CGSCC-NEXT:    [[PTR_VAL:%.*]] = load i32, ptr [[PTR]], align 8
+; CGSCC-NEXT:    store i32 [[PTR_VAL]], ptr [[IS_NOT_NULL]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 64
+; CGSCC-NEXT:    tail call void @t1_check(ptr nocapture align 256 [[A]], i64 noundef 99, ptr nocapture [[TMP0]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  %ptr_val = load i32, i32* %ptr, align 8
-  store i32 %ptr_val, i32* %is_not_null
-  %0 = load i32*, i32** %c, align 8
-  tail call void @t1_check(i32* %a, i64 %b, i32* %0)
+  %ptr_val = load i32, ptr %ptr, align 8
+  store i32 %ptr_val, ptr %is_not_null
+  %0 = load ptr, ptr %c, align 8
+  tail call void @t1_check(ptr %a, i64 %b, ptr %0)
   ret void
 }
 
-declare void @t1_check(i32* nocapture align 256, i64, i32* nocapture) nosync
+declare void @t1_check(ptr nocapture align 256, i64, ptr nocapture) nosync
 
-declare !callback !0 void @t1_callback_broker(i32* nocapture , i32* nocapture , void (i32*, i32*, ...)* nocapture, ...)
+declare !callback !0 void @t1_callback_broker(ptr nocapture , ptr nocapture , ptr nocapture, ...)
 
 ; Test 2
 ;
 ; Similar to test 1 but checking that the noalias is only placed if potential synchronization through @t2_check is preserved.
 
-define void @t2_caller(i32* noalias %a) {
+define void @t2_caller(ptr noalias %a) {
 ; TUNIT-LABEL: define {{[^@]+}}@t2_caller
-; TUNIT-SAME: (i32* noalias nocapture align 256 [[A:%.*]]) {
+; TUNIT-SAME: (ptr noalias nocapture align 256 [[A:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 32
-; TUNIT-NEXT:    [[C:%.*]] = alloca i32*, align 64
+; TUNIT-NEXT:    [[C:%.*]] = alloca ptr, align 64
 ; TUNIT-NEXT:    [[PTR:%.*]] = alloca i32, align 128
-; TUNIT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
-; TUNIT-NEXT:    store i32 42, i32* [[B]], align 32
-; TUNIT-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; TUNIT-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; TUNIT-NEXT:    store i32 42, ptr [[B]], align 32
+; TUNIT-NEXT:    store ptr [[B]], ptr [[C]], align 64
+; TUNIT-NEXT:    call void (ptr, ptr, ptr, ...) @t2_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr nocapture noundef @t2_callback_callee, ptr nocapture align 256 [[A]], i64 undef, ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@t2_caller
-; CGSCC-SAME: (i32* noalias align 256 [[A:%.*]]) {
+; CGSCC-SAME: (ptr noalias align 256 [[A:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 32
-; CGSCC-NEXT:    [[C:%.*]] = alloca i32*, align 64
+; CGSCC-NEXT:    [[C:%.*]] = alloca ptr, align 64
 ; CGSCC-NEXT:    [[PTR:%.*]] = alloca i32, align 128
-; CGSCC-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
-; CGSCC-NEXT:    store i32 42, i32* [[B]], align 32
-; CGSCC-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; CGSCC-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 noundef 99, i32** nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; CGSCC-NEXT:    store i32 42, ptr [[B]], align 32
+; CGSCC-NEXT:    store ptr [[B]], ptr [[C]], align 64
+; CGSCC-NEXT:    call void (ptr, ptr, ptr, ...) @t2_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr nocapture noundef @t2_callback_callee, ptr align 256 [[A]], i64 noundef 99, ptr nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %b = alloca i32, align 32
-  %c = alloca i32*, align 64
+  %c = alloca ptr, align 64
   %ptr = alloca i32, align 128
-  %0 = bitcast i32* %b to i8*
-  store i32 42, i32* %b, align 4
-  store i32* %b, i32** %c, align 8
-  call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t2_callback_broker(i32* null, i32* %ptr, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i32**)* @t2_callback_callee to void (i32*, i32*, ...)*), i32* %a, i64 99, i32** %c)
+  store i32 42, ptr %b, align 4
+  store ptr %b, ptr %c, align 8
+  call void (ptr, ptr, ptr, ...) @t2_callback_broker(ptr null, ptr %ptr, ptr @t2_callback_callee, ptr %a, i64 99, ptr %c)
   ret void
 }
 
@@ -205,78 +196,75 @@ entry:
 ; The others are annotated with alignment information, amongst others, or even replaced by the constants passed to the call.
 ;
 ; FIXME: We should derive noalias for %a and add a "fake use" of %a in all potentially synchronizing calls.
-define internal void @t2_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, i64 %b, i32** %c) {
+define internal void @t2_callback_callee(ptr %is_not_null, ptr %ptr, ptr %a, i64 %b, ptr %c) {
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@t2_callback_callee
-; TUNIT-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; TUNIT-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], ptr nocapture align 256 [[A:%.*]], i64 [[B:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
-; TUNIT-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; TUNIT-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture nonnull align 32 [[TMP0]])
+; TUNIT-NEXT:    [[PTR_VAL:%.*]] = load i32, ptr [[PTR]], align 8
+; TUNIT-NEXT:    store i32 [[PTR_VAL]], ptr [[IS_NOT_NULL]], align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 64
+; TUNIT-NEXT:    tail call void @t2_check(ptr nocapture align 256 [[A]], i64 noundef 99, ptr nocapture nonnull align 32 [[TMP0]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@t2_callback_callee
-; CGSCC-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], ptr nocapture align 256 [[A:%.*]], i64 [[B:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
-; CGSCC-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; CGSCC-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture [[TMP0]])
+; CGSCC-NEXT:    [[PTR_VAL:%.*]] = load i32, ptr [[PTR]], align 8
+; CGSCC-NEXT:    store i32 [[PTR_VAL]], ptr [[IS_NOT_NULL]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 64
+; CGSCC-NEXT:    tail call void @t2_check(ptr nocapture align 256 [[A]], i64 noundef 99, ptr nocapture [[TMP0]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  %ptr_val = load i32, i32* %ptr, align 8
-  store i32 %ptr_val, i32* %is_not_null
-  %0 = load i32*, i32** %c, align 8
-  tail call void @t2_check(i32* %a, i64 %b, i32* %0)
+  %ptr_val = load i32, ptr %ptr, align 8
+  store i32 %ptr_val, ptr %is_not_null
+  %0 = load ptr, ptr %c, align 8
+  tail call void @t2_check(ptr %a, i64 %b, ptr %0)
   ret void
 }
 
-declare void @t2_check(i32* nocapture align 256, i64, i32* nocapture)
+declare void @t2_check(ptr nocapture align 256, i64, ptr nocapture)
 
-declare !callback !0 void @t2_callback_broker(i32* nocapture , i32* nocapture , void (i32*, i32*, ...)* nocapture, ...)
+declare !callback !0 void @t2_callback_broker(ptr nocapture , ptr nocapture , ptr nocapture, ...)
 
 ; Test 3
 ;
 ; Basically test 2 with the casted callback callee used twice.
 
-define void @t3_caller(i32* noalias %a) {
+define void @t3_caller(ptr noalias %a) {
 ; TUNIT-LABEL: define {{[^@]+}}@t3_caller
-; TUNIT-SAME: (i32* noalias nocapture align 256 [[A:%.*]]) {
+; TUNIT-SAME: (ptr noalias nocapture align 256 [[A:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 32
-; TUNIT-NEXT:    [[C:%.*]] = alloca i32*, align 64
+; TUNIT-NEXT:    [[C:%.*]] = alloca ptr, align 64
 ; TUNIT-NEXT:    [[PTR:%.*]] = alloca i32, align 128
-; TUNIT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
-; TUNIT-NEXT:    store i32 42, i32* [[B]], align 32
-; TUNIT-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; TUNIT-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
-; TUNIT-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* nocapture align 256 [[A]], i64 undef, i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; TUNIT-NEXT:    store i32 42, ptr [[B]], align 32
+; TUNIT-NEXT:    store ptr [[B]], ptr [[C]], align 64
+; TUNIT-NEXT:    call void (ptr, ptr, ptr, ...) @t3_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr nocapture noundef @t3_callback_callee, ptr nocapture align 256 [[A]], i64 undef, ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; TUNIT-NEXT:    call void (ptr, ptr, ptr, ...) @t3_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr nocapture noundef @t3_callback_callee, ptr nocapture align 256 [[A]], i64 undef, ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@t3_caller
-; CGSCC-SAME: (i32* noalias align 256 [[A:%.*]]) {
+; CGSCC-SAME: (ptr noalias align 256 [[A:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 32
-; CGSCC-NEXT:    [[C:%.*]] = alloca i32*, align 64
+; CGSCC-NEXT:    [[C:%.*]] = alloca ptr, align 64
 ; CGSCC-NEXT:    [[PTR:%.*]] = alloca i32, align 128
-; CGSCC-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
-; CGSCC-NEXT:    store i32 42, i32* [[B]], align 32
-; CGSCC-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; CGSCC-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 noundef 99, i32** nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
-; CGSCC-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* noalias nocapture noundef align 4294967296 null, i32* noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nocapture noundef bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* align 256 [[A]], i64 noundef 99, i32** nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; CGSCC-NEXT:    store i32 42, ptr [[B]], align 32
+; CGSCC-NEXT:    store ptr [[B]], ptr [[C]], align 64
+; CGSCC-NEXT:    call void (ptr, ptr, ptr, ...) @t3_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr nocapture noundef @t3_callback_callee, ptr align 256 [[A]], i64 noundef 99, ptr nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
+; CGSCC-NEXT:    call void (ptr, ptr, ptr, ...) @t3_callback_broker(ptr noalias nocapture noundef align 4294967296 null, ptr noalias nocapture noundef nonnull align 128 dereferenceable(4) [[PTR]], ptr nocapture noundef @t3_callback_callee, ptr align 256 [[A]], i64 noundef 99, ptr nofree noundef nonnull readonly align 64 dereferenceable(8) [[C]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %b = alloca i32, align 32
-  %c = alloca i32*, align 64
+  %c = alloca ptr, align 64
   %ptr = alloca i32, align 128
-  %0 = bitcast i32* %b to i8*
-  store i32 42, i32* %b, align 4
-  store i32* %b, i32** %c, align 8
-  call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* null, i32* %ptr, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* %a, i64 99, i32** %c)
-  call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t3_callback_broker(i32* null, i32* %ptr, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i32**)* @t3_callback_callee to void (i32*, i32*, ...)*), i32* %a, i64 99, i32** %c)
+  store i32 42, ptr %b, align 4
+  store ptr %b, ptr %c, align 8
+  call void (ptr, ptr, ptr, ...) @t3_callback_broker(ptr null, ptr %ptr, ptr @t3_callback_callee, ptr %a, i64 99, ptr %c)
+  call void (ptr, ptr, ptr, ...) @t3_callback_broker(ptr null, ptr %ptr, ptr @t3_callback_callee, ptr %a, i64 99, ptr %c)
   ret void
 }
 
@@ -284,37 +272,37 @@ entry:
 ; The others are annotated with alignment information, amongst others, or even replaced by the constants passed to the call.
 ;
 ; FIXME: We should derive noalias for %a and add a "fake use" of %a in all potentially synchronizing calls.
-define internal void @t3_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, i64 %b, i32** %c) {
+define internal void @t3_callback_callee(ptr %is_not_null, ptr %ptr, ptr %a, i64 %b, ptr %c) {
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@t3_callback_callee
-; TUNIT-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; TUNIT-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], ptr nocapture align 256 [[A:%.*]], i64 [[B:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
-; TUNIT-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; TUNIT-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture nonnull align 32 [[TMP0]])
+; TUNIT-NEXT:    [[PTR_VAL:%.*]] = load i32, ptr [[PTR]], align 8
+; TUNIT-NEXT:    store i32 [[PTR_VAL]], ptr [[IS_NOT_NULL]], align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 64
+; TUNIT-NEXT:    tail call void @t3_check(ptr nocapture align 256 [[A]], i64 noundef 99, ptr nocapture nonnull align 32 [[TMP0]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@t3_callback_callee
-; CGSCC-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], i32* nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], i32* nocapture align 256 [[A:%.*]], i64 [[B:%.*]], i32** noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[IS_NOT_NULL:%.*]], ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[PTR:%.*]], ptr nocapture align 256 [[A:%.*]], i64 [[B:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(8) [[C:%.*]]) {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
-; CGSCC-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; CGSCC-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture [[TMP0]])
+; CGSCC-NEXT:    [[PTR_VAL:%.*]] = load i32, ptr [[PTR]], align 8
+; CGSCC-NEXT:    store i32 [[PTR_VAL]], ptr [[IS_NOT_NULL]], align 4
+; CGSCC-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C]], align 64
+; CGSCC-NEXT:    tail call void @t3_check(ptr nocapture align 256 [[A]], i64 noundef 99, ptr nocapture [[TMP0]])
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  %ptr_val = load i32, i32* %ptr, align 8
-  store i32 %ptr_val, i32* %is_not_null
-  %0 = load i32*, i32** %c, align 8
-  tail call void @t3_check(i32* %a, i64 %b, i32* %0)
+  %ptr_val = load i32, ptr %ptr, align 8
+  store i32 %ptr_val, ptr %is_not_null
+  %0 = load ptr, ptr %c, align 8
+  tail call void @t3_check(ptr %a, i64 %b, ptr %0)
   ret void
 }
 
-declare void @t3_check(i32* nocapture align 256, i64, i32* nocapture)
+declare void @t3_check(ptr nocapture align 256, i64, ptr nocapture)
 
-declare !callback !0 void @t3_callback_broker(i32* nocapture , i32* nocapture , void (i32*, i32*, ...)* nocapture, ...)
+declare !callback !0 void @t3_callback_broker(ptr nocapture , ptr nocapture , ptr nocapture, ...)
 
 !0 = !{!1}
 !1 = !{i64 2, i64 -1, i64 -1, i1 true}
@@ -324,3 +312,5 @@ declare !callback !0 void @t3_callback_broker(i32* nocapture , i32* nocapture , 
 ; CHECK: [[META0:![0-9]+]] = !{!1}
 ; CHECK: [[META1:![0-9]+]] = !{i64 2, i64 -1, i64 -1, i1 true}
 ;.
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

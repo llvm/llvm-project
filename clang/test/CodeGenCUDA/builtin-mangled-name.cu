@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-gnu-linux -aux-triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple x86_64-unknown-gnu-linux -aux-triple amdgcn-amd-amdhsa \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck -check-prefixes=CHECK,LNX %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows-msvc -aux-triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -aux-triple amdgcn-amd-amdhsa \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck -check-prefixes=CHECK,MSVC %s
 
 #include "Inputs/cuda.h"
@@ -15,14 +15,14 @@ namespace X {
 
 // LNX-LABEL: define {{.*}}@_Z4fun1v()
 // MSVC-LABEL: define {{.*}} @"?fun1@@YAPEBDXZ"()
-// CHECK: ret i8* getelementptr inbounds ({{.*}} @[[STR1]], i64 0, i64 0)
+// CHECK: ret ptr @[[STR1]]
 const char *fun1() {
   return __builtin_get_device_side_mangled_name(X::kern1);
 }
 
 // LNX-LABEL: define {{.*}}@_Z4fun2v()
 // MSVC-LABEL: define {{.*}}@"?fun2@@YAPEBDXZ"()
-// CHECK: ret i8* getelementptr inbounds ({{.*}} @[[STR2]], i64 0, i64 0)
+// CHECK: ret ptr @[[STR2]]
 __host__ __device__ const char *fun2() {
   return __builtin_get_device_side_mangled_name(X::var1);
 }

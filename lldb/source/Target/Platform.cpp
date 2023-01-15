@@ -10,6 +10,7 @@
 #include <csignal>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointIDList.h"
@@ -298,7 +299,7 @@ void Platform::GetStatus(Stream &strm) {
   if (!os_version.empty()) {
     strm.Format("OS Version: {0}", os_version.getAsString());
 
-    if (llvm::Optional<std::string> s = GetOSBuildString())
+    if (std::optional<std::string> s = GetOSBuildString())
       strm.Format(" ({0})", *s);
 
     strm.EOL();
@@ -327,7 +328,7 @@ void Platform::GetStatus(Stream &strm) {
   if (!specific_info.empty())
     strm.Printf("Platform-specific connection: %s\n", specific_info.c_str());
 
-  if (llvm::Optional<std::string> s = GetOSKernelDescription())
+  if (std::optional<std::string> s = GetOSKernelDescription())
     strm.Format("    Kernel: {0}\n", *s);
 }
 
@@ -373,13 +374,13 @@ llvm::VersionTuple Platform::GetOSVersion(Process *process) {
   return llvm::VersionTuple();
 }
 
-llvm::Optional<std::string> Platform::GetOSBuildString() {
+std::optional<std::string> Platform::GetOSBuildString() {
   if (IsHost())
     return HostInfo::GetOSBuildString();
   return GetRemoteOSBuildString();
 }
 
-llvm::Optional<std::string> Platform::GetOSKernelDescription() {
+std::optional<std::string> Platform::GetOSKernelDescription() {
   if (IsHost())
     return HostInfo::GetOSKernelDescription();
   return GetRemoteOSKernelDescription();
@@ -1357,7 +1358,7 @@ static constexpr OptionDefinition g_caching_option_table[] = {
 };
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformRSync::GetDefinitions() {
-  return llvm::makeArrayRef(g_rsync_option_table);
+  return llvm::ArrayRef(g_rsync_option_table);
 }
 
 void OptionGroupPlatformRSync::OptionParsingStarting(
@@ -1405,7 +1406,7 @@ Platform::SetThreadCreationBreakpoint(lldb_private::Target &target) {
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformSSH::GetDefinitions() {
-  return llvm::makeArrayRef(g_ssh_option_table);
+  return llvm::ArrayRef(g_ssh_option_table);
 }
 
 void OptionGroupPlatformSSH::OptionParsingStarting(
@@ -1438,7 +1439,7 @@ OptionGroupPlatformSSH::SetOptionValue(uint32_t option_idx,
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformCaching::GetDefinitions() {
-  return llvm::makeArrayRef(g_caching_option_table);
+  return llvm::ArrayRef(g_caching_option_table);
 }
 
 void OptionGroupPlatformCaching::OptionParsingStarting(

@@ -153,7 +153,7 @@ bool BPFCheckAndAdjustIR::removeCompareBuiltin(Module &M) {
         CmpInst::Predicate Opcode = (CmpInst::Predicate)OpVal;
 
         auto *ICmp = new ICmpInst(Opcode, Arg1, Arg2);
-        BB.getInstList().insert(Call->getIterator(), ICmp);
+        ICmp->insertBefore(Call);
 
         Call->replaceAllUsesWith(ICmp);
         ToBeDeleted = Call;

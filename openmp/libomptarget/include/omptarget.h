@@ -15,10 +15,14 @@
 #define _OMPTARGET_H_
 
 #include <deque>
+#include <functional>
 #include <stddef.h>
 #include <stdint.h>
+#include <type_traits>
 
 #include <SourceInfo.h>
+
+#include "llvm/ADT/SmallVector.h"
 
 #define OFFLOAD_SUCCESS (0)
 #define OFFLOAD_FAIL (~0)
@@ -181,15 +185,29 @@ struct DeviceTy;
 /// associated with a libomptarget layer device. RAII semantics to avoid
 /// mistakes.
 class AsyncInfoTy {
+public:
+  enum class SyncTy { BLOCKING, NON_BLOCKING };
+
+private:
   /// Locations we used in (potentially) asynchronous calls which should live
   /// as long as this AsyncInfoTy object.
   std::deque<void *> BufferLocations;
+
+  /// Post-processing operations executed after a successful synchronization.
+  /// \note the post-processing function should return OFFLOAD_SUCCESS or
+  /// OFFLOAD_FAIL appropriately.
+  using PostProcFuncTy = std::function<int()>;
+  llvm::SmallVector<PostProcFuncTy> PostProcessingFunctions;
 
   __tgt_async_info AsyncInfo;
   DeviceTy &Device;
 
 public:
-  AsyncInfoTy(DeviceTy &Device) : Device(Device) {}
+  /// Synchronization method to be used.
+  SyncTy SyncType;
+
+  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING)
+      : Device(Device), SyncType(SyncType) {}
   ~AsyncInfoTy() { synchronize(); }
 
   /// Implicit conversion to the __tgt_async_info which is used in the
@@ -198,12 +216,54 @@ public:
 
   /// Synchronize all pending actions.
   ///
+  /// \note synchronization will be performance in a blocking or non-blocking
+  /// manner, depending on the SyncType.
+  ///
+  /// \note if the operations are completed, the registered post-processing
+  /// functions will be executed once and unregistered afterwards.
+  ///
   /// \returns OFFLOAD_FAIL or OFFLOAD_SUCCESS appropriately.
   int synchronize();
 
   /// Return a void* reference with a lifetime that is at least as long as this
   /// AsyncInfoTy object. The location can be used as intermediate buffer.
   void *&getVoidPtrLocation();
+
+  /// Check if all asynchronous operations are completed.
+  ///
+  /// \note if the operations are completed, the registered post-processing
+  /// functions will be executed once and unregistered afterwards.
+  ///
+  /// \returns true if there is no pending asynchronous operations, false
+  /// otherwise.
+  bool isDone();
+
+  /// Add a new post-processing function to be executed after synchronization.
+  ///
+  /// \param[in] Function is a templated function (e.g., function pointers,
+  /// lambdas, std::function) that can be convertible to a PostProcFuncTy (i.e.,
+  /// it must have int() as its function signature).
+  template <typename FuncTy> void addPostProcessingFunction(FuncTy &&Function) {
+    static_assert(std::is_convertible_v<FuncTy, PostProcFuncTy>,
+                  "Invalid post-processing function type. Please check "
+                  "function signature!");
+    PostProcessingFunctions.emplace_back(Function);
+  }
+
+private:
+  /// Run all the post-processing functions sequentially.
+  ///
+  /// \note after a successful execution, all previously registered functions
+  /// are unregistered.
+  ///
+  /// \returns OFFLOAD_FAIL if any post-processing function failed,
+  /// OFFLOAD_SUCCESS otherwise.
+  int32_t runPostProcessing();
+
+  /// Check if the internal asynchronous info queue is empty or not.
+  ///
+  /// \returns true if empty, false otherwise.
+  bool isQueueEmpty() const;
 };
 
 /// This struct is a record of non-contiguous information
@@ -346,6 +406,15 @@ int __tgt_target_kernel_nowait(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                __tgt_kernel_arguments *Args, int32_t DepNum,
                                void *DepList, int32_t NoAliasDepNum,
                                void *NoAliasDepList);
+
+// Non-blocking synchronization for target nowait regions. This function
+// acquires the asynchronous context from task data of the current task being
+// executed and tries to query for the completion of its operations. If the
+// operations are still pending, the function returns immediately. If the
+// operations are completed, all the post-processing procedures stored in the
+// asynchronous context are executed and the context is removed from the task
+// data.
+void __tgt_target_nowait_query(void **AsyncHandle);
 
 void __tgt_set_info_flag(uint32_t);
 

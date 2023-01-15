@@ -453,8 +453,8 @@ static FailureOr<BaseMemRefType> computeLoopRegionIterArgBufferType(
 
 /// Return `true` if the given loop may have 0 iterations.
 bool mayHaveZeroIterations(scf::ForOp forOp) {
-  Optional<int64_t> lb = getConstantIntValue(forOp.getLowerBound());
-  Optional<int64_t> ub = getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> lb = getConstantIntValue(forOp.getLowerBound());
+  std::optional<int64_t> ub = getConstantIntValue(forOp.getUpperBound());
   if (!lb.has_value() || !ub.has_value())
     return true;
   return *ub <= *lb;
@@ -1055,7 +1055,7 @@ struct YieldOpInterface
 bool mayHaveZeroIterations(scf::ForeachThreadOp foreachThreadOp) {
   int64_t p = 1;
   for (Value v : foreachThreadOp.getNumThreads()) {
-    if (Optional<int64_t> c = getConstantIntValue(v)) {
+    if (std::optional<int64_t> c = getConstantIntValue(v)) {
       p *= *c;
     } else {
       return true;

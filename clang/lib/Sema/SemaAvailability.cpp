@@ -244,8 +244,8 @@ struct AttributeInsertion {
 /// attribute argument.
 /// \param SlotNames The vector that will be populated with slot names. In case
 /// of unsuccessful parsing can contain invalid data.
-/// \returns A number of method parameters if parsing was successful, None
-/// otherwise.
+/// \returns A number of method parameters if parsing was successful,
+/// std::nullopt otherwise.
 static Optional<unsigned>
 tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
                        const LangOptions &LangOpts) {
@@ -898,6 +898,11 @@ void Sema::DiagnoseUnguardedAvailabilityViolations(Decl *D) {
       return;
 
     Body = FD->getBody();
+
+    if (auto *CD = dyn_cast<CXXConstructorDecl>(FD))
+      for (const CXXCtorInitializer *CI : CD->inits())
+        DiagnoseUnguardedAvailability(*this, D).IssueDiagnostics(CI->getInit());
+
   } else if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
     Body = MD->getBody();
   else if (auto *BD = dyn_cast<BlockDecl>(D))

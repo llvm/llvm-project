@@ -12,7 +12,7 @@ target triple = "hexagon-unknown--elf"
 ; CHECK: = memd(##441656)
 define i64 @f0() #0 {
 b0:
-  %v0 = load volatile i64, i64* inttoptr (i32 441656 to i64*)
+  %v0 = load volatile i64, ptr inttoptr (i32 441656 to ptr)
   ret i64 %v0
 }
 
@@ -20,7 +20,7 @@ b0:
 ; CHECK: = memw(##441656)
 define i64 @f1() #0 {
 b0:
-  %v0 = load volatile i32, i32* inttoptr (i32 441656 to i32*)
+  %v0 = load volatile i32, ptr inttoptr (i32 441656 to ptr)
   %v1 = sext i32 %v0 to i64
   ret i64 %v1
 }
@@ -29,7 +29,7 @@ b0:
 ; CHECK: = memw(##441656)
 define i64 @f2() #0 {
 b0:
-  %v0 = load volatile i32, i32* inttoptr (i32 441656 to i32*)
+  %v0 = load volatile i32, ptr inttoptr (i32 441656 to ptr)
   %v1 = zext i32 %v0 to i64
   ret i64 %v1
 }
@@ -38,7 +38,7 @@ b0:
 ; CHECK: = memh(##441656)
 define i64 @f3() #0 {
 b0:
-  %v0 = load volatile i16, i16* inttoptr (i32 441656 to i16*)
+  %v0 = load volatile i16, ptr inttoptr (i32 441656 to ptr)
   %v1 = sext i16 %v0 to i64
   ret i64 %v1
 }
@@ -47,7 +47,7 @@ b0:
 ; CHECK: = memuh(##441656)
 define i64 @f4() #0 {
 b0:
-  %v0 = load volatile i16, i16* inttoptr (i32 441656 to i16*)
+  %v0 = load volatile i16, ptr inttoptr (i32 441656 to ptr)
   %v1 = zext i16 %v0 to i64
   ret i64 %v1
 }
@@ -56,7 +56,7 @@ b0:
 ; CHECK: = memb(##441656)
 define i64 @f5() #0 {
 b0:
-  %v0 = load volatile i8, i8* inttoptr (i32 441656 to i8*)
+  %v0 = load volatile i8, ptr inttoptr (i32 441656 to ptr)
   %v1 = sext i8 %v0 to i64
   ret i64 %v1
 }
@@ -65,7 +65,7 @@ b0:
 ; CHECK: = memub(##441656)
 define i64 @f6() #0 {
 b0:
-  %v0 = load volatile i8, i8* inttoptr (i32 441656 to i8*)
+  %v0 = load volatile i8, ptr inttoptr (i32 441656 to ptr)
   %v1 = zext i8 %v0 to i64
   ret i64 %v1
 }
@@ -74,7 +74,7 @@ b0:
 ; CHECK: = memd(##g3)
 define i64 @f7() #0 {
 b0:
-  %v0 = load volatile i64, i64* @g3
+  %v0 = load volatile i64, ptr @g3
   ret i64 %v0
 }
 
@@ -82,7 +82,7 @@ b0:
 ; CHECK: = memw(##g2)
 define i64 @f8() #0 {
 b0:
-  %v0 = load volatile i32, i32* @g2
+  %v0 = load volatile i32, ptr @g2
   %v1 = sext i32 %v0 to i64
   ret i64 %v1
 }
@@ -91,7 +91,7 @@ b0:
 ; CHECK: = memw(##g2)
 define i64 @f9() #0 {
 b0:
-  %v0 = load volatile i32, i32* @g2
+  %v0 = load volatile i32, ptr @g2
   %v1 = zext i32 %v0 to i64
   ret i64 %v1
 }
@@ -100,7 +100,7 @@ b0:
 ; CHECK: = memh(##g1)
 define i64 @f10() #0 {
 b0:
-  %v0 = load volatile i16, i16* @g1
+  %v0 = load volatile i16, ptr @g1
   %v1 = sext i16 %v0 to i64
   ret i64 %v1
 }
@@ -109,7 +109,7 @@ b0:
 ; CHECK: = memuh(##g1)
 define i64 @f11() #0 {
 b0:
-  %v0 = load volatile i16, i16* @g1
+  %v0 = load volatile i16, ptr @g1
   %v1 = zext i16 %v0 to i64
   ret i64 %v1
 }
@@ -118,7 +118,7 @@ b0:
 ; CHECK: = memb(##g0)
 define i64 @f12() #0 {
 b0:
-  %v0 = load volatile i8, i8* @g0
+  %v0 = load volatile i8, ptr @g0
   %v1 = sext i8 %v0 to i64
   ret i64 %v1
 }
@@ -127,7 +127,7 @@ b0:
 ; CHECK: = memub(##g0)
 define i64 @f13() #0 {
 b0:
-  %v0 = load volatile i8, i8* @g0
+  %v0 = load volatile i8, ptr @g0
   %v1 = zext i8 %v0 to i64
   ret i64 %v1
 }

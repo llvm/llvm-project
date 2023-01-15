@@ -31,17 +31,17 @@ for.body.lr.ph:
 for.body:
   %indvars.iv32 = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next33, %for.inc15 ]
   %2 = add nsw i64 %indvars.iv32, %1
-  %arrayidx = getelementptr inbounds [100 x i32], [100 x i32]* @B, i64 0, i64 %indvars.iv32
+  %arrayidx = getelementptr inbounds [100 x i32], ptr @B, i64 0, i64 %indvars.iv32
   %3 = trunc i64 %2 to i32
-  store i32 %3, i32* %arrayidx
+  store i32 %3, ptr %arrayidx
   br label %for.body3
 
 for.body3:
   %indvars.iv = phi i64 [ 0, %for.body ], [ %indvars.iv.next, %for.body3 ]
-  %arrayidx7 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv32, i64 %indvars.iv
-  %4 = load i32, i32* %arrayidx7
+  %arrayidx7 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %indvars.iv32, i64 %indvars.iv
+  %4 = load i32, ptr %arrayidx7
   %add10 = add nsw i32 %3, %4
-  store i32 %add10, i32* %arrayidx7
+  store i32 %add10, ptr %arrayidx7
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %0
@@ -84,10 +84,10 @@ for.body:
 
 for.body3:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body3 ], [ 2, %for.body ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv24, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %indvars.iv24, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx5
   %add = add nsw i32 %1, %k
-  store i32 %add, i32* %arrayidx5
+  store i32 %add, ptr %arrayidx5
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %0
@@ -124,10 +124,10 @@ preheader.j:
 
 for2:
   %j = phi i64 [ %j.next, %for2 ], [ 0, %preheader.j ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %j, i64 %j23
-  %lv = load i32, i32* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %j, i64 %j23
+  %lv = load i32, ptr %arrayidx5
   %add = add nsw i32 %lv, %k
-  store i32 %add, i32* %arrayidx5
+  store i32 %add, ptr %arrayidx5
   %j.next = add nuw nsw i64 %j, 1
   %exitcond = icmp eq i64 %j, 99
   br i1 %exitcond, label %for1.inc10, label %for2

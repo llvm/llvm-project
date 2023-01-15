@@ -14,7 +14,6 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1394,7 +1393,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (IsBigInt) {
       const uint64_t BitWidth = Record[1];
       const size_t NumWords = Record.size() - 3;
-      Value = readWideAPInt(makeArrayRef(&Record[3], NumWords), BitWidth);
+      Value = readWideAPInt(ArrayRef(&Record[3], NumWords), BitWidth);
     } else
       Value = APInt(64, unrotateSign(Record[1]), !IsUnsigned);
 

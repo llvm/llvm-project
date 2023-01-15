@@ -218,10 +218,13 @@ struct SIMode {
   SIMode(const AMDGPU::SIModeRegisterDefaults &Mode) {
     IEEE = Mode.IEEE;
     DX10Clamp = Mode.DX10Clamp;
-    FP32InputDenormals = Mode.FP32InputDenormals;
-    FP32OutputDenormals = Mode.FP32OutputDenormals;
-    FP64FP16InputDenormals = Mode.FP64FP16InputDenormals;
-    FP64FP16OutputDenormals = Mode.FP64FP16OutputDenormals;
+    FP32InputDenormals = Mode.FP32Denormals.Input != DenormalMode::PreserveSign;
+    FP32OutputDenormals =
+        Mode.FP32Denormals.Output != DenormalMode::PreserveSign;
+    FP64FP16InputDenormals =
+        Mode.FP64FP16Denormals.Input != DenormalMode::PreserveSign;
+    FP64FP16OutputDenormals =
+        Mode.FP64FP16Denormals.Output != DenormalMode::PreserveSign;
   }
 
   bool operator ==(const SIMode Other) const {
@@ -320,6 +323,35 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
 };
 
 } // end namespace yaml
+
+// A CSR SGPR value can be preserved inside a callee using one of the following
+// methods.
+//   1. Copy to an unused scratch SGPR.
+//   2. Spill to a VGPR lane.
+//   3. Spill to memory via. a scratch VGPR.
+// class PrologEpilogSGPRSaveRestoreInfo represents the save/restore method used
+// for an SGPR at function prolog/epilog.
+enum class SGPRSaveKind : uint8_t {
+  COPY_TO_SCRATCH_SGPR,
+  SPILL_TO_VGPR_LANE,
+  SPILL_TO_MEM
+};
+
+class PrologEpilogSGPRSaveRestoreInfo {
+  SGPRSaveKind Kind;
+  union {
+    int Index;
+    Register Reg;
+  };
+
+public:
+  PrologEpilogSGPRSaveRestoreInfo(SGPRSaveKind K, int I) : Kind(K), Index(I) {}
+  PrologEpilogSGPRSaveRestoreInfo(SGPRSaveKind K, Register R)
+      : Kind(K), Reg(R) {}
+  Register getReg() const { return Reg; }
+  int getIndex() const { return Index; }
+  SGPRSaveKind getKind() const { return Kind; }
+};
 
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
@@ -429,24 +461,13 @@ private:
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
 
-  mutable Optional<bool> UsesAGPRs;
+  mutable std::optional<bool> UsesAGPRs;
 
   MCPhysReg getNextUserSGPR() const;
 
   MCPhysReg getNextSystemSGPR() const;
 
 public:
-  struct SGPRSpillVGPR {
-    // VGPR used for SGPR spills
-    Register VGPR;
-
-    // If the VGPR is used for SGPR spills in a non-entrypoint function, the
-    // stack slot used to save/restore it in the prolog/epilog.
-    Optional<int> FI;
-
-    SGPRSpillVGPR(Register V, Optional<int> F) : VGPR(V), FI(F) {}
-  };
-
   struct VGPRSpillToAGPR {
     SmallVector<MCPhysReg, 32> Lanes;
     bool FullyAllocated = false;
@@ -467,30 +488,40 @@ public:
     unsigned TotalSize = 0;
   };
 
-  // Track VGPRs reserved for WWM.
-  SmallSetVector<Register, 8> WWMReservedRegs;
-
-  /// Track stack slots used for save/restore of reserved WWM VGPRs in the
-  /// prolog/epilog.
-
-  /// FIXME: This is temporary state only needed in PrologEpilogInserter, and
-  /// doesn't really belong here. It does not require serialization
-  SmallVector<int, 8> WWMReservedFrameIndexes;
-
-  void allocateWWMReservedSpillSlots(MachineFrameInfo &MFI,
-                                     const SIRegisterInfo &TRI);
-
-  auto wwmAllocation() const {
-    assert(WWMReservedRegs.size() == WWMReservedFrameIndexes.size());
-    return zip(WWMReservedRegs, WWMReservedFrameIndexes);
-  }
-
 private:
-  // Track VGPR + wave index for each subregister of the SGPR spilled to
-  // frameindex key.
-  DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>> SGPRToVGPRSpills;
+  // To track VGPR + lane index for each subregister of the SGPR spilled to
+  // frameindex key during SILowerSGPRSpills pass.
+  DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>> SGPRSpillToVGPRLanes;
+  // To track VGPR + lane index for spilling special SGPRs like Frame Pointer
+  // identified during PrologEpilogInserter.
+  DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>>
+      PrologEpilogSGPRSpillToVGPRLanes;
   unsigned NumVGPRSpillLanes = 0;
-  SmallVector<SGPRSpillVGPR, 2> SpillVGPRs;
+  unsigned NumVGPRPrologEpilogSpillLanes = 0;
+  SmallVector<Register, 2> SpillVGPRs;
+  using WWMSpillsMap = MapVector<Register, int>;
+  // To track the registers used in instructions that can potentially modify the
+  // inactive lanes. The WWM instructions and the writelane instructions for
+  // spilling SGPRs to VGPRs fall under such category of operations. The VGPRs
+  // modified by them should be spilled/restored at function prolog/epilog to
+  // avoid any undesired outcome. Each entry in this map holds a pair of values,
+  // the VGPR and its stack slot index.
+  WWMSpillsMap WWMSpills;
+
+  using ReservedRegSet = SmallSetVector<Register, 8>;
+  // To track the VGPRs reserved for WWM instructions. They get stack slots
+  // later during PrologEpilogInserter and get added into the superset WWMSpills
+  // for actual spilling. A separate set makes the register reserved part and
+  // the serialization easier.
+  ReservedRegSet WWMReservedRegs;
+
+  using PrologEpilogSGPRSpillsMap =
+      DenseMap<Register, PrologEpilogSGPRSaveRestoreInfo>;
+  // To track the SGPR spill method used for a CSR SGPR register during
+  // frame lowering. Even though the SGPR spills are handled during
+  // SILowerSGPRSpills pass, some special handling needed later during the
+  // PrologEpilogInserter.
+  PrologEpilogSGPRSpillsMap PrologEpilogSGPRSpills;
 
   DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
 
@@ -502,12 +533,17 @@ private:
 
   // Emergency stack slot. Sometimes, we create this before finalizing the stack
   // frame, so save it here and add it to the RegScavenger later.
-  Optional<int> ScavengeFI;
+  std::optional<int> ScavengeFI;
 
   LdsSpill LdsSpillInfo;
 
 private:
   Register VGPRForAGPRCopy;
+
+  bool allocateVGPRForSGPRSpills(MachineFunction &MF, int FI,
+                                 unsigned LaneIndex);
+  bool allocateVGPRForPrologEpilogSGPRSpills(MachineFunction &MF, int FI,
+                                             unsigned LaneIndex);
 
 public:
   Register getVGPRForAGPRCopy() const {
@@ -518,22 +554,11 @@ public:
     VGPRForAGPRCopy = NewVGPRForAGPRCopy;
   }
 
-public: // FIXME
-  /// If this is set, an SGPR used for save/restore of the register used for the
-  /// frame pointer.
-  Register SGPRForFPSaveRestoreCopy;
-  Optional<int> FramePointerSaveIndex;
-
-  /// If this is set, an SGPR used for save/restore of the register used for the
-  /// base pointer.
-  Register SGPRForBPSaveRestoreCopy;
-  Optional<int> BasePointerSaveIndex;
-
-  bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
+  bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
 
 public:
-  SIMachineFunctionInfo(const MachineFunction &MF);
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
+  SIMachineFunctionInfo(const Function &F, const GCNSubtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -545,23 +570,91 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error, SMRange &SourceRange);
 
-  void reserveWWMRegister(Register Reg) {
-    WWMReservedRegs.insert(Reg);
-  }
+  void reserveWWMRegister(Register Reg) { WWMReservedRegs.insert(Reg); }
 
   AMDGPU::SIModeRegisterDefaults getMode() const {
     return Mode;
   }
 
   ArrayRef<SIRegisterInfo::SpilledReg>
-  getSGPRToVGPRSpills(int FrameIndex) const {
-    auto I = SGPRToVGPRSpills.find(FrameIndex);
-    return (I == SGPRToVGPRSpills.end())
+  getSGPRSpillToVGPRLanes(int FrameIndex) const {
+    auto I = SGPRSpillToVGPRLanes.find(FrameIndex);
+    return (I == SGPRSpillToVGPRLanes.end())
                ? ArrayRef<SIRegisterInfo::SpilledReg>()
-               : makeArrayRef(I->second);
+               : ArrayRef(I->second);
   }
 
-  ArrayRef<SGPRSpillVGPR> getSGPRSpillVGPRs() const { return SpillVGPRs; }
+  ArrayRef<Register> getSGPRSpillVGPRs() const { return SpillVGPRs; }
+  const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
+  const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
+
+  const PrologEpilogSGPRSpillsMap &getPrologEpilogSGPRSpills() const {
+    return PrologEpilogSGPRSpills;
+  }
+
+  void addToPrologEpilogSGPRSpills(Register Reg,
+                                   PrologEpilogSGPRSaveRestoreInfo SI) {
+    PrologEpilogSGPRSpills.insert(std::make_pair(Reg, SI));
+  }
+
+  // Check if an entry created for \p Reg in PrologEpilogSGPRSpills. Return true
+  // on success and false otherwise.
+  bool hasPrologEpilogSGPRSpillEntry(Register Reg) const {
+    return PrologEpilogSGPRSpills.find(Reg) != PrologEpilogSGPRSpills.end();
+  }
+
+  // Get the scratch SGPR if allocated to save/restore \p Reg.
+  Register getScratchSGPRCopyDstReg(Register Reg) const {
+    auto I = PrologEpilogSGPRSpills.find(Reg);
+    if (I != PrologEpilogSGPRSpills.end() &&
+        I->second.getKind() == SGPRSaveKind::COPY_TO_SCRATCH_SGPR)
+      return I->second.getReg();
+
+    return AMDGPU::NoRegister;
+  }
+
+  // Get all scratch SGPRs allocated to copy/restore the SGPR spills.
+  void getAllScratchSGPRCopyDstRegs(SmallVectorImpl<Register> &Regs) const {
+    for (const auto &SI : PrologEpilogSGPRSpills) {
+      if (SI.second.getKind() == SGPRSaveKind::COPY_TO_SCRATCH_SGPR)
+        Regs.push_back(SI.second.getReg());
+    }
+  }
+
+  // Check if \p FI is allocated for any SGPR spill to a VGPR lane during PEI.
+  bool checkIndexInPrologEpilogSGPRSpills(int FI) const {
+    return find_if(PrologEpilogSGPRSpills,
+                   [FI](const std::pair<Register,
+                                        PrologEpilogSGPRSaveRestoreInfo> &SI) {
+                     return SI.second.getKind() ==
+                                SGPRSaveKind::SPILL_TO_VGPR_LANE &&
+                            SI.second.getIndex() == FI;
+                   }) != PrologEpilogSGPRSpills.end();
+  }
+
+  const PrologEpilogSGPRSaveRestoreInfo &
+  getPrologEpilogSGPRSaveRestoreInfo(Register Reg) const {
+    auto I = PrologEpilogSGPRSpills.find(Reg);
+    assert(I != PrologEpilogSGPRSpills.end());
+
+    return I->second;
+  }
+
+  ArrayRef<SIRegisterInfo::SpilledReg>
+  getPrologEpilogSGPRSpillToVGPRLanes(int FrameIndex) const {
+    auto I = PrologEpilogSGPRSpillToVGPRLanes.find(FrameIndex);
+    return (I == PrologEpilogSGPRSpillToVGPRLanes.end())
+               ? ArrayRef<SIRegisterInfo::SpilledReg>()
+               : ArrayRef(I->second);
+  }
+
+  void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,
+                        Align Alignment = Align(4));
+
+  void splitWWMSpillRegisters(
+      MachineFunction &MF,
+      SmallVectorImpl<std::pair<Register, int>> &CalleeSavedRegs,
+      SmallVectorImpl<std::pair<Register, int>> &ScratchRegs) const;
 
   ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
     return SpillAGPR;
@@ -583,9 +676,8 @@ public:
       I->second.IsDead = true;
   }
 
-  bool haveFreeLanesForSGPRSpill(const MachineFunction &MF,
-                                 unsigned NumLane) const;
-  bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
+  bool allocateSGPRSpillToVGPRLane(MachineFunction &MF, int FI,
+                                   bool IsPrologEpilog = false);
   bool allocateVGPRSpillToAGPR(MachineFunction &MF, int FI, bool isAGPRtoVGPR);
 
   /// If \p ResetSGPRSpillStackIDs is true, reset the stack ID from sgpr-spill
@@ -594,7 +686,7 @@ public:
                               bool ResetSGPRSpillStackIDs);
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
-  Optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
+  std::optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
 
   unsigned getBytesInStackArgArea() const {
     return BytesInStackArgArea;

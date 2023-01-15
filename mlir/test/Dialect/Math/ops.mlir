@@ -26,6 +26,18 @@ func.func @atan2(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
   return
 }
 
+// CHECK-LABEL: func @cbrt(
+// CHECK-SAME:             %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
+func.func @cbrt(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
+  // CHECK: %{{.*}} = math.cbrt %[[F]] : f32
+  %0 = math.cbrt %f : f32
+  // CHECK: %{{.*}} = math.cbrt %[[V]] : vector<4xf32>
+  %1 = math.cbrt %v : vector<4xf32>
+  // CHECK: %{{.*}} = math.cbrt %[[T]] : tensor<4x4x?xf32>
+  %2 = math.cbrt %t : tensor<4x4x?xf32>
+  return
+}
+
 // CHECK-LABEL: func @cos(
 // CHECK-SAME:            %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
 func.func @cos(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
@@ -271,15 +283,18 @@ func.func @trunc(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
 }
 
 // CHECK-LABEL: func @fastmath(
-// CHECK-SAME:             %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
-func.func @fastmath(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
-  // CHECK: %{{.*}} = math.trunc %[[F]] fastmath<fast> : f32
+// CHECK-SAME:      %[[F:.*]]: f32, %[[I:.*]]: i32,
+// CHECK-SAME:      %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
+func.func @fastmath(%f: f32, %i: i32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
+  // CHECK: math.trunc %[[F]] fastmath<fast> : f32
   %0 = math.trunc %f fastmath<fast> : f32
-  // CHECK: %{{.*}} = math.powf %[[V]], %[[V]] fastmath<fast> : vector<4xf32>
+  // CHECK: math.powf %[[V]], %[[V]] fastmath<fast> : vector<4xf32>
   %1 = math.powf %v, %v fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : vector<4xf32>
-  // CHECK: %{{.*}} = math.fma %[[T]], %[[T]], %[[T]] : tensor<4x4x?xf32>
+  // CHECK: math.fma %[[T]], %[[T]], %[[T]] : tensor<4x4x?xf32>
   %2 = math.fma %t, %t, %t fastmath<none> : tensor<4x4x?xf32>
-  // CHECK: %{{.*}} = math.absf %[[F]] fastmath<ninf> : f32
+  // CHECK: math.absf %[[F]] fastmath<ninf> : f32
   %3 = math.absf %f fastmath<ninf> : f32
+  // CHECK: math.fpowi %[[F]], %[[I]] fastmath<fast> : f32, i32
+  %4 = math.fpowi %f, %i fastmath<fast> : f32, i32
   return
 }

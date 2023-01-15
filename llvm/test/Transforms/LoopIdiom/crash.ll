@@ -4,18 +4,18 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 ; Don't crash inside DependenceAnalysis
 ; PR14219
-define void @test1(i64* %iwork, i64 %x)  {
+define void @test1(ptr %iwork, i64 %x)  {
 bb0:
   %mul116 = mul nsw i64 %x, %x
   %incdec.ptr6.sum175 = add i64 42, %x
-  %arrayidx135 = getelementptr inbounds i64, i64* %iwork, i64 %incdec.ptr6.sum175
+  %arrayidx135 = getelementptr inbounds i64, ptr %iwork, i64 %incdec.ptr6.sum175
   br label %bb1
 bb1:
   %storemerge4226 = phi i64 [ 0, %bb0 ], [ %inc139, %bb1 ]
-  store i64 1, i64* %arrayidx135, align 8
+  store i64 1, ptr %arrayidx135, align 8
   %incdec.ptr6.sum176 = add i64 %mul116, %storemerge4226
-  %arrayidx137 = getelementptr inbounds i64, i64* %iwork, i64 %incdec.ptr6.sum176
-  store i64 1, i64* %arrayidx137, align 8
+  %arrayidx137 = getelementptr inbounds i64, ptr %iwork, i64 %incdec.ptr6.sum176
+  store i64 1, ptr %arrayidx137, align 8
   %inc139 = add nsw i64 %storemerge4226, 1
   %cmp131 = icmp sgt i64 %storemerge4226, 42
   br i1 %cmp131, label %bb2, label %bb1

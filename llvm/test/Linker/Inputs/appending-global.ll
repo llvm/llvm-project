@@ -1,1 +1,1 @@
-@var = appending global [1 x i8* ] undef
+@var = appending global [1 x ptr] undef

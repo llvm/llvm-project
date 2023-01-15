@@ -7,14 +7,16 @@
 define double @doubleConstant1() {
 ; CHECK-P9-LABEL: doubleConstant1:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-P9-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
+; CHECK-P9-NEXT:    vspltisw 2, 14
+; CHECK-P9-NEXT:    xvcvsxwdp 1, 34
+; CHECK-P9-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: doubleConstant1:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-P8-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
+; CHECK-P8-NEXT:    vspltisw 2, 14
+; CHECK-P8-NEXT:    xvcvsxwdp 1, 34
+; CHECK-P8-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-P8-NEXT:    blr
   ret double 1.400000e+01
 }

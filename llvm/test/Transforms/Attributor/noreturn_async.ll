@@ -29,9 +29,9 @@ entry:
 ; CHECK-NEXT:   {{.*}}@printf{{.*}}
 ; CHECK-NEXT:   call void @"?overflow@@YAXXZ"()
 ; CHECK-NEXT:   unreachable
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0)) nofree nosync nounwind
+  %call2 = call i32 (ptr, ...) @printf(ptr @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@") nofree nosync nounwind
   call void @"?overflow@@YAXXZ"()
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
+  %call3 = call i32 (ptr, ...) @printf(ptr @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@")
   br label %b
 b:
   ret void
@@ -42,7 +42,7 @@ b:
 ; CHECK-NOT:    noreturn
 ; CHECK:        define
 ; CHECK-SAME:   @"?catchoverflow@@YAHXZ"()
-define dso_local i32 @"?catchoverflow@@YAHXZ"()  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
+define dso_local i32 @"?catchoverflow@@YAHXZ"()  personality ptr @__C_specific_handler {
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
@@ -60,24 +60,24 @@ catch.dispatch:                                   ; preds = %invoke.cont, %entry
   %0 = catchswitch within none [label %__except] unwind to caller
 
 __except:                                         ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
+  %1 = catchpad within %0 [ptr null]
   catchret from %1 to label %__except2
 
 __except2:                                        ; preds = %__except
   %2 = call i32 @llvm.eh.exceptioncode(token %1)
-  store i32 1, i32* %retval, align 4
+  store i32 1, ptr %retval, align 4
   br label %return
 
 invoke.cont1:                                     ; preds = %invoke.cont
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   br label %return
 
 __try.cont:                                       ; No predecessors!
-  store i32 2, i32* %retval, align 4
+  store i32 2, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %__try.cont, %__except2, %invoke.cont1
-  %3 = load i32, i32* %retval, align 4
+  %3 = load i32, ptr %retval, align 4
   ret i32 %3
 }
 
@@ -88,10 +88,10 @@ entry:
 ; CHECK-NOT:  nounwind
 ; CHECK-NEXT: define
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:   %call3 = call i32 (i8*, ...) @printf(i8* noundef nonnull dereferenceable(18) getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i32 0, i32 0))
+; CHECK-NEXT:   %call3 = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(18) @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@")
 ; CHECK-NEXT:   call void @"?overflow@@YAXXZ_may_throw"()
 ; CHECK-NEXT:   unreachable
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@", i64 0, i64 0))
+  %call3 = call i32 (ptr, ...) @printf(ptr @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@")
   call void @"?overflow@@YAXXZ_may_throw"()
   br label %b
 b:
@@ -103,7 +103,7 @@ b:
 ; CHECK-NOT:    noreturn
 ; CHECK:        define
 ; CHECK-SAME:   @"?catchoverflow@@YAHXZ_may_throw"()
-define dso_local i32 @"?catchoverflow@@YAHXZ_may_throw"()  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
+define dso_local i32 @"?catchoverflow@@YAHXZ_may_throw"()  personality ptr @__C_specific_handler {
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
@@ -121,30 +121,30 @@ catch.dispatch:                                   ; preds = %invoke.cont, %entry
   %0 = catchswitch within none [label %__except] unwind to caller
 
 __except:                                         ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
+  %1 = catchpad within %0 [ptr null]
   catchret from %1 to label %__except2
 
 __except2:                                        ; preds = %__except
   %2 = call i32 @llvm.eh.exceptioncode(token %1)
-  store i32 1, i32* %retval, align 4
+  store i32 1, ptr %retval, align 4
   br label %return
 
 invoke.cont1:                                     ; preds = %invoke.cont
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   br label %return
 
 __try.cont:                                       ; No predecessors!
-  store i32 2, i32* %retval, align 4
+  store i32 2, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %__try.cont, %__except2, %invoke.cont1
-  %3 = load i32, i32* %retval, align 4
+  %3 = load i32, ptr %retval, align 4
   ret i32 %3
 }
 
 declare dso_local i32 @__C_specific_handler(...)
 
-declare dso_local i32 @printf(i8* %_Format, ...)
+declare dso_local i32 @printf(ptr %_Format, ...)
 
 declare i32 @llvm.eh.exceptioncode(token)
 ;.
@@ -152,3 +152,5 @@ declare i32 @llvm.eh.exceptioncode(token)
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(none) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind }
 ;.
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

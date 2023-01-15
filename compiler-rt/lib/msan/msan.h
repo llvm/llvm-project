@@ -170,19 +170,6 @@ const MappingDesc kMemoryLayout[] = {
 
 #elif SANITIZER_NETBSD || (SANITIZER_LINUX && SANITIZER_WORDSIZE == 64)
 
-#ifdef MSAN_LINUX_X86_64_OLD_MAPPING
-// Requires PIE binary and ASLR enabled.
-// Main thread stack and DSOs at 0x7f0000000000 (sometimes 0x7e0000000000).
-// Heap at 0x600000000000.
-const MappingDesc kMemoryLayout[] = {
-    {0x000000000000ULL, 0x200000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x200000000000ULL, 0x400000000000ULL, MappingDesc::SHADOW, "shadow"},
-    {0x400000000000ULL, 0x600000000000ULL, MappingDesc::ORIGIN, "origin"},
-    {0x600000000000ULL, 0x800000000000ULL, MappingDesc::APP, "app"}};
-
-#define MEM_TO_SHADOW(mem) (((uptr)(mem)) & ~0x400000000000ULL)
-#define SHADOW_TO_ORIGIN(mem) (((uptr)(mem)) + 0x200000000000ULL)
-#else  // MSAN_LINUX_X86_64_OLD_MAPPING
 // All of the following configurations are supported.
 // ASLR disabled: main executable and DSOs at 0x555550000000
 // PIE and ASLR: main executable and DSOs at 0x7f0000000000
@@ -203,7 +190,6 @@ const MappingDesc kMemoryLayout[] = {
     {0x700000000000ULL, 0x800000000000ULL, MappingDesc::APP, "app-3"}};
 #define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x500000000000ULL)
 #define SHADOW_TO_ORIGIN(mem) (((uptr)(mem)) + 0x100000000000ULL)
-#endif  // MSAN_LINUX_X86_64_OLD_MAPPING
 
 #else
 #error "Unsupported platform"

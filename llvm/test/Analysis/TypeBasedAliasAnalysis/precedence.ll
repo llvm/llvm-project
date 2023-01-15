@@ -13,12 +13,11 @@ target datalayout = "e-p:64:64:64"
 ; TBAA:      ret i32 0
 ; BASICAA: @trouble
 ; BASICAA:   ret i32 1075000115
-define i32 @trouble(i32* %x) nounwind {
+define i32 @trouble(ptr %x) nounwind {
 entry:
-  store i32 0, i32* %x, !tbaa !0
-  %0 = bitcast i32* %x to float*
-  store float 0x4002666660000000, float* %0, !tbaa !3
-  %tmp3 = load i32, i32* %x, !tbaa !0
+  store i32 0, ptr %x, !tbaa !0
+  store float 0x4002666660000000, ptr %x, !tbaa !3
+  %tmp3 = load i32, ptr %x, !tbaa !0
   ret i32 %tmp3
 }
 
@@ -29,13 +28,12 @@ entry:
 ; TBAA:      ret i64 0
 ; BASICAA: @offset
 ; BASICAA:   ret i64 %tmp3
-define i64 @offset(i64* %x) nounwind {
+define i64 @offset(ptr %x) nounwind {
 entry:
-  store i64 0, i64* %x, !tbaa !4
-  %0 = bitcast i64* %x to i8*
-  %1 = getelementptr i8, i8* %0, i64 1
-  store i8 1, i8* %1, !tbaa !5
-  %tmp3 = load i64, i64* %x, !tbaa !4
+  store i64 0, ptr %x, !tbaa !4
+  %0 = getelementptr i8, ptr %x, i64 1
+  store i8 1, ptr %0, !tbaa !5
+  %tmp3 = load i64, ptr %x, !tbaa !4
   ret i64 %tmp3
 }
 

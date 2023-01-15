@@ -817,7 +817,10 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
     if (*(src + 1) == '+' || *(src + 1) == '-' || isdigit(*(src + 1))) {
       ++src;
       char *temp_str_end;
-      int32_t add_to_exponent = strtointeger<int32_t>(src, &temp_str_end, 10);
+      auto result = strtointeger<int32_t>(src, 10);
+      // TODO: If error, return with error.
+      temp_str_end = const_cast<char *>(src + result.parsed_len);
+      int32_t add_to_exponent = result.value;
       if (add_to_exponent > 100000)
         add_to_exponent = 100000;
       else if (add_to_exponent < -100000)
@@ -911,7 +914,10 @@ static inline bool hexadecimal_string_to_float(
     if (*(src + 1) == '+' || *(src + 1) == '-' || isdigit(*(src + 1))) {
       ++src;
       char *temp_str_end;
-      int32_t add_to_exponent = strtointeger<int32_t>(src, &temp_str_end, 10);
+      auto result = strtointeger<int32_t>(src, 10);
+      // TODO: If error, return error.
+      temp_str_end = const_cast<char *>(src + result.parsed_len);
+      int32_t add_to_exponent = result.value;
       if (add_to_exponent > 100000)
         add_to_exponent = 100000;
       else if (add_to_exponent < -100000)
@@ -1001,8 +1007,11 @@ static inline T strtofloatingpoint(const char *__restrict src,
             // more than is required by the specification, which says for the
             // input type "NAN(n-char-sequence)" that "the meaning of
             // the n-char sequence is implementation-defined."
-            nan_mantissa = static_cast<BitsType>(
-                strtointeger<uint64_t>(left_paren + 1, &temp_src, 0));
+
+            auto result = strtointeger<uint64_t>(left_paren + 1, 0);
+            // TODO: If error, return error
+            temp_src = const_cast<char *>(left_paren + 1 + result.parsed_len);
+            nan_mantissa = result.value;
             if (*temp_src != ')')
               nan_mantissa = 0;
           }

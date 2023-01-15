@@ -23,6 +23,7 @@
 #include <__memory/builtin_new_allocator.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/unique_ptr.h>
+#include <__type_traits/strip_signature.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
@@ -261,7 +262,7 @@ class __base<_Rp(_ArgTypes...)>
     __base& operator=(const __base&);
 public:
     _LIBCPP_INLINE_VISIBILITY __base() {}
-    _LIBCPP_INLINE_VISIBILITY virtual ~__base() {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual ~__base() {}
     virtual __base* __clone() const = 0;
     virtual void __clone(__base*) const = 0;
     virtual void destroy() _NOEXCEPT = 0;
@@ -1062,45 +1063,6 @@ public:
 #if _LIBCPP_STD_VER >= 17
 template<class _Rp, class ..._Ap>
 function(_Rp(*)(_Ap...)) -> function<_Rp(_Ap...)>;
-
-template<class _Fp>
-struct __strip_signature;
-
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...)> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) const> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) volatile> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) const volatile> { using type = _Rp(_Ap...); };
-
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) &> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) const &> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) volatile &> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) const volatile &> { using type = _Rp(_Ap...); };
-
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) noexcept> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) const noexcept> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) volatile noexcept> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) const volatile noexcept> { using type = _Rp(_Ap...); };
-
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) & noexcept> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) const & noexcept> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) volatile & noexcept> { using type = _Rp(_Ap...); };
-template<class _Rp, class _Gp, class ..._Ap>
-struct __strip_signature<_Rp (_Gp::*) (_Ap...) const volatile & noexcept> { using type = _Rp(_Ap...); };
 
 template<class _Fp, class _Stripped = typename __strip_signature<decltype(&_Fp::operator())>::type>
 function(_Fp) -> function<_Stripped>;

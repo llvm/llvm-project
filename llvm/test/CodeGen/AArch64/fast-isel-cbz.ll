@@ -57,10 +57,10 @@ bb1:
   ret i32 0
 }
 
-define i32 @icmp_eq_ptr(i8* %a) {
+define i32 @icmp_eq_ptr(ptr %a) {
 ; CHECK-LABEL: icmp_eq_ptr
 ; CHECK:       cbz x0, {{LBB.+_2}}
-  %1 = icmp eq i8* %a, null
+  %1 = icmp eq ptr %a, null
   br i1 %1, label %bb1, label %bb2
 bb2:
   ret i32 1

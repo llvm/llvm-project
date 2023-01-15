@@ -44,7 +44,7 @@ using llvm::MapVector;
 static Value allocBuffer(ImplicitLocOpBuilder &b,
                          const LinalgPromotionOptions &options,
                          Type elementType, Value allocSize, DataLayout &layout,
-                         Optional<unsigned> alignment = std::nullopt) {
+                         std::optional<unsigned> alignment = std::nullopt) {
   auto width = layout.getTypeSize(elementType);
 
   IntegerAttr alignmentAttr;
@@ -77,11 +77,10 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
 /// no call back to do so is provided. The default is to allocate a
 /// memref<..xi8> and return a view to get a memref type of shape
 /// boundingSubViewSize.
-static Optional<Value>
-defaultAllocBufferCallBack(const LinalgPromotionOptions &options,
-                           OpBuilder &builder, memref::SubViewOp subView,
-                           ArrayRef<Value> boundingSubViewSize,
-                           Optional<unsigned> alignment, DataLayout &layout) {
+static std::optional<Value> defaultAllocBufferCallBack(
+    const LinalgPromotionOptions &options, OpBuilder &builder,
+    memref::SubViewOp subView, ArrayRef<Value> boundingSubViewSize,
+    std::optional<unsigned> alignment, DataLayout &layout) {
   ShapedType viewType = subView.getType();
   ImplicitLocOpBuilder b(subView.getLoc(), builder);
   auto zero = b.createOrFold<arith::ConstantIndexOp>(0);
@@ -136,7 +135,7 @@ struct LinalgOpInstancePromotionOptions {
   CopyCallbackFn copyOutFn;
 
   /// Alignment of promoted buffer.
-  Optional<unsigned> alignment;
+  std::optional<unsigned> alignment;
 };
 } // namespace
 
@@ -166,7 +165,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
   } else {
     allocationFn = [&](OpBuilder &b, memref::SubViewOp subViewOp,
                        ArrayRef<Value> boundingSubViewSize,
-                       DataLayout &layout) -> Optional<Value> {
+                       DataLayout &layout) -> std::optional<Value> {
       return defaultAllocBufferCallBack(options, b, subViewOp,
                                         boundingSubViewSize, alignment, layout);
     };
@@ -236,7 +235,7 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
           getConstantUpperBoundForIndex(materializedSize);
       size = failed(upperBound)
                  ? materializedSize
-                 : b.create<arith::ConstantIndexOp>(loc, upperBound.value());
+                 : b.create<arith::ConstantIndexOp>(loc, *upperBound);
     }
     LLVM_DEBUG(llvm::dbgs() << "Extracted tightest: " << size << "\n");
     fullSizes.push_back(size);
@@ -246,7 +245,8 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
   SmallVector<int64_t, 4> dynSizes(fullSizes.size(), ShapedType::kDynamic);
   // If a callback is not specified, then use the default implementation for
   // allocating the promoted buffer.
-  Optional<Value> fullLocalView = allocationFn(b, subView, fullSizes, layout);
+  std::optional<Value> fullLocalView =
+      allocationFn(b, subView, fullSizes, layout);
   if (!fullLocalView)
     return failure();
   SmallVector<OpFoldResult, 4> zeros(fullSizes.size(), b.getIndexAttr(0));

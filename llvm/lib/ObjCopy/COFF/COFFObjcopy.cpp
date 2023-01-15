@@ -239,9 +239,9 @@ static Error handleArgs(const CommonConfig &Config,
       Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_1BYTES;
 
     addSection(Obj, NewSection.SectionName,
-               makeArrayRef(reinterpret_cast<const uint8_t *>(
-                                NewSection.SectionData->getBufferStart()),
-                            NewSection.SectionData->getBufferSize()),
+               ArrayRef(reinterpret_cast<const uint8_t *>(
+                            NewSection.SectionData->getBufferStart()),
+                        NewSection.SectionData->getBufferSize()),
                Characteristics);
   }
 

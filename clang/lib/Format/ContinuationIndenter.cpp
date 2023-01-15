@@ -21,6 +21,7 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "format-indenter"
 
@@ -149,7 +150,7 @@ static bool opensProtoMessageField(const FormatToken &LessTok,
 // Returns the delimiter of a raw string literal, or std::nullopt if TokenText
 // is not the text of a raw string literal. The delimiter could be the empty
 // string.  For example, the delimiter of R"deli(cont)deli" is deli.
-static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
+static std::optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   if (TokenText.size() < 5 // The smallest raw string possible is 'R"()"'.
       || !TokenText.startswith("R\"") || !TokenText.endswith("\"")) {
     return std::nullopt;
@@ -565,6 +566,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   // If the return type spans multiple lines, wrap before the function name.
   if (((Current.is(TT_FunctionDeclarationName) &&
+        !State.Line->ReturnTypeWrapped &&
         // Don't break before a C# function when no break after return type.
         (!Style.isCSharp() ||
          Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None) &&
@@ -1537,6 +1539,12 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
           std::max(State.Column, NewParenState.Indent), CurrentState.LastSpace);
     }
 
+    // Special case for generic selection expressions, its comma-separated
+    // expressions are not aligned to the opening paren like regular calls, but
+    // rather continuation-indented relative to the _Generic keyword.
+    if (Previous && Previous->endsSequence(tok::l_paren, tok::kw__Generic))
+      NewParenState.Indent = CurrentState.LastSpace;
+
     if (Previous &&
         (Previous->getPrecedence() == prec::Assignment ||
          Previous->isOneOf(tok::kw_return, TT_RequiresClause) ||
@@ -1683,8 +1691,12 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         (State.Line->Type != LT_ObjCDecl && Style.BinPackParameters) ||
         (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
 
+    bool GenericSelection =
+        Current.getPreviousNonComment() &&
+        Current.getPreviousNonComment()->is(tok::kw__Generic);
+
     AvoidBinPacking =
-        (CurrentState.IsCSharpGenericTypeConstraint) ||
+        (CurrentState.IsCSharpGenericTypeConstraint) || GenericSelection ||
         (Style.isJavaScript() && EndsInComma) ||
         (State.Line->MustBeDeclaration && !BinPackDeclaration) ||
         (!State.Line->MustBeDeclaration && !Style.BinPackArguments) ||

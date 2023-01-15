@@ -20,9 +20,9 @@
 # CHECK: ![[VARNUM:[0-9]+]] = !DILocalVariable
 #
 # CHECK-LABEL: bb.8:
-# CHECK:       DBG_VALUE $rsp, 0, ![[VARNUM]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_LLVM_fragment, 64, 64),
+# CHECK:       DBG_VALUE_LIST ![[VARNUM]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_LLVM_fragment, 64, 64), $rsp,
 # CHECK-LABEL:  bb.9:
-# CHECK:       DBG_VALUE $rsp, 0, ![[VARNUM]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_LLVM_fragment, 64, 64),
+# CHECK:       DBG_VALUE_LIST ![[VARNUM]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_LLVM_fragment, 64, 64), $rsp,
 
 --- |
   ; ModuleID = 'missingvar.ll'
@@ -302,7 +302,7 @@ body:             |
     MOV64mr undef renamable $rax, 1, $noreg, 0, $noreg, killed renamable $r10, debug-location !7 :: (store 8 into `%"class.llvm::Loop"*** undef`)
     MOV64mr killed renamable $rdi, 1, $noreg, 40, $noreg, killed renamable $r9, debug-location !7 :: (store 8 into %ir.24)
     renamable $rax = MOV64rm killed renamable $rsi, 1, $noreg, 24, $noreg, debug-location !7 :: (load 8 from %ir.26)
-    DBG_INSTR_REF 1, 0, !8, !DIExpression(DW_OP_LLVM_fragment, 64, 64), debug-location !7
+    DBG_INSTR_REF !8, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location !7
     renamable $rax = SUB64rr killed renamable $rax, killed renamable $r11, implicit-def dead $eflags, debug-location !7
     renamable $r8 = SUB64rr killed renamable $r8, killed renamable $r14, implicit-def dead $eflags, debug-location !7
     renamable $r8 = exact SAR64ri killed renamable $r8, 3, implicit-def dead $eflags, debug-location !7

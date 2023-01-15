@@ -8,9 +8,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+d,+zfh,+experimental-zvfh,+zve32f -target-abi=lp64d \
 ; RUN:     -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64ZVE32F
 
-declare void @llvm.masked.scatter.v1i8.v1p0i8(<1 x i8>, <1 x i8*>, i32, <1 x i1>)
+declare void @llvm.masked.scatter.v1i8.v1p0(<1 x i8>, <1 x ptr>, i32, <1 x i1>)
 
-define void @mscatter_v1i8(<1 x i8> %val, <1 x i8*> %ptrs, <1 x i1> %m) {
+define void @mscatter_v1i8(<1 x i8> %val, <1 x ptr> %ptrs, <1 x i1> %m) {
 ; RV32V-LABEL: mscatter_v1i8:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
@@ -32,23 +32,20 @@ define void @mscatter_v1i8(<1 x i8> %val, <1 x i8*> %ptrs, <1 x i1> %m) {
 ; RV64ZVE32F-LABEL: mscatter_v1i8:
 ; RV64ZVE32F:       # %bb.0:
 ; RV64ZVE32F-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; RV64ZVE32F-NEXT:    vmv.v.i v9, 0
-; RV64ZVE32F-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV64ZVE32F-NEXT:    vmv.x.s a1, v9
-; RV64ZVE32F-NEXT:    andi a1, a1, 1
-; RV64ZVE32F-NEXT:    beqz a1, .LBB0_2
+; RV64ZVE32F-NEXT:    vfirst.m a1, v0
+; RV64ZVE32F-NEXT:    bnez a1, .LBB0_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.store
 ; RV64ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; RV64ZVE32F-NEXT:    vse8.v v8, (a0)
 ; RV64ZVE32F-NEXT:  .LBB0_2: # %else
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v1i8.v1p0i8(<1 x i8> %val, <1 x i8*> %ptrs, i32 1, <1 x i1> %m)
+  call void @llvm.masked.scatter.v1i8.v1p0(<1 x i8> %val, <1 x ptr> %ptrs, i32 1, <1 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2i8.v2p0i8(<2 x i8>, <2 x i8*>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v2i8.v2p0(<2 x i8>, <2 x ptr>, i32, <2 x i1>)
 
-define void @mscatter_v2i8(<2 x i8> %val, <2 x i8*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i8(<2 x i8> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i8:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
@@ -88,11 +85,11 @@ define void @mscatter_v2i8(<2 x i8> %val, <2 x i8*> %ptrs, <2 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64ZVE32F-NEXT:    vse8.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v2i8.v2p0i8(<2 x i8> %val, <2 x i8*> %ptrs, i32 1, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> %val, <2 x ptr> %ptrs, i32 1, <2 x i1> %m)
   ret void
 }
 
-define void @mscatter_v2i16_truncstore_v2i8(<2 x i16> %val, <2 x i8*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i16_truncstore_v2i8(<2 x i16> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i16_truncstore_v2i8:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
@@ -137,11 +134,11 @@ define void @mscatter_v2i16_truncstore_v2i8(<2 x i16> %val, <2 x i8*> %ptrs, <2 
 ; RV64ZVE32F-NEXT:    vse8.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
   %tval = trunc <2 x i16> %val to <2 x i8>
-  call void @llvm.masked.scatter.v2i8.v2p0i8(<2 x i8> %tval, <2 x i8*> %ptrs, i32 1, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> %tval, <2 x ptr> %ptrs, i32 1, <2 x i1> %m)
   ret void
 }
 
-define void @mscatter_v2i32_truncstore_v2i8(<2 x i32> %val, <2 x i8*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i32_truncstore_v2i8(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i32_truncstore_v2i8:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -194,11 +191,11 @@ define void @mscatter_v2i32_truncstore_v2i8(<2 x i32> %val, <2 x i8*> %ptrs, <2 
 ; RV64ZVE32F-NEXT:    vse8.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
   %tval = trunc <2 x i32> %val to <2 x i8>
-  call void @llvm.masked.scatter.v2i8.v2p0i8(<2 x i8> %tval, <2 x i8*> %ptrs, i32 1, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> %tval, <2 x ptr> %ptrs, i32 1, <2 x i1> %m)
   ret void
 }
 
-define void @mscatter_v2i64_truncstore_v2i8(<2 x i64> %val, <2 x i8*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i64_truncstore_v2i8(<2 x i64> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i64_truncstore_v2i8:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -234,7 +231,7 @@ define void @mscatter_v2i64_truncstore_v2i8(<2 x i64> %val, <2 x i8*> %ptrs, <2 
 ; RV32ZVE32F-NEXT:    vle8.v v9, (a0)
 ; RV32ZVE32F-NEXT:    addi a0, sp, 14
 ; RV32ZVE32F-NEXT:    vle8.v v10, (a0)
-; RV32ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, tu, ma
+; RV32ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32ZVE32F-NEXT:    vslideup.vi v10, v9, 1
 ; RV32ZVE32F-NEXT:    vsoxei32.v v10, (zero), v8, v0.t
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
@@ -251,7 +248,7 @@ define void @mscatter_v2i64_truncstore_v2i8(<2 x i64> %val, <2 x i8*> %ptrs, <2 
 ; RV64ZVE32F-NEXT:    vle8.v v9, (a0)
 ; RV64ZVE32F-NEXT:    addi a0, sp, 14
 ; RV64ZVE32F-NEXT:    vle8.v v8, (a0)
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, tu, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64ZVE32F-NEXT:    vmv.x.s a0, v0
 ; RV64ZVE32F-NEXT:    andi a1, a0, 1
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
@@ -274,13 +271,13 @@ define void @mscatter_v2i64_truncstore_v2i8(<2 x i64> %val, <2 x i8*> %ptrs, <2 
 ; RV64ZVE32F-NEXT:    addi sp, sp, 16
 ; RV64ZVE32F-NEXT:    ret
   %tval = trunc <2 x i64> %val to <2 x i8>
-  call void @llvm.masked.scatter.v2i8.v2p0i8(<2 x i8> %tval, <2 x i8*> %ptrs, i32 1, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> %tval, <2 x ptr> %ptrs, i32 1, <2 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8>, <4 x i8*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4i8.v4p0(<4 x i8>, <4 x ptr>, i32, <4 x i1>)
 
-define void @mscatter_v4i8(<4 x i8> %val, <4 x i8*> %ptrs, <4 x i1> %m) {
+define void @mscatter_v4i8(<4 x i8> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32-LABEL: mscatter_v4i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -336,11 +333,11 @@ define void @mscatter_v4i8(<4 x i8> %val, <4 x i8*> %ptrs, <4 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64ZVE32F-NEXT:    vse8.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8> %val, <4 x i8*> %ptrs, i32 1, <4 x i1> %m)
+  call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> %m)
   ret void
 }
 
-define void @mscatter_truemask_v4i8(<4 x i8> %val, <4 x i8*> %ptrs) {
+define void @mscatter_truemask_v4i8(<4 x i8> %val, <4 x ptr> %ptrs) {
 ; RV32-LABEL: mscatter_truemask_v4i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -398,21 +395,21 @@ define void @mscatter_truemask_v4i8(<4 x i8> %val, <4 x i8*> %ptrs) {
 ; RV64ZVE32F-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> poison, <4 x i32> zeroinitializer
-  call void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8> %val, <4 x i8*> %ptrs, i32 1, <4 x i1> %mtrue)
+  call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> %mtrue)
   ret void
 }
 
-define void @mscatter_falsemask_v4i8(<4 x i8> %val, <4 x i8*> %ptrs) {
+define void @mscatter_falsemask_v4i8(<4 x i8> %val, <4 x ptr> %ptrs) {
 ; CHECK-LABEL: mscatter_falsemask_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8> %val, <4 x i8*> %ptrs, i32 1, <4 x i1> zeroinitializer)
+  call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %val, <4 x ptr> %ptrs, i32 1, <4 x i1> zeroinitializer)
   ret void
 }
 
-declare void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8>, <8 x i8*>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v8i8.v8p0(<8 x i8>, <8 x ptr>, i32, <8 x i1>)
 
-define void @mscatter_v8i8(<8 x i8> %val, <8 x i8*> %ptrs, <8 x i1> %m) {
+define void @mscatter_v8i8(<8 x i8> %val, <8 x ptr> %ptrs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_v8i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
@@ -508,11 +505,11 @@ define void @mscatter_v8i8(<8 x i8> %val, <8 x i8*> %ptrs, <8 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse8.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, i32 1, <8 x i1> %m)
+  call void @llvm.masked.scatter.v8i8.v8p0(<8 x i8> %val, <8 x ptr> %ptrs, i32 1, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i8(<8 x i8> %val, i8* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i8(<8 x i8> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -628,14 +625,14 @@ define void @mscatter_baseidx_v8i8(<8 x i8> %val, i8* %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse8.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds i8, i8* %base, <8 x i8> %idxs
-  call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, i32 1, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i8, ptr %base, <8 x i8> %idxs
+  call void @llvm.masked.scatter.v8i8.v8p0(<8 x i8> %val, <8 x ptr> %ptrs, i32 1, <8 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v1i16.v1p0i16(<1 x i16>, <1 x i16*>, i32, <1 x i1>)
+declare void @llvm.masked.scatter.v1i16.v1p0(<1 x i16>, <1 x ptr>, i32, <1 x i1>)
 
-define void @mscatter_v1i16(<1 x i16> %val, <1 x i16*> %ptrs, <1 x i1> %m) {
+define void @mscatter_v1i16(<1 x i16> %val, <1 x ptr> %ptrs, <1 x i1> %m) {
 ; RV32V-LABEL: mscatter_v1i16:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
@@ -657,23 +654,20 @@ define void @mscatter_v1i16(<1 x i16> %val, <1 x i16*> %ptrs, <1 x i1> %m) {
 ; RV64ZVE32F-LABEL: mscatter_v1i16:
 ; RV64ZVE32F:       # %bb.0:
 ; RV64ZVE32F-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; RV64ZVE32F-NEXT:    vmv.v.i v9, 0
-; RV64ZVE32F-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV64ZVE32F-NEXT:    vmv.x.s a1, v9
-; RV64ZVE32F-NEXT:    andi a1, a1, 1
-; RV64ZVE32F-NEXT:    beqz a1, .LBB10_2
+; RV64ZVE32F-NEXT:    vfirst.m a1, v0
+; RV64ZVE32F-NEXT:    bnez a1, .LBB10_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.store
 ; RV64ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:  .LBB10_2: # %else
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v1i16.v1p0i16(<1 x i16> %val, <1 x i16*> %ptrs, i32 2, <1 x i1> %m)
+  call void @llvm.masked.scatter.v1i16.v1p0(<1 x i16> %val, <1 x ptr> %ptrs, i32 2, <1 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2i16.v2p0i16(<2 x i16>, <2 x i16*>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v2i16.v2p0(<2 x i16>, <2 x ptr>, i32, <2 x i1>)
 
-define void @mscatter_v2i16(<2 x i16> %val, <2 x i16*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i16(<2 x i16> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i16:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -713,11 +707,11 @@ define void @mscatter_v2i16(<2 x i16> %val, <2 x i16*> %ptrs, <2 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v2i16.v2p0i16(<2 x i16> %val, <2 x i16*> %ptrs, i32 2, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i16.v2p0(<2 x i16> %val, <2 x ptr> %ptrs, i32 2, <2 x i1> %m)
   ret void
 }
 
-define void @mscatter_v2i32_truncstore_v2i16(<2 x i32> %val, <2 x i16*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i32_truncstore_v2i16(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i32_truncstore_v2i16:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -763,11 +757,11 @@ define void @mscatter_v2i32_truncstore_v2i16(<2 x i32> %val, <2 x i16*> %ptrs, <
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
   %tval = trunc <2 x i32> %val to <2 x i16>
-  call void @llvm.masked.scatter.v2i16.v2p0i16(<2 x i16> %tval, <2 x i16*> %ptrs, i32 2, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i16.v2p0(<2 x i16> %tval, <2 x ptr> %ptrs, i32 2, <2 x i1> %m)
   ret void
 }
 
-define void @mscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x i16*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i64_truncstore_v2i16:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -799,7 +793,7 @@ define void @mscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x i16*> %ptrs, <
 ; RV32ZVE32F-NEXT:    vle16.v v9, (a0)
 ; RV32ZVE32F-NEXT:    addi a0, sp, 12
 ; RV32ZVE32F-NEXT:    vle16.v v10, (a0)
-; RV32ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
+; RV32ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
 ; RV32ZVE32F-NEXT:    vslideup.vi v10, v9, 1
 ; RV32ZVE32F-NEXT:    vsoxei32.v v10, (zero), v8, v0.t
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
@@ -816,7 +810,7 @@ define void @mscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x i16*> %ptrs, <
 ; RV64ZVE32F-NEXT:    vle16.v v9, (a0)
 ; RV64ZVE32F-NEXT:    addi a0, sp, 12
 ; RV64ZVE32F-NEXT:    vle16.v v8, (a0)
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV64ZVE32F-NEXT:    vmv.x.s a0, v0
@@ -840,13 +834,13 @@ define void @mscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x i16*> %ptrs, <
 ; RV64ZVE32F-NEXT:    addi sp, sp, 16
 ; RV64ZVE32F-NEXT:    ret
   %tval = trunc <2 x i64> %val to <2 x i16>
-  call void @llvm.masked.scatter.v2i16.v2p0i16(<2 x i16> %tval, <2 x i16*> %ptrs, i32 2, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i16.v2p0(<2 x i16> %tval, <2 x ptr> %ptrs, i32 2, <2 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16>, <4 x i16*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4i16.v4p0(<4 x i16>, <4 x ptr>, i32, <4 x i1>)
 
-define void @mscatter_v4i16(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m) {
+define void @mscatter_v4i16(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32-LABEL: mscatter_v4i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -902,11 +896,11 @@ define void @mscatter_v4i16(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> %val, <4 x i16*> %ptrs, i32 2, <4 x i1> %m)
+  call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %val, <4 x ptr> %ptrs, i32 2, <4 x i1> %m)
   ret void
 }
 
-define void @mscatter_truemask_v4i16(<4 x i16> %val, <4 x i16*> %ptrs) {
+define void @mscatter_truemask_v4i16(<4 x i16> %val, <4 x ptr> %ptrs) {
 ; RV32-LABEL: mscatter_truemask_v4i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -964,21 +958,21 @@ define void @mscatter_truemask_v4i16(<4 x i16> %val, <4 x i16*> %ptrs) {
 ; RV64ZVE32F-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> poison, <4 x i32> zeroinitializer
-  call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> %val, <4 x i16*> %ptrs, i32 2, <4 x i1> %mtrue)
+  call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %val, <4 x ptr> %ptrs, i32 2, <4 x i1> %mtrue)
   ret void
 }
 
-define void @mscatter_falsemask_v4i16(<4 x i16> %val, <4 x i16*> %ptrs) {
+define void @mscatter_falsemask_v4i16(<4 x i16> %val, <4 x ptr> %ptrs) {
 ; CHECK-LABEL: mscatter_falsemask_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> %val, <4 x i16*> %ptrs, i32 2, <4 x i1> zeroinitializer)
+  call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %val, <4 x ptr> %ptrs, i32 2, <4 x i1> zeroinitializer)
   ret void
 }
 
-declare void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16>, <8 x i16*>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v8i16.v8p0(<8 x i16>, <8 x ptr>, i32, <8 x i1>)
 
-define void @mscatter_v8i16(<8 x i16> %val, <8 x i16*> %ptrs, <8 x i1> %m) {
+define void @mscatter_v8i16(<8 x i16> %val, <8 x ptr> %ptrs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_v8i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -1074,11 +1068,11 @@ define void @mscatter_v8i16(<8 x i16> %val, <8 x i16*> %ptrs, <8 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> %val, <8 x i16*> %ptrs, i32 2, <8 x i1> %m)
+  call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i8_v8i16(<8 x i16> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8i8_v8i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -1204,12 +1198,12 @@ define void @mscatter_baseidx_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i8> %i
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds i16, i16* %base, <8 x i8> %idxs
-  call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> %val, <8 x i16*> %ptrs, i32 2, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i16, ptr %base, <8 x i8> %idxs
+  call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i8_v8i16(<8 x i16> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_sext_v8i8_v8i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -1336,12 +1330,12 @@ define void @mscatter_baseidx_sext_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i16>
-  %ptrs = getelementptr inbounds i16, i16* %base, <8 x i16> %eidxs
-  call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> %val, <8 x i16*> %ptrs, i32 2, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i16, ptr %base, <8 x i16> %eidxs
+  call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i8_v8i16(<8 x i16> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_zext_v8i8_v8i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -1476,12 +1470,12 @@ define void @mscatter_baseidx_zext_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i16>
-  %ptrs = getelementptr inbounds i16, i16* %base, <8 x i16> %eidxs
-  call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> %val, <8 x i16*> %ptrs, i32 2, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i16, ptr %base, <8 x i16> %eidxs
+  call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i16(<8 x i16> %val, i16* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i16(<8 x i16> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -1608,14 +1602,14 @@ define void @mscatter_baseidx_v8i16(<8 x i16> %val, i16* %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds i16, i16* %base, <8 x i16> %idxs
-  call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> %val, <8 x i16*> %ptrs, i32 2, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i16, ptr %base, <8 x i16> %idxs
+  call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v1i32.v1p0i32(<1 x i32>, <1 x i32*>, i32, <1 x i1>)
+declare void @llvm.masked.scatter.v1i32.v1p0(<1 x i32>, <1 x ptr>, i32, <1 x i1>)
 
-define void @mscatter_v1i32(<1 x i32> %val, <1 x i32*> %ptrs, <1 x i1> %m) {
+define void @mscatter_v1i32(<1 x i32> %val, <1 x ptr> %ptrs, <1 x i1> %m) {
 ; RV32V-LABEL: mscatter_v1i32:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
@@ -1637,23 +1631,20 @@ define void @mscatter_v1i32(<1 x i32> %val, <1 x i32*> %ptrs, <1 x i1> %m) {
 ; RV64ZVE32F-LABEL: mscatter_v1i32:
 ; RV64ZVE32F:       # %bb.0:
 ; RV64ZVE32F-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; RV64ZVE32F-NEXT:    vmv.v.i v9, 0
-; RV64ZVE32F-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV64ZVE32F-NEXT:    vmv.x.s a1, v9
-; RV64ZVE32F-NEXT:    andi a1, a1, 1
-; RV64ZVE32F-NEXT:    beqz a1, .LBB22_2
+; RV64ZVE32F-NEXT:    vfirst.m a1, v0
+; RV64ZVE32F-NEXT:    bnez a1, .LBB22_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.store
 ; RV64ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:  .LBB22_2: # %else
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v1i32.v1p0i32(<1 x i32> %val, <1 x i32*> %ptrs, i32 4, <1 x i1> %m)
+  call void @llvm.masked.scatter.v1i32.v1p0(<1 x i32> %val, <1 x ptr> %ptrs, i32 4, <1 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32>, <2 x i32*>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v2i32.v2p0(<2 x i32>, <2 x ptr>, i32, <2 x i1>)
 
-define void @mscatter_v2i32(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i32(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i32:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1693,11 +1684,11 @@ define void @mscatter_v2i32(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %val, <2 x i32*> %ptrs, i32 4, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> %val, <2 x ptr> %ptrs, i32 4, <2 x i1> %m)
   ret void
 }
 
-define void @mscatter_v2i64_truncstore_v2i32(<2 x i64> %val, <2 x i32*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i64_truncstore_v2i32(<2 x i64> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i64_truncstore_v2i32:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -1749,13 +1740,13 @@ define void @mscatter_v2i64_truncstore_v2i32(<2 x i64> %val, <2 x i32*> %ptrs, <
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a3)
 ; RV64ZVE32F-NEXT:    ret
   %tval = trunc <2 x i64> %val to <2 x i32>
-  call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %tval, <2 x i32*> %ptrs, i32 4, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> %tval, <2 x ptr> %ptrs, i32 4, <2 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>, <4 x i32*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>, <4 x ptr>, i32, <4 x i1>)
 
-define void @mscatter_v4i32(<4 x i32> %val, <4 x i32*> %ptrs, <4 x i1> %m) {
+define void @mscatter_v4i32(<4 x i32> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32-LABEL: mscatter_v4i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -1811,11 +1802,11 @@ define void @mscatter_v4i32(<4 x i32> %val, <4 x i32*> %ptrs, <4 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %val, <4 x i32*> %ptrs, i32 4, <4 x i1> %m)
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 4, <4 x i1> %m)
   ret void
 }
 
-define void @mscatter_truemask_v4i32(<4 x i32> %val, <4 x i32*> %ptrs) {
+define void @mscatter_truemask_v4i32(<4 x i32> %val, <4 x ptr> %ptrs) {
 ; RV32-LABEL: mscatter_truemask_v4i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -1873,21 +1864,21 @@ define void @mscatter_truemask_v4i32(<4 x i32> %val, <4 x i32*> %ptrs) {
 ; RV64ZVE32F-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> poison, <4 x i32> zeroinitializer
-  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %val, <4 x i32*> %ptrs, i32 4, <4 x i1> %mtrue)
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 4, <4 x i1> %mtrue)
   ret void
 }
 
-define void @mscatter_falsemask_v4i32(<4 x i32> %val, <4 x i32*> %ptrs) {
+define void @mscatter_falsemask_v4i32(<4 x i32> %val, <4 x ptr> %ptrs) {
 ; CHECK-LABEL: mscatter_falsemask_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %val, <4 x i32*> %ptrs, i32 4, <4 x i1> zeroinitializer)
+  call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %val, <4 x ptr> %ptrs, i32 4, <4 x i1> zeroinitializer)
   ret void
 }
 
-declare void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32>, <8 x i32*>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v8i32.v8p0(<8 x i32>, <8 x ptr>, i32, <8 x i1>)
 
-define void @mscatter_v8i32(<8 x i32> %val, <8 x i32*> %ptrs, <8 x i1> %m) {
+define void @mscatter_v8i32(<8 x i32> %val, <8 x ptr> %ptrs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_v8i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -1983,11 +1974,11 @@ define void @mscatter_v8i32(<8 x i32> %val, <8 x i32*> %ptrs, <8 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %val, <8 x i32*> %ptrs, i32 4, <8 x i1> %m)
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i8_v8i32(<8 x i32> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8i8_v8i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -2112,12 +2103,12 @@ define void @mscatter_baseidx_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i8> %i
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds i32, i32* %base, <8 x i8> %idxs
-  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %val, <8 x i32*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i8> %idxs
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i8_v8i32(<8 x i32> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_sext_v8i8_v8i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -2243,12 +2234,12 @@ define void @mscatter_baseidx_sext_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i32>
-  %ptrs = getelementptr inbounds i32, i32* %base, <8 x i32> %eidxs
-  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %val, <8 x i32*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %eidxs
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i8_v8i32(<8 x i32> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_zext_v8i8_v8i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -2382,12 +2373,12 @@ define void @mscatter_baseidx_zext_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i32>
-  %ptrs = getelementptr inbounds i32, i32* %base, <8 x i32> %eidxs
-  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %val, <8 x i32*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %eidxs
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i16_v8i32(<8 x i32> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8i16_v8i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -2513,12 +2504,12 @@ define void @mscatter_baseidx_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x i16> 
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds i32, i32* %base, <8 x i16> %idxs
-  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %val, <8 x i32*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i16> %idxs
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i16_v8i32(<8 x i32> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_sext_v8i16_v8i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -2645,12 +2636,12 @@ define void @mscatter_baseidx_sext_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x 
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i16> %idxs to <8 x i32>
-  %ptrs = getelementptr inbounds i32, i32* %base, <8 x i32> %eidxs
-  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %val, <8 x i32*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %eidxs
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i16_v8i32(<8 x i32> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_zext_v8i16_v8i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -2787,12 +2778,12 @@ define void @mscatter_baseidx_zext_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x 
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i16> %idxs to <8 x i32>
-  %ptrs = getelementptr inbounds i32, i32* %base, <8 x i32> %eidxs
-  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %val, <8 x i32*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %eidxs
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i32(<8 x i32> %val, i32* %base, <8 x i32> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i32(<8 x i32> %val, ptr %base, <8 x i32> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -2919,14 +2910,14 @@ define void @mscatter_baseidx_v8i32(<8 x i32> %val, i32* %base, <8 x i32> %idxs,
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds i32, i32* %base, <8 x i32> %idxs
-  call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> %val, <8 x i32*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %idxs
+  call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v1i64.v1p0i64(<1 x i64>, <1 x i64*>, i32, <1 x i1>)
+declare void @llvm.masked.scatter.v1i64.v1p0(<1 x i64>, <1 x ptr>, i32, <1 x i1>)
 
-define void @mscatter_v1i64(<1 x i64> %val, <1 x i64*> %ptrs, <1 x i1> %m) {
+define void @mscatter_v1i64(<1 x i64> %val, <1 x ptr> %ptrs, <1 x i1> %m) {
 ; RV32V-LABEL: mscatter_v1i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
@@ -2942,11 +2933,8 @@ define void @mscatter_v1i64(<1 x i64> %val, <1 x i64*> %ptrs, <1 x i1> %m) {
 ; RV32ZVE32F-LABEL: mscatter_v1i64:
 ; RV32ZVE32F:       # %bb.0:
 ; RV32ZVE32F-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
-; RV32ZVE32F-NEXT:    vmv.v.i v9, 0
-; RV32ZVE32F-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV32ZVE32F-NEXT:    vmv.x.s a2, v9
-; RV32ZVE32F-NEXT:    andi a2, a2, 1
-; RV32ZVE32F-NEXT:    beqz a2, .LBB36_2
+; RV32ZVE32F-NEXT:    vfirst.m a2, v0
+; RV32ZVE32F-NEXT:    bnez a2, .LBB36_2
 ; RV32ZVE32F-NEXT:  # %bb.1: # %cond.store
 ; RV32ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32ZVE32F-NEXT:    vmv.x.s a2, v8
@@ -2958,22 +2946,19 @@ define void @mscatter_v1i64(<1 x i64> %val, <1 x i64*> %ptrs, <1 x i1> %m) {
 ; RV64ZVE32F-LABEL: mscatter_v1i64:
 ; RV64ZVE32F:       # %bb.0:
 ; RV64ZVE32F-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
-; RV64ZVE32F-NEXT:    vmv.v.i v8, 0
-; RV64ZVE32F-NEXT:    vmerge.vim v8, v8, 1, v0
-; RV64ZVE32F-NEXT:    vmv.x.s a2, v8
-; RV64ZVE32F-NEXT:    andi a2, a2, 1
-; RV64ZVE32F-NEXT:    beqz a2, .LBB36_2
+; RV64ZVE32F-NEXT:    vfirst.m a2, v0
+; RV64ZVE32F-NEXT:    bnez a2, .LBB36_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.store
 ; RV64ZVE32F-NEXT:    sd a0, 0(a1)
 ; RV64ZVE32F-NEXT:  .LBB36_2: # %else
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v1i64.v1p0i64(<1 x i64> %val, <1 x i64*> %ptrs, i32 8, <1 x i1> %m)
+  call void @llvm.masked.scatter.v1i64.v1p0(<1 x i64> %val, <1 x ptr> %ptrs, i32 8, <1 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2i64.v2p0i64(<2 x i64>, <2 x i64*>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v2i64.v2p0(<2 x i64>, <2 x ptr>, i32, <2 x i1>)
 
-define void @mscatter_v2i64(<2 x i64> %val, <2 x i64*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2i64(<2 x i64> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -3034,13 +3019,13 @@ define void @mscatter_v2i64(<2 x i64> %val, <2 x i64*> %ptrs, <2 x i1> %m) {
 ; RV64ZVE32F-NEXT:  .LBB37_4: # %cond.store1
 ; RV64ZVE32F-NEXT:    sd a1, 0(a3)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v2i64.v2p0i64(<2 x i64> %val, <2 x i64*> %ptrs, i32 8, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> %val, <2 x ptr> %ptrs, i32 8, <2 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v4i64.v4p0i64(<4 x i64>, <4 x i64*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4i64.v4p0(<4 x i64>, <4 x ptr>, i32, <4 x i1>)
 
-define void @mscatter_v4i64(<4 x i64> %val, <4 x i64*> %ptrs, <4 x i1> %m) {
+define void @mscatter_v4i64(<4 x i64> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32V-LABEL: mscatter_v4i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -3149,11 +3134,11 @@ define void @mscatter_v4i64(<4 x i64> %val, <4 x i64*> %ptrs, <4 x i1> %m) {
 ; RV64ZVE32F-NEXT:  .LBB38_8: # %cond.store5
 ; RV64ZVE32F-NEXT:    sd a3, 0(a2)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v4i64.v4p0i64(<4 x i64> %val, <4 x i64*> %ptrs, i32 8, <4 x i1> %m)
+  call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> %val, <4 x ptr> %ptrs, i32 8, <4 x i1> %m)
   ret void
 }
 
-define void @mscatter_truemask_v4i64(<4 x i64> %val, <4 x i64*> %ptrs) {
+define void @mscatter_truemask_v4i64(<4 x i64> %val, <4 x ptr> %ptrs) {
 ; RV32V-LABEL: mscatter_truemask_v4i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -3264,21 +3249,21 @@ define void @mscatter_truemask_v4i64(<4 x i64> %val, <4 x i64*> %ptrs) {
 ; RV64ZVE32F-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> poison, <4 x i32> zeroinitializer
-  call void @llvm.masked.scatter.v4i64.v4p0i64(<4 x i64> %val, <4 x i64*> %ptrs, i32 8, <4 x i1> %mtrue)
+  call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> %val, <4 x ptr> %ptrs, i32 8, <4 x i1> %mtrue)
   ret void
 }
 
-define void @mscatter_falsemask_v4i64(<4 x i64> %val, <4 x i64*> %ptrs) {
+define void @mscatter_falsemask_v4i64(<4 x i64> %val, <4 x ptr> %ptrs) {
 ; CHECK-LABEL: mscatter_falsemask_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.scatter.v4i64.v4p0i64(<4 x i64> %val, <4 x i64*> %ptrs, i32 8, <4 x i1> zeroinitializer)
+  call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> %val, <4 x ptr> %ptrs, i32 8, <4 x i1> zeroinitializer)
   ret void
 }
 
-declare void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64>, <8 x i64*>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v8i64.v8p0(<8 x i64>, <8 x ptr>, i32, <8 x i1>)
 
-define void @mscatter_v8i64(<8 x i64> %val, <8 x i64*> %ptrs, <8 x i1> %m) {
+define void @mscatter_v8i64(<8 x i64> %val, <8 x ptr> %ptrs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
@@ -3499,11 +3484,11 @@ define void @mscatter_v8i64(<8 x i64> %val, <8 x i64*> %ptrs, <8 x i1> %m) {
 ; RV64ZVE32F-NEXT:    andi a0, a7, -128
 ; RV64ZVE32F-NEXT:    bnez a0, .LBB41_8
 ; RV64ZVE32F-NEXT:    j .LBB41_9
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i8_v8i64(<8 x i64> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_v8i8_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -3745,12 +3730,12 @@ define void @mscatter_baseidx_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i8> %i
 ; RV64ZVE32F-NEXT:    add a0, a1, a0
 ; RV64ZVE32F-NEXT:    sd a2, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i8> %idxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i8> %idxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i8_v8i64(<8 x i64> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_sext_v8i8_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -3993,12 +3978,12 @@ define void @mscatter_baseidx_sext_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i
 ; RV64ZVE32F-NEXT:    sd a2, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i8_v8i64(<8 x i64> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_zext_v8i8_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -4249,12 +4234,12 @@ define void @mscatter_baseidx_zext_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i
 ; RV64ZVE32F-NEXT:    sd a2, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i16_v8i64(<8 x i64> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_v8i16_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -4497,12 +4482,12 @@ define void @mscatter_baseidx_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x i16> 
 ; RV64ZVE32F-NEXT:    add a0, a1, a0
 ; RV64ZVE32F-NEXT:    sd a2, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i16> %idxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i16> %idxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i16_v8i64(<8 x i64> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_sext_v8i16_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -4746,12 +4731,12 @@ define void @mscatter_baseidx_sext_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x 
 ; RV64ZVE32F-NEXT:    sd a2, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i16> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i16_v8i64(<8 x i64> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_zext_v8i16_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -5005,12 +4990,12 @@ define void @mscatter_baseidx_zext_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x 
 ; RV64ZVE32F-NEXT:    sd a2, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i16> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x i32> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i32_v8i64(<8 x i64> %val, ptr %base, <8 x i32> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_v8i32_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -5253,12 +5238,12 @@ define void @mscatter_baseidx_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x i32> 
 ; RV64ZVE32F-NEXT:    add a0, a1, a0
 ; RV64ZVE32F-NEXT:    sd a2, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i32> %idxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i32> %idxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x i32> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i32_v8i64(<8 x i64> %val, ptr %base, <8 x i32> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_sext_v8i32_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -5502,12 +5487,12 @@ define void @mscatter_baseidx_sext_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x 
 ; RV64ZVE32F-NEXT:    sd a2, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i32> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x i32> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i32_v8i64(<8 x i64> %val, ptr %base, <8 x i32> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_zext_v8i32_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -5759,12 +5744,12 @@ define void @mscatter_baseidx_zext_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x 
 ; RV64ZVE32F-NEXT:    sd a2, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i32> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i64(<8 x i64> %val, i64* %base, <8 x i64> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i64(<8 x i64> %val, ptr %base, <8 x i64> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_v8i64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -6060,14 +6045,14 @@ define void @mscatter_baseidx_v8i64(<8 x i64> %val, i64* %base, <8 x i64> %idxs,
 ; RV64ZVE32F-NEXT:    andi a0, a7, -128
 ; RV64ZVE32F-NEXT:    bnez a0, .LBB51_8
 ; RV64ZVE32F-NEXT:    j .LBB51_9
-  %ptrs = getelementptr inbounds i64, i64* %base, <8 x i64> %idxs
-  call void @llvm.masked.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds i64, ptr %base, <8 x i64> %idxs
+  call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v1f16.v1p0f16(<1 x half>, <1 x half*>, i32, <1 x i1>)
+declare void @llvm.masked.scatter.v1f16.v1p0(<1 x half>, <1 x ptr>, i32, <1 x i1>)
 
-define void @mscatter_v1f16(<1 x half> %val, <1 x half*> %ptrs, <1 x i1> %m) {
+define void @mscatter_v1f16(<1 x half> %val, <1 x ptr> %ptrs, <1 x i1> %m) {
 ; RV32V-LABEL: mscatter_v1f16:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
@@ -6089,23 +6074,20 @@ define void @mscatter_v1f16(<1 x half> %val, <1 x half*> %ptrs, <1 x i1> %m) {
 ; RV64ZVE32F-LABEL: mscatter_v1f16:
 ; RV64ZVE32F:       # %bb.0:
 ; RV64ZVE32F-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; RV64ZVE32F-NEXT:    vmv.v.i v9, 0
-; RV64ZVE32F-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV64ZVE32F-NEXT:    vmv.x.s a1, v9
-; RV64ZVE32F-NEXT:    andi a1, a1, 1
-; RV64ZVE32F-NEXT:    beqz a1, .LBB52_2
+; RV64ZVE32F-NEXT:    vfirst.m a1, v0
+; RV64ZVE32F-NEXT:    bnez a1, .LBB52_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.store
 ; RV64ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:  .LBB52_2: # %else
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v1f16.v1p0f16(<1 x half> %val, <1 x half*> %ptrs, i32 2, <1 x i1> %m)
+  call void @llvm.masked.scatter.v1f16.v1p0(<1 x half> %val, <1 x ptr> %ptrs, i32 2, <1 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2f16.v2p0f16(<2 x half>, <2 x half*>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v2f16.v2p0(<2 x half>, <2 x ptr>, i32, <2 x i1>)
 
-define void @mscatter_v2f16(<2 x half> %val, <2 x half*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2f16(<2 x half> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2f16:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
@@ -6145,13 +6127,13 @@ define void @mscatter_v2f16(<2 x half> %val, <2 x half*> %ptrs, <2 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v2f16.v2p0f16(<2 x half> %val, <2 x half*> %ptrs, i32 2, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2f16.v2p0(<2 x half> %val, <2 x ptr> %ptrs, i32 2, <2 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v4f16.v4p0f16(<4 x half>, <4 x half*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4f16.v4p0(<4 x half>, <4 x ptr>, i32, <4 x i1>)
 
-define void @mscatter_v4f16(<4 x half> %val, <4 x half*> %ptrs, <4 x i1> %m) {
+define void @mscatter_v4f16(<4 x half> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32-LABEL: mscatter_v4f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -6207,11 +6189,11 @@ define void @mscatter_v4f16(<4 x half> %val, <4 x half*> %ptrs, <4 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v4f16.v4p0f16(<4 x half> %val, <4 x half*> %ptrs, i32 2, <4 x i1> %m)
+  call void @llvm.masked.scatter.v4f16.v4p0(<4 x half> %val, <4 x ptr> %ptrs, i32 2, <4 x i1> %m)
   ret void
 }
 
-define void @mscatter_truemask_v4f16(<4 x half> %val, <4 x half*> %ptrs) {
+define void @mscatter_truemask_v4f16(<4 x half> %val, <4 x ptr> %ptrs) {
 ; RV32-LABEL: mscatter_truemask_v4f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
@@ -6269,21 +6251,21 @@ define void @mscatter_truemask_v4f16(<4 x half> %val, <4 x half*> %ptrs) {
 ; RV64ZVE32F-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> poison, <4 x i32> zeroinitializer
-  call void @llvm.masked.scatter.v4f16.v4p0f16(<4 x half> %val, <4 x half*> %ptrs, i32 2, <4 x i1> %mtrue)
+  call void @llvm.masked.scatter.v4f16.v4p0(<4 x half> %val, <4 x ptr> %ptrs, i32 2, <4 x i1> %mtrue)
   ret void
 }
 
-define void @mscatter_falsemask_v4f16(<4 x half> %val, <4 x half*> %ptrs) {
+define void @mscatter_falsemask_v4f16(<4 x half> %val, <4 x ptr> %ptrs) {
 ; CHECK-LABEL: mscatter_falsemask_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.scatter.v4f16.v4p0f16(<4 x half> %val, <4 x half*> %ptrs, i32 2, <4 x i1> zeroinitializer)
+  call void @llvm.masked.scatter.v4f16.v4p0(<4 x half> %val, <4 x ptr> %ptrs, i32 2, <4 x i1> zeroinitializer)
   ret void
 }
 
-declare void @llvm.masked.scatter.v8f16.v8p0f16(<8 x half>, <8 x half*>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v8f16.v8p0(<8 x half>, <8 x ptr>, i32, <8 x i1>)
 
-define void @mscatter_v8f16(<8 x half> %val, <8 x half*> %ptrs, <8 x i1> %m) {
+define void @mscatter_v8f16(<8 x half> %val, <8 x ptr> %ptrs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_v8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -6379,11 +6361,11 @@ define void @mscatter_v8f16(<8 x half> %val, <8 x half*> %ptrs, <8 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v8f16.v8p0f16(<8 x half> %val, <8 x half*> %ptrs, i32 2, <8 x i1> %m)
+  call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i8_v8f16(<8 x half> %val, half* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i8_v8f16(<8 x half> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8i8_v8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -6509,12 +6491,12 @@ define void @mscatter_baseidx_v8i8_v8f16(<8 x half> %val, half* %base, <8 x i8> 
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds half, half* %base, <8 x i8> %idxs
-  call void @llvm.masked.scatter.v8f16.v8p0f16(<8 x half> %val, <8 x half*> %ptrs, i32 2, <8 x i1> %m)
+  %ptrs = getelementptr inbounds half, ptr %base, <8 x i8> %idxs
+  call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i8_v8f16(<8 x half> %val, half* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i8_v8f16(<8 x half> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_sext_v8i8_v8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -6641,12 +6623,12 @@ define void @mscatter_baseidx_sext_v8i8_v8f16(<8 x half> %val, half* %base, <8 x
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i16>
-  %ptrs = getelementptr inbounds half, half* %base, <8 x i16> %eidxs
-  call void @llvm.masked.scatter.v8f16.v8p0f16(<8 x half> %val, <8 x half*> %ptrs, i32 2, <8 x i1> %m)
+  %ptrs = getelementptr inbounds half, ptr %base, <8 x i16> %eidxs
+  call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i8_v8f16(<8 x half> %val, half* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i8_v8f16(<8 x half> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_zext_v8i8_v8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -6781,12 +6763,12 @@ define void @mscatter_baseidx_zext_v8i8_v8f16(<8 x half> %val, half* %base, <8 x
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i16>
-  %ptrs = getelementptr inbounds half, half* %base, <8 x i16> %eidxs
-  call void @llvm.masked.scatter.v8f16.v8p0f16(<8 x half> %val, <8 x half*> %ptrs, i32 2, <8 x i1> %m)
+  %ptrs = getelementptr inbounds half, ptr %base, <8 x i16> %eidxs
+  call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8f16(<8 x half> %val, half* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8f16(<8 x half> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -6913,14 +6895,14 @@ define void @mscatter_baseidx_v8f16(<8 x half> %val, half* %base, <8 x i16> %idx
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse16.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds half, half* %base, <8 x i16> %idxs
-  call void @llvm.masked.scatter.v8f16.v8p0f16(<8 x half> %val, <8 x half*> %ptrs, i32 2, <8 x i1> %m)
+  %ptrs = getelementptr inbounds half, ptr %base, <8 x i16> %idxs
+  call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %val, <8 x ptr> %ptrs, i32 2, <8 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v1f32.v1p0f32(<1 x float>, <1 x float*>, i32, <1 x i1>)
+declare void @llvm.masked.scatter.v1f32.v1p0(<1 x float>, <1 x ptr>, i32, <1 x i1>)
 
-define void @mscatter_v1f32(<1 x float> %val, <1 x float*> %ptrs, <1 x i1> %m) {
+define void @mscatter_v1f32(<1 x float> %val, <1 x ptr> %ptrs, <1 x i1> %m) {
 ; RV32V-LABEL: mscatter_v1f32:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
@@ -6942,23 +6924,20 @@ define void @mscatter_v1f32(<1 x float> %val, <1 x float*> %ptrs, <1 x i1> %m) {
 ; RV64ZVE32F-LABEL: mscatter_v1f32:
 ; RV64ZVE32F:       # %bb.0:
 ; RV64ZVE32F-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; RV64ZVE32F-NEXT:    vmv.v.i v9, 0
-; RV64ZVE32F-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV64ZVE32F-NEXT:    vmv.x.s a1, v9
-; RV64ZVE32F-NEXT:    andi a1, a1, 1
-; RV64ZVE32F-NEXT:    beqz a1, .LBB62_2
+; RV64ZVE32F-NEXT:    vfirst.m a1, v0
+; RV64ZVE32F-NEXT:    bnez a1, .LBB62_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.store
 ; RV64ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:  .LBB62_2: # %else
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v1f32.v1p0f32(<1 x float> %val, <1 x float*> %ptrs, i32 4, <1 x i1> %m)
+  call void @llvm.masked.scatter.v1f32.v1p0(<1 x float> %val, <1 x ptr> %ptrs, i32 4, <1 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float>, <2 x float*>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v2f32.v2p0(<2 x float>, <2 x ptr>, i32, <2 x i1>)
 
-define void @mscatter_v2f32(<2 x float> %val, <2 x float*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2f32(<2 x float> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2f32:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
@@ -6998,13 +6977,13 @@ define void @mscatter_v2f32(<2 x float> %val, <2 x float*> %ptrs, <2 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v2f32.v2p0f32(<2 x float> %val, <2 x float*> %ptrs, i32 4, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2f32.v2p0(<2 x float> %val, <2 x ptr> %ptrs, i32 4, <2 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v4f32.v4p0f32(<4 x float>, <4 x float*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4f32.v4p0(<4 x float>, <4 x ptr>, i32, <4 x i1>)
 
-define void @mscatter_v4f32(<4 x float> %val, <4 x float*> %ptrs, <4 x i1> %m) {
+define void @mscatter_v4f32(<4 x float> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32-LABEL: mscatter_v4f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -7060,11 +7039,11 @@ define void @mscatter_v4f32(<4 x float> %val, <4 x float*> %ptrs, <4 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v4f32.v4p0f32(<4 x float> %val, <4 x float*> %ptrs, i32 4, <4 x i1> %m)
+  call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %val, <4 x ptr> %ptrs, i32 4, <4 x i1> %m)
   ret void
 }
 
-define void @mscatter_truemask_v4f32(<4 x float> %val, <4 x float*> %ptrs) {
+define void @mscatter_truemask_v4f32(<4 x float> %val, <4 x ptr> %ptrs) {
 ; RV32-LABEL: mscatter_truemask_v4f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -7122,21 +7101,21 @@ define void @mscatter_truemask_v4f32(<4 x float> %val, <4 x float*> %ptrs) {
 ; RV64ZVE32F-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> poison, <4 x i32> zeroinitializer
-  call void @llvm.masked.scatter.v4f32.v4p0f32(<4 x float> %val, <4 x float*> %ptrs, i32 4, <4 x i1> %mtrue)
+  call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %val, <4 x ptr> %ptrs, i32 4, <4 x i1> %mtrue)
   ret void
 }
 
-define void @mscatter_falsemask_v4f32(<4 x float> %val, <4 x float*> %ptrs) {
+define void @mscatter_falsemask_v4f32(<4 x float> %val, <4 x ptr> %ptrs) {
 ; CHECK-LABEL: mscatter_falsemask_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.scatter.v4f32.v4p0f32(<4 x float> %val, <4 x float*> %ptrs, i32 4, <4 x i1> zeroinitializer)
+  call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %val, <4 x ptr> %ptrs, i32 4, <4 x i1> zeroinitializer)
   ret void
 }
 
-declare void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float>, <8 x float*>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v8f32.v8p0(<8 x float>, <8 x ptr>, i32, <8 x i1>)
 
-define void @mscatter_v8f32(<8 x float> %val, <8 x float*> %ptrs, <8 x i1> %m) {
+define void @mscatter_v8f32(<8 x float> %val, <8 x ptr> %ptrs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_v8f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -7232,11 +7211,11 @@ define void @mscatter_v8f32(<8 x float> %val, <8 x float*> %ptrs, <8 x i1> %m) {
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %val, <8 x float*> %ptrs, i32 4, <8 x i1> %m)
+  call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i8_v8f32(<8 x float> %val, float* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i8_v8f32(<8 x float> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8i8_v8f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -7361,12 +7340,12 @@ define void @mscatter_baseidx_v8i8_v8f32(<8 x float> %val, float* %base, <8 x i8
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds float, float* %base, <8 x i8> %idxs
-  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %val, <8 x float*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds float, ptr %base, <8 x i8> %idxs
+  call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i8_v8f32(<8 x float> %val, float* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i8_v8f32(<8 x float> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_sext_v8i8_v8f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -7492,12 +7471,12 @@ define void @mscatter_baseidx_sext_v8i8_v8f32(<8 x float> %val, float* %base, <8
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i32>
-  %ptrs = getelementptr inbounds float, float* %base, <8 x i32> %eidxs
-  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %val, <8 x float*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds float, ptr %base, <8 x i32> %eidxs
+  call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i8_v8f32(<8 x float> %val, float* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i8_v8f32(<8 x float> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_zext_v8i8_v8f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -7631,12 +7610,12 @@ define void @mscatter_baseidx_zext_v8i8_v8f32(<8 x float> %val, float* %base, <8
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i32>
-  %ptrs = getelementptr inbounds float, float* %base, <8 x i32> %eidxs
-  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %val, <8 x float*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds float, ptr %base, <8 x i32> %eidxs
+  call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i16_v8f32(<8 x float> %val, float* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i16_v8f32(<8 x float> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8i16_v8f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -7762,12 +7741,12 @@ define void @mscatter_baseidx_v8i16_v8f32(<8 x float> %val, float* %base, <8 x i
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds float, float* %base, <8 x i16> %idxs
-  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %val, <8 x float*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds float, ptr %base, <8 x i16> %idxs
+  call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i16_v8f32(<8 x float> %val, float* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i16_v8f32(<8 x float> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_sext_v8i16_v8f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -7894,12 +7873,12 @@ define void @mscatter_baseidx_sext_v8i16_v8f32(<8 x float> %val, float* %base, <
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i16> %idxs to <8 x i32>
-  %ptrs = getelementptr inbounds float, float* %base, <8 x i32> %eidxs
-  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %val, <8 x float*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds float, ptr %base, <8 x i32> %eidxs
+  call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i16_v8f32(<8 x float> %val, float* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i16_v8f32(<8 x float> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_zext_v8i16_v8f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -8036,12 +8015,12 @@ define void @mscatter_baseidx_zext_v8i16_v8f32(<8 x float> %val, float* %base, <
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i16> %idxs to <8 x i32>
-  %ptrs = getelementptr inbounds float, float* %base, <8 x i32> %eidxs
-  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %val, <8 x float*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds float, ptr %base, <8 x i32> %eidxs
+  call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8f32(<8 x float> %val, float* %base, <8 x i32> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8f32(<8 x float> %val, ptr %base, <8 x i32> %idxs, <8 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v8f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -8168,14 +8147,14 @@ define void @mscatter_baseidx_v8f32(<8 x float> %val, float* %base, <8 x i32> %i
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 7
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds float, float* %base, <8 x i32> %idxs
-  call void @llvm.masked.scatter.v8f32.v8p0f32(<8 x float> %val, <8 x float*> %ptrs, i32 4, <8 x i1> %m)
+  %ptrs = getelementptr inbounds float, ptr %base, <8 x i32> %idxs
+  call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> %val, <8 x ptr> %ptrs, i32 4, <8 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v1f64.v1p0f64(<1 x double>, <1 x double*>, i32, <1 x i1>)
+declare void @llvm.masked.scatter.v1f64.v1p0(<1 x double>, <1 x ptr>, i32, <1 x i1>)
 
-define void @mscatter_v1f64(<1 x double> %val, <1 x double*> %ptrs, <1 x i1> %m) {
+define void @mscatter_v1f64(<1 x double> %val, <1 x ptr> %ptrs, <1 x i1> %m) {
 ; RV32V-LABEL: mscatter_v1f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
@@ -8191,11 +8170,8 @@ define void @mscatter_v1f64(<1 x double> %val, <1 x double*> %ptrs, <1 x i1> %m)
 ; RV32ZVE32F-LABEL: mscatter_v1f64:
 ; RV32ZVE32F:       # %bb.0:
 ; RV32ZVE32F-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; RV32ZVE32F-NEXT:    vmv.v.i v9, 0
-; RV32ZVE32F-NEXT:    vmerge.vim v9, v9, 1, v0
-; RV32ZVE32F-NEXT:    vmv.x.s a0, v9
-; RV32ZVE32F-NEXT:    andi a0, a0, 1
-; RV32ZVE32F-NEXT:    beqz a0, .LBB75_2
+; RV32ZVE32F-NEXT:    vfirst.m a0, v0
+; RV32ZVE32F-NEXT:    bnez a0, .LBB75_2
 ; RV32ZVE32F-NEXT:  # %bb.1: # %cond.store
 ; RV32ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32ZVE32F-NEXT:    vmv.x.s a0, v8
@@ -8206,22 +8182,19 @@ define void @mscatter_v1f64(<1 x double> %val, <1 x double*> %ptrs, <1 x i1> %m)
 ; RV64ZVE32F-LABEL: mscatter_v1f64:
 ; RV64ZVE32F:       # %bb.0:
 ; RV64ZVE32F-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
-; RV64ZVE32F-NEXT:    vmv.v.i v8, 0
-; RV64ZVE32F-NEXT:    vmerge.vim v8, v8, 1, v0
-; RV64ZVE32F-NEXT:    vmv.x.s a1, v8
-; RV64ZVE32F-NEXT:    andi a1, a1, 1
-; RV64ZVE32F-NEXT:    beqz a1, .LBB75_2
+; RV64ZVE32F-NEXT:    vfirst.m a1, v0
+; RV64ZVE32F-NEXT:    bnez a1, .LBB75_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.store
 ; RV64ZVE32F-NEXT:    fsd fa0, 0(a0)
 ; RV64ZVE32F-NEXT:  .LBB75_2: # %else
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v1f64.v1p0f64(<1 x double> %val, <1 x double*> %ptrs, i32 8, <1 x i1> %m)
+  call void @llvm.masked.scatter.v1f64.v1p0(<1 x double> %val, <1 x ptr> %ptrs, i32 8, <1 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double>, <2 x double*>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v2f64.v2p0(<2 x double>, <2 x ptr>, i32, <2 x i1>)
 
-define void @mscatter_v2f64(<2 x double> %val, <2 x double*> %ptrs, <2 x i1> %m) {
+define void @mscatter_v2f64(<2 x double> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32V-LABEL: mscatter_v2f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -8276,13 +8249,13 @@ define void @mscatter_v2f64(<2 x double> %val, <2 x double*> %ptrs, <2 x i1> %m)
 ; RV64ZVE32F-NEXT:  .LBB76_4: # %cond.store1
 ; RV64ZVE32F-NEXT:    fsd fa1, 0(a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> %val, <2 x double*> %ptrs, i32 8, <2 x i1> %m)
+  call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> %val, <2 x ptr> %ptrs, i32 8, <2 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double>, <4 x double*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4f64.v4p0(<4 x double>, <4 x ptr>, i32, <4 x i1>)
 
-define void @mscatter_v4f64(<4 x double> %val, <4 x double*> %ptrs, <4 x i1> %m) {
+define void @mscatter_v4f64(<4 x double> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32V-LABEL: mscatter_v4f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -8375,11 +8348,11 @@ define void @mscatter_v4f64(<4 x double> %val, <4 x double*> %ptrs, <4 x i1> %m)
 ; RV64ZVE32F-NEXT:  .LBB77_8: # %cond.store5
 ; RV64ZVE32F-NEXT:    fsd fa3, 0(a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> %val, <4 x double*> %ptrs, i32 8, <4 x i1> %m)
+  call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %val, <4 x ptr> %ptrs, i32 8, <4 x i1> %m)
   ret void
 }
 
-define void @mscatter_truemask_v4f64(<4 x double> %val, <4 x double*> %ptrs) {
+define void @mscatter_truemask_v4f64(<4 x double> %val, <4 x ptr> %ptrs) {
 ; RV32V-LABEL: mscatter_truemask_v4f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -8474,21 +8447,21 @@ define void @mscatter_truemask_v4f64(<4 x double> %val, <4 x double*> %ptrs) {
 ; RV64ZVE32F-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> poison, <4 x i32> zeroinitializer
-  call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> %val, <4 x double*> %ptrs, i32 8, <4 x i1> %mtrue)
+  call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %val, <4 x ptr> %ptrs, i32 8, <4 x i1> %mtrue)
   ret void
 }
 
-define void @mscatter_falsemask_v4f64(<4 x double> %val, <4 x double*> %ptrs) {
+define void @mscatter_falsemask_v4f64(<4 x double> %val, <4 x ptr> %ptrs) {
 ; CHECK-LABEL: mscatter_falsemask_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> %val, <4 x double*> %ptrs, i32 8, <4 x i1> zeroinitializer)
+  call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> %val, <4 x ptr> %ptrs, i32 8, <4 x i1> zeroinitializer)
   ret void
 }
 
-declare void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double>, <8 x double*>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v8f64.v8p0(<8 x double>, <8 x ptr>, i32, <8 x i1>)
 
-define void @mscatter_v8f64(<8 x double> %val, <8 x double*> %ptrs, <8 x i1> %m) {
+define void @mscatter_v8f64(<8 x double> %val, <8 x ptr> %ptrs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
@@ -8653,11 +8626,11 @@ define void @mscatter_v8f64(<8 x double> %val, <8 x double*> %ptrs, <8 x i1> %m)
 ; RV64ZVE32F-NEXT:  .LBB80_16: # %cond.store13
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a1)
 ; RV64ZVE32F-NEXT:    ret
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i8_v8f64(<8 x double> %val, double* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i8_v8f64(<8 x double> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_v8i8_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -8855,12 +8828,12 @@ define void @mscatter_baseidx_v8i8_v8f64(<8 x double> %val, double* %base, <8 x 
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i8> %idxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i8> %idxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i8_v8f64(<8 x double> %val, double* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i8_v8f64(<8 x double> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_sext_v8i8_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -9059,12 +9032,12 @@ define void @mscatter_baseidx_sext_v8i8_v8f64(<8 x double> %val, double* %base, 
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i8_v8f64(<8 x double> %val, double* %base, <8 x i8> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i8_v8f64(<8 x double> %val, ptr %base, <8 x i8> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_zext_v8i8_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -9271,12 +9244,12 @@ define void @mscatter_baseidx_zext_v8i8_v8f64(<8 x double> %val, double* %base, 
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i16_v8f64(<8 x double> %val, double* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i16_v8f64(<8 x double> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_v8i16_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -9475,12 +9448,12 @@ define void @mscatter_baseidx_v8i16_v8f64(<8 x double> %val, double* %base, <8 x
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i16> %idxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i16> %idxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i16_v8f64(<8 x double> %val, double* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i16_v8f64(<8 x double> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_sext_v8i16_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -9680,12 +9653,12 @@ define void @mscatter_baseidx_sext_v8i16_v8f64(<8 x double> %val, double* %base,
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i16> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i16_v8f64(<8 x double> %val, double* %base, <8 x i16> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i16_v8f64(<8 x double> %val, ptr %base, <8 x i16> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_zext_v8i16_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -9895,12 +9868,12 @@ define void @mscatter_baseidx_zext_v8i16_v8f64(<8 x double> %val, double* %base,
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i16> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8i32_v8f64(<8 x double> %val, double* %base, <8 x i32> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8i32_v8f64(<8 x double> %val, ptr %base, <8 x i32> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_v8i32_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -10099,12 +10072,12 @@ define void @mscatter_baseidx_v8i32_v8f64(<8 x double> %val, double* %base, <8 x
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i32> %idxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i32> %idxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_sext_v8i32_v8f64(<8 x double> %val, double* %base, <8 x i32> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_sext_v8i32_v8f64(<8 x double> %val, ptr %base, <8 x i32> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_sext_v8i32_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -10304,12 +10277,12 @@ define void @mscatter_baseidx_sext_v8i32_v8f64(<8 x double> %val, double* %base,
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = sext <8 x i32> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_zext_v8i32_v8f64(<8 x double> %val, double* %base, <8 x i32> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_zext_v8i32_v8f64(<8 x double> %val, ptr %base, <8 x i32> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_zext_v8i32_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -10517,12 +10490,12 @@ define void @mscatter_baseidx_zext_v8i32_v8f64(<8 x double> %val, double* %base,
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
   %eidxs = zext <8 x i32> %idxs to <8 x i64>
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i64> %eidxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i64> %eidxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-define void @mscatter_baseidx_v8f64(<8 x double> %val, double* %base, <8 x i64> %idxs, <8 x i1> %m) {
+define void @mscatter_baseidx_v8f64(<8 x double> %val, ptr %base, <8 x i64> %idxs, <8 x i1> %m) {
 ; RV32V-LABEL: mscatter_baseidx_v8f64:
 ; RV32V:       # %bb.0:
 ; RV32V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -10741,14 +10714,14 @@ define void @mscatter_baseidx_v8f64(<8 x double> %val, double* %base, <8 x i64> 
 ; RV64ZVE32F-NEXT:    add a0, a0, a2
 ; RV64ZVE32F-NEXT:    fsd fa7, 0(a0)
 ; RV64ZVE32F-NEXT:    ret
-  %ptrs = getelementptr inbounds double, double* %base, <8 x i64> %idxs
-  call void @llvm.masked.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, i32 8, <8 x i1> %m)
+  %ptrs = getelementptr inbounds double, ptr %base, <8 x i64> %idxs
+  call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8>, <16 x i8*>, i32, <16 x i1>)
+declare void @llvm.masked.scatter.v16i8.v16p0(<16 x i8>, <16 x ptr>, i32, <16 x i1>)
 
-define void @mscatter_baseidx_v16i8(<16 x i8> %val, i8* %base, <16 x i8> %idxs, <16 x i1> %m) {
+define void @mscatter_baseidx_v16i8(<16 x i8> %val, ptr %base, <16 x i8> %idxs, <16 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v16i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
@@ -10965,14 +10938,14 @@ define void @mscatter_baseidx_v16i8(<16 x i8> %val, i8* %base, <16 x i8> %idxs, 
 ; RV64ZVE32F-NEXT:    slli a2, a1, 50
 ; RV64ZVE32F-NEXT:    bltz a2, .LBB91_20
 ; RV64ZVE32F-NEXT:    j .LBB91_21
-  %ptrs = getelementptr inbounds i8, i8* %base, <16 x i8> %idxs
-  call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> %val, <16 x i8*> %ptrs, i32 1, <16 x i1> %m)
+  %ptrs = getelementptr inbounds i8, ptr %base, <16 x i8> %idxs
+  call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %val, <16 x ptr> %ptrs, i32 1, <16 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8>, <32 x i8*>, i32, <32 x i1>)
+declare void @llvm.masked.scatter.v32i8.v32p0(<32 x i8>, <32 x ptr>, i32, <32 x i1>)
 
-define void @mscatter_baseidx_v32i8(<32 x i8> %val, i8* %base, <32 x i8> %idxs, <32 x i1> %m) {
+define void @mscatter_baseidx_v32i8(<32 x i8> %val, ptr %base, <32 x i8> %idxs, <32 x i1> %m) {
 ; RV32-LABEL: mscatter_baseidx_v32i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a1, 32
@@ -11397,7 +11370,7 @@ define void @mscatter_baseidx_v32i8(<32 x i8> %val, i8* %base, <32 x i8> %idxs, 
 ; RV64ZVE32F-NEXT:    slli a2, a1, 34
 ; RV64ZVE32F-NEXT:    bltz a2, .LBB92_44
 ; RV64ZVE32F-NEXT:    j .LBB92_45
-  %ptrs = getelementptr inbounds i8, i8* %base, <32 x i8> %idxs
-  call void @llvm.masked.scatter.v32i8.v32p0i8(<32 x i8> %val, <32 x i8*> %ptrs, i32 1, <32 x i1> %m)
+  %ptrs = getelementptr inbounds i8, ptr %base, <32 x i8> %idxs
+  call void @llvm.masked.scatter.v32i8.v32p0(<32 x i8> %val, <32 x ptr> %ptrs, i32 1, <32 x i1> %m)
   ret void
 }

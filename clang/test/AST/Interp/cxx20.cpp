@@ -101,6 +101,7 @@ constexpr bool b1 = foo(p1) == foo(p1);
 static_assert(b1);
 
 constexpr bool b2 = foo(p1) == foo(p2); // ref-error {{must be initialized by a constant expression}} \
+                                        // ref-note {{comparison of addresses of literals}} \
                                         // ref-note {{declared here}}
 static_assert(!b2); // ref-error {{not an integral constant expression}} \
                     // ref-note {{not a constant expression}}
@@ -111,6 +112,7 @@ constexpr auto name2() { return "name2"; }
 constexpr auto b3 = name1() == name1();
 static_assert(b3);
 constexpr auto b4 = name1() == name2(); // ref-error {{must be initialized by a constant expression}} \
+                                        // ref-note {{has unspecified value}} \
                                         // ref-note {{declared here}}
 static_assert(!b4); // ref-error {{not an integral constant expression}} \
                     // ref-note {{not a constant expression}}

@@ -683,6 +683,41 @@ TEST_F(BracesRemoverTest, RemoveBraces) {
                "return a;",
                Style);
 
+  verifyFormat("if (a)\n"
+               "#ifdef FOO\n"
+               "  if (b)\n"
+               "    bar = c;\n"
+               "  else\n"
+               "#endif\n"
+               "  {\n"
+               "    foo = d;\n"
+               "#ifdef FOO\n"
+               "    bar = e;\n"
+               "#else\n"
+               "  bar = f;\n" // FIXME: should be indented 1 more level.
+               "#endif\n"
+               "  }\n"
+               "else\n"
+               "  bar = g;",
+               "if (a)\n"
+               "#ifdef FOO\n"
+               "  if (b)\n"
+               "    bar = c;\n"
+               "  else\n"
+               "#endif\n"
+               "  {\n"
+               "    foo = d;\n"
+               "#ifdef FOO\n"
+               "    bar = e;\n"
+               "#else\n"
+               "    bar = f;\n"
+               "#endif\n"
+               "  }\n"
+               "else {\n"
+               "  bar = g;\n"
+               "}",
+               Style);
+
   Style.ColumnLimit = 65;
   verifyFormat("if (condition) {\n"
                "  ff(Indices,\n"
@@ -790,6 +825,17 @@ TEST_F(BracesRemoverTest, RemoveBraces) {
                "    e;\n"
                "  } else\n"
                "    f = g(foo, bar, baz);\n"
+               "}",
+               Style);
+
+  verifyFormat("if (foo)\n"
+               "  f();\n"
+               "else if (bar || baz)\n"
+               "  g();",
+               "if (foo) {\n"
+               "  f();\n"
+               "} else if (bar || baz) {\n"
+               "  g();\n"
                "}",
                Style);
 

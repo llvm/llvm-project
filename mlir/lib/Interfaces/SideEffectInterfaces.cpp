@@ -202,3 +202,9 @@ bool mlir::isSpeculatable(Operation *op) {
 
   llvm_unreachable("Unhandled enum in mlir::isSpeculatable!");
 }
+
+/// The implementation of this function replicates the `def Pure : TraitList`
+/// in `SideEffectInterfaces.td` and has to be kept in sync manually.
+bool mlir::isPure(Operation *op) {
+  return isSpeculatable(op) && isMemoryEffectFree(op);
+}

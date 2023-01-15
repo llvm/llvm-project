@@ -17,17 +17,17 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 define void @fn4() local_unnamed_addr !dbg !12 {
 entry:
   %l1.sroa.7.i = alloca [3 x i8], align 1
-  tail call void @llvm.dbg.declare(metadata [3 x i8]* %l1.sroa.7.i, metadata !15, metadata !26), !dbg !27
+  tail call void @llvm.dbg.declare(metadata ptr %l1.sroa.7.i, metadata !15, metadata !26), !dbg !27
   %i.sroa.4.i = alloca [3 x i8], align 8
-  tail call void @llvm.dbg.declare(metadata [3 x i8]* %i.sroa.4.i, metadata !15, metadata !32), !dbg !27
-  %0 = load i32, i32* @h, align 4
+  tail call void @llvm.dbg.declare(metadata ptr %i.sroa.4.i, metadata !15, metadata !32), !dbg !27
+  %0 = load i32, ptr @h, align 4
   br label %while.body.i.i, !dbg !33
 
 while.body.i.i:                                   ; preds = %while.body.i.i, %entry
   br label %while.body.i.i, !dbg !34
 
 fn3.exit:                                         ; No predecessors!
-  %1 = load i32, i32* @f, align 4
+  %1 = load i32, ptr @f, align 4
   %tobool.i = icmp eq i32 %1, 0
   br label %while.body.i
 

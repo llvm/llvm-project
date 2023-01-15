@@ -83,19 +83,12 @@ def FalsePredicate : Predicate<"false">;
 
 // Add a predicate to the list if does not already exist to deduplicate it.
 class PredConcat<list<Predicate> lst, Predicate pred> {
-  list<Predicate> ret =
-      !listconcat([pred], !filter(item, lst, !ne(item, pred)));
+  list<Predicate> ret = !listconcat(lst, !listremove([pred], lst));
 }
 
-// Add a Register to the list if does not already exist
-class RegAppend<list<Register> lst, Register reg> {
-  list<Register> ret =
-      !listconcat([reg], !filter(item, lst, !ne(item, reg)));
-}
 // Get the union of two Register lists
 class RegListUnion<list<Register> lstA, list<Register> lstB> {
-  list<Register> ret =
-      !foldl(lstA, lstB, temp, item, RegAppend<temp, item>.ret);
+  list<Register> ret = !listconcat(lstA, !listremove(lstB, lstA));
 }
 
 class PredicateControl {

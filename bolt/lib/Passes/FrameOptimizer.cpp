@@ -171,8 +171,7 @@ void FrameOptimizerPass::removeUnusedStores(const FrameAnalysis &FA,
   for (BinaryBasicBlock &BB : BF) {
     LLVM_DEBUG(dbgs() << "\tNow at BB " << BB.getName() << "\n");
     const MCInst *Prev = nullptr;
-    for (auto I = BB.rbegin(), E = BB.rend(); I != E; ++I) {
-      MCInst &Inst = *I;
+    for (MCInst &Inst : llvm::reverse(BB)) {
       LLVM_DEBUG({
         dbgs() << "\t\tNow at ";
         Inst.dump();

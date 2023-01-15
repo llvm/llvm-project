@@ -56,7 +56,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -68,6 +67,7 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -895,7 +895,7 @@ ASTNodeImporter::import(const TemplateArgument &From) {
       return std::move(Err);
 
     return TemplateArgument(
-        llvm::makeArrayRef(ToPack).copy(Importer.getToContext()));
+        llvm::ArrayRef(ToPack).copy(Importer.getToContext()));
   }
   }
 
@@ -3174,10 +3174,10 @@ Error ASTNodeImporter::ImportTemplateInformation(
     // Import TemplateArgumentListInfo.
     TemplateArgumentListInfo ToTAInfo;
     if (Error Err = ImportTemplateArgumentListInfo(
-        FromInfo->getLAngleLoc(), FromInfo->getRAngleLoc(),
-        llvm::makeArrayRef(
-            FromInfo->getTemplateArgs(), FromInfo->getNumTemplateArgs()),
-        ToTAInfo))
+            FromInfo->getLAngleLoc(), FromInfo->getRAngleLoc(),
+            llvm::ArrayRef(FromInfo->getTemplateArgs(),
+                           FromInfo->getNumTemplateArgs()),
+            ToTAInfo))
       return Err;
 
     ToFD->setDependentTemplateSpecialization(Importer.getToContext(),
@@ -3981,7 +3981,7 @@ static FriendCountAndPosition getFriendCountAndPosition(
     const FriendDecl *FD,
     llvm::function_ref<T(const FriendDecl *)> GetCanTypeOrDecl) {
   unsigned int FriendCount = 0;
-  llvm::Optional<unsigned int> FriendPosition;
+  std::optional<unsigned int> FriendPosition;
   const auto *RD = cast<CXXRecordDecl>(FD->getLexicalDeclContext());
 
   T TypeOrDecl = GetCanTypeOrDecl(FD);
@@ -5916,10 +5916,10 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     CanonInjType = CanonInjType.getCanonicalType();
 
     if (GetImportedOrCreateDecl<ClassTemplatePartialSpecializationDecl>(
-            D2, D, Importer.getToContext(), D->getTagKind(), DC,
-            *BeginLocOrErr, *IdLocOrErr, ToTPList, ClassTemplate,
-            llvm::makeArrayRef(TemplateArgs.data(), TemplateArgs.size()),
-            ToTAInfo, CanonInjType,
+            D2, D, Importer.getToContext(), D->getTagKind(), DC, *BeginLocOrErr,
+            *IdLocOrErr, ToTPList, ClassTemplate,
+            llvm::ArrayRef(TemplateArgs.data(), TemplateArgs.size()), ToTAInfo,
+            CanonInjType,
             cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
       return D2;
 
@@ -7012,14 +7012,14 @@ ASTNodeImporter::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   const ASTContext &ToCtx = Importer.getToContext();
   if (E->isResultDependent()) {
     return GenericSelectionExpr::Create(
-        ToCtx, ToGenericLoc, ToControllingExpr,
-        llvm::makeArrayRef(ToAssocTypes), llvm::makeArrayRef(ToAssocExprs),
-        ToDefaultLoc, ToRParenLoc, E->containsUnexpandedParameterPack());
+        ToCtx, ToGenericLoc, ToControllingExpr, llvm::ArrayRef(ToAssocTypes),
+        llvm::ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
+        E->containsUnexpandedParameterPack());
   }
 
   return GenericSelectionExpr::Create(
-      ToCtx, ToGenericLoc, ToControllingExpr, llvm::makeArrayRef(ToAssocTypes),
-      llvm::makeArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
+      ToCtx, ToGenericLoc, ToControllingExpr, llvm::ArrayRef(ToAssocTypes),
+      llvm::ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
       E->containsUnexpandedParameterPack(), E->getResultIndex());
 }
 
@@ -7689,7 +7689,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   }
   Expr *RewrittenInit = nullptr;
   if (E->hasRewrittenInit()) {
-    ExpectedExpr ExprOrErr = import(E->getExpr());
+    ExpectedExpr ExprOrErr = import(E->getRewrittenExpr());
     if (!ExprOrErr)
       return ExprOrErr.takeError();
     RewrittenInit = ExprOrErr.get();
@@ -8111,7 +8111,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXUnresolvedConstructExpr(
 
   return CXXUnresolvedConstructExpr::Create(
       Importer.getToContext(), ToType, ToTypeSourceInfo, ToLParenLoc,
-      llvm::makeArrayRef(ToArgs), ToRParenLoc);
+      llvm::ArrayRef(ToArgs), ToRParenLoc);
 }
 
 ExpectedStmt
@@ -8390,7 +8390,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
 
   Expr *RewrittenInit = nullptr;
   if (E->hasRewrittenInit()) {
-    ExpectedExpr ExprOrErr = import(E->getExpr());
+    ExpectedExpr ExprOrErr = import(E->getRewrittenExpr());
     if (!ExprOrErr)
       return ExprOrErr.takeError();
     RewrittenInit = ExprOrErr.get();
@@ -8683,6 +8683,7 @@ Expected<TypeSourceInfo *> ASTImporter::Import(TypeSourceInfo *FromTSI) {
   return ToContext.getTrivialTypeSourceInfo(*TOrErr, *BeginLocOrErr);
 }
 
+namespace {
 // To use this object, it should be created before the new attribute is created,
 // and destructed after it is created. The construction already performs the
 // import of the data.
@@ -8813,6 +8814,7 @@ public:
     return ToAttr;
   }
 };
+} // namespace
 
 Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
   AttrImporter AI(*this);

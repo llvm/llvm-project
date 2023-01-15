@@ -9,8 +9,8 @@ declare void @llvm.objc.clang.arc.use(...) nounwind
 ; CHECK-LABEL: define void @test0(
 ; CHECK-NOT: clang.arc.use
 ; CHECK: }
-define void @test0(i8* %a, i8* %b) {
-  call void (...) @llvm.objc.clang.arc.use(i8* %a, i8* %b) nounwind
+define void @test0(ptr %a, ptr %b) {
+  call void (...) @llvm.objc.clang.arc.use(ptr %a, ptr %b) nounwind
   ret void
 }
 

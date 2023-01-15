@@ -30,7 +30,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @main() #0 !dbg !7 {
 entry:
   %newChar = alloca i8, align 64
-  call void @llvm.dbg.declare(metadata i8* %newChar, metadata !12, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.declare(metadata ptr %newChar, metadata !12, metadata !DIExpression()), !dbg !15
   ret i32 0, !dbg !16
 }
 

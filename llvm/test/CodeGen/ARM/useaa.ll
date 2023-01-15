@@ -15,14 +15,14 @@
 ; USEAA: str
 ; USEAA: str
 
-define void @test(i32* nocapture %a, i32* noalias nocapture %b) {
+define void @test(ptr nocapture %a, ptr noalias nocapture %b) {
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %add = add nsw i32 %0, 10
-  store i32 %add, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  store i32 %add, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %add2 = add nsw i32 %1, 20
-  store i32 %add2, i32* %b, align 4
+  store i32 %add2, ptr %b, align 4
   ret void
 }
 

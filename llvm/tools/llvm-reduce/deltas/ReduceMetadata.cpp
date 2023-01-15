@@ -29,6 +29,42 @@ static bool shouldKeepDebugNamedMetadata(NamedMDNode &MD) {
   return MD.getName() == "llvm.dbg.cu" && MD.getNumOperands() != 0;
 }
 
+// Named metadata with simple list-like behavior, so that it's valid to remove
+// operands individually.
+static constexpr StringLiteral ListNamedMetadata[] = {
+  "llvm.module.flags",
+  "llvm.ident",
+  "opencl.spir.version",
+  "opencl.ocl.version",
+  "opencl.used.extensions",
+  "opencl.used.optional.core.features",
+  "opencl.compiler.options"
+};
+
+/// Remove unneeded arguments to named metadata.
+static void reduceNamedMetadataOperands(Oracle &O, Module &M) {
+  for (StringRef MDName : ListNamedMetadata) {
+    NamedMDNode *NamedNode = M.getNamedMetadata(MDName);
+    if (!NamedNode)
+      continue;
+
+    bool MadeChange = false;
+    SmallVector<MDNode *, 16> KeptOperands;
+    for (auto I : seq<unsigned>(0, NamedNode->getNumOperands())) {
+      if (O.shouldKeep())
+        KeptOperands.push_back(NamedNode->getOperand(I));
+      else
+        MadeChange = true;
+    }
+
+    if (MadeChange) {
+      NamedNode->clearOperands();
+      for (MDNode *KeptOperand : KeptOperands)
+        NamedNode->addOperand(KeptOperand);
+    }
+  }
+}
+
 /// Removes all the Named and Unnamed Metadata Nodes, as well as any debug
 /// functions that aren't inside the desired Chunks.
 static void extractMetadataFromModule(Oracle &O, Module &Program) {
@@ -77,4 +113,8 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
 
 void llvm::reduceMetadataDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, extractMetadataFromModule, "Reducing Metadata");
+}
+
+void llvm::reduceNamedMetadataDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, reduceNamedMetadataOperands, "Reducing Named Metadata");
 }

@@ -10,14 +10,13 @@
 
 %struct.A = type { i32 }
 
-define i32 @_Z3fooP1A(%struct.A* %a) nounwind uwtable ssp !dbg !5 {
+define i32 @_Z3fooP1A(ptr %a) nounwind uwtable ssp !dbg !5 {
 entry:
-  %a.addr = alloca %struct.A*, align 8
-  store %struct.A* %a, %struct.A** %a.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.A** %a.addr, metadata !16, metadata !DIExpression()), !dbg !17
-  %0 = load %struct.A*, %struct.A** %a.addr, align 8, !dbg !18
-  %b = getelementptr inbounds %struct.A, %struct.A* %0, i32 0, i32 0, !dbg !18
-  %1 = load i32, i32* %b, align 4, !dbg !18
+  %a.addr = alloca ptr, align 8
+  store ptr %a, ptr %a.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !16, metadata !DIExpression()), !dbg !17
+  %0 = load ptr, ptr %a.addr, align 8, !dbg !18
+  %1 = load i32, ptr %0, align 4, !dbg !18
   ret i32 %1, !dbg !18
 }
 

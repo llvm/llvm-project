@@ -37,8 +37,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -599,8 +597,8 @@ private:
 
   /// The main heuristic function. Analyze the set of instructions pointed to by
   /// LRI and return a candidate solution if these instructions can be sunk, or
-  /// None otherwise.
-  Optional<SinkingInstructionCandidate> analyzeInstructionForSinking(
+  /// std::nullopt otherwise.
+  std::optional<SinkingInstructionCandidate> analyzeInstructionForSinking(
       LockstepReverseIterator &LRI, unsigned &InstNum, unsigned &MemoryInstNum,
       ModelledPHISet &NeededPHIs, SmallPtrSetImpl<Value *> &PHIContents);
 
@@ -640,9 +638,12 @@ private:
   }
 };
 
-Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
-  LockstepReverseIterator &LRI, unsigned &InstNum, unsigned &MemoryInstNum,
-  ModelledPHISet &NeededPHIs, SmallPtrSetImpl<Value *> &PHIContents) {
+std::optional<SinkingInstructionCandidate>
+GVNSink::analyzeInstructionForSinking(LockstepReverseIterator &LRI,
+                                      unsigned &InstNum,
+                                      unsigned &MemoryInstNum,
+                                      ModelledPHISet &NeededPHIs,
+                                      SmallPtrSetImpl<Value *> &PHIContents) {
   auto Insts = *LRI;
   LLVM_DEBUG(dbgs() << " -- Analyzing instruction set: [\n"; for (auto *I
                                                                   : Insts) {

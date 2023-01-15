@@ -31,14 +31,12 @@ namespace yaml {
 struct AArch64FunctionInfo;
 } // end namespace yaml
 
+class AArch64Subtarget;
 class MachineInstr;
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
-  /// Backreference to the machine function.
-  MachineFunction *MF;
-
   /// Number of bytes of arguments this function has on the stack. If the callee
   /// is expected to restore the argument stack this should be a multiple of 16,
   /// all usable during a tail call.
@@ -195,7 +193,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   mutable std::optional<bool> NeedsAsyncDwarfUnwindInfo;
 
 public:
-  explicit AArch64FunctionInfo(MachineFunction &MF);
+  AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -428,7 +426,7 @@ public:
     CalleeSaveBaseToFrameRecordOffset = Offset;
   }
 
-  bool shouldSignReturnAddress() const;
+  bool shouldSignReturnAddress(const MachineFunction &MF) const;
   bool shouldSignReturnAddress(bool SpillsLR) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
@@ -446,8 +444,8 @@ public:
   }
   int getSwiftAsyncContextFrameIdx() const { return SwiftAsyncContextFrameIdx; }
 
-  bool needsDwarfUnwindInfo() const;
-  bool needsAsyncDwarfUnwindInfo() const;
+  bool needsDwarfUnwindInfo(const MachineFunction &MF) const;
+  bool needsAsyncDwarfUnwindInfo(const MachineFunction &MF) const;
 
 private:
   // Hold the lists of LOHs.

@@ -30,7 +30,7 @@ private:
 
 public:
   VEMachineFunctionInfo() : VarArgsFrameOffset(0), IsLeafProc(false) {}
-  explicit VEMachineFunctionInfo(MachineFunction &MF)
+  VEMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
       : VarArgsFrameOffset(0), IsLeafProc(false) {}
 
   MachineFunctionInfo *

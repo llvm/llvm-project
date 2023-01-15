@@ -22,7 +22,6 @@ namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY BPFTargetInfo : public TargetInfo {
-  static const Builtin::Info BuiltinInfo[];
   bool HasAlu32 = false;
 
 public:

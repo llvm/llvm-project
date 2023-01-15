@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -45,16 +46,55 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     if (!weightType.hasRank())
       return rewriter.notifyMatchFailure(op, "unranked weight input");
 
-    // Stride must be 1 for this optimization.
-    for (APInt stride : op.getStride().getAsValueRange<IntegerAttr>()) {
-      if (!stride.isOne())
-        return failure();
-    }
+    if (!llvm::all_of(op.getStride(), [](int64_t v) { return v == 1; }))
+      return failure();
 
     // Only works for a 1x1 kernel.
     ArrayRef<int64_t> weightShape = weightType.getShape();
     if (weightShape[1] != 1 || weightShape[2] != 1)
       return failure();
+
+    llvm::ArrayRef<int64_t> padAttr = op.getPad();
+    llvm::SmallVector<int64_t> pad(8, 0);
+    for (const auto &it : llvm::enumerate(padAttr))
+      pad[it.index() + 2] = it.value();
+
+    if (llvm::any_of(pad, [](int64_t p) { return p != 0; })) {
+      Type inputETy = inputType.getElementType();
+      Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
+      if (op.getQuantizationInfo()) {
+        auto quantizationInfo = op.getQuantizationInfo();
+        int64_t iZp = quantizationInfo->getInputZp();
+
+        if (!validIntegerRange(inputETy.cast<IntegerType>(), iZp))
+          return rewriter.notifyMatchFailure(
+              op, "tosa.conv op quantization has zp outside of input range");
+
+        zeroAttr = rewriter.getIntegerAttr(inputETy, iZp);
+      }
+
+      llvm::SmallVector<int64_t> newShape(inputType.getShape());
+
+      for (int i = 0, s = newShape.size(); i < s; ++i) {
+        if (newShape[i] != ShapedType::kDynamic) {
+          newShape[i] += pad[i * 2] + pad[i * 2 + 1];
+        }
+      }
+
+      auto padSizeTy = RankedTensorType::get({4, 2}, rewriter.getI64Type());
+      auto padSize =
+          DenseIntElementsAttr::get(padSizeTy, ArrayRef<int64_t>(pad));
+      Value padSizeVal =
+          rewriter.create<tosa::ConstOp>(op->getLoc(), padSizeTy, padSize);
+
+      auto padTy = RankedTensorType::get({}, inputETy);
+      auto padAttr = DenseElementsAttr::get(padTy, zeroAttr);
+      Value padVal =
+          rewriter.create<tosa::ConstOp>(op->getLoc(), padTy, padAttr);
+      inputType = RankedTensorType::get(newShape, inputETy);
+      input = rewriter.create<tosa::PadOp>(op->getLoc(), inputType, input,
+                                           padSizeVal, padVal);
+    }
 
     // Reshape input to [N,IH,IW,IC] -> [N * IH * IW, IC].
     ArrayRef<int64_t> inputShape = inputType.getShape();
@@ -67,7 +107,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     auto reshapedInput = rewriter
                              .create<tosa::ReshapeOp>(
                                  op.getLoc(), revisedInputShapeType, input,
-                                 rewriter.getI64ArrayAttr(
+                                 rewriter.getDenseI64ArrayAttr(
                                      convertFromMlirShape(revisedInputShape)))
                              .getResult();
 
@@ -80,7 +120,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
     auto reshapedWeight = rewriter
                               .create<tosa::ReshapeOp>(
                                   op.getLoc(), revisedWeightShapeType, weight,
-                                  rewriter.getI64ArrayAttr(
+                                  rewriter.getDenseI64ArrayAttr(
                                       convertFromMlirShape(revisedWeightShape)))
                               .getResult();
 
@@ -110,7 +150,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
                                               inputShape[2], weightShape[0]};
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
         op, resultType, fullyConnectedValue,
-        rewriter.getI64ArrayAttr(convertFromMlirShape(outputShape)));
+        rewriter.getDenseI64ArrayAttr(convertFromMlirShape(outputShape)));
     return success();
   }
 };

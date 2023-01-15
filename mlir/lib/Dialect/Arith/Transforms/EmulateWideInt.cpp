@@ -419,78 +419,26 @@ struct ConvertMulI final : OpConversionPattern<arith::MulIOp> {
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
 
-    Type newElemTy = reduceInnermostDim(newTy);
-    unsigned newBitWidth = newTy.getElementTypeBitWidth();
-    unsigned digitBitWidth = newBitWidth / 2;
-
     auto [lhsElem0, lhsElem1] =
         extractLastDimHalves(rewriter, loc, adaptor.getLhs());
     auto [rhsElem0, rhsElem1] =
         extractLastDimHalves(rewriter, loc, adaptor.getRhs());
 
-    // Emulate multiplication by splitting each input element of type i2N into 4
-    // digits of type iN and bit width i(N/2). This is so that the intermediate
-    // multiplications and additions do not overflow. We extract these i(N/2)
-    // digits from iN vector elements by masking (low digit) and shifting right
-    // (high digit).
-    //
     // The multiplication algorithm used is the standard (long) multiplication.
-    // Multiplying two i2N integers produces (at most) a i4N result, but because
-    // the calculation of top i2N is not necessary, we omit it.
-    // In total, this implementations performs 10 intermediate multiplications
-    // and 16 additions. The number of multiplications could be decreased by
-    // switching to a more efficient algorithm like Karatsuba. This would,
-    // however, require being able to perform (intermediate) wide additions and
-    // subtractions, so it is not clear that such implementation would be more
-    // efficient.
+    // Multiplying two i2N integers produces (at most) an i4N result, but
+    // because the calculation of top i2N is not necessary, we omit it.
+    auto mulLowLow =
+        rewriter.create<arith::MulUIExtendedOp>(loc, lhsElem0, rhsElem0);
+    Value mulLowHi = rewriter.create<arith::MulIOp>(loc, lhsElem0, rhsElem1);
+    Value mulHiLow = rewriter.create<arith::MulIOp>(loc, lhsElem1, rhsElem0);
 
-    APInt lowMaskVal(newBitWidth, 1);
-    lowMaskVal = lowMaskVal.shl(digitBitWidth) - 1;
-    Value lowMask =
-        createScalarOrSplatConstant(rewriter, loc, newElemTy, lowMaskVal);
-    auto getLowDigit = [lowMask, newElemTy, loc, &rewriter](Value v) {
-      return rewriter.create<arith::AndIOp>(loc, newElemTy, v, lowMask);
-    };
+    Value resLow = mulLowLow.getLow();
+    Value resHi =
+        rewriter.create<arith::AddIOp>(loc, mulLowLow.getHigh(), mulLowHi);
+    resHi = rewriter.create<arith::AddIOp>(loc, resHi, mulHiLow);
 
-    Value shiftVal =
-        createScalarOrSplatConstant(rewriter, loc, newElemTy, digitBitWidth);
-    auto getHighDigit = [shiftVal, loc, &rewriter](Value v) {
-      return rewriter.create<arith::ShRUIOp>(loc, v, shiftVal);
-    };
-
-    Value zeroDigit = createScalarOrSplatConstant(rewriter, loc, newElemTy, 0);
-    std::array<Value, 4> resultDigits = {zeroDigit, zeroDigit, zeroDigit,
-                                         zeroDigit};
-    std::array<Value, 4> lhsDigits = {
-        getLowDigit(lhsElem0), getHighDigit(lhsElem0), getLowDigit(lhsElem1),
-        getHighDigit(lhsElem1)};
-    std::array<Value, 4> rhsDigits = {
-        getLowDigit(rhsElem0), getHighDigit(rhsElem0), getLowDigit(rhsElem1),
-        getHighDigit(rhsElem1)};
-
-    for (unsigned i = 0, e = lhsDigits.size(); i != e; ++i) {
-      for (unsigned j = 0; i + j != e; ++j) {
-        Value mul =
-            rewriter.create<arith::MulIOp>(loc, lhsDigits[i], rhsDigits[j]);
-        Value current =
-            rewriter.createOrFold<arith::AddIOp>(loc, resultDigits[i + j], mul);
-        resultDigits[i + j] = getLowDigit(current);
-        if (i + j + 1 != e) {
-          Value carry = rewriter.createOrFold<arith::AddIOp>(
-              loc, resultDigits[i + j + 1], getHighDigit(current));
-          resultDigits[i + j + 1] = carry;
-        }
-      }
-    }
-
-    auto combineDigits = [shiftVal, loc, &rewriter](Value low, Value high) {
-      Value highBits = rewriter.create<arith::ShLIOp>(loc, high, shiftVal);
-      return rewriter.create<arith::OrIOp>(loc, low, highBits);
-    };
-    Value resultElem0 = combineDigits(resultDigits[0], resultDigits[1]);
-    Value resultElem1 = combineDigits(resultDigits[2], resultDigits[3]);
     Value resultVec =
-        constructResultVector(rewriter, loc, newTy, {resultElem0, resultElem1});
+        constructResultVector(rewriter, loc, newTy, {resLow, resHi});
     rewriter.replaceOp(op, resultVec);
     return success();
   }
@@ -1053,10 +1001,10 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
   assert(widestIntSupportedByTarget >= 2 && "Integer type too narrow");
 
   // Allow unknown types.
-  addConversion([](Type ty) -> Optional<Type> { return ty; });
+  addConversion([](Type ty) -> std::optional<Type> { return ty; });
 
   // Scalar case.
-  addConversion([this](IntegerType ty) -> Optional<Type> {
+  addConversion([this](IntegerType ty) -> std::optional<Type> {
     unsigned width = ty.getWidth();
     if (width <= maxIntWidth)
       return ty;
@@ -1069,7 +1017,7 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
   });
 
   // Vector case.
-  addConversion([this](VectorType ty) -> Optional<Type> {
+  addConversion([this](VectorType ty) -> std::optional<Type> {
     auto intTy = ty.getElementType().dyn_cast<IntegerType>();
     if (!intTy)
       return ty;
@@ -1090,7 +1038,7 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
   });
 
   // Function case.
-  addConversion([this](FunctionType ty) -> Optional<Type> {
+  addConversion([this](FunctionType ty) -> std::optional<Type> {
     // Convert inputs and results, e.g.:
     //   (i2N, i2N) -> i2N --> (vector<2xiN>, vector<2xiN>) -> vector<2xiN>
     SmallVector<Type> inputs;

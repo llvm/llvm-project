@@ -192,7 +192,7 @@ template<> class po_iterator_storage<LoopBlocksTraversal, true> {
 public:
   po_iterator_storage(LoopBlocksTraversal &lbs) : LBT(lbs) {}
   // These functions are defined below.
-  bool insertEdge(Optional<BasicBlock *> From, BasicBlock *To);
+  bool insertEdge(std::optional<BasicBlock *> From, BasicBlock *To);
   void finishPostorder(BasicBlock *BB);
 };
 
@@ -245,7 +245,7 @@ public:
 };
 
 inline bool po_iterator_storage<LoopBlocksTraversal, true>::insertEdge(
-    Optional<BasicBlock *> From, BasicBlock *To) {
+    std::optional<BasicBlock *> From, BasicBlock *To) {
   return LBT.visitPreorder(To);
 }
 

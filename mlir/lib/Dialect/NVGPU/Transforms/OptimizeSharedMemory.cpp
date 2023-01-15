@@ -149,7 +149,7 @@ getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
     MemoryEffectOpInterface iface = dyn_cast<MemoryEffectOpInterface>(op);
     if (!iface)
       return;
-    Optional<MemoryEffects::EffectInstance> effect =
+    std::optional<MemoryEffects::EffectInstance> effect =
         iface.getEffectOnValue<MemoryEffects::Read>(shmMemRef);
     if (effect) {
       readOps.push_back(op);
@@ -181,8 +181,7 @@ mlir::LogicalResult
 mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
                                                 Value memrefValue) {
   auto memRefType = memrefValue.getType().dyn_cast<MemRefType>();
-  if (!memRefType || memRefType.getMemorySpaceAsInt() !=
-                         gpu::GPUDialect::getWorkgroupAddressSpace())
+  if (!memRefType || !NVGPUDialect::hasSharedMemoryAddressSpace(memRefType))
     return failure();
 
   // Abort if the given value has any sub-views; we do not do any alias
@@ -258,11 +257,7 @@ public:
     Operation *op = getOperation();
     SmallVector<memref::AllocOp> shmAllocOps;
     op->walk([&](memref::AllocOp allocOp) {
-      if (allocOp.getMemref()
-              .getType()
-              .cast<MemRefType>()
-              .getMemorySpaceAsInt() !=
-          gpu::GPUDialect::getWorkgroupAddressSpace())
+      if (!NVGPUDialect::hasSharedMemoryAddressSpace(allocOp.getType()))
         return;
       shmAllocOps.push_back(allocOp);
     });

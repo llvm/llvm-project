@@ -3,10 +3,10 @@
 
 ;; Test that loop's exit value is rewritten to its initial
 ;; value from loop preheader
-define i32 @test1(i32* %var) {
+define i32 @test1(ptr %var) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32* [[VAR:%.*]], null
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[VAR:%.*]], null
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP:%.*]], label [[EXIT:%.*]]
@@ -16,7 +16,7 @@ define i32 @test1(i32* %var) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %cond = icmp eq i32* %var, null
+  %cond = icmp eq ptr %var, null
   br label %header
 
 header:
@@ -33,10 +33,10 @@ exit:
 
 ;; Test that we can not rewrite loop exit value if it's not
 ;; a phi node (%indvar is an add instruction in this test).
-define i32 @test2(i32* %var) {
+define i32 @test2(ptr %var) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32* [[VAR:%.*]], null
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[VAR:%.*]], null
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[PHI_INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR:%.*]], [[HEADER]] ]
@@ -46,7 +46,7 @@ define i32 @test2(i32* %var) {
 ; CHECK-NEXT:    ret i32 [[INDVAR]]
 ;
 entry:
-  %cond = icmp eq i32* %var, null
+  %cond = icmp eq ptr %var, null
   br label %header
 
 header:
@@ -60,10 +60,10 @@ exit:
 
 ;; Test that we can not rewrite loop exit value if the condition
 ;; is not in loop header.
-define i32 @test3(i32* %var) {
+define i32 @test3(ptr %var) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32* [[VAR:%.*]], null
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq ptr [[VAR:%.*]], null
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[PHI_INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR:%.*]], [[HEADER_BACKEDGE:%.*]] ]
@@ -78,7 +78,7 @@ define i32 @test3(i32* %var) {
 ; CHECK-NEXT:    ret i32 [[PHI_INDVAR]]
 ;
 entry:
-  %cond1 = icmp eq i32* %var, null
+  %cond1 = icmp eq ptr %var, null
   br label %header
 
 header:
@@ -123,13 +123,13 @@ exit:
 }
 
 ; A conditionally executed exit.
-define i32 @test5(i1* %addr, i1 %cond2) {
+define i32 @test5(ptr %addr, i1 %cond2) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[PHI_INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR:%.*]], [[LOOP:%.*]] ]
-; CHECK-NEXT:    [[COND1:%.*]] = load volatile i1, i1* [[ADDR:%.*]], align 1
+; CHECK-NEXT:    [[COND1:%.*]] = load volatile i1, ptr [[ADDR:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[COND1]], label [[LOOP]], label [[MAYBE:%.*]]
 ; CHECK:       maybe:
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[LOOP]], label [[EXIT:%.*]]
@@ -144,7 +144,7 @@ entry:
 
 header:
   %phi_indvar = phi i32 [0, %entry], [%indvar, %loop]
-  %cond1 = load volatile i1, i1* %addr
+  %cond1 = load volatile i1, ptr %addr
   br i1 %cond1, label %loop, label %maybe
 
 maybe:

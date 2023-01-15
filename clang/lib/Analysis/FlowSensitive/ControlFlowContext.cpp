@@ -36,7 +36,7 @@ buildStmtToBasicBlockMap(const CFG &Cfg) {
       if (!Stmt)
         continue;
 
-      StmtToBlock[Stmt.value().getStmt()] = Block;
+      StmtToBlock[Stmt->getStmt()] = Block;
     }
     if (const Stmt *TerminatorStmt = Block->getTerminatorStmt())
       StmtToBlock[TerminatorStmt] = Block;
@@ -65,13 +65,6 @@ ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
   llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock =
       buildStmtToBasicBlockMap(*Cfg);
   return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock));
-}
-
-llvm::Expected<ControlFlowContext>
-ControlFlowContext::build(const Decl *D, Stmt *S, ASTContext *C) {
-  assert(S != nullptr);
-  assert(C != nullptr);
-  return build(D, *S, *C);
 }
 
 } // namespace dataflow

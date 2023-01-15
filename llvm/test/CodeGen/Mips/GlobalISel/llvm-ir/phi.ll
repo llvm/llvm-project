@@ -222,7 +222,7 @@ cond.end:
   ret i64 %cond
 }
 
-define void @phi_ambiguous_i64_in_fpr(i1 %cnd, i64* %i64_ptr_a, i64* %i64_ptr_b, i64* %i64_ptr_c) {
+define void @phi_ambiguous_i64_in_fpr(i1 %cnd, ptr %i64_ptr_a, ptr %i64_ptr_b, ptr %i64_ptr_c) {
 ; MIPS32-LABEL: phi_ambiguous_i64_in_fpr:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -32
@@ -256,8 +256,8 @@ define void @phi_ambiguous_i64_in_fpr(i1 %cnd, i64* %i64_ptr_a, i64* %i64_ptr_b,
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
-  %0 = load i64, i64* %i64_ptr_a, align 8
-  %1 = load i64, i64* %i64_ptr_b, align 8
+  %0 = load i64, ptr %i64_ptr_a, align 8
+  %1 = load i64, ptr %i64_ptr_b, align 8
   br i1 %cnd, label %cond.true, label %cond.false
 
 cond.true:
@@ -268,7 +268,7 @@ cond.false:
 
 cond.end:
   %cond = phi i64 [ %0, %cond.true ], [ %1, %cond.false ]
-  store i64 %cond, i64* %i64_ptr_c, align 8
+  store i64 %cond, ptr %i64_ptr_c, align 8
   ret void
 }
 
@@ -315,7 +315,7 @@ cond.end:
   ret float %cond
 }
 
-define void @phi_ambiguous_float_in_gpr(i1 %cnd, float* %f32_ptr_a, float* %f32_ptr_b, float* %f32_ptr_c) {
+define void @phi_ambiguous_float_in_gpr(i1 %cnd, ptr %f32_ptr_a, ptr %f32_ptr_b, ptr %f32_ptr_c) {
 ; MIPS32-LABEL: phi_ambiguous_float_in_gpr:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -16
@@ -349,8 +349,8 @@ define void @phi_ambiguous_float_in_gpr(i1 %cnd, float* %f32_ptr_a, float* %f32_
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
-  %0 = load float, float* %f32_ptr_a, align 4
-  %1 = load float, float* %f32_ptr_b, align 4
+  %0 = load float, ptr %f32_ptr_a, align 4
+  %1 = load float, ptr %f32_ptr_b, align 4
   br i1 %cnd, label %cond.true, label %cond.false
 
 cond.true:
@@ -361,7 +361,7 @@ cond.false:
 
 cond.end:
   %cond = phi float [ %0, %cond.true ], [ %1, %cond.false ]
-  store float %cond, float* %f32_ptr_c, align 4
+  store float %cond, ptr %f32_ptr_c, align 4
   ret void
 }
 

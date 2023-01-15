@@ -1212,8 +1212,8 @@ void WinEHPrepare::replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
       BranchInst *Goto = cast<BranchInst>(IncomingBlock->getTerminator());
       Goto->removeFromParent();
       CatchRet->removeFromParent();
-      IncomingBlock->getInstList().push_back(CatchRet);
-      NewBlock->getInstList().push_back(Goto);
+      CatchRet->insertInto(IncomingBlock, IncomingBlock->end());
+      Goto->insertInto(NewBlock, NewBlock->end());
       Goto->setSuccessor(0, PHIBlock);
       CatchRet->setSuccessor(NewBlock);
       // Update the color mapping for the newly split edge.

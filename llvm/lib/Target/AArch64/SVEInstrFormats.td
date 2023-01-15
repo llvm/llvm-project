@@ -659,6 +659,8 @@ class sve_int_pfalse<bits<6> opc, string asm>
 multiclass sve_int_pfalse<bits<6> opc, string asm> {
   def NAME : sve_int_pfalse<opc, asm>;
 
+  def : InstAlias<"pfalse\t$Pd", (!cast<Instruction>(NAME) PNR8:$Pd), 0>;
+
   def : Pat<(nxv16i1 immAllZerosV), (!cast<Instruction>(NAME))>;
   def : Pat<(nxv8i1 immAllZerosV), (!cast<Instruction>(NAME))>;
   def : Pat<(nxv4i1 immAllZerosV), (!cast<Instruction>(NAME))>;
@@ -7914,6 +7916,8 @@ class sve_int_bin_cons_misc_0_c<bits<8> opc, string asm, ZPRRegOp zprty>
   let Inst{10}    = opc{0};
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
+
+  let hasSideEffects = 0;
 }
 
 multiclass sve_int_bin_cons_misc_0_c_fexpa<string asm, SDPatternOperator op> {

@@ -35,17 +35,23 @@ void transform::detail::checkImplementsTransformOpInterface(
          "MemoryEffectsOpInterface");
 }
 
-void transform::detail::checkImplementsTransformTypeInterface(
+void transform::detail::checkImplementsTransformHandleTypeInterface(
     TypeID typeID, MLIRContext *context) {
   const auto &abstractType = AbstractType::lookup(typeID, context);
-  assert(abstractType.hasInterface(TransformTypeInterface::getInterfaceID()));
+  assert(
+      (abstractType.hasInterface(
+           TransformHandleTypeInterface::getInterfaceID()) ||
+       abstractType.hasInterface(
+           TransformParamTypeInterface::getInterfaceID())) &&
+      "expected Transform dialect type to implement one of the two interfaces");
 }
 #endif // NDEBUG
 
 namespace {
-struct PDLOperationTypeTransformTypeInterfaceImpl
-    : public transform::TransformTypeInterface::ExternalModel<
-          PDLOperationTypeTransformTypeInterfaceImpl, pdl::OperationType> {
+struct PDLOperationTypeTransformHandleTypeInterfaceImpl
+    : public transform::TransformHandleTypeInterface::ExternalModel<
+          PDLOperationTypeTransformHandleTypeInterfaceImpl,
+          pdl::OperationType> {
   DiagnosedSilenceableFailure
   checkPayload(Type type, Location loc, ArrayRef<Operation *> payload) const {
     return DiagnosedSilenceableFailure::success();
@@ -63,7 +69,7 @@ void transform::TransformDialect::initialize() {
   initializeTypes();
 
   pdl::OperationType::attachInterface<
-      PDLOperationTypeTransformTypeInterfaceImpl>(*getContext());
+      PDLOperationTypeTransformHandleTypeInterfaceImpl>(*getContext());
 }
 
 void transform::TransformDialect::mergeInPDLMatchHooks(

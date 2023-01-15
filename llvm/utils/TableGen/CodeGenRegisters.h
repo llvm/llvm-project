@@ -234,7 +234,7 @@ namespace llvm {
     const RegUnitList &getRegUnits() const { return RegUnits; }
 
     ArrayRef<LaneBitmask> getRegUnitLaneMasks() const {
-      return makeArrayRef(RegUnitLaneMasks).slice(0, NativeRegUnits.count());
+      return ArrayRef(RegUnitLaneMasks).slice(0, NativeRegUnits.count());
     }
 
     // Get the native register units. This is a prefix of getRegUnits().
@@ -472,6 +472,13 @@ namespace llvm {
 
     // Called by CodeGenRegBank::CodeGenRegBank().
     static void computeSubClasses(CodeGenRegBank&);
+
+    // Get ordering value among register base classes.
+    std::optional<int> getBaseClassOrder() const {
+      if (TheDef && !TheDef->isValueUnset("BaseClassOrder"))
+        return TheDef->getValueAsInt("BaseClassOrder");
+      return {};
+    }
   };
 
   // Register categories are used when we need to deterine the category a
@@ -524,7 +531,7 @@ namespace llvm {
 
     ArrayRef<const CodeGenRegister*> getRoots() const {
       assert(!(Roots[1] && !Roots[0]) && "Invalid roots array");
-      return makeArrayRef(Roots, !!Roots[0] + !!Roots[1]);
+      return ArrayRef(Roots, !!Roots[0] + !!Roots[1]);
     }
   };
 

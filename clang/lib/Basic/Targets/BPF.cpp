@@ -19,7 +19,7 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info BPFTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #include "clang/Basic/BuiltinsBPF.def"
@@ -43,8 +43,8 @@ void BPFTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 }
 
 ArrayRef<Builtin::Info> BPFTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::BPF::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::BPF::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
 bool BPFTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,

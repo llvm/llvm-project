@@ -245,6 +245,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  /// All functions are already synchronous. No need to do anything on this
+  /// query function.
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo) override {
+    return Plugin::success();
+  }
+
   /// This plugin does not support interoperability
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::error("initAsyncInfoImpl not supported");
@@ -357,6 +363,10 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// All images (ELF-compatible) should be compatible with this plugin.
   Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
     return true;
+  }
+
+  Triple::ArchType getTripleArch() const override {
+    return Triple::LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE;
   }
 };
 

@@ -34,7 +34,10 @@ using namespace lld::elf;
 // Create OptTable
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
@@ -47,7 +50,7 @@ static constexpr opt::OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-ELFOptTable::ELFOptTable() : OptTable(optInfo) {}
+ELFOptTable::ELFOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

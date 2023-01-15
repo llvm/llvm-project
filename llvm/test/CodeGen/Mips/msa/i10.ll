@@ -7,7 +7,7 @@
 
 define i32 @llvm_mips_bnz_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_bnz_b_ARG1
+  %0 = load <16 x i8>, ptr @llvm_mips_bnz_b_ARG1
   %1 = tail call i32 @llvm.mips.bnz.b(<16 x i8> %0)
   %2 = icmp eq i32 %1, 0
   br i1 %2, label %true, label %false
@@ -28,7 +28,7 @@ declare i32 @llvm.mips.bnz.b(<16 x i8>) nounwind
 
 define i32 @llvm_mips_bnz_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_bnz_h_ARG1
+  %0 = load <8 x i16>, ptr @llvm_mips_bnz_h_ARG1
   %1 = tail call i32 @llvm.mips.bnz.h(<8 x i16> %0)
   %2 = icmp eq i32 %1, 0
   br i1 %2, label %true, label %false
@@ -49,7 +49,7 @@ declare i32 @llvm.mips.bnz.h(<8 x i16>) nounwind
 
 define i32 @llvm_mips_bnz_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_bnz_w_ARG1
+  %0 = load <4 x i32>, ptr @llvm_mips_bnz_w_ARG1
   %1 = tail call i32 @llvm.mips.bnz.w(<4 x i32> %0)
   %2 = icmp eq i32 %1, 0
   br i1 %2, label %true, label %false
@@ -70,7 +70,7 @@ declare i32 @llvm.mips.bnz.w(<4 x i32>) nounwind
 
 define i32 @llvm_mips_bnz_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_bnz_d_ARG1
+  %0 = load <2 x i64>, ptr @llvm_mips_bnz_d_ARG1
   %1 = tail call i32 @llvm.mips.bnz.d(<2 x i64> %0)
   %2 = icmp eq i32 %1, 0
   br i1 %2, label %true, label %false
@@ -93,9 +93,9 @@ declare i32 @llvm.mips.bnz.d(<2 x i64>) nounwind
 define void @llvm_mips_ldi_b_test() nounwind {
 entry:
   %0 = call <16 x i8> @llvm.mips.ldi.b(i32 3)
-  store <16 x i8> %0, <16 x i8>* @llvm_mips_ldi_b_RES1
+  store <16 x i8> %0, ptr @llvm_mips_ldi_b_RES1
   %1 = call <16 x i8> @llvm.mips.ldi.b(i32 -3)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_ldi_b_RES2
+  store <16 x i8> %1, ptr @llvm_mips_ldi_b_RES2
   ret void
 }
 
@@ -111,9 +111,9 @@ declare <16 x i8> @llvm.mips.ldi.b(i32)
 define void @llvm_mips_ldi_h_test() nounwind {
 entry:
   %0 = call <8 x i16> @llvm.mips.ldi.h(i32 3)
-  store <8 x i16> %0, <8 x i16>* @llvm_mips_ldi_h_RES1
+  store <8 x i16> %0, ptr @llvm_mips_ldi_h_RES1
   %1 = call <8 x i16> @llvm.mips.ldi.h(i32 -3)
-  store <8 x i16> %1, <8 x i16>* @llvm_mips_ldi_h_RES2
+  store <8 x i16> %1, ptr @llvm_mips_ldi_h_RES2
   ret void
 }
 
@@ -129,9 +129,9 @@ declare <8 x i16> @llvm.mips.ldi.h(i32)
 define void @llvm_mips_ldi_w_test() nounwind {
 entry:
   %0 = call <4 x i32> @llvm.mips.ldi.w(i32 3)
-  store <4 x i32> %0, <4 x i32>* @llvm_mips_ldi_w_RES1
+  store <4 x i32> %0, ptr @llvm_mips_ldi_w_RES1
   %1 = call <4 x i32> @llvm.mips.ldi.w(i32 -3)
-  store <4 x i32> %1, <4 x i32>* @llvm_mips_ldi_w_RES2
+  store <4 x i32> %1, ptr @llvm_mips_ldi_w_RES2
   ret void
 }
 
@@ -147,9 +147,9 @@ declare <4 x i32> @llvm.mips.ldi.w(i32)
 define void @llvm_mips_ldi_d_test() nounwind {
 entry:
   %0 = call <2 x i64> @llvm.mips.ldi.d(i32 3)
-  store <2 x i64> %0, <2 x i64>* @llvm_mips_ldi_d_RES1
+  store <2 x i64> %0, ptr @llvm_mips_ldi_d_RES1
   %1 = call <2 x i64> @llvm.mips.ldi.d(i32 -3)
-  store <2 x i64> %1, <2 x i64>* @llvm_mips_ldi_d_RES2
+  store <2 x i64> %1, ptr @llvm_mips_ldi_d_RES2
   ret void
 }
 

@@ -181,17 +181,19 @@ public:
   /// within the given operation 'from'. This does not traverse into any nested
   /// symbol tables. This function returns std::nullopt if there are any unknown
   /// operations that may potentially be symbol tables.
-  static Optional<UseRange> getSymbolUses(Operation *from);
-  static Optional<UseRange> getSymbolUses(Region *from);
+  static std::optional<UseRange> getSymbolUses(Operation *from);
+  static std::optional<UseRange> getSymbolUses(Region *from);
 
   /// Get all of the uses of the given symbol that are nested within the given
   /// operation 'from'. This does not traverse into any nested symbol tables.
   /// This function returns std::nullopt if there are any unknown operations
   /// that may potentially be symbol tables.
-  static Optional<UseRange> getSymbolUses(StringAttr symbol, Operation *from);
-  static Optional<UseRange> getSymbolUses(Operation *symbol, Operation *from);
-  static Optional<UseRange> getSymbolUses(StringAttr symbol, Region *from);
-  static Optional<UseRange> getSymbolUses(Operation *symbol, Region *from);
+  static std::optional<UseRange> getSymbolUses(StringAttr symbol,
+                                               Operation *from);
+  static std::optional<UseRange> getSymbolUses(Operation *symbol,
+                                               Operation *from);
+  static std::optional<UseRange> getSymbolUses(StringAttr symbol, Region *from);
+  static std::optional<UseRange> getSymbolUses(Operation *symbol, Region *from);
 
   /// Return if the given symbol is known to have no uses that are nested
   /// within the given operation 'from'. This does not traverse into any nested

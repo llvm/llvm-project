@@ -44,7 +44,7 @@ public:
          JITDylib &PlatformJD, const char *OrcRuntimePath,
          LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime = false,
          const char *VCRuntimePath = nullptr,
-         Optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
+         std::optional<SymbolAliasMap> RuntimeAliases = std::nullopt);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
@@ -104,11 +104,11 @@ private:
       return Error::success();
     }
 
-    Error notifyRemovingResources(ResourceKey K) override {
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
       return Error::success();
     }
 
-    void notifyTransferringResources(ResourceKey DstKey,
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                      ResourceKey SrcKey) override {}
 
   private:

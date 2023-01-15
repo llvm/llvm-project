@@ -41,7 +41,7 @@ DumpData("dump-data",
 namespace llvm {
 namespace bolt {
 
-Optional<StringRef> getLTOCommonName(const StringRef Name) {
+std::optional<StringRef> getLTOCommonName(const StringRef Name) {
   size_t LTOSuffixPos = Name.find(".lto_priv.");
   if (LTOSuffixPos != StringRef::npos)
     return Name.substr(0, LTOSuffixPos + 10);
@@ -588,21 +588,21 @@ void DataReader::readSampleData(BinaryFunction &BF) {
   }
   uint64_t LastOffset = BF.getSize();
   uint64_t TotalEntryCount = 0;
-  for (auto I = BF.BasicBlockOffsets.rbegin(), E = BF.BasicBlockOffsets.rend();
-       I != E; ++I) {
-    uint64_t CurOffset = I->first;
+  for (BinaryFunction::BasicBlockOffset &BBOffset :
+       llvm::reverse(BF.BasicBlockOffsets)) {
+    uint64_t CurOffset = BBOffset.first;
     // Always work with samples multiplied by 1000 to avoid losing them if we
     // later need to normalize numbers
     uint64_t NumSamples =
         SampleDataOrErr->getSamples(CurOffset, LastOffset) * 1000;
-    if (NormalizeByInsnCount && I->second->getNumNonPseudos()) {
-      NumSamples /= I->second->getNumNonPseudos();
+    if (NormalizeByInsnCount && BBOffset.second->getNumNonPseudos()) {
+      NumSamples /= BBOffset.second->getNumNonPseudos();
     } else if (NormalizeByCalls) {
-      uint32_t NumCalls = I->second->getNumCalls();
+      uint32_t NumCalls = BBOffset.second->getNumCalls();
       NumSamples /= NumCalls + 1;
     }
-    I->second->setExecutionCount(NumSamples);
-    if (I->second->isEntryPoint())
+    BBOffset.second->setExecutionCount(NumSamples);
+    if (BBOffset.second->isEntryPoint())
       TotalEntryCount += NumSamples;
     LastOffset = CurOffset;
   }
@@ -1257,14 +1257,14 @@ std::error_code DataReader::parse() {
 void DataReader::buildLTONameMaps() {
   for (StringMapEntry<FuncBranchData> &FuncData : NamesToBranches) {
     const StringRef FuncName = FuncData.getKey();
-    const Optional<StringRef> CommonName = getLTOCommonName(FuncName);
+    const std::optional<StringRef> CommonName = getLTOCommonName(FuncName);
     if (CommonName)
       LTOCommonNameMap[*CommonName].push_back(&FuncData.getValue());
   }
 
   for (StringMapEntry<FuncMemData> &FuncData : NamesToMemEvents) {
     const StringRef FuncName = FuncData.getKey();
-    const Optional<StringRef> CommonName = getLTOCommonName(FuncName);
+    const std::optional<StringRef> CommonName = getLTOCommonName(FuncName);
     if (CommonName)
       LTOCommonNameMemMap[*CommonName].push_back(&FuncData.getValue());
   }
@@ -1276,8 +1276,8 @@ decltype(MapTy::MapEntryTy::second) *
 fetchMapEntry(MapTy &Map, const std::vector<MCSymbol *> &Symbols) {
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
-  for (auto SI = Symbols.rbegin(), SE = Symbols.rend(); SI != SE; ++SI) {
-    auto I = Map.find(normalizeName((*SI)->getName()));
+  for (const MCSymbol *Symbol : llvm::reverse(Symbols)) {
+    auto I = Map.find(normalizeName(Symbol->getName()));
     if (I != Map.end())
       return &I->getValue();
   }
@@ -1289,8 +1289,8 @@ decltype(MapTy::MapEntryTy::second) *
 fetchMapEntry(MapTy &Map, const std::vector<StringRef> &FuncNames) {
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
-  for (auto FI = FuncNames.rbegin(), FE = FuncNames.rend(); FI != FE; ++FI) {
-    auto I = Map.find(normalizeName(*FI));
+  for (StringRef Name : llvm::reverse(FuncNames)) {
+    auto I = Map.find(normalizeName(Name));
     if (I != Map.end())
       return &I->getValue();
   }
@@ -1306,9 +1306,9 @@ std::vector<decltype(MapTy::MapEntryTy::second) *> fetchMapEntriesRegex(
   std::vector<decltype(MapTy::MapEntryTy::second) *> AllData;
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
-  for (auto FI = FuncNames.rbegin(), FE = FuncNames.rend(); FI != FE; ++FI) {
-    std::string Name = normalizeName(*FI);
-    const Optional<StringRef> LTOCommonName = getLTOCommonName(Name);
+  for (StringRef FuncName : llvm::reverse(FuncNames)) {
+    std::string Name = normalizeName(FuncName);
+    const std::optional<StringRef> LTOCommonName = getLTOCommonName(Name);
     if (LTOCommonName) {
       auto I = LTOCommonNameMap.find(*LTOCommonName);
       if (I != LTOCommonNameMap.end()) {
@@ -1331,7 +1331,8 @@ bool DataReader::mayHaveProfileData(const BinaryFunction &Function) {
   if (getBranchData(Function) || getMemData(Function))
     return true;
 
-  if (getBranchDataForNames(Function.getNames()) ||
+  if (getFuncSampleData(Function.getNames()) ||
+      getBranchDataForNames(Function.getNames()) ||
       getMemDataForNames(Function.getNames()))
     return true;
 

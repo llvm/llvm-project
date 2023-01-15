@@ -518,10 +518,10 @@ namespace llvm {
     /// \param Name         Value parameter name.
     /// \param Ty           Parameter type.
     /// \param Val          The fully qualified name of the template.
-    DITemplateValueParameter *createTemplateTemplateParameter(DIScope *Scope,
-                                                              StringRef Name,
-                                                              DIType *Ty,
-                                                              StringRef Val);
+    /// \param IsDefault    Parameter is default or not.
+    DITemplateValueParameter *
+    createTemplateTemplateParameter(DIScope *Scope, StringRef Name, DIType *Ty,
+                                    StringRef Val, bool IsDefault = false);
 
     /// Create debugging information for a template parameter pack.
     /// \param Scope        Scope in which this type is defined.

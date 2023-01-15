@@ -94,7 +94,7 @@ InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer) {
       instrprof_error::unable_to_correlate_profile, "not an object file");
 }
 
-Optional<size_t> InstrProfCorrelator::getDataSize() const {
+std::optional<size_t> InstrProfCorrelator::getDataSize() const {
   if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint32_t>>(this)) {
     return C->getDataSize();
   } else if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint64_t>>(this)) {
@@ -217,7 +217,7 @@ void InstrProfCorrelatorImpl<IntPtrT>::addProbe(StringRef FunctionName,
 }
 
 template <class IntPtrT>
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 DwarfInstrProfCorrelator<IntPtrT>::getLocation(const DWARFDie &Die) const {
   auto Locations = Die.getLocations(dwarf::DW_AT_location);
   if (!Locations) {
@@ -264,9 +264,9 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
   auto maybeAddProbe = [&](DWARFDie Die) {
     if (!isDIEOfProbe(Die))
       return;
-    Optional<const char *> FunctionName;
+    std::optional<const char *> FunctionName;
     std::optional<uint64_t> CFGHash;
-    Optional<uint64_t> CounterPtr = getLocation(Die);
+    std::optional<uint64_t> CounterPtr = getLocation(Die);
     auto FnDie = Die.getParent();
     auto FunctionPtr = dwarf::toAddress(FnDie.find(dwarf::DW_AT_low_pc));
     std::optional<uint64_t> NumCounters;

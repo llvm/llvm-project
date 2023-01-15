@@ -23,7 +23,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
@@ -320,7 +319,7 @@ public:
       return APSInt(APInt(Integer.BitWidth, Integer.VAL), Integer.IsUnsigned);
 
     unsigned NumWords = APInt::getNumWords(Integer.BitWidth);
-    return APSInt(APInt(Integer.BitWidth, makeArrayRef(Integer.pVal, NumWords)),
+    return APSInt(APInt(Integer.BitWidth, ArrayRef(Integer.pVal, NumWords)),
                   Integer.IsUnsigned);
   }
 
@@ -365,7 +364,7 @@ public:
   /// Iterator range referencing all of the elements of a template
   /// argument pack.
   ArrayRef<TemplateArgument> pack_elements() const {
-    return llvm::makeArrayRef(pack_begin(), pack_end());
+    return llvm::ArrayRef(pack_begin(), pack_end());
   }
 
   /// The number of template arguments in the given template argument
@@ -378,7 +377,7 @@ public:
   /// Return the array of arguments in this template argument pack.
   ArrayRef<TemplateArgument> getPackAsArray() const {
     assert(getKind() == Pack);
-    return llvm::makeArrayRef(Args.Args, Args.NumArgs);
+    return llvm::ArrayRef(Args.Args, Args.NumArgs);
   }
 
   /// Determines whether two template arguments are superficially the
@@ -643,7 +642,7 @@ public:
   unsigned getNumTemplateArgs() const { return NumTemplateArgs; }
 
   llvm::ArrayRef<TemplateArgumentLoc> arguments() const {
-    return llvm::makeArrayRef(getTemplateArgs(), getNumTemplateArgs());
+    return llvm::ArrayRef(getTemplateArgs(), getNumTemplateArgs());
   }
 
   const TemplateArgumentLoc &operator[](unsigned I) const {

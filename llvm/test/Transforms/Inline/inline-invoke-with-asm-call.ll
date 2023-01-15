@@ -26,7 +26,7 @@ define void @caller() personality ptr @__objc_personality_v0 {
 }
 
 define void @callee_with_asm() {
-  call void asm sideeffect "mov\09r7, r7\09\09@ marker for objc_retainAutoreleaseReturnValue", ""()
+  call void asm sideeffect "mov\09r7, r7\09\09@ marker for objc_retainAutoreleaseReturnValue", ""() nounwind
   ret void
 }
 

@@ -15,6 +15,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -133,7 +134,7 @@ public:
   void Mutate();
 };
 
-class TypePromotion : public FunctionPass {
+class TypePromotionImpl {
   unsigned TypeSize = 0;
   LLVMContext *Ctx = nullptr;
   unsigned RegisterBitWidth = 0;
@@ -171,9 +172,15 @@ class TypePromotion : public FunctionPass {
   bool TryToPromote(Value *V, unsigned PromotedWidth, const LoopInfo &LI);
 
 public:
+  bool run(Function &F, const TargetMachine *TM,
+           const TargetTransformInfo &TTI, const LoopInfo &LI);
+};
+
+class TypePromotionLegacy : public FunctionPass {
+public:
   static char ID;
 
-  TypePromotion() : FunctionPass(ID) {}
+  TypePromotionLegacy() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LoopInfoWrapperPass>();
@@ -196,19 +203,19 @@ static bool GenerateSignBits(Instruction *I) {
          Opc == Instruction::SRem || Opc == Instruction::SExt;
 }
 
-bool TypePromotion::EqualTypeSize(Value *V) {
+bool TypePromotionImpl::EqualTypeSize(Value *V) {
   return V->getType()->getScalarSizeInBits() == TypeSize;
 }
 
-bool TypePromotion::LessOrEqualTypeSize(Value *V) {
+bool TypePromotionImpl::LessOrEqualTypeSize(Value *V) {
   return V->getType()->getScalarSizeInBits() <= TypeSize;
 }
 
-bool TypePromotion::GreaterThanTypeSize(Value *V) {
+bool TypePromotionImpl::GreaterThanTypeSize(Value *V) {
   return V->getType()->getScalarSizeInBits() > TypeSize;
 }
 
-bool TypePromotion::LessThanTypeSize(Value *V) {
+bool TypePromotionImpl::LessThanTypeSize(Value *V) {
   return V->getType()->getScalarSizeInBits() < TypeSize;
 }
 
@@ -219,7 +226,7 @@ bool TypePromotion::LessThanTypeSize(Value *V) {
 /// return values because we only accept ones that guarantee a zeroext ret val.
 /// Many arguments will have the zeroext attribute too, so those would be free
 /// too.
-bool TypePromotion::isSource(Value *V) {
+bool TypePromotionImpl::isSource(Value *V) {
   if (!isa<IntegerType>(V->getType()))
     return false;
 
@@ -240,7 +247,7 @@ bool TypePromotion::isSource(Value *V) {
 /// Return true if V will require any promoted values to be truncated for the
 /// the IR to remain valid. We can't mutate the value type of these
 /// instructions.
-bool TypePromotion::isSink(Value *V) {
+bool TypePromotionImpl::isSink(Value *V) {
   // TODO The truncate also isn't actually necessary because we would already
   // proved that the data value is kept within the range of the original data
   // type. We currently remove any truncs inserted for handling zext sinks.
@@ -266,7 +273,7 @@ bool TypePromotion::isSink(Value *V) {
 }
 
 /// Return whether this instruction can safely wrap.
-bool TypePromotion::isSafeWrap(Instruction *I) {
+bool TypePromotionImpl::isSafeWrap(Instruction *I) {
   // We can support a potentially wrapping instruction (I) if:
   // - It is only used by an unsigned icmp.
   // - The icmp uses a constant.
@@ -372,7 +379,7 @@ bool TypePromotion::isSafeWrap(Instruction *I) {
   return false;
 }
 
-bool TypePromotion::shouldPromote(Value *V) {
+bool TypePromotionImpl::shouldPromote(Value *V) {
   if (!isa<IntegerType>(V->getType()) || isSink(V))
     return false;
 
@@ -579,7 +586,6 @@ void IRPromoter::Cleanup() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Cleanup..\n");
   // Some zexts will now have become redundant, along with their trunc
   // operands, so remove them.
-  // Some zexts need to be replaced with truncate if src bitwidth is larger.
   for (auto *V : Visited) {
     if (!isa<ZExtInst>(V))
       continue;
@@ -593,11 +599,6 @@ void IRPromoter::Cleanup() {
       LLVM_DEBUG(dbgs() << "IR Promotion: Removing unnecessary cast: " << *ZExt
                         << "\n");
       ReplaceAllUsersOfWith(ZExt, Src);
-      continue;
-    } else if (ZExt->getSrcTy()->getScalarSizeInBits() > PromotedWidth) {
-      IRBuilder<> Builder{ZExt};
-      Value *Trunc = Builder.CreateTrunc(Src, ZExt->getDestTy());
-      ReplaceAllUsersOfWith(ZExt, Trunc);
       continue;
     }
 
@@ -634,6 +635,8 @@ void IRPromoter::ConvertTruncs() {
     ConstantInt *Mask =
         ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
     Value *Masked = Builder.CreateAnd(Trunc->getOperand(0), Mask);
+    if (SrcTy != ExtTy)
+      Masked = Builder.CreateTrunc(Masked, ExtTy);
 
     if (auto *I = dyn_cast<Instruction>(Masked))
       NewInsts.insert(I);
@@ -687,7 +690,7 @@ void IRPromoter::Mutate() {
 /// We disallow booleans to make life easier when dealing with icmps but allow
 /// any other integer that fits in a scalar register. Void types are accepted
 /// so we can handle switches.
-bool TypePromotion::isSupportedType(Value *V) {
+bool TypePromotionImpl::isSupportedType(Value *V) {
   Type *Ty = V->getType();
 
   // Allow voids and pointers, these won't be promoted.
@@ -705,7 +708,7 @@ bool TypePromotion::isSupportedType(Value *V) {
 /// Disallow casts other than zext and truncs and only allow calls if their
 /// return value is zeroext. We don't allow opcodes that can introduce sign
 /// bits.
-bool TypePromotion::isSupportedValue(Value *V) {
+bool TypePromotionImpl::isSupportedValue(Value *V) {
   if (auto *I = dyn_cast<Instruction>(V)) {
     switch (I->getOpcode()) {
     default:
@@ -753,7 +756,7 @@ bool TypePromotion::isSupportedValue(Value *V) {
 /// Check that the type of V would be promoted and that the original type is
 /// smaller than the targeted promoted type. Check that we're not trying to
 /// promote something larger than our base 'TypeSize' type.
-bool TypePromotion::isLegalToPromote(Value *V) {
+bool TypePromotionImpl::isLegalToPromote(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
@@ -768,10 +771,10 @@ bool TypePromotion::isLegalToPromote(Value *V) {
   return false;
 }
 
-bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth,
+bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
                                  const LoopInfo &LI) {
   Type *OrigTy = V->getType();
-  TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedSize();
+  TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedValue();
   SafeToPromote.clear();
   SafeWrap.clear();
 
@@ -900,29 +903,23 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth,
   return true;
 }
 
-bool TypePromotion::runOnFunction(Function &F) {
-  if (skipFunction(F) || DisablePromotion)
+bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
+                            const TargetTransformInfo &TTI,
+                            const LoopInfo &LI) {
+  if (DisablePromotion)
     return false;
 
   LLVM_DEBUG(dbgs() << "IR Promotion: Running on " << F.getName() << "\n");
-
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (!TPC)
-    return false;
 
   AllVisited.clear();
   SafeToPromote.clear();
   SafeWrap.clear();
   bool MadeChange = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
-  const TargetMachine &TM = TPC->getTM<TargetMachine>();
-  const TargetSubtargetInfo *SubtargetInfo = TM.getSubtargetImpl(F);
+  const TargetSubtargetInfo *SubtargetInfo = TM->getSubtargetImpl(F);
   const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
-  const TargetTransformInfo &TII =
-      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  const LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   RegisterBitWidth =
-      TII.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedSize();
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
   Ctx = &F.getParent()->getContext();
 
   // Return the preferred integer width of the instruction, or zero if we
@@ -1006,9 +1003,46 @@ bool TypePromotion::runOnFunction(Function &F) {
   return MadeChange;
 }
 
-INITIALIZE_PASS_BEGIN(TypePromotion, DEBUG_TYPE, PASS_NAME, false, false)
-INITIALIZE_PASS_END(TypePromotion, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_BEGIN(TypePromotionLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_END(TypePromotionLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-char TypePromotion::ID = 0;
+char TypePromotionLegacy::ID = 0;
 
-FunctionPass *llvm::createTypePromotionPass() { return new TypePromotion(); }
+bool TypePromotionLegacy::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC)
+    return false;
+
+  auto *TM = &TPC->getTM<TargetMachine>();
+  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+  TypePromotionImpl TP;
+  return TP.run(F, TM, TTI, LI);
+}
+
+FunctionPass *llvm::createTypePromotionLegacyPass() {
+  return new TypePromotionLegacy();
+}
+
+PreservedAnalyses TypePromotionPass::run(Function &F,
+                                         FunctionAnalysisManager &AM) {
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  TypePromotionImpl TP;
+
+  bool Changed = TP.run(F, TM, TTI, LI);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<LoopAnalysis>();
+  return PA;
+}

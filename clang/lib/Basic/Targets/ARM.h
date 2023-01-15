@@ -100,8 +100,6 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   };
   uint32_t HW_FP;
 
-  static const Builtin::Info BuiltinInfo[];
-
   void setABIAAPCS();
   void setABIAPCS(bool IsAAPCS16);
 

@@ -6,16 +6,16 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; both return undef. They should be merged. Note undef cannot be merged with
 ; anything else, because this implies the ordering will be inconsistent (i.e.
 ; -1 == undef and undef == 1, but -1 < 1, so we must have undef != <any int>).
-define internal i64 @Cfunc(i32* %P, i32* %Q) {
+define internal i64 @Cfunc(ptr %P, ptr %Q) {
 ; CHECK-LABEL: define internal i64 @Cfunc
-  store i32 4, i32* %P
-  store i32 6, i32* %Q
+  store i32 4, ptr %P
+  store i32 6, ptr %Q
   ret i64 undef
 }
 
-define internal i64* @Dfunc(i32* %P, i32* %Q) {
+define internal ptr @Dfunc(ptr %P, ptr %Q) {
 ; MERGE-NOT: @Dfunc
-  store i32 4, i32* %P
-  store i32 6, i32* %Q
-  ret i64* undef
+  store i32 4, ptr %P
+  store i32 6, ptr %Q
+  ret ptr undef
 }

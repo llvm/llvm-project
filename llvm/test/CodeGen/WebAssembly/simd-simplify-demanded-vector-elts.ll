@@ -24,6 +24,6 @@ define void @test(i8 %0) {
   %10 = sub nsw <4 x i32> <i32 655360000, i32 655360000, i32 655360000, i32 655360000>, %9
   %11 = ashr exact <4 x i32> %10, <i32 16, i32 16, i32 16, i32 16>
   %12 = trunc <4 x i32> %11 to <4 x i16>
-  store <4 x i16> %12, <4 x i16>* undef, align 4
+  store <4 x i16> %12, ptr undef, align 4
   ret void
 }

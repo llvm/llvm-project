@@ -137,7 +137,7 @@ exit:
 }
 
 ; Check that loop unswitch looks through a combination of or and select instructions.
-define i32 @test_partial_condition_unswitch_or_select(i32* %var, i1 %cond1, i1 %cond2, i1 %cond3, i1 %cond4, i1 %cond5, i1 %cond6) {
+define i32 @test_partial_condition_unswitch_or_select(ptr %var, i1 %cond1, i1 %cond2, i1 %cond3, i1 %cond4, i1 %cond5, i1 %cond6) {
 ; CHECK-LABEL: @test_partial_condition_unswitch_or_select(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND4_FR:%.*]] = freeze i1 [[COND4:%.*]]
@@ -151,7 +151,7 @@ define i32 @test_partial_condition_unswitch_or_select(i32* %var, i1 %cond1, i1 %
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[VAR_VAL:%.*]] = load i32, i32* [[VAR:%.*]], align 4
+; CHECK-NEXT:    [[VAR_VAL:%.*]] = load i32, ptr [[VAR:%.*]], align 4
 ; CHECK-NEXT:    [[VAR_COND:%.*]] = trunc i32 [[VAR_VAL]] to i1
 ; CHECK-NEXT:    [[COND_OR1:%.*]] = or i1 [[VAR_COND]], false
 ; CHECK-NEXT:    [[COND_OR2:%.*]] = or i1 false, false
@@ -174,7 +174,7 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %var_val = load i32, i32* %var
+  %var_val = load i32, ptr %var
   %var_cond = trunc i32 %var_val to i1
   %cond_or1 = or i1 %var_cond, %cond1
   %cond_or2 = or i1 %cond2, %cond3
@@ -196,7 +196,7 @@ loop_exit:
 
 ; Same as test_partial_condition_unswitch_or_select, but with arguments marked
 ; as noundef.
-define i32 @test_partial_condition_unswitch_or_select_noundef(i32* noundef %var, i1 noundef %cond1, i1 noundef %cond2, i1 noundef %cond3, i1 noundef %cond4, i1 noundef %cond5, i1 noundef %cond6) {
+define i32 @test_partial_condition_unswitch_or_select_noundef(ptr noundef %var, i1 noundef %cond1, i1 noundef %cond2, i1 noundef %cond3, i1 noundef %cond4, i1 noundef %cond5, i1 noundef %cond6) {
 ; CHECK-LABEL: @test_partial_condition_unswitch_or_select_noundef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND4:%.*]], [[COND2:%.*]]
@@ -206,7 +206,7 @@ define i32 @test_partial_condition_unswitch_or_select_noundef(i32* noundef %var,
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    [[VAR_VAL:%.*]] = load i32, i32* [[VAR:%.*]], align 4
+; CHECK-NEXT:    [[VAR_VAL:%.*]] = load i32, ptr [[VAR:%.*]], align 4
 ; CHECK-NEXT:    [[VAR_COND:%.*]] = trunc i32 [[VAR_VAL]] to i1
 ; CHECK-NEXT:    [[COND_OR1:%.*]] = or i1 [[VAR_COND]], false
 ; CHECK-NEXT:    [[COND_OR2:%.*]] = or i1 false, false
@@ -229,7 +229,7 @@ entry:
   br label %loop_begin
 
 loop_begin:
-  %var_val = load i32, i32* %var
+  %var_val = load i32, ptr %var
   %var_cond = trunc i32 %var_val to i1
   %cond_or1 = or i1 %var_cond, %cond1
   %cond_or2 = or i1 %cond2, %cond3

@@ -85,7 +85,16 @@ const u8 kIdentityCodeWithJump[] = {
     0xC3,                   // ret
 };
 
-#else
+const u8 kIdentityCodeWithJumpBackwards[] = {
+    0x89, 0xC8,  // mov         eax, ecx
+    0xC3,        // ret
+    0xE9, 0xF8, 0xFF, 0xFF,
+    0xFF,  // jmp - 8
+    0xCC, 0xCC, 0xCC, 0xCC,
+};
+const u8 kIdentityCodeWithJumpBackwardsOffset = 3;
+
+#    else
 
 const u8 kIdentityCodeWithPrologue[] = {
     0x55,                   // push        ebp
@@ -134,7 +143,16 @@ const u8 kIdentityCodeWithJump[] = {
     0xC3,                   // ret
 };
 
-#endif
+const u8 kIdentityCodeWithJumpBackwards[] = {
+    0x8B, 0x44, 0x24, 0x04,  // mov         eax,dword ptr [esp + 4]
+    0xC3,                    // ret
+    0xE9, 0xF6, 0xFF, 0xFF,
+    0xFF,  // jmp - 10
+    0xCC, 0xCC, 0xCC, 0xCC,
+};
+const u8 kIdentityCodeWithJumpBackwardsOffset = 5;
+
+#    endif
 
 const u8 kPatchableCode1[] = {
     0xB8, 0x4B, 0x00, 0x00, 0x00,   // mov eax,4B
@@ -366,13 +384,14 @@ TEST(Interception, InternalGetProcAddress) {
   EXPECT_NE(DbgPrint_adddress, isdigit_address);
 }
 
-template<class T>
+template <class T>
 static void TestIdentityFunctionPatching(
-    const T &code,
-    TestOverrideFunction override,
-    FunctionPrefixKind prefix_kind = FunctionPrefixNone) {
+    const T &code, TestOverrideFunction override,
+    FunctionPrefixKind prefix_kind = FunctionPrefixNone,
+    int function_start_offset = 0) {
   uptr identity_address;
   LoadActiveCode(code, &identity_address, prefix_kind);
+  identity_address += function_start_offset;
   IdentityFunction identity = (IdentityFunction)identity_address;
 
   // Validate behavior before dynamic patching.
@@ -410,7 +429,7 @@ static void TestIdentityFunctionPatching(
   TestOnlyReleaseTrampolineRegions();
 }
 
-#if !SANITIZER_WINDOWS64
+#    if !SANITIZER_WINDOWS64
 TEST(Interception, OverrideFunctionWithDetour) {
   TestOverrideFunction override = OverrideFunctionWithDetour;
   FunctionPrefixKind prefix = FunctionPrefixDetour;
@@ -424,6 +443,9 @@ TEST(Interception, OverrideFunctionWithDetour) {
 TEST(Interception, OverrideFunctionWithRedirectJump) {
   TestOverrideFunction override = OverrideFunctionWithRedirectJump;
   TestIdentityFunctionPatching(kIdentityCodeWithJump, override);
+  TestIdentityFunctionPatching(kIdentityCodeWithJumpBackwards, override,
+                               FunctionPrefixNone,
+                               kIdentityCodeWithJumpBackwardsOffset);
 }
 
 TEST(Interception, OverrideFunctionWithHotPatch) {

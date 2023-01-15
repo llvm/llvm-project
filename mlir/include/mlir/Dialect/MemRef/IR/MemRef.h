@@ -54,6 +54,16 @@ Type getTensorTypeFromMemRefType(Type type);
 /// single deallocate if it exists or nullptr.
 Optional<Operation *> findDealloc(Value allocValue);
 
+/// Return the dimensions of the given memref value.
+SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,
+                                        Value value);
+
+/// Create a rank-reducing SubViewOp @[0 .. 0] with strides [1 .. 1] and
+/// appropriate sizes (i.e. `memref.getSizes()`) to reduce the rank of `memref`
+/// to that of `targetShape`.
+Value createCanonicalRankReducingSubViewOp(OpBuilder &b, Location loc,
+                                           Value memref,
+                                           ArrayRef<int64_t> targetShape);
 } // namespace memref
 } // namespace mlir
 

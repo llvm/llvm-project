@@ -37,11 +37,14 @@ enum {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
-static constexpr llvm::opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
@@ -49,9 +52,9 @@ static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class DllOptTable : public llvm::opt::OptTable {
+class DllOptTable : public opt::GenericOptTable {
 public:
-  DllOptTable() : OptTable(InfoTable, false) {}
+  DllOptTable() : opt::GenericOptTable(InfoTable, false) {}
 };
 
 // Opens a file. Path has to be resolved already.
@@ -94,7 +97,7 @@ MachineTypes getDefaultMachine() {
   return getMachine(Triple(sys::getDefaultTargetTriple()));
 }
 
-Optional<std::string> getPrefix(StringRef Argv0) {
+std::optional<std::string> getPrefix(StringRef Argv0) {
   StringRef ProgName = llvm::sys::path::stem(Argv0);
   // x86_64-w64-mingw32-dlltool -> x86_64-w64-mingw32
   // llvm-dlltool -> None
@@ -149,7 +152,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   COFF::MachineTypes Machine = getDefaultMachine();
-  if (Optional<std::string> Prefix = getPrefix(ArgsArr[0])) {
+  if (std::optional<std::string> Prefix = getPrefix(ArgsArr[0])) {
     Triple T(*Prefix);
     if (T.getArch() != Triple::UnknownArch)
       Machine = getMachine(T);

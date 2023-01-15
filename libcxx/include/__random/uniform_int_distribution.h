@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___RANDOM_UNIFORM_INT_DISTRIBUTION_H
 #define _LIBCPP___RANDOM_UNIFORM_INT_DISTRIBUTION_H
 
-#include <__bits>
 #include <__config>
 #include <__random/is_valid.h>
 #include <__random/log2.h>
@@ -242,7 +241,7 @@ _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
     typedef __independent_bits_engine<_URNG, _UIntType> _Eng;
     if (_Rp == 0)
         return static_cast<result_type>(_Eng(__g, _Dt)());
-    size_t __w = _Dt - __countl_zero(_Rp) - 1;
+    size_t __w = _Dt - std::__countl_zero(_Rp) - 1;
     if ((_Rp & (numeric_limits<_UIntType>::max() >> (_Dt - __w))) != 0)
         ++__w;
     _Eng __e(__g, __w);

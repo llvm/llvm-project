@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
-; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 ; PR2792
 
 @g = global i32 0		; <ptr> [#uses=1]

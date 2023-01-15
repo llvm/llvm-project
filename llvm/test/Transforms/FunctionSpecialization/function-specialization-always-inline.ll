@@ -1,4 +1,4 @@
-; RUN: opt -passes=function-specialization -func-specialization-avg-iters-cost=3 -func-specialization-size-threshold=10 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -func-specialization-avg-iters-cost=3 -func-specialization-size-threshold=10 -S < %s | FileCheck %s
 
 ; CHECK-NOT: foo.{{[0-9]+}}
 

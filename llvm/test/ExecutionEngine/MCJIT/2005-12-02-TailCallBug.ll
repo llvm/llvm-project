@@ -1,7 +1,7 @@
 ; PR672
 ; RUN: %lli -jit-kind=mcjit %s
 ; RUN: %lli %s
-; XFAIL: i686 && windows
+; XFAIL: target={{i686.*windows.*}}
 
 define i32 @main() {
 	%res = tail call fastcc i32 @check_tail( i32 10, ptr @check_tail, i32 10 )		; <i32> [#uses=1]

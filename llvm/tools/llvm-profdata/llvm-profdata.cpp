@@ -13,7 +13,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -338,9 +337,16 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
                              FuncName, firstTime);
     });
   }
-  if (Reader->hasError())
+
+  if (Reader->hasError()) {
     if (Error E = Reader->getError())
       WC->Errors.emplace_back(std::move(E), Filename);
+  }
+
+  std::vector<llvm::object::BuildID> BinaryIds;
+  if (Error E = Reader->readBinaryIds(BinaryIds))
+    WC->Errors.emplace_back(std::move(E), Filename);
+  WC->Writer.addBinaryIds(BinaryIds);
 }
 
 /// Merge the \p Src writer context into \p Dst.
@@ -348,6 +354,9 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
   for (auto &ErrorPair : Src->Errors)
     Dst->Errors.push_back(std::move(ErrorPair));
   Src->Errors.clear();
+
+  if (Error E = Dst->Writer.mergeProfileKind(Src->Writer.getProfileKind()))
+    exitWithError(std::move(E));
 
   Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
     instrprof_error IPE = InstrProfError::take(std::move(E));
@@ -406,9 +415,6 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if (NumThreads == 0)
     NumThreads = std::min(hardware_concurrency().compute_thread_count(),
                           unsigned((Inputs.size() + 1) / 2));
-  // FIXME: There's a bug here, where setting NumThreads = Inputs.size() fails
-  // the merge_empty_profile.test because the InstrProfWriter.ProfileKind isn't
-  // merged, thus the emitted file ends up with a PF_Unknown kind.
 
   // Initialize the writer contexts.
   SmallVector<std::unique_ptr<WriterContext>, 4> Contexts;

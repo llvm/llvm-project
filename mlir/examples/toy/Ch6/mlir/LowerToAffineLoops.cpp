@@ -177,7 +177,7 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
       if (dimension == valueShape.size()) {
         rewriter.create<AffineStoreOp>(
             loc, rewriter.create<arith::ConstantOp>(loc, *valueIt++), alloc,
-            llvm::makeArrayRef(indices));
+            llvm::ArrayRef(indices));
         return;
       }
 

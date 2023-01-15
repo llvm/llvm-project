@@ -223,6 +223,37 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// PPC64 (AIX 64 bit) target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetPPC64 : public GenericTarget<TargetPPC64> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // two distinct element type arguments (re, im)
+    marshal.emplace_back(eleTy, AT{});
+    marshal.emplace_back(eleTy, AT{});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { t, t }   struct of 2 element type
+    mlir::TypeRange range = {eleTy, eleTy};
+    marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
+    return marshal;
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // PPC64le linux target specifics.
 //===----------------------------------------------------------------------===//
 
@@ -395,6 +426,9 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
   case llvm::Triple::ArchType::aarch64:
     return std::make_unique<TargetAArch64>(ctx, std::move(trp),
                                            std::move(kindMap));
+  case llvm::Triple::ArchType::ppc64:
+    return std::make_unique<TargetPPC64>(ctx, std::move(trp),
+                                         std::move(kindMap));
   case llvm::Triple::ArchType::ppc64le:
     return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
                                            std::move(kindMap));

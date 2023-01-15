@@ -59,6 +59,9 @@ namespace llvm {
 /// yet have VersionHelpers.h, so we have our own helper.
 bool RunningWindows8OrGreater();
 
+/// Determines if the program is running on Windows 11 or Windows Server 2022.
+bool RunningWindows11OrGreater();
+
 /// Returns the Windows version as Major.Minor.0.BuildNumber. Uses
 /// RtlGetVersion or GetVersionEx under the hood depending on what is available.
 /// GetVersionEx is deprecated, but this API exposes the build number which can

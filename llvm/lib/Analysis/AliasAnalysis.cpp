@@ -26,8 +26,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/CFLAndersAliasAnalysis.h"
-#include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -107,11 +105,12 @@ bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
 AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB) {
   SimpleAAQueryInfo AAQIP(*this);
-  return alias(LocA, LocB, AAQIP);
+  return alias(LocA, LocB, AAQIP, nullptr);
 }
 
 AliasResult AAResults::alias(const MemoryLocation &LocA,
-                             const MemoryLocation &LocB, AAQueryInfo &AAQI) {
+                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                             const Instruction *CtxI) {
   AliasResult Result = AliasResult::MayAlias;
 
   if (EnableAATrace) {
@@ -123,7 +122,7 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 
   AAQI.Depth++;
   for (const auto &AA : AAs) {
-    Result = AA->alias(LocA, LocB, AAQI);
+    Result = AA->alias(LocA, LocB, AAQI, CtxI);
     if (Result != AliasResult::MayAlias)
       break;
   }
@@ -245,7 +244,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
         continue;
       unsigned ArgIdx = I.index();
       MemoryLocation ArgLoc = MemoryLocation::getForArgument(Call, ArgIdx, TLI);
-      AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI);
+      AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI, Call);
       if (ArgAlias != AliasResult::NoAlias)
         AllArgsMask |= getArgModRefInfo(Call, ArgIdx);
     }
@@ -474,7 +473,7 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
   // If the load address doesn't alias the given address, it doesn't read
   // or write the specified memory.
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(L), Loc, AAQI);
+    AliasResult AR = alias(MemoryLocation::get(L), Loc, AAQI, L);
     if (AR == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
   }
@@ -490,7 +489,7 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(S), Loc, AAQI);
+    AliasResult AR = alias(MemoryLocation::get(S), Loc, AAQI, S);
     // If the store address cannot alias the pointer in question, then the
     // specified memory cannot be modified by the store.
     if (AR == AliasResult::NoAlias)
@@ -523,7 +522,7 @@ ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(V), Loc, AAQI);
+    AliasResult AR = alias(MemoryLocation::get(V), Loc, AAQI, V);
     // If the va_arg address cannot alias the pointer in question, then the
     // specified memory cannot be accessed by the va_arg.
     if (AR == AliasResult::NoAlias)
@@ -572,7 +571,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(CX), Loc, AAQI);
+    AliasResult AR = alias(MemoryLocation::get(CX), Loc, AAQI, CX);
     // If the cmpxchg address does not alias the location, it does not access
     // it.
     if (AR == AliasResult::NoAlias)
@@ -590,7 +589,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
     return ModRefInfo::ModRef;
 
   if (Loc.Ptr) {
-    AliasResult AR = alias(MemoryLocation::get(RMW), Loc, AAQI);
+    AliasResult AR = alias(MemoryLocation::get(RMW), Loc, AAQI, RMW);
     // If the atomicrmw address does not alias the location, it does not access
     // it.
     if (AR == AliasResult::NoAlias)
@@ -601,7 +600,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
 }
 
 ModRefInfo AAResults::getModRefInfo(const Instruction *I,
-                                    const Optional<MemoryLocation> &OptLoc,
+                                    const std::optional<MemoryLocation> &OptLoc,
                                     AAQueryInfo &AAQIP) {
   if (OptLoc == std::nullopt) {
     if (const auto *Call = dyn_cast<CallBase>(I))
@@ -678,9 +677,9 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
          !Call->isByValArgument(ArgNo)))
       continue;
 
-    AliasResult AR = alias(
-        MemoryLocation::getBeforeOrAfter(*CI),
-        MemoryLocation::getBeforeOrAfter(Object), AAQI);
+    AliasResult AR =
+        alias(MemoryLocation::getBeforeOrAfter(*CI),
+              MemoryLocation::getBeforeOrAfter(Object), AAQI, Call);
     // If this is a no-capture pointer argument, see if we can tell that it
     // is impossible to alias the pointer we're checking.  If not, we have to
     // assume that the call could touch the pointer, even though it doesn't
@@ -761,8 +760,6 @@ char AAResultsWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(AAResultsWrapperPass, "aa",
                       "Function Alias Analysis Results", false, true)
 INITIALIZE_PASS_DEPENDENCY(BasicAAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(CFLAndersAAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(CFLSteensAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ExternalAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SCEVAAWrapperPass)
@@ -809,10 +806,6 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
     AAR->addAAResult(WrapperPass->getResult());
   if (auto *WrapperPass = getAnalysisIfAvailable<SCEVAAWrapperPass>())
     AAR->addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = getAnalysisIfAvailable<CFLAndersAAWrapperPass>())
-    AAR->addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = getAnalysisIfAvailable<CFLSteensAAWrapperPass>())
-    AAR->addAAResult(WrapperPass->getResult());
 
   // If available, run an external AA providing callback over the results as
   // well.
@@ -837,8 +830,6 @@ void AAResultsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<TypeBasedAAWrapperPass>();
   AU.addUsedIfAvailable<GlobalsAAWrapperPass>();
   AU.addUsedIfAvailable<SCEVAAWrapperPass>();
-  AU.addUsedIfAvailable<CFLAndersAAWrapperPass>();
-  AU.addUsedIfAvailable<CFLSteensAAWrapperPass>();
   AU.addUsedIfAvailable<ExternalAAWrapperPass>();
 }
 
@@ -864,10 +855,6 @@ AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
   if (auto *WrapperPass = P.getAnalysisIfAvailable<TypeBasedAAWrapperPass>())
     AAR.addAAResult(WrapperPass->getResult());
   if (auto *WrapperPass = P.getAnalysisIfAvailable<GlobalsAAWrapperPass>())
-    AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<CFLAndersAAWrapperPass>())
-    AAR.addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = P.getAnalysisIfAvailable<CFLSteensAAWrapperPass>())
     AAR.addAAResult(WrapperPass->getResult());
   if (auto *WrapperPass = P.getAnalysisIfAvailable<ExternalAAWrapperPass>())
     if (WrapperPass->CB)
@@ -957,7 +944,5 @@ void llvm::getAAResultsAnalysisUsage(AnalysisUsage &AU) {
   AU.addUsedIfAvailable<ScopedNoAliasAAWrapperPass>();
   AU.addUsedIfAvailable<TypeBasedAAWrapperPass>();
   AU.addUsedIfAvailable<GlobalsAAWrapperPass>();
-  AU.addUsedIfAvailable<CFLAndersAAWrapperPass>();
-  AU.addUsedIfAvailable<CFLSteensAAWrapperPass>();
   AU.addUsedIfAvailable<ExternalAAWrapperPass>();
 }

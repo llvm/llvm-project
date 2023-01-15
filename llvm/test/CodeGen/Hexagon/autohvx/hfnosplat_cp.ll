@@ -8,10 +8,9 @@
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 ; Function Attrs: nofree norecurse nounwind writeonly
-define dso_local i32 @foo(half* nocapture %a) local_unnamed_addr #0 {
+define dso_local i32 @foo(ptr nocapture %a) local_unnamed_addr #0 {
 vector.body:
-  %0 = bitcast half* %a to <40 x half>*
-  store <40 x half> <half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79>, <40 x half>* %0, align 2
+  store <40 x half> <half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79, half 0xH3E79>, ptr %a, align 2
   ret i32 0
 }
 

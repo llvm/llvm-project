@@ -33,6 +33,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -145,37 +146,12 @@ RefKind toRefKind(index::SymbolRoleSet Roles, bool Spelled = false) {
   return Result;
 }
 
-llvm::Optional<RelationKind> indexableRelation(const index::SymbolRelation &R) {
+std::optional<RelationKind> indexableRelation(const index::SymbolRelation &R) {
   if (R.Roles & static_cast<unsigned>(index::SymbolRole::RelationBaseOf))
     return RelationKind::BaseOf;
   if (R.Roles & static_cast<unsigned>(index::SymbolRole::RelationOverrideOf))
     return RelationKind::OverriddenBy;
   return std::nullopt;
-}
-
-// Given a ref contained in enclosing decl `Enclosing`, return
-// the decl that should be used as that ref's Ref::Container. This is
-// usually `Enclosing` itself, but in cases where `Enclosing` is not
-// indexed, we walk further up because Ref::Container should always be
-// an indexed symbol.
-// Note: we don't use DeclContext as the container as in some cases
-// it's useful to use a Decl which is not a DeclContext. For example,
-// for a ref occurring in the initializer of a namespace-scope variable,
-// it's useful to use that variable as the container, as otherwise the
-// next enclosing DeclContext would be a NamespaceDecl or TranslationUnitDecl,
-// which are both not indexed and less granular than we'd like for use cases
-// like call hierarchy.
-const Decl *getRefContainer(const Decl *Enclosing,
-                            const SymbolCollector::Options &Opts) {
-  while (Enclosing) {
-    const auto *ND = dyn_cast<NamedDecl>(Enclosing);
-    if (ND && SymbolCollector::shouldCollectSymbol(*ND, ND->getASTContext(),
-                                                   Opts, true)) {
-      break;
-    }
-    Enclosing = dyn_cast_or_null<Decl>(Enclosing->getDeclContext());
-  }
-  return Enclosing;
 }
 
 // Check if there is an exact spelling of \p ND at \p Loc.
@@ -202,10 +178,10 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
 class SymbolCollector::HeaderFileURICache {
   struct FrameworkUmbrellaSpelling {
     // Spelling for the public umbrella header, e.g. <Foundation/Foundation.h>
-    llvm::Optional<std::string> PublicHeader;
+    std::optional<std::string> PublicHeader;
     // Spelling for the private umbrella header, e.g.
     // <Foundation/Foundation_Private.h>
-    llvm::Optional<std::string> PrivateHeader;
+    std::optional<std::string> PrivateHeader;
   };
   // Weird double-indirect access to PP, which might not be ready yet when
   // HeaderFiles is created but will be by the time it's used.
@@ -287,7 +263,7 @@ private:
     bool IsPrivateHeader;
   };
 
-  llvm::Optional<FrameworkHeaderPath>
+  std::optional<FrameworkHeaderPath>
   splitFrameworkHeaderPath(llvm::StringRef Path) {
     using namespace llvm::sys;
     path::reverse_iterator I = path::rbegin(Path);
@@ -320,7 +296,7 @@ private:
   // <Foundation/Foundation_Private.h> instead of
   // <Foundation/NSObject_Private.h> which should be used instead of directly
   // importing the header.
-  llvm::Optional<std::string> getFrameworkUmbrellaSpelling(
+  std::optional<std::string> getFrameworkUmbrellaSpelling(
       llvm::StringRef Framework, SrcMgr::CharacteristicKind HeadersDirKind,
       HeaderSearch &HS, FrameworkHeaderPath &HeaderPath) {
     auto Res = CacheFrameworkToUmbrellaHeaderSpelling.try_emplace(Framework);
@@ -364,7 +340,7 @@ private:
   // named `Framework`, e.g. `NSObject.h` in framework `Foundation` would
   // give <Foundation/Foundation.h> if the umbrella header exists, otherwise
   // <Foundation/NSObject.h>.
-  llvm::Optional<llvm::StringRef> getFrameworkHeaderIncludeSpelling(
+  std::optional<llvm::StringRef> getFrameworkHeaderIncludeSpelling(
       const FileEntry *FE, llvm::StringRef Framework, HeaderSearch &HS) {
     auto Res = CachePathToFrameworkSpelling.try_emplace(FE->getName());
     auto *CachedHeaderSpelling = &Res.first->second;
@@ -438,7 +414,7 @@ private:
 };
 
 // Return the symbol location of the token at \p TokLoc.
-llvm::Optional<SymbolLocation>
+std::optional<SymbolLocation>
 SymbolCollector::getTokenLocation(SourceLocation TokLoc) {
   const auto &SM = ASTCtx->getSourceManager();
   auto *FE = SM.getFileEntryForID(SM.getFileID(TokLoc));
@@ -518,6 +494,19 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
     return false;
 
   return true;
+}
+
+const Decl *
+SymbolCollector::getRefContainer(const Decl *Enclosing,
+                                 const SymbolCollector::Options &Opts) {
+  while (Enclosing) {
+    const auto *ND = dyn_cast<NamedDecl>(Enclosing);
+    if (ND && shouldCollectSymbol(*ND, ND->getASTContext(), Opts, true)) {
+      break;
+    }
+    Enclosing = dyn_cast_or_null<Decl>(Enclosing->getDeclContext());
+  }
+  return Enclosing;
 }
 
 // Always return true to continue indexing.
@@ -952,7 +941,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   std::string ReturnType = getReturnType(*CCS);
   S.ReturnType = ReturnType;
 
-  llvm::Optional<OpaqueType> TypeStorage;
+  std::optional<OpaqueType> TypeStorage;
   if (S.Flags & Symbol::IndexedForCodeCompletion) {
     TypeStorage = OpaqueType::fromCompletionResult(*ASTCtx, SymbolCompletion);
     if (TypeStorage)

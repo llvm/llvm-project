@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 using namespace llvm;
 
-using OptionalStatistic = Optional<std::pair<StringRef, uint64_t>>;
+using OptionalStatistic = std::optional<std::pair<StringRef, uint64_t>>;
 
 namespace {
 #define DEBUG_TYPE "unittest"

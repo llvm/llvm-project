@@ -15,7 +15,6 @@
 #define LLVM_ANALYSIS_VALUETRACKING_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -604,25 +603,27 @@ bool isGuaranteedToTransferExecutionToSuccessor(
 bool isGuaranteedToExecuteForEveryIteration(const Instruction *I,
                                             const Loop *L);
 
-/// Return true if I yields poison or raises UB if any of its operands is
-/// poison.
-/// Formally, given I = `r = op v1 v2 .. vN`, propagatesPoison returns true
-/// if, for all i, r is evaluated to poison or op raises UB if vi = poison.
-/// If vi is a vector or an aggregate and r is a single value, any poison
-/// element in vi should make r poison or raise UB.
+/// Return true if \p PoisonOp's user yields poison or raises UB if its
+/// operand \p PoisonOp is poison.
+///
+/// If \p PoisonOp is a vector or an aggregate and the operation's result is a
+/// single value, any poison element in /p PoisonOp should make the result
+/// poison or raise UB.
+///
 /// To filter out operands that raise UB on poison, you can use
 /// getGuaranteedNonPoisonOp.
-bool propagatesPoison(const Operator *I);
+bool propagatesPoison(const Use &PoisonOp);
 
 /// Insert operands of I into Ops such that I will trigger undefined behavior
 /// if I is executed and that operand has a poison value.
 void getGuaranteedNonPoisonOps(const Instruction *I,
-                               SmallPtrSetImpl<const Value *> &Ops);
+                               SmallVectorImpl<const Value *> &Ops);
+
 /// Insert operands of I into Ops such that I will trigger undefined behavior
 /// if I is executed and that operand is not a well-defined value
 /// (i.e. has undef bits or poison).
 void getGuaranteedWellDefinedOps(const Instruction *I,
-                                 SmallPtrSetImpl<const Value *> &Ops);
+                                 SmallVectorImpl<const Value *> &Ops);
 
 /// Return true if the given instruction must trigger undefined behavior
 /// when I is executed with any operands which appear in KnownPoison holding
@@ -822,29 +823,32 @@ bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P, Value *&Start,
 ///  T | T | F
 ///  F | T | T
 /// (A)
-Optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
-                                  const DataLayout &DL, bool LHSIsTrue = true,
-                                  unsigned Depth = 0);
-Optional<bool> isImpliedCondition(const Value *LHS, CmpInst::Predicate RHSPred,
-                                  const Value *RHSOp0, const Value *RHSOp1,
-                                  const DataLayout &DL, bool LHSIsTrue = true,
-                                  unsigned Depth = 0);
+std::optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
+                                       const DataLayout &DL,
+                                       bool LHSIsTrue = true,
+                                       unsigned Depth = 0);
+std::optional<bool> isImpliedCondition(const Value *LHS,
+                                       CmpInst::Predicate RHSPred,
+                                       const Value *RHSOp0, const Value *RHSOp1,
+                                       const DataLayout &DL,
+                                       bool LHSIsTrue = true,
+                                       unsigned Depth = 0);
 
 /// Return the boolean condition value in the context of the given instruction
 /// if it is known based on dominating conditions.
-Optional<bool> isImpliedByDomCondition(const Value *Cond,
-                                       const Instruction *ContextI,
-                                       const DataLayout &DL);
-Optional<bool> isImpliedByDomCondition(CmpInst::Predicate Pred,
-                                       const Value *LHS, const Value *RHS,
-                                       const Instruction *ContextI,
-                                       const DataLayout &DL);
+std::optional<bool> isImpliedByDomCondition(const Value *Cond,
+                                            const Instruction *ContextI,
+                                            const DataLayout &DL);
+std::optional<bool> isImpliedByDomCondition(CmpInst::Predicate Pred,
+                                            const Value *LHS, const Value *RHS,
+                                            const Instruction *ContextI,
+                                            const DataLayout &DL);
 
 /// If Ptr1 is provably equal to Ptr2 plus a constant offset, return that
 /// offset. For example, Ptr1 might be &A[42], and Ptr2 might be &A[40]. In
 /// this case offset would be -8.
-Optional<int64_t> isPointerOffset(const Value *Ptr1, const Value *Ptr2,
-                                  const DataLayout &DL);
+std::optional<int64_t> isPointerOffset(const Value *Ptr1, const Value *Ptr2,
+                                       const DataLayout &DL);
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H

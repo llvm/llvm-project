@@ -54,7 +54,7 @@ static int findTool(int Argc, char **Argv) {
       return I != StringRef::npos && (I + Tool.size() == Stem.size() ||
                                       !llvm::isAlnum(Stem[I + Tool.size()]));
     };
-    for (StringRef S : {Stem, ToolName})
+    for (StringRef S : {Stem, sys::path::filename(ToolName)})
       if (IsImpl(S))
         return true;
     return false;

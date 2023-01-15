@@ -10,6 +10,10 @@
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{option} = "enable-runtime-library=false  enable-buffer-initialization=true"
 // RUN: %{command}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{command}
 
 #SparseMatrix = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ]
@@ -32,7 +36,7 @@
 module {
   func.func @redsum(%arga: tensor<?x?x?xi32, #SparseTensor>,
                %argb: tensor<?x?x?xi32, #SparseTensor>)
-	           -> tensor<?x?xi32, #SparseMatrix> {
+                   -> tensor<?x?xi32, #SparseMatrix> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %arga, %c0 : tensor<?x?x?xi32, #SparseTensor>

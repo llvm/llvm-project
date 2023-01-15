@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -200,7 +199,7 @@ private:
   SmallPtrSet<const Instruction *, 2> getSIset(const SelectGroups &SIGroups);
 
   // Returns the latency cost of a given instruction.
-  Optional<uint64_t> computeInstCost(const Instruction *I);
+  std::optional<uint64_t> computeInstCost(const Instruction *I);
 
   // Returns the misprediction cost of a given select when converted to branch.
   Scaled64 getMispredictionCost(const SelectInst *SI, const Scaled64 CondCost);
@@ -922,8 +921,8 @@ bool SelectOptimize::computeLoopCosts(
           EmitAndPrintRemark(ORE, ORmissL);
           return false;
         }
-        IPredCost += Scaled64::get(ILatency.value());
-        INonPredCost += Scaled64::get(ILatency.value());
+        IPredCost += Scaled64::get(*ILatency);
+        INonPredCost += Scaled64::get(*ILatency);
 
         // For a select that can be converted to branch,
         // compute its cost as a branch (non-predicated cost).
@@ -932,7 +931,7 @@ bool SelectOptimize::computeLoopCosts(
         // PredictedPathCost = TrueOpCost * TrueProb + FalseOpCost * FalseProb
         // MispredictCost = max(MispredictPenalty, CondCost) * MispredictRate
         if (SIset.contains(&I)) {
-          auto SI = dyn_cast<SelectInst>(&I);
+          auto SI = cast<SelectInst>(&I);
 
           Scaled64 TrueOpCost = Scaled64::getZero(),
                    FalseOpCost = Scaled64::getZero();
@@ -977,11 +976,11 @@ SelectOptimize::getSIset(const SelectGroups &SIGroups) {
   return SIset;
 }
 
-Optional<uint64_t> SelectOptimize::computeInstCost(const Instruction *I) {
+std::optional<uint64_t> SelectOptimize::computeInstCost(const Instruction *I) {
   InstructionCost ICost =
       TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
   if (auto OC = ICost.getValue())
-    return Optional<uint64_t>(*OC);
+    return std::optional<uint64_t>(*OC);
   return std::nullopt;
 }
 

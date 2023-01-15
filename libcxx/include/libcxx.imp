@@ -1,5 +1,4 @@
 [
-  { include: [ "<__bits>", "private", "<bits>", "public" ] },
   { include: [ "<__hash_table>", "private", "<unordered_map>", "public" ] },
   { include: [ "<__hash_table>", "private", "<unordered_set>", "public" ] },
   { include: [ "<__locale>", "private", "<locale>", "public" ] },
@@ -24,6 +23,7 @@
   { include: [ "@<__concepts/.*>", "private", "<concepts>", "public" ] },
   { include: [ "@<__coroutine/.*>", "private", "<coroutine>", "public" ] },
   { include: [ "@<__debug_utils/.*>", "private", "<debug_utils>", "public" ] },
+  { include: [ "@<__expected/.*>", "private", "<expected>", "public" ] },
   { include: [ "@<__filesystem/.*>", "private", "<filesystem>", "public" ] },
   { include: [ "@<__format/.*>", "private", "<format>", "public" ] },
   { include: [ "@<__functional/.*>", "private", "<functional>", "public" ] },
@@ -38,7 +38,7 @@
   { include: [ "@<__string/.*>", "private", "<string>", "public" ] },
   { include: [ "@<__support/.*>", "private", "<support>", "public" ] },
   { include: [ "@<__thread/.*>", "private", "<thread>", "public" ] },
-  { include: [ "@<__tuple/.*>", "private", "<tuple>", "public" ] },
+  { include: [ "@<__tuple_dir/.*>", "private", "<tuple>", "public" ] },
   { include: [ "@<__type_traits/.*>", "private", "<type_traits>", "public" ] },
   { include: [ "@<__utility/.*>", "private", "<utility>", "public" ] },
   { include: [ "@<__variant/.*>", "private", "<variant>", "public" ] },

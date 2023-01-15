@@ -115,8 +115,9 @@ class HexagonAsmParser : public MCTargetAsmParser {
   bool Error(SMLoc L, const Twine &Msg) { return Parser.Error(L, Msg); }
   bool ParseDirectiveFalign(unsigned Size, SMLoc L);
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
   bool ParseDirectiveSubsection(SMLoc L);
   bool ParseDirectiveComm(bool IsLocal, SMLoc L);
@@ -799,12 +800,12 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
   HexagonMCELFStreamer &HexagonELFStreamer =
       static_cast<HexagonMCELFStreamer &>(getStreamer());
   if (IsLocal) {
-    HexagonELFStreamer.HexagonMCEmitLocalCommonSymbol(Sym, Size, ByteAlignment,
-                                                      AccessAlignment);
+    HexagonELFStreamer.HexagonMCEmitLocalCommonSymbol(
+        Sym, Size, Align(ByteAlignment), AccessAlignment);
     return false;
   }
 
-  HexagonELFStreamer.HexagonMCEmitCommonSymbol(Sym, Size, ByteAlignment,
+  HexagonELFStreamer.HexagonMCEmitCommonSymbol(Sym, Size, Align(ByteAlignment),
                                                AccessAlignment);
   return false;
 }
@@ -866,11 +867,11 @@ bool HexagonAsmParser::splitIdentifier(OperandVector &Operands) {
 }
 
 bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
-  unsigned Register;
+  MCRegister Register;
   SMLoc Begin;
   SMLoc End;
   MCAsmLexer &Lexer = getLexer();
-  if (!ParseRegister(Register, Begin, End)) {
+  if (!parseRegister(Register, Begin, End)) {
     if (!ErrorMissingParenthesis)
       switch (Register) {
       default:
@@ -962,12 +963,12 @@ bool HexagonAsmParser::handleNoncontigiousRegister(bool Contigious,
   return false;
 }
 
-bool HexagonAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool HexagonAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc) {
   return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
 }
 
-OperandMatchResultTy HexagonAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy HexagonAsmParser::tryParseRegister(MCRegister &RegNo,
                                                         SMLoc &StartLoc,
                                                         SMLoc &EndLoc) {
   MCAsmLexer &Lexer = getLexer();

@@ -70,6 +70,9 @@ void defineCommonBlocks(
 /// instantiateVariable cannot be called.
 void mapSymbolAttributes(AbstractConverter &, const pft::Variable &, SymMap &,
                          StatementContext &, mlir::Value preAlloc = {});
+void mapSymbolAttributes(AbstractConverter &, const semantics::SymbolRef &,
+                         SymMap &, StatementContext &,
+                         mlir::Value preAlloc = {});
 
 /// Instantiate the variables that appear in the specification expressions
 /// of the result of a function call. The instantiated variables are added
@@ -88,7 +91,8 @@ void mapCallInterfaceSymbols(AbstractConverter &,
 /// This handles the local instantiation of the target variable.
 mlir::Value genInitialDataTarget(Fortran::lower::AbstractConverter &,
                                  mlir::Location, mlir::Type boxType,
-                                 const SomeExpr &initialTarget);
+                                 const SomeExpr &initialTarget,
+                                 bool couldBeInEquivalence = false);
 
 /// Call \p genInit to generate code inside \p global initializer region.
 void createGlobalInitialization(

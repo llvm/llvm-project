@@ -210,11 +210,11 @@ define void @f0() nounwind {
 ; O3N32-NEXT:    addiu $sp, $sp, 32
 entry:
   tail call void @f1() nounwind
-  %tmp = load i32, i32* @p, align 4
+  %tmp = load i32, ptr @p, align 4
   tail call void @f2(i32 %tmp) nounwind
-  %tmp1 = load i32, i32* @q, align 4
+  %tmp1 = load i32, ptr @q, align 4
   tail call void @f2(i32 %tmp1) nounwind
-  %tmp2 = load i32, i32* @r, align 4
+  %tmp2 = load i32, ptr @r, align 4
   tail call void @f3(i32 %tmp1, i32 %tmp2) nounwind
   ret void
 }

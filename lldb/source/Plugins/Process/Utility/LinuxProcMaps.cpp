@@ -11,6 +11,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 using namespace lldb_private;
 
@@ -146,7 +147,7 @@ void lldb_private::ParseLinuxSMapRegions(llvm::StringRef linux_smap,
 
   llvm::StringRef lines(linux_smap);
   llvm::StringRef line;
-  llvm::Optional<MemoryRegionInfo> region;
+  std::optional<MemoryRegionInfo> region;
 
   while (lines.size()) {
     std::tie(line, lines) = lines.split('\n');

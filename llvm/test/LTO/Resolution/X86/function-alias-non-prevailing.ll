@@ -6,12 +6,12 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64--fuchsia"
 
 ; CHECK: declare void @foo()
-@foo = weak alias void(), void()* @bar
+@foo = weak alias void(), ptr @bar
 
 define internal void @bar() {
   ret void
 }
 
-define void()* @baz() {
-  ret void()* @foo
+define ptr @baz() {
+  ret ptr @foo
 }

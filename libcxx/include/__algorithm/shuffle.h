@@ -16,6 +16,7 @@
 #include <__random/uniform_int_distribution.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/swap.h>
 #include <cstddef>
 #include <cstdint>
 

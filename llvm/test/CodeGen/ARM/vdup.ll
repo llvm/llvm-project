@@ -219,103 +219,79 @@ define <4 x float> @v_shuffledupQfloat(float %A) nounwind {
 	ret <4 x float> %tmp2
 }
 
-define <8 x i8> @vduplane8(<8 x i8>* %A) nounwind {
+define arm_aapcs_vfpcc <8 x i8> @vduplane8(<8 x i8> %A) nounwind {
 ; CHECK-LABEL: vduplane8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vdup.8 d16, d16[1]
-; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vdup.8 d0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
-	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
+	%tmp2 = shufflevector <8 x i8> %A, <8 x i8> undef, <8 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
 	ret <8 x i8> %tmp2
 }
 
-define <4 x i16> @vduplane16(<4 x i16>* %A) nounwind {
+define arm_aapcs_vfpcc <4 x i16> @vduplane16(<4 x i16> %A) nounwind {
 ; CHECK-LABEL: vduplane16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vdup.16 d16, d16[1]
-; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vdup.16 d0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
-	%tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
+	%tmp2 = shufflevector <4 x i16> %A, <4 x i16> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
 	ret <4 x i16> %tmp2
 }
 
-define <2 x i32> @vduplane32(<2 x i32>* %A) nounwind {
+define arm_aapcs_vfpcc <2 x i32> @vduplane32(<2 x i32> %A) nounwind {
 ; CHECK-LABEL: vduplane32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vdup.32 d16, d16[1]
-; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vdup.32 d0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
-	%tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <2 x i32> < i32 1, i32 1 >
+	%tmp2 = shufflevector <2 x i32> %A, <2 x i32> undef, <2 x i32> < i32 1, i32 1 >
 	ret <2 x i32> %tmp2
 }
 
-define <2 x float> @vduplanefloat(<2 x float>* %A) nounwind {
+define arm_aapcs_vfpcc <2 x float> @vduplanefloat(<2 x float> %A) nounwind {
 ; CHECK-LABEL: vduplanefloat:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vdup.32 d16, d16[1]
-; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vdup.32 d0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x float>, <2 x float>* %A
-	%tmp2 = shufflevector <2 x float> %tmp1, <2 x float> undef, <2 x i32> < i32 1, i32 1 >
+	%tmp2 = shufflevector <2 x float> %A, <2 x float> undef, <2 x i32> < i32 1, i32 1 >
 	ret <2 x float> %tmp2
 }
 
-define <16 x i8> @vduplaneQ8(<8 x i8>* %A) nounwind {
+define arm_aapcs_vfpcc <16 x i8> @vduplaneQ8(<8 x i8> %A) nounwind {
 ; CHECK-LABEL: vduplaneQ8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vdup.8 q8, d16[1]
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    vdup.8 q0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
-	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <16 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
+	%tmp2 = shufflevector <8 x i8> %A, <8 x i8> undef, <16 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
 	ret <16 x i8> %tmp2
 }
 
-define <8 x i16> @vduplaneQ16(<4 x i16>* %A) nounwind {
+define arm_aapcs_vfpcc <8 x i16> @vduplaneQ16(<4 x i16> %A) nounwind {
 ; CHECK-LABEL: vduplaneQ16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vdup.16 q8, d16[1]
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    vdup.16 q0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
-	%tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <8 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
+	%tmp2 = shufflevector <4 x i16> %A, <4 x i16> undef, <8 x i32> < i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1 >
 	ret <8 x i16> %tmp2
 }
 
-define <4 x i32> @vduplaneQ32(<2 x i32>* %A) nounwind {
+define arm_aapcs_vfpcc <4 x i32> @vduplaneQ32(<2 x i32> %A) nounwind {
 ; CHECK-LABEL: vduplaneQ32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vdup.32 q8, d16[1]
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    vdup.32 q0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
-	%tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
+	%tmp2 = shufflevector <2 x i32> %A, <2 x i32> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
 	ret <4 x i32> %tmp2
 }
 
-define <4 x float> @vduplaneQfloat(<2 x float>* %A) nounwind {
+define arm_aapcs_vfpcc <4 x float> @vduplaneQfloat(<2 x float> %A) nounwind {
 ; CHECK-LABEL: vduplaneQfloat:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    vdup.32 q8, d16[1]
-; CHECK-NEXT:    vmov r0, r1, d16
-; CHECK-NEXT:    vmov r2, r3, d17
+; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    vdup.32 q0, d0[1]
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <2 x float>, <2 x float>* %A
-	%tmp2 = shufflevector <2 x float> %tmp1, <2 x float> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
+	%tmp2 = shufflevector <2 x float> %A, <2 x float> undef, <4 x i32> < i32 1, i32 1, i32 1, i32 1 >
 	ret <4 x float> %tmp2
 }
 
@@ -364,7 +340,7 @@ entry:
 }
 
 ; Radar 7373643
-define void @redundantVdup(<8 x i8>* %ptr) nounwind {
+define void @redundantVdup(ptr %ptr) nounwind {
 ; CHECK-LABEL: redundantVdup:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.i8 d16, #0x80
@@ -372,7 +348,7 @@ define void @redundantVdup(<8 x i8>* %ptr) nounwind {
 ; CHECK-NEXT:    mov pc, lr
   %1 = insertelement <8 x i8> undef, i8 -128, i32 0
   %2 = shufflevector <8 x i8> %1, <8 x i8> undef, <8 x i32> zeroinitializer
-  store <8 x i8> %2, <8 x i8>* %ptr, align 8
+  store <8 x i8> %2, ptr %ptr, align 8
   ret void
 }
 

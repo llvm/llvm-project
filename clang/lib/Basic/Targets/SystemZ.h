@@ -23,7 +23,6 @@ namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
 
-  static const Builtin::Info BuiltinInfo[];
   static const char *const GCCRegNames[];
   std::string CPU;
   int ISARevision;

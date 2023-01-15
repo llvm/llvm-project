@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tosa/Utils/CoversionUtils.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -30,15 +30,14 @@ mlir::tosa::condenseValues(const SmallVector<Value> &values) {
   return condensedValues;
 }
 
-Value mlir::tosa::clampFloatHelper(Location loc, Value arg,
-                                   arith::ConstantOp min, arith::ConstantOp max,
-                                   OpBuilder &rewriter) {
+Value mlir::tosa::clampFloatHelper(Location loc, Value arg, Value min,
+                                   Value max, OpBuilder &rewriter) {
   Value minValue = rewriter.create<arith::MinFOp>(loc, arg, max);
   return rewriter.create<arith::MaxFOp>(loc, minValue, min);
 }
 
-Value mlir::tosa::clampIntHelper(Location loc, Value arg, arith::ConstantOp min,
-                                 arith::ConstantOp max, OpBuilder &rewriter) {
+Value mlir::tosa::clampIntHelper(Location loc, Value arg, Value min, Value max,
+                                 OpBuilder &rewriter) {
   auto smallerThanMin =
       rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, arg, min);
   auto minOrArg =
@@ -46,4 +45,18 @@ Value mlir::tosa::clampIntHelper(Location loc, Value arg, arith::ConstantOp min,
   auto largerThanMax =
       rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, max, arg);
   return rewriter.create<arith::SelectOp>(loc, largerThanMax, max, minOrArg);
+}
+
+bool mlir::tosa::validIntegerRange(IntegerType ty, int64_t value) {
+  uint64_t bitwidth = ty.getIntOrFloatBitWidth();
+  if (ty.getSignedness() == IntegerType::Unsigned) {
+    uint64_t uvalue = value;
+    APInt intMin = APInt::getMinValue(bitwidth);
+    APInt intMax = APInt::getMaxValue(bitwidth);
+    return uvalue >= intMin.getZExtValue() && uvalue <= intMax.getZExtValue();
+  }
+
+  APInt intMin = APInt::getSignedMinValue(bitwidth);
+  APInt intMax = APInt::getSignedMaxValue(bitwidth);
+  return value >= intMin.getSExtValue() && value <= intMax.getSExtValue();
 }

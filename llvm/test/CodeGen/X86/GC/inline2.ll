@@ -1,9 +1,9 @@
-; RUN: opt < %s -inline -S | grep sample
-; RUN: opt < %s -inline -S | grep example
+; RUN: opt < %s -passes='cgscc(inline)' -S | grep sample
+; RUN: opt < %s -passes='cgscc(inline)' -S | grep example
 
 	%IntArray = type { i32, [0 x ptr] }
 
-declare void @llvm.gcroot(ptr, ptr) nounwind 
+declare void @llvm.gcroot(ptr, ptr) nounwind
 
 define i32 @f() gc "sample" {
 	%x = call i32 @g( )		; <i32> [#uses=1]

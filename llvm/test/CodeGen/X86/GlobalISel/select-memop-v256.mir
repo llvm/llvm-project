@@ -4,23 +4,23 @@
 
 
 --- |
-  define <8 x i32> @test_load_v8i32_noalign(<8 x i32>* %p1) {
-    %r = load <8 x i32>, <8 x i32>* %p1, align 1
+  define <8 x i32> @test_load_v8i32_noalign(ptr %p1) {
+    %r = load <8 x i32>, ptr %p1, align 1
     ret <8 x i32> %r
   }
 
-  define <8 x i32> @test_load_v8i32_align(<8 x i32>* %p1) {
-    %r = load <8 x i32>, <8 x i32>* %p1, align 32
+  define <8 x i32> @test_load_v8i32_align(ptr %p1) {
+    %r = load <8 x i32>, ptr %p1, align 32
     ret <8 x i32> %r
   }
 
-  define void @test_store_v8i32_noalign(<8 x i32> %val, <8 x i32>* %p1) {
-    store <8 x i32> %val, <8 x i32>* %p1, align 1
+  define void @test_store_v8i32_noalign(<8 x i32> %val, ptr %p1) {
+    store <8 x i32> %val, ptr %p1, align 1
     ret void
   }
 
-  define void @test_store_v8i32_align(<8 x i32> %val, <8 x i32>* %p1) {
-    store <8 x i32> %val, <8 x i32>* %p1, align 32
+  define void @test_store_v8i32_align(<8 x i32> %val, ptr %p1) {
+    store <8 x i32> %val, ptr %p1, align 32
     ret void
   }
 

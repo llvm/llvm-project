@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 ; Generated at -O2 -g from:
 ; typedef struct {} a;
 ; static struct {
@@ -29,10 +29,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @e() #0 !dbg !18 {
 entry:
-  %0 = load i64, i64* getelementptr inbounds (%struct.anon, %struct.anon* @d, i32 0, i32 0), align 8
+  %0 = load i64, ptr @d, align 8
   %add = add nsw i64 %0, 1
   call void @llvm.dbg.value(metadata i64 %add, metadata !24, metadata !DIExpression()), !dbg !25
-  store i64 %add, i64* getelementptr inbounds (%struct.anon, %struct.anon* @d, i32 0, i32 0), align 8
+  store i64 %add, ptr @d, align 8
   ret i32 undef
 }
 

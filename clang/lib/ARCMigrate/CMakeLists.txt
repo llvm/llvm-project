@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Support
+  TargetParser
   )
 
 # By default MSVC has a 2^16 limit on the number of sections in an object

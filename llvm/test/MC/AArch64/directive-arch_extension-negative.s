@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple aarch64 \
 // RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
-// RUN: -mattr=+rcpc3,+lse128,+d128,+the \
+// RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2 \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
@@ -168,3 +168,10 @@ rcwswp x0, x1, [x2]
 rcwswp x0, x1, [x2]
 // CHECK: [[@LINE-1]]:1: error: instruction requires: the
 // CHECK-NEXT: rcwswp x0, x1, [x2]
+
+mrs x0, ERXGSR_EL1
+// CHECK-NOT: [[@LINE-1]]:9: error: expected readable system register
+.arch_extension norasv2
+mrs x0, ERXGSR_EL1
+// CHECK: [[@LINE-1]]:9: error: expected readable system register
+// CHECK-NEXT: mrs x0, ERXGSR_EL1

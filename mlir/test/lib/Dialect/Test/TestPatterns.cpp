@@ -167,6 +167,38 @@ struct IncrementIntAttribute : public OpRewritePattern<AnyAttrOfOp> {
   }
 };
 
+/// This patterns adds an "eligible" attribute to "foo.maybe_eligible_op".
+struct MakeOpEligible : public RewritePattern {
+  MakeOpEligible(MLIRContext *context)
+      : RewritePattern("foo.maybe_eligible_op", /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (op->hasAttr("eligible"))
+      return failure();
+    rewriter.updateRootInPlace(
+        op, [&]() { op->setAttr("eligible", rewriter.getUnitAttr()); });
+    return success();
+  }
+};
+
+/// This pattern hoists eligible ops out of a "test.one_region_op".
+struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
+  using OpRewritePattern<test::OneRegionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(test::OneRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *terminator = op.getRegion().front().getTerminator();
+    Operation *toBeHoisted = terminator->getOperands()[0].getDefiningOp();
+    if (toBeHoisted->getParentOp() != op)
+      return failure();
+    if (!toBeHoisted->hasAttr("eligible"))
+      return failure();
+    toBeHoisted->moveBefore(op);
+    return success();
+  }
+};
+
 struct TestPatternDriver
     : public PassWrapper<TestPatternDriver, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPatternDriver)
@@ -183,7 +215,8 @@ struct TestPatternDriver
     // Verify named pattern is generated with expected name.
     patterns.add<FoldingPattern, TestNamedPatternRule,
                  FolderInsertBeforePreviouslyFoldedConstantPattern,
-                 FolderCommutativeOp2WithConstant>(&getContext());
+                 FolderCommutativeOp2WithConstant, HoistEligibleOps,
+                 MakeOpEligible>(&getContext());
 
     // Additional patterns for testing the GreedyPatternRewriteDriver.
     patterns.insert<IncrementIntAttribute<3>>(&getContext());
@@ -220,12 +253,12 @@ public:
 
   void runOnOperation() override {
     mlir::RewritePatternSet patterns(&getContext());
-    patterns.add<InsertSameOp, ReplaceWithSameOp, EraseOp>(&getContext());
+    patterns.add<InsertSameOp, ReplaceWithNewOp, EraseOp>(&getContext());
     SmallVector<Operation *> ops;
     getOperation()->walk([&](Operation *op) {
       StringRef opName = op->getName().getStringRef();
       if (opName == "test.insert_same_op" ||
-          opName == "test.replace_with_same_op" || opName == "test.erase_op") {
+          opName == "test.replace_with_new_op" || opName == "test.erase_op") {
         ops.push_back(op);
       }
     });
@@ -233,7 +266,7 @@ public:
     // Check if these transformations introduce visiting of operations that
     // are not in the `ops` set (The new created ops are valid). An invalid
     // operation will trigger the assertion while processing.
-    (void)applyOpPatternsAndFold(makeArrayRef(ops), std::move(patterns),
+    (void)applyOpPatternsAndFold(ArrayRef(ops), std::move(patterns),
                                  /*strict=*/true);
   }
 
@@ -260,16 +293,25 @@ private:
   };
 
   // Replace an operation may introduce the re-visiting of its users.
-  class ReplaceWithSameOp : public RewritePattern {
+  class ReplaceWithNewOp : public RewritePattern {
   public:
-    ReplaceWithSameOp(MLIRContext *context)
-        : RewritePattern("test.replace_with_same_op", /*benefit=*/1, context) {}
+    ReplaceWithNewOp(MLIRContext *context)
+        : RewritePattern("test.replace_with_new_op", /*benefit=*/1, context) {}
 
     LogicalResult matchAndRewrite(Operation *op,
                                   PatternRewriter &rewriter) const override {
-      Operation *newOp =
-          rewriter.create(op->getLoc(), op->getName().getIdentifier(),
-                          op->getOperands(), op->getResultTypes());
+      Operation *newOp;
+      if (op->hasAttr("create_erase_op")) {
+        newOp = rewriter.create(
+            op->getLoc(),
+            OperationName("test.erase_op", op->getContext()).getIdentifier(),
+            ValueRange(), TypeRange());
+      } else {
+        newOp = rewriter.create(
+            op->getLoc(),
+            OperationName("test.new_op", op->getContext()).getIdentifier(),
+            op->getOperands(), op->getResultTypes());
+      }
       rewriter.replaceOp(op, newOp->getResults());
       return success();
     }
@@ -354,7 +396,7 @@ struct TestReturnTypeDriver
       for (auto &op : getOperation().getBody().front())
         ops.push_back(&op);
       // Generate test patterns for each, but skip terminator.
-      for (auto *op : llvm::makeArrayRef(ops).drop_back()) {
+      for (auto *op : llvm::ArrayRef(ops).drop_back()) {
         // Test create method of each of the Op classes below. The resultant
         // output would be in reverse order underneath `op` from which
         // the attributes and regions are used.
@@ -777,8 +819,9 @@ struct TestTypeConverter : public TypeConverter {
 
   /// Hook for materializing a conversion. This is necessary because we generate
   /// 1->N type mappings.
-  static Optional<Value> materializeCast(OpBuilder &builder, Type resultType,
-                                         ValueRange inputs, Location loc) {
+  static std::optional<Value> materializeCast(OpBuilder &builder,
+                                              Type resultType,
+                                              ValueRange inputs, Location loc) {
     return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
   }
 };
@@ -1267,7 +1310,7 @@ struct TestTypeConversionDriver
         // Convert a recursive self-referring type into a non-self-referring
         // type named "outer_converted_type" that contains a SimpleAType.
         [&](test::TestRecursiveType type, SmallVectorImpl<Type> &results,
-            ArrayRef<Type> callStack) -> Optional<LogicalResult> {
+            ArrayRef<Type> callStack) -> std::optional<LogicalResult> {
           // If the type is already converted, return it to indicate that it is
           // legal.
           if (type.getName() == "outer_converted_type") {

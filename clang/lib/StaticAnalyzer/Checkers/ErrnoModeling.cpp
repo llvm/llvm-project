@@ -57,11 +57,11 @@ public:
 
 private:
   // FIXME: Names from `ErrnoLocationFuncNames` are used to build this set.
-  CallDescriptionSet ErrnoLocationCalls{{"__errno_location", 0, 0},
-                                        {"___errno", 0, 0},
-                                        {"__errno", 0, 0},
-                                        {"_errno", 0, 0},
-                                        {"__error", 0, 0}};
+  CallDescriptionSet ErrnoLocationCalls{{{"__errno_location"}, 0, 0},
+                                        {{"___errno"}, 0, 0},
+                                        {{"__errno"}, 0, 0},
+                                        {{"_errno"}, 0, 0},
+                                        {{"__error"}, 0, 0}};
 };
 
 } // namespace
@@ -246,12 +246,16 @@ Optional<Loc> getErrnoLoc(ProgramStateRef State) {
   return loc::MemRegionVal{ErrnoR};
 }
 
+ErrnoCheckState getErrnoState(ProgramStateRef State) {
+  return State->get<ErrnoState>();
+}
+
 ProgramStateRef setErrnoState(ProgramStateRef State, ErrnoCheckState EState) {
   return State->set<ErrnoState>(EState);
 }
 
-ErrnoCheckState getErrnoState(ProgramStateRef State) {
-  return State->get<ErrnoState>();
+ProgramStateRef clearErrnoState(ProgramStateRef State) {
+  return setErrnoState(State, Irrelevant);
 }
 
 bool isErrno(const Decl *D) {
@@ -299,11 +303,32 @@ ProgramStateRef setErrnoForStdFailure(ProgramStateRef State, CheckerContext &C,
   return setErrnoValue(State, C.getLocationContext(), ErrnoSym, Irrelevant);
 }
 
+ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
+                                         CheckerContext &C,
+                                         const Expr *InvalE) {
+  const MemRegion *ErrnoR = State->get<ErrnoRegion>();
+  if (!ErrnoR)
+    return State;
+  State = State->invalidateRegions(ErrnoR, InvalE, C.blockCount(),
+                                   C.getLocationContext(), false);
+  if (!State)
+    return nullptr;
+  return setErrnoState(State, MustBeChecked);
+}
+
 const NoteTag *getNoteTagForStdSuccess(CheckerContext &C, llvm::StringRef Fn) {
   return getErrnoNoteTag(
       C, (Twine("Assuming that function '") + Twine(Fn) +
           Twine("' is successful, in this case the value 'errno' ") +
           Twine(describeErrnoCheckState(MustNotBeChecked)))
+             .str());
+}
+
+const NoteTag *getNoteTagForStdMustBeChecked(CheckerContext &C,
+                                             llvm::StringRef Fn) {
+  return getErrnoNoteTag(
+      C, (Twine("Function '") + Twine(Fn) +
+          Twine("' indicates failure only by setting of 'errno'"))
              .str());
 }
 

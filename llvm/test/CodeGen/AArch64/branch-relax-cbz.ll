@@ -33,7 +33,7 @@ b2:
   br i1 %c1, label %b7, label %b8
 
 b3:
-  %v1 = load volatile i32, i32* undef, align 4
+  %v1 = load volatile i32, ptr undef, align 4
   %c2 = icmp eq i32 %v1, 0
   br i1 %c2, label %b7, label %b8
 

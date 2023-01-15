@@ -73,14 +73,6 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<false> + vp<[[CAN_IV]]> * ir<true>
 ; DBG-NEXT:     vp<[[STEPS1:%.+]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<true>
 ; DBG-NEXT:     vp<[[STEPS2:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; DBG-NEXT:   Successor(s): cond.false
-; DBG-EMPTY:
-; DBG-NEXT:   cond.false:
-; DBG-NEXT:     CLONE ir<%gep.src> = getelementptr ir<%src>, vp<[[STEPS2]]>
-; DBG-NEXT:     CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[STEPS2]]>
-; DBG-NEXT:   Successor(s): cond.false.0
-; DBG-EMPTY:
-; DBG-NEXT:   cond.false.0:
 ; DBG-NEXT:   Successor(s): pred.store
 ; DBG-EMPTY:
 ; DBG-NEXT:   <xVFxUF> pred.store: {
@@ -89,7 +81,9 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.if:
+; DBG-NEXT:       CLONE ir<%gep.src> = getelementptr ir<%src>, vp<[[STEPS2]]>
 ; DBG-NEXT:       CLONE ir<%l> = load ir<%gep.src>
+; DBG-NEXT:       CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[STEPS2]]>
 ; DBG-NEXT:       CLONE store ir<%l>, ir<%gep.dst>
 ; DBG-NEXT:     Successor(s): pred.store.continue
 ; DBG-EMPTY:
@@ -100,9 +94,6 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:   Successor(s): cond.false.1
 ; DBG-EMPTY:
 ; DBG-NEXT:   cond.false.1:
-; DBG-NEXT:   Successor(s): loop.latch
-; DBG-EMPTY:
-; DBG-NEXT:   loop.latch:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV_INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
 ; DBG-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_INC]]> vp<[[VEC_TC]]>
 ; DBG-NEXT:   No successors
@@ -124,9 +115,9 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    br i1 [[INDUCTION]], label %pred.store.if, label %pred.store.continue
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[INDUCTION4:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDUCTION4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION4]]
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
@@ -134,9 +125,9 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if4, label %pred.store.continue5
 ; CHECK:       pred.store.if4:
 ; CHECK-NEXT:    [[INDUCTION5:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue5
 ; CHECK:       pred.store.continue5:

@@ -24,8 +24,8 @@ namespace mlir {
 /// If 'insertImplicitModule' is true a top-level 'builtin.module' op will be
 /// inserted that contains the parsed IR, unless one exists already.
 inline OwningOpRef<Operation *>
-parseSourceFileForTool(llvm::SourceMgr &sourceMgr, const ParserConfig &config,
-                       bool insertImplicitModule) {
+parseSourceFileForTool(const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                       const ParserConfig &config, bool insertImplicitModule) {
   if (insertImplicitModule) {
     // TODO: Move implicit module logic out of 'parseSourceFile' and into here.
     return parseSourceFile<ModuleOp>(sourceMgr, config);

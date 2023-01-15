@@ -11,6 +11,13 @@ include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lld)
   set(LLD_BUILT_STANDALONE TRUE)
+  if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
+    message(WARNING
+      "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
+      "minimum version of CMake required to build LLVM will become 3.20.0, and "
+      "using an older CMake will become an error. Please upgrade your CMake to "
+      "at least 3.20.0 now to avoid issues in the future!")
+  endif()
 endif()
 
 # Must go below project(..)
@@ -26,7 +33,7 @@ if(LLD_BUILT_STANDALONE)
   find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
   list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 
-  # Turn into CACHE PATHs for overwritting
+  # Turn into CACHE PATHs for overwriting
   set(LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
   set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}" CACHE PATH "Path to LLVM build tree")
   set(LLVM_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm" CACHE PATH "Path to LLVM source tree")

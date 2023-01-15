@@ -852,6 +852,12 @@ std::optional<bool> IsContiguous(const A &x, FoldingContext &context) {
 
 template std::optional<bool> IsContiguous(
     const Expr<SomeType> &, FoldingContext &);
+template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &);
+template std::optional<bool> IsContiguous(const Substring &, FoldingContext &);
+template std::optional<bool> IsContiguous(const Component &, FoldingContext &);
+template std::optional<bool> IsContiguous(
+    const ComplexPart &, FoldingContext &);
+template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &);
 
 // IsErrorExpr()
 struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {

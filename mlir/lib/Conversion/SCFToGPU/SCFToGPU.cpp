@@ -22,8 +22,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -403,8 +403,8 @@ static unsigned getLaunchOpArgumentNum(gpu::Processor processor) {
 /// worklist. This signals the processor of the worklist to pop the rewriter
 /// one scope-level up.
 static LogicalResult processParallelLoop(
-    ParallelOp parallelOp, gpu::LaunchOp launchOp,
-    BlockAndValueMapping &cloningMap, SmallVectorImpl<Operation *> &worklist,
+    ParallelOp parallelOp, gpu::LaunchOp launchOp, IRMapping &cloningMap,
+    SmallVectorImpl<Operation *> &worklist,
     DenseMap<gpu::Processor, Value> &bounds, PatternRewriter &rewriter) {
   // TODO: Verify that this is a valid GPU mapping.
   // processor ids: 0-2 block [x/y/z], 3-5 -> thread [x/y/z], 6-> sequential
@@ -615,7 +615,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   rewriter.create<gpu::TerminatorOp>(loc);
   rewriter.setInsertionPointToStart(&launchOp.getBody().front());
 
-  BlockAndValueMapping cloningMap;
+  IRMapping cloningMap;
   llvm::DenseMap<gpu::Processor, Value> launchBounds;
   SmallVector<Operation *, 16> worklist;
   if (failed(processParallelLoop(parallelOp, launchOp, cloningMap, worklist,

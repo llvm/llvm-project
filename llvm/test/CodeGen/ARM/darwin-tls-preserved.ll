@@ -4,7 +4,7 @@
 
 ; r9 and r12 can be live across the asm, but those get clobbered by the TLS
 ; access (in a different BB to order it).
-define i32 @test_regs_preserved(i32* %ptr1, i32* %ptr2, i1 %tst1) {
+define i32 @test_regs_preserved(ptr %ptr1, ptr %ptr2, i1 %tst1) {
 ; CHECK-LABEL: test_regs_preserved:
 ; CHECK: str {{.*}}, [sp
 ; CHECK: mov {{.*}}, r12
@@ -13,12 +13,12 @@ entry:
   br i1 %tst1, label %get_tls, label %done
 
 get_tls:
-  %val = load i32, i32* @tls_var
+  %val = load i32, ptr @tls_var
   br label %done
 
 done:
   %res = phi i32 [%val, %get_tls], [0, %entry]
-  store i32 42, i32* %ptr1
-  store i32 42, i32* %ptr2
+  store i32 42, ptr %ptr1
+  store i32 42, ptr %ptr2
   ret i32 %res
 }

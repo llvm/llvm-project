@@ -103,10 +103,8 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
     FailureOr<func::FuncOp> outlined = outlineSingleBlockRegion(
         rewriter, location, exec.getRegion(), getFuncName(), &call);
 
-    if (failed(outlined)) {
-      (void)reportUnknownTransformError(target);
-      return DiagnosedSilenceableFailure::definiteFailure();
-    }
+    if (failed(outlined))
+      return emitDefaultDefiniteFailure(target);
 
     if (symbolTableOp) {
       SymbolTable &symbolTable =
@@ -127,7 +125,7 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
 
 DiagnosedSilenceableFailure
 transform::LoopPeelOp::applyToOne(scf::ForOp target,
-                                  SmallVector<Operation *> &results,
+                                  transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
   scf::ForOp result;
   IRRewriter rewriter(target->getContext());
@@ -139,7 +137,7 @@ transform::LoopPeelOp::applyToOne(scf::ForOp target,
       scf::peelAndCanonicalizeForLoop(rewriter, target, result);
   // TODO: Return both the peeled loop and the remainder loop.
   results.push_back(failed(status) ? target : result);
-  return DiagnosedSilenceableFailure(success());
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -184,7 +182,7 @@ loopScheduling(scf::ForOp forOp,
 
 DiagnosedSilenceableFailure
 transform::LoopPipelineOp::applyToOne(scf::ForOp target,
-                                      SmallVector<Operation *> &results,
+                                      transform::ApplyToEachResultList &results,
                                       transform::TransformState &state) {
   scf::PipeliningOption options;
   options.getScheduleFn =
@@ -200,7 +198,7 @@ transform::LoopPipelineOp::applyToOne(scf::ForOp target,
       pattern.returningMatchAndRewrite(target, rewriter);
   if (succeeded(patternResult)) {
     results.push_back(*patternResult);
-    return DiagnosedSilenceableFailure(success());
+    return DiagnosedSilenceableFailure::success();
   }
   results.assign(1, nullptr);
   return emitDefaultSilenceableFailure(target);
@@ -212,7 +210,7 @@ transform::LoopPipelineOp::applyToOne(scf::ForOp target,
 
 DiagnosedSilenceableFailure
 transform::LoopUnrollOp::applyToOne(Operation *op,
-                                    SmallVector<Operation *> &results,
+                                    transform::ApplyToEachResultList &results,
                                     transform::TransformState &state) {
   LogicalResult result(failure());
   if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op))
@@ -225,7 +223,7 @@ transform::LoopUnrollOp::applyToOne(Operation *op,
     diag << "Op failed to unroll";
     return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
   }
-  return DiagnosedSilenceableFailure(success());
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//

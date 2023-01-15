@@ -336,8 +336,7 @@ func.func @map_no_inputs(%init: tensor<64xf32>) -> tensor<64xf32> {
   func.return %add : tensor<64xf32>
 }
 // CHECK-LABEL: func @map_no_inputs
-//       CHECK:   linalg.map
-//  CHECK-NEXT:   outs
+//       CHECK:   linalg.map outs
 //  CHECK-NEXT:   () {
 //  CHECK-NEXT:     arith.constant
 //  CHECK-NEXT:     linalg.yield
@@ -357,13 +356,8 @@ func.func @map_binary(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
   func.return %add : tensor<64xf32>
 }
 // CHECK-LABEL: func @map_binary
-//       CHECK:   linalg.map
-//  CHECK-NEXT:   ins
-//  CHECK-NEXT:   outs
-//  CHECK-NEXT:   (%{{.*}}: f32, %{{.*}}: f32) {
-//  CHECK-NEXT:     arith.addf
-//  CHECK-NEXT:     linalg.yield
-//  CHECK-NEXT:   }
+//       CHECK:   linalg.map { arith.addf } ins
+//  CHECK-SAME:   outs
 
 // -----
 
@@ -420,20 +414,15 @@ func.func @reduce(%input: tensor<16x32x64xf32>,
       outs(%init:tensor<16x64xf32>)
       dimensions = [1]
       (%in: f32, %out: f32) {
-        %0 = arith.addf %in, %out: f32
+        %0 = arith.addf %out, %in: f32
         linalg.yield %0: f32
       }
   func.return %reduce : tensor<16x64xf32>
 }
 // CHECK-LABEL: func @reduce
-//       CHECK:   linalg.reduce
-//  CHECK-NEXT:   ins
-//  CHECK-NEXT:   outs
-//  CHECK-NEXT:   dimensions = [1]
-//  CHECK-NEXT:   (%{{.*}}: f32, %{{.*}}: f32) {
-//  CHECK-NEXT:     arith.addf
-//  CHECK-NEXT:     linalg.yield
-//  CHECK-NEXT:   }
+//       CHECK:   linalg.reduce { arith.addf } ins
+//  CHECK-SAME:   outs
+//  CHECK-SAME:   dimensions = [1]
 
 // -----
 
@@ -444,13 +433,15 @@ func.func @reduce_memref(%input: memref<16x32x64xf32>,
       outs(%init:memref<16x64xf32>)
       dimensions = [1]
       (%in: f32, %out: f32) {
-        %0 = arith.addf %in, %out: f32
+        %0 = arith.addf %out, %in: f32
         linalg.yield %0: f32
       }
   func.return
 }
-// CHECK-LABEL: func @reduce_memref
-//       CHECK:     linalg.reduce
+// CHECK-LABEL: func @reduce
+//       CHECK:   linalg.reduce { arith.addf } ins
+//  CHECK-SAME:   outs
+//  CHECK-SAME:   dimensions = [1]
 
 // -----
 
@@ -470,6 +461,7 @@ func.func @variadic_reduce(%input1: tensor<16x32x64xf32>,
 }
 // CHECK-LABEL: func @variadic_reduce
 //       CHECK:     linalg.reduce
+//   CHECK-NOT:     { arith.addf
 
 // -----
 
@@ -487,8 +479,9 @@ func.func @variadic_reduce_memref(%input1: memref<16x32x64xf32>,
       }
   func.return
 }
-// CHECK-LABEL: func @variadic_reduce_memref
+//   CHECK-LABEL: func @variadic_reduce_memref
 //       CHECK:     linalg.reduce
+//   CHECK-NOT:     { arith.addf
 
 // -----
 
@@ -501,10 +494,9 @@ func.func @transpose(%input: tensor<16x32x64xf32>,
   func.return %transpose : tensor<32x64x16xf32>
 }
 // CHECK-LABEL: func @transpose
-//      CHECK:    linalg.transpose
-// CHECK-NEXT:    ins
-// CHECK-NEXT:    outs
-// CHECK-NEXT:    permutation
+//      CHECK:    linalg.transpose ins
+// CHECK-SAME:    outs
+// CHECK-SAME:    permutation
 
 // -----
 
@@ -529,10 +521,9 @@ func.func @broadcast_static_sizes(%input: tensor<8x32xf32>,
   func.return %bcast : tensor<8x16x32xf32>
 }
 // CHECK-LABEL: func @broadcast_static_sizes
-//      CHECK:    linalg.broadcast
-// CHECK-NEXT:    ins
-// CHECK-NEXT:    outs
-// CHECK-NEXT:    dimensions
+//      CHECK:    linalg.broadcast ins
+// CHECK-SAME:    outs
+// CHECK-SAME:    dimensions
 
 // -----
 
@@ -546,10 +537,9 @@ func.func @broadcast_with_dynamic_sizes(
   func.return %bcast : tensor<8x16x?xf32>
 }
 // CHECK-LABEL: func @broadcast_with_dynamic_sizes
-//      CHECK:    linalg.broadcast
-// CHECK-NEXT:    ins
-// CHECK-NEXT:    outs
-// CHECK-NEXT:    dimensions
+//      CHECK:    linalg.broadcast ins
+// CHECK-SAME:    outs
+// CHECK-SAME:    dimensions
 
 // -----
 
@@ -563,7 +553,49 @@ func.func @broadcast_memref(%input: memref<8x32xf32>,
 }
 
 // CHECK-LABEL: func @broadcast_memref
-//      CHECK:    linalg.broadcast
-// CHECK-NEXT:    ins
-// CHECK-NEXT:    outs
-// CHECK-NEXT:    dimensions
+//      CHECK:    linalg.broadcast ins
+// CHECK-SAME:    outs
+// CHECK-SAME:    dimensions
+
+// -----
+
+func.func @map_arith_with_attr(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
+                      %init: tensor<64xf32>) -> tensor<64xf32> {
+  %add = linalg.map
+          ins(%lhs, %rhs: tensor<64xf32>, tensor<64xf32>)
+          outs(%init:tensor<64xf32>)
+          (%lhs_elem: f32, %rhs_elem: f32) {
+            %0 = arith.addf %lhs_elem, %rhs_elem fastmath<fast> : f32
+            linalg.yield %0: f32
+          }
+  func.return %add : tensor<64xf32>
+}
+
+// CHECK-LABEL: func @map_arith_with_attr
+// CHECK-NEXT:    %[[MAPPED:.*]] = linalg.map
+// CHECK-SAME:    { arith.addf {fastmath = #arith.fastmath<fast>} }
+// CHECK-SAME:    ins
+// CHECK-SAME:    outs
+// CHECK-NEXT:    return %[[MAPPED]] : tensor<64xf32>
+
+// -----
+
+func.func @reduce_arith_with_attr(%input: tensor<16x32x64xf32>,
+                  %init: tensor<16x64xf32>) -> tensor<16x64xf32> {
+  %reduce = linalg.reduce
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<16x64xf32>)
+      dimensions = [1]
+      (%in: f32, %out: f32) {
+        %0 = arith.addf %out, %in fastmath<fast> : f32
+        linalg.yield %0: f32
+      }
+  func.return %reduce : tensor<16x64xf32>
+}
+// CHECK-LABEL: func @reduce_arith_with_attr
+// CHECK-NEXT:    %[[REDUCED:.*]] = linalg.reduce
+// CHECK-SAME:    { arith.addf {fastmath = #arith.fastmath<fast>} }
+// CHECK-SAME:    ins
+// CHECK-SAME:    outs
+// CHECK-SAME:    dimensions = [1]
+// CHECK-NEXT:    return %[[REDUCED]] : tensor<16x64xf32>

@@ -7,6 +7,7 @@ unittest("ADTTests") {
     # Some tests include files from IR, but there's no library dependency.
     "//llvm/include/llvm/IR:public_tablegen",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
@@ -55,7 +56,7 @@ unittest("ADTTests") {
     "IteratorTest.cpp",
     "MapVectorTest.cpp",
     "MappedIteratorTest.cpp",
-    "OptionalTest.cpp",
+    "MoveOnly.cpp",
     "PackedVectorTest.cpp",
     "PointerEmbeddedIntTest.cpp",
     "PointerIntPairTest.cpp",
@@ -85,7 +86,6 @@ unittest("ADTTests") {
     "StringSetTest.cpp",
     "StringSwitchTest.cpp",
     "TinyPtrVectorTest.cpp",
-    "TripleTest.cpp",
     "TwineTest.cpp",
     "TypeSwitchTest.cpp",
     "TypeTraitsTest.cpp",

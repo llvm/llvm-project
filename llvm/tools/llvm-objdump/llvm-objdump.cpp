@@ -97,18 +97,19 @@ using namespace llvm::opt;
 
 namespace {
 
-class CommonOptTable : public opt::OptTable {
+class CommonOptTable : public opt::GenericOptTable {
 public:
   CommonOptTable(ArrayRef<Info> OptionInfos, const char *Usage,
                  const char *Description)
-      : OptTable(OptionInfos), Usage(Usage), Description(Description) {
+      : opt::GenericOptTable(OptionInfos), Usage(Usage),
+        Description(Description) {
     setGroupedShortOptions(true);
   }
 
   void printHelp(StringRef Argv0, bool ShowHidden = false) const {
     Argv0 = sys::path::filename(Argv0);
-    opt::OptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(), Description,
-                             ShowHidden, ShowHidden);
+    opt::GenericOptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(),
+                                    Description, ShowHidden, ShowHidden);
     // TODO Replace this with OptTable API once it adds extrahelp support.
     outs() << "\nPass @FILE as argument to read options from FILE.\n";
   }
@@ -119,28 +120,31 @@ private:
 };
 
 // ObjdumpOptID is in ObjdumpOptID.h
-
-#define PREFIX(NAME, VALUE) const char *const OBJDUMP_##NAME[] = VALUE;
+namespace objdump_opt {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "ObjdumpOpts.inc"
 #undef PREFIX
 
 static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
-#define OBJDUMP_nullptr nullptr
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {OBJDUMP_##PREFIX, NAME,         HELPTEXT,                                   \
-   METAVAR,          OBJDUMP_##ID, opt::Option::KIND##Class,                   \
-   PARAM,            FLAGS,        OBJDUMP_##GROUP,                            \
-   OBJDUMP_##ALIAS,  ALIASARGS,    VALUES},
+  {PREFIX,          NAME,         HELPTEXT,                                    \
+   METAVAR,         OBJDUMP_##ID, opt::Option::KIND##Class,                    \
+   PARAM,           FLAGS,        OBJDUMP_##GROUP,                             \
+   OBJDUMP_##ALIAS, ALIASARGS,    VALUES},
 #include "ObjdumpOpts.inc"
 #undef OPTION
-#undef OBJDUMP_nullptr
 };
+} // namespace objdump_opt
 
 class ObjdumpOptTable : public CommonOptTable {
 public:
   ObjdumpOptTable()
-      : CommonOptTable(ObjdumpInfoTable, " [options] <input object files>",
+      : CommonOptTable(objdump_opt::ObjdumpInfoTable,
+                       " [options] <input object files>",
                        "llvm object file dumper") {}
 };
 
@@ -153,27 +157,30 @@ enum OtoolOptID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const OTOOL_##NAME[] = VALUE;
+namespace otool {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "OtoolOpts.inc"
 #undef PREFIX
 
 static constexpr opt::OptTable::Info OtoolInfoTable[] = {
-#define OTOOL_nullptr nullptr
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {OTOOL_##PREFIX, NAME,       HELPTEXT,                                       \
-   METAVAR,        OTOOL_##ID, opt::Option::KIND##Class,                       \
-   PARAM,          FLAGS,      OTOOL_##GROUP,                                  \
-   OTOOL_##ALIAS,  ALIASARGS,  VALUES},
+  {PREFIX,        NAME,       HELPTEXT,                                        \
+   METAVAR,       OTOOL_##ID, opt::Option::KIND##Class,                        \
+   PARAM,         FLAGS,      OTOOL_##GROUP,                                   \
+   OTOOL_##ALIAS, ALIASARGS,  VALUES},
 #include "OtoolOpts.inc"
 #undef OPTION
-#undef OTOOL_nullptr
 };
+} // namespace otool
 
 class OtoolOptTable : public CommonOptTable {
 public:
   OtoolOptTable()
-      : CommonOptTable(OtoolInfoTable, " [option...] [file...]",
+      : CommonOptTable(otool::OtoolInfoTable, " [option...] [file...]",
                        "Mach-O object file displaying tool") {}
 };
 
@@ -647,10 +654,10 @@ public:
     if (Bytes.size() >= 4) {
       // D should be casted to uint32_t here as it is passed by format to
       // snprintf as vararg.
-      for (uint32_t D : makeArrayRef(
-               reinterpret_cast<const support::little32_t *>(Bytes.data()),
-               Bytes.size() / 4))
-        OS << format(" %08" PRIX32, D);
+      for (uint32_t D :
+           ArrayRef(reinterpret_cast<const support::little32_t *>(Bytes.data()),
+                    Bytes.size() / 4))
+          OS << format(" %08" PRIX32, D);
     } else {
       for (unsigned char B : Bytes)
         OS << format(" %02" PRIX8, B);
@@ -1691,7 +1698,7 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           continue;
         }
 
-        if (Status.value() == MCDisassembler::Fail) {
+        if (*Status == MCDisassembler::Fail) {
           // If onSymbolStart returns Fail, that means it identified some kind
           // of special data at this address, but wasn't able to disassemble it
           // meaningfully. So we fall back to disassembling the failed region
@@ -2505,8 +2512,8 @@ void objdump::printSymbol(const ObjectFile &O, const SymbolRef &Symbol,
             SymName = demangle(SymName);
 
           if (SymbolDescription)
-            SymName = getXCOFFSymbolDescription(
-                createSymbolInfo(O, SymRef.value()), SymName);
+            SymName = getXCOFFSymbolDescription(createSymbolInfo(O, *SymRef),
+                                                SymName);
 
           outs() << ' ' << SymName;
           outs() << ") ";
@@ -2614,7 +2621,7 @@ static void printRawClangAST(const ObjectFile *Obj) {
     return;
 
   StringRef ClangASTContents =
-      unwrapOrError(ClangASTSection.value().getContents(), Obj->getFileName());
+      unwrapOrError(ClangASTSection->getContents(), Obj->getFileName());
   outs().write(ClangASTContents.data(), ClangASTContents.size());
 }
 

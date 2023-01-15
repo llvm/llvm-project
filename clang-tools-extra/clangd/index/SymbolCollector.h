@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include <functional>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -103,6 +104,21 @@ public:
   static bool shouldCollectSymbol(const NamedDecl &ND, const ASTContext &ASTCtx,
                                   const Options &Opts, bool IsMainFileSymbol);
 
+  // Given a ref contained in enclosing decl `Enclosing`, return
+  // the decl that should be used as that ref's Ref::Container. This is
+  // usually `Enclosing` itself, but in cases where `Enclosing` is not
+  // indexed, we walk further up because Ref::Container should always be
+  // an indexed symbol.
+  // Note: we don't use DeclContext as the container as in some cases
+  // it's useful to use a Decl which is not a DeclContext. For example,
+  // for a ref occurring in the initializer of a namespace-scope variable,
+  // it's useful to use that variable as the container, as otherwise the
+  // next enclosing DeclContext would be a NamespaceDecl or TranslationUnitDecl,
+  // which are both not indexed and less granular than we'd like for use cases
+  // like call hierarchy.
+  static const Decl *getRefContainer(const Decl *Enclosing,
+                                     const SymbolCollector::Options &Opts);
+
   void initialize(ASTContext &Ctx) override;
 
   void setPreprocessor(std::shared_ptr<Preprocessor> PP) override {
@@ -140,9 +156,9 @@ private:
   void processRelations(const NamedDecl &ND, const SymbolID &ID,
                         ArrayRef<index::SymbolRelation> Relations);
 
-  llvm::Optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc);
+  std::optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc);
 
-  llvm::Optional<std::string> getIncludeHeader(const Symbol &S, FileID);
+  std::optional<std::string> getIncludeHeader(const Symbol &S, FileID);
 
   SymbolID getSymbolIDCached(const Decl *D);
   SymbolID getSymbolIDCached(const llvm::StringRef MacroName,

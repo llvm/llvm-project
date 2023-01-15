@@ -4,9 +4,9 @@
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-apple-macosx11.0.0"
 
-  declare i8* @objc_retainAutoreleasedReturnValue(i8*)
-  declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8*)
-  declare i8* @fn()
+  declare ptr @objc_retainAutoreleasedReturnValue(ptr)
+  declare ptr @objc_unsafeClaimAutoreleasedReturnValue(ptr)
+  declare ptr @fn()
 
   define void @test_objc_retainAutoreleaseReturnedValue() {
     ret void

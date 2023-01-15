@@ -185,7 +185,7 @@ Constraints
 
     auto StatusString = clang::dataflow::debugString(Result.getStatus());
     auto Solution = Result.getSolution();
-    auto SolutionString = Solution ? "\n" + debugString(Solution.value()) : "";
+    auto SolutionString = Solution ? "\n" + debugString(*Solution) : "";
 
     return formatv(
         Template,

@@ -7,13 +7,13 @@ declare i1 @side_effect_cond()
 declare i32 @personality_function()
 
 ; TODO: We can PRE the load away from the hot path.
-define i32 @test_load_on_cold_path(i32* %p) {
+define i32 @test_load_on_cold_path(ptr %p) {
 ; CHECK-LABEL: @test_load_on_cold_path(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -33,7 +33,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path
 
@@ -54,13 +54,13 @@ exit:
 }
 
 ; PRE here is meaningless, so we should not do it.
-define i32 @test_load_on_both_paths(i32* %p) {
+define i32 @test_load_on_both_paths(ptr %p) {
 ; CHECK-LABEL: @test_load_on_both_paths(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -81,7 +81,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path
 
@@ -104,13 +104,13 @@ exit:
 
 
 ; We could PRE here, but it doesn't seem very profitable.
-define i32 @test_load_on_backedge(i32* %p) {
+define i32 @test_load_on_backedge(ptr %p) {
 ; CHECK-LABEL: @test_load_on_backedge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -130,7 +130,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path
 
@@ -151,13 +151,13 @@ exit:
 }
 
 ; TODO: We can PRE via splitting of the critical edge in the cold path.
-define i32 @test_load_on_exiting_cold_path_01(i32* %p) {
+define i32 @test_load_on_exiting_cold_path_01(ptr %p) {
 ; CHECK-LABEL: @test_load_on_exiting_cold_path_01(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -179,7 +179,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path
 
@@ -203,13 +203,13 @@ cold_exit:
 }
 
 ; TODO: We can PRE via splitting of the critical edge in the cold path.
-define i32 @test_load_on_exiting_cold_path_02(i32* %p) gc "statepoint-example" personality i32 ()* @personality_function {
+define i32 @test_load_on_exiting_cold_path_02(ptr %p) gc "statepoint-example" personality ptr @personality_function {
 ; CHECK-LABEL: @test_load_on_exiting_cold_path_02(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -233,7 +233,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path
 
@@ -258,13 +258,13 @@ cold_exit:
 }
 
 ; Make sure we do not insert load into both cold path & backedge.
-define i32 @test_load_on_cold_path_and_backedge(i32* %p) {
+define i32 @test_load_on_cold_path_and_backedge(ptr %p) {
 ; CHECK-LABEL: @test_load_on_cold_path_and_backedge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -285,7 +285,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path
 
@@ -307,13 +307,13 @@ exit:
 }
 
 ; TODO: We can PRE the load away from the hot path. Make sure we only insert 1 load.
-define i32 @test_load_multi_block_cold_path(i32* %p) {
+define i32 @test_load_multi_block_cold_path(ptr %p) {
 ; CHECK-LABEL: @test_load_multi_block_cold_path(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH_1:%.*]]
 ; CHECK:       hot_path:
@@ -336,7 +336,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path.1
 
@@ -366,13 +366,13 @@ exit:
 }
 
 ; TODO: We can PRE via splitting of the critical edge in the cold path. Make sure we only insert 1 load.
-define i32 @test_load_on_multi_exiting_cold_path(i32* %p) {
+define i32 @test_load_on_multi_exiting_cold_path(ptr %p) {
 ; CHECK-LABEL: @test_load_on_multi_exiting_cold_path(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH_1:%.*]]
 ; CHECK:       hot_path:
@@ -400,7 +400,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path.1
 
@@ -432,13 +432,13 @@ cold_exit:
 }
 
 ; TODO: PRE via splittinga backedge in the cold loop. Make sure we don't insert a load into an inner loop.
-define i32 @test_inner_loop(i32* %p) {
+define i32 @test_inner_loop(ptr %p) {
 ; CHECK-LABEL: @test_inner_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -460,7 +460,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path
 
@@ -484,13 +484,13 @@ exit:
 }
 
 ; TODO: We can PRE here, but profitablility depends on frequency of cold blocks. Conservatively, we should not do it unless there is a reason.
-define i32 @test_multiple_cold_paths(i32* %p) {
+define i32 @test_multiple_cold_paths(ptr %p) {
 ; CHECK-LABEL: @test_multiple_cold_paths(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[HOT_PATH_1:%.*]], label [[COLD_PATH_1:%.*]]
 ; CHECK:       hot_path.1:
@@ -526,7 +526,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond.1 = icmp ne i32 %x, 0
   br i1 %cond.1, label %hot_path.1, label %cold_path.1
 
@@ -569,13 +569,13 @@ exit:
 }
 
 ; TODO: We can PRE via split of critical edge.
-define i32 @test_side_exit_after_merge(i32* %p) {
+define i32 @test_side_exit_after_merge(ptr %p) {
 ; CHECK-LABEL: @test_side_exit_after_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
@@ -603,7 +603,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [%iv.next, %backedge]
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %cond = icmp ne i32 %x, 0
   br i1 %cond, label %hot_path, label %cold_path
 

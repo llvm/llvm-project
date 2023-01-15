@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=arm-apple-darwin -relocation-model=pic -mattr=+v6,+vfp2
 
-@"\01LC" = external constant [15 x i8]		; <[15 x i8]*> [#uses=1]
+@"\01LC" = external constant [15 x i8]		; <ptr> [#uses=1]
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind
 
 define i32 @main() nounwind {
 entry:
@@ -57,6 +57,6 @@ Fft.exit.i:		; preds = %bb7.i.i
 	br i1 undef, label %bb5.i, label %bb1.outer2.i.i.outer
 
 bb5.i:		; preds = %Fft.exit.i
-	%0 = tail call i32 (i8*, ...) @printf(i8* getelementptr ([15 x i8], [15 x i8]* @"\01LC", i32 0, i32 0), double undef, double undef) nounwind		; <i32> [#uses=0]
+	%0 = tail call i32 (ptr, ...) @printf(ptr @"\01LC", double undef, double undef) nounwind		; <i32> [#uses=0]
 	unreachable
 }

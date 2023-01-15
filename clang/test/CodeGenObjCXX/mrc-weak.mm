@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.10 -emit-llvm -fblocks -fobjc-weak -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MODERN
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.10 -emit-llvm -fblocks -fobjc-weak -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-FRAGILE
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.10 -emit-llvm -fblocks -fobjc-weak -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MODERN
+// RUN: %clang_cc1 -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.10 -emit-llvm -fblocks -fobjc-weak -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-FRAGILE
 
 @interface Object
 - (instancetype) retain;
@@ -32,7 +32,7 @@
 
 void test1(__weak id x) {}
 // CHECK-LABEL: define{{.*}} void @_Z5test1P11objc_object(
-// CHECK:      [[X:%.*]] = alloca i8*,
+// CHECK:      [[X:%.*]] = alloca ptr,
 // CHECK-NEXT: llvm.objc.initWeak
 // CHECK-NEXT: llvm.objc.destroyWeak
 // CHECK-NEXT: ret void
@@ -41,12 +41,12 @@ void test2(id y) {
   __weak id z = y;
 }
 // CHECK-LABEL: define{{.*}} void @_Z5test2P11objc_object(
-// CHECK:      [[Y:%.*]] = alloca i8*,
-// CHECK-NEXT: [[Z:%.*]] = alloca i8*,
+// CHECK:      [[Y:%.*]] = alloca ptr,
+// CHECK-NEXT: [[Z:%.*]] = alloca ptr,
 // CHECK-NEXT: store
-// CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[Y]]
-// CHECK-NEXT: call i8* @llvm.objc.initWeak(i8** [[Z]], i8* [[T0]])
-// CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[Z]])
+// CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[Y]]
+// CHECK-NEXT: call ptr @llvm.objc.initWeak(ptr [[Z]], ptr [[T0]])
+// CHECK-NEXT: call void @llvm.objc.destroyWeak(ptr [[Z]])
 // CHECK-NEXT: ret void
 
 void test3(id y) {
@@ -54,51 +54,49 @@ void test3(id y) {
   z = y;
 }
 // CHECK-LABEL: define{{.*}} void @_Z5test3P11objc_object(
-// CHECK:      [[Y:%.*]] = alloca i8*,
-// CHECK-NEXT: [[Z:%.*]] = alloca i8*,
+// CHECK:      [[Y:%.*]] = alloca ptr,
+// CHECK-NEXT: [[Z:%.*]] = alloca ptr,
 // CHECK-NEXT: store
-// CHECK-NEXT: store i8* null, i8** [[Z]]
-// CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[Y]]
-// CHECK-NEXT: call i8* @llvm.objc.storeWeak(i8** [[Z]], i8* [[T0]])
-// CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[Z]])
+// CHECK-NEXT: store ptr null, ptr [[Z]]
+// CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[Y]]
+// CHECK-NEXT: call ptr @llvm.objc.storeWeak(ptr [[Z]], ptr [[T0]])
+// CHECK-NEXT: call void @llvm.objc.destroyWeak(ptr [[Z]])
 // CHECK-NEXT: ret void
 
 void test4(__weak id *p) {
   id y = *p;
 }
 // CHECK-LABEL: define{{.*}} void @_Z5test4PU6__weakP11objc_object(
-// CHECK:      [[P:%.*]] = alloca i8**,
-// CHECK-NEXT: [[Y:%.*]] = alloca i8*,
+// CHECK:      [[P:%.*]] = alloca ptr,
+// CHECK-NEXT: [[Y:%.*]] = alloca ptr,
 // CHECK-NEXT: store
-// CHECK-NEXT: [[T0:%.*]] = load i8**, i8*** [[P]]
-// CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.loadWeak(i8** [[T0]])
-// CHECK-NEXT: store i8* [[T1]], i8** [[Y]]
+// CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[P]]
+// CHECK-NEXT: [[T1:%.*]] = call ptr @llvm.objc.loadWeak(ptr [[T0]])
+// CHECK-NEXT: store ptr [[T1]], ptr [[Y]]
 // CHECK-NEXT: ret void
 
 void test5(__weak id *p) {
   id y = [*p retain];
 }
 // CHECK-LABEL: define{{.*}} void @_Z5test5PU6__weakP11objc_object
-// CHECK:      [[P:%.*]] = alloca i8**,
-// CHECK-NEXT: [[Y:%.*]] = alloca i8*,
+// CHECK:      [[P:%.*]] = alloca ptr,
+// CHECK-NEXT: [[Y:%.*]] = alloca ptr,
 // CHECK-NEXT: store
-// CHECK-NEXT: [[T0:%.*]] = load i8**, i8*** [[P]]
-// CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.loadWeakRetained(i8** [[T0]])
-// CHECK-NEXT: store i8* [[T1]], i8** [[Y]]
+// CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[P]]
+// CHECK-NEXT: [[T1:%.*]] = call ptr @llvm.objc.loadWeakRetained(ptr [[T0]])
+// CHECK-NEXT: store ptr [[T1]], ptr [[Y]]
 // CHECK-NEXT: ret void
 
 void test6(__weak Foo **p) {
   Foo *y = [*p retain];
 }
 // CHECK-LABEL: define{{.*}} void @_Z5test6PU6__weakP3Foo
-// CHECK:      [[P:%.*]] = alloca [[FOO:%.*]]**,
-// CHECK-NEXT: [[Y:%.*]] = alloca [[FOO]]*,
+// CHECK:      [[P:%.*]] = alloca ptr,
+// CHECK-NEXT: [[Y:%.*]] = alloca ptr,
 // CHECK-NEXT: store
-// CHECK-NEXT: [[T0:%.*]] = load [[FOO]]**, [[FOO]]*** [[P]]
-// CHECK-NEXT: [[T1:%.*]] = bitcast [[FOO]]** [[T0]] to i8**
-// CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.loadWeakRetained(i8** [[T1]])
-// CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[FOO]]*
-// CHECK-NEXT: store [[FOO]]* [[T3]], [[FOO]]** [[Y]]
+// CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[P]]
+// CHECK-NEXT: [[T2:%.*]] = call ptr @llvm.objc.loadWeakRetained(ptr [[T0]])
+// CHECK-NEXT: store ptr [[T2]], ptr [[Y]]
 // CHECK-NEXT: ret void
 
 extern "C" id get_object(void);
@@ -109,12 +107,9 @@ void test7(void) {
   use_block(^{ [p run ]; });
 }
 // CHECK-LABEL: define{{.*}} void @_Z5test7v
-// CHECK:       [[P:%.*]] = alloca [[FOO]]*,
-// CHECK:       [[T0:%.*]] = call i8* @get_object()
-// CHECK-NEXT:  [[T1:%.*]] = bitcast i8* [[T0]] to [[FOO]]*
-// CHECK-NEXT:  [[T2:%.*]] = bitcast [[FOO]]** [[P]] to i8**
-// CHECK-NEXT:  [[T3:%.*]] = bitcast [[FOO]]* [[T1]] to i8*
-// CHECK-NEXT:  call i8* @llvm.objc.initWeak(i8** [[T2]], i8* [[T3]])
+// CHECK:       [[P:%.*]] = alloca ptr,
+// CHECK:       [[T0:%.*]] = call ptr @get_object()
+// CHECK-NEXT:  call ptr @llvm.objc.initWeak(ptr [[P]], ptr [[T0]])
 // CHECK:       call void @llvm.objc.copyWeak
 // CHECK:       call void @use_block
 // CHECK:       call void @llvm.objc.destroyWeak
@@ -130,7 +125,7 @@ void test8(void) {
   use_block(^{ [p run ]; });
 }
 // CHECK-LABEL: define{{.*}} void @_Z5test8v
-// CHECK:       call i8* @llvm.objc.initWeak
+// CHECK:       call ptr @llvm.objc.initWeak
 // CHECK-NOT:   call void @llvm.objc.copyWeak
 // CHECK:       call void @use_block
 // CHECK:       call void @llvm.objc.destroyWeak

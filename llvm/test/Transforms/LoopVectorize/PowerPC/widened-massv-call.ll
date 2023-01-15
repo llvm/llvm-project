@@ -3,7 +3,7 @@
 ; RUN:   -vectorizer-maximize-bandwidth -passes='default<O2>,inject-tli-mappings,loop-vectorize' \
 ; RUN:   -mtriple=powerpc64le-unknown-linux -S -mcpu=pwr9 2>&1 | FileCheck %s
 
-define dso_local double @test(float* %Arr) {
+define dso_local double @test(ptr %Arr) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -11,9 +11,8 @@ define dso_local double @test(float* %Arr) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, float* [[ARR:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[TMP1]] to <2 x float>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[ARR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast <2 x double> @__sind2(<2 x double> [[TMP3]])
 ; CHECK-NEXT:    [[TMP5]] = fadd fast <2 x double> [[TMP4]], [[VEC_PHI]]
@@ -39,8 +38,8 @@ for.cond.cleanup:
 
 for.body:
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds float, float* %Arr, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %Arr, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fpext float %0 to double
   %1 = call fast double @llvm.sin.f64(double %conv)
   %add = fadd fast double %Sum.0, %1

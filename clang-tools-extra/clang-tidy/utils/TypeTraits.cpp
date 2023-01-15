@@ -10,6 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -38,8 +39,8 @@ bool hasDeletedCopyConstructor(QualType Type) {
 
 } // namespace
 
-llvm::Optional<bool> isExpensiveToCopy(QualType Type,
-                                       const ASTContext &Context) {
+std::optional<bool> isExpensiveToCopy(QualType Type,
+                                      const ASTContext &Context) {
   if (Type->isDependentType() || Type->isIncompleteType())
     return std::nullopt;
   return !Type.isTriviallyCopyableType(Context) &&

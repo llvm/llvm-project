@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 
 using namespace mlir;
 
@@ -386,12 +386,12 @@ void RewriterBase::inlineRegionBefore(Region &region, Block *before) {
 /// control to the region and passing it the correct block arguments.
 void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
                                      Region::iterator before,
-                                     BlockAndValueMapping &mapping) {
+                                     IRMapping &mapping) {
   region.cloneInto(&parent, before, mapping);
 }
 void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
                                      Region::iterator before) {
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
   cloneRegionBefore(region, parent, before, mapping);
 }
 void RewriterBase::cloneRegionBefore(Region &region, Block *before) {

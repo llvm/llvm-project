@@ -56,10 +56,9 @@ MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())
 MODULE_PASS("dot-callgraph", CallGraphDOTPrinterPass())
 MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
-MODULE_PASS("extract-blocks", BlockExtractorPass())
+MODULE_PASS("extract-blocks", BlockExtractorPass({}, false))
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
 MODULE_PASS("function-import", FunctionImportPass())
-MODULE_PASS("function-specialization", FunctionSpecializationPass())
 MODULE_PASS("globaldce", GlobalDCEPass())
 MODULE_PASS("globalopt", GlobalOptPass())
 MODULE_PASS("globalsplit", GlobalSplitPass())
@@ -76,7 +75,6 @@ MODULE_PASS("instrorderfile", InstrOrderFilePass())
 MODULE_PASS("instrprof", InstrProfiling())
 MODULE_PASS("internalize", InternalizePass())
 MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
-MODULE_PASS("ipsccp", IPSCCPPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
 MODULE_PASS("print-ir-similarity", IRSimilarityAnalysisPrinterPass(dbgs()))
 MODULE_PASS("lower-global-dtors", LowerGlobalDtorsPass())
@@ -162,6 +160,13 @@ MODULE_PASS_WITH_PARAMS("msan",
                         },
                         parseMSanPassOptions,
                         "recover;kernel;eager-checks;track-origins=N")
+MODULE_PASS_WITH_PARAMS("ipsccp",
+                        "IPSCCPPass",
+                        [](IPSCCPOptions Opts) {
+                          return IPSCCPPass(Opts);
+                        },
+                        parseIPSCCPOptions,
+                        "no-func-spec;func-spec")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
@@ -236,14 +241,13 @@ FUNCTION_ANALYSIS("targetir",
 FUNCTION_ANALYSIS("verify", VerifierAnalysis())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 FUNCTION_ANALYSIS("divergence", DivergenceAnalysis())
+FUNCTION_ANALYSIS("uniformity", UniformityInfoAnalysis())
 
 #ifndef FUNCTION_ALIAS_ANALYSIS
 #define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
   FUNCTION_ANALYSIS(NAME, CREATE_PASS)
 #endif
 FUNCTION_ALIAS_ANALYSIS("basic-aa", BasicAA())
-FUNCTION_ALIAS_ANALYSIS("cfl-anders-aa", CFLAndersAA())
-FUNCTION_ALIAS_ANALYSIS("cfl-steens-aa", CFLSteensAA())
 FUNCTION_ALIAS_ANALYSIS("objc-arc-aa", objcarc::ObjCARCAA())
 FUNCTION_ALIAS_ANALYSIS("scev-aa", SCEVAA())
 FUNCTION_ALIAS_ANALYSIS("scoped-noalias-aa", ScopedNoAliasAA())
@@ -365,6 +369,7 @@ FUNCTION_PASS("print-cfg-sccs", CFGSCCPrinterPass(dbgs()))
 FUNCTION_PASS("print-predicateinfo", PredicateInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print-mustexecute", MustExecutePrinterPass(dbgs()))
 FUNCTION_PASS("print-memderefs", MemDerefPrinterPass(dbgs()))
+FUNCTION_PASS("print<uniformity>", UniformityInfoPrinterPass(dbgs()))
 FUNCTION_PASS("reassociate", ReassociatePass())
 FUNCTION_PASS("redundant-dbg-inst-elim", RedundantDbgInstEliminationPass())
 FUNCTION_PASS("reg2mem", RegToMemPass())
@@ -376,10 +381,10 @@ FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
 FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
-FUNCTION_PASS("sroa", SROAPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
+FUNCTION_PASS("typepromotion", TypePromotionPass(TM))
 FUNCTION_PASS("unify-loop-exits", UnifyLoopExitsPass())
 FUNCTION_PASS("vector-combine", VectorCombinePass())
 FUNCTION_PASS("verify", VerifierPass())
@@ -472,6 +477,13 @@ FUNCTION_PASS_WITH_PARAMS("gvn",
                           "no-load-pre;load-pre;"
                           "no-split-backedge-load-pre;split-backedge-load-pre;"
                           "no-memdep;memdep")
+FUNCTION_PASS_WITH_PARAMS("sroa",
+                          "SROAPass",
+                          [](SROAOptions PreserveCFG) {
+                            return SROAPass(PreserveCFG);
+                          },
+                          parseSROAOptions,
+                          "preserve-cfg;modify-cfg")
 FUNCTION_PASS_WITH_PARAMS("print<stack-lifetime>",
                           "StackLifetimePrinterPass",
                            [](StackLifetime::LivenessType Type) {

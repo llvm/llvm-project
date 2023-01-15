@@ -896,7 +896,7 @@ define <2 x double> @maximum_nan_op1_vec(<2 x double> %x) {
 
 define <2 x double> @minimum_nan_op0_vec_partial_undef(<2 x double> %x) {
 ; CHECK-LABEL: @minimum_nan_op0_vec_partial_undef(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000DEAD00000>
 ;
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double undef, double 0x7ff8000dead00000>, <2 x double> %x)
   ret <2 x double> %r
@@ -904,7 +904,7 @@ define <2 x double> @minimum_nan_op0_vec_partial_undef(<2 x double> %x) {
 
 define <2 x double> @minimum_nan_op1_vec_partial_undef(<2 x double> %x) {
 ; CHECK-LABEL: @minimum_nan_op1_vec_partial_undef(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000DEAD00000>
 ;
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double undef, double 0x7ff8000dead00000>)
   ret <2 x double> %r

@@ -51,44 +51,43 @@ define void @doit1(i32 %n, i32 %step) local_unnamed_addr {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp sgt i8 [[TMP7]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP3]], i1 [[TMP8]], i1 [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = and i1 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[TMP13]]
-; CHECK-NEXT:    [[TMP17:%.*]] = sext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP15]], [[IDENT_CHECK]]
-; CHECK-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[IDENT_CHECK]]
+; CHECK-NEXT:    br i1 [[TMP16]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC]] to i32
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 [[CAST_CRD]], [[STEP]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i32 0
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP19:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP19]]
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i32 [[STEP]], 4
-; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP20]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = mul i32 [[STEP]], 4
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP18]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, i32* [[TMP22]], i32 0
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i32* [[TMP23]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], <4 x i32>* [[TMP24]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[TMP20]], i32 0
+; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], [[DOTSPLAT3]]
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -101,8 +100,8 @@ define void @doit1(i32 %n, i32 %step) local_unnamed_addr {
 ; CHECK-NEXT:    [[P_09:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[P_09]], 24
 ; CHECK-NEXT:    [[CONV:%.*]] = ashr exact i32 [[SEXT]], 24
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[CONV]], [[STEP]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -125,8 +124,8 @@ for.body:
   %p.09 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %sext = shl i32 %p.09, 24
   %conv = ashr exact i32 %sext, 24
-  %arrayidx = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 %indvars.iv
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 %indvars.iv
+  store i32 %conv, ptr %arrayidx, align 4
   %add = add nsw i32 %conv, %step
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
@@ -176,43 +175,42 @@ define void @doit2(i32 %n, i32 %step) local_unnamed_addr  {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP7]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 false
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], 255
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i8 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP13:%.*]] = and i1 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[TMP13]]
-; CHECK-NEXT:    [[TMP17:%.*]] = sext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP15]], [[IDENT_CHECK]]
-; CHECK-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i8 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP7]], i1 false
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP0]], 255
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[IDENT_CHECK]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC]] to i32
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 [[CAST_CRD]], [[STEP]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i32 0
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[STEP]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP19:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP19]]
-; CHECK-NEXT:    [[TMP20:%.*]] = mul i32 [[STEP]], 4
-; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP20]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[STEP]], 4
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP17]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, i32* [[TMP22]], i32 0
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i32* [[TMP23]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], <4 x i32>* [[TMP24]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i32 0
+; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], [[DOTSPLAT3]]
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -224,8 +222,8 @@ define void @doit2(i32 %n, i32 %step) local_unnamed_addr  {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[P_09:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[P_09]], 255
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[CONV]], [[STEP]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -247,8 +245,8 @@ for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %p.09 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %conv = and i32 %p.09, 255
-  %arrayidx = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 %indvars.iv
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 %indvars.iv
+  store i32 %conv, ptr %arrayidx, align 4
   %add = add nsw i32 %conv, %step
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
@@ -293,8 +291,8 @@ define void @doit3(i32 %n, i32 %step) local_unnamed_addr {
 ; CHECK-NEXT:    [[STEP_ADDR_010:%.*]] = phi i32 [ [[ADD3:%.*]], [[FOR_BODY]] ], [ [[STEP:%.*]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[P_012]], 24
 ; CHECK-NEXT:    [[CONV:%.*]] = ashr exact i32 [[SEXT]], 24
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[CONV]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[CONV]], [[STEP_ADDR_010]]
 ; CHECK-NEXT:    [[ADD3]] = add nsw i32 [[STEP_ADDR_010]], 2
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -319,8 +317,8 @@ for.body:
   %step.addr.010 = phi i32 [ %add3, %for.body ], [ %step, %for.body.preheader ]
   %sext = shl i32 %p.012, 24
   %conv = ashr exact i32 %sext, 24
-  %arrayidx = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 %indvars.iv
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 %indvars.iv
+  store i32 %conv, ptr %arrayidx, align 4
   %add = add nsw i32 %conv, %step.addr.010
   %add3 = add nsw i32 %step.addr.010, 2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -374,41 +372,40 @@ define void @doit4(i32 %n, i8 signext %cstep) local_unnamed_addr {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP3]], i8 [[TMP4]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP2]], i1 [[TMP8]], i1 [[TMP7]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i8 0, [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i8 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP2]], i1 [[TMP7]], i1 [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[CSTEP]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[TMP12]]
-; CHECK-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i64 [[N_VEC]] to i32
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 [[CAST_CRD]], [[CONV]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[CONV]], i32 0
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i32 [[DOTCAST]], [[CONV]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[CONV]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP16]]
-; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[CONV]], 4
-; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = mul i32 [[CONV]], 4
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP15]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[TMP19]], i32 0
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast i32* [[TMP20]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], <4 x i32>* [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i32 0
+; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], [[DOTSPLAT3]]
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]]
@@ -421,8 +418,8 @@ define void @doit4(i32 %n, i8 signext %cstep) local_unnamed_addr {
 ; CHECK-NEXT:    [[P_011:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[P_011]], 24
 ; CHECK-NEXT:    [[CONV2:%.*]] = ashr exact i32 [[SEXT]], 24
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[CONV2]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i32 [[CONV2]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[CONV2]], [[CONV]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -446,8 +443,8 @@ for.body:
   %p.011 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %sext = shl i32 %p.011, 24
   %conv2 = ashr exact i32 %sext, 24
-  %arrayidx = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 %indvars.iv
-  store i32 %conv2, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 %indvars.iv
+  store i32 %conv2, ptr %arrayidx, align 4
   %add = add nsw i32 %conv2, %conv
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count

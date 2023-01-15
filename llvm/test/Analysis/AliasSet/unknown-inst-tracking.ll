@@ -1,4 +1,4 @@
-; RUN: opt -S -licm -simple-loop-unswitch < %s | FileCheck %s
+; RUN: opt -S -passes=licm,simple-loop-unswitch < %s | FileCheck %s
 
 ; This test checks for a crash.  See PR32587.
 
@@ -12,7 +12,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb3, %bb
-  %tmp = load i32, i32* @global
+  %tmp = load i32, ptr @global
   %tmp2 = select i1 false, i16 1, i16 0
   br label %bb3
 

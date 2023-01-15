@@ -27,7 +27,6 @@ namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
-  static const Builtin::Info BuiltinInfo[];
   static const char *const GCCRegNames[];
 
   enum AddrSpace {
@@ -114,6 +113,9 @@ public:
   uint64_t getMaxPointerWidth() const override {
     return getTriple().getArch() == llvm::Triple::amdgcn ? 64 : 32;
   }
+
+  bool hasBFloat16Type() const override { return isAMDGCN(getTriple()); }
+  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 
   const char *getClobbers() const override { return ""; }
 

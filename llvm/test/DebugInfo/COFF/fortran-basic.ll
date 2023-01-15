@@ -77,23 +77,23 @@ target triple = "x86_64-pc-windows-msvc"
 define void @MAIN__() #0 !dbg !3 {
 alloca_0:
   %"$io_ctx" = alloca [6 x i64], align 8
-  %strlit_fetch.1 = load [6 x i8], [6 x i8]* @strlit, align 1, !dbg !39
-  %func_result = call i32 @for_set_reentrancy(i32* @0), !dbg !39
-  store i32 1, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @"ARRAY$ARRAY1", i32 0, i32 0), align 1, !dbg !40
-  store i32 2, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @"ARRAY$ARRAY2", i32 0, i32 0), align 1, !dbg !41
-  store double 8.000000e+00, double* bitcast ([18 x i8]* @COM to double*), align 1, !dbg !42
-  store i32 -1, i32* bitcast (i8* getelementptr inbounds ([18 x i8], [18 x i8]* @COM, i32 0, i64 8) to i32*), align 1, !dbg !43
-  call void @llvm.for.cpystr.i64.i64.i64(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @COM, i32 0, i64 12), i64 6, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @strlit, i32 0, i32 0), i64 3, i64 0, i1 false), !dbg !44
+  %strlit_fetch.1 = load [6 x i8], ptr @strlit, align 1, !dbg !39
+  %func_result = call i32 @for_set_reentrancy(ptr @0), !dbg !39
+  store i32 1, ptr @"ARRAY$ARRAY1", align 1, !dbg !40
+  store i32 2, ptr @"ARRAY$ARRAY2", align 1, !dbg !41
+  store double 8.000000e+00, ptr @COM, align 1, !dbg !42
+  store i32 -1, ptr getelementptr inbounds ([18 x i8], ptr @COM, i32 0, i64 8), align 1, !dbg !43
+  call void @llvm.for.cpystr.i64.i64.i64(ptr getelementptr inbounds ([18 x i8], ptr @COM, i32 0, i64 12), i64 6, ptr @strlit, i64 3, i64 0, i1 false), !dbg !44
   ret void, !dbg !45
 }
 
-declare i32 @for_set_reentrancy(i32* nocapture readonly)
+declare i32 @for_set_reentrancy(ptr nocapture readonly)
 
 ; Function Attrs: nounwind readnone speculatable
-declare i32* @llvm.intel.subscript.p0i32.i64.i64.p0i32.i64(i8, i64, i64, i32*, i64) #1
+declare ptr @llvm.intel.subscript.p0.i64.i64.p0.i64(i8, i64, i64, ptr, i64) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.for.cpystr.i64.i64.i64(i8* noalias nocapture writeonly, i64, i8* noalias nocapture readonly, i64, i64, i1 immarg) #2
+declare void @llvm.for.cpystr.i64.i64.i64(ptr noalias nocapture writeonly, i64, ptr noalias nocapture readonly, i64, i64, i1 immarg) #2
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="none" "intel-lang"="fortran" "min-legal-vector-width"="0" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
 attributes #1 = { nounwind readnone speculatable }

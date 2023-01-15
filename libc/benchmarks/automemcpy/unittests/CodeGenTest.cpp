@@ -10,6 +10,7 @@
 #include "automemcpy/RandomFunctionGenerator.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using testing::AllOf;
 using testing::AnyOf;
@@ -25,22 +26,22 @@ namespace {
 
 TEST(Automemcpy, Codegen) {
   static constexpr FunctionDescriptor kDescriptors[] = {
-      {FunctionType::MEMCPY, llvm::None, llvm::None, llvm::None, llvm::None,
+      {FunctionType::MEMCPY, std::nullopt, std::nullopt, std::nullopt, std::nullopt,
        Accelerator{{0, kMaxSize}}, ElementTypeClass::NATIVE},
       {FunctionType::MEMCPY, Contiguous{{0, 4}}, Overlap{{4, 256}},
-       Loop{{256, kMaxSize}, 64}, llvm::None, llvm::None,
+       Loop{{256, kMaxSize}, 64}, std::nullopt, std::nullopt,
        ElementTypeClass::NATIVE},
-      {FunctionType::MEMCMP, Contiguous{{0, 2}}, Overlap{{2, 64}}, llvm::None,
-       AlignedLoop{Loop{{64, kMaxSize}, 16}, 16, AlignArg::_1}, llvm::None,
+      {FunctionType::MEMCMP, Contiguous{{0, 2}}, Overlap{{2, 64}}, std::nullopt,
+       AlignedLoop{Loop{{64, kMaxSize}, 16}, 16, AlignArg::_1}, std::nullopt,
        ElementTypeClass::NATIVE},
-      {FunctionType::MEMSET, Contiguous{{0, 2}}, Overlap{{2, 256}}, llvm::None,
-       AlignedLoop{Loop{{256, kMaxSize}, 32}, 16, AlignArg::_1}, llvm::None,
+      {FunctionType::MEMSET, Contiguous{{0, 2}}, Overlap{{2, 256}}, std::nullopt,
+       AlignedLoop{Loop{{256, kMaxSize}, 32}, 16, AlignArg::_1}, std::nullopt,
        ElementTypeClass::NATIVE},
-      {FunctionType::MEMSET, Contiguous{{0, 2}}, Overlap{{2, 256}}, llvm::None,
-       AlignedLoop{Loop{{256, kMaxSize}, 32}, 32, AlignArg::_1}, llvm::None,
+      {FunctionType::MEMSET, Contiguous{{0, 2}}, Overlap{{2, 256}}, std::nullopt,
+       AlignedLoop{Loop{{256, kMaxSize}, 32}, 32, AlignArg::_1}, std::nullopt,
        ElementTypeClass::NATIVE},
-      {FunctionType::BZERO, Contiguous{{0, 4}}, Overlap{{4, 128}}, llvm::None,
-       AlignedLoop{Loop{{128, kMaxSize}, 32}, 32, AlignArg::_1}, llvm::None,
+      {FunctionType::BZERO, Contiguous{{0, 4}}, Overlap{{4, 128}}, std::nullopt,
+       AlignedLoop{Loop{{128, kMaxSize}, 32}, 32, AlignArg::_1}, std::nullopt,
        ElementTypeClass::NATIVE},
   };
 
@@ -140,14 +141,14 @@ namespace automemcpy {
 
 ArrayRef<NamedFunctionDescriptor> getFunctionDescriptors() {
   static constexpr NamedFunctionDescriptor kDescriptors[] = {
-    {"memcpy_0xE00E29EE73994E2B",{FunctionType::MEMCPY,llvm::None,llvm::None,llvm::None,llvm::None,Accelerator{{0,kMaxSize}},ElementTypeClass::NATIVE}},
-    {"memcpy_0x7381B60C7BE75EF9",{FunctionType::MEMCPY,Contiguous{{0,4}},Overlap{{4,256}},Loop{{256,kMaxSize},64},llvm::None,llvm::None,ElementTypeClass::NATIVE}},
-    {"memcmp_0x348D7BA6DB0EE033",{FunctionType::MEMCMP,Contiguous{{0,2}},Overlap{{2,64}},llvm::None,AlignedLoop{Loop{{64,kMaxSize},16},16,AlignArg::_1},llvm::None,ElementTypeClass::NATIVE}},
-    {"memset_0x71E761699B999863",{FunctionType::MEMSET,Contiguous{{0,2}},Overlap{{2,256}},llvm::None,AlignedLoop{Loop{{256,kMaxSize},32},16,AlignArg::_1},llvm::None,ElementTypeClass::NATIVE}},
-    {"memset_0x3DF0F44E2ED6A50F",{FunctionType::MEMSET,Contiguous{{0,2}},Overlap{{2,256}},llvm::None,AlignedLoop{Loop{{256,kMaxSize},32},32,AlignArg::_1},llvm::None,ElementTypeClass::NATIVE}},
-    {"bzero_0x475977492C218AD4",{FunctionType::BZERO,Contiguous{{0,4}},Overlap{{4,128}},llvm::None,AlignedLoop{Loop{{128,kMaxSize},32},32,AlignArg::_1},llvm::None,ElementTypeClass::NATIVE}},
+    {"memcpy_0xE00E29EE73994E2B",{FunctionType::MEMCPY,std::nullopt,std::nullopt,std::nullopt,std::nullopt,Accelerator{{0,kMaxSize}},ElementTypeClass::NATIVE}},
+    {"memcpy_0x7381B60C7BE75EF9",{FunctionType::MEMCPY,Contiguous{{0,4}},Overlap{{4,256}},Loop{{256,kMaxSize},64},std::nullopt,std::nullopt,ElementTypeClass::NATIVE}},
+    {"memcmp_0x348D7BA6DB0EE033",{FunctionType::MEMCMP,Contiguous{{0,2}},Overlap{{2,64}},std::nullopt,AlignedLoop{Loop{{64,kMaxSize},16},16,AlignArg::_1},std::nullopt,ElementTypeClass::NATIVE}},
+    {"memset_0x71E761699B999863",{FunctionType::MEMSET,Contiguous{{0,2}},Overlap{{2,256}},std::nullopt,AlignedLoop{Loop{{256,kMaxSize},32},16,AlignArg::_1},std::nullopt,ElementTypeClass::NATIVE}},
+    {"memset_0x3DF0F44E2ED6A50F",{FunctionType::MEMSET,Contiguous{{0,2}},Overlap{{2,256}},std::nullopt,AlignedLoop{Loop{{256,kMaxSize},32},32,AlignArg::_1},std::nullopt,ElementTypeClass::NATIVE}},
+    {"bzero_0x475977492C218AD4",{FunctionType::BZERO,Contiguous{{0,4}},Overlap{{4,128}},std::nullopt,AlignedLoop{Loop{{128,kMaxSize},32},32,AlignArg::_1},std::nullopt,ElementTypeClass::NATIVE}},
   };
-  return makeArrayRef(kDescriptors);
+  return ArrayRef(kDescriptors);
 }
 
 } // namespace automemcpy
@@ -167,7 +168,7 @@ llvm::ArrayRef<MemcpyConfiguration> getMemcpyConfigurations() {
     {Wrap<memcpy_0xE00E29EE73994E2B>, "memcpy_0xE00E29EE73994E2B"},
     {Wrap<memcpy_0x7381B60C7BE75EF9>, "memcpy_0x7381B60C7BE75EF9"},
   };
-  return llvm::makeArrayRef(kConfigurations);
+  return llvm::ArrayRef(kConfigurations);
 }
 
 using MemcmpStub = int (*)(const char *, const char *, size_t);
@@ -181,7 +182,7 @@ llvm::ArrayRef<MemcmpOrBcmpConfiguration> getMemcmpConfigurations() {
   static constexpr MemcmpOrBcmpConfiguration kConfigurations[] = {
     {Wrap<memcmp_0x348D7BA6DB0EE033>, "memcmp_0x348D7BA6DB0EE033"},
   };
-  return llvm::makeArrayRef(kConfigurations);
+  return llvm::ArrayRef(kConfigurations);
 }
 llvm::ArrayRef<MemcmpOrBcmpConfiguration> getBcmpConfigurations() {
   return {};
@@ -198,7 +199,7 @@ llvm::ArrayRef<MemsetConfiguration> getMemsetConfigurations() {
     {Wrap<memset_0x71E761699B999863>, "memset_0x71E761699B999863"},
     {Wrap<memset_0x3DF0F44E2ED6A50F>, "memset_0x3DF0F44E2ED6A50F"},
   };
-  return llvm::makeArrayRef(kConfigurations);
+  return llvm::ArrayRef(kConfigurations);
 }
 
 using BzeroStub = void (*)(char *, size_t);
@@ -210,7 +211,7 @@ llvm::ArrayRef<BzeroConfiguration> getBzeroConfigurations() {
   static constexpr BzeroConfiguration kConfigurations[] = {
     {Wrap<bzero_0x475977492C218AD4>, "bzero_0x475977492C218AD4"},
   };
-  return llvm::makeArrayRef(kConfigurations);
+  return llvm::ArrayRef(kConfigurations);
 }
 
 llvm::ArrayRef<MemmoveConfiguration> getMemmoveConfigurations() {

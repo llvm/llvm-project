@@ -67,7 +67,7 @@ define i32 @foo1(i32 %a) {
 ; NO-USE-MOVT-O0: .long 3758153728     @ 0xe000e000
 
 define i32 @foo2() {
-  %1 = load i32, i32* inttoptr (i32 -536813568 to i32*) ; load from 0xe000e000
+  %1 = load i32, ptr inttoptr (i32 -536813568 to ptr) ; load from 0xe000e000
   ret i32 %1
 }
 attributes #0 = { "target-features"="+no-movt" }

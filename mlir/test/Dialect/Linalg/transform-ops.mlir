@@ -8,7 +8,7 @@ transform.sequence failures(propagate) {
 
 //===----------------------------------------------------------------------===//
 // Check that operations are registered correctly through the extension
-// mechanism. Their syntax is generated and requries no additional testing since
+// mechanism. Their syntax is generated and requires no additional testing since
 // we test the generator.
 //===----------------------------------------------------------------------===//
 

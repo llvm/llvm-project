@@ -144,9 +144,9 @@ define i8 @and1_shl1_is_cmp_eq_0(i8 %x) {
 
 define i8 @and1_shl1_is_cmp_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @and1_shl1_is_cmp_eq_0_multiuse(
-; CHECK-NEXT:    [[SH:%.*]] = shl i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[SH:%.*]] = shl nuw i8 1, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SH]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SH]], [[AND]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[SH]], [[AND]]
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
   %sh = shl i8 1, %x

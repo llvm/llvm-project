@@ -9,10 +9,10 @@ target datalayout = "e-p:64:64"
 
 ; Make sure that optimizations do not optimize inrange GEP.
 
-@vtable = constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* null, i8* null] }
+@vtable = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr null] }
 
-define void @foo(i8*** %p) {
-  ;CHECK: store i8** getelementptr {{.*}} ({ [3 x i8*] }, { [3 x i8*] }* @vtable, i{{.*}} 0, inrange i32 0, i{{.*}} 3), i8*** %p
-  store i8** getelementptr ({ [3 x i8*] }, { [3 x i8*] }* @vtable, i32 0, inrange i32 0, i32 3), i8*** %p
+define void @foo(ptr %p) {
+  ;CHECK: store ptr getelementptr {{.*}} ({ [3 x ptr] }, ptr @vtable, i{{.*}} 0, inrange i32 0, i{{.*}} 3), ptr %p
+  store ptr getelementptr ({ [3 x ptr] }, ptr @vtable, i32 0, inrange i32 0, i32 3), ptr %p
   ret void
 }

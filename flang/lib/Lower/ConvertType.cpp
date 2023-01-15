@@ -316,7 +316,8 @@ struct TypeBuilderImpl {
          Fortran::semantics::OrderedComponentIterator(tySpec)) {
       // Lowering is assuming non deferred component lower bounds are always 1.
       // Catch any situations where this is not true for now.
-      if (componentHasNonDefaultLowerBounds(field))
+      if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
+          componentHasNonDefaultLowerBounds(field))
         TODO(converter.genLocation(field.name()),
              "derived type components with non default lower bounds");
       if (IsProcedure(field))
@@ -482,6 +483,15 @@ mlir::Type Fortran::lower::translateVariableToFIRType(
 
 mlir::Type Fortran::lower::convertReal(mlir::MLIRContext *context, int kind) {
   return genRealType(context, kind);
+}
+
+bool Fortran::lower::isDerivedTypeWithLenParameters(
+    const Fortran::semantics::Symbol &sym) {
+  if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
+    if (const Fortran::semantics::DerivedTypeSpec *derived =
+            declTy->AsDerived())
+      return Fortran::semantics::CountLenParameters(*derived) > 0;
+  return false;
 }
 
 template <typename T>

@@ -557,7 +557,9 @@ static void emitInterfaceDoc(const llvm::Record &interfaceDef,
 
     // If the body is not provided, this method must be provided by the user.
     if (!method.getBody())
-      os << "\nNOTE: This method *must* be implemented by the user.\n\n";
+      os << "\nNOTE: This method *must* be implemented by the user.";
+
+    os << "\n\n";
   }
 }
 

@@ -381,7 +381,7 @@ static void SimplifyAddOperands(SmallVectorImpl<const SCEV *> &Ops,
   // the sum into a single value, so just use that.
   Ops.clear();
   if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Sum))
-    Ops.append(Add->op_begin(), Add->op_end());
+    append_range(Ops, Add->operands());
   else if (!Sum->isZero())
     Ops.push_back(Sum);
   // Then append the addrecs.
@@ -409,7 +409,7 @@ static void SplitAddRecs(SmallVectorImpl<const SCEV *> &Ops,
                                          A->getNoWrapFlags(SCEV::FlagNW)));
       if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Start)) {
         Ops[i] = Zero;
-        Ops.append(Add->op_begin(), Add->op_end());
+        append_range(Ops, Add->operands());
         e += Add->getNumOperands();
       } else {
         Ops[i] = Start;
@@ -576,8 +576,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     // Fold a GEP with constant operands.
     if (Constant *CLHS = dyn_cast<Constant>(V))
       if (Constant *CRHS = dyn_cast<Constant>(Idx))
-        return ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ty->getContext()),
-                                              CLHS, CRHS);
+        return Builder.CreateGEP(Builder.getInt8Ty(), CLHS, CRHS);
 
     // Do a quick scan to see if we have this GEP nearby.  If so, reuse it.
     unsigned ScanLimit = 6;
@@ -1027,8 +1026,25 @@ void SCEVExpander::fixupInsertPoints(Instruction *I) {
 /// until we reach a value that dominates InsertPos.
 bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
                               bool RecomputePoisonFlags) {
-  if (SE.DT.dominates(IncV, InsertPos))
-      return true;
+  auto FixupPoisonFlags = [this](Instruction *I) {
+    // Drop flags that are potentially inferred from old context and infer flags
+    // in new context.
+    I->dropPoisonGeneratingFlags();
+    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
+      if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+        auto *BO = cast<BinaryOperator>(I);
+        BO->setHasNoUnsignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+        BO->setHasNoSignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+      }
+  };
+
+  if (SE.DT.dominates(IncV, InsertPos)) {
+    if (RecomputePoisonFlags)
+      FixupPoisonFlags(IncV);
+    return true;
+  }
 
   // InsertPos must itself dominate IncV so that IncV's new position satisfies
   // its existing users.
@@ -1054,19 +1070,8 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
   for (Instruction *I : llvm::reverse(IVIncs)) {
     fixupInsertPoints(I);
     I->moveBefore(InsertPos);
-    if (!RecomputePoisonFlags)
-      continue;
-    // Drop flags that are potentially inferred from old context and infer flags
-    // in new context.
-    I->dropPoisonGeneratingFlags();
-    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
-      if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
-        auto *BO = cast<BinaryOperator>(I);
-        BO->setHasNoUnsignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
-        BO->setHasNoSignedWrap(
-            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
-      }
+    if (RecomputePoisonFlags)
+      FixupPoisonFlags(I);
   }
   return true;
 }
@@ -1550,7 +1555,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
       !S->getType()->isPointerTy()) {
     SmallVector<const SCEV *, 4> NewOps(S->getNumOperands());
     for (unsigned i = 0, e = S->getNumOperands(); i != e; ++i)
-      NewOps[i] = SE.getAnyExtendExpr(S->op_begin()[i], CanonicalIV->getType());
+      NewOps[i] = SE.getAnyExtendExpr(S->getOperand(i), CanonicalIV->getType());
     Value *V = expand(SE.getAddRecExpr(NewOps, S->getLoop(),
                                        S->getNoWrapFlags(SCEV::FlagNW)));
     BasicBlock::iterator NewInsertPt =
@@ -1901,8 +1906,8 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       // Put pointers at the back and make sure pointer < pointer = false.
       if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
         return RHS->getType()->isIntegerTy() && !LHS->getType()->isIntegerTy();
-      return RHS->getType()->getPrimitiveSizeInBits().getFixedSize() <
-             LHS->getType()->getPrimitiveSizeInBits().getFixedSize();
+      return RHS->getType()->getPrimitiveSizeInBits().getFixedValue() <
+             LHS->getType()->getPrimitiveSizeInBits().getFixedValue();
     });
 
   unsigned NumElim = 0;

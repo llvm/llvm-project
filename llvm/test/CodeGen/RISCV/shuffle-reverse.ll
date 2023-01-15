@@ -7,7 +7,7 @@ define <2 x i8> @v2i8(<2 x i8> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -20,11 +20,11 @@ define <4 x i8> @v2i8_2(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 2
@@ -159,7 +159,7 @@ define <2 x i16> @v2i16(<2 x i16> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -172,11 +172,11 @@ define <4 x i16> @v2i16_2(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 1
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 2
@@ -311,7 +311,7 @@ define <2 x i32> @v2i32(<2 x i32> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -324,11 +324,11 @@ define <4 x i32> @v2i32_2(<2 x i32> %a, < 2 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 1
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 2
@@ -463,9 +463,9 @@ define <2 x i64> @v2i64(<2 x i64> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %v2i64 = shufflevector <2 x i64> %a, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
   ret <2 x i64> %v2i64
@@ -476,11 +476,11 @@ define <4 x i64> @v2i64_2(<2 x i64> %a, < 2 x i64> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v12, v8, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v9, 1
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v10, v12, 2
@@ -555,7 +555,7 @@ define <2 x half> @v2f16(<2 x half> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -568,11 +568,11 @@ define <4 x half> @v2f16_2(<2 x half> %a, <2 x half> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 1
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 2
@@ -680,7 +680,7 @@ define <2 x float> @v2f32(<2 x float> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -693,11 +693,11 @@ define <4 x float> @v2f32_2(<2 x float> %a, <2 x float> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v8, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 1
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 2
@@ -775,9 +775,9 @@ define <2 x double> @v2f64(<2 x double> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %v2f64 = shufflevector <2 x double> %a, <2 x double> undef, <2 x i32> <i32 1, i32 0>
   ret <2 x double> %v2f64
@@ -788,11 +788,11 @@ define <4 x double> @v2f64_2(<2 x double> %a, < 2 x double> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v12, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v12, v8, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v10, v9, 1
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v10, v12, 2

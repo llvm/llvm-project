@@ -104,3 +104,7 @@ sysp #0, c2, c0, #0, x0, x1
 rcwcasp   x0, x1, x6, x7, [x4]
 // CHECK: sysp #0, c2, c0, #0, x0, x1
 // CHECK: rcwcasp   x0, x1, x6, x7, [x4]
+
+.arch_extension rasv2
+mrs x0, ERXGSR_EL1
+// CHECK: mrs x0, ERXGSR_EL1

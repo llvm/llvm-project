@@ -70,6 +70,7 @@
 
 #include <bitset>
 #include <memory>
+#include <optional>
 
 // Unfortunately the signpost header pulls in the system MachO header, too.
 #ifdef CPU_TYPE_ARM
@@ -1398,9 +1399,8 @@ void ObjectFileMachO::SanitizeSegmentCommand(
     const char *lc_segment_name =
         seg_cmd.cmd == LC_SEGMENT_64 ? "LC_SEGMENT_64" : "LC_SEGMENT";
     GetModule()->ReportWarning(
-        "load command %u %s has a fileoff (0x%" PRIx64
-        ") that extends beyond the end of the file (0x%" PRIx64
-        "), ignoring this section",
+        "load command {0} {1} has a fileoff ({2:x16}) that extends beyond "
+        "the end of the file ({3:x16}), ignoring this section",
         cmd_idx, lc_segment_name, seg_cmd.fileoff, m_length);
 
     seg_cmd.fileoff = 0;
@@ -1417,9 +1417,9 @@ void ObjectFileMachO::SanitizeSegmentCommand(
     const char *lc_segment_name =
         seg_cmd.cmd == LC_SEGMENT_64 ? "LC_SEGMENT_64" : "LC_SEGMENT";
     GetModule()->ReportWarning(
-        "load command %u %s has a fileoff + filesize (0x%" PRIx64
-        ") that extends beyond the end of the file (0x%" PRIx64
-        "), the segment will be truncated to match",
+        "load command {0} {1} has a fileoff + filesize ({2:x16}) that "
+        "extends beyond the end of the file ({4:x16}), the segment will be "
+        "truncated to match",
         cmd_idx, lc_segment_name, seg_cmd.fileoff + seg_cmd.filesize, m_length);
 
     // Truncate the length
@@ -2188,8 +2188,8 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
   version_str[6] = '\0';
   if (strcmp(version_str, "dyld_v") == 0) {
     offset = offsetof(struct lldb_copy_dyld_cache_header_v1, uuid);
-    dsc_uuid = UUID(dsc_header_data.GetData(&offset, sizeof(uuid_t)), 
-                    sizeof(uuid_t));
+    dsc_uuid =
+        UUID(dsc_header_data.GetData(&offset, sizeof(uuid_t)), sizeof(uuid_t));
   }
   Log *log = GetLog(LLDBLog::Symbols);
   if (log && dsc_uuid.IsValid()) {
@@ -2200,7 +2200,7 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
   return dsc_uuid;
 }
 
-static llvm::Optional<struct nlist_64>
+static std::optional<struct nlist_64>
 ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
            size_t nlist_byte_size) {
   struct nlist_64 nlist;
@@ -2806,7 +2806,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                      nlist_index++) {
                   /////////////////////////////
                   {
-                    llvm::Optional<struct nlist_64> nlist_maybe =
+                    std::optional<struct nlist_64> nlist_maybe =
                         ParseNList(dsc_local_symbols_data, nlist_data_offset,
                                    nlist_byte_size);
                     if (!nlist_maybe)
@@ -6094,6 +6094,12 @@ bool ObjectFileMachO::GetIsDynamicLinkEditor() {
   return m_header.filetype == llvm::MachO::MH_DYLINKER;
 }
 
+bool ObjectFileMachO::CanTrustAddressRanges() {
+  // Dsymutil guarantees that the .debug_aranges accelerator is complete and can
+  // be trusted by LLDB.
+  return m_header.filetype == llvm::MachO::MH_DSYM;
+}
+
 bool ObjectFileMachO::AllowAssemblyEmulationUnwindPlans() {
   return m_allow_assembly_emulation_unwind_plans;
 }
@@ -6536,10 +6542,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
           if (prot != 0 && include_this_region) {
             addr_t pagesize = range_info.GetPageSize();
-            const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
+            const std::optional<std::vector<addr_t>> &dirty_page_list =
                 range_info.GetDirtyPageList();
             if (dirty_pages_only && dirty_page_list) {
-              for (addr_t dirtypage : dirty_page_list.value()) {
+              for (addr_t dirtypage : *dirty_page_list) {
                 page_object obj;
                 obj.addr = dirtypage;
                 obj.size = pagesize;

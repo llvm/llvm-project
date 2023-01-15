@@ -381,6 +381,13 @@ DecodeAVLdSt_160RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
                                   Decoder);
 }
 
+static DecodeStatus decodeOperand_SReg_16(MCInst &Inst, unsigned Imm,
+                                          uint64_t Addr,
+                                          const MCDisassembler *Decoder) {
+  auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+  return addOperand(Inst, DAsm->decodeOperand_SReg_16(Imm));
+}
+
 static DecodeStatus decodeOperand_SReg_32(MCInst &Inst, unsigned Imm,
                                           uint64_t Addr,
                                           const MCDisassembler *Decoder) {
@@ -1302,6 +1309,10 @@ MCOperand AMDGPUDisassembler::decodeOperand_VReg_512(unsigned Val) const {
 
 MCOperand AMDGPUDisassembler::decodeOperand_VReg_1024(unsigned Val) const {
   return createRegOperand(AMDGPU::VReg_1024RegClassID, Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeOperand_SReg_16(unsigned Val) const {
+  return decodeSrcOp(OPW16, Val);
 }
 
 MCOperand AMDGPUDisassembler::decodeOperand_SReg_32(unsigned Val) const {

@@ -8,12 +8,12 @@
 
 define void @t() nounwind "target-cpu"="mips16" "target-features"="+mips16,+o32" {
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %cmp = icmp slt i32 %0, 10
-  %1 = load i32, i32* @j, align 4
-  %2 = load i32, i32* @i, align 4
+  %1 = load i32, ptr @j, align 4
+  %2 = load i32, ptr @i, align 4
   %cond = select i1 %cmp, i32 %1, i32 %2
-  store i32 %cond, i32* @i, align 4
+  store i32 %cond, ptr @i, align 4
   ret void
 }
 

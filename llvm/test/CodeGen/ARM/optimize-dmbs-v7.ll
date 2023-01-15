@@ -9,9 +9,9 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.013 = phi i32 [ 1, %entry ], [ %inc6, %for.body ]
-  store atomic i32 %i.013, i32* @x1 seq_cst, align 4
-  store atomic i32 %i.013, i32* @x1 seq_cst, align 4
-  store atomic i32 %i.013, i32* @x2 seq_cst, align 4
+  store atomic i32 %i.013, ptr @x1 seq_cst, align 4
+  store atomic i32 %i.013, ptr @x1 seq_cst, align 4
+  store atomic i32 %i.013, ptr @x2 seq_cst, align 4
   %inc6 = add nsw i32 %i.013, 1
   %exitcond = icmp eq i32 %inc6, 2
   br i1 %exitcond, label %for.end, label %for.body

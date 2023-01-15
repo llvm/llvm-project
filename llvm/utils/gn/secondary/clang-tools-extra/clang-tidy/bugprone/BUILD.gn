@@ -57,6 +57,7 @@ static_library("bugprone") {
     "SizeofExpressionCheck.cpp",
     "SmartPtrArrayMismatchCheck.cpp",
     "SpuriouslyWakeUpFunctionsCheck.cpp",
+    "StandaloneEmptyCheck.cpp",
     "StringConstructorCheck.cpp",
     "StringIntegerAssignmentCheck.cpp",
     "StringLiteralWithEmbeddedNulCheck.cpp",

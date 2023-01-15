@@ -1174,15 +1174,32 @@ class NamedOperandBit_1<string Name, AsmOperandClass MatchClass> :
   let ParserMatchClass = MatchClass;
 }
 
-class NamedOperandU8<string Name, AsmOperandClass MatchClass> : Operand<i8> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+class CustomOperandClass<string CName, bit Optional> : AsmOperandClass {
+  let Name = CName;
+  let PredicateMethod = "is"#CName;
+  let ParserMethod = "parse"#CName;
+  let RenderMethod = "addImmOperands";
+  let IsOptional = Optional;
+  let DefaultMethod = "default"#CName;
 }
 
-class NamedOperandU16<string Name, AsmOperandClass MatchClass> : Operand<i16> {
+class CustomOperand<ValueType Type, bit Optional = 0, string Name = NAME,
+    AsmOperandClass Class = CustomOperandClass<Name, Optional>>
+    : Operand<Type> {
   let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
+  let ParserMatchClass = Class;
 }
+
+class NamedIntOperandClass<string Prefix, string Name>
+    : CustomOperandClass<Name, 1> {
+  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
+  let ParserMethod =
+    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#ImmTy#"); }";
+}
+
+class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME>
+  : CustomOperand<Type, 1, Name, NamedIntOperandClass<Prefix, Name>>;
 
 class NamedOperandU32<string Name, AsmOperandClass MatchClass> : Operand<i32> {
   let PrintMethod = "print"#Name;
@@ -1209,10 +1226,10 @@ class NamedOperandU32Default1<string Name, AsmOperandClass MatchClass> :
 
 let OperandType = "OPERAND_IMMEDIATE" in {
 
-def flat_offset : NamedOperandU16<"FlatOffset", NamedMatchClass<"FlatOffset">>;
-def offset : NamedOperandU16<"Offset", NamedMatchClass<"Offset">>;
-def offset0 : NamedOperandU8<"Offset0", NamedMatchClass<"Offset0">>;
-def offset1 : NamedOperandU8<"Offset1", NamedMatchClass<"Offset1">>;
+def flat_offset : CustomOperand<i16, 1, "FlatOffset">;
+def offset : NamedIntOperand<i16, "offset", "Offset">;
+def offset0 : NamedIntOperand<i8, "offset0", "Offset0">;
+def offset1 : NamedIntOperand<i8, "offset1", "Offset1">;
 
 def gds : NamedOperandBit<"GDS", NamedMatchClass<"GDS">>;
 
@@ -1236,16 +1253,16 @@ def SWZ_0 : NamedOperandBit_0<"SWZ", NamedMatchClass<"SWZ">>;
 def UNorm : NamedOperandBit<"UNorm", NamedMatchClass<"UNorm">>;
 def DA : NamedOperandBit<"DA", NamedMatchClass<"DA">>;
 def R128A16 : NamedOperandBit<"R128A16", NamedMatchClass<"R128A16">>;
-def GFX10A16 : NamedOperandBit<"GFX10A16", NamedMatchClass<"GFX10A16">>;
+def A16 : NamedOperandBit<"A16", NamedMatchClass<"A16">>;
 def D16 : NamedOperandBit<"D16", NamedMatchClass<"D16">>;
 def LWE : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
 def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
 def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 
-def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT", 0>>;
+def FORMAT : CustomOperand<i8>;
 
-def DMask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
-def Dim : NamedOperandU8<"Dim", NamedMatchClass<"Dim", 0>>;
+def DMask : NamedIntOperand<i16, "dmask">;
+def Dim : CustomOperand<i8>;
 
 def dst_sel : NamedOperandU32<"SDWADstSel", NamedMatchClass<"SDWADstSel">>;
 def src0_sel : NamedOperandU32<"SDWASrc0Sel", NamedMatchClass<"SDWASrc0Sel">>;
@@ -1275,8 +1292,8 @@ def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 }
 
-def wait_vdst : NamedOperandU8<"WaitVDST", NamedMatchClass<"WaitVDST">>;
-def wait_exp : NamedOperandU8<"WaitEXP", NamedMatchClass<"WaitEXP">>;
+def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
+def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
 
 } // End OperandType = "OPERAND_IMMEDIATE"
 
@@ -2099,8 +2116,7 @@ class getOutsSDWA <bit HasDst, ValueType DstVT, RegisterOperand DstRCSDWA> {
 }
 
 // Returns the assembly string for the inputs and outputs of a VOP[12C]
-// instruction.  This does not add the _e32 suffix, so it can be reused
-// by getAsm64.
+// instruction.
 class getAsm32 <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
   string dst = !if(!eq(DstVT.Size, 1), "$sdst", "$vdst"); // use $sdst for VOPC
   string src0 = ", $src0";
@@ -2119,23 +2135,6 @@ class getAsmVOPDPart <int NumSrcArgs, string XorY> {
   string ret = dst #
                !if(!ge(NumSrcArgs, 1), src0, "") #
                !if(!ge(NumSrcArgs, 2), src1, "");
-}
-
-// Returns the assembly string for the inputs and outputs of a VOP3
-// instruction.
-class getAsm64 <bit HasDst, int NumSrcArgs, bit HasIntClamp, bit HasModifiers,
-                bit HasOMod, ValueType DstVT = i32> {
-  string dst = !if(!eq(DstVT.Size, 1), "$sdst", "$vdst"); // use $sdst for VOPC
-  string src0 = !if(!eq(NumSrcArgs, 1), "$src0_modifiers", "$src0_modifiers,");
-  string src1 = !if(!eq(NumSrcArgs, 1), "",
-                   !if(!eq(NumSrcArgs, 2), " $src1_modifiers",
-                                           " $src1_modifiers,"));
-  string src2 = !if(!eq(NumSrcArgs, 3), " $src2_modifiers", "");
-  string iclamp = !if(HasIntClamp, "$clamp", "");
-  string ret =
-  !if(!not(HasModifiers),
-      getAsm32<HasDst, NumSrcArgs, DstVT>.ret # iclamp,
-      dst#", "#src0#src1#src2#"$clamp"#!if(HasOMod, "$omod", ""));
 }
 
 // Returns the assembly string for the inputs and outputs of a VOP3P
@@ -2212,7 +2211,7 @@ class getAsmDPP8 <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT 
   let ret = dst#args#" $dpp8$fi";
 }
 
-class getAsmVOP3DPPBase <int NumSrcArgs, bit HasDst, bit HasClamp,
+class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
                        bit HasOpSel, bit HasOMod, bit IsVOP3P,
                        bit HasModifiers, bit Src0HasMods,
                        bit Src1HasMods, bit Src2HasMods, ValueType DstVT = i32> {
@@ -2244,7 +2243,7 @@ class getAsmVOP3DPPBase <int NumSrcArgs, bit HasDst, bit HasClamp,
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
 
-  string ret = dst#", "#src0#src1#src2#opsel#3PMods#clamp#omod;
+  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#3PMods#clamp#omod, "");
 
 }
 
@@ -2571,7 +2570,16 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
-  field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;
+  field string AsmDPP = !if(HasExtDPP,
+                            getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
+  field string AsmDPP16 = getAsmDPP16<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;
+  // DPP8 encoding has no fields for modifiers, and it is enforced by setting
+  // the asm operand name via this HasModifiers flag
+  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
+  field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
+   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
+   HasModifiers, DstVT>.ret;
+  field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
                                               HasClamp,
@@ -2579,18 +2587,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                               HasSrc0FloatMods,
                                               HasSrc1FloatMods,
                                               HasSrc2FloatMods>.ret;
-  field string AsmDPP = !if(HasExtDPP,
-                            getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
-  field string AsmDPP16 = getAsmDPP16<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;
-  // DPP8 encoding has no fields for modifiers, and it is enforced by setting
-  // the asm operand name via this HasModifiers flag
-  field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
-  field string AsmVOP3DPPBase = getAsmVOP3DPPBase<NumSrcArgs, HasDst, HasClamp,
-   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
-   HasModifiers, DstVT>.ret;
-  field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3DPPBase>.ret;
-  field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3DPPBase>.ret;
-  field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3DPPBase>.ret;
+  field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
+  field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
+  field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
   field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
   field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;

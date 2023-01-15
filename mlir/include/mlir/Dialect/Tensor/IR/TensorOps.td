@@ -129,7 +129,7 @@ def Tensor_DimOp : Tensor_Op<"dim", [
 
   let extraClassDeclaration = [{
     /// Helper function to get the index as a simple integer if it is constant.
-    Optional<int64_t> getConstantIndex();
+    std::optional<int64_t> getConstantIndex();
 
     /// Interface method of ShapedDimOpInterface: Return the source tensor.
     Value getShapedValue() { return getSource(); }
@@ -237,12 +237,6 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
   let results = (outs AnyType:$result);
   let assemblyFormat = "$tensor `[` $indices `]` attr-dict `:` type($tensor)";
 
-  let builders = [
-    OpBuilder<(ins "Value":$tensor, CArg<"ValueRange", "{}">:$indices), [{
-      auto resType = tensor.getType().cast<ShapedType>().getElementType();
-      build($_builder, $_state, resType, tensor, indices);
-    }]>];
-
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -292,7 +286,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     between different flavors of ops on that operate on tensors.
 
     #### Verification vs Inference in the rank-reduced case
-    
+
     Note that there may be multiple ways to infer a resulting rank-reduced type.
       e.g. 1x6x1 could potentially rank-reduce to either 1x6 or 6x1 2-D shapes.
 
@@ -380,7 +374,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
 
     /// Compute the rank-reduction mask that can be applied to map the source
     /// tensor type to the result tensor type by dropping unit dims.
-    llvm::Optional<llvm::SmallDenseSet<unsigned>>
+    std::optional<llvm::SmallDenseSet<unsigned>>
     computeRankReductionMask() {
       return ::mlir::computeRankReductionMask(getSourceType().getShape(),
                                               getType().getShape());
@@ -435,6 +429,15 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     /// Return the dimensions of the source that are dropped in the
     /// result when the result is rank-reduced.
     llvm::SmallBitVector getDroppedDims();
+
+    /// Given a `value`, asserted to be of RankedTensorType, build an
+    /// ExtractSliceOp that results in a rank-reducing extract to the desired
+    /// tensor shape and return the new value created.
+    /// If the shape of `value` is already the `desiredShape`, just return
+    /// `value`.
+    /// If the shape of `value` cannot be rank-reduced to `desiredShape`, fail.
+    static FailureOr<Value> rankReduceIfNeeded(
+      OpBuilder &b, Location loc, Value value, ArrayRef<int64_t> desiredShape);
   }];
 
   let hasCanonicalizer = 1;
@@ -715,13 +718,6 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
     $scalar `into` $dest `[` $indices `]` attr-dict `:` type($dest)
   }];
 
-  let builders = [
-    OpBuilder<(ins "Value":$scalar, "Value":$dest,
-      CArg<"ValueRange", "{}">:$indices), [{
-      auto resType = dest.getType();
-      build($_builder, $_state, resType, scalar, dest, indices);
-    }]>];
-
   let extraClassDeclaration = [{
     std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
       return {1, 2};  // `dest` operand
@@ -786,7 +782,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     behavior of tensor.extract_slice.
 
     #### Verification in the rank-reduced case
-    
+
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
 
@@ -1390,7 +1386,7 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     rank-reducing behavior of tensor.insert_slice and tensor.extract_slice.
 
     #### Verification in the rank-reduced case
-    
+
     The same verification discussion and mechanisms apply as for ExtractSliceOp.
     Unlike ExtractSliceOp however, there is no need for a specific inference.
   }];
@@ -1720,13 +1716,13 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     Example NC_to_NCnc:
 
     ```mlir
-    tensor.pack %source inner_dims_pos = [0, 1]
+    %0 = tensor.pack %source inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<16x8x8x32xf32>
     ```
     Example CK to KCck
 
     ```mlir
-    tensor.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+    %0 = tensor.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<128x256xf32> -> tensor<8x16x8x32xf32>
     ```
 
@@ -1738,7 +1734,7 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     Example NC_to_NCnc with padding:
 
     ```mlir
-    tensor.pack %arg padding_value(%pad : f32) inner_dims_pos = [0, 1]
+    %0 = tensor.pack %arg padding_value(%pad : f32) inner_dims_pos = [0, 1]
       inner_tiles = [8, 2] into %arg1 : tensor<13x15xf32> -> tensor<2x8x8x2xf32>
     ```
 
@@ -1781,6 +1777,8 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
         Value source, ArrayRef<OpFoldResult> innerTileSizes,
         ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm);
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1800,14 +1798,14 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
     Example NCnc_to_NC:
 
     ```mlir
-    tensor.unpack %source inner_dims_pos = [0, 1]
+    %0 = tensor.unpack %source inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
     ```
 
     Example CK to KCck:
 
     ```mlir
-    tensor.unapck %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+    %0 = tensor.unapck %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
       inner_tiles = [8, 32] into %dest : tensor<8x16x8x32xf32> -> tensor<128x256xf32>
     ```
   }];

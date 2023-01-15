@@ -50,7 +50,6 @@ struct DenormalMode;
 class DISubprogram;
 class LLVMContext;
 class Module;
-template <typename T> class Optional;
 class raw_ostream;
 class Type;
 class User;
@@ -406,6 +405,15 @@ public:
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(StringRef Kind) const;
 
+  /// For a string attribute \p Kind, parse attribute as an integer.
+  ///
+  /// \returns \p Default if attribute is not present.
+  ///
+  /// \returns \p Default if there is an error parsing the attribute integer,
+  /// and error is emitted to the LLVMContext
+  uint64_t getFnAttributeAsParsedInteger(StringRef Kind,
+                                         uint64_t Default = 0) const;
+
   /// gets the specified attribute from the list of attributes.
   Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
@@ -428,15 +436,6 @@ public:
   /// adds the dereferenceable_or_null attribute to the list of
   /// attributes for the given arg.
   void addDereferenceableOrNullParamAttr(unsigned ArgNo, uint64_t Bytes);
-
-  /// Extract the alignment for a call or parameter (0=unknown).
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getParamAlign() instead.
-  uint64_t getParamAlignment(unsigned ArgNo) const {
-    if (const auto MA = getParamAlign(ArgNo))
-      return MA->value();
-    return 0;
-  }
 
   MaybeAlign getParamAlign(unsigned ArgNo) const {
     return AttributeSets.getParamAlignment(ArgNo);
@@ -678,9 +677,53 @@ public:
   /// Requires that this has no function body.
   void stealArgumentListFrom(Function &Src);
 
+  /// Insert \p BB in the basic block list at \p Position. \Returns an iterator
+  /// to the newly inserted BB.
+  Function::iterator insert(Function::iterator Position, BasicBlock *BB) {
+    return BasicBlocks.insert(Position, BB);
+  }
+
+  /// Transfer all blocks from \p FromF to this function at \p ToIt.
+  void splice(Function::iterator ToIt, Function *FromF) {
+    splice(ToIt, FromF, FromF->begin(), FromF->end());
+  }
+
+  /// Transfer one BasicBlock from \p FromF at \p FromIt to this function
+  /// at \p ToIt.
+  void splice(Function::iterator ToIt, Function *FromF,
+              Function::iterator FromIt) {
+    auto FromItNext = std::next(FromIt);
+    // Single-element splice is a noop if destination == source.
+    if (ToIt == FromIt || ToIt == FromItNext)
+      return;
+    splice(ToIt, FromF, FromIt, FromItNext);
+  }
+
+  /// Transfer a range of basic blocks that belong to \p FromF from \p
+  /// FromBeginIt to \p FromEndIt, to this function at \p ToIt.
+  void splice(Function::iterator ToIt, Function *FromF,
+              Function::iterator FromBeginIt,
+              Function::iterator FromEndIt);
+
+  /// Erases a range of BasicBlocks from \p FromIt to (not including) \p ToIt.
+  /// \Returns \p ToIt.
+  Function::iterator erase(Function::iterator FromIt, Function::iterator ToIt);
+
+private:
+  // These need access to the underlying BB list.
+  friend void BasicBlock::removeFromParent();
+  friend iplist<BasicBlock>::iterator BasicBlock::eraseFromParent();
+  template <class BB_t, class BB_i_t, class BI_t, class II_t>
+  friend class InstIterator;
+  friend class llvm::SymbolTableListTraits<llvm::BasicBlock>;
+  friend class llvm::ilist_node_with_parent<llvm::BasicBlock, llvm::Function>;
+
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.
   ///
+  /// This is deliberately private because we have implemented an adequate set
+  /// of functions to modify the list, including Function::splice(),
+  /// Function::erase(), Function::insert() etc.
   const BasicBlockListType &getBasicBlockList() const { return BasicBlocks; }
         BasicBlockListType &getBasicBlockList()       { return BasicBlocks; }
 
@@ -688,6 +731,7 @@ public:
     return &Function::BasicBlocks;
   }
 
+public:
   const BasicBlock       &getEntryBlock() const   { return front(); }
         BasicBlock       &getEntryBlock()         { return front(); }
 
@@ -864,7 +908,7 @@ public:
   DISubprogram *getSubprogram() const;
 
   /// Returns true if we should emit debug info for profiling.
-  bool isDebugInfoForProfiling() const;
+  bool shouldEmitDebugInfoForProfiling() const;
 
   /// Check if null pointer dereferencing is considered undefined behavior for
   /// the function.

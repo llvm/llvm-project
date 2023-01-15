@@ -164,7 +164,7 @@ bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 }
 
 void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
-                                      unsigned ByteAlignment) {
+                                      Align ByteAlignment) {
   llvm_unreachable("Common symbols are not yet implemented for Wasm");
 }
 

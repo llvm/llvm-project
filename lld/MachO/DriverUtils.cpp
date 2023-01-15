@@ -35,7 +35,10 @@ using namespace lld;
 using namespace lld::macho;
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE) const char *NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
@@ -48,7 +51,7 @@ static constexpr OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-MachOOptTable::MachOOptTable() : OptTable(optInfo) {}
+MachOOptTable::MachOOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
@@ -159,7 +162,6 @@ std::string macho::createResponseFile(const InputArgList &args) {
     case OPT_bundle_loader:
     case OPT_exported_symbols_list:
     case OPT_order_file:
-    case OPT_rpath:
     case OPT_syslibroot:
     case OPT_unexported_symbols_list:
       os << arg->getSpelling() << " " << quote(rewritePath(arg->getValue()))

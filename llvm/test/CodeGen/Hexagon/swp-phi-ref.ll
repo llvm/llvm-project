@@ -27,7 +27,7 @@ b1:                                               ; preds = %b1, %b0
   %v4 = tail call <16 x i32> @llvm.hexagon.V6.vaddh(<16 x i32> undef, <16 x i32> undef)
   %v5 = tail call <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32> %v4, <16 x i32> %v1, i32 2)
   %v6 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffh(<16 x i32> %v3, <16 x i32> %v5)
-  store <16 x i32> %v6, <16 x i32>* null, align 64
+  store <16 x i32> %v6, ptr null, align 64
   %v7 = add nsw i32 %v0, 1
   %v8 = icmp slt i32 %v7, undef
   br i1 %v8, label %b1, label %b2

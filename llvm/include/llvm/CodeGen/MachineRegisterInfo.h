@@ -17,6 +17,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator_range.h"
@@ -56,11 +57,15 @@ public:
     virtual ~Delegate() = default;
 
     virtual void MRI_NoteNewVirtualRegister(Register Reg) = 0;
+    virtual void MRI_NotecloneVirtualRegister(Register NewReg,
+                                              Register SrcReg) {
+      MRI_NoteNewVirtualRegister(NewReg);
+    }
   };
 
 private:
   MachineFunction *MF;
-  Delegate *TheDelegate = nullptr;
+  SmallPtrSet<Delegate *, 1> TheDelegates;
 
   /// True if subregister liveness is tracked.
   const bool TracksSubRegLiveness;
@@ -154,19 +159,28 @@ public:
 
   void resetDelegate(Delegate *delegate) {
     // Ensure another delegate does not take over unless the current
-    // delegate first unattaches itself. If we ever need to multicast
-    // notifications, we will need to change to using a list.
-    assert(TheDelegate == delegate &&
-           "Only the current delegate can perform reset!");
-    TheDelegate = nullptr;
+    // delegate first unattaches itself.
+    assert(TheDelegates.count(delegate) &&
+           "Only an existing delegate can perform reset!");
+    TheDelegates.erase(delegate);
   }
 
-  void setDelegate(Delegate *delegate) {
-    assert(delegate && !TheDelegate &&
-           "Attempted to set delegate to null, or to change it without "
+  void addDelegate(Delegate *delegate) {
+    assert(delegate && !TheDelegates.count(delegate) &&
+           "Attempted to add null delegate, or to change it without "
            "first resetting it!");
 
-    TheDelegate = delegate;
+    TheDelegates.insert(delegate);
+  }
+
+  void noteNewVirtualRegister(Register Reg) {
+    for (auto *TheDelegate : TheDelegates)
+      TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  }
+
+  void noteCloneVirtualRegister(Register NewReg, Register SrcReg) {
+    for (auto *TheDelegate : TheDelegates)
+      TheDelegate->MRI_NotecloneVirtualRegister(NewReg, SrcReg);
   }
 
   //===--------------------------------------------------------------------===//
@@ -899,6 +913,18 @@ public:
   /// freezeReservedRegs - Called by the register allocator to freeze the set
   /// of reserved registers before allocation begins.
   void freezeReservedRegs(const MachineFunction&);
+
+  /// reserveReg -- Mark a register as reserved so checks like isAllocatable 
+  /// will not suggest using it. This should not be used during the middle
+  /// of a function walk, or when liveness info is available.
+  void reserveReg(MCRegister PhysReg, const TargetRegisterInfo *TRI) {
+    assert(reservedRegsFrozen() &&
+           "Reserved registers haven't been frozen yet. ");
+    MCRegAliasIterator R(PhysReg, TRI, true);
+
+    for (; R.isValid(); ++R)
+      ReservedRegs.set(*R);
+  }
 
   /// reservedRegsFrozen - Returns true after freezeReservedRegs() was called
   /// to ensure the set of reserved registers stays constant.

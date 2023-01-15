@@ -4,15 +4,15 @@
 ; GFX90A-COUNT-2: load <2 x float>
 ; GFX90A-COUNT-2: fadd fast <2 x float>
 
-define float @vectorize_v2f32_loop(float addrspace(1)* noalias %s) {
+define float @vectorize_v2f32_loop(ptr addrspace(1) noalias %s) {
 entry:
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %q.04 = phi float [ 0.0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds float, float addrspace(1)* %s, i64 %indvars.iv
-  %load = load float, float addrspace(1)* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr addrspace(1) %s, i64 %indvars.iv
+  %load = load float, ptr addrspace(1) %arrayidx, align 4
   %add = fadd fast float %q.04, %load
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 256

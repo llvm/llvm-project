@@ -75,6 +75,7 @@ add_llvm_component_library(LLVMMC
 
   LINK_COMPONENTS
   Support
+  TargetParser
   BinaryFormat
   DebugInfoCodeView
   )

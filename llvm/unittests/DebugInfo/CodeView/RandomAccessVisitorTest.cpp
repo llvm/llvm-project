@@ -12,7 +12,6 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
-#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryItemStream.h"
@@ -23,7 +22,6 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
-using namespace llvm::pdb;
 
 namespace llvm {
 namespace codeview {

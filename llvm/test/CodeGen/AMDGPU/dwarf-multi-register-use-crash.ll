@@ -16,10 +16,12 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    v_writelane_b32 v40, s33, 16
+; CHECK-NEXT:    s_mov_b32 s16, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    v_writelane_b32 v40, s34, 2
@@ -33,7 +35,6 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    v_writelane_b32 v40, s42, 10
 ; CHECK-NEXT:    v_writelane_b32 v40, s43, 11
 ; CHECK-NEXT:    v_writelane_b32 v40, s44, 12
-; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s45, 13
 ; CHECK-NEXT:    v_writelane_b32 v40, s46, 14
@@ -47,6 +48,7 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    v_writelane_b32 v40, s47, 15
 ; CHECK-NEXT:    s_load_dwordx2 s[46:47], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    v_writelane_b32 v42, s16, 0
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v31
 ; CHECK-NEXT:    s_mov_b32 s42, s15
@@ -90,11 +92,13 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    v_readlane_b32 s34, v40, 2
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s4, v42, 0
+; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
 ; CHECK-NEXT:    s_addk_i32 s32, 0xfc00
-; CHECK-NEXT:    v_readlane_b32 s33, v40, 16
-; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .Ltmp2:

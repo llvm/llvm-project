@@ -47,20 +47,13 @@ static bool convertAnnotation2Metadata(Module &M) {
     auto *OpC = dyn_cast<ConstantStruct>(&Op);
     if (!OpC || OpC->getNumOperands() != 4)
       continue;
-    auto *StrGEP = dyn_cast<ConstantExpr>(OpC->getOperand(1));
-    if (!StrGEP || StrGEP->getNumOperands() < 2)
-      continue;
-    auto *StrC = dyn_cast<GlobalValue>(StrGEP->getOperand(0));
+    auto *StrC = dyn_cast<GlobalValue>(OpC->getOperand(1)->stripPointerCasts());
     if (!StrC)
       continue;
     auto *StrData = dyn_cast<ConstantDataSequential>(StrC->getOperand(0));
     if (!StrData)
       continue;
-    // Look through bitcast.
-    auto *Bitcast = dyn_cast<ConstantExpr>(OpC->getOperand(0));
-    if (!Bitcast || Bitcast->getOpcode() != Instruction::BitCast)
-      continue;
-    auto *Fn = dyn_cast<Function>(Bitcast->getOperand(0));
+    auto *Fn = dyn_cast<Function>(OpC->getOperand(0)->stripPointerCasts());
     if (!Fn)
       continue;
 

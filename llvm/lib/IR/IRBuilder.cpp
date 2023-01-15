@@ -13,7 +13,6 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -1258,10 +1257,8 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
   assert(EC.isNonZero() && "Cannot splat to an empty vector!");
 
   // First insert it into a poison vector so we can shuffle it.
-  Type *I32Ty = getInt32Ty();
   Value *Poison = PoisonValue::get(VectorType::get(V->getType(), EC));
-  V = CreateInsertElement(Poison, V, ConstantInt::get(I32Ty, 0),
-                          Name + ".splatinsert");
+  V = CreateInsertElement(Poison, V, getInt64(0), Name + ".splatinsert");
 
   // Shuffle the value across the desired number of elements.
   SmallVector<int, 16> Zeros;

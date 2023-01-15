@@ -14,6 +14,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <optional>
 
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-defines.h"
@@ -116,9 +117,10 @@ public:
   ///     How long to wait for the condition to hold.
   ///
   /// \return
-  ///     m_value if Cond(m_value) is true, None otherwise (timeout occurred).
+  ///     m_value if Cond(m_value) is true, std::nullopt otherwise (timeout
+  ///     occurred).
   template <typename C>
-  llvm::Optional<T> WaitFor(C Cond, const Timeout<std::micro> &timeout) {
+  std::optional<T> WaitFor(C Cond, const Timeout<std::micro> &timeout) {
     std::unique_lock<std::mutex> lock(m_mutex);
     auto RealCond = [&] { return Cond(m_value); };
     if (!timeout) {
@@ -177,8 +179,9 @@ public:
   ///     How long to wait for the condition to hold.
   ///
   /// \return
-  ///     m_value if m_value != value, None otherwise (timeout occurred).
-  llvm::Optional<T>
+  ///     m_value if m_value != value, std::nullopt otherwise (timeout
+  ///     occurred).
+  std::optional<T>
   WaitForValueNotEqualTo(T value,
                          const Timeout<std::micro> &timeout = std::nullopt) {
     return WaitFor([&value](T current) { return value != current; }, timeout);

@@ -55,7 +55,7 @@ TEST(CRCTest, LargeCRC32) {
   // Test expectation generated with:
   // $ truncate --size=`echo 2^32-1+42 | bc` /tmp/foo
   // $ crc32 /tmp/foo
-  EXPECT_EQ(0xE46F28FBU, llvm::crc32(makeArrayRef(TestData, TestSize)));
+  EXPECT_EQ(0xE46F28FBU, llvm::crc32(ArrayRef(TestData, TestSize)));
 
   free(TestData);
 }

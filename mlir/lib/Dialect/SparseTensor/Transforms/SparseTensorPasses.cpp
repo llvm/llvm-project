@@ -28,6 +28,7 @@ namespace mlir {
 #define GEN_PASS_DEF_SPARSETENSORCODEGEN
 #define GEN_PASS_DEF_SPARSEBUFFERREWRITE
 #define GEN_PASS_DEF_SPARSEVECTORIZATION
+#define GEN_PASS_DEF_STORAGESPECIFIERTOLLVM
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -193,9 +194,14 @@ struct SparseTensorCodegenPass
     target.addLegalOp<SortOp>();
     target.addLegalOp<SortCooOp>();
     target.addLegalOp<PushBackOp>();
-    // All dynamic rules below accept new function, call, return, and various
-    // tensor and bufferization operations as legal output of the rewriting
-    // provided that all sparse tensor types have been fully rewritten.
+    // Storage specifier outlives sparse tensor pipeline.
+    target.addLegalOp<GetStorageSpecifierOp>();
+    target.addLegalOp<SetStorageSpecifierOp>();
+    target.addLegalOp<StorageSpecifierInitOp>();
+    // All dynamic rules below accept new function, call, return, and
+    // various tensor and bufferization operations as legal output of the
+    // rewriting provided that all sparse tensor types have been fully
+    // rewritten.
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return converter.isSignatureLegal(op.getFunctionType());
     });
@@ -216,9 +222,9 @@ struct SparseTensorCodegenPass
     // The following operations and dialects may be introduced by the
     // codegen rules, and are therefore marked as legal.
     target.addLegalOp<linalg::FillOp>();
-    target.addLegalDialect<arith::ArithDialect,
-                           bufferization::BufferizationDialect,
-                           memref::MemRefDialect, scf::SCFDialect>();
+    target.addLegalDialect<
+        arith::ArithDialect, bufferization::BufferizationDialect,
+        complex::ComplexDialect, memref::MemRefDialect, scf::SCFDialect>();
     target.addLegalOp<UnrealizedConversionCastOp>();
     // Populate with rules and apply rewriting rules.
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
@@ -268,6 +274,44 @@ struct SparseVectorizationPass
         patterns, vectorLength, enableVLAVectorization, enableSIMDIndex32);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct StorageSpecifierToLLVMPass
+    : public impl::StorageSpecifierToLLVMBase<StorageSpecifierToLLVMPass> {
+
+  StorageSpecifierToLLVMPass() = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    ConversionTarget target(*ctx);
+    RewritePatternSet patterns(ctx);
+    StorageSpecifierToLLVMTypeConverter converter;
+
+    // All ops in the sparse dialect must go!
+    target.addIllegalDialect<SparseTensorDialect>();
+    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
+      return converter.isSignatureLegal(op.getFunctionType());
+    });
+    target.addDynamicallyLegalOp<func::CallOp>([&](func::CallOp op) {
+      return converter.isSignatureLegal(op.getCalleeType());
+    });
+    target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
+      return converter.isLegal(op.getOperandTypes());
+    });
+    target.addLegalDialect<arith::ArithDialect, LLVM::LLVMDialect>();
+
+    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
+                                                                   converter);
+    populateCallOpTypeConversionPattern(patterns, converter);
+    populateBranchOpInterfaceTypeConversionPattern(patterns, converter);
+    populateReturnOpTypeConversionPattern(patterns, converter);
+    scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
+                                                         target);
+    populateStorageSpecifierToLLVMPatterns(converter, patterns);
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
+      signalPassFailure();
   }
 };
 
@@ -354,4 +398,8 @@ mlir::createSparseVectorizationPass(unsigned vectorLength,
                                     bool enableSIMDIndex32) {
   return std::make_unique<SparseVectorizationPass>(
       vectorLength, enableVLAVectorization, enableSIMDIndex32);
+}
+
+std::unique_ptr<Pass> mlir::createStorageSpecifierToLLVMPass() {
+  return std::make_unique<StorageSpecifierToLLVMPass>();
 }

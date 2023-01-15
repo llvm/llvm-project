@@ -186,7 +186,7 @@ struct InitializeParams {
   ClientCapabilities capabilities;
 
   /// The initial trace setting. If omitted trace is disabled ('off').
-  Optional<TraceLevel> trace;
+  std::optional<TraceLevel> trace;
 };
 
 /// Add support for JSON serialization.
@@ -469,10 +469,10 @@ struct TextDocumentContentChangeEvent {
                                std::string &contents);
 
   /// The range of the document that changed.
-  Optional<Range> range;
+  std::optional<Range> range;
 
   /// The length of the range that got replaced.
-  Optional<int> rangeLength;
+  std::optional<int> rangeLength;
 
   /// The new text of the range/document.
   std::string text;
@@ -675,13 +675,13 @@ struct Diagnostic {
 
   /// An array of related diagnostic information, e.g. when symbol-names within
   /// a scope collide all definitions can be marked via this property.
-  Optional<std::vector<DiagnosticRelatedInformation>> relatedInformation;
+  std::optional<std::vector<DiagnosticRelatedInformation>> relatedInformation;
 
   /// The diagnostic's category. Can be omitted.
   /// An LSP extension that's used to send the name of the category over to the
   /// client. The category typically describes the compilation stage during
   /// which the issue was produced, e.g. "Semantic Issue" or "Parse Issue".
-  Optional<std::string> category;
+  std::optional<std::string> category;
 };
 
 /// Add support for JSON serialization.
@@ -821,7 +821,7 @@ struct CompletionItem {
   std::string detail;
 
   /// A human-readable string that represents a doc-comment.
-  Optional<MarkupContent> documentation;
+  std::optional<MarkupContent> documentation;
 
   /// A string that should be used when comparing this item with other items.
   /// When `falsy` the label is used.
@@ -844,7 +844,7 @@ struct CompletionItem {
   ///
   /// Note: The range of the edit must be a single line range and it must
   /// contain the position at which completion has been requested.
-  Optional<TextEdit> textEdit;
+  std::optional<TextEdit> textEdit;
 
   /// An optional array of additional text edits that are applied when selecting
   /// this completion. Edits must not overlap with the main edit nor with

@@ -3,7 +3,7 @@
 ; Check if the f32 load / store pair are optimized to i32 load / store.
 ; rdar://8944252
 
-define void @t(i32 %width, float* nocapture %src, float* nocapture %dst, i32 %index) nounwind {
+define void @t(i32 %width, ptr nocapture %src, ptr nocapture %dst, i32 %index) nounwind {
 ; CHECK-LABEL: t:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r0, #0
@@ -17,18 +17,16 @@ define void @t(i32 %width, float* nocapture %src, float* nocapture %dst, i32 %in
 ; CHECK-NEXT:  @ %bb.2: @ %return
 ; CHECK-NEXT:    bx lr
 entry:
-  %src6 = bitcast float* %src to i8*
   %0 = icmp eq i32 %width, 0
   br i1 %0, label %return, label %bb
 
 bb:
   %j.05 = phi i32 [ %2, %bb ], [ 0, %entry ]
   %tmp = mul i32 %j.05, %index
-  %uglygep = getelementptr i8, i8* %src6, i32 %tmp
-  %src_addr.04 = bitcast i8* %uglygep to float*
-  %dst_addr.03 = getelementptr float, float* %dst, i32 %j.05
-  %1 = load float, float* %src_addr.04, align 4
-  store float %1, float* %dst_addr.03, align 4
+  %uglygep = getelementptr i8, ptr %src, i32 %tmp
+  %dst_addr.03 = getelementptr float, ptr %dst, i32 %j.05
+  %1 = load float, ptr %uglygep, align 4
+  store float %1, ptr %dst_addr.03, align 4
   %2 = add i32 %j.05, 1
   %exitcond = icmp eq i32 %2, %width
   br i1 %exitcond, label %return, label %bb
@@ -52,14 +50,14 @@ declare void @_Z3fooddddddddddddddd(float, float, float, float, float, float, fl
 ; Because this test function is trying to pass float argument by stack,
 ; it can be optimized to i32 load / store
 define signext i32 @test() {
-%1 = load float, float* @a1, align 4
-%2 = load float, float* @a2, align 4
-%3 = load float, float* @a3, align 4
-%4 = load float, float* @a4, align 4
-%5 = load float, float* @a5, align 4
-%6 = load float, float* @a6, align 4
-%7 = load float, float* @a7, align 4
-%8 = load float, float* @a8, align 4
+%1 = load float, ptr @a1, align 4
+%2 = load float, ptr @a2, align 4
+%3 = load float, ptr @a3, align 4
+%4 = load float, ptr @a4, align 4
+%5 = load float, ptr @a5, align 4
+%6 = load float, ptr @a6, align 4
+%7 = load float, ptr @a7, align 4
+%8 = load float, ptr @a8, align 4
 tail call void @_Z3fooddddddddddddddd(float %1, float %2, float %3, float %4, float %5, float %6, float %7, float %8)
 ret i32 0
 }

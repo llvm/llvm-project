@@ -93,7 +93,7 @@ bool codeContainsImports(llvm::StringRef Code) {
   return false;
 }
 
-llvm::Optional<StringRef> parseIWYUPragma(const char *Text) {
+std::optional<StringRef> parseIWYUPragma(const char *Text) {
   // Skip the comment start, // or /*.
   if (Text[0] != '/' || (Text[1] != '/' && Text[1] != '*'))
     return std::nullopt;

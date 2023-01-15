@@ -6,7 +6,7 @@
 
 target triple = "wasm32-unknown-unknown"
 
-%fn = type <{i32 (%fn, i32, i32)*}>
+%fn = type <{ptr}>
 declare i1 @foo(i1)
 declare i1 @bar(i1)
 
@@ -87,7 +87,7 @@ define i32 @indirect_tail(%fn %f, i32 %x, i32 %y) {
 ; CHECK: call_indirect $push[[L:[0-9]+]]=, $0, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT: return $pop[[L]]{{$}}
 define i1 @choice_notail(i1 %x) {
-  %p = select i1 %x, i1 (i1)* @foo, i1 (i1)* @bar
+  %p = select i1 %x, ptr @foo, ptr @bar
   %v = notail call i1 %p(i1 %x)
   ret i1 %v
 }
@@ -95,7 +95,7 @@ define i1 @choice_notail(i1 %x) {
 ; CHECK-LABEL: choice_musttail:
 ; CHECK: return_call_indirect , $0, $pop{{[0-9]+}}{{$}}
 define i1 @choice_musttail(i1 %x) {
-  %p = select i1 %x, i1 (i1)* @foo, i1 (i1)* @bar
+  %p = select i1 %x, ptr @foo, ptr @bar
   %v = musttail call i1 %p(i1 %x)
   ret i1 %v
 }
@@ -105,7 +105,7 @@ define i1 @choice_musttail(i1 %x) {
 ; FAST: call_indirect $push[[L:[0-9]+]]=, $0, $pop{{[0-9]+}}{{$}}
 ; FAST: return $pop[[L]]{{$}}
 define i1 @choice_tail(i1 %x) {
-  %p = select i1 %x, i1 (i1)* @foo, i1 (i1)* @bar
+  %p = select i1 %x, ptr @foo, ptr @bar
   %v = tail call i1 %p(i1 %x)
   ret i1 %v
 }
@@ -165,9 +165,9 @@ define float @mismatched_indirect_f32(%fn %f, i32 %x, i32 %y) {
 ; CHECK-LABEL: mismatched_byval:
 ; CHECK: i32.store
 ; CHECK: return_call quux, $pop{{[0-9]+}}{{$}}
-declare i32 @quux(i32* byval(i32))
-define i32 @mismatched_byval(i32* %x) {
-  %v = tail call i32 @quux(i32* byval(i32) %x)
+declare i32 @quux(ptr byval(i32))
+define i32 @mismatched_byval(ptr %x) {
+  %v = tail call i32 @quux(ptr byval(i32) %x)
   ret i32 %v
 }
 
@@ -212,18 +212,18 @@ define i1 @mismatched_return_trunc() {
 
 ; CHECK-LABEL: stack_arg:
 ; CHECK: call
-define i32 @stack_arg(i32* %x) {
+define i32 @stack_arg(ptr %x) {
   %a = alloca i32
-  %v = tail call i32 @stack_arg(i32* %a)
+  %v = tail call i32 @stack_arg(ptr %a)
   ret i32 %v
 }
 
 ; CHECK-LABEL: stack_arg_gep:
 ; CHECK: call
-define i32 @stack_arg_gep(i32* %x) {
+define i32 @stack_arg_gep(ptr %x) {
   %a = alloca { i32, i32 }
-  %p = getelementptr { i32, i32 }, { i32, i32 }* %a, i32 0, i32 1
-  %v = tail call i32 @stack_arg_gep(i32* %p)
+  %p = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
+  %v = tail call i32 @stack_arg_gep(ptr %p)
   ret i32 %v
 }
 
@@ -235,7 +235,7 @@ define i32 @stack_arg_gep(i32* %x) {
 ; SLOW: return_call stack_arg_cast, ${{[0-9]+}}
 define i32 @stack_arg_cast(i32 %x) {
   %a = alloca [64 x i32]
-  %i = ptrtoint [64 x i32]* %a to i32
+  %i = ptrtoint ptr %a to i32
   %v = tail call i32 @stack_arg_cast(i32 %i)
   ret i32 %v
 }
@@ -251,8 +251,8 @@ define i32 @stack_arg_cast(i32 %x) {
 ; YAML-NEXT:      - F64
 ; YAML-NEXT:    ReturnTypes:
 ; YAML-NEXT:      - I32
-define i32 @unique_caller(i32 (i32, float, i64, double)** %p) {
-  %f = load i32 (i32, float, i64, double)*, i32 (i32, float, i64, double)** %p
+define i32 @unique_caller(ptr %p) {
+  %f = load ptr, ptr %p
   %v = tail call i32 %f(i32 0, float 0., i64 0, double 0.)
   ret i32 %v
 }

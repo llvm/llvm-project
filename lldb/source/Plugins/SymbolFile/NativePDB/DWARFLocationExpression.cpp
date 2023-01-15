@@ -24,6 +24,7 @@
 #include "PdbUtil.h"
 #include "CodeViewRegisterMapping.h"
 #include "PdbFPOProgramToDWARFExpression.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -130,7 +131,7 @@ static DWARFExpression MakeLocationExpressionInternal(lldb::ModuleSP module,
 
 static bool MakeRegisterBasedLocationExpressionInternal(
     Stream &stream, llvm::codeview::RegisterId reg, RegisterKind &register_kind,
-    llvm::Optional<int32_t> relative_offset, lldb::ModuleSP module) {
+    std::optional<int32_t> relative_offset, lldb::ModuleSP module) {
   uint32_t reg_num = GetRegisterNumber(module->GetArchitecture().GetMachine(),
                                        reg, register_kind);
   if (reg_num == LLDB_INVALID_REGNUM)
@@ -154,7 +155,7 @@ static bool MakeRegisterBasedLocationExpressionInternal(
 }
 
 static DWARFExpression MakeRegisterBasedLocationExpressionInternal(
-    llvm::codeview::RegisterId reg, llvm::Optional<int32_t> relative_offset,
+    llvm::codeview::RegisterId reg, std::optional<int32_t> relative_offset,
     lldb::ModuleSP module) {
   return MakeLocationExpressionInternal(
       module, [&](Stream &stream, RegisterKind &register_kind) -> bool {
@@ -248,7 +249,7 @@ DWARFExpression lldb_private::npdb::MakeConstantLocationExpression(
     Value.U = constant.getZExtValue();
   }
 
-  bytes = llvm::makeArrayRef(reinterpret_cast<const uint8_t *>(&Value), 8)
+  bytes = llvm::ArrayRef(reinterpret_cast<const uint8_t *>(&Value), 8)
               .take_front(size);
   buffer->CopyData(bytes.data(), size);
   DataExtractor extractor(buffer, lldb::eByteOrderLittle, address_size);
@@ -274,9 +275,9 @@ lldb_private::npdb::MakeEnregisteredLocationExpressionForComposite(
             cur_offset = offset_loc.first;
           }
           MemberValLocation loc = offset_loc.second;
-          llvm::Optional<int32_t> offset =
+          std::optional<int32_t> offset =
               loc.is_at_reg ? std::nullopt
-                            : llvm::Optional<int32_t>(loc.reg_offset);
+                            : std::optional<int32_t>(loc.reg_offset);
           if (!MakeRegisterBasedLocationExpressionInternal(
                   stream, (RegisterId)loc.reg_id, register_kind, offset,
                   module))

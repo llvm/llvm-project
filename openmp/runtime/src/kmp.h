@@ -1033,6 +1033,7 @@ typedef struct kmp_allocator_t {
   kmp_allocator_t *fb_data;
   kmp_uint64 pool_size;
   kmp_uint64 pool_used;
+  bool pinned;
 } kmp_allocator_t;
 
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
@@ -2500,6 +2501,10 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 
 } kmp_tasking_flags_t;
 
+typedef struct kmp_target_data {
+  void *async_handle; // libomptarget async handle for task completion query
+} kmp_target_data_t;
+
 struct kmp_taskdata { /* aligned during dynamic allocation       */
   kmp_int32 td_task_id; /* id, assigned by debugger                */
   kmp_tasking_flags_t td_flags; /* task flags                              */
@@ -2542,6 +2547,7 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
 #endif
+  kmp_target_data_t td_target_data;
 }; // struct kmp_taskdata
 
 // Make sure padding above worked
@@ -3901,6 +3907,9 @@ KMP_EXPORT kmp_int32 __kmpc_bound_num_threads(ident_t *);
 KMP_EXPORT kmp_int32 __kmpc_ok_to_fork(ident_t *);
 KMP_EXPORT void __kmpc_fork_call(ident_t *, kmp_int32 nargs,
                                  kmpc_micro microtask, ...);
+KMP_EXPORT void __kmpc_fork_call_if(ident_t *loc, kmp_int32 nargs,
+                                    kmpc_micro microtask, kmp_int32 cond,
+                                    void *args);
 
 KMP_EXPORT void __kmpc_serialized_parallel(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_serialized_parallel(ident_t *, kmp_int32 global_tid);
@@ -3973,7 +3982,6 @@ KMP_EXPORT void __kmpc_omp_task_complete_if0(ident_t *loc_ref, kmp_int32 gtid,
 KMP_EXPORT kmp_int32 __kmpc_omp_task_parts(ident_t *loc_ref, kmp_int32 gtid,
                                            kmp_task_t *new_task);
 KMP_EXPORT kmp_int32 __kmpc_omp_taskwait(ident_t *loc_ref, kmp_int32 gtid);
-
 KMP_EXPORT kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid,
                                           int end_part);
 
@@ -3997,6 +4005,15 @@ KMP_EXPORT void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid,
                                      kmp_depend_info_t *dep_list,
                                      kmp_int32 ndeps_noalias,
                                      kmp_depend_info_t *noalias_dep_list);
+/* __kmpc_omp_taskwait_deps_51 : Function for OpenMP 5.1 nowait clause.
+ *                               Placeholder for taskwait with nowait clause.*/
+KMP_EXPORT void __kmpc_omp_taskwait_deps_51(ident_t *loc_ref, kmp_int32 gtid,
+                                            kmp_int32 ndeps,
+                                            kmp_depend_info_t *dep_list,
+                                            kmp_int32 ndeps_noalias,
+                                            kmp_depend_info_t *noalias_dep_list,
+                                            kmp_int32 has_no_wait);
+
 extern kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
                                 bool serialize_immediate);
 
@@ -4037,6 +4054,10 @@ KMP_EXPORT void __kmp_set_num_teams(int num_teams);
 KMP_EXPORT int __kmp_get_max_teams(void);
 KMP_EXPORT void __kmp_set_teams_thread_limit(int limit);
 KMP_EXPORT int __kmp_get_teams_thread_limit(void);
+
+/* Interface target task integration */
+KMP_EXPORT void **__kmpc_omp_get_target_async_handle_ptr(kmp_int32 gtid);
+KMP_EXPORT bool __kmpc_omp_has_task_team(kmp_int32 gtid);
 
 /* Lock interface routines (fast versions with gtid passed in) */
 KMP_EXPORT void __kmpc_init_lock(ident_t *loc, kmp_int32 gtid,

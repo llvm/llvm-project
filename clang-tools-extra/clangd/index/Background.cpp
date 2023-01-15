@@ -49,6 +49,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <optional>
 #include <queue>
 #include <random>
 #include <string>
@@ -123,7 +124,7 @@ BackgroundQueue::Task BackgroundIndex::changedFilesTask(
   BackgroundQueue::Task T([this, ChangedFiles] {
     trace::Span Tracer("BackgroundIndexEnqueue");
 
-    llvm::Optional<WithContext> WithProvidedContext;
+    std::optional<WithContext> WithProvidedContext;
     if (ContextProvider)
       WithProvidedContext.emplace(ContextProvider(/*Path=*/""));
 
@@ -156,7 +157,7 @@ BackgroundQueue::Task BackgroundIndex::indexFileTask(std::string Path) {
   std::string Tag = filenameWithoutExtension(Path).str();
   uint64_t Key = llvm::xxHash64(Path);
   BackgroundQueue::Task T([this, Path(std::move(Path))] {
-    llvm::Optional<WithContext> WithProvidedContext;
+    std::optional<WithContext> WithProvidedContext;
     if (ContextProvider)
       WithProvidedContext.emplace(ContextProvider(Path));
     auto Cmd = CDB.getCompileCommand(Path);

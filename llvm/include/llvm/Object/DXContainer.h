@@ -39,9 +39,9 @@ private:
 
   Error parseHeader();
   Error parsePartOffsets();
-  Error parseDXILHeader(uint32_t Offset);
-  Error parseShaderFlags(uint32_t Offset);
-  Error parseHash(uint32_t Offset);
+  Error parseDXILHeader(StringRef Part);
+  Error parseShaderFlags(StringRef Part);
+  Error parseHash(StringRef Part);
   friend class PartIterator;
 
 public:

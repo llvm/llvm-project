@@ -30,7 +30,6 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -59,6 +58,7 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <system_error>
 
 #undef  DEBUG_TYPE
@@ -679,7 +679,7 @@ void RewriteInstance::parseBuildID() {
   BuildID = Buf.slice(Offset, Offset + DescSz);
 }
 
-Optional<std::string> RewriteInstance::getPrintableBuildID() const {
+std::optional<std::string> RewriteInstance::getPrintableBuildID() const {
   if (BuildID.empty())
     return std::nullopt;
 
@@ -1454,7 +1454,7 @@ void RewriteInstance::adjustFunctionBoundaries() {
       NextFunction = &std::next(BFI)->second;
 
     // Check if it's a fragment of a function.
-    Optional<StringRef> FragName =
+    std::optional<StringRef> FragName =
         Function.hasRestoredNameRegex(".*\\.cold(\\.[0-9]+)?");
     if (FragName) {
       static bool PrintedWarning = false;
@@ -1683,7 +1683,7 @@ Error RewriteInstance::readSpecialSections() {
 
   // Parse build-id
   parseBuildID();
-  if (Optional<std::string> FileBuildID = getPrintableBuildID())
+  if (std::optional<std::string> FileBuildID = getPrintableBuildID())
     BC->setFileBuildID(*FileBuildID);
 
   parseSDTNotes();
@@ -1883,7 +1883,7 @@ uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
 } // anonymous namespace
 
 bool RewriteInstance::analyzeRelocation(
-    const RelocationRef &Rel, uint64_t RType, std::string &SymbolName,
+    const RelocationRef &Rel, uint64_t &RType, std::string &SymbolName,
     bool &IsSectionRelocation, uint64_t &SymbolAddress, int64_t &Addend,
     uint64_t &ExtractedValue, bool &Skip) const {
   Skip = false;
@@ -2555,7 +2555,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   if (ForceRelocation) {
-    std::string Name = Relocation::isGOT(RType) ? "Zero" : SymbolName;
+    std::string Name =
+        Relocation::isGOT(RType) ? "__BOLT_got_zero" : SymbolName;
     ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);
     SymbolAddress = 0;
     if (Relocation::isGOT(RType))
@@ -2756,6 +2757,13 @@ void RewriteInstance::selectFunctionsToProcess() {
   LiteThresholdExecCount = std::max(
       LiteThresholdExecCount, static_cast<uint64_t>(opts::LiteThresholdCount));
 
+  StringSet<> ReorderFunctionsUserSet;
+  if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
+    for (const std::string &Function :
+         ReorderFunctions::readFunctionOrderFile())
+      ReorderFunctionsUserSet.insert(Function);
+  }
+
   uint64_t NumFunctionsToProcess = 0;
   auto shouldProcess = [&](const BinaryFunction &Function) {
     if (opts::MaxFunctions && NumFunctionsToProcess > opts::MaxFunctions)
@@ -2769,7 +2777,7 @@ void RewriteInstance::selectFunctionsToProcess() {
           return true;
 
       // Non-regex check (-funcs-no-regex and -funcs-file-no-regex).
-      Optional<StringRef> Match =
+      std::optional<StringRef> Match =
           Function.forEachName([&ForceFunctionsNR](StringRef Name) {
             return ForceFunctionsNR.count(Name.str());
           });
@@ -2781,6 +2789,16 @@ void RewriteInstance::selectFunctionsToProcess() {
         return false;
 
     if (opts::Lite) {
+      // Forcibly include functions specified in the -function-order file.
+      if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
+        std::optional<StringRef> Match =
+            Function.forEachName([&](StringRef Name) {
+              return ReorderFunctionsUserSet.contains(Name);
+            });
+        if (Match.has_value())
+          return true;
+      }
+
       if (ProfileReader && !ProfileReader->mayHaveProfileData(Function))
         return false;
 
@@ -2934,7 +2952,7 @@ void RewriteInstance::disassembleFunctions() {
     }
 
     if (opts::PrintAll || opts::PrintDisasm)
-      Function.print(outs(), "after disassembly", true);
+      Function.print(outs(), "after disassembly");
   }
 
   BC->processInterproceduralReferences();
@@ -3001,7 +3019,7 @@ void RewriteInstance::buildFunctionsCFG() {
 
         if (opts::PrintAll) {
           auto L = BC->scopeLock();
-          BF.print(outs(), "while building cfg", true);
+          BF.print(outs(), "while building cfg");
         }
       };
 
@@ -3034,7 +3052,7 @@ void RewriteInstance::postProcessFunctions() {
     Function.postProcessCFG();
 
     if (opts::PrintAll || opts::PrintCFG)
-      Function.print(outs(), "after building cfg", true);
+      Function.print(outs(), "after building cfg");
 
     if (opts::DumpDotAll)
       Function.dumpGraphForPass("00_build-cfg");
@@ -4763,7 +4781,7 @@ void RewriteInstance::updateELFSymbolTable(
     assert(SymbolName && "cannot get symbol name");
 
     auto updateSymbolValue = [&](const StringRef Name,
-                                 Optional<uint64_t> Value = std::nullopt) {
+                                 std::optional<uint64_t> Value = std::nullopt) {
       NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
       NewSymbol.st_shndx = ELF::SHN_ABS;
       outs() << "BOLT-INFO: setting " << Name << " to 0x"

@@ -3,14 +3,12 @@
 
 %struct.sw = type { float, float, float, float }
 
-define { <2 x float>, <2 x float> } @foo(%struct.sw* %v) {
+define { <2 x float>, <2 x float> } @foo(ptr %v) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* undef, align 4
-; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_SW:%.*]], %struct.sw* [[V:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* undef, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[X]] to <2 x float>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr undef, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr undef, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[V:%.*]], align 16
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> <float undef, float poison, float poison, float undef>, float [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[TMP1]], i32 2
@@ -25,11 +23,10 @@ define { <2 x float>, <2 x float> } @foo(%struct.sw* %v) {
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[INS2]]
 ;
 entry:
-  %0 = load float, float* undef, align 4
-  %x = getelementptr inbounds %struct.sw, %struct.sw* %v, i64 0, i32 0
-  %1 = load float, float* %x, align 16
-  %y = getelementptr inbounds %struct.sw, %struct.sw* %v, i64 0, i32 1
-  %2 = load float, float* %y, align 4
+  %0 = load float, ptr undef, align 4
+  %1 = load float, ptr %v, align 16
+  %y = getelementptr inbounds %struct.sw, ptr %v, i64 0, i32 1
+  %2 = load float, ptr %y, align 4
   %mul3 = fmul float %0, %2
   %add = fadd float undef, %mul3
   %add6 = fadd float %add, undef
@@ -38,7 +35,7 @@ entry:
   %add16 = fadd float %mul12, undef
   %add20 = fadd float undef, %add16
   %add24 = fadd float undef, %add20
-  %3 = load float, float* undef, align 4
+  %3 = load float, ptr undef, align 4
   %mul27 = fmul float %1, %3
   %add31 = fadd float %mul27, undef
   %add35 = fadd float undef, %add31

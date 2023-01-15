@@ -100,6 +100,7 @@ static cl::opt<bool>
             cl::desc("Widen the loop induction variables, if possible, so "
                      "overflow checks won't reject flattening"));
 
+namespace {
 // We require all uses of both induction variables to match this pattern:
 //
 //   (OuterPHI * InnerTripCount) + InnerPHI
@@ -215,6 +216,15 @@ struct FlattenInfo {
     LLVM_DEBUG(dbgs() << "Matched multiplication: "; MatchedMul->dump());
     LLVM_DEBUG(dbgs() << "Matched iteration count: "; MatchedItCount->dump());
 
+    // The mul should not have any other uses. Widening may leave trivially dead
+    // uses, which can be ignored.
+    if (count_if(MatchedMul->users(), [](User *U) {
+          return !isInstructionTriviallyDead(cast<Instruction>(U));
+        }) > 1) {
+      LLVM_DEBUG(dbgs() << "Multiply has more than one use\n");
+      return false;
+    }
+
     // Look through extends if the IV has been widened. Don't look through
     // extends if we already looked through a trunc.
     if (Widened && IsAdd &&
@@ -279,6 +289,7 @@ struct FlattenInfo {
     return true;
   }
 };
+} // namespace
 
 static bool
 setLoopComponents(Value *&TC, Value *&TripCount, BinaryOperator *&Increment,
@@ -775,9 +786,8 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   }
 
   // Tell LoopInfo, SCEV and the pass manager that the inner loop has been
-  // deleted, and any information that have about the outer loop invalidated.
+  // deleted, and invalidate any outer loop information.
   SE->forgetLoop(FI.OuterLoop);
-  SE->forgetLoop(FI.InnerLoop);
   SE->forgetBlockAndLoopDispositions();
   if (U)
     U->markLoopAsDeleted(*FI.InnerLoop, FI.InnerLoop->getName());

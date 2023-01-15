@@ -68,8 +68,8 @@ add_llvm_component_library(LLVMipo
   ProfileData
   Scalar
   Support
+  TargetParser
   TransformUtils
   Vectorize
   Instrumentation
-  Scalar
   )

@@ -8,9 +8,9 @@
 
 #include "mlir/Dialect/Async/IR/Async.h"
 
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -53,7 +53,7 @@ LogicalResult YieldOp::verify() {
 }
 
 MutableOperandRange
-YieldOp::getMutableSuccessorOperands(Optional<unsigned> index) {
+YieldOp::getMutableSuccessorOperands(std::optional<unsigned> index) {
   return getOperandsMutable();
 }
 
@@ -63,7 +63,8 @@ YieldOp::getMutableSuccessorOperands(Optional<unsigned> index) {
 
 constexpr char kOperandSegmentSizesAttr[] = "operand_segment_sizes";
 
-OperandRange ExecuteOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+OperandRange
+ExecuteOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
   assert(index && *index == 0 && "invalid region index");
   return getBodyOperands();
 }
@@ -77,7 +78,7 @@ bool ExecuteOp::areTypesCompatible(Type lhs, Type rhs) {
   return getValueOrTokenType(lhs) == getValueOrTokenType(rhs);
 }
 
-void ExecuteOp::getSuccessorRegions(Optional<unsigned> index,
+void ExecuteOp::getSuccessorRegions(std::optional<unsigned> index,
                                     ArrayRef<Attribute>,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `body` region branch back to the parent operation.
@@ -332,8 +333,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
                    ArrayRef<DictionaryAttr> argAttrs) {
   state.addAttribute(SymbolTable::getSymbolAttrName(),
                      builder.getStringAttr(name));
-  state.addAttribute(FunctionOpInterface::getTypeAttrName(),
-                     TypeAttr::get(type));
+  state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
 
   state.attributes.append(attrs.begin(), attrs.end());
   state.addRegion();
@@ -341,8 +341,9 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(builder, state, argAttrs,
-                                                /*resultAttrs=*/std::nullopt);
+  function_interface_impl::addArgAndResultAttrs(
+      builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
+      getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
 
 ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -352,11 +353,15 @@ ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
          std::string &) { return builder.getFunctionType(argTypes, results); };
 
   return function_interface_impl::parseFunctionOp(
-      parser, result, /*allowVariadic=*/false, buildFuncType);
+      parser, result, /*allowVariadic=*/false,
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
 
 void FuncOp::print(OpAsmPrinter &p) {
-  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
+  function_interface_impl::printFunctionOp(
+      p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
+      getArgAttrsAttrName(), getResAttrsAttrName());
 }
 
 /// Check that the result type of async.func is not void and must be

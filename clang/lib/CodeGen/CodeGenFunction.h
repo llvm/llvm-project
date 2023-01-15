@@ -4813,6 +4813,12 @@ public:
   // last (if it exists).
   void EmitMultiVersionResolver(llvm::Function *Resolver,
                                 ArrayRef<MultiVersionResolverOption> Options);
+  void
+  EmitX86MultiVersionResolver(llvm::Function *Resolver,
+                              ArrayRef<MultiVersionResolverOption> Options);
+  void
+  EmitAArch64MultiVersionResolver(llvm::Function *Resolver,
+                                  ArrayRef<MultiVersionResolverOption> Options);
 
 private:
   QualType getVarArgType(const Expr *Arg);
@@ -4831,7 +4837,11 @@ private:
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
   llvm::Value *EmitX86CpuSupports(uint64_t Mask);
   llvm::Value *EmitX86CpuInit();
-  llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *FormX86ResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *EmitAArch64CpuInit();
+  llvm::Value *
+  FormAArch64ResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
 };
 
 
@@ -4841,9 +4851,9 @@ DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {
 
   // Otherwise, we need an alloca.
   auto align = CharUnits::fromQuantity(
-            CGF.CGM.getDataLayout().getPrefTypeAlignment(value->getType()));
+      CGF.CGM.getDataLayout().getPrefTypeAlign(value->getType()));
   Address alloca =
-    CGF.CreateTempAlloca(value->getType(), align, "cond-cleanup.save");
+      CGF.CreateTempAlloca(value->getType(), align, "cond-cleanup.save");
   CGF.Builder.CreateStore(value, alloca);
 
   return saved_type(alloca.getPointer(), true);

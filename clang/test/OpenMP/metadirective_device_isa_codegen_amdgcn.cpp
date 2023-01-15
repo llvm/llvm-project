@@ -14,7 +14,7 @@ int amdgcn_device_isa_selected() {
                        : threadCount)
   {
 #pragma omp metadirective                     \
-    when(device = {isa("flat-address-space")} \
+    when(device = {isa("dpp")} \
          : parallel) default(single)
     threadCount++;
   }

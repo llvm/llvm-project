@@ -24,7 +24,6 @@ namespace targets {
 // Hexagon abstract base class
 class LLVM_LIBRARY_VISIBILITY HexagonTargetInfo : public TargetInfo {
 
-  static const Builtin::Info BuiltinInfo[];
   static const char *const GCCRegNames[];
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   std::string CPU;

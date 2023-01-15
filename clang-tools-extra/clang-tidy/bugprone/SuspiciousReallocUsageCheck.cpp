@@ -95,7 +95,7 @@ public:
   }
   bool VisitStmt(const Stmt *S) {
     for (const Stmt *Child : S->children())
-      if (Visit(Child))
+      if (Child && Visit(Child))
         return true;
     return false;
   }

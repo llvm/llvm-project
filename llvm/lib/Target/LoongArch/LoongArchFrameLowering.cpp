@@ -191,7 +191,10 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
-
+  // All calls are tail calls in GHC calling conv, and functions have no
+  // prologue/epilogue.
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+    return;
   // Determine the correct frame layout
   determineFrameLayout(MF);
 
@@ -322,7 +325,10 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
   Register SPReg = LoongArch::R3;
-
+  // All calls are tail calls in GHC calling conv, and functions have no
+  // prologue/epilogue.
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+    return;
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
@@ -461,7 +467,8 @@ bool LoongArchFrameLowering::spillCalleeSavedRegisters(
     bool IsKill =
         !(Reg == LoongArch::R1 && MF->getFrameInfo().isReturnAddressTaken());
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, CS.getFrameIdx(), RC, TRI);
+    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill, CS.getFrameIdx(), RC, TRI,
+                            Register());
   }
 
   return true;

@@ -24,6 +24,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -57,8 +58,8 @@ public:
 
   ~CommandObjectCommandsSource() override = default;
 
-  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
-                                               uint32_t index) override {
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
     return std::string("");
   }
 
@@ -118,7 +119,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_source_options);
+      return llvm::ArrayRef(g_source_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -201,7 +202,7 @@ protected:
 static const char *g_python_command_instructions =
     "Enter your Python command(s). Type 'DONE' to end.\n"
     "You must define a Python function with this signature:\n"
-    "def my_command_impl(debugger, args, result, internal_dict):\n";
+    "def my_command_impl(debugger, args, exe_ctx, result, internal_dict):\n";
 
 class CommandObjectCommandsAlias : public CommandObjectRaw {
 protected:
@@ -212,7 +213,7 @@ protected:
     ~CommandOptions() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_alias_options);
+      return llvm::ArrayRef(g_alias_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
@@ -1056,7 +1057,7 @@ private:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_regex_options);
+      return llvm::ArrayRef(g_regex_options);
     }
 
     llvm::StringRef GetHelp() { return m_help; }
@@ -1303,7 +1304,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_script_import_options);
+      return llvm::ArrayRef(g_script_import_options);
     }
     bool relative_to_command_file = false;
     bool silent = false;
@@ -1454,7 +1455,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_script_add_options);
+      return llvm::ArrayRef(g_script_add_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -1897,7 +1898,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_container_add_options);
+      return llvm::ArrayRef(g_container_add_options);
     }
 
     // Instance variables to hold the values for command options.

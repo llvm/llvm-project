@@ -3,6 +3,6 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 %some_named_struct = type { i8, i8 }
 
-define void @bar(%some_named_struct*) {
+define void @bar(ptr) {
   ret void
 }

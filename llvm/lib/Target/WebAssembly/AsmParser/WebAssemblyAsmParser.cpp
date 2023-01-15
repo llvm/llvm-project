@@ -210,6 +210,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   // guarantee that correct order.
   enum ParserState {
     FileStart,
+    FunctionLabel,
     FunctionStart,
     FunctionLocals,
     Instructions,
@@ -273,11 +274,11 @@ public:
 #include "WebAssemblyGenAsmMatcher.inc"
 
   // TODO: This is required to be implemented, but appears unused.
-  bool ParseRegister(unsigned & /*RegNo*/, SMLoc & /*StartLoc*/,
+  bool parseRegister(MCRegister & /*RegNo*/, SMLoc & /*StartLoc*/,
                      SMLoc & /*EndLoc*/) override {
-    llvm_unreachable("ParseRegister is not implemented.");
+    llvm_unreachable("parseRegister is not implemented.");
   }
-  OperandMatchResultTy tryParseRegister(unsigned & /*RegNo*/,
+  OperandMatchResultTy tryParseRegister(MCRegister & /*RegNo*/,
                                         SMLoc & /*StartLoc*/,
                                         SMLoc & /*EndLoc*/) override {
     llvm_unreachable("tryParseRegister is not implemented.");
@@ -287,8 +288,8 @@ public:
     return Parser.Error(Tok.getLoc(), Msg + Tok.getString());
   }
 
-  bool error(const Twine &Msg) {
-    return Parser.Error(Lexer.getTok().getLoc(), Msg);
+  bool error(const Twine &Msg, SMLoc Loc = SMLoc()) {
+    return Parser.Error(Loc.isValid() ? Loc : Lexer.getTok().getLoc(), Msg);
   }
 
   void addSignature(std::unique_ptr<wasm::WasmSignature> &&Sig) {
@@ -336,11 +337,12 @@ public:
     return false;
   }
 
-  bool ensureEmptyNestingStack() {
+  bool ensureEmptyNestingStack(SMLoc Loc = SMLoc()) {
     auto Err = !NestingStack.empty();
     while (!NestingStack.empty()) {
       error(Twine("Unmatched block construct(s) at function end: ") +
-            nestingString(NestingStack.back().NT).first);
+                nestingString(NestingStack.back().NT).first,
+            Loc);
       NestingStack.pop_back();
     }
     return Err;
@@ -865,12 +867,24 @@ public:
         return true;
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       if (WasmSym->isDefined()) {
-        // This .functype indicates a start of a function.
-        if (ensureEmptyNestingStack())
-          return true;
+        // We push 'Function' either when a label is parsed or a .functype
+        // directive is parsed. The reason it is not easy to do this uniformly
+        // in a single place is,
+        // 1. We can't do this at label parsing time only because there are
+        //    cases we don't have .functype directive before a function label,
+        //    in which case we don't know if the label is a function at the time
+        //    of parsing.
+        // 2. We can't do this at .functype parsing time only because we want to
+        //    detect a function started with a label and not ended correctly
+        //    without encountering a .functype directive after the label.
+        if (CurrentState != FunctionLabel) {
+          // This .functype indicates a start of a function.
+          if (ensureEmptyNestingStack())
+            return true;
+          push(Function);
+        }
         CurrentState = FunctionStart;
         LastFunctionLabel = WasmSym;
-        push(Function);
       }
       auto Signature = std::make_unique<wasm::WasmSignature>();
       if (parseSignature(Signature.get()))
@@ -1100,6 +1114,22 @@ public:
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())
       getContext().addGenDwarfSection(WS);
+
+    if (WasmSym->isFunction()) {
+      // We give the location of the label (IDLoc) here, because otherwise the
+      // lexer's next location will be used, which can be confusing. For
+      // example:
+      //
+      // test0: ; This function does not end properly
+      //   ...
+      //
+      // test1: ; We would like to point to this line for error
+      //   ...  . Not this line, which can contain any instruction
+      ensureEmptyNestingStack(IDLoc);
+      CurrentState = FunctionLabel;
+      LastFunctionLabel = Symbol;
+      push(Function);
+    }
   }
 
   void onEndOfFunction(SMLoc ErrorLoc) {

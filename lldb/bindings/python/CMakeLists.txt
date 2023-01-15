@@ -109,6 +109,13 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     FILES
     "${LLDB_SOURCE_DIR}/examples/python/scripted_process/scripted_process.py")
 
+  create_python_package(
+    ${swig_target}
+    ${lldb_python_target_dir}
+    "plugins"
+    FILES
+    "${LLDB_SOURCE_DIR}/examples/python/scripted_process/scripted_platform.py")
+
   if(APPLE)
     create_python_package(
       ${swig_target}

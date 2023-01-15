@@ -18,7 +18,6 @@
 #define LLVM_ADT_STLEXTRAS_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/identity.h"
@@ -525,6 +524,8 @@ protected:
       BaseT::operator++();
   }
 
+  filter_iterator_base() = default;
+
   // Construct the iterator. The begin iterator needs to know where the end
   // is, so that it can properly stop when it gets there. The end iterator only
   // needs the predicate to support bidirectional iteration.
@@ -560,6 +561,8 @@ template <typename WrappedIteratorT, typename PredicateT,
 class filter_iterator_impl
     : public filter_iterator_base<WrappedIteratorT, PredicateT, IterTag> {
 public:
+  filter_iterator_impl() = default;
+
   filter_iterator_impl(WrappedIteratorT Begin, WrappedIteratorT End,
                        PredicateT Pred)
       : filter_iterator_impl::filter_iterator_base(Begin, End, Pred) {}
@@ -580,6 +583,8 @@ class filter_iterator_impl<WrappedIteratorT, PredicateT,
 
 public:
   using BaseT::operator--;
+
+  filter_iterator_impl() = default;
 
   filter_iterator_impl(WrappedIteratorT Begin, WrappedIteratorT End,
                        PredicateT Pred)
@@ -921,7 +926,7 @@ Iter next_or_end(const Iter &I, const Iter &End) {
 }
 
 template <typename Iter>
-auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
+auto deref_or_none(const Iter &I, const Iter &End) -> std::optional<
     std::remove_const_t<std::remove_reference_t<decltype(*I)>>> {
   if (I == End)
     return std::nullopt;
@@ -929,7 +934,7 @@ auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
 }
 
 template <typename Iter> struct ZipLongestItemType {
-  using type = llvm::Optional<std::remove_const_t<
+  using type = std::optional<std::remove_const_t<
       std::remove_reference_t<decltype(*std::declval<Iter>())>>>;
 };
 
@@ -1030,7 +1035,7 @@ public:
 } // namespace detail
 
 /// Iterate over two or more iterators at the same time. Iteration continues
-/// until all iterators reach the end. The llvm::Optional only contains a value
+/// until all iterators reach the end. The std::optional only contains a value
 /// if the iterator has not reached the end.
 template <typename T, typename U, typename... Args>
 detail::zip_longest_range<T, U, Args...> zip_longest(T &&t, U &&u,

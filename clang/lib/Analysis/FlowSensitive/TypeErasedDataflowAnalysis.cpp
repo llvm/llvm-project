@@ -30,7 +30,6 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
@@ -52,7 +51,7 @@ public:
     assert(BlockIt != CFCtx.getStmtToBlock().end());
     const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
     assert(State);
-    return &State.value().Env;
+    return &State->Env;
   }
 
 private:
@@ -96,9 +95,8 @@ class TerminatorVisitor
     : public ConstStmtVisitor<TerminatorVisitor, TerminatorVisitorRetTy> {
 public:
   TerminatorVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env,
-                    int BlockSuccIdx, TransferOptions TransferOpts)
-      : StmtToEnv(StmtToEnv), Env(Env),
-        BlockSuccIdx(BlockSuccIdx), TransferOpts(TransferOpts) {}
+                    int BlockSuccIdx)
+      : StmtToEnv(StmtToEnv), Env(Env), BlockSuccIdx(BlockSuccIdx) {}
 
   TerminatorVisitorRetTy VisitIfStmt(const IfStmt *S) {
     auto *Cond = S->getCond();
@@ -143,7 +141,7 @@ private:
   TerminatorVisitorRetTy extendFlowCondition(const Expr &Cond) {
     // The terminator sub-expression might not be evaluated.
     if (Env.getStorageLocation(Cond, SkipPast::None) == nullptr)
-      transfer(StmtToEnv, Cond, Env, TransferOpts);
+      transfer(StmtToEnv, Cond, Env);
 
     // FIXME: The flow condition must be an r-value, so `SkipPast::None` should
     // suffice.
@@ -179,7 +177,6 @@ private:
   const StmtToEnvMap &StmtToEnv;
   Environment &Env;
   int BlockSuccIdx;
-  TransferOptions TransferOpts;
 };
 
 /// Holds data structures required for running dataflow analysis.
@@ -249,8 +246,6 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
   llvm::Optional<TypeErasedDataflowAnalysisState> MaybeState;
 
   auto &Analysis = AC.Analysis;
-  auto BuiltinTransferOpts = Analysis.builtinTransferOptions();
-
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
     if (!Pred || Pred->hasNoReturnElement())
@@ -263,14 +258,13 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     if (!MaybePredState)
       continue;
 
-    TypeErasedDataflowAnalysisState PredState = MaybePredState.value();
-    if (BuiltinTransferOpts) {
+    TypeErasedDataflowAnalysisState PredState = *MaybePredState;
+    if (Analysis.builtinOptions()) {
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
         const StmtToEnvMapImpl StmtToEnv(AC.CFCtx, AC.BlockStates);
         auto [Cond, CondValue] =
             TerminatorVisitor(StmtToEnv, PredState.Env,
-                              blockIndexInPredecessor(*Pred, Block),
-                              *BuiltinTransferOpts)
+                              blockIndexInPredecessor(*Pred, Block))
                 .Visit(PredTerminatorStmt);
         if (Cond != nullptr)
           // FIXME: Call transferBranchTypeErased even if BuiltinTransferOpts
@@ -302,8 +296,7 @@ void builtinTransferStatement(const CFGStmt &Elt,
                               AnalysisContext &AC) {
   const Stmt *S = Elt.getStmt();
   assert(S != nullptr);
-  transfer(StmtToEnvMapImpl(AC.CFCtx, AC.BlockStates), *S, InputState.Env,
-           *AC.Analysis.builtinTransferOptions());
+  transfer(StmtToEnvMapImpl(AC.CFCtx, AC.BlockStates), *S, InputState.Env);
 }
 
 /// Built-in transfer function for `CFGInitializer`.
@@ -346,14 +339,12 @@ void builtinTransfer(const CFGElement &Elt,
                      TypeErasedDataflowAnalysisState &State,
                      AnalysisContext &AC) {
   switch (Elt.getKind()) {
-  case CFGElement::Statement: {
+  case CFGElement::Statement:
     builtinTransferStatement(Elt.castAs<CFGStmt>(), State, AC);
     break;
-  }
-  case CFGElement::Initializer: {
+  case CFGElement::Initializer:
     builtinTransferInitializer(Elt.castAs<CFGInitializer>(), State);
     break;
-  }
   default:
     // FIXME: Evaluate other kinds of `CFGElement`.
     break;
@@ -376,7 +367,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   auto State = computeBlockInputState(Block, AC);
   for (const auto &Element : Block) {
     // Built-in analysis
-    if (AC.Analysis.builtinTransferOptions()) {
+    if (AC.Analysis.builtinOptions()) {
       builtinTransfer(Element, State, AC);
     }
 
@@ -453,7 +444,7 @@ runTypeErasedDataflowAnalysis(
     if (OldBlockState) {
       if (isLoopHead(*Block)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
-            NewBlockState.Lattice, OldBlockState.value().Lattice);
+            NewBlockState.Lattice, OldBlockState->Lattice);
         LatticeJoinEffect Effect2 =
             NewBlockState.Env.widen(OldBlockState->Env, Analysis);
         if (Effect1 == LatticeJoinEffect::Unchanged &&
@@ -461,7 +452,7 @@ runTypeErasedDataflowAnalysis(
           // The state of `Block` didn't change from widening so there's no need
           // to revisit its successors.
           continue;
-      } else if (Analysis.isEqualTypeErased(OldBlockState.value().Lattice,
+      } else if (Analysis.isEqualTypeErased(OldBlockState->Lattice,
                                             NewBlockState.Lattice) &&
                  OldBlockState->Env.equivalentTo(NewBlockState.Env, Analysis)) {
         // The state of `Block` didn't change after transfer so there's no need

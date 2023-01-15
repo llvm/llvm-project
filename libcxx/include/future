@@ -369,6 +369,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__memory/allocator_arg_t.h>
 #include <__memory/allocator_destructor.h>
 #include <__memory/uses_allocator.h>
+#include <__type_traits/strip_signature.h>
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -684,7 +685,7 @@ __assoc_state<_Rp>::move()
     unique_lock<mutex> __lk(this->__mut_);
     this->__sub_wait(__lk);
     if (this->__exception_ != nullptr)
-        rethrow_exception(this->__exception_);
+        std::rethrow_exception(this->__exception_);
     return _VSTD::move(*reinterpret_cast<_Rp*>(&__value_));
 }
 
@@ -695,7 +696,7 @@ __assoc_state<_Rp>::copy()
     unique_lock<mutex> __lk(this->__mut_);
     this->__sub_wait(__lk);
     if (this->__exception_ != nullptr)
-        rethrow_exception(this->__exception_);
+        std::rethrow_exception(this->__exception_);
     return *reinterpret_cast<_Rp*>(&__value_);
 }
 
@@ -755,7 +756,7 @@ __assoc_state<_Rp&>::copy()
     unique_lock<mutex> __lk(this->__mut_);
     this->__sub_wait(__lk);
     if (this->__exception_ != nullptr)
-        rethrow_exception(this->__exception_);
+        std::rethrow_exception(this->__exception_);
     return *__value_;
 }
 
@@ -1625,7 +1626,7 @@ class _LIBCPP_AVAILABILITY_FUTURE __packaged_task_base<_Rp(_ArgTypes...)>
 public:
     _LIBCPP_INLINE_VISIBILITY
     __packaged_task_base() {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     virtual ~__packaged_task_base() {}
     virtual void __move_to(__packaged_task_base*) _NOEXCEPT = 0;
     virtual void destroy() = 0;
@@ -2049,6 +2050,16 @@ public:
 
     void reset();
 };
+
+#if _LIBCPP_STD_VER >= 17
+
+template <class _Rp, class... _Args>
+packaged_task(_Rp(*)(_Args...)) -> packaged_task<_Rp(_Args...)>;
+
+template <class _Fp, class _Stripped = typename __strip_signature<decltype(&_Fp::operator())>::type>
+packaged_task(_Fp) -> packaged_task<_Stripped>;
+
+#endif
 
 template<class ..._ArgTypes>
 void

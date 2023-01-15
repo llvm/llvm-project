@@ -41,7 +41,7 @@ for.end:
 ; CHECK:      entry:
 ; CHECK:        [[ALLOCA:%.*]] = alloca [1024 x i32], align 16
 ; CHECK:      vector.ph:
-; CHECK:        [[TMP1:%.*]] = insertelement <vscale x 2 x [1024 x i32]*> poison, [1024 x i32]* %arr, i32 0
+; CHECK:        [[TMP1:%.*]] = insertelement <vscale x 2 x [1024 x i32]*> poison, [1024 x i32]* %arr, i64 0
 ; CHECK-NEXT:   [[SPLAT_ALLOCA:%.*]] = shufflevector <vscale x 2 x [1024 x i32]*> [[TMP1]], <vscale x 2 x [1024 x i32]*> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK:      vector.body:
 ; CHECK:        [[BC_ALLOCA:%.*]] = bitcast <vscale x 2 x [1024 x i32]*> [[SPLAT_ALLOCA]] to <vscale x 2 x i8*>

@@ -47,7 +47,7 @@ public:
   bool has_value() const { return impl.has_value(); }
 
   /// Access the internal ParseResult value.
-  ParseResult value() const { return impl.value(); }
+  ParseResult value() const { return *impl; }
   ParseResult operator*() const { return value(); }
 
 private:
@@ -1251,8 +1251,7 @@ struct HasParent {
       return op->emitOpError()
              << "expects parent op "
              << (sizeof...(ParentOpTypes) != 1 ? "to be one of '" : "'")
-             << llvm::makeArrayRef({ParentOpTypes::getOperationName()...})
-             << "'";
+             << llvm::ArrayRef({ParentOpTypes::getOperationName()...}) << "'";
     }
   };
 };
@@ -1687,18 +1686,35 @@ public:
 private:
   /// Trait to check if T provides a 'fold' method for a single result op.
   template <typename T, typename... Args>
-  using has_single_result_fold =
+  using has_single_result_fold_t =
       decltype(std::declval<T>().fold(std::declval<ArrayRef<Attribute>>()));
   template <typename T>
-  using detect_has_single_result_fold =
-      llvm::is_detected<has_single_result_fold, T>;
+  constexpr static bool has_single_result_fold_v =
+      llvm::is_detected<has_single_result_fold_t, T>::value;
   /// Trait to check if T provides a general 'fold' method.
   template <typename T, typename... Args>
-  using has_fold = decltype(std::declval<T>().fold(
+  using has_fold_t = decltype(std::declval<T>().fold(
       std::declval<ArrayRef<Attribute>>(),
       std::declval<SmallVectorImpl<OpFoldResult> &>()));
   template <typename T>
-  using detect_has_fold = llvm::is_detected<has_fold, T>;
+  constexpr static bool has_fold_v = llvm::is_detected<has_fold_t, T>::value;
+  /// Trait to check if T provides a 'fold' method with a FoldAdaptor for a
+  /// single result op.
+  template <typename T, typename... Args>
+  using has_fold_adaptor_single_result_fold_t =
+      decltype(std::declval<T>().fold(std::declval<typename T::FoldAdaptor>()));
+  template <class T>
+  constexpr static bool has_fold_adaptor_single_result_v =
+      llvm::is_detected<has_fold_adaptor_single_result_fold_t, T>::value;
+  /// Trait to check if T provides a general 'fold' method with a FoldAdaptor.
+  template <typename T, typename... Args>
+  using has_fold_adaptor_fold_t = decltype(std::declval<T>().fold(
+      std::declval<typename T::FoldAdaptor>(),
+      std::declval<SmallVectorImpl<OpFoldResult> &>()));
+  template <class T>
+  constexpr static bool has_fold_adaptor_v =
+      llvm::is_detected<has_fold_adaptor_fold_t, T>::value;
+
   /// Trait to check if T provides a 'print' method.
   template <typename T, typename... Args>
   using has_print =
@@ -1744,41 +1760,22 @@ private:
   /// hooks.
   /// Implementation of `FoldHookFn` OperationName hook.
   static OperationName::FoldHookFn getFoldHookFn() {
-    return getFoldHookFnImpl<ConcreteType>();
-  }
-  /// The internal implementation of `getFoldHookFn` above that is invoked if
-  /// the operation is single result and defines a `fold` method.
-  template <typename ConcreteOpT>
-  static std::enable_if_t<llvm::is_one_of<OpTrait::OneResult<ConcreteOpT>,
-                                          Traits<ConcreteOpT>...>::value &&
-                              detect_has_single_result_fold<ConcreteOpT>::value,
-                          OperationName::FoldHookFn>
-  getFoldHookFnImpl() {
-    return [](Operation *op, ArrayRef<Attribute> operands,
-              SmallVectorImpl<OpFoldResult> &results) {
-      return foldSingleResultHook<ConcreteOpT>(op, operands, results);
-    };
-  }
-  /// The internal implementation of `getFoldHookFn` above that is invoked if
-  /// the operation is not single result and defines a `fold` method.
-  template <typename ConcreteOpT>
-  static std::enable_if_t<!llvm::is_one_of<OpTrait::OneResult<ConcreteOpT>,
-                                           Traits<ConcreteOpT>...>::value &&
-                              detect_has_fold<ConcreteOpT>::value,
-                          OperationName::FoldHookFn>
-  getFoldHookFnImpl() {
-    return [](Operation *op, ArrayRef<Attribute> operands,
-              SmallVectorImpl<OpFoldResult> &results) {
-      return foldHook<ConcreteOpT>(op, operands, results);
-    };
-  }
-  /// The internal implementation of `getFoldHookFn` above that is invoked if
-  /// the operation does not define a `fold` method.
-  template <typename ConcreteOpT>
-  static std::enable_if_t<!detect_has_single_result_fold<ConcreteOpT>::value &&
-                              !detect_has_fold<ConcreteOpT>::value,
-                          OperationName::FoldHookFn>
-  getFoldHookFnImpl() {
+    // If the operation is single result and defines a `fold` method.
+    if constexpr (llvm::is_one_of<OpTrait::OneResult<ConcreteType>,
+                                  Traits<ConcreteType>...>::value &&
+                  (has_single_result_fold_v<ConcreteType> ||
+                   has_fold_adaptor_single_result_v<ConcreteType>))
+      return [](Operation *op, ArrayRef<Attribute> operands,
+                SmallVectorImpl<OpFoldResult> &results) {
+        return foldSingleResultHook<ConcreteType>(op, operands, results);
+      };
+    // The operation is not single result and defines a `fold` method.
+    if constexpr (has_fold_v<ConcreteType> || has_fold_adaptor_v<ConcreteType>)
+      return [](Operation *op, ArrayRef<Attribute> operands,
+                SmallVectorImpl<OpFoldResult> &results) {
+        return foldHook<ConcreteType>(op, operands, results);
+      };
+    // The operation does not define a `fold` method.
     return [](Operation *op, ArrayRef<Attribute> operands,
               SmallVectorImpl<OpFoldResult> &results) {
       // In this case, we only need to fold the traits of the operation.
@@ -1792,7 +1789,12 @@ private:
   static LogicalResult
   foldSingleResultHook(Operation *op, ArrayRef<Attribute> operands,
                        SmallVectorImpl<OpFoldResult> &results) {
-    OpFoldResult result = cast<ConcreteOpT>(op).fold(operands);
+    OpFoldResult result;
+    if constexpr (has_fold_adaptor_single_result_v<ConcreteOpT>)
+      result = cast<ConcreteOpT>(op).fold(typename ConcreteOpT::FoldAdaptor(
+          operands, op->getAttrDictionary(), op->getRegions()));
+    else
+      result = cast<ConcreteOpT>(op).fold(operands);
 
     // If the fold failed or was in-place, try to fold the traits of the
     // operation.
@@ -1809,7 +1811,15 @@ private:
   template <typename ConcreteOpT>
   static LogicalResult foldHook(Operation *op, ArrayRef<Attribute> operands,
                                 SmallVectorImpl<OpFoldResult> &results) {
-    LogicalResult result = cast<ConcreteOpT>(op).fold(operands, results);
+    auto result = LogicalResult::failure();
+    if constexpr (has_fold_adaptor_v<ConcreteOpT>) {
+      result = cast<ConcreteOpT>(op).fold(
+          typename ConcreteOpT::FoldAdaptor(operands, op->getAttrDictionary(),
+                                            op->getRegions()),
+          results);
+    } else {
+      result = cast<ConcreteOpT>(op).fold(operands, results);
+    }
 
     // If the fold failed or was in-place, try to fold the traits of the
     // operation.
@@ -1837,31 +1847,16 @@ private:
   }
   /// Implementation of `PrintAssemblyFn` OperationName hook.
   static OperationName::PrintAssemblyFn getPrintAssemblyFn() {
-    return getPrintAssemblyFnImpl<ConcreteType>();
-  }
-  /// The internal implementation of `getPrintAssemblyFn` that is invoked when
-  /// the concrete operation does not define a `print` method.
-  template <typename ConcreteOpT>
-  static std::enable_if_t<!detect_has_print<ConcreteOpT>::value,
-                          OperationName::PrintAssemblyFn>
-  getPrintAssemblyFnImpl() {
+    if constexpr (detect_has_print<ConcreteType>::value)
+      return [](Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
+        OpState::printOpName(op, p, defaultDialect);
+        return cast<ConcreteType>(op).print(p);
+      };
     return [](Operation *op, OpAsmPrinter &printer, StringRef defaultDialect) {
       return OpState::print(op, printer, defaultDialect);
     };
   }
-  /// The internal implementation of `getPrintAssemblyFn` that is invoked when
-  /// the concrete operation defines a `print` method.
-  template <typename ConcreteOpT>
-  static std::enable_if_t<detect_has_print<ConcreteOpT>::value,
-                          OperationName::PrintAssemblyFn>
-  getPrintAssemblyFnImpl() {
-    return &printAssembly;
-  }
-  static void printAssembly(Operation *op, OpAsmPrinter &p,
-                            StringRef defaultDialect) {
-    OpState::printOpName(op, p, defaultDialect);
-    return cast<ConcreteType>(op).print(p);
-  }
+
   /// Implementation of `PopulateDefaultAttrsFn` OperationName hook.
   static OperationName::PopulateDefaultAttrsFn getPopulateDefaultAttrsFn() {
     return ConcreteType::populateDefaultAttrs;

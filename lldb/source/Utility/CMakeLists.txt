@@ -81,4 +81,5 @@ add_lldb_library(lldbUtility
   LINK_COMPONENTS
     BinaryFormat
     Support
+    TargetParser
   )

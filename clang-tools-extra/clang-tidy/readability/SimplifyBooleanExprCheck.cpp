@@ -11,6 +11,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/SaveAndRestore.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -297,7 +298,7 @@ public:
   }
 
   // Extracts a bool if an expression is (true|false|!true|!false);
-  static Optional<bool> getAsBoolLiteral(const Expr *E, bool FilterMacro) {
+  static std::optional<bool> getAsBoolLiteral(const Expr *E, bool FilterMacro) {
     if (const auto *Bool = dyn_cast<CXXBoolLiteralExpr>(E)) {
       if (FilterMacro && Bool->getBeginLoc().isMacroID())
         return std::nullopt;
@@ -307,7 +308,7 @@ public:
       if (FilterMacro && UnaryOp->getBeginLoc().isMacroID())
         return std::nullopt;
       if (UnaryOp->getOpcode() == UO_LNot)
-        if (Optional<bool> Res = getAsBoolLiteral(
+        if (std::optional<bool> Res = getAsBoolLiteral(
                 UnaryOp->getSubExpr()->IgnoreImplicit(), FilterMacro))
           return !*Res;
     }
@@ -329,7 +330,7 @@ public:
     const auto *RS = dyn_cast<ReturnStmt>(S);
     if (!RS || !RS->getRetValue())
       return {};
-    if (Optional<bool> Ret =
+    if (std::optional<bool> Ret =
             getAsBoolLiteral(RS->getRetValue()->IgnoreImplicit(), false)) {
       return {RS->getRetValue(), *Ret};
     }
@@ -364,7 +365,7 @@ public:
      * if (false) ThenStmt(); else ElseStmt() -> ElseStmt();
      */
     Expr *Cond = If->getCond()->IgnoreImplicit();
-    if (Optional<bool> Bool = getAsBoolLiteral(Cond, true)) {
+    if (std::optional<bool> Bool = getAsBoolLiteral(Cond, true)) {
       if (*Bool)
         Check->replaceWithThenStatement(Context, If, Cond);
       else
@@ -399,7 +400,7 @@ public:
           const auto *BO = dyn_cast<BinaryOperator>(S);
           if (!BO || BO->getOpcode() != BO_Assign)
             return {};
-          Optional<bool> RightasBool =
+          std::optional<bool> RightasBool =
               getAsBoolLiteral(BO->getRHS()->IgnoreImplicit(), false);
           if (!RightasBool)
             return {};
@@ -438,9 +439,9 @@ public:
      * Condition ? true : false; -> Condition
      * Condition ? false : true; -> !Condition;
      */
-    if (Optional<bool> Then =
+    if (std::optional<bool> Then =
             getAsBoolLiteral(Cond->getTrueExpr()->IgnoreImplicit(), false)) {
-      if (Optional<bool> Else =
+      if (std::optional<bool> Else =
               getAsBoolLiteral(Cond->getFalseExpr()->IgnoreImplicit(), false)) {
         if (*Then != *Else)
           Check->replaceWithCondition(Context, Cond, *Else);
@@ -784,16 +785,16 @@ static BinaryOperatorKind getDemorganFlippedOperator(BinaryOperatorKind BO) {
 
 static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
                              const ASTContext &Ctx, const Expr *E,
-                             Optional<BinaryOperatorKind> OuterBO);
+                             std::optional<BinaryOperatorKind> OuterBO);
 
 /// Inverts \p BinOp, Removing \p Parens if they exist and are safe to remove.
 /// returns \c true if there is any issue building the Fixes, \c false
 /// otherwise.
-static bool flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
-                                       const ASTContext &Ctx,
-                                       const BinaryOperator *BinOp,
-                                       Optional<BinaryOperatorKind> OuterBO,
-                                       const ParenExpr *Parens = nullptr) {
+static bool
+flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
+                           const ASTContext &Ctx, const BinaryOperator *BinOp,
+                           std::optional<BinaryOperatorKind> OuterBO,
+                           const ParenExpr *Parens = nullptr) {
   switch (BinOp->getOpcode()) {
   case BO_LAnd:
   case BO_LOr: {
@@ -870,7 +871,7 @@ static bool flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
 
 static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
                              const ASTContext &Ctx, const Expr *E,
-                             Optional<BinaryOperatorKind> OuterBO) {
+                             std::optional<BinaryOperatorKind> OuterBO) {
   if (isa<UnaryOperator>(E) && cast<UnaryOperator>(E)->getOpcode() == UO_LNot) {
     //  if we have a not operator, '!a', just remove the '!'.
     if (cast<UnaryOperator>(E)->getOperatorLoc().isMacroID())

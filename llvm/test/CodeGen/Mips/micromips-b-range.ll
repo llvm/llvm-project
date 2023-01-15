@@ -61,7 +61,7 @@
 @x = external global i32, align 4
 
 define void @foo() {
-  %1 = load i32, i32* @x, align 4
+  %1 = load i32, ptr @x, align 4
   %2 = icmp sgt i32 %1, 0
   br i1 %2, label %la, label %lf
 

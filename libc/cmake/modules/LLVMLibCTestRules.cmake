@@ -106,7 +106,7 @@ function(create_libc_unittest fq_target_name)
     # machine specific object library. Such a test would be testing internals of
     # the libc and it is assumed that they will be rare in practice. So, they
     # can be skipped in the corresponding CMake files using platform specific
-    # logic. This pattern is followed in the loader tests for example.
+    # logic. This pattern is followed in the startup tests for example.
     #
     # Another pattern that is present currently is to detect machine
     # capabilities and add entrypoints and tests accordingly. That approach is
@@ -319,7 +319,7 @@ function(add_libc_fuzzer target_name)
     "LIBC_FUZZER"
     "" # No optional arguments
     "" # Single value arguments
-    "SRCS;HDRS;DEPENDS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT LIBC_FUZZER_SRCS)
@@ -374,13 +374,18 @@ function(add_libc_fuzzer target_name)
     ${fq_deps_list}
   )
   add_dependencies(libc-fuzzer ${fq_target_name})
+
+  target_compile_options(${fq_target_name}
+    PRIVATE
+    ${LIBC_FUZZER_COMPILE_OPTIONS})
+
 endfunction(add_libc_fuzzer)
 
 # Rule to add an integration test. An integration test is like a unit test
-# but does not use the system libc. Not even the loader from the system libc
-# is linked to the final executable. The final exe is fully statically linked.
-# The libc that the final exe links to consists of only the object files of
-# the DEPENDS targets.
+# but does not use the system libc. Not even the startup objects from the
+# system libc are linked in to the final executable. The final exe is fully
+# statically linked. The libc that the final exe links to consists of only
+# the object files of the DEPENDS targets.
 # 
 # Usage:
 #   add_integration_test(
@@ -388,15 +393,15 @@ endfunction(add_libc_fuzzer)
 #     SUITE <the suite to which the test should belong>
 #     SRCS <src1.cpp> [src2.cpp ...]
 #     HDRS [hdr1.cpp ...]
-#     LOADER <fully qualified loader target name>
+#     STARTUP <fully qualified startup system target name>
 #     DEPENDS <list of entrypoint or other object targets>
 #     ARGS <list of command line arguments to be passed to the test>
 #     ENV <list of environment variables to set before running the test>
 #     COMPILE_OPTIONS <list of special compile options for this target>
 #   )
 #
-# The loader target should provide a property named LOADER_OBJECT which is
-# the full path to the object file produces when the loader is built.
+# The startup target should provide a property named STARTUP_OBJECT which is
+# the full path to the object file produced when the startup system is built.
 #
 # The DEPENDS list can be empty. If not empty, it should be a list of
 # targets added with add_entrypoint_object or add_object_library.
@@ -409,7 +414,7 @@ function(add_integration_test test_name)
   cmake_parse_arguments(
     "INTEGRATION_TEST"
     "" # No optional arguments
-    "SUITE;LOADER" # Single value arguments
+    "SUITE;STARTUP" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
   )
@@ -417,8 +422,8 @@ function(add_integration_test test_name)
   if(NOT INTEGRATION_TEST_SUITE)
     message(FATAL_ERROR "SUITE not specified for ${fq_target_name}")
   endif()
-  if(NOT INTEGRATION_TEST_LOADER)
-    message(FATAL_ERROR "The LOADER to link to the integration test is missing.")
+  if(NOT INTEGRATION_TEST_STARTUP)
+    message(FATAL_ERROR "The STARTUP to link to the integration test is missing.")
   endif()
   if(NOT INTEGRATION_TEST_SRCS)
     message(FATAL_ERROR "The SRCS list for add_integration_test is missing.")
@@ -456,27 +461,27 @@ function(add_integration_test test_name)
   file(MAKE_DIRECTORY ${sysroot}/include)
   set(sysroot_lib ${sysroot}/lib)
   file(MAKE_DIRECTORY ${sysroot_lib})
-  get_target_property(loader_object_file ${INTEGRATION_TEST_LOADER} LOADER_OBJECT)
-  get_target_property(crti_object_file libc.loader.linux.crti LOADER_OBJECT)
-  get_target_property(crtn_object_file libc.loader.linux.crtn LOADER_OBJECT)
+  get_target_property(startup_object_file ${INTEGRATION_TEST_STARTUP} STARTUP_OBJECT)
+  get_target_property(crti_object_file libc.startup.linux.crti STARTUP_OBJECT)
+  get_target_property(crtn_object_file libc.startup.linux.crtn STARTUP_OBJECT)
   set(dummy_archive $<TARGET_PROPERTY:libc_integration_test_dummy,ARCHIVE_OUTPUT_DIRECTORY>/lib$<TARGET_PROPERTY:libc_integration_test_dummy,ARCHIVE_OUTPUT_NAME>.a)
-  if(NOT loader_object_file)
-    message(FATAL_ERROR "Missing LOADER_OBJECT property of ${INTEGRATION_TEST_LOADER}.")
+  if(NOT startup_object_file)
+    message(FATAL_ERROR "Missing STARTUP_OBJECT property of ${INTEGRATION_TEST_STARTUP}.")
   endif()
-  set(loader_dst ${sysroot_lib}/${LIBC_TARGET_ARCHITECTURE}-linux-gnu/crt1.o)
+  set(startup_dst ${sysroot_lib}/${LIBC_TARGET_ARCHITECTURE}-linux-gnu/crt1.o)
   add_custom_command(
-    OUTPUT ${loader_dst} ${sysroot}/lib/crti.o ${sysroot}/lib/crtn.o ${sysroot}/lib/libm.a ${sysroot}/lib/libc++.a
-    COMMAND cmake -E copy ${loader_object_file} ${loader_dst}
+    OUTPUT ${startup_dst} ${sysroot}/lib/crti.o ${sysroot}/lib/crtn.o ${sysroot}/lib/libm.a ${sysroot}/lib/libc++.a
+    COMMAND cmake -E copy ${startup_object_file} ${startup_dst}
     COMMAND cmake -E copy ${crti_object_file} ${sysroot}/lib
     COMMAND cmake -E copy ${crtn_object_file} ${sysroot}/lib
     # We copy the dummy archive as libm.a and libc++.a as the compiler drivers expect them.
     COMMAND cmake -E copy ${dummy_archive} ${sysroot}/lib/libm.a
     COMMAND cmake -E copy ${dummy_archive} ${sysroot}/lib/libc++.a
-    DEPENDS ${INTEGRATION_TEST_LOADER} libc.loader.linux.crti libc.loader.linux.crtn libc_integration_test_dummy
+    DEPENDS ${INTEGRATION_TEST_STARTUP} libc.startup.linux.crti libc.startup.linux.crtn libc_integration_test_dummy
   )
   add_custom_target(
-    ${fq_target_name}.__copy_loader__
-    DEPENDS ${loader_dst}
+    ${fq_target_name}.__copy_startup__
+    DEPENDS ${startup_dst}
   )
 
   add_library(
@@ -520,7 +525,7 @@ function(add_integration_test test_name)
   # as is (and not as paths like /usr/lib/.../crtbegin.o).
   target_link_options(${fq_target_name} PRIVATE --sysroot=${sysroot} -static -stdlib=libc++ --rtlib=compiler-rt)
   add_dependencies(${fq_target_name}
-                   ${fq_target_name}.__copy_loader__
+                   ${fq_target_name}.__copy_startup__
                    ${fq_libc_target_name}
                    libc.utils.IntegrationTest.test
                    ${INTEGRATION_TEST_DEPENDS})

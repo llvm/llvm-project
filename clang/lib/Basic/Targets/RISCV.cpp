@@ -15,8 +15,9 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::targets;
@@ -40,7 +41,7 @@ ArrayRef<const char *> RISCVTargetInfo::getGCCRegNames() const {
       "v8",  "v9",  "v10", "v11", "v12", "v13", "v14", "v15",
       "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23",
       "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31"};
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::GCCRegAlias> RISCVTargetInfo::getGCCRegAliases() const {
@@ -61,7 +62,7 @@ ArrayRef<TargetInfo::GCCRegAlias> RISCVTargetInfo::getGCCRegAliases() const {
       {{"fs4"}, "f20"}, {{"fs5"}, "f21"}, {{"fs6"}, "f22"},  {{"fs7"}, "f23"},
       {{"fs8"}, "f24"}, {{"fs9"}, "f25"}, {{"fs10"}, "f26"}, {{"fs11"}, "f27"},
       {{"ft8"}, "f28"}, {{"ft9"}, "f29"}, {{"ft10"}, "f30"}, {{"ft11"}, "f31"}};
-  return llvm::makeArrayRef(GCCRegAliases);
+  return llvm::ArrayRef(GCCRegAliases);
 }
 
 bool RISCVTargetInfo::validateAsmConstraint(
@@ -117,6 +118,10 @@ std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
   return R;
 }
 
+static unsigned getVersionValue(unsigned MajorVersion, unsigned MinorVersion) {
+  return MajorVersion * 1000000 + MinorVersion * 1000;
+}
+
 void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
                                        MacroBuilder &Builder) const {
   Builder.defineMacro("__ELF__");
@@ -152,10 +157,10 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   for (auto &Extension : ISAInfo->getExtensions()) {
     auto ExtName = Extension.first;
     auto ExtInfo = Extension.second;
-    unsigned Version =
-        (ExtInfo.MajorVersion * 1000000) + (ExtInfo.MinorVersion * 1000);
 
-    Builder.defineMacro(Twine("__riscv_", ExtName), Twine(Version));
+    Builder.defineMacro(
+        Twine("__riscv_", ExtName),
+        Twine(getVersionValue(ExtInfo.MajorVersion, ExtInfo.MinorVersion)));
   }
 
   if (ISAInfo->hasExtension("m") || ISAInfo->hasExtension("zmmul"))
@@ -193,12 +198,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (ISAInfo->hasExtension("zve32x")) {
     Builder.defineMacro("__riscv_vector");
     // Currently we support the v0.10 RISC-V V intrinsics.
-    unsigned Version = (0 * 1000000) + (10 * 1000);
-    Builder.defineMacro("__riscv_v_intrinsic", Twine(Version));
+    Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(0, 10)));
   }
 }
 
-const Builtin::Info RISCVTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
@@ -212,8 +216,8 @@ const Builtin::Info RISCVTargetInfo::BuiltinInfo[] = {
 };
 
 ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::RISCV::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
 bool RISCVTargetInfo::initFeatureMap(
@@ -270,7 +274,7 @@ RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 /// Return true if has this feature, need to sync with handleTargetFeatures.
 bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
   bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;
-  auto Result = llvm::StringSwitch<Optional<bool>>(Feature)
+  auto Result = llvm::StringSwitch<std::optional<bool>>(Feature)
                     .Case("riscv", true)
                     .Case("riscv32", !Is64Bit)
                     .Case("riscv64", Is64Bit)
@@ -278,7 +282,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
                     .Case("64bit", Is64Bit)
                     .Default(std::nullopt);
   if (Result)
-    return Result.value();
+    return *Result;
 
   if (ISAInfo->isSupportedExtensionFeature(Feature))
     return ISAInfo->hasExtension(Feature);

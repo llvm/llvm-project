@@ -11,13 +11,13 @@ b0:
   %v0 = alloca float, align 4
   %v1 = alloca i16, align 2
   %v2 = alloca float, align 4
-  store float %a0, float* %v0, align 4, !tbaa !0
-  %v3 = call signext i16 @f1(i16* %v1, float* %v0) #1
+  store float %a0, ptr %v0, align 4, !tbaa !0
+  %v3 = call signext i16 @f1(ptr %v1, ptr %v0) #1
   %v4 = icmp ult i16 %v3, 3
   br i1 %v4, label %b11, label %b1
 
 b1:                                               ; preds = %b0
-  %v5 = load i16, i16* %v1, align 2, !tbaa !4
+  %v5 = load i16, ptr %v1, align 2, !tbaa !4
   %v6 = sext i16 %v5 to i32
   %v7 = srem i32 %v6, 3
   %v8 = icmp eq i32 %v7, 0
@@ -40,25 +40,24 @@ b4:                                               ; preds = %b3
   %v16 = phi i16 [ %v12, %b3 ]
   %v17 = phi i32 [ %v11, %b3 ]
   %v18 = phi i32 [ %v10, %b3 ]
-  store i16 %v16, i16* %v1, align 2, !tbaa !4
+  store i16 %v16, ptr %v1, align 2, !tbaa !4
   %v19 = icmp slt i32 %v18, 1
   br i1 %v19, label %b5, label %b6
 
 b5:                                               ; preds = %b4
-  %v20 = call signext i16 @f2(float* %v0, i32 %v17) #1
+  %v20 = call signext i16 @f2(ptr %v0, i32 %v17) #1
   br label %b6
 
 b6:                                               ; preds = %b5, %b4, %b1
-  %v21 = bitcast float* %v0 to i16*
-  %v22 = getelementptr inbounds i16, i16* %v21, i32 1
-  %v23 = load i16, i16* %v22, align 2, !tbaa !6
+  %v22 = getelementptr inbounds i16, ptr %v0, i32 1
+  %v23 = load i16, ptr %v22, align 2, !tbaa !6
   %v24 = icmp slt i16 %v23, 0
-  %v25 = load float, float* %v0, align 4, !tbaa !0
+  %v25 = load float, ptr %v0, align 4, !tbaa !0
   br i1 %v24, label %b7, label %b8
 
 b7:                                               ; preds = %b6
   %v26 = fsub float -0.000000e+00, %v25
-  store float %v26, float* %v0, align 4, !tbaa !0
+  store float %v26, ptr %v0, align 4, !tbaa !0
   br label %b8
 
 b8:                                               ; preds = %b7, %b6
@@ -70,7 +69,7 @@ b8:                                               ; preds = %b7, %b6
   %v32 = fadd float %v31, 0x3FB43419E0000000
   %v33 = fadd float %v27, 0x3FD1E54B40000000
   %v34 = fdiv float %v32, %v33
-  store float %v34, float* %v2, align 4, !tbaa !0
+  store float %v34, ptr %v2, align 4, !tbaa !0
   %v35 = fmul float %v27, 1.500000e+00
   %v36 = fmul float %v34, %v34
   %v37 = fmul float %v27, 5.000000e-01
@@ -87,22 +86,22 @@ b9:                                               ; preds = %b8
 
 b10:                                              ; preds = %b9, %b8
   %v44 = phi float [ %v43, %b9 ], [ %v42, %b8 ]
-  store float %v44, float* %v2, align 4, !tbaa !0
-  %v45 = load i16, i16* %v1, align 2, !tbaa !4
+  store float %v44, ptr %v2, align 4, !tbaa !0
+  %v45 = load i16, ptr %v1, align 2, !tbaa !4
   %v46 = sext i16 %v45 to i32
   %v47 = sdiv i32 %v46, 3
-  %v48 = call signext i16 @f2(float* %v2, i32 %v47) #1
+  %v48 = call signext i16 @f2(ptr %v2, i32 %v47) #1
   br label %b11
 
 b11:                                              ; preds = %b10, %b0
-  %v49 = phi float* [ %v2, %b10 ], [ %v0, %b0 ]
-  %v50 = load float, float* %v49, align 4
+  %v49 = phi ptr [ %v2, %b10 ], [ %v0, %b0 ]
+  %v50 = load float, ptr %v49, align 4
   ret float %v50
 }
 
-declare signext i16 @f1(i16*, float*) #1
+declare signext i16 @f1(ptr, ptr) #1
 
-declare signext i16 @f2(float*, i32) #1
+declare signext i16 @f2(ptr, i32) #1
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" }
 attributes #1 = { nounwind }

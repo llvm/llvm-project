@@ -18,7 +18,7 @@ def AssertMacro : MacroDef<"assert"> {
     #ifdef __cplusplus
     extern "C"
     #endif
-    _Noreturn void __assert_fail(const char *, const char *, unsigned, const char *);
+    _Noreturn void __assert_fail(const char *, const char *, unsigned, const char *) __NOEXCEPT;
 
     #define assert(e)  \
       ((e) ? (void)0 : __assert_fail(#e, __FILE__, __LINE__, __PRETTY_FUNCTION__))
@@ -33,20 +33,6 @@ def StaticAssertMacro : MacroDef<"static_assert"> {
     #undef static_assert
     #define static_assert _Static_assert
     #endif
-  }];
-}
-
-def NullMacro : MacroDef<"NULL"> {
-  let Defn = [{
-    #define __need_NULL
-    #include <stddef.h>
-  }];
-}
-
-def ErrnoMacro : MacroDef<"errno"> {
-  let Defn = [{
-    extern _Thread_local int __llvmlibc_errno;
-    #define errno __llvmlibc_errno
   }];
 }
 
@@ -141,10 +127,6 @@ def FenvAPI: PublicAPI<"fenv.h"> {
 
 def StringAPI : PublicAPI<"string.h"> {
   let Types = ["size_t"];
-
-  let Macros = [
-    NullMacro,
-  ];
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {
@@ -180,25 +162,6 @@ def TimeAPI : PublicAPI<"time.h"> {
     "struct timespec",
     "struct timeval",
     "clockid_t",
-  ];
-}
-
-def ErrnoAPI : PublicAPI<"errno.h"> {
-  let Macros = [
-    ErrnoMacro,
-    // We largely depend on linux/errno.h to give us the
-    // various error macro definitions. However, some libc
-    // implementations have chosen to provide definitions
-    // for some of the error macros to account for the ones
-    // missing in linux/errno.h. There is no harm in doing
-    // the same here if we define the macros only when they
-    // are not already defined.
-    MacroDefineIfNot<"ENOTSUP", "EOPNOTSUPP">,
-    MacroDefineIfNot<"ECANCELED", "125">,
-    MacroDefineIfNot<"EOWNERDEAD", "130">,
-    MacroDefineIfNot<"ENOTRECOVERABLE", "131">,
-    MacroDefineIfNot<"ERFKILL", "132">,
-    MacroDefineIfNot<"EHWPOISON", "133">,
   ];
 }
 

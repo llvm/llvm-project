@@ -3,7 +3,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-darwin10.0"
 
 ; PR5837
-define void @test(i32 %N, double* %G) nounwind ssp {
+define void @test(i32 %N, ptr %G) nounwind ssp {
 entry:
   br label %for.cond
 
@@ -13,14 +13,14 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds double, double* %G, i64 %j.0 ; <double*> [#uses=1]
-  %tmp3 = load double, double* %arrayidx                  ; <double> [#uses=1]
+  %arrayidx = getelementptr inbounds double, ptr %G, i64 %j.0 ; <ptr> [#uses=1]
+  %tmp3 = load double, ptr %arrayidx                  ; <double> [#uses=1]
   %sub = sub i64 %j.0, 1                          ; <i64> [#uses=1]
-  %arrayidx6 = getelementptr inbounds double, double* %G, i64 %sub ; <double*> [#uses=1]
-  %tmp7 = load double, double* %arrayidx6                 ; <double> [#uses=1]
+  %arrayidx6 = getelementptr inbounds double, ptr %G, i64 %sub ; <ptr> [#uses=1]
+  %tmp7 = load double, ptr %arrayidx6                 ; <double> [#uses=1]
   %add = fadd double %tmp3, %tmp7                 ; <double> [#uses=1]
-  %arrayidx10 = getelementptr inbounds double, double* %G, i64 %j.0 ; <double*> [#uses=1]
-  store double %add, double* %arrayidx10
+  %arrayidx10 = getelementptr inbounds double, ptr %G, i64 %j.0 ; <ptr> [#uses=1]
+  store double %add, ptr %arrayidx10
   %inc = add nsw i64 %j.0, 1                      ; <i64> [#uses=1]
   br label %for.cond
 

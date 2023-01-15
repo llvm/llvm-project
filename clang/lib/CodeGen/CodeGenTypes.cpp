@@ -807,8 +807,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
         ResultType,
         llvm::ArrayType::get(CGM.Int8Ty, (atomicSize - valueSize) / 8)
       };
-      ResultType = llvm::StructType::get(getLLVMContext(),
-                                         llvm::makeArrayRef(elts));
+      ResultType =
+          llvm::StructType::get(getLLVMContext(), llvm::ArrayRef(elts));
     }
     break;
   }

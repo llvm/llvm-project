@@ -246,7 +246,7 @@ VectorType VectorType::scaleElementBitwidth(unsigned scale) {
   return VectorType();
 }
 
-VectorType VectorType::cloneWith(Optional<ArrayRef<int64_t>> shape,
+VectorType VectorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
   return VectorType::get(shape.value_or(getShape()), elementType,
                          getNumScalableDims());
@@ -268,7 +268,7 @@ ArrayRef<int64_t> TensorType::getShape() const {
   return cast<RankedTensorType>().getShape();
 }
 
-TensorType TensorType::cloneWith(Optional<ArrayRef<int64_t>> shape,
+TensorType TensorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
   if (auto unrankedTy = dyn_cast<UnrankedTensorType>()) {
     if (shape)
@@ -346,7 +346,7 @@ ArrayRef<int64_t> BaseMemRefType::getShape() const {
   return cast<MemRefType>().getShape();
 }
 
-BaseMemRefType BaseMemRefType::cloneWith(Optional<ArrayRef<int64_t>> shape,
+BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                          Type elementType) const {
   if (auto unrankedTy = dyn_cast<UnrankedMemRefType>()) {
     if (!shape)
@@ -387,7 +387,7 @@ unsigned BaseMemRefType::getMemorySpaceAsInt() const {
 /// which dimensions must be kept when e.g. compute MemRef strides under
 /// rank-reducing operations. Return std::nullopt if reducedShape cannot be
 /// obtained by dropping only `1` entries in `originalShape`.
-llvm::Optional<llvm::SmallDenseSet<unsigned>>
+std::optional<llvm::SmallDenseSet<unsigned>>
 mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
                                ArrayRef<int64_t> reducedShape) {
   size_t originalRank = originalShape.size(), reducedRank = reducedShape.size();

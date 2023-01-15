@@ -702,6 +702,20 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateInPlaceStress) {
   }
 }
 
+SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
+  auto *Allocator = this->Allocator.get();
+  auto Size = Allocator->getRingBufferSize();
+  ASSERT_GT(Size, 0);
+  EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
+  auto *Allocator = this->Allocator.get();
+  auto *Addr = Allocator->getRingBufferAddress();
+  EXPECT_NE(Addr, nullptr);
+  EXPECT_EQ(Addr, Allocator->getRingBufferAddress());
+}
+
 #if SCUDO_CAN_USE_PRIMARY64
 #if SCUDO_TRUSTY
 
@@ -730,4 +744,42 @@ TEST(ScudoCombinedTest, BasicTrustyConfig) {
 }
 
 #endif
+#endif
+
+#if SCUDO_LINUX
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, SoftRssLimit) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setRssLimitsTestOnly(1, 0, true);
+
+  size_t Megabyte = 1024 * 1024;
+  size_t ChunkSize = 16;
+  size_t Error = 256;
+
+  std::vector<void *> Ptrs;
+  for (size_t index = 0; index < Megabyte + Error; index += ChunkSize) {
+    void *Ptr = Allocator->allocate(ChunkSize, Origin);
+    Ptrs.push_back(Ptr);
+  }
+
+  EXPECT_EQ(nullptr, Allocator->allocate(ChunkSize, Origin));
+
+  for (void *Ptr : Ptrs)
+    Allocator->deallocate(Ptr, Origin);
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, HardRssLimit) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setRssLimitsTestOnly(0, 1, false);
+
+  size_t Megabyte = 1024 * 1024;
+
+  EXPECT_DEATH(
+      {
+        disableDebuggerdMaybe();
+        Allocator->allocate(Megabyte, Origin);
+      },
+      "");
+}
+
 #endif

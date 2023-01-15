@@ -12,6 +12,7 @@ unittest("MCJITTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:NativeTarget",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "MCJITCAPITest.cpp",

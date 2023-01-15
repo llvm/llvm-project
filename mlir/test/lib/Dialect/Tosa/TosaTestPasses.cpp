@@ -147,8 +147,9 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
 
   auto newTosaConv2DOp = rewriter.create<tosa::Conv2DOp>(
       op->getLoc(), newTosaConv2DOpType, tosaConv2DOp.getInput(),
-      tosaConv2DOp.getWeight(), tosaConv2DOp.getBias(), tosaConv2DOp.getPad(),
-      tosaConv2DOp.getStride(), tosaConv2DOp.getDilation());
+      tosaConv2DOp.getWeight(), tosaConv2DOp.getBias(),
+      tosaConv2DOp.getPadAttr(), tosaConv2DOp.getStrideAttr(),
+      tosaConv2DOp.getDilationAttr());
 
   // Create rescale to quantized type
   double inputScale = inputQType.getScale();
@@ -167,9 +168,9 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
   auto newTosaRescaleOp = rewriter.create<tosa::RescaleOp>(
       op->getLoc(), outputType, newTosaConv2DOp.getResult(),
       rewriter.getI32IntegerAttr(0), rewriter.getI32IntegerAttr(outputZp),
-      rewriter.getI32ArrayAttr({multiplier}), rewriter.getI32ArrayAttr({shift}),
-      rewriter.getBoolAttr(true), rewriter.getBoolAttr(true),
-      rewriter.getBoolAttr(false));
+      rewriter.getDenseI32ArrayAttr({multiplier}),
+      rewriter.getDenseI32ArrayAttr({shift}), rewriter.getBoolAttr(true),
+      rewriter.getBoolAttr(true), rewriter.getBoolAttr(false));
 
   rewriter.replaceOp(op, {newTosaRescaleOp.getResult()});
   return success();

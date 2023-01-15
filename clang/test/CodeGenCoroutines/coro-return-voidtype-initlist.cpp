@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 namespace std {
 template <typename a>
@@ -70,7 +70,7 @@ template <typename bc>
 f<std::b<std::c<int, int>>> J<bc>::bo() {
   std::c<int> bu;
   int bw(0);
-  // CHECK: void @_ZN1j12return_valueESt1bISt1cIiiEE(%struct.j* {{[^,]*}} %__promise)
+  // CHECK: void @_ZN1j12return_valueESt1bISt1cIiiEE(ptr {{[^,]*}} %__promise)
   co_return{0, co_await ax(bu, bw)};
 }
 void bh() {

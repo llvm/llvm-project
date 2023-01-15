@@ -118,6 +118,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/remove_reference.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -362,7 +363,7 @@ protected:
 // __outermost
 
 template <class _Alloc>
-decltype(declval<_Alloc>().outer_allocator(), true_type())
+decltype(std::declval<_Alloc>().outer_allocator(), true_type())
 __has_outer_allocator_test(_Alloc&& __a);
 
 template <class _Alloc>
@@ -373,7 +374,7 @@ template <class _Alloc>
 struct __has_outer_allocator
     : public common_type
              <
-                 decltype(__has_outer_allocator_test(declval<_Alloc&>()))
+                 decltype(std::__has_outer_allocator_test(std::declval<_Alloc&>()))
              >::type
 {
 };
@@ -391,7 +392,7 @@ struct __outermost<_Alloc, true>
 {
     typedef __libcpp_remove_reference_t
                      <
-                        decltype(declval<_Alloc>().outer_allocator())
+                        decltype(std::declval<_Alloc>().outer_allocator())
                      >                                    _OuterAlloc;
     typedef typename __outermost<_OuterAlloc>::type             type;
     _LIBCPP_INLINE_VISIBILITY
@@ -725,6 +726,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <memory>
 #  include <ratio>
 #  include <stdexcept>
+#  include <type_traits>
 #  include <variant>
 #endif
 

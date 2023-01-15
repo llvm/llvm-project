@@ -6,11 +6,11 @@
 ;
 ; CHECK: f1:
 
-%0 = type { i8 (i8)*, i8 (i8, %1*)*, i8 (i8)* }
+%0 = type { ptr, ptr, ptr }
 %1 = type { [16384 x i16], [8192 x i16], [8192 x i16], [8192 x i32], i32, i32, i32, %2, %2, i32, i32, i32, i32 }
 %2 = type { i32, i32, i32 }
 %3 = type { %4 }
-%4 = type { i32, i8* }
+%4 = type { i32, ptr }
 %5 = type { i8, i32, i32, i32, i16, i16, i16, i16, i8, i16, %6, %6, i32, i16, i16, i16, i16, i8 }
 %6 = type { i32, i32, i32, i32, i32, i32, i32, i8, i8 }
 %7 = type { i8, i8, i8, i8, i32, i32, i32, i32, i32, i32, %2, %2, %8, i8 }
@@ -21,9 +21,9 @@
 @g2 = external hidden constant %3, align 4
 @g3 = external hidden constant %3, align 4
 
-declare void @f0(%3*, i32, i32)
+declare void @f0(ptr, i32, i32)
 
-define hidden fastcc i32 @f1(%5* %a0, %7* %a1, %2* %a2) {
+define hidden fastcc i32 @f1(ptr %a0, ptr %a1, ptr %a2) {
 b0:
   br i1 undef, label %b1, label %b2
 
@@ -40,7 +40,7 @@ b4:                                               ; preds = %b2
   br i1 undef, label %b6, label %b5
 
 b5:                                               ; preds = %b4
-  %v0 = getelementptr inbounds %5, %5* %a0, i32 0, i32 1
+  %v0 = getelementptr inbounds %5, ptr %a0, i32 0, i32 1
   br label %b7
 
 b6:                                               ; preds = %b4
@@ -49,8 +49,8 @@ b6:                                               ; preds = %b4
 b7:                                               ; preds = %b52, %b5
   %v1 = phi i32 [ undef, %b5 ], [ %v43, %b52 ]
   %v2 = phi i32 [ 5, %b5 ], [ %v45, %b52 ]
-  %v3 = load i32, i32* undef, align 4
-  %v4 = load i32, i32* %v0, align 4
+  %v3 = load i32, ptr undef, align 4
+  %v4 = load i32, ptr %v0, align 4
   %v5 = sext i32 %v4 to i64
   %v6 = sdiv i64 0, %v5
   %v7 = trunc i64 %v6 to i32
@@ -58,11 +58,11 @@ b7:                                               ; preds = %b52, %b5
   br i1 %v8, label %b8, label %b9
 
 b8:                                               ; preds = %b7
-  call void @f0(%3* @g2, i32 %v3, i32 %v4)
+  call void @f0(ptr @g2, i32 %v3, i32 %v4)
   br label %b54
 
 b9:                                               ; preds = %b7
-  %v9 = load i8, i8* undef, align 1
+  %v9 = load i8, ptr undef, align 1
   %v10 = zext i8 %v9 to i32
   br i1 undef, label %b10, label %b11
 
@@ -76,8 +76,8 @@ b12:                                              ; preds = %b11
   br i1 undef, label %b13, label %b47
 
 b13:                                              ; preds = %b12
-  %v11 = getelementptr inbounds [7 x %0], [7 x %0]* @g0, i32 0, i32 %v10, i32 2
-  %v12 = load i8 (i8)*, i8 (i8)** %v11, align 4
+  %v11 = getelementptr inbounds [7 x %0], ptr @g0, i32 0, i32 %v10, i32 2
+  %v12 = load ptr, ptr %v11, align 4
   %v13 = call zeroext i8 %v12(i8 zeroext %v9)
   br i1 undef, label %b14, label %b47
 
@@ -122,8 +122,8 @@ b26:                                              ; preds = %b24
 
 b27:                                              ; preds = %b36, %b26
   %v14 = phi i32 [ 16, %b26 ], [ %v30, %b36 ]
-  %v15 = getelementptr inbounds %1, %1* @g1, i32 0, i32 2, i32 %v14
-  %v16 = load i16, i16* %v15, align 2
+  %v15 = getelementptr inbounds %1, ptr @g1, i32 0, i32 2, i32 %v14
+  %v16 = load i16, ptr %v15, align 2
   %v17 = sext i16 %v16 to i32
   %v18 = select i1 undef, i32 undef, i32 %v17
   %v19 = sext i32 %v18 to i64
@@ -151,15 +151,15 @@ b31:                                              ; preds = %b29
   br i1 %v28, label %b32, label %b33
 
 b32:                                              ; preds = %b31
-  store i32 %v26, i32* undef, align 4
+  store i32 %v26, ptr undef, align 4
   br label %b36
 
 b33:                                              ; preds = %b31
   br i1 undef, label %b34, label %b35
 
 b34:                                              ; preds = %b33
-  %v29 = getelementptr inbounds %1, %1* @g1, i32 0, i32 3, i32 %v14
-  store i32 undef, i32* %v29, align 4
+  %v29 = getelementptr inbounds %1, ptr @g1, i32 0, i32 3, i32 %v14
+  store i32 undef, ptr %v29, align 4
   br label %b36
 
 b35:                                              ; preds = %b33
@@ -190,7 +190,7 @@ b42:                                              ; preds = %b41
   br label %b47
 
 b43:                                              ; preds = %b41
-  %v33 = load i64, i64* undef, align 8
+  %v33 = load i64, ptr undef, align 8
   br label %b44
 
 b44:                                              ; preds = %b44, %b43
@@ -234,7 +234,7 @@ b52:                                              ; preds = %b51, %b49
   br i1 %v46, label %b54, label %b7
 
 b53:                                              ; preds = %b50
-  call void @f0(%3* @g3, i32 %v43, i32 undef)
+  call void @f0(ptr @g3, i32 %v43, i32 undef)
   unreachable
 
 b54:                                              ; preds = %b52, %b48, %b8

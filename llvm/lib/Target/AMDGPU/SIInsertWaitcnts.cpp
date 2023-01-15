@@ -1177,6 +1177,11 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         MachineOperand &Op = MI.getOperand(I);
         if (!Op.isReg())
           continue;
+
+        // If the instruction does not read tied source, skip the operand.
+        if (Op.isTied() && Op.isUse() && TII->doesNotReadTiedSource(MI))
+          continue;
+
         RegInterval Interval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, I);
 
@@ -1621,7 +1626,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         // there cannot be a vector store to the same memory location.
         if (!Memop->isInvariant()) {
           const Value *Ptr = Memop->getValue();
-          SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
+          SLoadAddresses.insert(std::pair(Ptr, Inst.getParent()));
         }
       }
       if (ST->hasReadVCCZBug()) {

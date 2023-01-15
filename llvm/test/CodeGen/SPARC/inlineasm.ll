@@ -84,8 +84,8 @@ attributes #0 = { "frame-pointer"="all" }
 
 ;; Ensures that tied in and out gets allocated properly.
 ; CHECK-LABEL: test_i64_inout:
-; CHECK: mov %g0, %i2
 ; CHECK: mov 5, %i3
+; CHECK: mov %g0, %i2
 ; CHECK: xor %i2, %g0, %i2
 ; CHECK: mov %i2, %i0
 ; CHECK: ret

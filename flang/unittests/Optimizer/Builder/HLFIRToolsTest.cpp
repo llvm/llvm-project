@@ -37,7 +37,8 @@ public:
 
   mlir::Value createDeclare(fir::ExtendedValue exv) {
     return hlfir::genDeclare(getLoc(), *firBuilder, exv,
-        "x" + std::to_string(varCounter++), fir::FortranVariableFlagsAttr{});
+        "x" + std::to_string(varCounter++), fir::FortranVariableFlagsAttr{})
+        .getBase();
   }
 
   mlir::Value createConstant(std::int64_t cst) {

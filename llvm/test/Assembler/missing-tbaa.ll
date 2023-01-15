@@ -4,7 +4,7 @@
 
 define void @foo() {
 entry:
-  store i8 undef, i8* undef,
+  store i8 undef, ptr undef,
 ; CHECK: :[[@LINE+1]]:10: error: use of undefined metadata '!1'
   !tbaa !1
   unreachable

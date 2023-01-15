@@ -72,8 +72,8 @@ public:
              std::vector<Update> Updates);
 
   BasicBlock *getOrAddBlock(StringRef BlockName);
-  Optional<Update> getNextUpdate() const;
-  Optional<Update> applyUpdate();
+  std::optional<Update> getNextUpdate() const;
+  std::optional<Update> applyUpdate();
   void dump(raw_ostream &OS = dbgs()) const;
 
 private:

@@ -13,6 +13,7 @@
 #include "lldb/lldb-types.h"
 #include <atomic>
 #include <mutex>
+#include <optional>
 
 namespace lldb_private {
 
@@ -102,7 +103,7 @@ private:
   const uint64_t m_total;
   /// The optional debugger ID to report progress to. If this has no value then
   /// all debuggers will receive this event.
-  llvm::Optional<lldb::user_id_t> m_debugger_id;
+  std::optional<lldb::user_id_t> m_debugger_id;
   /// Set to true when progress has been reported where m_completed == m_total
   /// to ensure that we don't send progress updates after progress has
   /// completed.

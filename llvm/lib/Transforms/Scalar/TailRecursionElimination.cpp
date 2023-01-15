@@ -716,8 +716,8 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   BranchInst *NewBI = BranchInst::Create(HeaderBB, Ret);
   NewBI->setDebugLoc(CI->getDebugLoc());
 
-  BB->getInstList().erase(Ret);  // Remove return.
-  BB->getInstList().erase(CI);   // Remove call.
+  Ret->eraseFromParent();  // Remove return.
+  CI->eraseFromParent();   // Remove call.
   DTU.applyUpdates({{DominatorTree::Insert, BB, HeaderBB}});
   ++NumEliminated;
   return true;

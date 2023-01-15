@@ -6,7 +6,7 @@ declare void @sideeffect1()
 declare void @sideeffect2()
 declare void @use8(i8)
 declare i1 @gen1()
-declare i32 @speculate_call(i32 *) #0
+declare i32 @speculate_call(ptr) #0
 
 ; Basic cases, blocks have nothing other than the comparison itself.
 
@@ -121,11 +121,11 @@ final_right:
 ; When we fold the dispatch block into pred, the call is moved to pred
 ; and the attribute nonnull propagates poison paramater. However, since the
 ; function is speculatable, it can never cause UB. So, we need not technically drop it.
-define void @one_pred_with_spec_call(i8 %v0, i8 %v1, i32* %p) {
+define void @one_pred_with_spec_call(i8 %v0, i8 %v1, ptr %p) {
 ; CHECK-LABEL: @one_pred_with_spec_call(
 ; CHECK-NEXT:  pred:
-; CHECK-NEXT:    [[C0:%.*]] = icmp ne i32* [[P:%.*]], null
-; CHECK-NEXT:    [[X:%.*]] = call i32 @speculate_call(i32* nonnull [[P]])
+; CHECK-NEXT:    [[C0:%.*]] = icmp ne ptr [[P:%.*]], null
+; CHECK-NEXT:    [[X:%.*]] = call i32 @speculate_call(ptr nonnull [[P]])
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[COMMON_RET:%.*]], label [[FINAL_RIGHT:%.*]]
@@ -136,11 +136,11 @@ define void @one_pred_with_spec_call(i8 %v0, i8 %v1, i32* %p) {
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 pred:
-  %c0 = icmp ne i32* %p, null
+  %c0 = icmp ne ptr %p, null
   br i1 %c0, label %dispatch, label %final_right
 
 dispatch:
-  %x = call i32 @speculate_call(i32* nonnull %p)
+  %x = call i32 @speculate_call(ptr nonnull %p)
   %c1 = icmp eq i8 %v1, 0
   br i1 %c1, label %final_left, label %final_right
 
@@ -153,11 +153,11 @@ final_right:
 }
 
 ; Drop dereferenceable on the parameter
-define void @one_pred_with_spec_call_deref(i8 %v0, i8 %v1, i32* %p) {
+define void @one_pred_with_spec_call_deref(i8 %v0, i8 %v1, ptr %p) {
 ; CHECK-LABEL: @one_pred_with_spec_call_deref(
 ; CHECK-NEXT:  pred:
-; CHECK-NEXT:    [[C0:%.*]] = icmp ne i32* [[P:%.*]], null
-; CHECK-NEXT:    [[X:%.*]] = call i32 @speculate_call(i32* [[P]])
+; CHECK-NEXT:    [[C0:%.*]] = icmp ne ptr [[P:%.*]], null
+; CHECK-NEXT:    [[X:%.*]] = call i32 @speculate_call(ptr [[P]])
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[COMMON_RET:%.*]], label [[FINAL_RIGHT:%.*]]
@@ -168,11 +168,11 @@ define void @one_pred_with_spec_call_deref(i8 %v0, i8 %v1, i32* %p) {
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 pred:
-  %c0 = icmp ne i32* %p, null
+  %c0 = icmp ne ptr %p, null
   br i1 %c0, label %dispatch, label %final_right
 
 dispatch:
-  %x = call i32 @speculate_call(i32* dereferenceable(12) %p)
+  %x = call i32 @speculate_call(ptr dereferenceable(12) %p)
   %c1 = icmp eq i8 %v1, 0
   br i1 %c1, label %final_left, label %final_right
 
@@ -944,7 +944,7 @@ define void @pr48450_3() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    [[V:%.*]] = load i8, i8* @f.b, align 1
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr @f.b, align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[V]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    br label [[FOR_COND1]]
@@ -953,7 +953,7 @@ entry:
   br label %for.cond1
 
 for.cond1:
-  %v = load i8, i8* @f.b, align 1
+  %v = load i8, ptr @f.b, align 1
   %cmp = icmp slt i8 %v, 1
   br i1 %cmp, label %for.body, label %for.end
 
@@ -999,7 +999,7 @@ define void @pr49510() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* @global_pr49510, align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @global_pr49510, align 1
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i16 [[TMP0]], 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP0]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TOBOOL]], [[CMP]]
@@ -1011,7 +1011,7 @@ entry:
   br label %for.cond
 
 for.cond:
-  %0 = load i16, i16* @global_pr49510, align 1
+  %0 = load i16, ptr @global_pr49510, align 1
   %tobool = icmp ne i16 %0, 0
   br i1 %tobool, label %land.rhs, label %for.end
 
@@ -1034,11 +1034,11 @@ define i32 @pr51125() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[L:%.*]]
 ; CHECK:       L:
-; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* @global_pr51125, align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr @global_pr51125, align 4
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[LD]], 0
 ; CHECK-NEXT:    br i1 [[ISZERO]], label [[EXIT:%.*]], label [[L2:%.*]]
 ; CHECK:       L2:
-; CHECK-NEXT:    store i32 -1, i32* @global_pr51125, align 4
+; CHECK-NEXT:    store i32 -1, ptr @global_pr51125, align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LD]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[L]], label [[EXIT]]
 ; CHECK:       exit:
@@ -1049,12 +1049,12 @@ entry:
   br label %L
 
 L:
-  %ld = load i32, i32* @global_pr51125, align 4
+  %ld = load i32, ptr @global_pr51125, align 4
   %iszero = icmp eq i32 %ld, 0
   br i1 %iszero, label %exit, label %L2
 
 L2:
-  store i32 -1, i32* @global_pr51125, align 4
+  store i32 -1, ptr @global_pr51125, align 4
   %cmp = icmp eq i32 %ld, -1
   br i1 %cmp, label %L, label %exit
 
@@ -1064,13 +1064,12 @@ exit:
 }
 
 ; https://github.com/llvm/llvm-project/issues/53861
-define i32 @firewall(i8* %data) {
+define i32 @firewall(ptr %data) {
 ; CHECK-LABEL: @firewall(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[DATA:%.*]], align 1
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[DATA]], i64 64
-; CHECK-NEXT:    [[I1:%.*]] = bitcast i8* [[ADD_PTR]] to i16*
-; CHECK-NEXT:    [[I2:%.*]] = load i16, i16* [[I1]], align 2
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[DATA:%.*]], align 1
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 64
+; CHECK-NEXT:    [[I2:%.*]] = load i16, ptr [[ADD_PTR]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 17
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i16 [[I2]], 1
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP3]], i1 false
@@ -1087,10 +1086,9 @@ define i32 @firewall(i8* %data) {
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
-  %i = load i8, i8* %data, align 1
-  %add.ptr = getelementptr inbounds i8, i8* %data, i64 64
-  %i1 = bitcast i8* %add.ptr to i16*
-  %i2 = load i16, i16* %i1, align 2
+  %i = load i8, ptr %data, align 1
+  %add.ptr = getelementptr inbounds i8, ptr %data, i64 64
+  %i2 = load i16, ptr %add.ptr, align 2
   %cmp = icmp eq i8 %i, 17
   %cmp3 = icmp eq i16 %i2, 1
   %or.cond = select i1 %cmp, i1 %cmp3, i1 false

@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/WasmTraits.h"
+#include <optional>
 
 #define DEBUG_TYPE "lld"
 
@@ -107,15 +108,15 @@ public:
 
 public:
   T type;
-  llvm::Optional<StringRef> importModule;
-  llvm::Optional<StringRef> importName;
+  std::optional<StringRef> importModule;
+  std::optional<StringRef> importName;
   State state;
 
 public:
   ImportKey(T type) : type(type), state(State::Plain) {}
   ImportKey(T type, State state) : type(type), state(state) {}
-  ImportKey(T type, llvm::Optional<StringRef> importModule,
-            llvm::Optional<StringRef> importName)
+  ImportKey(T type, std::optional<StringRef> importModule,
+            std::optional<StringRef> importName)
       : type(type), importModule(importModule), importName(importName),
         state(State::Plain) {}
 };

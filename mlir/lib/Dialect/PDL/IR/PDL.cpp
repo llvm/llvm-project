@@ -48,7 +48,7 @@ static bool hasBindingUse(Operation *op) {
 /// is used by a "binding" operation. On failure, emits an error.
 static LogicalResult verifyHasBindingUse(Operation *op) {
   // If the parent is not a pattern, there is nothing to do.
-  if (!isa<PatternOp>(op->getParentOp()))
+  if (!llvm::isa_and_nonnull<PatternOp>(op->getParentOp()))
     return success();
   if (hasBindingUse(op))
     return success();
@@ -112,7 +112,7 @@ LogicalResult ApplyNativeRewriteOp::verify() {
 
 LogicalResult AttributeOp::verify() {
   Value attrType = getValueType();
-  Optional<Attribute> attrValue = getValue();
+  std::optional<Attribute> attrValue = getValue();
 
   if (!attrValue) {
     if (isa<RewriteOp>((*this)->getParentOp()))
@@ -203,7 +203,7 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
   if (resultTypes.empty()) {
     // If we don't know the concrete operation, don't attempt any verification.
     // We can't make assumptions if we don't know the concrete operation.
-    Optional<StringRef> rawOpName = op.getOpName();
+    std::optional<StringRef> rawOpName = op.getOpName();
     if (!rawOpName)
       return success();
     Optional<RegisteredOperationName> opName =
@@ -265,7 +265,7 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
 }
 
 LogicalResult OperationOp::verify() {
-  bool isWithinRewrite = isa<RewriteOp>((*this)->getParentOp());
+  bool isWithinRewrite = isa_and_nonnull<RewriteOp>((*this)->getParentOp());
   if (isWithinRewrite && !getOpName())
     return emitOpError("must have an operation name when nested within "
                        "a `pdl.rewrite`");
@@ -290,7 +290,7 @@ LogicalResult OperationOp::verify() {
 }
 
 bool OperationOp::hasTypeInference() {
-  if (Optional<StringRef> rawOpName = getOpName()) {
+  if (std::optional<StringRef> rawOpName = getOpName()) {
     OperationName opName(*rawOpName, getContext());
     return opName.hasInterface<InferTypeOpInterface>();
   }
@@ -298,7 +298,7 @@ bool OperationOp::hasTypeInference() {
 }
 
 bool OperationOp::mightHaveTypeInference() {
-  if (Optional<StringRef> rawOpName = getOpName()) {
+  if (std::optional<StringRef> rawOpName = getOpName()) {
     OperationName opName(*rawOpName, getContext());
     return opName.mightHaveInterface<InferTypeOpInterface>();
   }

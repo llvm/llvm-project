@@ -10,10 +10,10 @@
 
 #include "lldb/Host/Config.h"
 
-
 #include <chrono>
 #include <cstring>
 #include <limits>
+#include <optional>
 #include <thread>
 
 #include "GDBRemoteCommunicationServerLLGS.h"
@@ -639,7 +639,7 @@ static void WriteRegisterValueInHexFixedWidth(
   }
 }
 
-static llvm::Optional<json::Object>
+static std::optional<json::Object>
 GetRegistersAsJSON(NativeThreadProtocol &thread) {
   Log *log = GetLog(LLDBLog::Thread);
 
@@ -753,7 +753,7 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
     json::Object thread_obj;
 
     if (!abridged) {
-      if (llvm::Optional<json::Object> registers = GetRegistersAsJSON(thread))
+      if (std::optional<json::Object> registers = GetRegistersAsJSON(thread))
         thread_obj.try_emplace("registers", std::move(*registers));
     }
 
@@ -2307,7 +2307,7 @@ GDBRemoteCommunicationServerLLGS::Handle_P(StringExtractorGDBRemote &packet) {
   // Build the reginfos response.
   StreamGDBRemote response;
 
-  RegisterValue reg_value(makeArrayRef(reg_bytes, reg_size),
+  RegisterValue reg_value(ArrayRef(reg_bytes, reg_size),
                           m_current_process->GetArchitecture().GetByteOrder());
   Status error = reg_context.WriteRegister(reg_info, reg_value);
   if (error.Fail()) {
@@ -4279,7 +4279,7 @@ std::string
 lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
                                                bool reverse_connect) {
   // Try parsing the argument as URL.
-  if (llvm::Optional<URI> url = URI::Parse(url_arg)) {
+  if (std::optional<URI> url = URI::Parse(url_arg)) {
     if (reverse_connect)
       return url_arg.str();
 

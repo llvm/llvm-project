@@ -150,33 +150,28 @@ class Merger {
 public:
   /// Constructs a merger for the given number of tensors, native loops, and
   /// filter loops. The user supplies the number of tensors involved in the
-  /// kernel, with the last tensor in this set denoting the output tensor. The
-  /// merger adds an additional synthetic tensor at the end of this set to
-  /// represent all invariant expressions in the kernel.
-  /// In addition to natives
-  /// loops (which are specified by the GenericOp), extra filter loops are
-  /// needed in order to handle affine expressions on sparse dimensions.
-  /// E.g., (d0, d1, d2) => (d0 + d1, d2), a naive implementation of the filter
-  /// loop could be generated as:
+  /// kernel, with the last tensor in this set denoting the output tensor.
+  /// The merger adds an additional synthetic tensor at the end of this set
+  /// to represent all invariant expressions in the kernel.
+  ///
+  /// In addition to natives loops (which are specified by the GenericOp),
+  /// extra filter loops are needed in order to handle affine expressions on
+  /// sparse dimensions. E.g., (d0, d1, d2) => (d0 + d1, d2), a naive
+  /// implementation of the filter loop could be generated as
+  ///
   /// for (coord : sparse_dim[0])
   ///   if (coord == d0 + d1) {
   ///      generated_code;
   ///   }
   /// }
-  /// to filter out coordinates that are not equal to the affine expression
-  /// result.
+  ///
+  /// to filter out coordinates that are not equal to the affine expression.
+  ///
   /// TODO: we want to make the filter loop more efficient in the future, e.g.,
   /// by avoiding scanning the full stored index sparse (keeping the last
   /// position in ordered list) or even apply binary search to find the index.
-  Merger(unsigned t, unsigned l, unsigned fl)
-      : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1),
-        numNativeLoops(l), numLoops(l + fl), hasSparseOut(false),
-        dimTypes(numTensors,
-                 std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
-        loopIdxToDim(numTensors,
-                     std::vector<Optional<unsigned>>(numLoops, std::nullopt)),
-        dimToLoopIdx(numTensors,
-                     std::vector<Optional<unsigned>>(numLoops, std::nullopt)) {}
+  ///
+  Merger(unsigned t, unsigned l, unsigned fl);
 
   /// Adds a tensor expression. Returns its index.
   unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value(),
@@ -271,6 +266,15 @@ public:
     return ldx >= numNativeLoops;
   }
 
+  /// Returns true if the expression contains the `t` as an operand.
+  bool expContainsTensor(unsigned e, unsigned t) const;
+
+  /// Returns true if the expression contains a negation on output tensor.
+  /// I.e., `- outTensor` or `exp - outputTensor`
+  /// NOTE: this is an trivial tests in that it does not handle recursive
+  /// negation, i.e., it returns true when the expression is `-(-tensor)`.
+  bool hasNegateOnOut(unsigned e) const;
+
   /// Returns true if given tensor iterates *only* in the given tensor
   /// expression. For the output tensor, this defines a "simply dynamic"
   /// operation [Bik96]. For instance: a(i) *= 2.0 or a(i) += a(i) for
@@ -348,9 +352,9 @@ public:
   void dumpBits(const BitVector &bits) const;
 #endif
 
-  /// Builds the iteration lattices in a bottom-up traversal given the remaining
-  /// tensor (sub)expression and the next loop index in the iteration graph.
-  /// Returns index of the root expression.
+  /// Builds the iteration lattices in a bottom-up traversal given the
+  /// remaining tensor (sub)expression and the next loop index in the
+  /// iteration graph. Returns index of the root expression.
   unsigned buildLattices(unsigned e, unsigned i);
 
   /// Builds a tensor expression from the given Linalg operation.
@@ -377,13 +381,18 @@ private:
   const unsigned numNativeLoops;
   const unsigned numLoops;
   bool hasSparseOut;
+
   // Map that converts pair<tensor id, loop id> to the corresponding dimension
   // level type.
   std::vector<std::vector<DimLevelType>> dimTypes;
-  // Map that converts pair<tensor id, loop id> to the corresponding dimension.
+
+  // Map that converts pair<tensor id, loop id> to the corresponding
+  // dimension.
   std::vector<std::vector<Optional<unsigned>>> loopIdxToDim;
+
   // Map that converts pair<tensor id, dim> to the corresponding loop id.
   std::vector<std::vector<Optional<unsigned>>> dimToLoopIdx;
+
   llvm::SmallVector<TensorExp> tensorExps;
   llvm::SmallVector<LatPoint> latPoints;
   llvm::SmallVector<SmallVector<unsigned>> latSets;

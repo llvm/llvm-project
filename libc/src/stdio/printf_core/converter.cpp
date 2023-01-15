@@ -46,9 +46,9 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'f':
   case 'F':
     return convert_float_decimal(writer, to_conv);
-  // case 'e':
-  // case 'E':
-  // return convert_float_dec_exp(writer, to_conv);
+  case 'e':
+  case 'E':
+    return convert_float_dec_exp(writer, to_conv);
   case 'a':
   case 'A':
     return convert_float_hex_exp(writer, to_conv);

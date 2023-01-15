@@ -13,13 +13,13 @@
 
 define amdgpu_kernel void @k0() {
 ; CHECK-LABEL: entry:
-; CHECK:   %ld = load i32, i32* inttoptr (i64 add (i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @used_only_within_kern, i32 0, i32 0) to i32*) to i64), i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @used_only_within_kern, i32 0, i32 0) to i32*) to i64)) to i32*), align 4
+; CHECK:   %ld = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_kern to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_kern to ptr) to i64)) to ptr), align 4
 ; CHECK:   %mul = mul i32 %ld, 2
-; CHECK:   store i32 %mul, i32* inttoptr (i64 add (i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @used_only_within_kern, i32 0, i32 0) to i32*) to i64), i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @used_only_within_kern, i32 0, i32 0) to i32*) to i64)) to i32*), align 4
+; CHECK:   store i32 %mul, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_kern to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_kern to ptr) to i64)) to ptr), align 4
 ; CHECK:   ret void
 entry:
-  %ld = load i32, i32* inttoptr (i64 add (i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* bitcast ([4 x i32] addrspace(3)* @used_only_within_kern to i32 addrspace(3)*) to i32*) to i64), i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* bitcast ([4 x i32] addrspace(3)* @used_only_within_kern to i32 addrspace(3)*) to i32*) to i64)) to i32*), align 4
+  %ld = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_kern to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_kern to ptr) to i64)) to ptr), align 4
   %mul = mul i32 %ld, 2
-  store i32 %mul, i32* inttoptr (i64 add (i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* bitcast ([4 x i32] addrspace(3)* @used_only_within_kern to i32 addrspace(3)*) to i32*) to i64), i64 ptrtoint (i32* addrspacecast (i32 addrspace(3)* bitcast ([4 x i32] addrspace(3)* @used_only_within_kern to i32 addrspace(3)*) to i32*) to i64)) to i32*), align 4
+  store i32 %mul, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_kern to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @used_only_within_kern to ptr) to i64)) to ptr), align 4
   ret void
 }

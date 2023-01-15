@@ -65,7 +65,8 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   bool CFGStackified = false;
 
 public:
-  explicit WebAssemblyFunctionInfo(MachineFunction &) {}
+  explicit WebAssemblyFunctionInfo(const Function &F,
+                                   const TargetSubtargetInfo *STI) {}
   ~WebAssemblyFunctionInfo() override;
 
   MachineFunctionInfo *

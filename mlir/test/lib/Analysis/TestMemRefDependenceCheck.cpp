@@ -53,13 +53,13 @@ getDirectionVectorStr(bool ret, unsigned numCommonLoops, unsigned loopNestDepth,
   for (const auto &dependenceComponent : dependenceComponents) {
     std::string lbStr = "-inf";
     if (dependenceComponent.lb.has_value() &&
-        dependenceComponent.lb.value() != std::numeric_limits<int64_t>::min())
-      lbStr = std::to_string(dependenceComponent.lb.value());
+        *dependenceComponent.lb != std::numeric_limits<int64_t>::min())
+      lbStr = std::to_string(*dependenceComponent.lb);
 
     std::string ubStr = "+inf";
     if (dependenceComponent.ub.has_value() &&
-        dependenceComponent.ub.value() != std::numeric_limits<int64_t>::max())
-      ubStr = std::to_string(dependenceComponent.ub.value());
+        *dependenceComponent.ub != std::numeric_limits<int64_t>::max())
+      ubStr = std::to_string(*dependenceComponent.ub);
 
     result += "[" + lbStr + ", " + ubStr + "]";
   }

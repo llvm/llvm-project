@@ -5,14 +5,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @__dfsan_arg_tls = external thread_local(initialexec) global [[TLS_ARR:\[100 x i64\]]]
 ; CHECK: @__dfsan_retval_tls = external thread_local(initialexec) global [[TLS_ARR]]
-; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
-
 define ptr @gepop(ptr %p, i32 %a, i32 %b, i32 %c) {
   ; CHECK: @gepop.dfsan
   ; CHECK_ORIGIN: %[[#PO:]] = load i32, ptr @__dfsan_arg_origin_tls, align [[ALIGN_O:4]]
-  ; CHECK: %[[#PS:]] = load i[[#SBITS]], ptr @__dfsan_arg_tls, align [[ALIGN_S:2]]
+  ; CHECK: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN_S:2]]
   ; CHECK: %e = getelementptr [10 x [20 x i32]], ptr %p, i32 %a, i32 %b, i32 %c
-  ; CHECK: store i[[#SBITS]] %[[#PS]], ptr @__dfsan_retval_tls, align [[ALIGN_S]]
+  ; CHECK: store i8 %[[#PS]], ptr @__dfsan_retval_tls, align [[ALIGN_S]]
   ; CHECK_ORIGIN: store i32 %[[#PO]], ptr @__dfsan_retval_origin_tls, align [[ALIGN_O]]
 
   %e = getelementptr [10 x [20 x i32]], ptr %p, i32 %a, i32 %b, i32 %c

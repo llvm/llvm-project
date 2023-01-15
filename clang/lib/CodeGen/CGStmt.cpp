@@ -574,9 +574,9 @@ void CodeGenFunction::EmitBlock(llvm::BasicBlock *BB, bool IsFinished) {
   // Place the block after the current block, if possible, or else at
   // the end of the function.
   if (CurBB && CurBB->getParent())
-    CurFn->getBasicBlockList().insertAfter(CurBB->getIterator(), BB);
+    CurFn->insert(std::next(CurBB->getIterator()), BB);
   else
-    CurFn->getBasicBlockList().push_back(BB);
+    CurFn->insert(CurFn->end(), BB);
   Builder.SetInsertPoint(BB);
 }
 
@@ -601,15 +601,14 @@ void CodeGenFunction::EmitBlockAfterUses(llvm::BasicBlock *block) {
   bool inserted = false;
   for (llvm::User *u : block->users()) {
     if (llvm::Instruction *insn = dyn_cast<llvm::Instruction>(u)) {
-      CurFn->getBasicBlockList().insertAfter(insn->getParent()->getIterator(),
-                                             block);
+      CurFn->insert(std::next(insn->getParent()->getIterator()), block);
       inserted = true;
       break;
     }
   }
 
   if (!inserted)
-    CurFn->getBasicBlockList().push_back(block);
+    CurFn->insert(CurFn->end(), block);
 
   Builder.SetInsertPoint(block);
 }
@@ -1469,7 +1468,7 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S,
   llvm::BasicBlock *FalseDest = CaseRangeBlock;
   CaseRangeBlock = createBasicBlock("sw.caserange");
 
-  CurFn->getBasicBlockList().push_back(CaseRangeBlock);
+  CurFn->insert(CurFn->end(), CaseRangeBlock);
   Builder.SetInsertPoint(CaseRangeBlock);
 
   // Emit range check.
@@ -2478,7 +2477,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       if (auto *VT = dyn_cast<llvm::VectorType>(ResultRegTypes.back()))
         LargestVectorWidth =
             std::max((uint64_t)LargestVectorWidth,
-                     VT->getPrimitiveSizeInBits().getKnownMinSize());
+                     VT->getPrimitiveSizeInBits().getKnownMinValue());
     } else {
       Address DestAddr = Dest.getAddress(*this);
       // Matrix types in memory are represented by arrays, but accessed through
@@ -2517,7 +2516,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       if (auto *VT = dyn_cast<llvm::VectorType>(Arg->getType()))
         LargestVectorWidth =
             std::max((uint64_t)LargestVectorWidth,
-                     VT->getPrimitiveSizeInBits().getKnownMinSize());
+                     VT->getPrimitiveSizeInBits().getKnownMinValue());
       // Only tie earlyclobber physregs.
       if (Info.allowsRegister() && (GCCReg.empty() || Info.earlyClobber()))
         InOutConstraints += llvm::utostr(i);
@@ -2607,7 +2606,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     if (auto *VT = dyn_cast<llvm::VectorType>(Arg->getType()))
       LargestVectorWidth =
           std::max((uint64_t)LargestVectorWidth,
-                   VT->getPrimitiveSizeInBits().getKnownMinSize());
+                   VT->getPrimitiveSizeInBits().getKnownMinValue());
 
     ArgTypes.push_back(Arg->getType());
     ArgElemTypes.push_back(ArgElemType);

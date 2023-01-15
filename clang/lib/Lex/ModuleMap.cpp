@@ -28,7 +28,6 @@
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -177,14 +176,14 @@ static void appendSubframeworkPaths(Module *Mod,
     llvm::sys::path::append(Path, "Frameworks", Framework + ".framework");
 }
 
-Optional<FileEntryRef> ModuleMap::findHeader(
+OptionalFileEntryRef ModuleMap::findHeader(
     Module *M, const Module::UnresolvedHeaderDirective &Header,
     SmallVectorImpl<char> &RelativePathName, bool &NeedsFramework) {
   // Search for the header file within the module's home directory.
   auto *Directory = M->Directory;
   SmallString<128> FullPathName(Directory->getName());
 
-  auto GetFile = [&](StringRef Filename) -> Optional<FileEntryRef> {
+  auto GetFile = [&](StringRef Filename) -> OptionalFileEntryRef {
     auto File =
         expectedToOptional(SourceMgr.getFileManager().getFileRef(Filename));
     if (!File || (Header.Size && File->getSize() != *Header.Size) ||
@@ -193,7 +192,7 @@ Optional<FileEntryRef> ModuleMap::findHeader(
     return *File;
   };
 
-  auto GetFrameworkFile = [&]() -> Optional<FileEntryRef> {
+  auto GetFrameworkFile = [&]() -> OptionalFileEntryRef {
     unsigned FullPathLength = FullPathName.size();
     appendSubframeworkPaths(M, RelativePathName);
     unsigned RelativePathLength = RelativePathName.size();
@@ -257,7 +256,7 @@ void ModuleMap::resolveHeader(Module *Mod,
                               const Module::UnresolvedHeaderDirective &Header,
                               bool &NeedsFramework) {
   SmallString<128> RelativePathName;
-  if (Optional<FileEntryRef> File =
+  if (OptionalFileEntryRef File =
           findHeader(Mod, Header, RelativePathName, NeedsFramework)) {
     if (Header.IsUmbrella) {
       const DirectoryEntry *UmbrellaDir = &File->getDir().getDirEntry();
@@ -1216,8 +1215,8 @@ void ModuleMap::resolveHeaderDirectives(
     Module *Mod, llvm::Optional<const FileEntry *> File) const {
   bool NeedsFramework = false;
   SmallVector<Module::UnresolvedHeaderDirective, 1> NewHeaders;
-  const auto Size = File ? File.value()->getSize() : 0;
-  const auto ModTime = File ? File.value()->getModificationTime() : 0;
+  const auto Size = File ? (*File)->getSize() : 0;
+  const auto ModTime = File ? (*File)->getModificationTime() : 0;
 
   for (auto &Header : Mod->UnresolvedHeaders) {
     if (File && ((Header.ModTime && Header.ModTime != ModTime) ||
@@ -1259,7 +1258,7 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
     Cb->moduleMapAddHeader(Header.Entry->getName());
 }
 
-Optional<FileEntryRef>
+OptionalFileEntryRef
 ModuleMap::getContainingModuleMapFile(const Module *Module) const {
   if (Module->DefinitionLoc.isInvalid())
     return std::nullopt;
@@ -1268,7 +1267,7 @@ ModuleMap::getContainingModuleMapFile(const Module *Module) const {
       SourceMgr.getFileID(Module->DefinitionLoc));
 }
 
-Optional<FileEntryRef>
+OptionalFileEntryRef
 ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
   if (M->IsInferred) {
     assert(InferredModuleAllowedBy.count(M) && "missing inferred module map");

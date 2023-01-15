@@ -98,41 +98,41 @@ entry:
   ret double %0
 }
 
-define float @load_f(float* %a) {
+define float @load_f(ptr %a) {
 entry:
 ; CHECK-LABEL: load_f:
 ; NONE: ldr r0, [r0]
 ; HARD: vldr s0, [r0]
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   ret float %0
 }
 
-define double @load_d(double* %a) {
+define double @load_d(ptr %a) {
 entry:
 ; CHECK-LABEL: load_d:
 ; NOREGS: ldm r0, {r0, r1}
 ; ONLYREGS: vldr d0, [r0]
 ; HARD: vldr d0, [r0]
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   ret double %0
 }
 
-define void @store_f(float* %a, float %b) {
+define void @store_f(ptr %a, float %b) {
 entry:
 ; CHECK-LABEL: store_f:
 ; NONE: str r1, [r0]
 ; HARD: vstr s0, [r0]
-  store float %b, float* %a, align 4
+  store float %b, ptr %a, align 4
   ret void
 }
 
-define void @store_d(double* %a, double %b) {
+define void @store_d(ptr %a, double %b) {
 entry:
 ; CHECK-LABEL: store_d:
 ; NOREGS: strd r2, r3, [r0]
 ; ONLYREGS: strd r2, r3, [r0]
 ; HARD: vstr d0, [r0]
-  store double %b, double* %a, align 8
+  store double %b, ptr %a, align 8
   ret void
 }
 

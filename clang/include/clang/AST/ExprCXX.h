@@ -40,7 +40,6 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -1279,10 +1278,6 @@ class CXXDefaultArgExpr final
     CXXDefaultArgExprBits.HasRewrittenInit = HasRewrittenInit;
   }
 
-  size_t numTrailingObjects() const {
-    return CXXDefaultArgExprBits.HasRewrittenInit;
-  }
-
 public:
   static CXXDefaultArgExpr *CreateEmpty(const ASTContext &C,
                                         bool HasRewrittenInit);
@@ -1358,7 +1353,7 @@ public:
 /// (C++1y [dcl.init.aggr]p7).
 class CXXDefaultInitExpr final
     : public Expr,
-      private llvm::TrailingObjects<CXXDefaultArgExpr, Expr *> {
+      private llvm::TrailingObjects<CXXDefaultInitExpr, Expr *> {
 
   friend class ASTStmtReader;
   friend class ASTReader;
@@ -1376,10 +1371,6 @@ class CXXDefaultInitExpr final
   CXXDefaultInitExpr(EmptyShell Empty, bool HasRewrittenInit)
       : Expr(CXXDefaultInitExprClass, Empty) {
     CXXDefaultInitExprBits.HasRewrittenInit = HasRewrittenInit;
-  }
-
-  size_t numTrailingObjects() const {
-    return CXXDefaultInitExprBits.HasRewrittenInit;
   }
 
 public:
@@ -2805,8 +2796,7 @@ public:
 
   /// Retrieve the argument types.
   ArrayRef<TypeSourceInfo *> getArgs() const {
-    return llvm::makeArrayRef(getTrailingObjects<TypeSourceInfo *>(),
-                              getNumArgs());
+    return llvm::ArrayRef(getTrailingObjects<TypeSourceInfo *>(), getNumArgs());
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
@@ -3452,8 +3442,7 @@ public:
                                   ArrayRef<CleanupObject> objects);
 
   ArrayRef<CleanupObject> getObjects() const {
-    return llvm::makeArrayRef(getTrailingObjects<CleanupObject>(),
-                              getNumObjects());
+    return llvm::ArrayRef(getTrailingObjects<CleanupObject>(), getNumObjects());
   }
 
   unsigned getNumObjects() const { return ExprWithCleanupsBits.NumObjects; }
@@ -4304,7 +4293,7 @@ public:
   ArrayRef<TemplateArgument> getPartialArguments() const {
     assert(isPartiallySubstituted());
     const auto *Args = getTrailingObjects<TemplateArgument>();
-    return llvm::makeArrayRef(Args, Args + Length);
+    return llvm::ArrayRef(Args, Args + Length);
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return OperatorLoc; }
@@ -4771,6 +4760,140 @@ public:
 
   const_child_range children() const {
     return const_child_range(SubExprs, SubExprs + SubExpr::Count);
+  }
+};
+
+/// Represents a list-initialization with parenthesis.
+///
+/// As per P0960R3, this is a C++20 feature that allows aggregate to
+/// be initialized with a parenthesized list of values:
+/// ```
+/// struct A {
+///   int a;
+///   double b;
+/// };
+///
+/// void foo() {
+///   A a1(0);        // Well-formed in C++20
+///   A a2(1.5, 1.0); // Well-formed in C++20
+/// }
+/// ```
+/// It has some sort of similiarity to braced
+/// list-initialization, with some differences such as
+/// it allows narrowing conversion whilst braced
+/// list-initialization doesn't.
+/// ```
+/// struct A {
+///   char a;
+/// };
+/// void foo() {
+///   A a(1.5); // Well-formed in C++20
+///   A b{1.5}; // Ill-formed !
+/// }
+/// ```
+class CXXParenListInitExpr final
+    : public Expr,
+      private llvm::TrailingObjects<CXXParenListInitExpr, Expr *> {
+  friend class TrailingObjects;
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+  unsigned NumExprs;
+  unsigned NumUserSpecifiedExprs;
+  SourceLocation InitLoc, LParenLoc, RParenLoc;
+  llvm::PointerUnion<Expr *, FieldDecl *> ArrayFillerOrUnionFieldInit;
+
+  CXXParenListInitExpr(ArrayRef<Expr *> Args, QualType T,
+                       unsigned NumUserSpecifiedExprs, SourceLocation InitLoc,
+                       SourceLocation LParenLoc, SourceLocation RParenLoc)
+      : Expr(CXXParenListInitExprClass, T, getValueKindForType(T), OK_Ordinary),
+        NumExprs(Args.size()), NumUserSpecifiedExprs(NumUserSpecifiedExprs),
+        InitLoc(InitLoc), LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
+    std::copy(Args.begin(), Args.end(), getTrailingObjects<Expr *>());
+    assert(NumExprs >= NumUserSpecifiedExprs &&
+           "number of user specified inits is greater than the number of "
+           "passed inits");
+    setDependence(computeDependence(this));
+  }
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const { return NumExprs; }
+
+public:
+  static CXXParenListInitExpr *
+  Create(ASTContext &C, ArrayRef<Expr *> Args, QualType T,
+         unsigned NumUserSpecifiedExprs, SourceLocation InitLoc,
+         SourceLocation LParenLoc, SourceLocation RParenLoc);
+
+  static CXXParenListInitExpr *CreateEmpty(ASTContext &C, unsigned numExprs,
+                                           EmptyShell Empty);
+
+  explicit CXXParenListInitExpr(EmptyShell Empty, unsigned NumExprs)
+      : Expr(CXXParenListInitExprClass, Empty), NumExprs(NumExprs),
+        NumUserSpecifiedExprs(0) {}
+
+  void updateDependence() { setDependence(computeDependence(this)); }
+
+  ArrayRef<Expr *> getInitExprs() {
+    return ArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  }
+
+  const ArrayRef<Expr *> getInitExprs() const {
+    return ArrayRef(getTrailingObjects<Expr *>(), NumExprs);
+  }
+
+  ArrayRef<Expr *> getUserSpecifiedInitExprs() {
+    return ArrayRef(getTrailingObjects<Expr *>(), NumUserSpecifiedExprs);
+  }
+
+  const ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
+    return ArrayRef(getTrailingObjects<Expr *>(), NumUserSpecifiedExprs);
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return LParenLoc; }
+
+  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
+
+  SourceLocation getInitLoc() const LLVM_READONLY { return InitLoc; }
+
+  SourceRange getSourceRange() const LLVM_READONLY {
+    return SourceRange(getBeginLoc(), getEndLoc());
+  }
+
+  void setArrayFiller(Expr *E) { ArrayFillerOrUnionFieldInit = E; }
+
+  Expr *getArrayFiller() {
+    return ArrayFillerOrUnionFieldInit.dyn_cast<Expr *>();
+  }
+
+  const Expr *getArrayFiller() const {
+    return ArrayFillerOrUnionFieldInit.dyn_cast<Expr *>();
+  }
+
+  void setInitializedFieldInUnion(FieldDecl *FD) {
+    ArrayFillerOrUnionFieldInit = FD;
+  }
+
+  FieldDecl *getInitializedFieldInUnion() {
+    return ArrayFillerOrUnionFieldInit.dyn_cast<FieldDecl *>();
+  }
+
+  const FieldDecl *getInitializedFieldInUnion() const {
+    return ArrayFillerOrUnionFieldInit.dyn_cast<FieldDecl *>();
+  }
+
+  child_range children() {
+    Stmt **Begin = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    return child_range(Begin, Begin + NumExprs);
+  }
+
+  const_child_range children() const {
+    Stmt *const *Begin =
+        reinterpret_cast<Stmt *const *>(getTrailingObjects<Expr *>());
+    return const_child_range(Begin, Begin + NumExprs);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXParenListInitExprClass;
   }
 };
 

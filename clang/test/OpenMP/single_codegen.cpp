@@ -199,7 +199,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK1:       eh.resume:
 // CHECK1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK1-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK1-NEXT:    resume { ptr, i32 } [[LPAD_VAL2]]
 //
@@ -275,7 +275,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK1:       eh.resume:
 // CHECK1-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK1-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK1-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK1-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK1-NEXT:    resume { ptr, i32 } [[LPAD_VAL2]]
 //
@@ -457,7 +457,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK1-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
 // CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [5 x ptr], ptr [[TMP3]], i64 0, i64 4
 // CHECK1-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[TMP23]], align 8
-// CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr [[CLASS_TESTCLASS:%.*]], ptr [[TMP22]], i64 2
+// CHECK1-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], ptr [[TMP22]], i64 2
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq ptr [[TMP22]], [[TMP25]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE4:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK1:       omp.arraycpy.body:
@@ -1077,7 +1077,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK2:       eh.resume:
 // CHECK2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK2-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK2-NEXT:    resume { ptr, i32 } [[LPAD_VAL2]]
 //
@@ -1169,7 +1169,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK2:       eh.resume:
 // CHECK2-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK2-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK2-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK2-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK2-NEXT:    resume { ptr, i32 } [[LPAD_VAL2]]
 //
@@ -1341,7 +1341,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK2-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
 // CHECK2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [5 x ptr], ptr [[TMP3]], i64 0, i64 4
 // CHECK2-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[TMP23]], align 8
-// CHECK2-NEXT:    [[TMP25:%.*]] = getelementptr [[CLASS_TESTCLASS:%.*]], ptr [[TMP22]], i64 2
+// CHECK2-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], ptr [[TMP22]], i64 2
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq ptr [[TMP22]], [[TMP25]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE4:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK2:       omp.arraycpy.body:
@@ -2006,7 +2006,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK4:       eh.resume:
 // CHECK4-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK4-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK4-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK4-NEXT:    resume { ptr, i32 } [[LPAD_VAL2]]
 //
@@ -2053,7 +2053,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK4:       eh.resume:
 // CHECK4-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8
 // CHECK4-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0
+// CHECK4-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0
 // CHECK4-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1
 // CHECK4-NEXT:    resume { ptr, i32 } [[LPAD_VAL2]]
 //
@@ -2233,7 +2233,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK4-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
 // CHECK4-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [5 x ptr], ptr [[TMP3]], i64 0, i64 4
 // CHECK4-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[TMP23]], align 8
-// CHECK4-NEXT:    [[TMP25:%.*]] = getelementptr [[CLASS_TESTCLASS:%.*]], ptr [[TMP22]], i64 2
+// CHECK4-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], ptr [[TMP22]], i64 2
 // CHECK4-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq ptr [[TMP22]], [[TMP25]]
 // CHECK4-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE4:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // CHECK4:       omp.arraycpy.body:
@@ -2897,7 +2897,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK5:       eh.resume:
 // CHECK5-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG25]]
 // CHECK5-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG25]]
-// CHECK5-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG25]]
+// CHECK5-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG25]]
 // CHECK5-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG25]]
 // CHECK5-NEXT:    resume { ptr, i32 } [[LPAD_VAL2]], !dbg [[DBG25]]
 //
@@ -2973,7 +2973,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK5:       eh.resume:
 // CHECK5-NEXT:    [[EXN:%.*]] = load ptr, ptr [[EXN_SLOT]], align 8, !dbg [[DBG37]]
 // CHECK5-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4, !dbg [[DBG37]]
-// CHECK5-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } undef, ptr [[EXN]], 0, !dbg [[DBG37]]
+// CHECK5-NEXT:    [[LPAD_VAL:%.*]] = insertvalue { ptr, i32 } poison, ptr [[EXN]], 0, !dbg [[DBG37]]
 // CHECK5-NEXT:    [[LPAD_VAL2:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL]], 1, !dbg [[DBG37]]
 // CHECK5-NEXT:    resume { ptr, i32 } [[LPAD_VAL2]], !dbg [[DBG37]]
 //
@@ -3155,7 +3155,7 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK5-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8, !dbg [[DBG75]]
 // CHECK5-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [5 x ptr], ptr [[TMP3]], i64 0, i64 4, !dbg [[DBG75]]
 // CHECK5-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[TMP23]], align 8, !dbg [[DBG75]]
-// CHECK5-NEXT:    [[TMP25:%.*]] = getelementptr [[CLASS_TESTCLASS:%.*]], ptr [[TMP22]], i64 2, !dbg [[DBG75]]
+// CHECK5-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [[CLASS_TESTCLASS:%.*]], ptr [[TMP22]], i64 2, !dbg [[DBG75]]
 // CHECK5-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq ptr [[TMP22]], [[TMP25]], !dbg [[DBG75]]
 // CHECK5-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE4:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]], !dbg [[DBG75]]
 // CHECK5:       omp.arraycpy.body:

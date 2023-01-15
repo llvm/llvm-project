@@ -3,8 +3,8 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @a = global [6 x void ()*] [void ()* no_cfi @f1, void ()* @.cfi.jumptable, void ()* bitcast ([8 x i8]* getelementptr inbounds ([3 x [8 x i8]], [3 x [8 x i8]]* bitcast (void ()* @.cfi.jumptable to [3 x [8 x i8]]*), i64 0, i64 1) to void ()*), void ()* no_cfi @f2, void ()* @f3, void ()* no_cfi @f3.cfi]
-@a = global [6 x void ()*] [void ()* no_cfi @f1, void ()* @f1, void ()* @f2, void ()* no_cfi @f2, void ()* @f3, void ()* no_cfi @f3]
+; CHECK: @a = global [6 x ptr] [ptr no_cfi @f1, ptr @.cfi.jumptable, ptr getelementptr inbounds ([3 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 1), ptr no_cfi @f2, ptr @f3, ptr no_cfi @f3.cfi]
+@a = global [6 x ptr] [ptr no_cfi @f1, ptr @f1, ptr @f2, ptr no_cfi @f2, ptr @f3, ptr no_cfi @f3]
 
 ; CHECK: define void @f1()
 define void @f1() !type !0 {
@@ -21,10 +21,10 @@ define void @f3() #0 !type !0 {
   ret void
 }
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
-define i1 @foo(i8* %p) {
-  %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
+define i1 @foo(ptr %p) {
+  %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid1")
   ret i1 %x
 }
 

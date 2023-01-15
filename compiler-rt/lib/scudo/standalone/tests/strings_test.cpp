@@ -43,9 +43,11 @@ TEST(ScudoStringsTest, Clear) {
 }
 
 TEST(ScudoStringsTest, ClearLarge) {
+  constexpr char appendString[] = "123";
   scudo::ScopedString Str;
+  Str.reserve(sizeof(appendString) * 10000);
   for (int i = 0; i < 10000; ++i)
-    Str.append("123");
+    Str.append(appendString);
   Str.clear();
   EXPECT_EQ(0ul, Str.length());
   EXPECT_EQ('\0', *Str.data());
@@ -76,6 +78,7 @@ TEST(ScudoStringTest, PotentialOverflows) {
   // of it with variations of append. The expectation is for nothing to crash.
   const scudo::uptr PageSize = scudo::getPageSizeCached();
   scudo::ScopedString Str;
+  Str.reserve(2 * PageSize);
   Str.clear();
   fillString(Str, 2 * PageSize);
   Str.clear();

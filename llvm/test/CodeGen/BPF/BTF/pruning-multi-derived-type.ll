@@ -12,20 +12,20 @@
 ; Compilation flags:
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
-%struct.t2 = type { %struct.t1* }
+%struct.t2 = type { ptr }
 %struct.t1 = type { i32 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define dso_local i32 @foo(%struct.t2* nocapture noundef readnone %arg) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @foo(ptr nocapture noundef readnone %arg) local_unnamed_addr #0 !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.t2* %arg, metadata !22, metadata !DIExpression()), !dbg !23
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !22, metadata !DIExpression()), !dbg !23
   ret i32 0, !dbg !24
 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
-define dso_local i32 @bar(%struct.t1* nocapture noundef readnone %arg) local_unnamed_addr #0 !dbg !25 {
+define dso_local i32 @bar(ptr nocapture noundef readnone %arg) local_unnamed_addr #0 !dbg !25 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.t1* %arg, metadata !29, metadata !DIExpression()), !dbg !30
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !29, metadata !DIExpression()), !dbg !30
   ret i32 0, !dbg !31
 }
 

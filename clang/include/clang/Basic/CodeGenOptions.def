@@ -30,7 +30,7 @@ CODEGENOPT(Name, Bits, Default)
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
 ENUM_CODEGENOPT(CompressDebugSections, llvm::DebugCompressionType, 2,
                 llvm::DebugCompressionType::None)
-CODEGENOPT(RelaxELFRelocations, 1, 0) ///< -Wa,--mrelax-relocations
+CODEGENOPT(RelaxELFRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
 CODEGENOPT(Dwarf64           , 1, 0) ///< -gdwarf64.
 CODEGENOPT(Dwarf32           , 1, 1) ///< -gdwarf32.
@@ -105,7 +105,6 @@ CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or return.
 CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or branch.
-CODEGENOPT(IBTSeal, 1, 0)             ///< set to optimize CFProtectionBranch.
 CODEGENOPT(FunctionReturnThunks, 1, 0) ///< -mfunction-return={keep|thunk-extern}
 CODEGENOPT(IndirectBranchCSPrefix, 1, 0) ///< if -mindirect-branch-cs-prefix
                                          ///< is set.

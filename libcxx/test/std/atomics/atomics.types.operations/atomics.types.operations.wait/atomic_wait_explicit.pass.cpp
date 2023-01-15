@@ -18,12 +18,12 @@
 // template<class T>
 //     void
 //     atomic_wait_explicit(const volatile atomic<T>*, atomic<T>::value_type,
-//                          memory_order);
+//                          memory_order) noexcept;
 //
 // template<class T>
 //     void
 //     atomic_wait_explicit(const volatile atomic<T>*, atomic<T>::value_type,
-//                          memory_order);
+//                          memory_order) noexcept;
 
 #include <atomic>
 #include <type_traits>
@@ -40,6 +40,7 @@ struct TestFn {
     typedef std::atomic<T> A;
     {
       A t(T(1));
+      static_assert(noexcept(std::atomic_wait_explicit(&t, T(0), std::memory_order_seq_cst)), "");
       assert(std::atomic_load(&t) == T(1));
       std::atomic_wait_explicit(&t, T(0), std::memory_order_seq_cst);
       std::thread t1 = support::make_test_thread([&]() {
@@ -52,6 +53,7 @@ struct TestFn {
     }
     {
       volatile A vt(T(2));
+      static_assert(noexcept(std::atomic_wait_explicit(&vt, T(0), std::memory_order_seq_cst)), "");
       assert(std::atomic_load(&vt) == T(2));
       std::atomic_wait_explicit(&vt, T(1), std::memory_order_seq_cst);
       std::thread t2 = support::make_test_thread([&]() {

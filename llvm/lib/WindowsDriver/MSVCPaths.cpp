@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/WindowsDriver/MSVCPaths.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -651,7 +650,7 @@ bool findVCToolChainViaSetupConfig(vfs::FileSystem &VFS, std::string &Path,
     return false;
 
   ISetupInstancePtr NewestInstance;
-  Optional<uint64_t> NewestVersionNum;
+  std::optional<uint64_t> NewestVersionNum;
   do {
     bstr_t VersionString;
     uint64_t VersionNum;
@@ -706,8 +705,10 @@ bool findVCToolChainViaRegistry(std::string &Path, ToolsetLayout &VSLayout) {
       getSystemRegistryString(R"(SOFTWARE\Microsoft\VCExpress\$VERSION)",
                               "InstallDir", VSInstallPath, nullptr)) {
     if (!VSInstallPath.empty()) {
-      SmallString<256> VCPath(StringRef(VSInstallPath.c_str(),
-                                        VSInstallPath.find(R"(\Common7\IDE)")));
+      auto pos = VSInstallPath.find(R"(\Common7\IDE)");
+      if (pos == std::string::npos)
+        return false;
+      SmallString<256> VCPath(StringRef(VSInstallPath.c_str(), pos));
       sys::path::append(VCPath, "VC");
 
       Path = std::string(VCPath.str());

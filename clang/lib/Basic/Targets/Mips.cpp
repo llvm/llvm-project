@@ -20,7 +20,7 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info MipsTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
@@ -195,11 +195,11 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (StringRef(CPU).startswith("octeon"))
     Builder.defineMacro("__OCTEON__");
 
-  // These shouldn't be defined for MIPS-I but there's no need to check
-  // for that since MIPS-I isn't supported.
-  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
-  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
-  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  if (CPU != "mips1") {
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  }
 
   // 32-bit MIPS processors don't have the necessary lld/scd instructions
   // found in 64-bit processors. In the case of O32 on a 64-bit processor,
@@ -220,8 +220,8 @@ bool MipsTargetInfo::hasFeature(StringRef Feature) const {
 }
 
 ArrayRef<Builtin::Info> MipsTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::Mips::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::Mips::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
 unsigned MipsTargetInfo::getUnwindWordWidth() const {

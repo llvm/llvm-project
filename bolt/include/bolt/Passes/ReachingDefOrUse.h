@@ -11,10 +11,10 @@
 
 #include "bolt/Passes/DataflowAnalysis.h"
 #include "bolt/Passes/RegAnalysis.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Timer.h"
+#include <optional>
 
 namespace opts {
 extern llvm::cl::opt<bool> TimeOpts;
@@ -34,7 +34,7 @@ class ReachingDefOrUse
 
 public:
   ReachingDefOrUse(const RegAnalysis &RA, BinaryFunction &BF,
-                   Optional<MCPhysReg> TrackingReg = std::nullopt,
+                   std::optional<MCPhysReg> TrackingReg = std::nullopt,
                    MCPlusBuilder::AllocatorIdTy AllocId = 0)
       : InstrsDataflowAnalysis<ReachingDefOrUse<Def>, !Def>(BF, AllocId),
         RA(RA), TrackingReg(TrackingReg) {}
@@ -65,7 +65,7 @@ protected:
 
   /// If set, limit the dataflow to only track instructions affecting this
   /// register. Otherwise the analysis can be too permissive.
-  Optional<MCPhysReg> TrackingReg;
+  std::optional<MCPhysReg> TrackingReg;
 
   void preflight() {
     // Populate our universe of tracked expressions with all instructions

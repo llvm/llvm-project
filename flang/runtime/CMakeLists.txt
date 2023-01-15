@@ -8,6 +8,13 @@
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.13.4)
+  if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
+    message(WARNING
+      "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
+      "minimum version of CMake required to build LLVM will become 3.20.0, and "
+      "using an older CMake will become an error. Please upgrade your CMake to "
+      "at least 3.20.0 now to avoid issues in the future!")
+  endif()
 
   project(FlangRuntime C CXX)
 
@@ -32,6 +39,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   include(AddLLVM)
   include(AddFlang)
+  include(HandleLLVMOptions)
 
   include(TestBigEndian)
   test_big_endian(IS_BIGENDIAN)
@@ -58,6 +66,13 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
+check_cxx_compiler_flag(-fno-lto FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
+if (FLANG_RUNTIME_HAS_FNO_LTO_FLAG)
+  set(NO_LTO_FLAGS "-fno-lto")
+else()
+  set(NO_LTO_FLAGS "")
+endif()
+
 if (NOT (HAVE_STRERROR OR HAVE_STRERROR_R OR HAVE_DECL_STRERROR_S))
   message(FATAL_ERROR "None of strerror, strerror_r, strerror_s found.")
 endif()
@@ -67,6 +82,9 @@ configure_file(config.h.cmake config.h)
 # because add_flang_library creates multiple objects (STATIC/SHARED, OBJECT)
 # with different names
 include_directories(AFTER ${CMAKE_CURRENT_BINARY_DIR})
+
+append(${NO_LTO_FLAGS} CMAKE_C_FLAGS)
+append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
 
 add_subdirectory(FortranMain)
 

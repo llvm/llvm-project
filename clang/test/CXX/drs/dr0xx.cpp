@@ -988,10 +988,10 @@ namespace dr70 { // dr70: yes
 // dr72: dup 69
 
 #if __cplusplus >= 201103L
-namespace dr73 { // dr73: no
-  // The resolution to dr73 is unworkable. Consider:
+namespace dr73 { // dr73: sup 1652
   int a, b;
   static_assert(&a + 1 != &b, ""); // expected-error {{not an integral constant expression}}
+  // expected-note@-1 {{comparison against pointer '&a + 1' that points past the end of a complete object}}
 }
 #endif
 

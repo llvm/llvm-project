@@ -32,7 +32,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -317,11 +316,9 @@ static Optional<bool> comparePath(const PathPieces &X, const PathPieces &Y) {
   PathPieces::const_iterator X_I = X.begin(), X_end = X.end();
   PathPieces::const_iterator Y_I = Y.begin(), Y_end = Y.end();
 
-  for ( ; X_I != X_end && Y_I != Y_end; ++X_I, ++Y_I) {
-    Optional<bool> b = comparePiece(**X_I, **Y_I);
-    if (b)
-      return b.value();
-  }
+  for (; X_I != X_end && Y_I != Y_end; ++X_I, ++Y_I)
+    if (Optional<bool> b = comparePiece(**X_I, **Y_I))
+      return *b;
 
   return std::nullopt;
 }
@@ -395,9 +392,7 @@ static bool compare(const PathDiagnostic &X, const PathDiagnostic &Y) {
     if (*XI != *YI)
       return (*XI) < (*YI);
   }
-  Optional<bool> b = comparePath(X.path, Y.path);
-  assert(b);
-  return b.value();
+  return *comparePath(X.path, Y.path);
 }
 
 void PathDiagnosticConsumer::FlushDiagnostics(

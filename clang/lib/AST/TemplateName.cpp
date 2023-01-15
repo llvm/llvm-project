@@ -35,7 +35,7 @@ using namespace clang;
 
 TemplateArgument
 SubstTemplateTemplateParmPackStorage::getArgumentPack() const {
-  return TemplateArgument(llvm::makeArrayRef(Arguments, Bits.Data));
+  return TemplateArgument(llvm::ArrayRef(Arguments, Bits.Data));
 }
 
 TemplateTemplateParmDecl *

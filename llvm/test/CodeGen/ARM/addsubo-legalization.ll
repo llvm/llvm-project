@@ -6,7 +6,7 @@ declare {<2 x i64>, <2 x i1>} @llvm.usub.with.overflow.v2i64(<2 x i64>, <2 x i64
 declare {<2 x i64>, <2 x i1>} @llvm.sadd.with.overflow.v2i64(<2 x i64>, <2 x i64>)
 declare {<2 x i64>, <2 x i1>} @llvm.ssub.with.overflow.v2i64(<2 x i64>, <2 x i64>)
 
-define <2 x i1> @uaddo(<2 x i64> *%ptr, <2 x i64> *%ptr2) {
+define <2 x i1> @uaddo(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: uaddo:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
@@ -36,16 +36,16 @@ define <2 x i1> @uaddo(<2 x i64> *%ptr, <2 x i64> *%ptr2) {
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
-  %x = load <2 x i64>, <2 x i64>* %ptr, align 8
-  %y = load <2 x i64>, <2 x i64>* %ptr2, align 8
+  %x = load <2 x i64>, ptr %ptr, align 8
+  %y = load <2 x i64>, ptr %ptr2, align 8
   %s = call {<2 x i64>, <2 x i1>} @llvm.uadd.with.overflow.v2i64(<2 x i64> %x, <2 x i64> %y)
   %m = extractvalue {<2 x i64>, <2 x i1>} %s, 0
   %o = extractvalue {<2 x i64>, <2 x i1>} %s, 1
-  store <2 x i64> %m, <2 x i64>* %ptr
+  store <2 x i64> %m, ptr %ptr
   ret <2 x i1> %o
 }
 
-define <2 x i1> @usubo(<2 x i64> *%ptr, <2 x i64> *%ptr2) {
+define <2 x i1> @usubo(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: usubo:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
@@ -75,16 +75,16 @@ define <2 x i1> @usubo(<2 x i64> *%ptr, <2 x i64> *%ptr2) {
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
-  %x = load <2 x i64>, <2 x i64>* %ptr, align 8
-  %y = load <2 x i64>, <2 x i64>* %ptr2, align 8
+  %x = load <2 x i64>, ptr %ptr, align 8
+  %y = load <2 x i64>, ptr %ptr2, align 8
   %s = call {<2 x i64>, <2 x i1>} @llvm.usub.with.overflow.v2i64(<2 x i64> %x, <2 x i64> %y)
   %m = extractvalue {<2 x i64>, <2 x i1>} %s, 0
   %o = extractvalue {<2 x i64>, <2 x i1>} %s, 1
-  store <2 x i64> %m, <2 x i64>* %ptr
+  store <2 x i64> %m, ptr %ptr
   ret <2 x i1> %o
 }
 
-define <2 x i1> @saddo(<2 x i64> *%ptr, <2 x i64> *%ptr2) {
+define <2 x i1> @saddo(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: saddo:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -100,16 +100,16 @@ define <2 x i1> @saddo(<2 x i64> *%ptr, <2 x i64> *%ptr2) {
 ; CHECK-NEXT:    vmov r2, r1, d18
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
-  %x = load <2 x i64>, <2 x i64>* %ptr, align 8
-  %y = load <2 x i64>, <2 x i64>* %ptr2, align 8
+  %x = load <2 x i64>, ptr %ptr, align 8
+  %y = load <2 x i64>, ptr %ptr2, align 8
   %s = call {<2 x i64>, <2 x i1>} @llvm.sadd.with.overflow.v2i64(<2 x i64> %x, <2 x i64> %y)
   %m = extractvalue {<2 x i64>, <2 x i1>} %s, 0
   %o = extractvalue {<2 x i64>, <2 x i1>} %s, 1
-  store <2 x i64> %m, <2 x i64>* %ptr
+  store <2 x i64> %m, ptr %ptr
   ret <2 x i1> %o
 }
 
-define <2 x i1> @ssubo(<2 x i64> *%ptr, <2 x i64> *%ptr2) {
+define <2 x i1> @ssubo(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: ssubo:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -125,11 +125,11 @@ define <2 x i1> @ssubo(<2 x i64> *%ptr, <2 x i64> *%ptr2) {
 ; CHECK-NEXT:    vmov r2, r1, d18
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    bx lr
-  %x = load <2 x i64>, <2 x i64>* %ptr, align 8
-  %y = load <2 x i64>, <2 x i64>* %ptr2, align 8
+  %x = load <2 x i64>, ptr %ptr, align 8
+  %y = load <2 x i64>, ptr %ptr2, align 8
   %s = call {<2 x i64>, <2 x i1>} @llvm.ssub.with.overflow.v2i64(<2 x i64> %x, <2 x i64> %y)
   %m = extractvalue {<2 x i64>, <2 x i1>} %s, 0
   %o = extractvalue {<2 x i64>, <2 x i1>} %s, 1
-  store <2 x i64> %m, <2 x i64>* %ptr
+  store <2 x i64> %m, ptr %ptr
   ret <2 x i1> %o
 }

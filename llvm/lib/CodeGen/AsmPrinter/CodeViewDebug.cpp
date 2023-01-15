@@ -12,8 +12,6 @@
 
 #include "CodeViewDebug.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -1340,7 +1338,7 @@ void CodeViewDebug::calculateRanges(
     assert(DVInst->isDebugValue() && "Invalid History entry");
     // FIXME: Find a way to represent constant variables, since they are
     // relatively common.
-    Optional<DbgVariableLocation> Location =
+    std::optional<DbgVariableLocation> Location =
         DbgVariableLocation::extractFromMachineInstruction(*DVInst);
     if (!Location)
     {
@@ -2046,7 +2044,7 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
   TypeIndex ReturnTypeIndex = TypeIndex::Void();
   ArrayRef<TypeIndex> ArgTypeIndices = std::nullopt;
   if (!ReturnAndArgTypeIndices.empty()) {
-    auto ReturnAndArgTypesRef = makeArrayRef(ReturnAndArgTypeIndices);
+    auto ReturnAndArgTypesRef = ArrayRef(ReturnAndArgTypeIndices);
     ReturnTypeIndex = ReturnAndArgTypesRef.front();
     ArgTypeIndices = ReturnAndArgTypesRef.drop_front();
   }
@@ -2804,7 +2802,7 @@ void CodeViewDebug::emitLocalVariableList(const FunctionInfo &FI,
         // If ConstantValue is set we will emit it as a S_CONSTANT instead of a
         // S_LOCAL in order to be able to represent it at all.
         const DIType *Ty = L.DIVar->getType();
-        APSInt Val(L.ConstantValue.value());
+        APSInt Val(*L.ConstantValue);
         emitConstantSymbolRecord(Ty, Val, std::string(L.DIVar->getName()));
       } else {
         emitLocalVariable(FI, L);

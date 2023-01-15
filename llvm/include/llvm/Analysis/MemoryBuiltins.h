@@ -23,6 +23,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/ValueHandle.h"
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -70,10 +71,10 @@ bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
 /// Tests if a function is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
-bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
+bool isReallocLikeFn(const Function *F);
 
 /// If this is a call to a realloc function, return the reallocated operand.
-Value *getReallocatedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
+Value *getReallocatedOperand(const CallBase *CB);
 
 //===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
@@ -111,7 +112,7 @@ Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
 /// calls that return their argument. A mapper function can be used to replace
 /// one Value* (operand to the allocation) with another. This is useful when
 /// doing abstract interpretation.
-Optional<APInt> getAllocSize(
+std::optional<APInt> getAllocSize(
     const CallBase *CB, const TargetLibraryInfo *TLI,
     function_ref<const Value *(const Value *)> Mapper = [](const Value *V) {
       return V;
@@ -127,8 +128,8 @@ Constant *getInitialValueOfAllocation(const Value *V,
 /// If a function is part of an allocation family (e.g.
 /// malloc/realloc/calloc/free), return the identifier for its family
 /// of functions.
-Optional<StringRef> getAllocationFamily(const Value *I,
-                                        const TargetLibraryInfo *TLI);
+std::optional<StringRef> getAllocationFamily(const Value *I,
+                                             const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.

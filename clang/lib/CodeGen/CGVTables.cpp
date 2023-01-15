@@ -128,7 +128,7 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
   // they are referencing.
-  for (auto &BB : Fn->getBasicBlockList()) {
+  for (auto &BB : *Fn) {
     for (auto &I : BB) {
       if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I)) {
         auto *DILocal = DII->getVariable();
@@ -909,7 +909,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   if (Linkage == llvm::GlobalVariable::AvailableExternallyLinkage)
     Linkage = llvm::GlobalVariable::InternalLinkage;
 
-  unsigned Align = CGM.getDataLayout().getABITypeAlignment(VTType);
+  llvm::Align Align = CGM.getDataLayout().getABITypeAlign(VTType);
 
   // Create the variable that will hold the construction vtable.
   llvm::GlobalVariable *VTable =

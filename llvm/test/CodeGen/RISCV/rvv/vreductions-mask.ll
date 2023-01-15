@@ -19,13 +19,6 @@ define signext i1 @vreduce_or_nxv1i1(<vscale x 1 x i1> %v) {
 declare i1 @llvm.vector.reduce.xor.nxv1i1(<vscale x 1 x i1>)
 
 define signext i1 @vreduce_xor_nxv1i1(<vscale x 1 x i1> %v) {
-; CHECK-LABEL: vreduce_xor_nxv1i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.xor.nxv1i1(<vscale x 1 x i1> %v)
   ret i1 %red
 }
@@ -120,13 +113,6 @@ define signext i1 @vreduce_or_nxv2i1(<vscale x 2 x i1> %v) {
 declare i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1>)
 
 define signext i1 @vreduce_xor_nxv2i1(<vscale x 2 x i1> %v) {
-; CHECK-LABEL: vreduce_xor_nxv2i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> %v)
   ret i1 %red
 }
@@ -221,13 +207,6 @@ define signext i1 @vreduce_or_nxv4i1(<vscale x 4 x i1> %v) {
 declare i1 @llvm.vector.reduce.xor.nxv4i1(<vscale x 4 x i1>)
 
 define signext i1 @vreduce_xor_nxv4i1(<vscale x 4 x i1> %v) {
-; CHECK-LABEL: vreduce_xor_nxv4i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.xor.nxv4i1(<vscale x 4 x i1> %v)
   ret i1 %red
 }
@@ -322,13 +301,6 @@ define signext i1 @vreduce_or_nxv8i1(<vscale x 8 x i1> %v) {
 declare i1 @llvm.vector.reduce.xor.nxv8i1(<vscale x 8 x i1>)
 
 define signext i1 @vreduce_xor_nxv8i1(<vscale x 8 x i1> %v) {
-; CHECK-LABEL: vreduce_xor_nxv8i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.xor.nxv8i1(<vscale x 8 x i1> %v)
   ret i1 %red
 }
@@ -423,13 +395,6 @@ define signext i1 @vreduce_or_nxv16i1(<vscale x 16 x i1> %v) {
 declare i1 @llvm.vector.reduce.xor.nxv16i1(<vscale x 16 x i1>)
 
 define signext i1 @vreduce_xor_nxv16i1(<vscale x 16 x i1> %v) {
-; CHECK-LABEL: vreduce_xor_nxv16i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.xor.nxv16i1(<vscale x 16 x i1> %v)
   ret i1 %red
 }
@@ -524,13 +489,6 @@ define signext i1 @vreduce_or_nxv32i1(<vscale x 32 x i1> %v) {
 declare i1 @llvm.vector.reduce.xor.nxv32i1(<vscale x 32 x i1>)
 
 define signext i1 @vreduce_xor_nxv32i1(<vscale x 32 x i1> %v) {
-; CHECK-LABEL: vreduce_xor_nxv32i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.xor.nxv32i1(<vscale x 32 x i1> %v)
   ret i1 %red
 }
@@ -625,13 +583,6 @@ define signext i1 @vreduce_or_nxv64i1(<vscale x 64 x i1> %v) {
 declare i1 @llvm.vector.reduce.xor.nxv64i1(<vscale x 64 x i1>)
 
 define signext i1 @vreduce_xor_nxv64i1(<vscale x 64 x i1> %v) {
-; CHECK-LABEL: vreduce_xor_nxv64i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.xor.nxv64i1(<vscale x 64 x i1> %v)
   ret i1 %red
 }
@@ -712,13 +663,6 @@ define signext i1 @vreduce_smin_nxv64i1(<vscale x 64 x i1> %v) {
 declare i1 @llvm.vector.reduce.add.nxv1i1(<vscale x 1 x i1>)
 
 define signext i1 @vreduce_add_nxv1i1(<vscale x 1 x i1> %v) {
-; CHECK-LABEL: vreduce_add_nxv1i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.nxv1i1(<vscale x 1 x i1> %v)
   ret i1 %red
 }
@@ -726,13 +670,6 @@ define signext i1 @vreduce_add_nxv1i1(<vscale x 1 x i1> %v) {
 declare i1 @llvm.vector.reduce.add.nxv2i1(<vscale x 2 x i1>)
 
 define signext i1 @vreduce_add_nxv2i1(<vscale x 2 x i1> %v) {
-; CHECK-LABEL: vreduce_add_nxv2i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.nxv2i1(<vscale x 2 x i1> %v)
   ret i1 %red
 }
@@ -740,13 +677,6 @@ define signext i1 @vreduce_add_nxv2i1(<vscale x 2 x i1> %v) {
 declare i1 @llvm.vector.reduce.add.nxv4i1(<vscale x 4 x i1>)
 
 define signext i1 @vreduce_add_nxv4i1(<vscale x 4 x i1> %v) {
-; CHECK-LABEL: vreduce_add_nxv4i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.nxv4i1(<vscale x 4 x i1> %v)
   ret i1 %red
 }
@@ -754,13 +684,6 @@ define signext i1 @vreduce_add_nxv4i1(<vscale x 4 x i1> %v) {
 declare i1 @llvm.vector.reduce.add.nxv8i1(<vscale x 8 x i1>)
 
 define signext i1 @vreduce_add_nxv8i1(<vscale x 8 x i1> %v) {
-; CHECK-LABEL: vreduce_add_nxv8i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.nxv8i1(<vscale x 8 x i1> %v)
   ret i1 %red
 }
@@ -768,13 +691,6 @@ define signext i1 @vreduce_add_nxv8i1(<vscale x 8 x i1> %v) {
 declare i1 @llvm.vector.reduce.add.nxv16i1(<vscale x 16 x i1>)
 
 define signext i1 @vreduce_add_nxv16i1(<vscale x 16 x i1> %v) {
-; CHECK-LABEL: vreduce_add_nxv16i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.nxv16i1(<vscale x 16 x i1> %v)
   ret i1 %red
 }
@@ -782,13 +698,6 @@ define signext i1 @vreduce_add_nxv16i1(<vscale x 16 x i1> %v) {
 declare i1 @llvm.vector.reduce.add.nxv32i1(<vscale x 32 x i1>)
 
 define signext i1 @vreduce_add_nxv32i1(<vscale x 32 x i1> %v) {
-; CHECK-LABEL: vreduce_add_nxv32i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.nxv32i1(<vscale x 32 x i1> %v)
   ret i1 %red
 }
@@ -796,13 +705,6 @@ define signext i1 @vreduce_add_nxv32i1(<vscale x 32 x i1> %v) {
 declare i1 @llvm.vector.reduce.add.nxv64i1(<vscale x 64 x i1>)
 
 define signext i1 @vreduce_add_nxv64i1(<vscale x 64 x i1> %v) {
-; CHECK-LABEL: vreduce_add_nxv64i1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    ret
   %red = call i1 @llvm.vector.reduce.add.nxv64i1(<vscale x 64 x i1> %v)
   ret i1 %red
 }

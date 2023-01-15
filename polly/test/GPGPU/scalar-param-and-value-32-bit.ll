@@ -2,7 +2,7 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck %s
 
-; REQUIRES: pollyacc,nvptx
+; REQUIRES: pollyacc, target=nvptx{{.*}}
 ;
 ;    void foo(float A[], int n) {
 ;      for (long j = 0; j < n; j++)
@@ -11,7 +11,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; CHECK: define ptx_kernel void @kernel_0(i8* %MemRef_A, i32 %n)
+; CHECK: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_A, i32 %n)
 
 define void @foo(float* %A, i32 %n) {
 bb:

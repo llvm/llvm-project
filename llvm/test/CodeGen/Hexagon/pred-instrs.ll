@@ -24,8 +24,8 @@ b2:                                               ; preds = %b0
 
 b3:                                               ; preds = %b2, %b1
   %v5 = phi i32 [ %v4, %b2 ], [ %v2, %b1 ]
-  store i32 %v5, i32* @g0, align 4
-  %v6 = load i32, i32* @g1, align 4
+  store i32 %v5, ptr @g0, align 4
+  %v6 = load i32, ptr @g1, align 4
   ret i32 %v6
 }
 

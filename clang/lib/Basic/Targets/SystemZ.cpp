@@ -20,7 +20,7 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info SystemZTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
@@ -46,11 +46,11 @@ const TargetInfo::AddlRegName GCCAddlRegNames[] = {
 };
 
 ArrayRef<const char *> SystemZTargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::AddlRegName> SystemZTargetInfo::getGCCAddlRegNames() const {
-  return llvm::makeArrayRef(GCCAddlRegNames);
+  return llvm::ArrayRef(GCCAddlRegNames);
 }
 
 bool SystemZTargetInfo::validateAsmConstraint(
@@ -161,6 +161,6 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 ArrayRef<Builtin::Info> SystemZTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::SystemZ::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo, clang::SystemZ::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }

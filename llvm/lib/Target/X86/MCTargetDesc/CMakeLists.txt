@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMX86Desc
   MC
   MCDisassembler
   Support
+  TargetParser
   X86Info
   BinaryFormat
 

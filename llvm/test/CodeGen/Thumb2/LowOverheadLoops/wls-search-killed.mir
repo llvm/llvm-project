@@ -5,7 +5,7 @@
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main-none-eabi"
 
-  define i32 @test(i64* nocapture %x, i32 %n, i64 %a, i32 %m) {
+  define i32 @test(ptr nocapture %x, i32 %n, i64 %a, i32 %m) {
   entry:
     %cmp.not = icmp eq i32 %n, 0
     %0 = call { i32, i1 } @llvm.test.start.loop.iterations.i32(i32 %n)
@@ -16,14 +16,14 @@
   if.then:                                          ; preds = %entry
     %conv = sext i32 %m to i64
     %div = sdiv i64 %a, %conv
-    %scevgep = getelementptr i64, i64* %x, i32 %m
+    %scevgep = getelementptr i64, ptr %x, i32 %m
     br label %do.body
 
   do.body:                                          ; preds = %do.body, %if.then
-    %lsr.iv = phi i64* [ %scevgep1, %do.body ], [ %scevgep, %if.then ]
+    %lsr.iv = phi ptr [ %scevgep1, %do.body ], [ %scevgep, %if.then ]
     %3 = phi i32 [ %2, %if.then ], [ %4, %do.body ]
-    store i64 %div, i64* %lsr.iv, align 8
-    %scevgep1 = getelementptr i64, i64* %lsr.iv, i32 1
+    store i64 %div, ptr %lsr.iv, align 8
+    %scevgep1 = getelementptr i64, ptr %lsr.iv, i32 1
     %4 = call i32 @llvm.loop.decrement.reg.i32(i32 %3, i32 1)
     %5 = icmp ne i32 %4, 0
     br i1 %5, label %do.body, label %if.end

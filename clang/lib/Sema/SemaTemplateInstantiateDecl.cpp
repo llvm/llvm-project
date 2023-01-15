@@ -469,8 +469,8 @@ static void instantiateOMPDeclareVariantAttr(
   if (!DeclVarData)
     return;
 
-  E = DeclVarData.value().second;
-  FD = DeclVarData.value().first;
+  E = DeclVarData->second;
+  FD = DeclVarData->first;
 
   if (auto *VariantDRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
     if (auto *VariantFD = dyn_cast<FunctionDecl>(VariantDRE->getDecl())) {
@@ -2582,7 +2582,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     if (NumTempParamLists)
       Method->setTemplateParameterListsInfo(
           SemaRef.Context,
-          llvm::makeArrayRef(TempParamLists.data(), NumTempParamLists));
+          llvm::ArrayRef(TempParamLists.data(), NumTempParamLists));
 
     Method->setLexicalDeclContext(Owner);
     Method->setObjectOfFriendDecl();
@@ -6155,9 +6155,8 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 
       // Move to the outer template scope.
       if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
-        // FIXME: We should use `getNonTransparentDeclContext()` here instead
-        // of `getDeclContext()` once we find the invalid test case.
-        if (FD->getFriendObjectKind() && FD->getDeclContext()->isFileContext()){
+        if (FD->getFriendObjectKind() &&
+            FD->getNonTransparentDeclContext()->isFileContext()) {
           DC = FD->getLexicalDeclContext();
           continue;
         }

@@ -15,7 +15,7 @@ define void @test() {
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP150_LOOPEXIT:%.*]]
 ; CHECK:       for.body63:
 ; CHECK-NEXT:    [[I58_010:%.*]] = phi i16 [ 32, [[VECTOR_PH]] ]
-; CHECK-NEXT:    store i16 undef, i16* undef, align 1
+; CHECK-NEXT:    store i16 undef, ptr undef, align 1
 ; CHECK-NEXT:    [[INC89:%.*]] = add nuw nsw i16 [[I58_010]], 1
 ; CHECK-NEXT:    [[EXITCOND12_NOT:%.*]] = icmp eq i16 [[INC89]], 33
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP62:%.*]]
@@ -36,7 +36,7 @@ for.body151.preheader:                            ; preds = %for.cond.cleanup62
 
 for.body63:                                       ; preds = %for.body63, %vector.ph
   %i58.010 = phi i16 [ 32, %vector.ph ], [ %inc89, %for.body63 ]
-  store i16 undef, i16* undef, align 1
+  store i16 undef, ptr undef, align 1
   %inc89 = add nuw nsw i16 %i58.010, 1
   %exitcond12.not = icmp eq i16 %inc89, 33
   br i1 %exitcond12.not, label %for.cond.cleanup62, label %for.body63

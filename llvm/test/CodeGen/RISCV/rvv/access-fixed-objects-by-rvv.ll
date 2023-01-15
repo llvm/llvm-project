@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -O2 < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64IV
 
-define <vscale x 1 x i64> @access_fixed_object(i64 *%val) {
+define <vscale x 1 x i64> @access_fixed_object(ptr %val) {
 ; RV64IV-LABEL: access_fixed_object:
 ; RV64IV:       # %bb.0:
 ; RV64IV-NEXT:    addi sp, sp, -528
@@ -15,10 +15,9 @@ define <vscale x 1 x i64> @access_fixed_object(i64 *%val) {
 ; RV64IV-NEXT:    ret
   %local = alloca i64
   %array = alloca [64 x i64]
-  %vptr = bitcast [64 x i64]* %array to <vscale x 1 x i64>*
-  %v = load <vscale x 1 x i64>, <vscale x 1 x i64>* %vptr
-  %len = load i64, i64* %local
-  store i64 %len, i64* %val
+  %v = load <vscale x 1 x i64>, <vscale x 1 x i64>* %array
+  %len = load i64, ptr %local
+  store i64 %len, ptr %val
   ret <vscale x 1 x i64> %v
 }
 
@@ -28,7 +27,7 @@ declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(
   <vscale x 1 x i64>,
   i64);
 
-define <vscale x 1 x i64> @access_fixed_and_vector_objects(i64 *%val) {
+define <vscale x 1 x i64> @access_fixed_and_vector_objects(ptr %val) {
 ; RV64IV-LABEL: access_fixed_and_vector_objects:
 ; RV64IV:       # %bb.0:
 ; RV64IV-NEXT:    addi sp, sp, -528
@@ -52,10 +51,9 @@ define <vscale x 1 x i64> @access_fixed_and_vector_objects(i64 *%val) {
   %local = alloca i64
   %vector = alloca <vscale x 1 x i64>
   %array = alloca [64 x i64]
-  %vptr = bitcast [64 x i64]* %array to <vscale x 1 x i64>*
-  %v1 = load <vscale x 1 x i64>, <vscale x 1 x i64>* %vptr
+  %v1 = load <vscale x 1 x i64>, <vscale x 1 x i64>* %array
   %v2 = load <vscale x 1 x i64>, <vscale x 1 x i64>* %vector
-  %len = load i64, i64* %local
+  %len = load i64, ptr %local
 
   %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(
     <vscale x 1 x i64> undef,

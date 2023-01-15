@@ -109,7 +109,7 @@ ArrayRef<ExecutionMode> getAllExecutionBits() {
       ExecutionMode::ALWAYS_PARALLEL_MISSING_USE_OR_DEF,
       ExecutionMode::PARALLEL_VIA_EXPLICIT_REGS,
   };
-  return makeArrayRef(kAllExecutionModeBits);
+  return ArrayRef(kAllExecutionModeBits);
 }
 
 SmallVector<ExecutionMode, 4> getExecutionModeBits(ExecutionMode Execution) {

@@ -10,6 +10,7 @@ static_library("IR") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Remarks",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "AbstractCallSite.cpp",

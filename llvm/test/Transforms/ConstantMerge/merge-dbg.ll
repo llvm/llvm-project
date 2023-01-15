@@ -4,9 +4,9 @@
 @a = internal constant i32 1, !dbg !0
 @b = unnamed_addr constant i32 1, !dbg !9
 
-define void @test1(i32** %P1, i32** %P2) {
-  store i32* @a, i32** %P1
-  store i32* @b, i32** %P2
+define void @test1(ptr %P1, ptr %P2) {
+  store ptr @a, ptr %P1
+  store ptr @b, ptr %P2
   ret void
 }
 

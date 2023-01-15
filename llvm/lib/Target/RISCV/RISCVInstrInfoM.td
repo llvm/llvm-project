@@ -46,12 +46,12 @@ def REMU    : ALU_rr<0b0000001, 0b111, "remu">,
               Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
 } // Predicates = [HasStdExtM]
 
-let Predicates = [HasStdExtMOrZmmul, IsRV64] in {
+let Predicates = [HasStdExtMOrZmmul, IsRV64], IsSignExtendingOpW = 1 in {
 def MULW    : ALUW_rr<0b0000001, 0b000, "mulw", /*Commutable*/1>,
               Sched<[WriteIMul32, ReadIMul32, ReadIMul32]>;
 } // Predicates = [HasStdExtMOrZmmul, IsRV64]
 
-let Predicates = [HasStdExtM, IsRV64] in {
+let Predicates = [HasStdExtM, IsRV64], IsSignExtendingOpW = 1 in {
 def DIVW    : ALUW_rr<0b0000001, 0b100, "divw">,
               Sched<[WriteIDiv32, ReadIDiv32, ReadIDiv32]>;
 def DIVUW   : ALUW_rr<0b0000001, 0b101, "divuw">,

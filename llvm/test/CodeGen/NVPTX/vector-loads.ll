@@ -9,60 +9,60 @@
 ; which will load two floats at once into scalar registers.
 
 ; CHECK-LABEL: foo
-define void @foo(<2 x float>* %a) {
+define void @foo(ptr %a) {
 ; CHECK: ld.v2.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}}
-  %t1 = load <2 x float>, <2 x float>* %a
+  %t1 = load <2 x float>, ptr %a
   %t2 = fmul <2 x float> %t1, %t1
-  store <2 x float> %t2, <2 x float>* %a
+  store <2 x float> %t2, ptr %a
   ret void
 }
 
 ; CHECK-LABEL: foo2
-define void @foo2(<4 x float>* %a) {
+define void @foo2(ptr %a) {
 ; CHECK: ld.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
-  %t1 = load <4 x float>, <4 x float>* %a
+  %t1 = load <4 x float>, ptr %a
   %t2 = fmul <4 x float> %t1, %t1
-  store <4 x float> %t2, <4 x float>* %a
+  store <4 x float> %t2, ptr %a
   ret void
 }
 
 ; CHECK-LABEL: foo3
-define void @foo3(<8 x float>* %a) {
+define void @foo3(ptr %a) {
 ; CHECK: ld.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
 ; CHECK-NEXT: ld.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
-  %t1 = load <8 x float>, <8 x float>* %a
+  %t1 = load <8 x float>, ptr %a
   %t2 = fmul <8 x float> %t1, %t1
-  store <8 x float> %t2, <8 x float>* %a
+  store <8 x float> %t2, ptr %a
   ret void
 }
 
 
 
 ; CHECK-LABEL: foo4
-define void @foo4(<2 x i32>* %a) {
+define void @foo4(ptr %a) {
 ; CHECK: ld.v2.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}}
-  %t1 = load <2 x i32>, <2 x i32>* %a
+  %t1 = load <2 x i32>, ptr %a
   %t2 = mul <2 x i32> %t1, %t1
-  store <2 x i32> %t2, <2 x i32>* %a
+  store <2 x i32> %t2, ptr %a
   ret void
 }
 
 ; CHECK-LABEL: foo5
-define void @foo5(<4 x i32>* %a) {
+define void @foo5(ptr %a) {
 ; CHECK: ld.v4.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
-  %t1 = load <4 x i32>, <4 x i32>* %a
+  %t1 = load <4 x i32>, ptr %a
   %t2 = mul <4 x i32> %t1, %t1
-  store <4 x i32> %t2, <4 x i32>* %a
+  store <4 x i32> %t2, ptr %a
   ret void
 }
 
 ; CHECK-LABEL: foo6
-define void @foo6(<8 x i32>* %a) {
+define void @foo6(ptr %a) {
 ; CHECK: ld.v4.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
 ; CHECK-NEXT: ld.v4.u32 {%r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}, %r{{[0-9]+}}}
-  %t1 = load <8 x i32>, <8 x i32>* %a
+  %t1 = load <8 x i32>, ptr %a
   %t2 = mul <8 x i32> %t1, %t1
-  store <8 x i32> %t2, <8 x i32>* %a
+  store <8 x i32> %t2, ptr %a
   ret void
 }
 
@@ -71,8 +71,7 @@ define void @foo6(<8 x i32>* %a) {
 declare i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() #0
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() #0
 ; CHECK-LABEL: foo_complex
-define void @foo_complex(i8* nocapture readonly align 16 dereferenceable(134217728) %alloc0) {
-  %targ0.1.typed = bitcast i8* %alloc0 to [1024 x [131072 x i8]]*
+define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(134217728) %alloc0) {
   %t0 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x(), !range !1
   %t1 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
   %t2 = lshr i32 %t1, 8
@@ -86,14 +85,14 @@ define void @foo_complex(i8* nocapture readonly align 16 dereferenceable(1342177
   %t10 = or i32 %t4, 129
   %t11 = zext i32 %t10 to i64
   %t20 = zext i32 %t2 to i64
-  %t27 = getelementptr inbounds [1024 x [131072 x i8]], [1024 x [131072 x i8]]* %targ0.1.typed, i64 0, i64 %t20, i64 %t9
+  %t27 = getelementptr inbounds [1024 x [131072 x i8]], ptr %alloc0, i64 0, i64 %t20, i64 %t9
 ; CHECK: ld.v2.u8
-  %t28 = load i8, i8* %t27, align 2
-  %t31 = getelementptr inbounds [1024 x [131072 x i8]], [1024 x [131072 x i8]]* %targ0.1.typed, i64 0, i64 %t20, i64 %t11
-  %t32 = load i8, i8* %t31, align 1
+  %t28 = load i8, ptr %t27, align 2
+  %t31 = getelementptr inbounds [1024 x [131072 x i8]], ptr %alloc0, i64 0, i64 %t20, i64 %t11
+  %t32 = load i8, ptr %t31, align 1
   %t33 = icmp ult i8 %t28, %t32
   %t34 = select i1 %t33, i8 %t32, i8 %t28
-  store i8 %t34, i8* %t31
+  store i8 %t34, ptr %t31
 ; CHECK: ret
   ret void
 }

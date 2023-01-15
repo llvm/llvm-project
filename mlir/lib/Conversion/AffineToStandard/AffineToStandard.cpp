@@ -18,7 +18,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -223,7 +223,7 @@ public:
       // initialization of the result values.
       Attribute reduction = std::get<0>(pair);
       Type resultType = std::get<1>(pair);
-      Optional<arith::AtomicRMWKind> reductionOp =
+      std::optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
               static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
       assert(reductionOp && "Reduction operation cannot be of None Type");
@@ -243,7 +243,7 @@ public:
            "Unequal number of reductions and operands.");
     for (unsigned i = 0, end = reductions.size(); i < end; i++) {
       // For each of the reduction operations get the respective mlir::Value.
-      Optional<arith::AtomicRMWKind> reductionOp =
+      std::optional<arith::AtomicRMWKind> reductionOp =
           arith::symbolizeAtomicRMWKind(
               reductions[i].cast<IntegerAttr>().getInt());
       assert(reductionOp && "Reduction Operation cannot be of None Type");
@@ -275,7 +275,7 @@ public:
     auto integerSet = op.getIntegerSet();
     Value zeroConstant = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     SmallVector<Value, 8> operands(op.getOperands());
-    auto operandsRef = llvm::makeArrayRef(operands);
+    auto operandsRef = llvm::ArrayRef(operands);
 
     // Calculate cond as a conjunction without short-circuiting.
     Value cond = nullptr;
@@ -419,7 +419,7 @@ public:
   LogicalResult matchAndRewrite(AffineDmaStartOp op,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value, 8> operands(op.getOperands());
-    auto operandsRef = llvm::makeArrayRef(operands);
+    auto operandsRef = llvm::ArrayRef(operands);
 
     // Expand affine map for DMA source memref.
     auto maybeExpandedSrcMap = expandAffineMap(

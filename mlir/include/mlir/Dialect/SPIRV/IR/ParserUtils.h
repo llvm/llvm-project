@@ -31,7 +31,8 @@ parseEnumKeywordAttr(EnumClass &value, ParserType &parser,
   auto loc = parser.getCurrentLocation();
   if (parser.parseKeyword(&keyword))
     return failure();
-  if (Optional<EnumClass> attr = spirv::symbolizeEnum<EnumClass>(keyword)) {
+  if (std::optional<EnumClass> attr =
+          spirv::symbolizeEnum<EnumClass>(keyword)) {
     value = *attr;
     return success();
   }

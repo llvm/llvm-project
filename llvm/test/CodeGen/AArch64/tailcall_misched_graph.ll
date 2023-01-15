@@ -6,14 +6,14 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios7.0.0"
 
-define void @caller2(i8* %a0, i8* %a1, i8* %a2, i8* %a3, i8* %a4, i8* %a5, i8* %a6, i8* %a7, i8* %a8, i8* %a9) {
+define void @caller2(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5, ptr %a6, ptr %a7, ptr %a8, ptr %a9) {
 entry:
-  tail call void @callee2(i8* %a1, i8* %a2, i8* %a3, i8* %a4, i8* %a5, i8* %a6, i8* %a7, i8* %a8, i8* %a9, i8* %a0)
+  tail call void @callee2(ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5, ptr %a6, ptr %a7, ptr %a8, ptr %a9, ptr %a0)
   ret void
 }
 
-declare void @callee2(i8*, i8*, i8*, i8*, i8*,
-                      i8*, i8*, i8*, i8*, i8*)
+declare void @callee2(ptr, ptr, ptr, ptr, ptr,
+                      ptr, ptr, ptr, ptr, ptr)
 
 ; Make sure there is a dependence between the load and store to the same stack
 ; location during a tail call. Tail calls clobber the incoming argument area and

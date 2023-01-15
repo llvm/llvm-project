@@ -113,7 +113,7 @@ bool SMEABI::updateNewZAFunctions(Module *M, Function *F,
   Builder.CreateCall(EnableZAIntr->getFunctionType(), EnableZAIntr);
 
   // Before returning, disable pstate.za
-  for (BasicBlock &BB : F->getBasicBlockList()) {
+  for (BasicBlock &BB : *F) {
     Instruction *T = BB.getTerminator();
     if (!T || !isa<ReturnInst>(T))
       continue;

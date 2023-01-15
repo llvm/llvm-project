@@ -7,14 +7,14 @@
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; There should be no spill code inserted between the xor and the real terminator
-define amdgpu_kernel void @extract_w_offset_vgpr(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-LABEL: name: extract_w_offset_vgpr
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY killed $vgpr0
-  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset.cast, align 4, addrspace 4)
+  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   renamable $sgpr6 = COPY renamable $sgpr1
   ; GCN-NEXT:   renamable $sgpr0 = COPY renamable $sgpr0, implicit killed $sgpr0_sgpr1
   ; GCN-NEXT:   renamable $sgpr4 = S_MOV_B32 61440
@@ -106,6 +106,6 @@ entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
   %index = add i32 %id, 1
   %value = extractelement <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>, i32 %index
-  store i32 %value, i32 addrspace(1)* %out
+  store i32 %value, ptr addrspace(1) %out
   ret void
 }

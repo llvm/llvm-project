@@ -93,7 +93,19 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
                                   Environment::ValueModel &Model) {
   // Join distinct boolean values preserving information about the constraints
   // in the respective path conditions.
-  if (auto *Expr1 = dyn_cast<BoolValue>(&Val1)) {
+  if (Type->isBooleanType()) {
+    // FIXME: The type check above is a workaround and should be unnecessary.
+    // However, right now we can end up with BoolValue's in integer-typed
+    // variables due to our incorrect handling of boolean-to-integer casts (we
+    // just propagate the BoolValue to the result of the cast). For example:
+    // std::optional<bool> o;
+    //
+    //
+    // int x;
+    // if (o.has_value()) {
+    //   x = o.value();
+    // }
+    auto *Expr1 = cast<BoolValue>(&Val1);
     auto *Expr2 = cast<BoolValue>(&Val2);
     auto &MergedVal = MergedEnv.makeAtomicBoolValue();
     MergedEnv.addToFlowCondition(MergedEnv.makeOr(
@@ -139,44 +151,62 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
 }
 
 /// Initializes a global storage value.
-static void initGlobalVar(const VarDecl &D, Environment &Env) {
-  if (!D.hasGlobalStorage() ||
-      Env.getStorageLocation(D, SkipPast::None) != nullptr)
-    return;
-
-  auto &Loc = Env.createStorageLocation(D);
-  Env.setStorageLocation(D, Loc);
-  if (auto *Val = Env.createValue(D.getType()))
-    Env.setValue(Loc, *Val);
-}
-
-/// Initializes a global storage value.
-static void initGlobalVar(const Decl &D, Environment &Env) {
+static void insertIfGlobal(const Decl &D,
+                           llvm::DenseSet<const FieldDecl *> &Fields,
+                           llvm::DenseSet<const VarDecl *> &Vars) {
   if (auto *V = dyn_cast<VarDecl>(&D))
-    initGlobalVar(*V, Env);
+    if (V->hasGlobalStorage())
+      Vars.insert(V);
 }
 
-/// Initializes global storage values that are declared or referenced from
-/// sub-statements of `S`.
-// FIXME: Add support for resetting globals after function calls to enable
-// the implementation of sound analyses.
-static void initGlobalVars(const Stmt &S, Environment &Env) {
-  for (auto *Child : S.children()) {
+static void getFieldsAndGlobalVars(const Decl &D,
+                                   llvm::DenseSet<const FieldDecl *> &Fields,
+                                   llvm::DenseSet<const VarDecl *> &Vars) {
+  insertIfGlobal(D, Fields, Vars);
+  if (const auto *Decomp = dyn_cast<DecompositionDecl>(&D))
+    for (const auto *B : Decomp->bindings())
+      if (auto *ME = dyn_cast_or_null<MemberExpr>(B->getBinding()))
+        // FIXME: should we be using `E->getFoundDecl()`?
+        if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+          Fields.insert(FD);
+}
+
+/// Traverses `S` and inserts into `Vars` any global storage values that are
+/// declared in or referenced from sub-statements.
+static void getFieldsAndGlobalVars(const Stmt &S,
+                                   llvm::DenseSet<const FieldDecl *> &Fields,
+                                   llvm::DenseSet<const VarDecl *> &Vars) {
+  for (auto *Child : S.children())
     if (Child != nullptr)
-      initGlobalVars(*Child, Env);
-  }
+      getFieldsAndGlobalVars(*Child, Fields, Vars);
 
   if (auto *DS = dyn_cast<DeclStmt>(&S)) {
-    if (DS->isSingleDecl()) {
-      initGlobalVar(*DS->getSingleDecl(), Env);
-    } else {
+    if (DS->isSingleDecl())
+      getFieldsAndGlobalVars(*DS->getSingleDecl(), Fields, Vars);
+    else
       for (auto *D : DS->getDeclGroup())
-        initGlobalVar(*D, Env);
-    }
+          getFieldsAndGlobalVars(*D, Fields, Vars);
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
-    initGlobalVar(*E->getDecl(), Env);
+    insertIfGlobal(*E->getDecl(), Fields, Vars);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
-    initGlobalVar(*E->getMemberDecl(), Env);
+    // FIXME: should we be using `E->getFoundDecl()`?
+    const ValueDecl *VD = E->getMemberDecl();
+    insertIfGlobal(*VD, Fields, Vars);
+    if (const auto *FD = dyn_cast<FieldDecl>(VD))
+      Fields.insert(FD);
+  }
+}
+
+// FIXME: Add support for resetting globals after function calls to enable
+// the implementation of sound analyses.
+void Environment::initVars(llvm::DenseSet<const VarDecl *> Vars) {
+  for (const VarDecl *D : Vars) {
+    if (getStorageLocation(*D, SkipPast::None) != nullptr)
+      continue;
+    auto &Loc = createStorageLocation(*D);
+    setStorageLocation(*D, Loc);
+    if (auto *Val = createValue(D->getType()))
+      setValue(Loc, *Val);
   }
 }
 
@@ -204,7 +234,28 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
 
   if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
     assert(FuncDecl->getBody() != nullptr);
-    initGlobalVars(*FuncDecl->getBody(), *this);
+
+    llvm::DenseSet<const FieldDecl *> Fields;
+    llvm::DenseSet<const VarDecl *> Vars;
+
+    // Look for global variable references in the constructor-initializers.
+    if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&DeclCtx)) {
+      for (const auto *Init : CtorDecl->inits()) {
+        if (const auto *M = Init->getAnyMember())
+          Fields.insert(M);
+        const Expr *E = Init->getInit();
+        assert(E != nullptr);
+        getFieldsAndGlobalVars(*E, Fields, Vars);
+      }
+    }
+    getFieldsAndGlobalVars(*FuncDecl->getBody(), Fields, Vars);
+
+    // These have to be added before the lines that follow to ensure that
+    // `create*` work correctly for structs.
+    DACtx.addModeledFields(Fields);
+
+    initVars(Vars);
+
     for (const auto *ParamDecl : FuncDecl->parameters()) {
       assert(ParamDecl != nullptr);
       auto &ParamLoc = createStorageLocation(*ParamDecl);
@@ -223,14 +274,12 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
     if (Parent->isLambda())
       MethodDecl = dyn_cast<CXXMethodDecl>(Parent->getDeclContext());
 
+    // FIXME: Initialize the ThisPointeeLoc of lambdas too.
     if (MethodDecl && !MethodDecl->isStatic()) {
       QualType ThisPointeeType = MethodDecl->getThisObjectType();
-      // FIXME: Add support for union types.
-      if (!ThisPointeeType->isUnionType()) {
-        ThisPointeeLoc = &createStorageLocation(ThisPointeeType);
-        if (Value *ThisPointeeVal = createValue(ThisPointeeType))
-          setValue(*ThisPointeeLoc, *ThisPointeeVal);
-      }
+      ThisPointeeLoc = &createStorageLocation(ThisPointeeType);
+      if (Value *ThisPointeeVal = createValue(ThisPointeeType))
+        setValue(*ThisPointeeLoc, *ThisPointeeVal);
     }
   }
 }
@@ -256,7 +305,7 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   }
 
   Env.pushCallInternal(Call->getDirectCallee(),
-                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
+                       llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
 
   return Env;
 }
@@ -270,7 +319,7 @@ Environment Environment::pushCall(const CXXConstructExpr *Call) const {
   Env.ThisPointeeLoc = Env.ReturnLoc;
 
   Env.pushCallInternal(Call->getConstructor(),
-                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
+                       llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
 
   return Env;
 }
@@ -279,10 +328,28 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
                                    ArrayRef<const Expr *> Args) {
   CallStack.push_back(FuncDecl);
 
-  // FIXME: In order to allow the callee to reference globals, we probably need
-  // to call `initGlobalVars` here in some way.
+  // FIXME: Share this code with the constructor, rather than duplicating it.
+  llvm::DenseSet<const FieldDecl *> Fields;
+  llvm::DenseSet<const VarDecl *> Vars;
+  // Look for global variable references in the constructor-initializers.
+  if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FuncDecl)) {
+    for (const auto *Init : CtorDecl->inits()) {
+      if (const auto *M = Init->getAnyMember())
+        Fields.insert(M);
+      const Expr *E = Init->getInit();
+      assert(E != nullptr);
+      getFieldsAndGlobalVars(*E, Fields, Vars);
+    }
+  }
+  getFieldsAndGlobalVars(*FuncDecl->getBody(), Fields, Vars);
 
-  auto ParamIt = FuncDecl->param_begin();
+  // These have to be added before the lines that follow to ensure that
+  // `create*` work correctly for structs.
+  DACtx->addModeledFields(Fields);
+
+  initVars(Vars);
+
+  const auto *ParamIt = FuncDecl->param_begin();
 
   // FIXME: Parameters don't always map to arguments 1:1; examples include
   // overloaded operators implemented as member functions, and parameter packs.
@@ -370,15 +437,18 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
 
   auto Effect = LatticeJoinEffect::Unchanged;
 
-  // By the API, `PrevEnv` <= `*this`, meaning `join(PrevEnv, *this) =
-  // *this`. That guarantees that these maps are subsets of the maps in
-  // `PrevEnv`. So, we don't need change their current values to widen (in
-  // contrast to `join`).
+  // By the API, `PrevEnv` is a previous version of the environment for the same
+  // block, so we have some guarantees about its shape. In particular, it will
+  // be the result of a join or widen operation on previous values for this
+  // block. For `DeclToLoc` and `ExprToLoc`, join guarantees that these maps are
+  // subsets of the maps in `PrevEnv`. So, as long as we maintain this property
+  // here, we don't need change their current values to widen.
   //
-  // FIXME: The above is violated for `MemberLocToStruct`, because `join` can
-  // cause the map size to increase (when we add fresh data in places of
-  // conflict). Once this issue with join is resolved, re-enable the assertion
-  // below or replace with something that captures the desired invariant.
+  // FIXME: `MemberLocToStruct` does not share the above property, because
+  // `join` can cause the map size to increase (when we add fresh data in places
+  // of conflict). Once this issue with join is resolved, re-enable the
+  // assertion below or replace with something that captures the desired
+  // invariant.
   assert(DeclToLoc.size() <= PrevEnv.DeclToLoc.size());
   assert(ExprToLoc.size() <= PrevEnv.ExprToLoc.size());
   // assert(MemberLocToStruct.size() <= PrevEnv.MemberLocToStruct.size());
@@ -444,10 +514,6 @@ LatticeJoinEffect Environment::join(const Environment &Other,
 
   JoinedEnv.MemberLocToStruct =
       intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
-  assert(JoinedEnv.MemberLocToStruct.size() <=
-         std::min(MemberLocToStruct.size(), Other.MemberLocToStruct.size()));
-
-  intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
   if (MemberLocToStruct.size() != JoinedEnv.MemberLocToStruct.size())
     Effect = LatticeJoinEffect::Changed;
 
@@ -550,9 +616,9 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
     auto &AggregateLoc = *cast<AggregateStorageLocation>(&Loc);
 
     const QualType Type = AggregateLoc.getType();
-    assert(Type->isStructureOrClassType());
+    assert(Type->isStructureOrClassType() || Type->isUnionType());
 
-    for (const FieldDecl *Field : getObjectFields(Type)) {
+    for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
       assert(Field != nullptr);
       StorageLocation &FieldLoc = AggregateLoc.getChild(*Field);
       MemberLocToStruct[&FieldLoc] = std::make_pair(StructVal, Field);
@@ -664,12 +730,10 @@ Value *Environment::createValueUnlessSelfReferential(
     return &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
   }
 
-  if (Type->isStructureOrClassType()) {
+  if (Type->isStructureOrClassType() || Type->isUnionType()) {
     CreatedValuesCount++;
-    // FIXME: Initialize only fields that are accessed in the context that is
-    // being analyzed.
     llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
-    for (const FieldDecl *Field : getObjectFields(Type)) {
+    for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
       assert(Field != nullptr);
 
       QualType FieldType = Field->getType();

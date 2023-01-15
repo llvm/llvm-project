@@ -649,7 +649,7 @@ defm DS_READ2_B64    : DS_1A_Off8_RET_mc<"ds_read2_b64", VReg_128>;
 defm DS_READ2ST64_B64: DS_1A_Off8_RET_mc<"ds_read2st64_b64", VReg_128>;
 
 let has_m0_read = 0 in {
-let SubtargetPredicate = HasD16LoadStore in {
+let SubtargetPredicate = HasD16LoadStore, TiedSourceNotRead = 1 in {
 def DS_READ_U8_D16     : DS_1A_RET_Tied<"ds_read_u8_d16">;
 def DS_READ_U8_D16_HI  : DS_1A_RET_Tied<"ds_read_u8_d16_hi">;
 def DS_READ_I8_D16     : DS_1A_RET_Tied<"ds_read_i8_d16">;

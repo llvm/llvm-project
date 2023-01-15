@@ -94,6 +94,7 @@ STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
+STATISTIC(NumURemExpanded, "Number of bound urem's expanded");
 
 namespace {
 
@@ -437,8 +438,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
 // See if we can prove that the given binary op intrinsic will not overflow.
 static bool willNotOverflow(BinaryOpIntrinsic *BO, LazyValueInfo *LVI) {
-  ConstantRange LRange = LVI->getConstantRange(BO->getLHS(), BO);
-  ConstantRange RRange = LVI->getConstantRange(BO->getRHS(), BO);
+  ConstantRange LRange = LVI->getConstantRangeAtUse(BO->getOperandUse(0));
+  ConstantRange RRange = LVI->getConstantRangeAtUse(BO->getOperandUse(1));
   ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
       BO->getBinaryOp(), RRange, BO->getNoWrapKind());
   return NWRegion.contains(LRange);
@@ -768,13 +769,74 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+  assert(Instr->getOpcode() == Instruction::URem);
+  assert(!Instr->getType()->isVectorTy());
+
+  const Use &X = Instr->getOperandUse(0);
+  const Use &Y = Instr->getOperandUse(1);
+
+  ConstantRange XCR = LVI->getConstantRangeAtUse(X);
+  ConstantRange YCR = LVI->getConstantRangeAtUse(Y);
+
+  // X u% Y -> X  iff X u< Y
+  if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
+    Instr->replaceAllUsesWith(X);
+    Instr->eraseFromParent();
+    ++NumURemExpanded;
+    return true;
+  }
+
+  // Given
+  //   R  = X u% Y
+  // We can represent the modulo operation as a loop/self-recursion:
+  //   urem_rec(X, Y):
+  //     Z = X - Y
+  //     if X u< Y
+  //       ret X
+  //     else
+  //       ret urem_rec(Z, Y)
+  // which isn't better, but if we only need a single iteration
+  // to compute the answer, this becomes quite good:
+  //   R  = X < Y ? X : X - Y    iff X u< 2*Y (w/ unsigned saturation)
+  // Now, we do not care about all full multiples of Y in X, they do not change
+  // the answer, thus we could rewrite the expression as:
+  //   X* = X - (Y * |_ X / Y _|)
+  //   R  = X* % Y
+  // so we don't need the *first* iteration to return, we just need to
+  // know *which* iteration will always return, so we could also rewrite it as:
+  //   X* = X - (Y * |_ X / Y _|)
+  //   R  = X* % Y                 iff X* u< 2*Y (w/ unsigned saturation)
+  // but that does not seem profitable here.
+
+  // Even if we don't know X's range, the divisor may be so large, X can't ever
+  // be 2x larger than that. I.e. if divisor is always negative.
+  if (!XCR.icmp(ICmpInst::ICMP_ULT,
+                YCR.umul_sat(APInt(YCR.getBitWidth(), 2))) &&
+      !YCR.isAllNegative())
+    return false;
+
+  IRBuilder<> B(Instr);
+  // NOTE: this transformation introduces two uses of X,
+  //       but it may be undef so we must freeze it first.
+  Value *FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
+  auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
+  auto *Cmp =
+      B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
+  auto *ExpandedURem = B.CreateSelect(Cmp, FrozenX, AdjX);
+  ExpandedURem->takeName(Instr);
+  Instr->replaceAllUsesWith(ExpandedURem);
+  Instr->eraseFromParent();
+  ++NumURemExpanded;
+  return true;
+}
+
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's
 /// sufficient to contain its operands.
-static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+static bool narrowUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   assert(Instr->getOpcode() == Instruction::UDiv ||
          Instr->getOpcode() == Instruction::URem);
-  if (Instr->getType()->isVectorTy())
-    return false;
+  assert(!Instr->getType()->isVectorTy());
 
   // Find the smallest power of two bitwidth that's sufficient to hold Instr's
   // operands.
@@ -812,10 +874,31 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+  assert(Instr->getOpcode() == Instruction::UDiv ||
+         Instr->getOpcode() == Instruction::URem);
+  if (Instr->getType()->isVectorTy())
+    return false;
+
+  if (Instr->getOpcode() == Instruction::URem && processURem(Instr, LVI))
+    return true;
+
+  return narrowUDivOrURem(Instr, LVI);
+}
+
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
   assert(SDI->getOpcode() == Instruction::SRem);
   if (SDI->getType()->isVectorTy())
     return false;
+
+  ConstantRange LCR = LVI->getConstantRange(SDI->getOperand(0), SDI);
+  ConstantRange RCR = LVI->getConstantRange(SDI->getOperand(1), SDI);
+
+  if (LCR.abs().icmp(CmpInst::ICMP_ULT, RCR.abs())) {
+    SDI->replaceAllUsesWith(SDI->getOperand(0));
+    SDI->eraseFromParent();
+    return true;
+  }
 
   struct Operand {
     Value *V;

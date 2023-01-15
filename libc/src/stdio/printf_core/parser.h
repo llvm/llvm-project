@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PARSER_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
@@ -103,19 +104,18 @@ private:
   // local_pos.
   size_t parse_index(size_t *local_pos);
 
-  template <typename T>
-  static constexpr TypeDesc TYPE_DESC{sizeof(T), PrimaryType::Integer};
-  template <>
-  static constexpr TypeDesc TYPE_DESC<double>{sizeof(double),
-                                              PrimaryType::Float};
-  template <>
-  static constexpr TypeDesc TYPE_DESC<long double>{sizeof(long double),
-                                                   PrimaryType::Float};
-  template <>
-  static constexpr TypeDesc TYPE_DESC<void *>{sizeof(void *),
-                                              PrimaryType::Pointer};
-  template <>
-  static constexpr TypeDesc TYPE_DESC<void>{0, PrimaryType::Integer};
+  template <typename T> static constexpr TypeDesc get_type_desc() {
+    if constexpr (cpp::is_same_v<T, void>) {
+      return TypeDesc{0, PrimaryType::Integer};
+    } else {
+      constexpr bool isPointer = cpp::is_same_v<T, void *>;
+      constexpr bool isFloat =
+          cpp::is_same_v<T, double> || cpp::is_same_v<T, long double>;
+      return TypeDesc{sizeof(T), isPointer ? PrimaryType::Pointer
+                                 : isFloat ? PrimaryType::Float
+                                           : PrimaryType::Integer};
+    }
+  }
 
   void inline set_type_desc(size_t index, TypeDesc value) {
     if (index != 0 && index <= DESC_ARR_LEN)
@@ -129,7 +129,7 @@ private:
     if (!(index == 0 || index == args_index))
       args_to_index(index);
 
-    set_type_desc(index, TYPE_DESC<T>);
+    set_type_desc(index, get_type_desc<T>());
 
     ++args_index;
     return get_next_arg_value<T>();

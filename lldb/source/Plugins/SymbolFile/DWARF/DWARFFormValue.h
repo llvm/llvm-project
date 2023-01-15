@@ -10,8 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H
 
 #include "DWARFDataExtractor.h"
-#include "llvm/ADT/Optional.h"
 #include <cstddef>
+#include <optional>
 
 class DWARFUnit;
 class SymbolFileDWARF;
@@ -55,9 +55,9 @@ public:
   bool ExtractValue(const lldb_private::DWARFDataExtractor &data,
                     lldb::offset_t *offset_ptr);
   const uint8_t *BlockData() const;
-  static llvm::Optional<uint8_t> GetFixedSize(dw_form_t form,
-                                              const DWARFUnit *u);
-  llvm::Optional<uint8_t> GetFixedSize() const;
+  static std::optional<uint8_t> GetFixedSize(dw_form_t form,
+                                             const DWARFUnit *u);
+  std::optional<uint8_t> GetFixedSize() const;
   DWARFDIE Reference() const;
   uint64_t Reference(dw_offset_t offset) const;
   bool Boolean() const { return m_value.value.uval != 0; }

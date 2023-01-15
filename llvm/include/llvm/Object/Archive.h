@@ -28,9 +28,6 @@
 #include <vector>
 
 namespace llvm {
-
-template <typename T> class Optional;
-
 namespace object {
 
 const char ArchiveMagic[] = "!<arch>\n";

@@ -18,6 +18,7 @@
 #include "PythonReadline.h"
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
+#include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
 
 #include "lldb/API/SBError.h"
@@ -50,6 +51,7 @@
 #include <cstdlib>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 
 using namespace lldb;
@@ -412,6 +414,8 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_command_thread_state(nullptr) {
   m_scripted_process_interface_up =
       std::make_unique<ScriptedProcessPythonInterface>(*this);
+  m_scripted_platform_interface_up =
+      std::make_unique<ScriptedPlatformPythonInterface>(*this);
 
   m_dictionary_name.append("_dict");
   StreamString run_string;
@@ -1369,7 +1373,7 @@ bool ScriptInterpreterPythonImpl::GenerateScriptAliasFunction(
   std::string auto_generated_function_name(GenerateUniqueName(
       "lldb_autogen_python_cmd_alias_func", num_created_functions));
 
-  sstr.Printf("def %s (debugger, args, result, internal_dict):",
+  sstr.Printf("def %s (debugger, args, exe_ctx, result, internal_dict):",
               auto_generated_function_name.c_str());
 
   if (!GenerateFunction(sstr.GetData(), user_input).Success())
@@ -2425,7 +2429,7 @@ bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
 
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-  if (llvm::Optional<std::string> result = LLDBSWIGPythonRunScriptKeywordThread(
+  if (std::optional<std::string> result = LLDBSWIGPythonRunScriptKeywordThread(
           impl_function, m_dictionary_name.c_str(),
           thread->shared_from_this())) {
     output = std::move(*result);
@@ -2474,7 +2478,7 @@ bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
 
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-  if (llvm::Optional<std::string> result = LLDBSWIGPythonRunScriptKeywordFrame(
+  if (std::optional<std::string> result = LLDBSWIGPythonRunScriptKeywordFrame(
           impl_function, m_dictionary_name.c_str(),
           frame->shared_from_this())) {
     output = std::move(*result);

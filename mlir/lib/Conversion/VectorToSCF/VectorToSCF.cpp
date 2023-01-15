@@ -98,9 +98,8 @@ static void getXferIndices(OpBuilder &b, OpTy xferOp, Value iv,
   if (!isBroadcast) {
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
-    Value offset = adaptor.getIndices()[dim.value()];
-    indices[dim.value()] =
-        makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    Value offset = adaptor.getIndices()[*dim];
+    indices[*dim] = makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
   }
 }
 
@@ -299,7 +298,7 @@ static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
     auto maskBuffer = b.create<memref::AllocaOp>(loc, maskType);
     b.setInsertionPoint(xferOp);
     b.create<memref::StoreOp>(loc, xferOp.getMask(), maskBuffer);
-    result.maskBuffer = b.create<memref::LoadOp>(loc, maskBuffer);
+    result.maskBuffer = b.create<memref::LoadOp>(loc, maskBuffer, ValueRange());
   }
 
   return result;

@@ -27,16 +27,16 @@
 namespace mlir {
 
 class AffineForOp;
+class AffineValueMap;
 class Block;
 class Location;
 struct MemRefAccess;
 class Operation;
 class Value;
 
-/// Populates 'loops' with IVs of the loops surrounding 'op' ordered from
-/// the outermost 'affine.for' operation to the innermost one.
-//  TODO: handle 'affine.if' ops.
-void getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
+/// Populates 'loops' with IVs of the affine.for ops surrounding 'op' ordered
+/// from the outermost 'affine.for' operation to the innermost one.
+void getAffineForIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
 
 /// Populates 'ops' with affine operations enclosing `op` ordered from outermost
 /// to innermost. affine.for, affine.if, or affine.parallel ops comprise such
@@ -129,7 +129,7 @@ struct ComputationSliceState {
   /// If this difference is empty, the slice is declared to be valid. Otherwise,
   /// return false as it implies that the effective fusion results in at least
   /// one iteration of the slice that was not originally in the source's domain.
-  /// If the validity cannot be determined, returns llvm:None.
+  /// If the validity cannot be determined, returns std::nullopt.
   Optional<bool> isSliceValid();
 
   void dump() const;
@@ -292,15 +292,16 @@ struct MemRefRegion {
   void setWrite(bool flag) { write = flag; }
 
   /// Returns a constant upper bound on the number of elements in this region if
-  /// bounded by a known constant (always possible for static shapes), None
-  /// otherwise. Note that the symbols of the region are treated specially,
-  /// i.e., the returned bounding constant holds for *any given* value of the
-  /// symbol variables. The 'shape' vector is set to the corresponding
-  /// dimension-wise bounds major to minor. The number of elements and all the
-  /// dimension-wise bounds are guaranteed to be non-negative. We use int64_t
-  /// instead of uint64_t since index types can be at most int64_t. `lbs` are
-  /// set to the lower bounds for each of the rank dimensions, and lbDivisors
-  /// contains the corresponding denominators for floorDivs.
+  /// bounded by a known constant (always possible for static shapes),
+  /// std::nullopt otherwise. Note that the symbols of the region are treated
+  /// specially, i.e., the returned bounding constant holds for *any given*
+  /// value of the symbol variables. The 'shape' vector is set to the
+  /// corresponding dimension-wise bounds major to minor. The number of elements
+  /// and all the dimension-wise bounds are guaranteed to be non-negative. We
+  /// use int64_t instead of uint64_t since index types can be at most
+  /// int64_t. `lbs` are set to the lower bounds for each of the rank
+  /// dimensions, and lbDivisors contains the corresponding denominators for
+  /// floorDivs.
   Optional<int64_t> getConstantBoundingSizeAndShape(
       SmallVectorImpl<int64_t> *shape = nullptr,
       std::vector<SmallVector<int64_t, 4>> *lbs = nullptr,
@@ -382,6 +383,13 @@ IntegerSet simplifyIntegerSet(IntegerSet set);
 unsigned getInnermostCommonLoopDepth(
     ArrayRef<Operation *> ops,
     SmallVectorImpl<AffineForOp> *surroundingLoops = nullptr);
+
+/// Try to simplify the given affine.min or affine.max op to an affine map with
+/// a single result and operands, taking into account the specified constraint
+/// set. Return failure if no simplified version could be found.
+FailureOr<AffineValueMap>
+simplifyConstrainedMinMaxOp(Operation *op,
+                            FlatAffineValueConstraints constraints);
 
 } // namespace mlir
 

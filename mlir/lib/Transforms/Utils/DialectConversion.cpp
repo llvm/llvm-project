@@ -8,10 +8,10 @@
 
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/Block.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -50,8 +50,9 @@ computeConversionSet(iterator_range<Region::iterator> region,
 
       // Don't check this operation's children for conversion if the operation
       // is recursively legal.
-      auto legalityInfo = target ? target->isLegal(&op)
-                                 : Optional<ConversionTarget::LegalOpDetails>();
+      auto legalityInfo =
+          target ? target->isLegal(&op)
+                 : std::optional<ConversionTarget::LegalOpDetails>();
       if (legalityInfo && legalityInfo->isRecursivelyLegal)
         continue;
       for (auto &region : op.getRegions()) {
@@ -103,7 +104,7 @@ static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// This class wraps a BlockAndValueMapping to provide recursive lookup
+/// This class wraps a IRMapping to provide recursive lookup
 /// functionality, i.e. we will traverse if the mapped value also has a mapping.
 struct ConversionValueMapping {
   /// Lookup a mapped value within the map. If a mapping for the provided value
@@ -144,7 +145,7 @@ struct ConversionValueMapping {
 
 private:
   /// Current value mappings.
-  BlockAndValueMapping mapping;
+  IRMapping mapping;
 };
 } // namespace
 
@@ -495,8 +496,8 @@ struct ArgConverter {
     Block *origBlock;
 
     /// The conversion information for each of the arguments. The information is
-    /// None if the argument was dropped during conversion.
-    SmallVector<Optional<ConvertedArgInfo>, 1> argInfo;
+    /// std::nullopt if the argument was dropped during conversion.
+    SmallVector<std::optional<ConvertedArgInfo>, 1> argInfo;
 
     /// The type converter used to convert the arguments.
     TypeConverter *converter;
@@ -649,7 +650,7 @@ void ArgConverter::applyRewrites(ConversionValueMapping &mapping) {
 
     // Process the remapping for each of the original arguments.
     for (unsigned i = 0, e = origBlock->getNumArguments(); i != e; ++i) {
-      Optional<ConvertedArgInfo> &argInfo = blockInfo.argInfo[i];
+      std::optional<ConvertedArgInfo> &argInfo = blockInfo.argInfo[i];
       BlockArgument origArg = origBlock->getArgument(i);
 
       // Handle the case of a 1->0 value mapping.
@@ -888,7 +889,8 @@ struct ConversionPatternRewriterImpl {
   /// success if the values could be remapped, failure otherwise. `valueDiagTag`
   /// is the tag used when describing a value within a diagnostic, e.g.
   /// "operand".
-  LogicalResult remapValues(StringRef valueDiagTag, Optional<Location> inputLoc,
+  LogicalResult remapValues(StringRef valueDiagTag,
+                            std::optional<Location> inputLoc,
                             PatternRewriter &rewriter, ValueRange values,
                             SmallVectorImpl<Value> &remapped);
 
@@ -1253,7 +1255,7 @@ void ConversionPatternRewriterImpl::undoBlockActions(
 }
 
 LogicalResult ConversionPatternRewriterImpl::remapValues(
-    StringRef valueDiagTag, Optional<Location> inputLoc,
+    StringRef valueDiagTag, std::optional<Location> inputLoc,
     PatternRewriter &rewriter, ValueRange values,
     SmallVectorImpl<Value> &remapped) {
   remapped.reserve(llvm::size(values));
@@ -1618,9 +1620,10 @@ void ConversionPatternRewriter::inlineRegionBefore(Region &region,
   PatternRewriter::inlineRegionBefore(region, parent, before);
 }
 
-void ConversionPatternRewriter::cloneRegionBefore(
-    Region &region, Region &parent, Region::iterator before,
-    BlockAndValueMapping &mapping) {
+void ConversionPatternRewriter::cloneRegionBefore(Region &region,
+                                                  Region &parent,
+                                                  Region::iterator before,
+                                                  IRMapping &mapping) {
   if (region.empty())
     return;
   PatternRewriter::cloneRegionBefore(region, parent, before, mapping);
@@ -2146,7 +2149,7 @@ void OperationLegalizer::buildLegalizationGraph(
 
   // Build the mapping from operations to the parent ops that may generate them.
   applicator.walkAllPatterns([&](const Pattern &pattern) {
-    Optional<OperationName> root = pattern.getRootKind();
+    std::optional<OperationName> root = pattern.getRootKind();
 
     // If the pattern has no specific root, we can't analyze the relationship
     // between the root op and generated operations. Given that, add all such
@@ -2186,7 +2189,7 @@ void OperationLegalizer::buildLegalizationGraph(
 
     // Check to see if any of the generated operations are invalid.
     if (llvm::any_of(pattern->getGeneratedOps(), [&](OperationName op) {
-          Optional<LegalizationAction> action = target.getOpAction(op);
+          std::optional<LegalizationAction> action = target.getOpAction(op);
           return !legalizerPatterns.count(op) &&
                  (!action || action == LegalizationAction::Illegal);
         }))
@@ -2228,7 +2231,7 @@ void OperationLegalizer::computeLegalizationGraphBenefit(
   // decreasing benefit.
   applicator.applyCostModel([&](const Pattern &pattern) {
     ArrayRef<const Pattern *> orderedPatternList;
-    if (Optional<OperationName> rootName = pattern.getRootKind())
+    if (std::optional<OperationName> rootName = pattern.getRootKind())
       orderedPatternList = legalizerPatterns[*rootName];
     else
       orderedPatternList = anyOpLegalizerPatterns;
@@ -2370,7 +2373,7 @@ private:
   LogicalResult legalizeUnresolvedMaterializations(
       ConversionPatternRewriter &rewriter,
       ConversionPatternRewriterImpl &rewriterImpl,
-      Optional<DenseMap<Value, SmallVector<Value>>> &inverseMapping);
+      std::optional<DenseMap<Value, SmallVector<Value>>> &inverseMapping);
 
   /// Legalize an operation result that was marked as "erased".
   LogicalResult
@@ -2479,7 +2482,7 @@ LogicalResult OperationConverter::convertOperations(
 
 LogicalResult
 OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
-  Optional<DenseMap<Value, SmallVector<Value>>> inverseMapping;
+  std::optional<DenseMap<Value, SmallVector<Value>>> inverseMapping;
   ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
   if (failed(legalizeUnresolvedMaterializations(rewriter, rewriterImpl,
                                                 inverseMapping)) ||
@@ -2806,7 +2809,7 @@ static LogicalResult legalizeUnresolvedMaterialization(
 LogicalResult OperationConverter::legalizeUnresolvedMaterializations(
     ConversionPatternRewriter &rewriter,
     ConversionPatternRewriterImpl &rewriterImpl,
-    Optional<DenseMap<Value, SmallVector<Value>>> &inverseMapping) {
+    std::optional<DenseMap<Value, SmallVector<Value>>> &inverseMapping) {
   if (rewriterImpl.unresolvedMaterializations.empty())
     return success();
   inverseMapping = rewriterImpl.mapping.getInverse();
@@ -2961,7 +2964,7 @@ LogicalResult TypeConverter::convertType(Type t,
   auto popConversionCallStack =
       llvm::make_scope_exit([this]() { conversionCallStack.pop_back(); });
   for (ConversionCallbackFn &converter : llvm::reverse(conversions)) {
-    if (Optional<LogicalResult> result =
+    if (std::optional<LogicalResult> result =
             converter(t, results, conversionCallStack)) {
       if (!succeeded(*result)) {
         cachedDirectConversions.try_emplace(t, nullptr);
@@ -3039,13 +3042,13 @@ Value TypeConverter::materializeConversion(
     MutableArrayRef<MaterializationCallbackFn> materializations,
     OpBuilder &builder, Location loc, Type resultType, ValueRange inputs) {
   for (MaterializationCallbackFn &fn : llvm::reverse(materializations))
-    if (Optional<Value> result = fn(builder, resultType, inputs, loc))
+    if (std::optional<Value> result = fn(builder, resultType, inputs, loc))
       return *result;
   return nullptr;
 }
 
 auto TypeConverter::convertBlockSignature(Block *block)
-    -> Optional<SignatureConversion> {
+    -> std::optional<SignatureConversion> {
   SignatureConversion conversion(block->getNumArguments());
   if (failed(convertSignatureArgs(block->getArgumentTypes(), conversion)))
     return std::nullopt;
@@ -3138,14 +3141,14 @@ void ConversionTarget::setDialectAction(ArrayRef<StringRef> dialectNames,
 }
 
 auto ConversionTarget::getOpAction(OperationName op) const
-    -> Optional<LegalizationAction> {
-  Optional<LegalizationInfo> info = getOpInfo(op);
-  return info ? info->action : Optional<LegalizationAction>();
+    -> std::optional<LegalizationAction> {
+  std::optional<LegalizationInfo> info = getOpInfo(op);
+  return info ? info->action : std::optional<LegalizationAction>();
 }
 
 auto ConversionTarget::isLegal(Operation *op) const
-    -> Optional<LegalOpDetails> {
-  Optional<LegalizationInfo> info = getOpInfo(op->getName());
+    -> std::optional<LegalOpDetails> {
+  std::optional<LegalizationInfo> info = getOpInfo(op->getName());
   if (!info)
     return std::nullopt;
 
@@ -3153,7 +3156,7 @@ auto ConversionTarget::isLegal(Operation *op) const
   auto isOpLegal = [&] {
     // Handle dynamic legality either with the provided legality function.
     if (info->action == LegalizationAction::Dynamic) {
-      Optional<bool> result = info->legalityFn(op);
+      std::optional<bool> result = info->legalityFn(op);
       if (result)
         return *result;
     }
@@ -3179,12 +3182,12 @@ auto ConversionTarget::isLegal(Operation *op) const
 }
 
 bool ConversionTarget::isIllegal(Operation *op) const {
-  Optional<LegalizationInfo> info = getOpInfo(op->getName());
+  std::optional<LegalizationInfo> info = getOpInfo(op->getName());
   if (!info)
     return false;
 
   if (info->action == LegalizationAction::Dynamic) {
-    Optional<bool> result = info->legalityFn(op);
+    std::optional<bool> result = info->legalityFn(op);
     if (!result)
       return false;
 
@@ -3201,8 +3204,8 @@ static ConversionTarget::DynamicLegalityCallbackFn composeLegalityCallbacks(
     return newCallback;
 
   auto chain = [oldCl = std::move(oldCallback), newCl = std::move(newCallback)](
-                   Operation *op) -> Optional<bool> {
-    if (Optional<bool> result = newCl(op))
+                   Operation *op) -> std::optional<bool> {
+    if (std::optional<bool> result = newCl(op))
       return *result;
 
     return oldCl(op);
@@ -3250,7 +3253,7 @@ void ConversionTarget::setLegalityCallback(
 }
 
 auto ConversionTarget::getOpInfo(OperationName op) const
-    -> Optional<LegalizationInfo> {
+    -> std::optional<LegalizationInfo> {
   // Check for info for this specific operation.
   auto it = legalOperations.find(op);
   if (it != legalOperations.end())
@@ -3362,7 +3365,7 @@ LogicalResult
 mlir::applyPartialConversion(Operation *op, ConversionTarget &target,
                              const FrozenRewritePatternSet &patterns,
                              DenseSet<Operation *> *unconvertedOps) {
-  return applyPartialConversion(llvm::makeArrayRef(op), target, patterns,
+  return applyPartialConversion(llvm::ArrayRef(op), target, patterns,
                                 unconvertedOps);
 }
 
@@ -3378,7 +3381,7 @@ mlir::applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
 LogicalResult
 mlir::applyFullConversion(Operation *op, ConversionTarget &target,
                           const FrozenRewritePatternSet &patterns) {
-  return applyFullConversion(llvm::makeArrayRef(op), target, patterns);
+  return applyFullConversion(llvm::ArrayRef(op), target, patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3399,6 +3402,6 @@ mlir::applyAnalysisConversion(Operation *op, ConversionTarget &target,
                               const FrozenRewritePatternSet &patterns,
                               DenseSet<Operation *> &convertedOps,
                               function_ref<void(Diagnostic &)> notifyCallback) {
-  return applyAnalysisConversion(llvm::makeArrayRef(op), target, patterns,
+  return applyAnalysisConversion(llvm::ArrayRef(op), target, patterns,
                                  convertedOps, notifyCallback);
 }

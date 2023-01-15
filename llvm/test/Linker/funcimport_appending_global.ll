@@ -9,7 +9,7 @@
 ; CHECK-NOT: @llvm.global_ctors = {{.*}}@foo
 
 declare void @f()
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @f, i8* null}]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @f, ptr null}]
 
 define i32 @main() {
 entry:

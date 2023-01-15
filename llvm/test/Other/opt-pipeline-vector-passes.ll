@@ -37,17 +37,17 @@
 ; O2_EXTRA: Running pass: EarlyCSEPass
 ; O2_EXTRA: Running pass: VectorCombinePass
 
-define i64 @f(i1 %cond, i32* %src, i32* %dst) {
+define i64 @f(i1 %cond, ptr %src, ptr %dst) {
 entry:
   br label %loop
 
 loop:
   %i = phi i64 [ 0, %entry ], [ %inc, %loop ]
-  %src.i = getelementptr i32, i32* %src, i64 %i
-  %src.v = load i32, i32* %src.i
+  %src.i = getelementptr i32, ptr %src, i64 %i
+  %src.v = load i32, ptr %src.i
   %add = add i32 %src.v, 10
-  %dst.i = getelementptr i32, i32* %dst, i64 %i
-  store i32 %add, i32* %dst.i
+  %dst.i = getelementptr i32, ptr %dst, i64 %i
+  store i32 %add, ptr %dst.i
   %inc = add nuw nsw i64 %i, 1
   %ec = icmp ne i64 %inc, 1000
   br i1 %ec, label %loop, label %exit

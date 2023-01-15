@@ -10,6 +10,7 @@
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::matchers;
@@ -40,7 +41,7 @@ getConstructExpr(const CXXCtorInitializer &CtorInit) {
   return dyn_cast<CXXConstructExpr>(InitExpr);
 }
 
-static llvm::Optional<SourceRange>
+static std::optional<SourceRange>
 getConstructExprArgRange(const CXXConstructExpr &Construct) {
   SourceLocation B, E;
   for (const Expr *Arg : Construct.arguments()) {
@@ -154,7 +155,7 @@ void RedundantStringInitCheck::check(const MatchFinder::MatchResult &Result) {
     const CXXConstructExpr *Construct = getConstructExpr(*CtorInit);
     if (!Construct)
       return;
-    if (llvm::Optional<SourceRange> RemovalRange =
+    if (std::optional<SourceRange> RemovalRange =
             getConstructExprArgRange(*Construct))
       diag(CtorInit->getMemberLocation(), "redundant string initialization")
           << FixItHint::CreateRemoval(*RemovalRange);

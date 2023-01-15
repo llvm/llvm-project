@@ -49,7 +49,7 @@ define <16 x i8> @ashr_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @ashr_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+define void @ashr_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: ashr_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -59,10 +59,10 @@ define void @ashr_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    asr z1.b, p0/m, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = ashr <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -108,7 +108,7 @@ define <8 x i16> @ashr_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @ashr_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @ashr_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: ashr_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -118,10 +118,10 @@ define void @ashr_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-NEXT:    asr z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = ashr <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -151,7 +151,7 @@ define <4 x i32> @ashr_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
   ret <4 x i32> %res
 }
 
-define void @ashr_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+define void @ashr_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: ashr_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -161,10 +161,10 @@ define void @ashr_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-NEXT:    asr z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = ashr <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -194,7 +194,7 @@ define <2 x i64> @ashr_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
-define void @ashr_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+define void @ashr_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: ashr_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -204,10 +204,10 @@ define void @ashr_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-NEXT:    asr z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = ashr <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
@@ -256,7 +256,7 @@ define <16 x i8> @lshr_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @lshr_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+define void @lshr_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: lshr_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -266,10 +266,10 @@ define void @lshr_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    lsr z1.b, p0/m, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = lshr <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -314,7 +314,7 @@ define <8 x i16> @lshr_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @lshr_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @lshr_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: lshr_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -324,10 +324,10 @@ define void @lshr_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-NEXT:    lsr z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = lshr <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -357,7 +357,7 @@ define <4 x i32> @lshr_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
   ret <4 x i32> %res
 }
 
-define void @lshr_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+define void @lshr_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: lshr_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -367,10 +367,10 @@ define void @lshr_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-NEXT:    lsr z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = lshr <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -400,7 +400,7 @@ define <2 x i64> @lshr_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
-define void @lshr_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+define void @lshr_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: lshr_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -410,10 +410,10 @@ define void @lshr_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = lshr <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
@@ -475,7 +475,7 @@ define <16 x i8> @shl_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
   ret <16 x i8> %res
 }
 
-define void @shl_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+define void @shl_v32i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shl_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -485,10 +485,10 @@ define void @shl_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-NEXT:    lsl z1.b, p0/m, z1.b, z3.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %res = shl <32 x i8> %op1, %op2
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -518,7 +518,7 @@ define <8 x i16> @shl_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
   ret <8 x i16> %res
 }
 
-define void @shl_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+define void @shl_v16i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shl_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -528,10 +528,10 @@ define void @shl_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-NEXT:    lsl z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %res = shl <16 x i16> %op1, %op2
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -561,7 +561,7 @@ define <4 x i32> @shl_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
   ret <4 x i32> %res
 }
 
-define void @shl_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+define void @shl_v8i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shl_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -571,10 +571,10 @@ define void @shl_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-NEXT:    lsl z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %res = shl <8 x i32> %op1, %op2
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -604,7 +604,7 @@ define <2 x i64> @shl_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
   ret <2 x i64> %res
 }
 
-define void @shl_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+define void @shl_v4i64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: shl_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -614,10 +614,10 @@ define void @shl_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-NEXT:    lsl z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %res = shl <4 x i64> %op1, %op2
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 

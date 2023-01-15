@@ -10,7 +10,7 @@
 
 ; This was obviously a Bad Thing.
 
-declare void @bar(i8*)
+declare void @bar(ptr)
 
 define i64 @test_chains() {
 ; CHECK-LABEL: test_chains:
@@ -34,16 +34,16 @@ define i64 @test_chains() {
 
   %locvar = alloca i8
 
-  call void @bar(i8* %locvar)
+  call void @bar(ptr %locvar)
 
-  %inc.1 = load i8, i8* %locvar
+  %inc.1 = load i8, ptr %locvar
   %inc.2 = zext i8 %inc.1 to i64
   %inc.3 = add i64 %inc.2, 1
   %inc.4 = trunc i64 %inc.3 to i8
-  store i8 %inc.4, i8* %locvar
+  store i8 %inc.4, ptr %locvar
 
 
-  %ret.1 = load i8, i8* %locvar
+  %ret.1 = load i8, ptr %locvar
   %ret.2 = zext i8 %ret.1 to i64
   ret i64 %ret.2
 }

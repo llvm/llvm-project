@@ -59,7 +59,7 @@ void CommandObjectThreadTraceExportCTF::CommandOptions::OptionParsingStarting(
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectThreadTraceExportCTF::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_thread_trace_export_ctf_options);
+  return llvm::ArrayRef(g_thread_trace_export_ctf_options);
 }
 
 bool CommandObjectThreadTraceExportCTF::DoExecute(Args &command,

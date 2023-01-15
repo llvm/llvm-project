@@ -35,7 +35,7 @@ TEST_F(StringSetTest, InsertAndCountStringMapEntry) {
   // which are required for set_difference(StringSet, StringSet).
   StringSet<> Set;
   StringMapEntry<StringRef> *Element =
-      StringMapEntry<StringRef>::Create("A", Set.getAllocator());
+      StringMapEntry<StringRef>::create("A", Set.getAllocator());
   Set.insert(*Element);
   size_t Count = Set.count(*Element);
   size_t Expected = 1;

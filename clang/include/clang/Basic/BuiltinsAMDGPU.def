@@ -120,12 +120,6 @@ BUILTIN(__builtin_amdgcn_s_sleep, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_incperflevel, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_decperflevel, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_setprio, "vIs", "n")
-BUILTIN(__builtin_amdgcn_uicmp, "WUiUiUiIi", "nc")
-BUILTIN(__builtin_amdgcn_uicmpl, "WUiWUiWUiIi", "nc")
-BUILTIN(__builtin_amdgcn_sicmp, "WUiiiIi", "nc")
-BUILTIN(__builtin_amdgcn_sicmpl, "WUiWiWiIi", "nc")
-BUILTIN(__builtin_amdgcn_fcmp, "WUiddIi", "nc")
-BUILTIN(__builtin_amdgcn_fcmpf, "WUiffIi", "nc")
 BUILTIN(__builtin_amdgcn_ds_swizzle, "iiIi", "nc")
 BUILTIN(__builtin_amdgcn_ds_permute, "iii", "nc")
 BUILTIN(__builtin_amdgcn_ds_bpermute, "iii", "nc")
@@ -156,13 +150,32 @@ BUILTIN(__builtin_amdgcn_mqsad_pk_u16_u8, "WUiWUiUiWUi", "nc")
 BUILTIN(__builtin_amdgcn_mqsad_u32_u8, "V4UiWUiUiV4Ui", "nc")
 
 //===----------------------------------------------------------------------===//
+// Ballot builtins.
+//===----------------------------------------------------------------------===//
+
+TARGET_BUILTIN(__builtin_amdgcn_ballot_w32, "Uib", "nc", "wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_ballot_w64, "LUib", "nc", "wavefrontsize64")
+
+// Deprecated intrinsics in favor of __builtin_amdgn_ballot_{w32|w64}
+BUILTIN(__builtin_amdgcn_uicmp, "WUiUiUiIi", "nc")
+BUILTIN(__builtin_amdgcn_uicmpl, "WUiWUiWUiIi", "nc")
+BUILTIN(__builtin_amdgcn_sicmp, "WUiiiIi", "nc")
+BUILTIN(__builtin_amdgcn_sicmpl, "WUiWiWiIi", "nc")
+BUILTIN(__builtin_amdgcn_fcmp, "WUiddIi", "nc")
+BUILTIN(__builtin_amdgcn_fcmpf, "WUiffIi", "nc")
+
+//===----------------------------------------------------------------------===//
+// Flat addressing builtins.
+//===----------------------------------------------------------------------===//
+BUILTIN(__builtin_amdgcn_is_shared, "bvC*0", "nc")
+BUILTIN(__builtin_amdgcn_is_private, "bvC*0", "nc")
+
+//===----------------------------------------------------------------------===//
 // CI+ only builtins.
 //===----------------------------------------------------------------------===//
 TARGET_BUILTIN(__builtin_amdgcn_s_dcache_inv_vol, "v", "n", "ci-insts")
 TARGET_BUILTIN(__builtin_amdgcn_buffer_wbinvl1_vol, "v", "n", "ci-insts")
 TARGET_BUILTIN(__builtin_amdgcn_ds_gws_sema_release_all, "vUi", "n", "ci-insts")
-TARGET_BUILTIN(__builtin_amdgcn_is_shared, "bvC*0", "nc", "flat-address-space")
-TARGET_BUILTIN(__builtin_amdgcn_is_private, "bvC*0", "nc", "flat-address-space")
 
 //===----------------------------------------------------------------------===//
 // Interpolation builtins.

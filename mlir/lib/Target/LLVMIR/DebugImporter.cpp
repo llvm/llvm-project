@@ -42,7 +42,7 @@ DIBasicTypeAttr DebugImporter::translateImpl(llvm::DIBasicType *node) {
 }
 
 DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
-  Optional<DIEmissionKind> emissionKind =
+  std::optional<DIEmissionKind> emissionKind =
       symbolizeDIEmissionKind(node->getEmissionKind());
   return DICompileUnitAttr::get(context, node->getSourceLanguage(),
                                 translate(node->getFile()),
@@ -51,7 +51,7 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
-  Optional<DIFlags> flags = symbolizeDIFlags(node->getFlags());
+  std::optional<DIFlags> flags = symbolizeDIFlags(node->getFlags());
   SmallVector<DINodeAttr> elements;
   for (llvm::DINode *element : node->getElements()) {
     assert(element && "expected a non-null element type");
@@ -102,7 +102,7 @@ DIScopeAttr DebugImporter::translateImpl(llvm::DIScope *node) {
 }
 
 DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
-  Optional<DISubprogramFlags> subprogramFlags =
+  std::optional<DISubprogramFlags> subprogramFlags =
       symbolizeDISubprogramFlags(node->getSubprogram()->getSPFlags());
   return DISubprogramAttr::get(
       context, translate(node->getUnit()), translate(node->getScope()),
@@ -129,15 +129,19 @@ DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
 
 DISubroutineTypeAttr
 DebugImporter::translateImpl(llvm::DISubroutineType *node) {
-  // Separate the result type since it is null for void functions.
-  DITypeAttr resultType = translate(*node->getTypeArray().begin());
-  SmallVector<DITypeAttr> argumentTypes;
-  for (llvm::DIType *type : llvm::drop_begin(node->getTypeArray())) {
-    assert(type && "expected a non-null argument type");
-    argumentTypes.push_back(translate(type));
+  SmallVector<DITypeAttr> types;
+  for (llvm::DIType *type : node->getTypeArray()) {
+    if (!type) {
+      // A nullptr entry at the beginning of the subroutine types list models a
+      // void result type. Translate the nullptr to an explicit
+      // DIVoidResultTypeAttr since the attribute list cannot contain a nullptr
+      // entry.
+      types.push_back(DIVoidResultTypeAttr::get(context));
+      continue;
+    }
+    types.push_back(translate(type));
   }
-  return DISubroutineTypeAttr::get(context, node->getCC(), resultType,
-                                   argumentTypes);
+  return DISubroutineTypeAttr::get(context, node->getCC(), types);
 }
 
 DITypeAttr DebugImporter::translateImpl(llvm::DIType *node) {
@@ -191,7 +195,7 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
 
 Location DebugImporter::translateLoc(llvm::DILocation *loc) {
   if (!loc)
-    return UnknownLoc::get(context);
+    return mlirModule.getLoc();
 
   // Get the file location of the instruction.
   Location result = FileLineColLoc::get(context, loc->getFilename(),

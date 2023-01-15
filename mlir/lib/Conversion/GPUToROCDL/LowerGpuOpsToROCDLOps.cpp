@@ -26,9 +26,11 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -119,13 +121,43 @@ struct LowerGpuOpsToROCDLOpsPass
       }
     }
 
+    // Apply in-dialect lowering. In-dialect lowering will replace
+    // ops which need to be lowered further, which is not supported by a
+    // single conversion pass.
+    {
+      RewritePatternSet patterns(ctx);
+      populateGpuRewritePatterns(patterns);
+      (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
+    }
+
+    // Apply memory space lowering. The target uses 3 for workgroup memory and 5
+    // for private memory.
+    {
+      RewritePatternSet patterns(ctx);
+      TypeConverter typeConverter;
+      typeConverter.addConversion([](Type t) { return t; });
+      gpu::populateMemorySpaceAttributeTypeConversions(
+          typeConverter, [](gpu::AddressSpace space) {
+            switch (space) {
+            case gpu::AddressSpace::Global:
+              return 1;
+            case gpu::AddressSpace::Workgroup:
+              return 3;
+            case gpu::AddressSpace::Private:
+              return 5;
+            }
+            llvm_unreachable("unknown address space enum value");
+            return 0;
+          });
+      ConversionTarget target(getContext());
+      gpu::populateLowerMemorySpaceOpLegality(target);
+      gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
+      if (failed(applyFullConversion(m, target, std::move(patterns))))
+        return signalPassFailure();
+    }
+
     LLVMTypeConverter converter(ctx, options);
-
-    RewritePatternSet patterns(ctx);
     RewritePatternSet llvmPatterns(ctx);
-
-    populateGpuRewritePatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     mlir::arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
@@ -139,6 +171,27 @@ struct LowerGpuOpsToROCDLOpsPass
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
+
+    // Manually rewrite known block size attributes so the LLVMIR translation
+    // infrastructure can pick them up.
+    m.walk([ctx](LLVM::LLVMFuncOp op) {
+      if (auto blockSizes =
+              op->removeAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName())
+                  .dyn_cast_or_null<DenseI32ArrayAttr>()) {
+        op->setAttr(ROCDL::ROCDLDialect::getReqdWorkGroupSizeAttrName(),
+                    blockSizes);
+        // Also set up the rocdl.flat_work_group_size attribute to prevent
+        // conflicting metadata.
+        uint32_t flatSize = 1;
+        for (uint32_t size : blockSizes.asArrayRef()) {
+          flatSize *= size;
+        }
+        StringAttr flatSizeAttr =
+            StringAttr::get(ctx, Twine(flatSize) + "," + Twine(flatSize));
+        op->setAttr(ROCDL::ROCDLDialect::getFlatWorkGroupSizeAttrName(),
+                    flatSizeAttr);
+      }
+    });
   }
 };
 
@@ -173,16 +226,21 @@ void mlir::populateGpuToROCDLConversionPatterns(
   populateWithGenerated(patterns);
   patterns
       .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
-                                       ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
+                                       ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>>(
+          converter, gpu::GPUFuncOp::getKnownBlockSizeAttrName());
+  patterns.add<GPUIndexIntrinsicOpLowering<
+      gpu::BlockIdOp, ROCDL::BlockIdXOp, ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>>(
+      converter, gpu::GPUFuncOp::getKnownGridSizeAttrName());
+  patterns
+      .add<GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
                                        ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, ROCDL::BlockIdXOp,
-                                       ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>,
            GPUIndexIntrinsicOpLowering<gpu::GridDimOp, ROCDL::GridDimXOp,
                                        ROCDL::GridDimYOp, ROCDL::GridDimZOp>,
            GPUReturnOpLowering>(converter);
   patterns.add<GPUFuncOpLowering>(
-      converter, /*allocaAddrSpace=*/5,
+      converter,
+      /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
+      /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
       StringAttr::get(&converter.getContext(),
                       ROCDL::ROCDLDialect::getKernelFuncAttrName()));
   if (Runtime::HIP == runtime) {
@@ -198,6 +256,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
                                    "__ocml_atan_f64");
   populateOpPatterns<math::Atan2Op>(converter, patterns, "__ocml_atan2_f32",
                                     "__ocml_atan2_f64");
+  populateOpPatterns<math::CbrtOp>(converter, patterns, "__ocml_cbrt_f32",
+                                   "__ocml_cbrt_f64");
   populateOpPatterns<math::CeilOp>(converter, patterns, "__ocml_ceil_f32",
                                    "__ocml_ceil_f64");
   populateOpPatterns<math::CosOp>(converter, patterns, "__ocml_cos_f32",
@@ -228,6 +288,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
                                    "__ocml_sqrt_f64");
   populateOpPatterns<math::TanhOp>(converter, patterns, "__ocml_tanh_f32",
                                    "__ocml_tanh_f64");
+  populateOpPatterns<math::TanOp>(converter, patterns, "__ocml_tan_f32",
+                                  "__ocml_tan_f64");
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

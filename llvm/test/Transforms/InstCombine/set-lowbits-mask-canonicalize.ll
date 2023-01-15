@@ -238,7 +238,7 @@ declare void @use32(i32)
 ; One use only.
 define i32 @bad_oneuse0(i32 %NBits) {
 ; CHECK-LABEL: @bad_oneuse0(
-; CHECK-NEXT:    [[SETBIT:%.*]] = shl i32 1, [[NBITS:%.*]]
+; CHECK-NEXT:    [[SETBIT:%.*]] = shl nuw i32 1, [[NBITS:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[SETBIT]])
 ; CHECK-NEXT:    [[RET:%.*]] = add i32 [[SETBIT]], -1
 ; CHECK-NEXT:    ret i32 [[RET]]
@@ -266,7 +266,7 @@ define i32 @bad_shl(i32 %base, i32 %NBits) {
 
 define i32 @bad_add0(i32 %NBits, i32 %addop2) {
 ; CHECK-LABEL: @bad_add0(
-; CHECK-NEXT:    [[SETBIT:%.*]] = shl i32 1, [[NBITS:%.*]]
+; CHECK-NEXT:    [[SETBIT:%.*]] = shl nuw i32 1, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = add i32 [[SETBIT]], [[ADDOP2:%.*]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -279,8 +279,8 @@ define i32 @bad_add0(i32 %NBits, i32 %addop2) {
 
 define i32 @bad_add1(i32 %NBits) {
 ; CHECK-LABEL: @bad_add1(
-; CHECK-NEXT:    [[SETBIT:%.*]] = shl i32 1, [[NBITS:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = add i32 [[SETBIT]], 1
+; CHECK-NEXT:    [[SETBIT:%.*]] = shl nuw i32 1, [[NBITS:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = add nuw i32 [[SETBIT]], 1
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %setbit = shl i32 1, %NBits
@@ -290,7 +290,7 @@ define i32 @bad_add1(i32 %NBits) {
 
 define i32 @bad_add2(i32 %NBits) {
 ; CHECK-LABEL: @bad_add2(
-; CHECK-NEXT:    [[SETBIT:%.*]] = shl i32 1, [[NBITS:%.*]]
+; CHECK-NEXT:    [[SETBIT:%.*]] = shl nuw i32 1, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = add i32 [[SETBIT]], -2
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;

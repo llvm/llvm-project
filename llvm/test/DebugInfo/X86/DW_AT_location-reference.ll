@@ -69,7 +69,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @f() nounwind !dbg !0 {
 entry:
   %call = tail call i32 @g(i32 0, i32 0) nounwind, !dbg !8
-  store i32 %call, i32* @a, align 4, !dbg !8
+  store i32 %call, ptr @a, align 4, !dbg !8
   tail call void @llvm.dbg.value(metadata i32 1, metadata !5, metadata !DIExpression()), !dbg !13
   br label %while.body
 
@@ -83,7 +83,7 @@ while.body:                                       ; preds = %entry, %while.body
 while.end:                                        ; preds = %while.body
   tail call void @llvm.dbg.value(metadata i32 %mul, metadata !5, metadata !DIExpression()), !dbg !14
   %call4 = tail call i32 @g(i32 %mul, i32 0) nounwind, !dbg !15
-  store i32 %call4, i32* @a, align 4, !dbg !15
+  store i32 %call4, ptr @a, align 4, !dbg !15
   tail call void @llvm.dbg.value(metadata i32 2, metadata !5, metadata !DIExpression()), !dbg !17
   br label %while.body9
 
@@ -97,7 +97,7 @@ while.body9:                                      ; preds = %while.end, %while.b
 while.end13:                                      ; preds = %while.body9
   tail call void @llvm.dbg.value(metadata i32 %mul12, metadata !5, metadata !DIExpression()), !dbg !18
   %call15 = tail call i32 @g(i32 0, i32 %mul12) nounwind, !dbg !19
-  store i32 %call15, i32* @a, align 4, !dbg !19
+  store i32 %call15, ptr @a, align 4, !dbg !19
   ret void, !dbg !20
 }
 

@@ -179,8 +179,8 @@ define i47 @sext_zext_apint2(i11 %A) {
 define i32 @masked_bit_set(i32 %x, i32 %y) {
 ; CHECK-LABEL: @masked_bit_set(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sh1 = shl i32 1, %y
   %and = and i32 %sh1, %x
@@ -193,8 +193,8 @@ define <2 x i32> @masked_bit_clear(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @masked_bit_clear(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP2]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %sh1 = shl <2 x i32> <i32 1, i32 1>, %y
   %and = and <2 x i32> %sh1, %x
@@ -207,8 +207,8 @@ define <2 x i32> @masked_bit_set_commute(<2 x i32> %px, <2 x i32> %y) {
 ; CHECK-LABEL: @masked_bit_set_commute(
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i32> <i32 42, i32 3>, [[PX:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %x = srem <2 x i32> <i32 42, i32 3>, %px ; thwart complexity-based canonicalization
   %sh1 = shl <2 x i32> <i32 1, i32 1>, %y
@@ -223,8 +223,8 @@ define i32 @masked_bit_clear_commute(i32 %px, i32 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = srem i32 42, [[PX:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP2]], 1
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = srem i32 42, %px ; thwart complexity-based canonicalization
   %sh1 = shl i32 1, %y
@@ -236,11 +236,11 @@ define i32 @masked_bit_clear_commute(i32 %px, i32 %y) {
 
 define i32 @masked_bit_set_use1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @masked_bit_set_use1(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[SH1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sh1 = shl i32 1, %y
   call void @use32(i32 %sh1)
@@ -254,7 +254,7 @@ define i32 @masked_bit_set_use1(i32 %x, i32 %y) {
 
 define i32 @masked_bit_set_use2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @masked_bit_set_use2(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SH1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[AND]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
@@ -273,7 +273,7 @@ define i32 @masked_bit_set_use2(i32 %x, i32 %y) {
 
 define i32 @masked_bit_set_use3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @masked_bit_set_use3(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SH1]], [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[CMP]])
@@ -290,12 +290,12 @@ define i32 @masked_bit_set_use3(i32 %x, i32 %y) {
 
 define i32 @masked_bit_clear_use1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @masked_bit_clear_use1(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[SH1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], [[Y]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 1
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP2]], 1
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sh1 = shl i32 1, %y
   call void @use32(i32 %sh1)
@@ -309,7 +309,7 @@ define i32 @masked_bit_clear_use1(i32 %x, i32 %y) {
 
 define i32 @masked_bit_clear_use2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @masked_bit_clear_use2(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SH1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[AND]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
@@ -328,7 +328,7 @@ define i32 @masked_bit_clear_use2(i32 %x, i32 %y) {
 
 define i32 @masked_bit_clear_use3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @masked_bit_clear_use3(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SH1]], [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    call void @use1(i1 [[CMP]])
@@ -364,7 +364,7 @@ define i32 @masked_bits_set(i32 %x, i32 %y) {
 
 define i32 @div_bit_set(i32 %x, i32 %y) {
 ; CHECK-LABEL: @div_bit_set(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = sdiv i32 [[SH1]], [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP]] to i32
@@ -381,7 +381,7 @@ define i32 @div_bit_set(i32 %x, i32 %y) {
 
 define i32 @masked_bit_set_nonzero_cmp(i32 %x, i32 %y) {
 ; CHECK-LABEL: @masked_bit_set_nonzero_cmp(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SH1]], [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 1
 ; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP]] to i32
@@ -398,7 +398,7 @@ define i32 @masked_bit_set_nonzero_cmp(i32 %x, i32 %y) {
 
 define i32 @masked_bit_wrong_pred(i32 %x, i32 %y) {
 ; CHECK-LABEL: @masked_bit_wrong_pred(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[SH1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SH1]], [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[AND]], 0
 ; CHECK-NEXT:    [[R:%.*]] = zext i1 [[CMP]] to i32
@@ -413,7 +413,7 @@ define i32 @masked_bit_wrong_pred(i32 %x, i32 %y) {
 
 define i32 @zext_or_masked_bit_test(i32 %a, i32 %b, i32 %x) {
 ; CHECK-LABEL: @zext_or_masked_bit_test(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[A:%.*]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[B]]
@@ -432,7 +432,7 @@ define i32 @zext_or_masked_bit_test(i32 %a, i32 %b, i32 %x) {
 
 define i32 @zext_or_masked_bit_test_uses(i32 %a, i32 %b, i32 %x) {
 ; CHECK-LABEL: @zext_or_masked_bit_test_uses(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[A:%.*]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[B]]
@@ -501,10 +501,10 @@ define i8 @notneg_zext_narrower_use(i32 %x) {
 
 define i8 @disguised_signbit_clear_test(i64 %x) {
 ; CHECK-LABEL: @disguised_signbit_clear_test(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i8 [[TMP2]], 7
-; CHECK-NEXT:    ret i8 [[TMP3]]
+; CHECK-NEXT:    [[A1:%.*]] = and i64 [[X:%.*]], 128
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i64 [[A1]], 0
+; CHECK-NEXT:    [[T6:%.*]] = zext i1 [[T4]] to i8
+; CHECK-NEXT:    ret i8 [[T6]]
 ;
   %a1 = and i64 %x, 128
   %t4 = icmp eq i64 %a1, 0
@@ -641,4 +641,64 @@ define i64 @and_trunc_extra_use1_wider_src(i65 %x, i32 %y) {
   %a = and i32 %t, %y
   %z = zext i32 %a to i64
   ret i64 %z
+}
+
+define i16 @zext_icmp_eq0_pow2(i32 %x) {
+; CHECK-LABEL: @zext_icmp_eq0_pow2(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[M]], 0
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[I]] to i16
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %m = and i32 %x, 4
+  %i = icmp eq i32 %m, 0
+  %z = zext i1 %i to i16
+  ret i16 %z
+}
+
+define i16 @zext_icmp_eq0_pow2_use1(i32 %x) {
+; CHECK-LABEL: @zext_icmp_eq0_pow2_use1(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 4
+; CHECK-NEXT:    call void @use32(i32 [[M]])
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[M]], 0
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[I]] to i16
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %m = and i32 %x, 4
+  call void @use32(i32 %m)
+  %i = icmp eq i32 %m, 0
+  %z = zext i1 %i to i16
+  ret i16 %z
+}
+
+define i16 @zext_icmp_eq0_pow2_use2(i32 %x) {
+; CHECK-LABEL: @zext_icmp_eq0_pow2_use2(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[M]], 0
+; CHECK-NEXT:    call void @use1(i1 [[I]])
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[I]] to i16
+; CHECK-NEXT:    ret i16 [[Z]]
+;
+  %m = and i32 %x, 4
+  %i = icmp eq i32 %m, 0
+  call void @use1(i1 %i)
+  %z = zext i1 %i to i16
+  ret i16 %z
+}
+
+; This used to infinite loop.
+
+define i8 @zext_icmp_eq_pow2(i8 %y, i8 %x) {
+; CHECK-LABEL: @zext_icmp_eq_pow2(
+; CHECK-NEXT:    [[SHLX:%.*]] = shl i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[SHLY:%.*]] = shl i8 -128, [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[SHLX]], [[SHLY]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[C]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shlx = shl i8 %x, 7
+  %shly = shl i8 -128, %y
+  %c = icmp eq i8 %shlx, %shly
+  %r = zext i1 %c to i8
+  ret i8 %r
 }

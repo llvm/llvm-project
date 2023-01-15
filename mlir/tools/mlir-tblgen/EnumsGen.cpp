@@ -97,7 +97,7 @@ struct FieldParser<{0}, {0}> {{
       return parser.emitError(loc, "expected keyword for {2}");
 
     // Symbolize the keyword.
-    if (::llvm::Optional<{0}> attr = {1}::symbolizeEnum<{0}>(enumKeyword))
+    if (::std::optional<{0}> attr = {1}::symbolizeEnum<{0}>(enumKeyword))
       return *attr;
     return parser.emitError(loc, "invalid {2} specification: ") << enumKeyword;
   }
@@ -128,8 +128,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
         continue;
       StringRef symbol = it.value().getSymbol();
       os << llvm::formatv("  case {0}::{1}:\n", qualName,
-                          llvm::isDigit(symbol.front()) ? ("_" + symbol)
-                                                        : symbol);
+                          makeIdentifier(symbol));
     }
     os << "    break;\n"
           "  default:\n"
@@ -228,7 +227,7 @@ static void emitMaxValueFn(const Record &enumDef, raw_ostream &os) {
 
 // Returns the EnumAttrCase whose value is zero if exists; returns std::nullopt
 // otherwise.
-static llvm::Optional<EnumAttrCase>
+static std::optional<EnumAttrCase>
 getAllBitsUnsetCase(llvm::ArrayRef<EnumAttrCase> cases) {
   for (auto attrCase : cases) {
     if (attrCase.getValue() == 0)
@@ -326,7 +325,7 @@ static void emitSymToStrFnForBitEnum(const Record &enumDef, raw_ostream &os) {
   if (allBitsUnsetCase) {
     os << "  // Special case for all bits unset.\n";
     os << formatv("  if (val == 0) return \"{0}\";\n\n",
-                  allBitsUnsetCase->getSymbol());
+                  allBitsUnsetCase->getStr());
   }
   os << "  ::llvm::SmallVector<::llvm::StringRef, 2> strs;\n";
 
@@ -382,9 +381,9 @@ static void emitStrToSymFnForIntEnum(const Record &enumDef, raw_ostream &os) {
   StringRef strToSymFnName = enumAttr.getStringToSymbolFnName();
   auto enumerants = enumAttr.getAllCases();
 
-  os << formatv("::llvm::Optional<{0}> {1}(::llvm::StringRef str) {{\n",
+  os << formatv("::std::optional<{0}> {1}(::llvm::StringRef str) {{\n",
                 enumName, strToSymFnName);
-  os << formatv("  return ::llvm::StringSwitch<::llvm::Optional<{0}>>(str)\n",
+  os << formatv("  return ::llvm::StringSwitch<::std::optional<{0}>>(str)\n",
                 enumName);
   for (const auto &enumerant : enumerants) {
     auto symbol = enumerant.getSymbol();
@@ -406,14 +405,14 @@ static void emitStrToSymFnForBitEnum(const Record &enumDef, raw_ostream &os) {
   auto enumerants = enumAttr.getAllCases();
   auto allBitsUnsetCase = getAllBitsUnsetCase(enumerants);
 
-  os << formatv("::llvm::Optional<{0}> {1}(::llvm::StringRef str) {{\n",
+  os << formatv("::std::optional<{0}> {1}(::llvm::StringRef str) {{\n",
                 enumName, strToSymFnName);
 
   if (allBitsUnsetCase) {
     os << "  // Special case for all bits unset.\n";
     StringRef caseSymbol = allBitsUnsetCase->getSymbol();
     os << formatv("  if (str == \"{1}\") return {0}::{2};\n\n", enumName,
-                  caseSymbol, makeIdentifier(caseSymbol));
+                  allBitsUnsetCase->getStr(), makeIdentifier(caseSymbol));
   }
 
   // Split the string to get symbols for all the bits.
@@ -426,7 +425,7 @@ static void emitStrToSymFnForBitEnum(const Record &enumDef, raw_ostream &os) {
 
   // Convert each symbol to the bit ordinal and set the corresponding bit.
   os << formatv("    auto bit = "
-                "llvm::StringSwitch<::llvm::Optional<{0}>>(symbol.trim())\n",
+                "llvm::StringSwitch<::std::optional<{0}>>(symbol.trim())\n",
                 underlyingType);
   for (const auto &enumerant : enumerants) {
     // Skip the special enumerant for None.
@@ -457,7 +456,7 @@ static void emitUnderlyingToSymFnForIntEnum(const Record &enumDef,
       }))
     return;
 
-  os << formatv("::llvm::Optional<{0}> {1}({2} value) {{\n", enumName,
+  os << formatv("::std::optional<{0}> {1}({2} value) {{\n", enumName,
                 underlyingToSymFnName,
                 underlyingType.empty() ? std::string("unsigned")
                                        : underlyingType)
@@ -540,7 +539,7 @@ static void emitUnderlyingToSymFnForBitEnum(const Record &enumDef,
   auto enumerants = enumAttr.getAllCases();
   auto allBitsUnsetCase = getAllBitsUnsetCase(enumerants);
 
-  os << formatv("::llvm::Optional<{0}> {1}({2} value) {{\n", enumName,
+  os << formatv("::std::optional<{0}> {1}({2} value) {{\n", enumName,
                 underlyingToSymFnName, underlyingType);
   if (allBitsUnsetCase) {
     os << "  // Special case for all bits unset.\n";
@@ -580,11 +579,11 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
         return enumerant.getValue() >= 0;
       })) {
     os << formatv(
-        "::llvm::Optional<{0}> {1}({2});\n", enumName, underlyingToSymFnName,
+        "::std::optional<{0}> {1}({2});\n", enumName, underlyingToSymFnName,
         underlyingType.empty() ? std::string("unsigned") : underlyingType);
   }
   os << formatv("{2} {1}({0});\n", enumName, symToStrFnName, symToStrFnRetType);
-  os << formatv("::llvm::Optional<{0}> {1}(::llvm::StringRef);\n", enumName,
+  os << formatv("::std::optional<{0}> {1}(::llvm::StringRef);\n", enumName,
                 strToSymFnName);
 
   if (enumAttr.isBitEnum()) {
@@ -606,10 +605,10 @@ inline {0} stringifyEnum({1} enumValue) {{
   // specified by the user.
   const char *const symbolizeEnumStr = R"(
 template <typename EnumType>
-::llvm::Optional<EnumType> symbolizeEnum(::llvm::StringRef);
+::std::optional<EnumType> symbolizeEnum(::llvm::StringRef);
 
 template <>
-inline ::llvm::Optional<{0}> symbolizeEnum<{0}>(::llvm::StringRef str) {
+inline ::std::optional<{0}> symbolizeEnum<{0}>(::llvm::StringRef str) {
   return {1}(str);
 }
 )";

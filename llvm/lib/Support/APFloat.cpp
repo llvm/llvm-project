@@ -883,6 +883,11 @@ bool IEEEFloat::isSmallest() const {
     significandMSB() == 0;
 }
 
+bool IEEEFloat::isSmallestNormalized() const {
+  return getCategory() == fcNormal && exponent == semantics->minExponent &&
+         isSignificandAllZerosExceptMSB();
+}
+
 bool IEEEFloat::isSignificandAllOnes() const {
   // Test if the significand excluding the integral bit is all ones. This allows
   // us to test for binade boundaries.
@@ -953,6 +958,21 @@ bool IEEEFloat::isSignificandAllZeros() const {
     return false;
 
   return true;
+}
+
+bool IEEEFloat::isSignificandAllZerosExceptMSB() const {
+  const integerPart *Parts = significandParts();
+  const unsigned PartCount = partCountForBits(semantics->precision);
+
+  for (unsigned i = 0; i < PartCount - 1; i++) {
+    if (Parts[i])
+      return false;
+  }
+
+  const unsigned NumHighBits =
+      PartCount * integerPartWidth - semantics->precision + 1;
+  return Parts[PartCount - 1] == integerPart(1)
+                                     << (integerPartWidth - NumHighBits);
 }
 
 bool IEEEFloat::isLargest() const {
@@ -2630,7 +2650,7 @@ IEEEFloat::convertFromZeroExtendedInteger(const integerPart *parts,
                                           unsigned int width, bool isSigned,
                                           roundingMode rounding_mode) {
   unsigned int partCount = partCountForBits(width);
-  APInt api = APInt(width, makeArrayRef(parts, partCount));
+  APInt api = APInt(width, ArrayRef(parts, partCount));
 
   sign = false;
   if (isSigned && APInt::tcExtractBit(parts, width - 1)) {
@@ -4036,9 +4056,9 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
 
   // Decompose the number into an APInt and an exponent.
   int exp = exponent - ((int) semantics->precision - 1);
-  APInt significand(semantics->precision,
-                    makeArrayRef(significandParts(),
-                                 partCountForBits(semantics->precision)));
+  APInt significand(
+      semantics->precision,
+      ArrayRef(significandParts(), partCountForBits(semantics->precision)));
 
   // Set FormatPrecision if zero.  We want to do this before we
   // truncate trailing zeros, as those are part of the precision.
@@ -4099,6 +4119,11 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
 
   // Fill the buffer.
   unsigned precision = significand.getBitWidth();
+  if (precision < 4) {
+    // We need enough precision to store the value 10.
+    precision = 4;
+    significand = significand.zext(precision);
+  }
   APInt ten(precision, 10);
   APInt digit(precision, 0);
 
@@ -4990,6 +5015,15 @@ bool DoubleAPFloat::isSmallest() const {
     return false;
   DoubleAPFloat Tmp(*this);
   Tmp.makeSmallest(this->isNegative());
+  return Tmp.compare(*this) == cmpEqual;
+}
+
+bool DoubleAPFloat::isSmallestNormalized() const {
+  if (getCategory() != fcNormal)
+    return false;
+
+  DoubleAPFloat Tmp(*this);
+  Tmp.makeSmallestNormalized(this->isNegative());
   return Tmp.compare(*this) == cmpEqual;
 }
 

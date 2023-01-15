@@ -9,7 +9,7 @@
 ; RUN:  llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11SELDAG,GFX11CHECK %s
 ; RUN:  llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11GLISEL,GFX11CHECK %s
 
-define amdgpu_kernel void @sgpr_isnan_f16(i32 addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX7SELDAG-LABEL: sgpr_isnan_f16:
 ; GFX7SELDAG:       ; %bb.0:
 ; GFX7SELDAG-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -90,7 +90,7 @@ define amdgpu_kernel void @sgpr_isnan_f16(i32 addrspace(1)* %out, half %x) {
 ; GFX11CHECK-NEXT:    s_endpgm
   %result = call i1 @llvm.is.fpclass.f16(half %x, i32 3)
   %sext = sext i1 %result to i32
-  store i32 %sext, i32 addrspace(1)* %out, align 4
+  store i32 %sext, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -104,37 +104,33 @@ define i1 @zeromask_f16(half %x) nounwind {
 ; GFX8CHECK-LABEL: zeromask_f16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, 0
-; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX8CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9CHECK-LABEL: zeromask_f16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, 0
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
+; GFX9CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: zeromask_f16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10CHECK-NEXT:    v_cmp_class_f16_e64 s4, v0, 0
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: zeromask_f16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0
-; GFX11CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 0)
   ret i1 %1
 }
 
+; FIXME: DAG and GlobalISel return different values for i1 true
 define i1 @allflags_f16(half %x) nounwind {
 ; GFX7SELDAG-LABEL: allflags_f16:
 ; GFX7SELDAG:       ; %bb.0:
@@ -151,34 +147,27 @@ define i1 @allflags_f16(half %x) nounwind {
 ; GFX8CHECK-LABEL: allflags_f16:
 ; GFX8CHECK:       ; %bb.0:
 ; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x3ff
-; GFX8CHECK-NEXT:    v_cmp_class_f16_e32 vcc, v0, v1
-; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8CHECK-NEXT:    v_mov_b32_e32 v0, {{(-)?}}1
 ; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9CHECK-LABEL: allflags_f16:
 ; GFX9CHECK:       ; %bb.0:
 ; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9CHECK-NEXT:    v_mov_b32_e32 v1, 0x3ff
-; GFX9CHECK-NEXT:    v_cmp_class_f16_e32 vcc, v0, v1
-; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9CHECK-NEXT:    v_mov_b32_e32 v0, {{(-)?}}1
 ; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10CHECK-LABEL: allflags_f16:
 ; GFX10CHECK:       ; %bb.0:
 ; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10CHECK-NEXT:    v_cmp_class_f16_e64 s4, v0, 0x3ff
-; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10CHECK-NEXT:    v_mov_b32_e32 v0, {{(-)?}}1
 ; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11CHECK-LABEL: allflags_f16:
 ; GFX11CHECK:       ; %bb.0:
 ; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 0x3ff
-; GFX11CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11CHECK-NEXT:    v_mov_b32_e32 v0, {{(-)?}}1
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 1023) ; 0x3ff
   ret i1 %1

@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 #include <atomic>
 #include <chrono>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -40,7 +41,7 @@ public:
     std::string Result;
     read(
         FS, FreshTime,
-        [&](llvm::Optional<llvm::StringRef> Data) {
+        [&](std::optional<llvm::StringRef> Data) {
           GotParse = true;
           Value = Data.value_or("").str();
         },

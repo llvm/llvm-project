@@ -44,7 +44,7 @@ define <16 x i8> @bitreverse_v16i8(<16 x i8> %op) #0 {
   ret <16 x i8> %res
 }
 
-define void @bitreverse_v32i8(<32 x i8>* %a) #0 {
+define void @bitreverse_v32i8(ptr %a) #0 {
 ; CHECK-LABEL: bitreverse_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -53,9 +53,9 @@ define void @bitreverse_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT:    rbit z1.b, p0/m, z1.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <32 x i8>, <32 x i8>* %a
+  %op = load <32 x i8>, ptr %a
   %res = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %op)
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
@@ -96,7 +96,7 @@ define <8 x i16> @bitreverse_v8i16(<8 x i16> %op) #0 {
   ret <8 x i16> %res
 }
 
-define void @bitreverse_v16i16(<16 x i16>* %a) #0 {
+define void @bitreverse_v16i16(ptr %a) #0 {
 ; CHECK-LABEL: bitreverse_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -105,9 +105,9 @@ define void @bitreverse_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT:    rbit z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %op)
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -135,7 +135,7 @@ define <4 x i32> @bitreverse_v4i32(<4 x i32> %op) #0 {
   ret <4 x i32> %res
 }
 
-define void @bitreverse_v8i32(<8 x i32>* %a) #0 {
+define void @bitreverse_v8i32(ptr %a) #0 {
 ; CHECK-LABEL: bitreverse_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -144,9 +144,9 @@ define void @bitreverse_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT:    rbit z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %op)
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -174,7 +174,7 @@ define <2 x i64> @bitreverse_v2i64(<2 x i64> %op) #0 {
   ret <2 x i64> %res
 }
 
-define void @bitreverse_v4i64(<4 x i64>* %a) #0 {
+define void @bitreverse_v4i64(ptr %a) #0 {
 ; CHECK-LABEL: bitreverse_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
@@ -183,9 +183,9 @@ define void @bitreverse_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    rbit z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %op)
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
@@ -247,7 +247,7 @@ define <8 x i16> @bswap_v8i16(<8 x i16> %op) #0 {
   ret <8 x i16> %res
 }
 
-define void @bswap_v16i16(<16 x i16>* %a) #0 {
+define void @bswap_v16i16(ptr %a) #0 {
 ; CHECK-LABEL: bswap_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
@@ -262,9 +262,9 @@ define void @bswap_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <16 x i16>, <16 x i16>* %a
+  %op = load <16 x i16>, ptr %a
   %res = call <16 x i16> @llvm.bswap.v16i16(<16 x i16> %op)
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
@@ -314,19 +314,19 @@ define <4 x i32> @bswap_v4i32(<4 x i32> %op) #0 {
   ret <4 x i32> %res
 }
 
-define void @bswap_v8i32(<8 x i32>* %a) #0 {
+define void @bswap_v8i32(ptr %a) #0 {
 ; CHECK-LABEL: bswap_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    lsr z2.s, p0/m, z2.s, #24
 ; CHECK-NEXT:    movprfx z3, z0
 ; CHECK-NEXT:    lsr z3.s, p0/m, z3.s, #8
-; CHECK-NEXT:    movprfx z4, z1
-; CHECK-NEXT:    lsr z4.s, p0/m, z4.s, #24
 ; CHECK-NEXT:    movprfx z5, z1
 ; CHECK-NEXT:    lsr z5.s, p0/m, z5.s, #8
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.s, p0/m, z2.s, #24
+; CHECK-NEXT:    movprfx z4, z1
+; CHECK-NEXT:    lsr z4.s, p0/m, z4.s, #24
 ; CHECK-NEXT:    and z3.s, z3.s, #0xff00
 ; CHECK-NEXT:    and z5.s, z5.s, #0xff00
 ; CHECK-NEXT:    orr z2.d, z3.d, z2.d
@@ -345,9 +345,9 @@ define void @bswap_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <8 x i32>, <8 x i32>* %a
+  %op = load <8 x i32>, ptr %a
   %res = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> %op)
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
@@ -356,10 +356,10 @@ define <1 x i64> @bswap_v1i64(<1 x i64> %op) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #40
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
 ; CHECK-NEXT:    movprfx z3, z0
 ; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, #24
 ; CHECK-NEXT:    movprfx z4, z0
@@ -396,10 +396,10 @@ define <2 x i64> @bswap_v2i64(<2 x i64> %op) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
 ; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #40
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #56
 ; CHECK-NEXT:    movprfx z3, z0
 ; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, #24
 ; CHECK-NEXT:    movprfx z4, z0
@@ -431,19 +431,19 @@ define <2 x i64> @bswap_v2i64(<2 x i64> %op) #0 {
   ret <2 x i64> %res
 }
 
-define void @bswap_v4i64(<4 x i64>* %a) #0 {
+define void @bswap_v4i64(ptr %a) #0 {
 ; CHECK-LABEL: bswap_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #56
 ; CHECK-NEXT:    movprfx z3, z0
 ; CHECK-NEXT:    lsr z3.d, p0/m, z3.d, #40
 ; CHECK-NEXT:    movprfx z4, z0
 ; CHECK-NEXT:    lsr z4.d, p0/m, z4.d, #24
 ; CHECK-NEXT:    movprfx z5, z0
 ; CHECK-NEXT:    lsr z5.d, p0/m, z5.d, #8
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    lsr z2.d, p0/m, z2.d, #56
 ; CHECK-NEXT:    and z3.d, z3.d, #0xff00
 ; CHECK-NEXT:    and z4.d, z4.d, #0xff0000
 ; CHECK-NEXT:    and z5.d, z5.d, #0xff000000
@@ -451,8 +451,6 @@ define void @bswap_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    orr z3.d, z5.d, z4.d
 ; CHECK-NEXT:    mov z6.d, z0.d
 ; CHECK-NEXT:    mov z7.d, z0.d
-; CHECK-NEXT:    movprfx z16, z0
-; CHECK-NEXT:    lsl z16.d, p0/m, z16.d, #56
 ; CHECK-NEXT:    orr z2.d, z3.d, z2.d
 ; CHECK-NEXT:    and z6.d, z6.d, #0xff000000
 ; CHECK-NEXT:    and z7.d, z7.d, #0xff0000
@@ -463,6 +461,8 @@ define void @bswap_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    orr z3.d, z4.d, z3.d
 ; CHECK-NEXT:    movprfx z4, z1
 ; CHECK-NEXT:    lsr z4.d, p0/m, z4.d, #40
+; CHECK-NEXT:    movprfx z16, z0
+; CHECK-NEXT:    lsl z16.d, p0/m, z16.d, #56
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff00
 ; CHECK-NEXT:    movprfx z5, z1
 ; CHECK-NEXT:    lsr z5.d, p0/m, z5.d, #56
@@ -496,9 +496,9 @@ define void @bswap_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT:    orr z0.d, z0.d, z2.d
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
-  %op = load <4 x i64>, <4 x i64>* %a
+  %op = load <4 x i64>, ptr %a
   %res = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %op)
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 

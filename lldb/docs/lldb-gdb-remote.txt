@@ -2153,3 +2153,21 @@ Example packet:
 The data in this packet is a single a character, which should be '0' if the
 inferior process should be killed, or '1' if the server should remove all
 breakpoints and detach from the inferior.
+
+//----------------------------------------------------------------------
+// "jGetDyldProcessState"
+//
+// BRIEF
+//  This packet fetches the process launch state, as reported by libdyld on
+//  Darwin systems, most importantly to indicate when the system libraries 
+//  have initialized sufficiently to safely call utility functions.
+//
+//
+//  LLDB SENDS: jGetDyldProcessState
+//  STUB REPLIES: {"process_state_value":48,"process_state string":"dyld_process_state_libSystem_initialized"}
+//
+// PRIORITY TO IMPLEMENT
+//  Low. This packet is needed to prevent lldb's utility functions for
+//  scanning the Objective-C class list from running very early in 
+//  process startup.
+//----------------------------------------------------------------------

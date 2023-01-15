@@ -18,8 +18,17 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+// We must include Enums.h.inc before AttrDefs.h.inc due to dependency between
+// StorageSpecifierKindAttr and StorageSpeciferKind Enum.
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrEnums.h.inc"
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.h.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.h.inc"
@@ -37,6 +46,11 @@ SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 /// dimension level type being unique.
 bool isUniqueCOOType(RankedTensorType tp);
 
+/// Returns the starting dimension for a trailing COO region that spans across
+/// at least two dimensions. If no such COO region is found, returns the rank
+/// of the tensor.
+unsigned getCOOStart(SparseTensorEncodingAttr enc);
+
 //
 // Dimension level types.
 //
@@ -46,8 +60,7 @@ bool isUniqueCOOType(RankedTensorType tp);
 // And therefore all functions calling it cannot be constexpr either.
 // TODO: since Clang does allow these to be constexpr, perhaps we should
 // define a macro to abstract over `inline` vs `constexpr` annotations.
-inline DimLevelType getDimLevelType(const SparseTensorEncodingAttr &enc,
-                                    uint64_t d) {
+inline DimLevelType getDimLevelType(SparseTensorEncodingAttr enc, uint64_t d) {
   if (enc) {
     auto types = enc.getDimLevelType();
     assert(d < types.size() && "Dimension out of bounds");
@@ -110,8 +123,8 @@ inline bool isUniqueDim(RankedTensorType type, uint64_t d) {
 // Reordering.
 //
 
-uint64_t toOrigDim(const SparseTensorEncodingAttr &enc, uint64_t d);
-uint64_t toStoredDim(const SparseTensorEncodingAttr &enc, uint64_t d);
+uint64_t toOrigDim(SparseTensorEncodingAttr enc, uint64_t d);
+uint64_t toStoredDim(SparseTensorEncodingAttr enc, uint64_t d);
 
 /// Convenience method to translate the given stored dimension
 /// to the original dimension (0 <= d < rank).

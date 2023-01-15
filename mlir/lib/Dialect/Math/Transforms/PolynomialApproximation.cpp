@@ -97,7 +97,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
   // If input shape matches target vector width, we can just call the
   // user-provided compute function with the operands.
-  if (inputShape == llvm::makeArrayRef(vectorWidth))
+  if (inputShape == llvm::ArrayRef(vectorWidth))
     return compute(operands);
 
   // Check if the inner dimension has to be expanded, or we can directly iterate

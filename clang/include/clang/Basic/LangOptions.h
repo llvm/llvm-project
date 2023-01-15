@@ -295,6 +295,8 @@ public:
     FEM_UnsetOnCommandLine = 3
   };
 
+  enum ExcessPrecisionKind { FPP_Standard, FPP_Fast, FPP_None };
+
   /// Possible exception handling behavior.
   enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
 

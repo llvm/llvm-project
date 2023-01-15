@@ -27,10 +27,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @__const.main.data = private unnamed_addr constant [16 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15], align 16
 
-define dso_local void @_Z21mul_pow_of_2_to_shiftjPjj(i32 %size, i32* nocapture %data, i32 %multiplicand) local_unnamed_addr !dbg !7 {
+define dso_local void @_Z21mul_pow_of_2_to_shiftjPjj(i32 %size, ptr nocapture %data, i32 %multiplicand) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %size, metadata !12, metadata !DIExpression()), !dbg !13
-  call void @llvm.dbg.value(metadata i32* %data, metadata !14, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.value(metadata ptr %data, metadata !14, metadata !DIExpression()), !dbg !13
   call void @llvm.dbg.value(metadata i32 %multiplicand, metadata !15, metadata !DIExpression()), !dbg !13
   call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !DIExpression()), !dbg !13
   br label %while.cond, !dbg !13
@@ -45,8 +45,8 @@ while.body:                                       ; preds = %while.cond
   %mul = mul i32 %i.0, %multiplicand, !dbg !17
   call void @llvm.dbg.value(metadata i32 %mul, metadata !19, metadata !DIExpression()), !dbg !17
   %idxprom = zext i32 %i.0 to i64, !dbg !17
-  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %idxprom, !dbg !17
-  store i32 %mul, i32* %arrayidx, align 4, !dbg !17
+  %arrayidx = getelementptr inbounds i32, ptr %data, i64 %idxprom, !dbg !17
+  store i32 %mul, ptr %arrayidx, align 4, !dbg !17
   %inc = add nuw i32 %i.0, 1, !dbg !17
   call void @llvm.dbg.value(metadata i32 %inc, metadata !16, metadata !DIExpression()), !dbg !13
   br label %while.cond, !dbg !13, !llvm.loop !20

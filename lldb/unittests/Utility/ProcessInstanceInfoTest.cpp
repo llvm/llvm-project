@@ -8,6 +8,7 @@
 
 #include "lldb/Target/Process.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace lldb_private;
 
@@ -16,13 +17,13 @@ namespace {
 /// for odd ones.
 class DummyUserIDResolver : public UserIDResolver {
 protected:
-  llvm::Optional<std::string> DoGetUserName(id_t uid) override {
+  std::optional<std::string> DoGetUserName(id_t uid) override {
     if (uid % 2)
       return ("user" + llvm::Twine(uid)).str();
     return std::nullopt;
   }
 
-  llvm::Optional<std::string> DoGetGroupName(id_t gid) override {
+  std::optional<std::string> DoGetGroupName(id_t gid) override {
     if (gid % 2)
       return ("group" + llvm::Twine(gid)).str();
     return std::nullopt;

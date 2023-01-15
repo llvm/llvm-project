@@ -6,32 +6,32 @@ target triple = "x86_64-apple-macosx10.15.0"
 
 ; No interleaved load instruction is generated, but the shuffle is moved just
 ; after the load.
-define <2 x double> @shuffle_binop_fol(<4 x double>* %ptr) {
+define <2 x double> @shuffle_binop_fol(ptr %ptr) {
 ; CHECK-LABEL: @shuffle_binop_fol(
 ; CHECK-NEXT:  vector.body.preheader:
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, <4 x double>* [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = shufflevector <4 x double> [[WIDE_LOAD]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[EXTRACTED2:%.*]] = shufflevector <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, <4 x double> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[FADD3:%.*]] = fadd <2 x double> [[EXTRACTED1]], [[EXTRACTED2]]
 ; CHECK-NEXT:    ret <2 x double> [[FADD3]]
 ;
 vector.body.preheader:
-  %wide.load = load <4 x double>, <4 x double>* %ptr, align 8
+  %wide.load = load <4 x double>, ptr %ptr, align 8
   %fadd = fadd <4 x double> %wide.load, <double 1.0, double 1.0, double 1.0, double 1.0>
   %extracted = shufflevector <4 x double> %fadd, <4 x double> undef, <2 x i32> <i32 0, i32 2>
   ret <2 x double> %extracted
 }
 
-define <2 x double> @shuffle_binop_fol_oob(<4 x double>* %ptr) {
+define <2 x double> @shuffle_binop_fol_oob(ptr %ptr) {
 ; CHECK-LABEL: @shuffle_binop_fol_oob(
 ; CHECK-NEXT:  vector.body.preheader:
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, <4 x double>* [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd <4 x double> [[WIDE_LOAD]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = shufflevector <4 x double> [[FADD]], <4 x double> undef, <2 x i32> <i32 0, i32 4>
 ; CHECK-NEXT:    ret <2 x double> [[EXTRACTED]]
 ;
 vector.body.preheader:
-  %wide.load = load <4 x double>, <4 x double>* %ptr, align 8
+  %wide.load = load <4 x double>, ptr %ptr, align 8
   %fadd = fadd <4 x double> %wide.load, <double 1.0, double 1.0, double 1.0, double 1.0>
   %extracted = shufflevector <4 x double> %fadd, <4 x double> undef, <2 x i32> <i32 0, i32 4>
   ret <2 x double> %extracted
@@ -39,10 +39,10 @@ vector.body.preheader:
 
 ; No interleaved load instruction is generated, but the extractelement
 ; instructions are updated to use the shuffle instead of the load.
-define void @shuffle_extract(<4 x double>* %ptr, i1 %c) {
+define void @shuffle_extract(ptr %ptr, i1 %c) {
 ; CHECK-LABEL: @shuffle_extract(
 ; CHECK-NEXT:  vector.body.preheader:
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, <4 x double>* [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = shufflevector <4 x double> [[WIDE_LOAD]], <4 x double> undef, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_MERGE:%.*]]
 ; CHECK:       if.then:
@@ -55,7 +55,7 @@ define void @shuffle_extract(<4 x double>* %ptr, i1 %c) {
 ; CHECK-NEXT:    ret void
 ;
 vector.body.preheader:
-  %wide.load = load <4 x double>, <4 x double>* %ptr, align 8
+  %wide.load = load <4 x double>, ptr %ptr, align 8
   %extracted = shufflevector <4 x double> %wide.load, <4 x double> undef, <2 x i32> <i32 0, i32 2>
   br i1 %c, label %if.then, label %if.merge
 

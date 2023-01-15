@@ -889,7 +889,7 @@ public:
   /// \param [in] V - the Value to find.
   /// \returns The positive number corresponding to the value.
   /// \returns std::nullopt if not present.
-  Optional<unsigned> getGVN(Value *V) {
+  std::optional<unsigned> getGVN(Value *V) {
     assert(V != nullptr && "Value is a nullptr?");
     DenseMap<Value *, unsigned>::iterator VNIt = ValueToNumber.find(V);
     if (VNIt == ValueToNumber.end())
@@ -901,7 +901,7 @@ public:
   /// \param [in] Num - the number to find.
   /// \returns The Value associated with the number.
   /// \returns std::nullopt if not present.
-  Optional<Value *> fromGVN(unsigned Num) {
+  std::optional<Value *> fromGVN(unsigned Num) {
     DenseMap<unsigned, Value *>::iterator VNIt = NumberToValue.find(Num);
     if (VNIt == NumberToValue.end())
       return std::nullopt;
@@ -915,7 +915,7 @@ public:
   /// \param N - The global value number to find the canonical number for.
   /// \returns An optional containing the value, and std::nullopt if it could
   /// not be found.
-  Optional<unsigned> getCanonicalNum(unsigned N) {
+  std::optional<unsigned> getCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator NCIt = NumberToCanonNum.find(N);
     if (NCIt == NumberToCanonNum.end())
       return std::nullopt;
@@ -928,7 +928,7 @@ public:
   /// \param N - The canonical number to find the global vlaue number for.
   /// \returns An optional containing the value, and std::nullopt if it could
   /// not be found.
-  Optional<unsigned> fromCanonicalNum(unsigned N) {
+  std::optional<unsigned> fromCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator CNIt = CanonNumToNumber.find(N);
     if (CNIt == CanonNumToNumber.end())
       return std::nullopt;
@@ -1048,7 +1048,7 @@ public:
 
   // \returns The groups of similarity ranges found in the most recently passed
   // set of modules.
-  Optional<SimilarityGroupList> &getSimilarity() {
+  std::optional<SimilarityGroupList> &getSimilarity() {
     return SimilarityCandidates;
   }
 
@@ -1085,8 +1085,8 @@ private:
   bool EnableMustTailCalls = false;
 
   /// The SimilarityGroups found with the most recent run of \ref
-  /// findSimilarity. None if there is no recent run.
-  Optional<SimilarityGroupList> SimilarityCandidates;
+  /// findSimilarity. std::nullopt if there is no recent run.
+  std::optional<SimilarityGroupList> SimilarityCandidates;
 };
 
 } // end namespace IRSimilarity

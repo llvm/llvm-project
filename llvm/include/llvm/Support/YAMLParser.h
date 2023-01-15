@@ -45,6 +45,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 
@@ -78,7 +79,7 @@ bool scanTokens(StringRef Input);
 std::string escape(StringRef Input, bool EscapePrintable = true);
 
 /// Parse \p S as a bool according to https://yaml.org/type/bool.html.
-llvm::Optional<bool> parseBool(StringRef S);
+std::optional<bool> parseBool(StringRef S);
 
 /// This class represents a YAML stream potentially containing multiple
 ///        documents.
@@ -610,7 +611,7 @@ public:
     return *this;
   }
 
-  Document &operator*() { return *Doc->get(); }
+  Document &operator*() { return **Doc; }
 
   std::unique_ptr<Document> &operator->() { return *Doc; }
 

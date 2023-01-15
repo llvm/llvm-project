@@ -170,10 +170,14 @@ int getopt_r(int argc, char *const argv[], const char *optstring,
 
 namespace impl {
 
-extern "C" char *optarg = nullptr;
-extern "C" int optind = 1;
-extern "C" int optopt = 0;
-extern "C" int opterr = 0;
+extern "C" {
+
+char *optarg = nullptr;
+int optind = 1;
+int optopt = 0;
+int opterr = 0;
+
+}
 
 static unsigned optpos;
 

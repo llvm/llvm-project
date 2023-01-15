@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include <cinttypes>
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -42,8 +43,8 @@ bool isLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
 /// Possibly strip a floating point cast expression.
 ///
 /// If `Node` represents an explicit cast to a floating point type, return
-/// the textual context of the cast argument, otherwise `None`.
-llvm::Optional<std::string>
+/// the textual context of the cast argument, otherwise `std::nullopt`.
+std::optional<std::string>
 stripFloatCast(const ast_matchers::MatchFinder::MatchResult &Result,
                const Expr &Node);
 
@@ -51,7 +52,7 @@ stripFloatCast(const ast_matchers::MatchFinder::MatchResult &Result,
 ///
 /// If `Node` represents a floating point literal with a zero fractional part,
 /// return the textual context of the integral part, otherwise `std::nullopt`.
-llvm::Optional<std::string>
+std::optional<std::string>
 stripFloatLiteralFraction(const ast_matchers::MatchFinder::MatchResult &Result,
                           const Expr &Node);
 
@@ -64,11 +65,11 @@ simplifyDurationFactoryArg(const ast_matchers::MatchFinder::MatchResult &Result,
 
 /// Given the name of an inverse Duration function (e.g., `ToDoubleSeconds`),
 /// return its `DurationScale`, or `std::nullopt` if a match is not found.
-llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name);
+std::optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name);
 
 /// Given the name of an inverse Time function (e.g., `ToUnixSeconds`),
 /// return its `DurationScale`, or `std::nullopt` if a match is not found.
-llvm::Optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name);
+std::optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name);
 
 /// Given a `Scale` return the fully qualified inverse functions for it.
 /// The first returned value is the inverse for `double`, and the second

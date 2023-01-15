@@ -3,7 +3,7 @@
 ; RUN: opt -mtriple=amdgcn--amdhsa -S -O3 -enable-no-infs-fp-math %s | FileCheck -check-prefix=GCN -check-prefix=NOINFS %s
 
 ; GCN: define float @foo(float %x) local_unnamed_addr #0 {
-; GCN: define amdgpu_kernel void @caller(float addrspace(1)* nocapture %p) local_unnamed_addr #1 {
+; GCN: define amdgpu_kernel void @caller(ptr addrspace(1) nocapture %p) local_unnamed_addr #1 {
 ; GCN: %mul.i = fmul float %load, 1.500000e+01
 
 ; UNSAFE: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "unsafe-fp-math"="true" }
@@ -21,11 +21,11 @@ entry:
   ret float %mul
 }
 
-define amdgpu_kernel void @caller(float addrspace(1)* %p) #1 {
+define amdgpu_kernel void @caller(ptr addrspace(1) %p) #1 {
 entry:
-  %load = load float, float addrspace(1)* %p, align 4
+  %load = load float, ptr addrspace(1) %p, align 4
   %call = call fast float @foo(float %load) #0
-  store float %call, float addrspace(1)* %p, align 4
+  store float %call, ptr addrspace(1) %p, align 4
   ret void
 }
 

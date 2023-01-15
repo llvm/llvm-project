@@ -493,12 +493,12 @@ void ASTStmtWriter::VisitRequiresExpr(RequiresExpr *E) {
     } else {
       auto *NestedReq = cast<concepts::NestedRequirement>(R);
       Record.push_back(concepts::Requirement::RK_Nested);
-      Record.push_back(NestedReq->isSubstitutionFailure());
-      if (NestedReq->isSubstitutionFailure()){
-        addSubstitutionDiagnostic(Record,
-                                  NestedReq->getSubstitutionDiagnostic());
+      Record.push_back(NestedReq->hasInvalidConstraint());
+      if (NestedReq->hasInvalidConstraint()) {
+        Record.AddString(NestedReq->getInvalidConstraintEntity());
+        addConstraintSatisfaction(Record, *NestedReq->Satisfaction);
       } else {
-        Record.AddStmt(NestedReq->Value.get<Expr *>());
+        Record.AddStmt(NestedReq->getConstraintExpr());
         if (!NestedReq->isDependent())
           addConstraintSatisfaction(Record, *NestedReq->Satisfaction);
       }
@@ -1753,10 +1753,10 @@ void ASTStmtWriter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
 
 void ASTStmtWriter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   VisitExpr(E);
+  Record.push_back(E->hasRewrittenInit());
   Record.AddDeclRef(E->getField());
   Record.AddDeclRef(cast_or_null<Decl>(E->getUsedContext()));
   Record.AddSourceLocation(E->getExprLoc());
-  Record.push_back(E->hasRewrittenInit());
   if (E->hasRewrittenInit())
     Record.AddStmt(E->getRewrittenExpr());
   Code = serialization::EXPR_CXX_DEFAULT_INIT;
@@ -2085,6 +2085,30 @@ void ASTStmtWriter::VisitCXXFoldExpr(CXXFoldExpr *E) {
   Record.AddStmt(E->SubExprs[2]);
   Record.push_back(E->Opcode);
   Code = serialization::EXPR_CXX_FOLD;
+}
+
+void ASTStmtWriter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+  VisitExpr(E);
+  ArrayRef<Expr *> InitExprs = E->getInitExprs();
+  Record.push_back(InitExprs.size());
+  Record.push_back(E->getUserSpecifiedInitExprs().size());
+  Record.AddSourceLocation(E->getInitLoc());
+  Record.AddSourceLocation(E->getBeginLoc());
+  Record.AddSourceLocation(E->getEndLoc());
+  for (Expr *InitExpr : E->getInitExprs())
+    Record.AddStmt(InitExpr);
+  Expr *ArrayFiller = E->getArrayFiller();
+  FieldDecl *UnionField = E->getInitializedFieldInUnion();
+  bool HasArrayFillerOrUnionDecl = ArrayFiller || UnionField;
+  Record.push_back(HasArrayFillerOrUnionDecl);
+  if (HasArrayFillerOrUnionDecl) {
+    Record.push_back(static_cast<bool>(ArrayFiller));
+    if (ArrayFiller)
+      Record.AddStmt(ArrayFiller);
+    else
+      Record.AddDeclRef(UnionField);
+  }
+  Code = serialization::EXPR_CXX_PAREN_LIST_INIT;
 }
 
 void ASTStmtWriter::VisitOpaqueValueExpr(OpaqueValueExpr *E) {

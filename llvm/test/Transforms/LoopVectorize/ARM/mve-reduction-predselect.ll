@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-none-none-eabi"
 
-define i32 @reduction_sum_single(i32* noalias nocapture %A) {
+define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-LABEL: @reduction_sum_single(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -14,9 +14,8 @@ define i32 @reduction_sum_single(i32* noalias nocapture %A) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP1]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP0]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[WIDE_MASKED_LOAD]])
 ; CHECK-NEXT:    [[TMP3]] = add i32 [[TMP2]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
@@ -38,8 +37,8 @@ entry:
 .lr.ph:                                           ; preds = %entry, %.lr.ph
   %indvars.iv = phi i32 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02 = phi i32 [ %l7, %.lr.ph ], [ 0, %entry ]
-  %l2 = getelementptr inbounds i32, i32* %A, i32 %indvars.iv
-  %l3 = load i32, i32* %l2, align 4
+  %l2 = getelementptr inbounds i32, ptr %A, i32 %indvars.iv
+  %l3 = load i32, ptr %l2, align 4
   %l7 = add i32 %sum.02, %l3
   %indvars.iv.next = add i32 %indvars.iv, 1
   %exitcond = icmp eq i32 %indvars.iv.next, 257
@@ -50,7 +49,7 @@ entry:
   ret i32 %sum.0.lcssa
 }
 
-define i32 @reduction_sum(i32* noalias nocapture %A, i32* noalias nocapture %B) {
+define i32 @reduction_sum(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-LABEL: @reduction_sum(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -61,12 +60,10 @@ define i32 @reduction_sum(i32* noalias nocapture %A, i32* noalias nocapture %B) 
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP1]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP3]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP0]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP2]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> [[VEC_IND]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[VEC_PHI]]
@@ -94,10 +91,10 @@ entry:
 .lr.ph:                                           ; preds = %entry, %.lr.ph
   %indvars.iv = phi i32 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %sum.02 = phi i32 [ %l9, %.lr.ph ], [ 0, %entry ]
-  %l2 = getelementptr inbounds i32, i32* %A, i32 %indvars.iv
-  %l3 = load i32, i32* %l2, align 4
-  %l4 = getelementptr inbounds i32, i32* %B, i32 %indvars.iv
-  %l5 = load i32, i32* %l4, align 4
+  %l2 = getelementptr inbounds i32, ptr %A, i32 %indvars.iv
+  %l3 = load i32, ptr %l2, align 4
+  %l4 = getelementptr inbounds i32, ptr %B, i32 %indvars.iv
+  %l5 = load i32, ptr %l4, align 4
   %l7 = add i32 %sum.02, %indvars.iv
   %l8 = add i32 %l7, %l3
   %l9 = add i32 %l8, %l5
@@ -110,7 +107,7 @@ entry:
   ret i32 %sum.0.lcssa
 }
 
-define i32 @reduction_prod(i32* noalias nocapture %A, i32* noalias nocapture %B) {
+define i32 @reduction_prod(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-LABEL: @reduction_prod(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -120,12 +117,10 @@ define i32 @reduction_prod(i32* noalias nocapture %A, i32* noalias nocapture %B)
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 1, i32 1, i32 1, i32 1>, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP1]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP3]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP0]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP2]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[VEC_PHI]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], [[WIDE_MASKED_LOAD1]]
 ; CHECK-NEXT:    [[TMP6]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> [[TMP5]], <4 x i32> [[VEC_PHI]]
@@ -149,10 +144,10 @@ entry:
 .lr.ph:                                           ; preds = %entry, %.lr.ph
   %indvars.iv = phi i32 [ %indvars.iv.next, %.lr.ph ], [ 0, %entry ]
   %prod.02 = phi i32 [ %l9, %.lr.ph ], [ 1, %entry ]
-  %l2 = getelementptr inbounds i32, i32* %A, i32 %indvars.iv
-  %l3 = load i32, i32* %l2, align 4
-  %l4 = getelementptr inbounds i32, i32* %B, i32 %indvars.iv
-  %l5 = load i32, i32* %l4, align 4
+  %l2 = getelementptr inbounds i32, ptr %A, i32 %indvars.iv
+  %l3 = load i32, ptr %l2, align 4
+  %l4 = getelementptr inbounds i32, ptr %B, i32 %indvars.iv
+  %l5 = load i32, ptr %l4, align 4
   %l8 = mul i32 %prod.02, %l3
   %l9 = mul i32 %l8, %l5
   %indvars.iv.next = add i32 %indvars.iv, 1
@@ -164,7 +159,7 @@ entry:
   ret i32 %prod.0.lcssa
 }
 
-define i32 @reduction_and(i32* nocapture %A, i32* nocapture %B) {
+define i32 @reduction_and(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @reduction_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -174,12 +169,10 @@ define i32 @reduction_and(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 -1, i32 -1, i32 -1, i32 -1>, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP1]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP3]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP0]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP2]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <4 x i32> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> [[TMP4]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[TMP6]] = and <4 x i32> [[VEC_PHI]], [[TMP5]]
@@ -203,10 +196,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %and, %for.body ], [ -1, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %indvars.iv
-  %l0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i32 %indvars.iv
-  %l1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %indvars.iv
+  %l0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i32 %indvars.iv
+  %l1 = load i32, ptr %arrayidx2, align 4
   %add = and i32 %result.08, %l0
   %and = and i32 %add, %l1
   %indvars.iv.next = add i32 %indvars.iv, 1
@@ -218,7 +211,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %result.0.lcssa
 }
 
-define i32 @reduction_or(i32* nocapture %A, i32* nocapture %B) {
+define i32 @reduction_or(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @reduction_or(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -228,12 +221,10 @@ define i32 @reduction_or(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP1]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP3]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP0]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP2]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD1]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> [[TMP4]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6]] = or <4 x i32> [[VEC_PHI]], [[TMP5]]
@@ -257,10 +248,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %or, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %indvars.iv
-  %l0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i32 %indvars.iv
-  %l1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %indvars.iv
+  %l0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i32 %indvars.iv
+  %l1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %l1, %l0
   %or = or i32 %add, %result.08
   %indvars.iv.next = add i32 %indvars.iv, 1
@@ -272,7 +263,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %result.0.lcssa
 }
 
-define i32 @reduction_xor(i32* nocapture %A, i32* nocapture %B) {
+define i32 @reduction_xor(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @reduction_xor(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -282,12 +273,10 @@ define i32 @reduction_xor(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP1]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP3]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP0]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP2]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD1]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> [[TMP4]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6]] = xor <4 x i32> [[VEC_PHI]], [[TMP5]]
@@ -311,10 +300,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %xor, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %indvars.iv
-  %l0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i32 %indvars.iv
-  %l1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %indvars.iv
+  %l0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i32 %indvars.iv
+  %l1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %l1, %l0
   %xor = xor i32 %add, %result.08
   %indvars.iv.next = add i32 %indvars.iv, 1
@@ -326,7 +315,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %result.0.lcssa
 }
 
-define float @reduction_fadd(float* nocapture %A, float* nocapture %B) {
+define float @reduction_fadd(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @reduction_fadd(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -336,12 +325,10 @@ define float @reduction_fadd(float* nocapture %A, float* nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[TMP0]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[TMP1]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[TMP2]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[TMP3]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP0]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP2]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <4 x float> [[TMP4]], [[WIDE_MASKED_LOAD1]]
 ; CHECK-NEXT:    [[TMP6]] = select fast <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> [[TMP5]], <4 x float> [[VEC_PHI]]
@@ -365,10 +352,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi float [ %fadd, %for.body ], [ 0.0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %A, i32 %indvars.iv
-  %l0 = load float, float* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %B, i32 %indvars.iv
-  %l1 = load float, float* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i32 %indvars.iv
+  %l0 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %B, i32 %indvars.iv
+  %l1 = load float, ptr %arrayidx2, align 4
   %add = fadd fast float %result.08, %l0
   %fadd = fadd fast float %add, %l1
   %indvars.iv.next = add i32 %indvars.iv, 1
@@ -380,7 +367,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret float %result.0.lcssa
 }
 
-define float @reduction_fmul(float* nocapture %A, float* nocapture %B) {
+define float @reduction_fmul(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @reduction_fmul(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -390,12 +377,10 @@ define float @reduction_fmul(float* nocapture %A, float* nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float 0.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[TMP0]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[TMP1]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[TMP2]] to <4 x float>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[TMP3]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP0]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP2]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <4 x float> [[VEC_PHI]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP4]], [[WIDE_MASKED_LOAD1]]
 ; CHECK-NEXT:    [[TMP6]] = select fast <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> [[TMP5]], <4 x float> [[VEC_PHI]]
@@ -419,10 +404,10 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi float [ %fmul, %for.body ], [ 0.0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %A, i32 %indvars.iv
-  %l0 = load float, float* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %B, i32 %indvars.iv
-  %l1 = load float, float* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i32 %indvars.iv
+  %l0 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %B, i32 %indvars.iv
+  %l1 = load float, ptr %arrayidx2, align 4
   %add = fmul fast float %result.08, %l0
   %fmul = fmul fast float %add, %l1
   %indvars.iv.next = add i32 %indvars.iv, 1
@@ -434,7 +419,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret float %result.0.lcssa
 }
 
-define i32 @reduction_min(i32* nocapture %A, i32* nocapture %B) {
+define i32 @reduction_min(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @reduction_min(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -443,9 +428,8 @@ define i32 @reduction_min(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 1000, i32 1000, i32 1000, i32 1000>, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
@@ -460,8 +444,8 @@ define i32 @reduction_min(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[RESULT_08:%.*]] = phi i32 [ [[TMP5:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INDVARS_IV]]
-; CHECK-NEXT:    [[L0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDVARS_IV]]
+; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP5]] = call i32 @llvm.smin.i32(i32 [[RESULT_08]], i32 [[L0]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i32 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], 257
@@ -476,8 +460,8 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %v0, %for.body ], [ 1000, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %indvars.iv
-  %l0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %indvars.iv
+  %l0 = load i32, ptr %arrayidx, align 4
   %c0 = icmp slt i32 %result.08, %l0
   %v0 = select i1 %c0, i32 %result.08, i32 %l0
   %indvars.iv.next = add i32 %indvars.iv, 1
@@ -489,7 +473,7 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %result.0.lcssa
 }
 
-define i32 @reduction_max(i32* nocapture %A, i32* nocapture %B) {
+define i32 @reduction_max(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @reduction_max(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -498,9 +482,8 @@ define i32 @reduction_max(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ <i32 1000, i32 1000, i32 1000, i32 1000>, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
@@ -515,8 +498,8 @@ define i32 @reduction_max(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[RESULT_08:%.*]] = phi i32 [ [[TMP5:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[INDVARS_IV]]
-; CHECK-NEXT:    [[L0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDVARS_IV]]
+; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP5]] = call i32 @llvm.umax.i32(i32 [[RESULT_08]], i32 [[L0]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i32 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], 257
@@ -531,8 +514,8 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi i32 [ %v0, %for.body ], [ 1000, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %indvars.iv
-  %l0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %indvars.iv
+  %l0 = load i32, ptr %arrayidx, align 4
   %c0 = icmp ugt i32 %result.08, %l0
   %v0 = select i1 %c0, i32 %result.08, i32 %l0
   %indvars.iv.next = add i32 %indvars.iv, 1
@@ -544,15 +527,15 @@ for.end:                                          ; preds = %for.body, %entry
   ret i32 %result.0.lcssa
 }
 
-define float @reduction_fmax(float* nocapture %A, float* nocapture %B) {
+define float @reduction_fmax(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-LABEL: @reduction_fmax(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[RESULT_08:%.*]] = phi float [ [[V0:%.*]], [[FOR_BODY]] ], [ 1.000000e+03, [[ENTRY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i32 [[INDVARS_IV]]
-; CHECK-NEXT:    [[L0:%.*]] = load float, float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 [[INDVARS_IV]]
+; CHECK-NEXT:    [[L0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[C0:%.*]] = fcmp ogt float [[RESULT_08]], [[L0]]
 ; CHECK-NEXT:    [[V0]] = select i1 [[C0]], float [[RESULT_08]], float [[L0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i32 [[INDVARS_IV]], 1
@@ -567,8 +550,8 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %result.08 = phi float [ %v0, %for.body ], [ 1000.0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %A, i32 %indvars.iv
-  %l0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i32 %indvars.iv
+  %l0 = load float, ptr %arrayidx, align 4
   %c0 = fcmp ogt float %result.08, %l0
   %v0 = select i1 %c0, float %result.08, float %l0
   %indvars.iv.next = add i32 %indvars.iv, 1

@@ -18,7 +18,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 
 namespace llvm {
@@ -243,6 +243,7 @@ enum NodeType : unsigned {
   VFCVT_RM_X_F_VL, // Has a rounding mode operand.
   SINT_TO_FP_VL,
   UINT_TO_FP_VL,
+  VFCVT_RM_F_XU_VL, // Has a rounding mode operand.
   FP_ROUND_VL,
   FP_EXTEND_VL,
 
@@ -300,6 +301,9 @@ enum NodeType : unsigned {
 
   //  vcpop.m with additional mask and VL operands.
   VCPOP_VL,
+
+  //  vfirst.m with additional mask and VL operands.
+  VFIRST_VL,
 
   // Reads value of CSR.
   // The first operand is a chain pointer. The second specifies address of the
@@ -379,6 +383,8 @@ public:
                                unsigned Index) const override;
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
+
+  bool preferScalarizeSplat(unsigned Opc) const override;
 
   bool softPromoteHalfType() const override { return true; }
 
@@ -699,6 +705,7 @@ private:
   SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
@@ -732,6 +739,10 @@ private:
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override {
     return false;
   };
+
+  /// For available scheduling models FDIV + two independent FMULs are much
+  /// faster than two FDIVs.
+  unsigned combineRepeatedFPDivisors() const override;
 };
 namespace RISCVVIntrinsicsTable {
 

@@ -15,7 +15,7 @@
 namespace mlir {
 
 class AffineExpr;
-class BlockAndValueMapping;
+class IRMapping;
 class UnknownLoc;
 class FileLineColLoc;
 class Type;
@@ -390,7 +390,7 @@ public:
   }
 
   /// Return the block the current insertion point belongs to.  Note that the
-  /// the insertion point is not necessarily the end of the block.
+  /// insertion point is not necessarily the end of the block.
   Block *getInsertionBlock() const { return block; }
 
   /// Returns the current insertion point of the builder.
@@ -517,13 +517,13 @@ public:
   /// ( leaving them alone if no entry is present).  Replaces references to
   /// cloned sub-operations to the corresponding operation that is copied,
   /// and adds those mappings to the map.
-  Operation *clone(Operation &op, BlockAndValueMapping &mapper);
+  Operation *clone(Operation &op, IRMapping &mapper);
   Operation *clone(Operation &op);
 
   /// Creates a deep copy of this operation but keep the operation regions
   /// empty. Operands are remapped using `mapper` (if present), and `mapper` is
   /// updated to contain the results.
-  Operation *cloneWithoutRegions(Operation &op, BlockAndValueMapping &mapper) {
+  Operation *cloneWithoutRegions(Operation &op, IRMapping &mapper) {
     return insert(op.cloneWithoutRegions(mapper));
   }
   Operation *cloneWithoutRegions(Operation &op) {

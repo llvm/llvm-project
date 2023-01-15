@@ -1,7 +1,7 @@
 ; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 
 ; CHECK: @llvm.global_ctors = appending global [1 x {{.*}}@_GLOBAL__I_c
-@llvm.global_ctors = appending global [3 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_b, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_c, i8* null }]
+@llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_a, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_b, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_c, ptr null }]
 
 ; CHECK: @tmp = local_unnamed_addr global i32 42
 ; CHECK: @tmp2 = local_unnamed_addr global i32 42
@@ -9,7 +9,7 @@
 @tmp = global i32 0
 @tmp2 = global i32 0
 @tmp3 = global i32 0
-@ptrToTmp3 = global i32* null
+@ptrToTmp3 = global ptr null
 
 define i32 @TheAnswerToLifeTheUniverseAndEverything() {
   ret i32 42
@@ -27,48 +27,43 @@ enter:
   %valptr = alloca i32
 
   %val = call i32 @TheAnswerToLifeTheUniverseAndEverything()
-  store i32 %val, i32* @tmp
-  store i32 %val, i32* %valptr
+  store i32 %val, ptr @tmp
+  store i32 %val, ptr %valptr
 
-  %0 = bitcast i32* %valptr to i8*
-  %barr = call i8* @llvm.launder.invariant.group(i8* %0)
-  %1 = getelementptr i8, i8* %barr, i32 0
-  %2 = bitcast i8* %1 to i32*
+  %barr = call ptr @llvm.launder.invariant.group(ptr %valptr)
 
-  %val2 = load i32, i32* %2
-  store i32 %val2, i32* @tmp2
+  %val2 = load i32, ptr %barr
+  store i32 %val2, ptr @tmp2
   ret void
 }
 
 ; We can't step through launder.invariant.group here, because that would change
 ; this load in @usage_of_globals()
-; %val = load i32, i32* %ptrVal, !invariant.group !0
+; %val = load i32, ptr %ptrVal, !invariant.group !0
 ; into
-; %val = load i32, i32* @tmp3, !invariant.group !0
+; %val = load i32, ptr @tmp3, !invariant.group !0
 ; and then we could assume that %val and %val2 to be the same, which coud be
 ; false, because @changeTmp3ValAndCallBarrierInside() may change the value
 ; of @tmp3.
 define void @_not_optimizable() {
 enter:
-  store i32 13, i32* @tmp3, !invariant.group !0
+  store i32 13, ptr @tmp3, !invariant.group !0
 
-  %0 = bitcast i32* @tmp3 to i8*
-  %barr = call i8* @llvm.launder.invariant.group(i8* %0)
-  %1 = bitcast i8* %barr to i32*
+  %barr = call ptr @llvm.launder.invariant.group(ptr @tmp3)
 
-  store i32* %1, i32** @ptrToTmp3
-  store i32 42, i32* %1, !invariant.group !0
+  store ptr %barr, ptr @ptrToTmp3
+  store i32 42, ptr %barr, !invariant.group !0
 
   ret void
 }
 
 define void @usage_of_globals() {
 entry:
-  %ptrVal = load i32*, i32** @ptrToTmp3
-  %val = load i32, i32* %ptrVal, !invariant.group !0
+  %ptrVal = load ptr, ptr @ptrToTmp3
+  %val = load i32, ptr %ptrVal, !invariant.group !0
 
   call void @changeTmp3ValAndCallBarrierInside()
-  %val2 = load i32, i32* @tmp3, !invariant.group !0
+  %val2 = load i32, ptr @tmp3, !invariant.group !0
   ret void;
 }
 
@@ -77,36 +72,32 @@ entry:
 define void @_GLOBAL__I_b() {
 enter:
   %val = call i32 @TheAnswerToLifeTheUniverseAndEverything()
-  %p1 = bitcast i32* @tmp4 to i8*
-  %p2 = call i8* @llvm.strip.invariant.group.p0i8(i8* %p1)
-  %p3 = bitcast i8* %p2 to i32*
-  store i32 %val, i32* %p3
+  %p2 = call ptr @llvm.strip.invariant.group.p0(ptr @tmp4)
+  store i32 %val, ptr %p2
   ret void
 }
 
 @tmp5 = global i32 0
-@tmp6 = global i32* null
-; CHECK: @tmp6 = local_unnamed_addr global i32* null
+@tmp6 = global ptr null
+; CHECK: @tmp6 = local_unnamed_addr global ptr null
 
-define i32* @_dont_return_param(i32* %p) {
-  %p1 = bitcast i32* %p to i8*
-  %p2 = call i8* @llvm.launder.invariant.group(i8* %p1)
-  %p3 = bitcast i8* %p2 to i32*
-  ret i32* %p3
+define ptr @_dont_return_param(ptr %p) {
+  %p2 = call ptr @llvm.launder.invariant.group(ptr %p)
+  ret ptr %p2
 }
 
 ; We should bail out if we return any pointers derived via invariant.group intrinsics at any point.
 define void @_GLOBAL__I_c() {
 enter:
-  %tmp5 = call i32* @_dont_return_param(i32* @tmp5)
-  store i32* %tmp5, i32** @tmp6
+  %tmp5 = call ptr @_dont_return_param(ptr @tmp5)
+  store ptr %tmp5, ptr @tmp6
   ret void
 }
 
 
 declare void @changeTmp3ValAndCallBarrierInside()
 
-declare i8* @llvm.launder.invariant.group(i8*)
-declare i8* @llvm.strip.invariant.group.p0i8(i8*)
+declare ptr @llvm.launder.invariant.group(ptr)
+declare ptr @llvm.strip.invariant.group.p0(ptr)
 
 !0 = !{}

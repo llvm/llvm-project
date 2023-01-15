@@ -583,9 +583,10 @@ template <TypeCategory TOCAT, typename VALUE> struct ConvertToKindHelper {
 template <TypeCategory TOCAT, typename VALUE>
 common::IfNoLvalue<Expr<SomeKind<TOCAT>>, VALUE> ConvertToKind(
     int kind, VALUE &&x) {
-  return common::SearchTypes(
-      ConvertToKindHelper<TOCAT, VALUE>{kind, std::move(x)})
-      .value();
+  auto result{common::SearchTypes(
+      ConvertToKindHelper<TOCAT, VALUE>{kind, std::move(x)})};
+  CHECK(result.has_value());
+  return *result;
 }
 
 // Given a type category CAT, SameKindExprs<CAT, N> is a variant that

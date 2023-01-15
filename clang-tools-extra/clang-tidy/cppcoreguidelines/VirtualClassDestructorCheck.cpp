@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 #include <string>
 
 using namespace clang::ast_matchers;
@@ -47,7 +48,7 @@ void VirtualClassDestructorCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static Optional<CharSourceRange>
+static std::optional<CharSourceRange>
 getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
                        const SourceManager &SM, const LangOptions &LangOpts) {
   if (Destructor.getLocation().isMacroID())
@@ -61,7 +62,8 @@ getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
 
   /// Range ends with \c StartOfNextToken so that any whitespace after \c
   /// virtual is included.
-  Optional<Token> NextToken = Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
+  std::optional<Token> NextToken =
+      Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
   if (!NextToken)
     return std::nullopt;
   SourceLocation StartOfNextToken = NextToken->getLocation();

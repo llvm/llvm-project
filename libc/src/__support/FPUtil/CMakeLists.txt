@@ -5,6 +5,7 @@ add_header_library(
   DEPENDS
     libc.include.fenv
     libc.src.__support.common
+    libc.src.__support.compiler_features
 )
 
 add_header_library(
@@ -175,6 +176,28 @@ add_header_library(
     libc.src.__support.common
   FLAGS
     ROUND_OPT
+)
+
+add_header_library(
+  double_double
+  HDRS
+    double_double.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.number_pair
+    .multiply_add
+)
+
+add_header_library(
+  dyadic_float
+  HDRS
+    dyadic_float.h
+  DEPENDS
+    .float_properties
+    .fp_bits
+    .multiply_add
+    libc.src.__support.common
+    libc.src.__support.uint
 )
 
 add_subdirectory(generic)

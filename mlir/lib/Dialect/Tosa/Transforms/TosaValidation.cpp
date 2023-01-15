@@ -46,7 +46,7 @@ public:
 private:
   void runOnOperation() override;
 
-  llvm::Optional<TosaProfileEnum> profileType;
+  std::optional<TosaProfileEnum> profileType;
 };
 
 void TosaValidation::runOnOperation() {

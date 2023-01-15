@@ -868,7 +868,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_objc_classtable_dump_options);
+      return llvm::ArrayRef(g_objc_classtable_dump_options);
     }
 
     OptionValueBoolean m_verbose;
@@ -1627,9 +1627,9 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
 
   LLDB_LOG(log, "Creating utility function {0}", name);
 
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
-  if (!ast)
+  if (!scratch_ts_sp)
     return {};
 
   auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
@@ -1643,9 +1643,9 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
 
   // Make some types for our arguments.
   CompilerType clang_uint32_t_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
   // Make the runner function for our implementation utility function.
   ValueList arguments;
@@ -1768,9 +1768,9 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   LLDB_LOG(log, "Creating utility function {0}",
            g_get_shared_cache_class_info_name);
 
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
-  if (!ast)
+  if (!scratch_ts_sp)
     return {};
 
   // If the inferior objc.dylib has the class_getNameRaw function, use that in
@@ -1808,11 +1808,11 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
 
   // Make some types for our arguments.
   CompilerType clang_uint32_t_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
   CompilerType clang_uint64_t_pointer_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 64)
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 64)
           .GetPointerType();
 
   // Next make the function caller for our implementation utility function.
@@ -1875,11 +1875,14 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
   if (!thread_sp)
     return DescriptorMapUpdateResult::Fail();
 
+  if (!thread_sp->SafeToCallFunctions())
+    return DescriptorMapUpdateResult::Retry();
+
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
 
-  if (!ast)
+  if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
 
   Address function_address;
@@ -1999,7 +2002,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     options.SetIsForUtilityExpr(true);
 
     CompilerType clang_uint32_t_type =
-        ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
 
     Value return_value;
     return_value.SetValueType(Value::ValueType::Scalar);
@@ -2042,7 +2045,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     }
   }
 
-  return DescriptorMapUpdateResult(success, num_class_infos);
+  return DescriptorMapUpdateResult(success, false, num_class_infos);
 }
 
 uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
@@ -2137,11 +2140,14 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   if (!thread_sp)
     return DescriptorMapUpdateResult::Fail();
 
+  if (!thread_sp->SafeToCallFunctions())
+    return DescriptorMapUpdateResult::Retry();
+
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClang *ast =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process->GetTarget());
 
-  if (!ast)
+  if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
 
   Address function_address;
@@ -2231,7 +2237,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     options.SetIsForUtilityExpr(true);
 
     CompilerType clang_uint32_t_type =
-        ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
 
     Value return_value;
     return_value.SetValueType(Value::ValueType::Scalar);
@@ -2314,7 +2320,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   // Deallocate the memory we allocated for the ClassInfo array
   process->DeallocateMemory(class_infos_addr);
 
-  return DescriptorMapUpdateResult(success, num_class_infos);
+  return DescriptorMapUpdateResult(success, false, num_class_infos);
 }
 
 lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheReadOnlyAddress() {
@@ -2414,18 +2420,23 @@ void AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded() {
 
       LLDB_LOGF(log,
                 "attempted to read objc class data - results: "
-                "[dynamic_update]: ran: %s, count: %" PRIu32
-                " [shared_cache_update]: ran: %s, count: %" PRIu32,
+                "[dynamic_update]: ran: %s, retry: %s, count: %" PRIu32
+                " [shared_cache_update]: ran: %s, retry: %s, count: %" PRIu32,
                 dynamic_update_result.m_update_ran ? "yes" : "no",
+                dynamic_update_result.m_retry_update ? "yes" : "no",
                 dynamic_update_result.m_num_found,
                 shared_cache_update_result.m_update_ran ? "yes" : "no",
+                shared_cache_update_result.m_retry_update ? "yes" : "no",
                 shared_cache_update_result.m_num_found);
 
       // warn if:
       // - we could not run either expression
       // - we found fewer than num_classes_to_warn_at classes total
-      if ((!shared_cache_update_result.m_update_ran) ||
-          (!dynamic_update_result.m_update_ran))
+      if (dynamic_update_result.m_retry_update ||
+          shared_cache_update_result.m_retry_update)
+        WarnIfNoClassesCached(SharedCacheWarningReason::eExpressionUnableToRun);
+      else if ((!shared_cache_update_result.m_update_ran) ||
+               (!dynamic_update_result.m_update_ran))
         WarnIfNoClassesCached(
             SharedCacheWarningReason::eExpressionExecutionFailure);
       else if (dynamic_update_result.m_num_found +
@@ -2503,6 +2514,12 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
         "Objective-C class data in the process. This may "
         "reduce the quality of type information available.\n",
         debugger.GetID(), &m_no_classes_cached_warning);
+    break;
+  case SharedCacheWarningReason::eExpressionUnableToRun:
+    Debugger::ReportWarning(
+        "could not execute support code to read Objective-C class data because "
+        "it's not yet safe to do so, and will be retried later.\n",
+        debugger.GetID(), nullptr);
     break;
   }
 }
@@ -3234,12 +3251,12 @@ public:
     if (!abi)
       return;
 
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
-    if (!clang_ast_context)
+    if (!scratch_ts_sp)
       return;
     CompilerType voidstar =
-        clang_ast_context->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
 
     ValueList args;
     Value input_value;

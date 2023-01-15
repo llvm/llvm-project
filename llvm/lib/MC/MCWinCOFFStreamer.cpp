@@ -260,7 +260,7 @@ void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
 }
 
 void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
-                                         unsigned ByteAlignment) {
+                                         Align ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
   const Triple &T = getContext().getTargetTriple();
@@ -269,7 +269,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
       report_fatal_error("alignment is limited to 32-bytes");
 
     // Round size up to alignment so that we will honor the alignment request.
-    Size = std::max(Size, static_cast<uint64_t>(ByteAlignment));
+    Size = std::max(Size, ByteAlignment.value());
   }
 
   getAssembler().registerSymbol(*Symbol);
@@ -282,7 +282,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
     const MCObjectFileInfo *MFI = getContext().getObjectFileInfo();
 
     OS << " -aligncomm:\"" << Symbol->getName() << "\","
-       << Log2_32_Ceil(ByteAlignment);
+       << Log2_32_Ceil(ByteAlignment.value());
 
     pushSection();
     switchSection(MFI->getDrectveSection());

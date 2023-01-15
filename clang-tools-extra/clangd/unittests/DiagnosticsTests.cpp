@@ -527,6 +527,37 @@ TEST(DiagnosticTest, ClangTidySuppressionComment) {
           diagName("bugprone-integer-division")))));
 }
 
+TEST(DiagnosticTest, ClangTidySystemMacro) {
+  Annotations Main(R"cpp(
+    #include "user.h"
+    #include "system.h"
+    int i = 3;
+    double x = $inline[[8]] / i;
+    double y = $user[[DIVIDE_USER]](i);
+    double z = DIVIDE_SYS(i);
+  )cpp");
+
+  auto TU = TestTU::withCode(Main.code());
+  TU.AdditionalFiles["user.h"] = R"cpp(
+    #define DIVIDE_USER(Y) 8/Y
+  )cpp";
+  TU.AdditionalFiles["system.h"] = R"cpp(
+    #pragma clang system_header
+    #define DIVIDE_SYS(Y) 8/Y
+  )cpp";
+
+  TU.ClangTidyProvider = addTidyChecks("bugprone-integer-division");
+  std::string BadDivision = "result of integer division used in a floating "
+                            "point context; possible loss of precision";
+
+  // Expect to see warning from user macros, but not system macros.
+  // This matches clang-tidy --system-headers=0 (the default).
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              ifTidyChecks(
+                  UnorderedElementsAre(Diag(Main.range("inline"), BadDivision),
+                                       Diag(Main.range("user"), BadDivision))));
+}
+
 TEST(DiagnosticTest, ClangTidyWarningAsError) {
   Annotations Main(R"cpp(
     int main() {
@@ -824,6 +855,19 @@ TEST(DiagnosticsTest, IgnoreVerify) {
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
 }
 
+TEST(DiagnosticTest, IgnoreBEFilelistOptions) {
+  auto TU = TestTU::withCode("");
+  TU.ExtraArgs.push_back("-Xclang");
+  for (const auto *DisableOption :
+       {"-fsanitize-ignorelist=null", "-fprofile-list=null",
+        "-fxray-always-instrument=null", "-fxray-never-instrument=null",
+        "-fxray-attr-list=null"}) {
+    TU.ExtraArgs.push_back(DisableOption);
+    EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+    TU.ExtraArgs.pop_back();
+  }
+}
+
 // Recursive main-file include is diagnosed, and doesn't crash.
 TEST(DiagnosticsTest, RecursivePreamble) {
   auto TU = TestTU::withCode(R"cpp(
@@ -874,7 +918,7 @@ void foo(int *x);
   auto AST = TU.build();
   EXPECT_THAT(*AST.getDiagnostics(), IsEmpty());
   const auto *X = cast<FunctionDecl>(findDecl(AST, "foo")).getParamDecl(0);
-  ASSERT_TRUE(X->getOriginalType()->getNullability(X->getASTContext()) ==
+  ASSERT_TRUE(X->getOriginalType()->getNullability() ==
               NullabilityKind::NonNull);
 }
 
@@ -892,10 +936,10 @@ void bar(int *Y);
   EXPECT_THAT(*AST.getDiagnostics(),
               ElementsAre(diagName("pp_eof_in_assume_nonnull")));
   const auto *X = cast<FunctionDecl>(findDecl(AST, "foo")).getParamDecl(0);
-  ASSERT_TRUE(X->getOriginalType()->getNullability(X->getASTContext()) ==
+  ASSERT_TRUE(X->getOriginalType()->getNullability() ==
               NullabilityKind::NonNull);
   const auto *Y = cast<FunctionDecl>(findDecl(AST, "bar")).getParamDecl(0);
-  ASSERT_FALSE(Y->getOriginalType()->getNullability(X->getASTContext()));
+  ASSERT_FALSE(Y->getOriginalType()->getNullability());
 }
 
 TEST(DiagnosticsTest, InsideMacros) {
@@ -1807,6 +1851,17 @@ TEST(Diagnostics, Tags) {
                         withTag(DiagnosticTag::Unnecessary)),
                   AllOf(Diag(Test.range("deprecated"), "'bar' is deprecated"),
                         withTag(DiagnosticTag::Deprecated))));
+
+  Test = Annotations(R"cpp(
+    $typedef[[typedef int INT]];
+  )cpp");
+  TU.Code = Test.code();
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                withTag(DiagnosticTag::Deprecated)))));
 }
 
 TEST(DiagnosticsTest, IncludeCleaner) {

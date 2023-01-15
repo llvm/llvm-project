@@ -67,8 +67,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
 #include "clang/Basic/AttrList.inc"
   };
   if (Value.isString())
-    return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
-                          "attr::");
+    return ::getBestGuess(Value.getString(), llvm::ArrayRef(Allowed), "attr::");
   return std::nullopt;
 }
 
@@ -80,8 +79,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
 #include "clang/AST/OperationKinds.def"
   };
   if (Value.isString())
-    return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
-                          "CK_");
+    return ::getBestGuess(Value.getString(), llvm::ArrayRef(Allowed), "CK_");
   return std::nullopt;
 }
 
@@ -94,8 +92,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
 #include "llvm/Frontend/OpenMP/OMP.inc"
   };
   if (Value.isString())
-    return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
-                          "OMPC_");
+    return ::getBestGuess(Value.getString(), llvm::ArrayRef(Allowed), "OMPC_");
   return std::nullopt;
 }
 
@@ -108,8 +105,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
 #include "clang/Basic/TokenKinds.def"
   };
   if (Value.isString())
-    return ::getBestGuess(Value.getString(), llvm::makeArrayRef(Allowed),
-                          "UETT_");
+    return ::getBestGuess(Value.getString(), llvm::ArrayRef(Allowed), "UETT_");
   return std::nullopt;
 }
 

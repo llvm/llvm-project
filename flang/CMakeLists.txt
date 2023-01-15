@@ -31,6 +31,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message("Building Flang as a standalone project.")
   project(Flang)
   set(FLANG_STANDALONE_BUILD ON)
+  if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
+    message(WARNING
+      "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
+      "minimum version of CMake required to build LLVM will become 3.20.0, and "
+      "using an older CMake will become an error. Please upgrade your CMake to "
+      "at least 3.20.0 now to avoid issues in the future!")
+  endif()
 else()
   set(FLANG_STANDALONE_BUILD OFF)
 endif()
@@ -46,6 +53,10 @@ if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
   if (IS_DIRECTORY "${LIBDIR}")
     link_libraries(${CLANG_RT_BUILTINS_LIBRARY})
   endif()
+endif()
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+  message(FATAL_ERROR "flang isn't supported on 32 bit CPUs")
 endif()
 
 if (FLANG_STANDALONE_BUILD)

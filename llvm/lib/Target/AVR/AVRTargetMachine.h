@@ -44,6 +44,10 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+
 private:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   AVRSubtarget SubTarget;

@@ -42,16 +42,6 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  vector_test
-  SUITE
-    libc_cpp_utils_unittests
-  SRCS
-    vector_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.vector
-)
-
-add_libc_unittest(
   int_seq_test
   SUITE
     libc_cpp_utils_unittests

@@ -217,9 +217,9 @@ uint32_t __kmpc_get_warp_size();
 int8_t __kmpc_is_spmd_exec_mode();
 
 int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine, bool);
+                           bool UseGenericStateMachine);
 
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool);
+void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode);
 
 ///}
 
@@ -302,9 +302,9 @@ uint16_t __kmpc_parallel_level(IdentTy *Loc, uint32_t);
 /// Tasking
 ///
 ///{
-TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, uint32_t, int32_t,
-                                        uint32_t TaskSizeInclPrivateValues,
-                                        uint32_t SharedValuesSize,
+TaskDescriptorTy *__kmpc_omp_task_alloc(IdentTy *, int32_t, int32_t,
+                                        size_t TaskSizeInclPrivateValues,
+                                        size_t SharedValuesSize,
                                         TaskFnTy TaskFn);
 
 int32_t __kmpc_omp_task(IdentTy *Loc, uint32_t TId,

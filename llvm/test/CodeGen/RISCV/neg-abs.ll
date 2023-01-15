@@ -83,8 +83,8 @@ define i64 @neg_abs64(i64 %x) {
 ; RV32I-NEXT:    xor a0, a0, a2
 ; RV32I-NEXT:    sltu a3, a2, a0
 ; RV32I-NEXT:    xor a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a3
 ; RV32I-NEXT:    sub a1, a2, a1
-; RV32I-NEXT:    sub a1, a1, a3
 ; RV32I-NEXT:    sub a0, a2, a0
 ; RV32I-NEXT:    ret
 ;
@@ -94,8 +94,8 @@ define i64 @neg_abs64(i64 %x) {
 ; RV32ZBB-NEXT:    xor a0, a0, a2
 ; RV32ZBB-NEXT:    sltu a3, a2, a0
 ; RV32ZBB-NEXT:    xor a1, a1, a2
+; RV32ZBB-NEXT:    add a1, a1, a3
 ; RV32ZBB-NEXT:    sub a1, a2, a1
-; RV32ZBB-NEXT:    sub a1, a1, a3
 ; RV32ZBB-NEXT:    sub a0, a2, a0
 ; RV32ZBB-NEXT:    ret
 ;
@@ -123,8 +123,8 @@ define i64 @select_neg_abs64(i64 %x) {
 ; RV32I-NEXT:    xor a0, a0, a2
 ; RV32I-NEXT:    sltu a3, a2, a0
 ; RV32I-NEXT:    xor a1, a1, a2
+; RV32I-NEXT:    add a1, a1, a3
 ; RV32I-NEXT:    sub a1, a2, a1
-; RV32I-NEXT:    sub a1, a1, a3
 ; RV32I-NEXT:    sub a0, a2, a0
 ; RV32I-NEXT:    ret
 ;
@@ -134,8 +134,8 @@ define i64 @select_neg_abs64(i64 %x) {
 ; RV32ZBB-NEXT:    xor a0, a0, a2
 ; RV32ZBB-NEXT:    sltu a3, a2, a0
 ; RV32ZBB-NEXT:    xor a1, a1, a2
+; RV32ZBB-NEXT:    add a1, a1, a3
 ; RV32ZBB-NEXT:    sub a1, a2, a1
-; RV32ZBB-NEXT:    sub a1, a1, a3
 ; RV32ZBB-NEXT:    sub a0, a2, a0
 ; RV32ZBB-NEXT:    ret
 ;
@@ -157,7 +157,7 @@ define i64 @select_neg_abs64(i64 %x) {
   ret i64 %3
 }
 
-define i32 @neg_abs32_multiuse(i32 %x, i32* %y) {
+define i32 @neg_abs32_multiuse(i32 %x, ptr %y) {
 ; RV32I-LABEL: neg_abs32_multiuse:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    srai a2, a0, 31
@@ -193,25 +193,25 @@ define i32 @neg_abs32_multiuse(i32 %x, i32* %y) {
 ; RV64ZBB-NEXT:    sw a2, 0(a1)
 ; RV64ZBB-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
-  store i32 %abs, i32* %y
+  store i32 %abs, ptr %y
   %neg = sub nsw i32 0, %abs
   ret i32 %neg
 }
 
-define i64 @neg_abs64_multiuse(i64 %x, i64* %y) {
+define i64 @neg_abs64_multiuse(i64 %x, ptr %y) {
 ; RV32I-LABEL: neg_abs64_multiuse:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    bgez a1, .LBB5_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    snez a3, a0
-; RV32I-NEXT:    add a1, a1, a3
-; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    neg a3, a3
+; RV32I-NEXT:    sub a1, a3, a1
 ; RV32I-NEXT:    neg a0, a0
 ; RV32I-NEXT:  .LBB5_2:
 ; RV32I-NEXT:    sw a0, 0(a2)
 ; RV32I-NEXT:    snez a3, a0
-; RV32I-NEXT:    add a3, a1, a3
 ; RV32I-NEXT:    neg a3, a3
+; RV32I-NEXT:    sub a3, a3, a1
 ; RV32I-NEXT:    neg a0, a0
 ; RV32I-NEXT:    sw a1, 4(a2)
 ; RV32I-NEXT:    mv a1, a3
@@ -222,14 +222,14 @@ define i64 @neg_abs64_multiuse(i64 %x, i64* %y) {
 ; RV32ZBB-NEXT:    bgez a1, .LBB5_2
 ; RV32ZBB-NEXT:  # %bb.1:
 ; RV32ZBB-NEXT:    snez a3, a0
-; RV32ZBB-NEXT:    add a1, a1, a3
-; RV32ZBB-NEXT:    neg a1, a1
+; RV32ZBB-NEXT:    neg a3, a3
+; RV32ZBB-NEXT:    sub a1, a3, a1
 ; RV32ZBB-NEXT:    neg a0, a0
 ; RV32ZBB-NEXT:  .LBB5_2:
 ; RV32ZBB-NEXT:    sw a0, 0(a2)
 ; RV32ZBB-NEXT:    snez a3, a0
-; RV32ZBB-NEXT:    add a3, a1, a3
 ; RV32ZBB-NEXT:    neg a3, a3
+; RV32ZBB-NEXT:    sub a3, a3, a1
 ; RV32ZBB-NEXT:    neg a0, a0
 ; RV32ZBB-NEXT:    sw a1, 4(a2)
 ; RV32ZBB-NEXT:    mv a1, a3
@@ -252,7 +252,7 @@ define i64 @neg_abs64_multiuse(i64 %x, i64* %y) {
 ; RV64ZBB-NEXT:    sd a2, 0(a1)
 ; RV64ZBB-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
-  store i64 %abs, i64* %y
+  store i64 %abs, ptr %y
   %neg = sub nsw i64 0, %abs
   ret i64 %neg
 }

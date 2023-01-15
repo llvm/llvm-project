@@ -14,8 +14,6 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -677,7 +675,8 @@ static SmallBitVector gatherFileIDs(StringRef SourceFile,
 }
 
 /// Return the ID of the file where the definition of the function is located.
-static Optional<unsigned> findMainViewFileID(const FunctionRecord &Function) {
+static std::optional<unsigned>
+findMainViewFileID(const FunctionRecord &Function) {
   SmallBitVector IsNotExpandedFile(Function.Filenames.size(), true);
   for (const auto &CR : Function.CountedRegions)
     if (CR.Kind == CounterMappingRegion::ExpansionRegion)
@@ -691,9 +690,9 @@ static Optional<unsigned> findMainViewFileID(const FunctionRecord &Function) {
 /// Check if SourceFile is the file that contains the definition of
 /// the Function. Return the ID of the file in that case or std::nullopt
 /// otherwise.
-static Optional<unsigned> findMainViewFileID(StringRef SourceFile,
-                                             const FunctionRecord &Function) {
-  Optional<unsigned> I = findMainViewFileID(Function);
+static std::optional<unsigned>
+findMainViewFileID(StringRef SourceFile, const FunctionRecord &Function) {
+  std::optional<unsigned> I = findMainViewFileID(Function);
   if (I && SourceFile == Function.Filenames[*I])
     return I;
   return std::nullopt;

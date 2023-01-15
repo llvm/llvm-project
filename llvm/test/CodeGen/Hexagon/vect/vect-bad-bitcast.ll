@@ -15,7 +15,7 @@ entry:
 
 for.body8:                                        ; preds = %for.body8, %polly.loop_exit.loopexit
   %i.120 = phi i32 [ 0, %polly.loop_exit.loopexit ], [ %inc11.24, %for.body8 ]
-  %call = call i32 bitcast (i32 (...)* @fxpBitAllocation to i32 (i32, i32, i32, i32, i16*, i32, i32, i32)*)(i32 0, i32 0, i32 256, i32 %conv9, i16* %WaterLeveldB_out, i32 0, i32 1920, i32 %i.120) #2
+  %call = call i32 @fxpBitAllocation(i32 0, i32 0, i32 256, i32 %conv9, ptr %WaterLeveldB_out, i32 0, i32 1920, i32 %i.120) #2
   %inc11.24 = add i32 %i.120, 25
   %exitcond.24 = icmp eq i32 %inc11.24, 500
   br i1 %exitcond.24, label %for.end12, label %for.body8
@@ -38,15 +38,14 @@ polly.loop_exit.loopexit:                         ; preds = %polly.stmt.for.body
 
 polly.stmt.for.body:                              ; preds = %entry, %polly.stmt.for.body
   %WaterLeveldB.1p_vsel35 = phi <4 x i16> [ <i16 -32768, i16 -32768, i16 -32768, i16 -32768>, %entry ], [ %WaterLeveldB.1p_vsel, %polly.stmt.for.body ]
-  %scevgep.phi = phi i16* [ getelementptr inbounds ([256 x i16], [256 x i16]* @input_buf, i32 0, i32 0), %entry ], [ %scevgep.inc, %polly.stmt.for.body ]
+  %scevgep.phi = phi ptr [ @input_buf, %entry ], [ %scevgep.inc, %polly.stmt.for.body ]
   %polly.indvar = phi i32 [ 0, %entry ], [ %polly.indvar_next, %polly.stmt.for.body ]
-  %vector_ptr = bitcast i16* %scevgep.phi to <4 x i16>*
-  %_p_vec_full = load <4 x i16>, <4 x i16>* %vector_ptr, align 8
+  %_p_vec_full = load <4 x i16>, ptr %scevgep.phi, align 8
   %cmp2p_vicmp = icmp sgt <4 x i16> %_p_vec_full, %WaterLeveldB.1p_vsel35
   %WaterLeveldB.1p_vsel = select <4 x i1> %cmp2p_vicmp, <4 x i16> %_p_vec_full, <4 x i16> %WaterLeveldB.1p_vsel35
   %polly.indvar_next = add nsw i32 %polly.indvar, 4
   %polly.loop_cond = icmp slt i32 %polly.indvar, 252
-  %scevgep.inc = getelementptr i16, i16* %scevgep.phi, i32 4
+  %scevgep.inc = getelementptr i16, ptr %scevgep.phi, i32 4
   br i1 %polly.loop_cond, label %polly.stmt.for.body, label %polly.loop_exit.loopexit
 }
 

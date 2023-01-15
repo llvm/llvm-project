@@ -13,10 +13,8 @@
 
 define internal void @f0() {
 ; CHECK-LABEL: entry:
-; CHECK:   %gep = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* @not-reachable-lds, i32 0, i32 0
 ; CHECK:   ret void
 entry:
-  %gep = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* @not-reachable-lds, i32 0, i32 0
   ret void
 }
 

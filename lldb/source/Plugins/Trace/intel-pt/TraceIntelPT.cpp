@@ -19,7 +19,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "llvm/ADT/None.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -158,7 +158,7 @@ TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
     for (const ThreadPostMortemTraceSP &thread : traced_threads) {
       trace_sp->m_storage.thread_decoders.try_emplace(
           thread->GetID(), std::make_unique<ThreadDecoder>(thread, *trace_sp));
-      if (const Optional<FileSpec> &trace_file = thread->GetTraceFile()) {
+      if (const std::optional<FileSpec> &trace_file = thread->GetTraceFile()) {
         trace_sp->SetPostMortemThreadDataFile(
             thread->GetID(), IntelPTDataKinds::kIptTrace, *trace_file);
       }
@@ -190,7 +190,7 @@ Expected<DecodedThreadSP> TraceIntelPT::Decode(Thread &thread) {
   return it->second->Decode();
 }
 
-Expected<Optional<uint64_t>> TraceIntelPT::FindBeginningOfTimeNanos() {
+Expected<std::optional<uint64_t>> TraceIntelPT::FindBeginningOfTimeNanos() {
   Storage &storage = GetUpdatedStorage();
   if (storage.beginning_of_time_nanos_calculated)
     return storage.beginning_of_time_nanos;
@@ -199,10 +199,10 @@ Expected<Optional<uint64_t>> TraceIntelPT::FindBeginningOfTimeNanos() {
   if (!storage.tsc_conversion)
     return std::nullopt;
 
-  Optional<uint64_t> lowest_tsc;
+  std::optional<uint64_t> lowest_tsc;
 
   if (storage.multicpu_decoder) {
-    if (Expected<Optional<uint64_t>> tsc =
+    if (Expected<std::optional<uint64_t>> tsc =
             storage.multicpu_decoder->FindLowestTSC()) {
       lowest_tsc = *tsc;
     } else {
@@ -211,7 +211,7 @@ Expected<Optional<uint64_t>> TraceIntelPT::FindBeginningOfTimeNanos() {
   }
 
   for (auto &decoder : storage.thread_decoders) {
-    Expected<Optional<uint64_t>> tsc = decoder.second->FindLowestTSC();
+    Expected<std::optional<uint64_t>> tsc = decoder.second->FindLowestTSC();
     if (!tsc)
       return tsc.takeError();
 
@@ -229,7 +229,7 @@ Expected<Optional<uint64_t>> TraceIntelPT::FindBeginningOfTimeNanos() {
 llvm::Expected<lldb::TraceCursorSP>
 TraceIntelPT::CreateNewCursor(Thread &thread) {
   if (Expected<DecodedThreadSP> decoded_thread = Decode(thread)) {
-    if (Expected<Optional<uint64_t>> beginning_of_time =
+    if (Expected<std::optional<uint64_t>> beginning_of_time =
             FindBeginningOfTimeNanos())
       return std::make_shared<TraceCursorIntelPT>(
           thread.shared_from_this(), *decoded_thread, m_storage.tsc_conversion,
@@ -265,12 +265,12 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose,
 
   DecodedThreadSP &decoded_thread_sp = *decoded_thread_sp_or_err;
 
-  Expected<Optional<uint64_t>> raw_size_or_error = GetRawTraceSize(thread);
+  Expected<std::optional<uint64_t>> raw_size_or_error = GetRawTraceSize(thread);
   if (!raw_size_or_error) {
     s.Format("  {0}\n", toString(raw_size_or_error.takeError()));
     return;
   }
-  Optional<uint64_t> raw_size = *raw_size_or_error;
+  std::optional<uint64_t> raw_size = *raw_size_or_error;
 
   s.Format("\n  Trace technology: {0}\n", GetPluginName());
 
@@ -362,7 +362,7 @@ void TraceIntelPT::DumpTraceInfoAsJson(Thread &thread, Stream &s,
     return;
   }
 
-  Expected<Optional<uint64_t>> raw_size_or_error = GetRawTraceSize(thread);
+  Expected<std::optional<uint64_t>> raw_size_or_error = GetRawTraceSize(thread);
   if (!raw_size_or_error) {
     s << "error: " << toString(raw_size_or_error.takeError()) << "\n";
     return;
@@ -387,7 +387,7 @@ void TraceIntelPT::DumpTraceInfoAsJson(Thread &thread, Stream &s,
       uint64_t mem_used = decoded_thread_sp->CalculateApproximateMemoryUsage();
       json_str.attributeObject("memoryUsage", [&] {
         json_str.attribute("totalInBytes", std::to_string(mem_used));
-        Optional<double> avg;
+        std::optional<double> avg;
         if (insn_len != 0)
           avg = double(mem_used) / insn_len;
         json_str.attribute("avgPerItemInBytes", avg);
@@ -462,7 +462,7 @@ void TraceIntelPT::DumpTraceInfoAsJson(Thread &thread, Stream &s,
   });
 }
 
-llvm::Expected<Optional<uint64_t>>
+llvm::Expected<std::optional<uint64_t>>
 TraceIntelPT::GetRawTraceSize(Thread &thread) {
   if (GetUpdatedStorage().multicpu_decoder)
     return std::nullopt; // TODO: calculate the amount of intel pt raw trace associated
@@ -544,7 +544,7 @@ Expected<pt_cpu> TraceIntelPT::GetCPUInfo() {
   return *m_cpu_info;
 }
 
-llvm::Optional<LinuxPerfZeroTscConversion>
+std::optional<LinuxPerfZeroTscConversion>
 TraceIntelPT::GetPerfZeroTscConversion() {
   return GetUpdatedStorage().tsc_conversion;
 }
@@ -607,7 +607,7 @@ bool TraceIntelPT::IsTraced(lldb::tid_t tid) {
 // documentation file. Similarly, it should match the CLI help messages of the
 // TraceIntelPTOptions.td file.
 const char *TraceIntelPT::GetStartConfigurationHelp() {
-  static Optional<std::string> message;
+  static std::optional<std::string> message;
   if (!message) {
     message.emplace(formatv(R"(Parameters:
 
@@ -641,8 +641,8 @@ const char *TraceIntelPT::GetStartConfigurationHelp() {
 
 Error TraceIntelPT::Start(uint64_t ipt_trace_size,
                           uint64_t total_buffer_size_limit, bool enable_tsc,
-                          Optional<uint64_t> psb_period, bool per_cpu_tracing,
-                          bool disable_cgroup_filtering) {
+                          std::optional<uint64_t> psb_period,
+                          bool per_cpu_tracing, bool disable_cgroup_filtering) {
   TraceIntelPTStartRequest request;
   request.ipt_trace_size = ipt_trace_size;
   request.process_buffer_size_limit = total_buffer_size_limit;
@@ -658,7 +658,7 @@ Error TraceIntelPT::Start(StructuredData::ObjectSP configuration) {
   uint64_t ipt_trace_size = kDefaultIptTraceSize;
   uint64_t process_buffer_size_limit = kDefaultProcessBufferSizeLimit;
   bool enable_tsc = kDefaultEnableTscValue;
-  Optional<uint64_t> psb_period = kDefaultPsbPeriod;
+  std::optional<uint64_t> psb_period = kDefaultPsbPeriod;
   bool per_cpu_tracing = kDefaultPerCpuTracing;
   bool disable_cgroup_filtering = kDefaultDisableCgroupFiltering;
 
@@ -684,7 +684,7 @@ Error TraceIntelPT::Start(StructuredData::ObjectSP configuration) {
 
 llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
                                 uint64_t ipt_trace_size, bool enable_tsc,
-                                Optional<uint64_t> psb_period) {
+                                std::optional<uint64_t> psb_period) {
   TraceIntelPTStartRequest request;
   request.ipt_trace_size = ipt_trace_size;
   request.enable_tsc = enable_tsc;
@@ -700,14 +700,14 @@ Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
                           StructuredData::ObjectSP configuration) {
   uint64_t ipt_trace_size = kDefaultIptTraceSize;
   bool enable_tsc = kDefaultEnableTscValue;
-  Optional<uint64_t> psb_period = kDefaultPsbPeriod;
+  std::optional<uint64_t> psb_period = kDefaultPsbPeriod;
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
       llvm::StringRef ipt_trace_size_not_parsed;
       if (dict->GetValueForKeyAsString("iptTraceSize",
                                        ipt_trace_size_not_parsed)) {
-        if (Optional<uint64_t> bytes =
+        if (std::optional<uint64_t> bytes =
                 ParsingUtils::ParseUserFriendlySizeExpression(
                     ipt_trace_size_not_parsed))
           ipt_trace_size = *bytes;

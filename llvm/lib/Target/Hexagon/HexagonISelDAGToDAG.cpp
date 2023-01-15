@@ -25,6 +25,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-isel"
+#define PASS_NAME "Hexagon DAG->DAG Pattern Instruction Selection"
 
 static
 cl::opt<bool>
@@ -62,6 +63,10 @@ FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
   return new HexagonDAGToDAGISel(TM, OptLevel);
 }
 }
+
+char HexagonDAGToDAGISel::ID = 0;
+
+INITIALIZE_PASS(HexagonDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   SDValue Chain = LD->getChain();

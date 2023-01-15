@@ -5,7 +5,7 @@
 ; have its loop-carried value (the load in for.cond) replaced accordingly
 ; after unrolling the loop.
 
-define i16 @full_unroll(i16* %A) {
+define i16 @full_unroll(ptr %A) {
 ; CHECK-LABEL: @full_unroll(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -18,8 +18,8 @@ define i16 @full_unroll(i16* %A) {
 ; CHECK:       for.cond.cleanup3:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_1:%.*]]
 ; CHECK:       for.cond.cleanup3.1:
-; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds i16, i16* [[A:%.*]], i64 2
-; CHECK-NEXT:    [[TMP2_2]] = load i16, i16* [[PTR_2]], align 2
+; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds i16, ptr [[A:%.*]], i64 2
+; CHECK-NEXT:    [[TMP2_2]] = load i16, ptr [[PTR_2]], align 2
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_2]]
 ; CHECK:       for.cond.cleanup3.2:
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP3_3:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -32,8 +32,8 @@ entry:
 for.cond:                                         ; preds = %for.cond.cleanup3, %entry
   %.lcssa10 = phi i16 [ 123, %entry ], [ %.lcssa, %for.cond.cleanup3 ]
   %i.0 = phi i64 [ 0, %entry ], [ %inc9, %for.cond.cleanup3 ]
-  %ptr = getelementptr inbounds i16, i16* %A, i64 %i.0
-  %tmp2 = load i16, i16* %ptr
+  %ptr = getelementptr inbounds i16, ptr %A, i64 %i.0
+  %tmp2 = load i16, ptr %ptr
   %cmp = icmp ult i64 %i.0, 3
   br i1 %cmp, label %for.cond.cleanup3, label %for.cond.cleanup
 
@@ -48,7 +48,7 @@ for.cond.cleanup3:                                ; preds = %for.cond
   br label %for.cond
 }
 
-define i16 @partial_unroll(i16* %A) {
+define i16 @partial_unroll(ptr %A) {
 ; CHECK-LABEL: @partial_unroll(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -61,8 +61,8 @@ define i16 @partial_unroll(i16* %A) {
 ; CHECK-NEXT:    ret i16 0
 ; CHECK:       for.cond.cleanup3:
 ; CHECK-NEXT:    [[INC9:%.*]] = add nuw nsw i64 [[I_0]], 1
-; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds i16, i16* [[A:%.*]], i64 [[INC9]]
-; CHECK-NEXT:    [[TMP2_1]] = load i16, i16* [[PTR_1]], align 2
+; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds i16, ptr [[A:%.*]], i64 [[INC9]]
+; CHECK-NEXT:    [[TMP2_1]] = load i16, ptr [[PTR_1]], align 2
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_1]]
 ; CHECK:       for.cond.cleanup3.1:
 ; CHECK-NEXT:    [[INC9_1:%.*]] = add nuw nsw i64 [[INC9]], 1
@@ -78,8 +78,8 @@ entry:
 for.cond:                                         ; preds = %for.cond.cleanup3, %entry
   %.lcssa10 = phi i16 [ 123, %entry ], [ %.lcssa, %for.cond.cleanup3 ]
   %i.0 = phi i64 [ 0, %entry ], [ %inc9, %for.cond.cleanup3 ]
-  %ptr = getelementptr inbounds i16, i16* %A, i64 %i.0
-  %tmp2 = load i16, i16* %ptr
+  %ptr = getelementptr inbounds i16, ptr %A, i64 %i.0
+  %tmp2 = load i16, ptr %ptr
   %cmp = icmp ult i64 %i.0, 200
   br i1 %cmp, label %for.cond.cleanup3, label %for.cond.cleanup
 

@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -79,7 +80,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   QualType TypePtr = MatchedDecl->getType();
-  llvm::Optional<const char *> InitializationString;
+  std::optional<const char *> InitializationString;
   bool AddMathInclude = false;
 
   if (TypePtr->isEnumeralType())

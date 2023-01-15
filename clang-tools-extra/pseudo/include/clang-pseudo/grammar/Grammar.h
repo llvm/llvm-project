@@ -55,10 +55,10 @@
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -163,7 +163,7 @@ public:
   llvm::StringRef symbolName(SymbolID) const;
 
   // Lookup the SymbolID of the nonterminal symbol by Name.
-  llvm::Optional<SymbolID> findNonterminal(llvm::StringRef Name) const;
+  std::optional<SymbolID> findNonterminal(llvm::StringRef Name) const;
 
   // Dumps the whole grammar.
   std::string dump() const;

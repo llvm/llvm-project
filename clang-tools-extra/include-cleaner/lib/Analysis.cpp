@@ -42,8 +42,9 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   // This is duplicated in writeHTMLReport, changes should be mirrored there.
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
-    auto &SM = Root->getASTContext().getSourceManager();
     walkAST(*Root, [&](SourceLocation Loc, NamedDecl &ND, RefType RT) {
+      if (!SM.isWrittenInMainFile(SM.getSpellingLoc(Loc)))
+        return;
       // FIXME: Most of the work done here is repetative. It might be useful to
       // have a cache/batching.
       SymbolReference SymRef{Loc, ND, RT};
@@ -52,7 +53,9 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
     assert(MacroRef.Target.kind() == Symbol::Macro);
-    return CB(MacroRef, headersForSymbol(MacroRef.Target, SM, PI));
+    if (!SM.isWrittenInMainFile(SM.getSpellingLoc(MacroRef.RefLocation)))
+      continue;
+    CB(MacroRef, findHeaders(MacroRef.Target.macro().Definition, SM, PI));
   }
 }
 
@@ -98,7 +101,7 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
 
   AnalysisResults Results;
   for (const Include &I : Inc.all())
-    if (!Used.contains(&I))
+    if (!Used.contains(&I) && PI && !PI->shouldKeep(I.Line))
       Results.Unused.push_back(&I);
   for (llvm::StringRef S : Missing.keys())
     Results.Missing.push_back(S.str());

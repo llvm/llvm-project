@@ -256,8 +256,8 @@ void DWARFRewriter::updateDebugInfo() {
   auto processUnitDIE = [&](size_t CUIndex, DWARFUnit *Unit) {
     // Check if the unit is a skeleton and we need special updates for it and
     // its matching split/DWO CU.
-    Optional<DWARFUnit *> SplitCU;
-    Optional<uint64_t> RangesBase;
+    std::optional<DWARFUnit *> SplitCU;
+    std::optional<uint64_t> RangesBase;
     std::optional<uint64_t> DWOId = Unit->getDWOId();
     StrOffstsWriter->initialize(Unit->getStringOffsetSection(),
                                 Unit->getStringOffsetsTableContribution());
@@ -357,7 +357,7 @@ void DWARFRewriter::updateUnitDebugInfo(
     DWARFUnit &Unit, DebugInfoBinaryPatcher &DebugInfoPatcher,
     DebugAbbrevWriter &AbbrevWriter, DebugLocWriter &DebugLocWriter,
     DebugRangesSectionWriter &RangesSectionWriter,
-    Optional<uint64_t> RangesBase) {
+    std::optional<uint64_t> RangesBase) {
   // Cache debug ranges so that the offset for identical ranges could be reused.
   std::map<DebugAddressRangesVector, uint64_t> CachedRanges;
 
@@ -463,28 +463,31 @@ void DWARFRewriter::updateUnitDebugInfo(
               ? BC.getBinaryFunctionContainingAddress(
                     RangesOrError->front().LowPC)
               : nullptr;
-      DebugAddressRangesVector OutputRanges;
       bool ErrorState = false;
+      std::optional<uint64_t> NewLowPC;
       if (Function) {
-        OutputRanges = Function->translateInputToOutputRanges(*RangesOrError);
+        DebugAddressRangesVector OutputRanges =
+            Function->translateInputToOutputRanges(*RangesOrError);
         LLVM_DEBUG(if (OutputRanges.empty() != RangesOrError->empty()) {
           dbgs() << "BOLT-DEBUG: problem with DIE at 0x"
                  << Twine::utohexstr(DIE.getOffset()) << " in CU at 0x"
                  << Twine::utohexstr(Unit.getOffset()) << '\n';
         });
-
+        if (!OutputRanges.empty())
+          NewLowPC = OutputRanges.front().LowPC;
         RangesSectionOffset = RangesSectionWriter.addRanges(
             std::move(OutputRanges), CachedRanges);
       } else if (!RangesOrError) {
         ErrorState = true;
         consumeError(RangesOrError.takeError());
       }
+
       uint64_t LowPCToUse = 0;
       if (!ErrorState && RangesOrError.get().size() == 1 &&
           RangesOrError.get().begin()->LowPC ==
               RangesOrError.get().begin()->HighPC) {
-        if (!OutputRanges.empty())
-          LowPCToUse = OutputRanges.front().LowPC;
+        if (NewLowPC)
+          LowPCToUse = NewLowPC.value();
         else
           LowPCToUse = RangesOrError.get().begin()->LowPC;
       }
@@ -794,7 +797,7 @@ void DWARFRewriter::updateUnitDebugInfo(
 void DWARFRewriter::updateDWARFObjectAddressRanges(
     const DWARFDie DIE, uint64_t DebugRangesOffset,
     SimpleBinaryPatcher &DebugInfoPatcher, DebugAbbrevWriter &AbbrevWriter,
-    uint64_t LowPCToUse, Optional<uint64_t> RangesBase) {
+    uint64_t LowPCToUse, std::optional<uint64_t> RangesBase) {
 
   // Some objects don't have an associated DIE and cannot be updated (such as
   // compiler-generated functions).
@@ -1190,7 +1193,7 @@ StringRef getSectionName(const SectionRef &Section) {
 
 // Exctracts an appropriate slice if input is DWP.
 // Applies patches or overwrites the section.
-Optional<StringRef>
+std::optional<StringRef>
 updateDebugData(DWARFContext &DWCtx, std::string &Storage,
                 StringRef SectionName, StringRef SectionContents,
                 const StringMap<KnownSectionsEntry> &KnownSections,
@@ -1209,11 +1212,11 @@ updateDebugData(DWARFContext &DWCtx, std::string &Storage,
       const DWARFUnitIndex::Entry::SectionContribution;
   auto getSliceData = [&](const DWARFUnitIndex::Entry *DWOEntry,
                           StringRef OutData, DWARFSectionKind Sec,
-                          uint32_t &DWPOffset) -> StringRef {
+                          uint64_t &DWPOffset) -> StringRef {
     if (DWOEntry) {
       DWOSectionContribution *DWOContrubution = DWOEntry->getContribution(Sec);
-      DWPOffset = DWOContrubution->Offset;
-      OutData = OutData.substr(DWPOffset, DWOContrubution->Length);
+      DWPOffset = DWOContrubution->getOffset();
+      OutData = OutData.substr(DWPOffset, DWOContrubution->getLength());
     }
     return OutData;
   };
@@ -1224,7 +1227,7 @@ updateDebugData(DWARFContext &DWCtx, std::string &Storage,
 
   Streamer.switchSection(SectionIter->second.first);
   StringRef OutData = SectionContents;
-  uint32_t DWPOffset = 0;
+  uint64_t DWPOffset = 0;
 
   switch (SectionIter->second.second) {
   default: {
@@ -1307,14 +1310,15 @@ static std::string extractDWOTUFromDWP(
   // Sorting so it's easy to compare output.
   // They should be sharing the same Abbrev.
   llvm::sort(TUContributions, [](const TUEntry &V1, const TUEntry &V2) -> bool {
-    return V1.second->Offset < V2.second->Offset;
+    return V1.second->getOffset() < V2.second->getOffset();
   });
 
   for (auto &PairEntry : TUContributions) {
     const DWARFUnitIndex::Entry::SectionContribution *C = PairEntry.second;
     const uint64_t TUSignature = PairEntry.first;
-    DWOTUSection.append(Contents.slice(C->Offset, C->Offset + C->Length).str());
-    TUContributionsToCU.push_back({TUSignature, C->Length});
+    DWOTUSection.append(
+        Contents.slice(C->getOffset(), C->getOffset() + C->getLength()).str());
+    TUContributionsToCU.push_back({TUSignature, C->getLength32()});
   }
   return DWOTUSection;
 }
@@ -1354,11 +1358,12 @@ static void extractTypesFromDWPDWARF5(
   llvm::sort(TUContributions,
              [](const DWARFUnitIndex::Entry::SectionContribution *V1,
                 const DWARFUnitIndex::Entry::SectionContribution *V2) -> bool {
-               return V1->Offset < V2->Offset;
+               return V1->getOffset() < V2->getOffset();
              });
   Streamer.switchSection(MCOFI.getDwarfInfoDWOSection());
   for (const auto *C : TUContributions)
-    Streamer.emitBytes(Contents.slice(C->Offset, C->Offset + C->Length));
+    Streamer.emitBytes(
+        Contents.slice(C->getOffset(), C->getOffset() + C->getLength()));
 }
 
 void DWARFRewriter::writeDWP(
@@ -1419,7 +1424,7 @@ void DWARFRewriter::writeDWP(
       continue;
 
     // Skipping CUs that we failed to load.
-    Optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
+    std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
     if (!DWOCU)
       continue;
 
@@ -1483,7 +1488,7 @@ void DWARFRewriter::writeDWP(
         extractDWOTUFromDWO(Contents, TUContributionsToCU);
       }
 
-      Optional<StringRef> TOutData = updateDebugData(
+      std::optional<StringRef> TOutData = updateDebugData(
           (*DWOCU)->getContext(), Storage, SectionName, Contents, KnownSections,
           *Streamer, *this, CUDWOEntry, *DWOId, OutputData, RangeListssWriter);
       if (!TOutData)
@@ -1507,9 +1512,10 @@ void DWARFRewriter::writeDWP(
           Streamer->emitBytes(OutData);
         auto Index =
             getContributionIndex(SectionIter->second.second, IndexVersion);
-        CurEntry.Contributions[Index].Offset = ContributionOffsets[Index];
-        CurEntry.Contributions[Index].Length = OutData.size();
-        ContributionOffsets[Index] += CurEntry.Contributions[Index].Length;
+        CurEntry.Contributions[Index].setOffset(ContributionOffsets[Index]);
+        CurEntry.Contributions[Index].setLength(OutData.size());
+        ContributionOffsets[Index] +=
+            CurEntry.Contributions[Index].getLength32();
       }
 
       // Strings are combined in to a new string section, and de-duplicated
@@ -1538,9 +1544,10 @@ void DWARFRewriter::writeDWP(
       for (const TUContribution &TUC : TUContributionsToCU) {
         UnitIndexEntry TUEntry = CurEntry;
         TUEntry.Contributions[0] = {};
-        TUEntry.Contributions[Index].Offset = ContributionOffsets[Index];
-        TUEntry.Contributions[Index].Length = TUC.Length;
-        ContributionOffsets[Index] += TUEntry.Contributions[Index].Length;
+        TUEntry.Contributions[Index].setOffset(ContributionOffsets[Index]);
+        TUEntry.Contributions[Index].setLength(TUC.Length);
+        ContributionOffsets[Index] +=
+            TUEntry.Contributions[Index].getLength32();
         TypeIndexEntries.insert(std::make_pair(TUC.Signature, TUEntry));
       }
     }
@@ -1588,7 +1595,7 @@ void DWARFRewriter::writeDWOFiles(
       continue;
 
     // Skipping CUs that we failed to load.
-    Optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
+    std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(*DWOId);
     if (!DWOCU)
       continue;
 
@@ -1624,7 +1631,7 @@ void DWARFRewriter::writeDWOFiles(
       if (!RangeListssWriter->empty()) {
         std::string Storage;
         std::unique_ptr<DebugBufferVector> OutputData;
-        if (Optional<StringRef> OutData = updateDebugData(
+        if (std::optional<StringRef> OutData = updateDebugData(
                 (*DWOCU)->getContext(), Storage, "debug_rnglists.dwo", "",
                 KnownSections, *Streamer, *this, CUDWOEntry, *DWOId, OutputData,
                 RangeListssWriter))
@@ -1658,7 +1665,7 @@ void DWARFRewriter::writeDWOFiles(
                                   *Streamer, Contents, *DWOId);
       }
 
-      if (Optional<StringRef> OutData = updateDebugData(
+      if (std::optional<StringRef> OutData = updateDebugData(
               (*DWOCU)->getContext(), Storage, SectionName, Contents,
               KnownSections, *Streamer, *this, CUDWOEntry, *DWOId, OutputData,
               RangeListssWriter))
@@ -1867,7 +1874,7 @@ void getRangeAttrData(DWARFDie DIE, std::optional<AttrInfo> &LowPCVal,
 
 void DWARFRewriter::convertToRangesPatchAbbrev(
     const DWARFUnit &Unit, const DWARFAbbreviationDeclaration *Abbrev,
-    DebugAbbrevWriter &AbbrevWriter, Optional<uint64_t> RangesBase) {
+    DebugAbbrevWriter &AbbrevWriter, std::optional<uint64_t> RangesBase) {
 
   dwarf::Attribute RangeBaseAttribute = dwarf::DW_AT_GNU_ranges_base;
   dwarf::Form RangesForm = dwarf::DW_FORM_sec_offset;
@@ -1894,7 +1901,7 @@ void DWARFRewriter::convertToRangesPatchAbbrev(
 void DWARFRewriter::convertToRangesPatchDebugInfo(
     DWARFDie DIE, uint64_t RangesSectionOffset,
     SimpleBinaryPatcher &DebugInfoPatcher, uint64_t LowPCToUse,
-    Optional<uint64_t> RangesBase) {
+    std::optional<uint64_t> RangesBase) {
   std::optional<AttrInfo> LowPCVal;
   std::optional<AttrInfo> HighPCVal;
   getRangeAttrData(DIE, LowPCVal, HighPCVal);

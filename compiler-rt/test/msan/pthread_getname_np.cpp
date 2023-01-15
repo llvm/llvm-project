@@ -1,7 +1,7 @@
 // RUN: %clangxx_msan -std=c++11 -O0 %s -o %t && %run %t
 // The main goal is getting the pthread name back and
 // FreeBSD based do not support this feature
-// UNSUPPORTED: android, freebsd
+// UNSUPPORTED: android, target={{.*freebsd.*}}
 
 // Regression test for a deadlock in pthread_getattr_np
 

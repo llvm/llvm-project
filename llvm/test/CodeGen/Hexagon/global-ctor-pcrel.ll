@@ -7,30 +7,29 @@ target triple = "hexagon"
 
 @g0 = global %s.0 zeroinitializer, align 4
 
-@e0 = alias void (%s.0*, i32, i32), void (%s.0*, i32, i32)* @f0
+@e0 = alias void (ptr, i32, i32), ptr @f0
 
 ; Function Attrs: nounwind
-define void @f0(%s.0* %a0, i32 %a1, i32 %a2) unnamed_addr #0 align 2 {
+define void @f0(ptr %a0, i32 %a1, i32 %a2) unnamed_addr #0 align 2 {
 b0:
-  %v0 = alloca %s.0*, align 4
+  %v0 = alloca ptr, align 4
   %v1 = alloca i32, align 4
   %v2 = alloca i32, align 4
-  store %s.0* %a0, %s.0** %v0, align 4
-  store i32 %a1, i32* %v1, align 4
-  store i32 %a2, i32* %v2, align 4
-  %v3 = load %s.0*, %s.0** %v0
-  %v4 = getelementptr inbounds %s.0, %s.0* %v3, i32 0, i32 0
-  %v5 = load i32, i32* %v2, align 4
-  store i32 %v5, i32* %v4, align 4
-  %v6 = getelementptr inbounds %s.0, %s.0* %v3, i32 0, i32 1
-  %v7 = load i32, i32* %v1, align 4
-  store i32 %v7, i32* %v6, align 4
+  store ptr %a0, ptr %v0, align 4
+  store i32 %a1, ptr %v1, align 4
+  store i32 %a2, ptr %v2, align 4
+  %v3 = load ptr, ptr %v0
+  %v5 = load i32, ptr %v2, align 4
+  store i32 %v5, ptr %v3, align 4
+  %v6 = getelementptr inbounds %s.0, ptr %v3, i32 0, i32 1
+  %v7 = load i32, ptr %v1, align 4
+  store i32 %v7, ptr %v6, align 4
   ret void
 }
 
 define internal void @f1() {
 b0:
-  call void @e0(%s.0* @g0, i32 3, i32 7)
+  call void @e0(ptr @g0, i32 3, i32 7)
   ret void
 }
 
@@ -38,7 +37,7 @@ b0:
 define i32 @f2() #0 {
 b0:
   %v0 = alloca i32, align 4
-  store i32 0, i32* %v0
+  store i32 0, ptr %v0
   ret i32 0
 }
 

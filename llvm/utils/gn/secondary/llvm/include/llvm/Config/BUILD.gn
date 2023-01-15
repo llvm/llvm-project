@@ -326,7 +326,6 @@ write_cmake_config("llvm-config") {
     "LLVM_FORCE_ENABLE_STATS=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
-    "LLVM_HAVE_TF_API=",
     "LLVM_HAVE_TFLITE=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
@@ -366,11 +365,13 @@ write_cmake_config("llvm-config") {
   if (current_os == "win") {
     values += [
       "HAVE_SYSEXITS_H=",
+      "LLVM_ENABLE_PLUGINS=",
       "LLVM_ON_UNIX=",
     ]
   } else {
     values += [
       "HAVE_SYSEXITS_H=1",
+      "LLVM_ENABLE_PLUGINS=1",
       "LLVM_ON_UNIX=1",
     ]
   }

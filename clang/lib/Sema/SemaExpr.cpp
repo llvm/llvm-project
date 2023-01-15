@@ -1623,10 +1623,9 @@ Sema::ActOnGenericSelectionExpr(SourceLocation KeyLoc,
       Types[i] = nullptr;
   }
 
-  ExprResult ER = CreateGenericSelectionExpr(KeyLoc, DefaultLoc, RParenLoc,
-                                             ControllingExpr,
-                                             llvm::makeArrayRef(Types, NumAssocs),
-                                             ArgExprs);
+  ExprResult ER =
+      CreateGenericSelectionExpr(KeyLoc, DefaultLoc, RParenLoc, ControllingExpr,
+                                 llvm::ArrayRef(Types, NumAssocs), ArgExprs);
   delete [] Types;
   return ER;
 }
@@ -1838,7 +1837,7 @@ static ExprResult BuildCookedLiteralOperatorCall(Sema &S, Scope *Scope,
   OpNameInfo.setCXXLiteralOperatorNameLoc(UDSuffixLoc);
 
   LookupResult R(S, OpName, UDSuffixLoc, Sema::LookupOrdinaryName);
-  if (S.LookupLiteralOperator(Scope, R, llvm::makeArrayRef(ArgTy, Args.size()),
+  if (S.LookupLiteralOperator(Scope, R, llvm::ArrayRef(ArgTy, Args.size()),
                               /*AllowRaw*/ false, /*AllowTemplate*/ false,
                               /*AllowStringTemplatePack*/ false,
                               /*DiagnoseMissing*/ true) == Sema::LOLR_Error)
@@ -2736,6 +2735,10 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 ExprResult Sema::BuildQualifiedDeclarationNameExpr(
     CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
     bool IsAddressOfOperand, const Scope *S, TypeSourceInfo **RecoveryTSI) {
+  if (NameInfo.getName().isDependentName())
+    return BuildDependentDeclRefExpr(SS, /*TemplateKWLoc=*/SourceLocation(),
+                                     NameInfo, /*TemplateArgs=*/nullptr);
+
   DeclContext *DC = computeDeclContext(SS, false);
   if (!DC)
     return BuildDependentDeclRefExpr(SS, /*TemplateKWLoc=*/SourceLocation(),
@@ -5966,6 +5969,11 @@ struct EnsureImmediateInvocationInDefaultArgs
   // FIXME: Immediate calls in capture initializers should be transformed.
   ExprResult TransformLambdaExpr(LambdaExpr *E) { return E; }
   ExprResult TransformBlockExpr(BlockExpr *E) { return E; }
+
+  // Make sure we don't rebuild the this pointer as it would
+  // cause it to incorrectly point it to the outermost class
+  // in the case of nested struct initialization.
+  ExprResult TransformCXXThisExpr(CXXThisExpr *E) { return E; }
 };
 
 ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
@@ -5973,8 +5981,7 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
                                         Expr *Init) {
   assert(Param->hasDefaultArg() && "can't build nonexistent default arg");
 
-  bool NestedDefaultChecking =
-      isCheckingDefaultArgumentOrInitializerOfOuterEntity();
+  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
 
   llvm::Optional<ExpressionEvaluationContextRecord::InitializationContext>
       InitializationContext =
@@ -5988,31 +5995,31 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
     // retransform immediate calls.
     EnterExpressionEvaluationContext EvalContext(
         *this, ExpressionEvaluationContext::PotentiallyEvaluated, Param);
-    ExprEvalContexts.back().DelayedDefaultInitializationContext = {
-        CallLoc, Param, CurContext};
 
     if (Param->hasUninstantiatedDefaultArg()) {
       if (InstantiateDefaultArgument(CallLoc, FD, Param))
         return ExprError();
-    } else {
-      // CWG2631
-      // An immediate invocation that is not evaluated where it appears is
-      // evaluated and checked for whether it is a constant expression at the
-      // point where the enclosing initializer is used in a function call.
-      ImmediateCallVisitor V;
-      if (!NestedDefaultChecking)
-        V.TraverseDecl(Param);
-      if (V.HasImmediateCalls) {
-        EnsureImmediateInvocationInDefaultArgs Immediate(*this);
-        ExprResult Res = Immediate.TransformExpr(Param->getInit());
-        if (Res.isInvalid())
-          return ExprError();
-        Res = ConvertParamDefaultArgument(Param, Res.get(),
-                                          Res.get()->getBeginLoc());
-        if (Res.isInvalid())
-          return ExprError();
-        Init = Res.get();
-      }
+    }
+    // CWG2631
+    // An immediate invocation that is not evaluated where it appears is
+    // evaluated and checked for whether it is a constant expression at the
+    // point where the enclosing initializer is used in a function call.
+    ImmediateCallVisitor V;
+    if (!NestedDefaultChecking)
+      V.TraverseDecl(Param);
+    if (V.HasImmediateCalls) {
+      ExprEvalContexts.back().DelayedDefaultInitializationContext = {
+          CallLoc, Param, CurContext};
+      EnsureImmediateInvocationInDefaultArgs Immediate(*this);
+      ExprResult Res = Immediate.TransformInitializer(Param->getInit(),
+                                                      /*NotCopy=*/false);
+      if (Res.isInvalid())
+        return ExprError();
+      Res = ConvertParamDefaultArgument(Param, Res.get(),
+                                        Res.get()->getBeginLoc());
+      if (Res.isInvalid())
+        return ExprError();
+      Init = Res.get();
     }
   }
 
@@ -6042,8 +6049,10 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
 
   Expr *Init = nullptr;
 
-  bool NestedDefaultChecking =
-      isCheckingDefaultArgumentOrInitializerOfOuterEntity();
+  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
+
+  EnterExpressionEvaluationContext EvalContext(
+      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
 
   if (!Field->getInClassInitializer()) {
     // Maybe we haven't instantiated the in-class initializer. Go check the
@@ -6066,40 +6075,40 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
         return ExprError();
       }
     }
-  } else {
-    // CWG2631
-    // An immediate invocation that is not evaluated where it appears is
-    // evaluated and checked for whether it is a constant expression at the
-    // point where the enclosing initializer is used in a [...] a constructor
-    // definition, or an aggregate initialization.
-    EnterExpressionEvaluationContext EvalContext(
-        *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
+  }
+
+  // CWG2631
+  // An immediate invocation that is not evaluated where it appears is
+  // evaluated and checked for whether it is a constant expression at the
+  // point where the enclosing initializer is used in a [...] a constructor
+  // definition, or an aggregate initialization.
+  ImmediateCallVisitor V;
+  if (!NestedDefaultChecking)
+    V.TraverseDecl(Field);
+  if (V.HasImmediateCalls) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
+    ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
+        NestedDefaultChecking;
 
-    ImmediateCallVisitor V;
-    if (!NestedDefaultChecking)
-      V.TraverseDecl(Field);
-    if (V.HasImmediateCalls) {
-      EnsureImmediateInvocationInDefaultArgs Immediate(*this);
-      ExprResult Res = Immediate.TransformExpr(Field->getInClassInitializer());
-      if (!Res.isInvalid())
-        Res = ConvertMemberDefaultInitExpression(Field, Res.get(), Loc);
-      if (Res.isInvalid()) {
-        Field->setInvalidDecl();
-        return ExprError();
-      }
-      Init = Res.get();
+    EnsureImmediateInvocationInDefaultArgs Immediate(*this);
+
+    ExprResult Res =
+        Immediate.TransformInitializer(Field->getInClassInitializer(),
+                                       /*CXXDirectInit=*/false);
+    if (!Res.isInvalid())
+      Res = ConvertMemberDefaultInitExpression(Field, Res.get(), Loc);
+    if (Res.isInvalid()) {
+      Field->setInvalidDecl();
+      return ExprError();
     }
+    Init = Res.get();
   }
 
   if (Field->getInClassInitializer()) {
     Expr *E = Init ? Init : Field->getInClassInitializer();
-    if (!NestedDefaultChecking) {
-      EnterExpressionEvaluationContext EvalContext(
-          *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
+    if (!NestedDefaultChecking)
       MarkDeclarationsReferencedInExpr(E, /*SkipLocalVariables=*/false);
-    }
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a
     //   full-expression.
@@ -7258,7 +7267,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     TheCall = dyn_cast<CallExpr>(Result.get());
     bool CorrectedTypos = TheCall != TheOldCall;
     if (!TheCall) return Result;
-    Args = llvm::makeArrayRef(TheCall->getArgs(), TheCall->getNumArgs());
+    Args = llvm::ArrayRef(TheCall->getArgs(), TheCall->getNumArgs());
 
     // A new call expression node was created if some typos were corrected.
     // However it may not have been constructed with enough storage. In this
@@ -8481,7 +8490,9 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   lhptee = S.Context.getQualifiedType(lhptee.getUnqualifiedType(), lhQual);
   rhptee = S.Context.getQualifiedType(rhptee.getUnqualifiedType(), rhQual);
 
-  QualType CompositeTy = S.Context.mergeTypes(lhptee, rhptee);
+  QualType CompositeTy = S.Context.mergeTypes(
+      lhptee, rhptee, /*OfBlockPointer=*/false, /*Unqualified=*/false,
+      /*BlockReturnType=*/false, /*IsConditionalOperator=*/true);
 
   if (CompositeTy.isNull()) {
     // In this situation, we assume void* type. No especially good
@@ -9288,8 +9299,8 @@ static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
   if (!ResTy->isAnyPointerType())
     return ResTy;
 
-  auto GetNullability = [&Ctx](QualType Ty) {
-    Optional<NullabilityKind> Kind = Ty->getNullability(Ctx);
+  auto GetNullability = [](QualType Ty) {
+    Optional<NullabilityKind> Kind = Ty->getNullability();
     if (Kind) {
       // For our purposes, treat _Nullable_result as _Nullable.
       if (*Kind == NullabilityKind::NullableResult)
@@ -9326,7 +9337,7 @@ static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
     return ResTy;
 
   // Strip all nullability from ResTy.
-  while (ResTy->getNullability(Ctx))
+  while (ResTy->getNullability())
     ResTy = ResTy.getSingleStepDesugaredType(Ctx);
 
   // Create a new AttributedType with the new nullability kind.
@@ -15423,38 +15434,21 @@ EmitDiagnosticForLogicalAndInLogicalOr(Sema &Self, SourceLocation OpLoc,
     Bop->getSourceRange());
 }
 
-/// Returns true if the given expression can be evaluated as a constant
-/// 'true'.
-static bool EvaluatesAsTrue(Sema &S, Expr *E) {
-  bool Res;
-  return !E->isValueDependent() &&
-         E->EvaluateAsBooleanCondition(Res, S.getASTContext()) && Res;
-}
-
-/// Returns true if the given expression can be evaluated as a constant
-/// 'false'.
-static bool EvaluatesAsFalse(Sema &S, Expr *E) {
-  bool Res;
-  return !E->isValueDependent() &&
-         E->EvaluateAsBooleanCondition(Res, S.getASTContext()) && !Res;
-}
-
 /// Look for '&&' in the left hand of a '||' expr.
 static void DiagnoseLogicalAndInLogicalOrLHS(Sema &S, SourceLocation OpLoc,
                                              Expr *LHSExpr, Expr *RHSExpr) {
   if (BinaryOperator *Bop = dyn_cast<BinaryOperator>(LHSExpr)) {
     if (Bop->getOpcode() == BO_LAnd) {
-      // If it's "a && b || 0" don't warn since the precedence doesn't matter.
-      if (EvaluatesAsFalse(S, RHSExpr))
-        return;
-      // If it's "1 && a || b" don't warn since the precedence doesn't matter.
-      if (!EvaluatesAsTrue(S, Bop->getLHS()))
+      // If it's "string_literal && a || b" don't warn since the precedence
+      // doesn't matter.
+      if (!isa<StringLiteral>(Bop->getLHS()->IgnoreParenImpCasts()))
         return EmitDiagnosticForLogicalAndInLogicalOr(S, OpLoc, Bop);
     } else if (Bop->getOpcode() == BO_LOr) {
       if (BinaryOperator *RBop = dyn_cast<BinaryOperator>(Bop->getRHS())) {
-        // If it's "a || b && 1 || c" we didn't warn earlier for
-        // "a || b && 1", but warn now.
-        if (RBop->getOpcode() == BO_LAnd && EvaluatesAsTrue(S, RBop->getRHS()))
+        // If it's "a || b && string_literal || c" we didn't warn earlier for
+        // "a || b && string_literal", but warn now.
+        if (RBop->getOpcode() == BO_LAnd &&
+            isa<StringLiteral>(RBop->getRHS()->IgnoreParenImpCasts()))
           return EmitDiagnosticForLogicalAndInLogicalOr(S, OpLoc, RBop);
       }
     }
@@ -15466,11 +15460,9 @@ static void DiagnoseLogicalAndInLogicalOrRHS(Sema &S, SourceLocation OpLoc,
                                              Expr *LHSExpr, Expr *RHSExpr) {
   if (BinaryOperator *Bop = dyn_cast<BinaryOperator>(RHSExpr)) {
     if (Bop->getOpcode() == BO_LAnd) {
-      // If it's "0 || a && b" don't warn since the precedence doesn't matter.
-      if (EvaluatesAsFalse(S, LHSExpr))
-        return;
-      // If it's "a || b && 1" don't warn since the precedence doesn't matter.
-      if (!EvaluatesAsTrue(S, Bop->getRHS()))
+      // If it's "a || b && string_literal" don't warn since the precedence
+      // doesn't matter.
+      if (!isa<StringLiteral>(Bop->getRHS()->IgnoreParenImpCasts()))
         return EmitDiagnosticForLogicalAndInLogicalOr(S, OpLoc, Bop);
     }
   }
@@ -18402,6 +18394,16 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
     });
   }
 
+  // If a constructor was defined in the context of a default parameter
+  // or of another default member initializer (ie a PotentiallyEvaluatedIfUsed
+  // context), its initializers may not be referenced yet.
+  if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(Func)) {
+    for (CXXCtorInitializer *Init : Constructor->inits()) {
+      if (Init->isInClassMemberInitializer())
+        MarkDeclarationsReferencedInExpr(Init->getInit());
+    }
+  }
+
   // C++14 [except.spec]p17:
   //   An exception-specification is considered to be needed when:
   //   - the function is odr-used or, if it appears in an unevaluated operand,
@@ -18461,10 +18463,13 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 ///  - else capture it in the DeclContext that maps to the
 ///    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.
 static void
-MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
+MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
                    const unsigned *const FunctionScopeIndexToStopAt = nullptr) {
   // Keep track of used but undefined variables.
   // FIXME: We shouldn't suppress this warning for static data members.
+  VarDecl *Var = V->getPotentiallyDecomposedVarDecl();
+  assert(Var && "expected a capturable variable");
+
   if (Var->hasDefinition(SemaRef.Context) == VarDecl::DeclarationOnly &&
       (!Var->isExternallyVisible() || Var->isInline() ||
        SemaRef.isExternalWithNoLinkageType(Var)) &&
@@ -18475,12 +18480,11 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
   }
   QualType CaptureType, DeclRefType;
   if (SemaRef.LangOpts.OpenMP)
-    SemaRef.tryCaptureOpenMPLambdas(Var);
-  SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit,
-    /*EllipsisLoc*/ SourceLocation(),
-    /*BuildAndDiagnose*/ true,
-    CaptureType, DeclRefType,
-    FunctionScopeIndexToStopAt);
+    SemaRef.tryCaptureOpenMPLambdas(V);
+  SemaRef.tryCaptureVariable(V, Loc, Sema::TryCapture_Implicit,
+                             /*EllipsisLoc*/ SourceLocation(),
+                             /*BuildAndDiagnose*/ true, CaptureType,
+                             DeclRefType, FunctionScopeIndexToStopAt);
 
   if (SemaRef.LangOpts.CUDA && Var->hasGlobalStorage()) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(SemaRef.CurContext);
@@ -18520,10 +18524,10 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
     }
   }
 
-  Var->markUsed(SemaRef.Context);
+  V->markUsed(SemaRef.Context);
 }
 
-void Sema::MarkCaptureUsedInEnclosingContext(VarDecl *Capture,
+void Sema::MarkCaptureUsedInEnclosingContext(ValueDecl *Capture,
                                              SourceLocation Loc,
                                              unsigned CapturingScopeIndex) {
   MarkVarDeclODRUsed(Capture, Loc, *this, &CapturingScopeIndex);
@@ -18610,13 +18614,9 @@ static DeclContext *getParentOfCapturingContextOrNull(DeclContext *DC,
   if (isa<BlockDecl>(DC) || isa<CapturedDecl>(DC) || isLambdaCallOperator(DC))
     return getLambdaAwareParentOfDeclContext(DC);
 
-  ValueDecl *Underlying = Var;
-  auto *BD = dyn_cast_or_null<BindingDecl>(Var);
-  if (BD)
-    Underlying = BD->getDecomposedDecl();
-
-  if (auto *VD = dyn_cast<VarDecl>(Underlying)) {
-    if (VD->hasLocalStorage() && Diagnose)
+  VarDecl *Underlying = Var->getPotentiallyDecomposedVarDecl();
+  if (Underlying) {
+    if (Underlying->hasLocalStorage() && Diagnose)
       diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
   }
   return nullptr;
@@ -19032,8 +19032,7 @@ bool Sema::tryCaptureVariable(
     if (VD->isInitCapture())
       VarDC = VarDC->getParent();
   } else {
-    VD = dyn_cast<DecompositionDecl>(
-        cast<BindingDecl>(Var)->getDecomposedDecl());
+    VD = Var->getPotentiallyDecomposedVarDecl();
   }
   assert(VD && "Cannot capture a null variable");
 
@@ -19707,6 +19706,38 @@ void Sema::CleanupVarDeclMarking() {
          "MarkVarDeclODRUsed failed to cleanup MaybeODRUseExprs?");
 }
 
+static void DoMarkPotentialCapture(Sema &SemaRef, SourceLocation Loc,
+                                   ValueDecl *Var, Expr *E) {
+  VarDecl *VD = Var->getPotentiallyDecomposedVarDecl();
+  if (!VD)
+    return;
+
+  const bool RefersToEnclosingScope =
+      (SemaRef.CurContext != VD->getDeclContext() &&
+       VD->getDeclContext()->isFunctionOrMethod() && VD->hasLocalStorage());
+  if (RefersToEnclosingScope) {
+    LambdaScopeInfo *const LSI =
+        SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true);
+    if (LSI && (!LSI->CallOperator ||
+                !LSI->CallOperator->Encloses(Var->getDeclContext()))) {
+      // If a variable could potentially be odr-used, defer marking it so
+      // until we finish analyzing the full expression for any
+      // lvalue-to-rvalue
+      // or discarded value conversions that would obviate odr-use.
+      // Add it to the list of potential captures that will be analyzed
+      // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
+      // unless the variable is a reference that was initialized by a constant
+      // expression (this will never need to be captured or odr-used).
+      //
+      // FIXME: We can simplify this a lot after implementing P0588R1.
+      assert(E && "Capture variable should be used in an expression.");
+      if (!Var->getType()->isReferenceType() ||
+          !VD->isUsableInConstantExpressions(SemaRef.Context))
+        LSI->addPotentialCapture(E->IgnoreParens());
+    }
+  }
+}
+
 static void DoMarkVarDeclReferenced(
     Sema &SemaRef, SourceLocation Loc, VarDecl *Var, Expr *E,
     llvm::DenseMap<const VarDecl *, int> &RefsMinusAssignments) {
@@ -19830,7 +19861,10 @@ static void DoMarkVarDeclReferenced(
 
   switch (OdrUse) {
   case OdrUseContext::None:
-    assert((!E || isa<FunctionParmPackExpr>(E)) &&
+    // In some cases, a variable may not have been marked unevaluated, if it
+    // appears in a defaukt initializer.
+    assert((!E || isa<FunctionParmPackExpr>(E) ||
+            SemaRef.isUnevaluatedContext()) &&
            "missing non-odr-use marking for unevaluated decl ref");
     break;
 
@@ -19853,36 +19887,13 @@ static void DoMarkVarDeclReferenced(
     // odr-used, but we may still need to track them for lambda capture.
     // FIXME: Do we also need to do this inside dependent typeid expressions
     // (which are modeled as unevaluated at this point)?
-    const bool RefersToEnclosingScope =
-        (SemaRef.CurContext != Var->getDeclContext() &&
-         Var->getDeclContext()->isFunctionOrMethod() && Var->hasLocalStorage());
-    if (RefersToEnclosingScope) {
-      LambdaScopeInfo *const LSI =
-          SemaRef.getCurLambda(/*IgnoreNonLambdaCapturingScope=*/true);
-      if (LSI && (!LSI->CallOperator ||
-                  !LSI->CallOperator->Encloses(Var->getDeclContext()))) {
-        // If a variable could potentially be odr-used, defer marking it so
-        // until we finish analyzing the full expression for any
-        // lvalue-to-rvalue
-        // or discarded value conversions that would obviate odr-use.
-        // Add it to the list of potential captures that will be analyzed
-        // later (ActOnFinishFullExpr) for eventual capture and odr-use marking
-        // unless the variable is a reference that was initialized by a constant
-        // expression (this will never need to be captured or odr-used).
-        //
-        // FIXME: We can simplify this a lot after implementing P0588R1.
-        assert(E && "Capture variable should be used in an expression.");
-        if (!Var->getType()->isReferenceType() ||
-            !Var->isUsableInConstantExpressions(SemaRef.Context))
-          LSI->addPotentialCapture(E->IgnoreParens());
-      }
-    }
+    DoMarkPotentialCapture(SemaRef, Loc, Var, E);
     break;
   }
 }
 
 static void DoMarkBindingDeclReferenced(Sema &SemaRef, SourceLocation Loc,
-                                        BindingDecl *BD) {
+                                        BindingDecl *BD, Expr *E) {
   BD->setReferenced();
 
   if (BD->isInvalidDecl())
@@ -19896,6 +19907,8 @@ static void DoMarkBindingDeclReferenced(Sema &SemaRef, SourceLocation Loc,
                                /*BuildAndDiagnose*/ true, CaptureType,
                                DeclRefType,
                                /*FunctionScopeIndexToStopAt*/ nullptr);
+  } else if (OdrUse == OdrUseContext::Dependent) {
+    DoMarkPotentialCapture(SemaRef, Loc, BD, E);
   }
 }
 
@@ -19919,7 +19932,7 @@ MarkExprReferenced(Sema &SemaRef, SourceLocation Loc, Decl *D, Expr *E,
   }
 
   if (BindingDecl *Decl = dyn_cast<BindingDecl>(D)) {
-    DoMarkBindingDeclReferenced(SemaRef, Loc, Decl);
+    DoMarkBindingDeclReferenced(SemaRef, Loc, Decl, E);
     return;
   }
 
@@ -20199,7 +20212,7 @@ bool Sema::DiagRuntimeBehavior(SourceLocation Loc, ArrayRef<const Stmt*> Stmts,
 bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
                                const PartialDiagnostic &PD) {
   return DiagRuntimeBehavior(
-      Loc, Statement ? llvm::makeArrayRef(Statement) : std::nullopt, PD);
+      Loc, Statement ? llvm::ArrayRef(Statement) : std::nullopt, PD);
 }
 
 bool Sema::CheckCallReturnType(QualType ReturnType, SourceLocation Loc,

@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Triple.h"
+#include <optional>
 #include <set>
 
 namespace clang {
@@ -37,9 +38,9 @@ llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
 /// If the target ID contains feature+, map it to true.
 /// If the target ID contains feature-, map it to false.
 /// If the target ID does not contain a feature (default), do not map it.
-llvm::Optional<llvm::StringRef>
-parseTargetID(const llvm::Triple &T, llvm::StringRef OffloadArch,
-              llvm::StringMap<bool> *FeatureMap);
+std::optional<llvm::StringRef> parseTargetID(const llvm::Triple &T,
+                                             llvm::StringRef OffloadArch,
+                                             llvm::StringMap<bool> *FeatureMap);
 
 /// Returns canonical target ID, assuming \p Processor is canonical and all
 /// entries in \p Features are valid.

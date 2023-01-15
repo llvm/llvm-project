@@ -5,7 +5,7 @@
 // Function jumps over variable initialization making lifetime analysis
 // ambiguous. Asan should ignore such variable and program must not fail.
 
-// REQUIRES: aarch64-target-arch
+// REQUIRES: aarch64-target-arch || riscv64-target-arch
 // REQUIRES: stable-runtime
 
 #include <stdlib.h>

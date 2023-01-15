@@ -5,7 +5,7 @@
 ; Test that the correct ISA version of the unaligned memory operations is
 ; selected up front.
 
-define void @g2(i32* %a, i32* %b) {
+define void @g2(ptr %a, ptr %b) {
   ; MIPS-LABEL: name: g2
   ; MIPS: bb.0.entry:
   ; MIPS:   liveins: $a0, $a1
@@ -29,7 +29,7 @@ define void @g2(i32* %a, i32* %b) {
   ; MICROMIPS:   SWR_MM [[LWR_MM]], [[COPY]], 3 :: (store (s32) into %ir.b, align 1)
   ; MICROMIPS:   RetRA
 entry:
-  %0 = load i32, i32* %a, align 1
-  store i32 %0, i32* %b, align 1
+  %0 = load i32, ptr %a, align 1
+  store i32 %0, ptr %b, align 1
   ret void
 }

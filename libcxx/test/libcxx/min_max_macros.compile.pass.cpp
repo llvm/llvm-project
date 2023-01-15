@@ -139,6 +139,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <execution>
 TEST_MACROS();
+#include <expected>
+TEST_MACROS();
 #include <fenv.h>
 TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
@@ -253,6 +255,8 @@ TEST_MACROS();
 #   include <shared_mutex>
 TEST_MACROS();
 #endif
+#include <source_location>
+TEST_MACROS();
 #include <span>
 TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)

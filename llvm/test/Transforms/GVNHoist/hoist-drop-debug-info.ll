@@ -15,15 +15,15 @@ entry:
   ], !dbg !11
 
 sw0:                                              ; preds = %entry
-  store i32 1, i32* @G, align 4, !dbg !12
+  store i32 1, ptr @G, align 4, !dbg !12
   br label %exit, !dbg !13
 
 sw1:                                              ; preds = %entry
-  store i32 1, i32* @G, align 4, !dbg !14
+  store i32 1, ptr @G, align 4, !dbg !14
   br label %exit, !dbg !15
 
 exit1:                                            ; preds = %entry
-  store i32 1, i32* @G, align 4, !dbg !16
+  store i32 1, ptr @G, align 4, !dbg !16
   ret void, !dbg !17
 
 exit:                                             ; preds = %sw1, %sw0

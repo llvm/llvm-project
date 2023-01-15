@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include <algorithm>
+#include <optional>
 
 #include "llvm/Support/LEB128.h"
 
@@ -60,7 +61,8 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
   const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
   if (abbrevDecl == nullptr) {
     cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "{0x%8.8x}: invalid abbreviation code %u, please file a bug and "
+        "[{0:x16}]: invalid abbreviation code {1}, "
+        "please file a bug and "
         "attach the file at the start of this error message",
         m_offset, (unsigned)abbr_idx);
     // WE can't parse anymore if the DWARF is borked...
@@ -75,7 +77,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
   dw_form_t form;
   for (i = 0; i < numAttributes; ++i) {
     form = abbrevDecl->GetFormByIndexUnchecked(i);
-    llvm::Optional<uint8_t> fixed_skip_size =
+    std::optional<uint8_t> fixed_skip_size =
         DWARFFormValue::GetFixedSize(form, cu);
     if (fixed_skip_size)
       offset += *fixed_skip_size;
@@ -190,7 +192,8 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
 
         default:
           cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-              "{0x%8.8x}: Unsupported DW_FORM_0x%x, please file a bug and "
+              "[{0:x16}]: Unsupported DW_FORM_{1:x}, please file a bug "
+              "and "
               "attach the file at the start of this error message",
               m_offset, (unsigned)form);
           *offset_ptr = m_offset;
@@ -214,9 +217,10 @@ static DWARFRangeList GetRangesOrReportError(DWARFUnit &unit,
           : unit.FindRnglistFromOffset(value.Unsigned());
   if (expected_ranges)
     return std::move(*expected_ranges);
+
   unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-      "{0x%8.8x}: DIE has DW_AT_ranges(%s 0x%" PRIx64 ") attribute, but "
-      "range extraction failed (%s), please file a bug "
+      "[{0:x16}]: DIE has DW_AT_ranges({1} {2:x16}) attribute, but "
+      "range extraction failed ({3}), please file a bug "
       "and attach the file at the start of this error message",
       die.GetOffset(),
       llvm::dwarf::FormEncodingString(value.Form()).str().c_str(),
@@ -448,7 +452,8 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
                                              recurse, curr_depth + 1);
         }
       } else {
-        llvm::Optional<uint8_t> fixed_skip_size = DWARFFormValue::GetFixedSize(form, cu);
+        std::optional<uint8_t> fixed_skip_size =
+            DWARFFormValue::GetFixedSize(form, cu);
         if (fixed_skip_size)
           offset += *fixed_skip_size;
         else
@@ -547,7 +552,7 @@ uint64_t DWARFDebugInfoEntry::GetAttributeValueAsUnsigned(
   return fail_value;
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 DWARFDebugInfoEntry::GetAttributeValueAsOptionalUnsigned(
     const DWARFUnit *cu, const dw_attr_t attr,
     bool check_specification_or_abstract_origin) const {

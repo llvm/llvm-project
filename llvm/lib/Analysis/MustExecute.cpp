@@ -498,12 +498,12 @@ bool llvm::mayContainIrreducibleControl(const Function &F, const LoopInfo *LI) {
 /// Lookup \p Key in \p Map and return the result, potentially after
 /// initializing the optional through \p Fn(\p args).
 template <typename K, typename V, typename FnTy, typename... ArgsTy>
-static V getOrCreateCachedOptional(K Key, DenseMap<K, Optional<V>> &Map,
-                                   FnTy &&Fn, ArgsTy&&... args) {
-  Optional<V> &OptVal = Map[Key];
+static V getOrCreateCachedOptional(K Key, DenseMap<K, std::optional<V>> &Map,
+                                   FnTy &&Fn, ArgsTy &&...args) {
+  std::optional<V> &OptVal = Map[Key];
   if (!OptVal)
     OptVal = Fn(std::forward<ArgsTy>(args)...);
-  return OptVal.value();
+  return *OptVal;
 }
 
 const BasicBlock *

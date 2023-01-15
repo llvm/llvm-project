@@ -8,12 +8,12 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define void @set() {
 ; CHECK-LABEL: define {{[^@]+}}@set() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @inofth, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @inofth, align 4
 ; CHECK-NEXT:    call void @omp_set_num_threads(i32 noundef [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* @inofth, align 4
+  %0 = load i32, ptr @inofth, align 4
   call void @omp_set_num_threads(i32 noundef %0)
   ret void
 }

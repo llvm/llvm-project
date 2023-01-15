@@ -110,7 +110,7 @@ entry:
   ret i32 %doublez
 }
 
-define i32 @call_reg(i32 (i32, i32)* %f_ptr, i32 %x, i32 %y) {
+define i32 @call_reg(ptr %f_ptr, i32 %x, i32 %y) {
   ; MIPS32-LABEL: name: call_reg
   ; MIPS32: bb.1.entry:
   ; MIPS32:   liveins: $a0, $a1, $a2
@@ -144,9 +144,9 @@ entry:
   ret i32 %call
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1 immarg)
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1 immarg)
 
-define void @call_symbol(i8* nocapture readonly %src, i8* nocapture %dest, i32 signext %length) {
+define void @call_symbol(ptr nocapture readonly %src, ptr nocapture %dest, i32 signext %length) {
   ; MIPS32-LABEL: name: call_symbol
   ; MIPS32: bb.1.entry:
   ; MIPS32:   liveins: $a0, $a1, $a2
@@ -164,7 +164,7 @@ define void @call_symbol(i8* nocapture readonly %src, i8* nocapture %dest, i32 s
   ; MIPS32_PIC:   G_MEMCPY [[COPY1]](p0), [[COPY]](p0), [[COPY2]](s32), 0 :: (store (s8) into %ir.dest), (load (s8) from %ir.src)
   ; MIPS32_PIC:   RetRA
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %dest, i8* align 1 %src, i32 %length, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %dest, ptr align 1 %src, i32 %length, i1 false)
   ret void
 }
 

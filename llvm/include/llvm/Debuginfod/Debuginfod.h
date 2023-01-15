@@ -106,8 +106,8 @@ class DebuginfodCollection {
   sys::RWMutex DebugBinariesMutex;
   StringMap<std::string> DebugBinaries;
   Error findBinaries(StringRef Path);
-  Expected<Optional<std::string>> getDebugBinaryPath(object::BuildIDRef);
-  Expected<Optional<std::string>> getBinaryPath(object::BuildIDRef);
+  Expected<std::optional<std::string>> getDebugBinaryPath(object::BuildIDRef);
+  Expected<std::optional<std::string>> getBinaryPath(object::BuildIDRef);
   // If the collection has not been updated since MinInterval, call update() and
   // return true. Otherwise return false. If update returns an error, return the
   // error.

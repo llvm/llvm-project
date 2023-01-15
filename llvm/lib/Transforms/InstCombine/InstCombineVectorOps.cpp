@@ -39,7 +39,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <numeric>
 #include <utility>
 
 #define DEBUG_TYPE "instcombine"
@@ -876,7 +875,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
 
   // Try to find a value of each element of an aggregate.
   // FIXME: deal with more complex, not one-dimensional, aggregate types
-  SmallVector<Optional<Instruction *>, 2> AggElts(NumAggElts, NotFound);
+  SmallVector<std::optional<Instruction *>, 2> AggElts(NumAggElts, NotFound);
 
   // Do we know values for each element of the aggregate?
   auto KnowAllElts = [&AggElts]() {
@@ -909,7 +908,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // Now, we may have already previously recorded the value for this element
     // of an aggregate. If we did, that means the CurrIVI will later be
     // overwritten with the already-recorded value. But if not, let's record it!
-    Optional<Instruction *> &Elt = AggElts[Indices.front()];
+    std::optional<Instruction *> &Elt = AggElts[Indices.front()];
     Elt = Elt.value_or(InsertedValue);
 
     // FIXME: should we handle chain-terminating undef base operand?
@@ -939,7 +938,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     /// or different elements had different source aggregates.
     FoundMismatch
   };
-  auto Describe = [](Optional<Value *> SourceAggregate) {
+  auto Describe = [](std::optional<Value *> SourceAggregate) {
     if (SourceAggregate == NotFound)
       return AggregateDescription::NotFound;
     if (*SourceAggregate == FoundMismatch)
@@ -953,8 +952,8 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // If found, return the source aggregate from which the extraction was.
   // If \p PredBB is provided, does PHI translation of an \p Elt first.
   auto FindSourceAggregate =
-      [&](Instruction *Elt, unsigned EltIdx, Optional<BasicBlock *> UseBB,
-          Optional<BasicBlock *> PredBB) -> Optional<Value *> {
+      [&](Instruction *Elt, unsigned EltIdx, std::optional<BasicBlock *> UseBB,
+          std::optional<BasicBlock *> PredBB) -> std::optional<Value *> {
     // For now(?), only deal with, at most, a single level of PHI indirection.
     if (UseBB && PredBB)
       Elt = dyn_cast<Instruction>(Elt->DoPHITranslation(*UseBB, *PredBB));
@@ -981,9 +980,9 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // see if we can find appropriate source aggregate for each of the elements,
   // and see it's the same aggregate for each element. If so, return it.
   auto FindCommonSourceAggregate =
-      [&](Optional<BasicBlock *> UseBB,
-          Optional<BasicBlock *> PredBB) -> Optional<Value *> {
-    Optional<Value *> SourceAggregate;
+      [&](std::optional<BasicBlock *> UseBB,
+          std::optional<BasicBlock *> PredBB) -> std::optional<Value *> {
+    std::optional<Value *> SourceAggregate;
 
     for (auto I : enumerate(AggElts)) {
       assert(Describe(SourceAggregate) != AggregateDescription::FoundMismatch &&
@@ -995,7 +994,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
       // For this element, is there a plausible source aggregate?
       // FIXME: we could special-case undef element, IFF we know that in the
       //        source aggregate said element isn't poison.
-      Optional<Value *> SourceAggregateForElement =
+      std::optional<Value *> SourceAggregateForElement =
           FindSourceAggregate(*I.value(), I.index(), UseBB, PredBB);
 
       // Okay, what have we found? Does that correlate with previous findings?
@@ -1029,7 +1028,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     return *SourceAggregate;
   };
 
-  Optional<Value *> SourceAggregate;
+  std::optional<Value *> SourceAggregate;
 
   // Can we find the source aggregate without looking at predecessors?
   SourceAggregate = FindCommonSourceAggregate(/*UseBB=*/std::nullopt,
@@ -1050,7 +1049,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // they all should be defined in the same basic block.
   BasicBlock *UseBB = nullptr;
 
-  for (const Optional<Instruction *> &I : AggElts) {
+  for (const std::optional<Instruction *> &I : AggElts) {
     BasicBlock *BB = (*I)->getParent();
     // If it's the first instruction we've encountered, record the basic block.
     if (!UseBB) {
@@ -1516,72 +1515,69 @@ static Instruction *narrowInsElt(InsertElementInst &InsElt,
   return CastInst::Create(CastOpcode, NewInsElt, InsElt.getType());
 }
 
-/// Try to convert scalar extraction ops (shift+trunc) with insertelt to
-/// bitcast and shuffle:
-/// inselt V, (lshr (trunc X)), IndexC --> shuffle (bitcast X), V, Mask
-static Instruction *foldTruncInsElt(InsertElementInst &InsElt, bool IsBigEndian,
-                                    InstCombiner::BuilderTy &Builder) {
-  // inselt undef, (trunc T), IndexC
-  // TODO: Allow any base vector value.
-  // TODO: The one-use limitation could be removed for some cases (eg, no
-  //       extra shuffle is needed and a shift is eliminated).
+/// If we are inserting 2 halves of a value into adjacent elements of a vector,
+/// try to convert to a single insert with appropriate bitcasts.
+static Instruction *foldTruncInsEltPair(InsertElementInst &InsElt,
+                                        bool IsBigEndian,
+                                        InstCombiner::BuilderTy &Builder) {
+  Value *VecOp    = InsElt.getOperand(0);
+  Value *ScalarOp = InsElt.getOperand(1);
+  Value *IndexOp  = InsElt.getOperand(2);
+
+  // Pattern depends on endian because we expect lower index is inserted first.
+  // Big endian:
+  // inselt (inselt BaseVec, (trunc (lshr X, BW/2), Index0), (trunc X), Index1
+  // Little endian:
+  // inselt (inselt BaseVec, (trunc X), Index0), (trunc (lshr X, BW/2)), Index1
+  // Note: It is not safe to do this transform with an arbitrary base vector
+  //       because the bitcast of that vector to fewer/larger elements could
+  //       allow poison to spill into an element that was not poison before.
+  // TODO: Detect smaller fractions of the scalar.
+  // TODO: One-use checks are conservative.
   auto *VTy = dyn_cast<FixedVectorType>(InsElt.getType());
-  Value *T, *V = InsElt.getOperand(0);
-  uint64_t IndexC;
-  if (!VTy || !match(InsElt.getOperand(1), m_OneUse(m_Trunc(m_Value(T)))) ||
-      !match(InsElt.getOperand(2), m_ConstantInt(IndexC)) ||
-      !match(V, m_Undef()))
+  Value *Scalar0, *BaseVec;
+  uint64_t Index0, Index1;
+  if (!VTy || (VTy->getNumElements() & 1) ||
+      !match(IndexOp, m_ConstantInt(Index1)) ||
+      !match(VecOp, m_InsertElt(m_Value(BaseVec), m_Value(Scalar0),
+                                m_ConstantInt(Index0))) ||
+      !match(BaseVec, m_Undef()))
     return nullptr;
 
-  Type *SrcTy = T->getType();
+  // The first insert must be to the index one less than this one, and
+  // the first insert must be to an even index.
+  if (Index0 + 1 != Index1 || Index0 & 1)
+    return nullptr;
+
+  // For big endian, the high half of the value should be inserted first.
+  // For little endian, the low half of the value should be inserted first.
+  Value *X;
+  uint64_t ShAmt;
+  if (IsBigEndian) {
+    if (!match(ScalarOp, m_Trunc(m_Value(X))) ||
+        !match(Scalar0, m_Trunc(m_LShr(m_Specific(X), m_ConstantInt(ShAmt)))))
+      return nullptr;
+  } else {
+    if (!match(Scalar0, m_Trunc(m_Value(X))) ||
+        !match(ScalarOp, m_Trunc(m_LShr(m_Specific(X), m_ConstantInt(ShAmt)))))
+      return nullptr;
+  }
+
+  Type *SrcTy = X->getType();
   unsigned ScalarWidth = SrcTy->getScalarSizeInBits();
   unsigned VecEltWidth = VTy->getScalarSizeInBits();
-  if (ScalarWidth % VecEltWidth != 0)
+  if (ScalarWidth != VecEltWidth * 2 || ShAmt != VecEltWidth)
     return nullptr;
 
-  unsigned NumEltsInScalar = ScalarWidth / VecEltWidth;
-  Value *X = T;
-  if (IndexC == (IsBigEndian ? NumEltsInScalar - 1 : 0)) {
-    // The insert is to the LSB end of the vector (depends on endian).
-    // That's all we need.
-  } else {
-    // If not, we must match a right-shift to translate the insert index.
-    uint64_t ShiftC;
-    if (!match(T, m_OneUse(m_LShr(m_Value(X), m_ConstantInt(ShiftC)))))
-      return nullptr;
+  // Bitcast the base vector to a vector type with the source element type.
+  Type *CastTy = FixedVectorType::get(SrcTy, VTy->getNumElements() / 2);
+  Value *CastBaseVec = Builder.CreateBitCast(BaseVec, CastTy);
 
-    // Check the shift amount to see if this can be folded to an identity
-    // shuffle (assuming we are shuffling with an undef base vector).
-    // Big endian has MSB at vector index 0, so the insert index is flipped.
-    if (ShiftC != (IsBigEndian ? (NumEltsInScalar - 1 - IndexC) * VecEltWidth
-                               : IndexC * VecEltWidth))
-      return nullptr;
-  }
-
-  // Bitcast the scalar to a vector type with the destination element type.
-  Type *CastTy = FixedVectorType::get(VTy->getElementType(), NumEltsInScalar);
-  Value *VecX = Builder.CreateBitCast(X, CastTy, "vec." + X->getName());
-
-  unsigned NumElts = VTy->getNumElements();
-  if (NumElts > NumEltsInScalar) {
-    // Pad the source vector with undef elements, so it matches the dest type.
-    SmallVector<int> IdentityPaddedMask(NumElts, UndefMaskElem);
-    for (unsigned i = 0; i != NumEltsInScalar; ++i)
-      IdentityPaddedMask[i] = i;
-    VecX = Builder.CreateShuffleVector(VecX, IdentityPaddedMask);
-  } else if (NumElts < NumEltsInScalar) {
-    // Narrow the source vector, so it matches the dest type.
-    SmallVector<int> IdentityExtractMask(NumElts);
-    std::iota(IdentityExtractMask.begin(), IdentityExtractMask.end(), 0);
-    VecX = Builder.CreateShuffleVector(VecX, IdentityExtractMask);
-  }
-
-  // Insert the truncated element using a select-shuffle. All lanes but one are
-  // from the base vector V.
-  SmallVector<int> SelectMask(NumElts);
-  std::iota(SelectMask.begin(), SelectMask.end(), 0);
-  SelectMask[IndexC] = (int)IndexC + NumElts;
-  return new ShuffleVectorInst(V, VecX, SelectMask);
+  // Scale the insert index for a vector with half as many elements.
+  // bitcast (inselt (bitcast BaseVec), X, NewIndex)
+  uint64_t NewIndex = IsBigEndian ? Index1 / 2 : Index0 / 2;
+  Value *NewInsert = Builder.CreateInsertElement(CastBaseVec, X, NewIndex);
+  return new BitCastInst(NewInsert, VTy);
 }
 
 Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
@@ -1594,9 +1590,21 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
     return replaceInstUsesWith(IE, V);
 
   // Canonicalize type of constant indices to i64 to simplify CSE
-  if (auto *IndexC = dyn_cast<ConstantInt>(IdxOp))
+  if (auto *IndexC = dyn_cast<ConstantInt>(IdxOp)) {
     if (auto *NewIdx = getPreferredVectorIndex(IndexC))
       return replaceOperand(IE, 2, NewIdx);
+
+    Value *BaseVec, *OtherScalar;
+    uint64_t OtherIndexVal;
+    if (match(VecOp, m_OneUse(m_InsertElt(m_Value(BaseVec),
+                                          m_Value(OtherScalar),
+                                          m_ConstantInt(OtherIndexVal)))) &&
+        !isa<Constant>(OtherScalar) && OtherIndexVal > IndexC->getZExtValue()) {
+      Value *NewIns = Builder.CreateInsertElement(BaseVec, ScalarOp, IdxOp);
+      return InsertElementInst::Create(NewIns, OtherScalar,
+                                       Builder.getInt64(OtherIndexVal));
+    }
+  }
 
   // If the vector and scalar are both bitcast from the same element type, do
   // the insert in that source type followed by bitcast.
@@ -1694,8 +1702,8 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   if (Instruction *Ext = narrowInsElt(IE, Builder))
     return Ext;
 
-  if (Instruction *Shuf = foldTruncInsElt(IE, DL.isBigEndian(), Builder))
-    return Shuf;
+  if (Instruction *Ext = foldTruncInsEltPair(IE, DL.isBigEndian(), Builder))
+    return Ext;
 
   return nullptr;
 }
@@ -2853,7 +2861,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     Value *V = LHS;
     unsigned MaskElems = Mask.size();
     auto *SrcTy = cast<FixedVectorType>(V->getType());
-    unsigned VecBitWidth = SrcTy->getPrimitiveSizeInBits().getFixedSize();
+    unsigned VecBitWidth = SrcTy->getPrimitiveSizeInBits().getFixedValue();
     unsigned SrcElemBitWidth = DL.getTypeSizeInBits(SrcTy->getElementType());
     assert(SrcElemBitWidth && "vector elements must have a bitwidth");
     unsigned SrcNumElems = SrcTy->getNumElements();

@@ -36,8 +36,7 @@ public:
   }
 
   mlir::Value createShape(llvm::ArrayRef<mlir::Value> extents) {
-    mlir::Type shapeType = fir::ShapeType::get(&context, extents.size());
-    return builder->create<fir::ShapeOp>(getLoc(), shapeType, extents);
+    return builder->create<fir::ShapeOp>(getLoc(), extents);
   }
   mlir::MLIRContext context;
   std::unique_ptr<mlir::OpBuilder> builder;

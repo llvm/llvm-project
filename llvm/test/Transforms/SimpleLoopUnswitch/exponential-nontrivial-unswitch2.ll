@@ -50,7 +50,7 @@
 
 declare void @bar()
 
-define void @loop_simple5(i32* %addr, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5) {
+define void @loop_simple5(ptr %addr, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5) {
 entry:
   br label %loop
 loop:
@@ -68,7 +68,7 @@ loop_next3:
 loop_next4:
   br i1 %c5, label %loop_latch, label %exit
 loop_latch:
-  store volatile i32 0, i32* %addr
+  store volatile i32 0, ptr %addr
   %test_loop = icmp slt i32 %iv, 50
   br i1 %test_loop, label %loop, label %exit
 exit:

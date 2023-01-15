@@ -56,6 +56,19 @@ program main
   enddo
   !$omp end target
 
+  !$omp target thread_limit(4)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end target
+
+  !ERROR: At most one THREAD_LIMIT clause can appear on the TARGET directive
+  !$omp target thread_limit(4) thread_limit(8)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end target
+
   !$omp teams num_teams(3) thread_limit(10) default(shared) private(i) shared(a)
   do i = 1, N
      a = 3.14

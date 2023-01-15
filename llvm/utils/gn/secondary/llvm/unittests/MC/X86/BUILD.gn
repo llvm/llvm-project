@@ -6,6 +6,7 @@ unittest("X86MCTests") {
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",
     "//llvm/lib/Target/X86",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "X86MCDisassemblerTest.cpp" ]
 }

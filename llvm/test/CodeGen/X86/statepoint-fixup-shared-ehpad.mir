@@ -17,44 +17,44 @@
 
   declare i32 @personality_function()
 
-  define i8 addrspace(1)* @test_one(i32 %a, i8 addrspace(1)* %p, i8 addrspace(1)* %q) gc "statepoint-example" personality i32 ()* @personality_function {
+  define ptr addrspace(1) @test_one(i32 %a, ptr addrspace(1) %p, ptr addrspace(1) %q) gc "statepoint-example" personality ptr @personality_function {
   entry:
     %cmp = icmp eq i32 %a, 0
     br i1 %cmp, label %zero, label %nonzero
 
   zero:                                             ; preds = %entry
-    %token = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i8 addrspace(1)* %p, i8 addrspace(1)* %q) ]
+    %token = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %p, ptr addrspace(1) %q) ]
             to label %normal_dest_a unwind label %exceptional_return_a
 
   nonzero:                                          ; preds = %entry
-    %token2 = invoke token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @bar, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i8 addrspace(1)* %p, i8 addrspace(1)* %q) ]
+    %token2 = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @bar, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %p, ptr addrspace(1) %q) ]
             to label %normal_dest_b unwind label %exceptional_return_b
 
   normal_dest_a:                                    ; preds = %zero
-    %p2 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 0, i32 0) ; (%p, %p)
-    ret i8 addrspace(1)* %p2
+    %p2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 0, i32 0) ; (%p, %p)
+    ret ptr addrspace(1) %p2
 
   exceptional_return_a:                             ; preds = %zero
     %landing_pad = landingpad token
             cleanup
-    %q2 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %landing_pad, i32 1, i32 1) ; (%q, %q)
-    ret i8 addrspace(1)* %q2
+    %q2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %landing_pad, i32 1, i32 1) ; (%q, %q)
+    ret ptr addrspace(1) %q2
 
   normal_dest_b:                                    ; preds = %nonzero
-    %p3 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token2, i32 0, i32 0) ; (%p, %p)
-    ret i8 addrspace(1)* %p3
+    %p3 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token2, i32 0, i32 0) ; (%p, %p)
+    ret ptr addrspace(1) %p3
 
   exceptional_return_b:                             ; preds = %nonzero
     %landing_pad2 = landingpad token
             cleanup
-    %q3 = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %landing_pad2, i32 1, i32 1) ; (%q, %q)
-    ret i8 addrspace(1)* %q3
+    %q3 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %landing_pad2, i32 1, i32 1) ; (%q, %q)
+    ret ptr addrspace(1) %q3
   }
 
-  declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 immarg, i32 immarg, void ()*, i32 immarg, i32 immarg, ...)
+  declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
 
   ; Function Attrs: nounwind readonly
-  declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32 immarg, i32 immarg) #0
+  declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32 immarg, i32 immarg) #0
 
   attributes #0 = { nounwind readonly }
   attributes #1 = { nounwind }

@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -531,10 +532,10 @@ namespace {
 class CFRetainReleaseChecker : public Checker<check::PreCall> {
   mutable APIMisuse BT{this, "null passed to CF memory management function"};
   const CallDescriptionSet ModelledCalls = {
-      {"CFRetain", 1},
-      {"CFRelease", 1},
-      {"CFMakeCollectable", 1},
-      {"CFAutorelease", 1},
+      {{"CFRetain"}, 1},
+      {{"CFRelease"}, 1},
+      {{"CFMakeCollectable"}, 1},
+      {{"CFAutorelease"}, 1},
   };
 
 public:
@@ -742,7 +743,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     return;
 
   // Verify that all arguments have Objective-C types.
-  Optional<ExplodedNode*> errorNode;
+  std::optional<ExplodedNode *> errorNode;
 
   for (unsigned I = variadicArgsBegin; I != variadicArgsEnd; ++I) {
     QualType ArgTy = msg.getArgExpr(I)->getType();
@@ -769,7 +770,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     if (!errorNode)
       errorNode = C.generateNonFatalErrorNode();
 
-    if (!errorNode.value())
+    if (!*errorNode)
       continue;
 
     SmallString<128> sbuf;
@@ -786,8 +787,8 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     ArgTy.print(os, C.getLangOpts());
     os << "'";
 
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT, os.str(),
-                                                      errorNode.value());
+    auto R =
+        std::make_unique<PathSensitiveBugReport>(*BT, os.str(), *errorNode);
     R->addRange(msg.getArgSourceRange(I));
     C.emitReport(std::move(R));
   }

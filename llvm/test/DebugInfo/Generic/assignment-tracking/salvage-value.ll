@@ -16,7 +16,7 @@ entry:
  call void @llvm.dbg.assign(metadata i32 %add1, metadata !32, metadata !DIExpression(), metadata !31, metadata ptr %p, metadata !DIExpression()), !dbg !16
 ;; %add1 is not salvaged as it requires two values and DIArgList is
 ;; not (yet) supported for dbg.assigns.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 undef,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr %p, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 poison,{{.+}}, metadata !DIExpression(),{{.+}}, metadata ptr %p, metadata !DIExpression())
 
   %arrayidx0 = getelementptr inbounds i32, ptr %p, i32 0
   call void @llvm.dbg.assign(metadata i32 %x, metadata !14, metadata !DIExpression(), metadata !17, metadata ptr %arrayidx0, metadata !DIExpression()), !dbg !16

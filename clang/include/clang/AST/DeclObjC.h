@@ -27,7 +27,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -374,8 +373,7 @@ public:
   // ArrayRef access to formal parameters.  This should eventually
   // replace the iterator interface above.
   ArrayRef<ParmVarDecl*> parameters() const {
-    return llvm::makeArrayRef(const_cast<ParmVarDecl**>(getParams()),
-                              NumParams);
+    return llvm::ArrayRef(const_cast<ParmVarDecl **>(getParams()), NumParams);
   }
 
   ParmVarDecl *getParamDecl(unsigned Idx) {

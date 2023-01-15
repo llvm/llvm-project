@@ -16,6 +16,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 #include <memory>
@@ -24,13 +25,32 @@
 namespace clang {
 namespace dataflow {
 
+void DataflowAnalysisContext::addModeledFields(
+    const llvm::DenseSet<const FieldDecl *> &Fields) {
+  llvm::set_union(ModeledFields, Fields);
+}
+
+llvm::DenseSet<const FieldDecl *>
+DataflowAnalysisContext::getReferencedFields(QualType Type) {
+  llvm::DenseSet<const FieldDecl *> Fields = getObjectFields(Type);
+  llvm::set_intersect(Fields, ModeledFields);
+  return Fields;
+}
+
 StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
   if (!Type.isNull() &&
       (Type->isStructureOrClassType() || Type->isUnionType())) {
-    // FIXME: Explore options to avoid eager initialization of fields as some of
-    // them might not be needed for a particular analysis.
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
-    for (const FieldDecl *Field : getObjectFields(Type))
+    // During context-sensitive analysis, a struct may be allocated in one
+    // function, but its field accessed in a function lower in the stack than
+    // the allocation. Since we only collect fields used in the function where
+    // the allocation occurs, we can't apply that filter when performing
+    // context-sensitive analysis. But, this only applies to storage locations,
+    // since field access it not allowed to fail. In contrast, field *values*
+    // don't need this allowance, since the API allows for uninitialized fields.
+    auto Fields = Opts.ContextSensitiveOpts ? getObjectFields(Type)
+                                            : getReferencedFields(Type);
+    for (const FieldDecl *Field : Fields)
       FieldLocs.insert({Field, &createStorageLocation(Field->getType())});
     return takeOwnership(
         std::make_unique<AggregateStorageLocation>(Type, std::move(FieldLocs)));

@@ -15,7 +15,7 @@
 
 #include "Types.h"
 
-namespace _OMP {
+namespace ompx {
 namespace config {
 
 enum DebugKind : uint32_t {
@@ -49,6 +49,6 @@ bool mayUseThreadStates();
 bool mayUseNestedParallelism();
 
 } // namespace config
-} // namespace _OMP
+} // namespace ompx
 
 #endif

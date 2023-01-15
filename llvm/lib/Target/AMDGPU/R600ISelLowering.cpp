@@ -18,6 +18,7 @@
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
+#include "R600TargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -180,6 +181,7 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
     setHasExtractBitsInsn(true);
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
 
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
   for (MVT VT : ScalarIntVTs)
@@ -418,6 +420,8 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
   case ISD::BRCOND: return LowerBRCOND(Op, DAG);
   case ISD::GlobalAddress: return LowerGlobalAddress(MFI, Op, DAG);
   case ISD::FrameIndex: return lowerFrameIndex(Op, DAG);
+  case ISD::ADDRSPACECAST:
+    return lowerADDRSPACECAST(Op, DAG);
   case ISD::INTRINSIC_VOID: {
     SDValue Chain = Op.getOperand(0);
     unsigned IntrinsicID =
@@ -935,6 +939,26 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
       Cond, HWFalse,
       True, False,
       DAG.getCondCode(ISD::SETNE));
+}
+
+SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  EVT VT = Op.getValueType();
+
+  const R600TargetMachine &TM =
+      static_cast<const R600TargetMachine &>(getTargetMachine());
+
+  const AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(Op);
+  unsigned SrcAS = ASC->getSrcAddressSpace();
+  unsigned DestAS = ASC->getDestAddressSpace();
+
+  if (auto *ConstSrc = dyn_cast<ConstantSDNode>(Op.getOperand(0))) {
+    if (SrcAS == AMDGPUAS::FLAT_ADDRESS && ConstSrc->isNullValue())
+      return DAG.getConstant(TM.getNullPointerValue(DestAS), SL, VT);
+  }
+
+  return Op;
 }
 
 /// LLVM generates byte-addressed pointers.  For indirect addressing, we need to
@@ -1681,7 +1705,7 @@ SDValue R600TargetLowering::constBufferLoad(LoadSDNode *LoadNode, int Block,
     NewVT = VT;
     NumElements = VT.getVectorNumElements();
   }
-  SDValue Result = DAG.getBuildVector(NewVT, DL, makeArrayRef(Slots, NumElements));
+  SDValue Result = DAG.getBuildVector(NewVT, DL, ArrayRef(Slots, NumElements));
   if (!VT.isVector()) {
     Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Result,
                          DAG.getConstant(0, DL, MVT::i32));

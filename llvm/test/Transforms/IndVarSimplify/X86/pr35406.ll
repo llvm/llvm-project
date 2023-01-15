@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @testDiv(i8* %p, i64* %p1) {
+define i32 @testDiv(ptr %p, ptr %p1) {
 ; CHECK-LABEL: @testDiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
@@ -16,9 +16,9 @@ define i32 @testDiv(i8* %p, i64* %p1) {
 ; CHECK:       loop2.preheader:
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    [[I4:%.*]] = load atomic i64, i64* [[P1:%.*]] unordered, align 8
+; CHECK-NEXT:    [[I4:%.*]] = load atomic i64, ptr [[P1:%.*]] unordered, align 8
 ; CHECK-NEXT:    [[I6:%.*]] = sub i64 [[I4]], -1
-; CHECK-NEXT:    store atomic i64 [[I6]], i64* [[P1]] unordered, align 8
+; CHECK-NEXT:    store atomic i64 [[I6]], ptr [[P1]] unordered, align 8
 ; CHECK-NEXT:    br i1 true, label [[LOOP2_EXIT_LOOPEXIT:%.*]], label [[LOOP2]]
 ; CHECK:       loop2.exit.loopexit:
 ; CHECK-NEXT:    br label [[LOOP2_EXIT]]
@@ -47,10 +47,10 @@ loop2:                                            ; preds = %loop2, %general_cas
   %local_1_56 = phi i32 [ %i2, %general_case24 ], [ %i3, %loop2 ]
   %local_2_57 = phi i32 [ 1, %general_case24 ], [ %i7, %loop2 ]
   %i3 = add i32 %local_1_56, -1
-  %i4 = load atomic i64, i64* %p1 unordered, align 8
+  %i4 = load atomic i64, ptr %p1 unordered, align 8
   %i5 = sext i32 %i3 to i64
   %i6 = sub i64 %i4, %i5
-  store atomic i64 %i6, i64* %p1 unordered, align 8
+  store atomic i64 %i6, ptr %p1 unordered, align 8
   %i7 = add nuw nsw i32 %local_2_57, 1
   %i8 = icmp ugt i32 %local_2_57, 7
   br i1 %i8, label %loop2.exit, label %loop2
@@ -66,7 +66,7 @@ exit:                                             ; preds = %loop2.exit, %loop1
   ret i32 0
 }
 
-define i32 @testRem(i8* %p, i64* %p1) {
+define i32 @testRem(ptr %p, ptr %p1) {
 ; CHECK-LABEL: @testRem(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
@@ -79,9 +79,9 @@ define i32 @testRem(i8* %p, i64* %p1) {
 ; CHECK:       loop2.preheader:
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    [[I4:%.*]] = load atomic i64, i64* [[P1:%.*]] unordered, align 8
+; CHECK-NEXT:    [[I4:%.*]] = load atomic i64, ptr [[P1:%.*]] unordered, align 8
 ; CHECK-NEXT:    [[I6:%.*]] = sub i64 [[I4]], -1
-; CHECK-NEXT:    store atomic i64 [[I6]], i64* [[P1]] unordered, align 8
+; CHECK-NEXT:    store atomic i64 [[I6]], ptr [[P1]] unordered, align 8
 ; CHECK-NEXT:    br i1 true, label [[LOOP2_EXIT_LOOPEXIT:%.*]], label [[LOOP2]]
 ; CHECK:       loop2.exit.loopexit:
 ; CHECK-NEXT:    br label [[LOOP2_EXIT]]
@@ -110,10 +110,10 @@ loop2:                                            ; preds = %loop2, %general_cas
   %local_1_56 = phi i32 [ %i2, %general_case24 ], [ %i3, %loop2 ]
   %local_2_57 = phi i32 [ 1, %general_case24 ], [ %i7, %loop2 ]
   %i3 = add i32 %local_1_56, -1
-  %i4 = load atomic i64, i64* %p1 unordered, align 8
+  %i4 = load atomic i64, ptr %p1 unordered, align 8
   %i5 = sext i32 %i3 to i64
   %i6 = sub i64 %i4, %i5
-  store atomic i64 %i6, i64* %p1 unordered, align 8
+  store atomic i64 %i6, ptr %p1 unordered, align 8
   %i7 = add nuw nsw i32 %local_2_57, 1
   %i8 = icmp ugt i32 %local_2_57, 7
   br i1 %i8, label %loop2.exit, label %loop2

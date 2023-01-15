@@ -69,6 +69,9 @@ public:
   getSerializableTargetIndices() const override;
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
+  bool isExplicitTargetIndexDef(const MachineInstr &MI, int &Index,
+                                int64_t &Offset) const override;
 };
 
 } // end namespace llvm

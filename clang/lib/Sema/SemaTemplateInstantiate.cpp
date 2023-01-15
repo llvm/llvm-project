@@ -15,10 +15,12 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Stack.h"
@@ -26,11 +28,13 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
@@ -950,8 +954,7 @@ void Sema::PrintInstantiationStack() {
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_building_builtin_dump_struct_call)
           << convertCallArgsToString(
-                 *this,
-                 llvm::makeArrayRef(Active->CallArgs, Active->NumCallArgs));
+                 *this, llvm::ArrayRef(Active->CallArgs, Active->NumCallArgs));
       break;
 
     case CodeSynthesisContext::Memoization:
@@ -1360,7 +1363,22 @@ namespace {
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
-      return inherited::TransformRequiresExpr(E);
+      ExprResult TransReq = inherited::TransformRequiresExpr(E);
+      if (TransReq.isInvalid())
+        return TransReq;
+      assert(TransReq.get() != E &&
+             "Do not change value of isSatisfied for the existing expression. "
+             "Create a new expression instead.");
+      if (E->getBody()->isDependentContext()) {
+        Sema::SFINAETrap Trap(SemaRef);
+        // We recreate the RequiresExpr body, but not by instantiating it.
+        // Produce pending diagnostics for dependent access check.
+        SemaRef.PerformDependentDiagnostics(E->getBody(), TemplateArgs);
+        // FIXME: Store SFINAE diagnostics in RequiresExpr for diagnosis.
+        if (Trap.hasErrorOccurred())
+          TransReq.getAs<RequiresExpr>()->setSatisfied(false);
+      }
+      return TransReq;
     }
 
     bool TransformRequiresExprRequirements(
@@ -2306,10 +2324,10 @@ TemplateInstantiator::TransformNestedRequirement(
     concepts::NestedRequirement *Req) {
   if (!Req->isDependent() && !AlwaysRebuild())
     return Req;
-  if (Req->isSubstitutionFailure()) {
+  if (Req->hasInvalidConstraint()) {
     if (AlwaysRebuild())
-      return RebuildNestedRequirement(
-          Req->getSubstitutionDiagnostic());
+      return RebuildNestedRequirement(Req->getInvalidConstraintEntity(),
+                                      Req->getConstraintSatisfaction());
     return Req;
   }
   Sema::InstantiatingTemplate ReqInst(SemaRef,
@@ -2329,36 +2347,30 @@ TemplateInstantiator::TransformNestedRequirement(
         Req->getConstraintExpr()->getSourceRange());
     if (ConstrInst.isInvalid())
       return nullptr;
-    TransConstraint = TransformExpr(Req->getConstraintExpr());
-    if (!TransConstraint.isInvalid()) {
-      bool CheckSucceeded =
-          SemaRef.CheckConstraintExpression(TransConstraint.get());
-      (void)CheckSucceeded;
-      assert((CheckSucceeded || Trap.hasErrorOccurred()) &&
-                                   "CheckConstraintExpression failed, but "
-                                   "did not produce a SFINAE error");
-    }
-    // Use version of CheckConstraintSatisfaction that does no substitutions.
-    if (!TransConstraint.isInvalid() &&
-        !TransConstraint.get()->isInstantiationDependent() &&
-        !Trap.hasErrorOccurred()) {
-      bool CheckFailed = SemaRef.CheckConstraintSatisfaction(
-          TransConstraint.get(), Satisfaction);
-      (void)CheckFailed;
-      assert((!CheckFailed || Trap.hasErrorOccurred()) &&
-                                 "CheckConstraintSatisfaction failed, "
-                                 "but did not produce a SFINAE error");
-    }
-    if (TransConstraint.isInvalid() || Trap.hasErrorOccurred())
-      return RebuildNestedRequirement(createSubstDiag(SemaRef, Info,
-          [&] (llvm::raw_ostream& OS) {
-              Req->getConstraintExpr()->printPretty(OS, nullptr,
-                                                    SemaRef.getPrintingPolicy());
-          }));
+    llvm::SmallVector<Expr *> Result;
+    if (!SemaRef.CheckConstraintSatisfaction(
+            nullptr, {Req->getConstraintExpr()}, Result, TemplateArgs,
+            Req->getConstraintExpr()->getSourceRange(), Satisfaction) &&
+        !Result.empty())
+      TransConstraint = Result[0];
+    assert(!Trap.hasErrorOccurred() && "Substitution failures must be handled "
+                                       "by CheckConstraintSatisfaction.");
   }
-  if (TransConstraint.get()->isInstantiationDependent())
+  if (TransConstraint.isUsable() &&
+      TransConstraint.get()->isInstantiationDependent())
     return new (SemaRef.Context)
         concepts::NestedRequirement(TransConstraint.get());
+  if (TransConstraint.isInvalid() || !TransConstraint.get() ||
+      Satisfaction.HasSubstitutionFailure()) {
+    SmallString<128> Entity;
+    llvm::raw_svector_ostream OS(Entity);
+    Req->getConstraintExpr()->printPretty(OS, nullptr,
+                                          SemaRef.getPrintingPolicy());
+    char *EntityBuf = new (SemaRef.Context) char[Entity.size()];
+    std::copy(Entity.begin(), Entity.end(), EntityBuf);
+    return new (SemaRef.Context) concepts::NestedRequirement(
+        SemaRef.Context, StringRef(EntityBuf, Entity.size()), Satisfaction);
+  }
   return new (SemaRef.Context) concepts::NestedRequirement(
       SemaRef.Context, TransConstraint.get(), Satisfaction);
 }

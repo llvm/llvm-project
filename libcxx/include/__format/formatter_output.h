@@ -171,7 +171,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, c
   } else {
     if (__specs.__width_ > __size) {
       // Determine padding and write padding.
-      __padding = __padding_size(__size, __specs.__width_, __specs.__alignment_);
+      __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__alignment_);
 
       __out_it = __formatter::__fill(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
     }
@@ -285,7 +285,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_transformed(const _CharT* __first, const _Cha
   if (__size >= __specs.__width_)
     return __formatter::__transform(__first, __last, _VSTD::move(__out_it), __op);
 
-  __padding_size_result __padding = __padding_size(__size, __specs.__width_, __specs.__alignment_);
+  __padding_size_result __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__alignment_);
   __out_it                        = __formatter::__fill(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
   __out_it                        = __formatter::__transform(__first, __last, _VSTD::move(__out_it), __op);
   return __formatter::__fill(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
@@ -312,7 +312,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_using_trailing_zeros(
   _LIBCPP_ASSERT(__num_trailing_zeros > 0, "The overload not writing trailing zeros should have been used");
 
   __padding_size_result __padding =
-      __padding_size(__size + __num_trailing_zeros, __specs.__width_, __specs.__alignment_);
+      __formatter::__padding_size(__size + __num_trailing_zeros, __specs.__width_, __specs.__alignment_);
   __out_it = __formatter::__fill(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
   __out_it = __formatter::__copy(__first, __exponent, _VSTD::move(__out_it));
   __out_it = __formatter::__fill(_VSTD::move(__out_it), __num_trailing_zeros, _CharT('0'));
@@ -368,15 +368,15 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string(
 
   int __size = __formatter::__truncate(__str, __specs.__precision_);
 
-  return __write(__str.begin(), __str.end(), _VSTD::move(__out_it), __specs, __size);
+  return __formatter::__write(__str.begin(), __str.end(), _VSTD::move(__out_it), __specs, __size);
 }
 
 #  if _LIBCPP_STD_VER > 20
 
-struct __null_sentinel {};
+struct __nul_terminator {};
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI bool operator==(const _CharT* __cstr, __null_sentinel) {
+_LIBCPP_HIDE_FROM_ABI bool operator==(const _CharT* __cstr, __nul_terminator) {
   return *__cstr == _CharT('\0');
 }
 
@@ -384,7 +384,7 @@ template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI void
 __write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _CharT* __prefix) {
   back_insert_iterator __out_it{__str};
-  std::ranges::copy(__prefix, __null_sentinel{}, __out_it);
+  std::ranges::copy(__prefix, __nul_terminator{}, __out_it);
 
   char __buffer[8];
   to_chars_result __r = std::to_chars(std::begin(__buffer), std::end(__buffer), __value, 16);
@@ -401,7 +401,7 @@ __write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _
 // lower-case hexadecimal digits.
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI void __write_well_formed_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value) {
-  __write_escaped_code_unit(__str, __value, _LIBCPP_STATICALLY_WIDEN(_CharT, "\\u{"));
+  __formatter::__write_escaped_code_unit(__str, __value, _LIBCPP_STATICALLY_WIDEN(_CharT, "\\u{"));
 }
 
 // [format.string.escaped]/2.2.3
@@ -411,7 +411,7 @@ _LIBCPP_HIDE_FROM_ABI void __write_well_formed_escaped_code_unit(basic_string<_C
 // lower-case hexadecimal digits.
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI void __write_escape_ill_formed_code_unit(basic_string<_CharT>& __str, char32_t __value) {
-  __write_escaped_code_unit(__str, __value, _LIBCPP_STATICALLY_WIDEN(_CharT, "\\x{"));
+  __formatter::__write_escaped_code_unit(__str, __value, _LIBCPP_STATICALLY_WIDEN(_CharT, "\\x{"));
 }
 
 template <class _CharT>

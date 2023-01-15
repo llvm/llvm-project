@@ -1044,7 +1044,6 @@ define <15 x i64> @vp_bswap_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroext %ev
 ; RV64-NEXT:    addi a5, sp, 16
 ; RV64-NEXT:    vl8r.v v24, (a5) # Unknown-size Folded Reload
 ; RV64-NEXT:    vor.vv v16, v16, v24, v0.t
-; RV64-NEXT:    addi a5, sp, 16
 ; RV64-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
 ; RV64-NEXT:    vsrl.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    vsrl.vx v16, v8, a4, v0.t
@@ -1107,7 +1106,6 @@ define <15 x i64> @vp_bswap_v15i64_unmasked(<15 x i64> %va, i32 zeroext %evl) {
 ; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vl8r.v v0, (a4) # Unknown-size Folded Reload
 ; RV32-NEXT:    vor.vv v24, v24, v0
-; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vs8r.v v24, (a4) # Unknown-size Folded Spill
 ; RV32-NEXT:    vand.vx v0, v8, a3
 ; RV32-NEXT:    vsll.vx v0, v0, a2
@@ -1314,7 +1312,6 @@ define <16 x i64> @vp_bswap_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroext %ev
 ; RV64-NEXT:    addi a5, sp, 16
 ; RV64-NEXT:    vl8r.v v24, (a5) # Unknown-size Folded Reload
 ; RV64-NEXT:    vor.vv v16, v16, v24, v0.t
-; RV64-NEXT:    addi a5, sp, 16
 ; RV64-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
 ; RV64-NEXT:    vsrl.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    vsrl.vx v16, v8, a4, v0.t
@@ -1377,7 +1374,6 @@ define <16 x i64> @vp_bswap_v16i64_unmasked(<16 x i64> %va, i32 zeroext %evl) {
 ; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vl8r.v v0, (a4) # Unknown-size Folded Reload
 ; RV32-NEXT:    vor.vv v24, v24, v0
-; RV32-NEXT:    addi a4, sp, 16
 ; RV32-NEXT:    vs8r.v v24, (a4) # Unknown-size Folded Spill
 ; RV32-NEXT:    vand.vx v0, v8, a3
 ; RV32-NEXT:    vsll.vx v0, v0, a2

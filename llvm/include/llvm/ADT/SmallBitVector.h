@@ -687,7 +687,7 @@ public:
     if (!isSmall())
       return getPointer()->getData();
     Store = getSmallBits();
-    return makeArrayRef(Store);
+    return Store;
   }
 
 private:

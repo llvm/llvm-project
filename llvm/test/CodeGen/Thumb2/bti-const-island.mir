@@ -10,9 +10,9 @@
 # bb.1.bb42.i.
 
 --- |
-  declare noalias i8* @calloc(i32, i32)
+  declare noalias ptr @calloc(i32, i32)
 
-  define internal i32 @test(i32 %argc, i8** nocapture %argv) {
+  define internal i32 @test(i32 %argc, ptr nocapture %argv) {
   entry:
     br label %bb42.i
 
@@ -21,15 +21,15 @@
     br label %bb42.i
 
   bb35.i:
-    %1 = call noalias i8* @calloc(i32 20, i32 1)
+    %1 = call noalias ptr @calloc(i32 20, i32 1)
     unreachable
 
   bb37.i:
-    %2 = call noalias i8* @calloc(i32 14, i32 1)
+    %2 = call noalias ptr @calloc(i32 14, i32 1)
     unreachable
 
   bb39.i:
-    %3 = call noalias i8* @calloc(i32 17, i32 1)
+    %3 = call noalias ptr @calloc(i32 17, i32 1)
     unreachable
 
   bb42.i:

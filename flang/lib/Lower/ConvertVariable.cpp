@@ -35,9 +35,11 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-variable"
 
@@ -159,14 +161,6 @@ hasDerivedTypeWithLengthParameters(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
-static mlir::Type unwrapElementType(mlir::Type type) {
-  if (mlir::Type ty = fir::dyn_cast_ptrOrBoxEleTy(type))
-    type = ty;
-  if (auto seqType = type.dyn_cast<fir::SequenceType>())
-    type = seqType.getEleTy();
-  return type;
-}
-
 fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::SomeExpr &addr) {
@@ -184,6 +178,10 @@ fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
     Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
                                         storeMap);
   }
+
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
+    return Fortran::lower::convertExprToAddress(loc, converter, addr,
+                                                globalOpSymMap, stmtCtx);
   return Fortran::lower::createInitializerAddress(loc, converter, addr,
                                                   globalOpSymMap, stmtCtx);
 }
@@ -191,7 +189,8 @@ fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
 /// create initial-data-target fir.box in a global initializer region.
 mlir::Value Fortran::lower::genInitialDataTarget(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    mlir::Type boxType, const Fortran::lower::SomeExpr &initialTarget) {
+    mlir::Type boxType, const Fortran::lower::SomeExpr &initialTarget,
+    bool couldBeInEquivalence) {
   Fortran::lower::SymMap globalOpSymMap;
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;
@@ -207,8 +206,19 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     // context.
     if (hasDerivedTypeWithLengthParameters(sym))
       TODO(loc, "initial-data-target with derived type length parameters");
-
     auto var = Fortran::lower::pft::Variable(sym, /*global=*/true);
+    if (couldBeInEquivalence) {
+      auto dependentVariableList =
+          Fortran::lower::pft::getDependentVariableList(sym);
+      for (Fortran::lower::pft::Variable var : dependentVariableList) {
+        if (!var.isAggregateStore())
+          break;
+        instantiateVariable(converter, var, globalOpSymMap, storeMap);
+      }
+      var = dependentVariableList.back();
+      assert(var.getSymbol().name() == sym->name() &&
+             "missing symbol in dependence list");
+    }
     Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
                                         storeMap);
   }
@@ -237,63 +247,33 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     }
   }
 
-  mlir::Value box;
-  if (initialTarget.Rank() > 0) {
-    box = fir::getBase(Fortran::lower::createSomeArrayBox(
-        converter, initialTarget, globalOpSymMap, stmtCtx));
-  } else {
-    fir::ExtendedValue addr = Fortran::lower::createInitializerAddress(
+  mlir::Value targetBox;
+  mlir::Value targetShift;
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    auto target = Fortran::lower::convertExprToBox(
         loc, converter, initialTarget, globalOpSymMap, stmtCtx);
-    box = builder.createBox(loc, addr);
+    targetBox = fir::getBase(target);
+    targetShift = builder.createShape(loc, target);
+  } else {
+    if (initialTarget.Rank() > 0) {
+      auto target = Fortran::lower::createSomeArrayBox(converter, initialTarget,
+                                                       globalOpSymMap, stmtCtx);
+      targetBox = fir::getBase(target);
+      targetShift = builder.createShape(loc, target);
+    } else {
+      fir::ExtendedValue addr = Fortran::lower::createInitializerAddress(
+          loc, converter, initialTarget, globalOpSymMap, stmtCtx);
+      targetBox = builder.createBox(loc, addr);
+      // Nothing to do for targetShift, the target is a scalar.
+    }
   }
-  // box is a fir.box<T>, not a fir.box<fir.ptr<T>> as it should to be used
-  // for pointers. A fir.convert should not be used here, because it would
-  // not actually set the pointer attribute in the descriptor.
-  // In a normal context, fir.rebox would be used to set the pointer attribute
-  // while copying the projection from another fir.box. But fir.rebox cannot be
-  // used in initializer because its current codegen expects that the input
-  // fir.box is in memory, which is not the case in initializers.
-  // So, just replace the fir.embox that created addr with one with
-  // fir.box<fir.ptr<T>> result type.
-  // Note that the descriptor cannot have been created with fir.rebox because
-  // the initial-data-target cannot be a fir.box itself (it cannot be
-  // assumed-shape, deferred-shape, or polymorphic as per C765). However the
-  // case where the initial data target is a derived type with length parameters
-  // will most likely be a bit trickier, hence the TODO above.
-
-  mlir::Operation *op = box.getDefiningOp();
-  if (!op || !mlir::isa<fir::EmboxOp>(*op))
-    fir::emitFatalError(
-        loc, "fir.box must be created with embox in global initializers");
-  mlir::Type targetEleTy = unwrapElementType(box.getType());
-  if (!fir::isa_char(targetEleTy))
-    return builder.create<fir::EmboxOp>(loc, boxType, op->getOperands(),
-                                        op->getAttrs());
-
-  // Handle the character case length particularities: embox takes a length
-  // value argument when the result type has unknown length, but not when the
-  // result type has constant length. The type of the initial target must be
-  // constant length, but the one of the pointer may not be. In this case, a
-  // length operand must be added.
-  auto targetLen = targetEleTy.cast<fir::CharacterType>().getLen();
-  auto ptrLen = unwrapElementType(boxType).cast<fir::CharacterType>().getLen();
-  if (ptrLen == targetLen)
-    // Nothing to do
-    return builder.create<fir::EmboxOp>(loc, boxType, op->getOperands(),
-                                        op->getAttrs());
-  auto embox = mlir::cast<fir::EmboxOp>(*op);
-  auto ptrType = boxType.cast<fir::BoxType>().getEleTy();
-  mlir::Value memref = builder.createConvert(loc, ptrType, embox.getMemref());
-  if (targetLen == fir::CharacterType::unknownLen())
-    // Drop the length argument.
-    return builder.create<fir::EmboxOp>(loc, boxType, memref, embox.getShape(),
-                                        embox.getSlice());
-  // targetLen is constant and ptrLen is unknown. Add a length argument.
-  mlir::Value targetLenValue =
-      builder.createIntegerConstant(loc, builder.getIndexType(), targetLen);
-  return builder.create<fir::EmboxOp>(loc, boxType, memref, embox.getShape(),
-                                      embox.getSlice(),
-                                      mlir::ValueRange{targetLenValue});
+  // The targetBox is a fir.box<T>, not a fir.box<fir.ptr<T>> as it should for
+  // pointers (this matters to get the POINTER attribute correctly inside the
+  // initial value of the descriptor).
+  // Create a fir.rebox to set the attribute correctly, and use targetShift
+  // to preserve the target lower bounds if any.
+  return builder.create<fir::ReboxOp>(loc, boxType, targetBox, targetShift,
+                                      /*slice=*/mlir::Value{});
 }
 
 static mlir::Value genDefaultInitializerValue(
@@ -538,7 +518,7 @@ getLinkageAttribute(fir::FirOpBuilder &builder,
   // with `linkonce_odr` LLVM linkage.
   if (var.hasSymbol() && isRuntimeTypeInfoData(var.getSymbol()))
     return builder.createLinkOnceODRLinkage();
-  if (var.isModuleVariable())
+  if (var.isModuleOrSubmoduleVariable())
     return {}; // external linkage
   // Otherwise, the variable is owned by a procedure and must not be visible in
   // other compilation units.
@@ -558,7 +538,7 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = genLocation(converter, sym);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   mlir::StringAttr linkage = getLinkageAttribute(builder, var);
-  if (var.isModuleVariable()) {
+  if (var.isModuleOrSubmoduleVariable()) {
     // A module global was or will be defined when lowering the module. Emit
     // only a declaration if the global does not exist at that point.
     global = declareGlobal(converter, var, globalName, linkage);
@@ -608,6 +588,11 @@ mustBeDefaultInitializedAtRuntime(const Fortran::lower::pft::Variable &var) {
     return false;
   if (Fortran::semantics::IsDummy(sym) && !Fortran::semantics::IsIntentOut(sym))
     return false;
+  // Polymorphic intent(out) dummy might need default initialization
+  // at runtime.
+  if (Fortran::semantics::IsPolymorphic(sym) &&
+      Fortran::semantics::IsDummy(sym) && Fortran::semantics::IsIntentOut(sym))
+    return true;
   // Local variables (including function results), and intent(out) dummies must
   // be default initialized at runtime if their type has default initialization.
   return hasDefaultInitialization(sym);
@@ -665,15 +650,37 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
           if (mlir::isa<fir::AllocaOp>(op))
             return;
         mlir::Location loc = converter.getCurrentLocation();
+        fir::FirOpBuilder &builder = converter.getFirOpBuilder();
         if (Fortran::semantics::IsOptional(sym)) {
-          fir::FirOpBuilder &builder = converter.getFirOpBuilder();
           auto isPresent = builder.create<fir::IsPresentOp>(
               loc, builder.getI1Type(), fir::getBase(extVal));
           builder.genIfThen(loc, isPresent)
               .genThen([&]() { genDeallocateBox(converter, *mutBox, loc); })
               .end();
         } else {
-          genDeallocateBox(converter, *mutBox, loc);
+          if (mutBox->isDerived() || mutBox->isPolymorphic() ||
+              mutBox->isUnlimitedPolymorphic()) {
+            mlir::Value isAlloc = fir::factory::genIsAllocatedOrAssociatedTest(
+                builder, loc, *mutBox);
+            builder.genIfThen(loc, isAlloc)
+                .genThen([&]() {
+                  if (mutBox->isPolymorphic()) {
+                    mlir::Value declaredTypeDesc;
+                    assert(sym.GetType());
+                    if (const Fortran::semantics::DerivedTypeSpec
+                            *derivedTypeSpec = sym.GetType()->AsDerived()) {
+                      declaredTypeDesc = Fortran::lower::getTypeDescAddr(
+                          builder, loc, *derivedTypeSpec);
+                    }
+                    genDeallocateBox(converter, *mutBox, loc, declaredTypeDesc);
+                  } else {
+                    genDeallocateBox(converter, *mutBox, loc);
+                  }
+                })
+                .end();
+          } else {
+            genDeallocateBox(converter, *mutBox, loc);
+          }
         }
       }
     }
@@ -713,7 +720,7 @@ static mlir::Value
 getAggregateStore(Fortran::lower::AggregateStoreMap &storeMap,
                   const Fortran::lower::pft::Variable &alias) {
   Fortran::lower::AggregateStoreKey key = {alias.getOwningScope(),
-                                           alias.getAlias()};
+                                           alias.getAliasOffset()};
   auto iter = storeMap.find(key);
   assert(iter != storeMap.end());
   return iter->second;
@@ -819,7 +826,7 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
     fir::GlobalOp global;
     auto &aggregate = var.getAggregateStore();
     mlir::StringAttr linkage = getLinkageAttribute(builder, var);
-    if (var.isModuleVariable()) {
+    if (var.isModuleOrSubmoduleVariable()) {
       // A module global was or will be defined when lowering the module. Emit
       // only a declaration if the global does not exist at that point.
       global = declareGlobalAggregateStore(converter, loc, aggregate, aggName,
@@ -871,18 +878,17 @@ static void instantiateAlias(Fortran::lower::AbstractConverter &converter,
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   const mlir::Location loc = genLocation(converter, sym);
   mlir::IndexType idxTy = builder.getIndexType();
-  std::size_t aliasOffset = var.getAlias();
-  mlir::Value store = getAggregateStore(storeMap, var);
   mlir::IntegerType i8Ty = builder.getIntegerType(8);
   mlir::Type i8Ptr = builder.getRefType(i8Ty);
-  mlir::Value offset = builder.createIntegerConstant(
-      loc, idxTy, sym.GetUltimate().offset() - aliasOffset);
-  auto ptr = builder.create<fir::CoordinateOp>(loc, i8Ptr, store,
-                                               mlir::ValueRange{offset});
-  mlir::Value preAlloc =
-      castAliasToPointer(builder, loc, converter.genType(sym), ptr);
+  mlir::Type symType = converter.genType(sym);
+  std::size_t off = sym.GetUltimate().offset() - var.getAliasOffset();
+  mlir::Value storeAddr = getAggregateStore(storeMap, var);
+  mlir::Value offset = builder.createIntegerConstant(loc, idxTy, off);
+  mlir::Value bytePtr = builder.create<fir::CoordinateOp>(
+      loc, i8Ptr, storeAddr, mlir::ValueRange{offset});
+  mlir::Value typedPtr = castAliasToPointer(builder, loc, symType, bytePtr);
   Fortran::lower::StatementContext stmtCtx;
-  mapSymbolAttributes(converter, var, symMap, stmtCtx, preAlloc);
+  mapSymbolAttributes(converter, var, symMap, stmtCtx, typedPtr);
   // Default initialization is possible for equivalence members: see
   // F2018 19.5.3.4. Note that if several equivalenced entities have
   // default initialization, they must have the same type, and the standard
@@ -1031,7 +1037,7 @@ declareCommonBlock(Fortran::lower::AbstractConverter &converter,
     auto commonTy = fir::SequenceType::get(shape, i8Ty);
     auto vecTy = mlir::VectorType::get(sz, i8Ty);
     mlir::Attribute zero = builder.getIntegerAttr(i8Ty, 0);
-    auto init = mlir::DenseElementsAttr::get(vecTy, llvm::makeArrayRef(zero));
+    auto init = mlir::DenseElementsAttr::get(vecTy, llvm::ArrayRef(zero));
     builder.createGlobal(loc, commonTy, commonName, linkage, init);
     // No need to add any initial value later.
     return std::nullopt;
@@ -1265,9 +1271,9 @@ lowerExplicitCharLen(Fortran::lower::AbstractConverter &converter,
     return mlir::Value{};
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Type lenTy = builder.getCharacterLengthType();
-  if (llvm::Optional<int64_t> len = box.getCharLenConst())
+  if (std::optional<int64_t> len = box.getCharLenConst())
     return builder.createIntegerConstant(loc, lenTy, *len);
-  if (llvm::Optional<Fortran::lower::SomeExpr> lenExpr = box.getCharLenExpr())
+  if (std::optional<Fortran::lower::SomeExpr> lenExpr = box.getCharLenExpr())
     // If the length expression is negative, the length is zero. See F2018
     // 7.4.4.2 point 5.
     return fir::factory::genMaxWithZero(
@@ -1687,14 +1693,14 @@ void Fortran::lower::mapSymbolAttributes(
       if (arg.getType().isa<fir::BoxCharType>())
         std::tie(addr, len) = charHelp.createUnboxChar(arg);
     }
-    if (llvm::Optional<int64_t> cstLen = ba.getCharLenConst()) {
+    if (std::optional<int64_t> cstLen = ba.getCharLenConst()) {
       // Static length
       len = builder.createIntegerConstant(loc, idxTy, *cstLen);
     } else {
       // Dynamic length
       if (genUnusedEntryPointBox())
         return;
-      if (llvm::Optional<Fortran::lower::SomeExpr> charLenExpr =
+      if (std::optional<Fortran::lower::SomeExpr> charLenExpr =
               ba.getCharLenExpr()) {
         // Explicit length
         mlir::Value rawLen = genValue(*charLenExpr);
@@ -1814,19 +1820,19 @@ void Fortran::lower::instantiateVariable(AbstractConverter &converter,
     if (!IsDummy(sym) && !IsFunctionResult(sym) && symMap.lookupSymbol(sym))
       return;
   }
-  if (var.isAggregateStore()) {
+  LLVM_DEBUG(llvm::dbgs() << "instantiateVariable: "; var.dump());
+  if (var.isAggregateStore())
     instantiateAggregateStore(converter, var, storeMap);
-  } else if (const Fortran::semantics::Symbol *common =
-                 Fortran::semantics::FindCommonBlockContaining(
-                     var.getSymbol().GetUltimate())) {
+  else if (const Fortran::semantics::Symbol *common =
+               Fortran::semantics::FindCommonBlockContaining(
+                   var.getSymbol().GetUltimate()))
     instantiateCommon(converter, *common, var, symMap);
-  } else if (var.isAlias()) {
+  else if (var.isAlias())
     instantiateAlias(converter, var, symMap, storeMap);
-  } else if (var.isGlobal()) {
+  else if (var.isGlobal())
     instantiateGlobal(converter, var, symMap);
-  } else {
+  else
     instantiateLocal(converter, var, symMap);
-  }
 }
 
 void Fortran::lower::mapCallInterfaceSymbols(
@@ -1835,46 +1841,56 @@ void Fortran::lower::mapCallInterfaceSymbols(
   Fortran::lower::AggregateStoreMap storeMap;
   const Fortran::semantics::Symbol &result = caller.getResultSymbol();
   for (Fortran::lower::pft::Variable var :
-       Fortran::lower::pft::buildFuncResultDependencyList(result)) {
+       Fortran::lower::pft::getDependentVariableList(result)) {
     if (var.isAggregateStore()) {
       instantiateVariable(converter, var, symMap, storeMap);
-    } else {
-      const Fortran::semantics::Symbol &sym = var.getSymbol();
-      const auto *hostDetails =
-          sym.detailsIf<Fortran::semantics::HostAssocDetails>();
-      if (hostDetails && !var.isModuleVariable()) {
-        // The callee is an internal procedure `A` whose result properties
-        // depend on host variables. The caller may be the host, or another
-        // internal procedure `B` contained in the same host.  In the first
-        // case, the host symbol is obviously mapped, in the second case, it
-        // must also be mapped because
-        // HostAssociations::internalProcedureBindings that was called when
-        // lowering `B` will have mapped all host symbols of captured variables
-        // to the tuple argument containing the composite of all host associated
-        // variables, whether or not the host symbol is actually referred to in
-        // `B`. Hence it is possible to simply lookup the variable associated to
-        // the host symbol without having to go back to the tuple argument.
-        Fortran::lower::SymbolBox hostValue =
-            symMap.lookupSymbol(hostDetails->symbol());
-        assert(hostValue && "callee host symbol must be mapped on caller side");
-        symMap.addSymbol(sym, hostValue.toExtendedValue());
-        // The SymbolBox associated to the host symbols is complete, skip
-        // instantiateVariable that would try to allocate a new storage.
-        continue;
-      }
-      if (Fortran::semantics::IsDummy(sym) && sym.owner() == result.owner()) {
-        // Get the argument for the dummy argument symbols of the current call.
-        symMap.addSymbol(sym, caller.getArgumentValue(sym));
-        // All the properties of the dummy variable may not come from the actual
-        // argument, let instantiateVariable handle this.
-      }
-      // If this is neither a host associated or dummy symbol, it must be a
-      // module or common block variable to satisfy specification expression
-      // requirements in 10.1.11, instantiateVariable will get its address and
-      // properties.
-      instantiateVariable(converter, var, symMap, storeMap);
+      continue;
     }
+    const Fortran::semantics::Symbol &sym = var.getSymbol();
+    if (&sym == &result)
+      continue;
+    const auto *hostDetails =
+        sym.detailsIf<Fortran::semantics::HostAssocDetails>();
+    if (hostDetails && !var.isModuleOrSubmoduleVariable()) {
+      // The callee is an internal procedure `A` whose result properties
+      // depend on host variables. The caller may be the host, or another
+      // internal procedure `B` contained in the same host.  In the first
+      // case, the host symbol is obviously mapped, in the second case, it
+      // must also be mapped because
+      // HostAssociations::internalProcedureBindings that was called when
+      // lowering `B` will have mapped all host symbols of captured variables
+      // to the tuple argument containing the composite of all host associated
+      // variables, whether or not the host symbol is actually referred to in
+      // `B`. Hence it is possible to simply lookup the variable associated to
+      // the host symbol without having to go back to the tuple argument.
+      Fortran::lower::SymbolBox hostValue =
+          symMap.lookupSymbol(hostDetails->symbol());
+      assert(hostValue && "callee host symbol must be mapped on caller side");
+      symMap.addSymbol(sym, hostValue.toExtendedValue());
+      // The SymbolBox associated to the host symbols is complete, skip
+      // instantiateVariable that would try to allocate a new storage.
+      continue;
+    }
+    if (Fortran::semantics::IsDummy(sym) && sym.owner() == result.owner()) {
+      // Get the argument for the dummy argument symbols of the current call.
+      symMap.addSymbol(sym, caller.getArgumentValue(sym));
+      // All the properties of the dummy variable may not come from the actual
+      // argument, let instantiateVariable handle this.
+    }
+    // If this is neither a host associated or dummy symbol, it must be a
+    // module or common block variable to satisfy specification expression
+    // requirements in 10.1.11, instantiateVariable will get its address and
+    // properties.
+    instantiateVariable(converter, var, symMap, storeMap);
   }
+}
+
+void Fortran::lower::mapSymbolAttributes(
+    AbstractConverter &converter, const Fortran::semantics::SymbolRef &symbol,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
+    mlir::Value preAlloc) {
+  mapSymbolAttributes(converter, pft::Variable{symbol}, symMap, stmtCtx,
+                      preAlloc);
 }
 
 void Fortran::lower::createRuntimeTypeInfoGlobal(

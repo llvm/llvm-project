@@ -194,6 +194,29 @@ struct PyGlobalDebugFlag {
   }
 };
 
+struct PyAttrBuilderMap {
+  static bool dunderContains(const std::string &attributeKind) {
+    return PyGlobals::get().lookupAttributeBuilder(attributeKind).has_value();
+  }
+  static py::function dundeGetItemNamed(const std::string &attributeKind) {
+    auto builder = PyGlobals::get().lookupAttributeBuilder(attributeKind);
+    if (!builder)
+      throw py::key_error();
+    return *builder;
+  }
+  static void dundeSetItemNamed(const std::string &attributeKind,
+                                py::function func) {
+    PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func));
+  }
+
+  static void bind(py::module &m) {
+    py::class_<PyAttrBuilderMap>(m, "AttrBuilder", py::module_local())
+        .def_static("contains", &PyAttrBuilderMap::dunderContains)
+        .def_static("get", &PyAttrBuilderMap::dundeGetItemNamed)
+        .def_static("insert", &PyAttrBuilderMap::dundeSetItemNamed);
+  }
+};
+
 //------------------------------------------------------------------------------
 // Collections.
 //------------------------------------------------------------------------------
@@ -445,6 +468,55 @@ public:
 private:
   PyOperationRef parentOperation;
   MlirBlock block;
+};
+
+class PyOpOperand {
+public:
+  PyOpOperand(MlirOpOperand opOperand) : opOperand(opOperand) {}
+
+  py::object getOwner() {
+    MlirOperation owner = mlirOpOperandGetOwner(opOperand);
+    PyMlirContextRef context =
+        PyMlirContext::forContext(mlirOperationGetContext(owner));
+    return PyOperation::forOperation(context, owner)->createOpView();
+  }
+
+  size_t getOperandNumber() { return mlirOpOperandGetOperandNumber(opOperand); }
+
+  static void bind(py::module &m) {
+    py::class_<PyOpOperand>(m, "OpOperand", py::module_local())
+        .def_property_readonly("owner", &PyOpOperand::getOwner)
+        .def_property_readonly("operand_number",
+                               &PyOpOperand::getOperandNumber);
+  }
+
+private:
+  MlirOpOperand opOperand;
+};
+
+class PyOpOperandIterator {
+public:
+  PyOpOperandIterator(MlirOpOperand opOperand) : opOperand(opOperand) {}
+
+  PyOpOperandIterator &dunderIter() { return *this; }
+
+  PyOpOperand dunderNext() {
+    if (mlirOpOperandIsNull(opOperand))
+      throw py::stop_iteration();
+
+    PyOpOperand returnOpOperand(opOperand);
+    opOperand = mlirOpOperandGetNextUse(opOperand);
+    return returnOpOperand;
+  }
+
+  static void bind(py::module &m) {
+    py::class_<PyOpOperandIterator>(m, "OpOperandIterator", py::module_local())
+        .def("__iter__", &PyOpOperandIterator::dunderIter)
+        .def("__next__", &PyOpOperandIterator::dunderNext);
+  }
+
+private:
+  MlirOpOperand opOperand;
 };
 
 } // namespace
@@ -792,7 +864,7 @@ py::tuple PyDiagnostic::getNotes() {
   materializedNotes = py::tuple(numNotes);
   for (intptr_t i = 0; i < numNotes; ++i) {
     MlirDiagnostic noteDiag = mlirDiagnosticGetNote(diagnostic, i);
-    materializedNotes.value()[i] = PyDiagnostic(noteDiag);
+    (*materializedNotes)[i] = PyDiagnostic(noteDiag);
   }
   return *materializedNotes;
 }
@@ -2424,7 +2496,7 @@ void mlir::python::populateIRCore(py::module &m) {
               throw py::value_error("No caller frames provided");
             MlirLocation caller = frames.back().get();
             for (const PyLocation &frame :
-                 llvm::reverse(llvm::makeArrayRef(frames).drop_back()))
+                 llvm::reverse(llvm::ArrayRef(frames).drop_back()))
               caller = mlirLocationCallSiteGet(frame.get(), caller);
             return PyLocation(context->getRef(),
                               mlirLocationCallSiteGet(callee.get(), caller));
@@ -2892,6 +2964,10 @@ void mlir::python::populateIRCore(py::module &m) {
              return self.get().ptr == other.get().ptr;
            })
       .def("__eq__", [](PyBlock &self, py::object &other) { return false; })
+      .def("__hash__",
+           [](PyBlock &self) {
+             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+           })
       .def(
           "__str__",
           [](PyBlock &self) {
@@ -3152,6 +3228,11 @@ void mlir::python::populateIRCore(py::module &m) {
             assert(false && "Value must be a block argument or an op result");
             return py::none();
           })
+      .def_property_readonly("uses",
+                             [](PyValue &self) {
+                               return PyOpOperandIterator(
+                                   mlirValueGetFirstUse(self.get()));
+                             })
       .def("__eq__",
            [](PyValue &self, PyValue &other) {
              return self.get().ptr == other.get().ptr;
@@ -3178,6 +3259,7 @@ void mlir::python::populateIRCore(py::module &m) {
       });
   PyBlockArgument::bind(m);
   PyOpResult::bind(m);
+  PyOpOperand::bind(m);
 
   //----------------------------------------------------------------------------
   // Mapping of SymbolTable.
@@ -3216,6 +3298,7 @@ void mlir::python::populateIRCore(py::module &m) {
   PyOperationIterator::bind(m);
   PyOperationList::bind(m);
   PyOpAttributeMap::bind(m);
+  PyOpOperandIterator::bind(m);
   PyOpOperandList::bind(m);
   PyOpResultList::bind(m);
   PyRegionIterator::bind(m);
@@ -3223,4 +3306,7 @@ void mlir::python::populateIRCore(py::module &m) {
 
   // Debug bindings.
   PyGlobalDebugFlag::bind(m);
+
+  // Attribute builder getter.
+  PyAttrBuilderMap::bind(m);
 }

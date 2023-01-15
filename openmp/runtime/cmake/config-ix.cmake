@@ -48,19 +48,25 @@ function(libomp_check_architecture_flag flag retval)
 endfunction()
 
 # Checking CXX, Linker Flags
+
+# GCC silently accepts any -Wno-<foo> option, but warns about those options
+# being unrecognized only if the compilation triggers other warnings to be
+# printed. Therefore, check for whether the compiler supports options in the
+# form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
+
 check_cxx_compiler_flag(-fno-exceptions LIBOMP_HAVE_FNO_EXCEPTIONS_FLAG)
 check_cxx_compiler_flag(-fno-rtti LIBOMP_HAVE_FNO_RTTI_FLAG)
-check_cxx_compiler_flag(-Wno-class-memaccess LIBOMP_HAVE_WNO_CLASS_MEMACCESS_FLAG)
-check_cxx_compiler_flag(-Wno-covered-switch-default LIBOMP_HAVE_WNO_COVERED_SWITCH_DEFAULT_FLAG)
-check_cxx_compiler_flag(-Wno-frame-address LIBOMP_HAVE_WNO_FRAME_ADDRESS_FLAG)
-check_cxx_compiler_flag(-Wno-strict-aliasing LIBOMP_HAVE_WNO_STRICT_ALIASING_FLAG)
+check_cxx_compiler_flag(-Wclass-memaccess LIBOMP_HAVE_WCLASS_MEMACCESS_FLAG)
+check_cxx_compiler_flag(-Wcovered-switch-default LIBOMP_HAVE_WCOVERED_SWITCH_DEFAULT_FLAG)
+check_cxx_compiler_flag(-Wframe-address LIBOMP_HAVE_WFRAME_ADDRESS_FLAG)
+check_cxx_compiler_flag(-Wstrict-aliasing LIBOMP_HAVE_WSTRICT_ALIASING_FLAG)
 check_cxx_compiler_flag(-Wstringop-overflow=0 LIBOMP_HAVE_WSTRINGOP_OVERFLOW_FLAG)
-check_cxx_compiler_flag(-Wno-stringop-truncation LIBOMP_HAVE_WNO_STRINGOP_TRUNCATION_FLAG)
-check_cxx_compiler_flag(-Wno-switch LIBOMP_HAVE_WNO_SWITCH_FLAG)
-check_cxx_compiler_flag(-Wno-uninitialized LIBOMP_HAVE_WNO_UNINITIALIZED_FLAG)
-check_cxx_compiler_flag(-Wno-return-type-c-linkage LIBOMP_HAVE_WNO_RETURN_TYPE_C_LINKAGE_FLAG)
-check_cxx_compiler_flag(-Wno-cast-qual LIBOMP_HAVE_WNO_CAST_QUAL_FLAG)
-check_cxx_compiler_flag(-Wno-int-to-void-pointer-cast LIBOMP_HAVE_WNO_INT_TO_VOID_POINTER_CAST_FLAG)
+check_cxx_compiler_flag(-Wstringop-truncation LIBOMP_HAVE_WSTRINGOP_TRUNCATION_FLAG)
+check_cxx_compiler_flag(-Wswitch LIBOMP_HAVE_WSWITCH_FLAG)
+check_cxx_compiler_flag(-Wuninitialized LIBOMP_HAVE_WUNINITIALIZED_FLAG)
+check_cxx_compiler_flag(-Wreturn-type-c-linkage LIBOMP_HAVE_WRETURN_TYPE_C_LINKAGE_FLAG)
+check_cxx_compiler_flag(-Wcast-qual LIBOMP_HAVE_WCAST_QUAL_FLAG)
+check_cxx_compiler_flag(-Wint-to-void-pointer-cast LIBOMP_HAVE_WINT_TO_VOID_POINTER_CAST_FLAG)
 # check_cxx_compiler_flag(-Wconversion LIBOMP_HAVE_WCONVERSION_FLAG)
 check_cxx_compiler_flag(-msse2 LIBOMP_HAVE_MSSE2_FLAG)
 check_cxx_compiler_flag(-ftls-model=initial-exec LIBOMP_HAVE_FTLS_MODEL_FLAG)
@@ -131,8 +137,7 @@ if(WIN32)
 elseif(NOT APPLE)
   libomp_check_linker_flag(-Wl,-x LIBOMP_HAVE_X_FLAG)
   libomp_check_linker_flag(-Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
-  libomp_check_linker_flag("-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  libomp_check_linker_flag("-Wl,--undefined-version" LIBOMP_HAVE_UNDEFINED_VERSION_FLAG)  # FIXME issue #58858
+  libomp_check_linker_flag("-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
   libomp_check_linker_flag(-static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
   libomp_check_linker_flag(-Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
 endif()

@@ -27,11 +27,7 @@ class ARCFunctionInfo : public MachineFunctionInfo {
   unsigned ReturnStackOffset;
 
 public:
-  ARCFunctionInfo()
-      : ReturnStackOffsetSet(false), VarArgsFrameIndex(0),
-        ReturnStackOffset(-1U), MaxCallStackReq(0) {}
-
-  explicit ARCFunctionInfo(MachineFunction &MF)
+  explicit ARCFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
       : ReturnStackOffsetSet(false), VarArgsFrameIndex(0),
         ReturnStackOffset(-1U), MaxCallStackReq(0) {}
   ~ARCFunctionInfo() {}

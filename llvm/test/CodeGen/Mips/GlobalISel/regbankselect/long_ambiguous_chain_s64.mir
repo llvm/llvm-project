@@ -2,7 +2,7 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @long_chain_ambiguous_i64_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %b, i64* %c, i64* %result) {
+  define void @long_chain_ambiguous_i64_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, ptr %a, ptr %b, ptr %c, ptr %result) {
   entry:
     br i1 %cnd0, label %pre.PHI.2, label %pre.PHI.1
 
@@ -13,15 +13,15 @@
     br i1 %cnd2, label %b.PHI.1.2, label %b.PHI.1.0
 
   b.PHI.1.0:                                        ; preds = %pre.PHI.1.0
-    %phi1.0 = load i64, i64* %a
+    %phi1.0 = load i64, ptr %a
     br label %b.PHI.1
 
   b.PHI.1.1:                                        ; preds = %pre.PHI.1
-    %phi1.1 = load i64, i64* %b
+    %phi1.1 = load i64, ptr %b
     br label %b.PHI.1
 
   b.PHI.1.2:                                        ; preds = %pre.PHI.1.0
-    %phi1.2 = load i64, i64* %c
+    %phi1.2 = load i64, ptr %c
     br label %b.PHI.1
 
   b.PHI.1:                                          ; preds = %b.PHI.1.2, %b.PHI.1.1, %b.PHI.1.0
@@ -29,18 +29,18 @@
     br i1 %cnd2, label %b.PHI.1.end, label %b.PHI.3
 
   b.PHI.1.end:                                      ; preds = %b.PHI.1
-    store i64 %phi1, i64* %result
+    store i64 %phi1, ptr %result
     ret void
 
   pre.PHI.2:                                        ; preds = %entry
     br i1 %cnd0, label %b.PHI.2.0, label %b.PHI.2.1
 
   b.PHI.2.0:                                        ; preds = %pre.PHI.2
-    %phi2.0 = load i64, i64* %a
+    %phi2.0 = load i64, ptr %a
     br label %b.PHI.2
 
   b.PHI.2.1:                                        ; preds = %pre.PHI.2
-    %phi2.1 = load i64, i64* %b
+    %phi2.1 = load i64, ptr %b
     br label %b.PHI.2
 
   b.PHI.2:                                          ; preds = %b.PHI.2.1, %b.PHI.2.0
@@ -48,7 +48,7 @@
     br i1 %cnd1, label %b.PHI.3, label %b.PHI.2.end
 
   b.PHI.2.end:                                      ; preds = %b.PHI.2
-    store i64 %phi2, i64* %result
+    store i64 %phi2, ptr %result
     ret void
 
   b.PHI.3:                                          ; preds = %b.PHI.2, %b.PHI.1
@@ -56,12 +56,12 @@
     %phi4 = phi i64 [ %phi2, %b.PHI.2 ], [ %phi1, %b.PHI.1 ]
     %sel_1.2 = select i1 %cnd2, i64 %phi3, i64 %phi4
     %sel_3_1.2 = select i1 %cnd1, i64 %sel_1.2, i64 %phi3
-    store i64 %sel_3_1.2, i64* %result
-    store i64 %phi3, i64* %result
+    store i64 %sel_3_1.2, ptr %result
+    store i64 %phi3, ptr %result
     ret void
   }
 
-  define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i64* %a, i64* %b, i64* %c, i64* %result) {
+  define void @long_chain_i64_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, ptr %a, ptr %b, ptr %c, ptr %result) {
   entry:
     br i1 %cnd0, label %pre.PHI.2, label %pre.PHI.1
 
@@ -72,15 +72,15 @@
     br i1 %cnd2, label %b.PHI.1.2, label %b.PHI.1.0
 
   b.PHI.1.0:                                        ; preds = %pre.PHI.1.0
-    %phi1.0 = load i64, i64* %a
+    %phi1.0 = load i64, ptr %a
     br label %b.PHI.1
 
   b.PHI.1.1:                                        ; preds = %pre.PHI.1
-    %phi1.1 = load i64, i64* %b
+    %phi1.1 = load i64, ptr %b
     br label %b.PHI.1
 
   b.PHI.1.2:                                        ; preds = %pre.PHI.1.0
-    %phi1.2 = load i64, i64* %c
+    %phi1.2 = load i64, ptr %c
     br label %b.PHI.1
 
   b.PHI.1:                                          ; preds = %b.PHI.1.2, %b.PHI.1.1, %b.PHI.1.0
@@ -88,18 +88,18 @@
     br i1 %cnd2, label %b.PHI.1.end, label %b.PHI.3
 
   b.PHI.1.end:                                      ; preds = %b.PHI.1
-    store i64 %phi1, i64* %result
+    store i64 %phi1, ptr %result
     ret void
 
   pre.PHI.2:                                        ; preds = %entry
     br i1 %cnd0, label %b.PHI.2.0, label %b.PHI.2.1
 
   b.PHI.2.0:                                        ; preds = %pre.PHI.2
-    %phi2.0 = load i64, i64* %a
+    %phi2.0 = load i64, ptr %a
     br label %b.PHI.2
 
   b.PHI.2.1:                                        ; preds = %pre.PHI.2
-    %phi2.1 = load i64, i64* %b
+    %phi2.1 = load i64, ptr %b
     br label %b.PHI.2
 
   b.PHI.2:                                          ; preds = %b.PHI.2.1, %b.PHI.2.0
@@ -107,7 +107,7 @@
     br i1 %cnd1, label %b.PHI.3, label %b.PHI.2.end
 
   b.PHI.2.end:                                      ; preds = %b.PHI.2
-    store i64 %phi2, i64* %result
+    store i64 %phi2, ptr %result
     ret void
 
   b.PHI.3:                                          ; preds = %b.PHI.2, %b.PHI.1
@@ -115,12 +115,12 @@
     %phi4 = phi i64 [ %phi2, %b.PHI.2 ], [ 0, %b.PHI.1 ]
     %sel_1.2 = select i1 %cnd2, i64 %phi3, i64 %phi4
     %sel_3_1.2 = select i1 %cnd1, i64 %sel_1.2, i64 %phi3
-    store i64 %sel_3_1.2, i64* %result
-    store i64 %phi3, i64* %result
+    store i64 %sel_3_1.2, ptr %result
+    store i64 %phi3, ptr %result
     ret void
   }
 
-  define void @long_chain_ambiguous_double_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, double* %a, double* %b, double* %c, double* %result) {
+  define void @long_chain_ambiguous_double_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, ptr %a, ptr %b, ptr %c, ptr %result) {
   entry:
     br i1 %cnd0, label %pre.PHI.2, label %pre.PHI.1
 
@@ -131,15 +131,15 @@
     br i1 %cnd2, label %b.PHI.1.2, label %b.PHI.1.0
 
   b.PHI.1.0:                                        ; preds = %pre.PHI.1.0
-    %phi1.0 = load double, double* %a
+    %phi1.0 = load double, ptr %a
     br label %b.PHI.1
 
   b.PHI.1.1:                                        ; preds = %pre.PHI.1
-    %phi1.1 = load double, double* %b
+    %phi1.1 = load double, ptr %b
     br label %b.PHI.1
 
   b.PHI.1.2:                                        ; preds = %pre.PHI.1.0
-    %phi1.2 = load double, double* %c
+    %phi1.2 = load double, ptr %c
     br label %b.PHI.1
 
   b.PHI.1:                                          ; preds = %b.PHI.1.2, %b.PHI.1.1, %b.PHI.1.0
@@ -147,18 +147,18 @@
     br i1 %cnd2, label %b.PHI.1.end, label %b.PHI.3
 
   b.PHI.1.end:                                      ; preds = %b.PHI.1
-    store double %phi1, double* %result
+    store double %phi1, ptr %result
     ret void
 
   pre.PHI.2:                                        ; preds = %entry
     br i1 %cnd0, label %b.PHI.2.0, label %b.PHI.2.1
 
   b.PHI.2.0:                                        ; preds = %pre.PHI.2
-    %phi2.0 = load double, double* %a
+    %phi2.0 = load double, ptr %a
     br label %b.PHI.2
 
   b.PHI.2.1:                                        ; preds = %pre.PHI.2
-    %phi2.1 = load double, double* %b
+    %phi2.1 = load double, ptr %b
     br label %b.PHI.2
 
   b.PHI.2:                                          ; preds = %b.PHI.2.1, %b.PHI.2.0
@@ -166,7 +166,7 @@
     br i1 %cnd1, label %b.PHI.3, label %b.PHI.2.end
 
   b.PHI.2.end:                                      ; preds = %b.PHI.2
-    store double %phi2, double* %result
+    store double %phi2, ptr %result
     ret void
 
   b.PHI.3:                                          ; preds = %b.PHI.2, %b.PHI.1
@@ -174,12 +174,12 @@
     %phi4 = phi double [ %phi2, %b.PHI.2 ], [ %phi1, %b.PHI.1 ]
     %sel_1.2 = select i1 %cnd2, double %phi3, double %phi4
     %sel_3_1.2 = select i1 %cnd1, double %sel_1.2, double %phi3
-    store double %sel_3_1.2, double* %result
-    store double %phi3, double* %result
+    store double %sel_3_1.2, ptr %result
+    store double %phi3, ptr %result
     ret void
   }
 
-  define void @long_chain_double_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, double* %a, double* %b, double* %c, double* %result) {
+  define void @long_chain_double_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, ptr %a, ptr %b, ptr %c, ptr %result) {
   entry:
     br i1 %cnd0, label %pre.PHI.2, label %pre.PHI.1
 
@@ -190,15 +190,15 @@
     br i1 %cnd2, label %b.PHI.1.2, label %b.PHI.1.0
 
   b.PHI.1.0:                                        ; preds = %pre.PHI.1.0
-    %phi1.0 = load double, double* %a
+    %phi1.0 = load double, ptr %a
     br label %b.PHI.1
 
   b.PHI.1.1:                                        ; preds = %pre.PHI.1
-    %phi1.1 = load double, double* %b
+    %phi1.1 = load double, ptr %b
     br label %b.PHI.1
 
   b.PHI.1.2:                                        ; preds = %pre.PHI.1.0
-    %phi1.2 = load double, double* %c
+    %phi1.2 = load double, ptr %c
     br label %b.PHI.1
 
   b.PHI.1:                                          ; preds = %b.PHI.1.2, %b.PHI.1.1, %b.PHI.1.0
@@ -206,18 +206,18 @@
     br i1 %cnd2, label %b.PHI.1.end, label %b.PHI.3
 
   b.PHI.1.end:                                      ; preds = %b.PHI.1
-    store double %phi1, double* %result
+    store double %phi1, ptr %result
     ret void
 
   pre.PHI.2:                                        ; preds = %entry
     br i1 %cnd0, label %b.PHI.2.0, label %b.PHI.2.1
 
   b.PHI.2.0:                                        ; preds = %pre.PHI.2
-    %phi2.0 = load double, double* %a
+    %phi2.0 = load double, ptr %a
     br label %b.PHI.2
 
   b.PHI.2.1:                                        ; preds = %pre.PHI.2
-    %phi2.1 = load double, double* %b
+    %phi2.1 = load double, ptr %b
     br label %b.PHI.2
 
   b.PHI.2:                                          ; preds = %b.PHI.2.1, %b.PHI.2.0
@@ -225,7 +225,7 @@
     br i1 %cnd1, label %b.PHI.3, label %b.PHI.2.end
 
   b.PHI.2.end:                                      ; preds = %b.PHI.2
-    store double %phi2, double* %result
+    store double %phi2, ptr %result
     ret void
 
   b.PHI.3:                                          ; preds = %b.PHI.2, %b.PHI.1
@@ -233,8 +233,8 @@
     %phi4 = phi double [ %phi2, %b.PHI.2 ], [ 0.000000e+00, %b.PHI.1 ]
     %sel_1.2 = select i1 %cnd2, double %phi3, double %phi4
     %sel_3_1.2 = select i1 %cnd1, double %sel_1.2, double %phi3
-    store double %sel_3_1.2, double* %result
-    store double %phi3, double* %result
+    store double %sel_3_1.2, ptr %result
+    store double %phi3, ptr %result
     ret void
   }
 

@@ -73,26 +73,29 @@ enum LipoID {
 #undef OPTION
 };
 
-// LipoInfoTable below references LIPO_##PREFIX. OptionGroup has prefix nullptr.
-constexpr const char *const *LIPO_nullptr = nullptr;
-#define PREFIX(NAME, VALUE) const char *const LIPO_##NAME[] = VALUE;
+namespace lipo {
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "LipoOpts.inc"
 #undef PREFIX
 
 static constexpr opt::OptTable::Info LipoInfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
-  {LIPO_##PREFIX, NAME,      HELPTEXT,                                         \
-   METAVAR,       LIPO_##ID, opt::Option::KIND##Class,                         \
-   PARAM,         FLAGS,     LIPO_##GROUP,                                     \
-   LIPO_##ALIAS,  ALIASARGS, VALUES},
+  {PREFIX,       NAME,      HELPTEXT,                                          \
+   METAVAR,      LIPO_##ID, opt::Option::KIND##Class,                          \
+   PARAM,        FLAGS,     LIPO_##GROUP,                                      \
+   LIPO_##ALIAS, ALIASARGS, VALUES},
 #include "LipoOpts.inc"
 #undef OPTION
 };
+} // namespace lipo
 
-class LipoOptTable : public opt::OptTable {
+class LipoOptTable : public opt::GenericOptTable {
 public:
-  LipoOptTable() : OptTable(LipoInfoTable) {}
+  LipoOptTable() : opt::GenericOptTable(lipo::LipoInfoTable) {}
 };
 
 enum class LipoAction {
@@ -726,7 +729,7 @@ int llvm_lipo_main(int argc, char **argv) {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
 
-  Config C = parseLipoOptions(makeArrayRef(argv + 1, argc - 1));
+  Config C = parseLipoOptions(ArrayRef(argv + 1, argc - 1));
   LLVMContext LLVMCtx;
   SmallVector<OwningBinary<Binary>, 1> InputBinaries =
       readInputBinaries(LLVMCtx, C.InputFiles);

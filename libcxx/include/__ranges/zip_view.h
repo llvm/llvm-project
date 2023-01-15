@@ -403,15 +403,15 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   friend constexpr auto iter_move(const __iterator& __i) noexcept(
-      (noexcept(ranges::iter_move(declval<const iterator_t<__maybe_const<_Const, _Views>>&>())) && ...) &&
+      (noexcept(ranges::iter_move(std::declval<const iterator_t<__maybe_const<_Const, _Views>>&>())) && ...) &&
       (is_nothrow_move_constructible_v<range_rvalue_reference_t<__maybe_const<_Const, _Views>>> && ...)) {
     return ranges::__tuple_transform(ranges::iter_move, __i.__current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI
   friend constexpr void iter_swap(const __iterator& __l, const __iterator& __r) noexcept(
-      (noexcept(ranges::iter_swap(declval<const iterator_t<__maybe_const<_Const, _Views>>&>(),
-                                  declval<const iterator_t<__maybe_const<_Const, _Views>>&>())) &&
+      (noexcept(ranges::iter_swap(std::declval<const iterator_t<__maybe_const<_Const, _Views>>&>(),
+                                  std::declval<const iterator_t<__maybe_const<_Const, _Views>>&>())) &&
        ...))
     requires(indirectly_swappable<iterator_t<__maybe_const<_Const, _Views>>> && ...) {
     ranges::__tuple_zip_for_each(ranges::iter_swap, __l.__current_, __r.__current_);

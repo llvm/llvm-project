@@ -79,9 +79,6 @@ namespace llvm {
       // Exception handler return. The stack is restored to the first
       // followed by a jump to the second argument.
       EH_RETURN,
-
-      // Memory barrier.
-      MEMBARRIER
     };
   }
 

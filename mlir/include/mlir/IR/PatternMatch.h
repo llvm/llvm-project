@@ -89,7 +89,7 @@ public:
 
   /// Return the root node that this pattern matches. Patterns that can match
   /// multiple root types return std::nullopt.
-  Optional<OperationName> getRootKind() const {
+  std::optional<OperationName> getRootKind() const {
     if (rootKind == RootKind::OperationName)
       return OperationName::getFromOpaquePointer(rootValue);
     return std::nullopt;
@@ -410,8 +410,7 @@ public:
   /// responsible for creating or updating the operation transferring flow of
   /// control to the region and passing it the correct block arguments.
   virtual void cloneRegionBefore(Region &region, Region &parent,
-                                 Region::iterator before,
-                                 BlockAndValueMapping &mapping);
+                                 Region::iterator before, IRMapping &mapping);
   void cloneRegionBefore(Region &region, Region &parent,
                          Region::iterator before);
   void cloneRegionBefore(Region &region, Block *before);
@@ -1638,12 +1637,15 @@ public:
 
   // Add a matchAndRewrite style pattern represented as a C function pointer.
   template <typename OpType>
-  RewritePatternSet &add(LogicalResult (*implFn)(OpType,
-                                                 PatternRewriter &rewriter)) {
+  RewritePatternSet &
+  add(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
+      PatternBenefit benefit = 1, ArrayRef<StringRef> generatedNames = {}) {
     struct FnPattern final : public OpRewritePattern<OpType> {
       FnPattern(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
-                MLIRContext *context)
-          : OpRewritePattern<OpType>(context), implFn(implFn) {}
+                MLIRContext *context, PatternBenefit benefit,
+                ArrayRef<StringRef> generatedNames)
+          : OpRewritePattern<OpType>(context, benefit, generatedNames),
+            implFn(implFn) {}
 
       LogicalResult matchAndRewrite(OpType op,
                                     PatternRewriter &rewriter) const override {
@@ -1653,7 +1655,8 @@ public:
     private:
       LogicalResult (*implFn)(OpType, PatternRewriter &rewriter);
     };
-    add(std::make_unique<FnPattern>(std::move(implFn), getContext()));
+    add(std::make_unique<FnPattern>(std::move(implFn), getContext(), benefit,
+                                    generatedNames));
     return *this;
   }
 

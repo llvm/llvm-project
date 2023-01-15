@@ -220,7 +220,7 @@ struct ThreadState {
 #endif
 
   atomic_uintptr_t in_signal_handler;
-  ThreadSignalContext *signal_ctx;
+  atomic_uintptr_t signal_ctx;
 
 #if !SANITIZER_GO
   StackID last_sleep_stack_id;
@@ -484,6 +484,7 @@ void MapThreadTrace(uptr addr, uptr size, const char *name);
 void DontNeedShadowFor(uptr addr, uptr size);
 void UnmapShadow(ThreadState *thr, uptr addr, uptr size);
 void InitializeShadowMemory();
+void DontDumpShadow(uptr addr, uptr size);
 void InitializeInterceptors();
 void InitializeLibIgnore();
 void InitializeDynamicAnnotations();

@@ -150,7 +150,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
             (TFI->isStackRealignable() || (Alignment <= StackAlign))) {
           const ConstantInt *CUI = cast<ConstantInt>(AI->getArraySize());
           uint64_t TySize =
-              MF->getDataLayout().getTypeAllocSize(Ty).getKnownMinSize();
+              MF->getDataLayout().getTypeAllocSize(Ty).getKnownMinValue();
 
           TySize *= CUI->getZExtValue();   // Get total allocated size.
           if (TySize == 0) TySize = 1; // Don't create zero-sized stack objects.
@@ -445,7 +445,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   Register DestReg = It->second;
   if (DestReg == 0)
     return;
-  assert(Register::isVirtualRegister(DestReg) && "Expected a virtual reg");
+  assert(DestReg.isVirtual() && "Expected a virtual reg");
   LiveOutRegInfo.grow(DestReg);
   LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
 
@@ -468,7 +468,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
     assert(ValueMap.count(V) && "V should have been placed in ValueMap when its"
                                 "CopyToReg node was created.");
     Register SrcReg = ValueMap[V];
-    if (!Register::isVirtualRegister(SrcReg)) {
+    if (!SrcReg.isVirtual()) {
       DestLOI.IsValid = false;
       return;
     }

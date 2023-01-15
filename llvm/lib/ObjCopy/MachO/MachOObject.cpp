@@ -115,7 +115,7 @@ Error Object::removeSections(
   }
 
   auto IsDead = [&](const std::unique_ptr<SymbolEntry> &S) -> bool {
-    Optional<uint32_t> Section = S->section();
+    std::optional<uint32_t> Section = S->section();
     return (Section && !OldIndexToSection.count(*Section));
   };
 
@@ -201,7 +201,7 @@ static StringRef extractSegmentName(const char *SegName) {
                    strnlen(SegName, sizeof(MachO::segment_command::segname)));
 }
 
-Optional<StringRef> LoadCommand::getSegmentName() const {
+std::optional<StringRef> LoadCommand::getSegmentName() const {
   const MachO::macho_load_command &MLC = MachOLoadCommand;
   switch (MLC.load_command_data.cmd) {
   case MachO::LC_SEGMENT:
@@ -213,7 +213,7 @@ Optional<StringRef> LoadCommand::getSegmentName() const {
   }
 }
 
-Optional<uint64_t> LoadCommand::getSegmentVMAddr() const {
+std::optional<uint64_t> LoadCommand::getSegmentVMAddr() const {
   const MachO::macho_load_command &MLC = MachOLoadCommand;
   switch (MLC.load_command_data.cmd) {
   case MachO::LC_SEGMENT:

@@ -10,8 +10,8 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -21,7 +21,7 @@ namespace performance {
 
 namespace {
 
-llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
+std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
   std::string Result;
   {
     llvm::raw_string_ostream OS(Result);

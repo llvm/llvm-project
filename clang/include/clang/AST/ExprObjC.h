@@ -27,7 +27,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -1416,11 +1415,10 @@ public:
   SourceLocation getSelectorLoc(unsigned Index) const {
     assert(Index < getNumSelectorLocs() && "Index out of range!");
     if (hasStandardSelLocs())
-      return getStandardSelectorLoc(Index, getSelector(),
-                                   getSelLocsKind() == SelLoc_StandardWithSpace,
-                               llvm::makeArrayRef(const_cast<Expr**>(getArgs()),
-                                                  getNumArgs()),
-                                   RBracLoc);
+      return getStandardSelectorLoc(
+          Index, getSelector(), getSelLocsKind() == SelLoc_StandardWithSpace,
+          llvm::ArrayRef(const_cast<Expr **>(getArgs()), getNumArgs()),
+          RBracLoc);
     return getStoredSelLocs()[Index];
   }
 

@@ -18,6 +18,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -192,7 +193,7 @@ getDesignators(const InitListExpr *Syn) {
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
-                   const Config &Cfg, llvm::Optional<Range> RestrictRange)
+                   const Config &Cfg, std::optional<Range> RestrictRange)
       : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
@@ -216,6 +217,13 @@ public:
     // SuppressDefaultTemplateArgs (set by default) to have an effect.
     StructuredBindingPolicy = TypeHintPolicy;
     StructuredBindingPolicy.PrintCanonicalTypes = true;
+  }
+
+  bool VisitTypeLoc(TypeLoc TL) {
+    if (const auto *DT = llvm::dyn_cast<DecltypeType>(TL.getType()))
+      if (QualType UT = DT->getUnderlyingType(); !UT->isDependentType())
+        addTypeHint(TL.getSourceRange(), UT, ": ");
+    return true;
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
@@ -640,7 +648,7 @@ private:
   }
 
   // Get the range of the main file that *exactly* corresponds to R.
-  llvm::Optional<Range> getHintRange(SourceRange R) {
+  std::optional<Range> getHintRange(SourceRange R) {
     const auto &SM = AST.getSourceManager();
     auto Spelled = Tokens.spelledForExpanded(Tokens.expandedTokens(R));
     // TokenBuffer will return null if e.g. R corresponds to only part of a
@@ -655,7 +663,22 @@ private:
                  sourceLocToPosition(SM, Spelled->back().endLocation())};
   }
 
+  static bool shouldPrintCanonicalType(QualType QT) {
+    // The sugared type is more useful in some cases, and the canonical
+    // type in other cases. For now, prefer the sugared type unless
+    // we are printing `decltype(expr)`. This could be refined further
+    // (see https://github.com/clangd/clangd/issues/1298).
+    if (QT->isDecltypeType())
+      return true;
+    if (const AutoType *AT = QT->getContainedAutoType())
+      if (!AT->getDeducedType().isNull() &&
+          AT->getDeducedType()->isDecltypeType())
+        return true;
+    return false;
+  }
+
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
+    TypeHintPolicy.PrintCanonicalTypes = shouldPrintCanonicalType(T);
     addTypeHint(R, T, Prefix, TypeHintPolicy);
   }
 
@@ -679,7 +702,7 @@ private:
   ASTContext &AST;
   const syntax::TokenBuffer &Tokens;
   const Config &Cfg;
-  llvm::Optional<Range> RestrictRange;
+  std::optional<Range> RestrictRange;
   FileID MainFileID;
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
@@ -698,7 +721,7 @@ private:
 } // namespace
 
 std::vector<InlayHint> inlayHints(ParsedAST &AST,
-                                  llvm::Optional<Range> RestrictRange) {
+                                  std::optional<Range> RestrictRange) {
   std::vector<InlayHint> Results;
   const auto &Cfg = Config::current();
   if (!Cfg.InlayHints.Enabled)

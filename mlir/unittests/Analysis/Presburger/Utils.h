@@ -67,9 +67,9 @@ inline void
 expectComputedVolumeIsValidOverapprox(const Optional<MPInt> &computedVolume,
                                       Optional<int64_t> trueVolume,
                                       Optional<int64_t> resultBound) {
-  expectComputedVolumeIsValidOverapprox(computedVolume,
-                                        trueVolume.transform(mpintFromInt64),
-                                        resultBound.transform(mpintFromInt64));
+  expectComputedVolumeIsValidOverapprox(
+      computedVolume, llvm::transformOptional(trueVolume, mpintFromInt64),
+      llvm::transformOptional(resultBound, mpintFromInt64));
 }
 
 } // namespace presburger

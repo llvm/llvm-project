@@ -46,7 +46,7 @@
 ; THINLTO-REFS-FOO: declare dso_local void @foo()
 ; THINLTO-REFS-FOO: define dso_local void @refs_foo()
 
-; THINLTO-SYMS: l     F __TEXT,__text _foo
+; THINLTO-SYMS: l     F __TEXT,__text .hidden _foo
 ; THINLTO-SYMS: g     F __TEXT,__text _same_module_caller
 ; THINLTO-SYMS: g     F __TEXT,__text _refs_foo
 

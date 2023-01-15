@@ -1,6 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(canonicalize))' -split-input-file -allow-unregistered-dialect | FileCheck %s
-
-// -----
+// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL: create_vector_mask_to_constant_mask
 func.func @create_vector_mask_to_constant_mask() -> (vector<4x3xi1>) {
@@ -2082,4 +2080,28 @@ func.func @extract_from_broadcast(%src: vector<1x1x1xf32>) -> vector<1xf32> {
   //  CHECK-NEXT:   return %0 : vector<1xf32>
   %1 = vector.extract %0[0, 0, 31] : vector<1x1x32x1xf32>
   return %1: vector<1xf32>
+}
+
+// -----
+// CHECK-LABEL: func.func @extract_strided_slice_of_constant_mask
+func.func @extract_strided_slice_of_constant_mask() -> vector<5x7xi1>{
+  //  CHECK-NEXT:   %[[RES:.*]] = vector.constant_mask [5, 4] : vector<5x7xi1>
+  //  CHECK-NEXT:   return %[[RES]] : vector<5x7xi1>
+  %c4 = arith.constant 4 : index
+  %c10 = arith.constant 10 : index
+  %mask = vector.create_mask %c10, %c4 : vector<12x7xi1>
+  %res = vector.extract_strided_slice %mask {offsets = [3], sizes = [5], strides = [1]} : vector<12x7xi1> to vector<5x7xi1>
+  return %res : vector<5x7xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @fold_extractelement_of_broadcast(
+//  CHECK-SAME:     %[[f:.*]]: f32
+//       CHECK:   return %[[f]]
+func.func @fold_extractelement_of_broadcast(%f: f32) -> f32 {
+  %0 = vector.broadcast %f : f32 to vector<15xf32>
+  %c5 = arith.constant 5 : index
+  %1 = vector.extractelement %0 [%c5 : index] : vector<15xf32>
+  return %1 : f32
 }

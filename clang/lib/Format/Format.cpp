@@ -20,6 +20,7 @@
 #include "FormatInternal.h"
 #include "FormatToken.h"
 #include "FormatTokenLexer.h"
+#include "IntegerLiteralSeparatorFixer.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "QualifierAlignmentFixer.h"
 #include "SortJavaScriptImports.h"
@@ -46,6 +47,7 @@
 #include <algorithm>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -106,6 +108,15 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
     IO.mapOptional("AcrossComments", Value.AcrossComments);
     IO.mapOptional("AlignCompound", Value.AlignCompound);
     IO.mapOptional("PadOperators", Value.PadOperators);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::AttributeBreakingStyle> {
+  static void enumeration(IO &IO, FormatStyle::AttributeBreakingStyle &Value) {
+    IO.enumCase(Value, "Always", FormatStyle::ABS_Always);
+    IO.enumCase(Value, "Leave", FormatStyle::ABS_Leave);
+    IO.enumCase(Value, "Never", FormatStyle::ABS_Never);
   }
 };
 
@@ -331,6 +342,14 @@ struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
     IO.enumCase(Value, "NoIndent", FormatStyle::IEBS_NoIndent);
     IO.enumCase(Value, "true", FormatStyle::IEBS_Indent);
     IO.enumCase(Value, "false", FormatStyle::IEBS_NoIndent);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::IntegerLiteralSeparatorStyle> {
+  static void mapping(IO &IO, FormatStyle::IntegerLiteralSeparatorStyle &Base) {
+    IO.mapOptional("Binary", Base.Binary);
+    IO.mapOptional("Decimal", Base.Decimal);
+    IO.mapOptional("Hex", Base.Hex);
   }
 };
 
@@ -828,6 +847,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BinPackParameters", Style.BinPackParameters);
     IO.mapOptional("BitFieldColonSpacing", Style.BitFieldColonSpacing);
     IO.mapOptional("BraceWrapping", Style.BraceWrapping);
+    IO.mapOptional("BreakAfterAttributes", Style.BreakAfterAttributes);
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
     IO.mapOptional("BreakArrays", Style.BreakArrays);
@@ -879,7 +899,9 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentWrappedFunctionNames",
                    Style.IndentWrappedFunctionNames);
     IO.mapOptional("InsertBraces", Style.InsertBraces);
+    IO.mapOptional("InsertNewlineAtEOF", Style.InsertNewlineAtEOF);
     IO.mapOptional("InsertTrailingCommas", Style.InsertTrailingCommas);
+    IO.mapOptional("IntegerLiteralSeparator", Style.IntegerLiteralSeparator);
     IO.mapOptional("JavaImportGroups", Style.JavaImportGroups);
     IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
@@ -1290,6 +1312,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*SplitEmptyFunction=*/true,
                              /*SplitEmptyRecord=*/true,
                              /*SplitEmptyNamespace=*/true};
+  LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Never;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakArrays = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
@@ -1333,7 +1356,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentWidth = 2;
   LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.InsertBraces = false;
+  LLVMStyle.InsertNewlineAtEOF = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
+  LLVMStyle.IntegerLiteralSeparator = {/*Binary=*/0, /*Decimal=*/0, /*Hex=*/0};
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
   LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;
@@ -1906,9 +1931,7 @@ namespace {
 class BracesInserter : public TokenAnalyzer {
 public:
   BracesInserter(const Environment &Env, const FormatStyle &Style)
-      : TokenAnalyzer(Env, Style) {
-    this->Style.RemoveBracesLLVM = false;
-  }
+      : TokenAnalyzer(Env, Style) {}
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
@@ -1961,9 +1984,7 @@ private:
 class BracesRemover : public TokenAnalyzer {
 public:
   BracesRemover(const Environment &Env, const FormatStyle &Style)
-      : TokenAnalyzer(Env, Style) {
-    this->Style.InsertBraces = false;
-  }
+      : TokenAnalyzer(Env, Style) {}
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
@@ -2261,9 +2282,11 @@ private:
       }
     }
     if (Style.DerivePointerAlignment) {
-      Style.PointerAlignment = countVariableAlignments(AnnotatedLines) <= 0
-                                   ? FormatStyle::PAS_Left
-                                   : FormatStyle::PAS_Right;
+      const auto NetRightCount = countVariableAlignments(AnnotatedLines);
+      if (NetRightCount > 0)
+        Style.PointerAlignment = FormatStyle::PAS_Right;
+      else if (NetRightCount < 0)
+        Style.PointerAlignment = FormatStyle::PAS_Left;
       Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
     }
     if (Style.Standard == FormatStyle::LS_Auto) {
@@ -3346,6 +3369,9 @@ reformat(const FormatStyle &Style, StringRef Code,
   FormatStyle Expanded = Style;
   expandPresetsBraceWrapping(Expanded);
   expandPresetsSpaceBeforeParens(Expanded);
+  Expanded.InsertBraces = false;
+  Expanded.RemoveBracesLLVM = false;
+  Expanded.RemoveSemicolon = false;
   switch (Expanded.RequiresClausePosition) {
   case FormatStyle::RCPS_SingleLine:
   case FormatStyle::RCPS_WithPreceding:
@@ -3381,10 +3407,19 @@ reformat(const FormatStyle &Style, StringRef Code,
     return {tooling::Replacements(), 0};
   }
 
+  auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
+                               NextStartColumn, LastStartColumn);
+  if (!Env)
+    return {};
+
   typedef std::function<std::pair<tooling::Replacements, unsigned>(
       const Environment &)>
       AnalyzerPass;
   SmallVector<AnalyzerPass, 8> Passes;
+
+  Passes.emplace_back([&](const Environment &Env) {
+    return IntegerLiteralSeparatorFixer().process(Env, Expanded);
+  });
 
   if (Style.isCpp()) {
     if (Style.QualifierAlignment != FormatStyle::QAS_Leave) {
@@ -3397,20 +3432,26 @@ reformat(const FormatStyle &Style, StringRef Code,
     }
 
     if (Style.InsertBraces) {
-      Passes.emplace_back([&](const Environment &Env) {
-        return BracesInserter(Env, Expanded).process(/*SkipAnnotation=*/true);
+      FormatStyle S = Expanded;
+      S.InsertBraces = true;
+      Passes.emplace_back([&, S](const Environment &Env) {
+        return BracesInserter(Env, S).process(/*SkipAnnotation=*/true);
       });
     }
 
     if (Style.RemoveBracesLLVM) {
-      Passes.emplace_back([&](const Environment &Env) {
-        return BracesRemover(Env, Expanded).process(/*SkipAnnotation=*/true);
+      FormatStyle S = Expanded;
+      S.RemoveBracesLLVM = true;
+      Passes.emplace_back([&, S](const Environment &Env) {
+        return BracesRemover(Env, S).process(/*SkipAnnotation=*/true);
       });
     }
 
     if (Style.RemoveSemicolon) {
-      Passes.emplace_back([&](const Environment &Env) {
-        return SemiRemover(Env, Expanded).process(/*SkipAnnotation=*/true);
+      FormatStyle S = Expanded;
+      S.RemoveSemicolon = true;
+      Passes.emplace_back([&, S](const Environment &Env) {
+        return SemiRemover(Env, S).process(/*SkipAnnotation=*/true);
       });
     }
 
@@ -3451,11 +3492,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     });
   }
 
-  auto Env = Environment::make(Code, FileName, Ranges, FirstStartColumn,
-                               NextStartColumn, LastStartColumn);
-  if (!Env)
-    return {};
-  llvm::Optional<std::string> CurrentCode;
+  std::optional<std::string> CurrentCode;
   tooling::Replacements Fixes;
   unsigned Penalty = 0;
   for (size_t I = 0, E = Passes.size(); I < E; ++I) {

@@ -32,19 +32,19 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: noinline nounwind uwtable
-define i32 @foo(i32 %a, i32* %d) !dbg !6 {
+define i32 @foo(i32 %a, ptr %d) !dbg !6 {
 entry:
   %tobool = icmp ne i32 %a, 0, !dbg !8
   br i1 %tobool, label %if.then, label %if.else, !dbg !8
 
 if.then:                                          ; preds = %entry
   %call = call i32 @bar(i32 %a), !dbg !9
-  store i32 %call, i32* %d, align 4, !dbg !10
+  store i32 %call, ptr %d, align 4, !dbg !10
   br label %if.end, !dbg !11
 
 if.else:                                          ; preds = %entry
   %call1 = call i32 @bar2(i32 %a), !dbg !12
-  store i32 %call1, i32* %d, align 4, !dbg !13
+  store i32 %call1, ptr %d, align 4, !dbg !13
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

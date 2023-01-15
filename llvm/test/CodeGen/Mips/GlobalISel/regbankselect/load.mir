@@ -2,12 +2,12 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @load_i32(i32* %ptr) {entry: ret void}
-  define void @load_i64(i64* %ptr) {entry: ret void}
-  define void @load_ambiguous_i64_in_fpr(i64* %i64_ptr_a, i64* %i64_ptr_b) {entry: ret void}
-  define void @load_float(float* %ptr) {entry: ret void}
-  define void @load_ambiguous_float_in_gpr(float* %float_ptr_a, float* %float_ptr_b) {entry: ret void}
-  define void @load_double(double* %ptr) {entry: ret void}
+  define void @load_i32(ptr %ptr) {entry: ret void}
+  define void @load_i64(ptr %ptr) {entry: ret void}
+  define void @load_ambiguous_i64_in_fpr(ptr %i64_ptr_a, ptr %i64_ptr_b) {entry: ret void}
+  define void @load_float(ptr %ptr) {entry: ret void}
+  define void @load_ambiguous_float_in_gpr(ptr %float_ptr_a, ptr %float_ptr_b) {entry: ret void}
+  define void @load_double(ptr %ptr) {entry: ret void}
 
 ...
 ---

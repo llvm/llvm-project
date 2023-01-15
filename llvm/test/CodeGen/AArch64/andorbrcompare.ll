@@ -4,7 +4,7 @@
 
 declare void @dummy()
 
-define i32 @and_eq_ne_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32* %p) {
+define i32 @and_eq_ne_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, ptr %p) {
 ; SDISEL-LABEL: and_eq_ne_ult:
 ; SDISEL:       // %bb.0: // %entry
 ; SDISEL-NEXT:    cmp w2, w3
@@ -46,14 +46,14 @@ entry:
   br i1 %o, label %if, label %else
 
 if:
-  store i32 1, i32* %p
+  store i32 1, ptr %p
   ret i32 1
 
 else:
   ret i32 0
 }
 
-define i32 @and_ne_ult_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32* %p) {
+define i32 @and_ne_ult_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, ptr %p) {
 ; SDISEL-LABEL: and_ne_ult_ule:
 ; SDISEL:       // %bb.0: // %entry
 ; SDISEL-NEXT:    cmp w2, w3
@@ -95,14 +95,14 @@ entry:
   br i1 %o, label %if, label %else
 
 if:
-  store i32 1, i32* %p
+  store i32 1, ptr %p
   ret i32 1
 
 else:
   ret i32 0
 }
 
-define i32 @and_ult_ule_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32* %p) {
+define i32 @and_ult_ule_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, ptr %p) {
 ; SDISEL-LABEL: and_ult_ule_ugt:
 ; SDISEL:       // %bb.0: // %entry
 ; SDISEL-NEXT:    cmp w2, w3
@@ -144,14 +144,14 @@ entry:
   br i1 %o, label %if, label %else
 
 if:
-  store i32 1, i32* %p
+  store i32 1, ptr %p
   ret i32 1
 
 else:
   ret i32 0
 }
 
-define i32 @and_ule_ugt_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32* %p) {
+define i32 @and_ule_ugt_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, ptr %p) {
 ; SDISEL-LABEL: and_ule_ugt_uge:
 ; SDISEL:       // %bb.0: // %entry
 ; SDISEL-NEXT:    cmp w2, w3
@@ -193,14 +193,14 @@ entry:
   br i1 %o, label %if, label %else
 
 if:
-  store i32 1, i32* %p
+  store i32 1, ptr %p
   ret i32 1
 
 else:
   ret i32 0
 }
 
-define i32 @and_ugt_uge_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32* %p) {
+define i32 @and_ugt_uge_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, ptr %p) {
 ; SDISEL-LABEL: and_ugt_uge_slt:
 ; SDISEL:       // %bb.0: // %entry
 ; SDISEL-NEXT:    cmp w2, w3
@@ -242,14 +242,14 @@ entry:
   br i1 %o, label %if, label %else
 
 if:
-  store i32 1, i32* %p
+  store i32 1, ptr %p
   ret i32 1
 
 else:
   ret i32 0
 }
 
-define i32 @and_uge_slt_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32* %p) {
+define i32 @and_uge_slt_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, ptr %p) {
 ; SDISEL-LABEL: and_uge_slt_sle:
 ; SDISEL:       // %bb.0: // %entry
 ; SDISEL-NEXT:    cmp w2, w3
@@ -291,14 +291,14 @@ entry:
   br i1 %o, label %if, label %else
 
 if:
-  store i32 1, i32* %p
+  store i32 1, ptr %p
   ret i32 1
 
 else:
   ret i32 0
 }
 
-define i32 @and_slt_sle_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32* %p) {
+define i32 @and_slt_sle_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, ptr %p) {
 ; SDISEL-LABEL: and_slt_sle_sgt:
 ; SDISEL:       // %bb.0: // %entry
 ; SDISEL-NEXT:    cmp w2, w3
@@ -340,14 +340,14 @@ entry:
   br i1 %o, label %if, label %else
 
 if:
-  store i32 1, i32* %p
+  store i32 1, ptr %p
   ret i32 1
 
 else:
   ret i32 0
 }
 
-define i32 @and_sle_sgt_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32* %p) {
+define i32 @and_sle_sgt_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, ptr %p) {
 ; SDISEL-LABEL: and_sle_sgt_sge:
 ; SDISEL:       // %bb.0: // %entry
 ; SDISEL-NEXT:    cmp w2, w3
@@ -389,7 +389,7 @@ entry:
   br i1 %o, label %if, label %else
 
 if:
-  store i32 1, i32* %p
+  store i32 1, ptr %p
   ret i32 1
 
 else:

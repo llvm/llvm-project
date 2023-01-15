@@ -228,11 +228,12 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
 
   unsigned LoopCount = 0;
 
-  // Test that Wait() with WaitUntilTerminates=true works. In this case,
+  // Test that Wait() with SecondsToWait=std::nullopt works. In this case,
   // LoopCount should only be incremented once.
   while (true) {
     ++LoopCount;
-    ProcessInfo WaitResult = llvm::sys::Wait(PI1, 0, true, &Error);
+    ProcessInfo WaitResult =
+        llvm::sys::Wait(PI1, /*SecondsToWait=*/std::nullopt, &Error);
     ASSERT_TRUE(Error.empty());
     if (WaitResult.Pid == PI1.Pid)
       break;
@@ -240,16 +241,17 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
 
   EXPECT_EQ(LoopCount, 1u) << "LoopCount should be 1";
 
-  ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(), {}, 0, &Error,
+  ProcessInfo PI2 = ExecuteNoWait(Executable, argv, getEnviron(),
+                                  /*Redirects*/ {}, /*MemoryLimit*/ 0, &Error,
                                   &ExecutionFailed);
   ASSERT_FALSE(ExecutionFailed) << Error;
   ASSERT_NE(PI2.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
 
   // Test that Wait() with SecondsToWait=0 performs a non-blocking wait. In this
-  // cse, LoopCount should be greater than 1 (more than one increment occurs).
+  // case, LoopCount should be greater than 1 (more than one increment occurs).
   while (true) {
     ++LoopCount;
-    ProcessInfo WaitResult = llvm::sys::Wait(PI2, 0, false, &Error);
+    ProcessInfo WaitResult = llvm::sys::Wait(PI2, /*SecondsToWait=*/0, &Error);
     ASSERT_TRUE(Error.empty());
     if (WaitResult.Pid == PI2.Pid)
       break;
@@ -277,9 +279,48 @@ TEST_F(ProgramEnvTest, TestExecuteAndWaitTimeout) {
   std::string Error;
   bool ExecutionFailed;
   int RetCode =
-      ExecuteAndWait(Executable, argv, getEnviron(), {}, /*secondsToWait=*/1, 0,
-                     &Error, &ExecutionFailed);
+      ExecuteAndWait(Executable, argv, getEnviron(), {}, /*SecondsToWait=*/1,
+                     /*MemoryLimit*/ 0, &Error, &ExecutionFailed);
   ASSERT_EQ(-2, RetCode);
+}
+
+TEST_F(ProgramEnvTest, TestExecuteNoWaitTimeoutPolling) {
+  using namespace llvm::sys;
+
+  if (getenv("LLVM_PROGRAM_TEST_TIMEOUT")) {
+    sleep_for(/*seconds*/ 5);
+    exit(0);
+  }
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
+  StringRef argv[] = {
+      Executable,
+      "--gtest_filter=ProgramEnvTest.TestExecuteNoWaitTimeoutPolling"};
+
+  // Add LLVM_PROGRAM_TEST_TIMEOUT to the environment of the child.
+  addEnvVar("LLVM_PROGRAM_TEST_TIMEOUT=1");
+
+  std::string Error;
+  bool ExecutionFailed;
+  ProcessInfo PI0 = ExecuteNoWait(Executable, argv, getEnviron(),
+                                  /*Redirects=*/{}, /*MemoryLimit=*/0, &Error,
+                                  &ExecutionFailed);
+  ASSERT_FALSE(ExecutionFailed) << Error;
+  ASSERT_NE(PI0.Pid, ProcessInfo::InvalidPid) << "Invalid process id";
+
+  // Check that we don't kill the process with a non-0 SecondsToWait if Polling.
+  unsigned LoopCount = 0;
+  ProcessInfo WaitResult;
+  do {
+    ++LoopCount;
+    WaitResult = llvm::sys::Wait(PI0, /*SecondsToWait=*/1, &Error,
+                                 /*ProcStats=*/nullptr,
+                                 /*Polling=*/true);
+    ASSERT_TRUE(Error.empty()) << Error;
+  } while (WaitResult.Pid != PI0.Pid);
+
+  ASSERT_GT(LoopCount, 1u) << "LoopCount should be >1";
 }
 
 TEST(ProgramTest, TestExecuteNegative) {
@@ -423,7 +464,7 @@ TEST_F(ProgramEnvTest, TestLockFile) {
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   ASSERT_NO_ERROR(fs::unlockFile(FD1));
-  ProcessInfo WaitResult = llvm::sys::Wait(PI2, 5 /* seconds */, true, &Error);
+  ProcessInfo WaitResult = llvm::sys::Wait(PI2, /*SecondsToWait=*/5, &Error);
   ASSERT_TRUE(Error.empty());
   ASSERT_EQ(0, WaitResult.ReturnCode);
   ASSERT_EQ(WaitResult.Pid, PI2.Pid);

@@ -11,6 +11,7 @@
 #include "ClangHost.h"
 #include "lldb/Host/FileSystem.h"
 #include "llvm/ADT/Triple.h"
+#include <optional>
 
 using namespace lldb_private;
 
@@ -46,8 +47,8 @@ getTargetIncludePaths(const llvm::Triple &triple) {
 }
 
 /// Returns the include path matching the given pattern for the given file
-/// path (or None if the path doesn't match the pattern).
-static llvm::Optional<llvm::StringRef>
+/// path (or std::nullopt if the path doesn't match the pattern).
+static std::optional<llvm::StringRef>
 guessIncludePath(llvm::StringRef path_to_file, llvm::StringRef pattern) {
   if (pattern.empty())
     return std::nullopt;
@@ -83,7 +84,7 @@ bool CppModuleConfiguration::analyzeFile(const FileSpec &f,
         (posix_dir + triple.str() + "/c++/v1").str());
   }
 
-  llvm::Optional<llvm::StringRef> inc_path;
+  std::optional<llvm::StringRef> inc_path;
   // Target specific paths contains /usr/include, so we check them first
   for (auto &path : getTargetIncludePaths(triple)) {
     if ((inc_path = guessIncludePath(posix_dir, path)))

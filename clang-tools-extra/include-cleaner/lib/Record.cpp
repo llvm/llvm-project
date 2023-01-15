@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -35,9 +36,9 @@ public:
   void InclusionDirective(SourceLocation Hash, const Token &IncludeTok,
                           StringRef SpelledFilename, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          llvm::Optional<FileEntryRef> File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *, SrcMgr::CharacteristicKind) override {
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *,
+                          SrcMgr::CharacteristicKind) override {
     if (!Active)
       return;
 
@@ -180,7 +181,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           llvm::StringRef FileName, bool IsAngled,
                           CharSourceRange /*FilenameRange*/,
-                          Optional<FileEntryRef> File,
+                          OptionalFileEntryRef File,
                           llvm::StringRef /*SearchPath*/,
                           llvm::StringRef /*RelativePath*/,
                           const clang::Module * /*Imported*/,
@@ -203,7 +204,7 @@ public:
         Top.SeenAtLine == HashLine) {
       if (IncludedHeader)
         Out->IWYUExportBy[IncludedHeader->getUniqueID()].push_back(
-            Top.FullPath);
+            Top.Path);
       // main-file #include with export pragma should never be removed.
       if (Top.SeenAtFile == SM.getMainFileID())
         Out->ShouldKeep.insert(HashLine);
@@ -250,14 +251,13 @@ public:
                                        SM.getFileOffset(Range.getBegin()));
     // Record export pragma.
     if (Pragma->startswith("export")) {
-      ExportStack.push_back(
-          {CommentLine, CommentFID,
-           save(SM.getFileEntryForID(CommentFID)->tryGetRealPathName()),
-           false});
+      ExportStack.push_back({CommentLine, CommentFID,
+                             save(SM.getFileEntryForID(CommentFID)->getName()),
+                             false});
     } else if (Pragma->startswith("begin_exports")) {
-      ExportStack.push_back(
-          {CommentLine, CommentFID,
-           save(SM.getFileEntryForID(CommentFID)->tryGetRealPathName()), true});
+      ExportStack.push_back({CommentLine, CommentFID,
+                             save(SM.getFileEntryForID(CommentFID)->getName()),
+                             true});
     } else if (Pragma->startswith("end_exports")) {
       // FIXME: be robust on unmatching cases. We should only pop the stack if
       // the begin_exports and end_exports is in the same file.
@@ -296,8 +296,8 @@ private:
     int SeenAtLine = 0; // 1-based line number.
     // The file where we saw the pragma.
     FileID SeenAtFile;
-    // FullPath of the file SeenAtFile.
-    StringRef FullPath;
+    // Name (per FileEntry::getName()) of the file SeenAtFile.
+    StringRef Path;
     // true if it is a block begin/end_exports pragma; false if it is a
     // single-line export pragma.
     bool Block = false;
@@ -352,6 +352,14 @@ bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
   return IWYUPublic.find(FE->getUniqueID()) != IWYUPublic.end();
 }
 
+namespace {
+template <typename T> bool isImplicitTemplateSpecialization(const Decl *D) {
+  if (const auto *TD = dyn_cast<T>(D))
+    return TD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+  return false;
+}
+} // namespace
+
 std::unique_ptr<ASTConsumer> RecordedAST::record() {
   class Recorder : public ASTConsumer {
     RecordedAST *Out;
@@ -364,7 +372,11 @@ std::unique_ptr<ASTConsumer> RecordedAST::record() {
       for (Decl *D : DG) {
         if (!SM.isWrittenInMainFile(SM.getExpansionLoc(D->getLocation())))
           continue;
-        // FIXME: Filter out certain Obj-C and template-related decls.
+        if (isImplicitTemplateSpecialization<FunctionDecl>(D) ||
+            isImplicitTemplateSpecialization<CXXRecordDecl>(D) ||
+            isImplicitTemplateSpecialization<VarDecl>(D))
+          continue;
+        // FIXME: Filter out certain Obj-C as well.
         Out->Roots.push_back(D);
       }
       return ASTConsumer::HandleTopLevelDecl(DG);

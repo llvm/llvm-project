@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX11 %s
 
-define void @local_store_i56(i56 addrspace(3)* %ptr, i56 %arg) #0 {
+define void @local_store_i56(ptr addrspace(3) %ptr, i56 %arg) #0 {
 ; CIVI-LABEL: local_store_i56:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -45,11 +45,11 @@ define void @local_store_i56(i56 addrspace(3)* %ptr, i56 %arg) #0 {
 ; GFX11-NEXT:    ds_store_b32 v0, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store i56 %arg, i56 addrspace(3)* %ptr, align 8
+  store i56 %arg, ptr addrspace(3) %ptr, align 8
   ret void
 }
 
-define amdgpu_kernel void @local_store_i55(i55 addrspace(3)* %ptr, i55 %arg) #0 {
+define amdgpu_kernel void @local_store_i55(ptr addrspace(3) %ptr, i55 %arg) #0 {
 ; HAWAII-LABEL: local_store_i55:
 ; HAWAII:       ; %bb.0:
 ; HAWAII-NEXT:    s_or_b32 s0, s4, 14
@@ -151,11 +151,11 @@ define amdgpu_kernel void @local_store_i55(i55 addrspace(3)* %ptr, i55 %arg) #0 
 ; GFX11-NEXT:    ds_store_b16 v1, v2 offset:4
 ; GFX11-NEXT:    ds_store_b32 v1, v3
 ; GFX11-NEXT:    s_endpgm
-  store i55 %arg, i55 addrspace(3)* %ptr, align 8
+  store i55 %arg, ptr addrspace(3) %ptr, align 8
   ret void
 }
 
-define amdgpu_kernel void @local_store_i48(i48 addrspace(3)* %ptr, i48 %arg) #0 {
+define amdgpu_kernel void @local_store_i48(ptr addrspace(3) %ptr, i48 %arg) #0 {
 ; HAWAII-LABEL: local_store_i48:
 ; HAWAII:       ; %bb.0:
 ; HAWAII-NEXT:    s_load_dword s2, s[4:5], 0x0
@@ -218,11 +218,11 @@ define amdgpu_kernel void @local_store_i48(i48 addrspace(3)* %ptr, i48 %arg) #0 
 ; GFX11-NEXT:    ds_store_b16 v0, v1 offset:4
 ; GFX11-NEXT:    ds_store_b32 v0, v2
 ; GFX11-NEXT:    s_endpgm
-  store i48 %arg, i48 addrspace(3)* %ptr, align 8
+  store i48 %arg, ptr addrspace(3) %ptr, align 8
   ret void
 }
 
-define amdgpu_kernel void @local_store_i65(i65 addrspace(3)* %ptr, i65 %arg) #0 {
+define amdgpu_kernel void @local_store_i65(ptr addrspace(3) %ptr, i65 %arg) #0 {
 ; HAWAII-LABEL: local_store_i65:
 ; HAWAII:       ; %bb.0:
 ; HAWAII-NEXT:    s_load_dword s2, s[4:5], 0x4
@@ -300,11 +300,11 @@ define amdgpu_kernel void @local_store_i65(i65 addrspace(3)* %ptr, i65 %arg) #0 
 ; GFX11-NEXT:    ds_store_b8 v2, v3 offset:8
 ; GFX11-NEXT:    ds_store_b64 v2, v[0:1]
 ; GFX11-NEXT:    s_endpgm
-  store i65 %arg, i65 addrspace(3)* %ptr, align 8
+  store i65 %arg, ptr addrspace(3) %ptr, align 8
   ret void
 }
 
-define void @local_store_i13(i13 addrspace(3)* %ptr, i13 %arg) #0 {
+define void @local_store_i13(ptr addrspace(3) %ptr, i13 %arg) #0 {
 ; CIVI-LABEL: local_store_i13:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -339,11 +339,11 @@ define void @local_store_i13(i13 addrspace(3)* %ptr, i13 %arg) #0 {
 ; GFX11-NEXT:    ds_store_b16 v0, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store i13 %arg, i13 addrspace(3)* %ptr, align 8
+  store i13 %arg, ptr addrspace(3) %ptr, align 8
   ret void
 }
 
-define void @local_store_i17(i17 addrspace(3)* %ptr, i17 %arg) #0 {
+define void @local_store_i17(ptr addrspace(3) %ptr, i17 %arg) #0 {
 ; CIVI-LABEL: local_store_i17:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -382,7 +382,7 @@ define void @local_store_i17(i17 addrspace(3)* %ptr, i17 %arg) #0 {
 ; GFX11-NEXT:    ds_store_b8_d16_hi v0, v2 offset:2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store i17 %arg, i17 addrspace(3)* %ptr, align 8
+  store i17 %arg, ptr addrspace(3) %ptr, align 8
   ret void
 }
 

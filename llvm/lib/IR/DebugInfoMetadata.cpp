@@ -974,6 +974,35 @@ DILocalScope *DILocalScope::getNonLexicalBlockFileScope() const {
   return const_cast<DILocalScope *>(this);
 }
 
+DILocalScope *DILocalScope::cloneScopeForSubprogram(
+    DILocalScope &RootScope, DISubprogram &NewSP, LLVMContext &Ctx,
+    DenseMap<const MDNode *, MDNode *> &Cache) {
+  SmallVector<DIScope *> ScopeChain;
+  DIScope *CachedResult = nullptr;
+
+  for (DIScope *Scope = &RootScope; !isa<DISubprogram>(Scope);
+       Scope = Scope->getScope()) {
+    if (auto It = Cache.find(Scope); It != Cache.end()) {
+      CachedResult = cast<DIScope>(It->second);
+      break;
+    }
+    ScopeChain.push_back(Scope);
+  }
+
+  // Recreate the scope chain, bottom-up, starting at the new subprogram (or a
+  // cached result).
+  DIScope *UpdatedScope = CachedResult ? CachedResult : &NewSP;
+  for (DIScope *ScopeToUpdate : reverse(ScopeChain)) {
+    TempMDNode ClonedScope = ScopeToUpdate->clone();
+    cast<DILexicalBlockBase>(*ClonedScope).replaceScope(UpdatedScope);
+    UpdatedScope =
+        cast<DIScope>(MDNode::replaceWithUniqued(std::move(ClonedScope)));
+    Cache[ScopeToUpdate] = UpdatedScope;
+  }
+
+  return cast<DILocalScope>(UpdatedScope);
+}
+
 DISubprogram::DISPFlags DISubprogram::getFlag(StringRef Flag) {
   return StringSwitch<DISPFlags>(Flag)
 #define HANDLE_DISP_FLAG(ID, NAME) .Case("DISPFlag" #NAME, SPFlag##NAME)
@@ -1329,12 +1358,15 @@ bool DIExpression::isValid() const {
       break;
     }
     case dwarf::DW_OP_LLVM_entry_value: {
-      // An entry value operator must appear at the beginning and the number of
-      // operations it cover can currently only be 1, because we support only
-      // entry values of a simple register location. One reason for this is that
-      // we currently can't calculate the size of the resulting DWARF block for
-      // other expressions.
-      return I->get() == expr_op_begin()->get() && I->getArg(0) == 1;
+      // An entry value operator must appear at the beginning or immediately
+      // following `DW_OP_LLVM_arg 0`, and the number of operations it cover can
+      // currently only be 1, because we support only entry values of a simple
+      // register location. One reason for this is that we currently can't
+      // calculate the size of the resulting DWARF block for other expressions.
+      auto FirstOp = expr_op_begin();
+      if (FirstOp->getOp() == dwarf::DW_OP_LLVM_arg && FirstOp->getArg(0) == 0)
+        ++FirstOp;
+      return I->get() == FirstOp->get() && I->getArg(0) == 1;
     }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
@@ -1403,6 +1435,7 @@ bool DIExpression::isComplex() const {
     switch (It.getOp()) {
     case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_LLVM_fragment:
+    case dwarf::DW_OP_LLVM_arg:
       continue;
     default:
       return true;
@@ -1410,6 +1443,109 @@ bool DIExpression::isComplex() const {
   }
 
   return false;
+}
+
+bool DIExpression::isSingleLocationExpression() const {
+  if (!isValid())
+    return false;
+
+  if (getNumElements() == 0)
+    return true;
+
+  auto ExprOpBegin = expr_ops().begin();
+  auto ExprOpEnd = expr_ops().end();
+  if (ExprOpBegin->getOp() == dwarf::DW_OP_LLVM_arg)
+    ++ExprOpBegin;
+
+  return !std::any_of(ExprOpBegin, ExprOpEnd, [](auto Op) {
+    return Op.getOp() == dwarf::DW_OP_LLVM_arg;
+  });
+}
+
+const DIExpression *
+DIExpression::convertToUndefExpression(const DIExpression *Expr) {
+  SmallVector<uint64_t, 3> UndefOps;
+  if (auto FragmentInfo = Expr->getFragmentInfo()) {
+    UndefOps.append({dwarf::DW_OP_LLVM_fragment, FragmentInfo->OffsetInBits,
+                     FragmentInfo->SizeInBits});
+  }
+  return DIExpression::get(Expr->getContext(), UndefOps);
+}
+
+const DIExpression *
+DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
+  if (any_of(Expr->expr_ops(), [](auto ExprOp) {
+        return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
+      }))
+    return Expr;
+  SmallVector<uint64_t> NewOps;
+  NewOps.reserve(Expr->getNumElements() + 2);
+  NewOps.append({dwarf::DW_OP_LLVM_arg, 0});
+  NewOps.append(Expr->elements_begin(), Expr->elements_end());
+  return DIExpression::get(Expr->getContext(), NewOps);
+}
+
+std::optional<const DIExpression *>
+DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
+  // Check for `isValid` covered by `isSingleLocationExpression`.
+  if (!Expr->isSingleLocationExpression())
+    return std::nullopt;
+
+  // An empty expression is already non-variadic.
+  if (!Expr->getNumElements())
+    return Expr;
+
+  auto ElementsBegin = Expr->elements_begin();
+  // If Expr does not have a leading DW_OP_LLVM_arg then we don't need to do
+  // anything.
+  if (*ElementsBegin != dwarf::DW_OP_LLVM_arg)
+    return Expr;
+
+  SmallVector<uint64_t> NonVariadicOps(
+      make_range(ElementsBegin + 2, Expr->elements_end()));
+  return DIExpression::get(Expr->getContext(), NonVariadicOps);
+}
+
+void DIExpression::canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
+                                             const DIExpression *Expr,
+                                             bool IsIndirect) {
+  // If Expr is not already variadic, insert the implied `DW_OP_LLVM_arg 0`
+  // to the existing expression ops.
+  if (none_of(Expr->expr_ops(), [](auto ExprOp) {
+        return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
+      }))
+    Ops.append({dwarf::DW_OP_LLVM_arg, 0});
+  // If Expr is not indirect, we only need to insert the expression elements and
+  // we're done.
+  if (!IsIndirect) {
+    Ops.append(Expr->elements_begin(), Expr->elements_end());
+    return;
+  }
+  // If Expr is indirect, insert the implied DW_OP_deref at the end of the
+  // expression but before DW_OP_{stack_value, LLVM_fragment} if they are
+  // present.
+  for (auto Op : Expr->expr_ops()) {
+    if (Op.getOp() == dwarf::DW_OP_stack_value ||
+        Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+      Ops.push_back(dwarf::DW_OP_deref);
+      IsIndirect = false;
+    }
+    Op.appendToVector(Ops);
+  }
+  if (IsIndirect)
+    Ops.push_back(dwarf::DW_OP_deref);
+}
+
+bool DIExpression::isEqualExpression(const DIExpression *FirstExpr,
+                                     bool FirstIndirect,
+                                     const DIExpression *SecondExpr,
+                                     bool SecondIndirect) {
+  SmallVector<uint64_t> FirstOps;
+  DIExpression::canonicalizeExpressionOps(FirstOps, FirstExpr, FirstIndirect);
+  SmallVector<uint64_t> SecondOps;
+  DIExpression::canonicalizeExpressionOps(SecondOps, SecondExpr,
+                                          SecondIndirect);
+  return FirstOps == SecondOps;
 }
 
 std::optional<DIExpression::FragmentInfo>
@@ -1487,8 +1623,8 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
     if (Expr->Elements.size() == PatternSize)
       return nullptr;
     return DIExpression::get(Expr->getContext(),
-                             makeArrayRef(&*Expr->Elements.begin(),
-                                          Expr->Elements.size() - PatternSize));
+                             ArrayRef(&*Expr->Elements.begin(),
+                                      Expr->Elements.size() - PatternSize));
   }
   return Expr;
 }
@@ -1525,10 +1661,21 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
 
   SmallVector<uint64_t, 8> NewOps;
   for (auto Op : Expr->expr_ops()) {
+    // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
+    if (StackValue) {
+      if (Op.getOp() == dwarf::DW_OP_stack_value)
+        StackValue = false;
+      else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+        NewOps.push_back(dwarf::DW_OP_stack_value);
+        StackValue = false;
+      }
+    }
     Op.appendToVector(NewOps);
     if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
       NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
   }
+  if (StackValue)
+    NewOps.push_back(dwarf::DW_OP_stack_value);
 
   return DIExpression::get(Expr->getContext(), NewOps);
 }

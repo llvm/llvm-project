@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTCOMPLEXTOLIBM
@@ -24,7 +25,7 @@ namespace {
 // Functor to resolve the function name corresponding to the given complex
 // result type.
 struct ComplexTypeResolver {
-  llvm::Optional<bool> operator()(Type type) const {
+  std::optional<bool> operator()(Type type) const {
     auto complexType = type.cast<ComplexType>();
     auto elementType = complexType.getElementType();
     if (!elementType.isa<Float32Type, Float64Type>())
@@ -37,7 +38,7 @@ struct ComplexTypeResolver {
 // Functor to resolve the function name corresponding to the given float result
 // type.
 struct FloatTypeResolver {
-  llvm::Optional<bool> operator()(Type type) const {
+  std::optional<bool> operator()(Type type) const {
     auto elementType = type.cast<FloatType>();
     if (!elementType.isa<Float32Type, Float64Type>())
       return {};
@@ -76,7 +77,7 @@ LogicalResult ScalarOpToLibmCall<Op, TypeResolver>::matchAndRewrite(
   if (!isDouble.has_value())
     return failure();
 
-  auto name = isDouble.value() ? doubleFunc : floatFunc;
+  auto name = *isDouble ? doubleFunc : floatFunc;
 
   auto opFunc = dyn_cast_or_null<SymbolOpInterface>(
       SymbolTable::lookupSymbolIn(module, name));

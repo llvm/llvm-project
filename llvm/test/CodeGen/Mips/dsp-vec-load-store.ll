@@ -5,7 +5,7 @@
 
 define void @extend_load_trunc_store_v2i8() {
 entry:
-  %0 = load <2 x i8>, <2 x i8>* @g1, align 2
-  store <2 x i8> %0, <2 x i8>* @g0, align 2
+  %0 = load <2 x i8>, ptr @g1, align 2
+  store <2 x i8> %0, ptr @g0, align 2
   ret void
 }

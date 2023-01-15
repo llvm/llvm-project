@@ -44,6 +44,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   FrontendOpenMP
   Option
+  TargetParser
   )
 
 set(COMPLETIONMODEL_SOURCES)

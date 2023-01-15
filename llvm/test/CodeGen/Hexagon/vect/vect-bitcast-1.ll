@@ -10,7 +10,7 @@ entry:
   br label %while.body
 
 while.body:                                       ; preds = %if.then155, %if.then12, %entry
-  %cmp.i = icmp eq i8* undef, null
+  %cmp.i = icmp eq ptr undef, null
   br i1 %cmp.i, label %lab_ci.exit, label %if.end.i
 
 if.end.i:                                         ; preds = %while.body
@@ -58,7 +58,7 @@ if.then155:                                       ; preds = %if.else150
   %0 = sext <2 x i16> %_p_splat to <2 x i32>
   %mul198p_vec = shl <2 x i32> %0, <i32 2, i32 2>
   %1 = extractelement <2 x i32> %mul198p_vec, i32 0
-  store i32 %1, i32* null, align 4
+  store i32 %1, ptr null, align 4
   br label %while.body
 
 if.else208:                                       ; preds = %if.else150

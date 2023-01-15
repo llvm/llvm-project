@@ -5,7 +5,7 @@
 ; This test uses Inputs/test-module.ll, as it shares it with a similar test
 ; for the 'release' mode.
 ;
-; REQUIRES: have_tf_api
+; REQUIRES: have_tflite
 ; RUN: rm -rf %t
 ; RUN: rm -rf %t_savedmodel
 ; RUN: %python %S/../../../../lib/Analysis/models/gen-inline-oz-test-model.py %t_savedmodel

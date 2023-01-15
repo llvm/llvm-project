@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64I
 
-define void @cast0(i32 addrspace(1)* %ptr) {
+define void @cast0(ptr addrspace(1) %ptr) {
 ; RV32I-LABEL: cast0:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw zero, 0(a0)
@@ -14,12 +14,12 @@ define void @cast0(i32 addrspace(1)* %ptr) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sw zero, 0(a0)
 ; RV64I-NEXT:    ret
-  %ptr0 = addrspacecast i32 addrspace(1)* %ptr to i32 addrspace(0)*
-  store i32 0, i32* %ptr0
+  %ptr0 = addrspacecast ptr addrspace(1) %ptr to ptr addrspace(0)
+  store i32 0, ptr %ptr0
   ret void
 }
 
-define void @cast1(i32* %ptr) {
+define void @cast1(ptr %ptr) {
 ; RV32I-LABEL: cast1:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -41,9 +41,9 @@ define void @cast1(i32* %ptr) {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %castptr = addrspacecast i32* %ptr to i32 addrspace(10)*
-  call void @foo(i32 addrspace(10)* %castptr)
+  %castptr = addrspacecast ptr %ptr to ptr addrspace(10)
+  call void @foo(ptr addrspace(10) %castptr)
   ret void
 }
 
-declare void @foo(i32 addrspace(10)*)
+declare void @foo(ptr addrspace(10))

@@ -196,29 +196,6 @@ struct BufferView : std::ranges::view_base {
   }
 };
 
-// an `input_iterator` that can be used in a `common_range`
-template <class Base>
-struct common_input_iterator {
-  Base it_;
-
-  using value_type = std::iter_value_t<Base>;
-  using difference_type = std::intptr_t;
-  using iterator_concept = std::input_iterator_tag;
-
-  constexpr common_input_iterator() = default;
-  constexpr explicit common_input_iterator(Base it) : it_(it) {}
-
-  constexpr common_input_iterator& operator++() {
-    ++it_;
-    return *this;
-  }
-  constexpr void operator++(int) { ++it_; }
-
-  constexpr std::iter_reference_t<Base> operator*() const { return *it_; }
-
-  friend constexpr bool operator==(common_input_iterator const&, common_input_iterator const&) = default;
-};
-
 using InputCommonInner = BufferView<common_input_iterator<int*>>;
 static_assert(std::ranges::input_range<InputCommonInner>);
 static_assert(!std::ranges::forward_range<InputCommonInner>);

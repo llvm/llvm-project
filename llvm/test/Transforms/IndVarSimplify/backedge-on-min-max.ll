@@ -3,7 +3,7 @@
 
 ;; --- signed ---
 
-define void @min.signed.1(i32* %a, i32 %a_len, i32 %n) {
+define void @min.signed.1(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-LABEL: @min.signed.1
  entry:
   %smin.cmp = icmp slt i32 %a_len, %n
@@ -19,8 +19,8 @@ define void @min.signed.1(i32* %a, i32 %a_len, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -31,7 +31,7 @@ define void @min.signed.1(i32* %a, i32 %a_len, i32 %n) {
   ret void
 }
 
-define void @min.signed.2(i32* %a, i32 %a_len, i32 %n) {
+define void @min.signed.2(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-LABEL: @min.signed.2
  entry:
   %smin.cmp = icmp slt i32 %a_len, %n
@@ -47,8 +47,8 @@ define void @min.signed.2(i32* %a, i32 %a_len, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -59,7 +59,7 @@ define void @min.signed.2(i32* %a, i32 %a_len, i32 %n) {
   ret void
 }
 
-define void @min.signed.3(i32* %a, i32 %n) {
+define void @min.signed.3(ptr %a, i32 %n) {
 ; CHECK-LABEL: @min.signed.3
  entry:
   %smin.cmp = icmp slt i32 42, %n
@@ -75,8 +75,8 @@ define void @min.signed.3(i32* %a, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -87,7 +87,7 @@ define void @min.signed.3(i32* %a, i32 %n) {
   ret void
 }
 
-define void @min.signed.4(i32* %a, i32 %n) {
+define void @min.signed.4(ptr %a, i32 %n) {
 ; CHECK-LABEL: @min.signed.4
  entry:
   %smin.cmp = icmp slt i32 42, %n
@@ -103,8 +103,8 @@ define void @min.signed.4(i32* %a, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -115,7 +115,7 @@ define void @min.signed.4(i32* %a, i32 %n) {
   ret void
 }
 
-define void @max.signed.1(i32* %a, i32 %a_len, i32 %n) {
+define void @max.signed.1(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-LABEL: @max.signed.1
  entry:
   %smax.cmp = icmp sgt i32 %a_len, %n
@@ -131,8 +131,8 @@ define void @max.signed.1(i32* %a, i32 %a_len, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -143,7 +143,7 @@ define void @max.signed.1(i32* %a, i32 %a_len, i32 %n) {
   ret void
 }
 
-define void @max.signed.2(i32* %a, i32 %a_len, i32 %n) {
+define void @max.signed.2(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-LABEL: @max.signed.2
  entry:
   %smax.cmp = icmp sgt i32 %a_len, %n
@@ -159,8 +159,8 @@ define void @max.signed.2(i32* %a, i32 %a_len, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -171,7 +171,7 @@ define void @max.signed.2(i32* %a, i32 %a_len, i32 %n) {
   ret void
 }
 
-define void @max.signed.3(i32* %a, i32 %n, i32 %init) {
+define void @max.signed.3(ptr %a, i32 %n, i32 %init) {
 ; CHECK-LABEL: @max.signed.3
  entry:
   %smax.cmp = icmp sgt i32 42, %n
@@ -187,8 +187,8 @@ define void @max.signed.3(i32* %a, i32 %n, i32 %init) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -199,7 +199,7 @@ define void @max.signed.3(i32* %a, i32 %n, i32 %init) {
   ret void
 }
 
-define void @max.signed.4(i32* %a, i32 %n, i32 %init) {
+define void @max.signed.4(ptr %a, i32 %n, i32 %init) {
 ; CHECK-LABEL: @max.signed.4
  entry:
   %smax.cmp = icmp sgt i32 42, %n
@@ -215,8 +215,8 @@ define void @max.signed.4(i32* %a, i32 %n, i32 %init) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -229,7 +229,7 @@ define void @max.signed.4(i32* %a, i32 %n, i32 %init) {
 
 ;; --- unsigned ---
 
-define void @min.unsigned.1(i32* %a, i32 %a_len, i32 %n) {
+define void @min.unsigned.1(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-LABEL: @min.unsigned.1
  entry:
   %umin.cmp = icmp ult i32 %a_len, %n
@@ -245,8 +245,8 @@ define void @min.unsigned.1(i32* %a, i32 %a_len, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -257,7 +257,7 @@ define void @min.unsigned.1(i32* %a, i32 %a_len, i32 %n) {
   ret void
 }
 
-define void @min.unsigned.2(i32* %a, i32 %a_len, i32 %n) {
+define void @min.unsigned.2(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-LABEL: @min.unsigned.2
  entry:
   %umin.cmp = icmp ult i32 %a_len, %n
@@ -273,8 +273,8 @@ define void @min.unsigned.2(i32* %a, i32 %a_len, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -285,7 +285,7 @@ define void @min.unsigned.2(i32* %a, i32 %a_len, i32 %n) {
   ret void
 }
 
-define void @min.unsigned.3(i32* %a, i32 %n) {
+define void @min.unsigned.3(ptr %a, i32 %n) {
 ; CHECK-LABEL: @min.unsigned.3
  entry:
   %umin.cmp = icmp ult i32 42, %n
@@ -301,8 +301,8 @@ define void @min.unsigned.3(i32* %a, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -313,7 +313,7 @@ define void @min.unsigned.3(i32* %a, i32 %n) {
   ret void
 }
 
-define void @min.unsigned.4(i32* %a, i32 %n) {
+define void @min.unsigned.4(ptr %a, i32 %n) {
 ; CHECK-LABEL: @min.unsigned.4
  entry:
   %umin.cmp = icmp ult i32 42, %n
@@ -329,8 +329,8 @@ define void @min.unsigned.4(i32* %a, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -341,7 +341,7 @@ define void @min.unsigned.4(i32* %a, i32 %n) {
   ret void
 }
 
-define void @max.unsigned.1(i32* %a, i32 %a_len, i32 %n) {
+define void @max.unsigned.1(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-LABEL: @max.unsigned.1
  entry:
   %umax.cmp = icmp ugt i32 %a_len, %n
@@ -357,8 +357,8 @@ define void @max.unsigned.1(i32* %a, i32 %a_len, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -369,7 +369,7 @@ define void @max.unsigned.1(i32* %a, i32 %a_len, i32 %n) {
   ret void
 }
 
-define void @max.unsigned.2(i32* %a, i32 %a_len, i32 %n) {
+define void @max.unsigned.2(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-LABEL: @max.unsigned.2
  entry:
   %umax.cmp = icmp ugt i32 %a_len, %n
@@ -385,8 +385,8 @@ define void @max.unsigned.2(i32* %a, i32 %a_len, i32 %n) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -397,7 +397,7 @@ define void @max.unsigned.2(i32* %a, i32 %a_len, i32 %n) {
   ret void
 }
 
-define void @max.unsigned.3(i32* %a, i32 %n, i32 %init) {
+define void @max.unsigned.3(ptr %a, i32 %n, i32 %init) {
 ; CHECK-LABEL: @max.unsigned.3
  entry:
   %umax.cmp = icmp ugt i32 42, %n
@@ -413,8 +413,8 @@ define void @max.unsigned.3(i32* %a, i32 %n, i32 %init) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:
@@ -425,7 +425,7 @@ define void @max.unsigned.3(i32* %a, i32 %n, i32 %init) {
   ret void
 }
 
-define void @max.unsigned.4(i32* %a, i32 %n, i32 %init) {
+define void @max.unsigned.4(ptr %a, i32 %n, i32 %init) {
 ; CHECK-LABEL: @max.unsigned.4
  entry:
   %umax.cmp = icmp ugt i32 42, %n
@@ -441,8 +441,8 @@ define void @max.unsigned.4(i32* %a, i32 %n, i32 %init) {
 ; CHECK: br i1 true, label %ok, label %latch
 
  ok:
-  %addr = getelementptr i32, i32* %a, i32 %idx
-  store i32 %idx, i32* %addr
+  %addr = getelementptr i32, ptr %a, i32 %idx
+  store i32 %idx, ptr %addr
   br label %latch
 
  latch:

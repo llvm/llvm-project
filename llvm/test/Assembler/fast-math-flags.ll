@@ -11,12 +11,12 @@ declare float @foo(float)
 
 define float @none(float %x, float %y) {
 entry:
-; CHECK:  %vec = load <3 x float>, <3 x float>* @vec
-  %vec    = load <3 x float>, <3 x float>* @vec
-; CHECK:  %select = load i1, i1* @select
-  %select = load i1, i1* @select
-; CHECK:  %arr = load [3 x float], [3 x float]* @arr
-  %arr    = load [3 x float], [3 x float]* @arr
+; CHECK:  %vec = load <3 x float>, ptr @vec
+  %vec    = load <3 x float>, ptr @vec
+; CHECK:  %select = load i1, ptr @select
+  %select = load i1, ptr @select
+; CHECK:  %arr = load [3 x float], ptr @arr
+  %arr    = load [3 x float], ptr @arr
 
 ; CHECK:  %a = fadd float %x, %y
   %a = fadd float %x, %y
@@ -49,12 +49,12 @@ entry:
 ; CHECK: no_nan
 define float @no_nan(float %x, float %y) {
 entry:
-; CHECK:  %vec = load <3 x float>, <3 x float>* @vec
-  %vec    = load <3 x float>, <3 x float>* @vec
-; CHECK:  %select = load i1, i1* @select
-  %select = load i1, i1* @select
-; CHECK:  %arr = load [3 x float], [3 x float]* @arr
-  %arr    = load [3 x float], [3 x float]* @arr
+; CHECK:  %vec = load <3 x float>, ptr @vec
+  %vec    = load <3 x float>, ptr @vec
+; CHECK:  %select = load i1, ptr @select
+  %select = load i1, ptr @select
+; CHECK:  %arr = load [3 x float], ptr @arr
+  %arr    = load [3 x float], ptr @arr
 
 ; CHECK:  %a = fadd nnan float %x, %y
   %a = fadd nnan float %x, %y
@@ -121,12 +121,12 @@ define float @afn(float %x, float %y) {
 ; CHECK: no_nan_inf
 define float @no_nan_inf(float %x, float %y) {
 entry:
-; CHECK:  %vec = load <3 x float>, <3 x float>* @vec
-  %vec    = load <3 x float>, <3 x float>* @vec
-; CHECK:  %select = load i1, i1* @select
-  %select = load i1, i1* @select
-; CHECK:  %arr = load [3 x float], [3 x float]* @arr
-  %arr    = load [3 x float], [3 x float]* @arr
+; CHECK:  %vec = load <3 x float>, ptr @vec
+  %vec    = load <3 x float>, ptr @vec
+; CHECK:  %select = load i1, ptr @select
+  %select = load i1, ptr @select
+; CHECK:  %arr = load [3 x float], ptr @arr
+  %arr    = load [3 x float], ptr @arr
 
 ; CHECK:  %a = fadd nnan ninf float %x, %y
   %a = fadd ninf nnan float %x, %y
@@ -155,12 +155,12 @@ entry:
 ; CHECK: mixed_flags
 define float @mixed_flags(float %x, float %y) {
 entry:
-; CHECK:  %vec = load <3 x float>, <3 x float>* @vec
-  %vec    = load <3 x float>, <3 x float>* @vec
-; CHECK:  %select = load i1, i1* @select
-  %select = load i1, i1* @select
-; CHECK:  %arr = load [3 x float], [3 x float]* @arr
-  %arr    = load [3 x float], [3 x float]* @arr
+; CHECK:  %vec = load <3 x float>, ptr @vec
+  %vec    = load <3 x float>, ptr @vec
+; CHECK:  %select = load i1, ptr @select
+  %select = load i1, ptr @select
+; CHECK:  %arr = load [3 x float], ptr @arr
+  %arr    = load [3 x float], ptr @arr
 
 ; CHECK:  %a = fadd nnan ninf afn float %x, %y
   %a = fadd ninf nnan afn float %x, %y
@@ -193,12 +193,12 @@ entry:
 ; CHECK: @fmf_calls(
 define float @fmf_calls(float %x, float %y) {
 entry:
-; CHECK:  %vec = load <3 x float>, <3 x float>* @vec
-  %vec    = load <3 x float>, <3 x float>* @vec
-; CHECK:  %select = load i1, i1* @select
-  %select = load i1, i1* @select
-; CHECK:  %arr = load [3 x float], [3 x float]* @arr
-  %arr    = load [3 x float], [3 x float]* @arr
+; CHECK:  %vec = load <3 x float>, ptr @vec
+  %vec    = load <3 x float>, ptr @vec
+; CHECK:  %select = load i1, ptr @select
+  %select = load i1, ptr @select
+; CHECK:  %arr = load [3 x float], ptr @arr
+  %arr    = load [3 x float], ptr @arr
 
 ; CHECK:  %a = call nnan ninf afn float @extfunc(float %x, float %y)
   %a = call ninf nnan afn float @extfunc(float %x, float %y)

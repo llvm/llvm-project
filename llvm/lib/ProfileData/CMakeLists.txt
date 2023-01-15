@@ -24,6 +24,7 @@ add_llvm_component_library(LLVMProfileData
   Demangle
   Symbolize
   DebugInfoDWARF
+  TargetParser
   )
 
 add_subdirectory(Coverage)

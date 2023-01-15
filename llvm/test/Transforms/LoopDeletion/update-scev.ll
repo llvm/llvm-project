@@ -60,7 +60,7 @@ declare void @sideeffect(i32)
 ; LoopDeletion removes the loop %for.body7.1. Make sure %inc.lcssa.1 in the loop
 ; exit block is correctly invalidated.
 
-define void @test2(double* %bx, i64 %by) local_unnamed_addr align 2 {
+define void @test2(ptr %bx, i64 %by) local_unnamed_addr align 2 {
 ; IR-AFTER-TRANSFORM-LABEL: @test2(
 ; IR-AFTER-TRANSFORM-NOT: for.body7.1:
 
@@ -106,8 +106,8 @@ for.body10.preheader:                             ; preds = %for.cond8.preheader
 for.body7:                                        ; preds = %for.body7, %for.body7.preheader
   %ca.26 = phi i64 [ %inc, %for.body7 ], [ %ca.19, %for.body7.preheader ]
   %inc = add nsw i64 %ca.26, 1
-  %arrayidx = getelementptr inbounds double, double* %bx, i64 %ca.26
-  store double 0.000000e+00, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %bx, i64 %ca.26
+  store double 0.000000e+00, ptr %arrayidx, align 8
   br i1 false, label %for.cond8.preheader.loopexit, label %for.body7
 
 for.body10:                                       ; preds = %for.body10, %for.body10.preheader
@@ -134,8 +134,8 @@ for.body7.preheader.1:                            ; preds = %for.cond5.preheader
 for.body7.1:                                      ; preds = %for.body7.1, %for.body7.preheader.1
   %ca.26.1 = phi i64 [ %inc.1, %for.body7.1 ], [ %ca.19.1, %for.body7.preheader.1 ]
   %inc.1 = add nsw i64 %ca.26.1, 1
-  %arrayidx.1 = getelementptr inbounds double, double* %bx, i64 %ca.26.1
-  store double 0.000000e+00, double* %arrayidx.1, align 8
+  %arrayidx.1 = getelementptr inbounds double, ptr %bx, i64 %ca.26.1
+  store double 0.000000e+00, ptr %arrayidx.1, align 8
   br i1 true, label %for.cond8.preheader.loopexit.1, label %for.body7.1
 
 for.cond8.preheader.loopexit.1:                   ; preds = %for.body7.1

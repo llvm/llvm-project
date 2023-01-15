@@ -5,20 +5,20 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-darwin10.2"
 
 %struct.anon = type { i32, i32 }
-%struct.test = type { i64, %struct.anon, %struct.test* }
+%struct.test = type { i64, %struct.anon, ptr }
 
-@TestArrayPtr = global %struct.test* getelementptr inbounds ([10 x %struct.test], [10 x %struct.test]* @TestArray, i64 0, i64 3) ; <%struct.test**> [#uses=1]
-@TestArray = common global [10 x %struct.test] zeroinitializer, align 32 ; <[10 x %struct.test]*> [#uses=2]
+@TestArrayPtr = global ptr getelementptr inbounds ([10 x %struct.test], ptr @TestArray, i64 0, i64 3) ; <ptr> [#uses=1]
+@TestArray = common global [10 x %struct.test] zeroinitializer, align 32 ; <ptr> [#uses=2]
 
 define i32 @main() nounwind readonly !dbg !1 {
-  %diff1 = alloca i64                             ; <i64*> [#uses=2]
+  %diff1 = alloca i64                             ; <ptr> [#uses=2]
 ; CHECK: call void @llvm.dbg.value(metadata i64 72,
-  call void @llvm.dbg.declare(metadata i64* %diff1, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
-  store i64 72, i64* %diff1, align 8
-  %v1 = load %struct.test*, %struct.test** @TestArrayPtr, align 8 ; <%struct.test*> [#uses=1]
-  %v2 = ptrtoint %struct.test* %v1 to i64 ; <i64> [#uses=1]
-  %v3 = sub i64 %v2, ptrtoint ([10 x %struct.test]* @TestArray to i64) ; <i64> [#uses=1]
-  store i64 %v3, i64* %diff1, align 8
+  call void @llvm.dbg.declare(metadata ptr %diff1, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  store i64 72, ptr %diff1, align 8
+  %v1 = load ptr, ptr @TestArrayPtr, align 8 ; <ptr> [#uses=1]
+  %v2 = ptrtoint ptr %v1 to i64 ; <i64> [#uses=1]
+  %v3 = sub i64 %v2, ptrtoint (ptr @TestArray to i64) ; <i64> [#uses=1]
+  store i64 %v3, ptr %diff1, align 8
   ret i32 4, !dbg !DILocation(scope: !1)
 }
 

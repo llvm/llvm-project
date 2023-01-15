@@ -9,12 +9,12 @@ define arm_aapcscc double @func() {
   br label %tailrecurse
 
 tailrecurse:
-  %v0 = load i16, i16* undef, align 8
+  %v0 = load i16, ptr undef, align 8
   %cond36.i = icmp eq i16 %v0, 3
   br i1 %cond36.i, label %sw.bb.i, label %sw.epilog.i
 
 sw.bb.i:
-  %v1 = load double, double* undef, align 8
+  %v1 = load double, ptr undef, align 8
   %call21.i = tail call arm_aapcscc double @func()
   %mul.i = fmul double %v1, %call21.i
   ret double %mul.i
