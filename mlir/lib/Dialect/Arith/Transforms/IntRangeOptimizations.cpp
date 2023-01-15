@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
@@ -23,20 +25,21 @@ using namespace mlir::arith;
 using namespace mlir::dataflow;
 
 /// Returns true if 2 integer ranges have intersection.
-static bool intersects(ConstantIntRanges lhs, ConstantIntRanges rhs) {
+static bool intersects(const ConstantIntRanges &lhs,
+                       const ConstantIntRanges &rhs) {
   return !((lhs.smax().slt(rhs.smin()) || lhs.smin().sgt(rhs.smax())) &&
            (lhs.umax().ult(rhs.umin()) || lhs.umin().ugt(rhs.umax())));
 }
 
 static FailureOr<bool> handleEq(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (!intersects(lhs, rhs))
+  if (!intersects(std::move(lhs), std::move(rhs)))
     return false;
 
   return failure();
 }
 
 static FailureOr<bool> handleNe(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  if (!intersects(lhs, rhs))
+  if (!intersects(std::move(lhs), std::move(rhs)))
     return true;
 
   return failure();
@@ -63,11 +66,11 @@ static FailureOr<bool> handleSle(ConstantIntRanges lhs, ConstantIntRanges rhs) {
 }
 
 static FailureOr<bool> handleSgt(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  return handleSlt(rhs, lhs);
+  return handleSlt(std::move(rhs), std::move(lhs));
 }
 
 static FailureOr<bool> handleSge(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  return handleSle(rhs, lhs);
+  return handleSle(std::move(rhs), std::move(lhs));
 }
 
 static FailureOr<bool> handleUlt(ConstantIntRanges lhs, ConstantIntRanges rhs) {
@@ -91,11 +94,11 @@ static FailureOr<bool> handleUle(ConstantIntRanges lhs, ConstantIntRanges rhs) {
 }
 
 static FailureOr<bool> handleUgt(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  return handleUlt(rhs, lhs);
+  return handleUlt(std::move(rhs), std::move(lhs));
 }
 
 static FailureOr<bool> handleUge(ConstantIntRanges lhs, ConstantIntRanges rhs) {
-  return handleUle(rhs, lhs);
+  return handleUle(std::move(rhs), std::move(lhs));
 }
 
 namespace {

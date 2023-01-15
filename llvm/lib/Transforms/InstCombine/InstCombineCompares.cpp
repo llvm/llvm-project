@@ -2042,37 +2042,21 @@ static Instruction *foldICmpShlOne(ICmpInst &Cmp, Instruction *Shl,
         Pred = ICmpInst::ICMP_UGT;
     }
 
-    // (1 << Y) >= 2147483648 -> Y >= 31 -> Y == 31
-    // (1 << Y) <  2147483648 -> Y <  31 -> Y != 31
     unsigned CLog2 = C.logBase2();
-    if (CLog2 == TypeBits - 1) {
-      if (Pred == ICmpInst::ICMP_UGE)
-        Pred = ICmpInst::ICMP_EQ;
-      else if (Pred == ICmpInst::ICMP_ULT)
-        Pred = ICmpInst::ICMP_NE;
-    }
     return new ICmpInst(Pred, Y, ConstantInt::get(ShiftType, CLog2));
   } else if (Cmp.isSigned()) {
     Constant *BitWidthMinusOne = ConstantInt::get(ShiftType, TypeBits - 1);
-    if (C.isAllOnes()) {
-      // (1 << Y) <= -1 -> Y == 31
-      if (Pred == ICmpInst::ICMP_SLE)
-        return new ICmpInst(ICmpInst::ICMP_EQ, Y, BitWidthMinusOne);
+    // (1 << Y) >  0 -> Y != 31
+    // (1 << Y) > -1 -> Y != 31
+    // TODO: This can be generalized to any negative constant.
+    if (Pred == ICmpInst::ICMP_SGT && (C.isZero() || C.isAllOnes()))
+      return new ICmpInst(ICmpInst::ICMP_NE, Y, BitWidthMinusOne);
 
-      // (1 << Y) >  -1 -> Y != 31
-      if (Pred == ICmpInst::ICMP_SGT)
-        return new ICmpInst(ICmpInst::ICMP_NE, Y, BitWidthMinusOne);
-    } else if (!C) {
-      // (1 << Y) <  0 -> Y == 31
-      // (1 << Y) <= 0 -> Y == 31
-      if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE)
-        return new ICmpInst(ICmpInst::ICMP_EQ, Y, BitWidthMinusOne);
-
-      // (1 << Y) >= 0 -> Y != 31
-      // (1 << Y) >  0 -> Y != 31
-      if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE)
-        return new ICmpInst(ICmpInst::ICMP_NE, Y, BitWidthMinusOne);
-    }
+    // (1 << Y) <  0 -> Y == 31
+    // (1 << Y) <  1 -> Y == 31
+    // TODO: This can be generalized to any negative constant except signed min.
+    if (Pred == ICmpInst::ICMP_SLT && (C.isZero() || C.isOne()))
+      return new ICmpInst(ICmpInst::ICMP_EQ, Y, BitWidthMinusOne);
   } else if (Cmp.isEquality() && CIsPowerOf2) {
     return new ICmpInst(Pred, Y, ConstantInt::get(ShiftType, C.logBase2()));
   }

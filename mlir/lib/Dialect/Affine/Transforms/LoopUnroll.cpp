@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 namespace mlir {
 #define GEN_PASS_DEF_AFFINELOOPUNROLL
@@ -51,7 +52,7 @@ struct LoopUnroll : public impl::AffineLoopUnrollBase<LoopUnroll> {
 
       = default;
   explicit LoopUnroll(
-      Optional<unsigned> unrollFactor = std::nullopt,
+      std::optional<unsigned> unrollFactor = std::nullopt,
       bool unrollUpToFactor = false, bool unrollFull = false,
       const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr)
       : getUnrollFactor(getUnrollFactor) {
@@ -99,7 +100,7 @@ void LoopUnroll::runOnOperation() {
     // so that loops are gathered from innermost to outermost (or else unrolling
     // an outer one may delete gathered inner ones).
     getOperation().walk([&](AffineForOp forOp) {
-      Optional<uint64_t> tripCount = getConstantTripCount(forOp);
+      std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
       if (tripCount && *tripCount <= unrollFullThreshold)
         loops.push_back(forOp);
     });
@@ -145,6 +146,6 @@ std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLoopUnrollPass(
     int unrollFactor, bool unrollUpToFactor, bool unrollFull,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(
-      unrollFactor == -1 ? std::nullopt : Optional<unsigned>(unrollFactor),
+      unrollFactor == -1 ? std::nullopt : std::optional<unsigned>(unrollFactor),
       unrollUpToFactor, unrollFull, getUnrollFactor);
 }

@@ -108,7 +108,7 @@ bool Fortran::lower::CallerInterface::requireDispatchCall() const {
 std::optional<unsigned>
 Fortran::lower::CallerInterface::getPassArgIndex() const {
   unsigned passArgIdx = 0;
-  std::optional<unsigned> passArg = std::nullopt;
+  std::optional<unsigned> passArg;
   for (const auto &arg : getCallDescription().arguments()) {
     if (arg && arg->isPassedObject()) {
       passArg = passArgIdx;

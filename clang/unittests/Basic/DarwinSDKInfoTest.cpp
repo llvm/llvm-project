@@ -9,6 +9,7 @@
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "llvm/Support/JSON.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;
@@ -16,7 +17,7 @@ using namespace clang;
 // Check the version mapping logic in DarwinSDKInfo.
 TEST(DarwinSDKInfo, VersionMapping) {
   llvm::json::Object Obj({{"3.0", "1.0"}, {"3.1", "1.2"}});
-  Optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
+  std::optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj,
                                                             VersionTuple());
   EXPECT_TRUE(Mapping);
@@ -54,7 +55,7 @@ TEST(DarwinSDKInfo, VersionMapping) {
 // Check the version mapping logic in DarwinSDKInfo.
 TEST(DarwinSDKInfo, VersionMappingMissingKey) {
   llvm::json::Object Obj({{"3.0", "1.0"}, {"5.0", "1.2"}});
-  Optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
+  std::optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
       DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj,
                                                             VersionTuple());
   EXPECT_TRUE(Mapping);

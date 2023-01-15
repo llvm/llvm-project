@@ -78,8 +78,7 @@ Operation *Operation::create(Location location, OperationName name,
   void *rawMem = mallocMem + prefixByteSize;
 
   // Populate default attributes.
-  if (Optional<RegisteredOperationName> info = name.getRegisteredInfo())
-    info->populateDefaultAttrs(attributes);
+  name.populateDefaultAttrs(attributes);
 
   // Create the new Operation.
   Operation *op = ::new (rawMem) Operation(
@@ -491,8 +490,7 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
                               SmallVectorImpl<OpFoldResult> &results) {
   // If we have a registered operation definition matching this one, use it to
   // try to constant fold the operation.
-  Optional<RegisteredOperationName> info = getRegisteredInfo();
-  if (info && succeeded(info->foldHook(this, operands, results)))
+  if (succeeded(name.foldHook(this, operands, results)))
     return success();
 
   // Otherwise, fall back on the dialect hook to handle it.

@@ -15,9 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 void StrToNumCheck::registerMatchers(MatchFinder *Finder) {
   // Match any function call to the C standard library string conversion
@@ -229,6 +227,4 @@ void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
       << classifyReplacement(Conversion);
 }
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert

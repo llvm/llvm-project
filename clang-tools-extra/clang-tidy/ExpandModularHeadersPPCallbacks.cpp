@@ -16,8 +16,7 @@
 
 #define DEBUG_TYPE "clang-tidy"
 
-namespace clang {
-namespace tooling {
+namespace clang::tooling {
 
 class ExpandModularHeadersPPCallbacks::FileRecorder {
 public:
@@ -306,5 +305,4 @@ void ExpandModularHeadersPPCallbacks::Endif(SourceLocation Loc,
   parseToLocation(Loc);
 }
 
-} // namespace tooling
-} // namespace clang
+} // namespace clang::tooling

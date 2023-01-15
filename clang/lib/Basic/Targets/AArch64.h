@@ -16,6 +16,7 @@
 #include "OSTargets.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/Support/AArch64TargetParser.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -76,10 +77,9 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasNoSVE = false;
   bool HasFMV = true;
 
-  llvm::AArch64::ArchKind ArchKind = llvm::AArch64::ArchKind::INVALID;
+  const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
 
   std::string ABI;
-  StringRef getArchProfile() const;
 
 public:
   AArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
@@ -141,7 +141,7 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
-  Optional<std::pair<unsigned, unsigned>>
+  std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const override;
 
   bool getFeatureDepOptions(StringRef Feature,

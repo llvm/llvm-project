@@ -27,9 +27,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Tracks a stack of parent statements during traversal.
 ///
@@ -911,6 +909,4 @@ bool VariableNamer::declarationExists(StringRef Symbol) {
   return DeclFinder.findUsages(SourceStmt);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

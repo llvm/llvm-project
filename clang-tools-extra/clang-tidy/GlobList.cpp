@@ -10,8 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 // Returns true if GlobList starts with the negative indicator ('-'), removes it
 // from the GlobList.
@@ -73,5 +72,4 @@ bool CachedGlobList::contains(StringRef S) const {
   return Value;
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

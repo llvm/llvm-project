@@ -15,9 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 void UniqueptrDeleteReleaseCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -81,6 +79,4 @@ void UniqueptrDeleteReleaseCheck::check(
   }
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

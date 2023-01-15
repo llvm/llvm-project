@@ -33,8 +33,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 //===----------------------------------------------------------------------===//
 // NoLintType
@@ -411,5 +410,4 @@ bool NoLintDirectiveHandler::shouldSuppress(
                                EnableNoLintBlocks);
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

@@ -9,10 +9,7 @@
 #include "OptionsUtils.h"
 #include "llvm/ADT/StringExtras.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
-namespace options {
+namespace clang::tidy::utils::options {
 
 static const char StringsDelimiter[] = ";";
 
@@ -63,7 +60,4 @@ std::string serializeStringList(ArrayRef<StringRef> Strings) {
   return llvm::join(Strings, StringsDelimiter);
 }
 
-} // namespace options
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils::options

@@ -37,6 +37,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -2698,7 +2699,7 @@ void CodeGenModule::EmitOMPAllocateDecl(const OMPAllocateDecl *D) {
   }
 }
 
-llvm::Optional<CharUnits>
+std::optional<CharUnits>
 CodeGenModule::getOMPAllocateAlignment(const VarDecl *VD) {
   if (const auto *AA = VD->getAttr<OMPAllocateDeclAttr>()) {
     if (Expr *Alignment = AA->getAlignment()) {

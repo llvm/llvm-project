@@ -46,6 +46,7 @@ END-SCRIPT
 #include <__algorithm/copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy.h'}}
 #include <__algorithm/copy_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy_backward.h'}}
 #include <__algorithm/copy_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy_if.h'}}
+#include <__algorithm/copy_move_common.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy_move_common.h'}}
 #include <__algorithm/copy_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy_n.h'}}
 #include <__algorithm/count.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/count.h'}}
 #include <__algorithm/count_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/count_if.h'}}
@@ -600,6 +601,7 @@ END-SCRIPT
 #include <__type_traits/is_abstract.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_abstract.h'}}
 #include <__type_traits/is_aggregate.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_aggregate.h'}}
 #include <__type_traits/is_allocator.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_allocator.h'}}
+#include <__type_traits/is_always_bitcastable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_always_bitcastable.h'}}
 #include <__type_traits/is_arithmetic.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_arithmetic.h'}}
 #include <__type_traits/is_array.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_array.h'}}
 #include <__type_traits/is_assignable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_assignable.h'}}
