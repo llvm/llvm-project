@@ -32,12 +32,12 @@
 
 #include "benchmark/benchmark.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 namespace libc_benchmarks {
