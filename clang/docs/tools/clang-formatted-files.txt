@@ -7310,6 +7310,7 @@ llvm/unittests/MC/AMDGPU/DwarfRegMappings.cpp
 llvm/unittests/MC/SystemZ/SystemZAsmLexerTest.cpp
 llvm/unittests/ObjCopy/ObjCopyTest.cpp
 llvm/unittests/Object/ArchiveTest.cpp
+llvm/unittests/Object/ELFObjectFileTest.cpp
 llvm/unittests/Object/ELFTest.cpp
 llvm/unittests/Object/ELFTypesTest.cpp
 llvm/unittests/Object/MinidumpTest.cpp
