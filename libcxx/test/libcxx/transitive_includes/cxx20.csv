@@ -732,6 +732,7 @@ scoped_allocator type_traits
 scoped_allocator variant
 scoped_allocator version
 semaphore atomic
+semaphore cstddef
 semaphore ctime
 semaphore iosfwd
 semaphore limits
@@ -752,6 +753,7 @@ set stdexcept
 set tuple
 set type_traits
 set version
+shared_mutex cstddef
 shared_mutex ctime
 shared_mutex iosfwd
 shared_mutex limits

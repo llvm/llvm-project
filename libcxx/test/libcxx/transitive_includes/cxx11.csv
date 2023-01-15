@@ -723,6 +723,7 @@ scoped_allocator type_traits
 scoped_allocator variant
 scoped_allocator version
 semaphore atomic
+semaphore cstddef
 semaphore ctime
 semaphore iosfwd
 semaphore limits
