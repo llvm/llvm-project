@@ -92,15 +92,22 @@ enum class TypeModifier : uint8_t {
   LLVM_MARK_AS_BITMASK_ENUM(LMUL1),
 };
 
-struct Policy {
-  bool IsUnspecified = false;
+class Policy {
+public:
   enum PolicyType {
     Undisturbed,
     Agnostic,
   };
-  PolicyType TailPolicy = Agnostic;
-  PolicyType MaskPolicy = Agnostic;
+
+private:
+  const bool IsUnspecified = false;
+  // The default assumption for an RVV instruction is TAMA, as an undisturbed
+  // policy generally will affect the performance of an out-of-order core.
+  const PolicyType TailPolicy = Agnostic;
+  const PolicyType MaskPolicy = Agnostic;
   bool HasTailPolicy, HasMaskPolicy;
+
+public:
   Policy(bool HasTailPolicy, bool HasMaskPolicy)
       : IsUnspecified(true), HasTailPolicy(HasTailPolicy),
         HasMaskPolicy(HasMaskPolicy) {}
@@ -422,7 +429,6 @@ public:
     return IntrinsicTypes;
   }
   Policy getPolicyAttrs() const {
-    assert(PolicyAttrs.IsUnspecified == false);
     return PolicyAttrs;
   }
   unsigned getPolicyAttrsBits() const {
@@ -430,8 +436,6 @@ public:
     // The 0th bit simulates the `vta` of RVV
     // The 1st bit simulates the `vma` of RVV
     // int PolicyAttrs = 0;
-
-    assert(PolicyAttrs.IsUnspecified == false);
 
     if (PolicyAttrs.isTUMAPolicy())
       return 2;
