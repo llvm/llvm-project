@@ -80,80 +80,72 @@ vint64m8_t test_vsmul_vx_i64m8(vint64m8_t op1, int64_t op2, size_t vl) {
 
 // CHECK-RV64-LABEL: @test_vsmul_vv_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vsmul.mask.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> [[MASKEDOFF:%.*]], <vscale x 1 x i64> [[OP1:%.*]], <vscale x 1 x i64> [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vsmul.mask.nxv1i64.nxv1i64.i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> [[OP1:%.*]], <vscale x 1 x i64> [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
-vint64m1_t test_vsmul_vv_i64m1_m(vbool64_t mask, vint64m1_t maskedoff,
-                                 vint64m1_t op1, vint64m1_t op2, size_t vl) {
-  return vsmul(mask, maskedoff, op1, op2, vl);
+vint64m1_t test_vsmul_vv_i64m1_m(vbool64_t mask, vint64m1_t op1, vint64m1_t op2, size_t vl) {
+  return vsmul(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsmul_vx_i64m1_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vsmul.mask.nxv1i64.i64.i64(<vscale x 1 x i64> [[MASKEDOFF:%.*]], <vscale x 1 x i64> [[OP1:%.*]], i64 [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i64> @llvm.riscv.vsmul.mask.nxv1i64.i64.i64(<vscale x 1 x i64> poison, <vscale x 1 x i64> [[OP1:%.*]], i64 [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP0]]
 //
-vint64m1_t test_vsmul_vx_i64m1_m(vbool64_t mask, vint64m1_t maskedoff,
-                                 vint64m1_t op1, int64_t op2, size_t vl) {
-  return vsmul(mask, maskedoff, op1, op2, vl);
+vint64m1_t test_vsmul_vx_i64m1_m(vbool64_t mask, vint64m1_t op1, int64_t op2, size_t vl) {
+  return vsmul(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsmul_vv_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vsmul.mask.nxv2i64.nxv2i64.i64(<vscale x 2 x i64> [[MASKEDOFF:%.*]], <vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vsmul.mask.nxv2i64.nxv2i64.i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-vint64m2_t test_vsmul_vv_i64m2_m(vbool32_t mask, vint64m2_t maskedoff,
-                                 vint64m2_t op1, vint64m2_t op2, size_t vl) {
-  return vsmul(mask, maskedoff, op1, op2, vl);
+vint64m2_t test_vsmul_vv_i64m2_m(vbool32_t mask, vint64m2_t op1, vint64m2_t op2, size_t vl) {
+  return vsmul(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsmul_vx_i64m2_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vsmul.mask.nxv2i64.i64.i64(<vscale x 2 x i64> [[MASKEDOFF:%.*]], <vscale x 2 x i64> [[OP1:%.*]], i64 [[OP2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.riscv.vsmul.mask.nxv2i64.i64.i64(<vscale x 2 x i64> poison, <vscale x 2 x i64> [[OP1:%.*]], i64 [[OP2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-vint64m2_t test_vsmul_vx_i64m2_m(vbool32_t mask, vint64m2_t maskedoff,
-                                 vint64m2_t op1, int64_t op2, size_t vl) {
-  return vsmul(mask, maskedoff, op1, op2, vl);
+vint64m2_t test_vsmul_vx_i64m2_m(vbool32_t mask, vint64m2_t op1, int64_t op2, size_t vl) {
+  return vsmul(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsmul_vv_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vsmul.mask.nxv4i64.nxv4i64.i64(<vscale x 4 x i64> [[MASKEDOFF:%.*]], <vscale x 4 x i64> [[OP1:%.*]], <vscale x 4 x i64> [[OP2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vsmul.mask.nxv4i64.nxv4i64.i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> [[OP1:%.*]], <vscale x 4 x i64> [[OP2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
-vint64m4_t test_vsmul_vv_i64m4_m(vbool16_t mask, vint64m4_t maskedoff,
-                                 vint64m4_t op1, vint64m4_t op2, size_t vl) {
-  return vsmul(mask, maskedoff, op1, op2, vl);
+vint64m4_t test_vsmul_vv_i64m4_m(vbool16_t mask, vint64m4_t op1, vint64m4_t op2, size_t vl) {
+  return vsmul(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsmul_vx_i64m4_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vsmul.mask.nxv4i64.i64.i64(<vscale x 4 x i64> [[MASKEDOFF:%.*]], <vscale x 4 x i64> [[OP1:%.*]], i64 [[OP2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.riscv.vsmul.mask.nxv4i64.i64.i64(<vscale x 4 x i64> poison, <vscale x 4 x i64> [[OP1:%.*]], i64 [[OP2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 4 x i64> [[TMP0]]
 //
-vint64m4_t test_vsmul_vx_i64m4_m(vbool16_t mask, vint64m4_t maskedoff,
-                                 vint64m4_t op1, int64_t op2, size_t vl) {
-  return vsmul(mask, maskedoff, op1, op2, vl);
+vint64m4_t test_vsmul_vx_i64m4_m(vbool16_t mask, vint64m4_t op1, int64_t op2, size_t vl) {
+  return vsmul(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsmul_vv_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vsmul.mask.nxv8i64.nxv8i64.i64(<vscale x 8 x i64> [[MASKEDOFF:%.*]], <vscale x 8 x i64> [[OP1:%.*]], <vscale x 8 x i64> [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vsmul.mask.nxv8i64.nxv8i64.i64(<vscale x 8 x i64> poison, <vscale x 8 x i64> [[OP1:%.*]], <vscale x 8 x i64> [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
-vint64m8_t test_vsmul_vv_i64m8_m(vbool8_t mask, vint64m8_t maskedoff,
-                                 vint64m8_t op1, vint64m8_t op2, size_t vl) {
-  return vsmul(mask, maskedoff, op1, op2, vl);
+vint64m8_t test_vsmul_vv_i64m8_m(vbool8_t mask, vint64m8_t op1, vint64m8_t op2, size_t vl) {
+  return vsmul(mask, op1, op2, vl);
 }
 
 // CHECK-RV64-LABEL: @test_vsmul_vx_i64m8_m(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vsmul.mask.nxv8i64.i64.i64(<vscale x 8 x i64> [[MASKEDOFF:%.*]], <vscale x 8 x i64> [[OP1:%.*]], i64 [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i64> @llvm.riscv.vsmul.mask.nxv8i64.i64.i64(<vscale x 8 x i64> poison, <vscale x 8 x i64> [[OP1:%.*]], i64 [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
 // CHECK-RV64-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
-vint64m8_t test_vsmul_vx_i64m8_m(vbool8_t mask, vint64m8_t maskedoff,
-                                 vint64m8_t op1, int64_t op2, size_t vl) {
-  return vsmul(mask, maskedoff, op1, op2, vl);
+vint64m8_t test_vsmul_vx_i64m8_m(vbool8_t mask, vint64m8_t op1, int64_t op2, size_t vl) {
+  return vsmul(mask, op1, op2, vl);
 }
