@@ -2178,6 +2178,26 @@ define <2 x i1> @icmp_shl_1_V_sle_0_vec(<2 x i32> %V) {
   ret <2 x i1> %cmp
 }
 
+define i1 @icmp_shl_1_V_sle_negative(i32 %V) {
+; CHECK-LABEL: @icmp_shl_1_V_sle_negative(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V:%.*]], 31
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i32 1, %V
+  %cmp = icmp sle i32 %shl, -42
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_shl_1_V_sle_0_negative(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_sle_0_negative(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[V:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp sle <2 x i32> %shl, <i32 -2147483647, i32 -2147483647>
+  ret <2 x i1> %cmp
+}
+
 define i1 @icmp_shl_1_V_sgt_0(i32 %V) {
 ; CHECK-LABEL: @icmp_shl_1_V_sgt_0(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[V:%.*]], 31
@@ -2195,6 +2215,26 @@ define <2 x i1> @icmp_shl_1_V_sgt_0_vec(<2 x i32> %V) {
 ;
   %shl = shl <2 x i32> <i32 1, i32 1>, %V
   %cmp = icmp sgt <2 x i32> %shl, <i32 0, i32 0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @icmp_shl_1_V_sgt_negative(i32 %V) {
+; CHECK-LABEL: @icmp_shl_1_V_sgt_negative(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[V:%.*]], 31
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shl = shl i32 1, %V
+  %cmp = icmp sgt i32 %shl, -12345
+  ret i1 %cmp
+}
+
+define <2 x i1> @icmp_shl_1_V_sgt_negative_vec(<2 x i32> %V) {
+; CHECK-LABEL: @icmp_shl_1_V_sgt_negative_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[V:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %shl = shl <2 x i32> <i32 1, i32 1>, %V
+  %cmp = icmp sgt <2 x i32> %shl, <i32 -2, i32 -2>
   ret <2 x i1> %cmp
 }
 

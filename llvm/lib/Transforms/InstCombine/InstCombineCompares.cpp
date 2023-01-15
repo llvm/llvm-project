@@ -2047,15 +2047,15 @@ static Instruction *foldICmpShlOne(ICmpInst &Cmp, Instruction *Shl,
   } else if (Cmp.isSigned()) {
     Constant *BitWidthMinusOne = ConstantInt::get(ShiftType, TypeBits - 1);
     // (1 << Y) >  0 -> Y != 31
-    // (1 << Y) > -1 -> Y != 31
-    // TODO: This can be generalized to any negative constant.
-    if (Pred == ICmpInst::ICMP_SGT && (C.isZero() || C.isAllOnes()))
+    // (1 << Y) >  C -> Y != 31 if C is negative.
+    if (Pred == ICmpInst::ICMP_SGT && C.sle(0))
       return new ICmpInst(ICmpInst::ICMP_NE, Y, BitWidthMinusOne);
 
     // (1 << Y) <  0 -> Y == 31
     // (1 << Y) <  1 -> Y == 31
-    // TODO: This can be generalized to any negative constant except signed min.
-    if (Pred == ICmpInst::ICMP_SLT && (C.isZero() || C.isOne()))
+    // (1 << Y) <  C -> Y == 31 if C is negative and not signed min.
+    // Exclude signed min by subtracting 1 and lower the upper bound to 0.
+    if (Pred == ICmpInst::ICMP_SLT && (C-1).sle(0))
       return new ICmpInst(ICmpInst::ICMP_EQ, Y, BitWidthMinusOne);
   } else if (Cmp.isEquality() && CIsPowerOf2) {
     return new ICmpInst(Pred, Y, ConstantInt::get(ShiftType, C.logBase2()));
