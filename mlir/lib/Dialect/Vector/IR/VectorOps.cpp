@@ -3373,12 +3373,12 @@ void TransferReadOp::print(OpAsmPrinter &p) {
   p << " : " << getShapedType() << ", " << getVectorType();
 }
 
-/// Infers the mask type for a transfer read given its vector type and
-/// permutation map. The mask in a transfer read operation applies to the
-/// tensor/buffer reading part of it and its type should match the shape read
+/// Infers the mask type for a transfer op given its vector type and
+/// permutation map. The mask in a transfer op operation applies to the
+/// tensor/buffer part of it and its type should match the vector shape
 /// *before* any permutation or broadcasting.
-static VectorType inferTransferReadMaskType(VectorType vecType,
-                                            AffineMap permMap) {
+static VectorType inferTransferOpMaskType(VectorType vecType,
+                                          AffineMap permMap) {
   auto i1Type = IntegerType::get(permMap.getContext(), 1);
   AffineMap invPermMap = inversePermutation(compressUnusedDims(permMap));
   assert(invPermMap && "Inversed permutation map couldn't be computed");
@@ -3436,7 +3436,7 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
           maskInfo.location, "does not support masks with vector element type");
     // Instead of adding the mask type as an op type, compute it based on the
     // vector type and the permutation map (to keep the type signature small).
-    auto maskType = inferTransferReadMaskType(vectorType, permMap);
+    auto maskType = inferTransferOpMaskType(vectorType, permMap);
     if (parser.resolveOperand(maskInfo, maskType, result.operands))
       return failure();
   }
@@ -3455,7 +3455,7 @@ LogicalResult TransferReadOp::verify() {
   auto paddingType = getPadding().getType();
   auto permutationMap = getPermutationMap();
   VectorType inferredMaskType =
-      maskType ? inferTransferReadMaskType(vectorType, permutationMap)
+      maskType ? inferTransferOpMaskType(vectorType, permutationMap)
                : VectorType();
   auto sourceElementType = shapedType.getElementType();
 
@@ -3495,7 +3495,7 @@ LogicalResult TransferReadOp::verify() {
 /// Returns the mask type expected by this operation. Mostly used for
 /// verification purposes. It requires the operation to be vectorized."
 Type TransferReadOp::getExpectedMaskType() {
-  return inferTransferReadMaskType(getVectorType(), getPermutationMap());
+  return inferTransferOpMaskType(getVectorType(), getPermutationMap());
 }
 
 template <typename TransferOp>
@@ -3836,18 +3836,6 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, vector, dest, indices, permutationMap, inBounds);
 }
 
-/// Infers the mask type for a transfer write given its vector type and
-/// permutation map. The mask in a transfer read operation applies to the
-/// tensor/buffer writing part of it and its type should match the shape written
-/// *after* any permutation.
-static VectorType inferTransferWriteMaskType(VectorType vecType,
-                                             AffineMap permMap) {
-  auto i1Type = IntegerType::get(permMap.getContext(), 1);
-  SmallVector<int64_t, 8> maskShape =
-      compressUnusedDims(permMap).compose(vecType.getShape());
-  return VectorType::get(maskShape, i1Type);
-}
-
 ParseResult TransferWriteOp::parse(OpAsmParser &parser,
                                    OperationState &result) {
   auto &builder = parser.getBuilder();
@@ -3892,7 +3880,7 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
     if (shapedType.getElementType().dyn_cast<VectorType>())
       return parser.emitError(
           maskInfo.location, "does not support masks with vector element type");
-    auto maskType = inferTransferWriteMaskType(vectorType, permMap);
+    auto maskType = inferTransferOpMaskType(vectorType, permMap);
     if (parser.resolveOperand(maskInfo, maskType, result.operands))
       return failure();
   }
@@ -3919,7 +3907,7 @@ LogicalResult TransferWriteOp::verify() {
   VectorType maskType = getMaskType();
   auto permutationMap = getPermutationMap();
   VectorType inferredMaskType =
-      maskType ? inferTransferWriteMaskType(vectorType, permutationMap)
+      maskType ? inferTransferOpMaskType(vectorType, permutationMap)
                : VectorType();
 
   if (llvm::size(getIndices()) != shapedType.getRank())
@@ -3945,7 +3933,7 @@ LogicalResult TransferWriteOp::verify() {
 /// Returns the mask type expected by this operation. Mostly used for
 /// verification purposes.
 Type TransferWriteOp::getExpectedMaskType() {
-  return inferTransferWriteMaskType(getVectorType(), getPermutationMap());
+  return inferTransferOpMaskType(getVectorType(), getPermutationMap());
 }
 
 /// Fold:
