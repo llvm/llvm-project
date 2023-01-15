@@ -275,7 +275,8 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
     M.print(FD, nullptr);
   }
 
-  opt(TM.get(), &TLII, M, OptLevel);
+  if (!JITSkipOpt)
+    opt(TM.get(), &TLII, M, OptLevel);
 
   if (PostOptIRModuleFileName.isPresent()) {
     std::error_code EC;
@@ -296,6 +297,46 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
   return MemoryBuffer::getMemBufferCopy(OS.str());
 }
 
+Expected<std::unique_ptr<MemoryBuffer>>
+JITEngine::getOrCreateObjFile(const __tgt_device_image &Image, LLVMContext &Ctx,
+                              const std::string &ComputeUnitKind) {
+
+  // Check if the user replaces the module at runtime with a finished object.
+  if (ReplacementObjectFileName.isPresent()) {
+    auto MBOrErr =
+        MemoryBuffer::getFileOrSTDIN(ReplacementObjectFileName.get());
+    if (!MBOrErr)
+      return createStringError(MBOrErr.getError(),
+                               "Could not read replacement obj from %s\n",
+                               ReplacementModuleFileName.get().c_str());
+    return std::move(*MBOrErr);
+  }
+
+  Module *Mod = nullptr;
+  // Check if the user replaces the module at runtime or we read it from the
+  // image.
+  // TODO: Allow the user to specify images per device (Arch + ComputeUnitKind).
+  if (!ReplacementModuleFileName.isPresent()) {
+    auto ModOrErr = createModuleFromImage(Image, Ctx);
+    if (!ModOrErr)
+      return ModOrErr.takeError();
+    Mod = ModOrErr->release();
+  } else {
+    auto MBOrErr =
+        MemoryBuffer::getFileOrSTDIN(ReplacementModuleFileName.get());
+    if (!MBOrErr)
+      return createStringError(MBOrErr.getError(),
+                               "Could not read replacement module from %s\n",
+                               ReplacementModuleFileName.get().c_str());
+    auto ModOrErr = createModuleFromMemoryBuffer(MBOrErr.get(), Ctx);
+    if (!ModOrErr)
+      return ModOrErr.takeError();
+    Mod = ModOrErr->release();
+  }
+
+  return backend(*Mod, ComputeUnitKind, JITOptLevel);
+}
+
 Expected<const __tgt_device_image *>
 JITEngine::compile(const __tgt_device_image &Image,
                    const std::string &ComputeUnitKind,
@@ -307,33 +348,11 @@ JITEngine::compile(const __tgt_device_image &Image,
   if (__tgt_device_image *JITedImage = CUI.TgtImageMap.lookup(&Image))
     return JITedImage;
 
-  Module *Mod = nullptr;
-  // Check if the user replaces the module at runtime or we read it from the
-  // image.
-  // TODO: Allow the user to specify images per device (Arch + ComputeUnitKind).
-  if (!ReplacementModuleFileName.isPresent()) {
-    auto ModOrErr = createModuleFromImage(Image, CUI.Context);
-    if (!ModOrErr)
-      return ModOrErr.takeError();
-    Mod = ModOrErr->release();
-  } else {
-    auto MBOrErr =
-        MemoryBuffer::getFileOrSTDIN(ReplacementModuleFileName.get());
-    if (!MBOrErr)
-      return createStringError(MBOrErr.getError(),
-                               "Could not read replacement module from %s\n",
-                               ReplacementModuleFileName.get().c_str());
-    auto ModOrErr = createModuleFromMemoryBuffer(MBOrErr.get(), CUI.Context);
-    if (!ModOrErr)
-      return ModOrErr.takeError();
-    Mod = ModOrErr->release();
-  }
+  auto ObjMBOrErr = getOrCreateObjFile(Image, CUI.Context, ComputeUnitKind);
+  if (!ObjMBOrErr)
+    return ObjMBOrErr.takeError();
 
-  auto MBOrError = backend(*Mod, ComputeUnitKind, JITOptLevel);
-  if (!MBOrError)
-    return MBOrError.takeError();
-
-  auto ImageMBOrErr = PostProcessing(std::move(*MBOrError));
+  auto ImageMBOrErr = PostProcessing(std::move(*ObjMBOrErr));
   if (!ImageMBOrErr)
     return ImageMBOrErr.takeError();
 
