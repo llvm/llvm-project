@@ -32,10 +32,7 @@ void test0_helper(A);
 void test0(X x) {
   test0_helper(x);
   // CHECK-LABEL:    define{{.*}} void @_Z5test01X(
-  // CHECK-SAME: ptr noundef [[ARG:%.*]])
-  // CHECK:      [[ARG_ADDR:%.*]] = alloca ptr
-  // CHECK-NEXT: [[TMP:%.*]] = alloca [[A:%.*]], align
-  // CHECK-NEXT: store ptr [[ARG]], ptr [[ARG_ADDR]]
+  // CHECK:      [[TMP:%.*]] = alloca [[A:%.*]], align
   // CHECK-NEXT: [[T0:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1XcvR1BEv(
   // CHECK-NEXT: call void @_ZN1AC1ERKS_(ptr {{[^,]*}} [[TMP]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T0]])
   // CHECK-NEXT: call void @_Z12test0_helper1A(ptr noundef [[TMP]])
