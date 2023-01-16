@@ -464,6 +464,7 @@ private:
                           SDValue &Offset, unsigned Scale = 1);
 
   bool SelectAllActivePredicate(SDValue N);
+  bool SelectAnyPredicate(SDValue N);
 };
 } // end anonymous namespace
 
@@ -6478,6 +6479,11 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
       static_cast<const AArch64TargetLowering *>(getTargetLowering());
 
   return TLI->isAllActivePredicate(*CurDAG, N);
+}
+
+bool AArch64DAGToDAGISel::SelectAnyPredicate(SDValue N) {
+  EVT VT = N.getValueType();
+  return VT.isScalableVector() && VT.getVectorElementType() == MVT::i1;
 }
 
 bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
