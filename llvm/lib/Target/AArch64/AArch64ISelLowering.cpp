@@ -33,6 +33,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -14016,11 +14017,19 @@ bool AArch64TargetLowering::shouldSinkOperands(
     return true;
   }
   case Instruction::Mul: {
-    bool IsProfitable = false;
+    int NumZExts = 0, NumSExts = 0;
     for (auto &Op : I->operands()) {
       // Make sure we are not already sinking this operand
       if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
         continue;
+
+      if (match(&Op, m_SExt(m_Value()))) {
+        NumSExts++;
+        continue;
+      } else if (match(&Op, m_ZExt(m_Value()))) {
+        NumZExts++;
+        continue;
+      }
 
       ShuffleVectorInst *Shuffle = dyn_cast<ShuffleVectorInst>(Op);
 
@@ -14031,11 +14040,14 @@ bool AArch64TargetLowering::shouldSinkOperands(
           match(Shuffle->getOperand(0), m_ZExtOrSExt(m_Value()))) {
         Ops.push_back(&Shuffle->getOperandUse(0));
         Ops.push_back(&Op);
-        IsProfitable = true;
+        if (match(Shuffle->getOperand(0), m_SExt(m_Value())))
+          NumSExts++;
+        else
+          NumZExts++;
         continue;
       }
 
-      if (!Shuffle || !Shuffle->isZeroEltSplat())
+      if (!Shuffle)
         continue;
 
       Value *ShuffleOperand = Shuffle->getOperand(0);
@@ -14054,15 +14066,27 @@ bool AArch64TargetLowering::shouldSinkOperands(
         continue;
 
       unsigned Opcode = OperandInstr->getOpcode();
-      if (Opcode != Instruction::SExt && Opcode != Instruction::ZExt)
-        continue;
+      if (Opcode == Instruction::SExt)
+        NumSExts++;
+      else if (Opcode == Instruction::ZExt)
+        NumZExts++;
+      else {
+        // If we find that the top bits are known 0, then we can sink and allow
+        // the backend to generate a umull.
+        unsigned Bitwidth = I->getType()->getScalarSizeInBits();
+        APInt UpperMask = APInt::getHighBitsSet(Bitwidth, Bitwidth / 2);
+        const DataLayout &DL = I->getFunction()->getParent()->getDataLayout();
+        if (!MaskedValueIsZero(OperandInstr, UpperMask, DL))
+          continue;
+        NumZExts++;
+      }
 
       Ops.push_back(&Shuffle->getOperandUse(0));
       Ops.push_back(&Op);
-      IsProfitable = true;
     }
 
-    return IsProfitable;
+    // Is it profitable to sink if we found two of the same type of extends.
+    return !Ops.empty() && (NumSExts == 2 || NumZExts == 2);
   }
   default:
     return false;
