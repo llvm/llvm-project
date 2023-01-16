@@ -49,15 +49,15 @@ def RDSVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdsvl", /*streaming_sve=*/0b1>
 def ADDSPL_XXI : sve_int_arith_vl<0b1, "addspl", /*streaming_sve=*/0b1>;
 def ADDSVL_XXI : sve_int_arith_vl<0b0, "addsvl", /*streaming_sve=*/0b1>;
 
-def ADDHA_MPPZ_S : sme_add_vector_to_tile_u32<0b0, "addha">;
-def ADDVA_MPPZ_S : sme_add_vector_to_tile_u32<0b1, "addva">;
+defm ADDHA_MPPZ_S : sme_add_vector_to_tile_u32<0b0, "addha", int_aarch64_sme_addha>;
+defm ADDVA_MPPZ_S : sme_add_vector_to_tile_u32<0b1, "addva", int_aarch64_sme_addva>;
 
 def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
 }
 
 let Predicates = [HasSMEI16I64] in {
-def ADDHA_MPPZ_D : sme_add_vector_to_tile_u64<0b0, "addha">;
-def ADDVA_MPPZ_D : sme_add_vector_to_tile_u64<0b1, "addva">;
+defm ADDHA_MPPZ_D : sme_add_vector_to_tile_u64<0b0, "addha", int_aarch64_sme_addha>;
+defm ADDVA_MPPZ_D : sme_add_vector_to_tile_u64<0b1, "addva", int_aarch64_sme_addva>;
 }
 
 let Predicates = [HasSME] in {
