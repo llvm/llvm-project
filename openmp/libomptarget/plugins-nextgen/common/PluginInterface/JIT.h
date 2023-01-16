@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Target/TargetMachine.h"
@@ -67,6 +68,12 @@ private:
   compile(const __tgt_device_image &Image, const std::string &ComputeUnitKind,
           PostProcessingFn PostProcessing);
 
+  /// Create or retrieve the object image file from the file system or via
+  /// compilation of the \p Image.
+  Expected<std::unique_ptr<MemoryBuffer>>
+  getOrCreateObjFile(const __tgt_device_image &Image, LLVMContext &Ctx,
+                     const std::string &ComputeUnitKind);
+
   /// Run backend, which contains optimization and code generation.
   Expected<std::unique_ptr<MemoryBuffer>>
   backend(Module &M, const std::string &ComputeUnitKind, unsigned OptLevel);
@@ -99,6 +106,8 @@ private:
   std::mutex ComputeUnitMapMutex;
 
   /// Control environment variables.
+  target::StringEnvar ReplacementObjectFileName =
+      target::StringEnvar("LIBOMPTARGET_JIT_REPLACEMENT_OBJECT");
   target::StringEnvar ReplacementModuleFileName =
       target::StringEnvar("LIBOMPTARGET_JIT_REPLACEMENT_MODULE");
   target::StringEnvar PreOptIRModuleFileName =
@@ -107,6 +116,8 @@ private:
       target::StringEnvar("LIBOMPTARGET_JIT_POST_OPT_IR_MODULE");
   target::UInt32Envar JITOptLevel =
       target::UInt32Envar("LIBOMPTARGET_JIT_OPT_LEVEL", 3);
+  target::BoolEnvar JITSkipOpt =
+      target::BoolEnvar("LIBOMPTARGET_JIT_SKIP_OPT", false);
 };
 
 } // namespace target
