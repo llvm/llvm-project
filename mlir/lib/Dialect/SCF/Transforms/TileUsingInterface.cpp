@@ -527,7 +527,7 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
                                                    fusableProducer);
   if (failed(fusedProducerValue))
     return std::nullopt;
-  rewriter.replaceOp(candidateSliceOp, fusedProducerValue.value());
+  rewriter.replaceAllUsesWith(candidateSliceOp, fusedProducerValue.value());
 
   // 3. If the slice is for a destination operand, for example,
   //
