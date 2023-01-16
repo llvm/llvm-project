@@ -27,6 +27,9 @@
 // in the comamnd line.
 // RUN: %clang -std=c++20 %t/Hello.cppm -fmodule-output=%t/pcm/Hello.pcm -o %t/Hello.o \
 // RUN:   -c -### 2>&1 | FileCheck %t/Hello.cppm --check-prefix=CHECK-SPECIFIED
+//
+// RUN: %clang -std=c++20 %t/Hello.cppm -fmodule-output=%t/Hello.pcm -fmodule-output -c -fsyntax-only \
+// RUN:   -### 2>&1 | FileCheck %t/Hello.cppm --check-prefix=CHECK-NOT-USED
 
 //--- Hello.cppm
 export module Hello;
@@ -38,6 +41,11 @@ export module Hello;
 
 // CHECK-SPECIFIED: "-emit-module-interface" {{.*}}"-main-file-name" "Hello.cppm" {{.*}}"-o" "{{.*}}/pcm/Hello.pcm" "-x" "c++" "{{.*}}/Hello.cppm"
 // CHECK-SPECIFIED: "-emit-obj" {{.*}}"-main-file-name" "Hello.cppm" {{.*}}"-o" "{{.*}}/Hello.o" "-x" "pcm" "{{.*}}/pcm/Hello.pcm"
+
+// CHECK-NOT-USED-NOT: warning: argument unused during compilation: '-fmodule-output'
+// CHECK-NOT-USED-NOT: warning: argument unused during compilation: '-fmodule-output=Hello.pcm'
+// CHECK-NOT-USED-NOT: "-fmodule-output"
+// CHECK-NOT-USED-NOT: "-fmodule-output="
 
 //--- AnotherModule.cppm
 export module AnotherModule;
