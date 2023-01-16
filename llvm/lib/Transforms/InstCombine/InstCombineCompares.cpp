@@ -2057,8 +2057,6 @@ static Instruction *foldICmpShlOne(ICmpInst &Cmp, Instruction *Shl,
     // Exclude signed min by subtracting 1 and lower the upper bound to 0.
     if (Pred == ICmpInst::ICMP_SLT && (C-1).sle(0))
       return new ICmpInst(ICmpInst::ICMP_EQ, Y, BitWidthMinusOne);
-  } else if (Cmp.isEquality() && CIsPowerOf2) {
-    return new ICmpInst(Pred, Y, ConstantInt::get(ShiftType, C.logBase2()));
   }
 
   return nullptr;
