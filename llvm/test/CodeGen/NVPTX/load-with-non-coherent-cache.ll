@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck -check-prefix=SM20 %s
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck -check-prefix=SM35 %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck -check-prefix=SM20 %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -verify-machineinstrs | FileCheck -check-prefix=SM35 %s
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
 

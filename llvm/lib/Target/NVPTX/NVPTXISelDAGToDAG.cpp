@@ -1671,9 +1671,6 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     LD = CurDAG->getMachineNode(*Opcode, DL, InstVTList, Ops);
   }
 
-  MachineMemOperand *MemRef = Mem->getMemOperand();
-  CurDAG->setNodeMemRefs(cast<MachineSDNode>(LD), {MemRef});
-
   // For automatic generation of LDG (through SelectLoad[Vector], not the
   // intrinsics), we may have an extending load like:
   //
