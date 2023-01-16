@@ -131,7 +131,12 @@ static LogicalResult encodeKernelName(spirv::ModuleOp module) {
   // based on `getKernelGlobalVariables()` call. Update this function's name
   // to:
   //   {spv_module_name}_{function_name}
-  auto entryPoint = *module.getOps<spirv::EntryPointOp>().begin();
+  auto entryPoints = module.getOps<spirv::EntryPointOp>();
+  if (!llvm::hasSingleElement(entryPoints)) {
+    return module.emitError(
+        "The module must contain exactly one entry point function");
+  }
+  spirv::EntryPointOp entryPoint = *entryPoints.begin();
   StringRef funcName = entryPoint.getFn();
   auto funcOp = module.lookupSymbol<spirv::FuncOp>(entryPoint.getFnAttr());
   StringAttr newFuncName =
@@ -313,8 +318,12 @@ public:
 
     // Finally, modify the kernel function in SPIR-V modules to avoid symbolic
     // conflicts.
-    for (auto spvModule : module.getOps<spirv::ModuleOp>())
-      (void)encodeKernelName(spvModule);
+    for (auto spvModule : module.getOps<spirv::ModuleOp>()) {
+      if (failed(encodeKernelName(spvModule))) {
+        signalPassFailure();
+        return;
+      }
+    }
   }
 };
 } // namespace
