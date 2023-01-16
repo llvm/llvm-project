@@ -113,7 +113,7 @@ bool Status::exists() const {
 
 File::~File() = default;
 
-llvm::ErrorOr<Optional<cas::ObjectRef>> File::getObjectRefForContent() {
+llvm::ErrorOr<std::optional<cas::ObjectRef>> File::getObjectRefForContent() {
   return std::nullopt;
 }
 
@@ -122,7 +122,7 @@ FileSystem::~FileSystem() = default;
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
                              bool RequiresNullTerminator, bool IsVolatile,
-                             Optional<cas::ObjectRef> *CASContents) {
+                             std::optional<cas::ObjectRef> *CASContents) {
   auto F = openFileForRead(Name);
   if (!F)
     return F.getError();
@@ -136,7 +136,7 @@ FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
   return (*F)->getBuffer(Name, FileSize, RequiresNullTerminator, IsVolatile);
 }
 
-llvm::ErrorOr<Optional<cas::ObjectRef>>
+llvm::ErrorOr<std::optional<cas::ObjectRef>>
 FileSystem::getObjectRefForFileContent(const Twine &Name) {
   auto F = openFileForRead(Name);
   if (!F)

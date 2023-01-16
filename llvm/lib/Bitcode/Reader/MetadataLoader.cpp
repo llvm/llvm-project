@@ -1455,7 +1455,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() > 13 && Record[13])
       Annotations = getMDOrNull(Record[13]);
 
-    Optional<DIDerivedType::PtrAuthData> PtrAuthData;
+    std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
     if (Record.size() > 14 && Record[14])
       PtrAuthData = DIDerivedType::PtrAuthData(Record[14]);
 

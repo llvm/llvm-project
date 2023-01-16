@@ -531,7 +531,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   uint64_t OffsetInBits;
   uint32_t AlignInBits;
   std::optional<unsigned> DWARFAddressSpace;
-  Optional<DIDerivedType::PtrAuthData> PtrAuthData;
+  std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
   unsigned Flags;
   Metadata *ExtraData;
   Metadata *Annotations;
@@ -540,7 +540,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits,
                 std::optional<unsigned> DWARFAddressSpace,
-                Optional<DIDerivedType::PtrAuthData> PtrAuthData,
+                std::optional<DIDerivedType::PtrAuthData> PtrAuthData,
                 unsigned Flags, Metadata *ExtraData, Metadata *Annotations)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),

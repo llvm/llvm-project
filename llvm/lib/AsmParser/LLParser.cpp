@@ -4997,7 +4997,7 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   std::optional<unsigned> DWARFAddressSpace;
   if (dwarfAddressSpace.Val != UINT32_MAX)
     DWARFAddressSpace = dwarfAddressSpace.Val;
-  Optional<DIDerivedType::PtrAuthData> PtrAuthData;
+  std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
   if (ptrAuthKey.Val)
     PtrAuthData = DIDerivedType::PtrAuthData(
         (unsigned)ptrAuthKey.Val, ptrAuthIsAddressDiscriminated.Val,

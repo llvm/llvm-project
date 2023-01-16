@@ -322,7 +322,7 @@ DIBuilder::createPtrAuthQualifiedType(DIType *FromTy, unsigned Key,
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_LLVM_ptrauth_type, "", nullptr, 0, nullptr,
       FromTy, 0, 0, 0, std::nullopt,
-      Optional<DIDerivedType::PtrAuthData>(
+      std::optional<DIDerivedType::PtrAuthData>(
           {Key, IsAddressDiscriminated, ExtraDiscriminator}),
       DINode::FlagZero);
 }

@@ -18,6 +18,7 @@
 #include "llvm/Support/FileSystem.h"
 #include <atomic>
 #include <mutex>
+#include <optional>
 
 #if LLVM_ENABLE_ONDISK_CAS
 
@@ -162,7 +163,7 @@ public:
       assert((uint64_t)Offset.get() < (1LL << 48));
     }
 
-    Optional<HintT> getHint(const OnDiskHashMappedTrie &This) const {
+    std::optional<HintT> getHint(const OnDiskHashMappedTrie &This) const {
       if (!IsHint)
         return std::nullopt;
       HintT H(ValueOrHint);
@@ -204,7 +205,7 @@ public:
   };
 
   pointer getMutablePointer(const_pointer CP) {
-    if (Optional<HintT> H = CP.getHint(*this))
+    if (std::optional<HintT> H = CP.getHint(*this))
       return pointer(CP.getOffset(), *H);
     if (!CP)
       return pointer();
@@ -294,9 +295,9 @@ public:
   static Expected<OnDiskHashMappedTrie>
   create(const Twine &Path, const Twine &TrieName, size_t NumHashBits,
          uint64_t DataSize, uint64_t MaxFileSize,
-         Optional<uint64_t> NewFileInitialSize,
-         Optional<size_t> NewTableNumRootBits = std::nullopt,
-         Optional<size_t> NewTableNumSubtrieBits = std::nullopt);
+         std::optional<uint64_t> NewFileInitialSize,
+         std::optional<size_t> NewTableNumRootBits = std::nullopt,
+         std::optional<size_t> NewTableNumSubtrieBits = std::nullopt);
 
   OnDiskHashMappedTrie(OnDiskHashMappedTrie &&RHS);
   OnDiskHashMappedTrie &operator=(OnDiskHashMappedTrie &&RHS);
@@ -359,7 +360,7 @@ public:
 
   static Expected<OnDiskDataAllocator>
   create(const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
-         Optional<uint64_t> NewFileInitialSize);
+         std::optional<uint64_t> NewFileInitialSize);
 
   OnDiskDataAllocator(OnDiskDataAllocator &&RHS);
   OnDiskDataAllocator &operator=(OnDiskDataAllocator &&RHS);

@@ -14,6 +14,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <map>
+#include <optional>
 
 namespace llvm {
 namespace cas {
@@ -34,7 +35,7 @@ class CachingOnDiskFileSystem : public ThreadSafeFileSystem {
 public:
   /// An extra API to pull out the \a CASID if \p Path refers to a file.
   virtual ErrorOr<vfs::Status> statusAndFileID(const Twine &Path,
-                                               Optional<CASID> &FileID) = 0;
+                                               std::optional<CASID> &FileID) = 0;
 
   /// Start tracking all stats (and other accesses). Only affects this
   /// filesystem instance, not current (or future) proxies.

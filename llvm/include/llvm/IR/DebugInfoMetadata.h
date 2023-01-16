@@ -998,7 +998,7 @@ private:
   DIDerivedType(LLVMContext &C, StorageType Storage, unsigned Tag,
                 unsigned Line, uint64_t SizeInBits, uint32_t AlignInBits,
                 uint64_t OffsetInBits,
-                std::optional<unsigned> DWARFAddressSpace, Optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+                std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                 ArrayRef<Metadata *> Ops)
       : DIType(C, DIDerivedTypeKind, Storage, Tag, Line, SizeInBits,
                AlignInBits, OffsetInBits, Flags, Ops),
@@ -1011,7 +1011,7 @@ private:
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, DIFile *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
           uint32_t AlignInBits, uint64_t OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace, Optional<PtrAuthData>
+          std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData>
           PtrAuthData, DIFlags Flags, Metadata *ExtraData, DINodeArray
           Annotations, StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
@@ -1023,7 +1023,7 @@ private:
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace, Optional<PtrAuthData> PtrAuthData,
+          std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData> PtrAuthData,
           DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
           StorageType Storage, bool ShouldCreate = true);
 
@@ -1040,7 +1040,7 @@ public:
                      unsigned Line, Metadata *Scope, Metadata *BaseType,
                      uint64_t SizeInBits, uint32_t AlignInBits,
                      uint64_t OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace, Optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+                     std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      Metadata *Annotations = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
@@ -1050,7 +1050,7 @@ public:
                     (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
                      DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
                      uint32_t AlignInBits, uint64_t OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace, Optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+                     std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      DINodeArray Annotations = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
@@ -1069,26 +1069,26 @@ public:
     return DWARFAddressSpace;
   }
 
-  Optional<PtrAuthData> getPtrAuthData() const {
+  std::optional<PtrAuthData> getPtrAuthData() const {
     return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
-               ? Optional<PtrAuthData>(PtrAuthData(SubclassData32))
+               ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
                : std::nullopt;
   }
 
   /// \returns The PointerAuth key.
-  Optional<unsigned> getPtrAuthKey() const {
+  std::optional<unsigned> getPtrAuthKey() const {
     if (auto PtrAuthData = getPtrAuthData())
       return (unsigned)PtrAuthData->Payload.Data.Key;
     else return std::nullopt;
   }
   /// \returns The PointerAuth address discrimination bit.
-  Optional<bool> isPtrAuthAddressDiscriminated() const {
+  std::optional<bool> isPtrAuthAddressDiscriminated() const {
     if (auto PtrAuthData = getPtrAuthData())
       return (bool)PtrAuthData->Payload.Data.IsAddressDiscriminated;
     else return std::nullopt;
   }
   /// \returns The PointerAuth extra discriminator.
-  Optional<unsigned> getPtrAuthExtraDiscriminator() const {
+  std::optional<unsigned> getPtrAuthExtraDiscriminator() const {
     if (auto PtrAuthData = getPtrAuthData())
       return (unsigned)PtrAuthData->Payload.Data.ExtraDiscriminator;
     else return std::nullopt;

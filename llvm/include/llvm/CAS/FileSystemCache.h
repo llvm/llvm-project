@@ -22,6 +22,7 @@
 #include "llvm/Support/VirtualCachedDirectoryEntry.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
+#include <optional>
 
 namespace llvm {
 namespace cas {
@@ -102,7 +103,7 @@ public:
   /// mutex.
   DirectoryEntry &makeDirectoryAlreadyLocked(DirectoryEntry &Parent,
                                              StringRef TreePath,
-                                             Optional<ObjectRef> Ref);
+                                             std::optional<ObjectRef> Ref);
 
   /// Create a directory entry for a \a Symlink without allocating it.
   ///
@@ -124,7 +125,7 @@ public:
   ///
   /// Thread-safe; takes a lock on \p Parent's mutex.
   DirectoryEntry &makeDirectory(DirectoryEntry &Parent, StringRef TreePath,
-                                Optional<ObjectRef> Ref = std::nullopt);
+                                std::optional<ObjectRef> Ref = std::nullopt);
 
   /// Create a directory entry and a symlink.
   ///
@@ -200,7 +201,7 @@ public:
   FileSystemCache(FileSystemCache &&) = delete;
   FileSystemCache(const FileSystemCache &) = delete;
 
-  explicit FileSystemCache(Optional<ObjectRef> Root = std::nullopt);
+  explicit FileSystemCache(std::optional<ObjectRef> Root = std::nullopt);
 
 private:
   ThreadSafeAllocator<SpecificBumpPtrAllocator<File>> FileAlloc;
@@ -236,7 +237,7 @@ public:
   bool isDirectory() const { return Kind == Directory; }
   EntryKind getKind() const { return Kind; }
   DirectoryEntry *getParent() const { return Parent; }
-  Optional<ObjectRef> getRef() const { return Ref; }
+  std::optional<ObjectRef> getRef() const { return Ref; }
 
   sys::fs::file_type getFileType() const;
 
@@ -296,16 +297,16 @@ public:
   DirectoryEntry() = delete;
 
   DirectoryEntry(DirectoryEntry *Parent, StringRef TreePath, EntryKind Kind,
-                 Optional<ObjectRef> Ref)
+                 std::optional<ObjectRef> Ref)
       : CachedDirectoryEntry(TreePath), Parent(Parent), Kind(Kind),
         Node(nullptr), Ref(Ref) {}
 
 private:
   DirectoryEntry *Parent;
   EntryKind Kind;
-  Optional<sys::fs::UniqueID> UniqueID;
+  std::optional<sys::fs::UniqueID> UniqueID;
   std::atomic<void *> Node;
-  Optional<ObjectRef> Ref; /// If this is a fixed tree.
+  std::optional<ObjectRef> Ref; /// If this is a fixed tree.
 };
 
 struct FileSystemCache::DirectoryListingInfo {
@@ -403,7 +404,7 @@ public:
 };
 
 class FileSystemCache::Directory::Writer {
-  Optional<std::lock_guard<std::mutex>> Lock;
+  std::optional<std::lock_guard<std::mutex>> Lock;
 
 public:
   Writer() = delete;

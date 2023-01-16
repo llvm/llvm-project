@@ -14,6 +14,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #if LLVM_ENABLE_ONDISK_CAS
 
@@ -101,7 +102,7 @@ Error LazyMappedFileRegion::extendSizeImpl(uint64_t MinSize) {
 
   // Synchronize with other threads. Skip if constructing a new file since
   // exclusive access is already guaranteed.
-  Optional<std::lock_guard<std::mutex>> Lock;
+  std::optional<std::lock_guard<std::mutex>> Lock;
   if (!IsConstructingNewFile)
     Lock.emplace(Mutex);
 

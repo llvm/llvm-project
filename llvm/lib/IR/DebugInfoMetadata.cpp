@@ -666,7 +666,7 @@ DIDerivedType *DIDerivedType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
     uint32_t AlignInBits, uint64_t OffsetInBits,
-    std::optional<unsigned> DWARFAddressSpace, Optional<PtrAuthData> PtrAuthData,
+    std::optional<unsigned> DWARFAddressSpace, std::optional<PtrAuthData> PtrAuthData,
     DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
     StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");

@@ -14,6 +14,7 @@
 #include "llvm/Support/FileSystem.h"
 #include <atomic>
 #include <mutex>
+#include <optional>
 
 #if LLVM_ENABLE_ONDISK_CAS
 
@@ -125,7 +126,7 @@ private:
   }
 
   std::string Path;
-  Optional<sys::fs::file_t> FD;
+  std::optional<sys::fs::file_t> FD;
   sys::fs::mapped_file_region Map;
   std::atomic<uint64_t> CachedSize;
   std::mutex Mutex;
