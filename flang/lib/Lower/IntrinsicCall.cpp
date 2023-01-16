@@ -806,7 +806,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"spacing", &I::genSpacing},
     {"spread",
      &I::genSpread,
-     {{{"source", asAddr}, {"dim", asValue}, {"ncopies", asValue}}},
+     {{{"source", asBox}, {"dim", asValue}, {"ncopies", asValue}}},
      /*isElemental=*/false},
     {"sum",
      &I::genSum,
