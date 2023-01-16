@@ -105,6 +105,7 @@ bool DwarfStreamer::init(Triple TheTriple,
   Asm.reset(TheTarget->createAsmPrinter(*TM, std::unique_ptr<MCStreamer>(MS)));
   if (!Asm)
     return error("no asm printer for target " + TripleName, Context), false;
+  Asm->setDwarfUsesRelocationsAcrossSections(false);
 
   RangesSectionSize = 0;
   LocSectionSize = 0;

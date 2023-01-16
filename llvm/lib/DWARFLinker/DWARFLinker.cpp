@@ -1151,14 +1151,14 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
 }
 
 unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
-    DIE &Die, AttributeSpec AttrSpec, const DWARFFormValue &Val,
-    const CompileUnit &Unit, AttributesInfo &Info) {
+    DIE &Die, AttributeSpec AttrSpec, unsigned AttrSize,
+    const DWARFFormValue &Val, const CompileUnit &Unit, AttributesInfo &Info) {
   if (LLVM_UNLIKELY(Linker.Options.Update)) {
     if (AttrSpec.Attr == dwarf::DW_AT_low_pc)
       Info.HasLowPc = true;
     Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
                  dwarf::Form(AttrSpec.Form), DIEInteger(Val.getRawUValue()));
-    return Unit.getOrigUnit().getAddressByteSize();
+    return AttrSize;
   }
 
   dwarf::Form Form = AttrSpec.Form;
@@ -1348,7 +1348,7 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
                                IsLittleEndian);
   case dwarf::DW_FORM_addr:
   case dwarf::DW_FORM_addrx:
-    return cloneAddressAttribute(Die, AttrSpec, Val, Unit, Info);
+    return cloneAddressAttribute(Die, AttrSpec, AttrSize, Val, Unit, Info);
   case dwarf::DW_FORM_data1:
   case dwarf::DW_FORM_data2:
   case dwarf::DW_FORM_data4:
@@ -1417,17 +1417,16 @@ void DWARFLinker::DIECloner::addObjCAccelerator(CompileUnit &Unit,
   }
 }
 
-static bool
-shouldSkipAttribute(DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-                    uint16_t Tag, bool InDebugMap, bool SkipPC,
-                    bool InFunctionScope) {
+static bool shouldSkipAttribute(
+    bool Update, DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
+    uint16_t Tag, bool InDebugMap, bool SkipPC, bool InFunctionScope) {
   switch (AttrSpec.Attr) {
   default:
     return false;
   case dwarf::DW_AT_low_pc:
   case dwarf::DW_AT_high_pc:
   case dwarf::DW_AT_ranges:
-    return SkipPC;
+    return !Update && SkipPC;
   case dwarf::DW_AT_str_offsets_base:
     // FIXME: Use the string offset table with Dwarf 5.
     return true;
@@ -1438,7 +1437,8 @@ shouldSkipAttribute(DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
     // wrong for globals where we will keep a wrong address. It is mostly
     // harmless for locals, but there is no point in keeping these anyway when
     // the function wasn't linked.
-    return (SkipPC || (!InFunctionScope && Tag == dwarf::DW_TAG_variable &&
+    return !Update &&
+           (SkipPC || (!InFunctionScope && Tag == dwarf::DW_TAG_variable &&
                        !InDebugMap)) &&
            !DWARFFormValue(AttrSpec.Form).isFormClass(DWARFFormValue::FC_Block);
   }
@@ -1544,8 +1544,7 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   }
 
   for (const auto &AttrSpec : Abbrev->attributes()) {
-    if (LLVM_LIKELY(!Update) &&
-        shouldSkipAttribute(AttrSpec, Die->getTag(), Info.InDebugMap,
+    if (shouldSkipAttribute(Update, AttrSpec, Die->getTag(), Info.InDebugMap,
                             Flags & TF_SkipPC, Flags & TF_InFunctionScope)) {
       DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
                                 U.getFormParams());

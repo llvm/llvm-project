@@ -329,6 +329,14 @@ public:
   /// definition in the same module.
   MCSymbol *getSymbolPreferLocal(const GlobalValue &GV) const;
 
+  bool doesDwarfUseRelocationsAcrossSections() const {
+    return DwarfUsesRelocationsAcrossSections;
+  }
+
+  void setDwarfUsesRelocationsAcrossSections(bool Enable) {
+    DwarfUsesRelocationsAcrossSections = Enable;
+  }
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//
@@ -831,6 +839,8 @@ private:
   mutable const MachineInstr *LastMI = nullptr;
   mutable unsigned LastFn = 0;
   mutable unsigned Counter = ~0U;
+
+  bool DwarfUsesRelocationsAcrossSections = false;
 
   /// This method emits the header for the current function.
   virtual void emitFunctionHeader();
