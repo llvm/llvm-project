@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -3247,7 +3248,7 @@ void PackOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
 void PackOp::build(OpBuilder &builder, OperationState &state, Value source,
                    Value dest, ArrayRef<int64_t> innerDimsPos,
                    ArrayRef<OpFoldResult> innerTiles,
-                   Optional<Value> paddingValue,
+                   std::optional<Value> paddingValue,
                    ArrayRef<int64_t> outerDimsPerm) {
   assert(innerDimsPos.size() == innerTiles.size() &&
          "number of tile sizes specified must match the specified number of "

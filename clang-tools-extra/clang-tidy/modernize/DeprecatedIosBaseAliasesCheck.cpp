@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 static constexpr std::array<StringRef, 5> DeprecatedTypes = {
     "::std::ios_base::io_state", "::std::ios_base::open_mode",
@@ -72,6 +70,4 @@ void DeprecatedIosBaseAliasesCheck::check(
     diag(IoStateLoc, "'std::ios_base::%0' is deprecated") << TypeName;
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

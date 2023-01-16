@@ -187,7 +187,7 @@ getCanonicalRawStringDelimiter(const FormatStyle &Style,
 RawStringFormatStyleManager::RawStringFormatStyleManager(
     const FormatStyle &CodeStyle) {
   for (const auto &RawStringFormat : CodeStyle.RawStringFormats) {
-    llvm::Optional<FormatStyle> LanguageStyle =
+    std::optional<FormatStyle> LanguageStyle =
         CodeStyle.GetLanguageStyle(RawStringFormat.Language);
     if (!LanguageStyle) {
       FormatStyle PredefinedStyle;
@@ -206,7 +206,7 @@ RawStringFormatStyleManager::RawStringFormatStyleManager(
   }
 }
 
-llvm::Optional<FormatStyle>
+std::optional<FormatStyle>
 RawStringFormatStyleManager::getDelimiterStyle(StringRef Delimiter) const {
   auto It = DelimiterStyle.find(Delimiter);
   if (It == DelimiterStyle.end())
@@ -214,7 +214,7 @@ RawStringFormatStyleManager::getDelimiterStyle(StringRef Delimiter) const {
   return It->second;
 }
 
-llvm::Optional<FormatStyle>
+std::optional<FormatStyle>
 RawStringFormatStyleManager::getEnclosingFunctionStyle(
     StringRef EnclosingFunction) const {
   auto It = EnclosingFunctionStyle.find(EnclosingFunction);
@@ -2080,7 +2080,7 @@ static StringRef getEnclosingFunctionName(const FormatToken &Current) {
   return Tok->TokenText;
 }
 
-llvm::Optional<FormatStyle>
+std::optional<FormatStyle>
 ContinuationIndenter::getRawStringStyle(const FormatToken &Current,
                                         const LineState &State) {
   if (!Current.isStringLiteral())

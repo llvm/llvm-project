@@ -1210,7 +1210,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     const TargetRegisterClass *RC = TRI->getRegClass(MCOI.RegClass);
     if (RC == &SystemZ::VR32BitRegClass || RC == &SystemZ::VR64BitRegClass) {
       Register Reg = MI.getOperand(I).getReg();
-      Register PhysReg = Register::isVirtualRegister(Reg)
+      Register PhysReg = Reg.isVirtual()
                              ? (VRM ? Register(VRM->getPhys(Reg)) : Register())
                              : Reg;
       if (!PhysReg ||
@@ -1257,15 +1257,13 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     else {
       Register DstReg = MI.getOperand(0).getReg();
       Register DstPhys =
-          (Register::isVirtualRegister(DstReg) ? Register(VRM->getPhys(DstReg))
-                                               : DstReg);
+          (DstReg.isVirtual() ? Register(VRM->getPhys(DstReg)) : DstReg);
       Register SrcReg = (OpNum == 2 ? MI.getOperand(1).getReg()
                                     : ((OpNum == 1 && MI.isCommutable())
                                            ? MI.getOperand(2).getReg()
                                            : Register()));
       if (DstPhys && !SystemZ::GRH32BitRegClass.contains(DstPhys) && SrcReg &&
-          Register::isVirtualRegister(SrcReg) &&
-          DstPhys == VRM->getPhys(SrcReg))
+          SrcReg.isVirtual() && DstPhys == VRM->getPhys(SrcReg))
         NeedsCommute = (OpNum == 1);
       else
         return nullptr;
@@ -1316,7 +1314,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     // Constrain the register classes if converted from a vector opcode. The
     // allocated regs are in an FP reg-class per previous check above.
     for (const MachineOperand &MO : MIB->operands())
-      if (MO.isReg() && Register::isVirtualRegister(MO.getReg())) {
+      if (MO.isReg() && MO.getReg().isVirtual()) {
         Register Reg = MO.getReg();
         if (MRI.getRegClass(Reg) == &SystemZ::VR32BitRegClass)
           MRI.setRegClass(Reg, &SystemZ::FP32BitRegClass);

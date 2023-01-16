@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenEnv.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -44,8 +45,8 @@ void CodegenEnv::startEmit(OpOperand *so, unsigned lv) {
                          /*isSparseOut=*/sparseOut != nullptr, topSort);
 }
 
-Optional<Operation *> CodegenEnv::genLoopBoundary(
-    function_ref<Optional<Operation *>(MutableArrayRef<Value> parameters)>
+std::optional<Operation *> CodegenEnv::genLoopBoundary(
+    function_ref<std::optional<Operation *>(MutableArrayRef<Value> parameters)>
         callback) {
   SmallVector<Value> params;
   if (isReduc())

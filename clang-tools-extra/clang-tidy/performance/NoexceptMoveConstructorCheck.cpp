@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 void NoexceptMoveConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -77,6 +75,4 @@ void NoexceptMoveConstructorCheck::check(
   }
 }
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance

@@ -15,9 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 void DurationSubtractionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -57,6 +55,4 @@ void DurationSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
                  .str());
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil

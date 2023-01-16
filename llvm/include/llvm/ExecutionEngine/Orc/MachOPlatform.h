@@ -107,6 +107,15 @@ public:
   static bool isInitializerSection(StringRef SegName, StringRef SectName);
 
 private:
+  // Data needed for bootstrap only.
+  struct BootstrapInfo {
+    std::mutex Mutex;
+    std::condition_variable CV;
+    size_t ActiveGraphs = 0;
+    shared::AllocActions DeferredAAs;
+    ExecutorAddr MachOHeaderAddr;
+  };
+
   // The MachOPlatformPlugin scans/modifies LinkGraphs to support MachO
   // platform features including initializers, exceptions, TLV, and language
   // runtime registration.
@@ -138,6 +147,12 @@ private:
     using InitSymbolDepMap =
         DenseMap<MaterializationResponsibility *, JITLinkSymbolSet>;
 
+    Error bootstrapPipelineStart(jitlink::LinkGraph &G);
+    Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
+    Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
+
+    Error recordRuntimeRegistrationFunctions(jitlink::LinkGraph &G);
+
     Error associateJITDylibHeaderSymbol(jitlink::LinkGraph &G,
                                         MaterializationResponsibility &MR);
 
@@ -149,9 +164,8 @@ private:
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
-    Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD);
-
-    Error registerEHSectionsPhase1(jitlink::LinkGraph &G);
+    Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD,
+                                         bool InBootstrapPhase);
 
     std::mutex PluginMutex;
     MachOPlatform &MP;
@@ -179,7 +193,7 @@ private:
                 Error &Err);
 
   // Associate MachOPlatform JIT-side runtime support functions with handlers.
-  Error associateRuntimeSupportFunctions(JITDylib &PlatformJD);
+  Error associateRuntimeSupportFunctions();
 
   // Implements rt_pushInitializers by making repeat async lookups for
   // initializer symbols (each lookup may spawn more initializer symbols if
@@ -195,19 +209,14 @@ private:
   void rt_lookupSymbol(SendSymbolAddressFn SendResult, ExecutorAddr Handle,
                        StringRef SymbolName);
 
-  // Records the addresses of runtime symbols used by the platform.
-  Error bootstrapMachORuntime(JITDylib &PlatformJD);
-
   // Call the ORC runtime to create a pthread key.
   Expected<uint64_t> createPThreadKey();
 
-  enum PlatformState { BootstrapPhase1, BootstrapPhase2, Initialized };
-
   ExecutionSession &ES;
+  JITDylib &PlatformJD;
   ObjectLinkingLayer &ObjLinkingLayer;
 
-  SymbolStringPtr MachOHeaderStartSymbol;
-  std::atomic<PlatformState> State{BootstrapPhase1};
+  SymbolStringPtr MachOHeaderStartSymbol = ES.intern("___dso_handle");
 
   struct RuntimeFunction {
     RuntimeFunction(SymbolStringPtr Name) : Name(std::move(Name)) {}
@@ -240,6 +249,8 @@ private:
   DenseMap<JITDylib *, ExecutorAddr> JITDylibToHeaderAddr;
   DenseMap<ExecutorAddr, JITDylib *> HeaderAddrToJITDylib;
   DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
+
+  std::atomic<BootstrapInfo *> Bootstrap;
 };
 
 namespace shared {

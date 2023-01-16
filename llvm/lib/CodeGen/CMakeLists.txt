@@ -213,7 +213,6 @@ add_llvm_component_library(LLVMCodeGen
   SpillPlacement.cpp
   SplitKit.cpp
   StackColoring.cpp
-  StackFrameLayoutAnalysisPass.cpp
   StackMapLivenessAnalysis.cpp
   StackMaps.cpp
   StackProtector.cpp

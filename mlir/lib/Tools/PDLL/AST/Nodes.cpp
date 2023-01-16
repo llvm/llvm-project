@@ -10,6 +10,7 @@
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll::ast;
@@ -325,7 +326,7 @@ OperationExpr::create(Context &ctx, SMRange loc, const ods::Operation *odsOp,
   return opExpr;
 }
 
-Optional<StringRef> OperationExpr::getName() const {
+std::optional<StringRef> OperationExpr::getName() const {
   return getNameDecl()->getName();
 }
 
@@ -404,7 +405,7 @@ OpConstraintDecl *OpConstraintDecl::create(Context &ctx, SMRange loc,
       OpConstraintDecl(loc, nameDecl);
 }
 
-Optional<StringRef> OpConstraintDecl::getName() const {
+std::optional<StringRef> OpConstraintDecl::getName() const {
   return getNameDecl()->getName();
 }
 
@@ -451,16 +452,17 @@ ValueRangeConstraintDecl::create(Context &ctx, SMRange loc, Expr *typeExpr) {
 // UserConstraintDecl
 //===----------------------------------------------------------------------===//
 
-Optional<StringRef>
+std::optional<StringRef>
 UserConstraintDecl::getNativeInputType(unsigned index) const {
   return hasNativeInputTypes ? getTrailingObjects<StringRef>()[index]
-                             : Optional<StringRef>();
+                             : std::optional<StringRef>();
 }
 
 UserConstraintDecl *UserConstraintDecl::createImpl(
     Context &ctx, const Name &name, ArrayRef<VariableDecl *> inputs,
     ArrayRef<StringRef> nativeInputTypes, ArrayRef<VariableDecl *> results,
-    Optional<StringRef> codeBlock, const CompoundStmt *body, Type resultType) {
+    std::optional<StringRef> codeBlock, const CompoundStmt *body,
+    Type resultType) {
   bool hasNativeInputTypes = !nativeInputTypes.empty();
   assert(!hasNativeInputTypes || nativeInputTypes.size() == inputs.size());
 
@@ -515,7 +517,7 @@ OpNameDecl *OpNameDecl::create(Context &ctx, SMRange loc) {
 //===----------------------------------------------------------------------===//
 
 PatternDecl *PatternDecl::create(Context &ctx, SMRange loc, const Name *name,
-                                 Optional<uint16_t> benefit,
+                                 std::optional<uint16_t> benefit,
                                  bool hasBoundedRecursion,
                                  const CompoundStmt *body) {
   return new (ctx.getAllocator().Allocate<PatternDecl>())
@@ -529,7 +531,7 @@ PatternDecl *PatternDecl::create(Context &ctx, SMRange loc, const Name *name,
 UserRewriteDecl *UserRewriteDecl::createImpl(Context &ctx, const Name &name,
                                              ArrayRef<VariableDecl *> inputs,
                                              ArrayRef<VariableDecl *> results,
-                                             Optional<StringRef> codeBlock,
+                                             std::optional<StringRef> codeBlock,
                                              const CompoundStmt *body,
                                              Type resultType) {
   unsigned allocSize = UserRewriteDecl::totalSizeToAlloc<VariableDecl *>(

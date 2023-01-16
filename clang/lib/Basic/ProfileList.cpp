@@ -17,6 +17,7 @@
 #include "llvm/Support/SpecialCaseList.h"
 
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 
@@ -100,7 +101,7 @@ ProfileList::getDefault(CodeGenOptions::ProfileInstrKind Kind) const {
   return Allow;
 }
 
-llvm::Optional<ProfileList::ExclusionType>
+std::optional<ProfileList::ExclusionType>
 ProfileList::inSection(StringRef Section, StringRef Prefix,
                        StringRef Query) const {
   if (SCL->inSection(Section, Prefix, Query, "allow"))
@@ -114,7 +115,7 @@ ProfileList::inSection(StringRef Section, StringRef Prefix,
   return std::nullopt;
 }
 
-llvm::Optional<ProfileList::ExclusionType>
+std::optional<ProfileList::ExclusionType>
 ProfileList::isFunctionExcluded(StringRef FunctionName,
                                 CodeGenOptions::ProfileInstrKind Kind) const {
   StringRef Section = getSectionName(Kind);
@@ -128,13 +129,13 @@ ProfileList::isFunctionExcluded(StringRef FunctionName,
   return std::nullopt;
 }
 
-llvm::Optional<ProfileList::ExclusionType>
+std::optional<ProfileList::ExclusionType>
 ProfileList::isLocationExcluded(SourceLocation Loc,
                                 CodeGenOptions::ProfileInstrKind Kind) const {
   return isFileExcluded(SM.getFilename(SM.getFileLoc(Loc)), Kind);
 }
 
-llvm::Optional<ProfileList::ExclusionType>
+std::optional<ProfileList::ExclusionType>
 ProfileList::isFileExcluded(StringRef FileName,
                             CodeGenOptions::ProfileInstrKind Kind) const {
   StringRef Section = getSectionName(Kind);

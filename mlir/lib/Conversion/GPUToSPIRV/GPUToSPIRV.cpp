@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -447,10 +448,10 @@ static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
       .getResult();
 }
 
-static llvm::Optional<Value> createGroupReduceOp(OpBuilder &builder,
-                                                 Location loc, Value arg,
-                                                 gpu::AllReduceOperation opType,
-                                                 bool isGroup, bool isUniform) {
+static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
+                                                Location loc, Value arg,
+                                                gpu::AllReduceOperation opType,
+                                                bool isGroup, bool isUniform) {
   using FuncT = Value (*)(OpBuilder &, Location, Value, bool, bool);
   struct OpHandler {
     gpu::AllReduceOperation type;

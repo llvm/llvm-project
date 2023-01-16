@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "memref-to-spirv-pattern"
 
@@ -115,7 +116,7 @@ static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
 /// Returns the scope to use for atomic operations use for emulating store
 /// operations of unsupported integer bitwidths, based on the memref
 /// type. Returns std::nullopt on failure.
-static Optional<spirv::Scope> getAtomicOpScope(MemRefType type) {
+static std::optional<spirv::Scope> getAtomicOpScope(MemRefType type) {
   auto sc = type.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
   switch (sc.getValue()) {
   case spirv::StorageClass::StorageBuffer:
@@ -529,7 +530,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   storeVal = shiftValue(loc, storeVal, offset, mask, dstBits, rewriter);
   Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
                                                    srcBits, dstBits, rewriter);
-  Optional<spirv::Scope> scope = getAtomicOpScope(memrefType);
+  std::optional<spirv::Scope> scope = getAtomicOpScope(memrefType);
   if (!scope)
     return failure();
   Value result = rewriter.create<spirv::AtomicAndOp>(

@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -65,8 +66,8 @@ struct GeneralizedConsumedAttr {
 }
 
 template <class T>
-Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
-                                                            QualType QT) {
+std::optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
+                                                                 QualType QT) {
   ObjKind K;
   if (isOneOf<T, CFConsumedAttr, CFReturnsRetainedAttr,
               CFReturnsNotRetainedAttr>()) {
@@ -106,8 +107,8 @@ Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
 }
 
 template <class T1, class T2, class... Others>
-Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
-                                                            QualType QT) {
+std::optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
+                                                                 QualType QT) {
   if (auto Out = hasAnyEnabledAttrOf<T1>(D, QT))
     return Out;
   return hasAnyEnabledAttrOf<T2, Others...>(D, QT);
@@ -718,7 +719,7 @@ bool RetainSummaryManager::isTrustedReferenceCountImplementation(
   return hasRCAnnotation(FD, "rc_ownership_trusted_implementation");
 }
 
-Optional<RetainSummaryManager::BehaviorSummary>
+std::optional<RetainSummaryManager::BehaviorSummary>
 RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
                               bool &hasTrustedImplementationAnnotation) {
 
@@ -864,7 +865,7 @@ RetainSummaryManager::getCFSummaryGetRule(const FunctionDecl *FD) {
 // Summary creation for Selectors.
 //===----------------------------------------------------------------------===//
 
-Optional<RetEffect>
+std::optional<RetEffect>
 RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
                                                   const Decl *D) {
   if (hasAnyEnabledAttrOf<NSReturnsRetainedAttr>(D, RetTy))
@@ -990,7 +991,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
     applyParamAnnotationEffect(*pi, parm_idx, FD, Template);
 
   QualType RetTy = FD->getReturnType();
-  if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
+  if (std::optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
     Template->setRetEffect(*RetE);
 
   if (hasAnyEnabledAttrOf<OSConsumesThisAttr>(FD, RetTy))
@@ -1017,7 +1018,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
     applyParamAnnotationEffect(*pi, parm_idx, MD, Template);
 
   QualType RetTy = MD->getReturnType();
-  if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, MD))
+  if (std::optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, MD))
     Template->setRetEffect(*RetE);
 }
 

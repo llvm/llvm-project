@@ -17,7 +17,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
@@ -26,6 +25,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 // This selects the coverage mapping format defined when `InstrProfData.inc`
 // is textually included.
@@ -97,27 +97,29 @@ class SourceMappingRegion {
   Counter Count;
 
   /// Secondary Counter used for Branch Regions for "False" branches.
-  Optional<Counter> FalseCount;
+  std::optional<Counter> FalseCount;
 
   /// The region's starting location.
-  Optional<SourceLocation> LocStart;
+  std::optional<SourceLocation> LocStart;
 
   /// The region's ending location.
-  Optional<SourceLocation> LocEnd;
+  std::optional<SourceLocation> LocEnd;
 
   /// Whether this region is a gap region. The count from a gap region is set
   /// as the line execution count if there are no other regions on the line.
   bool GapRegion;
 
 public:
-  SourceMappingRegion(Counter Count, Optional<SourceLocation> LocStart,
-                      Optional<SourceLocation> LocEnd, bool GapRegion = false)
+  SourceMappingRegion(Counter Count, std::optional<SourceLocation> LocStart,
+                      std::optional<SourceLocation> LocEnd,
+                      bool GapRegion = false)
       : Count(Count), LocStart(LocStart), LocEnd(LocEnd), GapRegion(GapRegion) {
   }
 
-  SourceMappingRegion(Counter Count, Optional<Counter> FalseCount,
-                      Optional<SourceLocation> LocStart,
-                      Optional<SourceLocation> LocEnd, bool GapRegion = false)
+  SourceMappingRegion(Counter Count, std::optional<Counter> FalseCount,
+                      std::optional<SourceLocation> LocStart,
+                      std::optional<SourceLocation> LocEnd,
+                      bool GapRegion = false)
       : Count(Count), FalseCount(FalseCount), LocStart(LocStart),
         LocEnd(LocEnd), GapRegion(GapRegion) {}
 
@@ -326,7 +328,7 @@ public:
   /// Get the coverage mapping file ID for \c Loc.
   ///
   /// If such file id doesn't exist, return std::nullopt.
-  Optional<unsigned> getCoverageFileID(SourceLocation Loc) {
+  std::optional<unsigned> getCoverageFileID(SourceLocation Loc) {
     auto Mapping = FileIDMapping.find(SM.getFileID(Loc));
     if (Mapping != FileIDMapping.end())
       return Mapping->second.first;
@@ -338,11 +340,11 @@ public:
   /// this returns std::nullopt.
   /// Note this function can potentially be expensive because
   /// getSpellingLineNumber uses getLineNumber, which is expensive.
-  Optional<SpellingRegion> adjustSkippedRange(SourceManager &SM,
-                                              SourceLocation LocStart,
-                                              SourceLocation LocEnd,
-                                              SourceLocation PrevTokLoc,
-                                              SourceLocation NextTokLoc) {
+  std::optional<SpellingRegion> adjustSkippedRange(SourceManager &SM,
+                                                   SourceLocation LocStart,
+                                                   SourceLocation LocEnd,
+                                                   SourceLocation PrevTokLoc,
+                                                   SourceLocation NextTokLoc) {
     SpellingRegion SR{SM, LocStart, LocEnd};
     SR.ColumnStart = 1;
     if (PrevTokLoc.isValid() && SM.isWrittenInSameFile(LocStart, PrevTokLoc) &&
@@ -385,7 +387,7 @@ public:
       auto CovFileID = getCoverageFileID(LocStart);
       if (!CovFileID)
         continue;
-      Optional<SpellingRegion> SR;
+      std::optional<SpellingRegion> SR;
       if (I.isComment())
         SR = adjustSkippedRange(SM, LocStart, LocEnd, I.PrevTokLoc,
                                 I.NextTokLoc);
@@ -584,9 +586,9 @@ struct CounterCoverageMappingBuilder
   /// Returns the index on the stack where the region was pushed. This can be
   /// used with popRegions to exit a "scope", ending the region that was pushed.
   size_t pushRegion(Counter Count,
-                    Optional<SourceLocation> StartLoc = std::nullopt,
-                    Optional<SourceLocation> EndLoc = std::nullopt,
-                    Optional<Counter> FalseCount = std::nullopt) {
+                    std::optional<SourceLocation> StartLoc = std::nullopt,
+                    std::optional<SourceLocation> EndLoc = std::nullopt,
+                    std::optional<Counter> FalseCount = std::nullopt) {
 
     if (StartLoc && !FalseCount) {
       MostRecentLocation = *StartLoc;
@@ -811,7 +813,7 @@ struct CounterCoverageMappingBuilder
     }
 
     llvm::SmallSet<SourceLocation, 8> StartLocs;
-    Optional<Counter> ParentCounter;
+    std::optional<Counter> ParentCounter;
     for (SourceMappingRegion &I : llvm::reverse(RegionStack)) {
       if (!I.hasStartLoc())
         continue;
@@ -879,8 +881,8 @@ struct CounterCoverageMappingBuilder
   }
 
   /// Find a valid gap range between \p AfterLoc and \p BeforeLoc.
-  Optional<SourceRange> findGapAreaBetween(SourceLocation AfterLoc,
-                                           SourceLocation BeforeLoc) {
+  std::optional<SourceRange> findGapAreaBetween(SourceLocation AfterLoc,
+                                                SourceLocation BeforeLoc) {
     // If AfterLoc is in function-like macro, use the right parenthesis
     // location.
     if (AfterLoc.isMacroID()) {
@@ -1390,7 +1392,7 @@ struct CounterCoverageMappingBuilder
       propagateCounts(ParentCount, S->getCond());
 
       // The 'then' count applies to the area immediately after the condition.
-      Optional<SourceRange> Gap =
+      std::optional<SourceRange> Gap =
           findGapAreaBetween(S->getRParenLoc(), getStart(S->getThen()));
       if (Gap)
         fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ThenCount);
@@ -1404,7 +1406,7 @@ struct CounterCoverageMappingBuilder
       bool ThenHasTerminateStmt = HasTerminateStmt;
       HasTerminateStmt = false;
       // The 'else' count applies to the area immediately after the 'then'.
-      Optional<SourceRange> Gap =
+      std::optional<SourceRange> Gap =
           findGapAreaBetween(getEnd(S->getThen()), getStart(Else));
       if (Gap)
         fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ElseCount);

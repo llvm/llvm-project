@@ -11,6 +11,7 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace mlir {
 
@@ -439,7 +440,7 @@ private:
   /// Helper for sanity checking preconditions for create* methods below.
   template <typename OpT>
   RegisteredOperationName getCheckRegisteredInfo(MLIRContext *ctx) {
-    Optional<RegisteredOperationName> opName =
+    std::optional<RegisteredOperationName> opName =
         RegisteredOperationName::lookup(OpT::getOperationName(), ctx);
     if (LLVM_UNLIKELY(!opName)) {
       llvm::report_fatal_error(

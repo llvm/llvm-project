@@ -9,6 +9,7 @@ set(files
   __algorithm/copy.h
   __algorithm/copy_backward.h
   __algorithm/copy_if.h
+  __algorithm/copy_move_common.h
   __algorithm/copy_n.h
   __algorithm/count.h
   __algorithm/count_if.h
@@ -587,6 +588,7 @@ set(files
   __type_traits/is_abstract.h
   __type_traits/is_aggregate.h
   __type_traits/is_allocator.h
+  __type_traits/is_always_bitcastable.h
   __type_traits/is_arithmetic.h
   __type_traits/is_array.h
   __type_traits/is_assignable.h

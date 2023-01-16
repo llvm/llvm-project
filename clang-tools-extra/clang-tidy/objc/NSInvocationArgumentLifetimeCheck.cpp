@@ -28,9 +28,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace objc {
+namespace clang::tidy::objc {
 namespace {
 
 static constexpr StringRef WeakText = "__weak";
@@ -142,6 +140,4 @@ void NSInvocationArgumentLifetimeCheck::check(
     Diag << *Hint;
 }
 
-} // namespace objc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::objc

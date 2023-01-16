@@ -515,7 +515,7 @@ const MCSymbol *NVPTXAsmPrinter::getFunctionFrameSymbol() const {
 
 void NVPTXAsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
   Register RegNo = MI->getOperand(0).getReg();
-  if (Register::isVirtualRegister(RegNo)) {
+  if (RegNo.isVirtual()) {
     OutStreamer->AddComment(Twine("implicit-def: ") +
                             getVirtualRegisterName(RegNo));
   } else {
@@ -2175,7 +2175,7 @@ void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   const MachineOperand &MO = MI->getOperand(opNum);
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
-    if (Register::isPhysicalRegister(MO.getReg())) {
+    if (MO.getReg().isPhysical()) {
       if (MO.getReg() == NVPTX::VRDepot)
         O << DEPOTNAME << getFunctionNumber();
       else

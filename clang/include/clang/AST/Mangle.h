@@ -19,6 +19,7 @@
 #include "clang/Basic/ABI.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 namespace llvm {
   class raw_ostream;
@@ -184,7 +185,7 @@ public:
 class ItaniumMangleContext : public MangleContext {
 public:
   using DiscriminatorOverrideTy =
-      llvm::Optional<unsigned> (*)(ASTContext &, const NamedDecl *);
+      std::optional<unsigned> (*)(ASTContext &, const NamedDecl *);
   explicit ItaniumMangleContext(ASTContext &C, DiagnosticsEngine &D,
                                 bool IsAux = false)
       : MangleContext(C, D, MK_Itanium, IsAux) {}

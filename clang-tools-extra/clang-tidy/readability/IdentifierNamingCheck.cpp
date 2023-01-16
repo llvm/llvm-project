@@ -28,8 +28,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 llvm::ArrayRef<
     std::pair<readability::IdentifierNamingCheck::CaseType, StringRef>>
@@ -1451,5 +1450,4 @@ IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
 }
 
 } // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

@@ -37,7 +37,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -53,6 +52,7 @@
 #include <cstddef>
 #include <cstring>
 #include <ctime>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -1301,7 +1301,7 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
 
   unsigned ParenDepth = 1;
   SourceLocation LParenLoc = Tok.getLocation();
-  llvm::Optional<int> Result;
+  std::optional<int> Result;
 
   Token ResultTok;
   bool SuppressDiagnostic = false;

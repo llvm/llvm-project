@@ -278,7 +278,7 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
     // not use the cached MemoryBuffer directly to ensure dsymutil does not
     // race with the cache pruner.
     StringRef objBuf;
-    std::optional<StringRef> cachePath = std::nullopt;
+    std::optional<StringRef> cachePath;
     if (files[i]) {
       objBuf = files[i]->getBuffer();
       cachePath = files[i]->getBufferIdentifier();

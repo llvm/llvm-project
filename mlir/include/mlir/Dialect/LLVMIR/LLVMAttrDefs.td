@@ -70,9 +70,9 @@ def LoopOptionsAttr : LLVM_Attr<"LoopOptions", "loopopts"> {
   let extraClassDeclaration = [{
     using OptionValuePair = std::pair<LoopOptionCase, int64_t>;
     using OptionsArray = ArrayRef<std::pair<LoopOptionCase, int64_t>>;
-    Optional<bool> disableUnroll();
-    Optional<bool> disableLICM();
-    Optional<int64_t> interleaveCount();
+    std::optional<bool> disableUnroll();
+    std::optional<bool> disableLICM();
+    std::optional<int64_t> interleaveCount();
   }];
 
   let builders = [

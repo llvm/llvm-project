@@ -701,7 +701,6 @@ utility version
 valarray cmath
 valarray cstddef
 valarray cstdlib
-valarray cstring
 valarray initializer_list
 valarray limits
 valarray new

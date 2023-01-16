@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -197,7 +198,7 @@ bool M68kTargetInfo::validateAsmConstraint(
   return false;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 M68kTargetInfo::handleAsmEscapedChar(char EscChar) const {
   char C;
   switch (EscChar) {

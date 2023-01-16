@@ -194,8 +194,9 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
 
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {}
 
-void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
-                            void *arg) {}
+void GetThreadExtraStackRangesLocked(tid_t os_id,
+                                     InternalMmapVector<Range> *ranges) {}
+void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {}
 void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {}
