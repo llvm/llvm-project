@@ -336,7 +336,7 @@ bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
 
   auto Close = make_scope_exit([&] { sys::fs::closeFile(*FD); });
   Expected<size_t> BytesRead = sys::fs::readNativeFileSlice(
-      *FD, makeMutableArrayRef(Buf, sizeof(Buf)), 0);
+      *FD, MutableArrayRef(Buf, sizeof(Buf)), 0);
   if (!BytesRead) {
     consumeError(BytesRead.takeError());
     return false;

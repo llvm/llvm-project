@@ -2818,7 +2818,7 @@ createSymbols(
   SmallVector<GdbSymbol, 0> ret;
   ret.reserve(numSymbols);
   for (SmallVector<GdbSymbol, 0> &vec :
-       makeMutableArrayRef(symbols.get(), numShards))
+       MutableArrayRef(symbols.get(), numShards))
     for (GdbSymbol &sym : vec)
       ret.push_back(std::move(sym));
 
