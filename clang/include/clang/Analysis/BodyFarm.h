@@ -17,7 +17,6 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include <optional>
 
 namespace clang {

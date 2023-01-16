@@ -17,7 +17,6 @@
 #include "clang/AST/DeclBase.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include <optional>
 #include <queue>
 #include <utility>
