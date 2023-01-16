@@ -34857,7 +34857,7 @@ bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,
     return false;
   if (!Subtarget.hasVLX() && !VT.is512BitVector())
     return false;
-  if (!VT.isVector())
+  if (!VT.isVector() || VT.getScalarType() == MVT::i1)
     return false;
 
   return true;
