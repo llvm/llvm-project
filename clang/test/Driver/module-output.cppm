@@ -1,3 +1,8 @@
+// It is annoying to handle different slash direction
+// in Windows and Linux. So we disable the test on Windows
+// here.
+// REQUIRES: !system-windows
+//
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: split-file %s %t
