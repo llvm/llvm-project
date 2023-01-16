@@ -29,37 +29,65 @@ enum DeprecatedAction { None, Warn, Error };
 
 static DeprecatedAction actionOnDeprecatedValue;
 
-// Returns if there is a use of `init` in `record`.
-static bool findUse(Record &record, Init *init,
-                    llvm::DenseMap<Record *, bool> &known) {
-  auto it = known.find(&record);
+// Returns if there is a use of `deprecatedInit` in `field`.
+static bool findUse(Init *field, Init *deprecatedInit,
+                    llvm::DenseMap<Init *, bool> &known) {
+  if (field == deprecatedInit)
+    return true;
+
+  auto it = known.find(field);
   if (it != known.end())
     return it->second;
 
   auto memoize = [&](bool val) {
-    known[&record] = val;
+    known[field] = val;
     return val;
   };
 
-  for (const RecordVal &val : record.getValues()) {
-    Init *valInit = val.getValue();
-    if (valInit == init)
-      return true;
-    if (auto *di = dyn_cast<DefInit>(valInit)) {
-      if (findUse(*di->getDef(), init, known))
-        return memoize(true);
-    } else if (auto *di = dyn_cast<DagInit>(valInit)) {
-      for (Init *arg : di->getArgs())
-        if (auto *di = dyn_cast<DefInit>(arg))
-          if (findUse(*di->getDef(), init, known))
-            return memoize(true);
-    } else if (ListInit *li = dyn_cast<ListInit>(valInit)) {
-      for (Init *jt : li->getValues())
-        if (jt == init)
-          return memoize(true);
-    }
+  if (auto *defInit = dyn_cast<DefInit>(field)) {
+    // Only recurse into defs if they are anonymous.
+    // Non-anonymous defs are handled by the main loop, with a proper
+    // deprecation warning for each. Returning true here, would cause
+    // all users of a def to also emit a deprecation warning.
+    if (!defInit->getDef()->isAnonymous())
+      // Purposefully not memoize as to not include every def use in the map.
+      // This is also a trivial case we return false for in constant time.
+      return false;
+
+    return memoize(
+        llvm::any_of(defInit->getDef()->getValues(), [&](const RecordVal &val) {
+          return findUse(val.getValue(), deprecatedInit, known);
+        }));
   }
-  return memoize(false);
+
+  if (auto *dagInit = dyn_cast<DagInit>(field)) {
+    if (findUse(dagInit->getOperator(), deprecatedInit, known))
+      return memoize(true);
+
+    return memoize(llvm::any_of(dagInit->getArgs(), [&](Init *arg) {
+      return findUse(arg, deprecatedInit, known);
+    }));
+  }
+
+  if (ListInit *li = dyn_cast<ListInit>(field)) {
+    return memoize(llvm::any_of(li->getValues(), [&](Init *jt) {
+      return findUse(jt, deprecatedInit, known);
+    }));
+  }
+
+  // Purposefully don't use memoize here. There is no need to cache the result
+  // for every kind of init (e.g. BitInit or StringInit), which will always
+  // return false. Doing so would grow the DenseMap to include almost every Init
+  // within the main file.
+  return false;
+}
+
+// Returns if there is a use of `deprecatedInit` in `record`.
+static bool findUse(Record &record, Init *deprecatedInit,
+                    llvm::DenseMap<Init *, bool> &known) {
+  return llvm::any_of(record.getValues(), [&](const RecordVal &val) {
+    return findUse(val.getValue(), deprecatedInit, known);
+  });
 }
 
 static void warnOfDeprecatedUses(RecordKeeper &records) {
@@ -72,7 +100,7 @@ static void warnOfDeprecatedUses(RecordKeeper &records) {
     if (!r || !r->getValue())
       continue;
 
-    llvm::DenseMap<Record *, bool> hasUse;
+    llvm::DenseMap<Init *, bool> hasUse;
     if (auto *si = dyn_cast<StringInit>(r->getValue())) {
       for (auto &jt : records.getDefs()) {
         // Skip anonymous defs.
