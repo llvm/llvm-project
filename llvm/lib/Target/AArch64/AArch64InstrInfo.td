@@ -2128,20 +2128,20 @@ defm ST2G  : MemTagStore<0b10, "st2g">;
 defm STZ2G : MemTagStore<0b11, "stz2g">;
 
 def : Pat<(AArch64stg GPR64sp:$Rn, (am_indexeds9s128 GPR64sp:$Rm, simm9s16:$imm)),
-          (STGOffset $Rn, $Rm, $imm)>;
+          (STGi $Rn, $Rm, $imm)>;
 def : Pat<(AArch64stzg GPR64sp:$Rn, (am_indexeds9s128 GPR64sp:$Rm, simm9s16:$imm)),
-          (STZGOffset $Rn, $Rm, $imm)>;
+          (STZGi $Rn, $Rm, $imm)>;
 def : Pat<(AArch64st2g GPR64sp:$Rn, (am_indexeds9s128 GPR64sp:$Rm, simm9s16:$imm)),
-          (ST2GOffset $Rn, $Rm, $imm)>;
+          (ST2Gi $Rn, $Rm, $imm)>;
 def : Pat<(AArch64stz2g GPR64sp:$Rn, (am_indexeds9s128 GPR64sp:$Rm, simm9s16:$imm)),
-          (STZ2GOffset $Rn, $Rm, $imm)>;
+          (STZ2Gi $Rn, $Rm, $imm)>;
 
 defm STGP     : StorePairOffset <0b01, 0, GPR64z, simm7s16, "stgp">;
 def  STGPpre  : StorePairPreIdx <0b01, 0, GPR64z, simm7s16, "stgp">;
 def  STGPpost : StorePairPostIdx<0b01, 0, GPR64z, simm7s16, "stgp">;
 
 def : Pat<(int_aarch64_stg GPR64:$Rt, (am_indexeds9s128 GPR64sp:$Rn, simm9s16:$offset)),
-          (STGOffset GPR64:$Rt, GPR64sp:$Rn,  simm9s16:$offset)>;
+          (STGi GPR64:$Rt, GPR64sp:$Rn,  simm9s16:$offset)>;
 
 def : Pat<(int_aarch64_stgp (am_indexed7s128 GPR64sp:$Rn, simm7s16:$imm), GPR64:$Rt, GPR64:$Rt2),
           (STGPi $Rt, $Rt2, $Rn, $imm)>;
