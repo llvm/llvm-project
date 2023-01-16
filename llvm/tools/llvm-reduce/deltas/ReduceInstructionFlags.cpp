@@ -17,8 +17,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 
-static void reduceFlagsInModule(Oracle &O, Module &Mod) {
-  for (Function &F : Mod) {
+static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  for (Function &F : WorkItem.getModule()) {
     for (Instruction &I : instructions(F)) {
       if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I)) {
         if (OBO->hasNoSignedWrap() && !O.shouldKeep())

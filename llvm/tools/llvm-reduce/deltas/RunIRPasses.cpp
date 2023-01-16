@@ -23,7 +23,8 @@ static cl::opt<std::string> PassPipeline(
     cl::init("function(sroa,instcombine,gvn,simplifycfg,infer-address-spaces)"),
     cl::cat(LLVMReduceOptions));
 
-static void runPasses(Oracle &O, Module &Program) {
+static void runPasses(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
