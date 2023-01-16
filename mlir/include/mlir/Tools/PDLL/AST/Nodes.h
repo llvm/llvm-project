@@ -681,8 +681,8 @@ private:
   /// PatternDecl.
   const Name *name;
 
-  /// The documentation comment attached to this decl. Defaults to None if
-  /// the comment is unset/unknown.
+  /// The documentation comment attached to this decl. Defaults to std::nullopt
+  /// if the comment is unset/unknown.
   std::optional<StringRef> docComment;
 };
 

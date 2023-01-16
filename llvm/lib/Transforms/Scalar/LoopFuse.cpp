@@ -885,8 +885,8 @@ private:
           // Check if the candidates have identical tripcounts (first value of
           // pair), and if not check the difference in the tripcounts between
           // the loops (second value of pair). The difference is not equal to
-          // None iff the loops iterate a constant number of times, and have a
-          // single exit.
+          // std::nullopt iff the loops iterate a constant number of times, and
+          // have a single exit.
           std::pair<bool, std::optional<unsigned>> IdenticalTripCountRes =
               haveIdenticalTripCounts(*FC0, *FC1);
           bool SameTripCount = IdenticalTripCountRes.first;
