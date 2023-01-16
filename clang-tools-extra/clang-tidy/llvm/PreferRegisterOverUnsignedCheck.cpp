@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace llvm_check {
+namespace clang::tidy::llvm_check {
 
 void PreferRegisterOverUnsignedCheck::registerMatchers(MatchFinder *Finder) {
   auto RegisterClassMatch = hasType(
@@ -61,6 +59,4 @@ void PreferRegisterOverUnsignedCheck::check(
              NeedsQualification ? "llvm::Register" : "Register");
 }
 
-} // namespace llvm_check
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_check

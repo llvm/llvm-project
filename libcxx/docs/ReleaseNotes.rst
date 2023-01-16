@@ -35,6 +35,19 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 16.0.0?
 ============================
 
+The main focus of the libc++ team has been to implement new C++20 and C++23
+features.
+
+The C++20 format library has improved but it not yet considered stable. The
+main improvements are additional formatters for the chrono calendar types. Work
+on formatting ranges has started.
+
+The C++20 ranges library has been completed and is no longer experimental. Some
+``views`` have not been implemented yet. Work on C++23 ranges has started.
+
+The C++20 spaceship operator has been added to more types, the work is still
+ongoing.
+
 Implemented Papers
 ------------------
 - P2499R0 - ``string_view`` range constructor should be ``explicit``
@@ -52,6 +65,7 @@ Implemented Papers
 - P1169R4 - ``static operator()``
 - P0415R1 - ``constexpr`` for ``std::complex``
 - P1208R6 - ``std::source_location``
+- P0323R12 - ``std::expected``
 
 Improvements and New Features
 -----------------------------
@@ -59,6 +73,7 @@ Improvements and New Features
   now provided when implementations in the global namespace are provided by
   the C library.
 - Implemented ``<memory_resource>`` header from C++17
+- `D122780 <https://reviews.llvm.org/D122780>`_ Improved the performance of std::sort
 
 Deprecations and Removals
 -------------------------
@@ -69,8 +84,7 @@ Deprecations and Removals
   includes are removed based on the language version used. Incidental transitive
   inclusions of the following headers have been removed:
 
-  - C++11, C++14, and C++17: ``chrono``
-  - C++20: ``chrono``
+  - C++11, C++14, C++17, and C++20: ``chrono``
   - C++2b: ``algorithm``, ``array``, ``atomic``, ``bit``, ``chrono``,
     ``climits``, ``cmath``, ``compare``, ``concepts``, ``cstdarg``, ``cstddef``,
     ``cstdint``, ``cstdlib``, ``cstring``, ``ctime``, ``exception``,
@@ -85,7 +99,7 @@ Deprecations and Removals
   incidental transitive includes more aggressively, in particular regardless
   of the language version in use.
 
-- The legacy testing system for libc++, libc++abi and libunwind has been removed.
+- The legacy testing system for libc++, libc++abi, and libunwind has been removed.
   All known clients have been migrated to the new configuration system, but please
   reach out to the libc++ developers if you find something missing in the new
   configuration system.

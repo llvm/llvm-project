@@ -911,12 +911,12 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
     //  };
     RetType =
         Builder.createPointerType(nullptr, Layout.getTypeSizeInBits(Ty),
-                                  Layout.getABITypeAlignment(Ty) * CHAR_BIT,
+                                  Layout.getABITypeAlign(Ty).value() * CHAR_BIT,
                                   /*DWARFAddressSpace=*/std::nullopt, Name);
   } else if (Ty->isStructTy()) {
     auto *DIStruct = Builder.createStructType(
         Scope, Name, Scope->getFile(), LineNum, Layout.getTypeSizeInBits(Ty),
-        Layout.getPrefTypeAlignment(Ty) * CHAR_BIT,
+        Layout.getPrefTypeAlign(Ty).value() * CHAR_BIT,
         llvm::DINode::FlagArtificial, nullptr, llvm::DINodeArray());
 
     auto *StructTy = cast<StructType>(Ty);

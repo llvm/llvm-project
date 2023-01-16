@@ -8,6 +8,7 @@
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include <optional>
 #include "mlir/Interfaces/InferIntRangeInterface.cpp.inc"
 
 using namespace mlir;
@@ -112,7 +113,7 @@ ConstantIntRanges::intersection(const ConstantIntRanges &other) const {
   return {uminIntersect, umaxIntersect, sminIntersect, smaxIntersect};
 }
 
-Optional<APInt> ConstantIntRanges::getConstantValue() const {
+std::optional<APInt> ConstantIntRanges::getConstantValue() const {
   // Note: we need to exclude the trivially-equal width 0 values here.
   if (umin() == umax() && umin().getBitWidth() != 0)
     return umin();

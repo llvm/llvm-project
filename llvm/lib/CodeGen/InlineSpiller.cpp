@@ -269,7 +269,7 @@ static Register isFullCopyOf(const MachineInstr &MI, Register Reg) {
 
 static void getVDefInterval(const MachineInstr &MI, LiveIntervals &LIS) {
   for (const MachineOperand &MO : MI.operands())
-    if (MO.isReg() && MO.isDef() && Register::isVirtualRegister(MO.getReg()))
+    if (MO.isReg() && MO.isDef() && MO.getReg().isVirtual())
       LIS.getInterval(MO.getReg());
 }
 
@@ -911,7 +911,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     if (!MO->isReg())
       continue;
     Register Reg = MO->getReg();
-    if (!Reg || Register::isVirtualRegister(Reg) || MRI.isReserved(Reg)) {
+    if (!Reg || Reg.isVirtual() || MRI.isReserved(Reg)) {
       continue;
     }
     // Skip non-Defs, including undef uses and internal reads.

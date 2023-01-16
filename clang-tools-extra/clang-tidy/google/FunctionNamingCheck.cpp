@@ -13,10 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace objc {
+namespace clang::tidy::google::objc {
 
 namespace {
 
@@ -117,7 +114,4 @@ void FunctionNamingCheck::check(const MatchFinder::MatchResult &Result) {
       << MatchedDecl << IsGlobal << generateFixItHint(MatchedDecl);
 }
 
-} // namespace objc
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::objc

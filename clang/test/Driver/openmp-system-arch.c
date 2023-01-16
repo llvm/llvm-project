@@ -37,10 +37,16 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_fail --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-GFX906
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa \
+// RUN:     --nvptx-arch-tool=%t/nvptx_arch_fail --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ARCH-GFX906
 // ARCH-GFX906: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
 
 // case when nvptx-arch succeeds.
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
+// RUN:     --nvptx-arch-tool=%t/nvptx_arch_sm_70 --amdgpu-arch-tool=%t/amdgpu_arch_fail %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ARCH-SM_70
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_sm_70 --amdgpu-arch-tool=%t/amdgpu_arch_fail %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-SM_70
 // ARCH-SM_70: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"
@@ -60,3 +66,15 @@
 // ARCH-MULTIPLE: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
 // ARCH-MULTIPLE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"
 // ARCH-MULTIPLE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_75"
+
+// case when 'nvptx-arch' returns nothing using `-fopenmp-targets=`.
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp \
+// RUN:     -fopenmp-targets=nvptx64-nvidia-cuda --nvptx-arch-tool=%t/nvptx_arch_empty %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NVPTX
+// NVPTX: error: cannot determine nvptx64 architecture: No NVIDIA GPU detected in the system; consider passing it via '-march'
+
+// case when 'amdgpu-arch' returns nothing using `-fopenmp-targets=`.
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp \
+// RUN:     -fopenmp-targets=amdgcn-amd-amdhsa --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=AMDGPU
+// AMDGPU: error: cannot determine amdgcn architecture: No AMD GPU detected in the system; consider passing it via '-march'

@@ -16,6 +16,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/FoldUtils.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -29,7 +30,7 @@ static LogicalResult replaceWithConstant(DataFlowSolver &solver, OpBuilder &b,
     return failure();
   const ConstantIntRanges &inferredRange =
       maybeInferredRange->getValue().getValue();
-  Optional<APInt> maybeConstValue = inferredRange.getConstantValue();
+  std::optional<APInt> maybeConstValue = inferredRange.getConstantValue();
   if (!maybeConstValue.has_value())
     return failure();
 

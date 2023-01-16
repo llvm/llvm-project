@@ -18,7 +18,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -27,6 +26,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -805,7 +805,7 @@ private:
   // In the simplest case, skips spelled tokens until finding one that produced
   // the NextExpanded token, and creates an empty mapping for them.
   // If Drain is provided, skips remaining tokens from that file instead.
-  void discard(llvm::Optional<FileID> Drain = std::nullopt) {
+  void discard(std::optional<FileID> Drain = std::nullopt) {
     SourceLocation Target =
         Drain ? SM.getLocForEndOfFile(*Drain)
               : SM.getExpansionLoc(

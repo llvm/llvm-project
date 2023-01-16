@@ -10,6 +10,7 @@
 #include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;
@@ -116,7 +117,7 @@ TEST(DiagnosticTest, diagnosticError) {
                             << "error");
   ASSERT_TRUE(!Value);
   llvm::Error Err = Value.takeError();
-  Optional<PartialDiagnosticAt> ErrDiag = DiagnosticError::take(Err);
+  std::optional<PartialDiagnosticAt> ErrDiag = DiagnosticError::take(Err);
   llvm::cantFail(std::move(Err));
   ASSERT_FALSE(!ErrDiag);
   EXPECT_EQ(ErrDiag->first, SourceLocation());

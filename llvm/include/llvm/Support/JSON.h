@@ -193,10 +193,9 @@ public:
   void push_back(Value &&E);
   template <typename... Args> void emplace_back(Args &&...A);
   void pop_back();
-  // FIXME: insert() takes const_iterator since C++11, old libstdc++ disagrees.
-  iterator insert(iterator P, const Value &E);
-  iterator insert(iterator P, Value &&E);
-  template <typename It> iterator insert(iterator P, It A, It Z);
+  iterator insert(const_iterator P, const Value &E);
+  iterator insert(const_iterator P, Value &&E);
+  template <typename It> iterator insert(const_iterator P, It A, It Z);
   template <typename... Args> iterator emplace(const_iterator P, Args &&...A);
 
   friend bool operator==(const Array &L, const Array &R);
@@ -535,14 +534,14 @@ template <typename... Args> inline void Array::emplace_back(Args &&...A) {
   V.emplace_back(std::forward<Args>(A)...);
 }
 inline void Array::pop_back() { V.pop_back(); }
-inline typename Array::iterator Array::insert(iterator P, const Value &E) {
+inline typename Array::iterator Array::insert(const_iterator P, const Value &E) {
   return V.insert(P, E);
 }
-inline typename Array::iterator Array::insert(iterator P, Value &&E) {
+inline typename Array::iterator Array::insert(const_iterator P, Value &&E) {
   return V.insert(P, std::move(E));
 }
 template <typename It>
-inline typename Array::iterator Array::insert(iterator P, It A, It Z) {
+inline typename Array::iterator Array::insert(const_iterator P, It A, It Z) {
   return V.insert(P, A, Z);
 }
 template <typename... Args>

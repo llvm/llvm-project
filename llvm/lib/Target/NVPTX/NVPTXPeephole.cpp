@@ -83,7 +83,7 @@ static bool isCVTAToLocalCombinationCandidate(MachineInstr &Root) {
   auto &Op = Root.getOperand(1);
   const auto &MRI = MF.getRegInfo();
   MachineInstr *GenericAddrDef = nullptr;
-  if (Op.isReg() && Register::isVirtualRegister(Op.getReg())) {
+  if (Op.isReg() && Op.getReg().isVirtual()) {
     GenericAddrDef = MRI.getUniqueVRegDef(Op.getReg());
   }
 

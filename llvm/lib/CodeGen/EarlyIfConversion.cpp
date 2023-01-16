@@ -262,12 +262,12 @@ bool SSAIfConv::InstrDependenciesAllowIfConv(MachineInstr *I) {
     Register Reg = MO.getReg();
 
     // Remember clobbered regunits.
-    if (MO.isDef() && Register::isPhysicalRegister(Reg))
+    if (MO.isDef() && Reg.isPhysical())
       for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
            ++Units)
         ClobberedRegUnits.set(*Units);
 
-    if (!MO.readsReg() || !Register::isVirtualRegister(Reg))
+    if (!MO.readsReg() || !Reg.isVirtual())
       continue;
     MachineInstr *DefMI = MRI->getVRegDef(Reg);
     if (!DefMI || DefMI->getParent() != Head)
@@ -387,7 +387,7 @@ bool SSAIfConv::findInsertionPoint() {
       if (!MO.isReg())
         continue;
       Register Reg = MO.getReg();
-      if (!Register::isPhysicalRegister(Reg))
+      if (!Reg.isPhysical())
         continue;
       // I clobbers Reg, so it isn't live before I.
       if (MO.isDef())

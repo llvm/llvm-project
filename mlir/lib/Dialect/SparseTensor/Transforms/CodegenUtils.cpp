@@ -18,13 +18,14 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 /// If the tensor is a sparse constant, generates and returns the pair of
 /// the constants for the indices and the values.
-static Optional<std::pair<Value, Value>>
+static std::optional<std::pair<Value, Value>>
 genSplitSparseConstant(OpBuilder &builder, Location loc, Value tensor) {
   if (auto constOp = tensor.getDefiningOp<arith::ConstantOp>()) {
     if (auto attr = constOp.getValue().dyn_cast<SparseElementsAttr>()) {
@@ -372,7 +373,11 @@ Type mlir::sparse_tensor::getOpaquePointerType(OpBuilder &builder) {
 }
 
 Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc,
-                                     unsigned sz, Type tp) {
+                                     unsigned sz, Type tp, bool staticShape) {
+  if (staticShape) {
+    auto memTp = MemRefType::get({sz}, tp);
+    return builder.create<memref::AllocaOp>(loc, memTp);
+  }
   return genAlloca(builder, loc, constantIndex(builder, loc, sz), tp);
 }
 

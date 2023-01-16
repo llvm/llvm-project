@@ -13,6 +13,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SetVector.h"
+#include <optional>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizationEnums.h.inc"
 
@@ -203,9 +204,9 @@ struct BufferizationOptions {
   bool isOpAllowed(Operation *op) const;
 
   /// Helper functions for allocation, deallocation, memory copying.
-  Optional<AllocationFn> allocationFn;
-  Optional<DeallocationFn> deallocationFn;
-  Optional<MemCpyFn> memCpyFn;
+  std::optional<AllocationFn> allocationFn;
+  std::optional<DeallocationFn> deallocationFn;
+  std::optional<MemCpyFn> memCpyFn;
 
   /// Create a memref allocation with the given type and dynamic extents.
   FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
@@ -232,7 +233,7 @@ struct BufferizationOptions {
   /// The default memory space that should be used when it cannot be inferred
   /// from the context. If case of std::nullopt, bufferization fails when the
   /// memory space cannot be inferred at any point.
-  Optional<Attribute> defaultMemorySpace = Attribute();
+  std::optional<Attribute> defaultMemorySpace = Attribute();
 
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced
@@ -521,6 +522,19 @@ getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
 /// Return the owner of the given value. In case of a BlockArgument that is the
 /// owner of the block. In case of an OpResult that is the defining op.
 Operation *getOwnerOfValue(Value value);
+
+/// Return the closest enclosing repetitive region around the given op.
+Region *getEnclosingRepetitiveRegion(Operation *op,
+                                     const BufferizationOptions &options);
+
+/// Return the closest enclosing repetitive region around the place where the
+/// given value is defined.
+Region *getEnclosingRepetitiveRegion(Value value,
+                                     const BufferizationOptions &options);
+
+/// Return the closest enclosing repetitive region around the given block.
+Region *getEnclosingRepetitiveRegion(Block *block,
+                                     const BufferizationOptions &options);
 
 namespace detail {
 /// This is the default implementation of

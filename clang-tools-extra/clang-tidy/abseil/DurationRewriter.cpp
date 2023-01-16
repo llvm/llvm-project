@@ -15,9 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 struct DurationScale2IndexFunctor {
   using argument_type = DurationScale;
@@ -322,6 +320,4 @@ bool isInMacro(const MatchFinder::MatchResult &Result, const Expr *E) {
   return Loc.isMacroID();
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil

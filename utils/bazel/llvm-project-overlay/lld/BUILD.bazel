@@ -5,6 +5,11 @@
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:tblgen.bzl", "gentbl")
 
+load(
+    "//:vars.bzl",
+    "LLVM_VERSION",
+)
+
 package(
     default_visibility = ["//visibility:public"],
     features = ["layering_check"],
@@ -16,7 +21,7 @@ licenses(["notice"])
 genrule(
     name = "config_version_gen",
     outs = ["include/lld/Common/Version.inc"],
-    cmd = "echo '#define LLD_VERSION_STRING \"16.0.0\"' > $@",
+    cmd = "echo '#define LLD_VERSION_STRING \"{}\"' > $@".format(LLVM_VERSION),
 )
 
 genrule(
@@ -214,6 +219,7 @@ cc_library(
         "//libunwind:unwind_headers_only",
         "//llvm:BinaryFormat",
         "//llvm:BitReader",
+        "//llvm:BitWriter",
         "//llvm:Core",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",

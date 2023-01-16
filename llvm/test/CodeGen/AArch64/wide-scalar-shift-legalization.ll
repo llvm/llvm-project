@@ -158,57 +158,39 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; ALL-LABEL: lshr_32bytes:
 ; ALL:       // %bb.0:
+; ALL-NEXT:    sub sp, sp, #64
 ; ALL-NEXT:    ldr x9, [x1]
-; ALL-NEXT:    mov w8, #128
+; ALL-NEXT:    mov x8, sp
 ; ALL-NEXT:    ldp x10, x11, [x0, #16]
-; ALL-NEXT:    sub x8, x8, x9
-; ALL-NEXT:    mvn w16, w9
-; ALL-NEXT:    ldp x13, x12, [x0]
-; ALL-NEXT:    mvn w0, w8
-; ALL-NEXT:    lsr x14, x10, #1
-; ALL-NEXT:    lsl x1, x11, x8
-; ALL-NEXT:    tst x8, #0x40
-; ALL-NEXT:    lsl x8, x10, x8
-; ALL-NEXT:    lsl x17, x11, #1
-; ALL-NEXT:    lsr x14, x14, x0
-; ALL-NEXT:    csel x0, xzr, x8, ne
-; ALL-NEXT:    orr x14, x1, x14
-; ALL-NEXT:    lsr x15, x10, x9
-; ALL-NEXT:    csel x8, x8, x14, ne
-; ALL-NEXT:    lsl x14, x12, #1
-; ALL-NEXT:    lsl x3, x17, x16
-; ALL-NEXT:    lsr x1, x13, x9
-; ALL-NEXT:    lsl x14, x14, x16
-; ALL-NEXT:    lsr x18, x11, x9
-; ALL-NEXT:    orr x15, x3, x15
-; ALL-NEXT:    tst x9, #0x40
-; ALL-NEXT:    orr x14, x14, x1
-; ALL-NEXT:    lsr x16, x12, x9
-; ALL-NEXT:    csel x15, x18, x15, ne
-; ALL-NEXT:    csel x14, x16, x14, ne
-; ALL-NEXT:    csel x16, xzr, x16, ne
-; ALL-NEXT:    csel x18, xzr, x18, ne
-; ALL-NEXT:    subs x1, x9, #128
-; ALL-NEXT:    orr x14, x14, x0
-; ALL-NEXT:    mvn w3, w1
-; ALL-NEXT:    orr x8, x16, x8
-; ALL-NEXT:    lsr x10, x10, x1
-; ALL-NEXT:    lsr x11, x11, x1
-; ALL-NEXT:    lsl x17, x17, x3
-; ALL-NEXT:    orr x10, x17, x10
-; ALL-NEXT:    csel x17, x18, xzr, lo
-; ALL-NEXT:    tst x1, #0x40
-; ALL-NEXT:    csel x10, x11, x10, ne
-; ALL-NEXT:    csel x11, xzr, x11, ne
-; ALL-NEXT:    cmp x9, #128
-; ALL-NEXT:    csel x10, x14, x10, lo
-; ALL-NEXT:    csel x14, x15, xzr, lo
-; ALL-NEXT:    csel x8, x8, x11, lo
-; ALL-NEXT:    cmp x9, #0
-; ALL-NEXT:    csel x9, x13, x10, eq
-; ALL-NEXT:    csel x8, x12, x8, eq
-; ALL-NEXT:    stp x14, x17, [x2, #16]
-; ALL-NEXT:    stp x9, x8, [x2]
+; ALL-NEXT:    movi v0.2d, #0000000000000000
+; ALL-NEXT:    ldr q1, [x0]
+; ALL-NEXT:    ubfx x12, x9, #3, #5
+; ALL-NEXT:    add x8, x8, x12
+; ALL-NEXT:    and x9, x9, #0x7
+; ALL-NEXT:    stp q0, q0, [sp, #32]
+; ALL-NEXT:    stp x10, x11, [sp, #16]
+; ALL-NEXT:    eor x11, x9, #0x3f
+; ALL-NEXT:    str q1, [sp]
+; ALL-NEXT:    ldp x10, x13, [x8, #8]
+; ALL-NEXT:    ldr x12, [x8, #24]
+; ALL-NEXT:    ldr x8, [x8]
+; ALL-NEXT:    lsl x14, x10, #1
+; ALL-NEXT:    lsr x10, x10, x9
+; ALL-NEXT:    lsl x15, x12, #1
+; ALL-NEXT:    lsl x14, x14, x11
+; ALL-NEXT:    lsl x11, x15, x11
+; ALL-NEXT:    mvn w15, w9
+; ALL-NEXT:    lsr x8, x8, x9
+; ALL-NEXT:    lsr x12, x12, x9
+; ALL-NEXT:    lsr x9, x13, x9
+; ALL-NEXT:    orr x8, x8, x14
+; ALL-NEXT:    orr x9, x9, x11
+; ALL-NEXT:    lsl x11, x13, #1
+; ALL-NEXT:    lsl x11, x11, x15
+; ALL-NEXT:    orr x10, x10, x11
+; ALL-NEXT:    stp x9, x12, [x2, #16]
+; ALL-NEXT:    stp x8, x10, [x2]
+; ALL-NEXT:    add sp, sp, #64
 ; ALL-NEXT:    ret
   %src = load i256, ptr %src.ptr, align 1
   %bitOff = load i256, ptr %bitOff.ptr, align 1
@@ -219,57 +201,40 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; ALL-LABEL: shl_32bytes:
 ; ALL:       // %bb.0:
+; ALL-NEXT:    sub sp, sp, #64
 ; ALL-NEXT:    ldr x9, [x1]
-; ALL-NEXT:    mov w8, #128
-; ALL-NEXT:    ldp x11, x10, [x0]
-; ALL-NEXT:    sub x8, x8, x9
-; ALL-NEXT:    mvn w16, w9
-; ALL-NEXT:    ldp x12, x13, [x0, #16]
-; ALL-NEXT:    mvn w0, w8
-; ALL-NEXT:    tst x8, #0x40
-; ALL-NEXT:    lsl x14, x10, #1
-; ALL-NEXT:    lsr x1, x11, x8
-; ALL-NEXT:    lsr x8, x10, x8
-; ALL-NEXT:    lsr x17, x11, #1
-; ALL-NEXT:    lsl x14, x14, x0
-; ALL-NEXT:    csel x0, xzr, x8, ne
-; ALL-NEXT:    orr x14, x14, x1
-; ALL-NEXT:    lsl x15, x10, x9
-; ALL-NEXT:    csel x8, x8, x14, ne
-; ALL-NEXT:    lsr x14, x12, #1
-; ALL-NEXT:    lsr x3, x17, x16
-; ALL-NEXT:    lsl x1, x13, x9
-; ALL-NEXT:    lsr x14, x14, x16
-; ALL-NEXT:    lsl x18, x11, x9
-; ALL-NEXT:    orr x15, x15, x3
-; ALL-NEXT:    tst x9, #0x40
-; ALL-NEXT:    orr x14, x1, x14
-; ALL-NEXT:    lsl x16, x12, x9
-; ALL-NEXT:    csel x15, x18, x15, ne
-; ALL-NEXT:    csel x14, x16, x14, ne
-; ALL-NEXT:    csel x16, xzr, x16, ne
-; ALL-NEXT:    csel x18, xzr, x18, ne
-; ALL-NEXT:    subs x1, x9, #128
-; ALL-NEXT:    orr x14, x14, x0
-; ALL-NEXT:    mvn w3, w1
-; ALL-NEXT:    orr x8, x16, x8
-; ALL-NEXT:    lsl x10, x10, x1
-; ALL-NEXT:    lsl x11, x11, x1
-; ALL-NEXT:    lsr x17, x17, x3
-; ALL-NEXT:    orr x10, x10, x17
-; ALL-NEXT:    csel x17, x18, xzr, lo
-; ALL-NEXT:    tst x1, #0x40
-; ALL-NEXT:    csel x10, x11, x10, ne
-; ALL-NEXT:    csel x11, xzr, x11, ne
-; ALL-NEXT:    cmp x9, #128
-; ALL-NEXT:    csel x10, x14, x10, lo
-; ALL-NEXT:    csel x14, x15, xzr, lo
-; ALL-NEXT:    csel x8, x8, x11, lo
-; ALL-NEXT:    cmp x9, #0
-; ALL-NEXT:    csel x9, x13, x10, eq
-; ALL-NEXT:    csel x8, x12, x8, eq
-; ALL-NEXT:    stp x17, x14, [x2]
-; ALL-NEXT:    stp x8, x9, [x2, #16]
+; ALL-NEXT:    mov x8, sp
+; ALL-NEXT:    ldp x10, x11, [x0, #16]
+; ALL-NEXT:    movi v0.2d, #0000000000000000
+; ALL-NEXT:    add x8, x8, #32
+; ALL-NEXT:    ldr q1, [x0]
+; ALL-NEXT:    ubfx x12, x9, #3, #5
+; ALL-NEXT:    sub x8, x8, x12
+; ALL-NEXT:    and x9, x9, #0x7
+; ALL-NEXT:    mvn w12, w9
+; ALL-NEXT:    eor x14, x9, #0x3f
+; ALL-NEXT:    stp q0, q0, [sp]
+; ALL-NEXT:    stp x10, x11, [sp, #48]
+; ALL-NEXT:    str q1, [sp, #32]
+; ALL-NEXT:    ldp x11, x10, [x8, #8]
+; ALL-NEXT:    ldr x13, [x8]
+; ALL-NEXT:    ldr x8, [x8, #24]
+; ALL-NEXT:    lsr x15, x11, #1
+; ALL-NEXT:    lsl x11, x11, x9
+; ALL-NEXT:    lsr x16, x10, #1
+; ALL-NEXT:    lsr x12, x15, x12
+; ALL-NEXT:    lsr x15, x13, #1
+; ALL-NEXT:    lsr x16, x16, x14
+; ALL-NEXT:    lsr x14, x15, x14
+; ALL-NEXT:    lsl x13, x13, x9
+; ALL-NEXT:    lsl x8, x8, x9
+; ALL-NEXT:    lsl x9, x10, x9
+; ALL-NEXT:    orr x11, x11, x14
+; ALL-NEXT:    orr x8, x8, x16
+; ALL-NEXT:    orr x9, x9, x12
+; ALL-NEXT:    stp x13, x11, [x2]
+; ALL-NEXT:    stp x9, x8, [x2, #16]
+; ALL-NEXT:    add sp, sp, #64
 ; ALL-NEXT:    ret
   %src = load i256, ptr %src.ptr, align 1
   %bitOff = load i256, ptr %bitOff.ptr, align 1
@@ -280,59 +245,40 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; ALL-LABEL: ashr_32bytes:
 ; ALL:       // %bb.0:
+; ALL-NEXT:    sub sp, sp, #64
+; ALL-NEXT:    ldp x11, x10, [x0, #16]
+; ALL-NEXT:    mov x8, sp
 ; ALL-NEXT:    ldr x9, [x1]
-; ALL-NEXT:    mov w8, #128
-; ALL-NEXT:    ldp x11, x10, [x0, #8]
-; ALL-NEXT:    sub x8, x8, x9
-; ALL-NEXT:    ldr x13, [x0, #24]
-; ALL-NEXT:    mvn w18, w8
-; ALL-NEXT:    ldr x12, [x0]
-; ALL-NEXT:    mvn w16, w9
-; ALL-NEXT:    tst x8, #0x40
-; ALL-NEXT:    lsr x14, x10, #1
-; ALL-NEXT:    lsl x1, x13, x8
-; ALL-NEXT:    lsr x14, x14, x18
-; ALL-NEXT:    lsl x8, x10, x8
-; ALL-NEXT:    orr x14, x1, x14
-; ALL-NEXT:    lsl x17, x13, #1
-; ALL-NEXT:    csel x18, xzr, x8, ne
-; ALL-NEXT:    csel x8, x8, x14, ne
-; ALL-NEXT:    lsl x14, x11, #1
-; ALL-NEXT:    lsr x15, x10, x9
-; ALL-NEXT:    lsl x3, x17, x16
-; ALL-NEXT:    lsr x1, x12, x9
-; ALL-NEXT:    lsl x14, x14, x16
-; ALL-NEXT:    asr x0, x13, x9
-; ALL-NEXT:    orr x15, x3, x15
-; ALL-NEXT:    tst x9, #0x40
-; ALL-NEXT:    orr x14, x14, x1
-; ALL-NEXT:    lsr x16, x11, x9
-; ALL-NEXT:    asr x1, x13, #63
-; ALL-NEXT:    csel x15, x0, x15, ne
-; ALL-NEXT:    csel x14, x16, x14, ne
-; ALL-NEXT:    csel x16, xzr, x16, ne
-; ALL-NEXT:    csel x0, x1, x0, ne
-; ALL-NEXT:    subs x3, x9, #128
-; ALL-NEXT:    mvn w4, w3
-; ALL-NEXT:    orr x14, x14, x18
-; ALL-NEXT:    orr x8, x16, x8
-; ALL-NEXT:    lsr x10, x10, x3
-; ALL-NEXT:    asr x13, x13, x3
-; ALL-NEXT:    lsl x17, x17, x4
-; ALL-NEXT:    orr x10, x17, x10
-; ALL-NEXT:    csel x17, x0, x1, lo
-; ALL-NEXT:    tst x3, #0x40
-; ALL-NEXT:    csel x10, x13, x10, ne
-; ALL-NEXT:    csel x13, x1, x13, ne
-; ALL-NEXT:    cmp x9, #128
-; ALL-NEXT:    csel x10, x14, x10, lo
-; ALL-NEXT:    csel x14, x15, x1, lo
-; ALL-NEXT:    csel x8, x8, x13, lo
-; ALL-NEXT:    cmp x9, #0
-; ALL-NEXT:    csel x9, x12, x10, eq
-; ALL-NEXT:    csel x8, x11, x8, eq
-; ALL-NEXT:    stp x14, x17, [x2, #16]
-; ALL-NEXT:    stp x9, x8, [x2]
+; ALL-NEXT:    ldr q0, [x0]
+; ALL-NEXT:    asr x12, x10, #63
+; ALL-NEXT:    stp x11, x10, [sp, #16]
+; ALL-NEXT:    ubfx x10, x9, #3, #5
+; ALL-NEXT:    str q0, [sp]
+; ALL-NEXT:    add x8, x8, x10
+; ALL-NEXT:    and x9, x9, #0x7
+; ALL-NEXT:    stp x12, x12, [sp, #48]
+; ALL-NEXT:    eor x14, x9, #0x3f
+; ALL-NEXT:    stp x12, x12, [sp, #32]
+; ALL-NEXT:    mvn w12, w9
+; ALL-NEXT:    ldp x10, x11, [x8, #8]
+; ALL-NEXT:    ldr x13, [x8, #24]
+; ALL-NEXT:    ldr x8, [x8]
+; ALL-NEXT:    lsl x16, x10, #1
+; ALL-NEXT:    lsl x15, x11, #1
+; ALL-NEXT:    lsl x16, x16, x14
+; ALL-NEXT:    lsl x12, x15, x12
+; ALL-NEXT:    lsl x15, x13, #1
+; ALL-NEXT:    lsl x14, x15, x14
+; ALL-NEXT:    lsr x11, x11, x9
+; ALL-NEXT:    asr x13, x13, x9
+; ALL-NEXT:    lsr x8, x8, x9
+; ALL-NEXT:    lsr x9, x10, x9
+; ALL-NEXT:    orr x11, x11, x14
+; ALL-NEXT:    orr x8, x8, x16
+; ALL-NEXT:    orr x9, x9, x12
+; ALL-NEXT:    stp x11, x13, [x2, #16]
+; ALL-NEXT:    stp x8, x9, [x2]
+; ALL-NEXT:    add sp, sp, #64
 ; ALL-NEXT:    ret
   %src = load i256, ptr %src.ptr, align 1
   %bitOff = load i256, ptr %bitOff.ptr, align 1

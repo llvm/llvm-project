@@ -18,18 +18,17 @@
 
 ;; Ensure lld doesn't generates index files when --thinlto-index-only is not enabled.
 ; RUN: rm -f 1.o.thinlto.bc 2.o.thinlto.bc
-; RUN: ld.lld -shared 1.o 2.o -o 4
+; RUN: ld.lld -shared 1.o 2.o -o 5
 ; RUN: not ls 1.o.thinlto.bc
 ; RUN: not ls 2.o.thinlto.bc
 
 ;; Ensure lld generates an index and not a binary if requested.
-; RUN: rm -f 4
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 2.o -o 4
 ; RUN: llvm-bcanalyzer -dump 1.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND1
 ; RUN: llvm-bcanalyzer -dump 2.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND2
 ; RUN: not test -e 4
 
-;; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib
+;; Ensure lld generates an index even if the file is wrapped in --start-lib/--end-lib.
 ; RUN: rm -f 2.o.thinlto.bc 4
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 3.o --start-lib 2.o --end-lib -o 4
 ; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'

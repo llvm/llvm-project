@@ -8,12 +8,12 @@
 
 #include "Marshallers.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
+#include <optional>
 #include <string>
 
-static llvm::Optional<std::string>
+static std::optional<std::string>
 getBestGuess(llvm::StringRef Search, llvm::ArrayRef<llvm::StringRef> Allowed,
              llvm::StringRef DropPrefix = "", unsigned MaxEditDistance = 3) {
   if (MaxEditDistance != ~0U)
@@ -59,7 +59,7 @@ getBestGuess(llvm::StringRef Search, llvm::ArrayRef<llvm::StringRef> Allowed,
   return std::nullopt;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     clang::attr::Kind>::getBestGuess(const VariantValue &Value) {
   static constexpr llvm::StringRef Allowed[] = {
@@ -71,7 +71,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   return std::nullopt;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     clang::CastKind>::getBestGuess(const VariantValue &Value) {
   static constexpr llvm::StringRef Allowed[] = {
@@ -83,7 +83,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   return std::nullopt;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     clang::OpenMPClauseKind>::getBestGuess(const VariantValue &Value) {
   static constexpr llvm::StringRef Allowed[] = {
@@ -96,7 +96,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   return std::nullopt;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     clang::UnaryExprOrTypeTrait>::getBestGuess(const VariantValue &Value) {
   static constexpr llvm::StringRef Allowed[] = {
@@ -117,7 +117,7 @@ static constexpr std::pair<llvm::StringRef, llvm::Regex::RegexFlags>
         {"BasicRegex", llvm::Regex::RegexFlags::BasicRegex},
 };
 
-static llvm::Optional<llvm::Regex::RegexFlags>
+static std::optional<llvm::Regex::RegexFlags>
 getRegexFlag(llvm::StringRef Flag) {
   for (const auto &StringFlag : RegexMap) {
     if (Flag == StringFlag.first)
@@ -126,8 +126,7 @@ getRegexFlag(llvm::StringRef Flag) {
   return std::nullopt;
 }
 
-static llvm::Optional<llvm::StringRef>
-getCloseRegexMatch(llvm::StringRef Flag) {
+static std::optional<llvm::StringRef> getCloseRegexMatch(llvm::StringRef Flag) {
   for (const auto &StringFlag : RegexMap) {
     if (Flag.edit_distance(StringFlag.first) < 3)
       return StringFlag.first;
@@ -135,14 +134,14 @@ getCloseRegexMatch(llvm::StringRef Flag) {
   return std::nullopt;
 }
 
-llvm::Optional<llvm::Regex::RegexFlags>
+std::optional<llvm::Regex::RegexFlags>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     llvm::Regex::RegexFlags>::getFlags(llvm::StringRef Flags) {
-  llvm::Optional<llvm::Regex::RegexFlags> Flag;
+  std::optional<llvm::Regex::RegexFlags> Flag;
   SmallVector<StringRef, 4> Split;
   Flags.split(Split, '|', -1, false);
   for (StringRef OrFlag : Split) {
-    if (llvm::Optional<llvm::Regex::RegexFlags> NextFlag =
+    if (std::optional<llvm::Regex::RegexFlags> NextFlag =
             getRegexFlag(OrFlag.trim()))
       Flag = Flag.value_or(llvm::Regex::NoFlags) | *NextFlag;
     else
@@ -151,7 +150,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   return Flag;
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 clang::ast_matchers::dynamic::internal::ArgTypeTraits<
     llvm::Regex::RegexFlags>::getBestGuess(const VariantValue &Value) {
   if (!Value.isString())
@@ -159,7 +158,7 @@ clang::ast_matchers::dynamic::internal::ArgTypeTraits<
   SmallVector<StringRef, 4> Split;
   llvm::StringRef(Value.getString()).split(Split, '|', -1, false);
   for (llvm::StringRef &Flag : Split) {
-    if (llvm::Optional<llvm::StringRef> BestGuess =
+    if (std::optional<llvm::StringRef> BestGuess =
             getCloseRegexMatch(Flag.trim()))
       Flag = *BestGuess;
     else

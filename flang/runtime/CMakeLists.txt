@@ -39,6 +39,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   include(AddLLVM)
   include(AddFlang)
+  include(HandleLLVMOptions)
 
   include(TestBigEndian)
   test_big_endian(IS_BIGENDIAN)

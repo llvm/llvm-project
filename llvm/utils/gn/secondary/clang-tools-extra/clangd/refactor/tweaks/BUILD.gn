@@ -18,7 +18,7 @@ source_set("tweaks") {
     "DefineInline.cpp",
     "DefineOutline.cpp",
     "DumpAST.cpp",
-    "ExpandAutoType.cpp",
+    "ExpandDeducedType.cpp",
     "ExpandMacro.cpp",
     "ExtractFunction.cpp",
     "ExtractVariable.cpp",

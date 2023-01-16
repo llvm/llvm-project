@@ -258,8 +258,7 @@ static const clang::StringRef PosixFunctions[] = {
     "::wctomb",
 };
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 template <> struct OptionEnumMapping<concurrency::MtUnsafeCheck::FunctionSet> {
   static llvm::ArrayRef<
@@ -312,5 +311,4 @@ void MtUnsafeCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 } // namespace concurrency
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

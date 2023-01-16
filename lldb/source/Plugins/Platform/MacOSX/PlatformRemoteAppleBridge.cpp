@@ -56,10 +56,8 @@ void PlatformRemoteAppleBridge::Terminate() {
   PlatformDarwin::Terminate();
 }
 
-PlatformSP
-PlatformRemoteAppleBridge::CreateInstance(bool force, const ArchSpec *arch,
-                                          const Debugger *debugger,
-                                          const ScriptedMetadata *metadata) {
+PlatformSP PlatformRemoteAppleBridge::CreateInstance(bool force,
+                                                 const ArchSpec *arch) {
   Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;

@@ -77,9 +77,7 @@ def write_header(module_path, module, namespace, check_name, check_name_camel):
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace %(namespace)s {
+namespace clang::tidy::%(namespace)s {
 
 /// FIXME: Write a short description.
 ///
@@ -93,9 +91,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace %(namespace)s
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::%(namespace)s
 
 #endif // %(header_guard)s
 """ % {'header_guard': header_guard,
@@ -129,9 +125,7 @@ def write_implementation(module_path, module, namespace, check_name_camel):
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace %(namespace)s {
+namespace clang::tidy::%(namespace)s {
 
 void %(check_name)s::registerMatchers(MatchFinder *Finder) {
   // FIXME: Add matchers.
@@ -149,9 +143,7 @@ void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
 }
 
-} // namespace %(namespace)s
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::%(namespace)s
 """ % {'check_name': check_name_camel,
        'module': module,
        'namespace': namespace})

@@ -41,6 +41,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
 #include <random>
+#include <optional>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -355,31 +356,6 @@ static bool happensBefore(Operation *a, Operation *b,
   return false;
 }
 
-static Region *
-getEnclosingRepetitiveRegion(Operation *op,
-                             const BufferizationOptions &options) {
-  while (Region *region = op->getParentRegion()) {
-    op = region->getParentOp();
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
-        return region;
-  }
-  return nullptr;
-}
-
-static Region *
-getEnclosingRepetitiveRegion(Value value, const BufferizationOptions &options) {
-  Region *region = value.getParentRegion();
-  while (region) {
-    Operation *op = region->getParentOp();
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
-        return region;
-    region = op->getParentRegion();
-  }
-  return nullptr;
-}
-
 /// Return `true` if the given tensor value is a memory write. Most values are
 /// tensor writes, but ops that define a tensor SSA value without specifying its
 /// contents (e.g., alloc_tensor) are not.
@@ -479,7 +455,7 @@ bool canUseOpDominance(const DenseSet<OpOperand *> &usesRead,
                        const DenseSet<OpOperand *> &usesWrite,
                        const AnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
-  Optional<Region *> commonEnclosingRegion = std::nullopt;
+  std::optional<Region *> commonEnclosingRegion;
 
   // In case of a write, take the region in which the write takes place.
   for (OpOperand *uWrite : usesWrite) {

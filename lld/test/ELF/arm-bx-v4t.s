@@ -5,6 +5,10 @@
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-far | FileCheck %s --check-prefixes=FAR
 // RUN: ld.lld %t/a.o --script %t/near.lds -o %t/a-near
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-near | FileCheck %s --check-prefixes=NEAR
+// RUN: ld.lld %t/a.o -pie --script %t/far.lds -o %t/a-far-pie
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-far-pie | FileCheck %s --check-prefixes=FAR-PIE
+// RUN: ld.lld %t/a.o -pie --script %t/near.lds -o %t/a-near-pie
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv4t-none-linux-gnueabi %t/a-near-pie | FileCheck %s --check-prefixes=NEAR-PIE
 
 /// On Arm v4t there is no blx instruction so all interworking must go via
 /// a thunk.
@@ -45,6 +49,29 @@ _start:
 // NEAR-NEXT:  <$d>:
 // NEAR-NEXT:  1000010: 15 00 00 01   .word   0x01000015
 
+// FAR-PIE-LABEL: <_start>:
+// FAR-PIE-NEXT:   1000000:    	bl	0x1000008 <__ARMv4PILongBXThunk_target> @ imm = #0
+// FAR-PIE-NEXT:               	bx	lr
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <__ARMv4PILongBXThunk_target>:
+// FAR-PIE-NEXT:   1000008:     ldr	r12, [pc, #4]           @ 0x1000014 <__ARMv4PILongBXThunk_target+0xc>
+// FAR-PIE-NEXT:                add	r12, pc, r12
+// FAR-PIE-NEXT:                bx	r12
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <$d>:
+// FAR-PIE-NEXT:   1000014: ed ff ff 04  	.word	0x04ffffed
+
+// NEAR-PIE-LABEL: <_start>:
+// NEAR-PIE-NEXT:   1000000:    bl	0x1000008 <__ARMv4PILongBXThunk_target> @ imm = #0
+// NEAR-PIE-NEXT:               bx	lr
+// NEAR-PIE-EMPTY:
+// NEAR-PIE-NEXT:  <__ARMv4PILongBXThunk_target>:
+// NEAR-PIE-NEXT:   1000008:    ldr	r12, [pc, #4]           @ 0x1000014 <__ARMv4PILongBXThunk_target+0xc>
+// NEAR-PIE-NEXT:               add	r12, pc, r12
+// NEAR-PIE-NEXT:               bx	r12
+// NEAR-PIE-EMPTY:
+// NEAR-PIE-NEXT:  <$d>:
+// NEAR-PIE-NEXT:   1000014: 05 00 00 00  	.word	0x00000005
 
 .section .high, "ax", %progbits
 .thumb
@@ -71,18 +98,50 @@ target:
 
 // NEAR-LABEL: <target>:
 // NEAR-NEXT:   1000014:       bl      0x100001c <__Thumbv4ABSLongBXThunk__start> @ imm = #4
-// NEAR-NEXT:   1000018:       bx      lr
-// NEAR-NEXT:   100001a:       bmi     0xffffc6                @ imm = #-88
+// NEAR-NEXT:                  bx      lr
+// NEAR-NEXT:                  bmi     0xffffc6                @ imm = #-88
 // NEAR-EMPTY:
 // NEAR-NEXT:  <__Thumbv4ABSLongBXThunk__start>:
 // NEAR-NEXT:   100001c:       bx      pc
-// NEAR-NEXT:   100001e:       b       0x100001c <__Thumbv4ABSLongBXThunk__start> @ imm = #-6
+// NEAR-NEXT:                  b       0x100001c <__Thumbv4ABSLongBXThunk__start> @ imm = #-6
 // NEAR-EMPTY:
 // NEAR-NEXT:  <$a>:
 // NEAR-NEXT:   1000020:       ldr     pc, [pc, #-4]           @ 0x1000024 <__Thumbv4ABSLongBXThunk__start+0x8>
 // NEAR-EMPTY:
 // NEAR-NEXT:  <$d>:
 // NEAR-NEXT:   1000024: 00 00 00 01   .word   0x01000000
+
+// FAR-PIE-LABEL: <target>:
+// FAR-PIE-NEXT:   6000000:       	bl	0x6000008 <__Thumbv4PILongBXThunk__start> @ imm = #4
+// FAR-PIE-NEXT:                	bx  lr
+// FAR-PIE-NEXT:                	bmi 0x5ffffb2 <__ARMv4PILongBXThunk_target+0x4ffffaa> @ imm = #-88
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <__Thumbv4PILongBXThunk__start>:
+// FAR-PIE-NEXT:   6000008:      	bx	pc
+// FAR-PIE-NEXT:                	b	0x6000008 <__Thumbv4PILongBXThunk__start> @ imm = #-6
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <$a>:
+// FAR-PIE-NEXT:   600000c:      	ldr	r12, [pc]               @ 0x6000014 <__Thumbv4PILongBXThunk__start+0xc>
+// FAR-PIE-NEXT:                	add	pc, r12, pc
+// FAR-PIE-EMPTY:
+// FAR-PIE-NEXT:  <$d>:
+// FAR-PIE-NEXT:   6000014: e8 ff ff fa  	.word	0xfaffffe8
+
+// NEAR-PIE-LABEL: <target>:
+// NEAR-PIE-NEXT:   1000018:      	bl	0x1000020 <__Thumbv4PILongBXThunk__start> @ imm = #4
+// NEAR-PIE-NEXT:               	bx	lr
+// NEAR-PIE-NEXT:               	bmi	0xffffca                @ imm = #-88
+// NEAR-PIE-EMPTY:
+// NEAR-PIE-NEXT:  <__Thumbv4PILongBXThunk__start>:
+// NEAR-PIE-NEXT:   1000020:      	bx	pc
+// NEAR-PIE-NEXT:               	b	0x1000020 <__Thumbv4PILongBXThunk__start> @ imm = #-6
+// NEAR-PIE-EMPTY:
+// NEAR-PIE-NEXT:  <$a>:
+// NEAR-PIE-NEXT:   1000024:      	ldr	r12, [pc]               @ 0x100002c <__Thumbv4PILongBXThunk__start+0xc>
+// NEAR-PIE-NEXT:               	add	pc, r12, pc
+// NEAR-PIE-EMPTY:
+// NEAR-PIE-NEXT:  <$d>:
+// NEAR-PIE-NEXT:   100002c: d0 ff ff ff  	.word	0xffffffd0
 
 #--- far.lds
 SECTIONS {

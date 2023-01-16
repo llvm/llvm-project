@@ -99,7 +99,7 @@ void DwarfExpression::addAnd(unsigned Mask) {
 bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
                                     llvm::Register MachineReg,
                                     unsigned MaxSize) {
-  if (!llvm::Register::isPhysicalRegister(MachineReg)) {
+  if (!MachineReg.isPhysical()) {
     if (isFrameRegister(TRI, MachineReg)) {
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;

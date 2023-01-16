@@ -56,7 +56,8 @@ public:
 
   /// Convert RISCV ISA info to a feature vector.
   void toFeatures(std::vector<StringRef> &Features,
-                  std::function<StringRef(const Twine &)> StrAlloc) const;
+                  llvm::function_ref<StringRef(const Twine &)> StrAlloc,
+                  bool AddAllExtensions) const;
 
   const OrderedExtensionMap &getExtensions() const { return Exts; };
 

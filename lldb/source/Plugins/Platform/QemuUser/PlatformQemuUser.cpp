@@ -103,9 +103,7 @@ void PlatformQemuUser::DebuggerInitialize(Debugger &debugger) {
   }
 }
 
-PlatformSP PlatformQemuUser::CreateInstance(bool force, const ArchSpec *arch,
-                                            const Debugger *debugger,
-                                            const ScriptedMetadata *metadata) {
+PlatformSP PlatformQemuUser::CreateInstance(bool force, const ArchSpec *arch) {
   if (force)
     return PlatformSP(new PlatformQemuUser());
   return nullptr;

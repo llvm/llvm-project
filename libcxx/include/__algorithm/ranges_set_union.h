@@ -10,6 +10,7 @@
 #define _LIBCPP___ALGORITHM_RANGES_SET_UNION_H
 
 #include <__algorithm/in_in_out_result.h>
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/make_projected.h>
 #include <__algorithm/set_union.h>
 #include <__config>
@@ -61,7 +62,7 @@ struct __fn {
       _Comp __comp   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_union(
+    auto __ret = std::__set_union<_RangeAlgPolicy>(
         std::move(__first1),
         std::move(__last1),
         std::move(__first2),
@@ -95,7 +96,7 @@ struct __fn {
         _Comp __comp   = {},
         _Proj1 __proj1 = {},
         _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_union(
+    auto __ret = std::__set_union<_RangeAlgPolicy>(
         ranges::begin(__range1),
         ranges::end(__range1),
         ranges::begin(__range2),

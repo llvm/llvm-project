@@ -459,7 +459,8 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
 
   InstructionMappings AltMappings;
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_CONSTANT: {
+  case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_IMPLICIT_DEF: {
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
     if (Size == 1) {
       static const OpRegBankEntry<1> Table[3] = {
@@ -729,7 +730,7 @@ Register AMDGPURegisterBankInfo::buildReadFirstLane(MachineIRBuilder &B,
   if (Bits == 32)
     return DstParts[0];
 
-  Register Dst = B.buildMerge(Ty, DstParts).getReg(0);
+  Register Dst = B.buildMergeLikeInstr(Ty, DstParts).getReg(0);
   MRI.setRegBank(Dst, AMDGPU::SGPRRegBank);
   return Dst;
 }
@@ -1439,7 +1440,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
     if (Ty.isVector())
       B.buildConcatVectors(Dst, LoadParts);
     else
-      B.buildMerge(Dst, LoadParts);
+      B.buildMergeLikeInstr(Dst, LoadParts);
   }
 
   // We removed the instruction earlier with a waterfall loop.
@@ -1499,7 +1500,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(const OperandsMapper &OpdMapper,
                    : B.buildUbfx(S32, UnmergeSOffset.getReg(0), Zero, WidthReg);
         auto Extend =
             Signed ? B.buildAShr(S32, Extract, B.buildConstant(S32, 31)) : Zero;
-        B.buildMerge(DstReg, {Extract, Extend});
+        B.buildMergeLikeInstr(DstReg, {Extract, Extend});
       } else {
         // Use bitfield extract on upper 32-bit source, and combine with lower
         // 32-bit source.
@@ -1508,7 +1509,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(const OperandsMapper &OpdMapper,
             Signed
                 ? B.buildSbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth)
                 : B.buildUbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth);
-        B.buildMerge(DstReg, {UnmergeSOffset.getReg(0), Extract});
+        B.buildMergeLikeInstr(DstReg, {UnmergeSOffset.getReg(0), Extract});
       }
       MI.eraseFromParent();
       return true;
@@ -1695,7 +1696,7 @@ bool AMDGPURegisterBankInfo::applyMappingMAD_64_32(
     }
   }
 
-  B.buildMerge(Dst0, {DstLo, DstHi});
+  B.buildMergeLikeInstr(Dst0, {DstLo, DstHi});
 
   if (DstOnValu) {
     B.buildCopy(Dst1, Carry);
@@ -1782,7 +1783,8 @@ Register AMDGPURegisterBankInfo::handleD16VData(MachineIRBuilder &B,
   const LLT S32 = LLT::scalar(32);
   int NumElts = StoreVT.getNumElements();
 
-  return B.buildMerge(LLT::fixed_vector(NumElts, S32), WideRegs).getReg(0);
+  return B.buildMergeLikeInstr(LLT::fixed_vector(NumElts, S32), WideRegs)
+      .getReg(0);
 }
 
 static std::pair<Register, unsigned>
@@ -2117,7 +2119,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   unsigned Opc = MI.getOpcode();
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
   switch (Opc) {
-  case AMDGPU::G_CONSTANT: {
+  case AMDGPU::G_CONSTANT:
+  case AMDGPU::G_IMPLICIT_DEF: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
     if (DstTy != LLT::scalar(1))
@@ -2138,9 +2141,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     LLVMContext &Ctx = B.getMF().getFunction().getContext();
 
     MI.getOperand(0).setReg(NewDstReg);
-    uint64_t ConstVal = MI.getOperand(1).getCImm()->getZExtValue();
-    MI.getOperand(1).setCImm(
-        ConstantInt::get(IntegerType::getInt32Ty(Ctx), ConstVal));
+    if (Opc != AMDGPU::G_IMPLICIT_DEF) {
+      uint64_t ConstVal = MI.getOperand(1).getCImm()->getZExtValue();
+      MI.getOperand(1).setCImm(
+          ConstantInt::get(IntegerType::getInt32Ty(Ctx), ConstVal));
+    }
 
     MRI.setRegBank(NewDstReg, *DstBank);
     B.buildTrunc(DefRegs[0], NewDstReg);

@@ -246,7 +246,7 @@ inline uint64_t LocalAddressSpace::getULEB128(pint_t &addr, pint_t end) {
 inline int64_t LocalAddressSpace::getSLEB128(pint_t &addr, pint_t end) {
   const uint8_t *p = (uint8_t *)addr;
   const uint8_t *pend = (uint8_t *)end;
-  int64_t result = 0;
+  uint64_t result = 0;
   int bit = 0;
   uint8_t byte;
   do {
@@ -260,7 +260,7 @@ inline int64_t LocalAddressSpace::getSLEB128(pint_t &addr, pint_t end) {
   if ((byte & 0x40) != 0 && bit < 64)
     result |= (-1ULL) << bit;
   addr = (pint_t) p;
-  return result;
+  return (int64_t)result;
 }
 
 inline LocalAddressSpace::pint_t

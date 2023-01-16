@@ -1618,6 +1618,7 @@ public:
   OperandMatchResultTy parseFORMAT(OperandVector &Operands);
   OperandMatchResultTy parseSymbolicOrNumericFormat(int64_t &Format);
   OperandMatchResultTy parseNumericFormat(int64_t &Format);
+  OperandMatchResultTy parseFlatOffset(OperandVector &Operands);
   bool tryParseFmt(const char *Pref, int64_t MaxVal, int64_t &Val);
   bool matchDfmtNfmt(int64_t &Dfmt, int64_t &Nfmt, StringRef FormatStr, SMLoc Loc);
 
@@ -6679,6 +6680,16 @@ AMDGPUAsmParser::parseFORMAT(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
+OperandMatchResultTy AMDGPUAsmParser::parseFlatOffset(OperandVector &Operands) {
+  OperandMatchResultTy Res =
+      parseIntWithPrefix("offset", Operands, AMDGPUOperand::ImmTyOffset);
+  if (Res == MatchOperand_NoMatch) {
+    Res = parseIntWithPrefix("inst_offset", Operands,
+                             AMDGPUOperand::ImmTyInstOffset);
+  }
+  return Res;
+}
+
 //===----------------------------------------------------------------------===//
 // ds
 //===----------------------------------------------------------------------===//
@@ -9469,8 +9480,6 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
     return parseNamedBit("d16", Operands, AMDGPUOperand::ImmTyD16);
   case MCK_ImmDA:
     return parseNamedBit("da", Operands, AMDGPUOperand::ImmTyDA);
-  case MCK_ImmDMask:
-    return parseIntWithPrefix("dmask", Operands, AMDGPUOperand::ImmTyDMask);
   case MCK_ImmExpCompr:
     return parseNamedBit("compr", Operands, AMDGPUOperand::ImmTyExpCompr);
   case MCK_ImmExpVM:
@@ -9494,22 +9503,8 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
   case MCK_ImmNegLo:
     return parseOperandArrayWithPrefix("neg_lo", Operands,
                                        AMDGPUOperand::ImmTyNegLo);
-  case MCK_ImmOffset:
   case MCK_ImmSMEMOffset:
     return parseIntWithPrefix("offset", Operands, AMDGPUOperand::ImmTyOffset);
-  case MCK_ImmFlatOffset: {
-    OperandMatchResultTy Res =
-        parseIntWithPrefix("offset", Operands, AMDGPUOperand::ImmTyOffset);
-    if (Res == MatchOperand_NoMatch) {
-      Res = parseIntWithPrefix("inst_offset", Operands,
-                               AMDGPUOperand::ImmTyInstOffset);
-    }
-    return Res;
-  }
-  case MCK_ImmOffset0:
-    return parseIntWithPrefix("offset0", Operands, AMDGPUOperand::ImmTyOffset0);
-  case MCK_ImmOffset1:
-    return parseIntWithPrefix("offset1", Operands, AMDGPUOperand::ImmTyOffset1);
   case MCK_ImmOModSI:
     return parseOModOperand(Operands);
   case MCK_ImmOpSel:
@@ -9543,18 +9538,6 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
     return parseNamedBit("tfe", Operands, AMDGPUOperand::ImmTyTFE);
   case MCK_ImmUNorm:
     return parseNamedBit("unorm", Operands, AMDGPUOperand::ImmTyUNorm);
-  case MCK_ImmWaitEXP:
-    return parseIntWithPrefix("wait_exp", Operands,
-                              AMDGPUOperand::ImmTyWaitEXP);
-  case MCK_ImmWaitVDST:
-    return parseIntWithPrefix("wait_vdst", Operands,
-                              AMDGPUOperand::ImmTyWaitVDST);
-  case MCK_ImmWaitVAVDST:
-    return parseIntWithPrefix("wait_va_vdst", Operands,
-                              AMDGPUOperand::ImmTyWaitVAVDST);
-  case MCK_ImmWaitVMVSRC:
-    return parseIntWithPrefix("wait_vm_vsrc", Operands,
-                              AMDGPUOperand::ImmTyWaitVMVSRC);
   }
   return tryCustomParseOperand(Operands, MCK);
 }

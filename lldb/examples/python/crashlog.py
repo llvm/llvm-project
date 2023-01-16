@@ -417,15 +417,15 @@ class InteractiveCrashLogException(Exception):
     pass
 
 class CrashLogParser:
-    "CrashLog parser base class and factory."
-    def __new__(cls, debugger, path, verbose):
+    @staticmethod
+    def create(debugger, path, verbose):
         data = JSONCrashLogParser.is_valid_json(path)
         if data:
-            self = object.__new__(JSONCrashLogParser)
-            self.data = data
-            return self
+            parser = JSONCrashLogParser(debugger, path, verbose)
+            parser.data = data
+            return parser
         else:
-            return object.__new__(TextCrashLogParser)
+            return TextCrashLogParser(debugger, path, verbose)
 
     def __init__(self, debugger, path, verbose):
         self.path = os.path.expanduser(path)
@@ -1076,7 +1076,7 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     if not os.path.exists(crashlog_path):
         raise InteractiveCrashLogException("crashlog file %s does not exist" % crashlog_path)
 
-    crashlog = CrashLogParser(debugger, crashlog_path, False).parse()
+    crashlog = CrashLogParser.create(debugger, crashlog_path, False).parse()
 
     target = lldb.SBTarget()
     # 1. Try to use the user-provided target
@@ -1332,7 +1332,7 @@ def SymbolicateCrashLogs(debugger, command_args, result):
                 except InteractiveCrashLogException as e:
                     result.SetError(str(e))
             else:
-                crash_log = CrashLogParser(debugger, crash_log_file, options.verbose).parse()
+                crash_log = CrashLogParser.create(debugger, crash_log_file, options.verbose).parse()
                 SymbolicateCrashLog(crash_log, options)
 
 if __name__ == '__main__':
@@ -1344,8 +1344,8 @@ if __name__ == '__main__':
 
 def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
-        'command script add -c lldb.macosx.crashlog.Symbolicate crashlog')
+        'command script add -o -c lldb.macosx.crashlog.Symbolicate crashlog')
     debugger.HandleCommand(
-        'command script add -f lldb.macosx.crashlog.save_crashlog save_crashlog')
+        'command script add -o -f lldb.macosx.crashlog.save_crashlog save_crashlog')
     print('"crashlog" and "save_crashlog" commands have been installed, use '
           'the "--help" options on these commands for detailed help.')

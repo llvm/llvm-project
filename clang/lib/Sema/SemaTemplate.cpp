@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringExtras.h"
 
 #include <iterator>
+#include <optional>
 using namespace clang;
 using namespace sema;
 
@@ -816,7 +817,7 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
   if (!Complain || (PatternDef && PatternDef->isInvalidDecl()))
     return true;
 
-  llvm::Optional<unsigned> Note;
+  std::optional<unsigned> Note;
   QualType InstantiationTy;
   if (TagDecl *TD = dyn_cast<TagDecl>(Instantiation))
     InstantiationTy = Context.getTypeDeclType(TD);
@@ -941,7 +942,7 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
     TemplateName Template = Arg.getAsTemplate().get();
     TemplateArgument TArg;
     if (Arg.getEllipsisLoc().isValid())
-      TArg = TemplateArgument(Template, Optional<unsigned int>());
+      TArg = TemplateArgument(Template, std::optional<unsigned int>());
     else
       TArg = Template;
     return TemplateArgumentLoc(
@@ -2378,7 +2379,7 @@ private:
           TTP->getIdentifier(), TTP->wasDeclaredWithTypename(),
           TTP->isParameterPack(), TTP->hasTypeConstraint(),
           TTP->isExpandedParameterPack()
-              ? llvm::Optional<unsigned>(TTP->getNumExpansionParameters())
+              ? std::optional<unsigned>(TTP->getNumExpansionParameters())
               : std::nullopt);
       if (const auto *TC = TTP->getTypeConstraint())
         SemaRef.SubstTypeConstraint(NewTTP, TC, Args,
@@ -5861,7 +5862,7 @@ bool Sema::CheckTemplateArgumentList(
        Param != ParamEnd; /* increment in loop */) {
     // If we have an expanded parameter pack, make sure we don't have too
     // many arguments.
-    if (Optional<unsigned> Expansions = getExpandedPackSize(*Param)) {
+    if (std::optional<unsigned> Expansions = getExpandedPackSize(*Param)) {
       if (*Expansions == SugaredArgumentPack.size()) {
         // We're done with this parameter pack. Pack up its arguments and add
         // them to the list.
@@ -10180,13 +10181,12 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
 
   bool Owned = false;
   bool IsDependent = false;
-  Decl *TagD = ActOnTag(S, TagSpec, Sema::TUK_Reference,
-                        KWLoc, SS, Name, NameLoc, Attr, AS_none,
-                        /*ModulePrivateLoc=*/SourceLocation(),
-                        MultiTemplateParamsArg(), Owned, IsDependent,
-                        SourceLocation(), false, TypeResult(),
-                        /*IsTypeSpecifier*/false,
-                        /*IsTemplateParamOrArg*/false);
+  Decl *TagD = ActOnTag(
+      S, TagSpec, Sema::TUK_Reference, KWLoc, SS, Name, NameLoc, Attr, AS_none,
+      /*ModulePrivateLoc=*/SourceLocation(), MultiTemplateParamsArg(), Owned,
+      IsDependent, SourceLocation(), false, TypeResult(),
+      /*IsTypeSpecifier*/ false,
+      /*IsTemplateParamOrArg=*/false, /*OOK=*/OOK_Outside);
   assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)

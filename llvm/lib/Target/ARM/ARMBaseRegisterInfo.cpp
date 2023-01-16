@@ -403,7 +403,7 @@ void ARMBaseRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
     // Make sure the pair has not already divorced.
     if (Hint.second == Reg) {
       MRI->setRegAllocationHint(OtherReg, Hint.first, NewReg);
-      if (Register::isVirtualRegister(NewReg))
+      if (NewReg.isVirtual())
         MRI->setRegAllocationHint(NewReg,
                                   Hint.first == ARMRI::RegPairOdd
                                       ? ARMRI::RegPairEven
@@ -855,8 +855,7 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const TargetRegisterClass *RegClass =
       TII.getRegClass(MCID, FIOperandNum, this, *MI.getParent()->getParent());
 
-  if (Offset == 0 &&
-      (Register::isVirtualRegister(FrameReg) || RegClass->contains(FrameReg)))
+  if (Offset == 0 && (FrameReg.isVirtual() || RegClass->contains(FrameReg)))
     // Must be addrmode4/6.
     MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false, false, false);
   else {

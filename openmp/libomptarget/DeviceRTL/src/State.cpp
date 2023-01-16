@@ -357,7 +357,7 @@ int omp_get_num_threads(void) {
   return omp_get_level() > 1 ? 1 : state::ParallelTeamSize;
 }
 
-int omp_get_thread_limit(void) { return mapping::getKernelSize(); }
+int omp_get_thread_limit(void) { return mapping::getBlockSize(); }
 
 int omp_get_num_procs(void) { return mapping::getNumberOfProcessorElements(); }
 

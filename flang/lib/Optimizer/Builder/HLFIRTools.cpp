@@ -494,6 +494,22 @@ mlir::Value hlfir::genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
   return lenParams[0];
 }
 
+// Return a "shape" that can be used in fir.embox/fir.rebox with \p exv base.
+static mlir::Value asEmboxShape(mlir::Location loc, fir::FirOpBuilder &builder,
+                                const fir::ExtendedValue &exv,
+                                mlir::Value shape) {
+  if (!shape)
+    return shape;
+  // fir.rebox does not need and does not accept extents (fir.shape or
+  // fir.shape_shift) since this information is already in the input fir.box,
+  // it only accepts fir.shift because local lower bounds may not be reflected
+  // in the fir.box.
+  if (fir::getBase(exv).getType().isa<fir::BaseBoxType>() &&
+      !shape.getType().isa<fir::ShiftType>())
+    return builder.createShape(loc, exv);
+  return shape;
+}
+
 std::pair<mlir::Value, mlir::Value> hlfir::genVariableFirBaseShapeAndParams(
     mlir::Location loc, fir::FirOpBuilder &builder, Entity entity,
     llvm::SmallVectorImpl<mlir::Value> &typeParams) {
@@ -506,7 +522,8 @@ std::pair<mlir::Value, mlir::Value> hlfir::genVariableFirBaseShapeAndParams(
   if (entity.isScalar())
     return {fir::getBase(exv), mlir::Value{}};
   if (auto variableInterface = entity.getIfVariableInterface())
-    return {fir::getBase(exv), variableInterface.getShape()};
+    return {fir::getBase(exv),
+            asEmboxShape(loc, builder, exv, variableInterface.getShape())};
   return {fir::getBase(exv), builder.createShape(loc, exv)};
 }
 

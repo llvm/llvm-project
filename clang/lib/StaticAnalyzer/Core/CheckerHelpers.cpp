@@ -14,6 +14,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 namespace clang {
 
@@ -110,8 +111,7 @@ Nullability getNullabilityAnnotation(QualType Type) {
   return Nullability::Unspecified;
 }
 
-llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
-                                       const Preprocessor &PP) {
+std::optional<int> tryExpandAsInteger(StringRef Macro, const Preprocessor &PP) {
   const auto *MacroII = PP.getIdentifierInfo(Macro);
   if (!MacroII)
     return std::nullopt;

@@ -38,7 +38,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     auto globalOp = rewriter.create<LLVM::GlobalOp>(
         gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
         LLVM::Linkage::Internal, name, /*value=*/Attribute(),
-        /*alignment=*/0, gpu::GPUDialect::getWorkgroupAddressSpace());
+        /*alignment=*/0, workgroupAddrSpace);
     workgroupBuffers.push_back(globalOp);
   }
 

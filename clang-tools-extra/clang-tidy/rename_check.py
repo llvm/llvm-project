@@ -308,8 +308,9 @@ def main():
     for filename in check_implementation_files:
       # Move check implementation to the directory of the new module.
       filename = fileRename(filename, old_module_path, new_module_path)
-      replaceInFileRegex(filename, 'namespace ' + old_module + '[^ \n]*',
-                         'namespace ' + new_namespace)
+      replaceInFileRegex(filename,
+                         'namespace clang::tidy::' + old_module + '[^ \n]*',
+                         'namespace clang::tidy::' + new_namespace)
 
   if (args.old_check_name == args.new_check_name):
     return

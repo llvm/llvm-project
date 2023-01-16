@@ -1503,19 +1503,19 @@ def __lldb_init_module(debugger, internal_dict):
     malloc_info.__doc__ = get_malloc_info_options().format_help()
     objc_refs.__doc__ = get_objc_refs_options().format_help()
     debugger.HandleCommand(
-        'command script add -f %s.ptr_refs ptr_refs' %
+        'command script add -o -f %s.ptr_refs ptr_refs' %
         __name__)
     debugger.HandleCommand(
-        'command script add -f %s.cstr_refs cstr_refs' %
+        'command script add -o -f %s.cstr_refs cstr_refs' %
         __name__)
     debugger.HandleCommand(
-        'command script add -f %s.malloc_info malloc_info' %
+        'command script add -o -f %s.malloc_info malloc_info' %
         __name__)
     debugger.HandleCommand(
-        'command script add -f %s.find_variable find_variable' %
+        'command script add -o -f %s.find_variable find_variable' %
         __name__)
-    # debugger.HandleCommand('command script add -f %s.section_ptr_refs section_ptr_refs' % package_name)
+    # debugger.HandleCommand('command script add -o -f %s.section_ptr_refs section_ptr_refs' % package_name)
     debugger.HandleCommand(
-        'command script add -f %s.objc_refs objc_refs' %
+        'command script add -o -f %s.objc_refs objc_refs' %
         __name__)
     print('"malloc_info", "ptr_refs", "cstr_refs", "find_variable", and "objc_refs" commands have been installed, use the "--help" options on these commands for detailed help.')

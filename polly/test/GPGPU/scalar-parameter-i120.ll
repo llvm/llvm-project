@@ -2,9 +2,9 @@
 
 ; XFAIL: *
 
-; REQUIRES: pollyacc,nvptx
+; REQUIRES: pollyacc, target=nvptx{{.*}}
 
-; This fails today with "type mismatch between callee prototype and arguments"
+; This fails today with "Promotion is not suitable for scalars of size larger than 64-bits"
 
 ;    void foo(i120 A[], i120 b) {
 ;      for (long i = 0; i < 1024; i++)

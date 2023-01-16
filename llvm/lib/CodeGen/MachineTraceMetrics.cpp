@@ -663,7 +663,7 @@ static bool getDataDeps(const MachineInstr &UseMI,
     Register Reg = MO.getReg();
     if (!Reg)
       continue;
-    if (Register::isPhysicalRegister(Reg)) {
+    if (Reg.isPhysical()) {
       HasPhysRegs = true;
       continue;
     }
@@ -902,7 +902,7 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
-    if (!Register::isPhysicalRegister(Reg))
+    if (!Reg.isPhysical())
       continue;
     if (MO.readsReg())
       ReadOps.push_back(MI.getOperandNo(MOI));
@@ -979,7 +979,7 @@ addLiveIns(const MachineInstr *DefMI, unsigned DefOp,
            ArrayRef<const MachineBasicBlock*> Trace) {
   assert(!Trace.empty() && "Trace should contain at least one block");
   Register Reg = DefMI->getOperand(DefOp).getReg();
-  assert(Register::isVirtualRegister(Reg));
+  assert(Reg.isVirtual());
   const MachineBasicBlock *DefMBB = DefMI->getParent();
 
   // Reg is live-in to all blocks in Trace that follow DefMBB.

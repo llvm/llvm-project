@@ -184,10 +184,11 @@ public:
     auto module = designate->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
 
-    if (designate.getComponent() || designate.getComplexPart())
-      TODO(loc, "hlfir::designate with complex part or component");
+    if (designate.getComplexPart())
+      TODO(loc, "hlfir::designate with complex part");
 
     hlfir::Entity baseEntity(designate.getMemref());
+
     if (baseEntity.isMutableBox())
       TODO(loc, "hlfir::designate load of pointer or allocatable");
 
@@ -195,23 +196,73 @@ public:
     llvm::SmallVector<mlir::Value> firBaseTypeParameters;
     auto [base, shape] = hlfir::genVariableFirBaseShapeAndParams(
         loc, builder, baseEntity, firBaseTypeParameters);
-    if (designateResultType.isa<fir::BoxType>()) {
+    mlir::Type baseEleTy = hlfir::getFortranElementType(base.getType());
+
+    mlir::Value fieldIndex;
+    if (designate.getComponent()) {
+      mlir::Type baseRecordType = baseEntity.getFortranElementType();
+      if (fir::isRecordWithTypeParameters(baseRecordType))
+        TODO(loc, "hlfir.designate with a parametrized derived type base");
+      fieldIndex = builder.create<fir::FieldIndexOp>(
+          loc, fir::FieldType::get(builder.getContext()),
+          designate.getComponent().value(), baseRecordType,
+          /*typeParams=*/mlir::ValueRange{});
+      if (baseEntity.isScalar()) {
+        // Component refs of scalar base right away:
+        // - scalar%scalar_component [substring|complex_part] or
+        // - scalar%static_size_array_comp
+        // - scalar%array(indices) [substring| complex part]
+        mlir::Type componentType = baseEleTy.cast<fir::RecordType>().getType(
+            designate.getComponent().value());
+        if (componentType.isa<fir::BaseBoxType>())
+          TODO(loc,
+               "addressing parametrized derived type automatic components");
+        mlir::Type coorTy = fir::ReferenceType::get(componentType);
+        base = builder.create<fir::CoordinateOp>(loc, coorTy, base, fieldIndex);
+        baseEleTy = hlfir::getFortranElementType(componentType);
+        shape = designate.getComponentShape();
+      } else {
+        // array%component[(indices) substring|complex part] cases.
+        // Component ref of array bases are dealt with below in embox/rebox.
+        assert(designateResultType.isa<fir::BaseBoxType>());
+      }
+    }
+
+    if (designateResultType.isa<fir::BaseBoxType>()) {
       // Generate embox or rebox.
-      if (designate.getIndices().empty())
-        TODO(loc, "hlfir::designate whole part");
-      // Otherwise, this is an array section with triplets.
+      if (!fir::unwrapPassByRefType(designateResultType)
+               .isa<fir::SequenceType>())
+        TODO(loc, "addressing polymorphic arrays");
       llvm::SmallVector<mlir::Value> triples;
-      auto undef = builder.create<fir::UndefOp>(loc, builder.getIndexType());
+      llvm::SmallVector<mlir::Value> sliceFields;
+      mlir::Type idxTy = builder.getIndexType();
       auto subscripts = designate.getIndices();
-      unsigned i = 0;
-      for (auto isTriplet : designate.getIsTriplet()) {
-        triples.push_back(subscripts[i++]);
-        if (isTriplet) {
+      if (fieldIndex && baseEntity.isArray()) {
+        // array%scalar_comp or array%array_comp(indices)
+        // Generate triples for array(:, :, ...).
+        auto one = builder.createIntegerConstant(loc, idxTy, 1);
+        for (auto [lb, ub] : hlfir::genBounds(loc, builder, baseEntity)) {
+          triples.push_back(builder.createConvert(loc, idxTy, lb));
+          triples.push_back(builder.createConvert(loc, idxTy, ub));
+          triples.push_back(one);
+        }
+        sliceFields.push_back(fieldIndex);
+        // Add indices in the field path for "array%array_comp(indices)"
+        // case.
+        sliceFields.append(subscripts.begin(), subscripts.end());
+      } else {
+        // Otherwise, this is an array section with triplets.
+        auto undef = builder.create<fir::UndefOp>(loc, idxTy);
+        unsigned i = 0;
+        for (auto isTriplet : designate.getIsTriplet()) {
           triples.push_back(subscripts[i++]);
-          triples.push_back(subscripts[i++]);
-        } else {
-          triples.push_back(undef);
-          triples.push_back(undef);
+          if (isTriplet) {
+            triples.push_back(subscripts[i++]);
+            triples.push_back(subscripts[i++]);
+          } else {
+            triples.push_back(undef);
+            triples.push_back(undef);
+          }
         }
       }
       llvm::SmallVector<mlir::Value, 2> substring;
@@ -226,11 +277,15 @@ public:
         substring.push_back(designate.getTypeparams()[0]);
       }
 
-      mlir::Value slice = builder.create<fir::SliceOp>(
-          loc, triples, /*fields=*/mlir::ValueRange{}, substring);
+      mlir::Value slice;
+      if (!triples.empty())
+        slice =
+            builder.create<fir::SliceOp>(loc, triples, sliceFields, substring);
+      else
+        assert(sliceFields.empty() && substring.empty());
       llvm::SmallVector<mlir::Type> resultType{designateResultType};
       mlir::Value resultBox;
-      if (base.getType().isa<fir::BoxType>())
+      if (base.getType().isa<fir::BaseBoxType>())
         resultBox =
             builder.create<fir::ReboxOp>(loc, resultType, base, shape, slice);
       else
@@ -240,23 +295,36 @@ public:
       return mlir::success();
     }
 
-    // Otherwise, the result is the address of a scalar. The base may be an
-    // array, or a scalar.
+    // Otherwise, the result is the address of a scalar, or the address of the
+    // first element of a contiguous array section with compile time constant
+    // shape. The base may be an array, or a scalar.
     mlir::Type resultAddressType = designateResultType;
     if (auto boxCharType = designateResultType.dyn_cast<fir::BoxCharType>())
       resultAddressType = fir::ReferenceType::get(boxCharType.getEleTy());
 
     // Array element indexing.
     if (!designate.getIndices().empty()) {
-      auto eleTy = hlfir::getFortranElementType(base.getType());
-      auto arrayCoorType = fir::ReferenceType::get(eleTy);
-      base = builder.create<fir::ArrayCoorOp>(loc, arrayCoorType, base, shape,
-                                              /*slice=*/mlir::Value{},
-                                              designate.getIndices(),
-                                              firBaseTypeParameters);
+      // - array(indices) [substring|complex_part] or
+      // - scalar%array_comp(indices) [substring|complex_part]
+      // This may be a ranked contiguous array section in which case
+      // The first element address is being computed.
+      llvm::SmallVector<mlir::Value> firstElementIndices;
+      auto indices = designate.getIndices();
+      int i = 0;
+      for (auto isTriplet : designate.getIsTripletAttr().asArrayRef()) {
+        // Coordinate of the first element are the index and triplets lower
+        // bounds
+        firstElementIndices.push_back(indices[i]);
+        i = i + (isTriplet ? 3 : 1);
+      }
+      mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy);
+      base = builder.create<fir::ArrayCoorOp>(
+          loc, arrayCoorType, base, shape,
+          /*slice=*/mlir::Value{}, firstElementIndices, firBaseTypeParameters);
     }
 
-    // Scalar substring (potentially on the previously built array element).
+    // Scalar substring (potentially on the previously built array element or
+    // component reference).
     if (!designate.getSubstring().empty())
       base = fir::factory::CharacterExprHelper{builder, loc}.genSubstringBase(
           base, designate.getSubstring()[0], resultAddressType);

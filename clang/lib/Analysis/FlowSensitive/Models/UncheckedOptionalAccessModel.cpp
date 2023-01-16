@@ -30,6 +30,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -58,7 +59,7 @@ auto hasOptionalType() { return hasType(optionalOrAliasType()); }
 
 auto isOptionalMemberCallWithName(
     llvm::StringRef MemberName,
-    const llvm::Optional<StatementMatcher> &Ignorable = std::nullopt) {
+    const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
   auto Exception = unless(Ignorable ? expr(anyOf(*Ignorable, cxxThisExpr()))
                                     : cxxThisExpr());
   return cxxMemberCallExpr(
@@ -68,7 +69,7 @@ auto isOptionalMemberCallWithName(
 
 auto isOptionalOperatorCallWithName(
     llvm::StringRef operator_name,
-    const llvm::Optional<StatementMatcher> &Ignorable = std::nullopt) {
+    const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName(operator_name),
       callee(cxxMethodDecl(ofClass(optionalClass()))),
@@ -614,7 +615,7 @@ void transferOptionalAndValueCmp(const clang::CXXOperatorCallExpr *CmpExpr,
   }
 }
 
-llvm::Optional<StatementMatcher>
+std::optional<StatementMatcher>
 ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
   if (Options.IgnoreSmartPointerDereference) {
     auto SmartPtrUse = expr(ignoringParenImpCasts(cxxOperatorCallExpr(
@@ -627,12 +628,12 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
 }
 
 StatementMatcher
-valueCall(const llvm::Optional<StatementMatcher> &IgnorableOptional) {
+valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
   return isOptionalMemberCallWithName("value", IgnorableOptional);
 }
 
 StatementMatcher
-valueOperatorCall(const llvm::Optional<StatementMatcher> &IgnorableOptional) {
+valueOperatorCall(const std::optional<StatementMatcher> &IgnorableOptional) {
   return expr(anyOf(isOptionalOperatorCallWithName("*", IgnorableOptional),
                     isOptionalOperatorCallWithName("->", IgnorableOptional)));
 }

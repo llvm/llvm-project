@@ -18,6 +18,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
+#include <optional>
 
 namespace mlir {
 namespace presburger {
@@ -175,8 +176,8 @@ public:
   PresburgerSet getDomain() const;
 
   /// Return the output of the function at the given point.
-  Optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<MPInt> point) const;
-  Optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<int64_t> point) const {
+  std::optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<MPInt> point) const;
+  std::optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<int64_t> point) const {
     return valueAt(getMPIntVec(point));
   }
 

@@ -155,7 +155,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
-  CHECK_PARSE_BOOL(DeriveLineEnding);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
@@ -193,7 +192,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpaceBeforeInheritanceColon);
   CHECK_PARSE_BOOL(SpaceBeforeRangeBasedForLoopColon);
   CHECK_PARSE_BOOL(SpaceBeforeSquareBrackets);
-  CHECK_PARSE_BOOL(UseCRLF);
 
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
@@ -886,6 +884,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::ABS_Leave);
   CHECK_PARSE("BreakAfterAttributes: Never", BreakAfterAttributes,
               FormatStyle::ABS_Never);
+
+  const auto DefaultLineEnding = FormatStyle::LE_DeriveLF;
+  CHECK_PARSE("LineEnding: LF", LineEnding, FormatStyle::LE_LF);
+  CHECK_PARSE("LineEnding: CRLF", LineEnding, FormatStyle::LE_CRLF);
+  CHECK_PARSE("LineEnding: DeriveCRLF", LineEnding, FormatStyle::LE_DeriveCRLF);
+  CHECK_PARSE("LineEnding: DeriveLF", LineEnding, DefaultLineEnding);
+  // For backward compatibility:
+  CHECK_PARSE("DeriveLineEnding: false", LineEnding, FormatStyle::LE_LF);
+  Style.LineEnding = DefaultLineEnding;
+  CHECK_PARSE("DeriveLineEnding: false\n"
+              "UseCRLF: true",
+              LineEnding, FormatStyle::LE_CRLF);
+  Style.LineEnding = DefaultLineEnding;
+  CHECK_PARSE("UseCRLF: true", LineEnding, FormatStyle::LE_DeriveCRLF);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

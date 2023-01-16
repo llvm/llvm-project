@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 void MisplacedConstCheck::registerMatchers(MatchFinder *Finder) {
   auto NonConstAndNonFunctionPointerType = hasType(pointerType(unless(
@@ -74,6 +72,4 @@ void MisplacedConstCheck::check(const MatchFinder::MatchResult &Result) {
   diag(AliasLoc, "%0 declared here", DiagnosticIDs::Note) << AliasType;
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

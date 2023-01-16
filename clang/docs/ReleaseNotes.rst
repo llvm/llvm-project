@@ -450,6 +450,8 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses overflow undefined behavior in a constant expression while
   evaluating a compound assignment with remainder as operand.
 - Add ``-Wreturn-local-addr``, a GCC alias for ``-Wreturn-stack-address``.
+- Clang now suppresses ``-Wlogical-op-parentheses`` on ``(x && a || b)`` and ``(a || b && x)``
+  only when ``x`` is a string literal.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -668,6 +670,9 @@ C2x Feature Support
       va_start(list); // Invalid in C17 and earlier, valid in C2x and later.
       va_end(list);
     }
+    
+- Reject type definitions in the ``type`` argument of ``__builtin_offsetof`` 
+  according to `WG14 N2350 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2350.htm>`_.
 
 C++ Language Changes in Clang
 -----------------------------
@@ -798,6 +803,9 @@ RISC-V Support in Clang
 - ``sifive-7-rv32`` and ``sifive-7-rv64`` are no longer supported for ``-mcpu``.
   Use ``sifive-e76``, ``sifive-s76``, or ``sifive-u74`` instead.
 - Native detections via ``-mcpu=native`` and ``-mtune=native`` are supported.
+- Fix interaction of ``-mcpu`` and ``-march``, RISC-V backend will take the
+  architecture extension union of ``-mcpu`` and ``-march`` before, and now will
+  take architecture extensions from ``-march`` if both are given.
 
 X86 Support in Clang
 --------------------
@@ -901,6 +909,7 @@ clang-format
 - Add ``BreakAfterAttributes`` option for breaking after a group of C++11
   attributes before a function declaration/definition name.
 - Add ``InsertNewlineAtEOF`` option for inserting a newline at EOF if missing.
+- Add ``LineEnding`` option to deprecate ``DeriveLineEnding`` and ``UseCRLF``.
 
 clang-extdef-mapping
 --------------------

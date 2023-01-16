@@ -91,8 +91,6 @@ public:
     // usage of the base type of the MemberExpr, so that e.g. code
     // `returnFoo().bar` can keep #include "foo.h" (rather than inserting
     // "bar.h" for the underlying base type `Bar`).
-    //
-    // FIXME: support dependent types, e.g., "std::vector<T>().size()".
     QualType Type = E->getBase()->IgnoreImpCasts()->getType();
     report(E->getMemberLoc(), getMemberProvider(Type), RefType::Implicit);
     return true;
