@@ -130,17 +130,17 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
   }
 
   printDesc(P.getDeclDesc());
-  for (auto It = Levels.rbegin(); It != Levels.rend(); ++It) {
-    if (It->inArray()) {
-      OS << "[" << It->expand().getIndex() << "]";
+  for (const auto &It : Levels) {
+    if (It.inArray()) {
+      OS << "[" << It.expand().getIndex() << "]";
       continue;
     }
-    if (auto Index = It->getIndex()) {
+    if (auto Index = It.getIndex()) {
       OS << " + " << Index;
       continue;
     }
     OS << ".";
-    printDesc(It->getFieldDesc());
+    printDesc(It.getFieldDesc());
   }
 }
 
