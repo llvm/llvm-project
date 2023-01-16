@@ -1585,13 +1585,11 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
         loc, rewriter, useInputType ? inputType : boxTy.getEleTy(), typeparams);
 
     mlir::Value typeDesc;
-    if (sourceBox)
+    // When emboxing to a polymorphic box, get the type descriptor, type code
+    // and element size from the source box if any.
+    if (fir::isPolymorphicType(boxTy) && sourceBox) {
       typeDesc =
           this->loadTypeDescAddress(loc, sourceBoxType, sourceBox, rewriter);
-    // When emboxing a fir.ref<none> to an unlimited polymorphic box, get the
-    // type code and element size from the box used to extract the type desc.
-    if (fir::isUnlimitedPolymorphicType(boxTy) &&
-        inputType.isa<mlir::NoneType>() && sourceBox) {
       mlir::Type idxTy = this->lowerTy().indexType();
       eleSize = this->getElementSizeFromBox(loc, idxTy, sourceBox, rewriter);
       cfiTy = this->getValueFromBox(loc, sourceBox, cfiTy.getType(), rewriter,
