@@ -6,9 +6,6 @@
 /// Board constructors.
 /// This tests that InterpFrame::describe().
 
-// FIXME: With the new interpreter, most of the described frames are
-//  currently broken in one way or another.
-
 typedef unsigned long uint64_t;
 
 struct Board {
