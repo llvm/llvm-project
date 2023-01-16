@@ -78,7 +78,7 @@ protected:
 private:
   DummyParameterProvider ParameterProvider;
   static char DummyFunction(char Payload) { return Payload; }
-  llvm::Optional<std::queue<Duration>> MaybeTimepoints;
+  std::optional<std::queue<Duration>> MaybeTimepoints;
 };
 
 TEST_F(LibcBenchmark, MaxSamplesReached) {

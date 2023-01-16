@@ -377,7 +377,7 @@ static raw_ostream &operator<<(raw_ostream &Stream, const FunctionType &T) {
 }
 template <typename T>
 static raw_ostream &operator<<(raw_ostream &Stream,
-                               const llvm::Optional<T> &MaybeT) {
+                               const std::optional<T> &MaybeT) {
   if (MaybeT)
     return Stream << *MaybeT;
   return Stream << "std::nullopt";
