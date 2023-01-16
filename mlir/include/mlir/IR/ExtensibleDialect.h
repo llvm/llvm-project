@@ -336,15 +336,12 @@ public:
 
 /// The definition of a dynamic op. A dynamic op is an op that is defined at
 /// runtime, and that can be registered at runtime by an extensible dialect (a
-/// dialect inheriting ExtensibleDialect). This class implements the method
-/// exposed by the OperationName class, and in addition defines the TypeID of
-/// the op that will be defined. Each dynamic operation definition refers to one
-/// instance of this class.
-class DynamicOpDefinition : public OperationName::Impl {
+/// dialect inheriting ExtensibleDialect). This class stores the functions that
+/// are in the OperationName class, and in addition defines the TypeID of the op
+/// that will be defined.
+/// Each dynamic operation definition refers to one instance of this class.
+class DynamicOpDefinition {
 public:
-  using GetCanonicalizationPatternsFn =
-      llvm::unique_function<void(RewritePatternSet &, MLIRContext *) const>;
-
   /// Create a new op at runtime. The op is registered only after passing it to
   /// the dialect using registerDynamicOp.
   static std::unique_ptr<DynamicOpDefinition>
@@ -364,7 +361,8 @@ public:
       OperationName::ParseAssemblyFn &&parseFn,
       OperationName::PrintAssemblyFn &&printFn,
       OperationName::FoldHookFn &&foldHookFn,
-      GetCanonicalizationPatternsFn &&getCanonicalizationPatternsFn,
+      OperationName::GetCanonicalizationPatternsFn
+          &&getCanonicalizationPatternsFn,
       OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn);
 
   /// Returns the op typeID.
@@ -402,8 +400,9 @@ public:
 
   /// Set the hook returning any canonicalization pattern rewrites that the op
   /// supports, for use by the canonicalization pass.
-  void setGetCanonicalizationPatternsFn(
-      GetCanonicalizationPatternsFn &&getCanonicalizationPatterns) {
+  void
+  setGetCanonicalizationPatternsFn(OperationName::GetCanonicalizationPatternsFn
+                                       &&getCanonicalizationPatterns) {
     getCanonicalizationPatternsFn = std::move(getCanonicalizationPatterns);
   }
 
@@ -411,29 +410,6 @@ public:
   void setPopulateDefaultAttrsFn(
       OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrs) {
     populateDefaultAttrsFn = std::move(populateDefaultAttrs);
-  }
-
-  LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
-                         SmallVectorImpl<OpFoldResult> &results) final {
-    return foldHookFn(op, attrs, results);
-  }
-  void getCanonicalizationPatterns(RewritePatternSet &set,
-                                   MLIRContext *context) final {
-    getCanonicalizationPatternsFn(set, context);
-  }
-  bool hasTrait(TypeID id) final { return false; }
-  OperationName::ParseAssemblyFn getParseAssemblyFn() final { return parseFn; }
-  void populateDefaultAttrs(const OperationName &name,
-                            NamedAttrList &attrs) final {
-    populateDefaultAttrsFn(name, attrs);
-  }
-  void printAssembly(Operation *op, OpAsmPrinter &printer,
-                     StringRef name) final {
-    printFn(op, printer, name);
-  }
-  LogicalResult verifyInvariants(Operation *op) final { return verifyFn(op); }
-  LogicalResult verifyRegionInvariants(Operation *op) final {
-    return verifyRegionFn(op);
   }
 
 private:
@@ -444,18 +420,26 @@ private:
       OperationName::ParseAssemblyFn &&parseFn,
       OperationName::PrintAssemblyFn &&printFn,
       OperationName::FoldHookFn &&foldHookFn,
-      GetCanonicalizationPatternsFn &&getCanonicalizationPatternsFn,
+      OperationName::GetCanonicalizationPatternsFn
+          &&getCanonicalizationPatternsFn,
       OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn);
 
+  /// Unique identifier for this operation.
+  TypeID typeID;
+
+  /// Name of the operation.
+  /// The name is prefixed with the dialect name.
+  std::string name;
+
   /// Dialect defining this operation.
-  ExtensibleDialect *getdialect();
+  ExtensibleDialect *dialect;
 
   OperationName::VerifyInvariantsFn verifyFn;
   OperationName::VerifyRegionInvariantsFn verifyRegionFn;
   OperationName::ParseAssemblyFn parseFn;
   OperationName::PrintAssemblyFn printFn;
   OperationName::FoldHookFn foldHookFn;
-  GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
+  OperationName::GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
   OperationName::PopulateDefaultAttrsFn populateDefaultAttrsFn;
 
   friend ExtensibleDialect;

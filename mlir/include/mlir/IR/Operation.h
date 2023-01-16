@@ -506,9 +506,11 @@ public:
 
   /// Sets default attributes on unset attributes.
   void populateDefaultAttrs() {
+    if (auto registered = getRegisteredInfo()) {
       NamedAttrList attrs(getAttrDictionary());
-      name.populateDefaultAttrs(attrs);
+      registered->populateDefaultAttrs(attrs);
       setAttrs(attrs.getDictionary(getContext()));
+    }
   }
 
   //===--------------------------------------------------------------------===//
