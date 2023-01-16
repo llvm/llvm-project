@@ -103,6 +103,10 @@ APValue Pointer::toAPValue() const {
     if (isUnknownSizeArray()) {
       IsOnePastEnd = false;
       Offset = CharUnits::Zero();
+    } else if (Desc->asExpr()) {
+      // Pointer pointing to a an expression.
+      IsOnePastEnd = false;
+      Offset = CharUnits::Zero();
     } else {
       // TODO: compute the offset into the object.
       Offset = CharUnits::Zero();
