@@ -1121,6 +1121,10 @@ void Writer::appendImportThunks() {
       dataSec->addChunk(c);
     for (Chunk *c : delayIdata.getCodeChunks())
       textSec->addChunk(c);
+    for (Chunk *c : delayIdata.getCodePData())
+      pdataSec->addChunk(c);
+    for (Chunk *c : delayIdata.getCodeUnwindInfo())
+      rdataSec->addChunk(c);
   }
 }
 
