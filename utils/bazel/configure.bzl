@@ -91,6 +91,7 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
             continue
         if setfoo[0].strip().lower() != "set":
             continue
+
         # `kv` is assumed as \s*KEY\s+VAL\s*\).*
         # Typical case is like
         #   LLVM_REQUIRED_CXX_STANDARD 17)
@@ -101,17 +102,20 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
         if i < 0:
             continue
         k = kv[:i]
+
         # Prefer LLVM_REQUIRED_CXX_STANDARD instead of CMAKE_CXX_STANDARD
         if k == "LLVM_REQUIRED_CXX_STANDARD":
             k = "CMAKE_CXX_STANDARD"
             c[k] = None
         if k not in c:
             continue
+
         # Skip if `CMAKE_CXX_STANDARD` is set with
         # `LLVM_REQUIRED_CXX_STANDARD`.
         # Then `v` will not be desired form, like "${...} CACHE"
         if c[k] != None:
             continue
+
         # Pick up 1st word as the value.
         # Note: It assumes unquoted word.
         v = kv[i:].strip().partition(")")[0].partition(" ")[0]
