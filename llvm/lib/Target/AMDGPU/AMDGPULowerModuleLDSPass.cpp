@@ -162,7 +162,7 @@ enum class LoweringKind { module, table, kernel, hybrid };
 cl::opt<LoweringKind> LoweringKindLoc(
     "amdgpu-lower-module-lds-strategy",
     cl::desc("Specify lowering strategy for function LDS access:"), cl::Hidden,
-    cl::init(LoweringKind::module),
+    cl::init(LoweringKind::hybrid),
     cl::values(
         clEnumValN(LoweringKind::table, "table", "Lower via table lookup"),
         clEnumValN(LoweringKind::module, "module", "Lower via module struct"),
