@@ -498,11 +498,11 @@ bool Writer::createThunks(OutputSection *os, int margin) {
     ArrayRef<coff_relocation> curRelocs = sc->getRelocs();
     MutableArrayRef<coff_relocation> newRelocs;
     if (originalRelocs.data() == curRelocs.data()) {
-      newRelocs = makeMutableArrayRef(
+      newRelocs = MutableArrayRef(
           bAlloc().Allocate<coff_relocation>(originalRelocs.size()),
           originalRelocs.size());
     } else {
-      newRelocs = makeMutableArrayRef(
+      newRelocs = MutableArrayRef(
           const_cast<coff_relocation *>(curRelocs.data()), curRelocs.size());
     }
 

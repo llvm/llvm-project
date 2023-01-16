@@ -80,8 +80,7 @@ struct LoopCoalescingPass
         LLVM_DEBUG(llvm::dbgs() << "  found coalesceable band from " << start
                                 << " to " << end << '\n');
 
-        auto band =
-            llvm::makeMutableArrayRef(loops.data() + start, end - start);
+        auto band = llvm::MutableArrayRef(loops.data() + start, end - start);
         (void)coalesceLoops(band);
         break;
       }
