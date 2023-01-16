@@ -37,6 +37,11 @@ class LLVM_LIBRARY_VISIBILITY DwarfCFIException : public EHStreamer {
   /// Per-module flag to indicate if .cfi_section has beeen emitted.
   bool hasEmittedCFISections = false;
 
+  /// Vector of all personality functions seen so far in the module.
+  std::vector<const GlobalValue *> Personalities;
+
+  void addPersonality(const GlobalValue *Personality);
+
 public:
   //===--------------------------------------------------------------------===//
   // Main entry points.
