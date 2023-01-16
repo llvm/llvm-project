@@ -2731,12 +2731,14 @@ define i32 @floor_sdiv_wrong_op(i32 %x, i32 %y) {
   ret i32 %r
 }
 
+; (X s>> (BW - 1)) + (zext (X s> 0)) --> (X s>> (BW - 1)) | (zext (X != 0))
+
 define i8 @signum_i8_i8(i8 %x) {
 ; CHECK-LABEL: @signum_i8_i8(
-; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[ZGT0:%.*]] = zext i1 [[SGT0]] to i8
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 [[X]], 7
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[SIGNBIT]], [[ZGT0]]
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    [[ISNOTNULL_ZEXT:%.*]] = zext i1 [[ISNOTNULL]] to i8
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[SIGNBIT]], [[ISNOTNULL_ZEXT]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sgt0 = icmp sgt i8 %x, 0
@@ -2746,13 +2748,15 @@ define i8 @signum_i8_i8(i8 %x) {
   ret i8 %r
 }
 
+; extra use of shift is ok
+
 define i8 @signum_i8_i8_use1(i8 %x) {
 ; CHECK-LABEL: @signum_i8_i8_use1(
-; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[ZGT0:%.*]] = zext i1 [[SGT0]] to i8
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 [[X]], 7
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr i8 [[X:%.*]], 7
 ; CHECK-NEXT:    call void @use(i8 [[SIGNBIT]])
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[SIGNBIT]], [[ZGT0]]
+; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    [[ISNOTNULL_ZEXT:%.*]] = zext i1 [[ISNOTNULL]] to i8
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[SIGNBIT]], [[ISNOTNULL_ZEXT]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sgt0 = icmp sgt i8 %x, 0
@@ -2762,6 +2766,8 @@ define i8 @signum_i8_i8_use1(i8 %x) {
   %r = add i8 %zgt0, %signbit
   ret i8 %r
 }
+
+; negative test
 
 define i8 @signum_i8_i8_use2(i8 %x) {
 ; CHECK-LABEL: @signum_i8_i8_use2(
@@ -2780,6 +2786,8 @@ define i8 @signum_i8_i8_use2(i8 %x) {
   ret i8 %r
 }
 
+; negative test
+
 define i8 @signum_i8_i8_use3(i8 %x) {
 ; CHECK-LABEL: @signum_i8_i8_use3(
 ; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i8 [[X:%.*]], 0
@@ -2797,12 +2805,15 @@ define i8 @signum_i8_i8_use3(i8 %x) {
   ret i8 %r
 }
 
+; poison/undef is ok to propagate in shift amount
+; complexity canonicalization guarantees that shift is op0 of add
+
 define <2 x i5> @signum_v2i5_v2i5(<2 x i5> %x) {
 ; CHECK-LABEL: @signum_v2i5_v2i5(
-; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt <2 x i5> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[ZGT0:%.*]] = zext <2 x i1> [[SGT0]] to <2 x i5>
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr <2 x i5> [[X]], <i5 4, i5 poison>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i5> [[SIGNBIT]], [[ZGT0]]
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = ashr <2 x i5> [[X:%.*]], <i5 4, i5 poison>
+; CHECK-NEXT:    [[ISNOTNULL:%.*]] = icmp ne <2 x i5> [[X]], zeroinitializer
+; CHECK-NEXT:    [[ISNOTNULL_ZEXT:%.*]] = zext <2 x i1> [[ISNOTNULL]] to <2 x i5>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i5> [[SIGNBIT]], [[ISNOTNULL_ZEXT]]
 ; CHECK-NEXT:    ret <2 x i5> [[R]]
 ;
   %sgt0 = icmp sgt <2 x i5> %x, zeroinitializer
@@ -2811,6 +2822,8 @@ define <2 x i5> @signum_v2i5_v2i5(<2 x i5> %x) {
   %r = add <2 x i5> %signbit, %zgt0
   ret <2 x i5> %r
 }
+
+; negative test
 
 define i8 @signum_i8_i8_wrong_sh_amt(i8 %x) {
 ; CHECK-LABEL: @signum_i8_i8_wrong_sh_amt(
@@ -2827,6 +2840,8 @@ define i8 @signum_i8_i8_wrong_sh_amt(i8 %x) {
   ret i8 %r
 }
 
+; negative test
+
 define i8 @signum_i8_i8_wrong_ext(i8 %x) {
 ; CHECK-LABEL: @signum_i8_i8_wrong_ext(
 ; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i8 [[X:%.*]], 0
@@ -2841,6 +2856,8 @@ define i8 @signum_i8_i8_wrong_ext(i8 %x) {
   %r = add i8 %zgt0, %signbit
   ret i8 %r
 }
+
+; negative test
 
 define i8 @signum_i8_i8_wrong_pred(i8 %x) {
 ; CHECK-LABEL: @signum_i8_i8_wrong_pred(
