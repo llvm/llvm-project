@@ -1270,7 +1270,10 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
   const Target *TheTarget = getTarget(Obj);
 
   // Package up features to be passed to target/subtarget
-  SubtargetFeatures Features = Obj->getFeatures();
+  Expected<SubtargetFeatures> FeaturesValue = Obj->getFeatures();
+  if (!FeaturesValue)
+    WithColor::error(errs(), ToolName) << FeaturesValue.takeError();
+  SubtargetFeatures Features = *FeaturesValue;
   std::vector<std::string> MAttrs = lld::getMAttrs();
   if (MAttrs.size()) {
     for (unsigned I = 0; I != MAttrs.size(); ++I) {
