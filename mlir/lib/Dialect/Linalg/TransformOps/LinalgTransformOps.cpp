@@ -24,6 +24,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -35,6 +36,8 @@ using namespace mlir::linalg;
 using namespace mlir::transform;
 
 #define DEBUG_TYPE "linalg-transforms"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
+#define DBGSNL() (llvm::dbgs() << "\n")
 
 /// Attempts to apply the pattern specified as template argument to the given
 /// operation. The pattern is expected to have a `returningMatchAndRewrite`
@@ -58,6 +61,67 @@ static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
   if (failed(result))
     return failure();
   return cast<LinalgOp>(result->getOperation());
+}
+
+/// Assuming that `ofr` is an index attr or a transform dialect handle mapped
+/// to exactly one op with one index result, return that value.
+static DiagnosedSilenceableFailure unpackSingleIndexResultPDLOperations(
+    transform::TransformState &state, TransformOpInterface transformOp,
+    SmallVector<OpFoldResult> &result, ArrayRef<OpFoldResult> ofrs) {
+  for (OpFoldResult ofr : ofrs) {
+    if (ofr.is<Attribute>()) {
+      if (!ofr.get<Attribute>().isa<IntegerAttr>())
+        return transformOp.emitDefiniteFailure() << "expected IntegerAttr";
+      result.push_back(ofr);
+      continue;
+    }
+    ArrayRef<Operation *> payloadOps = state.getPayloadOps(ofr.get<Value>());
+    if (payloadOps.size() != 1) {
+      DiagnosedSilenceableFailure diag =
+          transformOp.emitSilenceableError()
+          << "handle must be mapped to exactly one payload op";
+      diag.attachNote(ofr.get<Value>().getLoc())
+          << "mapped to " << payloadOps.size() << " payload ops";
+      return diag;
+    }
+
+    Operation *op = payloadOps[0];
+    if (op->getNumResults() != 1 || !op->getResult(0).getType().isIndex()) {
+      DiagnosedSilenceableFailure diag =
+          transformOp.emitSilenceableError()
+          << "payload op must have exactly 1 index result";
+      diag.attachNote(op->getLoc())
+          << "has " << op->getNumResults() << " results";
+      return diag;
+    }
+    result.push_back(op->getResult(0));
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+// Given a list of OpFoldResults that are either index attrs or op
+// handles, return a list of OpFoldResults where all op handles are
+// replaced with the first (and only) OpResult of that payload op. (There
+// must be exactly one mapped payload op and it must have exactly one
+// index result.)
+static DiagnosedSilenceableFailure unpackSingleIndexResultPDLOperations(
+    transform::TransformState &state, TransformOpInterface transformOp,
+    SmallVector<OpFoldResult> &result, Value packedHandle) {
+  ArrayRef<Operation *> payloadOps = state.getPayloadOps(packedHandle);
+  for (Operation *op : payloadOps) {
+    if (op->getNumResults() != 1 || !op->getResult(0).getType().isIndex()) {
+      DiagnosedSilenceableFailure diag =
+          transformOp.emitSilenceableError()
+          << "payload op must have exactly 1 index result";
+      diag.attachNote(op->getLoc())
+          << "has " << op->getNumResults() << " results";
+      return diag;
+    }
+    result.push_back(op->getResult(0));
+  }
+
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -741,6 +805,334 @@ void transform::MultiTileSizesOp::getEffects(
   onlyReadsHandle(getTarget(), effects);
   producesHandle(getResults(), effects);
   modifiesPayload(effects);
+}
+
+//===---------------------------------------------------------------------===//
+// PackOp
+//===---------------------------------------------------------------------===//
+
+SmallVector<OpFoldResult> transform::PackOp::getMixedPackedSizes() {
+  Builder b(getContext());
+  return getMixedValues(getStaticPackedSizes(), getPackedSizes(), b);
+}
+
+/// Return true if `map` has 0 or 1 result function of AffineDimExpr(dim).
+static bool hasAtMostOneResultFunctionOfDim(AffineMap map, int64_t dim) {
+  bool found = false;
+  for (AffineExpr e : map.getResults()) {
+    if (!e.isFunctionOfDim(dim))
+      continue;
+    if (found)
+      return false;
+    found = true;
+  }
+  return true;
+}
+
+/// Return the index of the first result of `map` that is a function of
+/// AffineDimExpr(dim), std::nullopt otherwise.
+static std::optional<int64_t> getFirstResultIndexFunctionOf(AffineMap map,
+                                                            int64_t dim) {
+  for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
+    AffineExpr expr = map.getResult(i);
+    if (!expr.isFunctionOfDim(dim))
+      continue;
+    return i;
+  }
+  return std::nullopt;
+}
+
+/// Perform one step of packing of a LinalgOp's metadata along `dim` into the
+/// `newDim` at `iteratorTypes.size()` by:
+///   1. Appending `iteratorTypes[newDim]`, equal to `iteratorTypes[dim]`.
+///   2. Appending a `newDim` to the domain of every indexing map.
+///   3. For each operand (i.e. for each map in `indexingMaps`), perform packing
+///      by potentially adding a `newDim` result to `map`.
+/// The preserved invariant is that `iteratorTypes.size()` is always equal to
+/// `map.getNumDims()` for every map in `indexingMaps`.
+///
+/// Update `indexingMaps` and `iteratorTypes` inplace as one step of the update.
+/// Return a vector that records the optional packing for each operand.
+/// Return failure if the packed indexing cannot be represented with a LinalgOp.
+///
+/// Further details:
+/// ================
+/// The current implementation of packing (i.e. data tiling) consists of
+/// rewriting a linearized strip-mined form into a higher-dimensional access.
+/// e.g. consider an access `A[I][f(j, k, l)]` and packing by 4; we rewrite
+/// `I` into `4 * i + ii`, where `0 <= ii < 4`.
+/// The access is further rewritten as `A[i][f(j, k, l)][ii]`.
+///
+/// This rewrite into higher dimensional access is not possible for general
+/// AffineExpr in Linalg atm, it is restricted to an AffineDimExpr:
+/// e.g. consider an access `A[I + J][f(j, k, l)]` and packing by 4; we
+/// rewrite `I + J` into `4 * i + ii + J`, where `0 <= ii < 4`.
+/// The rewrite of the access would be a form not representable in Linalg:
+///   `A[i + (ii + J) / 4][f(j, k, l)][(ii + J) % 4]`.
+/// Note however that as `J` and `ii` iterate, the accesses do not have a
+/// particular alignment, so packing does not achieve alignment in this case
+///
+/// In the future, we may want to consider a mixed-form that allows some
+/// alignment in the presence of multiple accesses:
+///   `A[I][f(j, k, l)]` and `B[I + J][f(j, k, l)]`
+/// And would rewrite accesses as:
+///   `A[i][f(j, k, l)][ii]` and `B[4 * i + ii + J][f(j, k, l)]`
+static FailureOr<SmallVector<std::optional<int64_t>>>
+packLinalgMetadataOnce(SmallVectorImpl<AffineMap> &indexingMaps,
+                       SmallVectorImpl<utils::IteratorType> &iteratorTypes,
+                       int64_t dim) {
+  int64_t newDim = iteratorTypes.size();
+  iteratorTypes.push_back(iteratorTypes[dim]);
+
+  SmallVector<std::optional<int64_t>> packedDimPerIndexingMap(
+      indexingMaps.size(), std::nullopt);
+  SmallVector<AffineMap> newMaps;
+  for (int64_t operandIdx = 0, e = indexingMaps.size(); operandIdx < e;
+       ++operandIdx) {
+    AffineMap map = indexingMaps[operandIdx];
+
+    // Add the `newDim` to map whatever the case.
+    assert(map.getNumDims() == newDim && "num dims invariant violation");
+    map = map.shiftDims(1, newDim);
+
+    // Get the at-most-1 index of the result that is a function of `dim`.
+    // If we can find one, we insert `AffineDimExpr(newDim)` to the map, which
+    // logically chunks dimension `dim` into `K * dim + newDim`, where the
+    // packing factor `K` is specified separately.
+    assert(hasAtMostOneResultFunctionOfDim(map, dim) &&
+           "num results invariant violation");
+    auto maybeOperandDimensionToPack = getFirstResultIndexFunctionOf(map, dim);
+    if (!maybeOperandDimensionToPack.has_value()) {
+      newMaps.push_back(map);
+      continue;
+    }
+
+    // We can only pack AffineDimExpr atm.
+    if (!map.getResult(maybeOperandDimensionToPack.value())
+             .isa<AffineDimExpr>())
+      return failure();
+
+    // Add `newDim` to the results of the map.
+    map = map.insertResult(Builder(map.getContext()).getAffineDimExpr(newDim),
+                           map.getNumResults());
+    newMaps.push_back(map);
+
+    // Record the that `operandIdx` is packed.
+    packedDimPerIndexingMap[operandIdx] = maybeOperandDimensionToPack;
+  }
+  indexingMaps = newMaps;
+
+  return packedDimPerIndexingMap;
+}
+
+namespace {
+
+/// Helper struct to encode packing along one dimension of a LinalgOp.
+struct PackedOperandsDim {
+  OpFoldResult packedSize;
+  SmallVector<std::optional<int64_t>> packedDimForEachOperand;
+};
+
+/// Helper struct to encode packing along all dimensions of a LinalgOp.
+struct PackedOperandsDimList {
+  void push_back(PackedOperandsDim &&packedOperandsDims) {
+    spec.emplace_back(packedOperandsDims);
+  }
+  /// Return all the dims that have been packed for operand @ `operandPos`.
+  SmallVector<int64_t> extractPackedDimsForOperand(int64_t operandPos);
+  /// Return all the pack sizes by which an operand @ `operandPos` is packed.
+  SmallVector<OpFoldResult> extractPackSizesForOperand(int64_t operandPos);
+
+private:
+  SmallVector<PackedOperandsDim> spec;
+};
+
+} // namespace
+
+SmallVector<int64_t>
+PackedOperandsDimList::extractPackedDimsForOperand(int64_t operandPos) {
+  SmallVector<int64_t> res;
+  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
+    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
+      continue;
+    res.push_back(spec[i].packedDimForEachOperand[operandPos].value());
+  }
+  return res;
+}
+
+SmallVector<OpFoldResult>
+PackedOperandsDimList::extractPackSizesForOperand(int64_t operandPos) {
+  SmallVector<OpFoldResult> res;
+  for (int64_t i = 0, e = spec.size(); i < e; ++i) {
+    if (!spec[i].packedDimForEachOperand[operandPos].has_value())
+      continue;
+    res.push_back(spec[i].packedSize);
+  }
+  return res;
+}
+
+/// Implement packing of a single LinalgOp by performing packing by
+/// `packedSizeHandles`. There must be one packedSizeHandles entry per
+/// `linalgOp` iterator. Return the packed Linalg op on success, failure
+/// otherwise.
+static FailureOr<linalg::LinalgOp>
+packOneLinalgOp(RewriterBase &rewriter, transform::TransformState &state,
+                TransformOpInterface transformOp, linalg::LinalgOp linalgOp,
+                ArrayRef<OpFoldResult> packedSizeHandles) {
+  assert(packedSizeHandles.size() == linalgOp.getNumLoops() &&
+         "incorrect number of pack sizes");
+
+  Location loc = linalgOp->getLoc();
+  SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
+  SmallVector<utils::IteratorType> iteratorTypes =
+      linalgOp.getIteratorTypesArray();
+  LLVM_DEBUG(DBGS() << "Start packing: " << linalgOp << "\n";
+             llvm::interleaveComma(indexingMaps, DBGS() << "maps: "); DBGSNL();
+             llvm::interleaveComma(iteratorTypes, DBGS() << "iterators: ");
+             DBGSNL(););
+
+  // Unpack handles to constants or actual SSA index values.
+  SmallVector<OpFoldResult> packedSizes;
+  DiagnosedSilenceableFailure status = unpackSingleIndexResultPDLOperations(
+      state, transformOp, packedSizes, packedSizeHandles);
+
+  // Step 1. Pack each dim of the LinalgOp metadata by packedSizes[i].
+  PackedOperandsDimList listOfPackedOperandsDim;
+  for (int64_t i = 0, e = packedSizes.size(); i < e; ++i) {
+    std::optional<int64_t> maybeConstant = getConstantIntValue(packedSizes[i]);
+    // Skip tile sizes explicitly set to 0.
+    if (maybeConstant.has_value() && maybeConstant.value() == 0)
+      continue;
+
+    PackedOperandsDim packedOperandsDims;
+    packedOperandsDims.packedSize = packedSizes[i];
+    FailureOr<SmallVector<std::optional<int64_t>>>
+        maybePackedDimForEachOperand =
+            packLinalgMetadataOnce(indexingMaps, iteratorTypes, i);
+    if (failed(maybePackedDimForEachOperand))
+      return failure();
+    packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
+    listOfPackedOperandsDim.push_back(std::move(packedOperandsDims));
+
+    LLVM_DEBUG(
+        DBGS() << "++++ After pack size #" << i << ": " << packedSizes[i]
+               << "\n";
+        llvm::interleaveComma(indexingMaps, DBGS() << "maps: "); DBGSNL();
+        llvm::interleaveComma(iteratorTypes, DBGS() << "iterators: "); DBGSNL();
+        llvm::interleaveComma(packedOperandsDims.packedDimForEachOperand,
+                              DBGS() << "packedDimForEachOperand: ");
+        DBGSNL(););
+  }
+
+  // Step 2. Propagate packing to all LinalgOp operands.
+  SmallVector<Value> inputsAndInits, results;
+  for (auto operandsList :
+       {linalgOp.getDpsInputOperands(), linalgOp.getDpsInitOperands()}) {
+    for (OpOperand *opOperandPtr : operandsList) {
+      int64_t pos = opOperandPtr->getOperandNumber();
+      Value operand = opOperandPtr->get();
+      SmallVector<int64_t> innerPos =
+          listOfPackedOperandsDim.extractPackedDimsForOperand(pos);
+      SmallVector<OpFoldResult> innerPackSizes =
+          listOfPackedOperandsDim.extractPackSizesForOperand(pos);
+      LLVM_DEBUG(
+          DBGS() << "operand: " << operand << "\n";
+          llvm::interleaveComma(innerPos, DBGS() << "innerPos: "); DBGSNL();
+          llvm::interleaveComma(innerPackSizes, DBGS() << "innerPackSizes: ");
+          DBGSNL(););
+      if (innerPackSizes.empty()) {
+        inputsAndInits.push_back(operand);
+        continue;
+      }
+      Value dest = tensor::PackOp::createDestinationTensor(
+          rewriter, loc, operand, innerPackSizes, innerPos,
+          /*outerDimsPerm=*/{});
+      // TODO: value of the padding attribute should be determined by consumers.
+      Attribute zeroAttr =
+          rewriter.getZeroAttr(getElementTypeOrSelf(dest.getType()));
+      Value zero = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
+      inputsAndInits.push_back(rewriter.create<tensor::PackOp>(
+          loc, operand, dest, innerPos, innerPackSizes, zero));
+    }
+  }
+
+  // Step 3. Build the packed op, use the type of `inits` as result types.
+  ValueRange inputs =
+      ValueRange{inputsAndInits}.take_front(linalgOp.getNumDpsInputs());
+  ValueRange inits =
+      ValueRange{inputsAndInits}.take_back(linalgOp.getNumDpsInits());
+  auto packedLinalgOp = rewriter.create<linalg::GenericOp>(
+      linalgOp.getLoc(), inits.getTypes(), inputs, inits, indexingMaps,
+      iteratorTypes);
+  packedLinalgOp.getRegion().takeBody(linalgOp->getRegion(0));
+
+  // Step 4. Propagate packing to all the op results.
+  for (OpResult result : packedLinalgOp->getResults()) {
+    int64_t resultNum = result.getResultNumber();
+    tensor::PackOp maybePackedInit =
+        inits[resultNum].getDefiningOp<tensor::PackOp>();
+    if (!maybePackedInit) {
+      results.push_back(result);
+      continue;
+    }
+    // Build the symmetrical UnPackOp to the existing PackOp.
+    results.push_back(rewriter.create<tensor::UnPackOp>(
+        packedLinalgOp->getLoc(), result, maybePackedInit.getSource(),
+        maybePackedInit.getInnerDimsPos(), maybePackedInit.getMixedTiles()));
+  }
+
+  // Step 5. Replace `linalgOp`.
+  rewriter.replaceOp(linalgOp, results);
+
+  // Return packedLinalgOp.
+  return cast<linalg::LinalgOp>(packedLinalgOp.getOperation());
+}
+
+DiagnosedSilenceableFailure
+transform::PackOp::apply(transform::TransformResults &transformResults,
+                         transform::TransformState &state) {
+  ArrayRef<Operation *> targetOps = state.getPayloadOps(getTarget());
+  // If nothing to pack, propagate success.
+  if (targetOps.empty()) {
+    transformResults.set(getPackedOp().cast<OpResult>(), {});
+    return DiagnosedSilenceableFailure::success();
+  }
+  // Fail on multi-op handles.
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(targetOps.front());
+  if (targetOps.size() != 1 || !linalgOp) {
+    // TODO: remove this unnecessary set to empty once crashes are fixed.
+    transformResults.set(getPackedOp().cast<OpResult>(), {});
+    return emitSilenceableError()
+           << "requires target to map to exactly 1 LinalgOp (got "
+           << targetOps.size() << ")";
+  }
+  // Fail on mismatched number of pack sizes.
+  if (getMixedPackedSizes().size() != linalgOp.getNumLoops()) {
+    // TODO: remove this unnecessary set to empty once crashes are fixed.
+    transformResults.set(getPackedOp().cast<OpResult>(), {});
+    return emitSilenceableError()
+           << "requires number of packed sizes match the number of loops ("
+           << getMixedPackedSizes().size() << " vs " << linalgOp.getNumLoops()
+           << ")";
+  }
+
+  IRRewriter rewriter(linalgOp->getContext());
+  rewriter.setInsertionPoint(linalgOp);
+  FailureOr<LinalgOp> maybeResult =
+      packOneLinalgOp(rewriter, state, *this, linalgOp, getMixedPackedSizes());
+  if (failed(maybeResult))
+    return emitDefiniteFailure("data tiling failed");
+
+  transformResults.set(getPackedOp().cast<OpResult>(),
+                       maybeResult->getOperation());
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::PackOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getTarget(), effects);
+  transform::onlyReadsHandle(getPackedSizes(), effects);
+  transform::producesHandle(getPackedOp(), effects);
 }
 
 //===---------------------------------------------------------------------===//
@@ -1608,68 +2000,6 @@ void transform::TileToForeachThreadOp::build(
         /*mapping=*/mapping);
 }
 
-/// Assuming that `ofr` is an index attr or a transform dialect handle mapped
-/// to exactly one op with one index result, return that value.
-static DiagnosedSilenceableFailure unpackPDLOperations(
-    transform::TransformState &state, TransformOpInterface transformOp,
-    SmallVector<OpFoldResult> &result, ArrayRef<OpFoldResult> ofrs) {
-  for (OpFoldResult ofr : ofrs) {
-    if (ofr.is<Attribute>()) {
-      if (!ofr.get<Attribute>().isa<IntegerAttr>())
-        return transformOp.emitDefiniteFailure() << "expected IntegerAttr";
-      result.push_back(ofr);
-      continue;
-    }
-    ArrayRef<Operation *> payloadOps = state.getPayloadOps(ofr.get<Value>());
-    if (payloadOps.size() != 1) {
-      DiagnosedSilenceableFailure diag =
-          transformOp.emitSilenceableError()
-          << "handle must be mapped to exactly one payload op";
-      diag.attachNote(ofr.get<Value>().getLoc())
-          << "mapped to " << payloadOps.size() << " payload ops";
-      return diag;
-    }
-
-    Operation *op = payloadOps[0];
-    if (op->getNumResults() != 1 || !op->getResult(0).getType().isIndex()) {
-      DiagnosedSilenceableFailure diag =
-          transformOp.emitSilenceableError()
-          << "payload op must have exactly 1 index result";
-      diag.attachNote(op->getLoc())
-          << "has " << op->getNumResults() << " results";
-      return diag;
-    }
-    result.push_back(op->getResult(0));
-  }
-
-  return DiagnosedSilenceableFailure::success();
-}
-
-// Given a list of OpFoldResults that are either index attrs or op
-// handles, return a list of OpFoldResults where all op handles are
-// replaced with the first (and only) OpResult of that payload op. (There
-// must be exactly one mapped payload op and it must have exactly one
-// index result.)
-static DiagnosedSilenceableFailure
-unpackPDLOperations(transform::TransformState &state,
-                    TransformOpInterface transformOp,
-                    SmallVector<OpFoldResult> &result, Value packedHandle) {
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(packedHandle);
-  for (Operation *op : payloadOps) {
-    if (op->getNumResults() != 1 || !op->getResult(0).getType().isIndex()) {
-      DiagnosedSilenceableFailure diag =
-          transformOp.emitSilenceableError()
-          << "payload op must have exactly 1 index result";
-      diag.attachNote(op->getLoc())
-          << "has " << op->getNumResults() << " results";
-      return diag;
-    }
-    result.push_back(op->getResult(0));
-  }
-
-  return DiagnosedSilenceableFailure::success();
-}
-
 DiagnosedSilenceableFailure transform::tileToForeachThreadOpImpl(
     RewriterBase &rewriter, transform::TransformState &state,
     TransformOpInterface transformOp, ArrayRef<Operation *> targets,
@@ -1724,18 +2054,18 @@ DiagnosedSilenceableFailure transform::TileToForeachThreadOp::apply(
   SmallVector<OpFoldResult> mixedNumThreads;
   DiagnosedSilenceableFailure status =
       getPackedNumThreads()
-          ? unpackPDLOperations(state, transformOp, mixedNumThreads,
-                                getPackedNumThreads())
-          : unpackPDLOperations(state, transformOp, mixedNumThreads,
-                                getMixedNumThreads());
+          ? unpackSingleIndexResultPDLOperations(
+                state, transformOp, mixedNumThreads, getPackedNumThreads())
+          : unpackSingleIndexResultPDLOperations(
+                state, transformOp, mixedNumThreads, getMixedNumThreads());
   if (!status.succeeded())
     return status;
   SmallVector<OpFoldResult> mixedTileSizes;
   status = getPackedTileSizes()
-               ? unpackPDLOperations(state, transformOp, mixedTileSizes,
-                                     getPackedTileSizes())
-               : unpackPDLOperations(state, transformOp, mixedTileSizes,
-                                     getMixedTileSizes());
+               ? unpackSingleIndexResultPDLOperations(
+                     state, transformOp, mixedTileSizes, getPackedTileSizes())
+               : unpackSingleIndexResultPDLOperations(
+                     state, transformOp, mixedTileSizes, getMixedTileSizes());
   if (!status.succeeded())
     return status;
 
