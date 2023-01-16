@@ -1221,13 +1221,21 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
         operands.push_back(llvm::MDString::get(
             ctx, tdOp.getIdentity().value_or(llvm::StringRef{})));
         for (int64_t offset : tdOp.getOffsets()) {
-          operands.push_back(nullptr); // Placeholder for the member type.
+          // Use temporary MDNode as the placeholder for the member type
+          // to prevent uniquing the type descriptor nodes until they are
+          // finalized.
+          operands.push_back(
+              llvm::MDNode::getTemporary(ctx, std::nullopt).release());
           operands.push_back(llvm::ConstantAsMetadata::get(
               llvm::ConstantInt::get(offsetTy, offset)));
         }
       } else if (auto tagOp = dyn_cast<LLVM::TBAATagOp>(op)) {
-        operands.push_back(nullptr); // Placeholder for the base type.
-        operands.push_back(nullptr); // Placeholder for the access type.
+        // Use temporary MDNode's as the placeholders for the base and access
+        // types to prevent uniquing the tag nodes until they are finalized.
+        operands.push_back(
+            llvm::MDNode::getTemporary(ctx, std::nullopt).release());
+        operands.push_back(
+            llvm::MDNode::getTemporary(ctx, std::nullopt).release());
         operands.push_back(llvm::ConstantAsMetadata::get(
             llvm::ConstantInt::get(offsetTy, tagOp.getOffset())));
         if (tagOp.getConstant())
