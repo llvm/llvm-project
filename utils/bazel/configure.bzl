@@ -136,7 +136,7 @@ def _write_dict_to_file(repository_ctx, filepath, header, vars):
         fci += '{} = "{}"\n'.format(k, v)
         fcd += '    "{}": "{}",\n'.format(k, v)
 
-    repository_ctx.file(filepath, content=fci + fcd + fct)
+    repository_ctx.file(filepath, content = fci + fcd + fct)
 
 def _llvm_configure_impl(repository_ctx):
     _overlay_directories(repository_ctx)
@@ -149,9 +149,9 @@ def _llvm_configure_impl(repository_ctx):
 
     _write_dict_to_file(
         repository_ctx,
-        filepath="vars.bzl",
-        header="# Generated from {}\n\n".format(llvm_cmake),
-        vars=vars,
+        filepath = "vars.bzl",
+        header = "# Generated from {}\n\n".format(llvm_cmake),
+        vars = vars,
     )
 
     # Create a starlark file with the requested LLVM targets.
