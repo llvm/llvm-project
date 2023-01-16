@@ -590,8 +590,9 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       [[fallthrough]];
     }
     case tok::kw_case:
-      if (Style.isVerilog() ||
+      if (Style.isProto() || Style.isVerilog() ||
           (Style.isJavaScript() && Line->MustBeDeclaration)) {
+        // Proto: there are no switch/case statements
         // Verilog: Case labels don't have this word. We handle case
         // labels including default in TokenAnnotator.
         // JavaScript: A 'case: string' style field declaration.
@@ -1620,7 +1621,11 @@ void UnwrappedLineParser::parseStructuralElement(
     // e.g. "default void f() {}" in a Java interface.
     break;
   case tok::kw_case:
-    // In Verilog switch is called case.
+    // Proto: there are no switch/case statements.
+    if (Style.isProto()) {
+      nextToken();
+      return;
+    }
     if (Style.isVerilog()) {
       parseBlock();
       addUnwrappedLine();
@@ -2100,6 +2105,11 @@ void UnwrappedLineParser::parseStructuralElement(
       parseNew();
       break;
     case tok::kw_case:
+      // Proto: there are no switch/case statements.
+      if (Style.isProto()) {
+        nextToken();
+        return;
+      }
       // In Verilog switch is called case.
       if (Style.isVerilog()) {
         parseBlock();
