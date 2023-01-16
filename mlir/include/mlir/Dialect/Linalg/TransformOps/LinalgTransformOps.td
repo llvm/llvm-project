@@ -341,6 +341,90 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
   }];
 }
 
+def PackOp : Op<Transform_Dialect, "structured.pack", [
+                TransformOpInterface,
+                DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,]> {
+  let description = [{
+    Pack a LinalgOp by applying a data tiling transformation on the op and
+    packing the operands according to the `packed_sizes` specification.
+    
+    Iterator dimensions are tiled in their canonical order in the op spec.
+    Operands are packed according to the same canonical order of the op iterator
+    dimensions.
+
+    Specifying a packed size of 0 for an iterator removes it from consideration
+    for packing.
+
+    `tensor.pack` (resp. `tensor.unpack`) operations are inserted for the operands
+    (resp. results) that need to be packed (resp. unpacked) according to the
+    `packed_sizes` specification.
+
+    #### Example
+
+    Consider a `linalg.matmul` with indexing maps:
+    ```
+      //              M   N   K       M   K
+      // affine_map<(d0, d1, d2) -> (d0, d2)>
+      //                              K   N
+      // affine_map<(d0, d1, d2) -> (d2, d1)>
+      //                              M   N
+      // affine_map<(d0, d1, d2) -> (d0, d1)>
+      %0 = linalg.matmul  ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
+                         outs(    %C: tensor<?x?xf32>)
+    ```
+
+    Specifying packed_sizes [2, 3, 4] results in tiling the iterator dimensions
+    M, N and K, in this order, in both the op and its operands.
+    ```
+      //              M   N   K   m   n   k       M   K   m   k
+      // affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d2, d3, d5)>
+      //                                          K   N   n   k
+      // affine_map<(d0, d1, d2, d3, d4, d5) -> (d2, d1, d4, d5)>
+      //                                          M   N   m   n
+      // affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d3, d4)>
+      %0 = linalg.generic_representing_some_higher_d_matmul  
+            ins(%A, %B: tensor<?x?x2x4xf32>, tensor<?x?x4x3xf32>)
+           outs(    %C: tensor<?x?x2x4xf32>)
+    ```
+    In particular, note that the second operand `B` has shape `KxNxnxk` (and not
+    `KxNxkxn` as one could expect by looking **only** at the operand).
+
+    Other layouts can be obtained unsurprisingly from this canonical 
+    transformation by composing the resulting operation with a (future) 
+    `transform.structured.pack_transpose` op.
+    This composition allows separating concerns and composes better compared
+    to adding additional permutation attributes to this transform op.
+
+    #### Return modes
+
+    This operation applies to a single Linalg op, otherwise it fails.
+    This operation may produce a definiteFailure if the packing fails for any
+    reason.
+
+    The returned handle point to the packed LinalgOp.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   Variadic<PDL_Operation>:$packed_sizes,
+                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_packed_sizes);
+  let results = (outs TransformHandleTypeInterface:$packed_op);
+  let assemblyFormat = [{
+    $target 
+    `packed_sizes` `=` custom<DynamicIndexList>($packed_sizes,
+                                                $static_packed_sizes)
+    attr-dict
+    `:` functional-type($target, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+      transform::TransformResults &transformResults,
+      transform::TransformState &state);
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedPackedSizes();
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // PadOp
 //===----------------------------------------------------------------------===//
