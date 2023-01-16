@@ -2345,6 +2345,9 @@ defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
 def fmodule_related_to_pch : Flag<["-"], "fmodule-related-to-pch">,
   Group<f_Group>, Flags<[CC1Option]>, HelpText<"Mark module as related to a PCH">;
 
+def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption, CC1Option]>,
+  HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
+
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Flags<[CC1Option]>, MetaVarName<"<seconds>">,
   HelpText<"Specify the interval (in seconds) between attempts to prune the module cache">,
