@@ -500,6 +500,9 @@ Non-comprehensive list of changes in this release
 - Clang can now generate a PCH when using ``-fdelayed-template-parsing`` for
   code with templates containing loop hint pragmas, OpenMP pragmas, and
   ``#pragma unused``.
+- Clang now saves the address of ABI-indirect function parameters on the stack,
+  improving the debug information available in programs compiled without
+  optimizations.
 
 
 New Compiler Flags
