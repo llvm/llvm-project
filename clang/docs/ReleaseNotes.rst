@@ -537,6 +537,11 @@ New Compiler Flags
       int b[0]; // NOT a flexible array member.
     };
 
+- Added ``-fmodule-output`` to enable the one-phase compilation model for
+  standard C++ modules. See
+  `Standard C++ Modules <https://clang.llvm.org/docs/StandardCPlusPlusModules.html>`_
+  for more information.
+
 Deprecated Compiler Flags
 -------------------------
 - ``-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang``
