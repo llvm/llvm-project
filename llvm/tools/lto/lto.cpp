@@ -528,20 +528,10 @@ thinlto_code_gen_t thinlto_create_codegen(void) {
     if (OptLevel < '0' || OptLevel > '3')
       report_fatal_error("Optimization level must be between 0 and 3");
     CodeGen->setOptLevel(OptLevel - '0');
-    switch (OptLevel) {
-    case '0':
-      CodeGen->setCodeGenOptLevel(CodeGenOpt::None);
-      break;
-    case '1':
-      CodeGen->setCodeGenOptLevel(CodeGenOpt::Less);
-      break;
-    case '2':
-      CodeGen->setCodeGenOptLevel(CodeGenOpt::Default);
-      break;
-    case '3':
-      CodeGen->setCodeGenOptLevel(CodeGenOpt::Aggressive);
-      break;
-    }
+    std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+        CodeGenOpt::getLevel(OptLevel - '0');
+    assert(CGOptLevelOrNone);
+    CodeGen->setCodeGenOptLevel(*CGOptLevelOrNone);
   }
   return wrap(CodeGen);
 }
