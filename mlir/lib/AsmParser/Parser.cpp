@@ -1368,18 +1368,14 @@ Operation *OperationParser::parseGenericOperation() {
   if (!result.name.isRegistered()) {
     StringRef dialectName = StringRef(name).split('.').first;
     if (!getContext()->getLoadedDialect(dialectName) &&
-        !getContext()->getOrLoadDialect(dialectName)) {
-      if (!getContext()->allowsUnregisteredDialects()) {
-        // Emit an error if the dialect couldn't be loaded (i.e., it was not
-        // registered) and unregistered dialects aren't allowed.
-        emitError("operation being parsed with an unregistered dialect. If "
-                  "this is intended, please use -allow-unregistered-dialect "
-                  "with the MLIR tool used");
-        return nullptr;
-      }
-    } else {
-      // Reload the OperationName now that the dialect is loaded.
-      result.name = OperationName(name, getContext());
+        !getContext()->getOrLoadDialect(dialectName) &&
+        !getContext()->allowsUnregisteredDialects()) {
+      // Emit an error if the dialect couldn't be loaded (i.e., it was not
+      // registered) and unregistered dialects aren't allowed.
+      emitError("operation being parsed with an unregistered dialect. If "
+                "this is intended, please use -allow-unregistered-dialect "
+                "with the MLIR tool used");
+      return nullptr;
     }
   }
 

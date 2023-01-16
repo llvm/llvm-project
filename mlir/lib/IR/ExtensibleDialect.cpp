@@ -294,19 +294,16 @@ DynamicOpDefinition::DynamicOpDefinition(
     OperationName::ParseAssemblyFn &&parseFn,
     OperationName::PrintAssemblyFn &&printFn,
     OperationName::FoldHookFn &&foldHookFn,
-    GetCanonicalizationPatternsFn &&getCanonicalizationPatternsFn,
+    OperationName::GetCanonicalizationPatternsFn
+        &&getCanonicalizationPatternsFn,
     OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn)
-    : Impl(StringAttr::get(dialect->getContext(),
-                           (dialect->getNamespace() + "." + name).str()),
-           dialect, dialect->allocateTypeID(),
-           /*interfaceMap=*/detail::InterfaceMap(std::nullopt)),
+    : typeID(dialect->allocateTypeID()),
+      name((dialect->getNamespace() + "." + name).str()), dialect(dialect),
       verifyFn(std::move(verifyFn)), verifyRegionFn(std::move(verifyRegionFn)),
       parseFn(std::move(parseFn)), printFn(std::move(printFn)),
       foldHookFn(std::move(foldHookFn)),
       getCanonicalizationPatternsFn(std::move(getCanonicalizationPatternsFn)),
-      populateDefaultAttrsFn(std::move(populateDefaultAttrsFn)) {
-  typeID = dialect->allocateTypeID();
-}
+      populateDefaultAttrsFn(std::move(populateDefaultAttrsFn)) {}
 
 std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
     StringRef name, ExtensibleDialect *dialect,
@@ -341,7 +338,8 @@ std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
   auto getCanonicalizationPatternsFn = [](RewritePatternSet &, MLIRContext *) {
   };
 
-  auto populateDefaultAttrsFn = [](const OperationName &, NamedAttrList &) {};
+  auto populateDefaultAttrsFn = [](const RegisteredOperationName &,
+                                   NamedAttrList &) {};
 
   return DynamicOpDefinition::get(name, dialect, std::move(verifyFn),
                                   std::move(verifyRegionFn), std::move(parseFn),
@@ -357,7 +355,8 @@ std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(
     OperationName::ParseAssemblyFn &&parseFn,
     OperationName::PrintAssemblyFn &&printFn,
     OperationName::FoldHookFn &&foldHookFn,
-    GetCanonicalizationPatternsFn &&getCanonicalizationPatternsFn,
+    OperationName::GetCanonicalizationPatternsFn
+        &&getCanonicalizationPatternsFn,
     OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn) {
   return std::unique_ptr<DynamicOpDefinition>(new DynamicOpDefinition(
       name, dialect, std::move(verifyFn), std::move(verifyRegionFn),
@@ -449,7 +448,15 @@ void ExtensibleDialect::registerDynamicOp(
     std::unique_ptr<DynamicOpDefinition> &&op) {
   assert(op->dialect == this &&
          "trying to register a dynamic op in the wrong dialect");
-  RegisteredOperationName::insert(std::move(op), /*attrNames=*/{});
+  auto hasTraitFn = [](TypeID traitId) { return false; };
+
+  RegisteredOperationName::insert(
+      op->name, *op->dialect, op->typeID, std::move(op->parseFn),
+      std::move(op->printFn), std::move(op->verifyFn),
+      std::move(op->verifyRegionFn), std::move(op->foldHookFn),
+      std::move(op->getCanonicalizationPatternsFn),
+      detail::InterfaceMap::get<>(), std::move(hasTraitFn), {},
+      std::move(op->populateDefaultAttrsFn));
 }
 
 bool ExtensibleDialect::classof(const Dialect *dialect) {
