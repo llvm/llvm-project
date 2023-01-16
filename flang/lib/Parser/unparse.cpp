@@ -2150,6 +2150,9 @@ public:
     case llvm::omp::Directive::OMPD_teams_distribute_simd:
       Word("TEAMS DISTRIBUTE SIMD ");
       break;
+    case llvm::omp::Directive::OMPD_tile:
+      Word("TILE ");
+      break;
     default:
       break;
     }
