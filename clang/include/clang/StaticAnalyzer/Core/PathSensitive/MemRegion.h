@@ -30,13 +30,13 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -102,7 +102,7 @@ public:
 
 private:
   const Kind kind;
-  mutable Optional<RegionOffset> cachedOffset;
+  mutable std::optional<RegionOffset> cachedOffset;
 
 protected:
   MemRegion(Kind k) : kind(k) {}

@@ -69,7 +69,7 @@ public:
   /// This optional continuation allows the generation of those dereferences.
   /// These accesses are always on Fortran entities of record types, which are
   /// implicitly in-memory objects.
-  std::optional<ExtendRefFunc> extendCoorRef = std::nullopt;
+  std::optional<ExtendRefFunc> extendCoorRef;
 
 private:
   void setPC(bool isImplicit);

@@ -629,10 +629,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
     // Check if one of the register is not a generic register.
-    if ((Register::isPhysicalRegister(DstReg) ||
-         !MRI.getType(DstReg).isValid()) ||
-        (Register::isPhysicalRegister(SrcReg) ||
-         !MRI.getType(SrcReg).isValid())) {
+    if ((DstReg.isPhysical() || !MRI.getType(DstReg).isValid()) ||
+        (SrcReg.isPhysical() || !MRI.getType(SrcReg).isValid())) {
       const RegisterBank *DstRB = getRegBank(DstReg, MRI, TRI);
       const RegisterBank *SrcRB = getRegBank(SrcReg, MRI, TRI);
       if (!DstRB)

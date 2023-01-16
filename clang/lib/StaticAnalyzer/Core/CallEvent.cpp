@@ -49,7 +49,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ImmutableList.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -61,6 +60,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 #define DEBUG_TYPE "static-analyzer-call-event"
@@ -514,8 +514,7 @@ const ConstructionContext *CallEvent::getConstructionContext() const {
   return nullptr;
 }
 
-Optional<SVal>
-CallEvent::getReturnValueUnderConstruction() const {
+std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
   const auto *CC = getConstructionContext();
   if (!CC)
     return std::nullopt;
@@ -807,7 +806,7 @@ void CXXInstanceCall::getInitialStackFrameContents(
       QualType Ty = Ctx.getPointerType(Ctx.getRecordType(Class));
 
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
-      Optional<SVal> V =
+      std::optional<SVal> V =
           StateMgr.getStoreManager().evalBaseToDerived(ThisVal, Ty);
       if (!V) {
         // We might have suffered some sort of placement new earlier, so
@@ -1222,10 +1221,10 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
   // stays around until clang quits, which also may be bad if we
   // need to release memory.
   using PrivateMethodCache =
-      llvm::DenseMap<PrivateMethodKey, Optional<const ObjCMethodDecl *>>;
+      llvm::DenseMap<PrivateMethodKey, std::optional<const ObjCMethodDecl *>>;
 
   static PrivateMethodCache PMC;
-  Optional<const ObjCMethodDecl *> &Val =
+  std::optional<const ObjCMethodDecl *> &Val =
       PMC[{Interface, LookupSelector, InstanceMethod}];
 
   // Query lookupPrivateMethod() if the cache does not hit.
@@ -1435,9 +1434,10 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
   SVal ThisVal = State->getSVal(ThisPtr);
 
   const Stmt *Trigger;
-  if (Optional<CFGAutomaticObjDtor> AutoDtor = E.getAs<CFGAutomaticObjDtor>())
+  if (std::optional<CFGAutomaticObjDtor> AutoDtor =
+          E.getAs<CFGAutomaticObjDtor>())
     Trigger = AutoDtor->getTriggerStmt();
-  else if (Optional<CFGDeleteDtor> DeleteDtor = E.getAs<CFGDeleteDtor>())
+  else if (std::optional<CFGDeleteDtor> DeleteDtor = E.getAs<CFGDeleteDtor>())
     Trigger = DeleteDtor->getDeleteExpr();
   else
     Trigger = Dtor->getBody();

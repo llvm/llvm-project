@@ -16,9 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 void TimeComparisonCheck::registerMatchers(MatchFinder *Finder) {
   auto Matcher =
@@ -57,6 +55,4 @@ void TimeComparisonCheck::check(const MatchFinder::MatchResult &Result) {
                                           .str());
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil

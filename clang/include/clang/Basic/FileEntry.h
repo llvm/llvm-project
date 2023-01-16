@@ -25,6 +25,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 
+#include <optional>
 #include <utility>
 
 namespace llvm {

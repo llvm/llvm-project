@@ -555,7 +555,7 @@ inline unsigned getRegState(const MachineOperand &RegOp) {
          getUndefRegState(RegOp.isUndef()) |
          getInternalReadRegState(RegOp.isInternalRead()) |
          getDebugRegState(RegOp.isDebug()) |
-         getRenamableRegState(Register::isPhysicalRegister(RegOp.getReg()) &&
+         getRenamableRegState(RegOp.getReg().isPhysical() &&
                               RegOp.isRenamable());
 }
 

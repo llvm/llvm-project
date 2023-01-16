@@ -219,8 +219,7 @@ constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 template <>
 struct OptionEnumMapping<
@@ -560,5 +559,4 @@ void SignalHandlerCheck::reportHandlerChain(
 }
 
 } // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
+#include <optional>
 
 namespace llvm {
 class TargetMachine;
@@ -106,8 +107,8 @@ private:
   std::unique_ptr<llvm::TargetMachine> createTargetMachine();
 
   /// Translates the module to ISA
-  Optional<std::string> translateToISA(llvm::Module &llvmModule,
-                                       llvm::TargetMachine &targetMachine);
+  std::optional<std::string> translateToISA(llvm::Module &llvmModule,
+                                            llvm::TargetMachine &targetMachine);
 
   /// Serializes the target ISA to binary form.
   virtual std::unique_ptr<std::vector<char>>

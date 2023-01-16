@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <type_traits>
+#include <optional>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -37,7 +38,7 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-static Optional<int64_t> extractConstantIndex(Value v) {
+static std::optional<int64_t> extractConstantIndex(Value v) {
   if (auto cstOp = v.getDefiningOp<arith::ConstantIndexOp>())
     return cstOp.value();
   if (auto affineApplyOp = v.getDefiningOp<AffineApplyOp>())

@@ -14,6 +14,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 
 namespace mlir {
 namespace transform {
@@ -189,7 +190,7 @@ private:
 template <typename OpTy>
 void TransformDialect::addOperationIfNotRegistered() {
   StringRef name = OpTy::getOperationName();
-  Optional<RegisteredOperationName> opName =
+  std::optional<RegisteredOperationName> opName =
       RegisteredOperationName::lookup(name, getContext());
   if (!opName) {
     addOperations<OpTy>();

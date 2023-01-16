@@ -26,7 +26,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -43,6 +42,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -1258,9 +1258,9 @@ const char *Lexer::SkipEscapedNewLines(const char *P) {
   }
 }
 
-Optional<Token> Lexer::findNextToken(SourceLocation Loc,
-                                     const SourceManager &SM,
-                                     const LangOptions &LangOpts) {
+std::optional<Token> Lexer::findNextToken(SourceLocation Loc,
+                                          const SourceManager &SM,
+                                          const LangOptions &LangOpts) {
   if (Loc.isMacroID()) {
     if (!Lexer::isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
       return std::nullopt;
@@ -1294,7 +1294,7 @@ Optional<Token> Lexer::findNextToken(SourceLocation Loc,
 SourceLocation Lexer::findLocationAfterToken(
     SourceLocation Loc, tok::TokenKind TKind, const SourceManager &SM,
     const LangOptions &LangOpts, bool SkipTrailingWhitespaceAndNewLine) {
-  Optional<Token> Tok = findNextToken(Loc, SM, LangOpts);
+  std::optional<Token> Tok = findNextToken(Loc, SM, LangOpts);
   if (!Tok || Tok->isNot(TKind))
     return {};
   SourceLocation TokenLoc = Tok->getLocation();
@@ -3256,9 +3256,9 @@ bool Lexer::isCodeCompletionPoint(const char *CurPtr) const {
   return false;
 }
 
-llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
-                                                  const char *SlashLoc,
-                                                  Token *Result) {
+std::optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
+                                                 const char *SlashLoc,
+                                                 Token *Result) {
   unsigned CharSize;
   char Kind = getCharAndSize(StartPtr, CharSize);
   assert((Kind == 'u' || Kind == 'U') && "expected a UCN");
@@ -3370,9 +3370,9 @@ llvm::Optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
   return CodePoint;
 }
 
-llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
-                                                const char *SlashLoc,
-                                                Token *Result) {
+std::optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
+                                               const char *SlashLoc,
+                                               Token *Result) {
   unsigned CharSize;
   bool Diagnose = Result && !isLexingRawMode();
 
@@ -3461,14 +3461,14 @@ llvm::Optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
   } else {
     StartPtr = CurPtr;
   }
-  return Match ? llvm::Optional<uint32_t>(*Match) : std::nullopt;
+  return Match ? std::optional<uint32_t>(*Match) : std::nullopt;
 }
 
 uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
                            Token *Result) {
 
   unsigned CharSize;
-  llvm::Optional<uint32_t> CodePointOpt;
+  std::optional<uint32_t> CodePointOpt;
   char Kind = getCharAndSize(StartPtr, CharSize);
   if (Kind == 'u' || Kind == 'U')
     CodePointOpt = tryReadNumericUCN(StartPtr, SlashLoc, Result);

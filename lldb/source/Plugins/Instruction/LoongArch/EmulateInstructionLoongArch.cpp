@@ -40,6 +40,10 @@ EmulateInstructionLoongArch::GetOpcodeForInstruction(uint32_t inst) {
        "beqz rj, offs21"},
       {0xfc000000, 0x44000000, &EmulateInstructionLoongArch::EmulateBNEZ,
        "bnez rj, offs21"},
+      {0xfc000300, 0x48000000, &EmulateInstructionLoongArch::EmulateBCEQZ,
+       "bceqz cj, offs21"},
+      {0xfc000300, 0x48000100, &EmulateInstructionLoongArch::EmulateBCNEZ,
+       "bcnez cj, offs21"},
       {0xfc000000, 0x4c000000, &EmulateInstructionLoongArch::EmulateJIRL,
        "jirl rd, rj, offs16"},
       {0xfc000000, 0x50000000, &EmulateInstructionLoongArch::EmulateB,
@@ -217,6 +221,14 @@ bool EmulateInstructionLoongArch::EmulateBNEZ(uint32_t inst) {
   return IsLoongArch64() ? EmulateBNEZ64(inst) : false;
 }
 
+bool EmulateInstructionLoongArch::EmulateBCEQZ(uint32_t inst) {
+  return IsLoongArch64() ? EmulateBCEQZ64(inst) : false;
+}
+
+bool EmulateInstructionLoongArch::EmulateBCNEZ(uint32_t inst) {
+  return IsLoongArch64() ? EmulateBCNEZ64(inst) : false;
+}
+
 bool EmulateInstructionLoongArch::EmulateJIRL(uint32_t inst) {
   return IsLoongArch64() ? EmulateJIRL64(inst) : false;
 }
@@ -293,6 +305,50 @@ bool EmulateInstructionLoongArch::EmulateBNEZ64(uint32_t inst) {
     return WritePC(next_pc);
   } else
     return WritePC(pc + 4);
+}
+
+// bceqz cj, offs21
+// if CFR[cj] == 0:
+//	PC = PC + SignExtend({offs21, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBCEQZ64(uint32_t inst) {
+  bool success = false;
+  uint32_t cj = Bits32(inst, 7, 5) + fpr_fcc0_loongarch;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  uint32_t offs21 = Bits32(inst, 25, 10) + (Bits32(inst, 4, 0) << 16);
+  uint8_t cj_val =
+      (uint8_t)ReadRegisterUnsigned(eRegisterKindLLDB, cj, 0, &success);
+  if (!success)
+    return false;
+  if (cj_val == 0) {
+    uint64_t next_pc = pc + llvm::SignExtend64<23>(offs21 << 2);
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+  return false;
+}
+
+// bcnez cj, offs21
+// if CFR[cj] != 0:
+//	PC = PC + SignExtend({offs21, 2'b0}, GRLEN)
+bool EmulateInstructionLoongArch::EmulateBCNEZ64(uint32_t inst) {
+  bool success = false;
+  uint32_t cj = Bits32(inst, 7, 5) + fpr_fcc0_loongarch;
+  uint64_t pc = ReadPC(&success);
+  if (!success)
+    return false;
+  uint32_t offs21 = Bits32(inst, 25, 10) + (Bits32(inst, 4, 0) << 16);
+  uint8_t cj_val =
+      (uint8_t)ReadRegisterUnsigned(eRegisterKindLLDB, cj, 0, &success);
+  if (!success)
+    return false;
+  if (cj_val != 0) {
+    uint64_t next_pc = pc + llvm::SignExtend64<23>(offs21 << 2);
+    return WritePC(next_pc);
+  } else
+    return WritePC(pc + 4);
+  return false;
 }
 
 // jirl rd, rj, offs16

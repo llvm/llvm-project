@@ -14,6 +14,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
 #include <complex>
+#include <optional>
 
 namespace mlir {
 class AffineMap;
@@ -785,7 +786,7 @@ public:
 
   /// Return the data of this attribute as an ArrayRef<T> if it is present,
   /// returns std::nullopt otherwise.
-  Optional<ArrayRef<T>> tryGetAsArrayRef() const;
+  std::optional<ArrayRef<T>> tryGetAsArrayRef() const;
 
   /// Support for isa<>/cast<>.
   static bool classof(Attribute attr);

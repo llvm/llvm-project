@@ -22,10 +22,10 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <utility>
 
 namespace clang {
@@ -284,7 +284,7 @@ struct DeductionFailureInfo {
 
   /// Return the index of the call argument that this deduction
   /// failure refers to, if any.
-  llvm::Optional<unsigned> getCallArgIndex();
+  std::optional<unsigned> getCallArgIndex();
 
   /// Free any memory associated with this deduction failure.
   void Destroy();

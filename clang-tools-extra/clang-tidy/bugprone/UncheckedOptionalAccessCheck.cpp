@@ -24,9 +24,7 @@
 #include <optional>
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 using ast_matchers::MatchFinder;
 using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
@@ -101,6 +99,4 @@ void UncheckedOptionalAccessCheck::check(
       diag(Loc, "unchecked access to optional value");
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

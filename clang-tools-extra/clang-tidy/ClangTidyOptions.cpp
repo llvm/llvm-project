@@ -28,8 +28,7 @@ using OptionsSource = clang::tidy::ClangTidyOptionsProvider::OptionsSource;
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FileFilter)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FileFilter::LineRange)
 
-namespace llvm {
-namespace yaml {
+namespace llvm::yaml {
 
 // Map std::pair<int, int> to a JSON array of size 2.
 template <> struct SequenceTraits<FileFilter::LineRange> {
@@ -135,11 +134,9 @@ template <> struct MappingTraits<ClangTidyOptions> {
   }
 };
 
-} // namespace yaml
-} // namespace llvm
+} // namespace llvm::yaml
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 ClangTidyOptions ClangTidyOptions::getDefaults() {
   ClangTidyOptions Options;
@@ -452,5 +449,4 @@ std::string configurationAsText(const ClangTidyOptions &Options) {
   return Stream.str();
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

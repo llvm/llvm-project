@@ -319,8 +319,7 @@ void ClangTidyDiagnosticConsumer::finalizeLastError() {
   LastErrorPassesLineFilter = false;
 }
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 const llvm::StringMap<tooling::Replacements> *
 getFixIt(const tooling::Diagnostic &Diagnostic, bool GetFixFromNotes) {
@@ -340,8 +339,7 @@ getFixIt(const tooling::Diagnostic &Diagnostic, bool GetFixFromNotes) {
   return Result;
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy
 
 void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {

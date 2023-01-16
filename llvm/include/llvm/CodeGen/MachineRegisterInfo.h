@@ -757,7 +757,7 @@ public:
   /// Get the low-level type of \p Reg or LLT{} if Reg is not a generic
   /// (target independent) virtual register.
   LLT getType(Register Reg) const {
-    if (Register::isVirtualRegister(Reg) && VRegToType.inBounds(Reg))
+    if (Reg.isVirtual() && VRegToType.inBounds(Reg))
       return VRegToType[Reg];
     return LLT{};
   }
@@ -799,7 +799,7 @@ public:
   /// addRegAllocationHint - Add a register allocation hint to the hints
   /// vector for VReg.
   void addRegAllocationHint(Register VReg, Register PrefReg) {
-    assert(Register::isVirtualRegister(VReg));
+    assert(VReg.isVirtual());
     RegAllocHints[VReg].second.push_back(PrefReg);
   }
 

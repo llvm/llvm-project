@@ -14,9 +14,7 @@
 using namespace clang::ast_matchers;
 using namespace clang::tidy::utils::lexer;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 AST_MATCHER(DeclStmt, isSingleDecl) { return Node.isSingleDecl(); }
@@ -273,6 +271,4 @@ void IsolateDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << FixItHint::CreateReplacement(WholeDecl->getSourceRange(),
                                        Replacement);
 }
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
