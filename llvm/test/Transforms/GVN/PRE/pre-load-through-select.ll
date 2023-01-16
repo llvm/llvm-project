@@ -236,15 +236,13 @@ define i32 @test_pointer_phi_select_simp_store_clobber_3(ptr %a, ptr %b, ptr %c,
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP_I_I_I]], i32 [[L_1]], i32 [[L_2]]
 ; CHECK-NEXT:    [[MIN_SELECT:%.*]] = select i1 [[CMP_I_I_I]], ptr [[A]], ptr [[B]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[RES_2_PRE:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES_2:%.*]] = phi i32 [ [[SELECT]], [[THEN]] ], [ [[RES_2_PRE]], [[ELSE]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[MIN_SELECT]], [[THEN]] ], [ [[A]], [[ELSE]] ]
+; CHECK-NEXT:    [[RES_2:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[RES_2]]
 ;
 entry:
