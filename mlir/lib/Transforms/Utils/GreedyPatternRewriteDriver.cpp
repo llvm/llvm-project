@@ -80,9 +80,6 @@ protected:
   // before the root is changed.
   void notifyRootReplaced(Operation *op, ValueRange replacement) override;
 
-  /// PatternRewriter hook for erasing a dead operation.
-  void eraseOp(Operation *op) override;
-
   /// PatternRewriter hook for notifying match failure reasons.
   LogicalResult
   notifyMatchFailure(Location loc,
@@ -394,6 +391,11 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(ValueRange operands) {
 }
 
 void GreedyPatternRewriteDriver::notifyOperationRemoved(Operation *op) {
+  LLVM_DEBUG({
+    logger.startLine() << "** Erase   : '" << op->getName() << "'(" << op
+                       << ")\n";
+  });
+
   addOperandsToWorklist(op->getOperands());
   op->walk([this](Operation *operation) {
     removeFromWorklist(operation);
@@ -410,14 +412,6 @@ void GreedyPatternRewriteDriver::notifyRootReplaced(Operation *op,
   for (auto result : op->getResults())
     for (auto *user : result.getUsers())
       addToWorklist(user);
-}
-
-void GreedyPatternRewriteDriver::eraseOp(Operation *op) {
-  LLVM_DEBUG({
-    logger.startLine() << "** Erase   : '" << op->getName() << "'(" << op
-                       << ")\n";
-  });
-  PatternRewriter::eraseOp(op);
 }
 
 LogicalResult GreedyPatternRewriteDriver::notifyMatchFailure(
