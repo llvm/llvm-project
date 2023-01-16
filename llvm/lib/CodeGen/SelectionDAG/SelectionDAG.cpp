@@ -2628,7 +2628,8 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID)
-      return TLI->isSplatValueForTargetNode(V, DemandedElts, UndefElts, Depth);
+      return TLI->isSplatValueForTargetNode(V, DemandedElts, UndefElts, *this,
+                                            Depth);
     break;
 }
 
