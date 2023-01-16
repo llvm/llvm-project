@@ -4822,10 +4822,9 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
 
 llvm::DILocalVariable *
 CGDebugInfo::EmitDeclareOfArgVariable(const VarDecl *VD, llvm::Value *AI,
-                                      unsigned ArgNo, CGBuilderTy &Builder,
-                                      const bool UsePointerValue) {
+                                      unsigned ArgNo, CGBuilderTy &Builder) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  return EmitDeclare(VD, AI, ArgNo, Builder, UsePointerValue);
+  return EmitDeclare(VD, AI, ArgNo, Builder);
 }
 
 namespace {

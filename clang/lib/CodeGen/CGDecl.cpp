@@ -2476,8 +2476,6 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   Address AllocaPtr = Address::invalid();
   bool DoStore = false;
   bool IsScalar = hasScalarEvaluationKind(Ty);
-  bool UseIndirectDebugAddress = false;
-
   // If we already have a pointer to the argument, reuse the input pointer.
   if (Arg.isIndirect()) {
     // If we have a prettier pointer type at this point, bitcast to that.
@@ -2489,19 +2487,6 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     auto AllocaAS = CGM.getASTAllocaAddressSpace();
     auto *V = DeclPtr.getPointer();
     AllocaPtr = DeclPtr;
-
-    // For truly ABI indirect arguments -- those that are not `byval` -- store
-    // the address of the argument on the stack to preserve debug information.
-    ABIArgInfo ArgInfo = CurFnInfo->arguments()[ArgNo - 1].info;
-    if (ArgInfo.isIndirect())
-      UseIndirectDebugAddress = !ArgInfo.getIndirectByVal();
-    if (UseIndirectDebugAddress) {
-      auto PtrTy = getContext().getPointerType(Ty);
-      AllocaPtr = CreateMemTemp(PtrTy, getContext().getTypeAlignInChars(PtrTy),
-                                D.getName() + ".indirect_addr");
-      EmitStoreOfScalar(V, AllocaPtr, /* Volatile */ false, PtrTy);
-    }
-
     auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;
     auto DestLangAS =
         getLangOpts().OpenCL ? LangAS::opencl_private : LangAS::Default;
@@ -2618,7 +2603,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !CurFuncIsThunk &&
         !NoDebugInfo) {
       llvm::DILocalVariable *DILocalVar = DI->EmitDeclareOfArgVariable(
-          &D, AllocaPtr.getPointer(), ArgNo, Builder, UseIndirectDebugAddress);
+          &D, AllocaPtr.getPointer(), ArgNo, Builder);
       if (const auto *Var = dyn_cast_or_null<ParmVarDecl>(&D))
         DI->getParamDbgMappings().insert({Var, DILocalVar});
     }

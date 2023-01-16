@@ -59,10 +59,7 @@ void test3(pointer_pair_t pair) {
 }
 
 // CHECK-LABEL:define{{.*}} void @test4(
-// CHECK-SAME: ptr noundef [[QUAD:%.*]])
-// CHECK:      [[QUAD_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT: [[TEMP:%.*]] = alloca [[QUAD_T:%.*]], align 8
-// CHECK-NEXT: store ptr [[QUAD]], ptr [[QUAD_INDIRECT_ADDR]]
+// CHECK:      [[TEMP:%.*]] = alloca [[QUAD_T:%.*]], align 8
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TEMP]], ptr align 8 {{%.*}}, i64 32, i1 false)
 // CHECK-NEXT: call void @__atomic_store(i64 noundef 32, ptr noundef @a_pointer_quad, ptr noundef [[TEMP]], i32 noundef 5)
 void test4(pointer_quad_t quad) {
