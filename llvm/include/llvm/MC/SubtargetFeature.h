@@ -189,6 +189,8 @@ public:
   /// Adds Features.
   void AddFeature(StringRef String, bool Enable = true);
 
+  void addFeaturesVector(const ArrayRef<std::string> OtherFeatures);
+
   /// Returns the vector of individual subtarget features.
   const std::vector<std::string> &getFeatures() const { return Features; }
 
