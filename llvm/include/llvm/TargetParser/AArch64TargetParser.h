@@ -312,12 +312,12 @@ inline constexpr ArchInfo ARMV8_5A  = { VersionTuple{8, 5}, AProfile, "armv8.5-a
 constexpr unsigned BaseNoCrypto = ARMV8_5A.DefaultExts ^ AArch64::AEK_CRYPTO; // 8.6 onwards has no AEK_CRYPTO
 inline constexpr ArchInfo ARMV8_6A  = { VersionTuple{8, 6}, AProfile, "armv8.6-a", "+v8.6a", (BaseNoCrypto | AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 | AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM)};
 inline constexpr ArchInfo ARMV8_7A  = { VersionTuple{8, 7}, AProfile, "armv8.7-a", "+v8.7a", (ARMV8_6A.DefaultExts)};
-inline constexpr ArchInfo ARMV8_8A  = { VersionTuple{8, 8}, AProfile, "armv8.8-a", "+v8.8a", (ARMV8_7A.DefaultExts)};
+inline constexpr ArchInfo ARMV8_8A  = { VersionTuple{8, 8}, AProfile, "armv8.8-a", "+v8.8a", (ARMV8_7A.DefaultExts | AArch64::AEK_MOPS | AArch64::AEK_HBC)};
 inline constexpr ArchInfo ARMV8_9A  = { VersionTuple{8, 9}, AProfile, "armv8.9-a", "+v8.9a", (ARMV8_8A.DefaultExts)};
 inline constexpr ArchInfo ARMV9A    = { VersionTuple{9, 0}, AProfile, "armv9-a", "+v9a", (BaseNoCrypto | AArch64::AEK_SVE | AArch64::AEK_SVE2)};
 inline constexpr ArchInfo ARMV9_1A  = { VersionTuple{9, 1}, AProfile, "armv9.1-a", "+v9.1a", (ARMV9A.DefaultExts | AArch64::AEK_BF16 | AArch64::AEK_I8MM)};
 inline constexpr ArchInfo ARMV9_2A  = { VersionTuple{9, 2}, AProfile, "armv9.2-a", "+v9.2a", (ARMV9_1A.DefaultExts)};
-inline constexpr ArchInfo ARMV9_3A  = { VersionTuple{9, 3}, AProfile, "armv9.3-a", "+v9.3a", (ARMV9_2A.DefaultExts)};
+inline constexpr ArchInfo ARMV9_3A  = { VersionTuple{9, 3}, AProfile, "armv9.3-a", "+v9.3a", (ARMV9_2A.DefaultExts | AArch64::AEK_MOPS | AArch64::AEK_HBC)};
 inline constexpr ArchInfo ARMV9_4A  = { VersionTuple{9, 4}, AProfile, "armv9.4-a", "+v9.4a", (ARMV9_3A.DefaultExts)};
 // For v8-R, we do not enable crypto and align with GCC that enables a more minimal set of optional architecture extensions.
 inline constexpr ArchInfo ARMV8R    = { VersionTuple{8, 0}, RProfile, "armv8-r", "+v8r", ((BaseNoCrypto ^ AArch64::AEK_LSE) | AArch64::AEK_SSBS | AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SB), };
