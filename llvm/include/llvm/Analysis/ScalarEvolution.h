@@ -1074,6 +1074,71 @@ public:
   bool isKnownOnEveryIteration(ICmpInst::Predicate Pred,
                                const SCEVAddRecExpr *LHS, const SCEV *RHS);
 
+  /// Information about the number of loop iterations for which a loop exit's
+  /// branch condition evaluates to the not-taken path.  This is a temporary
+  /// pair of exact and max expressions that are eventually summarized in
+  /// ExitNotTakenInfo and BackedgeTakenInfo.
+  struct ExitLimit {
+    const SCEV *ExactNotTaken; // The exit is not taken exactly this many times
+    const SCEV *ConstantMaxNotTaken; // The exit is not taken at most this many
+                                     // times
+    const SCEV *SymbolicMaxNotTaken;
+
+    // Not taken either exactly ConstantMaxNotTaken or zero times
+    bool MaxOrZero = false;
+
+    /// A set of predicate guards for this ExitLimit. The result is only valid
+    /// if all of the predicates in \c Predicates evaluate to 'true' at
+    /// run-time.
+    SmallPtrSet<const SCEVPredicate *, 4> Predicates;
+
+    void addPredicate(const SCEVPredicate *P) {
+      assert(!isa<SCEVUnionPredicate>(P) && "Only add leaf predicates here!");
+      Predicates.insert(P);
+    }
+
+    /// Construct either an exact exit limit from a constant, or an unknown
+    /// one from a SCEVCouldNotCompute.  No other types of SCEVs are allowed
+    /// as arguments and asserts enforce that internally.
+    /*implicit*/ ExitLimit(const SCEV *E);
+
+    ExitLimit(
+        const SCEV *E, const SCEV *ConstantMaxNotTaken,
+        const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
+        ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList =
+            std::nullopt);
+
+    ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
+              const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
+              const SmallPtrSetImpl<const SCEVPredicate *> &PredSet);
+
+    /// Test whether this ExitLimit contains any computed information, or
+    /// whether it's all SCEVCouldNotCompute values.
+    bool hasAnyInfo() const {
+      return !isa<SCEVCouldNotCompute>(ExactNotTaken) ||
+             !isa<SCEVCouldNotCompute>(ConstantMaxNotTaken);
+    }
+
+    /// Test whether this ExitLimit contains all information.
+    bool hasFullInfo() const {
+      return !isa<SCEVCouldNotCompute>(ExactNotTaken);
+    }
+  };
+
+  /// Compute the number of times the backedge of the specified loop will
+  /// execute if its exit condition were a conditional branch of ExitCond.
+  ///
+  /// \p ControlsExit is true if ExitCond directly controls the exit
+  /// branch. In this case, we can assume that the loop exits only if the
+  /// condition is true and can infer that failing to meet the condition prior
+  /// to integer wraparound results in undefined behavior.
+  ///
+  /// If \p AllowPredicates is set, this call will try to use a minimal set of
+  /// SCEV predicates in order to return an exact answer.
+  ExitLimit computeExitLimitFromCond(const Loop *L, Value *ExitCond,
+                                     bool ExitIfTrue, bool ControlsExit,
+                                     bool AllowPredicates = false);
+
   /// A predicate is said to be monotonically increasing if may go from being
   /// false to being true as the loop iterates, but never the other way
   /// around.  A predicate is said to be monotonically decreasing if may go
@@ -1364,57 +1429,6 @@ private:
 
   /// Private helper method for the GetMinTrailingZeros method
   uint32_t GetMinTrailingZerosImpl(const SCEV *S);
-
-  /// Information about the number of loop iterations for which a loop exit's
-  /// branch condition evaluates to the not-taken path.  This is a temporary
-  /// pair of exact and max expressions that are eventually summarized in
-  /// ExitNotTakenInfo and BackedgeTakenInfo.
-  struct ExitLimit {
-    const SCEV *ExactNotTaken; // The exit is not taken exactly this many times
-    const SCEV *ConstantMaxNotTaken; // The exit is not taken at most this many
-                                     // times
-    const SCEV *SymbolicMaxNotTaken;
-
-    // Not taken either exactly ConstantMaxNotTaken or zero times
-    bool MaxOrZero = false;
-
-    /// A set of predicate guards for this ExitLimit. The result is only valid
-    /// if all of the predicates in \c Predicates evaluate to 'true' at
-    /// run-time.
-    SmallPtrSet<const SCEVPredicate *, 4> Predicates;
-
-    void addPredicate(const SCEVPredicate *P) {
-      assert(!isa<SCEVUnionPredicate>(P) && "Only add leaf predicates here!");
-      Predicates.insert(P);
-    }
-
-    /// Construct either an exact exit limit from a constant, or an unknown
-    /// one from a SCEVCouldNotCompute.  No other types of SCEVs are allowed
-    /// as arguments and asserts enforce that internally.
-    /*implicit*/ ExitLimit(const SCEV *E);
-
-    ExitLimit(
-        const SCEV *E, const SCEV *ConstantMaxNotTaken,
-        const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
-        ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList =
-            std::nullopt);
-
-    ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
-              const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
-              const SmallPtrSetImpl<const SCEVPredicate *> &PredSet);
-
-    /// Test whether this ExitLimit contains any computed information, or
-    /// whether it's all SCEVCouldNotCompute values.
-    bool hasAnyInfo() const {
-      return !isa<SCEVCouldNotCompute>(ExactNotTaken) ||
-             !isa<SCEVCouldNotCompute>(ConstantMaxNotTaken);
-    }
-
-    /// Test whether this ExitLimit contains all information.
-    bool hasFullInfo() const {
-      return !isa<SCEVCouldNotCompute>(ExactNotTaken);
-    }
-  };
 
   /// Information about the number of times a particular loop exit may be
   /// reached before exiting the loop.
@@ -1736,20 +1750,6 @@ private:
   /// return an exact answer.
   ExitLimit computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                              bool AllowPredicates = false);
-
-  /// Compute the number of times the backedge of the specified loop will
-  /// execute if its exit condition were a conditional branch of ExitCond.
-  ///
-  /// \p ControlsExit is true if ExitCond directly controls the exit
-  /// branch. In this case, we can assume that the loop exits only if the
-  /// condition is true and can infer that failing to meet the condition prior
-  /// to integer wraparound results in undefined behavior.
-  ///
-  /// If \p AllowPredicates is set, this call will try to use a minimal set of
-  /// SCEV predicates in order to return an exact answer.
-  ExitLimit computeExitLimitFromCond(const Loop *L, Value *ExitCond,
-                                     bool ExitIfTrue, bool ControlsExit,
-                                     bool AllowPredicates = false);
 
   /// Return a symbolic upper bound for the backedge taken count of the loop.
   /// This is more general than getConstantMaxBackedgeTakenCount as it returns
