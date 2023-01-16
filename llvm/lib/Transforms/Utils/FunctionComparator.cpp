@@ -110,7 +110,7 @@ int FunctionComparator::cmpMem(StringRef L, StringRef R) const {
 
   // Compare strings lexicographically only when it is necessary: only when
   // strings are equal in size.
-  return L.compare(R);
+  return std::clamp(L.compare(R), -1, 1);
 }
 
 int FunctionComparator::cmpAttrs(const AttributeList L,
