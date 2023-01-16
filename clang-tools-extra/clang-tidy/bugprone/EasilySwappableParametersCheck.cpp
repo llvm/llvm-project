@@ -89,9 +89,7 @@ static constexpr std::size_t
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 using TheCheck = EasilySwappableParametersCheck;
 
@@ -2311,6 +2309,4 @@ void EasilySwappableParametersCheck::check(
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

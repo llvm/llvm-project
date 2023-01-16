@@ -17,6 +17,7 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -79,14 +80,14 @@ public:
                            const std::vector<std::string> &CommandLine,
                            DependencyConsumer &DepConsumer,
                            DiagnosticConsumer &DiagConsumer,
-                           llvm::Optional<StringRef> ModuleName = std::nullopt);
+                           std::optional<StringRef> ModuleName = std::nullopt);
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, success otherwise.
   llvm::Error
   computeDependencies(StringRef WorkingDirectory,
                       const std::vector<std::string> &CommandLine,
                       DependencyConsumer &Consumer,
-                      llvm::Optional<StringRef> ModuleName = std::nullopt);
+                      std::optional<StringRef> ModuleName = std::nullopt);
 
   bool shouldEagerLoadModules() const { return EagerLoadModules; }
 

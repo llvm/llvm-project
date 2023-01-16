@@ -792,7 +792,7 @@ static void unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB,
 
   for (auto &MI : Split) {
     for (auto &MO : MI.explicit_uses()) {
-      if (!MO.isReg() || Register::isPhysicalRegister(MO.getReg()))
+      if (!MO.isReg() || MO.getReg().isPhysical())
         continue;
       if (MachineInstr *Def = MRI.getUniqueVRegDef(MO.getReg()))
         if (Def->getParent() == &MBB)

@@ -1155,9 +1155,14 @@ Error LVELFReader::loadTargetInfo(const ObjectFile &Obj) {
   TT.setOS(Triple::UnknownOS);
 
   // Features to be passed to target/subtarget
-  SubtargetFeatures Features = Obj.getFeatures();
-
-  return loadGenericTargetInfo(TT.str(), Features.getString());
+  Expected<SubtargetFeatures> Features = Obj.getFeatures();
+  SubtargetFeatures FeaturesValue;
+  if (!Features) {
+    consumeError(Features.takeError());
+    FeaturesValue = SubtargetFeatures();
+  }
+  FeaturesValue = *Features;
+  return loadGenericTargetInfo(TT.str(), FeaturesValue.getString());
 }
 
 void LVELFReader::mapRangeAddress(const ObjectFile &Obj) {

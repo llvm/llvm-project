@@ -125,7 +125,7 @@ SVal getPointeeOf(const CheckerContext &C, Loc LValue) {
 }
 
 /// Given a pointer/reference argument, return the value it refers to.
-Optional<SVal> getPointeeOf(const CheckerContext &C, SVal Arg) {
+std::optional<SVal> getPointeeOf(const CheckerContext &C, SVal Arg) {
   if (auto LValue = Arg.getAs<Loc>())
     return getPointeeOf(C, *LValue);
   return std::nullopt;
@@ -134,7 +134,8 @@ Optional<SVal> getPointeeOf(const CheckerContext &C, SVal Arg) {
 /// Given a pointer, return the SVal of its pointee or if it is tainted,
 /// otherwise return the pointer's SVal if tainted.
 /// Also considers stdin as a taint source.
-Optional<SVal> getTaintedPointeeOrPointer(const CheckerContext &C, SVal Arg) {
+std::optional<SVal> getTaintedPointeeOrPointer(const CheckerContext &C,
+                                               SVal Arg) {
   const ProgramStateRef State = C.getState();
 
   if (auto Pointee = getPointeeOf(C, Arg))
@@ -163,7 +164,7 @@ class ArgSet {
 public:
   ArgSet() = default;
   ArgSet(ArgVecTy &&DiscreteArgs,
-         Optional<ArgIdxTy> VariadicIndex = std::nullopt)
+         std::optional<ArgIdxTy> VariadicIndex = std::nullopt)
       : DiscreteArgs(std::move(DiscreteArgs)),
         VariadicIndex(std::move(VariadicIndex)) {}
 
@@ -178,7 +179,7 @@ public:
 
 private:
   ArgVecTy DiscreteArgs;
-  Optional<ArgIdxTy> VariadicIndex;
+  std::optional<ArgIdxTy> VariadicIndex;
 };
 
 /// A struct used to specify taint propagation rules for a function.
@@ -199,12 +200,12 @@ class GenericTaintRule {
   ArgSet PropDstArgs;
 
   /// A message that explains why the call is sensitive to taint.
-  Optional<StringRef> SinkMsg;
+  std::optional<StringRef> SinkMsg;
 
   GenericTaintRule() = default;
 
   GenericTaintRule(ArgSet &&Sink, ArgSet &&Filter, ArgSet &&Src, ArgSet &&Dst,
-                   Optional<StringRef> SinkMsg = std::nullopt)
+                   std::optional<StringRef> SinkMsg = std::nullopt)
       : SinkArgs(std::move(Sink)), FilterArgs(std::move(Filter)),
         PropSrcArgs(std::move(Src)), PropDstArgs(std::move(Dst)),
         SinkMsg(SinkMsg) {}
@@ -213,7 +214,7 @@ public:
   /// Make a rule that reports a warning if taint reaches any of \p FilterArgs
   /// arguments.
   static GenericTaintRule Sink(ArgSet &&SinkArgs,
-                               Optional<StringRef> Msg = std::nullopt) {
+                               std::optional<StringRef> Msg = std::nullopt) {
     return {std::move(SinkArgs), {}, {}, {}, Msg};
   }
 
@@ -234,9 +235,9 @@ public:
   }
 
   /// Make a rule that taints all PropDstArgs if any of PropSrcArgs is tainted.
-  static GenericTaintRule SinkProp(ArgSet &&SinkArgs, ArgSet &&SrcArgs,
-                                   ArgSet &&DstArgs,
-                                   Optional<StringRef> Msg = std::nullopt) {
+  static GenericTaintRule
+  SinkProp(ArgSet &&SinkArgs, ArgSet &&SrcArgs, ArgSet &&DstArgs,
+           std::optional<StringRef> Msg = std::nullopt) {
     return {
         std::move(SinkArgs), {}, std::move(SrcArgs), std::move(DstArgs), Msg};
   }
@@ -482,7 +483,7 @@ void GenericTaintRuleParser::parseConfig(const std::string &Option,
   validateArgVector(Option, P.DstArgs);
   bool IsSrcVariadic = P.VarType == TaintConfiguration::VariadicType::Src;
   bool IsDstVariadic = P.VarType == TaintConfiguration::VariadicType::Dst;
-  Optional<ArgIdxTy> JustVarIndex = P.VarIndex;
+  std::optional<ArgIdxTy> JustVarIndex = P.VarIndex;
 
   ArgSet SrcDesc(std::move(P.SrcArgs),
                  IsSrcVariadic ? JustVarIndex : std::nullopt);
@@ -725,7 +726,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
   std::string Option{"Config"};
   StringRef ConfigFile =
       Mgr->getAnalyzerOptions().getCheckerStringOption(this, Option);
-  llvm::Optional<TaintConfiguration> Config =
+  std::optional<TaintConfiguration> Config =
       getConfiguration<TaintConfiguration>(*Mgr, this, Option, ConfigFile);
   if (!Config) {
     // We don't have external taint config, no parsing required.
@@ -901,7 +902,7 @@ bool GenericTaintRule::UntrustedEnv(CheckerContext &C) {
 bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
                                                   CheckerContext &C) const {
   assert(E);
-  Optional<SVal> TaintedSVal{getTaintedPointeeOrPointer(C, C.getSVal(E))};
+  std::optional<SVal> TaintedSVal{getTaintedPointeeOrPointer(C, C.getSVal(E))};
 
   if (!TaintedSVal)
     return false;

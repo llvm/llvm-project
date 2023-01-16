@@ -2785,8 +2785,26 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
   // Create a conditional branch and update PHI nodes.
   auto *BI = BranchInst::Create(NewBB, BB, SI->getCondition(), Pred);
   BI->applyMergedLocation(PredTerm->getDebugLoc(), SI->getDebugLoc());
+  BI->copyMetadata(*SI, {LLVMContext::MD_prof});
   SIUse->setIncomingValue(Idx, SI->getFalseValue());
   SIUse->addIncoming(SI->getTrueValue(), NewBB);
+  // Set the block frequency of NewBB.
+  if (HasProfileData) {
+    uint64_t TrueWeight, FalseWeight;
+    if (extractBranchWeights(*SI, TrueWeight, FalseWeight) &&
+        (TrueWeight + FalseWeight) != 0) {
+      SmallVector<BranchProbability, 2> BP;
+      BP.emplace_back(BranchProbability::getBranchProbability(
+          TrueWeight, TrueWeight + FalseWeight));
+      BP.emplace_back(BranchProbability::getBranchProbability(
+          FalseWeight, TrueWeight + FalseWeight));
+      BPI->setEdgeProbability(Pred, BP);
+    }
+
+    auto NewBBFreq =
+        BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, NewBB);
+    BFI->setBlockFreq(NewBB, NewBBFreq.getFrequency());
+  }
 
   // The select is now dead.
   SI->eraseFromParent();

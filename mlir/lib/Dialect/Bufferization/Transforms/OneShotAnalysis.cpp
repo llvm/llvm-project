@@ -41,6 +41,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
 #include <random>
+#include <optional>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -454,7 +455,7 @@ bool canUseOpDominance(const DenseSet<OpOperand *> &usesRead,
                        const DenseSet<OpOperand *> &usesWrite,
                        const AnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
-  Optional<Region *> commonEnclosingRegion = std::nullopt;
+  std::optional<Region *> commonEnclosingRegion;
 
   // In case of a write, take the region in which the write takes place.
   for (OpOperand *uWrite : usesWrite) {

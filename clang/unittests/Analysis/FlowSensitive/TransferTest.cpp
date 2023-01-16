@@ -23,6 +23,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -54,7 +55,7 @@ void runDataflow(llvm::StringRef Code, Matcher Match,
         return NoopAnalysis(
             C, DataflowAnalysisOptions{UseBuiltinModel
                                            ? Env.getAnalysisOptions()
-                                           : llvm::Optional<BuiltinOptions>()});
+                                           : std::optional<BuiltinOptions>()});
       });
   AI.ASTBuildArgs = ASTBuildArgs;
   if (Options.BuiltinOpts)

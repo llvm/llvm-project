@@ -31,6 +31,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;
@@ -1654,7 +1655,7 @@ namespace {
   class DeclAsInlineDebugLocation {
     CGDebugInfo *DI;
     llvm::MDNode *InlinedAt;
-    llvm::Optional<ApplyDebugLocation> Location;
+    std::optional<ApplyDebugLocation> Location;
 
   public:
     DeclAsInlineDebugLocation(CodeGenFunction &CGF, const NamedDecl &Decl)
@@ -1676,7 +1677,7 @@ namespace {
 
   static void EmitSanitizerDtorCallback(
       CodeGenFunction &CGF, StringRef Name, llvm::Value *Ptr,
-      llvm::Optional<CharUnits::QuantityType> PoisonSize = {}) {
+      std::optional<CharUnits::QuantityType> PoisonSize = {}) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     // Pass in void pointer and size of region as arguments to runtime
     // function
@@ -1810,7 +1811,7 @@ namespace {
    ASTContext &Context;
    EHScopeStack &EHStack;
    const CXXDestructorDecl *DD;
-   llvm::Optional<unsigned> StartIndex;
+   std::optional<unsigned> StartIndex;
 
  public:
    SanitizeDtorCleanupBuilder(ASTContext &Context, EHScopeStack &EHStack,

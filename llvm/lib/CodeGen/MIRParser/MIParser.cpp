@@ -1374,7 +1374,7 @@ static const char *printImplicitRegisterFlag(const MachineOperand &MO) {
 
 static std::string getRegisterName(const TargetRegisterInfo *TRI,
                                    Register Reg) {
-  assert(Register::isPhysicalRegister(Reg) && "expected phys reg");
+  assert(Reg.isPhysical() && "expected phys reg");
   return StringRef(TRI->getName(Reg)).lower();
 }
 
@@ -1704,11 +1704,11 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
   if (Token.is(MIToken::dot)) {
     if (parseSubRegisterIndex(SubReg))
       return true;
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       return error("subregister index expects a virtual register");
   }
   if (Token.is(MIToken::colon)) {
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       return error("register class specification expects a virtual register");
     lex();
     if (parseRegisterClassOrBank(*RegInfo))
@@ -1738,7 +1738,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     }
   } else if (consumeIfPresent(MIToken::lparen)) {
     // Virtual registers may have a tpe with GlobalISel.
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       return error("unexpected type on physical register");
 
     LLT Ty;
@@ -1753,7 +1753,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
 
     MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
     MRI.setType(Reg, Ty);
-  } else if (Register::isVirtualRegister(Reg)) {
+  } else if (Reg.isVirtual()) {
     // Generic virtual registers must have a type.
     // If we end up here this means the type hasn't been specified and
     // this is bad!

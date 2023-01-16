@@ -23,9 +23,12 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <limits>
+#include <memory>
 #include <sstream>
 #include <string>
 
@@ -224,6 +227,25 @@ inline Error Envar<Ty>::init(StringRef Name, GetterFunctor Getter,
   }
 
   return Error::success();
+}
+
+/// Return the difference (in bytes) between \p Begin and \p End.
+template <typename Ty = char>
+ptrdiff_t getPtrDiff(const void *End, const void *Begin) {
+  return reinterpret_cast<const Ty *>(End) -
+         reinterpret_cast<const Ty *>(Begin);
+}
+
+/// Return \p Ptr advanced by \p Offset bytes.
+template <typename Ty> Ty *advanceVoidPtr(Ty *Ptr, int64_t Offset) {
+  static_assert(std::is_void<Ty>::value);
+  return const_cast<char *>(reinterpret_cast<const char *>(Ptr) + Offset);
+}
+
+/// Return \p Ptr aligned to \p Alignment bytes.
+template <typename Ty> Ty *alignPtr(Ty *Ptr, int64_t Alignment) {
+  size_t Space = std::numeric_limits<size_t>::max();
+  return std::align(Alignment, sizeof(char), Ptr, Space);
 }
 
 } // namespace target

@@ -356,8 +356,8 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
 
 /// Construct an APint from a parsed value, a known attribute type and
 /// sign.
-static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
-                                           StringRef spelling) {
+static std::optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
+                                                StringRef spelling) {
   // Parse the integer value into an APInt that is big enough to hold the value.
   APInt result;
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
@@ -417,7 +417,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
   }
 
   if (auto floatType = type.dyn_cast<FloatType>()) {
-    Optional<APFloat> result;
+    std::optional<APFloat> result;
     if (failed(parseFloatFromIntegerLiteral(result, tok, isNegative,
                                             floatType.getFloatSemantics(),
                                             floatType.getWidth())))
@@ -435,7 +435,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
     return nullptr;
   }
 
-  Optional<APInt> apInt = buildAttributeAPInt(type, isNegative, spelling);
+  std::optional<APInt> apInt = buildAttributeAPInt(type, isNegative, spelling);
   if (!apInt)
     return emitError(loc, "integer constant out of range for attribute"),
            nullptr;
@@ -450,7 +450,7 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
 /// stored into 'result'.
 static ParseResult parseElementAttrHexValues(Parser &parser, Token tok,
                                              std::string &result) {
-  if (Optional<std::string> value = tok.getHexStringValue()) {
+  if (std::optional<std::string> value = tok.getHexStringValue()) {
     result = std::move(*value);
     return success();
   }
@@ -636,7 +636,7 @@ TensorLiteralParser::getIntAttrElements(SMLoc loc, Type eltTy,
     }
 
     // Create APInt values for each element with the correct bitwidth.
-    Optional<APInt> apInt =
+    std::optional<APInt> apInt =
         buildAttributeAPInt(eltTy, isNegative, token.getSpelling());
     if (!apInt)
       return p.emitError(tokenLoc, "integer constant out of range for type");
@@ -656,7 +656,7 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
 
     // Handle hexadecimal float literals.
     if (token.is(Token::integer) && token.getSpelling().startswith("0x")) {
-      Optional<APFloat> result;
+      std::optional<APFloat> result;
       if (failed(p.parseFloatFromIntegerLiteral(result, token, isNegative,
                                                 eltTy.getFloatSemantics(),
                                                 eltTy.getWidth())))
@@ -880,7 +880,7 @@ ParseResult DenseArrayElementParser::parseIntegerElement(Parser &p) {
   bool isNegative = p.consumeIf(Token::minus);
 
   // Parse an integer literal as an APInt.
-  Optional<APInt> value;
+  std::optional<APInt> value;
   StringRef spelling = p.getToken().getSpelling();
   if (p.getToken().isAny(Token::kw_true, Token::kw_false)) {
     if (!type.isInteger(1))
@@ -903,7 +903,7 @@ ParseResult DenseArrayElementParser::parseFloatElement(Parser &p) {
   bool isNegative = p.consumeIf(Token::minus);
 
   Token token = p.getToken();
-  Optional<APFloat> result;
+  std::optional<APFloat> result;
   auto floatType = type.cast<FloatType>();
   if (p.consumeIf(Token::integer)) {
     // Parse an integer literal as a float.
@@ -913,7 +913,7 @@ ParseResult DenseArrayElementParser::parseFloatElement(Parser &p) {
       return failure();
   } else if (p.consumeIf(Token::floatliteral)) {
     // Parse a floating point literal.
-    Optional<double> val = token.getFloatingPointValue();
+    std::optional<double> val = token.getFloatingPointValue();
     if (!val)
       return failure();
     result = APFloat(isNegative ? -*val : *val);
@@ -1150,7 +1150,7 @@ Attribute Parser::parseStridedLayoutAttr() {
   // Parses either an integer token or a question mark token. Reports an error
   // and returns std::nullopt if the current token is neither. The integer token
   // must fit into int64_t limits.
-  auto parseStrideOrOffset = [&]() -> Optional<int64_t> {
+  auto parseStrideOrOffset = [&]() -> std::optional<int64_t> {
     if (consumeIf(Token::question))
       return ShapedType::kDynamic;
 
@@ -1163,7 +1163,7 @@ Attribute Parser::parseStridedLayoutAttr() {
     bool negative = consumeIf(Token::minus);
 
     if (getToken().is(Token::integer)) {
-      Optional<uint64_t> value = getToken().getUInt64IntegerValue();
+      std::optional<uint64_t> value = getToken().getUInt64IntegerValue();
       if (!value ||
           *value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()))
         return emitWrongTokenError();
@@ -1182,7 +1182,7 @@ Attribute Parser::parseStridedLayoutAttr() {
   SmallVector<int64_t> strides;
   if (!getToken().is(Token::r_square)) {
     do {
-      Optional<int64_t> stride = parseStrideOrOffset();
+      std::optional<int64_t> stride = parseStrideOrOffset();
       if (!stride)
         return nullptr;
       strides.push_back(*stride);
@@ -1205,7 +1205,7 @@ Attribute Parser::parseStridedLayoutAttr() {
       failed(parseToken(Token::colon, "expected ':' after 'offset'")))
     return nullptr;
 
-  Optional<int64_t> offset = parseStrideOrOffset();
+  std::optional<int64_t> offset = parseStrideOrOffset();
   if (!offset || failed(parseToken(Token::greater, "expected '>'")))
     return nullptr;
 

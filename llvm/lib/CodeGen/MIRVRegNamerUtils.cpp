@@ -77,7 +77,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
           MO.getType(), MO.getTargetFlags(),
           MO.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
     case MachineOperand::MO_Register:
-      if (Register::isVirtualRegister(MO.getReg()))
+      if (MO.getReg().isVirtual())
         return MRI.getVRegDef(MO.getReg())->getOpcode();
       return MO.getReg();
     case MachineOperand::MO_Immediate:
@@ -156,7 +156,7 @@ bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
     // Look for instructions that define VRegs in operand 0.
     MachineOperand &MO = Candidate.getOperand(0);
     // Avoid non regs, instructions defining physical regs.
-    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
     VRegs.push_back(
         NamedVReg(MO.getReg(), Prefix + getInstructionOpcodeHash(Candidate)));

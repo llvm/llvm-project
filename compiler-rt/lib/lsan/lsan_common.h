@@ -43,6 +43,8 @@
 #  define CAN_SANITIZE_LEAKS 1
 #elif defined(__arm__) && SANITIZER_LINUX
 #  define CAN_SANITIZE_LEAKS 1
+#elif SANITIZER_LOONGARCH64 && SANITIZER_LINUX
+#  define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_RISCV64 && SANITIZER_LINUX
 #  define CAN_SANITIZE_LEAKS 1
 #elif SANITIZER_NETBSD || SANITIZER_FUCHSIA
@@ -77,6 +79,11 @@ enum IgnoreObjectResult {
   kIgnoreObjectInvalid
 };
 
+struct Range {
+  uptr begin;
+  uptr end;
+};
+
 //// --------------------------------------------------------------------------
 //// Poisoning prototypes.
 //// --------------------------------------------------------------------------
@@ -103,8 +110,9 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls);
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches);
-void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
-                            void *arg);
+void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges);
+void GetThreadExtraStackRangesLocked(tid_t os_id,
+                                     InternalMmapVector<Range> *ranges);
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs);
 void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads);
 
@@ -248,7 +256,6 @@ struct CheckForLeaksParam {
 InternalMmapVectorNoCtor<RootRegion> const *GetRootRegions();
 void ScanRootRegion(Frontier *frontier, RootRegion const &region,
                     uptr region_begin, uptr region_end, bool is_readable);
-void ForEachExtraStackRangeCb(uptr begin, uptr end, void *arg);
 // Run stoptheworld while holding any platform-specific locks, as well as the
 // allocator and thread registry locks.
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
@@ -258,6 +265,8 @@ void ScanRangeForPointers(uptr begin, uptr end,
                           Frontier *frontier,
                           const char *region_type, ChunkTag tag);
 void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier);
+void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
+                          Frontier *frontier);
 
 // Functions called from the parent tool.
 const char *MaybeCallLsanDefaultOptions();

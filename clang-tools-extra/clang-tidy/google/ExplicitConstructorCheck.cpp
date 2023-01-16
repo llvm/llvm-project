@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
+namespace clang::tidy::google {
 
 void ExplicitConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -146,6 +144,4 @@ void ExplicitConstructorCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateInsertion(Loc, "explicit ");
 }
 
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google

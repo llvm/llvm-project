@@ -388,7 +388,7 @@ namespace {
 
     bool mayLiveOut(Register VirtReg);
     bool mayLiveIn(Register VirtReg);
-
+    bool shouldAllocateRegister(const Register Reg) const;
     void dumpState() const;
   };
 
@@ -398,6 +398,12 @@ char RegAllocFast::ID = 0;
 
 INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
                 false)
+
+bool RegAllocFast::shouldAllocateRegister(const Register Reg) const {
+  assert(Reg.isVirtual());
+  const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
+  return ShouldAllocateClass(*TRI, RC);
+}
 
 void RegAllocFast::setPhysRegState(MCPhysReg PhysReg, unsigned NewState) {
   for (MCRegUnitIterator UI(PhysReg, TRI); UI.isValid(); ++UI)
@@ -989,7 +995,10 @@ void RegAllocFast::allocVirtReg(MachineInstr &MI, LiveReg &LR,
 void RegAllocFast::allocVirtRegUndef(MachineOperand &MO) {
   assert(MO.isUndef() && "expected undef use");
   Register VirtReg = MO.getReg();
-  assert(Register::isVirtualRegister(VirtReg) && "Expected virtreg");
+
+  assert(VirtReg.isVirtual() && "Expected virtreg");
+  if (!shouldAllocateRegister(VirtReg))
+    return;
 
   LiveRegMap::const_iterator LRI = findLiveVirtReg(VirtReg);
   MCPhysReg PhysReg;
@@ -1561,7 +1570,7 @@ void RegAllocFast::handleDebugValue(MachineInstr &MI) {
   // Ignore DBG_VALUEs that aren't based on virtual registers. These are
   // mostly constants and frame indices.
   for (Register Reg : MI.getUsedDebugRegs()) {
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
 
     // Already spilled to a stackslot?

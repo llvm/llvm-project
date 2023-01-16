@@ -351,9 +351,6 @@ Bug Fixes
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-- Clang now supports implicit conversion warnings (``-Wsign-conversion``,
-  ``Wshorten-64-to-32``, etc) for compound assignment operators (like +=, -=, <<=, >>= etc) 
-  with integral operands.
 - Clang will now check compile-time determinable string literals as format strings.
   Fixes `Issue 55805: <https://github.com/llvm/llvm-project/issues/55805>`_.
 - ``-Wformat`` now recognizes ``%b`` for the ``printf``/``scanf`` family of
@@ -503,6 +500,9 @@ Non-comprehensive list of changes in this release
 - Clang can now generate a PCH when using ``-fdelayed-template-parsing`` for
   code with templates containing loop hint pragmas, OpenMP pragmas, and
   ``#pragma unused``.
+- Clang now saves the address of ABI-indirect function parameters on the stack,
+  improving the debug information available in programs compiled without
+  optimizations.
 
 
 New Compiler Flags
@@ -539,6 +539,11 @@ New Compiler Flags
       int a;
       int b[0]; // NOT a flexible array member.
     };
+
+- Added ``-fmodule-output`` to enable the one-phase compilation model for
+  standard C++ modules. See
+  `Standard C++ Modules <https://clang.llvm.org/docs/StandardCPlusPlusModules.html>`_
+  for more information.
 
 Deprecated Compiler Flags
 -------------------------
@@ -909,6 +914,7 @@ clang-format
 - Add ``BreakAfterAttributes`` option for breaking after a group of C++11
   attributes before a function declaration/definition name.
 - Add ``InsertNewlineAtEOF`` option for inserting a newline at EOF if missing.
+- Add ``LineEnding`` option to deprecate ``DeriveLineEnding`` and ``UseCRLF``.
 
 clang-extdef-mapping
 --------------------

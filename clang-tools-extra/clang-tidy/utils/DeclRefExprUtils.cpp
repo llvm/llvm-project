@@ -12,10 +12,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
-namespace decl_ref_expr {
+namespace clang::tidy::utils::decl_ref_expr {
 
 using namespace ::clang::ast_matchers;
 using llvm::SmallPtrSet;
@@ -146,7 +143,4 @@ bool isCopyAssignmentArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
   return !Matches.empty();
 }
 
-} // namespace decl_ref_expr
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils::decl_ref_expr

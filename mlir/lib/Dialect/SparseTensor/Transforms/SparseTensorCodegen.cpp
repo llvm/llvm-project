@@ -27,6 +27,7 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -133,8 +134,9 @@ Value sizeAtStoredDim(OpBuilder &builder, Location loc,
 
 static void createPushback(OpBuilder &builder, Location loc,
                            MutSparseTensorDescriptor desc,
-                           SparseTensorFieldKind kind, Optional<unsigned> dim,
-                           Value value, Value repeat = Value()) {
+                           SparseTensorFieldKind kind,
+                           std::optional<unsigned> dim, Value value,
+                           Value repeat = Value()) {
   Type etp = desc.getMemRefElementType(kind, dim);
   Value field = desc.getMemRefField(kind, dim);
   StorageSpecifierKind specFieldKind = toSpecifierKind(kind);

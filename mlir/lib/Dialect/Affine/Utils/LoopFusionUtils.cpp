@@ -21,6 +21,7 @@
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 #define DEBUG_TYPE "loop-fusion-utils"
 
@@ -357,7 +358,7 @@ FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
 LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
                                              bool siblingFusionUser) {
   // Check if the reduction loop is a single iteration loop.
-  Optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount || *tripCount != 1)
     return failure();
   auto iterOperands = forOp.getIterOperands();
@@ -490,7 +491,7 @@ bool mlir::getLoopNestStats(AffineForOp forOpRoot, LoopNestStats *stats) {
 
     // Record trip count for 'forOp'. Set flag if trip count is not
     // constant.
-    Optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
+    std::optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
     if (!maybeConstTripCount) {
       // Currently only constant trip count loop nests are supported.
       LLVM_DEBUG(llvm::dbgs() << "Non-constant trip count unsupported\n");

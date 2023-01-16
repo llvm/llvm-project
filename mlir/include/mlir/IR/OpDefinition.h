@@ -24,6 +24,7 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 #include <type_traits>
+#include <optional>
 
 namespace mlir {
 class Builder;
@@ -51,7 +52,7 @@ public:
   ParseResult operator*() const { return value(); }
 
 private:
-  Optional<ParseResult> impl;
+  std::optional<ParseResult> impl;
 };
 
 // These functions are out-of-line utilities, which avoids them being template
@@ -183,8 +184,7 @@ public:
                                           MLIRContext *context) {}
 
   /// This hook populates any unset default attrs.
-  static void populateDefaultAttrs(const RegisteredOperationName &,
-                                   NamedAttrList &) {}
+  static void populateDefaultAttrs(const OperationName &, NamedAttrList &) {}
 
 protected:
   /// If the concrete type didn't implement a custom verifier hook, just fall
@@ -1673,8 +1673,9 @@ public:
   /// interfaces for the concrete operation.
   template <typename... Models>
   static void attachInterface(MLIRContext &context) {
-    Optional<RegisteredOperationName> info = RegisteredOperationName::lookup(
-        ConcreteType::getOperationName(), &context);
+    std::optional<RegisteredOperationName> info =
+        RegisteredOperationName::lookup(ConcreteType::getOperationName(),
+                                        &context);
     if (!info)
       llvm::report_fatal_error(
           "Attempting to attach an interface to an unregistered operation " +
@@ -1831,19 +1832,10 @@ private:
     return result;
   }
 
-  /// Implementation of `GetCanonicalizationPatternsFn` OperationName hook.
-  static OperationName::GetCanonicalizationPatternsFn
-  getGetCanonicalizationPatternsFn() {
-    return &ConcreteType::getCanonicalizationPatterns;
-  }
   /// Implementation of `GetHasTraitFn`
   static OperationName::HasTraitFn getHasTraitFn() {
     return
         [](TypeID id) { return op_definition_impl::hasTrait<Traits...>(id); };
-  }
-  /// Implementation of `ParseAssemblyFn` OperationName hook.
-  static OperationName::ParseAssemblyFn getParseAssemblyFn() {
-    return &ConcreteType::parse;
   }
   /// Implementation of `PrintAssemblyFn` OperationName hook.
   static OperationName::PrintAssemblyFn getPrintAssemblyFn() {
@@ -1916,7 +1908,8 @@ protected:
     OperationName name = op->getName();
 
     // Access the raw interface from the operation info.
-    if (Optional<RegisteredOperationName> rInfo = name.getRegisteredInfo()) {
+    if (std::optional<RegisteredOperationName> rInfo =
+            name.getRegisteredInfo()) {
       if (auto *opIface = rInfo->getInterface<ConcreteType>())
         return opIface;
       // Fallback to the dialect to provide it with a chance to implement this

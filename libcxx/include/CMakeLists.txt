@@ -9,6 +9,7 @@ set(files
   __algorithm/copy.h
   __algorithm/copy_backward.h
   __algorithm/copy_if.h
+  __algorithm/copy_move_common.h
   __algorithm/copy_n.h
   __algorithm/count.h
   __algorithm/count_if.h
@@ -363,6 +364,7 @@ set(files
   __fwd/span.h
   __fwd/string.h
   __fwd/string_view.h
+  __fwd/subrange.h
   __fwd/tuple.h
   __hash_table
   __ios/fpos.h
@@ -502,6 +504,7 @@ set(files
   __ranges/data.h
   __ranges/drop_view.h
   __ranges/drop_while_view.h
+  __ranges/elements_view.h
   __ranges/empty.h
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
@@ -553,10 +556,12 @@ set(files
   __tree
   __tuple_dir/apply_cv.h
   __tuple_dir/make_tuple_types.h
+  __tuple_dir/pair_like.h
   __tuple_dir/sfinae_helpers.h
   __tuple_dir/tuple_element.h
   __tuple_dir/tuple_indices.h
   __tuple_dir/tuple_like.h
+  __tuple_dir/tuple_like_ext.h
   __tuple_dir/tuple_size.h
   __tuple_dir/tuple_types.h
   __type_traits/add_const.h
@@ -587,6 +592,7 @@ set(files
   __type_traits/is_abstract.h
   __type_traits/is_aggregate.h
   __type_traits/is_allocator.h
+  __type_traits/is_always_bitcastable.h
   __type_traits/is_arithmetic.h
   __type_traits/is_array.h
   __type_traits/is_assignable.h

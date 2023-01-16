@@ -438,10 +438,10 @@ private:
 class SerialPort : public NativeFile {
 public:
   struct Options {
-    std::optional<unsigned int> BaudRate = std::nullopt;
-    std::optional<Terminal::Parity> Parity = std::nullopt;
-    std::optional<Terminal::ParityCheck> ParityCheck = std::nullopt;
-    std::optional<unsigned int> StopBits = std::nullopt;
+    std::optional<unsigned int> BaudRate;
+    std::optional<Terminal::Parity> Parity;
+    std::optional<Terminal::ParityCheck> ParityCheck;
+    std::optional<unsigned int> StopBits;
   };
 
   // Obtain Options corresponding to the passed URL query string

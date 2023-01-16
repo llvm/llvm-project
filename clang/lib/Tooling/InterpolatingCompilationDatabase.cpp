@@ -49,7 +49,6 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -58,6 +57,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -128,7 +128,7 @@ struct TransferableCommand {
   // Flags that should not apply to all files are stripped from CommandLine.
   CompileCommand Cmd;
   // Language detected from -x or the filename. Never TY_INVALID.
-  Optional<types::ID> Type;
+  std::optional<types::ID> Type;
   // Standard specified by -std.
   LangStandard::Kind Std = LangStandard::lang_unspecified;
   // Whether the command line is for the cl-compatible driver.
@@ -279,7 +279,7 @@ private:
   }
 
   // Try to interpret the argument as a type specifier, e.g. '-x'.
-  Optional<types::ID> tryParseTypeArg(const llvm::opt::Arg &Arg) {
+  std::optional<types::ID> tryParseTypeArg(const llvm::opt::Arg &Arg) {
     const llvm::opt::Option &Opt = Arg.getOption();
     using namespace driver::options;
     if (ClangCLMode) {
@@ -295,7 +295,7 @@ private:
   }
 
   // Try to interpret the argument as '-std='.
-  Optional<LangStandard::Kind> tryParseStdArg(const llvm::opt::Arg &Arg) {
+  std::optional<LangStandard::Kind> tryParseStdArg(const llvm::opt::Arg &Arg) {
     using namespace driver::options;
     if (Arg.getOption().matches(ClangCLMode ? OPT__SLASH_std : OPT_std_EQ))
       return LangStandard::getLangKind(Arg.getValue());

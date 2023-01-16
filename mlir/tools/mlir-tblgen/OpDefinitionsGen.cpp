@@ -926,7 +926,7 @@ void OpEmitter::genAttrNameGetters() {
     const char *const getAttrName = R"(
   assert(index < {0} && "invalid attribute index");
   assert(name.getStringRef() == getOperationName() && "invalid operation name");
-  return name.getRegisteredInfo()->getAttributeNames()[index];
+  return name.getAttributeNames()[index];
 )";
     method->body() << formatv(getAttrName, attributes.size());
   }
@@ -1739,7 +1739,7 @@ void OpEmitter::genPopulateDefaultAttributes() {
     return;
 
   SmallVector<MethodParameter> paramList;
-  paramList.emplace_back("const ::mlir::RegisteredOperationName &", "opName");
+  paramList.emplace_back("const ::mlir::OperationName &", "opName");
   paramList.emplace_back("::mlir::NamedAttrList &", "attributes");
   auto *m = opClass.addStaticMethod("void", "populateDefaultAttrs", paramList);
   ERROR_IF_PRUNED(m, "populateDefaultAttrs", op);

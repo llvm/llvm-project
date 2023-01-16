@@ -26,7 +26,7 @@ define double @constraint_f_double(double %a) nounwind {
 ; LA64-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    ret
-  %1 = load double, double* @gd
+  %1 = load double, ptr @gd
   %2 = tail call double asm "fadd.d $0, $1, $2", "=f,f,f"(double %a, double %1)
   ret double %2
 }

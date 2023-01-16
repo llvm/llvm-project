@@ -29,7 +29,6 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -44,6 +43,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 
@@ -114,7 +114,7 @@ public:
 
     private:
       TokenBuffer &Result;
-      llvm::Optional<TokenCollector> Collector;
+      std::optional<TokenCollector> Collector;
     };
 
     constexpr const char *FileName = "./input.cpp";

@@ -18,6 +18,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include <optional>
 
 namespace mlir {
 class AffineForOp;
@@ -185,14 +186,14 @@ struct AffineCopyOptions {
 /// encountered.
 LogicalResult affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
                                      const AffineCopyOptions &copyOptions,
-                                     Optional<Value> filterMemRef,
+                                     std::optional<Value> filterMemRef,
                                      DenseSet<Operation *> &copyNests);
 
 /// A convenience version of affineDataCopyGenerate for all ops in the body of
 /// an AffineForOp.
 LogicalResult affineDataCopyGenerate(AffineForOp forOp,
                                      const AffineCopyOptions &copyOptions,
-                                     Optional<Value> filterMemRef,
+                                     std::optional<Value> filterMemRef,
                                      DenseSet<Operation *> &copyNests);
 
 /// Result for calling generateCopyForMemRegion.

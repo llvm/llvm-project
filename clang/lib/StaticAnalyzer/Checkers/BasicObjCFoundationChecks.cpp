@@ -370,7 +370,7 @@ enum CFNumberType {
   kCFNumberCGFloatType = 16
 };
 
-static Optional<uint64_t> GetCFNumberSize(ASTContext &Ctx, uint64_t i) {
+static std::optional<uint64_t> GetCFNumberSize(ASTContext &Ctx, uint64_t i) {
   static const unsigned char FixedSize[] = { 8, 16, 32, 64, 32, 64 };
 
   if (i < kCFNumberCharType)
@@ -443,12 +443,13 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 
   // FIXME: We really should allow ranges of valid theType values, and
   //   bifurcate the state appropriately.
-  Optional<nonloc::ConcreteInt> V = dyn_cast<nonloc::ConcreteInt>(TheTypeVal);
+  std::optional<nonloc::ConcreteInt> V =
+      dyn_cast<nonloc::ConcreteInt>(TheTypeVal);
   if (!V)
     return;
 
   uint64_t NumberKind = V->getValue().getLimitedValue();
-  Optional<uint64_t> OptCFNumberSize = GetCFNumberSize(Ctx, NumberKind);
+  std::optional<uint64_t> OptCFNumberSize = GetCFNumberSize(Ctx, NumberKind);
 
   // FIXME: In some cases we can emit an error.
   if (!OptCFNumberSize)
@@ -463,7 +464,7 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 
   // FIXME: Eventually we should handle arbitrary locations.  We can do this
   //  by having an enhanced memory model that does low-level typing.
-  Optional<loc::MemRegionVal> LV = TheValueExpr.getAs<loc::MemRegionVal>();
+  std::optional<loc::MemRegionVal> LV = TheValueExpr.getAs<loc::MemRegionVal>();
   if (!LV)
     return;
 
@@ -555,7 +556,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
 
   // Get the argument's value.
   SVal ArgVal = Call.getArgSVal(0);
-  Optional<DefinedSVal> DefArgVal = ArgVal.getAs<DefinedSVal>();
+  std::optional<DefinedSVal> DefArgVal = ArgVal.getAs<DefinedSVal>();
   if (!DefArgVal)
     return;
 
@@ -858,7 +859,8 @@ static ProgramStateRef checkCollectionNonNil(CheckerContext &C,
     return nullptr;
 
   SVal CollectionVal = C.getSVal(FCS->getCollection());
-  Optional<DefinedSVal> KnownCollection = CollectionVal.getAs<DefinedSVal>();
+  std::optional<DefinedSVal> KnownCollection =
+      CollectionVal.getAs<DefinedSVal>();
   if (!KnownCollection)
     return State;
 
@@ -890,7 +892,7 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
   const Stmt *Element = FCS->getElement();
 
   // FIXME: Copied from ExprEngineObjC.
-  Optional<Loc> ElementLoc;
+  std::optional<Loc> ElementLoc;
   if (const DeclStmt *DS = dyn_cast<DeclStmt>(Element)) {
     const VarDecl *ElemDecl = cast<VarDecl>(DS->getSingleDecl());
     assert(ElemDecl->getInit() == nullptr);
@@ -929,8 +931,8 @@ assumeCollectionNonEmpty(CheckerContext &C, ProgramStateRef State,
                           nonloc::SymbolVal(*CountS),
                           SvalBuilder.makeIntVal(0, (*CountS)->getType()),
                           SvalBuilder.getConditionType());
-  Optional<DefinedSVal> CountGreaterThanZero =
-    CountGreaterThanZeroVal.getAs<DefinedSVal>();
+  std::optional<DefinedSVal> CountGreaterThanZero =
+      CountGreaterThanZeroVal.getAs<DefinedSVal>();
   if (!CountGreaterThanZero) {
     // The SValBuilder cannot construct a valid SVal for this condition.
     // This means we cannot properly reason about it.
@@ -958,7 +960,7 @@ static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
     return false;
 
   ProgramPoint P = N->getLocation();
-  if (Optional<BlockEdge> BE = P.getAs<BlockEdge>()) {
+  if (std::optional<BlockEdge> BE = P.getAs<BlockEdge>()) {
     return BE->getSrc()->getLoopTarget() == FCS;
   }
 
@@ -1175,7 +1177,8 @@ ObjCNonNilReturnValueChecker::assumeExprIsNonNull(const Expr *NonNullExpr,
                                                   ProgramStateRef State,
                                                   CheckerContext &C) const {
   SVal Val = C.getSVal(NonNullExpr);
-  if (Optional<DefinedOrUnknownSVal> DV = Val.getAs<DefinedOrUnknownSVal>())
+  if (std::optional<DefinedOrUnknownSVal> DV =
+          Val.getAs<DefinedOrUnknownSVal>())
     return State->assume(*DV, true);
   return State;
 }

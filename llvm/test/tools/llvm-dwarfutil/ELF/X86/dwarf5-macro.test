@@ -45,6 +45,11 @@
 #RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
 #RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefix=MACRO
 
+## Check that macro table preserved during updating accelerator tables.
+#RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %p/Inputs/dwarf5-macro.out %t1
+#RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+#RUN: llvm-dwarfdump -a  %t1 | FileCheck %s --check-prefixes=MACRO,NAMES
+
 #CHECK: No errors.
 
 #MACRO: .debug_info contents
@@ -2228,3 +2233,6 @@
 #MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_UTF_16__ 1
 #MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __STDC_UTF_32__ 1
 #MACRO-NEXT: DW_MACRO_define_str{{[px]}} - lineno: 0 macro: __GCC_HAVE_DWARF2_CFI_ASM 1
+
+#NAMES: .debug_names contents
+#NAMES: Name Index

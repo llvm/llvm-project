@@ -21,7 +21,6 @@
 #include "clang/Sema/DeclSpec.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,6 +28,7 @@
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -358,7 +358,7 @@ private:
 
   /// The scope specifier that comes before the completion token e.g.
   /// "a::b::"
-  llvm::Optional<CXXScopeSpec> ScopeSpecifier;
+  std::optional<CXXScopeSpec> ScopeSpecifier;
 
   /// A set of declaration contexts visited by Sema when doing lookup for
   /// code completion.
@@ -421,7 +421,7 @@ public:
     return VisitedContexts;
   }
 
-  llvm::Optional<const CXXScopeSpec *> getCXXScopeSpecifier() {
+  std::optional<const CXXScopeSpec *> getCXXScopeSpecifier() {
     if (ScopeSpecifier)
       return &*ScopeSpecifier;
     return std::nullopt;
