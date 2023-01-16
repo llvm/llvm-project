@@ -2,6 +2,7 @@
 // in Windows and Linux. So we disable the test on Windows
 // here.
 // REQUIRES: !system-windows
+// REQUIRES: x86-registered-target
 //
 // RUN: rm -rf %t
 // RUN: mkdir %t
