@@ -649,8 +649,7 @@ Status NativeProcessProtocol::ReadMemoryWithoutTrap(lldb::addr_t addr,
   if (error.Fail())
     return error;
 
-  auto data =
-      llvm::makeMutableArrayRef(static_cast<uint8_t *>(buf), bytes_read);
+  llvm::MutableArrayRef data(static_cast<uint8_t *>(buf), bytes_read);
   for (const auto &pair : m_software_breakpoints) {
     lldb::addr_t bp_addr = pair.first;
     auto saved_opcodes = llvm::ArrayRef(pair.second.saved_opcodes);

@@ -8045,7 +8045,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       return TEs.back();
     };
     (void)performExtractsShuffleAction<const TreeEntry>(
-        makeMutableArrayRef(Vector.data(), Vector.size()), Base,
+        MutableArrayRef(Vector.data(), Vector.size()), Base,
         [](const TreeEntry *E) { return E->getVectorFactor(); }, ResizeToVF,
         EstimateShufflesCost);
     InstructionCost InsertCost = TTI->getScalarizationOverhead(
@@ -9898,7 +9898,7 @@ Value *BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues,
     Builder.SetInsertPoint(LastInsert);
     auto Vector = ShuffledInserts[I].ValueMasks.takeVector();
     Value *NewInst = performExtractsShuffleAction<Value>(
-        makeMutableArrayRef(Vector.data(), Vector.size()),
+        MutableArrayRef(Vector.data(), Vector.size()),
         FirstInsert->getOperand(0),
         [](Value *Vec) {
           return cast<VectorType>(Vec->getType())

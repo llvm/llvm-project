@@ -1181,7 +1181,7 @@ Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
   for (;;) {
     Buffer.resize_for_overwrite(Size + ChunkSize);
     Expected<size_t> ReadBytes = readNativeFile(
-        FileHandle, makeMutableArrayRef(Buffer.begin() + Size, ChunkSize));
+        FileHandle, MutableArrayRef(Buffer.begin() + Size, ChunkSize));
     if (!ReadBytes)
       return ReadBytes.takeError();
     if (*ReadBytes == 0)

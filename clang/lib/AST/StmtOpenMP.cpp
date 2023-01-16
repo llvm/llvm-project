@@ -31,7 +31,7 @@ void OMPChildren::setClauses(ArrayRef<OMPClause *> Clauses) {
 }
 
 MutableArrayRef<Stmt *> OMPChildren::getChildren() {
-  return llvm::makeMutableArrayRef(getTrailingObjects<Stmt *>(), NumChildren);
+  return llvm::MutableArrayRef(getTrailingObjects<Stmt *>(), NumChildren);
 }
 
 OMPChildren *OMPChildren::Create(void *Mem, ArrayRef<OMPClause *> Clauses) {

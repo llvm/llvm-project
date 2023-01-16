@@ -257,7 +257,7 @@ public:
     NumReplacementTokens = NumTokens;
     Token *NewReplacementTokens = PPAllocator.Allocate<Token>(NumTokens);
     ReplacementTokens = NewReplacementTokens;
-    return llvm::makeMutableArrayRef(NewReplacementTokens, NumTokens);
+    return llvm::MutableArrayRef(NewReplacementTokens, NumTokens);
   }
 
   void setTokens(ArrayRef<Token> Tokens, llvm::BumpPtrAllocator &PPAllocator) {
