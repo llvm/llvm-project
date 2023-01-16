@@ -71,7 +71,7 @@ public:
   unsigned size() const { return map.size(); }
 
   /// Returns the bit vector index for a given declaration.
-  Optional<unsigned> getValueIndex(const VarDecl *d) const;
+  std::optional<unsigned> getValueIndex(const VarDecl *d) const;
 };
 
 } // namespace
@@ -87,7 +87,7 @@ void DeclToIndex::computeMap(const DeclContext &dc) {
   }
 }
 
-Optional<unsigned> DeclToIndex::getValueIndex(const VarDecl *d) const {
+std::optional<unsigned> DeclToIndex::getValueIndex(const VarDecl *d) const {
   llvm::DenseMap<const VarDecl *, unsigned>::const_iterator I = map.find(d);
   if (I == map.end())
     return std::nullopt;
@@ -148,7 +148,7 @@ public:
 
   Value getValue(const CFGBlock *block, const CFGBlock *dstBlock,
                  const VarDecl *vd) {
-    Optional<unsigned> idx = declToIndex.getValueIndex(vd);
+    std::optional<unsigned> idx = declToIndex.getValueIndex(vd);
     return getValueVector(block)[*idx];
   }
 };
@@ -859,7 +859,7 @@ static bool runOnBlock(const CFGBlock *block, const CFG &cfg,
   // Apply the transfer function.
   TransferFunctions tf(vals, cfg, block, ac, classification, handler);
   for (const auto &I : *block) {
-    if (Optional<CFGStmt> cs = I.getAs<CFGStmt>())
+    if (std::optional<CFGStmt> cs = I.getAs<CFGStmt>())
       tf.Visit(const_cast<Stmt *>(cs->getStmt()));
   }
   CFGTerminator terminator = block->getTerminator();

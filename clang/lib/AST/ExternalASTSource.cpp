@@ -30,7 +30,7 @@ char ExternalASTSource::ID;
 
 ExternalASTSource::~ExternalASTSource() = default;
 
-llvm::Optional<ASTSourceDescriptor>
+std::optional<ASTSourceDescriptor>
 ExternalASTSource::getSourceDescriptor(unsigned ID) {
   return std::nullopt;
 }

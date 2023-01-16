@@ -275,8 +275,8 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
 ///
 /// \returns a similar string if exists. If no similar string exists,
 /// returns std::nullopt.
-static Optional<StringRef> findSimilarStr(
-    StringRef LHS, const std::vector<StringRef> &Candidates) {
+static std::optional<StringRef>
+findSimilarStr(StringRef LHS, const std::vector<StringRef> &Candidates) {
   // We need to check if `Candidates` has the exact case-insensitive string
   // because the Levenshtein distance match does not care about it.
   for (StringRef C : Candidates) {
@@ -291,7 +291,7 @@ static Optional<StringRef> findSimilarStr(
   size_t Length = LHS.size();
   size_t MaxDist = Length < 3 ? Length - 1 : Length / 3;
 
-  Optional<std::pair<StringRef, size_t>> SimilarStr;
+  std::optional<std::pair<StringRef, size_t>> SimilarStr;
   for (StringRef C : Candidates) {
     size_t CurDist = LHS.edit_distance(C, true);
     if (CurDist <= MaxDist) {
@@ -456,7 +456,7 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   if (LangOpts.C2x || LangOpts.CPlusPlus2b)
     Candidates.insert(Candidates.end(), {"elifdef", "elifndef"});
 
-  if (Optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
+  if (std::optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
     // Directive cannot be coming from macro.
     assert(Tok.getLocation().isFileID());
     CharSourceRange DirectiveRange = CharSourceRange::getCharRange(

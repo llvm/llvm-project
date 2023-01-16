@@ -257,9 +257,9 @@ protected:
 
   unsigned MaxOpenCLWorkGroupSize;
 
-  Optional<unsigned> MaxBitIntWidth;
+  std::optional<unsigned> MaxBitIntWidth;
 
-  Optional<llvm::Triple> DarwinTargetVariantTriple;
+  std::optional<llvm::Triple> DarwinTargetVariantTriple;
 
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
@@ -955,7 +955,7 @@ public:
   virtual ArrayRef<Builtin::Info> getTargetBuiltins() const = 0;
 
   /// Returns target-specific min and max values VScale_Range.
-  virtual Optional<std::pair<unsigned, unsigned>>
+  virtual std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts) const {
     return std::nullopt;
   }
@@ -1181,7 +1181,7 @@ public:
 
   /// Replace some escaped characters with another string based on
   /// target-specific rules
-  virtual llvm::Optional<std::string> handleAsmEscapedChar(char C) const {
+  virtual std::optional<std::string> handleAsmEscapedChar(char C) const {
     return std::nullopt;
   }
 
@@ -1200,7 +1200,7 @@ public:
   }
 
   /// Returns the target ID if supported.
-  virtual llvm::Optional<std::string> getTargetID() const {
+  virtual std::optional<std::string> getTargetID() const {
     return std::nullopt;
   }
 
@@ -1450,7 +1450,7 @@ public:
 
   // Get the cache line size of a given cpu. This method switches over
   // the given cpu and returns "std::nullopt" if the CPU is not found.
-  virtual Optional<unsigned> getCPUCacheLineSize() const {
+  virtual std::optional<unsigned> getCPUCacheLineSize() const {
     return std::nullopt;
   }
 
@@ -1540,7 +1540,7 @@ public:
   /// for constant global memory. It must be possible to convert pointers into
   /// this address space to LangAS::Default. If no such address space exists,
   /// this may return std::nullopt, and such optimizations will be disabled.
-  virtual llvm::Optional<LangAS> getConstantAddressSpace() const {
+  virtual std::optional<LangAS> getConstantAddressSpace() const {
     return LangAS::Default;
   }
 
@@ -1715,10 +1715,10 @@ public:
 
   /// Returns the version of the darwin target variant SDK which was used during
   /// the compilation if one was specified, or an empty version otherwise.
-  const Optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
+  const std::optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
     return !getTargetOpts().DarwinTargetVariantSDKVersion.empty()
                ? getTargetOpts().DarwinTargetVariantSDKVersion
-               : Optional<VersionTuple>();
+               : std::optional<VersionTuple>();
   }
 
 protected:

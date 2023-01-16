@@ -158,7 +158,7 @@ static bool isInMIGCall(CheckerContext &C) {
 
   const Decl *D = SFC->getDecl();
 
-  if (Optional<AnyCall> AC = AnyCall::forDecl(D)) {
+  if (std::optional<AnyCall> AC = AnyCall::forDecl(D)) {
     // Even though there's a Sema warning when the return type of an annotated
     // function is not a kern_return_t, this warning isn't an error, so we need
     // an extra check here.

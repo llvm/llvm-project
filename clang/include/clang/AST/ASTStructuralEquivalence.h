@@ -115,7 +115,7 @@ struct StructuralEquivalenceContext {
   ///
   /// FIXME: This is needed by ASTImporter and ASTStructureEquivalence. It
   /// probably makes more sense in some other common place then here.
-  static llvm::Optional<unsigned>
+  static std::optional<unsigned>
   findUntaggedStructOrUnionIndex(RecordDecl *Anon);
 
   // If ErrorOnTagTypeMismatch is set, return the error, otherwise get the

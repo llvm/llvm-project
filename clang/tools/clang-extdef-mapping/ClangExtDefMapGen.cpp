@@ -83,7 +83,7 @@ void MapExtDefNamesConsumer::handleDecl(const Decl *D) {
 
 void MapExtDefNamesConsumer::addIfInMain(const DeclaratorDecl *DD,
                                          SourceLocation defStart) {
-  llvm::Optional<std::string> LookupName =
+  std::optional<std::string> LookupName =
       CrossTranslationUnitContext::getLookupName(DD);
   if (!LookupName)
     return;

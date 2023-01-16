@@ -92,8 +92,8 @@ class LinkageComputer {
     return QueryType(ND, Kind.toBits());
   }
 
-  llvm::Optional<LinkageInfo> lookup(const NamedDecl *ND,
-                                     LVComputationKind Kind) const {
+  std::optional<LinkageInfo> lookup(const NamedDecl *ND,
+                                    LVComputationKind Kind) const {
     auto Iter = CachedLinkageInfo.find(makeCacheKey(ND, Kind));
     if (Iter == CachedLinkageInfo.end())
       return std::nullopt;

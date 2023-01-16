@@ -1484,7 +1484,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
       ConsumeToken();
   }
 
-  Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
+  std::optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
       Actions.checkOpenMPDeclareVariantFunction(
           Ptr, AssociatedFunction.get(), TI, AppendArgs.size(),
           SourceRange(Loc, Tok.getLocation()));
@@ -1782,7 +1782,7 @@ struct SimpleClauseData {
 };
 } // anonymous namespace
 
-static Optional<SimpleClauseData>
+static std::optional<SimpleClauseData>
 parseOpenMPSimpleClause(Parser &P, OpenMPClauseKind Kind) {
   const Token &Tok = P.getCurToken();
   SourceLocation Loc = Tok.getLocation();
@@ -1877,7 +1877,7 @@ void Parser::ParseOMPDeclareTargetClauses(
       }
       // Parse 'device_type' clause and go to next clause if any.
       if (IsDeviceTypeClause) {
-        Optional<SimpleClauseData> DevTypeData =
+        std::optional<SimpleClauseData> DevTypeData =
             parseOpenMPSimpleClause(*this, OMPC_device_type);
         if (DevTypeData) {
           if (DeviceTypeLoc.isValid()) {
@@ -3694,7 +3694,7 @@ OMPClause *Parser::ParseOpenMPInteropClause(OpenMPClauseKind Kind,
 ///
 OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
                                            bool ParseOnly) {
-  llvm::Optional<SimpleClauseData> Val = parseOpenMPSimpleClause(*this, Kind);
+  std::optional<SimpleClauseData> Val = parseOpenMPSimpleClause(*this, Kind);
   if (!Val || ParseOnly)
     return nullptr;
   if (getLangOpts().OpenMP < 51 && Kind == OMPC_default &&

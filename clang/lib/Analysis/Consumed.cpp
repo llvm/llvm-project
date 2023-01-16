@@ -63,7 +63,7 @@ static SourceLocation getFirstStmtLoc(const CFGBlock *Block) {
   // Find the source location of the first statement in the block, if the block
   // is not empty.
   for (const auto &B : *Block)
-    if (Optional<CFGStmt> CS = B.getAs<CFGStmt>())
+    if (std::optional<CFGStmt> CS = B.getAs<CFGStmt>())
       return CS->getStmt()->getBeginLoc();
 
   // Block is empty.
@@ -82,7 +82,7 @@ static SourceLocation getLastStmtLoc(const CFGBlock *Block) {
   } else {
     for (CFGBlock::const_reverse_iterator BI = Block->rbegin(),
          BE = Block->rend(); BI != BE; ++BI) {
-      if (Optional<CFGStmt> CS = BI->getAs<CFGStmt>())
+      if (std::optional<CFGStmt> CS = BI->getAs<CFGStmt>())
         return CS->getStmt()->getBeginLoc();
     }
   }

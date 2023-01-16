@@ -579,20 +579,20 @@ bool ScanReachableSymbols::scan(const SymExpr *sym) {
 }
 
 bool ScanReachableSymbols::scan(SVal val) {
-  if (Optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>())
+  if (std::optional<loc::MemRegionVal> X = val.getAs<loc::MemRegionVal>())
     return scan(X->getRegion());
 
-  if (Optional<nonloc::LazyCompoundVal> X =
+  if (std::optional<nonloc::LazyCompoundVal> X =
           val.getAs<nonloc::LazyCompoundVal>())
     return scan(*X);
 
-  if (Optional<nonloc::LocAsInteger> X = val.getAs<nonloc::LocAsInteger>())
+  if (std::optional<nonloc::LocAsInteger> X = val.getAs<nonloc::LocAsInteger>())
     return scan(X->getLoc());
 
   if (SymbolRef Sym = val.getAsSymbol())
     return scan(Sym);
 
-  if (Optional<nonloc::CompoundVal> X = val.getAs<nonloc::CompoundVal>())
+  if (std::optional<nonloc::CompoundVal> X = val.getAs<nonloc::CompoundVal>())
     return scan(*X);
 
   return true;

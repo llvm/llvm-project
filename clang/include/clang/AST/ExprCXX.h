@@ -2263,7 +2263,7 @@ private:
   CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
              FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
              bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
-             SourceRange TypeIdParens, Optional<Expr *> ArraySize,
+             SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
              InitializationStyle InitializationStyle, Expr *Initializer,
              QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
              SourceRange DirectInitRange);
@@ -2278,7 +2278,7 @@ public:
   Create(const ASTContext &Ctx, bool IsGlobalNew, FunctionDecl *OperatorNew,
          FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
          bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
-         SourceRange TypeIdParens, Optional<Expr *> ArraySize,
+         SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
          InitializationStyle InitializationStyle, Expr *Initializer,
          QualType Ty, TypeSourceInfo *AllocatedTypeInfo, SourceRange Range,
          SourceRange DirectInitRange);
@@ -2323,7 +2323,7 @@ public:
   /// This might return std::nullopt even if isArray() returns true,
   /// since there might not be an array size expression.
   /// If the result is not-None, it will never wrap a nullptr.
-  Optional<Expr *> getArraySize() {
+  std::optional<Expr *> getArraySize() {
     if (!isArray())
       return std::nullopt;
 
@@ -2337,7 +2337,7 @@ public:
   /// This might return std::nullopt even if isArray() returns true,
   /// since there might not be an array size expression.
   /// If the result is not-None, it will never wrap a nullptr.
-  Optional<const Expr *> getArraySize() const {
+  std::optional<const Expr *> getArraySize() const {
     if (!isArray())
       return std::nullopt;
 
@@ -4139,7 +4139,7 @@ class PackExpansionExpr : public Expr {
 
 public:
   PackExpansionExpr(QualType T, Expr *Pattern, SourceLocation EllipsisLoc,
-                    Optional<unsigned> NumExpansions)
+                    std::optional<unsigned> NumExpansions)
       : Expr(PackExpansionExprClass, T, Pattern->getValueKind(),
              Pattern->getObjectKind()),
         EllipsisLoc(EllipsisLoc),
@@ -4162,7 +4162,7 @@ public:
 
   /// Determine the number of expansions that will be produced when
   /// this pack expansion is instantiated, if already known.
-  Optional<unsigned> getNumExpansions() const {
+  std::optional<unsigned> getNumExpansions() const {
     if (NumExpansions)
       return NumExpansions - 1;
 
@@ -4233,7 +4233,7 @@ class SizeOfPackExpr final
   /// the given parameter pack.
   SizeOfPackExpr(QualType SizeType, SourceLocation OperatorLoc, NamedDecl *Pack,
                  SourceLocation PackLoc, SourceLocation RParenLoc,
-                 Optional<unsigned> Length,
+                 std::optional<unsigned> Length,
                  ArrayRef<TemplateArgument> PartialArgs)
       : Expr(SizeOfPackExprClass, SizeType, VK_PRValue, OK_Ordinary),
         OperatorLoc(OperatorLoc), PackLoc(PackLoc), RParenLoc(RParenLoc),
@@ -4254,7 +4254,7 @@ public:
   static SizeOfPackExpr *
   Create(ASTContext &Context, SourceLocation OperatorLoc, NamedDecl *Pack,
          SourceLocation PackLoc, SourceLocation RParenLoc,
-         Optional<unsigned> Length = std::nullopt,
+         std::optional<unsigned> Length = std::nullopt,
          ArrayRef<TemplateArgument> PartialArgs = std::nullopt);
   static SizeOfPackExpr *CreateDeserialized(ASTContext &Context,
                                             unsigned NumPartialArgs);
@@ -4338,7 +4338,7 @@ public:
   SubstNonTypeTemplateParmExpr(QualType Ty, ExprValueKind ValueKind,
                                SourceLocation Loc, Expr *Replacement,
                                Decl *AssociatedDecl, unsigned Index,
-                               Optional<unsigned> PackIndex, bool RefParam)
+                               std::optional<unsigned> PackIndex, bool RefParam)
       : Expr(SubstNonTypeTemplateParmExprClass, Ty, ValueKind, OK_Ordinary),
         Replacement(Replacement),
         AssociatedDeclAndRef(AssociatedDecl, RefParam), Index(Index),
@@ -4364,7 +4364,7 @@ public:
   /// This should match the result of `getParameter()->getIndex()`.
   unsigned getIndex() const { return Index; }
 
-  Optional<unsigned> getPackIndex() const {
+  std::optional<unsigned> getPackIndex() const {
     if (PackIndex == 0)
       return std::nullopt;
     return PackIndex - 1;
@@ -4691,7 +4691,7 @@ public:
   CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
               SourceLocation LParenLoc, Expr *LHS, BinaryOperatorKind Opcode,
               SourceLocation EllipsisLoc, Expr *RHS, SourceLocation RParenLoc,
-              Optional<unsigned> NumExpansions)
+              std::optional<unsigned> NumExpansions)
       : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary),
         LParenLoc(LParenLoc), EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
         NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
@@ -4728,7 +4728,7 @@ public:
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
   BinaryOperatorKind getOperator() const { return Opcode; }
 
-  Optional<unsigned> getNumExpansions() const {
+  std::optional<unsigned> getNumExpansions() const {
     if (NumExpansions)
       return NumExpansions - 1;
     return std::nullopt;

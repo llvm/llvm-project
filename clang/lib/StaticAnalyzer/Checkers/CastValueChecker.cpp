@@ -473,7 +473,7 @@ bool CastValueChecker::evalCall(const CallEvent &Call,
   const CastCheck &Check = Lookup->first;
   CallKind Kind = Lookup->second;
 
-  Optional<DefinedOrUnknownSVal> DV;
+  std::optional<DefinedOrUnknownSVal> DV;
 
   switch (Kind) {
   case CallKind::Function: {

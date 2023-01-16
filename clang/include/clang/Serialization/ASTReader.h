@@ -473,7 +473,7 @@ private:
   SourceLocation CurrentImportLoc;
 
   /// The module kind that is currently deserializing.
-  Optional<ModuleKind> CurrentDeserializingModuleKind;
+  std::optional<ModuleKind> CurrentDeserializingModuleKind;
 
   /// The global module index, if loaded.
   std::unique_ptr<GlobalModuleIndex> GlobalIndex;
@@ -886,7 +886,7 @@ private:
   SourceLocation PointersToMembersPragmaLocation;
 
   /// The pragma float_control state.
-  Optional<FPOptionsOverride> FpPragmaCurrentValue;
+  std::optional<FPOptionsOverride> FpPragmaCurrentValue;
   SourceLocation FpPragmaCurrentLocation;
   struct FpPragmaStackEntry {
     FPOptionsOverride Value;
@@ -898,7 +898,7 @@ private:
   llvm::SmallVector<std::string, 2> FpPragmaStrings;
 
   /// The pragma align/pack state.
-  Optional<Sema::AlignPackInfo> PragmaAlignPackCurrentValue;
+  std::optional<Sema::AlignPackInfo> PragmaAlignPackCurrentValue;
   SourceLocation PragmaAlignPackCurrentLocation;
   struct PragmaAlignPackStackEntry {
     Sema::AlignPackInfo Value;
@@ -1781,8 +1781,8 @@ public:
 
   /// Optionally returns true or false if the preallocated preprocessed
   /// entity with index \p Index came from file \p FID.
-  Optional<bool> isPreprocessedEntityInFileID(unsigned Index,
-                                              FileID FID) override;
+  std::optional<bool> isPreprocessedEntityInFileID(unsigned Index,
+                                                   FileID FID) override;
 
   /// Read the header file information for the given file entry.
   HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) override;
@@ -2142,7 +2142,7 @@ public:
   unsigned getModuleFileID(ModuleFile *M);
 
   /// Return a descriptor for the corresponding module.
-  llvm::Optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID) override;
+  std::optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID) override;
 
   ExtKind hasExternalDefinitions(const Decl *D) override;
 

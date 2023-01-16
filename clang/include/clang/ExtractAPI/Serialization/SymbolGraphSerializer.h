@@ -68,8 +68,8 @@ public:
   /// \returns an optional JSON Object representing the payload that libclang
   /// expects for providing symbol information for a single symbol. If this is
   /// not a known symbol returns \c None.
-  static Optional<Object> serializeSingleSymbolSGF(StringRef USR,
-                                                   const APISet &API);
+  static std::optional<Object> serializeSingleSymbolSGF(StringRef USR,
+                                                        const APISet &API);
 
   /// The kind of a relationship between two symbols.
   enum RelationshipKind {
@@ -121,7 +121,7 @@ private:
   /// \returns \c std::nullopt if this \p Record should be skipped, or a JSON
   /// object containing common symbol information of \p Record.
   template <typename RecordTy>
-  Optional<Object> serializeAPIRecord(const RecordTy &Record) const;
+  std::optional<Object> serializeAPIRecord(const RecordTy &Record) const;
 
   /// Helper method to serialize second-level member records of \p Record and
   /// the member-of relationships.

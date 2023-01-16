@@ -120,7 +120,7 @@ static unsigned int adjustColumnPos(FullSourceLoc Loc,
   assert(!Loc.isInvalid() && "invalid Loc when adjusting column position");
 
   std::pair<FileID, unsigned> LocInfo = Loc.getDecomposedExpansionLoc();
-  Optional<MemoryBufferRef> Buf =
+  std::optional<MemoryBufferRef> Buf =
       Loc.getManager().getBufferOrNone(LocInfo.first);
   assert(Buf && "got an invalid buffer for the location's file");
   assert(Buf->getBufferSize() >= (LocInfo.second + TokenLen) &&

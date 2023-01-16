@@ -71,8 +71,8 @@ static std::string getName(const CallEvent &Call) {
 
 // The predefinitions ('CDM') could break due to the ever growing code base.
 // Check for the expected invariants and see whether they apply.
-static Optional<bool> isInvariantBreak(bool ExpectedValue, SVal ReturnV,
-                                       CheckerContext &C) {
+static std::optional<bool> isInvariantBreak(bool ExpectedValue, SVal ReturnV,
+                                            CheckerContext &C) {
   auto ReturnDV = ReturnV.getAs<DefinedOrUnknownSVal>();
   if (!ReturnDV)
     return std::nullopt;
@@ -91,7 +91,8 @@ void ReturnValueChecker::checkPostCall(const CallEvent &Call,
 
   SVal ReturnV = Call.getReturnValue();
   bool ExpectedValue = *RawExpectedValue;
-  Optional<bool> IsInvariantBreak = isInvariantBreak(ExpectedValue, ReturnV, C);
+  std::optional<bool> IsInvariantBreak =
+      isInvariantBreak(ExpectedValue, ReturnV, C);
   if (!IsInvariantBreak)
     return;
 
@@ -138,7 +139,8 @@ void ReturnValueChecker::checkEndFunction(const ReturnStmt *RS,
 
   SVal ReturnV = State->getSVal(RS->getRetValue(), C.getLocationContext());
   bool ExpectedValue = *RawExpectedValue;
-  Optional<bool> IsInvariantBreak = isInvariantBreak(ExpectedValue, ReturnV, C);
+  std::optional<bool> IsInvariantBreak =
+      isInvariantBreak(ExpectedValue, ReturnV, C);
   if (!IsInvariantBreak)
     return;
 

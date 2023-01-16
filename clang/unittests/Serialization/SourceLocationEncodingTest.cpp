@@ -22,7 +22,7 @@ using LocSeq = SourceLocationSequence;
 // If ExpectedEncoded is provided, verify the encoded value too.
 // Loc is the raw (in-memory) form of SourceLocation.
 void roundTrip(SourceLocation::UIntTy Loc,
-               llvm::Optional<uint64_t> ExpectedEncoded = std::nullopt) {
+               std::optional<uint64_t> ExpectedEncoded = std::nullopt) {
   uint64_t ActualEncoded =
       SourceLocationEncoding::encode(SourceLocation::getFromRawEncoding(Loc));
   if (ExpectedEncoded)

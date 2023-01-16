@@ -199,7 +199,7 @@ LLVM_DUMP_METHOD void MacroInfo::dump() const {
 MacroDirective::DefInfo MacroDirective::getDefinition() {
   MacroDirective *MD = this;
   SourceLocation UndefLoc;
-  Optional<bool> isPublic;
+  std::optional<bool> isPublic;
   for (; MD; MD = MD->getPrevious()) {
     if (DefMacroDirective *DefMD = dyn_cast<DefMacroDirective>(MD))
       return DefInfo(DefMD, UndefLoc, !isPublic || *isPublic);

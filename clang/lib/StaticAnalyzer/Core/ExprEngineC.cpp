@@ -447,10 +447,10 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
 
         // Check if the value being cast does not evaluates to 0.
         if (!val.isZeroConstant())
-          if (Optional<SVal> V =
+          if (std::optional<SVal> V =
                   StateMgr.getStoreManager().evalBaseToDerived(val, T)) {
-            val = *V;
-            Failed = false;
+          val = *V;
+          Failed = false;
           }
 
         if (Failed) {
@@ -485,7 +485,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
           resultType = getContext().getPointerType(resultType);
 
         if (!val.isConstant()) {
-          Optional<SVal> V = getStoreManager().evalBaseToDerived(val, T);
+          std::optional<SVal> V = getStoreManager().evalBaseToDerived(val, T);
           val = V ? *V : UnknownVal();
         }
 
@@ -824,7 +824,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
   SVal V;
 
   for (CFGElement CE : llvm::reverse(*SrcBlock)) {
-    if (Optional<CFGStmt> CS = CE.getAs<CFGStmt>()) {
+    if (std::optional<CFGStmt> CS = CE.getAs<CFGStmt>()) {
       const Expr *ValEx = cast<Expr>(CS->getStmt());
       ValEx = ValEx->IgnoreParens();
 
@@ -1044,16 +1044,15 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
           //  Note: technically we do "E == 0", but this is the same in the
           //    transfer functions as "0 == E".
           SVal Result;
-          if (Optional<Loc> LV = V.getAs<Loc>()) {
-            Loc X = svalBuilder.makeNullWithType(Ex->getType());
-            Result = evalBinOp(state, BO_EQ, *LV, X, U->getType());
+          if (std::optional<Loc> LV = V.getAs<Loc>()) {
+          Loc X = svalBuilder.makeNullWithType(Ex->getType());
+          Result = evalBinOp(state, BO_EQ, *LV, X, U->getType());
           } else if (Ex->getType()->isFloatingType()) {
-            // FIXME: handle floating point types.
-            Result = UnknownVal();
+          // FIXME: handle floating point types.
+          Result = UnknownVal();
           } else {
-            nonloc::ConcreteInt X(getBasicVals().getValue(0, Ex->getType()));
-            Result = evalBinOp(state, BO_EQ, V.castAs<NonLoc>(), X,
-                               U->getType());
+          nonloc::ConcreteInt X(getBasicVals().getValue(0, Ex->getType()));
+          Result = evalBinOp(state, BO_EQ, V.castAs<NonLoc>(), X, U->getType());
           }
 
           state = state->BindExpr(U, LCtx, Result);

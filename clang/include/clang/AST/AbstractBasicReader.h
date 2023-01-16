@@ -16,12 +16,11 @@ namespace clang {
 namespace serialization {
 
 template <class T>
-inline T makeNullableFromOptional(const Optional<T> &value) {
+inline T makeNullableFromOptional(const std::optional<T> &value) {
   return (value ? *value : T());
 }
 
-template <class T>
-inline T *makePointerFromOptional(Optional<T *> value) {
+template <class T> inline T *makePointerFromOptional(std::optional<T *> value) {
   return value.value_or(nullptr);
 }
 
@@ -50,7 +49,7 @@ inline T *makePointerFromOptional(Optional<T *> value) {
 //     type-specific readers for all the enum types.
 //
 //   template <class ValueType>
-//   Optional<ValueType> writeOptional();
+//   std::optional<ValueType> writeOptional();
 //
 //     Reads an optional value from the current property.
 //
@@ -158,7 +157,7 @@ public:
   }
 
   template <class T, class... Args>
-  llvm::Optional<T> readOptional(Args &&...args) {
+  std::optional<T> readOptional(Args &&...args) {
     return UnpackOptionalValue<T>::unpack(
              ReadDispatcher<T>::read(asImpl(), std::forward<Args>(args)...));
   }

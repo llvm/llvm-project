@@ -75,7 +75,7 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
     if (!PM)
       PM = &LC->getParentMap();
 
-    if (Optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {
+    if (std::optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {
       const CFGBlock *CB = BE->getBlock();
       reachable.insert(CB->getBlockID());
     }
@@ -130,7 +130,7 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
       bool foundUnreachable = false;
       for (CFGBlock::const_iterator ci = CB->begin(), ce = CB->end();
            ci != ce; ++ci) {
-        if (Optional<CFGStmt> S = (*ci).getAs<CFGStmt>())
+        if (std::optional<CFGStmt> S = (*ci).getAs<CFGStmt>())
           if (const CallExpr *CE = dyn_cast<CallExpr>(S->getStmt())) {
             if (CE->getBuiltinCallee() == Builtin::BI__builtin_unreachable ||
                 CE->isBuiltinAssumeFalse(Eng.getContext())) {
@@ -200,7 +200,7 @@ void UnreachableCodeChecker::FindUnreachableEntryPoints(const CFGBlock *CB,
 // Find the Stmt* in a CFGBlock for reporting a warning
 const Stmt *UnreachableCodeChecker::getUnreachableStmt(const CFGBlock *CB) {
   for (CFGBlock::const_iterator I = CB->begin(), E = CB->end(); I != E; ++I) {
-    if (Optional<CFGStmt> S = I->getAs<CFGStmt>()) {
+    if (std::optional<CFGStmt> S = I->getAs<CFGStmt>()) {
       if (!isa<DeclStmt>(S->getStmt()))
         return S->getStmt();
     }

@@ -168,7 +168,7 @@ public:
 
   const ProgramStateRef &getState() const { return State; }
 
-  template <typename T> Optional<T> getLocationAs() const & {
+  template <typename T> std::optional<T> getLocationAs() const & {
     return Location.getAs<T>();
   }
 

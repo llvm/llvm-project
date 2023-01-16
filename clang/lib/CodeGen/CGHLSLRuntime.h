@@ -51,7 +51,7 @@ class CGHLSLRuntime {
 public:
   struct BufferResBinding {
     // The ID like 2 in register(b2, space1).
-    llvm::Optional<unsigned> Reg;
+    std::optional<unsigned> Reg;
     // The Space like 1 is register(b2, space1).
     // Default value is 0.
     unsigned Space;

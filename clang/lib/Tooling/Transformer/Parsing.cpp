@@ -120,8 +120,8 @@ getBinaryRangeSelectors() {
 }
 
 template <typename Element>
-llvm::Optional<Element> findOptional(const llvm::StringMap<Element> &Map,
-                                     llvm::StringRef Key) {
+std::optional<Element> findOptional(const llvm::StringMap<Element> &Map,
+                                    llvm::StringRef Key) {
   auto it = Map.find(Key);
   if (it == Map.end())
     return std::nullopt;

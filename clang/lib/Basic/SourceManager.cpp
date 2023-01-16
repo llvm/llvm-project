@@ -99,7 +99,7 @@ const char *ContentCache::getInvalidBOM(StringRef BufStr) {
   return InvalidBOM;
 }
 
-llvm::Optional<llvm::MemoryBufferRef>
+std::optional<llvm::MemoryBufferRef>
 ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
                               SourceLocation Loc) const {
   // Lazily create the Buffer for ContentCaches that wrap files.  If we already
@@ -682,7 +682,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   return SourceLocation::getMacroLoc(NextLocalOffset - (Length + 1));
 }
 
-llvm::Optional<llvm::MemoryBufferRef>
+std::optional<llvm::MemoryBufferRef>
 SourceManager::getMemoryBufferForFileOrNone(const FileEntry *File) {
   SrcMgr::ContentCache &IR = getOrCreateContentCache(File->getLastRef());
   return IR.getBufferOrNone(Diag, getFileManager(), SourceLocation());
@@ -730,7 +730,7 @@ void SourceManager::setFileIsTransient(const FileEntry *File) {
   getOrCreateContentCache(File->getLastRef()).IsTransient = true;
 }
 
-Optional<StringRef>
+std::optional<StringRef>
 SourceManager::getNonBuiltinFilenameForID(FileID FID) const {
   if (const SrcMgr::SLocEntry *Entry = getSLocEntryForFile(FID))
     if (Entry->getFile().getContentCache().OrigEntry)
@@ -745,14 +745,14 @@ StringRef SourceManager::getBufferData(FileID FID, bool *Invalid) const {
   return B ? *B : "<<<<<INVALID SOURCE LOCATION>>>>>";
 }
 
-llvm::Optional<StringRef>
+std::optional<StringRef>
 SourceManager::getBufferDataIfLoaded(FileID FID) const {
   if (const SrcMgr::SLocEntry *Entry = getSLocEntryForFile(FID))
     return Entry->getFile().getContentCache().getBufferDataIfLoaded();
   return std::nullopt;
 }
 
-llvm::Optional<StringRef> SourceManager::getBufferDataOrNone(FileID FID) const {
+std::optional<StringRef> SourceManager::getBufferDataOrNone(FileID FID) const {
   if (const SrcMgr::SLocEntry *Entry = getSLocEntryForFile(FID))
     if (auto B = Entry->getFile().getContentCache().getBufferOrNone(
             Diag, getFileManager(), SourceLocation()))
@@ -1172,7 +1172,7 @@ const char *SourceManager::getCharacterData(SourceLocation SL,
 
     return "<<<<INVALID BUFFER>>>>";
   }
-  llvm::Optional<llvm::MemoryBufferRef> Buffer =
+  std::optional<llvm::MemoryBufferRef> Buffer =
       Entry.getFile().getContentCache().getBufferOrNone(Diag, getFileManager(),
                                                         SourceLocation());
   if (Invalid)
@@ -1185,7 +1185,7 @@ const char *SourceManager::getCharacterData(SourceLocation SL,
 /// this is significantly cheaper to compute than the line number.
 unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
                                         bool *Invalid) const {
-  llvm::Optional<llvm::MemoryBufferRef> MemBuf = getBufferOrNone(FID);
+  std::optional<llvm::MemoryBufferRef> MemBuf = getBufferOrNone(FID);
   if (Invalid)
     *Invalid = !MemBuf;
 
@@ -1375,7 +1375,7 @@ unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
   // If this is the first use of line information for this buffer, compute the
   /// SourceLineCache for it on demand.
   if (!Content->SourceLineCache) {
-    llvm::Optional<llvm::MemoryBufferRef> Buffer =
+    std::optional<llvm::MemoryBufferRef> Buffer =
         Content->getBufferOrNone(Diag, getFileManager(), SourceLocation());
     if (Invalid)
       *Invalid = !Buffer;
@@ -1725,7 +1725,7 @@ SourceLocation SourceManager::translateLineCol(FileID FID,
 
   // If this is the first use of line information for this buffer, compute the
   // SourceLineCache for it on demand.
-  llvm::Optional<llvm::MemoryBufferRef> Buffer =
+  std::optional<llvm::MemoryBufferRef> Buffer =
       Content->getBufferOrNone(Diag, getFileManager());
   if (!Buffer)
     return SourceLocation();
@@ -2183,7 +2183,7 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
   llvm::raw_ostream &out = llvm::errs();
 
   auto DumpSLocEntry = [&](int ID, const SrcMgr::SLocEntry &Entry,
-                           llvm::Optional<SourceLocation::UIntTy> NextStart) {
+                           std::optional<SourceLocation::UIntTy> NextStart) {
     out << "SLocEntry <FileID " << ID << "> " << (Entry.isFile() ? "file" : "expansion")
         << " <SourceLocation " << Entry.getOffset() << ":";
     if (NextStart)
@@ -2223,7 +2223,7 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
                                    : LocalSLocEntryTable[ID + 1].getOffset());
   }
   // Dump loaded SLocEntries.
-  llvm::Optional<SourceLocation::UIntTy> NextStart;
+  std::optional<SourceLocation::UIntTy> NextStart;
   for (unsigned Index = 0; Index != LoadedSLocEntryTable.size(); ++Index) {
     int ID = -(int)Index - 2;
     if (SLocEntryLoaded[Index]) {
@@ -2236,7 +2236,7 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
 }
 
 void SourceManager::noteSLocAddressSpaceUsage(
-    DiagnosticsEngine &Diag, Optional<unsigned> MaxNotes) const {
+    DiagnosticsEngine &Diag, std::optional<unsigned> MaxNotes) const {
   struct Info {
     // A location where this file was entered.
     SourceLocation Loc;

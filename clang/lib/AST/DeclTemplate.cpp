@@ -131,7 +131,7 @@ unsigned TemplateParameterList::getMinRequiredArguments() const {
   unsigned NumRequiredArgs = 0;
   for (const NamedDecl *P : asArray()) {
     if (P->isTemplateParameterPack()) {
-      if (Optional<unsigned> Expansions = getExpandedPackSize(P)) {
+      if (std::optional<unsigned> Expansions = getExpandedPackSize(P)) {
         NumRequiredArgs += *Expansions;
         continue;
       }
@@ -637,13 +637,11 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
 // TemplateTypeParm Allocation/Deallocation Method Implementations
 //===----------------------------------------------------------------------===//
 
-TemplateTypeParmDecl *
-TemplateTypeParmDecl::Create(const ASTContext &C, DeclContext *DC,
-                             SourceLocation KeyLoc, SourceLocation NameLoc,
-                             unsigned D, unsigned P, IdentifierInfo *Id,
-                             bool Typename, bool ParameterPack,
-                             bool HasTypeConstraint,
-                             Optional<unsigned> NumExpanded) {
+TemplateTypeParmDecl *TemplateTypeParmDecl::Create(
+    const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
+    SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
+    bool Typename, bool ParameterPack, bool HasTypeConstraint,
+    std::optional<unsigned> NumExpanded) {
   auto *TTPDecl =
       new (C, DC,
            additionalSizeToAlloc<TypeConstraint>(HasTypeConstraint ? 1 : 0))

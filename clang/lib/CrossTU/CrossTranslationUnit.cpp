@@ -242,7 +242,7 @@ CrossTranslationUnitContext::CrossTranslationUnitContext(CompilerInstance &CI)
 
 CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 
-llvm::Optional<std::string>
+std::optional<std::string>
 CrossTranslationUnitContext::getLookupName(const NamedDecl *ND) {
   SmallString<128> DeclUSR;
   bool Ret = index::generateUSRForDecl(ND, DeclUSR);
@@ -268,7 +268,7 @@ CrossTranslationUnitContext::findDefInDeclContext(const DeclContext *DC,
     const T *ResultDecl;
     if (!ND || !hasBodyOrInit(ND, ResultDecl))
       continue;
-    llvm::Optional<std::string> ResultLookupName = getLookupName(ResultDecl);
+    std::optional<std::string> ResultLookupName = getLookupName(ResultDecl);
     if (!ResultLookupName || *ResultLookupName != LookupName)
       continue;
     return ResultDecl;
@@ -284,7 +284,7 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
   assert(!hasBodyOrInit(D) &&
          "D has a body or init in current translation unit!");
   ++NumGetCTUCalled;
-  const llvm::Optional<std::string> LookupName = getLookupName(D);
+  const std::optional<std::string> LookupName = getLookupName(D);
   if (!LookupName)
     return llvm::make_error<IndexError>(
         index_error_code::failed_to_generate_usr);
@@ -794,7 +794,7 @@ CrossTranslationUnitContext::getOrCreateASTImporter(ASTUnit *Unit) {
   return *NewImporter;
 }
 
-llvm::Optional<clang::MacroExpansionContext>
+std::optional<clang::MacroExpansionContext>
 CrossTranslationUnitContext::getMacroExpansionContextForSourceLocation(
     const clang::SourceLocation &ToLoc) const {
   // FIXME: Implement: Record such a context for every imported ASTUnit; lookup.

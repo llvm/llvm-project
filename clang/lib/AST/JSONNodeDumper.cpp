@@ -738,7 +738,7 @@ void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
 }
 
 void JSONNodeDumper::VisitPackExpansionType(const PackExpansionType *PET) {
-  if (llvm::Optional<unsigned> N = PET->getNumExpansions())
+  if (std::optional<unsigned> N = PET->getNumExpansions())
     JOS.attribute("numExpansions", *N);
 }
 

@@ -2455,7 +2455,7 @@ void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
                    TraitProperty::user_condition_unknown &&
                "Ill-formed user condition, expected unknown trait property!");
 
-        if (Optional<APSInt> CondVal =
+        if (std::optional<APSInt> CondVal =
                 Selector.ScoreOrCondition->getIntegerConstantExpr(ASTCtx))
           VMI.addTrait(CondVal->isZero() ? TraitProperty::user_condition_false
                                          : TraitProperty::user_condition_true,
@@ -2465,7 +2465,7 @@ void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
         continue;
       }
 
-      Optional<llvm::APSInt> Score;
+      std::optional<llvm::APSInt> Score;
       llvm::APInt *ScorePtr = nullptr;
       if (Selector.ScoreOrCondition) {
         if ((Score = Selector.ScoreOrCondition->getIntegerConstantExpr(ASTCtx)))

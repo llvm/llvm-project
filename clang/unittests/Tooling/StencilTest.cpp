@@ -70,9 +70,9 @@ struct TestMatch {
 // `StatementCode` exactly -- that is, produce exactly one match. However,
 // `StatementCode` may contain other statements not described by `Matcher`.
 // `ExtraPreface` (optionally) adds extra decls to the TU, before the code.
-static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
-                                           StatementMatcher Matcher,
-                                           StringRef ExtraPreface = "") {
+static std::optional<TestMatch> matchStmt(StringRef StatementCode,
+                                          StatementMatcher Matcher,
+                                          StringRef ExtraPreface = "") {
   auto AstUnit = tooling::buildASTFromCodeWithArgs(
       wrapSnippet(ExtraPreface, StatementCode), {"-Wno-unused-value"});
   if (AstUnit == nullptr) {

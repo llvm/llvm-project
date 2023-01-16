@@ -213,11 +213,11 @@ public:
            removeBinding(R, BindingKey::Default);
   }
 
-  Optional<SVal> getDirectBinding(const MemRegion *R) const;
+  std::optional<SVal> getDirectBinding(const MemRegion *R) const;
 
   /// getDefaultBinding - Returns an SVal* representing an optional default
   ///  binding associated with a region and its subregions.
-  Optional<SVal> getDefaultBinding(const MemRegion *R) const;
+  std::optional<SVal> getDefaultBinding(const MemRegion *R) const;
 
   /// Return the internal tree as a Store.
   Store asStore() const {
@@ -263,14 +263,16 @@ public:
 
 typedef const RegionBindingsRef& RegionBindingsConstRef;
 
-Optional<SVal> RegionBindingsRef::getDirectBinding(const MemRegion *R) const {
+std::optional<SVal>
+RegionBindingsRef::getDirectBinding(const MemRegion *R) const {
   const SVal *V = lookup(R, BindingKey::Direct);
-  return V ? Optional<SVal>(*V) : std::nullopt;
+  return V ? std::optional<SVal>(*V) : std::nullopt;
 }
 
-Optional<SVal> RegionBindingsRef::getDefaultBinding(const MemRegion *R) const {
+std::optional<SVal>
+RegionBindingsRef::getDefaultBinding(const MemRegion *R) const {
   const SVal *V = lookup(R, BindingKey::Default);
-  return V ? Optional<SVal>(*V) : std::nullopt;
+  return V ? std::optional<SVal>(*V) : std::nullopt;
 }
 
 RegionBindingsRef RegionBindingsRef::addBinding(BindingKey K, SVal V) const {
@@ -424,10 +426,10 @@ public:
 
   RegionBindingsRef removeSubRegionBindings(RegionBindingsConstRef B,
                                             const SubRegion *R);
-  Optional<SVal>
+  std::optional<SVal>
   getConstantValFromConstArrayInitializer(RegionBindingsConstRef B,
                                           const ElementRegion *R);
-  Optional<SVal>
+  std::optional<SVal>
   getSValFromInitListExpr(const InitListExpr *ILE,
                           const SmallVector<uint64_t, 2> &ConcreteOffsets,
                           QualType ElemT);
@@ -488,10 +490,9 @@ public: // Part of public interface to class.
   ///
   /// \returns The updated store bindings, or \c std::nullopt if binding
   ///          non-lazily would be too expensive.
-  Optional<RegionBindingsRef> tryBindSmallStruct(RegionBindingsConstRef B,
-                                                 const TypedValueRegion *R,
-                                                 const RecordDecl *RD,
-                                                 nonloc::LazyCompoundVal LCV);
+  std::optional<RegionBindingsRef>
+  tryBindSmallStruct(RegionBindingsConstRef B, const TypedValueRegion *R,
+                     const RecordDecl *RD, nonloc::LazyCompoundVal LCV);
 
   /// BindStruct - Bind a compound value to a structure.
   RegionBindingsRef bindStruct(RegionBindingsConstRef B,
@@ -501,10 +502,9 @@ public: // Part of public interface to class.
   RegionBindingsRef bindVector(RegionBindingsConstRef B,
                                const TypedValueRegion* R, SVal V);
 
-  Optional<RegionBindingsRef> tryBindSmallArray(RegionBindingsConstRef B,
-                                                const TypedValueRegion *R,
-                                                const ArrayType *AT,
-                                                nonloc::LazyCompoundVal LCV);
+  std::optional<RegionBindingsRef>
+  tryBindSmallArray(RegionBindingsConstRef B, const TypedValueRegion *R,
+                    const ArrayType *AT, nonloc::LazyCompoundVal LCV);
 
   RegionBindingsRef bindArray(RegionBindingsConstRef B,
                               const TypedValueRegion* R,
@@ -551,7 +551,7 @@ public: // Part of public interface to class.
     return getBinding(getRegionBindings(S), L, T);
   }
 
-  Optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
+  std::optional<SVal> getDefaultBinding(Store S, const MemRegion *R) override {
     RegionBindingsRef B = getRegionBindings(S);
     // Default bindings are always applied over a base region so look up the
     // base region's default binding, otherwise the lookup will fail when R
@@ -592,10 +592,10 @@ public: // Part of public interface to class.
   ///
   /// Note that callers may need to specially handle LazyCompoundVals, which
   /// are returned as is in case the caller needs to treat them differently.
-  Optional<SVal> getBindingForDerivedDefaultValue(RegionBindingsConstRef B,
-                                                  const MemRegion *superR,
-                                                  const TypedValueRegion *R,
-                                                  QualType Ty);
+  std::optional<SVal>
+  getBindingForDerivedDefaultValue(RegionBindingsConstRef B,
+                                   const MemRegion *superR,
+                                   const TypedValueRegion *R, QualType Ty);
 
   /// Get the state and region whose binding this region \p R corresponds to.
   ///
@@ -864,7 +864,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
   // Find the length (in bits) of the region being invalidated.
   uint64_t Length = UINT64_MAX;
   SVal Extent = Top->getMemRegionManager().getStaticSize(Top, SVB);
-  if (Optional<nonloc::ConcreteInt> ExtentCI =
+  if (std::optional<nonloc::ConcreteInt> ExtentCI =
           Extent.getAs<nonloc::ConcreteInt>()) {
     const llvm::APSInt &ExtentInt = ExtentCI->getValue();
     assert(ExtentInt.isNonNegative() || ExtentInt.isUnsigned());
@@ -1036,7 +1036,7 @@ void InvalidateRegionsWorker::VisitBinding(SVal V) {
   }
 
   // Is it a LazyCompoundVal?  All references get invalidated as well.
-  if (Optional<nonloc::LazyCompoundVal> LCS =
+  if (std::optional<nonloc::LazyCompoundVal> LCS =
           V.getAs<nonloc::LazyCompoundVal>()) {
 
     // `getInterestingValues()` returns SVals contained within LazyCompoundVals,
@@ -1109,7 +1109,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
         // a pointer value, but the thing pointed by that pointer may
         // get invalidated.
         SVal V = RM.getBinding(B, loc::MemRegionVal(VR));
-        if (Optional<Loc> L = V.getAs<Loc>()) {
+        if (std::optional<Loc> L = V.getAs<Loc>()) {
           if (const MemRegion *LR = L->getAsRegion())
             AddToWorkList(LR);
         }
@@ -1169,7 +1169,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     if (doNotInvalidateSuperRegion) {
       // We are not doing blank invalidation of the whole array region so we
       // have to manually invalidate each elements.
-      Optional<uint64_t> NumElements;
+      std::optional<uint64_t> NumElements;
 
       // Compute lower and upper offsets for region within array.
       if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(AT))
@@ -1204,8 +1204,8 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
       for (ClusterBindings::iterator I = C->begin(), E = C->end(); I != E;
            ++I) {
         const BindingKey &BK = I.getKey();
-        Optional<uint64_t> ROffset =
-            BK.hasSymbolicOffset() ? Optional<uint64_t>() : BK.getOffset();
+        std::optional<uint64_t> ROffset =
+            BK.hasSymbolicOffset() ? std::optional<uint64_t>() : BK.getOffset();
 
         // Check offset is not symbolic and within array's boundaries.
         // Handles arrays of 0 elements and of 0-sized elements as well.
@@ -1293,8 +1293,8 @@ void RegionStoreManager::populateWorkList(InvalidateRegionsWorker &W,
   for (ArrayRef<SVal>::iterator I = Values.begin(),
                                 E = Values.end(); I != E; ++I) {
     SVal V = *I;
-    if (Optional<nonloc::LazyCompoundVal> LCS =
-        V.getAs<nonloc::LazyCompoundVal>()) {
+    if (std::optional<nonloc::LazyCompoundVal> LCS =
+            V.getAs<nonloc::LazyCompoundVal>()) {
 
       for (SVal S : getInterestingValues(*LCS))
         if (const MemRegion *R = S.getAsRegion())
@@ -1539,14 +1539,15 @@ static QualType getUnderlyingType(const SubRegion *R) {
 ///
 /// Note that unlike RegionStoreManager::findLazyBinding, this will not search
 /// for lazy bindings for super-regions of \p R.
-static Optional<nonloc::LazyCompoundVal>
+static std::optional<nonloc::LazyCompoundVal>
 getExistingLazyBinding(SValBuilder &SVB, RegionBindingsConstRef B,
                        const SubRegion *R, bool AllowSubregionBindings) {
-  Optional<SVal> V = B.getDefaultBinding(R);
+  std::optional<SVal> V = B.getDefaultBinding(R);
   if (!V)
     return std::nullopt;
 
-  Optional<nonloc::LazyCompoundVal> LCV = V->getAs<nonloc::LazyCompoundVal>();
+  std::optional<nonloc::LazyCompoundVal> LCV =
+      V->getAs<nonloc::LazyCompoundVal>();
   if (!LCV)
     return std::nullopt;
 
@@ -1573,14 +1574,13 @@ getExistingLazyBinding(SValBuilder &SVB, RegionBindingsConstRef B,
   return *LCV;
 }
 
-
 std::pair<Store, const SubRegion *>
 RegionStoreManager::findLazyBinding(RegionBindingsConstRef B,
                                    const SubRegion *R,
                                    const SubRegion *originalRegion) {
   if (originalRegion != R) {
-    if (Optional<nonloc::LazyCompoundVal> V =
-          getExistingLazyBinding(svalBuilder, B, R, true))
+    if (std::optional<nonloc::LazyCompoundVal> V =
+            getExistingLazyBinding(svalBuilder, B, R, true))
       return std::make_pair(V->getStore(), V->getRegion());
   }
 
@@ -1680,7 +1680,7 @@ getElementRegionOffsetsWithBase(const ElementRegion *ER) {
 ///                          // returns std::nullopt
 ///   int x2 = arr[42][5][-6]; // returns UndefinedVal
 ///   int x3 = arr[4][5][x2];  // returns UnknownVal
-static Optional<SVal>
+static std::optional<SVal>
 convertOffsetsFromSvalToUnsigneds(const SmallVector<SVal, 2> &SrcOffsets,
                                   const SmallVector<uint64_t, 2> ArrayExtents,
                                   SmallVector<uint64_t, 2> &DstOffsets) {
@@ -1723,7 +1723,7 @@ convertOffsetsFromSvalToUnsigneds(const SmallVector<SVal, 2> &SrcOffsets,
   return std::nullopt;
 }
 
-Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
+std::optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
     RegionBindingsConstRef B, const ElementRegion *R) {
   assert(R && "ElementRegion should not be null");
 
@@ -1780,8 +1780,8 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
     return std::nullopt;
 
   SmallVector<uint64_t, 2> ConcreteOffsets;
-  if (Optional<SVal> V = convertOffsetsFromSvalToUnsigneds(SValOffsets, Extents,
-                                                           ConcreteOffsets))
+  if (std::optional<SVal> V = convertOffsetsFromSvalToUnsigneds(
+          SValOffsets, Extents, ConcreteOffsets))
     return *V;
 
   // Handle InitListExpr.
@@ -1819,7 +1819,7 @@ Optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
 /// NOTE: Inorder to get a valid SVal, a caller shall guarantee valid offsets
 /// for the given initialization list. Otherwise SVal can be an equivalent to 0
 /// or lead to assertion.
-Optional<SVal> RegionStoreManager::getSValFromInitListExpr(
+std::optional<SVal> RegionStoreManager::getSValFromInitListExpr(
     const InitListExpr *ILE, const SmallVector<uint64_t, 2> &Offsets,
     QualType ElemT) {
   assert(ILE && "InitListExpr should not be null");
@@ -1890,7 +1890,7 @@ SVal RegionStoreManager::getSValFromStringLiteral(const StringLiteral *SL,
   return svalBuilder.makeIntVal(Code, ElemT);
 }
 
-static Optional<SVal> getDerivedSymbolForBinding(
+static std::optional<SVal> getDerivedSymbolForBinding(
     RegionBindingsConstRef B, const TypedValueRegion *BaseRegion,
     const TypedValueRegion *SubReg, const ASTContext &Ctx, SValBuilder &SVB) {
   assert(BaseRegion);
@@ -1898,7 +1898,8 @@ static Optional<SVal> getDerivedSymbolForBinding(
   QualType Ty = SubReg->getValueType();
   if (BaseTy->isScalarType() && Ty->isScalarType()) {
     if (Ctx.getTypeSizeInChars(BaseTy) >= Ctx.getTypeSizeInChars(Ty)) {
-      if (const Optional<SVal> &ParentValue = B.getDirectBinding(BaseRegion)) {
+      if (const std::optional<SVal> &ParentValue =
+              B.getDirectBinding(BaseRegion)) {
         if (SymbolRef ParentValueAsSym = ParentValue->getAsSymbol())
           return SVB.getDerivedRegionValueSymbolVal(ParentValueAsSym, SubReg);
 
@@ -1917,7 +1918,7 @@ static Optional<SVal> getDerivedSymbolForBinding(
 SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
                                               const ElementRegion* R) {
   // Check if the region has a binding.
-  if (const Optional<SVal> &V = B.getDirectBinding(R))
+  if (const std::optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
   const MemRegion* superR = R->getSuperRegion();
@@ -1938,7 +1939,7 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
       return getSValFromStringLiteral(SL, Idx.getZExtValue(), T);
     }
   } else if (isa<ElementRegion, VarRegion>(superR)) {
-    if (Optional<SVal> V = getConstantValFromConstArrayInitializer(B, R))
+    if (std::optional<SVal> V = getConstantValFromConstArrayInitializer(B, R))
       return *V;
   }
 
@@ -1969,7 +1970,7 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
                                             const FieldRegion* R) {
 
   // Check if the region has a binding.
-  if (const Optional<SVal> &V = B.getDirectBinding(R))
+  if (const std::optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
   // If the containing record was initialized, try to get its constant value.
@@ -1989,7 +1990,7 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
         if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
           if (Index < InitList->getNumInits()) {
             if (const Expr *FieldInit = InitList->getInit(Index))
-              if (Optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
+              if (std::optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
                 return *V;
           } else {
             return svalBuilder.makeZeroVal(Ty);
@@ -2020,13 +2021,11 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   return getBindingForFieldOrElementCommon(B, R, Ty);
 }
 
-Optional<SVal>
-RegionStoreManager::getBindingForDerivedDefaultValue(RegionBindingsConstRef B,
-                                                     const MemRegion *superR,
-                                                     const TypedValueRegion *R,
-                                                     QualType Ty) {
+std::optional<SVal> RegionStoreManager::getBindingForDerivedDefaultValue(
+    RegionBindingsConstRef B, const MemRegion *superR,
+    const TypedValueRegion *R, QualType Ty) {
 
-  if (const Optional<SVal> &D = B.getDefaultBinding(superR)) {
+  if (const std::optional<SVal> &D = B.getDefaultBinding(superR)) {
     const SVal &val = *D;
     if (SymbolRef parentSym = val.getAsSymbol())
       return svalBuilder.getDerivedRegionValueSymbolVal(parentSym, R);
@@ -2116,7 +2115,8 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
   const SubRegion *SR = R;
   while (SR) {
     const MemRegion *Base = SR->getSuperRegion();
-    if (Optional<SVal> D = getBindingForDerivedDefaultValue(B, Base, R, Ty)) {
+    if (std::optional<SVal> D =
+            getBindingForDerivedDefaultValue(B, Base, R, Ty)) {
       if (D->getAs<nonloc::LazyCompoundVal>()) {
         hasPartialLazyBinding = true;
         break;
@@ -2158,7 +2158,7 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
     // Try to get direct binding if all other attempts failed thus far.
     // Else, return UndefinedVal()
     if (!hasPartialLazyBinding && !isa<BlockDataRegion>(R->getBaseRegion())) {
-      if (const Optional<SVal> &V = B.getDefaultBinding(R))
+      if (const std::optional<SVal> &V = B.getDefaultBinding(R))
         return *V;
       return UndefinedVal();
     }
@@ -2171,13 +2171,13 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
 SVal RegionStoreManager::getBindingForObjCIvar(RegionBindingsConstRef B,
                                                const ObjCIvarRegion* R) {
   // Check if the region has a binding.
-  if (const Optional<SVal> &V = B.getDirectBinding(R))
+  if (const std::optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
   const MemRegion *superR = R->getSuperRegion();
 
   // Check if the super region has a default binding.
-  if (const Optional<SVal> &V = B.getDefaultBinding(superR)) {
+  if (const std::optional<SVal> &V = B.getDefaultBinding(superR)) {
     if (SymbolRef parentSym = V->getAsSymbol())
       return svalBuilder.getDerivedRegionValueSymbolVal(parentSym, R);
 
@@ -2192,10 +2192,10 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
                                           const VarRegion *R) {
 
   // Check if the region has a binding.
-  if (Optional<SVal> V = B.getDirectBinding(R))
+  if (std::optional<SVal> V = B.getDirectBinding(R))
     return *V;
 
-  if (Optional<SVal> V = B.getDefaultBinding(R))
+  if (std::optional<SVal> V = B.getDefaultBinding(R))
     return *V;
 
   // Lazily derive a value for the VarRegion.
@@ -2209,7 +2209,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
   // Is 'VD' declared constant?  If so, retrieve the constant value.
   if (VD->getType().isConstQualified()) {
     if (const Expr *Init = VD->getAnyInitializer()) {
-      if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
+      if (std::optional<SVal> V = svalBuilder.getConstantVal(Init))
         return *V;
 
       // If the variable is const qualified and has an initializer but
@@ -2230,7 +2230,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
     // If we're in main(), then global initializers have not become stale yet.
     if (B.isMainAnalysis())
       if (const Expr *Init = VD->getAnyInitializer())
-        if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
+        if (std::optional<SVal> V = svalBuilder.getConstantVal(Init))
           return *V;
 
     // Function-scoped static variables are default-initialized to 0; if they
@@ -2240,7 +2240,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
     if (isa<StaticGlobalSpaceRegion>(MS))
       return svalBuilder.makeZeroVal(T);
 
-    if (Optional<SVal> V = getBindingForDerivedDefaultValue(B, MS, R, T)) {
+    if (std::optional<SVal> V = getBindingForDerivedDefaultValue(B, MS, R, T)) {
       assert(!V->getAs<nonloc::LazyCompoundVal>());
       return *V;
     }
@@ -2298,8 +2298,8 @@ RegionStoreManager::getInterestingValues(nonloc::LazyCompoundVal LCV) {
 
 NonLoc RegionStoreManager::createLazyBinding(RegionBindingsConstRef B,
                                              const TypedValueRegion *R) {
-  if (Optional<nonloc::LazyCompoundVal> V =
-        getExistingLazyBinding(svalBuilder, B, R, false))
+  if (std::optional<nonloc::LazyCompoundVal> V =
+          getExistingLazyBinding(svalBuilder, B, R, false))
     return *V;
 
   return svalBuilder.makeLazyCompoundVal(StoreRef(B.asStore(), *this), R);
@@ -2359,7 +2359,7 @@ bool RegionStoreManager::includedInBindings(Store store,
 //===----------------------------------------------------------------------===//
 
 StoreRef RegionStoreManager::killBinding(Store ST, Loc L) {
-  if (Optional<loc::MemRegionVal> LV = L.getAs<loc::MemRegionVal>())
+  if (std::optional<loc::MemRegionVal> LV = L.getAs<loc::MemRegionVal>())
     if (const MemRegion* R = LV->getRegion())
       return StoreRef(getRegionBindings(ST).removeBinding(R)
                                            .asImmutableMap()
@@ -2434,7 +2434,7 @@ RegionStoreManager::setImplicitDefaultValue(RegionBindingsConstRef B,
   return B.addBinding(R, BindingKey::Default, V);
 }
 
-Optional<RegionBindingsRef> RegionStoreManager::tryBindSmallArray(
+std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallArray(
     RegionBindingsConstRef B, const TypedValueRegion *R, const ArrayType *AT,
     nonloc::LazyCompoundVal LCV) {
 
@@ -2475,7 +2475,7 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
 
   const ArrayType *AT =cast<ArrayType>(Ctx.getCanonicalType(R->getValueType()));
   QualType ElementTy = AT->getElementType();
-  Optional<uint64_t> Size;
+  std::optional<uint64_t> Size;
 
   if (const ConstantArrayType* CAT = dyn_cast<ConstantArrayType>(AT))
     Size = CAT->getSize().getZExtValue();
@@ -2483,15 +2483,16 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
   // Check if the init expr is a literal. If so, bind the rvalue instead.
   // FIXME: It's not responsibility of the Store to transform this lvalue
   // to rvalue. ExprEngine or maybe even CFG should do this before binding.
-  if (Optional<loc::MemRegionVal> MRV = Init.getAs<loc::MemRegionVal>()) {
+  if (std::optional<loc::MemRegionVal> MRV = Init.getAs<loc::MemRegionVal>()) {
     SVal V = getBinding(B.asStore(), *MRV, R->getValueType());
     return bindAggregate(B, R, V);
   }
 
   // Handle lazy compound values.
-  if (Optional<nonloc::LazyCompoundVal> LCV =
+  if (std::optional<nonloc::LazyCompoundVal> LCV =
           Init.getAs<nonloc::LazyCompoundVal>()) {
-    if (Optional<RegionBindingsRef> NewB = tryBindSmallArray(B, R, AT, *LCV))
+    if (std::optional<RegionBindingsRef> NewB =
+            tryBindSmallArray(B, R, AT, *LCV))
       return *NewB;
 
     return bindAggregate(B, R, Init);
@@ -2572,11 +2573,9 @@ RegionBindingsRef RegionStoreManager::bindVector(RegionBindingsConstRef B,
   return NewB;
 }
 
-Optional<RegionBindingsRef>
-RegionStoreManager::tryBindSmallStruct(RegionBindingsConstRef B,
-                                       const TypedValueRegion *R,
-                                       const RecordDecl *RD,
-                                       nonloc::LazyCompoundVal LCV) {
+std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
+    RegionBindingsConstRef B, const TypedValueRegion *R, const RecordDecl *RD,
+    nonloc::LazyCompoundVal LCV) {
   FieldVector Fields;
 
   if (const CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(RD))
@@ -2631,9 +2630,10 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
     return B;
 
   // Handle lazy compound values and symbolic values.
-  if (Optional<nonloc::LazyCompoundVal> LCV =
-        V.getAs<nonloc::LazyCompoundVal>()) {
-    if (Optional<RegionBindingsRef> NewB = tryBindSmallStruct(B, R, RD, *LCV))
+  if (std::optional<nonloc::LazyCompoundVal> LCV =
+          V.getAs<nonloc::LazyCompoundVal>()) {
+    if (std::optional<RegionBindingsRef> NewB =
+            tryBindSmallStruct(B, R, RD, *LCV))
       return *NewB;
     return bindAggregate(B, R, V);
   }

@@ -622,11 +622,10 @@ Registry::buildMatcherCtor(MatcherCtor Ctor, SourceRange NameRange,
 }
 
 // static
-llvm::Optional<MatcherCtor> Registry::lookupMatcherCtor(StringRef MatcherName) {
+std::optional<MatcherCtor> Registry::lookupMatcherCtor(StringRef MatcherName) {
   auto it = RegistryData->constructors().find(MatcherName);
-  return it == RegistryData->constructors().end()
-             ? llvm::Optional<MatcherCtor>()
-             : it->second.get();
+  return it == RegistryData->constructors().end() ? std::optional<MatcherCtor>()
+                                                  : it->second.get();
 }
 
 static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
@@ -799,9 +798,9 @@ VariantMatcher Registry::constructBoundMatcher(MatcherCtor Ctor,
   VariantMatcher Out = constructMatcher(Ctor, NameRange, Args, Error);
   if (Out.isNull()) return Out;
 
-  llvm::Optional<DynTypedMatcher> Result = Out.getSingleMatcher();
+  std::optional<DynTypedMatcher> Result = Out.getSingleMatcher();
   if (Result) {
-    llvm::Optional<DynTypedMatcher> Bound = Result->tryBind(BindID);
+    std::optional<DynTypedMatcher> Bound = Result->tryBind(BindID);
     if (Bound) {
       return VariantMatcher::SingleMatcher(*Bound);
     }

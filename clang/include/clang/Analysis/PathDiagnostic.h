@@ -533,7 +533,7 @@ public:
 };
 
 class PathDiagnosticEventPiece : public PathDiagnosticSpotPiece {
-  Optional<bool> IsPrunable;
+  std::optional<bool> IsPrunable;
 
 public:
   PathDiagnosticEventPiece(const PathDiagnosticLocation &pos,

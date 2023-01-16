@@ -8056,7 +8056,7 @@ private:
                "invalid builtin comparison");
 
         if (NeedsDeducing) {
-          Optional<ComparisonCategoryType> Cat =
+          std::optional<ComparisonCategoryType> Cat =
               getComparisonCategoryForBuiltinCmp(T);
           assert(Cat && "no category for builtin comparison?");
           R.Category = *Cat;

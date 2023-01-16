@@ -140,7 +140,7 @@ struct TypeErasedDataflowAnalysisState {
 ///   `std::nullopt` represent basic blocks that are not evaluated yet.
 TypeErasedDataflowAnalysisState transferBlock(
     const ControlFlowContext &CFCtx,
-    llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,
+    llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis,
     std::function<void(const CFGElement &,
@@ -153,7 +153,7 @@ TypeErasedDataflowAnalysisState transferBlock(
 /// dataflow analysis cannot be performed successfully. Otherwise, calls
 /// `PostVisitCFG` on each CFG element with the final analysis results at that
 /// program point.
-llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
+llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,

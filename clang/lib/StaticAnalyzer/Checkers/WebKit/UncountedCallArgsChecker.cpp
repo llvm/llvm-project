@@ -86,7 +86,7 @@ public:
           continue; // FIXME? Should we bail?
 
         // FIXME: more complex types (arrays, references to raw pointers, etc)
-        Optional<bool> IsUncounted = isUncountedPtr(ArgType);
+        std::optional<bool> IsUncounted = isUncountedPtr(ArgType);
         if (!IsUncounted || !(*IsUncounted))
           continue;
 

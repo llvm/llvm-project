@@ -51,7 +51,7 @@ public:
                         SourceSelectionKind::None));
   }
 
-  Optional<SelectedASTNode> getSelectedASTNode() {
+  std::optional<SelectedASTNode> getSelectedASTNode() {
     assert(SelectionStack.size() == 1 && "stack was not popped");
     SelectedASTNode Result = std::move(SelectionStack.back());
     SelectionStack.pop_back();
@@ -179,7 +179,7 @@ private:
 
 } // end anonymous namespace
 
-Optional<SelectedASTNode>
+std::optional<SelectedASTNode>
 clang::tooling::findSelectedASTNodes(const ASTContext &Context,
                                      SourceRange SelectionRange) {
   assert(SelectionRange.isValid() &&
@@ -376,7 +376,7 @@ static void findDeepestWithKind(
   findDeepestWithKind(ASTSelection, MatchingNodes, Kind, ParentStack);
 }
 
-Optional<CodeRangeASTSelection>
+std::optional<CodeRangeASTSelection>
 CodeRangeASTSelection::create(SourceRange SelectionRange,
                               const SelectedASTNode &ASTSelection) {
   // Code range is selected when the selection range is not empty.

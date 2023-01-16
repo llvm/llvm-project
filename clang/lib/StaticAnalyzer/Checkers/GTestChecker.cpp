@@ -259,7 +259,7 @@ SVal GTestChecker::getAssertionResultSuccessFieldValue(
   if (!SuccessField)
     return UnknownVal();
 
-  Optional<Loc> FieldLoc =
+  std::optional<Loc> FieldLoc =
       State->getLValue(SuccessField, Instance).getAs<Loc>();
   if (!FieldLoc)
     return UnknownVal();

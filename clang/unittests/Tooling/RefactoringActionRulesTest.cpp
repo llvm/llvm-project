@@ -48,7 +48,7 @@ createReplacements(const std::unique_ptr<RefactoringActionRule> &Rule,
     }
 
   public:
-    Optional<Expected<AtomicChanges>> Result;
+    std::optional<Expected<AtomicChanges>> Result;
   };
 
   Consumer C;
@@ -176,8 +176,8 @@ TEST_F(RefactoringActionRulesTest, ReturnError) {
   EXPECT_EQ(Message, "Error");
 }
 
-Optional<SymbolOccurrences> findOccurrences(RefactoringActionRule &Rule,
-                                            RefactoringRuleContext &Context) {
+std::optional<SymbolOccurrences>
+findOccurrences(RefactoringActionRule &Rule, RefactoringRuleContext &Context) {
   class Consumer final : public RefactoringResultConsumer {
     void handleError(llvm::Error) override {}
     void handle(SymbolOccurrences Occurrences) override {
@@ -188,7 +188,7 @@ Optional<SymbolOccurrences> findOccurrences(RefactoringActionRule &Rule,
     }
 
   public:
-    Optional<SymbolOccurrences> Result;
+    std::optional<SymbolOccurrences> Result;
   };
 
   Consumer C;
@@ -225,7 +225,7 @@ TEST_F(RefactoringActionRulesTest, ReturnSymbolOccurrences) {
   SourceLocation Cursor =
       Context.Sources.getLocForStartOfFile(Context.Sources.getMainFileID());
   RefContext.setSelectionRange({Cursor, Cursor});
-  Optional<SymbolOccurrences> Result = findOccurrences(*Rule, RefContext);
+  std::optional<SymbolOccurrences> Result = findOccurrences(*Rule, RefContext);
 
   ASSERT_FALSE(!Result);
   SymbolOccurrences Occurrences = std::move(*Result);

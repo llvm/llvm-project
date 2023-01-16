@@ -110,7 +110,7 @@ public:
 
   /// If @c E is a generic call (to ObjC method /function/block/etc),
   /// return a constructed @c AnyCall object. Return std::nullopt otherwise.
-  static Optional<AnyCall> forExpr(const Expr *E) {
+  static std::optional<AnyCall> forExpr(const Expr *E) {
     if (const auto *ME = dyn_cast<ObjCMessageExpr>(E)) {
       return AnyCall(ME);
     } else if (const auto *CE = dyn_cast<CallExpr>(E)) {
@@ -131,7 +131,7 @@ public:
   /// If @c D is a callable (Objective-C method or a function), return
   /// a constructed @c AnyCall object. Return std::nullopt otherwise.
   // FIXME: block support.
-  static Optional<AnyCall> forDecl(const Decl *D) {
+  static std::optional<AnyCall> forDecl(const Decl *D) {
     if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
       return AnyCall(FD);
     } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {

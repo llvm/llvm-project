@@ -29,7 +29,7 @@ class Sema;
 
 struct AtomicConstraint {
   const Expr *ConstraintExpr;
-  Optional<ArrayRef<TemplateArgumentLoc>> ParameterMapping;
+  std::optional<ArrayRef<TemplateArgumentLoc>> ParameterMapping;
 
   AtomicConstraint(Sema &S, const Expr *ConstraintExpr) :
       ConstraintExpr(ConstraintExpr) { };
@@ -145,9 +145,9 @@ struct NormalizedConstraint {
   }
 
 private:
-  static Optional<NormalizedConstraint>
+  static std::optional<NormalizedConstraint>
   fromConstraintExprs(Sema &S, NamedDecl *D, ArrayRef<const Expr *> E);
-  static Optional<NormalizedConstraint>
+  static std::optional<NormalizedConstraint>
   fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E);
 };
 

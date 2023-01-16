@@ -105,7 +105,7 @@ public:
     map(const VersionTuple &Key, const VersionTuple &MinimumValue,
         std::optional<VersionTuple> MaximumValue) const;
 
-    static Optional<RelatedTargetVersionMapping>
+    static std::optional<RelatedTargetVersionMapping>
     parseJSON(const llvm::json::Object &Obj,
               VersionTuple MaximumDeploymentTarget);
 
@@ -117,12 +117,13 @@ public:
     llvm::DenseMap<VersionTuple, VersionTuple> Mapping;
   };
 
-  DarwinSDKInfo(VersionTuple Version, VersionTuple MaximumDeploymentTarget,
-                llvm::DenseMap<OSEnvPair::StorageType,
-                               Optional<RelatedTargetVersionMapping>>
-                    VersionMappings =
-                        llvm::DenseMap<OSEnvPair::StorageType,
-                                       Optional<RelatedTargetVersionMapping>>())
+  DarwinSDKInfo(
+      VersionTuple Version, VersionTuple MaximumDeploymentTarget,
+      llvm::DenseMap<OSEnvPair::StorageType,
+                     std::optional<RelatedTargetVersionMapping>>
+          VersionMappings =
+              llvm::DenseMap<OSEnvPair::StorageType,
+                             std::optional<RelatedTargetVersionMapping>>())
       : Version(Version), MaximumDeploymentTarget(MaximumDeploymentTarget),
         VersionMappings(std::move(VersionMappings)) {}
 
@@ -155,7 +156,8 @@ private:
   // Need to wrap the value in an optional here as the value has to be default
   // constructible, and std::unique_ptr doesn't like DarwinSDKInfo being
   // Optional as Optional is trying to copy it in emplace.
-  llvm::DenseMap<OSEnvPair::StorageType, Optional<RelatedTargetVersionMapping>>
+  llvm::DenseMap<OSEnvPair::StorageType,
+                 std::optional<RelatedTargetVersionMapping>>
       VersionMappings;
 };
 

@@ -368,7 +368,7 @@ class TypeSourceInfo;
     /// in the "to" context was imported. If it was not imported or of the wrong
     /// type a null value is returned.
     template <typename DeclT>
-    llvm::Optional<DeclT *> getImportedFromDecl(const DeclT *ToD) const {
+    std::optional<DeclT *> getImportedFromDecl(const DeclT *ToD) const {
       auto FromI = ImportedFromDecls.find(ToD);
       if (FromI == ImportedFromDecls.end())
         return {};
@@ -565,7 +565,7 @@ class TypeSourceInfo;
     /// Return if import of the given declaration has failed and if yes
     /// the kind of the problem. This gives the first error encountered with
     /// the node.
-    llvm::Optional<ASTImportError> getImportDeclErrorIfAny(Decl *FromD) const;
+    std::optional<ASTImportError> getImportDeclErrorIfAny(Decl *FromD) const;
 
     /// Mark (newly) imported declaration with error.
     void setImportDeclError(Decl *From, ASTImportError Error);
@@ -579,7 +579,7 @@ class TypeSourceInfo;
     /// F should be a field (or indirect field) declaration.
     /// \returns The index of the field in its parent context (starting from 0).
     /// On error `std::nullopt` is returned (parent context is non-record).
-    static llvm::Optional<unsigned> getFieldIndex(Decl *F);
+    static std::optional<unsigned> getFieldIndex(Decl *F);
   };
 
 } // namespace clang

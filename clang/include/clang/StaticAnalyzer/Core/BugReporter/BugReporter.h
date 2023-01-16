@@ -453,13 +453,13 @@ public:
   bool isInteresting(SVal V) const;
   bool isInteresting(const LocationContext *LC) const;
 
-  Optional<bugreporter::TrackingKind>
+  std::optional<bugreporter::TrackingKind>
   getInterestingnessKind(SymbolRef sym) const;
 
-  Optional<bugreporter::TrackingKind>
+  std::optional<bugreporter::TrackingKind>
   getInterestingnessKind(const MemRegion *R) const;
 
-  Optional<bugreporter::TrackingKind> getInterestingnessKind(SVal V) const;
+  std::optional<bugreporter::TrackingKind> getInterestingnessKind(SVal V) const;
 
   /// Returns whether or not this report should be considered valid.
   ///
@@ -779,8 +779,8 @@ public:
     return T->getTagKind() == &Kind;
   }
 
-  Optional<std::string> generateMessage(BugReporterContext &BRC,
-                                        PathSensitiveBugReport &R) const {
+  std::optional<std::string> generateMessage(BugReporterContext &BRC,
+                                             PathSensitiveBugReport &R) const {
     std::string Msg = Cb(BRC, R);
     if (Msg.empty())
       return std::nullopt;

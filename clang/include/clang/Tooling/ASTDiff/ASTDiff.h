@@ -45,8 +45,8 @@ struct Node {
   ASTNodeKind getType() const;
   StringRef getTypeLabel() const;
   bool isLeaf() const { return Children.empty(); }
-  llvm::Optional<StringRef> getIdentifier() const;
-  llvm::Optional<std::string> getQualifiedIdentifier() const;
+  std::optional<StringRef> getIdentifier() const;
+  std::optional<std::string> getQualifiedIdentifier() const;
 };
 
 /// SyntaxTree objects represent subtrees of the AST.

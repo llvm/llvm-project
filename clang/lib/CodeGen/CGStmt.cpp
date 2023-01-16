@@ -1869,7 +1869,7 @@ static bool FindCaseStatementsForValue(const SwitchStmt &S,
          FoundCase;
 }
 
-static Optional<SmallVector<uint64_t, 16>>
+static std::optional<SmallVector<uint64_t, 16>>
 getLikelihoodWeights(ArrayRef<Stmt::Likelihood> Likelihoods) {
   // Are there enough branches to weight them?
   if (Likelihoods.size() <= 1)
@@ -2076,7 +2076,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   } else if (SwitchLikelihood) {
     assert(SwitchLikelihood->size() == 1 + SwitchInsn->getNumCases() &&
            "switch likelihoods do not match switch cases");
-    Optional<SmallVector<uint64_t, 16>> LHW =
+    std::optional<SmallVector<uint64_t, 16>> LHW =
         getLikelihoodWeights(*SwitchLikelihood);
     if (LHW) {
       llvm::MDBuilder MDHelper(CGM.getLLVMContext());

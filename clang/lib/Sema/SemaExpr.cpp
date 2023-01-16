@@ -5030,7 +5030,7 @@ ExprResult Sema::CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
       return nullptr;
     }
 
-    if (Optional<llvm::APSInt> Idx =
+    if (std::optional<llvm::APSInt> Idx =
             IndexExpr->getIntegerConstantExpr(Context)) {
       if ((*Idx < 0 || *Idx >= Dim)) {
         Diag(IndexExpr->getBeginLoc(), diag::err_matrix_index_outside_range)
@@ -5453,7 +5453,8 @@ ExprResult Sema::ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
         IsCorrect = false;
         continue;
       }
-      Optional<llvm::APSInt> Result = Step->getIntegerConstantExpr(Context);
+      std::optional<llvm::APSInt> Result =
+          Step->getIntegerConstantExpr(Context);
       // OpenMP 5.0, 2.1.6 Iterators, Restrictions
       // If the step expression of a range-specification equals zero, the
       // behavior is unspecified.
@@ -5999,7 +6000,7 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
 
   bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
 
-  llvm::Optional<ExpressionEvaluationContextRecord::InitializationContext>
+  std::optional<ExpressionEvaluationContextRecord::InitializationContext>
       InitializationContext =
           OutermostDeclarationWithDelayedImmediateInvocations();
   if (!InitializationContext.has_value())
@@ -6057,7 +6058,7 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
 
   auto *ParentRD = cast<CXXRecordDecl>(Field->getParent());
 
-  llvm::Optional<ExpressionEvaluationContextRecord::InitializationContext>
+  std::optional<ExpressionEvaluationContextRecord::InitializationContext>
       InitializationContext =
           OutermostDeclarationWithDelayedImmediateInvocations();
   if (!InitializationContext.has_value())
@@ -6535,9 +6536,10 @@ Sema::CheckStaticArrayArgument(SourceLocation CallLoc,
     return;
   }
 
-  Optional<CharUnits> ArgSize =
+  std::optional<CharUnits> ArgSize =
       getASTContext().getTypeSizeInCharsIfKnown(ArgCAT);
-  Optional<CharUnits> ParmSize = getASTContext().getTypeSizeInCharsIfKnown(CAT);
+  std::optional<CharUnits> ParmSize =
+      getASTContext().getTypeSizeInCharsIfKnown(CAT);
   if (ArgSize && ParmSize && *ArgSize < *ParmSize) {
     Diag(CallLoc, diag::warn_static_array_too_small)
         << ArgExpr->getSourceRange() << (unsigned)ArgSize->getQuantity()
@@ -9324,7 +9326,7 @@ static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
     return ResTy;
 
   auto GetNullability = [](QualType Ty) {
-    Optional<NullabilityKind> Kind = Ty->getNullability();
+    std::optional<NullabilityKind> Kind = Ty->getNullability();
     if (Kind) {
       // For our purposes, treat _Nullable_result as _Nullable.
       if (*Kind == NullabilityKind::NullableResult)
@@ -12575,7 +12577,7 @@ static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
   if (Type.isNull())
     return S.InvalidOperands(Loc, LHS, RHS);
 
-  Optional<ComparisonCategoryType> CCT =
+  std::optional<ComparisonCategoryType> CCT =
       getComparisonCategoryForBuiltinCmp(Type);
   if (!CCT)
     return S.InvalidOperands(Loc, LHS, RHS);
@@ -12719,7 +12721,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     QualType CompositeTy = LHS.get()->getType();
     assert(!CompositeTy->isReferenceType());
 
-    Optional<ComparisonCategoryType> CCT =
+    std::optional<ComparisonCategoryType> CCT =
         getComparisonCategoryForBuiltinCmp(CompositeTy);
     if (!CCT)
       return InvalidOperands(Loc, LHS, RHS);
@@ -21198,7 +21200,7 @@ ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
     SourceLocation RParen) {
 
   auto FindSpecVersion = [&](StringRef Platform)
-      -> Optional<ObjCAvailabilityCheckExpr::VersionAsWritten> {
+      -> std::optional<ObjCAvailabilityCheckExpr::VersionAsWritten> {
     auto Spec = llvm::find_if(AvailSpecs, [&](const AvailabilitySpec &Spec) {
       return Spec.getPlatform() == Platform;
     });

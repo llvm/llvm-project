@@ -151,7 +151,7 @@ struct AssemblerInvocation {
 
   /// Darwin target variant triple, the variant of the deployment target
   /// for which the code is being compiled.
-  llvm::Optional<llvm::Triple> DarwinTargetVariantTriple;
+  std::optional<llvm::Triple> DarwinTargetVariantTriple;
 
   /// The version of the darwin target variant SDK which was used during the
   /// compilation

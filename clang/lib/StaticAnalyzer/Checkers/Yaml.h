@@ -26,8 +26,8 @@ namespace ento {
 /// template parameter must have a yaml MappingTraits.
 /// Emit diagnostic error in case of any failure.
 template <class T, class Checker>
-llvm::Optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
-                                   StringRef Option, StringRef ConfigFile) {
+std::optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
+                                  StringRef Option, StringRef ConfigFile) {
   if (ConfigFile.trim().empty())
     return std::nullopt;
 

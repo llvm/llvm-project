@@ -106,7 +106,7 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
   SmallVector<std::unique_ptr<DepDirectives>> DepDirectivesObjects;
 
   auto getDependencyDirectives = [&](FileEntryRef File)
-      -> Optional<ArrayRef<dependency_directives_scan::Directive>> {
+      -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
     DepDirectivesObjects.push_back(std::make_unique<DepDirectives>());
     StringRef Input = (*FileMgr.getBufferForFile(File))->getBuffer();
     bool Err = scanSourceForDependencyDirectives(
@@ -118,7 +118,7 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
 
   auto PPOpts = std::make_shared<PreprocessorOptions>();
   PPOpts->DependencyDirectivesForFile = [&](FileEntryRef File)
-      -> Optional<ArrayRef<dependency_directives_scan::Directive>> {
+      -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
     return getDependencyDirectives(File);
   };
 
