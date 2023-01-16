@@ -914,17 +914,13 @@ public:
     BaseCL::setArgOperand(ARG_SOURCE, Ptr);
   }
 
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use the version that takes MaybeAlign instead of this one.
-  void setSourceAlignment(unsigned Alignment) {
-    setSourceAlignment(MaybeAlign(Alignment));
-  }
   void setSourceAlignment(MaybeAlign Alignment) {
     BaseCL::removeParamAttr(ARG_SOURCE, Attribute::Alignment);
     if (Alignment)
       BaseCL::addParamAttr(ARG_SOURCE, Attribute::getWithAlignment(
                                            BaseCL::getContext(), *Alignment));
   }
+
   void setSourceAlignment(Align Alignment) {
     BaseCL::removeParamAttr(ARG_SOURCE, Attribute::Alignment);
     BaseCL::addParamAttr(ARG_SOURCE, Attribute::getWithAlignment(
