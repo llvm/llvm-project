@@ -6012,6 +6012,10 @@ bool X86TargetLowering::
   return NewShiftOpcode == ISD::SHL;
 }
 
+bool X86TargetLowering::preferScalarizeSplat(unsigned Opc) const {
+  return Opc != ISD::FP_EXTEND;
+}
+
 bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
     const SDNode *N, CombineLevel Level) const {
   assert(((N->getOpcode() == ISD::SHL &&
