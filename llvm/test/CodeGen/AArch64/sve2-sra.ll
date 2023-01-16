@@ -108,8 +108,7 @@ define <vscale x 2 x i64> @usra_intr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i6
 define <vscale x 16 x i8> @usra_intr_u_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: usra_intr_u_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr z1.b, p0/m, z1.b, #1
-; CHECK-NEXT:    add z0.b, z0.b, z1.b
+; CHECK-NEXT:    usra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 16 x i8> poison, i8 1, i32 0
   %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -121,8 +120,7 @@ define <vscale x 16 x i8> @usra_intr_u_i8(<vscale x 16 x i1> %pg, <vscale x 16 x
 define <vscale x 8 x i16> @usra_intr_u_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: usra_intr_u_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr z1.h, p0/m, z1.h, #2
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    usra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
   %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -134,8 +132,7 @@ define <vscale x 8 x i16> @usra_intr_u_i16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 define <vscale x 4 x i32> @usra_intr_u_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: usra_intr_u_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr z1.s, p0/m, z1.s, #3
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    usra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
   %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -147,8 +144,7 @@ define <vscale x 4 x i32> @usra_intr_u_i32(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 2 x i64> @usra_intr_u_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: usra_intr_u_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr z1.d, p0/m, z1.d, #4
-; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    usra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
   %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -262,8 +258,7 @@ define <vscale x 2 x i64> @ssra_intr_i64(<vscale x 2 x i64> %a, <vscale x 2 x i6
 define <vscale x 16 x i8> @ssra_intr_u_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: ssra_intr_u_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr z1.b, p0/m, z1.b, #1
-; CHECK-NEXT:    add z0.b, z0.b, z1.b
+; CHECK-NEXT:    ssra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 16 x i8> poison, i8 1, i32 0
   %splat = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -275,8 +270,7 @@ define <vscale x 16 x i8> @ssra_intr_u_i8(<vscale x 16 x i1> %pg, <vscale x 16 x
 define <vscale x 8 x i16> @ssra_intr_u_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
 ; CHECK-LABEL: ssra_intr_u_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr z1.h, p0/m, z1.h, #2
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
+; CHECK-NEXT:    ssra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
   %splat = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
@@ -288,8 +282,7 @@ define <vscale x 8 x i16> @ssra_intr_u_i16(<vscale x 8 x i1> %pg, <vscale x 8 x 
 define <vscale x 4 x i32> @ssra_intr_u_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: ssra_intr_u_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr z1.s, p0/m, z1.s, #3
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    ssra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
   %splat = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -301,8 +294,7 @@ define <vscale x 4 x i32> @ssra_intr_u_i32(<vscale x 4 x i1> %pg, <vscale x 4 x 
 define <vscale x 2 x i64> @ssra_intr_u_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: ssra_intr_u_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr z1.d, p0/m, z1.d, #4
-; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    ssra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
   %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
