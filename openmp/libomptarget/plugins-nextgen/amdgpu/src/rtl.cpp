@@ -2232,7 +2232,7 @@ private:
                                  GlobalTy &ImageGlobal) override {
     // The global's address in AMDGPU is computed as the image begin + the ELF
     // symbol value. Notice we do not add the ELF section offset.
-    ImageGlobal.setPtr((char *)Image.getStart() + Symbol.st_value);
+    ImageGlobal.setPtr(advanceVoidPtr(Image.getStart(), Symbol.st_value));
 
     // Set the global's size.
     ImageGlobal.setSize(Symbol.st_size);
@@ -2462,7 +2462,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // Initialize implicit arguments.
   utils::AMDGPUImplicitArgsTy *ImplArgs =
       reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
-          static_cast<char *>(AllArgs) + KernelArgsSize);
+          advanceVoidPtr(AllArgs, KernelArgsSize));
 
   // Initialize the implicit arguments to zero.
   std::memset(ImplArgs, 0, ImplicitArgsSize);
