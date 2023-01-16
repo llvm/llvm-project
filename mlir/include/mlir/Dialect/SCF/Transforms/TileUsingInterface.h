@@ -90,7 +90,9 @@ struct SCFTileAndFuseOptions {
 };
 
 /// Fuse the producer of the source of `candidateSliceOp` by computing the
-/// required slice of the producer in-place.
+/// required slice of the producer in-place.  Note that the method
+/// replaces the uses of `candidateSliceOp` with the tiled and fused producer
+/// value but does not delete the slice operation.
 struct SCFFuseProducerOfSliceResult {
   OpResult origProducer;       // Original untiled producer.
   Value tiledAndFusedProducer; // Tile and fused producer value.
