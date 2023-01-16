@@ -43,6 +43,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TypeSize.h"
 #include <cstdarg>
+#include <optional>
 
 using namespace clang;
 using namespace CodeGen;

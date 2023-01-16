@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <utility>
 
 namespace clang {

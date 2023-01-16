@@ -54,6 +54,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 #include <system_error>
 using namespace clang;
 using namespace clang::driver;

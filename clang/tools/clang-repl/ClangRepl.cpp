@@ -21,6 +21,7 @@
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h" // llvm::Initialize*
+#include <optional>
 
 static llvm::cl::list<std::string>
     ClangArgs("Xcc",

@@ -20,6 +20,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 #include <string>
 #include <utility>
 

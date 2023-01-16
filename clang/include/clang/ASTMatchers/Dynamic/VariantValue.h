@@ -22,6 +22,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {

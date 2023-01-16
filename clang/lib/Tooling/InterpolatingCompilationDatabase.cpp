@@ -58,6 +58,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace tooling {

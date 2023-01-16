@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <list>
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace clang {

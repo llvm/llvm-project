@@ -30,6 +30,7 @@
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <utility>
 
 using namespace clang;

@@ -29,6 +29,7 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <vector>
 

@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 

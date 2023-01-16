@@ -29,6 +29,7 @@
 #include <cassert>
 #include <list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 

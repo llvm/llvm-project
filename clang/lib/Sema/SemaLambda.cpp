@@ -21,6 +21,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 using namespace clang;
 using namespace sema;
 

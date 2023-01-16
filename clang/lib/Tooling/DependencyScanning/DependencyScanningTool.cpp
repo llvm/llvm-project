@@ -16,6 +16,7 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/PrefixMappingFileSystem.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;

@@ -15,6 +15,7 @@
 
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Execution.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {

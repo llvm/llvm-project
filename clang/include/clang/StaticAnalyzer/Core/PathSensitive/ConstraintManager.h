@@ -20,6 +20,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace llvm {

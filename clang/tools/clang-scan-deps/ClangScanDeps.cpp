@@ -32,6 +32,7 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include <mutex>
+#include <optional>
 #include <thread>
 
 using namespace clang;

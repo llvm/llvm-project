@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include <optional>
 
 namespace clang {
 /// Kinds of LV computation.  The linkage side of the computation is

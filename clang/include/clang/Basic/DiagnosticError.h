@@ -11,6 +11,7 @@
 
 #include "clang/Basic/PartialDiagnostic.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace clang {
 

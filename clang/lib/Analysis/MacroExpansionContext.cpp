@@ -8,6 +8,7 @@
 
 #include "clang/Analysis/MacroExpansionContext.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "macro-expansion-context"
 

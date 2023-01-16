@@ -18,6 +18,7 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 
 using namespace clang;
 using namespace edit;

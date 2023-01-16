@@ -20,6 +20,7 @@
 #include "clang/Format/Format.h"
 #include "llvm/Support/Regex.h"
 #include <map>
+#include <optional>
 #include <tuple>
 
 namespace clang {

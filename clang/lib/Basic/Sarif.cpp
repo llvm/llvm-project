@@ -25,6 +25,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 

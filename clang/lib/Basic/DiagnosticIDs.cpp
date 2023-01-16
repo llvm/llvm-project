@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <map>
+#include <optional>
 using namespace clang;
 
 //===----------------------------------------------------------------------===//

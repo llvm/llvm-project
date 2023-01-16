@@ -27,6 +27,7 @@
 #include "gtest/gtest.h"
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <string>
 using namespace clang;
 using namespace clang::driver;

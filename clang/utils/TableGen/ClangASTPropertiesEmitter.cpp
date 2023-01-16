@@ -20,6 +20,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 using namespace llvm;

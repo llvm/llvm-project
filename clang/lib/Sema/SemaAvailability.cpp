@@ -19,6 +19,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;

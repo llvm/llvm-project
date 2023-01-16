@@ -56,6 +56,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/X86TargetParser.h"
+#include <optional>
 #include <sstream>
 
 using namespace clang;

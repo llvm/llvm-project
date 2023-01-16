@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>

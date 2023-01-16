@@ -14,6 +14,7 @@
 #include "clang/Tooling/Refactoring/RefactoringOption.h"
 #include "clang/Tooling/Refactoring/RefactoringOptionVisitor.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <type_traits>
 
 namespace clang {

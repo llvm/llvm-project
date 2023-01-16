@@ -31,6 +31,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include <cassert>
 #include <cstring>
+#include <optional>
 
 using namespace clang;
 

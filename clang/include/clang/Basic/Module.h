@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <ctime>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>

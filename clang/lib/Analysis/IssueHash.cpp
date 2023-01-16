@@ -21,6 +21,7 @@
 #include "llvm/Support/Path.h"
 
 #include <functional>
+#include <optional>
 #include <sstream>
 #include <string>
 

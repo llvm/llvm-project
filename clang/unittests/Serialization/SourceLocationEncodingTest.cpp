@@ -10,6 +10,7 @@
 
 #include "gtest/gtest.h"
 #include <climits>
+#include <optional>
 
 using namespace llvm;
 using namespace clang;

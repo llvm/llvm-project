@@ -30,6 +30,7 @@
 #include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/Optional.h"
 #include <cstdint>
+#include <optional>
 
 namespace clang {
 

@@ -13,6 +13,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {

@@ -35,6 +35,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/AST/ParentMap.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;

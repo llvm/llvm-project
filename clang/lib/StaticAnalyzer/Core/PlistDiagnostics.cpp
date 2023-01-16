@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace ento;

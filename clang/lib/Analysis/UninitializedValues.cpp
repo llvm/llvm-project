@@ -35,6 +35,7 @@
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
+#include <optional>
 
 using namespace clang;
 

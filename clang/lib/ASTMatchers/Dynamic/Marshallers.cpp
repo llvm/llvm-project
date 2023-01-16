@@ -11,6 +11,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
+#include <optional>
 #include <string>
 
 static llvm::Optional<std::string>

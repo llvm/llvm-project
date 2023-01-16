@@ -19,6 +19,7 @@
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <unordered_set>
 
 using namespace llvm;

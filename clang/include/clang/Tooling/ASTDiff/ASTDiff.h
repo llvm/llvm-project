@@ -20,6 +20,7 @@
 #define LLVM_CLANG_TOOLING_ASTDIFF_ASTDIFF_H
 
 #include "clang/Tooling/ASTDiff/ASTDiffInternal.h"
+#include <optional>
 
 namespace clang {
 namespace diff {

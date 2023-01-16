@@ -23,6 +23,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
+#include <optional>
 #include <sstream>
 #include <string>
 

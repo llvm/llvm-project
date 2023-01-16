@@ -38,6 +38,7 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
+#include <optional>
 
 using namespace clang;
 

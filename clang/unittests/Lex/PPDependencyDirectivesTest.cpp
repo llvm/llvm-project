@@ -21,6 +21,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace clang;
 

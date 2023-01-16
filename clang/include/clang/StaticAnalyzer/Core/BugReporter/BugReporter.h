@@ -38,6 +38,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>

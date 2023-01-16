@@ -11,6 +11,7 @@
 #include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "llvm/ADT/Optional.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 #include <vector>
 

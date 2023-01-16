@@ -23,6 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
+#include <optional>
 
 using namespace clang;
 using namespace llvm;
