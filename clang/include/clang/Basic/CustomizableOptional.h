@@ -45,7 +45,7 @@ public:
   constexpr CustomizableOptional(std::in_place_t, ArgTypes &&...Args)
       : Storage(std::in_place, std::forward<ArgTypes>(Args)...) {}
 
-  // Allow conversion from Optional<T>.
+  // Allow conversion from std::optional<T>.
   constexpr CustomizableOptional(const std::optional<T> &y)
       : CustomizableOptional(y ? *y : CustomizableOptional()) {}
   constexpr CustomizableOptional(std::optional<T> &&y)
@@ -98,7 +98,7 @@ public:
     return has_value() ? std::move(operator*()) : std::forward<U>(alt);
   }
 
-  // Allow conversion to Optional<T>.
+  // Allow conversion to std::optional<T>.
   explicit operator std::optional<T> &() const & {
     return *this ? **this : std::optional<T>();
   }

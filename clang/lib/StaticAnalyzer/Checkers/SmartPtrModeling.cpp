@@ -33,6 +33,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 #include <string>
 
 using namespace clang;
@@ -298,8 +299,9 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
   if (matchesAny(Call, StdMakeUniqueCall, StdMakeUniqueForOverwriteCall)) {
     if (!ModelSmartPtrDereference)
       return false;
-    
-    const Optional<SVal> ThisRegionOpt = Call.getReturnValueUnderConstruction();
+
+    const std::optional<SVal> ThisRegionOpt =
+        Call.getReturnValueUnderConstruction();
     if (!ThisRegionOpt)
       return false;
 

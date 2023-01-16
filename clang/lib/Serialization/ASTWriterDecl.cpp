@@ -23,6 +23,7 @@
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 using namespace clang;
 using namespace serialization;
 
@@ -2492,7 +2493,7 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   assert(FD->doesThisDeclarationHaveABody());
   bool ModulesCodegen = false;
   if (!FD->isDependentContext()) {
-    Optional<GVALinkage> Linkage;
+    std::optional<GVALinkage> Linkage;
     if (Writer->WritingModule &&
         Writer->WritingModule->isInterfaceOrPartition()) {
       // When building a C++20 module interface unit or a partition unit, a

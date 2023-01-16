@@ -17,9 +17,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 
@@ -957,6 +955,4 @@ bool SimplifyBooleanExprCheck::reportDeMorgan(const ASTContext &Context,
   Diag << Fixes;
   return true;
 }
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

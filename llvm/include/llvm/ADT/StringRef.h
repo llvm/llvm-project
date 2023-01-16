@@ -561,7 +561,8 @@ namespace llvm {
     /// \param N The number of characters to included in the substring. If N
     /// exceeds the number of characters remaining in the string, the string
     /// suffix (starting with \p Start) will be returned.
-    [[nodiscard]] StringRef substr(size_t Start, size_t N = npos) const {
+    [[nodiscard]] constexpr StringRef substr(size_t Start,
+                                             size_t N = npos) const {
       Start = std::min(Start, Length);
       return StringRef(Data + Start, std::min(N, Length - Start));
     }

@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 static constexpr llvm::StringLiteral ParentDeclName = "parent-decl";
 static constexpr llvm::StringLiteral TagDeclName = "tag-decl";
@@ -142,6 +140,4 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   std::string Replacement = Using + Name + " = " + Type;
   Diag << FixItHint::CreateReplacement(ReplaceRange, Replacement);
 }
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 void AvoidReferenceCoroutineParametersCheck::registerMatchers(
     MatchFinder *Finder) {
@@ -33,6 +31,4 @@ void AvoidReferenceCoroutineParametersCheck::check(
   }
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

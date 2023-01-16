@@ -31,7 +31,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -41,6 +40,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -221,7 +221,7 @@ private:
   llvm::StringMap<SourceLocation> PreambleSrcLocCache;
 
   /// The contents of the preamble.
-  llvm::Optional<PrecompiledPreamble> Preamble;
+  std::optional<PrecompiledPreamble> Preamble;
 
   /// When non-NULL, this is the buffer used to store the contents of
   /// the main file when it has been padded for use with the precompiled
@@ -834,7 +834,7 @@ public:
       bool SingleFileParse = false, bool UserFilesAreVolatile = false,
       bool ForSerialization = false,
       bool RetainExcludedConditionalBlocks = false,
-      llvm::Optional<StringRef> ModuleFormat = std::nullopt,
+      std::optional<StringRef> ModuleFormat = std::nullopt,
       std::unique_ptr<ASTUnit> *ErrAST = nullptr,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 

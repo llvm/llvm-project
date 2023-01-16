@@ -21,6 +21,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 using namespace mlir;
 using namespace test;
@@ -97,7 +98,7 @@ static LogicalResult parseCustomTypeA(AsmParser &parser,
 static void printCustomTypeA(AsmPrinter &printer, int a) { printer << a; }
 
 static LogicalResult parseCustomTypeB(AsmParser &parser, int a,
-                                      FailureOr<Optional<int>> &bResult) {
+                                      FailureOr<std::optional<int>> &bResult) {
   if (a < 0)
     return success();
   for (int i : llvm::seq(0, a))
@@ -107,7 +108,7 @@ static LogicalResult parseCustomTypeB(AsmParser &parser, int a,
   return parser.parseInteger(**bResult);
 }
 
-static void printCustomTypeB(AsmPrinter &printer, int a, Optional<int> b) {
+static void printCustomTypeB(AsmPrinter &printer, int a, std::optional<int> b) {
   if (a < 0)
     return;
   printer << ' ';

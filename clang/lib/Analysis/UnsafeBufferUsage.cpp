@@ -10,6 +10,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 
 using namespace llvm;
 using namespace clang;
@@ -196,10 +197,9 @@ public:
   /// Returns a fixit that would fix the current gadget according to
   /// the current strategy. Returns None if the fix cannot be produced;
   /// returns an empty list if no fixes are necessary.
-  virtual Optional<FixItList> getFixits(const Strategy &) const {
+  virtual std::optional<FixItList> getFixits(const Strategy &) const {
     return std::nullopt;
   }
-
 };
 
 using FixableGadgetList = std::vector<std::unique_ptr<FixableGadget>>;

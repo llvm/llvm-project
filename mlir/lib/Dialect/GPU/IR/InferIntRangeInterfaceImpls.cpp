@@ -53,7 +53,7 @@ static Value valueByDim(KernelDim3 dims, Dimension dim) {
 static uint64_t zext(uint32_t arg) { return static_cast<uint64_t>(arg); }
 
 template <typename Op>
-static Optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
+static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
   Dimension dim = op.getDimension();
   if (auto launch = op->template getParentOfType<LaunchOp>()) {
     KernelDim3 bounds;
@@ -84,7 +84,8 @@ static Optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
 
 void BlockDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                    SetIntRangeFn setResultRange) {
-  Optional<uint64_t> knownVal = getKnownLaunchDim(*this, LaunchDims::Block);
+  std::optional<uint64_t> knownVal =
+      getKnownLaunchDim(*this, LaunchDims::Block);
   if (knownVal)
     setResultRange(getResult(), getIndexRange(*knownVal, *knownVal));
   else
@@ -99,7 +100,7 @@ void BlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 
 void GridDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                   SetIntRangeFn setResultRange) {
-  Optional<uint64_t> knownVal = getKnownLaunchDim(*this, LaunchDims::Grid);
+  std::optional<uint64_t> knownVal = getKnownLaunchDim(*this, LaunchDims::Grid);
   if (knownVal)
     setResultRange(getResult(), getIndexRange(*knownVal, *knownVal));
   else

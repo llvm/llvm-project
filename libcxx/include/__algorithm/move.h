@@ -9,19 +9,12 @@
 #ifndef _LIBCPP___ALGORITHM_MOVE_H
 #define _LIBCPP___ALGORITHM_MOVE_H
 
+#include <__algorithm/copy_move_common.h>
 #include <__algorithm/iterator_operations.h>
-#include <__algorithm/unwrap_iter.h>
 #include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/reverse_iterator.h>
-#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/is_trivially_move_assignable.h>
-#include <__type_traits/remove_const.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,93 +22,46 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// move
-
-template <class _AlgPolicy, class _InIter, class _Sent, class _OutIter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
-pair<_InIter, _OutIter> __move_impl(_InIter __first, _Sent __last, _OutIter __result) {
-  while (__first != __last) {
-    *__result = _IterOps<_AlgPolicy>::__iter_move(__first);
-    ++__first;
-    ++__result;
+template <class _AlgPolicy>
+struct __move_loop {
+  template <class _InIter, class _Sent, class _OutIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, _OutIter>
+  operator()(_InIter __first, _Sent __last, _OutIter __result) const {
+    while (__first != __last) {
+      *__result = _IterOps<_AlgPolicy>::__iter_move(__first);
+      ++__first;
+      ++__result;
+    }
+    return std::make_pair(std::move(__first), std::move(__result));
   }
-  return std::make_pair(std::move(__first), std::move(__result));
-}
+};
 
-template <class _AlgPolicy,
-          class _InType,
-          class _OutType,
-          class = __enable_if_t<is_same<__remove_const_t<_InType>, _OutType>::value
-                             && is_trivially_move_assignable<_OutType>::value> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-pair<_InType*, _OutType*> __move_impl(_InType* __first, _InType* __last, _OutType* __result) {
-  if (__libcpp_is_constant_evaluated()
-// TODO: Remove this once GCC supports __builtin_memmove during constant evaluation
-#ifndef _LIBCPP_COMPILER_GCC
-   && !is_trivially_copyable<_InType>::value
-#endif
-     )
-    return std::__move_impl<_AlgPolicy, _InType*, _InType*, _OutType*>(__first, __last, __result);
-  const size_t __n = static_cast<size_t>(__last - __first);
-  ::__builtin_memmove(__result, __first, __n * sizeof(_OutType));
-  return std::make_pair(__first + __n, __result + __n);
-}
-
-template <class>
-struct __is_trivially_move_assignable_unwrapped_impl : false_type {};
-
-template <class _Type>
-struct __is_trivially_move_assignable_unwrapped_impl<_Type*> : is_trivially_move_assignable<_Type> {};
-
-template <class _Iter>
-struct __is_trivially_move_assignable_unwrapped
-    : __is_trivially_move_assignable_unwrapped_impl<decltype(std::__unwrap_iter<_Iter>(std::declval<_Iter>()))> {};
-
-template <class _AlgPolicy,
-          class _InIter,
-          class _OutIter,
-          __enable_if_t<is_same<__remove_const_t<typename iterator_traits<_InIter>::value_type>,
-                                typename iterator_traits<_OutIter>::value_type>::value
-                     && __is_cpp17_contiguous_iterator<_InIter>::value
-                     && __is_cpp17_contiguous_iterator<_OutIter>::value
-                     && is_trivially_move_assignable<__iter_value_type<_OutIter> >::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
-pair<reverse_iterator<_InIter>, reverse_iterator<_OutIter> >
-__move_impl(reverse_iterator<_InIter> __first,
-            reverse_iterator<_InIter> __last,
-            reverse_iterator<_OutIter> __result) {
-  auto __first_base = std::__unwrap_iter(__first.base());
-  auto __last_base = std::__unwrap_iter(__last.base());
-  auto __result_base = std::__unwrap_iter(__result.base());
-  auto __result_first = __result_base - (__first_base - __last_base);
-  std::__move_impl<_AlgPolicy>(__last_base, __first_base, __result_first);
-  return std::make_pair(__last, reverse_iterator<_OutIter>(std::__rewrap_iter(__result.base(), __result_first)));
-}
+struct __move_trivial {
+  // At this point, the iterators have been unwrapped so any `contiguous_iterator` has been unwrapped to a pointer.
+  template <class _In, class _Out,
+            __enable_if_t<__can_lower_move_assignment_to_memmove<_In, _Out>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_In*, _Out*>
+  operator()(_In* __first, _In* __last, _Out* __result) const {
+    return std::__copy_trivial_impl(__first, __last, __result);
+  }
+};
 
 template <class _AlgPolicy, class _InIter, class _Sent, class _OutIter>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-__enable_if_t<is_copy_constructible<_InIter>::value
-           && is_copy_constructible<_Sent>::value
-           && is_copy_constructible<_OutIter>::value, pair<_InIter, _OutIter> >
+pair<_InIter, _OutIter>
 __move(_InIter __first, _Sent __last, _OutIter __result) {
-  auto __ret = std::__move_impl<_AlgPolicy>(
-      std::__unwrap_iter(__first), std::__unwrap_iter(__last), std::__unwrap_iter(__result));
-  return std::make_pair(std::__rewrap_iter(__first, __ret.first), std::__rewrap_iter(__result, __ret.second));
-}
-
-template <class _AlgPolicy, class _InIter, class _Sent, class _OutIter>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-__enable_if_t<!is_copy_constructible<_InIter>::value
-           || !is_copy_constructible<_Sent>::value
-           || !is_copy_constructible<_OutIter>::value, pair<_InIter, _OutIter> >
-__move(_InIter __first, _Sent __last, _OutIter __result) {
-  return std::__move_impl<_AlgPolicy>(std::move(__first), std::move(__last), std::move(__result));
+  return std::__dispatch_copy_or_move<_AlgPolicy, __move_loop<_AlgPolicy>, __move_trivial>(
+      std::move(__first), std::move(__last), std::move(__result));
 }
 
 template <class _InputIterator, class _OutputIterator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _OutputIterator move(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
-  return std::__move<_ClassicAlgPolicy>(__first, __last, __result).second;
+  static_assert(is_copy_constructible<_InputIterator>::value, "Iterators has to be copy constructible.");
+  static_assert(is_copy_constructible<_OutputIterator>::value, "The output iterator has to be copy constructible.");
+
+  return std::__move<_ClassicAlgPolicy>(
+      std::move(__first), std::move(__last), std::move(__result)).second;
 }
 
 _LIBCPP_END_NAMESPACE_STD

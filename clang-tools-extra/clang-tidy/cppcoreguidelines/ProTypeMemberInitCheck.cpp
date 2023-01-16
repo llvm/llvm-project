@@ -20,9 +20,7 @@ using namespace clang::tidy::matchers;
 using llvm::SmallPtrSet;
 using llvm::SmallPtrSetImpl;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 namespace {
 
@@ -579,6 +577,4 @@ void ProTypeMemberInitCheck::checkUninitializedTrivialType(
       Context.getLangOpts().CPlusPlus11 ? "{}" : " = {}");
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

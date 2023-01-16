@@ -19,9 +19,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, isTriviallyDefaultConstructible) {
@@ -126,6 +124,4 @@ void NonTrivialTypesLibcMemoryCallsCheck::check(
   }
 }
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert

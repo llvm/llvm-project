@@ -75,8 +75,9 @@ void EnsureMainThreadIDIsCorrect() {
 
 ///// Interface to the common LSan module. /////
 
-void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
-                            void *arg) {}
+void GetThreadExtraStackRangesLocked(tid_t os_id,
+                                     InternalMmapVector<Range> *ranges) {}
+void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
 void LockThreadRegistry() { thread_registry->Lock(); }
 
