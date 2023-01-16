@@ -27,7 +27,10 @@ static StringRef SpecialGlobalNames[] = {"llvm.used", "llvm.compiler.used"};
 
 /// Removes all special globals aren't inside any of the
 /// desired Chunks.
-static void extractSpecialGlobalsFromModule(Oracle &O, Module &Program) {
+static void extractSpecialGlobalsFromModule(Oracle &O,
+                                            ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+
   for (StringRef Name : SpecialGlobalNames) {
     if (auto *Used = Program.getNamedGlobal(Name)) {
       Used->replaceAllUsesWith(getDefaultValue(Used->getType()));
