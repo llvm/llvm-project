@@ -23,6 +23,11 @@
 // RUN: %clang %t/Hello.cppm -fmodule-output -arch i386 -arch x86_64 -### -target \
 // RUN:   x86_64-apple-darwin 2>&1 | FileCheck %t/Hello.cppm -check-prefix=MULTIPLE-ARCH
 
+// Tests that the .pcm file will be generated in the same path with the specified one
+// in the comamnd line.
+// RUN: %clang -std=c++20 %t/Hello.cppm -fmodule-output=%t/pcm/Hello.pcm -o %t/Hello.o \
+// RUN:   -c -### 2>&1 | FileCheck %t/Hello.cppm --check-prefix=CHECK-SPECIFIED
+
 //--- Hello.cppm
 export module Hello;
 
@@ -30,6 +35,9 @@ export module Hello;
 // CHECK: "-emit-obj" {{.*}}"-main-file-name" "Hello.cppm" {{.*}}"-o" "{{.*}}/output/Hello.o" "-x" "pcm" "{{.*}}/output/Hello.pcm"
 
 // MULTIPLE-ARCH: option '-fmodule-output' can't be used with multiple arch options
+
+// CHECK-SPECIFIED: "-emit-module-interface" {{.*}}"-main-file-name" "Hello.cppm" {{.*}}"-o" "{{.*}}/pcm/Hello.pcm" "-x" "c++" "{{.*}}/Hello.cppm"
+// CHECK-SPECIFIED: "-emit-obj" {{.*}}"-main-file-name" "Hello.cppm" {{.*}}"-o" "{{.*}}/Hello.o" "-x" "pcm" "{{.*}}/pcm/Hello.pcm"
 
 //--- AnotherModule.cppm
 export module AnotherModule;
