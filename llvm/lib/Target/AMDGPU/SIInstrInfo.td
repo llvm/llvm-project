@@ -1157,23 +1157,6 @@ class NamedMatchClass<string CName, bit Optional = 1> : AsmOperandClass {
   let DefaultMethod = !if(Optional, "default"#CName, ?);
 }
 
-class NamedOperandBit<string Name, AsmOperandClass MatchClass> : Operand<i1> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
-}
-
-class NamedOperandBit_0<string Name, AsmOperandClass MatchClass> :
-  OperandWithDefaultOps<i1, (ops (i1 0))> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
-}
-
-class NamedOperandBit_1<string Name, AsmOperandClass MatchClass> :
-  OperandWithDefaultOps<i1, (ops (i1 1))> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
-}
-
 class CustomOperandClass<string CName, bit Optional> : AsmOperandClass {
   let Name = CName;
   let PredicateMethod = "is"#CName;
@@ -1183,23 +1166,43 @@ class CustomOperandClass<string CName, bit Optional> : AsmOperandClass {
   let DefaultMethod = "default"#CName;
 }
 
-class CustomOperand<ValueType Type, bit Optional = 0, string Name = NAME,
-    AsmOperandClass Class = CustomOperandClass<Name, Optional>>
-    : Operand<Type> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = Class;
+class CustomOperandProps<bit Optional = 0, string Name = NAME,
+    AsmOperandClass Class = CustomOperandClass<Name, Optional>> {
+  string PrintMethod = "print"#Name;
+  AsmOperandClass ParserMatchClass = Class;
 }
 
-class NamedIntOperandClass<string Prefix, string Name>
+class CustomOperand<ValueType Type, bit Optional = 0, string Name = NAME,
+    AsmOperandClass Class = CustomOperandClass<Name, Optional>>
+  : Operand<Type>, CustomOperandProps<Optional, Name, Class>;
+
+class NamedIntOperandClass<string Prefix, string Name, string ConvertMethod>
     : CustomOperandClass<Name, 1> {
   string ImmTy = "AMDGPUOperand::ImmTy"#Name;
   let ParserMethod =
     "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
-    "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#ImmTy#"); }";
+    "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#ImmTy#", "#
+    ConvertMethod#"); }";
 }
 
-class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME>
-  : CustomOperand<Type, 1, Name, NamedIntOperandClass<Prefix, Name>>;
+class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
+                      string ConvertMethod = "nullptr">
+  : CustomOperand<Type, 1, Name, NamedIntOperandClass<Prefix, Name, ConvertMethod>>;
+
+class BitOperandClass<string Id, string Name>
+    : CustomOperandClass<Name, 1> {
+  string ImmTy = "AMDGPUOperand::ImmTy"#Name;
+  let ParserMethod =
+    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "return parseNamedBit(\""#Id#"\", Operands, "#ImmTy#"); }";
+}
+
+class NamedBitOperand<string Id, string Name = NAME>
+  : CustomOperand<i1, 1, Name, BitOperandClass<Id, Name>>;
+
+class DefaultOperand_0<CustomOperand Op>
+  : OperandWithDefaultOps<Op.Type, (ops (Op.Type 0))>,
+    CustomOperandProps<1, Op.ParserMatchClass.Name, Op.ParserMatchClass>;
 
 class NamedOperandU32<string Name, AsmOperandClass MatchClass> : Operand<i32> {
   let PrintMethod = "print"#Name;
@@ -1231,7 +1234,7 @@ def offset : NamedIntOperand<i16, "offset", "Offset">;
 def offset0 : NamedIntOperand<i8, "offset0", "Offset0">;
 def offset1 : NamedIntOperand<i8, "offset1", "Offset1">;
 
-def gds : NamedOperandBit<"GDS", NamedMatchClass<"GDS">>;
+def gds : NamedBitOperand<"gds", "GDS">;
 
 def omod : NamedOperandU32<"OModSI", NamedMatchClass<"OModSI">>;
 def omod0 : NamedOperandU32_0<"OModSI", NamedMatchClass<"OModSI">>;
@@ -1239,25 +1242,25 @@ def omod0 : NamedOperandU32_0<"OModSI", NamedMatchClass<"OModSI">>;
 // We need to make the cases with a default of 0 distinct from no
 // default to help deal with some cases where the operand appears
 // before a mandatory operand.
-def clampmod : NamedOperandBit<"ClampSI", NamedMatchClass<"ClampSI">>;
-def clampmod0 : NamedOperandBit_0<"ClampSI", NamedMatchClass<"ClampSI">>;
-def highmod : NamedOperandBit<"High", NamedMatchClass<"High">>;
+def clampmod : NamedBitOperand<"clamp", "ClampSI">;
+def clampmod0 : DefaultOperand_0<clampmod>;
+def highmod : NamedBitOperand<"high", "High">;
 
 def CPol : NamedOperandU32<"CPol", NamedMatchClass<"CPol">>;
 def CPol_0 : NamedOperandU32Default0<"CPol", NamedMatchClass<"CPol">>;
 def CPol_GLC1 : NamedOperandU32Default1<"CPol", NamedMatchClass<"CPol">>;
 
-def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
-def SWZ : NamedOperandBit<"SWZ", NamedMatchClass<"SWZ">>;
-def SWZ_0 : NamedOperandBit_0<"SWZ", NamedMatchClass<"SWZ">>;
-def UNorm : NamedOperandBit<"UNorm", NamedMatchClass<"UNorm">>;
-def DA : NamedOperandBit<"DA", NamedMatchClass<"DA">>;
-def R128A16 : NamedOperandBit<"R128A16", NamedMatchClass<"R128A16">>;
-def A16 : NamedOperandBit<"A16", NamedMatchClass<"A16">>;
-def D16 : NamedOperandBit<"D16", NamedMatchClass<"D16">>;
-def LWE : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
-def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
-def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
+def TFE : NamedBitOperand<"tfe">;
+def SWZ : NamedBitOperand<"swz">;
+def SWZ_0 : DefaultOperand_0<SWZ>;
+def UNorm : NamedBitOperand<"unorm">;
+def DA : NamedBitOperand<"da">;
+def R128A16 : CustomOperand<i1, 1>;
+def A16 : NamedBitOperand<"a16">;
+def D16 : NamedBitOperand<"d16">;
+def LWE : NamedBitOperand<"lwe">;
+def exp_compr : NamedBitOperand<"compr", "ExpCompr">;
+def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
 def FORMAT : CustomOperand<i8>;
 
@@ -1279,7 +1282,7 @@ def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
 
 def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;
 def bank_mask : NamedOperandU32<"BankMask", NamedMatchClass<"BankMask">>;
-def bound_ctrl : NamedOperandBit<"BoundCtrl", NamedMatchClass<"BoundCtrl">>;
+def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl", "ConvertDppBoundCtrl">;
 def FI : NamedOperandU32<"FI", NamedMatchClass<"FI">>;
 
 def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
