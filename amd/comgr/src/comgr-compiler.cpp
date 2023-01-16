@@ -846,7 +846,7 @@ amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
   llvm::ArrayRef<std::optional<StringRef>> Redirects;
   std::string ErrMsg;
   int RC = sys::ExecuteAndWait(Exec, ArgsV,
-                               /*env=*/None, Redirects, /*secondsToWait=*/0,
+                               /*env=*/std::nullopt, Redirects, /*secondsToWait=*/0,
                                /*memoryLimit=*/0, &ErrMsg);
   LogS << ErrMsg;
   return RC ? AMD_COMGR_STATUS_ERROR : AMD_COMGR_STATUS_SUCCESS;
