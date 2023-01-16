@@ -9923,16 +9923,23 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   // However when after the source operand of SRL is optimized into AND, the SRL
   // itself may not be optimized further. Look for it and add the BRCOND into
   // the worklist.
+  //
+  // The also tends to happen for binary operations when SimplifyDemandedBits
+  // is involved.
+  //
+  // FIXME: This is unecessary if we process the DAG in topological order,
+  // which we plan to do. This workaround can be removed once the DAG is
+  // processed in topological order.
   if (N->hasOneUse()) {
     SDNode *Use = *N->use_begin();
-    if (Use->getOpcode() == ISD::BRCOND)
-      AddToWorklist(Use);
-    else if (Use->getOpcode() == ISD::TRUNCATE && Use->hasOneUse()) {
-      // Also look pass the truncate.
+
+    // Look pass the truncate.
+    if (Use->getOpcode() == ISD::TRUNCATE && Use->hasOneUse())
       Use = *Use->use_begin();
-      if (Use->getOpcode() == ISD::BRCOND)
-        AddToWorklist(Use);
-    }
+
+    if (Use->getOpcode() == ISD::BRCOND || Use->getOpcode() == ISD::AND ||
+        Use->getOpcode() == ISD::OR || Use->getOpcode() == ISD::XOR)
+      AddToWorklist(Use);
   }
 
   // Try to transform this shift into a multiply-high if
