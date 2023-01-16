@@ -3798,6 +3798,10 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fmodules_disable_diagnostic_validation);
   }
 
+  // Claim `-fmodule-output` and `-fmodule-output=` to avoid unused warnings.
+  Args.ClaimAllArgs(options::OPT_fmodule_output);
+  Args.ClaimAllArgs(options::OPT_fmodule_output_EQ);
+
   return HaveModules;
 }
 
