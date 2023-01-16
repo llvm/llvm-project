@@ -204,29 +204,23 @@ entry:
 define void @vld2_v8i16_align1(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v8i16_align1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u8 q0, [r0]
-; CHECK-NEXT:    vldrb.u8 q2, [r0, #16]
-; CHECK-NEXT:    vmovx.f16 s4, s0
-; CHECK-NEXT:    vmovx.f16 s6, s1
-; CHECK-NEXT:    vins.f16 s4, s6
-; CHECK-NEXT:    vmovx.f16 s5, s2
-; CHECK-NEXT:    vmovx.f16 s6, s3
-; CHECK-NEXT:    vmovx.f16 s12, s9
-; CHECK-NEXT:    vins.f16 s5, s6
-; CHECK-NEXT:    vmovx.f16 s6, s8
-; CHECK-NEXT:    vins.f16 s6, s12
-; CHECK-NEXT:    vmovx.f16 s7, s10
-; CHECK-NEXT:    vmovx.f16 s12, s11
-; CHECK-NEXT:    vins.f16 s2, s3
-; CHECK-NEXT:    vins.f16 s10, s11
-; CHECK-NEXT:    vins.f16 s8, s9
-; CHECK-NEXT:    vins.f16 s0, s1
-; CHECK-NEXT:    vmov.f32 s1, s2
-; CHECK-NEXT:    vins.f16 s7, s12
-; CHECK-NEXT:    vmov.f32 s2, s8
-; CHECK-NEXT:    vmov.f32 s3, s10
-; CHECK-NEXT:    vadd.i16 q0, q0, q1
+; CHECK-NEXT:    .pad #32
+; CHECK-NEXT:    sub sp, #32
+; CHECK-NEXT:    vldrb.u8 q0, [r0, #16]
+; CHECK-NEXT:    add r2, sp, #16
+; CHECK-NEXT:    vshr.u32 q1, q0, #16
+; CHECK-NEXT:    vstrh.32 q1, [r2, #8]
+; CHECK-NEXT:    vldrb.u8 q1, [r0]
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vshr.u32 q2, q1, #16
+; CHECK-NEXT:    vstrh.32 q2, [r2]
+; CHECK-NEXT:    vstrh.32 q0, [r0, #8]
+; CHECK-NEXT:    vstrh.32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vadd.i16 q0, q1, q0
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    add sp, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <16 x i16>, ptr %src, align 1
