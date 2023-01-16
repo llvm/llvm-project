@@ -592,11 +592,6 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         return MemDepResult::getDef(Inst);
     }
 
-    // If we found a select instruction for MemLoc pointer, return it as
-    // Select dependency.
-    if (isa<SelectInst>(Inst) && MemLoc.Ptr == Inst)
-      return MemDepResult::getSelect(Inst);
-
     if (isInvariantLoad)
       continue;
 
@@ -967,7 +962,7 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
   // If the block has a dependency (i.e. it isn't completely transparent to
   // the value), remember the reverse association because we just added it
   // to Cache!
-  if (!Dep.isLocal())
+  if (!Dep.isDef() && !Dep.isClobber())
     return Dep;
 
   // Keep the ReverseNonLocalPtrDeps map up to date so we can efficiently
