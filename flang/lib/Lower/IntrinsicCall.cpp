@@ -4733,8 +4733,9 @@ IntrinsicLibrary::genSpread(mlir::Type resultType,
   // Generate result descriptor
   mlir::Type resultArrayType =
       builder.getVarLenSeqTy(resultType, sourceRank + 1);
-  fir::MutableBoxValue resultMutableBox =
-      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  fir::MutableBoxValue resultMutableBox = fir::factory::createTempMutableBox(
+      builder, loc, resultArrayType, {},
+      fir::isPolymorphicType(source.getType()) ? source : mlir::Value{});
   mlir::Value resultIrBox =
       fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
 
