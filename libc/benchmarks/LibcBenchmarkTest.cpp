@@ -8,12 +8,12 @@
 
 #include "LibcBenchmark.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <chrono>
 #include <limits>
+#include <optional>
 #include <queue>
 #include <vector>
 

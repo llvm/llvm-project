@@ -37,11 +37,11 @@
 
 #include "automemcpy/CodeGen.h"
 #include <cassert>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/StringSet.h>
 #include <llvm/Support/FormatVariadic.h>
 #include <llvm/Support/raw_ostream.h>
+#include <optional>
 #include <set>
 
 namespace llvm {
@@ -126,9 +126,9 @@ struct FunctionImplementation {
   StringRef Name;
   std::vector<Individual> Individuals;
   std::vector<Overlap> Overlaps;
-  Optional<Loop> Loop;
-  Optional<AlignedLoop> AlignedLoop;
-  Optional<Accelerator> Accelerator;
+  std::optional<Loop> Loop;
+  std::optional<AlignedLoop> AlignedLoop;
+  std::optional<Accelerator> Accelerator;
   ElementTypeClass ElementClass;
 };
 
