@@ -572,22 +572,6 @@ void CodeGenAction::generateLLVMIR() {
   }
 }
 
-static llvm::CodeGenOpt::Level
-getCGOptLevel(const Fortran::frontend::CodeGenOptions &opts) {
-  switch (opts.OptimizationLevel) {
-  default:
-    llvm_unreachable("Invalid optimization level!");
-  case 0:
-    return llvm::CodeGenOpt::None;
-  case 1:
-    return llvm::CodeGenOpt::Less;
-  case 2:
-    return llvm::CodeGenOpt::Default;
-  case 3:
-    return llvm::CodeGenOpt::Aggressive;
-  }
-}
-
 void CodeGenAction::setUpTargetMachine() {
   CompilerInstance &ci = this->getInstance();
 
@@ -602,7 +586,10 @@ void CodeGenAction::setUpTargetMachine() {
 
   // Create `TargetMachine`
   const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
-  llvm::CodeGenOpt::Level OptLevel = getCGOptLevel(CGOpts);
+  std::optional<llvm::CodeGenOpt::Level> OptLevelOrNone =
+      CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
+  assert(OptLevelOrNone && "Invalid optimization level!");
+  llvm::CodeGenOpt::Level OptLevel = *OptLevelOrNone;
   std::string featuresStr = llvm::join(targetOpts.featuresAsWritten.begin(),
                                        targetOpts.featuresAsWritten.end(), ",");
   tm.reset(theTarget->createTargetMachine(
