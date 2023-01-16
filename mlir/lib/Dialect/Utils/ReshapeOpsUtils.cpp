@@ -360,7 +360,7 @@ SliceFromCollapseHelper::getInsertSliceParams(MLIRContext *ctx,
 static std::optional<int64_t> getUniqueNonUnitDim(ArrayRef<int64_t> indices,
                                                   ArrayRef<int64_t> shape) {
   // Return false if more than one of the dimensions in this group are not 1.
-  std::optional<int64_t> dimIndex = std::nullopt;
+  std::optional<int64_t> dimIndex;
   if (indices.size() < 2)
     return std::nullopt;
   for (int64_t idx : indices) {

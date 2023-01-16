@@ -39,10 +39,10 @@ struct TraceDumperOptions {
   /// For each instruction, print the instruction kind.
   bool show_control_flow_kind = false;
   /// Optional custom id to start traversing from.
-  std::optional<uint64_t> id = std::nullopt;
+  std::optional<uint64_t> id;
   /// Optional number of instructions to skip from the starting position
   /// of the cursor.
-  std::optional<size_t> skip = std::nullopt;
+  std::optional<size_t> skip;
 };
 
 /// Class used to dump the instructions of a \a TraceCursor using its current
