@@ -362,6 +362,215 @@ define <2 x i64> @uabd_2d_promoted_ops(<2 x i32> %a, <2 x i32> %b) #0 {
   ret <2 x i64> %abs
 }
 
+define <16 x i8> @uabd_v16i8_nuw(<16 x i8> %a, <16 x i8> %b) #0 {
+; CHECK-LABEL: uabd_v16i8_nuw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    abs v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %sub = sub nuw <16 x i8> %a, %b
+  %abs = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %sub, i1 true)
+  ret <16 x i8> %abs
+}
+
+define <8 x i16> @uabd_v8i16_nuw(<8 x i16> %a, <8 x i16> %b) #0 {
+; CHECK-LABEL: uabd_v8i16_nuw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    abs v0.8h, v0.8h
+; CHECK-NEXT:    ret
+  %sub = sub nuw <8 x i16> %a, %b
+  %abs = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %sub, i1 true)
+  ret <8 x i16> %abs
+}
+
+define <4 x i32> @uabd_v4i32_nuw(<4 x i32> %a, <4 x i32> %b) #0 {
+; CHECK-LABEL: uabd_v4i32_nuw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    abs v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %sub = sub nuw <4 x i32> %a, %b
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 true)
+  ret <4 x i32> %abs
+}
+
+define <2 x i64> @uabd_v2i64_nuw(<2 x i64> %a, <2 x i64> %b) #0 {
+; CHECK-LABEL: uabd_v2i64_nuw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    abs v0.2d, v0.2d
+; CHECK-NEXT:    ret
+  %sub = sub nuw <2 x i64> %a, %b
+  %abs = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %sub, i1 true)
+  ret <2 x i64> %abs
+}
+
+define <16 x i8> @sabd_v16i8_nsw(<16 x i8> %a, <16 x i8> %b) #0 {
+; CHECK-LABEL: sabd_v16i8_nsw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    abs v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %sub = sub nsw <16 x i8> %a, %b
+  %abs = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %sub, i1 true)
+  ret <16 x i8> %abs
+}
+
+define <8 x i16> @sabd_v8i16_nsw(<8 x i16> %a, <8 x i16> %b) #0 {
+; CHECK-LABEL: sabd_v8i16_nsw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    abs v0.8h, v0.8h
+; CHECK-NEXT:    ret
+  %sub = sub nsw <8 x i16> %a, %b
+  %abs = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %sub, i1 true)
+  ret <8 x i16> %abs
+}
+
+define <4 x i32> @sabd_v4i32_nsw(<4 x i32> %a, <4 x i32> %b) #0 {
+; CHECK-LABEL: sabd_v4i32_nsw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    abs v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %sub = sub nsw <4 x i32> %a, %b
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 true)
+  ret <4 x i32> %abs
+}
+
+define <2 x i64> @sabd_v2i64_nsw(<2 x i64> %a, <2 x i64> %b) #0 {
+; CHECK-LABEL: sabd_v2i64_nsw:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    abs v0.2d, v0.2d
+; CHECK-NEXT:    ret
+  %sub = sub nsw <2 x i64> %a, %b
+  %abs = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %sub, i1 true)
+  ret <2 x i64> %abs
+}
+
+define <16 x i8> @smaxmin_v16i8(<16 x i8> %0, <16 x i8> %1) {
+; CHECK-LABEL: smaxmin_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smax v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    smin v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    sub v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ret
+  %a = tail call <16 x i8> @llvm.smax.v16i8(<16 x i8> %0, <16 x i8> %1)
+  %b = tail call <16 x i8> @llvm.smin.v16i8(<16 x i8> %0, <16 x i8> %1)
+  %sub = sub <16 x i8> %a, %b
+  ret <16 x i8> %sub
+}
+
+define <8 x i16> @smaxmin_v8i16(<8 x i16> %0, <8 x i16> %1) {
+; CHECK-LABEL: smaxmin_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smax v2.8h, v0.8h, v1.8h
+; CHECK-NEXT:    smin v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    sub v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    ret
+  %a = tail call <8 x i16> @llvm.smax.v8i16(<8 x i16> %0, <8 x i16> %1)
+  %b = tail call <8 x i16> @llvm.smin.v8i16(<8 x i16> %0, <8 x i16> %1)
+  %sub = sub <8 x i16> %a, %b
+  ret <8 x i16> %sub
+}
+
+define <4 x i32> @smaxmin_v4i32(<4 x i32> %0, <4 x i32> %1) {
+; CHECK-LABEL: smaxmin_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smax v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    sub v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    ret
+  %a = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> %0, <4 x i32> %1)
+  %b = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> %0, <4 x i32> %1)
+  %sub = sub <4 x i32> %a, %b
+  ret <4 x i32> %sub
+}
+
+define <2 x i64> @smaxmin_v2i64(<2 x i64> %0, <2 x i64> %1) {
+; CHECK-LABEL: smaxmin_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    cmgt v3.2d, v1.2d, v0.2d
+; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-NEXT:    sub v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    ret
+  %a = tail call <2 x i64> @llvm.smax.v2i64(<2 x i64> %0, <2 x i64> %1)
+  %b = tail call <2 x i64> @llvm.smin.v2i64(<2 x i64> %0, <2 x i64> %1)
+  %sub = sub <2 x i64> %a, %b
+  ret <2 x i64> %sub
+}
+
+define <16 x i8> @umaxmin_v16i8(<16 x i8> %0, <16 x i8> %1) {
+; CHECK-LABEL: umaxmin_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umax v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umin v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    sub v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ret
+  %a = tail call <16 x i8> @llvm.umax.v16i8(<16 x i8> %0, <16 x i8> %1)
+  %b = tail call <16 x i8> @llvm.umin.v16i8(<16 x i8> %0, <16 x i8> %1)
+  %sub = sub <16 x i8> %a, %b
+  ret <16 x i8> %sub
+}
+
+define <8 x i16> @umaxmin_v8i16(<8 x i16> %0, <8 x i16> %1) {
+; CHECK-LABEL: umaxmin_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umax v2.8h, v0.8h, v1.8h
+; CHECK-NEXT:    umin v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    sub v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    ret
+  %a = tail call <8 x i16> @llvm.umax.v8i16(<8 x i16> %0, <8 x i16> %1)
+  %b = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> %0, <8 x i16> %1)
+  %sub = sub <8 x i16> %a, %b
+  ret <8 x i16> %sub
+}
+
+define <4 x i32> @umaxmin_v4i32(<4 x i32> %0, <4 x i32> %1) {
+; CHECK-LABEL: umaxmin_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umax v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    sub v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    ret
+  %a = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> %0, <4 x i32> %1)
+  %b = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> %0, <4 x i32> %1)
+  %sub = sub <4 x i32> %a, %b
+  ret <4 x i32> %sub
+}
+
+define <2 x i64> @umaxmin_v2i64(<2 x i64> %0, <2 x i64> %1) {
+; CHECK-LABEL: umaxmin_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmhi v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    cmhi v3.2d, v1.2d, v0.2d
+; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-NEXT:    sub v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    ret
+  %a = tail call <2 x i64> @llvm.umax.v2i64(<2 x i64> %0, <2 x i64> %1)
+  %b = tail call <2 x i64> @llvm.umin.v2i64(<2 x i64> %0, <2 x i64> %1)
+  %sub = sub <2 x i64> %a, %b
+  ret <2 x i64> %sub
+}
+
+define <16 x i8> @umaxmin_v16i8_com1(<16 x i8> %0, <16 x i8> %1) {
+; CHECK-LABEL: umaxmin_v16i8_com1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umax v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umin v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    sub v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ret
+  %a = tail call <16 x i8> @llvm.umax.v16i8(<16 x i8> %0, <16 x i8> %1)
+  %b = tail call <16 x i8> @llvm.umin.v16i8(<16 x i8> %1, <16 x i8> %0)
+  %sub = sub <16 x i8> %a, %b
+  ret <16 x i8> %sub
+}
+
 declare <8 x i8> @llvm.abs.v8i8(<8 x i8>, i1)
 declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
 
@@ -377,5 +586,22 @@ declare <2 x i64> @llvm.abs.v2i64(<2 x i64>, i1)
 declare <4 x i64> @llvm.abs.v4i64(<4 x i64>, i1)
 
 declare <2 x i128> @llvm.abs.v2i128(<2 x i128>, i1)
+
+declare <16 x i8> @llvm.smax.v16i8(<16 x i8>, <16 x i8>)
+declare <8 x i16> @llvm.smax.v8i16(<8 x i16>, <8 x i16>)
+declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
+declare <2 x i64> @llvm.smax.v2i64(<2 x i64>, <2 x i64>)
+declare <16 x i8> @llvm.smin.v16i8(<16 x i8>, <16 x i8>)
+declare <8 x i16> @llvm.smin.v8i16(<8 x i16>, <8 x i16>)
+declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)
+declare <2 x i64> @llvm.smin.v2i64(<2 x i64>, <2 x i64>)
+declare <16 x i8> @llvm.umax.v16i8(<16 x i8>, <16 x i8>)
+declare <8 x i16> @llvm.umax.v8i16(<8 x i16>, <8 x i16>)
+declare <4 x i32> @llvm.umax.v4i32(<4 x i32>, <4 x i32>)
+declare <2 x i64> @llvm.umax.v2i64(<2 x i64>, <2 x i64>)
+declare <16 x i8> @llvm.umin.v16i8(<16 x i8>, <16 x i8>)
+declare <8 x i16> @llvm.umin.v8i16(<8 x i16>, <8 x i16>)
+declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>)
+declare <2 x i64> @llvm.umin.v2i64(<2 x i64>, <2 x i64>)
 
 attributes #0 = { "target-features"="+neon" }
