@@ -21,6 +21,7 @@
 #include "Debug.h"
 #include "DeviceEnvironment.h"
 #include "GlobalHandler.h"
+#include "JIT.h"
 #include "MemoryManager.h"
 #include "Utilities.h"
 #include "omptarget.h"
@@ -37,6 +38,7 @@
 namespace llvm {
 namespace omp {
 namespace target {
+
 namespace plugin {
 
 struct GenericPluginTy;
@@ -378,10 +380,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
 
-  /// Get target architecture.
-  virtual std::string getArch() const {
-    return "unknown";
-  }
+  /// Get target compute unit kind (e.g., sm_80, or gfx908).
+  virtual std::string getComputeUnitKind() const { return "unknown"; }
 
   /// Post processing after jit backend. The ownership of \p MB will be taken.
   virtual Expected<std::unique_ptr<MemoryBuffer>>
@@ -513,8 +513,8 @@ protected:
 struct GenericPluginTy {
 
   /// Construct a plugin instance.
-  GenericPluginTy()
-      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr) {}
+  GenericPluginTy(Triple::ArchType TA)
+      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -543,9 +543,7 @@ struct GenericPluginTy {
   virtual uint16_t getMagicElfBits() const = 0;
 
   /// Get the target triple of this plugin.
-  virtual Triple::ArchType getTripleArch() const {
-    return Triple::ArchType::UnknownArch;
-  }
+  virtual Triple::ArchType getTripleArch() const = 0;
 
   /// Allocate a structure using the internal allocator.
   template <typename Ty> Ty *allocate() {
@@ -557,6 +555,10 @@ struct GenericPluginTy {
     assert(GlobalHandler && "Global handler not initialized");
     return *GlobalHandler;
   }
+
+  /// Get the reference to the JIT used for all devices connected to this
+  /// plugin.
+  JITEngine &getJIT() { return JIT; }
 
   /// Get the OpenMP requires flags set for this plugin.
   int64_t getRequiresFlags() const { return RequiresFlags; }
@@ -609,6 +611,9 @@ private:
 
   /// Internal allocator for different structures.
   BumpPtrAllocator Allocator;
+
+  /// The JIT engine shared by all devices connected to this plugin.
+  JITEngine JIT;
 };
 
 /// Class for simplifying the getter operation of the plugin. Anywhere on the
