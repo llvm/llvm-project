@@ -3634,6 +3634,7 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
 
   HaveModules |= HaveClangModules;
   if (Args.hasArg(options::OPT_fmodules_ts)) {
+    D.Diag(diag::warn_deprecated_fmodules_ts_flag);
     CmdArgs.push_back("-fmodules-ts");
     HaveModules = true;
   }

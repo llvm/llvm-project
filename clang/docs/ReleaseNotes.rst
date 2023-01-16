@@ -555,6 +555,8 @@ Deprecated Compiler Flags
   compatible with GCC.
 - ``-fcoroutines-ts`` has been deprecated. The flag will be removed in Clang 17.
   Please use ``-std=c++20`` or higher to use standard C++ coroutines instead.
+- ``-fmodules-ts`` has been deprecated. The flag will be removed in Clang 17.
+  Please use ``-std=c++20`` or higher to use standard C++ modules instead.
 
 Modified Compiler Flags
 -----------------------
