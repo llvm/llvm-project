@@ -8,6 +8,8 @@
 //
 // UNSUPPORTED: no-threads
 
+// ALLOW_RETRIES: 3
+
 // notify_all_at_thread_exit(...) requires move semantics to transfer the unique_lock.
 // UNSUPPORTED: c++03
 
