@@ -672,3 +672,16 @@ func.func @switch_missing_terminator(%arg0: index, %arg1: i32) {
     return
   }) {cases = array<i64: 1>} : (index) -> ()
 }
+
+// -----
+
+func.func @parallel_missing_terminator(%0 : index) {
+  // expected-error @below {{'scf.parallel' op expects body to terminate with 'scf.yield'}}
+  "scf.parallel"(%0, %0, %0) ({
+  ^bb0(%arg1: index):
+    // expected-note @below {{terminator here}}
+    %2 = "arith.constant"() {value = 1.000000e+00 : f32} : () -> f32
+  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>} : (index, index, index) -> ()
+  return
+}
+
