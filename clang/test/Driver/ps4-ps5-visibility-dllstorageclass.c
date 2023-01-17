@@ -1,4 +1,4 @@
-// Check behaviour of -fvisibility-from-dllstorageclass options for PS4
+// Check behaviour of -fvisibility-from-dllstorageclass options for PS4/PS5.
 
 // DEFINE: %{triple} =
 // DEFINE: %{run} = \
@@ -10,6 +10,8 @@
 // DEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
 // DEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
 // REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
+// REDEFINE: %{triple} = x86_64-sie-ps5
 // RUN: %{run}
 //
 // REDEFINE: %{run} = \
@@ -25,6 +27,8 @@
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
 // REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
+// REDEFINE: %{triple} = x86_64-sie-ps5
 // RUN: %{run}
 
 // DEFAULTS:      "-fvisibility-from-dllstorageclass"
@@ -51,6 +55,8 @@
 // REDEFINE:     --implicit-check-not=warning:
 // REDEFINE: %{triple} = x86_64-scei-ps4
 // RUN: %{run}
+// REDEFINE: %{triple} = x86_64-sie-ps5
+// RUN: %{run}
 
 // UNUSED:      warning: argument unused during compilation: '-fvisibility-dllexport=hidden'
 // UNUSED-NEXT: warning: argument unused during compilation: '-fvisibility-nodllstorageclass=protected'
@@ -71,6 +77,8 @@
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
 // REDEFINE: %{triple} = x86_64-scei-ps4
 // RUN: %{run}
+// REDEFINE: %{triple} = x86_64-sie-ps5
+// RUN: %{run}
 
 // REDEFINE: %{run} = \
 // REDEFINE: %clang -### -target x86_64-scei-ps4 \
@@ -86,6 +94,8 @@
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
 // REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
+// REDEFINE: %{triple} = x86_64-sie-ps5
 // RUN: %{run}
 
 // SOME:      "-fvisibility-from-dllstorageclass"
@@ -114,6 +124,8 @@
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
 // REDEFINE: %{triple} = x86_64-scei-ps4
 // RUN: %{run}
+// REDEFINE: %{triple} = x86_64-sie-ps5
+// RUN: %{run}
 
 // REDEFINE: %{run} = \
 // REDEFINE: %clang -### -target x86_64-scei-ps4 \
@@ -135,6 +147,8 @@
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
 // REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
+// REDEFINE: %{triple} = x86_64-sie-ps5
 // RUN: %{run}
 
 // ALL:      "-fvisibility-from-dllstorageclass"
