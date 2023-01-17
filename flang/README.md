@@ -333,7 +333,7 @@ ninja check-flang
 ## Generate FIR Documentation
 If flang was built with `-DLINK_WITH_FIR=ON` (`ON` by default), it is possible to
 generate FIR language documentation by running `ninja flang-doc`. This will
-create `docs/Dialect/FIRLangRef.md` in flang build directory.
+create `<build-dir>/tools/flang/docs/Dialect/FIRLangRef.md` in flang build directory.
 
 ## Generate Doxygen-based Documentation
 To generate doxygen-style documentation from source code
