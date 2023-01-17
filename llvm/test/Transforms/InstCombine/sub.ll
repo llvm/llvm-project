@@ -1307,8 +1307,8 @@ define <2 x i32> @test69(<2 x i32> %x) {
 ; Check (X | Y) - Y --> X & ~Y when Y is a constant
 define i32 @test70(i32 %A) {
 ; CHECK-LABEL: @test70(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -124
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = and i32 [[A:%.*]], -124
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = or i32 %A, 123
   %C = sub i32 %B, 123
@@ -2388,4 +2388,99 @@ define <2 x i8> @sub_to_and_vector4(<2 x i8> %x) {
   %and = and <2 x i8> %sub, <i8 120, i8 120>
   %r = sub <2 x i8>  <i8 88, i8 undef>, %and
   ret <2 x i8> %r
+}
+
+define i8 @diff_of_squares(i8 %x, i8 %y) {
+; CHECK-LABEL: @diff_of_squares(
+; CHECK-NEXT:    [[X2:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul i8 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X2]], [[Y2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x2 = mul i8 %x, %x
+  %y2 = mul i8 %y, %y
+  %r = sub i8 %x2, %y2
+  ret i8 %r
+}
+
+define i5 @diff_of_squares_nuw(i5 %x, i5 %y) {
+; CHECK-LABEL: @diff_of_squares_nuw(
+; CHECK-NEXT:    [[X2:%.*]] = mul nuw i5 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul nuw i5 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i5 [[X2]], [[Y2]]
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %x2 = mul nuw i5 %x, %x
+  %y2 = mul nuw i5 %y, %y
+  %r = sub nuw i5 %x2, %y2
+  ret i5 %r
+}
+
+define i5 @diff_of_squares_partial_nuw(i5 %x, i5 %y) {
+; CHECK-LABEL: @diff_of_squares_partial_nuw(
+; CHECK-NEXT:    [[X2:%.*]] = mul nuw i5 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul nuw i5 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sub i5 [[X2]], [[Y2]]
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %x2 = mul nuw i5 %x, %x
+  %y2 = mul nuw i5 %y, %y
+  %r = sub i5 %x2, %y2
+  ret i5 %r
+}
+
+define <2 x i5> @diff_of_squares_nsw(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @diff_of_squares_nsw(
+; CHECK-NEXT:    [[X2:%.*]] = mul nsw <2 x i5> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul nsw <2 x i5> [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i5> [[X2]], [[Y2]]
+; CHECK-NEXT:    ret <2 x i5> [[R]]
+;
+  %x2 = mul nsw <2 x i5> %x, %x
+  %y2 = mul nsw <2 x i5> %y, %y
+  %r = sub nsw <2 x i5> %x2, %y2
+  ret <2 x i5> %r
+}
+
+define <2 x i5> @diff_of_squares_partial_nsw(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @diff_of_squares_partial_nsw(
+; CHECK-NEXT:    [[X2:%.*]] = mul nsw <2 x i5> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul <2 x i5> [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i5> [[X2]], [[Y2]]
+; CHECK-NEXT:    ret <2 x i5> [[R]]
+;
+  %x2 = mul nsw <2 x i5> %x, %x
+  %y2 = mul <2 x i5> %y, %y
+  %r = sub nsw <2 x i5> %x2, %y2
+  ret <2 x i5> %r
+}
+
+define i8 @diff_of_squares_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: @diff_of_squares_use1(
+; CHECK-NEXT:    [[X2:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    call void @use8(i8 [[X2]])
+; CHECK-NEXT:    [[Y2:%.*]] = mul i8 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X2]], [[Y2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x2 = mul i8 %x, %x
+  call void @use8(i8 %x2)
+  %y2 = mul i8 %y, %y
+  %r = sub i8 %x2, %y2
+  ret i8 %r
+}
+
+define i8 @diff_of_squares_use2(i8 %x, i8 %y) {
+; CHECK-LABEL: @diff_of_squares_use2(
+; CHECK-NEXT:    [[X2:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul i8 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    call void @use8(i8 [[Y2]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X2]], [[Y2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x2 = mul i8 %x, %x
+  %y2 = mul i8 %y, %y
+  call void @use8(i8 %y2)
+  %r = sub i8 %x2, %y2
+  ret i8 %r
 }
