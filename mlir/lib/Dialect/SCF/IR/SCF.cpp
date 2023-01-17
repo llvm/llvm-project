@@ -1110,10 +1110,6 @@ Speculation::Speculatability ForOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ForeachThreadOp::verify() {
-  // Call terminator's verify to produce most informative error messages.
-  if (failed(getTerminator().verify()))
-    return failure();
-
   // Check number of outputs.
   if (getNumResults() != getOutputs().size())
     return emitOpError("produces ")
