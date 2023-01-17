@@ -17,6 +17,8 @@ end subroutine
 ! CHECK:    %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_13]] : i32
 ! CHECK:    hlfir.yield_element %[[VAL_14]] : i32
 ! CHECK:  }
+! CHECK: hlfir.assign
+! CHECK: hlfir.destroy %[[VAL_8]]
 
 subroutine binary_with_scalar_and_array(x, y)
   integer :: x(100), y
@@ -33,6 +35,8 @@ end subroutine
 ! CHECK:    %[[VAL_11:.*]] = arith.addi %[[VAL_10]], %[[VAL_6]] : i32
 ! CHECK:    hlfir.yield_element %[[VAL_11]] : i32
 ! CHECK:  }
+! CHECK: hlfir.assign
+! CHECK: hlfir.destroy %[[VAL_7]]
 
 subroutine char_binary(x, y)
   character(*) :: x(100), y(100)
@@ -49,6 +53,8 @@ end subroutine
 ! CHECK:    %[[VAL_17:.*]] = hlfir.concat %[[VAL_15]], %[[VAL_16]] len %[[VAL_12]] : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:    hlfir.yield_element %[[VAL_17]] : !hlfir.expr<!fir.char<1,?>>
 ! CHECK:  }
+! CHECK: fir.call
+! CHECK: hlfir.destroy %[[VAL_13]]
 
 subroutine unary(x, n)
   integer :: n
@@ -67,6 +73,8 @@ end subroutine
 ! CHECK:    %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i1) -> !fir.logical<4>
 ! CHECK:    hlfir.yield_element %[[VAL_18]] : !fir.logical<4>
 ! CHECK:  }
+! CHECK: hlfir.assign
+! CHECK: hlfir.destroy %[[VAL_11]]
 
 subroutine char_unary(x)
   character(10) :: x(20)
@@ -80,6 +88,8 @@ end subroutine
 ! CHECK:    %[[VAL_10:.*]] = hlfir.as_expr %[[VAL_9]] : (!fir.ref<!fir.char<1,10>>) -> !hlfir.expr<!fir.char<1,10>>
 ! CHECK:    hlfir.yield_element %[[VAL_10]] : !hlfir.expr<!fir.char<1,10>>
 ! CHECK:  }
+! CHECK: fir.call
+! CHECK: hlfir.destroy %[[VAL_7]]
 
 subroutine chained_elemental(x, y, z)
   integer :: x(100), y(100), z(100)
@@ -106,6 +116,9 @@ end subroutine
 ! CHECK:    %[[VAL_25:.*]] = arith.addi %[[VAL_21]], %[[VAL_24]] : i32
 ! CHECK:    hlfir.yield_element %[[VAL_25]] : i32
 ! CHECK:  }
+! CHECK: hlfir.assign
+! CHECK: hlfir.destroy %[[VAL_19]]
+! CHECK: hlfir.destroy %[[VAL_12]]
 
 subroutine lower_bounds(x)
   integer :: x(2:101)
@@ -126,3 +139,5 @@ end subroutine
 ! CHECK:    %[[VAL_13:.*]] = hlfir.no_reassoc %[[VAL_12]] : i32
 ! CHECK:    hlfir.yield_element %[[VAL_13]] : i32
 ! CHECK:  }
+! CHECK: fir.call
+! CHECK: hlfir.destroy %[[VAL_6]]

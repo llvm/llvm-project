@@ -18,6 +18,8 @@ end subroutine
 ! CHECK:    %[[VAL_12:.*]] = fir.call @acosf(%[[VAL_11]]) fastmath<contract> : (f32) -> f32
 ! CHECK:    hlfir.yield_element %[[VAL_12]] : f32
 ! CHECK:  }
+! CHECK: hlfir.assign
+! CHECK: hlfir.destroy %[[VAL_8]]
 
 subroutine elemental_mixed_args(x,y, scalar)
   real :: x(100), y(100), scalar
@@ -39,6 +41,8 @@ end subroutine
 ! CHECK:    %[[VAL_15:.*]] = math.atan2 %[[VAL_14]], %[[VAL_10]] fastmath<contract> : f32
 ! CHECK:    hlfir.yield_element %[[VAL_15]] : f32
 ! CHECK:  }
+! CHECK: hlfir.assign
+! CHECK: hlfir.destroy %[[VAL_11]]
 
 subroutine elemental_assumed_shape_arg(x)
   real :: x(:)
@@ -56,6 +60,8 @@ end subroutine
 ! CHECK:    %[[VAL_14:.*]] = math.sin %[[VAL_13]] fastmath<contract> : f32
 ! CHECK:    hlfir.yield_element %[[VAL_14]] : f32
 ! CHECK:  }
+! CHECK: fir.call
+! CHECK: hlfir.destroy %[[VAL_10]]
 
 subroutine elemental_with_char_args(x,y)
   character(*) :: x(100), y(:)
@@ -80,3 +86,5 @@ end subroutine
 ! CHECK:    %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i64) -> i32
 ! CHECK:    hlfir.yield_element %[[VAL_26]] : i32
 ! CHECK:  }
+! CHECK: fir.call
+! CHECK: hlfir.destroy %[[VAL_13]]
