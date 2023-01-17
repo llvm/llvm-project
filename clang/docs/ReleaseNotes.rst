@@ -348,6 +348,8 @@ Bug Fixes
 - Fix issue that the standard C++ modules importer will call global
   constructor/destructor for the global varaibles in the importing modules.
   This fixes `Issue 59765 <https://github.com/llvm/llvm-project/issues/59765>`_
+- Reject in-class defaulting of previosly declared comparison operators. Fixes
+  `Issue 51227 <https://github.com/llvm/llvm-project/issues/51227>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
