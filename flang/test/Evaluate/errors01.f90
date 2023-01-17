@@ -137,6 +137,10 @@ module m
     !CHERK: error: Must be a constant value
     integer, parameter :: bad2 = storage_size(y)
   end subroutine
+  subroutine s13
+    !CHECK: portability: Result of REPEAT() is too large to compute at compilation time (1.1259e+15 characters)
+    print *, repeat(repeat(' ', 2**20), 2**30)
+  end subroutine
   subroutine warnings
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
     real, parameter :: ok2 = scale(1.0, -99999) ! 0.0
