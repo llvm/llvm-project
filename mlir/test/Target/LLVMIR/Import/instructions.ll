@@ -181,16 +181,16 @@ define void @integer_extension_and_truncation(i32 %arg1) {
 ; CHECK-LABEL: @pointer_casts
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[ARG2:[a-zA-Z0-9]+]]
-define i32* @pointer_casts(double* %arg1, i64 %arg2) {
-  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.null : !llvm.ptr<i32>
-  ; CHECK:  llvm.ptrtoint %[[ARG1]] : !llvm.ptr<f64> to i64
-  ; CHECK:  llvm.inttoptr %[[ARG2]] : i64 to !llvm.ptr<i64>
-  ; CHECK:  llvm.bitcast %[[ARG1]] : !llvm.ptr<f64> to !llvm.ptr<i32>
-  ; CHECK:  llvm.return %[[NULL]] : !llvm.ptr<i32>
-  %1 = ptrtoint double* %arg1 to i64
-  %2 = inttoptr i64 %arg2 to i64*
-  %3 = bitcast double* %arg1 to i32*
-  ret i32* bitcast (double* null to i32*)
+define ptr @pointer_casts(ptr %arg1, i64 %arg2) {
+  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.null : !llvm.ptr
+  ; CHECK:  llvm.ptrtoint %[[ARG1]] : !llvm.ptr to i64
+  ; CHECK:  llvm.inttoptr %[[ARG2]] : i64 to !llvm.ptr
+  ; CHECK:  llvm.bitcast %[[ARG1]] : !llvm.ptr to !llvm.ptr
+  ; CHECK:  llvm.return %[[NULL]] : !llvm.ptr
+  %1 = ptrtoint ptr %arg1 to i64
+  %2 = inttoptr i64 %arg2 to ptr
+  %3 = bitcast ptr %arg1 to ptr
+  ret ptr null
 }
 
 ; // -----
@@ -250,11 +250,11 @@ define void @integer_arith(i32 %arg1, i32 %arg2, i64 %arg3, i64 %arg4) {
 ; CHECK-LABEL: @extract_element
 ; CHECK-SAME:  %[[VEC:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[IDX:[a-zA-Z0-9]+]]
-define half @extract_element(<4 x half>* %vec, i32 %idx) {
-  ; CHECK:  %[[V1:.+]] = llvm.load %[[VEC]] : !llvm.ptr<vector<4xf16>>
+define half @extract_element(ptr %vec, i32 %idx) {
+  ; CHECK:  %[[V1:.+]] = llvm.load %[[VEC]] : !llvm.ptr -> vector<4xf16>
   ; CHECK:  %[[V2:.+]] = llvm.extractelement %[[V1]][%[[IDX]] : i32] : vector<4xf16>
   ; CHECK:  llvm.return %[[V2]]
-  %1 = load <4 x half>, <4 x half>* %vec
+  %1 = load <4 x half>, ptr %vec
   %2 = extractelement <4 x half> %1, i32 %idx
   ret half %2
 }
@@ -265,11 +265,11 @@ define half @extract_element(<4 x half>* %vec, i32 %idx) {
 ; CHECK-SAME:  %[[VEC:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[VAL:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[IDX:[a-zA-Z0-9]+]]
-define <4 x half> @insert_element(<4 x half>* %vec, half %val, i32 %idx) {
-  ; CHECK:  %[[V1:.+]] = llvm.load %[[VEC]] : !llvm.ptr<vector<4xf16>>
+define <4 x half> @insert_element(ptr %vec, half %val, i32 %idx) {
+  ; CHECK:  %[[V1:.+]] = llvm.load %[[VEC]] : !llvm.ptr -> vector<4xf16>
   ; CHECK:  %[[V2:.+]] = llvm.insertelement %[[VAL]], %[[V1]][%[[IDX]] : i32] : vector<4xf16>
   ; CHECK:  llvm.return %[[V2]]
-  %1 = load <4 x half>, <4 x half>* %vec
+  %1 = load <4 x half>, ptr %vec
   %2 = insertelement <4 x half> %1, half %val, i32 %idx
   ret <4 x half> %2
 }
@@ -336,26 +336,26 @@ define <4 x half> @shuffle_vec(<4 x half> %arg1, <4 x half> %arg2) {
 
 ; CHECK-LABEL: @alloca
 ; CHECK-SAME:  %[[SIZE:[a-zA-Z0-9]+]]
-define double* @alloca(i64 %size) {
+define ptr @alloca(i64 %size) {
   ; CHECK:  %[[C1:[0-9]+]] = llvm.mlir.constant(1 : i32) : i32
-  ; CHECK:  llvm.alloca %[[C1]] x f64 {alignment = 8 : i64} : (i32) -> !llvm.ptr<f64>
-  ; CHECK:  llvm.alloca %[[SIZE]] x i32 {alignment = 8 : i64} : (i64) -> !llvm.ptr<i32>
-  ; CHECK:  llvm.alloca %[[SIZE]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr<i32, 3>
+  ; CHECK:  llvm.alloca %[[C1]] x f64 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  ; CHECK:  llvm.alloca %[[SIZE]] x i32 {alignment = 8 : i64} : (i64) -> !llvm.ptr
+  ; CHECK:  llvm.alloca %[[SIZE]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr<3>
   %1 = alloca double
   %2 = alloca i32, i64 %size, align 8
   %3 = alloca i32, i64 %size, addrspace(3)
-  ret double* %1
+  ret ptr %1
 }
 
 ; // -----
 
 ; CHECK-LABEL: @load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
-define void @load_store(double* %ptr) {
-  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] : !llvm.ptr<f64>
-  ; CHECK:  llvm.store %[[V1]], %[[PTR]] : !llvm.ptr<f64>
-  %1 = load double, double* %ptr
-  store double %1, double* %ptr
+define void @load_store(ptr %ptr) {
+  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] : !llvm.ptr -> f64
+  ; CHECK:  llvm.store %[[V1]], %[[PTR]] : f64, !llvm.ptr
+  %1 = load double, ptr %ptr
+  store double %1, ptr %ptr
   ret void
 }
 
@@ -438,10 +438,10 @@ define void @call_fn_ptr(ptr %fn) {
 
 ; CHECK-LABEL: @gep_static_idx
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
-define void @gep_static_idx(float* %ptr) {
+define void @gep_static_idx(ptr %ptr) {
   ; CHECK: %[[IDX:.+]] = llvm.mlir.constant(7 : i32)
-  ; CHECK: llvm.getelementptr inbounds %[[PTR]][%[[IDX]]] : (!llvm.ptr<f32>, i32) -> !llvm.ptr<f32>
-  %1 = getelementptr inbounds float, float* %ptr, i32 7
+  ; CHECK: llvm.getelementptr inbounds %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
+  %1 = getelementptr inbounds float, ptr %ptr, i32 7
   ret void
 }
 
@@ -453,10 +453,10 @@ define void @gep_static_idx(float* %ptr) {
 ; CHECK-LABEL: @gep_dynamic_idx
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[IDX:[a-zA-Z0-9]+]]
-define void @gep_dynamic_idx(%my_struct* %ptr, i32 %idx) {
+define void @gep_dynamic_idx(ptr %ptr, i32 %idx) {
   ; CHECK: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
   ; CHECK: llvm.getelementptr %[[PTR]][%[[C0]], 1, %[[IDX]]]
-  %1 = getelementptr %my_struct, %my_struct* %ptr, i32 0, i32 1, i32 %idx
+  %1 = getelementptr %my_struct, ptr %ptr, i32 0, i32 1, i32 %idx
   ret void
 }
 
