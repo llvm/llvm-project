@@ -328,21 +328,37 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", []> {
 }
 
 def hlfir_AsExprOp : hlfir_Op<"as_expr", []> {
-  let summary = "Take the value of an array, character or derived expression";
+  let summary = "Take the value of an array, character or derived variable";
 
   let description = [{
-    Take the value of an array, character or derived expression.
+    Take the value of an array, character or derived variable.
+    In general, this operation will lead to a copy of the variable
+    in the bufferization pass if it was not transformed.
+
+    However, if it is known that the variable storage will not be used anymore
+    afterwards, the variable storage ownership can be passed to the hlfir.expr
+    by providing the $must_free argument that is a boolean that indicates if
+    the storage must be freed (when it was allocated on the heap).
+    This allows Fortran lowering to build some expression value in memory when
+    there is no adequate hlfir operation, and to promote the result to an
+    hlfir.expr value without paying the price of introducing a copy.
   }];
 
-  let arguments = (ins AnyFortranVariable:$var);
+  let arguments = (ins AnyFortranVariable:$var,
+                       Optional<I1>:$must_free);
   let results = (outs hlfir_ExprType);
 
+  let extraClassDeclaration = [{
+      // Is this a "move" ?
+      bool isMove() { return getMustFree() != mlir::Value{}; }
+  }];
+
   let assemblyFormat = [{
-    $var attr-dict `:` functional-type(operands, results)
+    $var (`move` $must_free^)? attr-dict `:` functional-type(operands, results)
   }];
 
 
-  let builders = [OpBuilder<(ins "mlir::Value":$var)>];
+  let builders = [OpBuilder<(ins "mlir::Value":$var, CArg<"mlir::Value", "{}">:$must_free)>];
 }
 
 def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndResultType]> {
