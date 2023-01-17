@@ -33,6 +33,19 @@ inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
   return builder.getBoolArrayAttr(newInBoundsValues);
 }
 
+/// Extend the rank of a vector Value by `addedRanks` by adding outer unit
+/// dimensions.
+static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
+                              int64_t addedRank) {
+  auto originalVecType = vec.getType().cast<VectorType>();
+  SmallVector<int64_t> newShape(addedRank, 1);
+  newShape.append(originalVecType.getShape().begin(),
+                  originalVecType.getShape().end());
+  VectorType newVecType =
+      VectorType::get(newShape, originalVecType.getElementType());
+  return builder.create<vector::BroadcastOp>(loc, newVecType, vec);
+}
+
 /// Lower transfer_read op with permutation into a transfer_read with a
 /// permutation map composed of leading zeros followed by a minor identiy +
 /// vector.transpose op.
@@ -170,6 +183,77 @@ struct TransferWritePermutationLowering
   }
 };
 
+/// Convert a transfer.write op with a map which isn't the permutation of a
+/// minor identity into a vector.broadcast + transfer_write with permutation of
+/// minor identity map by adding unit dim on inner dimension. Ex:
+/// ```
+///   vector.transfer_write %v
+///     {permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, d2)>} :
+///     vector<8x16xf32>
+/// ```
+/// into:
+/// ```
+///   %v1 = vector.broadcast %v : vector<8x16xf32> to vector<1x8x16xf32>
+///   vector.transfer_write %v1
+///     {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d1, d2)>} :
+///     vector<1x8x16xf32>
+/// ```
+struct TransferWriteNonPermutationLowering
+    : public OpRewritePattern<vector::TransferWriteOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferWriteOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getTransferRank() == 0)
+      return failure();
+    SmallVector<unsigned> permutation;
+    AffineMap map = op.getPermutationMap();
+    if (map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
+      return failure();
+
+    // Missing outer dimensions are allowed, find the most outer existing
+    // dimension then deduce the missing inner dimensions.
+    SmallVector<bool> foundDim(map.getNumDims(), false);
+    for (AffineExpr exp : map.getResults()) {
+      foundDim[exp.cast<AffineDimExpr>().getPosition()] = true;
+    }
+    SmallVector<AffineExpr> exprs;
+    bool foundFirstDim = false;
+    SmallVector<int64_t> missingInnerDim;
+    for (size_t i = 0; i < foundDim.size(); i++) {
+      if (foundDim[i]) {
+        foundFirstDim = true;
+        continue;
+      }
+      if (!foundFirstDim)
+        continue;
+      // Once we found one outer dimension existing in the map keep track of all
+      // the missing dimensions after that.
+      missingInnerDim.push_back(i);
+      exprs.push_back(rewriter.getAffineDimExpr(i));
+    }
+    // Add unit dims at the beginning of the shape.
+    Value newVec = extendVectorRank(rewriter, op.getLoc(), op.getVector(),
+                                    missingInnerDim.size());
+    exprs.append(map.getResults().begin(), map.getResults().end());
+    AffineMap newMap =
+        AffineMap::get(map.getNumDims(), 0, exprs, op.getContext());
+    ArrayAttr newInBoundsAttr;
+    if (op.getInBounds()) {
+      // All the new dimensions added are inbound.
+      SmallVector<bool> newInBoundsValues(missingInnerDim.size(), true);
+      for (Attribute attr : op.getInBounds().value().getValue()) {
+        newInBoundsValues.push_back(attr.cast<BoolAttr>().getValue());
+      }
+      newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
+    }
+    rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
+        op, newVec, op.getSource(), op.getIndices(), AffineMapAttr::get(newMap),
+        op.getMask(), newInBoundsAttr);
+    return success();
+  }
+};
+
 /// Lower transfer_read op with broadcast in the leading dimensions into
 /// transfer_read of lower rank + vector.broadcast.
 /// Ex: vector.transfer_read ...
@@ -250,7 +334,8 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
 
 void mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<TransferReadPermutationLowering,
-               TransferWritePermutationLowering, TransferOpReduceRank>(
-      patterns.getContext(), benefit);
+  patterns
+      .add<TransferReadPermutationLowering, TransferWritePermutationLowering,
+           TransferOpReduceRank, TransferWriteNonPermutationLowering>(
+          patterns.getContext(), benefit);
 }
