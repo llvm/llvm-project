@@ -944,7 +944,7 @@ const MachineBasicBlock *MachineBasicBlock::getSingleSuccessor() const {
   return Successors.size() == 1 ? Successors[0] : nullptr;
 }
 
-MachineBasicBlock *MachineBasicBlock::getFallThrough() {
+MachineBasicBlock *MachineBasicBlock::getFallThrough(bool JumpToFallThrough) {
   MachineFunction::iterator Fallthrough = getIterator();
   ++Fallthrough;
   // If FallthroughBlock is off the end of the function, it can't fall through.
@@ -975,8 +975,8 @@ MachineBasicBlock *MachineBasicBlock::getFallThrough() {
 
   // If there is some explicit branch to the fallthrough block, it can obviously
   // reach, even though the branch should get folded to fall through implicitly.
-  if (MachineFunction::iterator(TBB) == Fallthrough ||
-      MachineFunction::iterator(FBB) == Fallthrough)
+  if (!JumpToFallThrough && (MachineFunction::iterator(TBB) == Fallthrough ||
+                           MachineFunction::iterator(FBB) == Fallthrough))
     return &*Fallthrough;
 
   // If it's an unconditional branch to some block not the fall through, it
