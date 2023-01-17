@@ -1,4 +1,4 @@
-// RUN: mlir-opt --lower-host-to-llvm %s | FileCheck %s
+// RUN: mlir-opt --lower-host-to-llvm %s -split-input-file | FileCheck %s
 
 module attributes {gpu.container_module, spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], [SPV_KHR_variable_pointers]>, #spirv.resource_limits<max_compute_workgroup_invocations = 128, max_compute_workgroup_size = [128, 128, 64]>>} {
 
@@ -43,5 +43,37 @@ module attributes {gpu.container_module, spirv.target_env = #spirv.target_env<#s
     gpu.launch_func @foo::@bar blocks in (%one, %one, %one)
         threads in (%one, %one, %one) args(%buffer : memref<6xi32>)
     return
+  }
+}
+
+// -----
+
+// Check using a specified sym_name attribute.
+module {
+  spirv.module Logical GLSL450 attributes { sym_name = "spirv.sym" } {
+    // CHECK: spirv.func @spirv.sym_bar
+    // CHECK: spirv.EntryPoint "GLCompute" @spirv.sym_bar
+    // CHECK: spirv.ExecutionMode @spirv.sym_bar "LocalSize", 1, 1, 1
+    spirv.func @bar() "None" {
+      spirv.Return
+    }
+    spirv.EntryPoint "GLCompute" @bar
+    spirv.ExecutionMode @bar "LocalSize", 1, 1, 1
+  }
+}
+
+// -----
+
+// Check using the default sym_name attribute.
+module {
+  spirv.module Logical GLSL450 {
+    // CHECK: spirv.func @__spv___bar
+    // CHECK: spirv.EntryPoint "GLCompute" @__spv___bar
+    // CHECK: spirv.ExecutionMode @__spv___bar "LocalSize", 1, 1, 1
+    spirv.func @bar() "None" {
+      spirv.Return
+    }
+    spirv.EntryPoint "GLCompute" @bar
+    spirv.ExecutionMode @bar "LocalSize", 1, 1, 1
   }
 }
