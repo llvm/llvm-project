@@ -558,7 +558,8 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   if (FalseZero) {
     // If we cannot prefix the requested instruction we'll instead emit a
     // prefixed_zeroing_mov for DestructiveBinary.
-    assert((DOPRegIsUnique || AArch64::DestructiveBinary == DType) &&
+    assert((DOPRegIsUnique || ((DType == AArch64::DestructiveBinary) ||
+                               (DType = AArch64::DestructiveBinaryComm))) &&
            "The destructive operand should be unique");
     assert(ElementSize != AArch64::ElementSizeNone &&
            "This instruction is unpredicated");
@@ -575,7 +576,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     // Create the additional LSL to zero the lanes when the DstReg is not
     // unique. Zeros the lanes in z0 that aren't active in p0 with sequence
     // movprfx z0.b, p0/z, z0.b; lsl z0.b, p0/m, z0.b, #0;
-    if (DType == AArch64::DestructiveBinary && !DOPRegIsUnique) {
+    if (((DType == AArch64::DestructiveBinary) ||
+         (DType == AArch64::DestructiveBinaryComm)) &&
+        !DOPRegIsUnique) {
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(LSLZero))
           .addReg(DstReg, RegState::Define)
           .add(MI.getOperand(PredIdx))
