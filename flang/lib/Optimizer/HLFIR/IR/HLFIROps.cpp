@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -418,6 +421,72 @@ void hlfir::SetLengthOp::build(mlir::OpBuilder &builder,
       fir::CharacterType::get(builder.getContext(), kind, resultTypeLen),
       false);
   build(builder, result, resultType, string, len);
+}
+
+//===----------------------------------------------------------------------===//
+// SumOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::SumOp::verify() {
+  mlir::Operation *op = getOperation();
+
+  auto results = op->getResultTypes();
+  assert(results.size() == 1);
+
+  mlir::Value array = getArray();
+  mlir::Value mask = getMask();
+
+  fir::SequenceType arrayTy =
+      hlfir::getFortranElementOrSequenceType(array.getType())
+          .cast<fir::SequenceType>();
+  mlir::Type numTy = arrayTy.getEleTy();
+  llvm::ArrayRef<int64_t> arrayShape = arrayTy.getShape();
+  hlfir::ExprType resultTy = results[0].cast<hlfir::ExprType>();
+
+  if (mask) {
+    fir::SequenceType maskSeq =
+        hlfir::getFortranElementOrSequenceType(mask.getType())
+            .dyn_cast<fir::SequenceType>();
+    llvm::ArrayRef<int64_t> maskShape;
+
+    if (maskSeq)
+      maskShape = maskSeq.getShape();
+
+    if (!maskShape.empty()) {
+      if (maskShape.size() != arrayShape.size())
+        return emitWarning("MASK must be conformable to ARRAY");
+      static_assert(fir::SequenceType::getUnknownExtent() ==
+                    hlfir::ExprType::getUnknownExtent());
+      constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+      for (std::size_t i = 0; i < arrayShape.size(); ++i) {
+        int64_t arrayExtent = arrayShape[i];
+        int64_t maskExtent = maskShape[i];
+        if ((arrayExtent != maskExtent) && (arrayExtent != unknownExtent) &&
+            (maskExtent != unknownExtent))
+          return emitWarning("MASK must be conformable to ARRAY");
+      }
+    }
+  }
+
+  if (resultTy.isArray()) {
+    // Result is of the same type as ARRAY
+    if (resultTy.getEleTy() != numTy)
+      return emitOpError(
+          "result must have the same element type as ARRAY argument");
+
+    llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+
+    // Result has rank n-1
+    if (resultShape.size() != (arrayShape.size() - 1))
+      return emitOpError("result rank must be one less than ARRAY");
+  } else {
+    // Result is of the same type as ARRAY
+    if (resultTy.getElementType() != numTy)
+      return emitOpError(
+          "result must have the same element type as ARRAY argument");
+  }
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
