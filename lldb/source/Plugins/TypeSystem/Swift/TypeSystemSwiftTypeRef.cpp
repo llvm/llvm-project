@@ -3367,7 +3367,7 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
 }
 
 bool TypeSystemSwiftTypeRef::IsTupleType(lldb::opaque_compiler_type_t type) {
-  auto impl = [&] {
+  auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
     NodePointer node = GetDemangledType(dem, AsMangledName(type));
@@ -3375,7 +3375,30 @@ bool TypeSystemSwiftTypeRef::IsTupleType(lldb::opaque_compiler_type_t type) {
   };
   VALIDATE_AND_RETURN(impl, IsTupleType, type, g_no_exe_ctx,
                       (ReconstructType(type)), (ReconstructType(type)));
-  return false;
+}
+
+llvm::Optional<TypeSystemSwift::NonTriviallyManagedReferenceKind>
+TypeSystemSwiftTypeRef::GetNonTriviallyManagedReferenceKind(
+    lldb::opaque_compiler_type_t type) {
+  auto impl = [&]()
+      -> llvm::Optional<TypeSystemSwift::NonTriviallyManagedReferenceKind> {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer node = GetDemangledType(dem, AsMangledName(type));
+    switch (node->getKind()) {
+    default:
+      return {};
+    case Node::Kind::Unmanaged:
+      return NonTriviallyManagedReferenceKind::eUnmanaged;
+    case Node::Kind::Unowned:
+      return NonTriviallyManagedReferenceKind::eUnowned;
+    case Node::Kind::Weak:
+      return NonTriviallyManagedReferenceKind::eWeak;
+    }
+  };
+  VALIDATE_AND_RETURN(impl, GetNonTriviallyManagedReferenceKind, type,
+                      g_no_exe_ctx, (ReconstructType(type)),
+                      (ReconstructType(type)));
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
