@@ -139,6 +139,14 @@ public:
   virtual CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) = 0;
   virtual bool IsTupleType(lldb::opaque_compiler_type_t type) = 0;
+  enum class NonTriviallyManagedReferenceKind : uint8_t {
+    eWeak,
+    eUnowned,
+    eUnmanaged
+  };
+  virtual llvm::Optional<NonTriviallyManagedReferenceKind>
+  GetNonTriviallyManagedReferenceKind(lldb::opaque_compiler_type_t type) = 0;
+
   using TypeSystem::DumpTypeDescription;
   virtual void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, bool print_help_if_available,
@@ -201,9 +209,6 @@ public:
                            bool &is_complex) override;
   bool IsIntegerType(lldb::opaque_compiler_type_t type,
                      bool &is_signed) override;
-  bool IsBooleanType(lldb::opaque_compiler_type_t type) override {
-    return false;
-  }
   bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {
     return false;
   }

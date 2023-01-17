@@ -66,34 +66,36 @@ ExtractSomeIfAny(ValueObject *optional,
   auto process_sp = optional->GetProcessSP();
   auto *swift_runtime = SwiftLanguageRuntime::Get(process_sp);
 
-  SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy;
-  if (SwiftASTContext::IsNonTriviallyManagedReferenceType(
-          non_synth_valobj->GetCompilerType(), strategy) &&
-      strategy ==
-          SwiftASTContext::NonTriviallyManagedReferenceStrategy::eWeak) {
-    if (swift_runtime) {
-      lldb::addr_t original_ptr =
-          value_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-      lldb::addr_t tweaked_ptr =
-          swift_runtime->MaybeMaskNonTrivialReferencePointer(original_ptr,
-                                                             strategy);
-      if (original_ptr != tweaked_ptr) {
-        CompilerType value_type(value_sp->GetCompilerType());
-        DataBufferSP buffer_sp(
-            new DataBufferHeap(&tweaked_ptr, sizeof(tweaked_ptr)));
-        DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
-                                process_sp->GetAddressByteSize());
-        ExecutionContext exe_ctx(process_sp);
-        value_sp = PointerOrSP(ValueObject::CreateValueObjectFromData(
-            value_sp->GetName().AsCString(), extractor, exe_ctx, value_type));
-        if (!value_sp)
-          return nullptr;
-        else
-          value_sp->SetSyntheticChildrenGenerated(true);
+  CompilerType type = non_synth_valobj->GetCompilerType();
+  auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
+  if (!type_system)
+    return nullptr;
+  if (auto kind = type_system->GetNonTriviallyManagedReferenceKind(
+          type.GetOpaqueQualType())) {
+    if (*kind == TypeSystemSwift::NonTriviallyManagedReferenceKind::eWeak) {
+      if (swift_runtime) {
+        lldb::addr_t original_ptr =
+            value_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+        lldb::addr_t tweaked_ptr =
+            swift_runtime->MaybeMaskNonTrivialReferencePointer(original_ptr,
+                                                               *kind);
+        if (original_ptr != tweaked_ptr) {
+          CompilerType value_type(value_sp->GetCompilerType());
+          DataBufferSP buffer_sp(
+              new DataBufferHeap(&tweaked_ptr, sizeof(tweaked_ptr)));
+          DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(),
+                                  process_sp->GetAddressByteSize());
+          ExecutionContext exe_ctx(process_sp);
+          value_sp = PointerOrSP(ValueObject::CreateValueObjectFromData(
+              value_sp->GetName().AsCString(), extractor, exe_ctx, value_type));
+          if (!value_sp)
+            return nullptr;
+          else
+            value_sp->SetSyntheticChildrenGenerated(true);
+        }
       }
     }
   }
-
   lldb::DynamicValueType use_dynamic;
 
   // FIXME: We usually want to display the dynamic value of an optional's
@@ -114,7 +116,7 @@ ExtractSomeIfAny(ValueObject *optional,
     value_sp = value_sp->GetSyntheticValue();
 
   return value_sp;
-}
+  }
 
 static bool
 SwiftOptional_SummaryProvider_Impl(ValueObject &valobj, Stream &stream,
