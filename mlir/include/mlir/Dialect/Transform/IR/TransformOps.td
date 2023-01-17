@@ -189,6 +189,27 @@ def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent
     "$target attr-dict `:` functional-type(operands, results)";
 }
 
+def GetConsumersOfResult : TransformDialectOp<"get_consumers_of_result",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Get handle to the consumers of this operation's result number";
+  let description = [{
+    The handle defined by this Transform op corresponds to all operations that
+    consume the SSA value defined by the `target` and `result_number`
+    arguments.
+    This operation applies to a single payload operation, otherwise it 
+    definitely fails.
+    The return handle points to the consuming operations operations, which can
+    be empty.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       I64Attr:$result_number);
+  let results = (outs TransformHandleTypeInterface:$consumers);
+  let assemblyFormat = "$target `[` $result_number `]` attr-dict `:` "
+                       "functional-type(operands, results)";
+}
+
 def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
