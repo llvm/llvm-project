@@ -1060,9 +1060,12 @@ private:
       auto leftVal = hlfir::loadTrivialScalar(l, b, leftElement);
       return unaryOp.gen(l, b, op.derived(), leftVal);
     };
-    // TODO: deal with hlfir.elemental result destruction.
-    return hlfir::EntityWithAttributes{hlfir::genElementalOp(
-        loc, builder, elementType, shape, typeParams, genKernel)};
+    mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
+                                                  shape, typeParams, genKernel);
+    fir::FirOpBuilder *bldr = &builder;
+    getStmtCtx().attachCleanup(
+        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+    return hlfir::EntityWithAttributes{elemental};
   }
 
   template <typename D, typename R, typename LO, typename RO>
@@ -1102,9 +1105,12 @@ private:
       auto rightVal = hlfir::loadTrivialScalar(l, b, rightElement);
       return binaryOp.gen(l, b, op.derived(), leftVal, rightVal);
     };
-    // TODO: deal with hlfir.elemental result destruction.
-    return hlfir::EntityWithAttributes{hlfir::genElementalOp(
-        loc, builder, elementType, shape, typeParams, genKernel)};
+    mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
+                                                  shape, typeParams, genKernel);
+    fir::FirOpBuilder *bldr = &builder;
+    getStmtCtx().attachCleanup(
+        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+    return hlfir::EntityWithAttributes{elemental};
   }
 
   hlfir::EntityWithAttributes

@@ -1,4 +1,4 @@
-// Test hlfir.destroy code generation  and hlfir.yield_element "implicit
+// Test hlfir.destroy code generation and hlfir.yield_element "implicit
 // hlfir.destroy" aspect.
 
 // RUN: fir-opt %s -bufferize-hlfir | FileCheck %s
