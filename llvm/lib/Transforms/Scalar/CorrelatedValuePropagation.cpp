@@ -692,26 +692,13 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool isNonNegative(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
-  Constant *Zero = ConstantInt::get(V->getType(), 0);
-  auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SGE, V, Zero, CxtI,
-                                    /*UseBlockValue=*/true);
-  return Result == LazyValueInfo::True;
-}
-
-static bool isNonPositive(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
-  Constant *Zero = ConstantInt::get(V->getType(), 0);
-  auto Result = LVI->getPredicateAt(ICmpInst::ICMP_SLE, V, Zero, CxtI,
-                                    /*UseBlockValue=*/true);
-  return Result == LazyValueInfo::True;
-}
-
 enum class Domain { NonNegative, NonPositive, Unknown };
 
-Domain getDomain(Value *V, LazyValueInfo *LVI, Instruction *CxtI) {
-  if (isNonNegative(V, LVI, CxtI))
+static Domain getDomain(const Use &U, LazyValueInfo *LVI) {
+  ConstantRange CR = LVI->getConstantRangeAtUse(U);
+  if (CR.isAllNonNegative())
     return Domain::NonNegative;
-  if (isNonPositive(V, LVI, CxtI))
+  if (CR.icmp(ICmpInst::ICMP_SLE, APInt::getNullValue(CR.getBitWidth())))
     return Domain::NonPositive;
   return Domain::Unknown;
 }
@@ -906,10 +893,9 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
   };
   std::array<Operand, 2> Ops;
 
-  for (const auto I : zip(Ops, SDI->operands())) {
-    Operand &Op = std::get<0>(I);
-    Op.V = std::get<1>(I);
-    Op.D = getDomain(Op.V, LVI, SDI);
+  for (const auto &[Op, U] : zip(Ops, SDI->operands())) {
+    Op.V = U;
+    Op.D = getDomain(U, LVI);
     if (Op.D == Domain::Unknown)
       return false;
   }
@@ -964,10 +950,9 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
   };
   std::array<Operand, 2> Ops;
 
-  for (const auto I : zip(Ops, SDI->operands())) {
-    Operand &Op = std::get<0>(I);
-    Op.V = std::get<1>(I);
-    Op.D = getDomain(Op.V, LVI, SDI);
+  for (const auto &[Op, U] : zip(Ops, SDI->operands())) {
+    Op.V = U;
+    Op.D = getDomain(U, LVI);
     if (Op.D == Domain::Unknown)
       return false;
   }
@@ -1038,7 +1023,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
     return true;
   }
 
-  if (!isNonNegative(SDI->getOperand(0), LVI, SDI))
+  if (!LRange.isAllNonNegative())
     return false;
 
   ++NumAShrsConverted;
@@ -1057,9 +1042,8 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
-  Value *Base = SDI->getOperand(0);
-
-  if (!isNonNegative(Base, LVI, SDI))
+  const Use &Base = SDI->getOperandUse(0);
+  if (!LVI->getConstantRangeAtUse(Base).isAllNonNegative())
     return false;
 
   ++NumSExt;
