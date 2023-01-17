@@ -69,6 +69,13 @@ inline bool isBoxAddressOrValueType(mlir::Type type) {
   return fir::unwrapRefType(type).isa<fir::BaseBoxType>();
 }
 
+bool isFortranScalarNumericalType(mlir::Type);
+bool isFortranNumericalArrayObject(mlir::Type);
+bool isPassByRefOrIntegerType(mlir::Type);
+bool isI1Type(mlir::Type);
+// scalar i1 or logical, or sequence of logical (via (boxed?) array or expr)
+bool isMaskArgument(mlir::Type);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H
