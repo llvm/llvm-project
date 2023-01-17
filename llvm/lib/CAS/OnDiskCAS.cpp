@@ -120,7 +120,6 @@ public:
   enum class OffsetKind {
     IndexRecord = 0,
     DataRecord = 1,
-    String2B = 2,
   };
 
   OffsetKind getOffsetKind() const {
@@ -542,46 +541,6 @@ DataRecordHandle::create(function_ref<char *(size_t Size)> Alloc,
   Layout L(I);
   return constructImpl(Alloc(L.getTotalSize()), I, L);
 }
-
-struct String2BHandle {
-  /// Header layout:
-  /// - 2-bytes: Length
-  struct Header {
-    uint16_t Length;
-  };
-
-  uint64_t getLength() const { return H->Length; }
-
-  StringRef getString() const { return toStringRef(getArray()); }
-  ArrayRef<char> getArray() const {
-    assert(H && "Expected valid handle");
-    return makeArrayRef(reinterpret_cast<const char *>(H + 1), getLength());
-  }
-
-  static String2BHandle create(function_ref<char *(size_t Size)> Alloc,
-                               StringRef String) {
-    assert(String.size() <= UINT16_MAX);
-    char *Mem = Alloc(sizeof(Header) + String.size() + 1);
-    Header *H = new (Mem) Header{(uint16_t)String.size()};
-    llvm::copy(String, Mem + sizeof(Header));
-    Mem[sizeof(Header) + String.size()] = 0;
-    return String2BHandle(*H);
-  }
-
-  static String2BHandle get(const char *Mem) {
-    return String2BHandle(
-        *reinterpret_cast<const String2BHandle::Header *>(Mem));
-  }
-
-  explicit operator bool() const { return H; }
-  const Header &getHeader() const { return *H; }
-
-  String2BHandle() = default;
-  explicit String2BHandle(const Header &H) : H(&H) {}
-
-private:
-  const Header *H = nullptr;
-};
 
 struct OnDiskContent;
 class StandaloneDataInMemory {
@@ -1306,7 +1265,6 @@ void OnDiskCAS::print(raw_ostream &OS) const {
   OS << "on-disk-root-path: " << RootPath << "\n";
 
   struct PoolInfo {
-    bool IsString2B;
     int64_t Offset;
   };
   SmallVector<PoolInfo> Pool;
@@ -1334,7 +1292,7 @@ void OnDiskCAS::print(raw_ostream &OS) const {
       break;
     case TrieRecord::StorageKind::DataPool:
       OS << "datapool         ";
-      Pool.push_back({/*IsString2B=*/false, D.Offset.get()});
+      Pool.push_back({D.Offset.get()});
       break;
     case TrieRecord::StorageKind::Standalone:
       OS << "standalone-data  ";
@@ -1357,15 +1315,6 @@ void OnDiskCAS::print(raw_ostream &OS) const {
       Pool, [](PoolInfo LHS, PoolInfo RHS) { return LHS.Offset < RHS.Offset; });
   for (PoolInfo PI : Pool) {
     OS << "- addr=" << (void *)PI.Offset << " ";
-    if (PI.IsString2B) {
-      auto S = String2BHandle::get(DataPool.beginData(FileOffset(PI.Offset)));
-      OS << "string length=" << S.getLength();
-      OS << " end="
-         << (void *)(PI.Offset + sizeof(String2BHandle::Header) +
-                     S.getLength() + 1)
-         << "\n";
-      continue;
-    }
     DataRecordHandle D =
         DataRecordHandle::get(DataPool.beginData(FileOffset(PI.Offset)));
     OS << "record refs=" << D.getNumRefs() << " data=" << D.getDataSize()
@@ -1429,9 +1378,6 @@ Optional<IndexProxy> OnDiskCAS::getIndexProxyFromRef(InternalRef Ref) const {
 
 Optional<FileOffset> OnDiskCAS::getIndexOffset(InternalRef Ref) const {
   switch (Ref.getOffsetKind()) {
-  case InternalRef::OffsetKind::String2B:
-    return None;
-
   case InternalRef::OffsetKind::IndexRecord:
     return Ref.getFileOffset();
 
@@ -1576,13 +1522,6 @@ OnDiskContent OnDiskCAS::getContentFromHandle(InternalHandle Handle) const {
 
   InternalRef DirectRef = *Handle.DirectRef;
   switch (DirectRef.getOffsetKind()) {
-  case InternalRef::OffsetKind::String2B: {
-    auto Handle =
-        String2BHandle::get(DataPool.beginData(DirectRef.getFileOffset()));
-    assert(Handle.getString().end()[0] == 0 && "Null termination");
-    return OnDiskContent{None, arrayRefFromStringRef<char>(Handle.getString())};
-  }
-
   case InternalRef::OffsetKind::DataRecord: {
     auto Handle =
         DataRecordHandle::get(DataPool.beginData(DirectRef.getFileOffset()));
