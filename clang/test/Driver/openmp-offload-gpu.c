@@ -355,3 +355,21 @@
 // RUN:    | FileCheck --check-prefix=CHECK-SET-FEATURES %s
 
 // CHECK-SET-FEATURES: clang-offload-packager{{.*}}--image={{.*}}feature=+ptx64
+
+//
+// Check that `-Xarch_host` works for OpenMP offloading.
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -Xarch_host -O3 %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=XARCH-HOST %s
+// XARCH-HOST: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-O3"
+// XARCH-HOST-NOT: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-O3"
+
+//
+// Check that `-Xarch_device` works for OpenMP offloading.
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -Xarch_device -O3 %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=XARCH-DEVICE %s
+// XARCH-DEVICE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-O3"
+// XARCH-DEVICE-NOT: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-O3"
