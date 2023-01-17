@@ -329,7 +329,7 @@ LogicalResult coalescePerfectlyNestedLoops(LoopOpTy op) {
         continue;
       assert(maxPos == start &&
              "expected loop bounds to be known at the start of the band");
-      auto band = llvm::makeMutableArrayRef(loops.data() + start, end - start);
+      auto band = llvm::MutableArrayRef(loops.data() + start, end - start);
       if (succeeded(coalesceLoops(band)))
         result = success();
       break;
