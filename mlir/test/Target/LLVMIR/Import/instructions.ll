@@ -402,11 +402,11 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
 ; CHECK-SAME:  %[[PTR1:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[VAL1:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[VAL2:[a-zA-Z0-9]+]]
-define void @atomic_cmpxchg(i32* %ptr1, i32 %val1, i32 %val2) {
+define void @atomic_cmpxchg(ptr %ptr1, i32 %val1, i32 %val2) {
   ; CHECK:  llvm.cmpxchg %[[PTR1]], %[[VAL1]], %[[VAL2]] seq_cst seq_cst : i32
-  %1 = cmpxchg i32* %ptr1, i32 %val1, i32 %val2 seq_cst seq_cst
+  %1 = cmpxchg ptr %ptr1, i32 %val1, i32 %val2 seq_cst seq_cst
   ; CHECK:  llvm.cmpxchg %[[PTR1]], %[[VAL1]], %[[VAL2]] monotonic seq_cst : i32
-  %2 = cmpxchg i32* %ptr1, i32 %val1, i32 %val2 monotonic seq_cst
+  %2 = cmpxchg ptr %ptr1, i32 %val1, i32 %val2 monotonic seq_cst
   ret void
 }
 
