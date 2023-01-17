@@ -265,9 +265,11 @@ public:
   void replacePointer(Instruction &I, Value *V);
 
 private:
+  bool collectUsersRecursive(Instruction &I);
   void replace(Instruction *I);
   Value *getReplacement(Value *I);
 
+  SmallPtrSet<Instruction *, 32> ValuesToRevisit;
   SmallSetVector<Instruction *, 4> Worklist;
   MapVector<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
@@ -275,15 +277,47 @@ private:
 } // end anonymous namespace
 
 bool PointerReplacer::collectUsers(Instruction &I) {
+  if (!collectUsersRecursive(I))
+    return false;
+
+  // Ensure that all outstanding (indirect) users of I
+  // are inserted into the Worklist. Return false
+  // otherwise.
+  for (auto *Inst : ValuesToRevisit)
+    if (!Worklist.contains(Inst))
+      return false;
+  return true;
+}
+
+bool PointerReplacer::collectUsersRecursive(Instruction &I) {
   for (auto *U : I.users()) {
     auto *Inst = cast<Instruction>(&*U);
     if (auto *Load = dyn_cast<LoadInst>(Inst)) {
       if (Load->isVolatile())
         return false;
       Worklist.insert(Load);
-    } else if (isa<GetElementPtrInst>(Inst) || isa<BitCastInst>(Inst)) {
+    } else if (auto *PHI = dyn_cast<PHINode>(Inst)) {
+      // All incoming values must be instructions for replacability
+      if (any_of(PHI->incoming_values(),
+                 [](Value *V) { return !isa<Instruction>(V); }))
+        return false;
+
+      // If at least one incoming value of the PHI is not in Worklist,
+      // store the PHI for revisiting and skip this iteration of the
+      // loop.
+      if (any_of(PHI->incoming_values(), [this](Value *V) {
+            return !Worklist.contains(cast<Instruction>(V));
+          })) {
+        ValuesToRevisit.insert(Inst);
+        continue;
+      }
+
+      Worklist.insert(PHI);
+      if (!collectUsersRecursive(*PHI))
+        return false;
+    } else if (isa<GetElementPtrInst, BitCastInst>(Inst)) {
       Worklist.insert(Inst);
-      if (!collectUsers(*Inst))
+      if (!collectUsersRecursive(*Inst))
         return false;
     } else if (auto *MI = dyn_cast<MemTransferInst>(Inst)) {
       if (MI->isVolatile())
@@ -318,6 +352,14 @@ void PointerReplacer::replace(Instruction *I) {
     IC.InsertNewInstWith(NewI, *LT);
     IC.replaceInstUsesWith(*LT, NewI);
     WorkMap[LT] = NewI;
+  } else if (auto *PHI = dyn_cast<PHINode>(I)) {
+    Type *NewTy = getReplacement(PHI->getIncomingValue(0))->getType();
+    auto *NewPHI = PHINode::Create(NewTy, PHI->getNumIncomingValues(),
+                                   PHI->getName(), PHI);
+    for (unsigned int I = 0; I < PHI->getNumIncomingValues(); ++I)
+      NewPHI->addIncoming(getReplacement(PHI->getIncomingValue(I)),
+                          PHI->getIncomingBlock(I));
+    WorkMap[PHI] = NewPHI;
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
     auto *V = getReplacement(GEP->getPointerOperand());
     assert(V && "Operand not replaced");
