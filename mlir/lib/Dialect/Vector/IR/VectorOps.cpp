@@ -1632,6 +1632,13 @@ public:
     // folding patterns.
     if (extractResultRank < broadcastSrcRank)
       return failure();
+
+    // Special case if broadcast src is a 0D vector.
+    if (extractResultRank == 0) {
+      assert(broadcastSrcRank == 0 && source.getType().isa<VectorType>());
+      rewriter.replaceOpWithNewOp<vector::ExtractElementOp>(extractOp, source);
+      return success();
+    }
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         extractOp, extractOp.getType(), source);
     return success();
