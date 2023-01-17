@@ -14,7 +14,6 @@
 #include "common.h"
 #include "debug.h"
 #include "error.h"
-#include "interval_map.h"
 #include "wrapper_function_utils.h"
 
 #include <algorithm>
