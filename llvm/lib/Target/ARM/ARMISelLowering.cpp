@@ -7526,10 +7526,10 @@ static bool isTruncMask(ArrayRef<int> M, EVT VT, bool Top, bool SingleSource) {
   //  Top && !SingleSource: <1, 3, 5, 7, 9, 11, 13, 15>
   int Ofs = Top ? 1 : 0;
   int Upper = SingleSource ? 0 : NumElts;
-  for (unsigned i = 0, e = NumElts / 2; i != e; ++i) {
-    if (M[i] >= 0 && M[i] != (int)((i * 2) + Ofs))
+  for (int i = 0, e = NumElts / 2; i != e; ++i) {
+    if (M[i] >= 0 && M[i] != (i * 2) + Ofs)
       return false;
-    if (M[i + e] >= 0 && M[i + e] != (int)((i * 2) + Ofs + Upper))
+    if (M[i + e] >= 0 && M[i + e] != (i * 2) + Ofs + Upper)
       return false;
   }
   return true;
