@@ -1035,14 +1035,19 @@ std::optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
   if (!MI)
     return std::nullopt;
 
-  if (!isBuildVectorOp(MI->getOpcode()))
+  bool isConcatVectorsOp = MI->getOpcode() == TargetOpcode::G_CONCAT_VECTORS;
+  if (!isBuildVectorOp(MI->getOpcode()) && !isConcatVectorsOp)
     return std::nullopt;
 
   std::optional<ValueAndVReg> SplatValAndReg;
   for (MachineOperand &Op : MI->uses()) {
     Register Element = Op.getReg();
+    // If we have a G_CONCAT_VECTOR, we recursively look into the
+    // vectors that we're concatenating to see if they're splats.
     auto ElementValAndReg =
-        getAnyConstantVRegValWithLookThrough(Element, MRI, true, true);
+        isConcatVectorsOp
+            ? getAnyConstantSplat(Element, MRI, AllowUndef)
+            : getAnyConstantVRegValWithLookThrough(Element, MRI, true, true);
 
     // If AllowUndef, treat undef as value that will result in a constant splat.
     if (!ElementValAndReg) {
