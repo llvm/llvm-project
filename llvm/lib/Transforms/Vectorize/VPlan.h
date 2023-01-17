@@ -755,20 +755,6 @@ public:
   }
 };
 
-inline bool VPUser::classof(const VPDef *Def) {
-  return Def->getVPDefID() == VPDef::VPInstructionSC ||
-         Def->getVPDefID() == VPDef::VPWidenSC ||
-         Def->getVPDefID() == VPDef::VPWidenCallSC ||
-         Def->getVPDefID() == VPDef::VPWidenSelectSC ||
-         Def->getVPDefID() == VPDef::VPWidenGEPSC ||
-         Def->getVPDefID() == VPDef::VPBlendSC ||
-         Def->getVPDefID() == VPDef::VPInterleaveSC ||
-         Def->getVPDefID() == VPDef::VPReplicateSC ||
-         Def->getVPDefID() == VPDef::VPReductionSC ||
-         Def->getVPDefID() == VPDef::VPBranchOnMaskSC ||
-         Def->getVPDefID() == VPDef::VPWidenMemoryInstructionSC;
-}
-
 // Helper macro to define common classof implementations for recipes.
 #define VP_CLASSOF_IMPL(VPDefID, VPValueID)                                    \
   static inline bool classof(const VPDef *D) {                                 \
