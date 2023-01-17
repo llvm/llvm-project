@@ -656,9 +656,9 @@ static void normalizeLoop(scf::ForOp loop, scf::ForOp outer, scf::ForOp inner) {
   loop.setStep(loopPieces.step);
 }
 
-void mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
+LogicalResult mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
   if (loops.size() < 2)
-    return;
+    return failure();
 
   scf::ForOp innermost = loops.back();
   scf::ForOp outermost = loops.front();
@@ -710,6 +710,7 @@ void mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
       Block::iterator(second.getOperation()),
       innermost.getBody()->getOperations());
   second.erase();
+  return success();
 }
 
 void mlir::collapseParallelLoops(

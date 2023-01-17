@@ -189,4 +189,31 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
   }];
 }
 
+def LoopCoalesceOp : Op<Transform_Dialect, "loop.coalesce", [
+  FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+  TransformOpInterface, TransformEachOpTrait]> {
+  let summary = "Coalesces the perfect loop nest enclosed by a given loop";
+  let description = [{
+    Given a perfect loop nest identified by the outermost loop,
+    perform loop coalescing in a bottom-up one-by-one manner.
+
+    #### Return modes
+
+    The return handle points to the coalesced loop if coalescing happens, or
+    the given input loop if coalescing does not happen.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat =
+      "$target attr-dict `:` functional-type($target, $transformed)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // SCF_TRANSFORM_OPS
