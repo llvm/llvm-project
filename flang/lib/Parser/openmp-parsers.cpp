@@ -215,6 +215,7 @@ TYPE_PARSER(
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
     "FINAL" >> construct<OmpClause>(construct<OmpClause::Final>(
                    parenthesized(scalarLogicalExpr))) ||
+    "FULL" >> construct<OmpClause>(construct<OmpClause::Full>()) ||
     "FIRSTPRIVATE" >> construct<OmpClause>(construct<OmpClause::Firstprivate>(
                           parenthesized(Parser<OmpObjectList>{}))) ||
     "FROM" >> construct<OmpClause>(construct<OmpClause::From>(
@@ -250,6 +251,8 @@ TYPE_PARSER(
     "NUM_THREADS" >> construct<OmpClause>(construct<OmpClause::NumThreads>(
                          parenthesized(scalarIntExpr))) ||
     "ORDERED" >> construct<OmpClause>(construct<OmpClause::Ordered>(
+                     maybe(parenthesized(scalarIntConstantExpr)))) ||
+    "PARTIAL" >> construct<OmpClause>(construct<OmpClause::Partial>(
                      maybe(parenthesized(scalarIntConstantExpr)))) ||
     "PRIORITY" >> construct<OmpClause>(construct<OmpClause::Priority>(
                       parenthesized(scalarIntExpr))) ||
@@ -337,7 +340,8 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
     "TEAMS DISTRIBUTE SIMD" >>
         pure(llvm::omp::Directive::OMPD_teams_distribute_simd),
     "TEAMS DISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_teams_distribute),
-    "TILE" >> pure(llvm::omp::Directive::OMPD_tile)))))
+    "TILE" >> pure(llvm::omp::Directive::OMPD_tile),
+    "UNROLL" >> pure(llvm::omp::Directive::OMPD_unroll)))))
 
 TYPE_PARSER(sourced(construct<OmpBeginLoopDirective>(
     sourced(Parser<OmpLoopDirective>{}), Parser<OmpClauseList>{})))
