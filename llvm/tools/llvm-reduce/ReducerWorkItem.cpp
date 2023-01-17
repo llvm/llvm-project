@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReducerWorkItem.h"
+#include "TestRunner.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -25,12 +29,15 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <optional>
 
@@ -44,8 +51,10 @@ static cl::opt<std::string> TargetTriple("mtriple",
                                          cl::desc("Set the target triple"),
                                          cl::cat(LLVMReduceOptions));
 
-void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
-                 StringRef ToolName);
+static cl::opt<bool> TmpFilesAsBitcode(
+    "write-tmp-files-as-bitcode",
+    cl::desc("Always write temporary files as bitcode instead of textual IR"),
+    cl::init(false), cl::cat(LLVMReduceOptions));
 
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
@@ -392,137 +401,6 @@ static void initializeTargetInfo() {
   InitializeAllAsmParsers();
 }
 
-std::pair<std::unique_ptr<ReducerWorkItem>, bool>
-parseReducerWorkItem(StringRef ToolName, StringRef Filename, LLVMContext &Ctxt,
-                     std::unique_ptr<TargetMachine> &TM, bool IsMIR) {
-  bool IsBitcode = false;
-  Triple TheTriple;
-
-  auto MMM = std::make_unique<ReducerWorkItem>();
-
-  if (IsMIR) {
-    initializeTargetInfo();
-
-    auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
-    if (std::error_code EC = FileOrErr.getError()) {
-      WithColor::error(errs(), ToolName) << EC.message() << '\n';
-      return {nullptr, false};
-    }
-
-    std::unique_ptr<MIRParser> MParser =
-        createMIRParser(std::move(FileOrErr.get()), Ctxt);
-
-    auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
-                             StringRef OldDLStr) -> std::optional<std::string> {
-      // If we are supposed to override the target triple, do so now.
-      std::string IRTargetTriple = DataLayoutTargetTriple.str();
-      if (!TargetTriple.empty())
-        IRTargetTriple = Triple::normalize(TargetTriple);
-      TheTriple = Triple(IRTargetTriple);
-      if (TheTriple.getTriple().empty())
-        TheTriple.setTriple(sys::getDefaultTargetTriple());
-
-      std::string Error;
-      const Target *TheTarget =
-          TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
-      if (!TheTarget) {
-        WithColor::error(errs(), ToolName) << Error;
-        exit(1);
-      }
-
-      // Hopefully the MIR parsing doesn't depend on any options.
-      TargetOptions Options;
-      std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
-      std::string CPUStr = codegen::getCPUStr();
-      std::string FeaturesStr = codegen::getFeaturesStr();
-      TM = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-          TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
-          codegen::getExplicitCodeModel(), CodeGenOpt::Default));
-      assert(TM && "Could not allocate target machine!");
-
-      return TM->createDataLayout().getStringRepresentation();
-    };
-
-    std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
-    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
-
-    MMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
-    MParser->parseMachineFunctions(*M, *MMM->MMI);
-    MMM->M = std::move(M);
-  } else {
-    SMDiagnostic Err;
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFileOrSTDIN(Filename);
-    if (std::error_code EC = MB.getError()) {
-      WithColor::error(errs(), ToolName) << Filename << ": " << EC.message() << "\n";
-      return {nullptr, false};
-    }
-
-    if (!isBitcode((const unsigned char *)(*MB)->getBufferStart(),
-                  (const unsigned char *)(*MB)->getBufferEnd())) {
-      std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
-      if (!Result) {
-        Err.print(ToolName.data(), errs());
-        return {nullptr, false};
-      }
-      MMM->M = std::move(Result);
-    } else {
-      IsBitcode = true;
-      readBitcode(*MMM, MemoryBufferRef(**MB), Ctxt, ToolName);
-
-      if (MMM->LTOInfo->IsThinLTO && MMM->LTOInfo->EnableSplitLTOUnit)
-       initializeTargetInfo();
-    }
-  }
-  if (verifyReducerWorkItem(*MMM, &errs())) {
-    WithColor::error(errs(), ToolName)
-        << Filename << " - input module is broken!\n";
-    return {nullptr, false};
-  }
-  return {std::move(MMM), IsBitcode};
-}
-
-std::unique_ptr<ReducerWorkItem>
-cloneReducerWorkItem(const ReducerWorkItem &MMM, const TargetMachine *TM) {
-  auto CloneMMM = std::make_unique<ReducerWorkItem>();
-  if (TM) {
-    // We're assuming the Module IR contents are always unchanged by MIR
-    // reductions, and can share it as a constant.
-    CloneMMM->M = MMM.M;
-
-    // MachineModuleInfo contains a lot of other state used during codegen which
-    // we won't be using here, but we should be able to ignore it (although this
-    // is pretty ugly).
-    const LLVMTargetMachine *LLVMTM =
-        static_cast<const LLVMTargetMachine *>(TM);
-    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
-
-    for (const Function &F : MMM.getModule()) {
-      if (auto *MF = MMM.MMI->getMachineFunction(F))
-        CloneMMM->MMI->insertFunction(F, cloneMF(MF, *CloneMMM->MMI));
-    }
-  } else {
-    CloneMMM->M = CloneModule(*MMM.M);
-  }
-  return CloneMMM;
-}
-
-bool verifyReducerWorkItem(const ReducerWorkItem &MMM, raw_fd_ostream *OS) {
-  if (verifyModule(*MMM.M, OS))
-    return true;
-
-  if (!MMM.MMI)
-    return false;
-
-  for (const Function &F : MMM.getModule()) {
-    if (const MachineFunction *MF = MMM.MMI->getMachineFunction(F)) {
-      if (!MF->verify(nullptr, "", /*AbortOnError=*/false))
-        return true;
-    }
-  }
-
-  return false;
-}
-
 void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
   if (MMI) {
     printMIR(ROS, *M);
@@ -534,6 +412,80 @@ void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
     M->print(ROS, /*AssemblyAnnotationWriter=*/nullptr,
              /*ShouldPreserveUseListOrder=*/true);
   }
+}
+
+bool ReducerWorkItem::verify(raw_fd_ostream *OS) const {
+  if (verifyModule(*M, OS))
+    return true;
+
+  if (!MMI)
+    return false;
+
+  for (const Function &F : getModule()) {
+    if (const MachineFunction *MF = MMI->getMachineFunction(F)) {
+      if (!MF->verify(nullptr, "", /*AbortOnError=*/false))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+bool ReducerWorkItem::isReduced(const TestRunner &Test) const {
+  const bool UseBitcode = Test.inputIsBitcode() || TmpFilesAsBitcode;
+
+  SmallString<128> CurrentFilepath;
+
+  // Write ReducerWorkItem to tmp file
+  int FD;
+  std::error_code EC = sys::fs::createTemporaryFile(
+      "llvm-reduce", isMIR() ? "mir" : (UseBitcode ? "bc" : "ll"), FD,
+      CurrentFilepath,
+      UseBitcode && !isMIR() ? sys::fs::OF_None : sys::fs::OF_Text);
+  if (EC) {
+    errs() << "Error making unique filename: " << EC.message() << "!\n";
+    exit(1);
+  }
+
+  ToolOutputFile Out(CurrentFilepath, FD);
+
+  // FIXME: This should be UseBitcode
+  writeOutput(Out.os(), TmpFilesAsBitcode);
+
+  Out.os().close();
+  if (Out.os().has_error()) {
+    errs() << "Error emitting bitcode to file '" << CurrentFilepath
+           << "': " << Out.os().error().message();
+    exit(1);
+  }
+
+  // Current Chunks aren't interesting
+  return Test.run(CurrentFilepath);
+}
+
+std::unique_ptr<ReducerWorkItem>
+ReducerWorkItem::clone(const TargetMachine *TM) const {
+  auto CloneMMM = std::make_unique<ReducerWorkItem>();
+  if (TM) {
+    // We're assuming the Module IR contents are always unchanged by MIR
+    // reductions, and can share it as a constant.
+    CloneMMM->M = M;
+
+    // MachineModuleInfo contains a lot of other state used during codegen which
+    // we won't be using here, but we should be able to ignore it (although this
+    // is pretty ugly).
+    const LLVMTargetMachine *LLVMTM =
+        static_cast<const LLVMTargetMachine *>(TM);
+    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+
+    for (const Function &F : getModule()) {
+      if (auto *MF = MMI->getMachineFunction(F))
+        CloneMMM->MMI->insertFunction(F, cloneMF(MF, *CloneMMM->MMI));
+    }
+  } else {
+    CloneMMM->M = CloneModule(*M);
+  }
+  return CloneMMM;
 }
 
 /// Try to produce some number that indicates a function is getting smaller /
@@ -730,4 +682,148 @@ uint64_t ReducerWorkItem::computeIRComplexityScore() const {
     Score += computeIRComplexityScoreImpl(F);
 
   return Score;
+}
+
+void ReducerWorkItem::writeOutput(raw_ostream &OS, bool EmitBitcode) const {
+  // Requesting bitcode emission with mir is nonsense, so just ignore it.
+  if (EmitBitcode && !isMIR())
+    writeBitcode(OS);
+  else
+    print(OS, /*AnnotationWriter=*/nullptr);
+}
+
+void ReducerWorkItem::readBitcode(MemoryBufferRef Data, LLVMContext &Ctx,
+                                  StringRef ToolName) {
+  Expected<BitcodeFileContents> IF = llvm::getBitcodeFileContents(Data);
+  if (!IF) {
+    WithColor::error(errs(), ToolName) << IF.takeError();
+    exit(1);
+  }
+  BitcodeModule BM = IF->Mods[0];
+  Expected<BitcodeLTOInfo> LI = BM.getLTOInfo();
+  Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(Ctx);
+  if (!LI || !MOrErr) {
+    WithColor::error(errs(), ToolName) << IF.takeError();
+    exit(1);
+  }
+  LTOInfo = std::make_unique<BitcodeLTOInfo>(*LI);
+  M = std::move(MOrErr.get());
+}
+
+void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
+  if (LTOInfo && LTOInfo->IsThinLTO && LTOInfo->EnableSplitLTOUnit) {
+    PassBuilder PB;
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+    ModulePassManager MPM;
+    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr));
+    MPM.run(*M, MAM);
+  } else {
+    std::unique_ptr<ModuleSummaryIndex> Index;
+    if (LTOInfo && LTOInfo->HasSummary) {
+      ProfileSummaryInfo PSI(*M);
+      Index = std::make_unique<ModuleSummaryIndex>(
+          buildModuleSummaryIndex(*M, nullptr, &PSI));
+    }
+    WriteBitcodeToFile(getModule(), OutStream, Index.get());
+  }
+}
+
+std::pair<std::unique_ptr<ReducerWorkItem>, bool>
+llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
+                           LLVMContext &Ctxt,
+                           std::unique_ptr<TargetMachine> &TM, bool IsMIR) {
+  bool IsBitcode = false;
+  Triple TheTriple;
+
+  auto MMM = std::make_unique<ReducerWorkItem>();
+
+  if (IsMIR) {
+    initializeTargetInfo();
+
+    auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
+    if (std::error_code EC = FileOrErr.getError()) {
+      WithColor::error(errs(), ToolName) << EC.message() << '\n';
+      return {nullptr, false};
+    }
+
+    std::unique_ptr<MIRParser> MParser =
+        createMIRParser(std::move(FileOrErr.get()), Ctxt);
+
+    auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
+                             StringRef OldDLStr) -> std::optional<std::string> {
+      // If we are supposed to override the target triple, do so now.
+      std::string IRTargetTriple = DataLayoutTargetTriple.str();
+      if (!TargetTriple.empty())
+        IRTargetTriple = Triple::normalize(TargetTriple);
+      TheTriple = Triple(IRTargetTriple);
+      if (TheTriple.getTriple().empty())
+        TheTriple.setTriple(sys::getDefaultTargetTriple());
+
+      std::string Error;
+      const Target *TheTarget =
+          TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
+      if (!TheTarget) {
+        WithColor::error(errs(), ToolName) << Error;
+        exit(1);
+      }
+
+      // Hopefully the MIR parsing doesn't depend on any options.
+      TargetOptions Options;
+      std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
+      std::string CPUStr = codegen::getCPUStr();
+      std::string FeaturesStr = codegen::getFeaturesStr();
+      TM = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
+          TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
+          codegen::getExplicitCodeModel(), CodeGenOpt::Default));
+      assert(TM && "Could not allocate target machine!");
+
+      return TM->createDataLayout().getStringRepresentation();
+    };
+
+    std::unique_ptr<Module> M = MParser->parseIRModule(SetDataLayout);
+    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
+
+    MMM->MMI = std::make_unique<MachineModuleInfo>(LLVMTM);
+    MParser->parseMachineFunctions(*M, *MMM->MMI);
+    MMM->M = std::move(M);
+  } else {
+    SMDiagnostic Err;
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFileOrSTDIN(Filename);
+    if (std::error_code EC = MB.getError()) {
+      WithColor::error(errs(), ToolName)
+          << Filename << ": " << EC.message() << "\n";
+      return {nullptr, false};
+    }
+
+    if (!isBitcode((const unsigned char *)(*MB)->getBufferStart(),
+                   (const unsigned char *)(*MB)->getBufferEnd())) {
+      std::unique_ptr<Module> Result = parseIRFile(Filename, Err, Ctxt);
+      if (!Result) {
+        Err.print(ToolName.data(), errs());
+        return {nullptr, false};
+      }
+      MMM->M = std::move(Result);
+    } else {
+      IsBitcode = true;
+      MMM->readBitcode(MemoryBufferRef(**MB), Ctxt, ToolName);
+
+      if (MMM->LTOInfo->IsThinLTO && MMM->LTOInfo->EnableSplitLTOUnit)
+        initializeTargetInfo();
+    }
+  }
+  if (MMM->verify(&errs())) {
+    WithColor::error(errs(), ToolName)
+        << Filename << " - input module is broken!\n";
+    return {nullptr, false};
+  }
+  return {std::move(MMM), IsBitcode};
 }

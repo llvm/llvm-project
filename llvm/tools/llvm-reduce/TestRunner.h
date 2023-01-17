@@ -38,7 +38,10 @@ public:
   /// Returns the most reduced version of the original testcase
   ReducerWorkItem &getProgram() const { return *Program; }
 
-  void setProgram(std::unique_ptr<ReducerWorkItem> P);
+  void setProgram(std::unique_ptr<ReducerWorkItem> &&P) {
+    assert(P && "Setting null program?");
+    Program = std::move(P);
+  }
 
   const TargetMachine *getTargetMachine() const { return TM.get(); }
 
