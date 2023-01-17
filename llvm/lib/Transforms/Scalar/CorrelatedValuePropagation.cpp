@@ -694,8 +694,7 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
 
 enum class Domain { NonNegative, NonPositive, Unknown };
 
-static Domain getDomain(const Use &U, LazyValueInfo *LVI) {
-  ConstantRange CR = LVI->getConstantRangeAtUse(U);
+static Domain getDomain(const ConstantRange &CR) {
   if (CR.isAllNonNegative())
     return Domain::NonNegative;
   if (CR.icmp(ICmpInst::ICMP_SLE, APInt::getNullValue(CR.getBitWidth())))
@@ -705,11 +704,11 @@ static Domain getDomain(const Use &U, LazyValueInfo *LVI) {
 
 /// Try to shrink a sdiv/srem's width down to the smallest power of two that's
 /// sufficient to contain its operands.
-static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
+                             const ConstantRange &RCR) {
   assert(Instr->getOpcode() == Instruction::SDiv ||
          Instr->getOpcode() == Instruction::SRem);
-  if (Instr->getType()->isVectorTy())
-    return false;
+  assert(!Instr->getType()->isVectorTy());
 
   // Find the smallest power of two bitwidth that's sufficient to hold Instr's
   // operands.
@@ -718,16 +717,13 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
   std::array<std::optional<ConstantRange>, 2> CRs;
-  unsigned MinSignedBits = 0;
-  for (auto I : zip(Instr->operands(), CRs)) {
-    std::get<1>(I) = LVI->getConstantRangeAtUse(std::get<0>(I));
-    MinSignedBits = std::max(std::get<1>(I)->getMinSignedBits(), MinSignedBits);
-  }
+  unsigned MinSignedBits =
+      std::max(LCR.getMinSignedBits(), RCR.getMinSignedBits());
 
   // sdiv/srem is UB if divisor is -1 and divident is INT_MIN, so unless we can
   // prove that such a combination is impossible, we need to bump the bitwidth.
-  if (CRs[1]->contains(APInt::getAllOnes(OrigWidth)) &&
-      CRs[0]->contains(APInt::getSignedMinValue(MinSignedBits).sext(OrigWidth)))
+  if (RCR.contains(APInt::getAllOnes(OrigWidth)) &&
+      LCR.contains(APInt::getSignedMinValue(MinSignedBits).sext(OrigWidth)))
     ++MinSignedBits;
 
   // Don't shrink below 8 bits wide.
@@ -870,13 +866,10 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   return narrowUDivOrURem(Instr, XCR, YCR);
 }
 
-static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
+static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
+                        const ConstantRange &RCR, LazyValueInfo *LVI) {
   assert(SDI->getOpcode() == Instruction::SRem);
-  if (SDI->getType()->isVectorTy())
-    return false;
-
-  ConstantRange LCR = LVI->getConstantRangeAtUse(SDI->getOperandUse(0));
-  ConstantRange RCR = LVI->getConstantRangeAtUse(SDI->getOperandUse(1));
+  assert(!SDI->getType()->isVectorTy());
 
   if (LCR.abs().icmp(CmpInst::ICMP_ULT, RCR.abs())) {
     SDI->replaceAllUsesWith(SDI->getOperand(0));
@@ -888,14 +881,10 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
     Value *V;
     Domain D;
   };
-  std::array<Operand, 2> Ops;
-
-  for (const auto &[Op, U] : zip(Ops, SDI->operands())) {
-    Op.V = U;
-    Op.D = getDomain(U, LVI);
-    if (Op.D == Domain::Unknown)
-      return false;
-  }
+  std::array<Operand, 2> Ops = {{{SDI->getOperand(0), getDomain(LCR)},
+                                 {SDI->getOperand(1), getDomain(RCR)}}};
+  if (Ops[0].D == Domain::Unknown || Ops[1].D == Domain::Unknown)
+    return false;
 
   // We know domains of both of the operands!
   ++NumSRems;
@@ -936,23 +925,19 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
 /// If this is the case, replace the SDiv with a UDiv. Even for local
 /// conditions, this can sometimes prove conditions instcombine can't by
 /// exploiting range information.
-static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
+static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
+                        const ConstantRange &RCR, LazyValueInfo *LVI) {
   assert(SDI->getOpcode() == Instruction::SDiv);
-  if (SDI->getType()->isVectorTy())
-    return false;
+  assert(!SDI->getType()->isVectorTy());
 
   struct Operand {
     Value *V;
     Domain D;
   };
-  std::array<Operand, 2> Ops;
-
-  for (const auto &[Op, U] : zip(Ops, SDI->operands())) {
-    Op.V = U;
-    Op.D = getDomain(U, LVI);
-    if (Op.D == Domain::Unknown)
-      return false;
-  }
+  std::array<Operand, 2> Ops = {{{SDI->getOperand(0), getDomain(LCR)},
+                                 {SDI->getOperand(1), getDomain(RCR)}}};
+  if (Ops[0].D == Domain::Unknown || Ops[1].D == Domain::Unknown)
+    return false;
 
   // We know domains of both of the operands!
   ++NumSDivs;
@@ -993,15 +978,18 @@ static bool processSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   if (Instr->getType()->isVectorTy())
     return false;
 
+  ConstantRange LCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0));
+  ConstantRange RCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1));
   if (Instr->getOpcode() == Instruction::SDiv)
-    if (processSDiv(Instr, LVI))
+    if (processSDiv(Instr, LCR, RCR, LVI))
       return true;
 
-  if (Instr->getOpcode() == Instruction::SRem)
-    if (processSRem(Instr, LVI))
+  if (Instr->getOpcode() == Instruction::SRem) {
+    if (processSRem(Instr, LCR, RCR, LVI))
       return true;
+  }
 
-  return narrowSDivOrSRem(Instr, LVI);
+  return narrowSDivOrSRem(Instr, LCR, RCR);
 }
 
 static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
