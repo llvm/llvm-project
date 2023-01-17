@@ -13,7 +13,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @ppc_fp128(ppc_fp128* %A, ppc_fp128 %b) {
+define void @ppc_fp128(ptr %A, ppc_fp128 %b) {
 bb:
   br label %bb1
 
@@ -23,10 +23,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds ppc_fp128, ppc_fp128* %A, i64 %i.0
-  %tmp3 = load ppc_fp128, ppc_fp128* %tmp, align 4
+  %tmp = getelementptr inbounds ppc_fp128, ptr %A, i64 %i.0
+  %tmp3 = load ppc_fp128, ptr %tmp, align 4
   %tmp4 = fadd ppc_fp128 %tmp3, %b
-  store ppc_fp128 %tmp4, ppc_fp128* %tmp, align 4
+  store ppc_fp128 %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2

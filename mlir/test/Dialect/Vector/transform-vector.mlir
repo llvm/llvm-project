@@ -22,5 +22,5 @@ transform.sequence failures(propagate) {
   transform.bufferization.one_shot_bufferize %module_op
 
   %func = transform.structured.match ops{["func.func"]} in %module_op
-  transform.vector.lower_vectors %func { multireduction_lowering = "innerreduce"}
+  transform.vector.lower_vectors %func multireduction_lowering = "innerreduction"
 }

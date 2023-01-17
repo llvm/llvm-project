@@ -70,6 +70,14 @@ let TargetPrefix = "x86" in {
                                      [ImmArg<ArgIndex<1>>]>;
   def int_x86_atomic_btr : Intrinsic<[llvm_anyint_ty], [llvm_ptr_ty, llvm_i8_ty],
                                      [ImmArg<ArgIndex<1>>]>;
+  def int_x86_atomic_bts_rm  : Intrinsic<[llvm_i8_ty], [llvm_ptr_ty, llvm_anyint_ty],
+                                         []>;
+  def int_x86_atomic_btc_rm  : Intrinsic<[llvm_i8_ty], [llvm_ptr_ty, llvm_anyint_ty],
+                                         []>;
+  def int_x86_atomic_btr_rm  : Intrinsic<[llvm_i8_ty], [llvm_ptr_ty, llvm_anyint_ty],
+                                         []>;
+
+
 }
 
 // Lock binary arith with CC.

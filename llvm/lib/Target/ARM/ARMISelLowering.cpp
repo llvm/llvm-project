@@ -7526,10 +7526,10 @@ static bool isTruncMask(ArrayRef<int> M, EVT VT, bool Top, bool SingleSource) {
   //  Top && !SingleSource: <1, 3, 5, 7, 9, 11, 13, 15>
   int Ofs = Top ? 1 : 0;
   int Upper = SingleSource ? 0 : NumElts;
-  for (unsigned i = 0, e = NumElts / 2; i != e; ++i) {
-    if (M[i] >= 0 && M[i] != (int)((i * 2) + Ofs))
+  for (int i = 0, e = NumElts / 2; i != e; ++i) {
+    if (M[i] >= 0 && M[i] != (i * 2) + Ofs)
       return false;
-    if (M[i + e] >= 0 && M[i + e] != (int)((i * 2) + Ofs + Upper))
+    if (M[i + e] >= 0 && M[i + e] != (i * 2) + Ofs + Upper)
       return false;
   }
   return true;
@@ -8554,6 +8554,7 @@ static SDValue LowerVECTOR_SHUFFLE_i1(SDValue Op, SelectionDAG &DAG,
          "No support for vector shuffle of boolean predicates");
 
   SDValue V1 = Op.getOperand(0);
+  SDValue V2 = Op.getOperand(1);
   SDLoc dl(Op);
   if (isReverseMask(ShuffleMask, VT)) {
     SDValue cast = DAG.getNode(ARMISD::PREDICATE_CAST, dl, MVT::i32, V1);
@@ -8571,12 +8572,16 @@ static SDValue LowerVECTOR_SHUFFLE_i1(SDValue Op, SelectionDAG &DAG,
   // many cases the generated code might be even better than scalar code
   // operating on bits. Just imagine trying to shuffle 8 arbitrary 2-bit
   // fields in a register into 8 other arbitrary 2-bit fields!
-  SDValue PredAsVector = PromoteMVEPredVector(dl, V1, VT, DAG);
-  EVT NewVT = PredAsVector.getValueType();
+  SDValue PredAsVector1 = PromoteMVEPredVector(dl, V1, VT, DAG);
+  EVT NewVT = PredAsVector1.getValueType();
+  SDValue PredAsVector2 = V2.isUndef() ? DAG.getUNDEF(NewVT)
+                                       : PromoteMVEPredVector(dl, V2, VT, DAG);
+  assert(PredAsVector2.getValueType() == NewVT &&
+         "Expected identical vector type in expanded i1 shuffle!");
 
   // Do the shuffle!
-  SDValue Shuffled = DAG.getVectorShuffle(NewVT, dl, PredAsVector,
-                                          DAG.getUNDEF(NewVT), ShuffleMask);
+  SDValue Shuffled = DAG.getVectorShuffle(NewVT, dl, PredAsVector1,
+                                          PredAsVector2, ShuffleMask);
 
   // Now return the result of comparing the shuffled vector with zero,
   // which will generate a real predicate, i.e. v4i1, v8i1 or v16i1. For a v2i1

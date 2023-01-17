@@ -452,6 +452,8 @@ Improvements to Clang's diagnostics
 - Add ``-Wreturn-local-addr``, a GCC alias for ``-Wreturn-stack-address``.
 - Clang now suppresses ``-Wlogical-op-parentheses`` on ``(x && a || b)`` and ``(a || b && x)``
   only when ``x`` is a string literal.
+- Clang will now reject the GNU extension address of label in coroutines explicitly.
+  This fixes `Issue 56436 <https://github.com/llvm/llvm-project/issues/56436>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -799,6 +801,19 @@ CUDA Support in Clang
 
 - Clang now supports CUDA SDK up to 11.8
 - Added support for targeting sm_{87,89,90} GPUs.
+
+LoongArch Support in Clang
+--------------------------
+- Clang now supports LoongArch. Along with the backend, clang is able to build a
+  large corpus of Linux applications. Test-suite 100% pass.
+- Support basic option ``-march=`` which is used to select the target
+  architecture, i.e. the basic set of ISA modules to be enabled. Possible values
+  are ``loongarch64`` and ``la464``.
+- Support basic option ``-mabi=`` which is used to select the base ABI type.
+  Possible values are ``lp64d``, ``lp64f``, ``lp64s``, ``ilp32d``, ``ilp32f``
+  and ``ilp32s``.
+- Support extended options: ``-msoft-float``, ``-msingle-float``, ``-mdouble-float`` and ``mfpu=``.
+  See `LoongArch toolchain conventions <https://loongson.github.io/LoongArch-Documentation/LoongArch-toolchain-conventions-EN.html>`_.
 
 RISC-V Support in Clang
 -----------------------

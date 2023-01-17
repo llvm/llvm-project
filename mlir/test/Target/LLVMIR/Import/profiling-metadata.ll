@@ -54,11 +54,11 @@ declare void @foo()
 declare i32 @__gxx_personality_v0(...)
 
 ; CHECK-LABEL: @invoke_branch_weights
-define i32 @invoke_branch_weights() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @invoke_branch_weights() personality ptr @__gxx_personality_v0 {
   ; CHECK: llvm.invoke @foo() to ^bb2 unwind ^bb1 {branch_weights = dense<[42, 99]> : vector<2xi32>} : () -> ()
   invoke void @foo() to label %bb2 unwind label %bb1, !prof !0
 bb1:
-  %1 = landingpad { i8*, i32 } cleanup
+  %1 = landingpad { ptr, i32 } cleanup
   br label %bb2
 bb2:
   ret i32 1

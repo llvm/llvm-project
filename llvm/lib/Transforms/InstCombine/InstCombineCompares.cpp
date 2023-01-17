@@ -4986,7 +4986,7 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
   return foldICmpWithZextOrSext(ICmp);
 }
 
-static bool isNeutralValue(Instruction::BinaryOps BinaryOp, Value *RHS) {
+static bool isNeutralValue(Instruction::BinaryOps BinaryOp, Value *RHS, bool IsSigned) {
   switch (BinaryOp) {
     default:
       llvm_unreachable("Unsupported binary op");
@@ -4994,7 +4994,8 @@ static bool isNeutralValue(Instruction::BinaryOps BinaryOp, Value *RHS) {
     case Instruction::Sub:
       return match(RHS, m_Zero());
     case Instruction::Mul:
-      return match(RHS, m_One());
+      return !(RHS->getType()->isIntOrIntVectorTy(1) && IsSigned) &&
+             match(RHS, m_One());
   }
 }
 
@@ -5041,7 +5042,7 @@ bool InstCombinerImpl::OptimizeOverflowCheck(Instruction::BinaryOps BinaryOp,
   if (auto *LHSTy = dyn_cast<VectorType>(LHS->getType()))
     OverflowTy = VectorType::get(OverflowTy, LHSTy->getElementCount());
 
-  if (isNeutralValue(BinaryOp, RHS)) {
+  if (isNeutralValue(BinaryOp, RHS, IsSigned)) {
     Result = LHS;
     Overflow = ConstantInt::getFalse(OverflowTy);
     return true;

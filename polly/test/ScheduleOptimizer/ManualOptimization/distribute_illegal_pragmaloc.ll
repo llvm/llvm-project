@@ -13,10 +13,10 @@ source_filename = "distribute_illegal.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local void @foo(double* %A, double* %B) #0 !dbg !7 {
+define dso_local void @foo(ptr %A, ptr %B) #0 !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata double* %A, metadata !13, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.value(metadata double* %B, metadata !14, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %A, metadata !13, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata ptr %B, metadata !14, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.value(metadata i32 1, metadata !15, metadata !DIExpression()), !dbg !19
   br label %for.cond, !dbg !20
 
@@ -29,16 +29,16 @@ for.cond:
 for.body:
   %conv = sitofp i32 %i.0 to double, !dbg !24
   %idxprom = sext i32 %i.0 to i64, !dbg !26
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %idxprom, !dbg !26
-  store double %conv, double* %arrayidx, align 8, !dbg !27, !tbaa !28
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %idxprom, !dbg !26
+  store double %conv, ptr %arrayidx, align 8, !dbg !27, !tbaa !28
 
   %add = add nsw i32 %i.0, 1, !dbg !32
   %idxprom1 = sext i32 %add to i64, !dbg !33
-  %arrayidx2 = getelementptr inbounds double, double* %A, i64 %idxprom1, !dbg !33
-  %0 = load double, double* %arrayidx2, align 8, !dbg !33, !tbaa !28
+  %arrayidx2 = getelementptr inbounds double, ptr %A, i64 %idxprom1, !dbg !33
+  %0 = load double, ptr %arrayidx2, align 8, !dbg !33, !tbaa !28
   %idxprom3 = sext i32 %i.0 to i64, !dbg !34
-  %arrayidx4 = getelementptr inbounds double, double* %B, i64 %idxprom3, !dbg !34
-  store double %0, double* %arrayidx4, align 8, !dbg !35, !tbaa !28
+  %arrayidx4 = getelementptr inbounds double, ptr %B, i64 %idxprom3, !dbg !34
+  store double %0, ptr %arrayidx4, align 8, !dbg !35, !tbaa !28
 
   %inc = add nsw i32 %i.0, 1, !dbg !36
   call void @llvm.dbg.value(metadata i32 %inc, metadata !15, metadata !DIExpression()), !dbg !19
@@ -50,9 +50,9 @@ for.end:
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 

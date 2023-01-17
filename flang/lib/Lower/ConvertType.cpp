@@ -409,6 +409,15 @@ struct TypeBuilderImpl {
   Fortran::lower::LenParameterTy getCharacterLength(const A &expr) {
     return fir::SequenceType::getUnknownExtent();
   }
+
+  template <typename T>
+  Fortran::lower::LenParameterTy
+  getCharacterLength(const Fortran::evaluate::FunctionRef<T> &funcRef) {
+    if (auto constantLen = toInt64(funcRef.LEN()))
+      return *constantLen;
+    return fir::SequenceType::getUnknownExtent();
+  }
+
   Fortran::lower::LenParameterTy
   getCharacterLength(const Fortran::lower::SomeExpr &expr) {
     // Do not use dynamic type length here. We would miss constant

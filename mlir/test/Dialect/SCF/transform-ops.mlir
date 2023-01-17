@@ -84,31 +84,6 @@ transform.sequence failures(propagate) {
 
 // -----
 
-func.func private @cond() -> i1
-func.func private @body()
-
-func.func @loop_outline_op_multi_region() {
-  // expected-note @below {{target op}}
-  scf.while : () -> () {
-    %0 = func.call @cond() : () -> i1
-    scf.condition(%0)
-  } do {
-  ^bb0:
-    func.call @body() : () -> ()
-    scf.yield
-  }
-  return
-}
-
-transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["scf.while"]} in %arg1
-  // expected-error @below {{failed to outline}}
-  transform.loop.outline %0 {func_name = "foo"} : (!pdl.operation) -> !pdl.operation
-}
-
-// -----
-
 // CHECK-LABEL: @loop_peel_op
 func.func @loop_peel_op() {
   // CHECK: %[[C0:.+]] = arith.constant 0

@@ -67,9 +67,19 @@ def OMPC_Private : Clause<"private"> {
   let clangClass = "OMPPrivateClause";
   let flangClass = "OmpObjectList";
 }
-def OMPC_Sizes: Clause<"sizes"> { let clangClass = "OMPSizesClause"; }
-def OMPC_Full: Clause<"full"> { let clangClass = "OMPFullClause"; }
-def OMPC_Partial: Clause<"partial"> { let clangClass = "OMPPartialClause"; }
+def OMPC_Sizes: Clause<"sizes"> { 
+  let clangClass = "OMPSizesClause"; 
+  let flangClass = "ScalarIntExpr";
+  let isValueList = true;
+  }
+def OMPC_Full: Clause<"full"> { 
+  let clangClass = "OMPFullClause"; 
+}
+def OMPC_Partial: Clause<"partial"> { 
+  let clangClass = "OMPPartialClause";
+  let flangClass = "ScalarIntConstantExpr"; 
+  let isValueOptional = true;
+ }
 def OMPC_FirstPrivate : Clause<"firstprivate"> {
   let clangClass = "OMPFirstprivateClause";
   let flangClass = "OmpObjectList";
@@ -789,12 +799,14 @@ def OMP_TargetParallelDo : Directive<"target parallel do"> {
 }
 def OMP_TargetUpdate : Directive<"target update"> {
   let allowedClauses = [
-    VersionedClause<OMPC_If>,
-    VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_To>,
     VersionedClause<OMPC_From>,
-    VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Depend>
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_NoWait>
   ];
 }
 def OMP_ParallelFor : Directive<"parallel for"> {

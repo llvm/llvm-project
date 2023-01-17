@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @compdecomp() nounwind {
 entry:
   %max = alloca i64
-  %i = load i64, i64* undef
+  %i = load i64, ptr undef
   br label %bb37
 
 bb37:                                             ; preds = %bb36, %bb28
@@ -12,7 +12,7 @@ bb37:                                             ; preds = %bb36, %bb28
   br i1 %tmp, label %bb38, label %bb39
 
 bb38:                                             ; preds = %bb37
-  store i64 %i, i64* %max
+  store i64 %i, ptr %max
   br label %bb39
 
 bb39:                                             ; preds = %bb38, %bb37

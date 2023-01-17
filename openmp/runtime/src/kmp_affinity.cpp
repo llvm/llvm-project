@@ -4053,6 +4053,107 @@ static int __kmp_affinity_max_proc_per_core(int nprocs, int bottom_level,
 
 static int *procarr = NULL;
 static int __kmp_aff_depth = 0;
+static int *__kmp_osid_to_hwthread_map = NULL;
+
+static void __kmp_affinity_get_mask_topology_info(const kmp_affin_mask_t *mask,
+                                                  kmp_affinity_ids_t &ids,
+                                                  kmp_affinity_attrs_t &attrs) {
+  if (!KMP_AFFINITY_CAPABLE())
+    return;
+
+  // Initiailze ids and attrs thread data
+  for (int i = 0; i < KMP_HW_LAST; ++i)
+    ids[i] = kmp_hw_thread_t::UNKNOWN_ID;
+  attrs = KMP_AFFINITY_ATTRS_UNKNOWN;
+
+  // Iterate through each os id within the mask and determine
+  // the topology id and attribute information
+  int cpu;
+  int depth = __kmp_topology->get_depth();
+  KMP_CPU_SET_ITERATE(cpu, mask) {
+    int osid_idx = __kmp_osid_to_hwthread_map[cpu];
+    const kmp_hw_thread_t &hw_thread = __kmp_topology->at(osid_idx);
+    for (int level = 0; level < depth; ++level) {
+      kmp_hw_t type = __kmp_topology->get_type(level);
+      int id = hw_thread.sub_ids[level];
+      if (ids[type] == kmp_hw_thread_t::UNKNOWN_ID || ids[type] == id) {
+        ids[type] = id;
+      } else {
+        // This mask spans across multiple topology units, set it as such
+        // and mark every level below as such as well.
+        ids[type] = kmp_hw_thread_t::MULTIPLE_ID;
+        for (; level < depth; ++level) {
+          kmp_hw_t type = __kmp_topology->get_type(level);
+          ids[type] = kmp_hw_thread_t::MULTIPLE_ID;
+        }
+      }
+    }
+    if (!attrs.valid) {
+      attrs.core_type = hw_thread.attrs.get_core_type();
+      attrs.core_eff = hw_thread.attrs.get_core_eff();
+      attrs.valid = 1;
+    } else {
+      // This mask spans across multiple attributes, set it as such
+      if (attrs.core_type != hw_thread.attrs.get_core_type())
+        attrs.core_type = KMP_HW_CORE_TYPE_UNKNOWN;
+      if (attrs.core_eff != hw_thread.attrs.get_core_eff())
+        attrs.core_eff = kmp_hw_attr_t::UNKNOWN_CORE_EFF;
+    }
+  }
+}
+
+static void __kmp_affinity_get_thread_topology_info(kmp_info_t *th) {
+  if (!KMP_AFFINITY_CAPABLE())
+    return;
+  const kmp_affin_mask_t *mask = th->th.th_affin_mask;
+  kmp_affinity_ids_t &ids = th->th.th_topology_ids;
+  kmp_affinity_attrs_t &attrs = th->th.th_topology_attrs;
+  __kmp_affinity_get_mask_topology_info(mask, ids, attrs);
+}
+
+// Assign the topology information to each place in the place list
+// A thread can then grab not only its affinity mask, but the topology
+// information associated with that mask. e.g., Which socket is a thread on
+static void __kmp_affinity_get_topology_info(kmp_affinity_t &affinity) {
+  if (!KMP_AFFINITY_CAPABLE())
+    return;
+  if (affinity.type != affinity_none) {
+    KMP_ASSERT(affinity.num_os_id_masks);
+    KMP_ASSERT(affinity.os_id_masks);
+  }
+  KMP_ASSERT(affinity.num_masks);
+  KMP_ASSERT(affinity.masks);
+  KMP_ASSERT(__kmp_affin_fullMask);
+
+  int max_cpu = __kmp_affin_fullMask->get_max_cpu();
+  int num_hw_threads = __kmp_topology->get_num_hw_threads();
+
+  // Allocate thread topology information
+  if (!affinity.ids) {
+    affinity.ids = (kmp_affinity_ids_t *)__kmp_allocate(
+        sizeof(kmp_affinity_ids_t) * affinity.num_masks);
+  }
+  if (!affinity.attrs) {
+    affinity.attrs = (kmp_affinity_attrs_t *)__kmp_allocate(
+        sizeof(kmp_affinity_attrs_t) * affinity.num_masks);
+  }
+  if (!__kmp_osid_to_hwthread_map) {
+    // Want the +1 because max_cpu should be valid index into map
+    __kmp_osid_to_hwthread_map =
+        (int *)__kmp_allocate(sizeof(int) * (max_cpu + 1));
+  }
+
+  // Create the OS proc to hardware thread map
+  for (int hw_thread = 0; hw_thread < num_hw_threads; ++hw_thread)
+    __kmp_osid_to_hwthread_map[__kmp_topology->at(hw_thread).os_id] = hw_thread;
+
+  for (unsigned i = 0; i < affinity.num_masks; ++i) {
+    kmp_affinity_ids_t &ids = affinity.ids[i];
+    kmp_affinity_attrs_t &attrs = affinity.attrs[i];
+    kmp_affin_mask_t *mask = KMP_CPU_INDEX(affinity.masks, i);
+    __kmp_affinity_get_mask_topology_info(mask, ids, attrs);
+  }
+}
 
 // Create a one element mask array (set of places) which only contains the
 // initial process's affinity mask
@@ -4063,6 +4164,7 @@ static void __kmp_create_affinity_none_places(kmp_affinity_t &affinity) {
   KMP_CPU_ALLOC_ARRAY(affinity.masks, affinity.num_masks);
   kmp_affin_mask_t *dest = KMP_CPU_INDEX(affinity.masks, 0);
   KMP_CPU_COPY(dest, __kmp_affin_fullMask);
+  __kmp_affinity_get_topology_info(affinity);
 }
 
 static void __kmp_aux_affinity_initialize_masks(kmp_affinity_t &affinity) {
@@ -4432,6 +4534,7 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
       if ((nproc < 2) || (nproc < __kmp_avail_proc)) {
         KMP_AFF_WARNING(affinity, AffBalancedNotAvail, env_var);
         affinity.type = affinity_none;
+        __kmp_create_affinity_none_places(affinity);
         affinity.flags.initialized = TRUE;
         return;
       }
@@ -4508,6 +4611,7 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
   default:
     KMP_ASSERT2(0, "Unexpected affinity setting");
   }
+  __kmp_affinity_get_topology_info(affinity);
   affinity.flags.initialized = TRUE;
 }
 
@@ -4538,6 +4642,10 @@ void __kmp_affinity_uninitialize(void) {
       KMP_CPU_FREE_ARRAY(affinity->os_id_masks, affinity->num_os_id_masks);
     if (affinity->proclist != NULL)
       __kmp_free(affinity->proclist);
+    if (affinity->ids != NULL)
+      __kmp_free(affinity->ids);
+    if (affinity->attrs != NULL)
+      __kmp_free(affinity->attrs);
     *affinity = KMP_AFFINITY_INIT(affinity->env_var);
   }
   if (__kmp_affin_origMask != NULL) {
@@ -4551,6 +4659,10 @@ void __kmp_affinity_uninitialize(void) {
   if (procarr != NULL) {
     __kmp_free(procarr);
     procarr = NULL;
+  }
+  if (__kmp_osid_to_hwthread_map) {
+    __kmp_free(__kmp_osid_to_hwthread_map);
+    __kmp_osid_to_hwthread_map = NULL;
   }
 #if KMP_USE_HWLOC
   if (__kmp_hwloc_topology != NULL) {
@@ -4584,12 +4696,21 @@ static void __kmp_select_mask_by_gtid(int gtid, const kmp_affinity_t *affinity,
   *mask = KMP_CPU_INDEX(affinity->masks, *place);
 }
 
+// This function initializes the per-thread data concerning affinity including
+// the mask and topology information
 void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
+
+  kmp_info_t *th = (kmp_info_t *)TCR_SYNC_PTR(__kmp_threads[gtid]);
+
+  // Set the thread topology information to default of unknown
+  for (int id = 0; id < KMP_HW_LAST; ++id)
+    th->th.th_topology_ids[id] = kmp_hw_thread_t::UNKNOWN_ID;
+  th->th.th_topology_attrs = KMP_AFFINITY_ATTRS_UNKNOWN;
+
   if (!KMP_AFFINITY_CAPABLE()) {
     return;
   }
 
-  kmp_info_t *th = (kmp_info_t *)TCR_SYNC_PTR(__kmp_threads[gtid]);
   if (th->th.th_affin_mask == NULL) {
     KMP_CPU_ALLOC(th->th.th_affin_mask);
   } else {
@@ -4653,6 +4774,11 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
     // set all threads' place-partition-var to the entire place list
     th->th.th_first_place = 0;
     th->th.th_last_place = affinity->num_masks - 1;
+  }
+  // Copy topology information associated with the place
+  if (i >= 0) {
+    th->th.th_topology_ids = __kmp_affinity.ids[i];
+    th->th.th_topology_attrs = __kmp_affinity.attrs[i];
   }
 
   if (i == KMP_PLACE_ALL) {
@@ -4718,6 +4844,9 @@ void __kmp_affinity_set_place(int gtid) {
       KMP_CPU_INDEX(__kmp_affinity.masks, th->th.th_new_place);
   KMP_CPU_COPY(th->th.th_affin_mask, mask);
   th->th.th_current_place = th->th.th_new_place;
+  // Copy topology information associated with the place
+  th->th.th_topology_ids = __kmp_affinity.ids[th->th.th_new_place];
+  th->th.th_topology_attrs = __kmp_affinity.attrs[th->th.th_new_place];
 
   if (__kmp_affinity.flags.verbose) {
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
@@ -5037,6 +5166,7 @@ void __kmp_balanced_affinity(kmp_info_t *th, int nthreads) {
       KMP_INFORM(BoundToOSProcSet, env_var, (kmp_int32)getpid(), __kmp_gettid(),
                  tid, buf);
     }
+    __kmp_affinity_get_thread_topology_info(th);
     __kmp_set_system_affinity(mask, TRUE);
   } else { // Non-uniform topology
 
@@ -5203,6 +5333,7 @@ void __kmp_balanced_affinity(kmp_info_t *th, int nthreads) {
       KMP_INFORM(BoundToOSProcSet, env_var, (kmp_int32)getpid(), __kmp_gettid(),
                  tid, buf);
     }
+    __kmp_affinity_get_thread_topology_info(th);
     __kmp_set_system_affinity(mask, TRUE);
   }
 }

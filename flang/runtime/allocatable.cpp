@@ -61,6 +61,10 @@ void RTNAME(AllocatableSetDerivedLength)(
 
 void RTNAME(AllocatableApplyMold)(
     Descriptor &descriptor, const Descriptor &mold) {
+  if (descriptor.IsAllocated()) {
+    // 9.7.1.3 Return so the error can be emitted by AllocatableAllocate.
+    return;
+  }
   descriptor = mold;
   descriptor.set_base_addr(nullptr);
   descriptor.raw().attribute = CFI_attribute_allocatable;

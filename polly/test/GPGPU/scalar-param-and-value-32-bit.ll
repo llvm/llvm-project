@@ -11,9 +11,9 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; CHECK: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_A, i32 %n)
+; CHECK: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_0(ptr addrspace(1) %MemRef_A, i32 %n)
 
-define void @foo(float* %A, i32 %n) {
+define void @foo(ptr %A, i32 %n) {
 bb:
   br label %bb1
 
@@ -26,10 +26,10 @@ bb1:                                              ; preds = %bb9, %bb
 bb3:                                              ; preds = %bb1
   %tmp4 = sext i32 %n to i64
   %tmp5 = add nsw i64 %j.0, %tmp4
-  %tmp6 = getelementptr inbounds float, float* %A, i64 %tmp5
-  %tmp7 = load float, float* %tmp6, align 4
+  %tmp6 = getelementptr inbounds float, ptr %A, i64 %tmp5
+  %tmp7 = load float, ptr %tmp6, align 4
   %tmp8 = fadd float %tmp7, 4.200000e+01
-  store float %tmp8, float* %tmp6, align 4
+  store float %tmp8, ptr %tmp6, align 4
   br label %bb9
 
 bb9:                                              ; preds = %bb3

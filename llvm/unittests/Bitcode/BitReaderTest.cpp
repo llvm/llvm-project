@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -253,6 +255,208 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionAfter) {
   EXPECT_FALSE(M->getFunction("func")->empty());
   EXPECT_TRUE(M->getFunction("other")->empty());
   EXPECT_FALSE(verifyModule(*M, &dbgs()));
+}
+
+// Helper function to convert type metadata to a string for testing
+static std::string mdToString(Metadata *MD) {
+  std::string S;
+  if (auto *VMD = dyn_cast<ValueAsMetadata>(MD)) {
+    if (VMD->getType()->isPointerTy()) {
+      S += "ptr";
+      return S;
+    }
+  }
+
+  if (auto *TMD = dyn_cast<MDTuple>(MD)) {
+    S += "!{";
+    for (unsigned I = 0; I < TMD->getNumOperands(); I++) {
+      if (I != 0)
+        S += ", ";
+      S += mdToString(TMD->getOperand(I).get());
+    }
+    S += "}";
+  } else if (auto *SMD = dyn_cast<MDString>(MD)) {
+    S += "!'";
+    S += SMD->getString();
+    S += "'";
+  } else if (auto *I = mdconst::dyn_extract<ConstantInt>(MD)) {
+    S += std::to_string(I->getZExtValue());
+  } else if (auto *P = mdconst::dyn_extract<PoisonValue>(MD)) {
+    auto *Ty = P->getType();
+    if (Ty->isIntegerTy()) {
+      S += "i";
+      S += std::to_string(Ty->getIntegerBitWidth());
+    } else if (Ty->isStructTy()) {
+      S += "%";
+      S += Ty->getStructName();
+    } else {
+      llvm_unreachable("unhandled poison metadata");
+    }
+  } else {
+    llvm_unreachable("unhandled metadata");
+  }
+  return S;
+}
+
+// Recursively look into a (pointer) type and the the type.
+// For primitive types it's a poison value of the type, for a pointer it's a
+// metadata tuple with the addrspace and the referenced type. For a function,
+// it's a tuple where the first element is the string "function", the second
+// element is the return type or the string "void" and the following elements
+// are the argument types.
+static Metadata *getTypeMetadataEntry(unsigned TypeID, LLVMContext &Context,
+                                      GetTypeByIDTy GetTypeByID,
+                                      GetContainedTypeIDTy GetContainedTypeID) {
+  Type *Ty = GetTypeByID(TypeID);
+  if (auto *FTy = dyn_cast<FunctionType>(Ty)) {
+    // Save the function signature as metadata
+    SmallVector<Metadata *> SignatureMD;
+    SignatureMD.push_back(MDString::get(Context, "function"));
+    // Return type
+    if (FTy->getReturnType()->isVoidTy())
+      SignatureMD.push_back(MDString::get(Context, "void"));
+    else
+      SignatureMD.push_back(getTypeMetadataEntry(GetContainedTypeID(TypeID, 0),
+                                                 Context, GetTypeByID,
+                                                 GetContainedTypeID));
+    // Arguments
+    for (unsigned I = 0; I != FTy->getNumParams(); ++I)
+      SignatureMD.push_back(
+          getTypeMetadataEntry(GetContainedTypeID(TypeID, I + 1), Context,
+                               GetTypeByID, GetContainedTypeID));
+
+    return MDTuple::get(Context, SignatureMD);
+  }
+
+  if (!Ty->isPointerTy())
+    return ConstantAsMetadata::get(PoisonValue::get(Ty));
+
+  // Return !{<addrspace>, <inner>} for pointer
+  SmallVector<Metadata *, 2> MD;
+  MD.push_back(ConstantAsMetadata::get(ConstantInt::get(
+      Type::getInt32Ty(Context), Ty->getPointerAddressSpace())));
+  MD.push_back(getTypeMetadataEntry(GetContainedTypeID(TypeID, 0), Context,
+                                    GetTypeByID, GetContainedTypeID));
+  return MDTuple::get(Context, MD);
+}
+
+// Test that when reading bitcode with typed pointers and upgrading them to
+// opaque pointers, the type information of function signatures can be extracted
+// and stored in metadata.
+TEST(BitReaderTest, AccessFunctionTypeInfo) {
+  SmallString<1024> Mem;
+  LLVMContext WriteContext;
+  writeModuleToBuffer(
+      parseAssembly(
+          WriteContext,
+          "define void @func() {\n"
+          "  unreachable\n"
+          "}\n"
+          "declare i32 @func_header()\n"
+          "declare i8* @ret_ptr()\n"
+          "declare i8* @ret_and_arg_ptr(i32 addrspace(8)*)\n"
+          "declare i8 addrspace(1)* @double_ptr(i32* addrspace(2)*, i32***)\n"),
+      Mem);
+
+  LLVMContext Context;
+  Context.setOpaquePointers(true);
+
+  ParserCallbacks Callbacks;
+  // Supply a callback that stores the signature of a function into metadata,
+  // so that the types behind pointers can be accessed.
+  // Each function gets a !types metadata, which is a tuple with one element
+  // for a non-void return type and every argument. For primitive types it's
+  // a poison value of the type, for a pointer it's a metadata tuple with
+  // the addrspace and the referenced type.
+  Callbacks.ValueType = [&](Value *V, unsigned TypeID,
+                            GetTypeByIDTy GetTypeByID,
+                            GetContainedTypeIDTy GetContainedTypeID) {
+    if (auto *F = dyn_cast<Function>(V)) {
+      auto *MD = getTypeMetadataEntry(TypeID, F->getContext(), GetTypeByID,
+                                      GetContainedTypeID);
+      F->setMetadata("types", cast<MDNode>(MD));
+    }
+  };
+
+  Expected<std::unique_ptr<Module>> ModuleOrErr =
+      parseBitcodeFile(MemoryBufferRef(Mem.str(), "test"), Context, Callbacks);
+
+  if (!ModuleOrErr)
+    report_fatal_error("Could not parse bitcode module");
+  std::unique_ptr<Module> M = std::move(ModuleOrErr.get());
+
+  EXPECT_EQ(mdToString(M->getFunction("func")->getMetadata("types")),
+            "!{!'function', !'void'}");
+  EXPECT_EQ(mdToString(M->getFunction("func_header")->getMetadata("types")),
+            "!{!'function', i32}");
+  EXPECT_EQ(mdToString(M->getFunction("ret_ptr")->getMetadata("types")),
+            "!{!'function', !{0, i8}}");
+  EXPECT_EQ(mdToString(M->getFunction("ret_and_arg_ptr")->getMetadata("types")),
+            "!{!'function', !{0, i8}, !{8, i32}}");
+  EXPECT_EQ(mdToString(M->getFunction("double_ptr")->getMetadata("types")),
+            "!{!'function', !{1, i8}, !{2, !{0, i32}}, !{0, !{0, !{0, i32}}}}");
+}
+
+// Test that when reading bitcode with typed pointers and upgrading them to
+// opaque pointers, the type information of pointers in metadata can be
+// extracted and stored in metadata.
+TEST(BitReaderTest, AccessMetadataTypeInfo) {
+  SmallString<1024> Mem;
+  LLVMContext WriteContext;
+  writeModuleToBuffer(
+      parseAssembly(WriteContext,
+                    "%dx.types.f32 = type { float }\n"
+                    "declare void @main()\n"
+                    "!md = !{!0}\n"
+                    "!md2 = !{!1}\n"
+                    "!0 = !{i32 2, %dx.types.f32 addrspace(1)* undef, void ()* "
+                    "@main, void() addrspace(3)* null}\n"
+                    "!1 = !{i8*(i32* addrspace(2)*) addrspace(4)* undef, "
+                    "i32*** undef}\n"),
+      Mem);
+
+  LLVMContext Context;
+  Context.setOpaquePointers(true);
+
+  ParserCallbacks Callbacks;
+  // Supply a callback that stores types from metadata,
+  // so that the types behind pointers can be accessed.
+  // Non-pointer entries are ignored. Values with a pointer type are
+  // replaced by a metadata tuple with {original value, type md}. We cannot
+  // save the metadata outside because after conversion to opaque pointers,
+  // entries are not distinguishable anymore (e.g. i32* and i8* are both
+  // upgraded to ptr).
+  Callbacks.MDType = [&](Metadata **Val, unsigned TypeID,
+                         GetTypeByIDTy GetTypeByID,
+                         GetContainedTypeIDTy GetContainedTypeID) {
+    auto *OrigVal = cast<ValueAsMetadata>(*Val);
+    if (OrigVal->getType()->isPointerTy()) {
+      // Ignore function references, their signature can be saved like
+      // in the test above
+      if (!isa<Function>(OrigVal->getValue())) {
+        SmallVector<Metadata *> Tuple;
+        Tuple.push_back(OrigVal);
+        Tuple.push_back(getTypeMetadataEntry(GetContainedTypeID(TypeID, 0),
+                                             OrigVal->getContext(), GetTypeByID,
+                                             GetContainedTypeID));
+        *Val = MDTuple::get(OrigVal->getContext(), Tuple);
+      }
+    }
+  };
+
+  Expected<std::unique_ptr<Module>> ModuleOrErr =
+      parseBitcodeFile(MemoryBufferRef(Mem.str(), "test"), Context, Callbacks);
+
+  if (!ModuleOrErr)
+    report_fatal_error("Could not parse bitcode module");
+  std::unique_ptr<Module> M = std::move(ModuleOrErr.get());
+
+  EXPECT_EQ(
+      mdToString(M->getNamedMetadata("md")->getOperand(0)),
+      "!{2, !{ptr, %dx.types.f32}, ptr, !{ptr, !{!'function', !'void'}}}");
+  EXPECT_EQ(mdToString(M->getNamedMetadata("md2")->getOperand(0)),
+            "!{!{ptr, !{!'function', !{0, i8}, !{2, !{0, i32}}}}, !{ptr, !{0, "
+            "!{0, i32}}}}");
 }
 
 } // end namespace

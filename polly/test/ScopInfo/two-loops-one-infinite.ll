@@ -6,15 +6,15 @@
 ;
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n8:16:32-S64"
 
-define void @foo(i32* noalias nocapture readonly %xxx, i32* noalias nocapture readonly %yyy, i8*** nocapture readonly %zzz, i32 %conv6) {
+define void @foo(ptr noalias nocapture readonly %xxx, ptr noalias nocapture readonly %yyy, ptr nocapture readonly %zzz, i32 %conv6) {
 while.body.us.preheader:
- %a2 = load i8**, i8*** %zzz, align 4
+ %a2 = load ptr, ptr %zzz, align 4
  %sub = add nsw i32 %conv6, -1
   br label %while.body.us
 
 while.body.us:                                    ; preds = %while.body.us.preheader, %if.then.us
   %uuu = phi i32 [ %www, %if.then.us ], [ 0, %while.body.us.preheader ]
-  %a13 = load i32, i32* %yyy, align 8
+  %a13 = load i32, ptr %yyy, align 8
   %vvv = icmp sgt i32 %a13, 0
   br i1 %vvv, label %while.body.13.us58.preheader, label %if.then.us
 
@@ -23,9 +23,9 @@ while.body.13.us58.preheader:                     ; preds = %while.body.us
 
 if.then.us:                                       ; preds = %while.body.us
   %add.us = add nuw nsw i32 %uuu, 1
-  tail call void @goo(i8** %a2, i32 %uuu, i8** %a2, i32 %add.us, i32 %sub, i32 %a13) #3
+  tail call void @goo(ptr %a2, i32 %uuu, ptr %a2, i32 %add.us, i32 %sub, i32 %a13) #3
   %www = add nuw nsw i32 %uuu, %conv6
-  %a14 = load i32, i32* %xxx, align 4
+  %a14 = load i32, ptr %xxx, align 4
   %cmp.us = icmp slt i32 %www, %a14
   br i1 %cmp.us, label %while.body.us, label %while.end.21.loopexit145
 
@@ -36,5 +36,5 @@ while.end.21.loopexit145:
   ret void
 }
 
-declare void @goo(i8**, i32, i8**, i32, i32, i32) #1
+declare void @goo(ptr, i32, ptr, i32, i32, i32) #1
 

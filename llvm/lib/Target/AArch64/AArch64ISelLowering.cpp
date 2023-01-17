@@ -287,29 +287,6 @@ static bool isZeroingInactiveLanes(SDValue Op) {
     case Intrinsic::aarch64_sve_fcmpge:
     case Intrinsic::aarch64_sve_fcmpgt:
     case Intrinsic::aarch64_sve_fcmpuo:
-    case Intrinsic::aarch64_sve_facgt:
-    case Intrinsic::aarch64_sve_facge:
-    case Intrinsic::aarch64_sve_whilege:
-    case Intrinsic::aarch64_sve_whilegt:
-    case Intrinsic::aarch64_sve_whilehi:
-    case Intrinsic::aarch64_sve_whilehs:
-    case Intrinsic::aarch64_sve_whilele:
-    case Intrinsic::aarch64_sve_whilelo:
-    case Intrinsic::aarch64_sve_whilels:
-    case Intrinsic::aarch64_sve_whilelt:
-    case Intrinsic::aarch64_sve_match:
-    case Intrinsic::aarch64_sve_nmatch:
-    case Intrinsic::aarch64_sve_trn1:
-    case Intrinsic::aarch64_sve_trn2:
-    case Intrinsic::aarch64_sve_uzp1:
-    case Intrinsic::aarch64_sve_uzp2:
-    case Intrinsic::aarch64_sve_orr_z:
-    case Intrinsic::aarch64_sve_orn_z:
-    case Intrinsic::aarch64_sve_and_z:
-    case Intrinsic::aarch64_sve_bic_z:
-    case Intrinsic::aarch64_sve_eor_z:
-    case Intrinsic::aarch64_sve_nor_z:
-    case Intrinsic::aarch64_sve_nand_z:
       return true;
     }
   }

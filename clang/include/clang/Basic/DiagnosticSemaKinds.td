@@ -11360,6 +11360,9 @@ def warn_non_aligned_allocation_function : Warning <
 def err_conflicting_aligned_options : Error <
   "conflicting option '-fcoro-aligned-allocation' and '-fno-aligned-allocation'"
 >;
+def err_coro_invalid_addr_of_label : Error<
+  "the GNU address of label extension is not allowed in coroutines."
+>;
 } // end of coroutines issue category
 
 let CategoryName = "Documentation Issue" in {
