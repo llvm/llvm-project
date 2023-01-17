@@ -263,7 +263,7 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
   DeviceEnvironment.DynamicMemSize = OMPX_SharedMemorySize;
 
   // Create the metainfo of the device environment global.
-  GlobalTy DevEnvGlobal("omptarget_device_environment",
+  GlobalTy DevEnvGlobal("__omp_rtl_device_environment",
                         sizeof(DeviceEnvironmentTy), &DeviceEnvironment);
 
   // Write device environment values to the device.
