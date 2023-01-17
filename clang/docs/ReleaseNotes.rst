@@ -774,6 +774,9 @@ C++20 Feature Support
   and `P1975R0: <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1975r0.html>`_,
   which allows parenthesized aggregate-initialization.
 
+- Fixed an issue with concept requirement evaluation, where we incorrectly allowed implicit
+  conversions to bool for a requirement.  This fixes `GH54524 <https://github.com/llvm/llvm-project/issues/54524>`_.
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
