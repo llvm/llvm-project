@@ -1462,20 +1462,26 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
       return false;
     return I.readsRegister(VDSTReg, &TRI) || I.modifiesRegister(VDSTReg, &TRI);
   };
-  auto IsExpiredFn = [](const MachineInstr &I, int) {
+  bool LdsdirCanWait = ST.hasLdsWaitVMSRC();
+  auto IsExpiredFn = [this, LdsdirCanWait](const MachineInstr &I, int) {
     return SIInstrInfo::isVALU(I) || SIInstrInfo::isEXP(I) ||
            (I.getOpcode() == AMDGPU::S_WAITCNT && !I.getOperand(0).getImm()) ||
            (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-            I.getOperand(0).getImm() == 0xffe3);
+            I.getOperand(0).getImm() == 0xffe3) ||
+           (LdsdirCanWait && SIInstrInfo::isLDSDIR(I) &&
+            !TII.getNamedOperand(I, AMDGPU::OpName::waitvsrc)->getImm());
   };
 
   if (::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn) ==
       std::numeric_limits<int>::max())
     return false;
 
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-          TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(0xffe3);
+  if (LdsdirCanWait)
+    TII.getNamedOperand(*MI, AMDGPU::OpName::waitvsrc)->setImm(0);
+  else
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+            TII.get(AMDGPU::S_WAITCNT_DEPCTR))
+        .addImm(0xffe3);
 
   return true;
 }
