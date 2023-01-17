@@ -425,9 +425,11 @@ define i16 @srem_narrow(i16 %x) {
 
 define i16 @srem_convert(i16 %x) {
 ; CHECK-LABEL: @srem_convert(
-; CHECK-NEXT:    [[SREM:%.*]] = srem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[X_NONNEG:%.*]] = sub i16 0, [[X:%.*]]
+; CHECK-NEXT:    [[SREM1:%.*]] = urem i16 [[X_NONNEG]], 42
+; CHECK-NEXT:    [[SREM1_NEG:%.*]] = sub i16 0, [[SREM1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM]], i16 24
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM1_NEG]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %srem = srem i16 %x, 42
@@ -438,9 +440,11 @@ define i16 @srem_convert(i16 %x) {
 
 define i16 @sdiv_convert(i16 %x) {
 ; CHECK-LABEL: @sdiv_convert(
-; CHECK-NEXT:    [[SREM:%.*]] = sdiv i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[X_NONNEG:%.*]] = sub i16 0, [[X:%.*]]
+; CHECK-NEXT:    [[SREM1:%.*]] = udiv i16 [[X_NONNEG]], 42
+; CHECK-NEXT:    [[SREM1_NEG:%.*]] = sub i16 0, [[SREM1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM]], i16 24
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM1_NEG]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %srem = sdiv i16 %x, 42
@@ -503,7 +507,7 @@ define i16 @umin_elide(i16 %x) {
 
 define i16 @ashr_convert(i16 %x, i16 %y) {
 ; CHECK-LABEL: @ashr_convert(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ASHR:%.*]] = lshr i16 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[X]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[ASHR]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
@@ -516,7 +520,7 @@ define i16 @ashr_convert(i16 %x, i16 %y) {
 
 define i32 @sext_convert(i16 %x) {
 ; CHECK-LABEL: @sext_convert(
-; CHECK-NEXT:    [[EXT:%.*]] = sext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[X]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[EXT]], i32 24
 ; CHECK-NEXT:    ret i32 [[SEL]]
