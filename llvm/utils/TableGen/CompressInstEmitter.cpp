@@ -613,8 +613,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
   } else if (EType == EmitterType::CheckCompress) {
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
-    FuncH.indent(27) << "const " << TargetName << "Subtarget *Subtarget,\n";
-    FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
+    FuncH.indent(31) << "const " << TargetName << "Subtarget *Subtarget,\n";
+    FuncH.indent(31) << "const MCSubtargetInfo &STI) {\n";
   }
 
   if (CompressPatterns.empty()) {
