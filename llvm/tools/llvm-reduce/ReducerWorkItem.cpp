@@ -715,6 +715,12 @@ uint64_t ReducerWorkItem::computeIRComplexityScore() const {
     GlobalMetadata.clear();
   }
 
+  for (const GlobalAlias &GA : M.aliases())
+    Score += classifyReductivePower(GA.getAliasee());
+
+  for (const GlobalIFunc &GI : M.ifuncs())
+    Score += classifyReductivePower(GI.getResolver());
+
   for (const Function &F : M)
     Score += computeIRComplexityScoreImpl(F);
 
