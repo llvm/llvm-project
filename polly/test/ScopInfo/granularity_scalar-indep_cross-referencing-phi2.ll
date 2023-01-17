@@ -17,7 +17,7 @@
 ;   A[0] = valA;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -25,7 +25,7 @@ for:
   %j = phi i32 [0, %entry], [%j.inc, %for]
   %valA = phi double [42.0, %entry], [%valB, %for]
   %valB = phi double [21.0, %entry], [%add, %for]
-  store double %valB, double* %A
+  store double %valB, ptr %A
   %add = fadd double %valA, 0.1
   %j.cmp = icmp slt i32 %j, %n
   %j.inc = add nuw nsw i32 %j, 1
@@ -58,7 +58,7 @@ return:
 ; CHECK-NEXT:         Instructions {
 ; CHECK-NEXT:               %valA = phi double [ 4.200000e+01, %entry ], [ %valB, %for ]
 ; CHECK-NEXT:               %valB = phi double [ 2.100000e+01, %entry ], [ %add, %for ]
-; CHECK-NEXT:               store double %valB, double* %A, align 8
+; CHECK-NEXT:               store double %valB, ptr %A, align 8
 ; CHECK-NEXT:               %add = fadd double %valA, 1.000000e-01
 ; CHECK-NEXT:         }
 ; CHECK-NEXT: }

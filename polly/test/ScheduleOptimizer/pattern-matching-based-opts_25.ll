@@ -12,7 +12,7 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-macosx12.0.0"
 
-define void @foo([64 x double]* noundef %C, [64 x double]* noundef %A, [64 x [64 x double]]* noundef %B) {
+define void @foo(ptr noundef %C, ptr noundef %A, ptr noundef %B) {
 entry:
   br label %for.cond1.preheader
 
@@ -25,8 +25,8 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3
 
 for.cond5.preheader:                              ; preds = %for.cond.cleanup7, %for.cond1.preheader
   %indvars.iv41 = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next42, %for.cond.cleanup7 ]
-  %arrayidx20 = getelementptr inbounds [64 x double], [64 x double]* %C, i64 %indvars.iv45, i64 %indvars.iv41
-  %.pre = load double, double* %arrayidx20, align 8
+  %arrayidx20 = getelementptr inbounds [64 x double], ptr %C, i64 %indvars.iv45, i64 %indvars.iv41
+  %.pre = load double, ptr %arrayidx20, align 8
   br label %for.body8
 
 for.cond.cleanup3:                                ; preds = %for.cond.cleanup7
@@ -42,12 +42,12 @@ for.cond.cleanup7:                                ; preds = %for.body8
 for.body8:                                        ; preds = %for.body8, %for.cond5.preheader
   %i = phi double [ %.pre, %for.cond5.preheader ], [ %i3, %for.body8 ]
   %indvars.iv = phi i64 [ 0, %for.cond5.preheader ], [ %indvars.iv.next, %for.body8 ]
-  %arrayidx10 = getelementptr inbounds [64 x double], [64 x double]* %A, i64 %indvars.iv45, i64 %indvars.iv
-  %i1 = load double, double* %arrayidx10, align 8
-  %arrayidx16 = getelementptr inbounds [64 x [64 x double]], [64 x [64 x double]]* %B, i64 %indvars.iv, i64 %indvars.iv41, i64 %indvars.iv45
-  %i2 = load double, double* %arrayidx16, align 8
+  %arrayidx10 = getelementptr inbounds [64 x double], ptr %A, i64 %indvars.iv45, i64 %indvars.iv
+  %i1 = load double, ptr %arrayidx10, align 8
+  %arrayidx16 = getelementptr inbounds [64 x [64 x double]], ptr %B, i64 %indvars.iv, i64 %indvars.iv41, i64 %indvars.iv45
+  %i2 = load double, ptr %arrayidx16, align 8
   %i3 = tail call double @llvm.fmuladd.f64(double %i1, double %i2, double %i)
-  store double %i3, double* %arrayidx20, align 8
+  store double %i3, ptr %arrayidx20, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 32
   br i1 %exitcond.not, label %for.cond.cleanup7, label %for.body8

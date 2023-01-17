@@ -2,7 +2,7 @@
 target datalayout = "e-i64:64-f80:128-s:64-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(float* %A) #0 !dbg !4 {
+define void @foo(ptr %A) #0 !dbg !4 {
 entry:
   br label %entry.split
 
@@ -12,9 +12,9 @@ entry.split:                                      ; preds = %entry
 for.body:                                         ; preds = %entry.split, %for.body
   %indvar = phi i64 [ 0, %entry.split ], [ %indvar.next, %for.body ]
   %i.01 = trunc i64 %indvar to i32, !dbg !13
-  %arrayidx = getelementptr float, float* %A, i64 %indvar, !dbg !13
+  %arrayidx = getelementptr float, ptr %A, i64 %indvar, !dbg !13
   %conv = sitofp i32 %i.01 to float, !dbg !13
-  store float %conv, float* %arrayidx, align 4, !dbg !13
+  store float %conv, ptr %arrayidx, align 4, !dbg !13
   %indvar.next = add i64 %indvar, 1, !dbg !11
   %exitcond = icmp ne i64 %indvar.next, 100, !dbg !11
   br i1 %exitcond, label %for.body, label %for.end, !dbg !11
@@ -28,7 +28,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK: test.c:3: End of scop
 
 ; Function Attrs: nounwind uwtable
-define void @bar(float* %A) #0 !dbg !7 {
+define void @bar(ptr %A) #0 !dbg !7 {
 entry:
   br label %entry.split
 
@@ -38,9 +38,9 @@ entry.split:                                      ; preds = %entry
 for.body:                                         ; preds = %entry.split, %for.body
   %indvar = phi i64 [ 0, %entry.split ], [ %indvar.next, %for.body ]
   %i.01 = trunc i64 %indvar to i32, !dbg !17
-  %arrayidx = getelementptr float, float* %A, i64 %indvar, !dbg !17
+  %arrayidx = getelementptr float, ptr %A, i64 %indvar, !dbg !17
   %conv = sitofp i32 %i.01 to float, !dbg !17
-  store float %conv, float* %arrayidx, align 4, !dbg !17
+  store float %conv, ptr %arrayidx, align 4, !dbg !17
   %indvar.next = add i64 %indvar, 1, !dbg !15
   %exitcond = icmp ne i64 %indvar.next, 100, !dbg !15
   br i1 %exitcond, label %for.body, label %for.end, !dbg !15
