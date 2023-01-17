@@ -6083,6 +6083,10 @@ bool AArch64TargetLowering::mergeStoresAfterLegalization(EVT VT) const {
   return !Subtarget->useSVEForFixedLengthVectors();
 }
 
+bool AArch64TargetLowering::isVScaleKnownToBeAPowerOfTwo() const {
+  return true;
+}
+
 bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
     EVT VT, bool OverrideNEON) const {
   if (!VT.isFixedLengthVector() || !VT.isSimple())
