@@ -427,7 +427,7 @@ define float @call_fn(i32 %arg1) {
 
 ; CHECK-LABEL: @call_fn_ptr
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
-define void @call_fn_ptr(void (i16) *%fn) {
+define void @call_fn_ptr(ptr %fn) {
   ; CHECK:  %[[C0:[0-9]+]] = llvm.mlir.constant(0 : i16) : i16
   ; CHECK:  llvm.call %[[PTR]](%[[C0]])
   call void %fn(i16 0)
