@@ -406,7 +406,7 @@ class MetadataLoader::MetadataLoaderImpl {
   BitstreamCursor &Stream;
   LLVMContext &Context;
   Module &TheModule;
-  std::function<Type *(unsigned)> getTypeByID;
+  MetadataLoaderCallbacks Callbacks;
 
   /// Cursor associated with the lazy-loading of Metadata. This is the easy way
   /// to keep around the right "context" (Abbrev list) to be able to jump in
@@ -627,14 +627,15 @@ class MetadataLoader::MetadataLoaderImpl {
     upgradeCUVariables();
   }
 
+  void callMDTypeCallback(Metadata **Val, unsigned TypeID);
+
 public:
   MetadataLoaderImpl(BitstreamCursor &Stream, Module &TheModule,
                      BitcodeReaderValueList &ValueList,
-                     std::function<Type *(unsigned)> getTypeByID,
-                     bool IsImporting)
+                     MetadataLoaderCallbacks Callbacks, bool IsImporting)
       : MetadataList(TheModule.getContext(), Stream.SizeInBytes()),
         ValueList(ValueList), Stream(Stream), Context(TheModule.getContext()),
-        TheModule(TheModule), getTypeByID(std::move(getTypeByID)),
+        TheModule(TheModule), Callbacks(std::move(Callbacks)),
         IsImporting(IsImporting) {}
 
   Error parseMetadata(bool ModuleLevel);
@@ -952,6 +953,14 @@ Expected<bool> MetadataLoader::MetadataLoaderImpl::loadGlobalDeclAttachments() {
   }
 }
 
+void MetadataLoader::MetadataLoaderImpl::callMDTypeCallback(Metadata **Val,
+                                                            unsigned TypeID) {
+  if (Callbacks.MDType) {
+    (*Callbacks.MDType)(Val, TypeID, Callbacks.GetTypeByID,
+                        Callbacks.GetContainedTypeID);
+  }
+}
+
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
 Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
@@ -1221,7 +1230,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     unsigned TyID = Record[0];
-    Type *Ty = getTypeByID(TyID);
+    Type *Ty = Callbacks.GetTypeByID(TyID);
     if (Ty->isMetadataTy() || Ty->isVoidTy()) {
       dropRecord();
       break;
@@ -1245,7 +1254,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     SmallVector<Metadata *, 8> Elts;
     for (unsigned i = 0; i != Size; i += 2) {
       unsigned TyID = Record[i];
-      Type *Ty = getTypeByID(TyID);
+      Type *Ty = Callbacks.GetTypeByID(TyID);
       if (!Ty)
         return error("Invalid record");
       if (Ty->isMetadataTy())
@@ -1255,9 +1264,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                                             /*ConstExprInsertBB*/ nullptr);
         if (!V)
           return error("Invalid value reference from old metadata");
-        auto *MD = ValueAsMetadata::get(V);
+        Metadata *MD = ValueAsMetadata::get(V);
         assert(isa<ConstantAsMetadata>(MD) &&
                "Expected non-function-local metadata");
+        callMDTypeCallback(&MD, TyID);
         Elts.push_back(MD);
       } else
         Elts.push_back(nullptr);
@@ -1271,7 +1281,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return error("Invalid record");
 
     unsigned TyID = Record[0];
-    Type *Ty = getTypeByID(TyID);
+    Type *Ty = Callbacks.GetTypeByID(TyID);
     if (Ty->isMetadataTy() || Ty->isVoidTy())
       return error("Invalid record");
 
@@ -1280,7 +1290,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (!V)
       return error("Invalid value reference from metadata");
 
-    MetadataList.assignValue(ValueAsMetadata::get(V), NextMetadataNo);
+    Metadata *MD = ValueAsMetadata::get(V);
+    callMDTypeCallback(&MD, TyID);
+    MetadataList.assignValue(MD, NextMetadataNo);
     NextMetadataNo++;
     break;
   }
@@ -2359,9 +2371,9 @@ MetadataLoader::~MetadataLoader() = default;
 MetadataLoader::MetadataLoader(BitstreamCursor &Stream, Module &TheModule,
                                BitcodeReaderValueList &ValueList,
                                bool IsImporting,
-                               std::function<Type *(unsigned)> getTypeByID)
+                               MetadataLoaderCallbacks Callbacks)
     : Pimpl(std::make_unique<MetadataLoaderImpl>(
-          Stream, TheModule, ValueList, std::move(getTypeByID), IsImporting)) {}
+          Stream, TheModule, ValueList, std::move(Callbacks), IsImporting)) {}
 
 Error MetadataLoader::parseMetadata(bool ModuleLevel) {
   return Pimpl->parseMetadata(ModuleLevel);
