@@ -756,15 +756,13 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+static bool processURem(BinaryOperator *Instr, const ConstantRange &XCR,
+                        const ConstantRange &YCR) {
   assert(Instr->getOpcode() == Instruction::URem);
   assert(!Instr->getType()->isVectorTy());
 
-  const Use &X = Instr->getOperandUse(0);
-  const Use &Y = Instr->getOperandUse(1);
-
-  ConstantRange XCR = LVI->getConstantRangeAtUse(X);
-  ConstantRange YCR = LVI->getConstantRangeAtUse(Y);
+  Value *X = Instr->getOperand(0);
+  Value *Y = Instr->getOperand(1);
 
   // X u% Y -> X  iff X u< Y
   if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
@@ -820,7 +818,8 @@ static bool processURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 
 /// Try to shrink a udiv/urem's width down to the smallest power of two that's
 /// sufficient to contain its operands.
-static bool narrowUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
+static bool narrowUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
+                             const ConstantRange &YCR) {
   assert(Instr->getOpcode() == Instruction::UDiv ||
          Instr->getOpcode() == Instruction::URem);
   assert(!Instr->getType()->isVectorTy());
@@ -830,11 +829,7 @@ static bool narrowUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 
   // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
-  unsigned MaxActiveBits = 0;
-  for (const Use &U : Instr->operands()) {
-    ConstantRange CR = LVI->getConstantRangeAtUse(U);
-    MaxActiveBits = std::max(CR.getActiveBits(), MaxActiveBits);
-  }
+  unsigned MaxActiveBits = std::max(XCR.getActiveBits(), YCR.getActiveBits());
   // Don't shrink below 8 bits wide.
   unsigned NewWidth = std::max<unsigned>(PowerOf2Ceil(MaxActiveBits), 8);
 
@@ -867,10 +862,12 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   if (Instr->getType()->isVectorTy())
     return false;
 
-  if (Instr->getOpcode() == Instruction::URem && processURem(Instr, LVI))
+  ConstantRange XCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0));
+  ConstantRange YCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1));
+  if (Instr->getOpcode() == Instruction::URem && processURem(Instr, XCR, YCR))
     return true;
 
-  return narrowUDivOrURem(Instr, LVI);
+  return narrowUDivOrURem(Instr, XCR, YCR);
 }
 
 static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
