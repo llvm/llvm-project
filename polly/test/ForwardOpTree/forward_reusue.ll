@@ -2,7 +2,7 @@
 ;
 ; Move operand tree without duplicating values used multiple times.
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -20,7 +20,7 @@ for:
       br label %bodyB
 
     bodyB:
-      store double %val5, double* %A
+      store double %val5, ptr %A
       br label %inc
 
 inc:
@@ -60,6 +60,6 @@ return:
 ; CHECK-NEXT:                   %val3 = fadd double %val2, %val2
 ; CHECK-NEXT:                   %val4 = fadd double %val3, %val3
 ; CHECK-NEXT:                   %val5 = fadd double %val4, %val4
-; CHECK-NEXT:                   store double %val5, double* %A, align 8
+; CHECK-NEXT:                   store double %val5, ptr %A, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

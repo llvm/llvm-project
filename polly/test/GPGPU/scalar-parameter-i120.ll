@@ -13,7 +13,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @i120(i120* %A, i120 %b) {
+define void @i120(ptr %A, i120 %b) {
 bb:
   br label %bb1
 
@@ -23,10 +23,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i120, i120* %A, i120 %i.0
-  %tmp3 = load i120, i120* %tmp, align 4
+  %tmp = getelementptr inbounds i120, ptr %A, i120 %i.0
+  %tmp3 = load i120, ptr %tmp, align 4
   %tmp4 = add i120 %tmp3, %b
-  store i120 %tmp4, i120* %tmp, align 4
+  store i120 %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2

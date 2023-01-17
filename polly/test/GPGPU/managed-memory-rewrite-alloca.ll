@@ -29,8 +29,8 @@ entry.split:                                      ; preds = %entry
 
 for.body:                                         ; preds = %entry.split, %for.body
   %indvars.iv1 = phi i64 [ 0, %entry.split ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [100 x i32], [100 x i32]* %arr, i64 0, i64 %indvars.iv1
-  store i32 42, i32* %arrayidx, align 4, !tbaa !3
+  %arrayidx = getelementptr inbounds [100 x i32], ptr %arr, i64 0, i64 %indvars.iv1
+  store i32 42, ptr %arrayidx, align 4, !tbaa !3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv1, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 100
   br i1 %exitcond, label %for.end, label %for.body
@@ -40,11 +40,11 @@ for.end:                                          ; preds = %for.body
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
 
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
 
 attributes #0 = { argmemonly nounwind }
 
