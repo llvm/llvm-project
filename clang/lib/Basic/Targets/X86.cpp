@@ -400,9 +400,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     return false;
   }
 
-  SimdDefaultAlign =
-      hasFeature("avx512f") ? 512 : hasFeature("avx") ? 256 : 128;
-
   // FIXME: We should allow long double type on 32-bits to match with GCC.
   // This requires backend to be able to lower f80 without x87 first.
   if (!HasX87 && LongDoubleFormat == &llvm::APFloat::x87DoubleExtended())
