@@ -3,6 +3,7 @@ add_flang_library(FIRCodeGen
   CGOps.cpp
   CodeGen.cpp
   PreCGRewrite.cpp
+  TBAABuilder.cpp
   Target.cpp
   TargetRewrite.cpp
 
