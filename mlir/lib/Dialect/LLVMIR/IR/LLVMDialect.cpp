@@ -2430,7 +2430,9 @@ LogicalResult AtomicCmpXchgOp::verify() {
     return emitOpError("expected LLVM IR pointer type for operand #0");
   auto cmpType = getCmp().getType();
   auto valType = getVal().getType();
-  if (cmpType != ptrType.getElementType() || cmpType != valType)
+  if (cmpType != valType)
+    return emitOpError("expected both value operands to have the same type");
+  if (!ptrType.isOpaque() && cmpType != ptrType.getElementType())
     return emitOpError("expected LLVM IR element type for operand #0 to "
                        "match type for all other operands");
   auto intType = valType.dyn_cast<IntegerType>();
