@@ -78,6 +78,23 @@ void mlir::scf::buildTerminatedBody(OpBuilder &builder, Location loc) {
   builder.create<scf::YieldOp>(loc);
 }
 
+/// Verifies that the first block of the given `region` is terminated by a
+/// TerminatorTy. Reports errors on the given operation if it is not the case.
+template <typename TerminatorTy>
+static TerminatorTy verifyAndGetTerminator(Operation *op, Region &region,
+                                           StringRef errorMessage) {
+  Operation *terminatorOperation = nullptr;
+  if (!region.empty() && !region.front().empty()) {
+    terminatorOperation = &region.front().back();
+    if (auto yield = dyn_cast_or_null<TerminatorTy>(terminatorOperation))
+      return yield;
+  }
+  auto diag = op->emitOpError(errorMessage);
+  if (terminatorOperation)
+    diag.attachNote(terminatorOperation->getLoc()) << "terminator here";
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // ExecuteRegionOp
 //===----------------------------------------------------------------------===//
@@ -2323,10 +2340,13 @@ LogicalResult ParallelOp::verify() {
           "expects arguments for the induction variable to be of index type");
 
   // Check that the yield has no results
-  Operation *yield = body->getTerminator();
+  auto yield = verifyAndGetTerminator<scf::YieldOp>(
+      *this, getRegion(), "expects body to terminate with 'scf.yield'");
+  if (!yield)
+    return failure();
   if (yield->getNumOperands() != 0)
-    return yield->emitOpError() << "not allowed to have operands inside '"
-                                << ParallelOp::getOperationName() << "'";
+    return yield.emitOpError() << "not allowed to have operands inside '"
+                               << ParallelOp::getOperationName() << "'";
 
   // Check that the number of results is the same as the number of ReduceOps.
   SmallVector<ReduceOp, 4> reductions(body->getOps<ReduceOp>());
@@ -2852,23 +2872,6 @@ static LogicalResult verifyTypeRangesMatch(OpTy op, TypeRange left,
   }
 
   return success();
-}
-
-/// Verifies that the first block of the given `region` is terminated by a
-/// YieldOp. Reports errors on the given operation if it is not the case.
-template <typename TerminatorTy>
-static TerminatorTy verifyAndGetTerminator(scf::WhileOp op, Region &region,
-                                           StringRef errorMessage) {
-  Operation *terminatorOperation = nullptr;
-  if (!region.empty() && !region.front().empty()) {
-    terminatorOperation = &region.front().back();
-    if (auto yield = dyn_cast_or_null<TerminatorTy>(terminatorOperation))
-      return yield;
-  }
-  auto diag = op.emitOpError(errorMessage);
-  if (terminatorOperation)
-    diag.attachNote(terminatorOperation->getLoc()) << "terminator here";
-  return nullptr;
 }
 
 LogicalResult scf::WhileOp::verify() {
