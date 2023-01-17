@@ -1490,19 +1490,19 @@ void IfOp::build(OpBuilder &builder, OperationState &result,
                  function_ref<void(OpBuilder &, Location)> thenBuilder,
                  function_ref<void(OpBuilder &, Location)> elseBuilder) {
   assert(thenBuilder && "the builder callback for 'then' must be present");
-
   result.addOperands(cond);
   result.addTypes(resultTypes);
 
+  // Build then region.
   OpBuilder::InsertionGuard guard(builder);
   Region *thenRegion = result.addRegion();
   builder.createBlock(thenRegion);
   thenBuilder(builder, result.location);
 
+  // Build else region.
   Region *elseRegion = result.addRegion();
   if (!elseBuilder)
     return;
-
   builder.createBlock(elseRegion);
   elseBuilder(builder, result.location);
 }
@@ -1510,7 +1510,25 @@ void IfOp::build(OpBuilder &builder, OperationState &result,
 void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
                  function_ref<void(OpBuilder &, Location)> thenBuilder,
                  function_ref<void(OpBuilder &, Location)> elseBuilder) {
-  build(builder, result, TypeRange(), cond, thenBuilder, elseBuilder);
+  assert(thenBuilder && "the builder callback for 'then' must be present");
+  result.addOperands(cond);
+
+  // Build then region.
+  OpBuilder::InsertionGuard guard(builder);
+  Region *thenRegion = result.addRegion();
+  Block *thenBlock = builder.createBlock(thenRegion);
+  thenBuilder(builder, result.location);
+
+  // Infer types if there are any.
+  if (auto yieldOp = llvm::dyn_cast<YieldOp>(thenBlock->getTerminator()))
+    result.addTypes(yieldOp.getOperandTypes());
+
+  // Build else region.
+  Region *elseRegion = result.addRegion();
+  if (!elseBuilder)
+    return;
+  builder.createBlock(elseRegion);
+  elseBuilder(builder, result.location);
 }
 
 LogicalResult IfOp::verify() {
