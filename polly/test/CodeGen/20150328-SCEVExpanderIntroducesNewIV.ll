@@ -28,8 +28,8 @@ unreachableA:
 
 for.body121:
   %indvar = phi i32 [ 0, %switchbb ], [ %indvar.next, %for.body121 ]
-  %ptr = getelementptr [1536 x float], [1536 x float]* @A, i64 0, i32 %indvar
-  store float undef, float* %ptr
+  %ptr = getelementptr [1536 x float], ptr @A, i64 0, i32 %indvar
+  store float undef, ptr %ptr
   %indvar.next = add nsw i32 %indvar, 1
   br i1 false, label %for.body121, label %while.cond.loopexit3
 

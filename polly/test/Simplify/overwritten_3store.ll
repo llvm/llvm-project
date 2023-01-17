@@ -10,7 +10,7 @@
 ;   A[0] = 42.0;
 ; }
 ;
-define void @overwritten_3store(i32 %n, double* noalias nonnull %A) {
+define void @overwritten_3store(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -20,9 +20,9 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 10.5, double* %A
-      store double 21.0, double* %A
-      store double 42.0, double* %A
+      store double 10.5, ptr %A
+      store double 21.0, ptr %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:

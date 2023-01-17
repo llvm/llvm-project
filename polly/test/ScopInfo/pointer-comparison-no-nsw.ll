@@ -15,7 +15,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32* %B) {
+define void @f(ptr %A, ptr %B) {
 entry:
   br label %entry.split
 
@@ -23,15 +23,15 @@ entry.split:
   br i1 true, label %while.cond, label %while.end
 
 while.cond:                                       ; preds = %while.body, %entry
-  %A.addr.0 = phi i32* [ %A, %entry.split ], [ %incdec.ptr, %while.body ]
-  %cmp = icmp eq i32* %A.addr.0, %B
+  %A.addr.0 = phi ptr [ %A, %entry.split ], [ %incdec.ptr, %while.body ]
+  %cmp = icmp eq ptr %A.addr.0, %B
   br i1 %cmp, label %while.end, label %while.body
 
 while.body:                                       ; preds = %while.cond
-  %tmp = load i32, i32* %A.addr.0, align 4
+  %tmp = load i32, ptr %A.addr.0, align 4
   %add = add i32 %tmp, 1
-  store i32 %add, i32* %A.addr.0, align 4
-  %incdec.ptr = getelementptr i32, i32* %A.addr.0, i64 1
+  store i32 %add, ptr %A.addr.0, align 4
+  %incdec.ptr = getelementptr i32, ptr %A.addr.0, i64 1
   br label %while.cond
 
 while.end:                                        ; preds = %while.cond

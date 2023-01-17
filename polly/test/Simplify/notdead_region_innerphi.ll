@@ -3,7 +3,7 @@
 ;
 ; Do not remove dependencies of a phi node within a region statement (%phi).
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double %alpha) {
+define void @func(i32 %n, ptr noalias nonnull %A, double %alpha) {
 entry:
   br label %for
 
@@ -29,7 +29,7 @@ for:
 
     region_mostlytrue:
       %phi = phi double [%val, %region_true], [0.0, %region_verytrue]
-      store double %phi, double* %A
+      store double %phi, ptr %A
       br label %region_exit
 
     region_exit:
