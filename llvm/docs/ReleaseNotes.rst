@@ -47,6 +47,8 @@ Non-comprehensive list of changes in this release
    is not a constant in coroutines. This decision may cause unnecessary
    performance regressions and we plan to fix it in later versions.
 
+*  The LoongArch target is promoted to "official" (see below for more details).
+
 * ...
 
 Update on required toolchains to build LLVM
@@ -153,6 +155,19 @@ Changes to the Hexagon Backend
 ------------------------------
 
 * ...
+
+Changes to the LoongArch Backend
+--------------------------------
+
+* The LoongArch target is no longer "experimental"! It's now built by default,
+  rather than needing to be enabled with ``LLVM_EXPERIMENTAL_TARGETS_TO_BUILD``.
+
+* The backend has full codegen support for the base (both integer and
+  floating-point) instruction set and it conforms to psABI v2. Testing has been
+  performed with Linux, including native compilation of a large corpus of Linux
+  applications.
+
+* Support GHC calling convention.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -279,9 +294,13 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* Initial support for debugging Linux LoongArch 64-bit binaries.
+
 Changes to Sanitizers
 ---------------------
 
+* Many Sanitizers (asan, fuzzer, lsan, safestack, scudo, tsan, ubsan) have
+  support for Linux LoongArch 64-bit variant. Some of them may be rudimentary.
 
 Other Changes
 -------------
