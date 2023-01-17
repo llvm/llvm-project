@@ -130,7 +130,8 @@ class SimpleLoggerDataImpl : public LoggerDataImpl {
 
   raw_ostream &startObservation(raw_ostream &OS, size_t Nr) const {
     json::OStream JOS(OS);
-    JOS.object([&]() { JOS.attribute("observation", Nr); });
+    JOS.object(
+        [&]() { JOS.attribute("observation", static_cast<int64_t>(Nr)); });
     OS << "\n";
     return OS;
   }
@@ -140,7 +141,9 @@ class SimpleLoggerDataImpl : public LoggerDataImpl {
     if (IncludeReward) {
       OS << "\n";
       json::OStream JOS(OS);
-      JOS.object([&]() { JOS.attribute("outcome", CurrentObservationID); });
+      JOS.object([&]() {
+        JOS.attribute("outcome", static_cast<int64_t>(CurrentObservationID));
+      });
       OS << "\n";
       OS.write(RewardStorage[CurrentObservationID].get(),
                RewardSpec.getTotalTensorBufferSize());
