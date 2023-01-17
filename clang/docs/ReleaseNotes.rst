@@ -802,6 +802,19 @@ CUDA Support in Clang
 - Clang now supports CUDA SDK up to 11.8
 - Added support for targeting sm_{87,89,90} GPUs.
 
+LoongArch Support in Clang
+--------------------------
+- Clang now supports LoongArch. Along with the backend, clang is able to build a
+  large corpus of Linux applications. Test-suite 100% pass.
+- Support basic option ``-march=`` which is used to select the target
+  architecture, i.e. the basic set of ISA modules to be enabled. Possible values
+  are ``loongarch64`` and ``la464``.
+- Support basic option ``-mabi=`` which is used to select the base ABI type.
+  Possible values are ``lp64d``, ``lp64f``, ``lp64s``, ``ilp32d``, ``ilp32f``
+  and ``ilp32s``.
+- Support extended options: ``-msoft-float``, ``-msingle-float``, ``-mdouble-float`` and ``mfpu=``.
+  See `LoongArch toolchain conventions <https://loongson.github.io/LoongArch-Documentation/LoongArch-toolchain-conventions-EN.html>`_.
+
 RISC-V Support in Clang
 -----------------------
 - ``sifive-7-rv32`` and ``sifive-7-rv64`` are no longer supported for ``-mcpu``.
