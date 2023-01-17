@@ -1330,6 +1330,18 @@ def Vector_TransferReadOp :
                memref<?x?x?xf32>, vector<32x256xf32>
     }}}
 
+    // or equivalently (rewrite with vector.transpose)
+    %f0 = arith.constant 0.0f : f32
+    for %i0 = 0 to %0 {
+      affine.for %i1 = 0 to %1 step 256 {
+        affine.for %i2 = 0 to %2 step 32 {
+          %v0 = vector.transfer_read %A[%i0, %i1, %i2], (%f0)
+               {permutation_map: (d0, d1, d2) -> (d1, d2)} :
+               memref<?x?x?xf32>, vector<256x32xf32>
+          %v = vector.transpose %v0, [1, 0] :
+              vector<256x32xf32> to vector<32x256f32>
+    }}}
+
     // Read the slice `%A[%i0, %i1]` (i.e. the element `%A[%i0, %i1]`) into
     // vector<128xf32>. The underlying implementation will require a 1-D vector
     // broadcast:
@@ -1483,6 +1495,19 @@ def Vector_TransferWriteOp :
             vector.transfer_write %val, %A[%i0, %i1, %i2, %i3]
               {permutation_map: (d0, d1, d2, d3) -> (d3, d1, d2)} :
               vector<16x32x64xf32>, memref<?x?x?x?xf32>
+    }}}}
+
+    // or equivalently (rewrite with vector.transpose)
+    for %i0 = 0 to %0 {
+      affine.for %i1 = 0 to %1 step 32 {
+        affine.for %i2 = 0 to %2 step 64 {
+          affine.for %i3 = 0 to %3 step 16 {
+            %val = `ssa-value` : vector<16x32x64xf32>
+            %valt = vector.transpose %val, [1, 2, 0] :
+                  vector<16x32x64xf32> -> vector<32x64x16xf32>
+            vector.transfer_write %valt, %A[%i0, %i1, %i2, %i3]
+              {permutation_map: (d0, d1, d2, d3) -> (d1, d2, d3)} :
+              vector<32x64x16xf32>, memref<?x?x?x?xf32>
     }}}}
 
     // write to a memref with vector element type.
