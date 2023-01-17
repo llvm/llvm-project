@@ -298,9 +298,6 @@ public:
     return const_operand_range(op_begin(), op_end());
   }
 
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPDef *Recipe);
-
   /// Returns true if the VPUser uses scalars of operand \p Op. Conservatively
   /// returns if only first (scalar) lane is used, as default.
   virtual bool usesScalars(const VPValue *Op) const {
