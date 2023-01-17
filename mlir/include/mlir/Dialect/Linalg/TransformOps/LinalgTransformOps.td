@@ -384,7 +384,7 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
       // affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d3, d4)>
       %0 = linalg.generic_representing_some_higher_d_matmul  
             ins(%A, %B: tensor<?x?x2x4xf32>, tensor<?x?x4x3xf32>)
-           outs(    %C: tensor<?x?x2x4xf32>)
+           outs(    %C: tensor<?x?x2x3xf32>)
     ```
     In particular, note that the second operand `B` has shape `KxNxnxk` (and not
     `KxNxkxn` as one could expect by looking **only** at the operand).
