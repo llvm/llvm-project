@@ -642,7 +642,7 @@ void TpiSource::mergeTypeRecord(TypeIndex curIndex, CVType ty) {
   size_t offset = merged.recs.size();
   size_t newSize = alignTo(ty.length(), 4);
   merged.recs.resize(offset + newSize);
-  auto newRec = makeMutableArrayRef(&merged.recs[offset], newSize);
+  auto newRec = MutableArrayRef(&merged.recs[offset], newSize);
   memcpy(newRec.data(), ty.data().data(), newSize);
 
   // Fix up the record prefix and padding bytes if it required resizing.

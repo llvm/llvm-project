@@ -422,7 +422,11 @@ public:
     getCanonicalizationPatternsFn(set, context);
   }
   bool hasTrait(TypeID id) final { return false; }
-  OperationName::ParseAssemblyFn getParseAssemblyFn() final { return parseFn; }
+  OperationName::ParseAssemblyFn getParseAssemblyFn() final {
+    return [&](OpAsmParser &parser, OperationState &state) {
+      return parseFn(parser, state);
+    };
+  }
   void populateDefaultAttrs(const OperationName &name,
                             NamedAttrList &attrs) final {
     populateDefaultAttrsFn(name, attrs);

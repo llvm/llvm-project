@@ -142,8 +142,8 @@ private:
     return llvm::ArrayRef(reinterpret_cast<ForestNode *const *>(this + 1), Num);
   }
   llvm::MutableArrayRef<ForestNode *> children(uint16_t Num) {
-    return llvm::makeMutableArrayRef(reinterpret_cast<ForestNode **>(this + 1),
-                                     Num);
+    return llvm::MutableArrayRef(reinterpret_cast<ForestNode **>(this + 1),
+                                 Num);
   }
 
   Token::Index StartIndex;

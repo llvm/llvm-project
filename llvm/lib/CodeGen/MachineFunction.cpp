@@ -759,10 +759,6 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
 
   const Instruction *FirstI = LandingPad->getBasicBlock()->getFirstNonPHI();
   if (const auto *LPI = dyn_cast<LandingPadInst>(FirstI)) {
-    if (const auto *PF =
-            dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts()))
-      getMMI().addPersonality(PF);
-
     // If there's no typeid list specified, then "cleanup" is implicit.
     // Otherwise, id 0 is reserved for the cleanup action.
     if (LPI->isCleanup() && LPI->getNumClauses() != 0)

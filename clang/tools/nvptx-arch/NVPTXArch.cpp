@@ -11,6 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Error.h"
+#include <cstdint>
+#include <cstdio>
+#include <memory>
+
 #if defined(__has_include)
 #if __has_include("cuda.h")
 #include "cuda.h"
@@ -23,11 +29,53 @@
 #endif
 
 #if !CUDA_HEADER_FOUND
-int main() { return 1; }
-#else
+typedef enum cudaError_enum {
+  CUDA_SUCCESS = 0,
+  CUDA_ERROR_NO_DEVICE = 100,
+} CUresult;
 
-#include <cstdint>
-#include <cstdio>
+typedef enum CUdevice_attribute_enum {
+  CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR = 75,
+  CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR = 76,
+} CUdevice_attribute;
+
+typedef uint32_t CUdevice;
+
+CUresult (*cuInit)(unsigned int);
+CUresult (*cuDeviceGetCount)(int *);
+CUresult (*cuGetErrorString)(CUresult, const char **);
+CUresult (*cuDeviceGet)(CUdevice *, int);
+CUresult (*cuDeviceGetAttribute)(int *, CUdevice_attribute, CUdevice);
+
+constexpr const char *DynamicCudaPath = "libcuda.so";
+
+llvm::Error loadCUDA() {
+  std::string ErrMsg;
+  auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+      llvm::sys::DynamicLibrary::getPermanentLibrary(DynamicCudaPath, &ErrMsg));
+  if (!DynlibHandle->isValid()) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to 'dlopen' %s\n", DynamicCudaPath);
+  }
+#define DYNAMIC_INIT(SYMBOL)                                                   \
+  {                                                                            \
+    void *SymbolPtr = DynlibHandle->getAddressOfSymbol(#SYMBOL);               \
+    if (!SymbolPtr)                                                            \
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),           \
+                                     "Failed to 'dlsym' " #SYMBOL);            \
+    SYMBOL = reinterpret_cast<decltype(SYMBOL)>(SymbolPtr);                    \
+  }
+  DYNAMIC_INIT(cuInit);
+  DYNAMIC_INIT(cuDeviceGetCount);
+  DYNAMIC_INIT(cuGetErrorString);
+  DYNAMIC_INIT(cuDeviceGet);
+  DYNAMIC_INIT(cuDeviceGetAttribute);
+#undef DYNAMIC_INIT
+  return llvm::Error::success();
+}
+#else
+llvm::Error loadCUDA() { return llvm::Error::success(); }
+#endif
 
 static int handleError(CUresult Err) {
   const char *ErrStr = nullptr;
@@ -38,7 +86,13 @@ static int handleError(CUresult Err) {
   return EXIT_FAILURE;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  // Attempt to load the NVPTX driver runtime.
+  if (llvm::Error Err = loadCUDA()) {
+    logAllUnhandledErrors(std::move(Err), llvm::errs());
+    return EXIT_FAILURE;
+  }
+
   if (CUresult Err = cuInit(0)) {
     if (Err == CUDA_ERROR_NO_DEVICE)
       return EXIT_SUCCESS;
@@ -68,5 +122,3 @@ int main() {
   }
   return EXIT_SUCCESS;
 }
-
-#endif

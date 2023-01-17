@@ -1866,7 +1866,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   // This is the actual hook for the custom op parsing, usually implemented by
   // the op itself (`Op::parse()`). We retrieve it either from the
   // RegisteredOperationName or from the Dialect.
-  function_ref<ParseResult(OpAsmParser &, OperationState &)> parseAssemblyFn;
+  OperationName::ParseAssemblyFn parseAssemblyFn;
   bool isIsolatedFromAbove = false;
 
   StringRef defaultDialect = "";

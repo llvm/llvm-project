@@ -21,8 +21,6 @@
 
 declare void @may_throw(i32)
 declare i32 @__CxxFrameHandler3(...)
-declare void @llvm.eh.begincatch(i8*, i8*)
-declare void @llvm.eh.endcatch()
 declare i32 @llvm.eh.typeid.for(i8*)
 
 $"\01??_R0H@8" = comdat any

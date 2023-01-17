@@ -8,6 +8,8 @@
 # //
 # //===----------------------------------------------------------------------===//
 
+set(LLVM_LINK_COMPONENTS Support)
+
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 
 set(AMDGPU_ARCH_DLOPEN_LIBHSA OFF)

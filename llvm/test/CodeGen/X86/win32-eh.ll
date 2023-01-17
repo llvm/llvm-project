@@ -4,9 +4,7 @@ declare void @may_throw_or_crash()
 declare i32 @_except_handler3(...)
 declare i32 @_except_handler4(...)
 declare i32 @__CxxFrameHandler3(...)
-declare void @llvm.eh.begincatch(i8*, i8*)
-declare void @llvm.eh.endcatch()
-declare i32 @llvm.eh.typeid.for(i8*)
+declare i32 @llvm.eh.typeid.for(ptr)
 
 define internal i32 @catchall_filt() {
   ret i32 1

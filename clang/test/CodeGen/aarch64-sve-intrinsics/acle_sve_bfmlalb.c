@@ -60,16 +60,16 @@ svfloat32_t test_bfmlalb_lane_7_f32(svfloat32_t x, svbfloat16_t y, svbfloat16_t 
 // CHECK-LABEL: @test_bfmlalb_n_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x bfloat> poison, bfloat [[Z:%.*]], i64 0
-// CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 8 x bfloat> [[DOTSPLATINSERT]], <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlalb(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[TMP0]])
-// CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x bfloat> [[DOTSPLATINSERT]], <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlalb(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[DOTSPLAT]])
+// CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 // CPP-CHECK-LABEL: @_Z18test_bfmlalb_n_f32u13__SVFloat32_tu14__SVBFloat16_tu6__bf16(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x bfloat> poison, bfloat [[Z:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 8 x bfloat> [[DOTSPLATINSERT]], <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlalb(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[TMP0]])
-// CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x bfloat> [[DOTSPLATINSERT]], <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlalb(<vscale x 4 x float> [[X:%.*]], <vscale x 8 x bfloat> [[Y:%.*]], <vscale x 8 x bfloat> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 svfloat32_t test_bfmlalb_n_f32(svfloat32_t x, svbfloat16_t y, bfloat16_t z) {
   return SVE_ACLE_FUNC(svbfmlalb, _n_f32, , )(x, y, z);

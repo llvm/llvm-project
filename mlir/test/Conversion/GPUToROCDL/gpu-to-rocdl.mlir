@@ -460,3 +460,15 @@ gpu.module @test_module {
     gpu.return
   }
 }
+
+// ----
+
+gpu.module @module {
+// CHECK-LABEL: @spirv_exp
+// CHECK: llvm.call @__ocml_exp_f32
+  spirv.func @spirv_exp(%arg0: vector<4xf32>) -> vector<4xf32> "None" {
+    %0 = math.exp %arg0 : vector<4xf32>
+    spirv.ReturnValue %0 : vector<4xf32>
+  }
+}
+

@@ -229,6 +229,19 @@ static const uint8_t tailMergeX64[] = {
     0xFF, 0xE0,                         // jmp     rax
 };
 
+static const uint8_t tailMergeUnwindInfoX64[] = {
+    0x01,       // Version=1, Flags=UNW_FLAG_NHANDLER
+    0x0a,       // Size of prolog
+    0x05,       // Count of unwind codes
+    0x00,       // No frame register
+    0x0a, 0x82, // Offset 0xa: UWOP_ALLOC_SMALL(0x48)
+    0x06, 0x02, // Offset 6: UWOP_ALLOC_SMALL(8)
+    0x04, 0x02, // Offset 4: UWOP_ALLOC_SMALL(8)
+    0x02, 0x02, // Offset 2: UWOP_ALLOC_SMALL(8)
+    0x01, 0x02, // Offset 1: UWOP_ALLOC_SMALL(8)
+    0x00, 0x00  // Padding to align on 32-bits
+};
+
 static const uint8_t thunkX86[] = {
     0xB8, 0, 0, 0, 0,  // mov   eax, offset ___imp__<FUNCNAME>
     0xE9, 0, 0, 0, 0,  // jmp   __tailMerge_<lib>
@@ -330,6 +343,41 @@ public:
 
   Chunk *desc = nullptr;
   Defined *helper = nullptr;
+};
+
+class TailMergePDataChunkX64 : public NonSectionChunk {
+public:
+  TailMergePDataChunkX64(Chunk *tm, Chunk *unwind) : tm(tm), unwind(unwind) {
+    // See
+    // https://learn.microsoft.com/en-us/cpp/build/exception-handling-x64#struct-runtime_function
+    setAlignment(4);
+  }
+
+  size_t getSize() const override { return 3 * sizeof(uint32_t); }
+
+  void writeTo(uint8_t *buf) const override {
+    write32le(buf + 0, tm->getRVA()); // TailMergeChunk start RVA
+    write32le(buf + 4, tm->getRVA() + tm->getSize()); // TailMergeChunk stop RVA
+    write32le(buf + 8, unwind->getRVA());             // UnwindInfo RVA
+  }
+
+  Chunk *tm = nullptr;
+  Chunk *unwind = nullptr;
+};
+
+class TailMergeUnwindInfoX64 : public NonSectionChunk {
+public:
+  TailMergeUnwindInfoX64() {
+    // See
+    // https://learn.microsoft.com/en-us/cpp/build/exception-handling-x64#struct-unwind_info
+    setAlignment(4);
+  }
+
+  size_t getSize() const override { return sizeof(tailMergeUnwindInfoX64); }
+
+  void writeTo(uint8_t *buf) const override {
+    memcpy(buf, tailMergeUnwindInfoX64, sizeof(tailMergeUnwindInfoX64));
+  }
 };
 
 class ThunkChunkX86 : public NonSectionChunk {
@@ -672,6 +720,8 @@ void DelayLoadContents::create(Defined *h) {
   helper = h;
   std::vector<std::vector<DefinedImportData *>> v = binImports(ctx, imports);
 
+  Chunk *unwind = newTailMergeUnwindInfoChunk();
+
   // Create .didat contents for each DLL.
   for (std::vector<DefinedImportData *> &syms : v) {
     // Create the delay import table header.
@@ -680,6 +730,7 @@ void DelayLoadContents::create(Defined *h) {
 
     size_t base = addresses.size();
     Chunk *tm = newTailMergeChunk(dir);
+    Chunk *pdataChunk = unwind ? newTailMergePDataChunk(tm, unwind) : nullptr;
     for (DefinedImportData *s : syms) {
       Chunk *t = newThunkChunk(s, tm);
       auto *a = make<DelayAddressChunk>(ctx, t);
@@ -692,7 +743,7 @@ void DelayLoadContents::create(Defined *h) {
         auto *c = make<HintNameChunk>(extName, 0);
         names.push_back(make<LookupChunk>(ctx, c));
         hintNames.push_back(c);
-        // Add a syntentic symbol for this load thunk, using the "__imp___load"
+        // Add a synthetic symbol for this load thunk, using the "__imp___load"
         // prefix, in case this thunk needs to be added to the list of valid
         // call targets for Control Flow Guard.
         StringRef symName = saver().save("__imp___load_" + extName);
@@ -701,6 +752,8 @@ void DelayLoadContents::create(Defined *h) {
       }
     }
     thunks.push_back(tm);
+    if (pdataChunk)
+      pdata.push_back(pdataChunk);
     StringRef tmName =
         saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
     ctx.symtab.addSynthetic(tmName, tm);
@@ -720,6 +773,9 @@ void DelayLoadContents::create(Defined *h) {
     dir->nameTab = names[base];
     dirs.push_back(dir);
   }
+
+  if (unwind)
+    unwindinfo.push_back(unwind);
   // Add null terminator.
   dirs.push_back(make<NullChunk>(sizeof(delay_import_directory_table_entry)));
 }
@@ -736,6 +792,25 @@ Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
     return make<TailMergeChunkARM64>(dir, helper);
   default:
     llvm_unreachable("unsupported machine type");
+  }
+}
+
+Chunk *DelayLoadContents::newTailMergeUnwindInfoChunk() {
+  switch (ctx.config.machine) {
+  case AMD64:
+    return make<TailMergeUnwindInfoX64>();
+    // FIXME: Add support for other architectures.
+  default:
+    return nullptr; // Just don't generate unwind info.
+  }
+}
+Chunk *DelayLoadContents::newTailMergePDataChunk(Chunk *tm, Chunk *unwind) {
+  switch (ctx.config.machine) {
+  case AMD64:
+    return make<TailMergePDataChunkX64>(tm, unwind);
+    // FIXME: Add support for other architectures.
+  default:
+    return nullptr; // Just don't generate unwind info.
   }
 }
 

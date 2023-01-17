@@ -1520,6 +1520,19 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return BinaryOperator::CreateSub(B, Shl);
   }
 
+  // Canonicalize signum variant that ends in add:
+  // (A s>> (BW - 1)) + (zext (A s> 0)) --> (A s>> (BW - 1)) | (zext (A != 0))
+  ICmpInst::Predicate Pred;
+  uint64_t BitWidth = Ty->getScalarSizeInBits();
+  if (match(LHS, m_AShr(m_Value(A), m_SpecificIntAllowUndef(BitWidth - 1))) &&
+      match(RHS, m_OneUse(m_ZExt(
+                     m_OneUse(m_ICmp(Pred, m_Specific(A), m_ZeroInt()))))) &&
+      Pred == CmpInst::ICMP_SGT) {
+    Value *NotZero = Builder.CreateIsNotNull(A, "isnotnull");
+    Value *Zext = Builder.CreateZExt(NotZero, Ty, "isnotnull.zext");
+    return BinaryOperator::CreateOr(LHS, Zext);
+  }
+
   if (Instruction *Ashr = foldAddToAshr(I))
     return Ashr;
 

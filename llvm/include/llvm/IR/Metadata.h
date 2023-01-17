@@ -1033,7 +1033,7 @@ class MDNode : public Metadata {
     MutableArrayRef<MDOperand> operands() {
       if (IsLarge)
         return getLarge();
-      return makeMutableArrayRef(
+      return MutableArrayRef(
           reinterpret_cast<MDOperand *>(this) - SmallSize, SmallNumOps);
     }
 

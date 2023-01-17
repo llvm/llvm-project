@@ -69,7 +69,7 @@ public:
       Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) const>;
   using HasTraitFn = llvm::unique_function<bool(TypeID) const>;
   using ParseAssemblyFn =
-      llvm::function_ref<ParseResult(OpAsmParser &, OperationState &)>;
+      llvm::unique_function<ParseResult(OpAsmParser &, OperationState &)>;
   // Note: RegisteredOperationName is passed as reference here as the derived
   // class is defined below.
   using PopulateDefaultAttrsFn =

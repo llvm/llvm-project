@@ -187,7 +187,7 @@ public:
   }
 
   MutableArrayRef<Entry> getMutableRows() {
-    return makeMutableArrayRef(Rows.get(), Header.NumBuckets);
+    return MutableArrayRef(Rows.get(), Header.NumBuckets);
   }
 };
 

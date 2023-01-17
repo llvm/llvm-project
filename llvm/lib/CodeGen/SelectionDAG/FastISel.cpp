@@ -407,11 +407,6 @@ void FastISel::recomputeInsertPt() {
     ++FuncInfo.InsertPt;
   } else
     FuncInfo.InsertPt = FuncInfo.MBB->getFirstNonPHI();
-
-  // Now skip past any EH_LABELs, which must remain at the beginning.
-  while (FuncInfo.InsertPt != FuncInfo.MBB->end() &&
-         FuncInfo.InsertPt->getOpcode() == TargetOpcode::EH_LABEL)
-    ++FuncInfo.InsertPt;
 }
 
 void FastISel::removeDeadCode(MachineBasicBlock::iterator I,
