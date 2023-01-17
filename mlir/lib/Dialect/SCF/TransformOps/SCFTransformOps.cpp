@@ -219,9 +219,32 @@ transform::LoopUnrollOp::applyToOne(Operation *op,
     result = loopUnrollByFactor(affineFor, getFactor());
 
   if (failed(result)) {
-    Diagnostic diag(op->getLoc(), DiagnosticSeverity::Note);
-    diag << "Op failed to unroll";
-    return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "failed to unroll";
+    return diag;
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopCoalesceOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::LoopCoalesceOp::applyToOne(Operation *op,
+                                      transform::ApplyToEachResultList &results,
+                                      transform::TransformState &state) {
+  LogicalResult result(failure());
+  if (scf::ForOp scfForOp = dyn_cast<scf::ForOp>(op))
+    result = coalescePerfectlyNestedLoops(scfForOp);
+  else if (AffineForOp affineForOp = dyn_cast<AffineForOp>(op))
+    result = coalescePerfectlyNestedLoops(affineForOp);
+
+  results.push_back(op);
+  if (failed(result)) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "failed to coalesce";
+    return diag;
   }
   return DiagnosedSilenceableFailure::success();
 }
