@@ -70,7 +70,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   const MCInst *NewMI = MI;
   MCInst UncompressedMI;
   if (PrintAliases && !NoAliases)
-    Res = uncompressInst(UncompressedMI, *MI, MRI, STI);
+    Res = uncompressInst(UncompressedMI, *MI, STI);
   if (Res)
     NewMI = const_cast<MCInst *>(&UncompressedMI);
   if (!PrintAliases || NoAliases || !printAliasInstr(NewMI, Address, STI, O))
