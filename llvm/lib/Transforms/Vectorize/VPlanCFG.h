@@ -189,9 +189,8 @@ public:
 
   static VPAllSuccessorsIterator end(BlockPtrTy Block) {
     BlockPtrTy ParentWithSuccs = getBlockWithSuccs(Block);
-    unsigned NumSuccessors = ParentWithSuccs
-                                 ? ParentWithSuccs->getNumSuccessors()
-                                 : Block->getNumSuccessors();
+    unsigned NumSuccessors =
+        ParentWithSuccs ? ParentWithSuccs->getNumSuccessors() : 0;
 
     if (auto *R = dyn_cast<VPRegionBlock>(Block))
       return {R, NumSuccessors + 1};
