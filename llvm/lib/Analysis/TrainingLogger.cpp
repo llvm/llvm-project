@@ -209,6 +209,7 @@ Logger::~Logger() {}
 #define LOG_REWARD(NAME, TYPE)                                                 \
   void Logger::log##NAME##Reward(TYPE Value) {                                 \
     assert(IncludeReward);                                                     \
+    (void)IncludeReward;                                                       \
     LoggerData->logReward(Value);                                              \
   }
 
