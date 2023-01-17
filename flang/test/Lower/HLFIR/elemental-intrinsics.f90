@@ -88,3 +88,65 @@ end subroutine
 ! CHECK:  }
 ! CHECK: fir.call
 ! CHECK: hlfir.destroy %[[VAL_13]]
+
+
+! -----------------------------------------------------------------------------
+!  Test elemental character intrinsics with non compile time constant result
+!  length.
+! -----------------------------------------------------------------------------
+
+subroutine test_adjustl(x)
+  character(*) :: x(100)
+  call bar(adjustl(x))
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_adjustl(
+! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3:.*]](%[[VAL_5:[a-z0-9]*]]) typeparams %[[VAL_2:[a-z0-9]*]]#1  {{.*}}Ex
+! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_2]]#1 : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
+! CHECK:  ^bb0(%[[VAL_8:.*]]: index):
+! CHECK:    %[[VAL_9:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_8]])  typeparams %[[VAL_2]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+! CHECK:    fir.call @_FortranAAdjustl
+! CHECK:    %[[VAL_24:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_22:.*]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.heap<!fir.char<1,?>>)
+! CHECK:    %[[VAL_25:.*]] = arith.constant true
+! CHECK:    %[[VAL_26:.*]] = hlfir.as_expr %[[VAL_24]]#0 move %[[VAL_25]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK:    hlfir.yield_element %[[VAL_26]] : !hlfir.expr<!fir.char<1,?>>
+! CHECK:  }
+
+subroutine test_adjustr(x)
+  character(*) :: x(100)
+  call bar(adjustr(x))
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_adjustr(
+! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3:.*]](%[[VAL_5:[a-z0-9]*]]) typeparams %[[VAL_2:[a-z0-9]*]]#1  {{.*}}Ex
+! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_2]]#1 : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
+! CHECK:  ^bb0(%[[VAL_8:.*]]: index):
+! CHECK:    %[[VAL_9:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_8]])  typeparams %[[VAL_2]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+! CHECK:    fir.call @_FortranAAdjustr
+! CHECK:    %[[VAL_24:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_22:.*]] {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.heap<!fir.char<1,?>>)
+! CHECK:    %[[VAL_25:.*]] = arith.constant true
+! CHECK:    %[[VAL_26:.*]] = hlfir.as_expr %[[VAL_24]]#0 move %[[VAL_25]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK:    hlfir.yield_element %[[VAL_26]] : !hlfir.expr<!fir.char<1,?>>
+! CHECK:  }
+
+subroutine test_merge(x, y, mask)
+  character(*) :: x(100), y(100)
+  logical :: mask(100)
+  call bar(merge(x, y, mask))
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_merge(
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]](%[[VAL_4:[a-z0-9]*]])  {{.*}}Emask
+! CHECK:  %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_7:[a-z0-9]*]](%[[VAL_9:[a-z0-9]*]]) typeparams %[[VAL_6:[a-z0-9]*]]#1  {{.*}}Ex
+! CHECK:  %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_12:[a-z0-9]*]](%[[VAL_14:[a-z0-9]*]]) typeparams %[[VAL_11:[a-z0-9]*]]#1  {{.*}}Ey
+! CHECK:  %[[VAL_16:.*]] = hlfir.elemental %[[VAL_9]] typeparams %[[VAL_6]]#1 : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
+! CHECK:  ^bb0(%[[VAL_17:.*]]: index):
+! CHECK:    %[[VAL_18:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_17]])  typeparams %[[VAL_6]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+! CHECK:    %[[VAL_19:.*]] = hlfir.designate %[[VAL_15]]#0 (%[[VAL_17]])  typeparams %[[VAL_11]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+! CHECK:    %[[VAL_20:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_17]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+! CHECK:    %[[VAL_21:.*]]:2 = fir.unboxchar %[[VAL_18]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:    %[[VAL_22:.*]]:2 = fir.unboxchar %[[VAL_19]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:    %[[VAL_23:.*]] = fir.load %[[VAL_20]] : !fir.ref<!fir.logical<4>>
+! CHECK:    %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.logical<4>) -> i1
+! CHECK:    %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_21]]#0, %[[VAL_22]]#0 : !fir.ref<!fir.char<1,?>>
+! CHECK:    %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] typeparams %[[VAL_6]]#1 {uniq_name = ".tmp.intrinsic_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:    %[[VAL_27:.*]] = hlfir.as_expr %[[VAL_26]]#0 : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK:    hlfir.yield_element %[[VAL_27]] : !hlfir.expr<!fir.char<1,?>>
+! CHECK:  }

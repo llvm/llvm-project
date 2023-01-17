@@ -724,12 +724,19 @@ static hlfir::EntityWithAttributes genIntrinsicRefCore(
       loc, builder, resultExv, ".tmp.intrinsic_result");
   // Move result into memory into an hlfir.expr since they are immutable from
   // that point, and the result storage is some temp.
-  if (!fir::isa_trivial(resultEntity.getType()))
-    resultEntity = hlfir::EntityWithAttributes{
-        builder
-            .create<hlfir::AsExprOp>(loc, resultEntity,
-                                     builder.createBool(loc, mustBeFreed))
-            .getResult()};
+  if (!fir::isa_trivial(resultEntity.getType())) {
+    hlfir::AsExprOp asExpr;
+    // Character/Derived MERGE lowering returns one of its argument address
+    // (this is the only intrinsic implemented in that way so far). The
+    // ownership of this address cannot be taken here since it may not be a
+    // temp.
+    if (intrinsic.name == "merge")
+      asExpr = builder.create<hlfir::AsExprOp>(loc, resultEntity);
+    else
+      asExpr = builder.create<hlfir::AsExprOp>(
+          loc, resultEntity, builder.createBool(loc, mustBeFreed));
+    resultEntity = hlfir::EntityWithAttributes{asExpr.getResult()};
+  }
   return resultEntity;
 }
 
@@ -800,8 +807,19 @@ public:
     // Get result length parameters.
     llvm::SmallVector<mlir::Value> typeParams;
     if (elementType.isa<fir::CharacterType>() ||
-        fir::isRecordWithTypeParameters(elementType))
-      TODO(loc, "compute elemental function result length parameters in HLFIR");
+        fir::isRecordWithTypeParameters(elementType)) {
+      auto charType = elementType.dyn_cast<fir::CharacterType>();
+      if (charType && charType.hasConstantLen())
+        typeParams.push_back(builder.createIntegerConstant(
+            loc, builder.getIndexType(), charType.getLen()));
+      else if (charType)
+        typeParams.push_back(impl().computeDynamicCharacterResultLength(
+            loweredActuals, callContext));
+      else
+        TODO(
+            loc,
+            "compute elemental PDT function result length parameters in HLFIR");
+    }
     auto genKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
                          mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
       callContext.stmtCtx.pushScope();
@@ -858,6 +876,13 @@ public:
            arg.passBy == PassBy::BaseAddressValueAttribute;
   }
 
+  mlir::Value
+  computeDynamicCharacterResultLength(PreparedActualArguments &loweredActuals,
+                                      CallContext &callContext) {
+    TODO(callContext.loc,
+         "compute elemental function result length parameters in HLFIR");
+  }
+
 private:
   Fortran::lower::CallerInterface &caller;
   mlir::FunctionType callSiteType;
@@ -884,6 +909,19 @@ public:
     // Elemental intrinsic functions never need the actual addresses
     // of their arguments.
     return isFunction;
+  }
+
+  mlir::Value
+  computeDynamicCharacterResultLength(PreparedActualArguments &loweredActuals,
+                                      CallContext &callContext) {
+    if (intrinsic.name == "adjustr" || intrinsic.name == "adjustl" ||
+        intrinsic.name == "merge")
+      return hlfir::genCharLength(callContext.loc, callContext.getBuilder(),
+                                  loweredActuals[0].value().actual);
+    // Character MIN/MAX is the min/max of the arguments length that are
+    // present.
+    TODO(callContext.loc,
+         "compute elemental character min/max function result length in HLFIR");
   }
 
 private:
