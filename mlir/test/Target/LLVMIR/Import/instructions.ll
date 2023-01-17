@@ -366,33 +366,33 @@ define void @load_store(double* %ptr) {
 ; CHECK-SAME:  %[[VAL1:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[PTR2:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[VAL2:[a-zA-Z0-9]+]]
-define void @atomic_rmw(i32* %ptr1, i32 %val1, float* %ptr2, float %val2) {
+define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
   ; CHECK:  llvm.atomicrmw xchg %[[PTR1]], %[[VAL1]] acquire  : i32
-  %1 = atomicrmw xchg i32* %ptr1, i32 %val1 acquire
+  %1 = atomicrmw xchg ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw add %[[PTR1]], %[[VAL1]] release  : i32
-  %2 = atomicrmw add i32* %ptr1, i32 %val1 release
+  %2 = atomicrmw add ptr %ptr1, i32 %val1 release
   ; CHECK:  llvm.atomicrmw sub %[[PTR1]], %[[VAL1]] acq_rel  : i32
-  %3 = atomicrmw sub i32* %ptr1, i32 %val1 acq_rel
+  %3 = atomicrmw sub ptr %ptr1, i32 %val1 acq_rel
   ; CHECK:  llvm.atomicrmw _and %[[PTR1]], %[[VAL1]] seq_cst  : i32
-  %4 = atomicrmw and i32* %ptr1, i32 %val1 seq_cst
+  %4 = atomicrmw and ptr %ptr1, i32 %val1 seq_cst
   ; CHECK:  llvm.atomicrmw nand %[[PTR1]], %[[VAL1]] acquire  : i32
-  %5 = atomicrmw nand i32* %ptr1, i32 %val1 acquire
+  %5 = atomicrmw nand ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw _or %[[PTR1]], %[[VAL1]] acquire  : i32
-  %6 = atomicrmw or i32* %ptr1, i32 %val1 acquire
+  %6 = atomicrmw or ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw _xor %[[PTR1]], %[[VAL1]] acquire  : i32
-  %7 = atomicrmw xor i32* %ptr1, i32 %val1 acquire
+  %7 = atomicrmw xor ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw max %[[PTR1]], %[[VAL1]] acquire  : i32
-  %8 = atomicrmw max i32* %ptr1, i32 %val1 acquire
+  %8 = atomicrmw max ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw min %[[PTR1]], %[[VAL1]] acquire  : i32
-  %9 = atomicrmw min i32* %ptr1, i32 %val1 acquire
+  %9 = atomicrmw min ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw umax %[[PTR1]], %[[VAL1]] acquire  : i32
-  %10 = atomicrmw umax i32* %ptr1, i32 %val1 acquire
+  %10 = atomicrmw umax ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw umin %[[PTR1]], %[[VAL1]] acquire  : i32
-  %11 = atomicrmw umin i32* %ptr1, i32 %val1 acquire
+  %11 = atomicrmw umin ptr %ptr1, i32 %val1 acquire
   ; CHECK:  llvm.atomicrmw fadd %[[PTR2]], %[[VAL2]] acquire  : f32
-  %12 = atomicrmw fadd float* %ptr2, float %val2 acquire
+  %12 = atomicrmw fadd ptr %ptr2, float %val2 acquire
   ; CHECK:  llvm.atomicrmw fsub %[[PTR2]], %[[VAL2]] acquire  : f32
-  %13 = atomicrmw fsub float* %ptr2, float %val2 acquire
+  %13 = atomicrmw fsub ptr %ptr2, float %val2 acquire
   ret void
 }
 
