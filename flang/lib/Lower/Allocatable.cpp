@@ -206,6 +206,24 @@ static mlir::Value genRuntimeAllocateSource(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, callee, operands).getResult(0);
 }
 
+/// Generate runtime call to apply mold to the descriptor.
+static void genRuntimeAllocateApplyMold(fir::FirOpBuilder &builder,
+                                        mlir::Location loc,
+                                        const fir::MutableBoxValue &box,
+                                        fir::ExtendedValue mold) {
+  mlir::func::FuncOp callee =
+      box.isPointer()
+          ? fir::runtime::getRuntimeFunc<mkRTKey(PointerApplyMold)>(loc,
+                                                                    builder)
+          : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableApplyMold)>(
+                loc, builder);
+  llvm::SmallVector<mlir::Value> args{box.getAddr(), fir::getBase(mold)};
+  llvm::SmallVector<mlir::Value> operands;
+  for (auto [fst, snd] : llvm::zip(args, callee.getFunctionType().getInputs()))
+    operands.emplace_back(builder.createConvert(loc, snd, fst));
+  builder.create<fir::CallOp>(loc, callee, operands);
+}
+
 /// Generate a runtime call to deallocate memory.
 static mlir::Value genRuntimeDeallocate(fir::FirOpBuilder &builder,
                                         mlir::Location loc,
@@ -282,7 +300,7 @@ public:
     if (sourceExpr)
       sourceExv = converter.genExprBox(loc, *sourceExpr, stmtCtx);
     if (moldExpr)
-      TODO(loc, "lower MOLD expr in allocate");
+      moldExv = converter.genExprBox(loc, *moldExpr, stmtCtx);
     mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
     for (const auto &allocation :
          std::get<std::list<Fortran::parser::Allocation>>(stmt.t))
@@ -554,8 +572,14 @@ private:
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     errorManager.assignStat(builder, loc, stat);
   }
-  void genMoldAllocation(const Allocation &, const fir::MutableBoxValue &) {
-    TODO(loc, "MOLD allocation");
+
+  void genMoldAllocation(const Allocation &alloc,
+                         const fir::MutableBoxValue &box) {
+    genRuntimeAllocateApplyMold(builder, loc, box, moldExv);
+    errorManager.genStatCheck(builder, loc);
+    mlir::Value stat = genRuntimeAllocate(builder, loc, box, errorManager);
+    fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
+    errorManager.assignStat(builder, loc, stat);
   }
 
   /// Generate call to the AllocatableInitDerived to set up the type descriptor
@@ -651,6 +675,7 @@ private:
   ErrorManager errorManager;
   // 9.7.1.2(7) The source-expr is evaluated exactly once for each AllocateStmt.
   fir::ExtendedValue sourceExv;
+  fir::ExtendedValue moldExv;
 
   mlir::Location loc;
 };
