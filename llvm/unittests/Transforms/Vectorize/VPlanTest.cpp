@@ -394,10 +394,18 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R1, R2);
 
+    // Successors of R1.
+    SmallVector<const VPBlockBase *> FromIterator(
+        VPAllSuccessorsIterator<VPBlockBase *>(R1),
+        VPAllSuccessorsIterator<VPBlockBase *>::end(R1));
+    EXPECT_EQ(2u, FromIterator.size());
+    EXPECT_EQ(R1BB1, FromIterator[0]);
+    EXPECT_EQ(R2, FromIterator[1]);
+
     // Depth-first.
     VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(R1);
-    SmallVector<const VPBlockBase *> FromIterator(df_begin(Start),
-                                                  df_end(Start));
+    FromIterator.clear();
+    copy(df_begin(Start), df_end(Start), std::back_inserter(FromIterator));
     EXPECT_EQ(8u, FromIterator.size());
     EXPECT_EQ(R1, FromIterator[0]);
     EXPECT_EQ(R1BB1, FromIterator[1]);
