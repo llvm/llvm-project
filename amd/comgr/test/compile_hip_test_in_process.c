@@ -43,7 +43,7 @@ int main(int Argc, char *Argv[]) {
   char *BufSource;
   size_t SizeSource;
   amd_comgr_data_t DataSrc;
-  amd_comgr_data_set_t DataSetSrc, DataSetBc, DataSetDevLibs, DataSetLinkedBc,
+  amd_comgr_data_set_t DataSetSrc, DataSetBc, DataSetLinkedBc,
       DataSetAsm, DataSetReloc, DataSetExec;
   amd_comgr_action_info_t ActionInfo;
   amd_comgr_status_t Status;
@@ -72,20 +72,14 @@ int main(int Argc, char *Argv[]) {
 
   Status = amd_comgr_create_data_set(&DataSetBc);
   checkError(Status, "amd_comgr_create_data_set");
-  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC,
                                ActionInfo, DataSetSrc, DataSetBc);
-  checkError(Status, "amd_comgr_do_action");
-
-  Status = amd_comgr_create_data_set(&DataSetDevLibs);
-  checkError(Status, "amd_comgr_create_data_set");
-  Status = amd_comgr_do_action(AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
-                               ActionInfo, DataSetBc, DataSetDevLibs);
   checkError(Status, "amd_comgr_do_action");
 
   Status = amd_comgr_create_data_set(&DataSetLinkedBc);
   checkError(Status, "amd_comgr_create_data_set");
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_BC_TO_BC, ActionInfo,
-                               DataSetDevLibs, DataSetLinkedBc);
+                               DataSetBc, DataSetLinkedBc);
   checkError(Status, "amd_comgr_do_action");
 
   Status = amd_comgr_create_data_set(&DataSetAsm);
@@ -111,8 +105,6 @@ int main(int Argc, char *Argv[]) {
   Status = amd_comgr_destroy_data_set(DataSetSrc);
   checkError(Status, "amd_comgr_destroy_data_set");
   Status = amd_comgr_destroy_data_set(DataSetBc);
-  checkError(Status, "amd_comgr_destroy_data_set");
-  Status = amd_comgr_destroy_data_set(DataSetDevLibs);
   checkError(Status, "amd_comgr_destroy_data_set");
   Status = amd_comgr_destroy_data_set(DataSetLinkedBc);
   checkError(Status, "amd_comgr_destroy_data_set");

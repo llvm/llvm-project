@@ -889,14 +889,13 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
     }
   }
 
-  Argv.push_back(InputFilePath);
-
-  // By default, disable bitcode selection and linking by the driver.
-  // FIXME: We should always let the driver take care of bitcode library
-  // selection and linking when we have a consistent path to use.
+  // The ROCm device library should be provided via --rocm-path. Otherwise
+  // we can pass -nogpulib to build without the ROCm device library
   if (NoGpuLib) {
     Argv.push_back("-nogpulib");
   }
+
+  Argv.push_back(InputFilePath);
 
   Argv.push_back("-o");
   Argv.push_back(OutputFilePath);
@@ -1046,7 +1045,6 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
     Args.push_back("-target");
     Args.push_back("x86_64-unknown-linux-gnu");
     Args.push_back("--cuda-device-only");
-    Args.push_back("-nogpulib");
     Args.push_back("-isystem");
     Args.push_back(ROCMIncludePath.c_str());
     Args.push_back("-isystem");
