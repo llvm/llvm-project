@@ -2153,6 +2153,9 @@ public:
     case llvm::omp::Directive::OMPD_tile:
       Word("TILE ");
       break;
+    case llvm::omp::Directive::OMPD_unroll:
+      Word("UNROLL ");
+      break;
     default:
       break;
     }

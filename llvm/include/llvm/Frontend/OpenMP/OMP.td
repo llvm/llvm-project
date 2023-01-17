@@ -72,8 +72,14 @@ def OMPC_Sizes: Clause<"sizes"> {
   let flangClass = "ScalarIntExpr";
   let isValueList = true;
   }
-def OMPC_Full: Clause<"full"> { let clangClass = "OMPFullClause"; }
-def OMPC_Partial: Clause<"partial"> { let clangClass = "OMPPartialClause"; }
+def OMPC_Full: Clause<"full"> { 
+  let clangClass = "OMPFullClause"; 
+}
+def OMPC_Partial: Clause<"partial"> { 
+  let clangClass = "OMPPartialClause";
+  let flangClass = "ScalarIntConstantExpr"; 
+  let isValueOptional = true;
+ }
 def OMPC_FirstPrivate : Clause<"firstprivate"> {
   let clangClass = "OMPFirstprivateClause";
   let flangClass = "OmpObjectList";
