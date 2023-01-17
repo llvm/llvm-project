@@ -107,10 +107,21 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(
       var->getInterfaceType());
   auto loweredType = converter.getLoweredRValueType(
       swift::TypeExpansionContext::minimal(), type);
+
+  // The fact that self is unowned is not preserved in the inner
+  // lldb_expr function. By casting the value to $*@sil_unowned ...
+  // SILGen emits a load_unowned instead of a load and the unwrapped
+  // self is passed to the lldb_expr.
+  swift::CanType var_type = loweredType;
+  if (info.is_unowned_self)
+    var_type = swift::ReferenceStorageType::get(
+                   loweredType, swift::ReferenceOwnership::Unowned, ast_ctx)
+                   ->getCanonicalType();
+
   swift::PointerToAddressInst *address_of_variable =
       m_builder.createPointerToAddress(
           null_loc, pointer_to_variable,
-          swift::SILType::getPrimitiveAddressType(loweredType),
+          swift::SILType::getPrimitiveAddressType(var_type),
           /*isStrict*/ true);
 
   if (info.needs_init) {
