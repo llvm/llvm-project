@@ -1920,19 +1920,7 @@ public:
 
   ~VPScalarIVStepsRecipe() override = default;
 
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPDef *D) {
-    return D->getVPDefID() == VPDef::VPScalarIVStepsSC;
-  }
-  /// Extra classof implementations to allow directly casting from VPUser ->
-  /// VPScalarIVStepsRecipe.
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && R->getVPDefID() == VPDef::VPScalarIVStepsSC;
-  }
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPDef::VPScalarIVStepsSC;
-  }
+  VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 
   /// Generate the scalarized versions of the phi node as needed by their users.
   void execute(VPTransformState &State) override;
