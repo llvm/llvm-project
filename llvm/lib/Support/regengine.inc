@@ -590,6 +590,7 @@ backref(struct match *m, const char *start, const char *stop, sopno startst,
 				return(NULL);
 			break;
 		case O_QUEST:
+		case O_CH:
 			break;
 		case OOR1:	/* matches null but needs to skip */
 			ss++;
@@ -662,7 +663,7 @@ backref(struct match *m, const char *start, const char *stop, sopno startst,
 		esub = ss + OPND(s) - 1;
 		assert(OP(m->g->strip[esub]) == OOR1);
 		for (;;) {	/* find first matching branch */
-			dp = backref(m, sp, stop, ssub, esub, lev, rec);
+			dp = backref(m, sp, stop, ssub, stopst, lev, rec);
 			if (dp != NULL)
 				return(dp);
 			/* that one missed, try next one */
