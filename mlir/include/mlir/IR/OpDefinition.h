@@ -184,8 +184,7 @@ public:
                                           MLIRContext *context) {}
 
   /// This hook populates any unset default attrs.
-  static void populateDefaultAttrs(const RegisteredOperationName &,
-                                   NamedAttrList &) {}
+  static void populateDefaultAttrs(const OperationName &, NamedAttrList &) {}
 
 protected:
   /// If the concrete type didn't implement a custom verifier hook, just fall
@@ -1833,19 +1832,10 @@ private:
     return result;
   }
 
-  /// Implementation of `GetCanonicalizationPatternsFn` OperationName hook.
-  static OperationName::GetCanonicalizationPatternsFn
-  getGetCanonicalizationPatternsFn() {
-    return &ConcreteType::getCanonicalizationPatterns;
-  }
   /// Implementation of `GetHasTraitFn`
   static OperationName::HasTraitFn getHasTraitFn() {
     return
         [](TypeID id) { return op_definition_impl::hasTrait<Traits...>(id); };
-  }
-  /// Implementation of `ParseAssemblyFn` OperationName hook.
-  static OperationName::ParseAssemblyFn getParseAssemblyFn() {
-    return &ConcreteType::parse;
   }
   /// Implementation of `PrintAssemblyFn` OperationName hook.
   static OperationName::PrintAssemblyFn getPrintAssemblyFn() {
