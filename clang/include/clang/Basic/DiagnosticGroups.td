@@ -173,6 +173,7 @@ def DeleteNonVirtualDtor : DiagGroup<"delete-non-virtual-dtor",
                                       DeleteAbstractNonVirtualDtor]>;
 def AbstractFinalClass : DiagGroup<"abstract-final-class">;
 def FinalDtorNonFinalClass : DiagGroup<"final-dtor-non-final-class">;
+def GNUOffsetofExtensions : DiagGroup<"gnu-offsetof-extensions">;
 
 def CXX11CompatDeprecatedWritableStr :
   DiagGroup<"c++11-compat-deprecated-writable-strings">;
@@ -1139,9 +1140,9 @@ def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
                             GNUFlexibleArrayUnionMember, GNUFoldingConstant,
                             GNUImaginaryConstant, GNUIncludeNext,
                             GNULabelsAsValue, GNULineMarker, GNUNullPointerArithmetic,
-                            GNUPointerArith, RedeclaredClassMember,
-                            GNURedeclaredEnum, GNUStatementExpression,
-                            GNUStaticFloatInit,
+                            GNUOffsetofExtensions, GNUPointerArith,
+                            RedeclaredClassMember, GNURedeclaredEnum,
+                            GNUStatementExpression, GNUStaticFloatInit,
                             GNUStringLiteralOperatorTemplate, GNUUnionCast,
                             GNUVariableSizedTypeNotAtEnd, ZeroLengthArray,
                             GNUZeroLineDirective,

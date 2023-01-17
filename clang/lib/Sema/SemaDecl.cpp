@@ -16593,7 +16593,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                      SourceLocation ScopedEnumKWLoc,
                      bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
                      bool IsTypeSpecifier, bool IsTemplateParamOrArg,
-                     SkipBodyInfo *SkipBody) {
+                     OffsetOfKind OOK, SkipBodyInfo *SkipBody) {
   // If this is not a definition, it must have a name.
   IdentifierInfo *OrigName = Name;
   assert((Name != nullptr || TUK == TUK_Definition) &&
@@ -17366,10 +17366,16 @@ CreateNewDecl:
                                cast_or_null<RecordDecl>(PrevDecl));
   }
 
+  if (OOK != OOK_Outside && TUK == TUK_Definition && !getLangOpts().CPlusPlus) {
+    Diag(New->getLocation(), diag::ext_type_defined_in_offsetof)
+        << (OOK == OOK_Macro) << New->getSourceRange();
+    Invalid = true;
+  }
+
   // C++11 [dcl.type]p3:
   //   A type-specifier-seq shall not define a class or enumeration [...].
-  if (getLangOpts().CPlusPlus && (IsTypeSpecifier || IsTemplateParamOrArg) &&
-      TUK == TUK_Definition) {
+  if (!Invalid && getLangOpts().CPlusPlus &&
+      (IsTypeSpecifier || IsTemplateParamOrArg) && TUK == TUK_Definition) {
     Diag(New->getLocation(), diag::err_type_defined_in_type_specifier)
       << Context.getTagDeclType(New);
     Invalid = true;
