@@ -385,6 +385,13 @@ DecodeAVLdSt_160RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
                                   Decoder);
 }
 
+static DecodeStatus
+DecodeAVLdSt_1024RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
+                               const MCDisassembler *Decoder) {
+  return decodeOperand_AVLdSt_Any(Inst, Imm, AMDGPUDisassembler::OPW1024,
+                                  Decoder);
+}
+
 static DecodeStatus decodeOperand_SReg_16(MCInst &Inst, unsigned Imm,
                                           uint64_t Addr,
                                           const MCDisassembler *Decoder) {
