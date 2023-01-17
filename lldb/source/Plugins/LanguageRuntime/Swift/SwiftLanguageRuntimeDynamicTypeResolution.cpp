@@ -510,6 +510,8 @@ SwiftLanguageRuntimeImpl::GetMetadataPromise(lldb::addr_t addr,
   if (!scratch_ctx)
     return nullptr;
   SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+  if (!swift_ast_ctx)
+    return nullptr;
   if (swift_ast_ctx->HasFatalErrors())
     return nullptr;
   if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
