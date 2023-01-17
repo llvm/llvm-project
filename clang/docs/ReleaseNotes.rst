@@ -452,6 +452,8 @@ Improvements to Clang's diagnostics
 - Add ``-Wreturn-local-addr``, a GCC alias for ``-Wreturn-stack-address``.
 - Clang now suppresses ``-Wlogical-op-parentheses`` on ``(x && a || b)`` and ``(a || b && x)``
   only when ``x`` is a string literal.
+- Clang will now reject the GNU extension address of label in coroutines explicitly.
+  This fixes `Issue 56436 <https://github.com/llvm/llvm-project/issues/56436>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
