@@ -202,20 +202,9 @@ private:
 /// field in a consistent way.
 /// Users should not make assumption on how a sparse tensor is laid out but
 /// instead relies on this class to access the right value for the right field.
-template <bool mut>
+template <typename ValueArrayRef>
 class SparseTensorDescriptorImpl {
 protected:
-  // Uses ValueRange for immuatable descriptors; uses SmallVectorImpl<Value> &
-  // for mutable descriptors.
-  // Using SmallVector for mutable descriptor allows users to reuse it as a tmp
-  // buffers to append value for some special cases, though users should be
-  // responsible to restore the buffer to legal states after their use. It is
-  // probably not a clean way, but it is the most efficient way to avoid copying
-  // the fields into another SmallVector. If a more clear way is wanted, we
-  // should change it to MutableArrayRef instead.
-  using ValueArrayRef = typename std::conditional<mut, SmallVectorImpl<Value> &,
-                                                  ValueRange>::type;
-
   SparseTensorDescriptorImpl(Type tp, ValueArrayRef fields)
       : rType(tp.cast<RankedTensorType>()), fields(fields) {
     assert(getSparseTensorEncoding(tp) &&
@@ -223,8 +212,8 @@ protected:
                fields.size());
     // We should make sure the class is trivially copyable (and should be small
     // enough) such that we can pass it by value.
-    static_assert(
-        std::is_trivially_copyable_v<SparseTensorDescriptorImpl<mut>>);
+    static_assert(std::is_trivially_copyable_v<
+                  SparseTensorDescriptorImpl<ValueArrayRef>>);
   }
 
 public:
@@ -262,12 +251,12 @@ public:
 
   Value getMemRefField(SparseTensorFieldKind kind,
                        std::optional<unsigned> dim) const {
-    return fields[getMemRefFieldIndex(kind, dim)];
+    return getField(getMemRefFieldIndex(kind, dim));
   }
 
   Value getMemRefField(unsigned fidx) const {
     assert(fidx < fields.size() - 1);
-    return fields[fidx];
+    return getField(fidx);
   }
 
   Value getPtrMemSize(OpBuilder &builder, Location loc, unsigned dim) const {
@@ -293,19 +282,6 @@ public:
         .getElementType();
   }
 
-  RankedTensorType getTensorType() const { return rType; }
-  ValueArrayRef getFields() const { return fields; }
-
-protected:
-  RankedTensorType rType;
-  ValueArrayRef fields;
-};
-
-class MutSparseTensorDescriptor : public SparseTensorDescriptorImpl<true> {
-public:
-  MutSparseTensorDescriptor(Type tp, ValueArrayRef buffers)
-      : SparseTensorDescriptorImpl<true>(tp, buffers) {}
-
   Value getField(unsigned fidx) const {
     assert(fidx < fields.size());
     return fields[fidx];
@@ -317,9 +293,60 @@ public:
     return ret.slice(0, fields.size() - 1);
   }
 
+  std::pair<unsigned, unsigned>
+  getIdxMemRefIndexAndStride(unsigned idxDim) const {
+    StorageLayout layout(getSparseTensorEncoding(rType));
+    return layout.getFieldIndexAndStride(SparseTensorFieldKind::IdxMemRef,
+                                         idxDim);
+  }
+
+  Value getAOSMemRef() const {
+    auto enc = getSparseTensorEncoding(rType);
+    unsigned cooStart = getCOOStart(enc);
+    assert(cooStart < enc.getDimLevelType().size());
+    return getMemRefField(SparseTensorFieldKind::IdxMemRef, cooStart);
+  }
+
+  RankedTensorType getTensorType() const { return rType; }
+  ValueArrayRef getFields() const { return fields; }
+
+protected:
+  RankedTensorType rType;
+  ValueArrayRef fields;
+};
+
+/// Uses ValueRange for immuatable descriptors;
+class SparseTensorDescriptor : public SparseTensorDescriptorImpl<ValueRange> {
+public:
+  SparseTensorDescriptor(Type tp, ValueRange buffers)
+      : SparseTensorDescriptorImpl<ValueRange>(tp, buffers) {}
+
+  Value getIdxMemRefOrView(OpBuilder &builder, Location loc,
+                           unsigned idxDim) const;
+};
+
+/// Uses SmallVectorImpl<Value> & for mutable descriptors.
+/// Using SmallVector for mutable descriptor allows users to reuse it as a
+/// tmp buffers to append value for some special cases, though users should
+/// be responsible to restore the buffer to legal states after their use. It
+/// is probably not a clean way, but it is the most efficient way to avoid
+/// copying the fields into another SmallVector. If a more clear way is
+/// wanted, we should change it to MutableArrayRef instead.
+class MutSparseTensorDescriptor
+    : public SparseTensorDescriptorImpl<SmallVectorImpl<Value> &> {
+public:
+  MutSparseTensorDescriptor(Type tp, SmallVectorImpl<Value> &buffers)
+      : SparseTensorDescriptorImpl<SmallVectorImpl<Value> &>(tp, buffers) {}
+
+  // Allow implicit type conversion from mutable descriptors to immutable ones
+  // (but not vice versa).
+  /*implicit*/ operator SparseTensorDescriptor() const {
+    return SparseTensorDescriptor(rType, fields);
+  }
+
   ///
-  /// Setters: update the value for required field (only enabled for
-  /// MutSparseTensorDescriptor).
+  /// Adds additional setters for mutable descriptor, update the value for
+  /// required field.
   ///
 
   void setMemRefField(SparseTensorFieldKind kind, std::optional<unsigned> dim,
@@ -348,29 +375,6 @@ public:
   void setDimSize(OpBuilder &builder, Location loc, unsigned dim, Value v) {
     setSpecifierField(builder, loc, StorageSpecifierKind::DimSize, dim, v);
   }
-
-  std::pair<unsigned, unsigned>
-  getIdxMemRefIndexAndStride(unsigned idxDim) const {
-    StorageLayout layout(getSparseTensorEncoding(rType));
-    return layout.getFieldIndexAndStride(SparseTensorFieldKind::IdxMemRef,
-                                         idxDim);
-  }
-
-  Value getAOSMemRef() const {
-    auto enc = getSparseTensorEncoding(rType);
-    unsigned cooStart = getCOOStart(enc);
-    assert(cooStart < enc.getDimLevelType().size());
-    return getMemRefField(SparseTensorFieldKind::IdxMemRef, cooStart);
-  }
-};
-
-class SparseTensorDescriptor : public SparseTensorDescriptorImpl<false> {
-public:
-  SparseTensorDescriptor(Type tp, ValueArrayRef buffers)
-      : SparseTensorDescriptorImpl<false>(tp, buffers) {}
-
-  Value getIdxMemRefOrView(OpBuilder &builder, Location loc,
-                           unsigned idxDim) const;
 };
 
 /// Returns the "tuple" value of the adapted tensor.
@@ -386,7 +390,7 @@ inline Value genTuple(OpBuilder &builder, Location loc, Type tp,
 }
 
 inline Value genTuple(OpBuilder &builder, Location loc,
-                      MutSparseTensorDescriptor desc) {
+                      SparseTensorDescriptor desc) {
   return genTuple(builder, loc, desc.getTensorType(), desc.getFields());
 }
 
