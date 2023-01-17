@@ -706,7 +706,7 @@ uint64_t ReducerWorkItem::computeIRComplexityScore() const {
     ++Score;
 
     if (GV.hasInitializer())
-      ++Score;
+      Score += classifyReductivePower(GV.getInitializer());
 
     // TODO: Account for linkage?
 
