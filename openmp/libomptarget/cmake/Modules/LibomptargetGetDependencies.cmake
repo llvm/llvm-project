@@ -106,15 +106,19 @@ if (CUDA_TOOLKIT_ROOT_DIR)
 endif()
 find_package(CUDA QUIET)
 
-# Try to get the highest Nvidia GPU architecture the system supports
-if (CUDA_FOUND)
-  cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS)
-  string(REGEX MATCH "sm_([0-9]+)" CUDA_ARCH_MATCH_OUTPUT ${CUDA_ARCH_FLAGS})
-  if (NOT DEFINED CUDA_ARCH_MATCH_OUTPUT OR "${CMAKE_MATCH_1}" LESS 35)
-    libomptarget_warning_say("Setting Nvidia GPU architecture support for OpenMP target runtime library to sm_35 by default")
-    set(LIBOMPTARGET_DEP_CUDA_ARCH "35")
-  else()
-    set(LIBOMPTARGET_DEP_CUDA_ARCH "${CMAKE_MATCH_1}")
+# Identify any locally installed GPUs to use for testing.
+set(LIBOMPTARGET_DEP_CUDA_ARCH "sm_35")
+
+find_program(LIBOMPTARGET_NVPTX_ARCH NAMES nvptx-arch PATHS ${LLVM_BINARY_DIR}/bin)
+if(LIBOMPTARGET_NVPTX_ARCH)
+  execute_process(COMMAND ${LIBOMPTARGET_NVPTX_ARCH}
+                  OUTPUT_VARIABLE LIBOMPTARGET_NVPTX_ARCH_OUTPUT
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(FIND "${LIBOMPTARGET_NVPTX_ARCH_OUTPUT}" "\n" first_arch_string)
+  string(SUBSTRING "${LIBOMPTARGET_NVPTX_ARCH_OUTPUT}" 0 ${first_arch_string}
+         arch_string)
+  if(arch_string)
+    set(LIBOMPTARGET_DEP_CUDA_ARCH "${arch_string}")
   endif()
 endif()
 
