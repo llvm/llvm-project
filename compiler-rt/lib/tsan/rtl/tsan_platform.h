@@ -155,70 +155,82 @@ struct MappingAppleAarch64 {
 
 /*
 C/C++ on linux/aarch64 (39-bit VMA)
-0000 0010 00 - 0100 0000 00: main binary
-0100 0000 00 - 0400 0000 00: -
-0400 0000 00 - 1000 0000 00: shadow memory
-2000 0000 00 - 3100 0000 00: -
-3100 0000 00 - 3400 0000 00: metainfo
-3400 0000 00 - 5500 0000 00: -
-5500 0000 00 - 5600 0000 00: main binary (PIE)
+0000 0010 00 - 0500 0000 00: main binary                    (20 GB)
+0100 0000 00 - 2000 0000 00: -
+2000 0000 00 - 4000 0000 00: shadow memory                 (128 GB)
+4000 0000 00 - 4800 0000 00: metainfo                       (32 GB)
+4800 0000 00 - 5500 0000 00: -
+5500 0000 00 - 5a00 0000 00: main binary (PIE)              (20 GB)
 5600 0000 00 - 7c00 0000 00: -
-7c00 0000 00 - 7d00 0000 00: heap
-7d00 0000 00 - 7fff ffff ff: modules and main thread stack
+7a00 0000 00 - 7d00 0000 00: heap                           (12 GB)
+7d00 0000 00 - 7fff ffff ff: modules and main thread stack  (12 GB)
 */
 struct MappingAarch64_39 {
-  static const uptr kBroken = kBrokenAliasedMetas;
   static const uptr kLoAppMemBeg   = 0x0000001000ull;
-  static const uptr kLoAppMemEnd   = 0x0100000000ull;
-  static const uptr kShadowBeg = 0x0400000000ull;
-  static const uptr kShadowEnd = 0x1000000000ull;
-  static const uptr kMetaShadowBeg = 0x3100000000ull;
-  static const uptr kMetaShadowEnd = 0x3400000000ull;
+  static const uptr kLoAppMemEnd   = 0x0500000000ull;
+  static const uptr kShadowBeg     = 0x2000000000ull;
+  static const uptr kShadowEnd     = 0x4000000000ull;
+  static const uptr kMetaShadowBeg = 0x4000000000ull;
+  static const uptr kMetaShadowEnd = 0x4800000000ull;
   static const uptr kMidAppMemBeg  = 0x5500000000ull;
-  static const uptr kMidAppMemEnd = 0x5600000000ull;
-  static const uptr kHeapMemBeg    = 0x7c00000000ull;
+  static const uptr kMidAppMemEnd  = 0x5a00000000ull;
+  static const uptr kHeapMemBeg    = 0x7a00000000ull;
   static const uptr kHeapMemEnd    = 0x7d00000000ull;
-  static const uptr kHiAppMemBeg   = 0x7e00000000ull;
+  static const uptr kHiAppMemBeg   = 0x7d00000000ull;
   static const uptr kHiAppMemEnd   = 0x7fffffffffull;
-  static const uptr kShadowMsk = 0x7800000000ull;
-  static const uptr kShadowXor = 0x0200000000ull;
-  static const uptr kShadowAdd = 0x0000000000ull;
+  static const uptr kShadowMsk     = 0x7000000000ull;
+  static const uptr kShadowXor     = 0x1000000000ull;
+  static const uptr kShadowAdd     = 0x0000000000ull;
   static const uptr kVdsoBeg       = 0x7f00000000ull;
 };
 
 /*
 C/C++ on linux/aarch64 (42-bit VMA)
-00000 0010 00 - 01000 0000 00: main binary
-01000 0000 00 - 08000 0000 00: -
-08000 0000 00 - 10000 0000 00: shadow memory
-10000 0000 00 - 26000 0000 00: -
-26000 0000 00 - 28000 0000 00: metainfo
-28000 0000 00 - 2aa00 0000 00: -
-2aa00 0000 00 - 2ab00 0000 00: main binary (PIE)
-2ab00 0000 00 - 3e000 0000 00: -
-3e000 0000 00 - 3f000 0000 00: heap
-3f000 0000 00 - 3ffff ffff ff: modules and main thread stack
+00000 0010 00 - 02000 0000 00: main binary                   (128 GB)
+02000 0000 00 - 08000 0000 00: -
+10000 0000 00 - 20000 0000 00: shadow memory                (1024 GB)
+20000 0000 00 - 24000 0000 00: metainfo                      (256 GB)
+24000 0000 00 - 2aa00 0000 00: -
+2aa00 0000 00 - 2c000 0000 00: main binary (PIE)              (88 GB)
+2c000 0000 00 - 3c000 0000 00: -
+3c000 0000 00 - 3f000 0000 00: heap                          (192 GB)
+3f000 0000 00 - 3ffff ffff ff: modules and main thread stack  (64 GB)
 */
 struct MappingAarch64_42 {
-  static const uptr kBroken = kBrokenReverseMapping | kBrokenAliasedMetas;
   static const uptr kLoAppMemBeg   = 0x00000001000ull;
-  static const uptr kLoAppMemEnd   = 0x01000000000ull;
-  static const uptr kShadowBeg = 0x08000000000ull;
-  static const uptr kShadowEnd = 0x10000000000ull;
-  static const uptr kMetaShadowBeg = 0x26000000000ull;
-  static const uptr kMetaShadowEnd = 0x28000000000ull;
+  static const uptr kLoAppMemEnd   = 0x02000000000ull;
+  static const uptr kShadowBeg     = 0x10000000000ull;
+  static const uptr kShadowEnd     = 0x20000000000ull;
+  static const uptr kMetaShadowBeg = 0x20000000000ull;
+  static const uptr kMetaShadowEnd = 0x24000000000ull;
   static const uptr kMidAppMemBeg  = 0x2aa00000000ull;
-  static const uptr kMidAppMemEnd = 0x2ab00000000ull;
-  static const uptr kHeapMemBeg    = 0x3e000000000ull;
+  static const uptr kMidAppMemEnd  = 0x2c000000000ull;
+  static const uptr kHeapMemBeg    = 0x3c000000000ull;
   static const uptr kHeapMemEnd    = 0x3f000000000ull;
   static const uptr kHiAppMemBeg   = 0x3f000000000ull;
   static const uptr kHiAppMemEnd   = 0x3ffffffffffull;
-  static const uptr kShadowMsk = 0x3c000000000ull;
-  static const uptr kShadowXor = 0x04000000000ull;
-  static const uptr kShadowAdd = 0x00000000000ull;
+  static const uptr kShadowMsk     = 0x38000000000ull;
+  static const uptr kShadowXor     = 0x08000000000ull;
+  static const uptr kShadowAdd     = 0x00000000000ull;
   static const uptr kVdsoBeg       = 0x37f00000000ull;
 };
 
+/*
+C/C++ on linux/aarch64 (48-bit VMA)
+0000 0000 1000 - 0a00 0000 0000: main binary                   (10240 GB)
+0a00 0000 1000 - 1554 0000 0000: -
+1554 0000 1000 - 5400 0000 0000: shadow memory                 (64176 GB)
+5400 0000 1000 - 8000 0000 0000: -
+8000 0000 1000 - 0a00 0000 0000: metainfo                      (32768 GB)
+a000 0000 1000 - aaaa 0000 0000: -
+aaaa 0000 1000 - ac00 0000 0000: main binary (PIE)              (1368 GB)
+ac00 0000 1000 - fc00 0000 0000: -
+fc00 0000 1000 - ffff ffff ffff: modules and main thread stack  (4096 GB)
+
+N.B. the shadow memory region has a strange start address, because it
+contains the shadows for the mid, high and low app regions (in this
+unusual order).
+*/
 struct MappingAarch64_48 {
   static const uptr kLoAppMemBeg   = 0x0000000001000ull;
   static const uptr kLoAppMemEnd   = 0x00a0000000000ull;
@@ -295,7 +307,6 @@ struct MappingPPC64_44 {
   static const uptr kHeapMemEnd    = 0x0f5000000000ull;
   static const uptr kHiAppMemBeg   = 0x0f6000000000ull;
   static const uptr kHiAppMemEnd   = 0x100000000000ull; // 44 bits
-
   static const uptr kShadowMsk = 0x0f0000000000ull;
   static const uptr kShadowXor = 0x002100000000ull;
   static const uptr kShadowAdd = 0x000000000000ull;
