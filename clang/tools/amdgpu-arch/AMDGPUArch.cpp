@@ -17,33 +17,16 @@
 #include <string>
 #include <vector>
 
-#if defined(__has_include)
-#if __has_include("hsa/hsa.h")
-#define HSA_HEADER_FOUND 1
-#include "hsa/hsa.h"
-#elif __has_include("hsa.h")
-#define HSA_HEADER_FOUND 1
-#include "hsa.h"
-#else
-#define HSA_HEADER_FOUND 0
-#endif
-#else
-#define HSA_HEADER_FOUND 0
-#endif
-
-#if !HSA_HEADER_FOUND
-// Forward declaration of the status enumeration used by HSA.
+#if DYNAMIC_HSA
 typedef enum {
   HSA_STATUS_SUCCESS = 0x0,
 } hsa_status_t;
 
-// Forward declaration of the device types used by HSA.
 typedef enum {
   HSA_DEVICE_TYPE_CPU = 0,
   HSA_DEVICE_TYPE_GPU = 1,
 } hsa_device_type_t;
 
-// Forward declaration of the agent information types we use.
 typedef enum {
   HSA_AGENT_INFO_NAME = 0,
   HSA_AGENT_INFO_DEVICE = 17,
@@ -56,8 +39,7 @@ typedef struct hsa_agent_s {
 hsa_status_t (*hsa_init)();
 hsa_status_t (*hsa_shut_down)();
 hsa_status_t (*hsa_agent_get_info)(hsa_agent_t, hsa_agent_info_t, void *);
-hsa_status_t (*hsa_iterate_agents)(hsa_status_t (*callback)(hsa_agent_t,
-                                                            void *),
+hsa_status_t (*hsa_iterate_agents)(hsa_status_t (*)(hsa_agent_t, void *),
                                    void *);
 
 constexpr const char *DynamicHSAPath = "libhsa-runtime64.so";
@@ -86,6 +68,16 @@ llvm::Error loadHSA() {
   return llvm::Error::success();
 }
 #else
+
+#if defined(__has_include)
+#if __has_include("hsa/hsa.h")
+#include "hsa/hsa.h"
+#elif __has_include("hsa.h")
+#include "hsa.h"
+#endif
+#include "hsa/hsa.h"
+#endif
+
 llvm::Error loadHSA() { return llvm::Error::success(); }
 #endif
 
