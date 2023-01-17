@@ -9,18 +9,14 @@ target datalayout="p5:32:32-A5"
 define i8 @remove_alloca_use_arg(i1 %cond) {
 ; CHECK-LABEL: @remove_alloca_use_arg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(1)
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 4 dereferenceable(256) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(256) @g1, i64 256, i1 false)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[VAL_IF:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(1) [[ALLOCA]], i64 0, i64 2
 ; CHECK-NEXT:    br label [[SINK:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[VAL_ELSE:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(1) [[ALLOCA]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[VAL_IF]], [[IF]] ], [ [[VAL_ELSE]], [[ELSE]] ]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(1) [[PTR]], align 1
+; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ getelementptr inbounds ([32 x i8], ptr @g1, i64 0, i64 2), [[IF]] ], [ getelementptr inbounds ([32 x i8], ptr @g1, i64 0, i64 1), [[ELSE]] ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR1]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
 entry:
@@ -116,18 +112,14 @@ sink:
 define i8 @loop_phi_remove_alloca(i1 %cond) {
 ; CHECK-LABEL: @loop_phi_remove_alloca(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(1)
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 4 dereferenceable(256) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(256) @g1, i64 256, i1 false)
-; CHECK-NEXT:    [[VAL1:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(1) [[ALLOCA]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[BB_0:%.*]]
 ; CHECK:       bb.0:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[VAL1]], [[ENTRY:%.*]] ], [ [[VAL2:%.*]], [[BB_1:%.*]] ]
+; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ getelementptr inbounds ([32 x i8], ptr @g1, i64 0, i64 1), [[ENTRY:%.*]] ], [ getelementptr inbounds ([32 x i8], ptr @g1, i64 0, i64 2), [[BB_1:%.*]] ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB_1]], label [[EXIT:%.*]]
 ; CHECK:       bb.1:
-; CHECK-NEXT:    [[VAL2]] = getelementptr inbounds [32 x i8], ptr addrspace(1) [[ALLOCA]], i64 0, i64 2
 ; CHECK-NEXT:    br label [[BB_0]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(1) [[PTR]], align 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR1]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
 entry:
@@ -174,21 +166,17 @@ join:
   ret i32 %v
 }
 
-define i8 @loop_phi_late_memtransfer(i1 %cond) {
-; CHECK-LABEL: @loop_phi_late_memtransfer(
+define i8 @loop_phi_late_memtransfer_remove_alloca(i1 %cond) {
+; CHECK-LABEL: @loop_phi_late_memtransfer_remove_alloca(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(1)
-; CHECK-NEXT:    [[VAL1:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(1) [[ALLOCA]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[BB_0:%.*]]
 ; CHECK:       bb.0:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[VAL1]], [[ENTRY:%.*]] ], [ [[VAL2:%.*]], [[BB_1:%.*]] ]
+; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ getelementptr inbounds ([32 x i8], ptr @g1, i64 0, i64 1), [[ENTRY:%.*]] ], [ getelementptr inbounds ([32 x i8], ptr @g1, i64 0, i64 2), [[BB_1:%.*]] ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB_1]], label [[EXIT:%.*]]
 ; CHECK:       bb.1:
-; CHECK-NEXT:    [[VAL2]] = getelementptr inbounds [32 x i8], ptr addrspace(1) [[ALLOCA]], i64 0, i64 2
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 4 dereferenceable(256) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(256) @g1, i64 256, i1 false)
 ; CHECK-NEXT:    br label [[BB_0]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(1) [[PTR]], align 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR1]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
 entry:
