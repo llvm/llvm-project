@@ -15254,9 +15254,15 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   }
 
   // C++ [module.import/6] external definitions are not permitted in header
-  // units.
+  // units.  Deleted and Defaulted functions are implicitly inline (but the
+  // inline state is not set at this point, so check the BodyKind explicitly).
+  // FIXME: Consider an alternate location for the test where the inlined()
+  // state is complete.
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
-      FD->getFormalLinkage() == Linkage::ExternalLinkage && !FD->isInlined()) {
+      FD->getFormalLinkage() == Linkage::ExternalLinkage &&
+      !FD->isInvalidDecl() && BodyKind != FnBodyKind::Delete &&
+      BodyKind != FnBodyKind::Default && !FD->isInlined()) {
+    assert(FD->isThisDeclarationADefinition());
     Diag(FD->getLocation(), diag::err_extern_def_in_header_unit);
     FD->setInvalidDecl();
   }
