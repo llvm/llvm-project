@@ -126,7 +126,7 @@ static LogicalResult getKernelGlobalVariables(
 /// Encodes the SPIR-V module's symbolic name into the name of the entry point
 /// function.
 static LogicalResult encodeKernelName(spirv::ModuleOp module) {
-  StringRef spvModuleName = *module.getSymName();
+  StringRef spvModuleName = module.getSymName().value_or(kSPIRVModule);
   // We already know that the module contains exactly one entry point function
   // based on `getKernelGlobalVariables()` call. Update this function's name
   // to:
