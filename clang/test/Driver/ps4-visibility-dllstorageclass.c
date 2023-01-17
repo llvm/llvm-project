@@ -1,24 +1,31 @@
 // Check behaviour of -fvisibility-from-dllstorageclass options for PS4
 
-// RUN: %clang -### -target x86_64-scei-ps4 %s -Werror -o - 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=DEFAULTS \
-// RUN:     --implicit-check-not=-fvisibility-from-dllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-dllexport \
-// RUN:     --implicit-check-not=-fvisibility-nodllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-externs-dllimport \
-// RUN:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
-
-// RUN: %clang -### -target x86_64-scei-ps4 \
-// RUN:     -fno-visibility-from-dllstorageclass \
-// RUN:     -fvisibility-from-dllstorageclass \
-// RUN:     -Werror \
-// RUN:     %s -o - 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=DEFAULTS \
-// RUN:     --implicit-check-not=-fvisibility-from-dllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-dllexport \
-// RUN:     --implicit-check-not=-fvisibility-nodllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-externs-dllimport \
-// RUN:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// DEFINE: %{triple} =
+// DEFINE: %{run} = \
+// DEFINE: %clang -### -target %{triple} %s -Werror -o - 2>&1 | \
+// DEFINE:   FileCheck %s --check-prefix=DEFAULTS \
+// DEFINE:     --implicit-check-not=-fvisibility-from-dllstorageclass \
+// DEFINE:     --implicit-check-not=-fvisibility-dllexport \
+// DEFINE:     --implicit-check-not=-fvisibility-nodllstorageclass \
+// DEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
+// DEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
+//
+// REDEFINE: %{run} = \
+// REDEFINE: %clang -### -target %{triple} \
+// REDEFINE:     -fno-visibility-from-dllstorageclass \
+// REDEFINE:     -fvisibility-from-dllstorageclass \
+// REDEFINE:     -Werror \
+// REDEFINE:     %s -o - 2>&1 | \
+// REDEFINE:   FileCheck %s --check-prefix=DEFAULTS \
+// REDEFINE:     --implicit-check-not=-fvisibility-from-dllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-dllexport \
+// REDEFINE:     --implicit-check-not=-fvisibility-nodllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
 
 // DEFAULTS:      "-fvisibility-from-dllstorageclass"
 // DEFAULTS-SAME: "-fvisibility-dllexport=protected"
@@ -26,51 +33,60 @@
 // DEFAULTS-SAME: "-fvisibility-externs-dllimport=default"
 // DEFAULTS-SAME: "-fvisibility-externs-nodllstorageclass=default"
 
-// RUN: %clang -### -target x86_64-scei-ps4 \
-// RUN:     -fvisibility-from-dllstorageclass \
-// RUN:     -fvisibility-dllexport=hidden \
-// RUN:     -fvisibility-nodllstorageclass=protected \
-// RUN:     -fvisibility-externs-dllimport=hidden \
-// RUN:     -fvisibility-externs-nodllstorageclass=protected \
-// RUN:     -fno-visibility-from-dllstorageclass \
-// RUN:     %s -o - 2>&1 | \
-// RUN:   FileCheck %s -check-prefix=UNUSED \
-// RUN:     --implicit-check-not=-fvisibility-from-dllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-dllexport \
-// RUN:     --implicit-check-not=-fvisibility-nodllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-externs-dllimport \
-// RUN:     --implicit-check-not=-fvisibility-externs-nodllstorageclass \
-// RUN:     --implicit-check-not=warning:
+// REDEFINE: %{run} = \
+// REDEFINE: %clang -### -target x86_64-scei-ps4 \
+// REDEFINE:     -fvisibility-from-dllstorageclass \
+// REDEFINE:     -fvisibility-dllexport=hidden \
+// REDEFINE:     -fvisibility-nodllstorageclass=protected \
+// REDEFINE:     -fvisibility-externs-dllimport=hidden \
+// REDEFINE:     -fvisibility-externs-nodllstorageclass=protected \
+// REDEFINE:     -fno-visibility-from-dllstorageclass \
+// REDEFINE:     %s -o - 2>&1 | \
+// REDEFINE:   FileCheck %s -check-prefix=UNUSED \
+// REDEFINE:     --implicit-check-not=-fvisibility-from-dllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-dllexport \
+// REDEFINE:     --implicit-check-not=-fvisibility-nodllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass \
+// REDEFINE:     --implicit-check-not=warning:
+// REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
 
 // UNUSED:      warning: argument unused during compilation: '-fvisibility-dllexport=hidden'
 // UNUSED-NEXT: warning: argument unused during compilation: '-fvisibility-nodllstorageclass=protected'
 // UNUSED-NEXT: warning: argument unused during compilation: '-fvisibility-externs-dllimport=hidden'
 // UNUSED-NEXT: warning: argument unused during compilation: '-fvisibility-externs-nodllstorageclass=protected'
 
-// RUN: %clang -### -target x86_64-scei-ps4 \
-// RUN:     -fvisibility-nodllstorageclass=protected \
-// RUN:     -fvisibility-externs-dllimport=hidden \
-// RUN:     -Werror \
-// RUN:     %s -o - 2>&1 | \
-// RUN:   FileCheck %s -check-prefix=SOME \
-// RUN:     --implicit-check-not=-fvisibility-from-dllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-dllexport \
-// RUN:     --implicit-check-not=-fvisibility-nodllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-externs-dllimport \
-// RUN:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{run} = \
+// REDEFINE: %clang -### -target x86_64-scei-ps4 \
+// REDEFINE:     -fvisibility-nodllstorageclass=protected \
+// REDEFINE:     -fvisibility-externs-dllimport=hidden \
+// REDEFINE:     -Werror \
+// REDEFINE:     %s -o - 2>&1 | \
+// REDEFINE:   FileCheck %s -check-prefix=SOME \
+// REDEFINE:     --implicit-check-not=-fvisibility-from-dllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-dllexport \
+// REDEFINE:     --implicit-check-not=-fvisibility-nodllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
 
-// RUN: %clang -### -target x86_64-scei-ps4 \
-// RUN:     -fvisibility-from-dllstorageclass \
-// RUN:     -fvisibility-nodllstorageclass=protected \
-// RUN:     -fvisibility-externs-dllimport=hidden \
-// RUN:     -Werror \
-// RUN:     %s -o - 2>&1 | \
-// RUN:   FileCheck %s -check-prefix=SOME \
-// RUN:     --implicit-check-not=-fvisibility-from-dllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-dllexport \
-// RUN:     --implicit-check-not=-fvisibility-nodllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-externs-dllimport \
-// RUN:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{run} = \
+// REDEFINE: %clang -### -target x86_64-scei-ps4 \
+// REDEFINE:     -fvisibility-from-dllstorageclass \
+// REDEFINE:     -fvisibility-nodllstorageclass=protected \
+// REDEFINE:     -fvisibility-externs-dllimport=hidden \
+// REDEFINE:     -Werror \
+// REDEFINE:     %s -o - 2>&1 | \
+// REDEFINE:   FileCheck %s -check-prefix=SOME \
+// REDEFINE:     --implicit-check-not=-fvisibility-from-dllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-dllexport \
+// REDEFINE:     --implicit-check-not=-fvisibility-nodllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
 
 // SOME:      "-fvisibility-from-dllstorageclass"
 // SOME-SAME: "-fvisibility-dllexport=protected"
@@ -78,42 +94,48 @@
 // SOME-SAME: "-fvisibility-externs-dllimport=hidden"
 // SOME-SAME: "-fvisibility-externs-nodllstorageclass=default"
 
-// RUN: %clang -### -target x86_64-scei-ps4 \
-// RUN:     -fvisibility-dllexport=default \
-// RUN:     -fvisibility-dllexport=hidden \
-// RUN:     -fvisibility-nodllstorageclass=default \
-// RUN:     -fvisibility-nodllstorageclass=protected \
-// RUN:     -fvisibility-externs-dllimport=default \
-// RUN:     -fvisibility-externs-dllimport=hidden \
-// RUN:     -fvisibility-externs-nodllstorageclass=default \
-// RUN:     -fvisibility-externs-nodllstorageclass=protected \
-// RUN:     -Werror \
-// RUN:     %s -o - 2>&1 | \
-// RUN:   FileCheck %s -check-prefix=ALL \
-// RUN:     --implicit-check-not=-fvisibility-from-dllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-dllexport \
-// RUN:     --implicit-check-not=-fvisibility-nodllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-externs-dllimport \
-// RUN:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{run} = \
+// REDEFINE: %clang -### -target x86_64-scei-ps4 \
+// REDEFINE:     -fvisibility-dllexport=default \
+// REDEFINE:     -fvisibility-dllexport=hidden \
+// REDEFINE:     -fvisibility-nodllstorageclass=default \
+// REDEFINE:     -fvisibility-nodllstorageclass=protected \
+// REDEFINE:     -fvisibility-externs-dllimport=default \
+// REDEFINE:     -fvisibility-externs-dllimport=hidden \
+// REDEFINE:     -fvisibility-externs-nodllstorageclass=default \
+// REDEFINE:     -fvisibility-externs-nodllstorageclass=protected \
+// REDEFINE:     -Werror \
+// REDEFINE:     %s -o - 2>&1 | \
+// REDEFINE:   FileCheck %s -check-prefix=ALL \
+// REDEFINE:     --implicit-check-not=-fvisibility-from-dllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-dllexport \
+// REDEFINE:     --implicit-check-not=-fvisibility-nodllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
 
-// RUN: %clang -### -target x86_64-scei-ps4 \
-// RUN:     -fvisibility-from-dllstorageclass \
-// RUN:     -fvisibility-dllexport=default \
-// RUN:     -fvisibility-dllexport=hidden \
-// RUN:     -fvisibility-nodllstorageclass=default \
-// RUN:     -fvisibility-nodllstorageclass=protected \
-// RUN:     -fvisibility-externs-dllimport=default \
-// RUN:     -fvisibility-externs-dllimport=hidden \
-// RUN:     -fvisibility-externs-nodllstorageclass=default \
-// RUN:     -fvisibility-externs-nodllstorageclass=protected \
-// RUN:     -Werror \
-// RUN:     %s -o - 2>&1 | \
-// RUN:   FileCheck %s -check-prefix=ALL \
-// RUN:     --implicit-check-not=-fvisibility-from-dllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-dllexport \
-// RUN:     --implicit-check-not=-fvisibility-nodllstorageclass \
-// RUN:     --implicit-check-not=-fvisibility-externs-dllimport \
-// RUN:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{run} = \
+// REDEFINE: %clang -### -target x86_64-scei-ps4 \
+// REDEFINE:     -fvisibility-from-dllstorageclass \
+// REDEFINE:     -fvisibility-dllexport=default \
+// REDEFINE:     -fvisibility-dllexport=hidden \
+// REDEFINE:     -fvisibility-nodllstorageclass=default \
+// REDEFINE:     -fvisibility-nodllstorageclass=protected \
+// REDEFINE:     -fvisibility-externs-dllimport=default \
+// REDEFINE:     -fvisibility-externs-dllimport=hidden \
+// REDEFINE:     -fvisibility-externs-nodllstorageclass=default \
+// REDEFINE:     -fvisibility-externs-nodllstorageclass=protected \
+// REDEFINE:     -Werror \
+// REDEFINE:     %s -o - 2>&1 | \
+// REDEFINE:   FileCheck %s -check-prefix=ALL \
+// REDEFINE:     --implicit-check-not=-fvisibility-from-dllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-dllexport \
+// REDEFINE:     --implicit-check-not=-fvisibility-nodllstorageclass \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
+// REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass
+// REDEFINE: %{triple} = x86_64-scei-ps4
+// RUN: %{run}
 
 // ALL:      "-fvisibility-from-dllstorageclass"
 // ALL-SAME: "-fvisibility-dllexport=hidden"
