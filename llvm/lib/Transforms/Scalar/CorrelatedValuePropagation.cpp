@@ -733,7 +733,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   std::array<std::optional<ConstantRange>, 2> CRs;
   unsigned MinSignedBits = 0;
   for (auto I : zip(Instr->operands(), CRs)) {
-    std::get<1>(I) = LVI->getConstantRange(std::get<0>(I), Instr);
+    std::get<1>(I) = LVI->getConstantRangeAtUse(std::get<0>(I));
     MinSignedBits = std::max(std::get<1>(I)->getMinSignedBits(), MinSignedBits);
   }
 
@@ -844,8 +844,8 @@ static bool narrowUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
   unsigned MaxActiveBits = 0;
-  for (Value *Operand : Instr->operands()) {
-    ConstantRange CR = LVI->getConstantRange(Operand, Instr);
+  for (const Use &U : Instr->operands()) {
+    ConstantRange CR = LVI->getConstantRangeAtUse(U);
     MaxActiveBits = std::max(CR.getActiveBits(), MaxActiveBits);
   }
   // Don't shrink below 8 bits wide.
@@ -891,8 +891,8 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
-  ConstantRange LCR = LVI->getConstantRange(SDI->getOperand(0), SDI);
-  ConstantRange RCR = LVI->getConstantRange(SDI->getOperand(1), SDI);
+  ConstantRange LCR = LVI->getConstantRangeAtUse(SDI->getOperandUse(0));
+  ConstantRange RCR = LVI->getConstantRangeAtUse(SDI->getOperandUse(1));
 
   if (LCR.abs().icmp(CmpInst::ICMP_ULT, RCR.abs())) {
     SDI->replaceAllUsesWith(SDI->getOperand(0));
@@ -1026,7 +1026,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   if (SDI->getType()->isVectorTy())
     return false;
 
-  ConstantRange LRange = LVI->getConstantRange(SDI->getOperand(0), SDI);
+  ConstantRange LRange = LVI->getConstantRangeAtUse(SDI->getOperandUse(0));
   unsigned OrigWidth = SDI->getType()->getIntegerBitWidth();
   ConstantRange NegOneOrZero =
       ConstantRange(APInt(OrigWidth, (uint64_t)-1, true), APInt(OrigWidth, 1));
@@ -1116,7 +1116,7 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
 
   // Pattern match (and lhs, C) where C includes a superset of bits which might
   // be set in lhs.  This is a common truncation idiom created by instcombine.
-  Value *LHS = BinOp->getOperand(0);
+  const Use &LHS = BinOp->getOperandUse(0);
   ConstantInt *RHS = dyn_cast<ConstantInt>(BinOp->getOperand(1));
   if (!RHS || !RHS->getValue().isMask())
     return false;
@@ -1124,7 +1124,7 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   // We can only replace the AND with LHS based on range info if the range does
   // not include undef.
   ConstantRange LRange =
-      LVI->getConstantRange(LHS, BinOp, /*UndefAllowed=*/false);
+      LVI->getConstantRangeAtUse(LHS, /*UndefAllowed=*/false);
   if (!LRange.getUnsignedMax().ule(RHS->getValue()))
     return false;
 
