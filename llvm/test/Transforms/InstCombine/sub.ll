@@ -2390,11 +2390,13 @@ define <2 x i8> @sub_to_and_vector4(<2 x i8> %x) {
   ret <2 x i8> %r
 }
 
+; (X * X) - (Y * Y) --> (X + Y) * (X - Y)
+
 define i8 @diff_of_squares(i8 %x, i8 %y) {
 ; CHECK-LABEL: @diff_of_squares(
-; CHECK-NEXT:    [[X2:%.*]] = mul i8 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[Y2:%.*]] = mul i8 [[Y:%.*]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X2]], [[Y2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul i8 [[ADD]], [[SUB]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x2 = mul i8 %x, %x
@@ -2403,11 +2405,13 @@ define i8 @diff_of_squares(i8 %x, i8 %y) {
   ret i8 %r
 }
 
+; All-or-nothing for propagation of no-wrap flags (possibly conservative)
+
 define i5 @diff_of_squares_nuw(i5 %x, i5 %y) {
 ; CHECK-LABEL: @diff_of_squares_nuw(
-; CHECK-NEXT:    [[X2:%.*]] = mul nuw i5 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[Y2:%.*]] = mul nuw i5 [[Y:%.*]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub nuw i5 [[X2]], [[Y2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i5 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i5 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw i5 [[ADD]], [[SUB]]
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %x2 = mul nuw i5 %x, %x
@@ -2416,11 +2420,13 @@ define i5 @diff_of_squares_nuw(i5 %x, i5 %y) {
   ret i5 %r
 }
 
+; All-or-nothing for propagation of no-wrap flags (possibly conservative)
+
 define i5 @diff_of_squares_partial_nuw(i5 %x, i5 %y) {
 ; CHECK-LABEL: @diff_of_squares_partial_nuw(
-; CHECK-NEXT:    [[X2:%.*]] = mul nuw i5 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[Y2:%.*]] = mul nuw i5 [[Y:%.*]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub i5 [[X2]], [[Y2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i5 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul i5 [[ADD]], [[SUB]]
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %x2 = mul nuw i5 %x, %x
@@ -2429,11 +2435,13 @@ define i5 @diff_of_squares_partial_nuw(i5 %x, i5 %y) {
   ret i5 %r
 }
 
+; All-or-nothing for propagation of no-wrap flags (possibly conservative)
+
 define <2 x i5> @diff_of_squares_nsw(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @diff_of_squares_nsw(
-; CHECK-NEXT:    [[X2:%.*]] = mul nsw <2 x i5> [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[Y2:%.*]] = mul nsw <2 x i5> [[Y:%.*]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i5> [[X2]], [[Y2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i5> [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul nsw <2 x i5> [[ADD]], [[SUB]]
 ; CHECK-NEXT:    ret <2 x i5> [[R]]
 ;
   %x2 = mul nsw <2 x i5> %x, %x
@@ -2442,11 +2450,13 @@ define <2 x i5> @diff_of_squares_nsw(<2 x i5> %x, <2 x i5> %y) {
   ret <2 x i5> %r
 }
 
+; All-or-nothing for propagation of no-wrap flags (possibly conservative)
+
 define <2 x i5> @diff_of_squares_partial_nsw(<2 x i5> %x, <2 x i5> %y) {
 ; CHECK-LABEL: @diff_of_squares_partial_nsw(
-; CHECK-NEXT:    [[X2:%.*]] = mul nsw <2 x i5> [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[Y2:%.*]] = mul <2 x i5> [[Y:%.*]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i5> [[X2]], [[Y2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i5> [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul <2 x i5> [[ADD]], [[SUB]]
 ; CHECK-NEXT:    ret <2 x i5> [[R]]
 ;
   %x2 = mul nsw <2 x i5> %x, %x
@@ -2454,6 +2464,8 @@ define <2 x i5> @diff_of_squares_partial_nsw(<2 x i5> %x, <2 x i5> %y) {
   %r = sub nsw <2 x i5> %x2, %y2
   ret <2 x i5> %r
 }
+
+; negative test
 
 define i8 @diff_of_squares_use1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @diff_of_squares_use1(
@@ -2469,6 +2481,8 @@ define i8 @diff_of_squares_use1(i8 %x, i8 %y) {
   %r = sub i8 %x2, %y2
   ret i8 %r
 }
+
+; negative test
 
 define i8 @diff_of_squares_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @diff_of_squares_use2(
