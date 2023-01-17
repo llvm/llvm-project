@@ -8725,10 +8725,14 @@ class sve2p1_fclamp<string asm, bits<2> sz, ZPRRegOp zpr_ty>
   let ElementSize = zpr_ty.ElementSize;
 }
 
-multiclass sve2p1_fclamp<string asm> {
+multiclass sve2p1_fclamp<string asm, SDPatternOperator op> {
   def _H : sve2p1_fclamp<asm, 0b01, ZPR16>;
   def _S : sve2p1_fclamp<asm, 0b10, ZPR32>;
   def _D : sve2p1_fclamp<asm, 0b11, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv8f16, op, nxv8f16, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2f64, op, nxv2f64, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 // SVE two-way dot product
