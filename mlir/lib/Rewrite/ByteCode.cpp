@@ -1606,7 +1606,7 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
   unsigned numResults = read();
   if (numResults == kInferTypesMarker) {
     InferTypeOpInterface::Concept *inferInterface =
-        state.name.getInterface<InferTypeOpInterface>();
+        state.name.getRegisteredInfo()->getInterface<InferTypeOpInterface>();
     assert(inferInterface &&
            "expected operation to provide InferTypeOpInterface");
 

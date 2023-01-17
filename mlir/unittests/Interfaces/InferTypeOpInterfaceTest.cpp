@@ -36,7 +36,6 @@ protected:
     registry.insert<func::FuncDialect, arith::ArithDialect>();
     ctx.appendDialectRegistry(registry);
     module = parseSourceString<ModuleOp>(ir, &ctx);
-    assert(module);
     mapFn = cast<func::FuncOp>(module->front());
   }
 
