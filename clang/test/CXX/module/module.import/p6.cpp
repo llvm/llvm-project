@@ -22,3 +22,9 @@ int ok_var_decl;
 
 int bad_var_definition = 3;  // expected-error {{non-inline external definitions are not permitted in C++ header units}}
 
+class A {
+public:
+    // This is a declaration instead of definition.
+    static const int value = 43; 
+};
+
