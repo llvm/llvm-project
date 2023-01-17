@@ -273,8 +273,8 @@ struct TestTileConsumerFuseAndYieldProducerUsingSCFForOp
     };
 
     // The rest of this method is similar to
-    // scf::tileAndFuseGreedilyUsingSCFForOp, except that also yields
-    // replacements for values of the fused producer.
+    // scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp, except that also
+    // yields replacements for values of the fused producer.
 
     // 1. Tile the consumer.
     SmallVector<OpResult> yieldedValuesToOrigValues;
