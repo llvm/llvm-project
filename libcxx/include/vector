@@ -3304,10 +3304,10 @@ erase_if(vector<_Tp, _Allocator>& __c, _Predicate __pred) {
 }
 
 template <>
-inline constexpr bool __format::__enable_insertable<std::vector<char>> = true;
+inline constexpr bool __format::__enable_insertable<vector<char>> = true;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template <>
-inline constexpr bool __format::__enable_insertable<std::vector<wchar_t>> = true;
+inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
 #endif
 
 #endif // _LIBCPP_STD_VER > 17

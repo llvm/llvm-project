@@ -27,7 +27,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/ValueHandle.h"
@@ -282,7 +281,7 @@ class CGDebugInfo {
     llvm::ArrayRef<TemplateArgument> Args;
   };
   /// A helper function to collect template parameters.
-  llvm::DINodeArray CollectTemplateParams(Optional<TemplateArgs> Args,
+  llvm::DINodeArray CollectTemplateParams(std::optional<TemplateArgs> Args,
                                           llvm::DIFile *Unit);
   /// A helper function to collect debug info for function template
   /// parameters.
@@ -294,9 +293,9 @@ class CGDebugInfo {
   llvm::DINodeArray CollectVarTemplateParams(const VarDecl *VD,
                                              llvm::DIFile *Unit);
 
-  Optional<TemplateArgs> GetTemplateArgs(const VarDecl *) const;
-  Optional<TemplateArgs> GetTemplateArgs(const RecordDecl *) const;
-  Optional<TemplateArgs> GetTemplateArgs(const FunctionDecl *) const;
+  std::optional<TemplateArgs> GetTemplateArgs(const VarDecl *) const;
+  std::optional<TemplateArgs> GetTemplateArgs(const RecordDecl *) const;
+  std::optional<TemplateArgs> GetTemplateArgs(const FunctionDecl *) const;
 
   /// A helper function to collect debug info for template
   /// parameters.
@@ -490,10 +489,9 @@ public:
 
   /// Emit call to \c llvm.dbg.declare for an argument variable
   /// declaration.
-  llvm::DILocalVariable *EmitDeclareOfArgVariable(const VarDecl *Decl,
-                                                  llvm::Value *AI,
-                                                  unsigned ArgNo,
-                                                  CGBuilderTy &Builder);
+  llvm::DILocalVariable *
+  EmitDeclareOfArgVariable(const VarDecl *Decl, llvm::Value *AI, unsigned ArgNo,
+                           CGBuilderTy &Builder, bool UsePointerValue = false);
 
   /// Emit call to \c llvm.dbg.declare for the block-literal argument
   /// to a block invocation function.
@@ -597,7 +595,7 @@ private:
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.
   llvm::DILocalVariable *EmitDeclare(const VarDecl *decl, llvm::Value *AI,
-                                     llvm::Optional<unsigned> ArgNo,
+                                     std::optional<unsigned> ArgNo,
                                      CGBuilderTy &Builder,
                                      const bool UsePointerValue = false);
 
@@ -613,7 +611,7 @@ private:
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.declare, or nullptr otherwise.
   llvm::DILocalVariable *EmitDeclare(const BindingDecl *decl, llvm::Value *AI,
-                                     llvm::Optional<unsigned> ArgNo,
+                                     std::optional<unsigned> ArgNo,
                                      CGBuilderTy &Builder,
                                      const bool UsePointerValue = false);
 

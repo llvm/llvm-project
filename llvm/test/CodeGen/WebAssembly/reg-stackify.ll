@@ -26,7 +26,7 @@ define i32 @no0(ptr %p, ptr %q) {
 ; CHECK: return $1{{$}}
 ; NOREGS-LABEL: no1:
 ; NOREGS: return{{$}}
-define i32 @no1(ptr %p, ptr dereferenceable(4) %q) {
+define i32 @no1(ptr %p, ptr dereferenceable(4) align(4) %q) {
   %t = load volatile i32, ptr %q, !invariant.load !0
   store volatile i32 0, ptr %p
   ret i32 %t
@@ -38,7 +38,7 @@ define i32 @no1(ptr %p, ptr dereferenceable(4) %q) {
 ; CHECK: return $pop{{[0-9]+}}{{$}}
 ; NOREGS-LABEL: yes0:
 ; NOREGS: return{{$}}
-define i32 @yes0(ptr %p, ptr dereferenceable(4) %q) {
+define i32 @yes0(ptr %p, ptr dereferenceable(4) align(4) %q) {
   %t = load i32, ptr %q, !invariant.load !0
   store i32 0, ptr %p
   ret i32 %t
@@ -559,7 +559,7 @@ define i32 @no_stackify_store_past_load(i32 %a, ptr %p1, ptr %p2) {
 ; NOREGS: call callee
 ; NOREGS: i32.load 0
 ; NOREGS: return
-define i32 @store_past_invar_load(i32 %a, ptr %p1, ptr dereferenceable(4) %p2) {
+define i32 @store_past_invar_load(i32 %a, ptr %p1, ptr dereferenceable(4) align(4) %p2) {
   store i32 %a, ptr %p1
   %b = load i32, ptr %p2, !invariant.load !0
   call i32 @callee(i32 %a)

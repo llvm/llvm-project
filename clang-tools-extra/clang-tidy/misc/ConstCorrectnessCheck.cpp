@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 namespace {
 // FIXME: This matcher exists in some other code-review as well.
@@ -207,6 +205,4 @@ void ConstCorrectnessCheck::registerScope(const CompoundStmt *LocalScope,
     Analyzer = std::make_unique<ExprMutationAnalyzer>(*LocalScope, *Context);
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

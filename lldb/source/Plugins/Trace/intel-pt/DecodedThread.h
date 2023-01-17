@@ -312,7 +312,7 @@ private:
   // cpu is seen.
   std::map<uint64_t, lldb::cpu_id_t> m_cpus;
   /// This is the chronologically last CPU ID.
-  std::optional<uint64_t> m_last_cpu = std::nullopt;
+  std::optional<uint64_t> m_last_cpu;
 
   // The PSB offsets are stored as a map. It maps `item index -> psb offset`.
   llvm::DenseMap<uint64_t, lldb::addr_t> m_psb_offsets;

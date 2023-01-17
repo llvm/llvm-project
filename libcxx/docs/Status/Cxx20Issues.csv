@@ -281,7 +281,7 @@
 "`3373 <https://wg21.link/LWG3373>`__","``{to,from}_chars_result``\  and ``format_to_n_result``\  need the  ""we really mean what we say"" wording","Prague","|Complete|","14.0","|format|"
 "`3374 <https://wg21.link/LWG3374>`__","P0653 + P1006 should have made the other ``std::to_address``\  overload ``constexpr``\ ","Prague","|Complete|","12.0"
 "`3375 <https://wg21.link/LWG3375>`__","``decay``\  in ``viewable_range``\  should be ``remove_cvref``\ ","Prague","|Complete|","15.0","|ranges|"
-"`3377 <https://wg21.link/LWG3377>`__","``elements_view::iterator``\  befriends a specialization of itself","Prague","","","|ranges|"
+"`3377 <https://wg21.link/LWG3377>`__","``elements_view::iterator``\  befriends a specialization of itself","Prague","|Nothing To Do|","","|ranges|"
 "`3379 <https://wg21.link/LWG3379>`__","""``safe``\ "" in several library names is misleading","Prague","|Complete|","15.0","|ranges|"
 "`3380 <https://wg21.link/LWG3380>`__","``common_type``\  and comparison categories","Prague","|Complete|","15.0","|spaceship|"
 "`3381 <https://wg21.link/LWG3381>`__","``begin``\  and ``data``\  must agree for ``contiguous_range``\ ","Prague","|Nothing To Do|","","|ranges|"

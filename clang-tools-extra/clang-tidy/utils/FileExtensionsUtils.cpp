@@ -11,9 +11,7 @@
 #include "llvm/Support/Path.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 bool isExpansionLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                 const FileExtensionsSet &HeaderFileExtensions) {
@@ -70,6 +68,4 @@ bool isFileExtension(StringRef FileName,
   return getFileExtension(FileName, FileExtensions).has_value();
 }
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils

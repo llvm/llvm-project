@@ -40,8 +40,7 @@
 #include "SpecialMemberFunctionsCheck.h"
 #include "VirtualClassDestructorCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace cppcoreguidelines {
 
 /// A module containing checks of the C++ Core Guidelines
@@ -129,5 +128,4 @@ static ClangTidyModuleRegistry::Add<CppCoreGuidelinesModule>
 // and thus register the CppCoreGuidelinesModule.
 volatile int CppCoreGuidelinesModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

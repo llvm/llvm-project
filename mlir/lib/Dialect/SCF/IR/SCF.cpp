@@ -2859,10 +2859,12 @@ static LogicalResult verifyTypeRangesMatch(OpTy op, TypeRange left,
 template <typename TerminatorTy>
 static TerminatorTy verifyAndGetTerminator(scf::WhileOp op, Region &region,
                                            StringRef errorMessage) {
-  Operation *terminatorOperation = region.front().getTerminator();
-  if (auto yield = dyn_cast_or_null<TerminatorTy>(terminatorOperation))
-    return yield;
-
+  Operation *terminatorOperation = nullptr;
+  if (!region.empty() && !region.front().empty()) {
+    terminatorOperation = &region.front().back();
+    if (auto yield = dyn_cast_or_null<TerminatorTy>(terminatorOperation))
+      return yield;
+  }
   auto diag = op.emitOpError(errorMessage);
   if (terminatorOperation)
     diag.attachNote(terminatorOperation->getLoc()) << "terminator here";

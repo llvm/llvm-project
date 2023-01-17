@@ -1121,8 +1121,8 @@ private:
   // Resource Section
 
   LogicalResult
-  parseResourceSection(Optional<ArrayRef<uint8_t>> resourceData,
-                       Optional<ArrayRef<uint8_t>> resourceOffsetData);
+  parseResourceSection(std::optional<ArrayRef<uint8_t>> resourceData,
+                       std::optional<ArrayRef<uint8_t>> resourceOffsetData);
 
   //===--------------------------------------------------------------------===//
   // IR Section
@@ -1269,7 +1269,8 @@ LogicalResult BytecodeReader::read(llvm::MemoryBufferRef buffer, Block *block) {
   });
 
   // Parse the raw data for each of the top-level sections of the bytecode.
-  Optional<ArrayRef<uint8_t>> sectionDatas[bytecode::Section::kNumSections];
+  std::optional<ArrayRef<uint8_t>>
+      sectionDatas[bytecode::Section::kNumSections];
   while (!reader.empty()) {
     // Read the next section from the bytecode.
     bytecode::Section::ID sectionID;
@@ -1389,8 +1390,8 @@ FailureOr<OperationName> BytecodeReader::parseOpName(EncodingReader &reader) {
 // Resource Section
 
 LogicalResult BytecodeReader::parseResourceSection(
-    Optional<ArrayRef<uint8_t>> resourceData,
-    Optional<ArrayRef<uint8_t>> resourceOffsetData) {
+    std::optional<ArrayRef<uint8_t>> resourceData,
+    std::optional<ArrayRef<uint8_t>> resourceOffsetData) {
   // Ensure both sections are either present or not.
   if (resourceData.has_value() != resourceOffsetData.has_value()) {
     if (resourceOffsetData)

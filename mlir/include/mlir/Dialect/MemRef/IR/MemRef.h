@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include <optional>
 
 namespace mlir {
 
@@ -52,7 +53,7 @@ Type getTensorTypeFromMemRefType(Type type);
 /// Finds a single dealloc operation for the given allocated value. If there
 /// are > 1 deallocates for `allocValue`, returns std::nullopt, else returns the
 /// single deallocate if it exists or nullptr.
-Optional<Operation *> findDealloc(Value allocValue);
+std::optional<Operation *> findDealloc(Value allocValue);
 
 /// Return the dimensions of the given memref value.
 SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,

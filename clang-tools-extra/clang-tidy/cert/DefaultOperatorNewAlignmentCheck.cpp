@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 void DefaultOperatorNewAlignmentCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -63,6 +61,4 @@ void DefaultOperatorNewAlignmentCheck::check(
         << (SpecifiedAlignment / CharWidth);
 }
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert

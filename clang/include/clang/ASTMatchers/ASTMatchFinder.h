@@ -44,6 +44,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Timer.h"
+#include <optional>
 
 namespace clang {
 
@@ -137,7 +138,7 @@ public:
     /// Enables per-check timers.
     ///
     /// It prints a report after match.
-    llvm::Optional<Profiling> CheckProfiling;
+    std::optional<Profiling> CheckProfiling;
   };
 
   MatchFinder(MatchFinderOptions Options = MatchFinderOptions());

@@ -756,8 +756,13 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   }
 
   // When completely unrolling, the last latch becomes unreachable.
-  if (!LatchIsExiting && CompletelyUnroll)
-    changeToUnreachable(Latches.back()->getTerminator(), PreserveLCSSA, &DTU);
+  if (!LatchIsExiting && CompletelyUnroll) {
+    // There is no need to update the DT here, because there must be a unique
+    // latch. Hence if the latch is not exiting it must directly branch back to
+    // the original loop header and does not dominate any nodes.
+    assert(LatchBlock->getSingleSuccessor() && "Loop with multiple latches?");
+    changeToUnreachable(Latches.back()->getTerminator(), PreserveLCSSA);
+  }
 
   // Merge adjacent basic blocks, if possible.
   for (BasicBlock *Latch : Latches) {

@@ -26,10 +26,10 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead %3:vreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead [[DEF2:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_NOP 0, implicit [[DEF1]]
   ; CHECK-NEXT:   S_NOP 0, implicit [[DEF1]]
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_1024_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vreg_1024_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -49,7 +49,7 @@ body:             |
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:av_1024_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:av_1024_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit undef $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:

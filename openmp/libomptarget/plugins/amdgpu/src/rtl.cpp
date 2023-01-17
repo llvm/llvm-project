@@ -1142,12 +1142,6 @@ public:
       TargetAllocTy kind = (HostAllocations.find(ptr) == HostAllocations.end())
                                ? TARGET_ALLOC_DEFAULT
                                : TARGET_ALLOC_HOST;
-      hsa_status_t err = HSA_STATUS_SUCCESS;
-
-      err = unlock_memory(ptr);
-      if (err != HSA_STATUS_SUCCESS)
-        DP("Error when unlocking memory\n");
-
       switch (kind) {
       case TARGET_ALLOC_DEFAULT:
       case TARGET_ALLOC_DEVICE: {
@@ -1331,8 +1325,11 @@ public:
     // Cleanup by unlocking all the locked pointers from the small pools
     SmallPoolTy::PtrVecTy AllPtrs = SmallPoolMgr.getAllPoolPtrs();
     for (const auto &e : AllPtrs) {
-      hsa_status_t err = HSA_STATUS_SUCCESS;
-      assert(is_locked(e, &err, nullptr));
+      void *agentBasedAddress = nullptr;
+      hsa_status_t err = is_locked(e, &agentBasedAddress);
+      if(err != HSA_STATUS_SUCCESS)
+        continue;
+      assert(agentBasedAddress);
 
       DP("Calling hsa_amd_memory_unlock in RTLDeviceInfoTy dtor for PoolPtr "
          "%p\n",
@@ -1820,8 +1817,13 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
 
 /// Get a pointer from a small pool, given a host pointer
 void *prepareHstPtrForDataRetrieve(size_t Size, void *HstPtr) {
+  void *agentBasedAddress = nullptr;
+  hsa_status_t err = is_locked(HstPtr, &agentBasedAddress);
   // user-locked data does not need the pool
-  if (is_locked(HstPtr, /*err_p=*/nullptr, /*agentBaseAddress=*/nullptr))
+  if (err != HSA_STATUS_SUCCESS)
+    return nullptr;
+
+  if(agentBasedAddress)
     return HstPtr;
 
   void *PoolPtr = DeviceInfo().getSmallPoolMgr().allocateFromPool(Size, HstPtr);
@@ -1873,8 +1875,13 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
 /// Get a pointer from a small pool, given a HstPtr. Perform copy-in to the pool
 /// pointer since data transfer will use the pool pointer
 void *prepareHstPtrForDataSubmit(size_t Size, void *HstPtr) {
+  void *agentBasedAddress = nullptr;
+  hsa_status_t err = is_locked(HstPtr, &agentBasedAddress);
   // user-locked data does not need the pool
-  if (is_locked(HstPtr, /*err_p=*/nullptr, /*agentBaseAddress=*/nullptr))
+  if (err != HSA_STATUS_SUCCESS)
+    return nullptr;
+
+  if (agentBasedAddress)
     return HstPtr;
 
   void *PoolPtr = DeviceInfo().getSmallPoolMgr().allocateFromPool(Size, HstPtr);
@@ -2705,6 +2712,35 @@ bool imageContainsSymbol(void *Data, size_t Size, const char *Sym) {
   SymbolInfo SI;
   int Rc = getSymbolInfoWithoutLoading((char *)Data, Size, Sym, &SI);
   return (Rc == 0) && (SI.Addr != nullptr);
+}
+
+hsa_status_t lock_memory(void *HostPtr, size_t Size, hsa_agent_t Agent,
+                         void **LockedHostPtr) {
+  hsa_status_t err = is_locked(HostPtr, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // HostPtr is already locked, just return it
+  if (*LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  hsa_agent_t Agents[1] = {Agent};
+  return hsa_amd_memory_lock(HostPtr, Size, Agents, /*num_agent=*/1,
+                             LockedHostPtr);
+}
+
+hsa_status_t unlock_memory(void *HostPtr) {
+  void *LockedHostPtr = nullptr;
+  hsa_status_t err = is_locked(HostPtr, &LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // if LockedHostPtr is nullptr, then HostPtr was not locked
+  if (!LockedHostPtr)
+    return HSA_STATUS_SUCCESS;
+
+  err = hsa_amd_memory_unlock(HostPtr);
+  return err;
 }
 
 } // namespace
@@ -3572,37 +3608,6 @@ void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
   return Ptr;
 }
 
-void *__tgt_rtl_data_lock(int DeviceId, void *TgtPtr, int64_t size) {
-  void *ptr = TgtPtr;
-  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
-  hsa_status_t err = HSA_STATUS_SUCCESS;
-
-  err = lock_memory(&ptr, size);
-
-  if (err != HSA_STATUS_SUCCESS) {
-    DP("Error in tgt_rtl_data_lock\n");
-    return nullptr;
-  }
-
-  DP("Tgt lock data %ld bytes, (tgt:%016llx).\n", size,
-     (long long unsigned)(Elf64_Addr)ptr);
-
-  return ptr;
-}
-
-void __tgt_rtl_data_unlock(int DeviceId, void *TgtPtr) {
-  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
-  hsa_status_t err = HSA_STATUS_SUCCESS;
-
-  err = unlock_memory(TgtPtr);
-
-  if (err != HSA_STATUS_SUCCESS)
-    DP("Error in tgt_rtl_data_unlock\n");
-
-  DP("Tgt unlock data (tgt:%016llx).\n",
-     (long long unsigned)(Elf64_Addr)TgtPtr);
-}
-
 int32_t __tgt_rtl_data_submit(int DeviceId, void *tgt_ptr, void *hst_ptr,
                               int64_t size) {
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
@@ -3820,28 +3825,6 @@ hsa_status_t device_malloc(void **mem, size_t size, int DeviceId) {
   return hsa_amd_memory_pool_allocate(MemoryPool, size, 0, mem);
 }
 
-hsa_status_t lock_memory(void **mem, size_t size) {
-  void *lockedPtr = nullptr;
-  hsa_status_t err = HSA_STATUS_SUCCESS;
-
-  if (is_locked(*mem, &err, nullptr))
-    return HSA_STATUS_SUCCESS;
-
-  err = hsa_amd_memory_lock(*mem, size, nullptr, 0, (void **)&lockedPtr);
-  if (err != HSA_STATUS_SUCCESS)
-    return err;
-
-  *mem = lockedPtr;
-  return err;
-}
-
-hsa_status_t unlock_memory(void *mem) {
-  hsa_status_t err = HSA_STATUS_SUCCESS;
-  if (is_locked(mem, &err, nullptr))
-    err = hsa_amd_memory_unlock(mem);
-  return err;
-}
-
 hsa_status_t impl_free(void *mem) { return core::Runtime::Memfree(mem); }
 
 hsa_status_t ftn_assign_wrapper(void *arg0, void *arg1, void *arg2, void *arg3,
@@ -3886,6 +3869,34 @@ void __tgt_rtl_print_device_info(int32_t DeviceId) {
   // NOTE: We don't need to set context for print device info.
 
   DeviceInfo().printDeviceInfo(DeviceId, DeviceInfo().HSAAgents[DeviceId]);
+}
+
+int32_t __tgt_rtl_data_lock(int32_t DeviceId, void *HostPtr, int64_t Size,
+                            void **LockedHostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+
+  hsa_agent_t Agent = DeviceInfo().HSAAgents[DeviceId];
+  hsa_status_t err = lock_memory(HostPtr, Size, Agent, LockedHostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_lock\n");
+    return OFFLOAD_FAIL;
+  }
+  DP("Tgt lock host data %ld bytes, (HostPtr:%016llx).\n", Size,
+     (long long unsigned)(Elf64_Addr)*LockedHostPtr);
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_data_unlock(int DeviceId, void *HostPtr) {
+  assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+  hsa_status_t err = unlock_memory(HostPtr);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_unlock\n");
+    return OFFLOAD_FAIL;
+  }
+
+  DP("Tgt unlock data (tgt:%016llx).\n",
+     (long long unsigned)(Elf64_Addr)HostPtr);
+  return OFFLOAD_SUCCESS;
 }
 
 } // extern "C"

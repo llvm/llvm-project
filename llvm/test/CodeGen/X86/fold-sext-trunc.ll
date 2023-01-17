@@ -5,7 +5,7 @@
 %0 = type { i64 }
 %struct.S1 = type { i16, i32 }
 
-@g_10 = external dso_local global %struct.S1
+@g_10 = external dso_local global %struct.S1, align 8
 
 declare void @func_28(i64, i64)
 

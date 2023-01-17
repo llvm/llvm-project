@@ -12,6 +12,7 @@
 #include "ParserState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
+#include <optional>
 
 namespace mlir {
 namespace detail {
@@ -139,7 +140,7 @@ public:
   OptionalParseResult parseOptionalInteger(APInt &result);
 
   /// Parse a floating point value from an integer literal token.
-  ParseResult parseFloatFromIntegerLiteral(Optional<APFloat> &result,
+  ParseResult parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
                                            const Token &tok, bool isNegative,
                                            const llvm::fltSemantics &semantics,
                                            size_t typeSizeInBits);

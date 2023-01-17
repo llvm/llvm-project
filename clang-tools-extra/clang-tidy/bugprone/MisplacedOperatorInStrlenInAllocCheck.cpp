@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void MisplacedOperatorInStrlenInAllocCheck::registerMatchers(
     MatchFinder *Finder) {
@@ -108,6 +106,4 @@ void MisplacedOperatorInStrlenInAllocCheck::check(
       << StrLen->getDirectCallee()->getName() << Hint;
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -4603,75 +4603,74 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
+  // If the condition is not an integer SETCC which operates on XLenVT, we need
+  // to emit a RISCVISD::SELECT_CC comparing the condition to zero. i.e.:
+  // (select condv, truev, falsev)
+  // -> (riscvisd::select_cc condv, zero, setne, truev, falsev)
+  if (CondV.getOpcode() != ISD::SETCC ||
+      CondV.getOperand(0).getSimpleValueType() != XLenVT) {
+    SDValue Zero = DAG.getConstant(0, DL, XLenVT);
+    SDValue SetNE = DAG.getCondCode(ISD::SETNE);
+
+    SDValue Ops[] = {CondV, Zero, SetNE, TrueV, FalseV};
+
+    return DAG.getNode(RISCVISD::SELECT_CC, DL, VT, Ops);
+  }
+
   // If the CondV is the output of a SETCC node which operates on XLenVT inputs,
   // then merge the SETCC node into the lowered RISCVISD::SELECT_CC to take
   // advantage of the integer compare+branch instructions. i.e.:
   // (select (setcc lhs, rhs, cc), truev, falsev)
   // -> (riscvisd::select_cc lhs, rhs, cc, truev, falsev)
-  if (CondV.getOpcode() == ISD::SETCC &&
-      CondV.getOperand(0).getSimpleValueType() == XLenVT) {
-    SDValue LHS = CondV.getOperand(0);
-    SDValue RHS = CondV.getOperand(1);
-    ISD::CondCode CCVal = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+  SDValue LHS = CondV.getOperand(0);
+  SDValue RHS = CondV.getOperand(1);
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
 
-    // Special case for a select of 2 constants that have a diffence of 1.
-    // Normally this is done by DAGCombine, but if the select is introduced by
-    // type legalization or op legalization, we miss it. Restricting to SETLT
-    // case for now because that is what signed saturating add/sub need.
-    // FIXME: We don't need the condition to be SETLT or even a SETCC,
-    // but we would probably want to swap the true/false values if the condition
-    // is SETGE/SETLE to avoid an XORI.
-    if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV) &&
-        CCVal == ISD::SETLT) {
-      const APInt &TrueVal = cast<ConstantSDNode>(TrueV)->getAPIntValue();
-      const APInt &FalseVal = cast<ConstantSDNode>(FalseV)->getAPIntValue();
-      if (TrueVal - 1 == FalseVal)
-        return DAG.getNode(ISD::ADD, DL, VT, CondV, FalseV);
-      if (TrueVal + 1 == FalseVal)
-        return DAG.getNode(ISD::SUB, DL, VT, FalseV, CondV);
-    }
-
-    translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
-    // 1 < x ? x : 1 -> 0 < x ? x : 1
-    if (isOneConstant(LHS) &&
-        (CCVal == ISD::SETLT || CCVal == ISD::SETULT) && RHS == TrueV &&
-        LHS == FalseV) {
-      LHS = DAG.getConstant(0, DL, VT);
-      // 0 <u x is the same as x != 0.
-      if (CCVal == ISD::SETULT) {
-        std::swap(LHS, RHS);
-        CCVal = ISD::SETNE;
-      }
-    }
-
-    // x <s -1 ? x : -1 -> x <s 0 ? x : -1
-    if (isAllOnesConstant(RHS) && CCVal == ISD::SETLT && LHS == TrueV &&
-        RHS == FalseV) {
-      RHS = DAG.getConstant(0, DL, VT);
-    }
-
-    SDValue TargetCC = DAG.getCondCode(CCVal);
-
-    if (isa<ConstantSDNode>(TrueV) && !isa<ConstantSDNode>(FalseV)) {
-      // (select (setcc lhs, rhs, CC), constant, falsev)
-      // -> (select (setcc lhs, rhs, InverseCC), falsev, constant)
-      std::swap(TrueV, FalseV);
-      TargetCC =
-          DAG.getCondCode(ISD::getSetCCInverse(CCVal, LHS.getValueType()));
-    }
-
-    SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
-    return DAG.getNode(RISCVISD::SELECT_CC, DL, VT, Ops);
+  // Special case for a select of 2 constants that have a diffence of 1.
+  // Normally this is done by DAGCombine, but if the select is introduced by
+  // type legalization or op legalization, we miss it. Restricting to SETLT
+  // case for now because that is what signed saturating add/sub need.
+  // FIXME: We don't need the condition to be SETLT or even a SETCC,
+  // but we would probably want to swap the true/false values if the condition
+  // is SETGE/SETLE to avoid an XORI.
+  if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV) &&
+      CCVal == ISD::SETLT) {
+    const APInt &TrueVal = cast<ConstantSDNode>(TrueV)->getAPIntValue();
+    const APInt &FalseVal = cast<ConstantSDNode>(FalseV)->getAPIntValue();
+    if (TrueVal - 1 == FalseVal)
+      return DAG.getNode(ISD::ADD, DL, VT, CondV, FalseV);
+    if (TrueVal + 1 == FalseVal)
+      return DAG.getNode(ISD::SUB, DL, VT, FalseV, CondV);
   }
 
-  // Otherwise:
-  // (select condv, truev, falsev)
-  // -> (riscvisd::select_cc condv, zero, setne, truev, falsev)
-  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
-  SDValue SetNE = DAG.getCondCode(ISD::SETNE);
+  translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
+  // 1 < x ? x : 1 -> 0 < x ? x : 1
+  if (isOneConstant(LHS) && (CCVal == ISD::SETLT || CCVal == ISD::SETULT) &&
+      RHS == TrueV && LHS == FalseV) {
+    LHS = DAG.getConstant(0, DL, VT);
+    // 0 <u x is the same as x != 0.
+    if (CCVal == ISD::SETULT) {
+      std::swap(LHS, RHS);
+      CCVal = ISD::SETNE;
+    }
+  }
 
-  SDValue Ops[] = {CondV, Zero, SetNE, TrueV, FalseV};
+  // x <s -1 ? x : -1 -> x <s 0 ? x : -1
+  if (isAllOnesConstant(RHS) && CCVal == ISD::SETLT && LHS == TrueV &&
+      RHS == FalseV) {
+    RHS = DAG.getConstant(0, DL, VT);
+  }
 
+  SDValue TargetCC = DAG.getCondCode(CCVal);
+
+  if (isa<ConstantSDNode>(TrueV) && !isa<ConstantSDNode>(FalseV)) {
+    // (select (setcc lhs, rhs, CC), constant, falsev)
+    // -> (select (setcc lhs, rhs, InverseCC), falsev, constant)
+    std::swap(TrueV, FalseV);
+    TargetCC = DAG.getCondCode(ISD::getSetCCInverse(CCVal, LHS.getValueType()));
+  }
+
+  SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
   return DAG.getNode(RISCVISD::SELECT_CC, DL, VT, Ops);
 }
 

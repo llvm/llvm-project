@@ -10,9 +10,7 @@
 #include "clang/AST/ParentMapContext.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 // Returns the Stmt nodes that are parents of 'S', skipping any potential
 // intermediate non-Stmt nodes.
@@ -206,6 +204,4 @@ const CFGBlock *StmtToBlockMap::blockContainingStmt(const Stmt *S) const {
   return Map.lookup(S);
 }
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils

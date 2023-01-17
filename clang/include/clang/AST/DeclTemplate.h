@@ -39,6 +39,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <utility>
 
 namespace clang {
@@ -1236,7 +1237,8 @@ class TemplateTypeParmDecl final : public TypeDecl,
 
   TemplateTypeParmDecl(DeclContext *DC, SourceLocation KeyLoc,
                        SourceLocation IdLoc, IdentifierInfo *Id, bool Typename,
-                       bool HasTypeConstraint, Optional<unsigned> NumExpanded)
+                       bool HasTypeConstraint,
+                       std::optional<unsigned> NumExpanded)
       : TypeDecl(TemplateTypeParm, DC, IdLoc, Id, KeyLoc), Typename(Typename),
         HasTypeConstraint(HasTypeConstraint), TypeConstraintInitialized(false),
         ExpandedParameterPack(NumExpanded),
@@ -1247,7 +1249,7 @@ public:
   Create(const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
          SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
          bool Typename, bool ParameterPack, bool HasTypeConstraint = false,
-         Optional<unsigned> NumExpanded = std::nullopt);
+         std::optional<unsigned> NumExpanded = std::nullopt);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
                                                   unsigned ID);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
@@ -3432,7 +3434,7 @@ inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {
 ///
 /// In \c A<int,int>::B, \c NTs and \c TTs have expanded pack size 2, and \c Us
 /// is not a pack expansion, so returns an empty Optional.
-inline Optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
+inline std::optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
     if (TTP->isExpandedParameterPack())
       return TTP->getNumExpansionParameters();

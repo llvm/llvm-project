@@ -27,8 +27,7 @@
 using namespace clang::ast_matchers;
 using namespace llvm;
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 template <> struct OptionEnumMapping<modernize::Confidence::Level> {
   static llvm::ArrayRef<std::pair<modernize::Confidence::Level, StringRef>>
@@ -970,5 +969,4 @@ llvm::StringRef LoopConvertCheck::getReverseHeader() const {
 }
 
 } // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

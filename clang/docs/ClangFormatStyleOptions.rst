@@ -2685,8 +2685,8 @@ the configuration (without a prefix: ``Auto``).
 .. _DeriveLineEnding:
 
 **DeriveLineEnding** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <DeriveLineEnding>`
-  Analyze the formatted file for the most used line ending (``\r\n``
-  or ``\n``). ``UseCRLF`` is only used as a fallback if none can be derived.
+  This option is **deprecated**. See ``DeriveLF`` and ``DeriveCRLF`` of
+  ``LineEnding``.
 
 .. _DerivePointerAlignment:
 
@@ -3580,6 +3580,27 @@ the configuration (without a prefix: ``Auto``).
     Should be used for Verilog and SystemVerilog.
     https://standards.ieee.org/ieee/1800/6700/
     https://sci-hub.st/10.1109/IEEESTD.2018.8299595
+
+
+
+.. _LineEnding:
+
+**LineEnding** (``LineEndingStyle``) :versionbadge:`clang-format 16` :ref:`¶ <LineEnding>`
+  Line ending style (``\n`` or ``\r\n``) to use.
+
+  Possible values:
+
+  * ``LE_LF`` (in configuration: ``LF``)
+    Use ``\n``.
+
+  * ``LE_CRLF`` (in configuration: ``CRLF``)
+    Use ``\r\n``.
+
+  * ``LE_DeriveLF`` (in configuration: ``DeriveLF``)
+    Use ``\n`` unless the input has more lines ending in ``\r\n``.
+
+  * ``LE_DeriveCRLF`` (in configuration: ``DeriveCRLF``)
+    Use ``\r\n`` unless the input has more lines ending in ``\n``.
 
 
 
@@ -5114,8 +5135,7 @@ the configuration (without a prefix: ``Auto``).
 .. _UseCRLF:
 
 **UseCRLF** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <UseCRLF>`
-  Use ``\r\n`` instead of ``\n`` for line breaks.
-  Also used as fallback if ``DeriveLineEnding`` is true.
+  This option is **deprecated**. See ``LF`` and ``CRLF`` of ``LineEnding``.
 
 .. _UseTab:
 

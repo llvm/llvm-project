@@ -2009,7 +2009,10 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   const Target *TheTarget = getTarget(Obj);
 
   // Package up features to be passed to target/subtarget
-  SubtargetFeatures Features = Obj->getFeatures();
+  Expected<SubtargetFeatures> FeaturesValue = Obj->getFeatures();
+  if (!FeaturesValue)
+    WithColor::error(errs(), ToolName) << FeaturesValue.takeError();
+  SubtargetFeatures Features = *FeaturesValue;
   if (!MAttrs.empty()) {
     for (unsigned I = 0; I != MAttrs.size(); ++I)
       Features.AddFeature(MAttrs[I]);

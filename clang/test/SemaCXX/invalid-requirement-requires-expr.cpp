@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -I%S -std=c++2a -verify
+// RUN: %clang -fsyntax-only -std=c++2a -Xclang -verify -ftemplate-depth=5 -ftemplate-backtrace-limit=4 %s
 
 // RequiresExpr contains invalid requirement. (Eg. Highly recurisive template).
 template<int x>
@@ -15,9 +15,13 @@ template<int x>
 constexpr bool A<x>::far() {
     return requires(B b) {
       b.data_member;
-      requires A<x-1>::far(); //expected-note 3{{in instantiation}} // expected-note 6{{while}} expected-note {{contexts in backtrace; use -ftemplate-backtrace-limit=0 to see all}}
-      // expected-error@-1{{recursive template instantiation exceeded maximum depth}}
+      requires A<x-1>::far(); // #Invalid
+      // expected-error@#Invalid {{recursive template instantiation exceeded maximum depth}}
+      // expected-note@#Invalid {{in instantiation}}
+      // expected-note@#Invalid 2 {{while}}
+      // expected-note@#Invalid {{contexts in backtrace}}
+      // expected-note@#Invalid {{increase recursive template instantiation depth}}
     };
 }
 static_assert(A<1>::far());
-static_assert(!A<10001>::far()); // expected-note {{in instantiation of member function}}
+static_assert(!A<6>::far()); // expected-note {{in instantiation of member function}}

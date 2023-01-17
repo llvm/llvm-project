@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/PatternMatch.h"
+#include <optional>
 
 namespace mlir {
 namespace tosa {
@@ -44,9 +45,9 @@ bool validIntegerRange(IntegerType ty, int64_t value);
 // Checks for a dynamic batch dim in any of the passed parameters of an op.
 // The batch dimention must be #0 and the rest of the dimensions must be static.
 template <typename Op>
-Optional<SmallVector<Value>> checkHasDynamicBatchDims(PatternRewriter &rewriter,
-                                                      Op op,
-                                                      ArrayRef<Value> params) {
+std::optional<SmallVector<Value>>
+checkHasDynamicBatchDims(PatternRewriter &rewriter, Op op,
+                         ArrayRef<Value> params) {
   SmallVector<ShapedType> dynTypes;
   SmallVector<Value> dynamicDims;
   for (const Value &param : params) {

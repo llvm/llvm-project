@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 namespace {
 AST_POLYMORPHIC_MATCHER_P(isInHeaderFile,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
@@ -74,6 +72,4 @@ void UseAnonymousNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

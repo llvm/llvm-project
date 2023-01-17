@@ -379,8 +379,7 @@ class CommandObjectPlatformSettings : public CommandObjectParsed {
 public:
   CommandObjectPlatformSettings(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "platform settings",
-                            "Set settings for the current target's platform, "
-                            "or for a platform by name.",
+                            "Set settings for the current target's platform.",
                             "platform settings", 0),
         m_option_working_dir(LLDB_OPT_SET_1, false, "working-dir", 'w',
                              CommandCompletions::eRemoteDiskDirectoryCompletion,

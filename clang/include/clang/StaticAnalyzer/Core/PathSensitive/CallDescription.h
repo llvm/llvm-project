@@ -17,8 +17,8 @@
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -42,9 +42,9 @@ enum CallDescriptionFlags : unsigned {
 /// arguments and the name of the function.
 class CallDescription {
   friend class CallEvent;
-  using MaybeCount = Optional<unsigned>;
+  using MaybeCount = std::optional<unsigned>;
 
-  mutable Optional<const IdentifierInfo *> II;
+  mutable std::optional<const IdentifierInfo *> II;
   // The list of the qualified names used to identify the specified CallEvent,
   // e.g. "{a, b}" represent the qualified names, like "a::b".
   std::vector<std::string> QualifiedName;

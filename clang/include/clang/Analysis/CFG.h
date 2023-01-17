@@ -21,7 +21,6 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
@@ -31,6 +30,7 @@
 #include <cstddef>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -104,8 +104,7 @@ public:
 
   /// Convert to the specified CFGElement type, returning std::nullopt if this
   /// CFGElement is not of the desired type.
-  template<typename T>
-  Optional<T> getAs() const {
+  template <typename T> std::optional<T> getAs() const {
     if (!T::isKind(*this))
       return std::nullopt;
     T t;
@@ -1399,7 +1398,7 @@ public:
     for (const_iterator I = begin(), E = end(); I != E; ++I)
       for (CFGBlock::const_iterator BI = (*I)->begin(), BE = (*I)->end();
            BI != BE; ++BI) {
-        if (Optional<CFGStmt> stmt = BI->getAs<CFGStmt>())
+        if (std::optional<CFGStmt> stmt = BI->getAs<CFGStmt>())
           O(const_cast<Stmt *>(stmt->getStmt()));
       }
   }

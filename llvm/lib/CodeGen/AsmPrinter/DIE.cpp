@@ -580,7 +580,7 @@ void DIEString::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
     DIEInteger(S.getIndex()).emitValue(AP, Form);
     return;
   case dwarf::DW_FORM_strp:
-    if (AP->MAI->doesDwarfUseRelocationsAcrossSections())
+    if (AP->doesDwarfUseRelocationsAcrossSections())
       DIELabel(S.getSymbol()).emitValue(AP, Form);
     else
       DIEInteger(S.getOffset()).emitValue(AP, Form);
