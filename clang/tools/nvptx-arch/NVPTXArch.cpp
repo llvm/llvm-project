@@ -17,18 +17,7 @@
 #include <cstdio>
 #include <memory>
 
-#if defined(__has_include)
-#if __has_include("cuda.h")
-#include "cuda.h"
-#define CUDA_HEADER_FOUND 1
-#else
-#define CUDA_HEADER_FOUND 0
-#endif
-#else
-#define CUDA_HEADER_FOUND 0
-#endif
-
-#if !CUDA_HEADER_FOUND
+#if DYNAMIC_CUDA
 typedef enum cudaError_enum {
   CUDA_SUCCESS = 0,
   CUDA_ERROR_NO_DEVICE = 100,
@@ -74,28 +63,31 @@ llvm::Error loadCUDA() {
   return llvm::Error::success();
 }
 #else
+
+#include "cuda.h"
 llvm::Error loadCUDA() { return llvm::Error::success(); }
+
 #endif
 
 static int handleError(CUresult Err) {
   const char *ErrStr = nullptr;
   CUresult Result = cuGetErrorString(Err, &ErrStr);
   if (Result != CUDA_SUCCESS)
-    return EXIT_FAILURE;
+    return 1;
   fprintf(stderr, "CUDA error: %s\n", ErrStr);
-  return EXIT_FAILURE;
+  return 1;
 }
 
 int main(int argc, char *argv[]) {
   // Attempt to load the NVPTX driver runtime.
   if (llvm::Error Err = loadCUDA()) {
     logAllUnhandledErrors(std::move(Err), llvm::errs());
-    return EXIT_FAILURE;
+    return 1;
   }
 
   if (CUresult Err = cuInit(0)) {
     if (Err == CUDA_ERROR_NO_DEVICE)
-      return EXIT_SUCCESS;
+      return 0;
     else
       return handleError(Err);
   }
@@ -104,7 +96,7 @@ int main(int argc, char *argv[]) {
   if (CUresult Err = cuDeviceGetCount(&Count))
     return handleError(Err);
   if (Count == 0)
-    return EXIT_SUCCESS;
+    return 0;
   for (int DeviceId = 0; DeviceId < Count; ++DeviceId) {
     CUdevice Device;
     if (CUresult Err = cuDeviceGet(&Device, DeviceId))
@@ -120,5 +112,5 @@ int main(int argc, char *argv[]) {
 
     printf("sm_%d%d\n", Major, Minor);
   }
-  return EXIT_SUCCESS;
+  return 0;
 }
