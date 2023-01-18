@@ -115,6 +115,27 @@ namespace std::ranges {
   template<range R>
     using borrowed_subrange_t = see below;
 
+  // [range.elements], elements view
+  template<input_range V, size_t N>
+    requires see below
+  class elements_view;
+
+  template<class T, size_t N>
+    inline constexpr bool enable_borrowed_range<elements_view<T, N>> =
+      enable_borrowed_range<T>;
+
+  template<class R>
+    using keys_view = elements_view<R, 0>;
+  template<class R>
+    using values_view = elements_view<R, 1>;
+
+  namespace views {
+    template<size_t N>
+      inline constexpr unspecified elements = unspecified;
+    inline constexpr auto keys = elements<0>;
+    inline constexpr auto values = elements<1>;
+  }
+
   // [range.empty], empty view
   template<class T>
     requires is_object_v<T>
@@ -316,6 +337,7 @@ namespace std {
 #include <__ranges/data.h>
 #include <__ranges/drop_view.h>
 #include <__ranges/drop_while_view.h>
+#include <__ranges/elements_view.h>
 #include <__ranges/empty.h>
 #include <__ranges/empty_view.h>
 #include <__ranges/enable_borrowed_range.h>

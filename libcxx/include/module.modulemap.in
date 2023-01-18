@@ -1229,6 +1229,7 @@ module std [system] {
       module data                   { private header "__ranges/data.h" }
       module drop_view              { private header "__ranges/drop_view.h" }
       module drop_while_view        { private header "__ranges/drop_while_view.h" }
+      module elements_view          { private header "__ranges/elements_view.h" }
       module empty                  { private header "__ranges/empty.h" }
       module empty_view             { private header "__ranges/empty_view.h" }
       module enable_borrowed_range  { private header "__ranges/enable_borrowed_range.h" }
@@ -1250,7 +1251,11 @@ module std [system] {
       module reverse_view           { private header "__ranges/reverse_view.h" }
       module single_view            { private header "__ranges/single_view.h" }
       module size                   { private header "__ranges/size.h" }
-      module subrange               { private header "__ranges/subrange.h" }
+      module subrange               {
+        private header "__ranges/subrange.h"
+
+        module subrange_fwd { private header "__fwd/subrange.h" }
+      }
       module take_view              { private header "__ranges/take_view.h" }
       module take_while_view        { private header "__ranges/take_while_view.h" }
       module transform_view         {
@@ -1365,11 +1370,13 @@ module std [system] {
     module apply_cv         { private header "__tuple_dir/apply_cv.h" }
     module get_fwd          { private header "__fwd/get.h" }
     module make_tuple_types { private header "__tuple_dir/make_tuple_types.h" }
+    module pair_like        { private header "__tuple_dir/pair_like.h" }
     module sfinae_helpers   { private header "__tuple_dir/sfinae_helpers.h" }
     module tuple_element    { private header "__tuple_dir/tuple_element.h" }
     module tuple_fwd        { private header "__fwd/tuple.h" }
     module tuple_indices    { private header "__tuple_dir/tuple_indices.h" }
     module tuple_like       { private header "__tuple_dir/tuple_like.h" }
+    module tuple_like_ext   { private header "__tuple_dir/tuple_like_ext.h" }
     module tuple_size       { private header "__tuple_dir/tuple_size.h" }
     module tuple_types      { private header "__tuple_dir/tuple_types.h" }
   }

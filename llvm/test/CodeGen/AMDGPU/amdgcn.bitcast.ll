@@ -381,3 +381,478 @@ end:
   store <4 x double> %phi_cast, ptr addrspace(1) %out
   ret void
 }
+
+; FUNC-LABEL: {{^}}bitcast_v20f16_to_v5f64:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v20f16_to_v5f64(i32 %cond, ptr addrspace(1) %out, <20 x half> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <20 x half> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <20 x half> %phi_value to <5 x double>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <5 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <5 x double> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v10f32_to_v5f64:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v10f32_to_v5f64(i32 %cond, ptr addrspace(1) %out, <10 x float> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <10 x float> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <10 x float> %phi_value to <5 x double>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <5 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <5 x double> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v10i32_to_v5f64:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v10i32_to_v5f64(i32 %cond, ptr addrspace(1) %out, <10 x i32> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <10 x i32> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <10 x i32> %phi_value to <5 x double>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <5 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <5 x double> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v10f32_to_v5i64:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v10f32_to_v5i64(i32 %cond, ptr addrspace(1) %out, <10 x float> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <10 x float> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <10 x float> %phi_value to <5 x i64>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <5 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <5 x i64> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v10i32_to_v5i64:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v10i32_to_v5i64(i32 %cond, ptr addrspace(1) %out, <10 x i32> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <10 x i32> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <10 x i32> %phi_value to <5 x i64>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <5 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <5 x i64> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v40i8_to_v5f64:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v40i8_to_v5f64(i32 %cond, ptr addrspace(1) %out, <40 x i8> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <40 x i8> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <40 x i8> %phi_value to <5 x double>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <5 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <5 x double> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v40i8_to_v5i64:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v40i8_to_v5i64(i32 %cond, ptr addrspace(1) %out, <40 x i8> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <40 x i8> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <40 x i8> %phi_value to <5 x i64>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <5 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <5 x i64> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v5f64_to_v10f32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v5f64_to_v10f32(i32 %cond, ptr addrspace(1) %out, <5 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <5 x double> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <5 x double> %phi_value to <10 x float>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <10 x float> [zeroinitializer, %entry], [%cast, %if]
+  store <10 x float> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v5f64_to_v10i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v5f64_to_v10i32(i32 %cond, ptr addrspace(1) %out, <5 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <5 x double> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <5 x double> %phi_value to <10 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <10 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <10 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v5i64_to_v10f32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v5i64_to_v10f32(i32 %cond, ptr addrspace(1) %out, <5 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <5 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <5 x i64> %phi_value to <10 x float>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <10 x float> [zeroinitializer, %entry], [%cast, %if]
+  store <10 x float> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v5i64_to_v10i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v5i64_to_v10i32(i32 %cond, ptr addrspace(1) %out, <5 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <5 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <5 x i64> %phi_value to <10 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <10 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <10 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v6f64_to_v12i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v6f64_to_v12i32(i32 %cond, ptr addrspace(1) %out, <6 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <6 x double> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <6 x double> %phi_value to <12 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <12 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <12 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v6f64_to_v12f32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v6f64_to_v12f32(i32 %cond, ptr addrspace(1) %out, <6 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <6 x double> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <6 x double> %phi_value to <12 x float>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <12 x float> [zeroinitializer, %entry], [%cast, %if]
+  store <12 x float> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v12i32_to_v6i64:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v12i32_to_v6i64(i32 %cond, ptr addrspace(1) %out, <12 x i32> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <12 x i32> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <12 x i32> %phi_value to <6 x i64>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <6 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <6 x i64> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v12i32_to_v6f64:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v12i32_to_v6f64(i32 %cond, ptr addrspace(1) %out, <12 x i32> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <12 x i32> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <12 x i32> %phi_value to <6 x double>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <6 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <6 x double> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v6i64_to_v12i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v6i64_to_v12i32(i32 %cond, ptr addrspace(1) %out, <6 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <6 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <6 x i64> %phi_value to <12 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <12 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <12 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v7i64_to_v14i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v7i64_to_v14i32(i32 %cond, ptr addrspace(1) %out, <7 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <7 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <7 x i64> %phi_value to <14 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <14 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <14 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v7f64_to_v14i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v7f64_to_v14i32(i32 %cond, ptr addrspace(1) %out, <7 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <7 x double> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <7 x double> %phi_value to <14 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <14 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <14 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v9i64_to_v18i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v9i64_to_v18i32(i32 %cond, ptr addrspace(1) %out, <9 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <9 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <9 x i64> %phi_value to <18 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <18 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <18 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v10i64_to_v20i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v10i64_to_v20i32(i32 %cond, ptr addrspace(1) %out, <10 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <10 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <10 x i64> %phi_value to <20 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <20 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <20 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v11i64_to_v20i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v11i64_to_v20i32(i32 %cond, ptr addrspace(1) %out, <11 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <11 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <11 x i64> %phi_value to <22 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <22 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <22 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v12i64_to_v22i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v12i64_to_v22i32(i32 %cond, ptr addrspace(1) %out, <12 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <12 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <12 x i64> %phi_value to <24 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <24 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <24 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v13i64_to_v24i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v13i64_to_v24i32(i32 %cond, ptr addrspace(1) %out, <13 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <13 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <13 x i64> %phi_value to <26 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <26 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <26 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v14i64_to_v26i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v14i64_to_v26i32(i32 %cond, ptr addrspace(1) %out, <14 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <14 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <14 x i64> %phi_value to <28 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <28 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <28 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v15i64_to_v26i32:
+; SI: ScratchSize: 0
+define amdgpu_kernel void @bitcast_v15i64_to_v26i32(i32 %cond, ptr addrspace(1) %out, <15 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %phi_value = phi <15 x i64> [zeroinitializer, %entry], [%value, %if]
+  %cast = bitcast <15 x i64> %phi_value to <30 x i32>
+  %cmp1 = icmp eq i32 %cond, 1
+  br i1 %cmp1, label %if, label %end
+
+end:
+  %phi_cast = phi <30 x i32> [zeroinitializer, %entry], [%cast, %if]
+  store <30 x i32> %phi_cast, ptr addrspace(1) %out
+  ret void
+}

@@ -317,15 +317,15 @@ void RewriterBase::replaceAllUsesWith(Value from, Value to) {
   }
 }
 
-/// Find uses of `from` and replace them with `to` except if the user is
-/// `exceptedUser`. It also marks every modified uses and notifies the
-/// rewriter that an in-place operation modification is about to happen.
-void RewriterBase::replaceAllUsesExcept(Value from, Value to,
-                                        Operation *exceptedUser) {
+/// Find uses of `from` and replace them with `to` if the `functor` returns
+/// true. It also marks every modified uses and notifies the rewriter that an
+/// in-place operation modification is about to happen.
+void RewriterBase::replaceUseIf(
+    Value from, Value to,
+    llvm::unique_function<bool(OpOperand &) const> functor) {
   for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
-    Operation *user = operand.getOwner();
-    if (user != exceptedUser)
-      updateRootInPlace(user, [&]() { operand.set(to); });
+    if (functor(operand))
+      updateRootInPlace(operand.getOwner(), [&]() { operand.set(to); });
   }
 }
 

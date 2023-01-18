@@ -9,10 +9,10 @@
 #ifndef LLVM_LINEEDITOR_LINEEDITOR_H
 #define LLVM_LINEEDITOR_LINEEDITOR_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>

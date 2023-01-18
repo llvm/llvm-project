@@ -66,6 +66,7 @@ Implemented Papers
 - P0415R1 - ``constexpr`` for ``std::complex``
 - P1208R6 - ``std::source_location``
 - P0323R12 - ``std::expected``
+- P1035R7 - Input Range Adaptors
 
 Improvements and New Features
 -----------------------------

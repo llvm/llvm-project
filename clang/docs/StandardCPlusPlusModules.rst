@@ -223,7 +223,27 @@ The ``-fmodules-ts`` option is deprecated and is planned to be removed.
 How to produce a BMI
 ~~~~~~~~~~~~~~~~~~~~
 
-It is possible to generate a BMI for an importable module unit by specifying the ``--precompile`` option.
+We can generate a BMI for an importable module unit by either ``--precompile``
+or ``-fmodule-output`` flags.
+
+The ``--precompile`` option generates the BMI as the output of the compilation and the output path
+can be specified using the ``-o`` option. 
+
+The ``-fmodule-output`` option generates the BMI as a by-product of the compilation.
+If ``-fmodule-output=`` is specified, the BMI will be emitted the specified location. Then if
+``-fmodule-output`` and ``-c`` are specified, the BMI will be emitted in the directory of the
+output file with the name of the input file with the new extension ``.pcm``. Otherwise, the BMI
+will be emitted in the working directory with the name of the input file with the new extension
+``.pcm``.
+
+The style to generate BMIs by ``--precompile`` is called two-phase compilation since it takes
+2 steps to compile a source file to an object file. The style to generate BMIs by ``-fmodule-output``
+is called one-phase compilation respectively. The one-phase compilation model is simpler
+for build systems to implement and the two-phase compilation has the potential to compile faster due
+to higher parallelism. As an example, if there are two module units A and B, and B depends on A, the
+one-phase compilation model would need to compile them serially, whereas the two-phase compilation
+model may be able to compile them simultaneously if the compilation from A.pcm to A.o takes a long
+time.
 
 File name requirement
 ~~~~~~~~~~~~~~~~~~~~~

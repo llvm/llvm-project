@@ -188,7 +188,7 @@ public:
 
   bool operator<(const PartialSectionKey &other) const {
     int c = name.compare(other.name);
-    if (c == 1)
+    if (c > 0)
       return false;
     if (c == 0)
       return characteristics < other.characteristics;

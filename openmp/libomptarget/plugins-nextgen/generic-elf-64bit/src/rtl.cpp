@@ -340,7 +340,7 @@ public:
 /// Class implementing the plugin functionalities for GenELF64.
 struct GenELF64PluginTy final : public GenericPluginTy {
   /// Create the GenELF64 plugin.
-  GenELF64PluginTy() : GenericPluginTy() {}
+  GenELF64PluginTy() : GenericPluginTy(getTripleArch()) {}
 
   /// This class should not be copied.
   GenELF64PluginTy(const GenELF64PluginTy &) = delete;
