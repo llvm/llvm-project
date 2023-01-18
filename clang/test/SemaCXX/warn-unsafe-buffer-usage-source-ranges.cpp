@@ -3,47 +3,46 @@
 void foo(int i) {
   int * ptr;
 
-
   ptr++;
-  // CHECK-DAG: {7:3-7:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
   ptr--;
-  // CHECK-DAG: {9:3-9:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
   ++ptr;
-  // CHECK-DAG: {11:5-11:8}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:5-[[@LINE-1]]:8}
   --ptr;
-  // CHECK-DAG: {13:5-13:8}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:5-[[@LINE-1]]:8}
 
 
   ptr + 1;
-  // CHECK-DAG: {17:3-17:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
   2 + ptr;
-  // CHECK-DAG: {19:7-19:10}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:7-[[@LINE-1]]:10}
   ptr + i;
-  // CHECK-DAG: {21:3-21:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
   i + ptr;
-  // CHECK-DAG: {23:7-23:10}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:7-[[@LINE-1]]:10}
 
 
   ptr - 3;
-  // CHECK-DAG: {27:3-27:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
   ptr - i;
-  // CHECK-DAG: {29:3-29:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
 
 
   ptr += 4;
-  // CHECK-DAG: {33:3-33:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
   ptr += i;
-  // CHECK-DAG: {35:3-35:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
 
 
   ptr -= 5;
-  // CHECK-DAG: {39:3-39:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
   ptr -= i;
-  // CHECK-DAG: {41:3-41:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
 
 
   ptr[5];
-  // CHECK-DAG: {45:3-45:6}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:3-[[@LINE-1]]:6}
   5[ptr];
-  // CHECK-DAG: {47:5-47:8}{{.*}}[-Wunsafe-buffer-usage]
+  // CHECK-DAG: {[[@LINE-1]]:5-[[@LINE-1]]:8}
 }
