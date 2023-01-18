@@ -18,8 +18,8 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX908-NEXT:   [[COPY1:%[0-9]+]]:vreg_128 = COPY [[COPY]]
   ; REGALLOC-GFX908-NEXT:   GLOBAL_STORE_DWORDX4 undef %14:vreg_64, [[COPY1]], 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) undef`, addrspace 1)
   ; REGALLOC-GFX908-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg.kernarg.offset1, addrspace 4)
-  ; REGALLOC-GFX908-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
   ; REGALLOC-GFX908-NEXT:   [[COPY2:%[0-9]+]]:areg_128 = COPY killed renamable $sgpr0_sgpr1_sgpr2_sgpr3
+  ; REGALLOC-GFX908-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
   ; REGALLOC-GFX908-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
   ; REGALLOC-GFX908-NEXT:   [[V_MFMA_I32_4X4X4I8_e64_:%[0-9]+]]:areg_128 = V_MFMA_I32_4X4X4I8_e64 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
   ; REGALLOC-GFX908-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
@@ -43,8 +43,8 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; PEI-GFX908-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3, implicit $exec
   ; PEI-GFX908-NEXT:   GLOBAL_STORE_DWORDX4 undef renamable $vgpr0_vgpr1, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) undef`, addrspace 1)
   ; PEI-GFX908-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg.kernarg.offset1, addrspace 4)
-  ; PEI-GFX908-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
   ; PEI-GFX908-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec
+  ; PEI-GFX908-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
   ; PEI-GFX908-NEXT:   renamable $vgpr1 = V_MOV_B32_e32 2, implicit $exec
   ; PEI-GFX908-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 killed $vgpr0, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
   ; PEI-GFX908-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 4, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
