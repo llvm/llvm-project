@@ -18,6 +18,8 @@
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #include <cstdint>
 #include <limits>
@@ -28,6 +30,168 @@ using namespace target;
 using namespace plugin;
 
 GenericPluginTy *Plugin::SpecificPlugin = nullptr;
+
+// TODO: Fix any thread safety issues for multi-threaded kernel recording.
+struct RecordReplayTy {
+private:
+  // Memory pointers for recording, replaying memory.
+  void *MemoryStart;
+  void *MemoryPtr;
+  size_t MemorySize;
+  GenericDeviceTy *Device;
+  std::mutex AllocationLock;
+
+  // Environment variables for record and replay.
+  // Enables recording kernels if set.
+  BoolEnvar OMPX_RecordKernel;
+  // Enables replaying a kernel if set.
+  BoolEnvar OMPX_ReplayKernel;
+  // Enables saving the device memory kernel output post execution if set.
+  BoolEnvar OMPX_ReplaySaveOutput;
+  // Sets the maximum to pre-allocate device memory.
+  UInt32Envar OMPX_DeviceMemorySize;
+
+  // Record/replay pre-allocates the largest possible device memory using the
+  // default kind.
+  // TODO: Expand allocation to include other kinds (device, host, shared) and
+  // possibly use a MemoryManager to track (de-)allocations for
+  // storing/retrieving when recording/replaying.
+  Error preallocateDeviceMemory() {
+    // Pre-allocate memory on device. Starts with 64GB and subtracts in steps
+    // of 1GB until allocation succeeds.
+    const size_t MAX_MEMORY_ALLOCATION =
+        OMPX_DeviceMemorySize * 1024 * 1024 * 1024ULL;
+    constexpr size_t STEP = 1024 * 1024 * 1024ULL;
+    MemoryStart = nullptr;
+    for (size_t Try = MAX_MEMORY_ALLOCATION; Try > 0; Try -= STEP) {
+      MemoryStart =
+          Device->allocate(Try, /* HstPtr */ nullptr, TARGET_ALLOC_DEFAULT);
+      if (MemoryStart)
+        break;
+    }
+
+    if (!MemoryStart)
+      return Plugin::error("Allocating record/replay memory");
+
+    MemoryPtr = MemoryStart;
+    MemorySize = 0;
+
+    return Plugin::success();
+  }
+
+  void dumpDeviceMemory(StringRef Filename,
+                        AsyncInfoWrapperTy &AsyncInfoWrapper) {
+    ErrorOr<std::unique_ptr<WritableMemoryBuffer>> DeviceMemoryMB =
+        WritableMemoryBuffer::getNewUninitMemBuffer(MemorySize);
+    if (!DeviceMemoryMB)
+      report_fatal_error("Error creating MemoryBuffer for device memory");
+
+    auto Err = Device->dataRetrieve(DeviceMemoryMB.get()->getBufferStart(),
+                                    MemoryStart, MemorySize, AsyncInfoWrapper);
+    if (Err)
+      report_fatal_error("Error retrieving data for target pointer");
+
+    StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), MemorySize);
+    std::error_code EC;
+    raw_fd_ostream OS(Filename, EC);
+    if (EC)
+      report_fatal_error("Error dumping memory to file " + Filename + " :" +
+                         EC.message());
+    OS << DeviceMemory;
+    OS.close();
+  }
+
+public:
+  bool isRecording() const { return OMPX_RecordKernel; }
+  bool isReplaying() const { return OMPX_ReplayKernel; }
+  bool isRecordingOrReplaying() const {
+    return (OMPX_RecordKernel || OMPX_ReplayKernel);
+  }
+  bool isSaveOutputEnabled() const { return OMPX_ReplaySaveOutput; }
+
+  RecordReplayTy()
+      : OMPX_RecordKernel("LIBOMPTARGET_RECORD"),
+        OMPX_ReplayKernel("LIBOMPTARGET_REPLAY"),
+        OMPX_ReplaySaveOutput("LIBOMPTARGET_RR_SAVE_OUTPUT"),
+        OMPX_DeviceMemorySize("LIBOMPTARGET_RR_DEVMEM_SIZE",
+                              /* Default in GB */ 64) {}
+
+  void saveImage(const char *Name, DeviceImageTy &Image) {
+    Twine ImageName = Twine(Name) + Twine(".image");
+    std::error_code EC;
+    raw_fd_ostream OS(ImageName.str(), EC);
+    if (EC)
+      report_fatal_error("Error saving image : " + StringRef(EC.message()));
+    OS << Image.getMemoryBuffer().getBuffer();
+    OS.close();
+  }
+
+  void saveKernelInputInfo(const char *Name, void **ArgPtrs,
+                           ptrdiff_t *ArgOffsets, int32_t NumArgs,
+                           uint64_t NumTeamsClause, uint32_t ThreadLimitClause,
+                           uint64_t LoopTripCount,
+                           AsyncInfoWrapperTy &AsyncInfoWrapper) {
+    json::Object JsonKernelInfo;
+    JsonKernelInfo["Name"] = Name;
+    JsonKernelInfo["NumArgs"] = NumArgs;
+    JsonKernelInfo["NumTeamsClause"] = NumTeamsClause;
+    JsonKernelInfo["ThreadLimitClause"] = ThreadLimitClause;
+    JsonKernelInfo["LoopTripCount"] = LoopTripCount;
+    JsonKernelInfo["DeviceMemorySize"] = MemorySize;
+    JsonKernelInfo["DeviceId"] = Device->getDeviceId();
+
+    json::Array JsonArgPtrs;
+    for (int I = 0; I < NumArgs; ++I)
+      JsonArgPtrs.push_back((intptr_t)ArgPtrs[I]);
+    JsonKernelInfo["ArgPtrs"] = json::Value(std::move(JsonArgPtrs));
+
+    json::Array JsonArgOffsets;
+    for (int I = 0; I < NumArgs; ++I)
+      JsonArgOffsets.push_back(ArgOffsets[I]);
+    JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
+
+    Twine KernelName(Name);
+    Twine MemoryFilename = KernelName + ".memory";
+    dumpDeviceMemory(MemoryFilename.str(), AsyncInfoWrapper);
+
+    Twine JsonFilename = KernelName + ".json";
+    std::error_code EC;
+    raw_fd_ostream JsonOS(JsonFilename.str(), EC);
+    if (EC)
+      report_fatal_error("Error saving kernel json file : " +
+                         StringRef(EC.message()));
+    JsonOS << json::Value(std::move(JsonKernelInfo));
+    JsonOS.close();
+  }
+
+  void saveKernelOutputInfo(const char *Name,
+                            AsyncInfoWrapperTy &AsyncInfoWrapper) {
+    Twine OutputFilename =
+        Twine(Name) + (isRecording() ? ".original.output" : ".replay.output");
+    dumpDeviceMemory(OutputFilename.str(), AsyncInfoWrapper);
+  }
+
+  void *alloc(uint64_t Size) {
+    assert(MemoryStart && "Expected memory has been pre-allocated");
+    void *Alloc = nullptr;
+    constexpr int ALIGN = 16;
+    // Assumes alignment is a power of 2.
+    int64_t AlignedSize = Size + (ALIGN - 1) & (~(ALIGN - 1));
+    std::lock_guard<std::mutex> LG(AllocationLock);
+    Alloc = MemoryPtr;
+    MemoryPtr = (char *)MemoryPtr + AlignedSize;
+    MemorySize += AlignedSize;
+    return Alloc;
+  }
+
+  Error init(GenericDeviceTy *Device) {
+    this->Device = Device;
+    return preallocateDeviceMemory();
+  }
+
+  void deinit() { Device->free(MemoryStart); }
+
+} RecordReplay;
 
 AsyncInfoWrapperTy::~AsyncInfoWrapperTy() {
   // If we used a local async info object we want synchronous behavior.
@@ -44,6 +208,9 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   MaxNumThreads = GenericDevice.getThreadLimit();
 
   DynamicMemorySize = GenericDevice.getDynamicMemorySize();
+
+  if (RecordReplay.isRecording())
+    RecordReplay.saveImage(Name, Image);
 
   return initImpl(GenericDevice, Image);
 }
@@ -197,6 +364,10 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (EnableMM)
     MemoryManager = new MemoryManagerTy(*this, ThresholdMM);
 
+  if (RecordReplay.isRecordingOrReplaying())
+    if (auto Err = RecordReplay.init(this))
+      return Err;
+
   return Plugin::success();
 }
 
@@ -206,6 +377,9 @@ Error GenericDeviceTy::deinit() {
   if (MemoryManager)
     delete MemoryManager;
   MemoryManager = nullptr;
+
+  if (RecordReplay.isRecordingOrReplaying())
+    RecordReplay.deinit();
 
   return deinitImpl();
 }
@@ -437,6 +611,9 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind) {
   void *Alloc = nullptr;
 
+  if (RecordReplay.isRecordingOrReplaying())
+    return RecordReplay.alloc(Size);
+
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
@@ -469,6 +646,10 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 }
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
+  // Free is a noop when recording or replaying.
+  if (RecordReplay.isRecordingOrReplaying())
+    return Plugin::success();
+
   int Res;
   if (MemoryManager)
     Res = MemoryManager->free(TgtPtr);
@@ -521,9 +702,20 @@ Error GenericDeviceTy::runTargetTeamRegion(
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
 
+  if (RecordReplay.isRecording())
+    RecordReplay.saveKernelInputInfo(
+        GenericKernel.getName(), ArgPtrs, ArgOffsets, NumArgs, NumTeamsClause,
+        ThreadLimitClause, LoopTripCount, AsyncInfoWrapper);
+
   Err =
       GenericKernel.launch(*this, ArgPtrs, ArgOffsets, NumArgs, NumTeamsClause,
                            ThreadLimitClause, LoopTripCount, AsyncInfoWrapper);
+
+  if (RecordReplay.isRecordingOrReplaying() &&
+      RecordReplay.isSaveOutputEnabled())
+    RecordReplay.saveKernelOutputInfo(GenericKernel.getName(),
+                                      AsyncInfoWrapper);
+
   return Err;
 }
 
