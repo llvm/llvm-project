@@ -93,13 +93,7 @@ struct InlineEvent {
   int64_t Reward = 0;
 };
 
-/// Collect data we may use for training a model, and write it as a textual
-/// Tensorflow SequenceExample
-/// (https://www.tensorflow.org/api_docs/python/tf/train/SequenceExample)
-/// protobuf (https://developers.google.com/protocol-buffers).
-/// Because this is a protobuf, we cannot just stream the events as they come.
-/// Internally, TrainingLogger stores data in column-major format, because that
-/// lines up with how TF SequenceExample represents it.
+/// Collect data we may use for training a model.
 class TrainingLogger final {
 public:
   TrainingLogger(StringRef LogFileName, const ModelUnderTrainingRunner *MUTR);

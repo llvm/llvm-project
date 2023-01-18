@@ -18,13 +18,8 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   endif()
 
   if (LLVM_HAVE_TFLITE)
-    build_proto(
-      tensorflow/core/protobuf/error_codes
-      tensorflow/core/example/feature
-      tensorflow/core/example/example)
     list(APPEND MLLinkDeps
-      tensorflow-lite::tensorflow-lite
-      protobuf::libprotobuf)
+      tensorflow-lite::tensorflow-lite)
   endif()
 endif()
 
