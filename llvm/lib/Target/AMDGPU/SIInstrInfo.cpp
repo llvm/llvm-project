@@ -8464,6 +8464,11 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
   for (auto srcOp : MI.operands()) {
     if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
       const TargetRegisterClass *regClass = RI.getPhysRegBaseClass(srcOp.getReg());
+
+      // If the class is missing it's an unallocatable scalar of some kind.
+      if (!regClass)
+        continue;
+
       if (RI.isVGPRClass(regClass))
         return InstructionUniformity::NeverUniform;
     }
