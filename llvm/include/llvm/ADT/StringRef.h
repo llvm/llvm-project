@@ -171,8 +171,9 @@ namespace llvm {
       return Length == RHS.Length && compare_insensitive(RHS) == 0;
     }
 
-    /// compare - Compare two strings; the result is -1, 0, or 1 if this string
-    /// is lexicographically less than, equal to, or greater than the \p RHS.
+    /// compare - Compare two strings; the result is negative, zero, or positive
+    /// if this string is lexicographically less than, equal to, or greater than
+    /// the \p RHS.
     [[nodiscard]] int compare(StringRef RHS) const {
       // Check the prefix for a mismatch.
       if (int Res = compareMemory(Data, RHS.Data, std::min(Length, RHS.Length)))
@@ -292,13 +293,7 @@ namespace llvm {
     /// \returns The index of the first occurrence of \p C, or npos if not
     /// found.
     [[nodiscard]] size_t find(char C, size_t From = 0) const {
-      size_t FindBegin = std::min(From, Length);
-      if (FindBegin < Length) { // Avoid calling memchr with nullptr.
-        // Just forward to memchr, which is faster than a hand-rolled loop.
-        if (const void *P = ::memchr(Data + FindBegin, C, Length - FindBegin))
-          return static_cast<const char *>(P) - Data;
-      }
-      return npos;
+      return std::string_view(*this).find(C, From);
     }
 
     /// Search for the first character \p C in the string, ignoring case.
@@ -878,19 +873,19 @@ namespace llvm {
   inline bool operator!=(StringRef LHS, StringRef RHS) { return !(LHS == RHS); }
 
   inline bool operator<(StringRef LHS, StringRef RHS) {
-    return LHS.compare(RHS) == -1;
+    return LHS.compare(RHS) < 0;
   }
 
   inline bool operator<=(StringRef LHS, StringRef RHS) {
-    return LHS.compare(RHS) != 1;
+    return LHS.compare(RHS) <= 0;
   }
 
   inline bool operator>(StringRef LHS, StringRef RHS) {
-    return LHS.compare(RHS) == 1;
+    return LHS.compare(RHS) > 0;
   }
 
   inline bool operator>=(StringRef LHS, StringRef RHS) {
-    return LHS.compare(RHS) != -1;
+    return LHS.compare(RHS) >= 0;
   }
 
   inline std::string &operator+=(std::string &buffer, StringRef string) {

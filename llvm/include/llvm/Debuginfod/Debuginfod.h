@@ -22,7 +22,6 @@
 
 #include "HTTPServer.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/BuildID.h"
@@ -34,6 +33,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <optional>
 #include <queue>
 
 namespace llvm {

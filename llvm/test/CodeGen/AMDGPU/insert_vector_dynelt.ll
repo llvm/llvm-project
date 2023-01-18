@@ -610,16 +610,10 @@ entry:
 define amdgpu_kernel void @double5_inselt(ptr addrspace(1) %out, <5 x double> %vec, i32 %sel) {
 ; GCN-LABEL: double5_inselt:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_mov_b32 s16, SCRATCH_RSRC_DWORD0
-; GCN-NEXT:    s_mov_b32 s17, SCRATCH_RSRC_DWORD1
-; GCN-NEXT:    s_mov_b32 s18, -1
-; GCN-NEXT:    s_mov_b32 s19, 0xe80000
-; GCN-NEXT:    s_add_u32 s16, s16, s3
 ; GCN-NEXT:    s_load_dword s12, s[0:1], 0xa4
 ; GCN-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x84
 ; GCN-NEXT:    s_load_dwordx2 s[10:11], s[0:1], 0x24
 ; GCN-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x64
-; GCN-NEXT:    s_addc_u32 s17, s17, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s12, 4
 ; GCN-NEXT:    s_cselect_b32 s9, 0x3ff00000, s9

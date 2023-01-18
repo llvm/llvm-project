@@ -427,13 +427,12 @@ define i16 @red_mla_dup_ext_u8_s8_s16(i8* noalias nocapture noundef readonly %A,
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB5_4: // %vector.ph
-; CHECK-NEXT:    dup v2.8b, w9
 ; CHECK-NEXT:    and x11, x10, #0xfffffff0
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    add x8, x0, #8
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x12, x11
-; CHECK-NEXT:    sshll v2.8h, v2.8b, #0
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    dup v2.8h, w9
 ; CHECK-NEXT:  .LBB5_5: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldp d3, d4, [x8, #-8]
@@ -704,9 +703,8 @@ define void @matrix_mul_unsigned_and(i32 %N, i32* nocapture %C, i16* nocapture r
 ; CHECK:       // %bb.0: // %vector.header
 ; CHECK-NEXT:    and w8, w3, #0xffff
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    dup v0.4h, w8
 ; CHECK-NEXT:    and x8, x0, #0xfffffff8
-; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:  .LBB10_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x2, w0, uxtw #1
@@ -767,27 +765,24 @@ for.end12:                                        ; preds = %vector.body
 define void @matrix_mul_unsigned_and_double(i32 %N, i32* nocapture %C, i16* nocapture readonly %A, i32 %val) {
 ; CHECK-LABEL: matrix_mul_unsigned_and_double:
 ; CHECK:       // %bb.0: // %vector.header
-; CHECK-NEXT:    and w8, w3, #0xffff
+; CHECK-NEXT:    and w9, w3, #0xffff
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    and x8, x0, #0xfffffff0
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    dup v0.8h, w9
 ; CHECK-NEXT:  .LBB11_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x2, w0, uxtw #1
+; CHECK-NEXT:    add x10, x1, w0, uxtw #2
 ; CHECK-NEXT:    subs x8, x8, #16
+; CHECK-NEXT:    add w0, w0, #16
 ; CHECK-NEXT:    ldr q1, [x9]
 ; CHECK-NEXT:    ldur q2, [x9, #8]
-; CHECK-NEXT:    add x9, x1, w0, uxtw #2
-; CHECK-NEXT:    add w0, w0, #16
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    umull2 v3.4s, v0.8h, v1.8h
 ; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
+; CHECK-NEXT:    umull2 v4.4s, v0.8h, v2.8h
 ; CHECK-NEXT:    umull v2.4s, v0.4h, v2.4h
-; CHECK-NEXT:    umull v3.4s, v0.4h, v3.4h
-; CHECK-NEXT:    umull v4.4s, v0.4h, v4.4h
-; CHECK-NEXT:    stp q1, q3, [x9]
-; CHECK-NEXT:    stp q2, q4, [x9, #32]
+; CHECK-NEXT:    stp q1, q3, [x10]
+; CHECK-NEXT:    stp q2, q4, [x10, #32]
 ; CHECK-NEXT:    b.ne .LBB11_1
 ; CHECK-NEXT:  // %bb.2: // %for.end12
 ; CHECK-NEXT:    ret

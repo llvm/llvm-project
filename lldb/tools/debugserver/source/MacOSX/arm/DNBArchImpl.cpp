@@ -1011,7 +1011,7 @@ uint32_t DNBArchMachARM::EnableHardwareBreakpoint(nub_addr_t addr,
         // We have a thumb breakpoint
         // We have an ARM breakpoint
         m_state.dbg.__bcr[i] =
-            BCR_M_IMVA_MATCH | // Stop on address mismatch
+            BCR_M_IMVA_MATCH | // Stop on address match
             byte_addr_select | // Set the correct byte address select so we only
                                // trigger on the correct opcode
             S_USER |           // Which modes should this breakpoint stop in?
@@ -1025,7 +1025,7 @@ uint32_t DNBArchMachARM::EnableHardwareBreakpoint(nub_addr_t addr,
       } else if (size == 4) {
         // We have an ARM breakpoint
         m_state.dbg.__bcr[i] =
-            BCR_M_IMVA_MATCH | // Stop on address mismatch
+            BCR_M_IMVA_MATCH | // Stop on address match
             BAS_IMVA_ALL | // Stop on any of the four bytes following the IMVA
             S_USER |       // Which modes should this breakpoint stop in?
             BCR_ENABLE;    // Enable this hardware breakpoint

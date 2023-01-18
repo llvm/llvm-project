@@ -212,12 +212,22 @@ Error GenericDeviceTy::deinit() {
 
 Expected<__tgt_target_table *>
 GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
-                            const __tgt_device_image *TgtImage) {
-  DP("Load data from image " DPxMOD "\n", DPxPTR(TgtImage->ImageStart));
+                            const __tgt_device_image *InputTgtImage) {
+  assert(InputTgtImage && "Expected non-null target image");
+  DP("Load data from image " DPxMOD "\n", DPxPTR(InputTgtImage->ImageStart));
+
+  auto PostJITImageOrErr = Plugin.getJIT().process(*InputTgtImage, *this);
+  if (!PostJITImageOrErr) {
+    auto Err = PostJITImageOrErr.takeError();
+    REPORT("Failure to jit IR image %p on device %d: %s\n", InputTgtImage,
+           DeviceId, toString(std::move(Err)).data());
+    return nullptr;
+  }
 
   // Load the binary and allocate the image object. Use the next available id
   // for the image id, which is the number of previously loaded images.
-  auto ImageOrErr = loadBinaryImpl(TgtImage, LoadedImages.size());
+  auto ImageOrErr =
+      loadBinaryImpl(PostJITImageOrErr.get(), LoadedImages.size());
   if (!ImageOrErr)
     return ImageOrErr.takeError();
 
@@ -668,7 +678,7 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *TgtImage) {
   if (elf_check_machine(TgtImage, Plugin::get().getMagicElfBits()))
     return true;
 
-  return jit::checkBitcodeImage(TgtImage, Plugin::get().getTripleArch());
+  return Plugin::get().getJIT().checkBitcodeImage(*TgtImage);
 }
 
 int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *TgtImage,
@@ -745,34 +755,6 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   GenericPluginTy &Plugin = Plugin::get();
   GenericDeviceTy &Device = Plugin.getDevice(DeviceId);
 
-  // If it is a bitcode image, we have to jit the binary image before loading to
-  // the device.
-  {
-    // TODO: Move this (at least the environment variable) into the JIT.h.
-    UInt32Envar JITOptLevel("LIBOMPTARGET_JIT_OPT_LEVEL", 3);
-    Triple::ArchType TA = Plugin.getTripleArch();
-    std::string Arch = Device.getArch();
-
-    jit::PostProcessingFn PostProcessing =
-        [&Device](std::unique_ptr<MemoryBuffer> MB)
-        -> Expected<std::unique_ptr<MemoryBuffer>> {
-      return Device.doJITPostProcessing(std::move(MB));
-    };
-
-    if (jit::checkBitcodeImage(TgtImage, TA)) {
-      auto TgtImageOrErr =
-          jit::compile(TgtImage, TA, Arch, JITOptLevel, PostProcessing);
-      if (!TgtImageOrErr) {
-        auto Err = TgtImageOrErr.takeError();
-        REPORT("Failure to jit binary image from bitcode image %p on device "
-               "%d: %s\n",
-               TgtImage, DeviceId, toString(std::move(Err)).data());
-        return nullptr;
-      }
-
-      TgtImage = *TgtImageOrErr;
-    }
-  }
 
   auto TableOrErr = Device.loadBinary(Plugin, TgtImage);
   if (!TableOrErr) {

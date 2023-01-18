@@ -1188,7 +1188,7 @@ namespace llvm {
         bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
 
     bool isSplatValueForTargetNode(SDValue Op, const APInt &DemandedElts,
-                                   APInt &UndefElts,
+                                   APInt &UndefElts, const SelectionDAG &DAG,
                                    unsigned Depth) const override;
 
     bool isTargetCanonicalConstantNode(SDValue Op) const override {
