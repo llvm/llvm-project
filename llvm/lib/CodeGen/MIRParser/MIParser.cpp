@@ -500,6 +500,7 @@ public:
   bool parseAlignment(uint64_t &Alignment);
   bool parseAddrspace(unsigned &Addrspace);
   bool parseSectionID(std::optional<MBBSectionID> &SID);
+  bool parseBBID(std::optional<unsigned> &BBID);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -663,6 +664,18 @@ bool MIParser::parseSectionID(std::optional<MBBSectionID> &SID) {
   return false;
 }
 
+// Parse Machine Basic Block ID.
+bool MIParser::parseBBID(std::optional<unsigned> &BBID) {
+  assert(Token.is(MIToken::kw_bb_id));
+  lex();
+  unsigned Value = 0;
+  if (getUnsigned(Value))
+    return error("Unknown BB ID");
+  BBID = Value;
+  lex();
+  return false;
+}
+
 bool MIParser::parseBasicBlockDefinition(
     DenseMap<unsigned, MachineBasicBlock *> &MBBSlots) {
   assert(Token.is(MIToken::MachineBasicBlockLabel));
@@ -679,6 +692,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsEHFuncletEntry = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
+  std::optional<unsigned> BBID;
   BasicBlock *BB = nullptr;
   if (consumeIfPresent(MIToken::lparen)) {
     do {
@@ -719,6 +733,10 @@ bool MIParser::parseBasicBlockDefinition(
         if (parseSectionID(SectionID))
           return true;
         break;
+      case MIToken::kw_bb_id:
+        if (parseBBID(BBID))
+          return true;
+        break;
       default:
         break;
       }
@@ -755,6 +773,13 @@ bool MIParser::parseBasicBlockDefinition(
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
+  }
+  if (BBID.has_value()) {
+    // BBSectionsType is set to `List` if any basic blocks has `SectionID`.
+    // Here, we set it to `Labels` if it hasn't been set above.
+    if (!MF.hasBBSections())
+      MF.setBBSectionsType(BasicBlockSection::Labels);
+    MBB->setBBID(BBID.value());
   }
   return false;
 }
