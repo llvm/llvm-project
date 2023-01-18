@@ -674,31 +674,7 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
   return applyMapping(MI, *BestMapping, RepairPts);
 }
 
-bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
-  // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
-    return false;
-
-  LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
-  const Function &F = MF.getFunction();
-  Mode SaveOptMode = OptMode;
-  if (F.hasOptNone())
-    OptMode = Mode::Fast;
-  init(MF);
-
-#ifndef NDEBUG
-  // Check that our input is fully legal: we require the function to have the
-  // Legalized property, so it should be.
-  // FIXME: This should be in the MachineVerifier.
-  if (!DisableGISelLegalityCheck)
-    if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
-      reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
-                         "instruction is not legal", *MI);
-      return false;
-    }
-#endif
-
+bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
   // Walk the function and assign register banks to all operands.
   // Use a RPOT to make sure all registers are assigned before we choose
   // the best mapping of the current instruction.
@@ -734,6 +710,41 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  return true;
+}
+
+bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
+  if (!DisableGISelLegalityCheck) {
+    if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
+      reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+                         "instruction is not legal", *MI);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
+  // If the ISel pipeline failed, do not bother running that pass.
+  if (MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::FailedISel))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
+  const Function &F = MF.getFunction();
+  Mode SaveOptMode = OptMode;
+  if (F.hasOptNone())
+    OptMode = Mode::Fast;
+  init(MF);
+
+#ifndef NDEBUG
+  if (!checkFunctionIsLegal(MF))
+    return false;
+#endif
+
+  assignRegisterBanks(MF);
 
   OptMode = SaveOptMode;
   return false;
