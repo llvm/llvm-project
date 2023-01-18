@@ -188,6 +188,17 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
     if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
       return rewriter.notifyMatchFailure(op, "Non-constant permutation");
 
+    if (op.getInput1().getDefiningOp<tosa::TransposeOp>())
+      return rewriter.notifyMatchFailure(
+          op, "Src is from transpose, can compose transposes");
+
+    Value result = op.getResult();
+    for (Operation *subop : result.getUsers()) {
+      if (dyn_cast_or_null<tosa::TransposeOp>(subop))
+        return rewriter.notifyMatchFailure(
+            op, "Dest is used by transpose, can compose transposes");
+    }
+
     auto input = op.getInput1();
     auto inputTy = input.getType().cast<ShapedType>();
     if (!inputTy.hasRank())
