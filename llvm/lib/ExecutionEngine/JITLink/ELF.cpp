@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_i386.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/Object/ELF.h"
@@ -68,6 +69,8 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
   switch (*TargetMachineArch) {
   case ELF::EM_AARCH64:
     return createLinkGraphFromELFObject_aarch64(ObjectBuffer);
+  case ELF::EM_LOONGARCH:
+    return createLinkGraphFromELFObject_loongarch(ObjectBuffer);
   case ELF::EM_RISCV:
     return createLinkGraphFromELFObject_riscv(ObjectBuffer);
   case ELF::EM_X86_64:
@@ -86,6 +89,10 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   switch (G->getTargetTriple().getArch()) {
   case Triple::aarch64:
     link_ELF_aarch64(std::move(G), std::move(Ctx));
+    return;
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+    link_ELF_loongarch(std::move(G), std::move(Ctx));
     return;
   case Triple::riscv32:
   case Triple::riscv64:
