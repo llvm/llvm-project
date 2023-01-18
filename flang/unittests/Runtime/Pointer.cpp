@@ -51,3 +51,15 @@ TEST(Pointer, ApplyMoldAllocation) {
   EXPECT_EQ(p->ElementBytes(), m->ElementBytes());
   EXPECT_EQ(p->type(), m->type());
 }
+
+TEST(Pointer, DeallocatePolymorphic) {
+  // CLASS(*) :: p
+  // ALLOCATE(integer::p)
+  auto p{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Integer, 4},
+      4, nullptr, 0, nullptr, CFI_attribute_pointer)};
+  RTNAME(PointerAllocate)
+  (*p, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  // DEALLOCATE(p)
+  RTNAME(PointerDeallocatePolymorphic)
+  (*p, nullptr, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+}
