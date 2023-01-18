@@ -250,6 +250,16 @@ static unsigned getNumCompoundAffineOnSparseDims(linalg::GenericOp op) {
   return num;
 }
 
+static bool hasCompoundAffineOnSparseOut(linalg::GenericOp op) {
+  OpOperand *out = op.getDpsInitOperand(0);
+  auto enc = getSparseTensorEncoding(out->get().getType());
+  if (!enc || enc.isAllDense())
+    return false;
+
+  return getNumCompoundAffineOnSparseDims(op.getMatchingIndexingMap(out),
+                                          out->get());
+}
+
 /// Helper method to inspect sparse encodings in the tensor types.
 /// Fills the per-dimension sparsity information for all tensors.
 /// Returns true if the sparse annotations and affine subscript
@@ -496,7 +506,7 @@ static bool computeIterationGraph(CodegenEnv &env, unsigned mask,
     // will be skipped more often.
     if (mask & SortMask::kIncludeUndef) {
       unsigned tensor = t.getOperandNumber();
-      for (unsigned i = 0; i < n; i++)
+      for (unsigned i = 0; i < n; i++) {
         if (isCompressedDLT(env.dlt(tensor, i)) ||
             isSingletonDLT(env.dlt(tensor, i))) {
           for (unsigned j = 0; j < n; j++)
@@ -508,98 +518,13 @@ static bool computeIterationGraph(CodegenEnv &env, unsigned mask,
           assert(isDenseDLT(env.dlt(tensor, i)) ||
                  isUndefDLT(env.dlt(tensor, i)));
         }
+      }
     }
   }
   // Topologically sort the iteration graph to determine loop order.
   // Report failure for a cyclic iteration graph.
   env.topSortClear(n);
   return topSortOptimal(env, n, iteratorTypes, inDegree, adjM);
-}
-
-/// Returns true if tensor materializes uninitialized into the computation.
-static bool isMaterializing(Value val) {
-  return val.getDefiningOp<tensor::EmptyOp>() ||
-         val.getDefiningOp<bufferization::AllocTensorOp>();
-}
-
-/// Returns true when the tensor expression is admissible for codegen.
-/// Since all sparse input tensors are admissible, we just need to check
-/// whether the out tensor in the tensor expression codegen is admissible.
-/// Sets `sparseOut` to the tensor and `outerParNest` to the outer injective
-/// nesting depth when a "truly dynamic" sparse tensor output occurs.
-static bool isAdmissibleTensorExp(CodegenEnv &env, unsigned exp,
-                                  OpOperand **sparseOut,
-                                  unsigned *outerParNest) {
-  // We reject any expression that makes a reduction from `-outTensor`, as those
-  // expressions create a dependency between the current iteration (i) and the
-  // previous iteration (i-1). It would require iterating over the whole
-  // coordinate space, which prevent exploiting sparsity for faster code.
-  for (utils::IteratorType it : env.op().getIteratorTypesArray()) {
-    if (it == utils::IteratorType::reduction) {
-      if (env.merger().hasNegateOnOut(exp))
-        return false;
-      break;
-    }
-  }
-
-  OpOperand *lhs = env.op().getDpsInitOperand(0);
-  unsigned tensor = lhs->getOperandNumber();
-  auto enc = getSparseTensorEncoding(lhs->get().getType());
-  // An non-annotated output tensor is assumed dense, and becomes a random
-  // access n-dim memref. Admissible since insertions cannot occur.
-  if (!enc)
-    return true;
-  // An all-dense annotated "sparse" output tensor becomes a linearized random
-  // access 1-dim memref. Also admissible since insertions cannot occur.
-  bool allDense = true;
-  unsigned numLoops =
-      env.merger().getNumLoops(); // numNativeLoops + numFilterLoops
-  for (unsigned i = 0; i < env.merger().getNumLoops(); i++)
-    if (isCompressedDLT(env.dlt(tensor, i)) ||
-        isSingletonDLT(env.dlt(tensor, i))) {
-      allDense = false;
-      break;
-    } else {
-      assert(isDenseDLT(env.dlt(tensor, i)) || isUndefDLT(env.dlt(tensor, i)));
-    }
-  if (allDense)
-    return true;
-
-  // TODO: support compound affine expression on sparse output.
-  if (getNumCompoundAffineOnSparseDims(env.op().getMatchingIndexingMap(lhs),
-                                       lhs->get()) != 0)
-    return false;
-
-  // A tensor expression with a sparse output tensor that changes its values
-  // but not its nonzero structure, an operation called "simply dynamic" in
-  // [Bik96,Ch9], is also admissible without special env.
-  if (env.merger().isSingleCondition(tensor, exp))
-    return true;
-
-  // Accept "truly dynamic" if the output tensor materializes uninitialized
-  // into the computation and insertions occur in lexicographic index order.
-  if (isMaterializing(lhs->get())) {
-    auto iteratorTypes = env.op().getIteratorTypesArray();
-    unsigned nest = 0;
-    for (unsigned i = 0; i < numLoops; i++) {
-      if (!env.merger().isFilterLoop(env.topSortAt(i))) {
-        // We only count non-filter loops as filter loops should be considered
-        // as a special type of parallel loops.
-        if (linalg::isReductionIterator(iteratorTypes[env.topSortAt(i)]))
-          break; // terminate at first reduction
-        nest++;
-      }
-    }
-    // Determine admissible dynamic insertion situations:
-    // (1) fully injective, since there are no reductions,
-    // (2) admissible 1-d expansion in innermost dimension.
-    if (nest >= env.op().getRank(lhs) - 1) {
-      *sparseOut = lhs;
-      *outerParNest = nest;
-      return true;
-    }
-  }
-  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1271,72 +1196,73 @@ static bool translateBitsToTidDimPairs(
 
   unsigned numloopCond = 0;
   // Converts bits to array + dim pair
-  env.merger().foreachTidDimPairInBits(all, [&,
-                                             idx](unsigned b, unsigned tid,
-                                                  std::optional<unsigned> dim,
-                                                  DimLevelType dlt) {
-    if (simple.test(b)) {
-      if (isUndefDLT(dlt)) {
-        // An undefined dlt in the lattices, we probably mean to iterate based
-        // on the dim of output tensor.
-        // E.g., this could be a synthetic tensor (for invariants and sparse
-        // output tensor).
-        // out[i][j] = invariant; or a broadcast
-        // out[i][j] = in[i] (j is undef for input)
-        tid = env.merger().getOutTensorID();
-        dim = env.merger().getDimNum(tid, idx);
-        // Skips invalid dim (e.g., when this is a zero ranked tensor).
-        if (!dim)
-          return;
-      }
-      tids.push_back(tid);
-      dims.push_back(*dim);
-      numloopCond++;
-    } else if (isDenseDLT(dlt)) {
-      tids.push_back(tid);
-      dims.push_back(*dim);
-    } else {
-      assert(isUndefDLT(dlt));
-      linalg::GenericOp op = env.op();
-      if (tid >= op.getNumDpsInputs())
-        // We only handle affine expression on input tensors (for now).
-        return;
-      OpOperand *operand = &op->getOpOperand(tid);
-      auto enc = getSparseTensorEncoding(operand->get().getType());
-      // Non-annotated dense tensors requires no special handling.
-      if (!enc)
-        return;
+  env.merger().foreachTidDimPairInBits(
+      all, [&, idx](unsigned b, unsigned tid, std::optional<unsigned> dim,
+                    DimLevelType dlt) {
+        if (simple.test(b)) {
+          if (isUndefDLT(dlt)) {
+            // An undefined dlt in the lattices, we probably mean to iterate
+            // based on the dim of output tensor.
+            // E.g., this could be a synthetic tensor (for invariants and sparse
+            // output tensor).
+            // out[i][j] = invariant; or a broadcast
+            // out[i][j] = in[i] (j is undef for input)
+            tid = env.merger().getOutTensorID();
+            dim = env.merger().getDimNum(tid, idx);
+            // Skips invalid dim (e.g., when this is a zero ranked tensor).
+            if (!dim)
+              return;
+          }
+          tids.push_back(tid);
+          dims.push_back(*dim);
+          numloopCond++;
+        } else if (isDenseDLT(dlt)) {
+          tids.push_back(tid);
+          dims.push_back(*dim);
+        } else {
+          assert(isUndefDLT(dlt));
+          linalg::GenericOp op = env.op();
+          if (tid >= op.getNumDpsInputs())
+            // We only handle affine expression on input tensors (for now).
+            return;
+          OpOperand *operand = &op->getOpOperand(tid);
+          auto enc = getSparseTensorEncoding(operand->get().getType());
+          // Non-annotated dense tensors requires no special handling.
+          if (!enc)
+            return;
 
-      ArrayRef<AffineExpr> affines =
-          op.getMatchingIndexingMap(operand).getResults();
-      assert(affines.size() == enc.getDimLevelType().size());
-      for (unsigned i = 0, e = affines.size(); i < e; i++) {
-        AffineExpr exp = affines[toOrigDim(enc, i)];
-        // Skip simple affine expression and non dense dimensions (which has
-        // it own filter loop).
-        if (exp.isa<AffineDimExpr>() || !isDenseDLT(getDimLevelType(enc, i)))
-          continue;
+          ArrayRef<AffineExpr> affines =
+              op.getMatchingIndexingMap(operand).getResults();
+          assert(affines.size() == enc.getDimLevelType().size());
+          for (unsigned i = 0, e = affines.size(); i < e; i++) {
+            AffineExpr exp = affines[toOrigDim(enc, i)];
+            // Skip simple affine expression and non dense dimensions (which has
+            // it own filter loop).
+            if (exp.isa<AffineDimExpr>() ||
+                !isDenseDLT(getDimLevelType(enc, i)))
+              continue;
 
-        // Constant affine expression are handled in genLoop
-        if (!exp.isa<AffineConstantExpr>()) {
-          bool atLevel = false;
-          if (isInvariantAffine(env, exp, idx, atLevel) && atLevel) {
-            // If the compound affine is invariant and we are right at the
-            // level. We need to generate the address according to the affine
-            // expression. This is also the best place we can do it to avoid
-            // putting it inside inner loops.
-            // NOTE: It assumes that the levels of the input tensor are
-            // initialized in order (and it is also currently guaranteed by
-            // computeIterationGraph), another more admissible approach might be
-            // accepting out-of-order access between consecutive dense levels.
-            affineTids.push_back(tid);
-            affineDims.push_back(i);
-            exps.push_back(exp);
+            // Constant affine expression are handled in genLoop
+            if (!exp.isa<AffineConstantExpr>()) {
+              bool atLevel = false;
+              if (isInvariantAffine(env, exp, idx, atLevel) && atLevel) {
+                // If the compound affine is invariant and we are right at the
+                // level. We need to generate the address according to the
+                // affine expression. This is also the best place we can do it
+                // to avoid putting it inside inner loops.
+                // NOTE: It assumes that the levels of the input tensor are
+                // initialized in order (and it is also currently guaranteed by
+                // computeIterationGraph), another more admissible approach
+                // might be accepting out-of-order access between consecutive
+                // dense levels.
+                affineTids.push_back(tid);
+                affineDims.push_back(i);
+                exps.push_back(exp);
+              }
+            }
           }
         }
-      }
-    }
-  });
+      });
 
   if (isDenseDLT(env.dlt(env.merger().getOutTensorID(), idx))) {
     // Note that we generate dense indices of the output tensor
@@ -1513,8 +1439,9 @@ public:
 
   LogicalResult matchAndRewrite(linalg::GenericOp op,
                                 PatternRewriter &rewriter) const override {
-    // Only accept single output operations.
-    if (op.getNumDpsInits() != 1)
+    // Only accept single output operations without affine index on sparse
+    // output.
+    if (op.getNumDpsInits() != 1 || hasCompoundAffineOnSparseOut(op))
       return failure();
 
     // Sets up a code generation environment.
@@ -1528,11 +1455,10 @@ public:
     if (!findSparseAnnotations(env))
       return failure();
 
-    // Builds the tensor expression for the Linalg operation in SSA form.
-    std::optional<unsigned> optExp = env.merger().buildTensorExpFromLinalg(op);
-    if (!optExp)
+    // Constructs the tensor expressions tree from `op`, returns failure if the
+    // tree can not be built or the tensor expression is inadmissible.
+    if (failed(env.initTensorExp()))
       return failure();
-    unsigned exp = *optExp;
 
     // Computes a topologically sorted iteration graph to ensure tensors
     // are visited in natural index order. Gradually relaxes the considered
@@ -1541,31 +1467,31 @@ public:
     // to resolve cycles by inserting a conversion.
     bool isAdmissible = false;
     bool hasCycle = true;
-    OpOperand *sparseOut = nullptr;
-    unsigned outerParNest = -1u;
+
     // An const list of all masks that we used for interation graph
     // computation. Must be ordered from more strict to less strict.
     const auto allMask = {SortMask::kIncludeAll, SortMask::kIncludeUndef,
                           SortMask::kIncludeDense, SortMask::kSparseOnly};
-    for (auto mask : allMask)
+    for (auto mask : allMask) {
       if (computeIterationGraph(env, mask)) {
         hasCycle = false;
-        if (isAdmissibleTensorExp(env, exp, &sparseOut, &outerParNest)) {
+        if (env.isAdmissibleTopoOrder()) {
           isAdmissible = true;
           break;
         }
         // else try a set of less strict constraints.
       }
+    }
     if (hasCycle)
       return resolveCycle(env, rewriter); // one last shot
     if (!isAdmissible)
       return failure(); // inadmissible expression, reject
 
     // Recursively generates code if admissible.
-    env.startEmit(sparseOut, outerParNest);
+    env.startEmit();
     genBuffers(env, rewriter);
     genInitConstantDenseAddress(env, rewriter);
-    genStmt(env, rewriter, exp, 0);
+    genStmt(env, rewriter, env.getTensorExp(), 0);
     genResult(env, rewriter);
     return success();
   }
