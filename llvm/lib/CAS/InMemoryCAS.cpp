@@ -214,7 +214,6 @@ public:
   }
 
   CASID getID(ObjectRef Ref) const final { return getIDImpl(Ref); }
-  CASID getID(ObjectHandle Ref) const final { return getIDImpl(Ref); }
   CASID getIDImpl(ReferenceBase Ref) const {
     return getID(asInMemoryObject(Ref));
   }
