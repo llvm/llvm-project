@@ -4565,6 +4565,26 @@ bool SwiftASTContext::IsTupleType(lldb::opaque_compiler_type_t type) {
   return llvm::isa<::swift::TupleType>(swift_type);
 }
 
+llvm::Optional<TypeSystemSwift::NonTriviallyManagedReferenceKind>
+SwiftASTContext::GetNonTriviallyManagedReferenceKind(
+    lldb::opaque_compiler_type_t type) {
+  VALID_OR_RETURN({});
+  if (swift::CanType swift_can_type = GetCanonicalSwiftType(type)) {
+    const swift::TypeKind type_kind = swift_can_type->getKind();
+    switch (type_kind) {
+    default:
+      return {};
+    case swift::TypeKind::UnmanagedStorage:
+      return NonTriviallyManagedReferenceKind::eUnmanaged;
+    case swift::TypeKind::UnownedStorage:
+      return NonTriviallyManagedReferenceKind::eUnowned;
+    case swift::TypeKind::WeakStorage:
+      return NonTriviallyManagedReferenceKind::eWeak;
+    }
+  }
+  return {};
+}
+
 CompilerType SwiftASTContext::GetErrorType() {
   VALID_OR_RETURN(CompilerType());
 
@@ -6649,40 +6669,6 @@ GetInstanceVariableOffset(ValueObject *valobj, ExecutionContext *exe_ctx,
 
   return GetInstanceVariableOffset_Metadata(valobj, exe_ctx, class_type,
                                             ivar_name, ivar_type);
-}
-
-bool SwiftASTContext::IsNonTriviallyManagedReferenceType(
-    const CompilerType &type, NonTriviallyManagedReferenceStrategy &strategy,
-    CompilerType *underlying_type) {
-  if (swift::CanType swift_can_type = ::GetCanonicalSwiftType(type)) {
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    default:
-      break;
-    case swift::TypeKind::UnmanagedStorage: {
-      strategy = NonTriviallyManagedReferenceStrategy::eUnmanaged;
-      if (underlying_type)
-        *underlying_type = ToCompilerType(
-            swift_can_type->getReferenceStorageReferent().getPointer());
-    }
-      return true;
-    case swift::TypeKind::UnownedStorage: {
-      strategy = NonTriviallyManagedReferenceStrategy::eUnowned;
-      if (underlying_type)
-        *underlying_type = ToCompilerType(
-            swift_can_type->getReferenceStorageReferent().getPointer());
-    }
-      return true;
-    case swift::TypeKind::WeakStorage: {
-      strategy = NonTriviallyManagedReferenceStrategy::eWeak;
-      if (underlying_type)
-        *underlying_type = ToCompilerType(
-            swift_can_type->getReferenceStorageReferent().getPointer());
-    }
-      return true;
-    }
-  }
-  return false;
 }
 
 CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(

@@ -408,6 +408,9 @@ public:
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
   bool IsTupleType(lldb::opaque_compiler_type_t type) override;
+  llvm::Optional<NonTriviallyManagedReferenceKind>
+  GetNonTriviallyManagedReferenceKind(
+      lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetErrorType() override;
 
@@ -552,16 +555,6 @@ public:
 
   static bool GetProtocolTypeInfo(const CompilerType &type,
                                   ProtocolInfo &protocol_info);
-
-  enum class NonTriviallyManagedReferenceStrategy {
-    eWeak,
-    eUnowned,
-    eUnmanaged
-  };
-
-  static bool IsNonTriviallyManagedReferenceType(
-      const CompilerType &type, NonTriviallyManagedReferenceStrategy &strategy,
-      CompilerType *underlying_type = nullptr);
 
   static void ApplyWorkingDir(llvm::SmallVectorImpl<char> &clang_argument,
                               llvm::StringRef cur_working_dir);

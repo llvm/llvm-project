@@ -343,9 +343,7 @@ public:
   /// task is to strip those bits if necessary and return a pure
   /// pointer (or a tagged pointer).
   lldb::addr_t MaybeMaskNonTrivialReferencePointer(
-      lldb::addr_t,
-      SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy);
-
+      lldb::addr_t, TypeSystemSwift::NonTriviallyManagedReferenceKind kind);
   /// \return true if this is a Swift tagged pointer (as opposed to an
   /// Objective-C tagged pointer).
   bool IsTaggedPointer(lldb::addr_t addr, CompilerType type);

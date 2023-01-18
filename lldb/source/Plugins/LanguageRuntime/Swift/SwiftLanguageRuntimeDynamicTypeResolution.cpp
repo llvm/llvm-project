@@ -121,8 +121,7 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer(lldb::addr_t addr,
 }
 
 lldb::addr_t SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
-    lldb::addr_t addr,
-    SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy) {
+    lldb::addr_t addr, TypeSystemSwift::NonTriviallyManagedReferenceKind kind) {
 
   if (addr == 0)
     return addr;
@@ -162,8 +161,7 @@ lldb::addr_t SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
 
   lldb::addr_t mask = 0;
 
-  if (strategy ==
-      SwiftASTContext::NonTriviallyManagedReferenceStrategy::eWeak) {
+  if (kind == TypeSystemSwift::NonTriviallyManagedReferenceKind::eWeak) {
     bool is_indirect = true;
 
     // On non-objc platforms, the weak reference pointer always pointed to a
@@ -217,7 +215,6 @@ lldb::addr_t SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer(
       return addr;
     }
     return isa_addr;
-
   }
 
   if (is_arm && is_64)

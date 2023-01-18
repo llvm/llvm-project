@@ -272,6 +272,9 @@ public:
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
   bool IsTupleType(lldb::opaque_compiler_type_t type) override;
+  llvm::Optional<NonTriviallyManagedReferenceKind>
+  GetNonTriviallyManagedReferenceKind(
+      lldb::opaque_compiler_type_t type) override;
 
   /// Return the nth tuple element's type and name, if it has one.
   llvm::Optional<TupleElement>
