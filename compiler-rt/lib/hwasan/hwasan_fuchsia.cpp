@@ -202,6 +202,12 @@ void InitializeOsSupport() {
 
 }  // namespace __hwasan
 
+namespace __lsan {
+
+bool UseExitcodeOnLeak() { return __hwasan::flags()->halt_on_error; }
+
+}  // namespace __lsan
+
 extern "C" {
 
 void *__sanitizer_before_thread_create_hook(thrd_t thread, bool detached,
