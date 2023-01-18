@@ -98,7 +98,8 @@ target_include_directories(omptarget.rtl.cuda PRIVATE
 # This controls whether tests are run for the nvptx offloading target
 # Run them if libcuda is available, or if the user explicitly asked for dlopen
 # Otherwise this plugin is being built speculatively and there may be no cuda available
-if (LIBOMPTARGET_CAN_LINK_LIBCUDA OR LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
+option(LIBOMPTARGET_FORCE_NVIDIA_TESTS "Build NVIDIA libomptarget tests" OFF)
+if (LIBOMPTARGET_FOUND_NVIDIA_GPU OR LIBOMPTARGET_FORCE_NVIDIA_TESTS)
   libomptarget_say("Enable tests using CUDA plugin")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-oldDriver" PARENT_SCOPE)
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-LTO" PARENT_SCOPE)
