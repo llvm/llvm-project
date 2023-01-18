@@ -134,7 +134,7 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
 // Check if \p ChunkToCheckForUninterestingness is interesting. Returns the
 // modified module if the chunk resulted in a reduction.
 static std::unique_ptr<ReducerWorkItem>
-CheckChunk(const Chunk &ChunkToCheckForUninterestingness,
+CheckChunk(const Chunk ChunkToCheckForUninterestingness,
            std::unique_ptr<ReducerWorkItem> Clone, const TestRunner &Test,
            ReductionFunc ExtractChunksFromModule,
            const DenseSet<Chunk> &UninterestingChunks,
@@ -188,10 +188,11 @@ CheckChunk(const Chunk &ChunkToCheckForUninterestingness,
 }
 
 static SmallString<0> ProcessChunkFromSerializedBitcode(
-  const Chunk &ChunkToCheckForUninterestingness, const TestRunner &Test,
-    ReductionFunc ExtractChunksFromModule, const DenseSet<Chunk> &UninterestingChunks,
-    ArrayRef<Chunk> ChunksStillConsideredInteresting,
-    StringRef OriginalBC, std::atomic<bool> &AnyReduced) {
+    const Chunk ChunkToCheckForUninterestingness, const TestRunner &Test,
+    ReductionFunc ExtractChunksFromModule,
+    const DenseSet<Chunk> &UninterestingChunks,
+    ArrayRef<Chunk> ChunksStillConsideredInteresting, StringRef OriginalBC,
+    std::atomic<bool> &AnyReduced) {
   LLVMContext Ctx;
   auto CloneMMM = std::make_unique<ReducerWorkItem>();
   MemoryBufferRef Data(OriginalBC, "<bc file>");
@@ -314,14 +315,12 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
         // LLVMContext object. If a task reduces the input, serialize the result
         // back in the corresponding Result element.
         for (unsigned J = 0; J < NumInitialTasks; ++J) {
+          Chunk ChunkToCheck = *(I + J);
           TaskQueue.emplace_back(ChunkThreadPool.async(
-              [J, I, &Test, &ExtractChunksFromModule, &UninterestingChunks,
-               &ChunksStillConsideredInteresting, &OriginalBC, &AnyReduced]() {
-                return ProcessChunkFromSerializedBitcode(
-                    *(I + J), Test, ExtractChunksFromModule,
-                    UninterestingChunks, ChunksStillConsideredInteresting,
-                    OriginalBC, AnyReduced);
-              }));
+              ProcessChunkFromSerializedBitcode, ChunkToCheck, std::ref(Test),
+              ExtractChunksFromModule, UninterestingChunks,
+              ChunksStillConsideredInteresting, OriginalBC,
+              std::ref(AnyReduced)));
         }
 
         // Start processing results of the queued tasks. We wait for the first
@@ -340,16 +339,12 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
           if (Res.empty()) {
             unsigned NumScheduledTasks = NumChunksProcessed + TaskQueue.size();
             if (!AnyReduced && I + NumScheduledTasks != E) {
-              Chunk &ChunkToCheck = *(I + NumScheduledTasks);
+              Chunk ChunkToCheck = *(I + NumScheduledTasks);
               TaskQueue.emplace_back(ChunkThreadPool.async(
-                  [&Test, &ExtractChunksFromModule, &UninterestingChunks,
-                   &ChunksStillConsideredInteresting, &OriginalBC,
-                   &ChunkToCheck, &AnyReduced]() {
-                    return ProcessChunkFromSerializedBitcode(
-                        ChunkToCheck, Test, ExtractChunksFromModule,
-                        UninterestingChunks, ChunksStillConsideredInteresting,
-                        OriginalBC, AnyReduced);
-                  }));
+                  ProcessChunkFromSerializedBitcode, ChunkToCheck,
+                  std::ref(Test), ExtractChunksFromModule, UninterestingChunks,
+                  ChunksStillConsideredInteresting, OriginalBC,
+                  std::ref(AnyReduced)));
             }
             continue;
           }
@@ -381,7 +376,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
       if (!Result)
         continue;
 
-      Chunk &ChunkToCheckForUninterestingness = *I;
+      const Chunk ChunkToCheckForUninterestingness = *I;
       FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = true;
       UninterestingChunks.insert(ChunkToCheckForUninterestingness);
       ReducedProgram = std::move(Result);
