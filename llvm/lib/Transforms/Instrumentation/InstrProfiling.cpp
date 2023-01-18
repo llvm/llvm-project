@@ -823,36 +823,6 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
   return F->hasAddressTaken() || F->hasLinkOnceLinkage();
 }
 
-static inline Constant *getFuncAddrForProfData(Function *Fn) {
-  auto *Int8PtrTy = Type::getInt8PtrTy(Fn->getContext());
-  // Store a nullptr in __llvm_profd, if we shouldn't use a real address
-  if (!shouldRecordFunctionAddr(Fn))
-    return ConstantPointerNull::get(Int8PtrTy);
-
-  // If we can't use an alias, we must use the public symbol, even though this
-  // may require a symbolic relocation. When the function has local linkage, we
-  // can use the symbol directly without introducing relocations.
-  if (Fn->isDeclarationForLinker() || Fn->hasLocalLinkage())
-    return ConstantExpr::getBitCast(Fn, Int8PtrTy);
-
-  // When possible use a private alias to avoid symbolic relocations.
-  auto *GA = GlobalAlias::create(GlobalValue::LinkageTypes::PrivateLinkage,
-                                 Fn->getName() + ".local", Fn);
-
-  // When the instrumented function is a COMDAT function, we cannot use a
-  // private alias. If we did, we would create reference to a local label in
-  // this function's section. If this version of the function isn't selected by
-  // the linker, then the metadata would introduce a reference to a discarded
-  // section. So, for COMDAT functions, we need to adjust the linkage of the
-  // alias. Using hidden visibility avoids a dynamic relocation and an entry in
-  // the dynamic symbol table.
-  if (Fn->hasComdat()) {
-    GA->setLinkage(Fn->getLinkage());
-    GA->setVisibility(GlobalValue::VisibilityTypes::HiddenVisibility);
-  }
-  return ConstantExpr::getBitCast(GA, Int8PtrTy);
-}
-
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   // Don't do this for Darwin.  compiler-rt uses linker magic.
   if (TT.isOSDarwin())
@@ -1044,7 +1014,9 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   };
   auto *DataTy = StructType::get(Ctx, ArrayRef(DataTypes));
 
-  Constant *FunctionAddr = getFuncAddrForProfData(Fn);
+  Constant *FunctionAddr = shouldRecordFunctionAddr(Fn)
+                               ? ConstantExpr::getBitCast(Fn, Int8PtrTy)
+                               : ConstantPointerNull::get(Int8PtrTy);
 
   Constant *Int16ArrayVals[IPVK_Last + 1];
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
