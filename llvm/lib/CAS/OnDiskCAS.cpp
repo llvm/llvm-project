@@ -108,35 +108,17 @@ private:
 class InternalRef4B;
 
 /// 8B reference:
-/// - bits  0-47: Offset
-/// - bits 48-63: Reserved for other metadata.
 class InternalRef {
-  enum Counts : size_t {
-    NumMetadataBits = 16,
-    NumOffsetBits = 64 - NumMetadataBits,
-  };
-
 public:
-  enum class OffsetKind {
-    IndexRecord = 0,
-    DataRecord = 1,
-  };
-
-  OffsetKind getOffsetKind() const {
-    return (OffsetKind)((Data >> NumOffsetBits) & UINT8_MAX);
-  }
-
   FileOffset getFileOffset() const { return FileOffset(getRawOffset()); }
 
   uint64_t getRawData() const { return Data; }
-  uint64_t getRawOffset() const { return Data & (UINT64_MAX >> 16); }
+  uint64_t getRawOffset() const { return Data; }
 
   static InternalRef getFromRawData(uint64_t Data) { return InternalRef(Data); }
 
-  static InternalRef getFromOffset(OffsetKind Kind, FileOffset Offset) {
-    assert((uint64_t)Offset.get() <= (UINT64_MAX >> NumMetadataBits) &&
-           "Offset must fit in 6B");
-    return InternalRef((uint64_t)Kind << NumOffsetBits | Offset.get());
+  static InternalRef getFromOffset(FileOffset Offset) {
+    return InternalRef(Offset.get());
   }
 
   friend bool operator==(InternalRef LHS, InternalRef RHS) {
@@ -144,54 +126,29 @@ public:
   }
 
 private:
-  InternalRef(OffsetKind Kind, FileOffset Offset)
-      : Data((uint64_t)Kind << NumOffsetBits | Offset.get()) {
-    assert(Offset.get() == getFileOffset().get());
-    assert(Kind == getOffsetKind());
-  }
+  InternalRef(FileOffset Offset) : Data((uint64_t)Offset.get()) {}
   InternalRef(uint64_t Data) : Data(Data) {}
   uint64_t Data;
 };
 
 /// 4B reference:
-/// - bits  0-29: Offset
-/// - bits 30-31: Reserved for other metadata.
 class InternalRef4B {
-  enum Counts : size_t {
-    NumMetadataBits = 4,
-    NumOffsetBits = 32 - NumMetadataBits,
-  };
-
 public:
-  using OffsetKind = InternalRef::OffsetKind;
+  FileOffset getFileOffset() const { return FileOffset(Data); }
 
-  OffsetKind getOffsetKind() const {
-    return (OffsetKind)(Data >> NumOffsetBits);
-  }
-
-  FileOffset getFileOffset() const {
-    uint64_t RawOffset = Data & (UINT32_MAX >> NumMetadataBits);
-    return FileOffset(RawOffset << 3);
-  }
+  uint32_t getRawData() const { return Data; }
 
   /// Shrink to 4B reference.
   static Optional<InternalRef4B> tryToShrink(InternalRef Ref) {
-    OffsetKind Kind = Ref.getOffsetKind();
-    uint64_t ShiftedKind = (uint64_t)Kind << NumOffsetBits;
-    if (ShiftedKind > UINT32_MAX)
-      return None;
+    uint64_t Offset = Ref.getRawOffset();
+    if (Offset > UINT32_MAX)
+      return std::nullopt;
 
-    uint64_t ShiftedOffset = Ref.getRawOffset();
-    assert(isAligned(Align(8), ShiftedOffset));
-    ShiftedOffset >>= 3;
-    if (ShiftedOffset > (UINT32_MAX >> NumMetadataBits))
-      return None;
-
-    return InternalRef4B(ShiftedKind | ShiftedOffset);
+    return InternalRef4B(Offset);
   }
 
   operator InternalRef() const {
-    return InternalRef::getFromOffset(getOffsetKind(), getFileOffset());
+    return InternalRef::getFromOffset(getFileOffset());
   }
 
 private:
@@ -280,15 +237,14 @@ public:
   bool is4B() const { return Begin.is<const InternalRef4B *>(); }
   bool is8B() const { return Begin.is<const InternalRef *>(); }
 
-  ArrayRef<InternalRef> as8B() const {
-    assert(is8B());
-    auto *B = Begin.get<const InternalRef *>();
-    return makeArrayRef(B, Size);
-  }
-
-  ArrayRef<InternalRef4B> as4B() const {
-    auto *B = Begin.get<const InternalRef4B *>();
-    return makeArrayRef(B, Size);
+  ArrayRef<uint8_t> getBuffer() const {
+    if (is4B()) {
+      auto *B = Begin.get<const InternalRef4B *>();
+      return ArrayRef((const uint8_t *)B, sizeof(InternalRef4B) * Size);
+    } else {
+      auto *B = Begin.get<const InternalRef *>();
+      return ArrayRef((const uint8_t *)B, sizeof(InternalRef) * Size);
+    }
   }
 
   InternalRefArrayRef(NoneType = None) {}
@@ -332,8 +288,8 @@ private:
   SmallVector<InternalRef> FullRefs;
 };
 
-/// DataStore record data: 8B + size? + refs? + data + 0
-/// - 8-bytes: Header
+/// DataStore record data: 4B + size? + refs? + data + 0
+/// - 4-bytes: Header
 /// - {0,4,8}-bytes: DataSize     (may be packed in Header)
 /// - {0,4,8}-bytes: NumRefs      (may be packed in Header)
 /// - NumRefs*{4,8}-bytes: Refs[] (end-ptr is 8-byte aligned)
@@ -360,13 +316,6 @@ struct DataRecordHandle {
     Max = Uses8B,
   };
 
-  enum class TrieOffsetFlags {
-    /// TrieRecord storage: 6B or 4B.
-    Uses6B = 0U,
-    Uses4B = 1U,
-    Max = Uses4B,
-  };
-
   /// Kind of ref stored in Refs[]: InternalRef or InternalRef4B.
   enum class RefKindFlags {
     InternalRef = 0U,
@@ -379,9 +328,7 @@ struct DataRecordHandle {
     NumRefsBits = 3,
     DataSizeShift = NumRefsShift + NumRefsBits,
     DataSizeBits = 2,
-    TrieOffsetShift = DataSizeShift + DataSizeBits,
-    TrieOffsetBits = 1,
-    RefKindShift = TrieOffsetShift + TrieOffsetBits,
+    RefKindShift = DataSizeShift + DataSizeBits,
     RefKindBits = 1,
   };
   static_assert(((UINT32_MAX << NumRefsBits) & (uint32_t)NumRefsFlags::Max) ==
@@ -390,9 +337,6 @@ struct DataRecordHandle {
   static_assert(((UINT32_MAX << DataSizeBits) & (uint32_t)DataSizeFlags::Max) ==
                     0,
                 "Not enough bits");
-  static_assert(((UINT32_MAX << TrieOffsetBits) &
-                 (uint32_t)TrieOffsetFlags::Max) == 0,
-                "Not enough bits");
   static_assert(((UINT32_MAX << RefKindBits) & (uint32_t)RefKindFlags::Max) ==
                     0,
                 "Not enough bits");
@@ -400,19 +344,16 @@ struct DataRecordHandle {
   struct LayoutFlags {
     NumRefsFlags NumRefs;
     DataSizeFlags DataSize;
-    TrieOffsetFlags TrieOffset;
     RefKindFlags RefKind;
 
     static uint64_t pack(LayoutFlags LF) {
       unsigned Packed = ((unsigned)LF.NumRefs << NumRefsShift) |
                         ((unsigned)LF.DataSize << DataSizeShift) |
-                        ((unsigned)LF.TrieOffset << TrieOffsetShift) |
                         ((unsigned)LF.RefKind << RefKindShift);
 #ifndef NDEBUG
       LayoutFlags RoundTrip = unpack(Packed);
       assert(LF.NumRefs == RoundTrip.NumRefs);
       assert(LF.DataSize == RoundTrip.DataSize);
-      assert(LF.TrieOffset == RoundTrip.TrieOffset);
       assert(LF.RefKind == RoundTrip.RefKind);
 #endif
       return Packed;
@@ -424,8 +365,6 @@ struct DataRecordHandle {
           (NumRefsFlags)((Storage >> NumRefsShift) & ((1U << NumRefsBits) - 1));
       LF.DataSize = (DataSizeFlags)((Storage >> DataSizeShift) &
                                     ((1U << DataSizeBits) - 1));
-      LF.TrieOffset = (TrieOffsetFlags)((Storage >> TrieOffsetShift) &
-                                        ((1U << TrieOffsetBits) - 1));
       LF.RefKind =
           (RefKindFlags)((Storage >> RefKindShift) & ((1U << RefKindBits) - 1));
       return LF;
@@ -436,24 +375,21 @@ struct DataRecordHandle {
   /// - 1-byte:      LayoutFlags
   /// - 1-byte:      1B size field
   /// - {0,2}-bytes: 2B size field
-  /// - {4,6}-bytes: TrieRecordOffset
   struct Header {
-    uint64_t Packed;
+    using PackTy = uint32_t;
+    PackTy Packed;
+
+    static constexpr unsigned LayoutFlagsShift =
+        (sizeof(PackTy) - 1) * CHAR_BIT;
   };
 
   struct Input {
-    FileOffset TrieRecordOffset;
     InternalRefArrayRef Refs;
     ArrayRef<char> Data;
   };
 
   LayoutFlags getLayoutFlags() const {
-    return LayoutFlags::unpack(H->Packed >> 56);
-  }
-  FileOffset getTrieRecordOffset() const {
-    if (getLayoutFlags().TrieOffset == TrieOffsetFlags::Uses4B)
-      return FileOffset(H->Packed & UINT32_MAX);
-    return FileOffset(H->Packed & (UINT64_MAX >> 16));
+    return LayoutFlags::unpack(H->Packed >> Header::LayoutFlagsShift);
   }
 
   uint64_t getDataSize() const;
@@ -474,7 +410,6 @@ struct DataRecordHandle {
     explicit Layout(const Input &I);
 
     LayoutFlags Flags{};
-    uint64_t TrieRecordOffset = 0;
     uint64_t DataSize = 0;
     uint32_t NumRefs = 0;
     int64_t RefsRelOffset = 0;
@@ -550,12 +485,10 @@ public:
   /// FIXME: Should be mapped_file_region instead of MemoryBuffer to drop a
   /// layer of indirection.
   std::unique_ptr<MemoryBuffer> Region;
-  InternalRef Ref;
   TrieRecord::StorageKind SK;
-  StandaloneDataInMemory(std::unique_ptr<MemoryBuffer> Region, InternalRef Ref,
+  StandaloneDataInMemory(std::unique_ptr<MemoryBuffer> Region,
                          TrieRecord::StorageKind SK)
-      : Region(std::move(Region)), Ref(Ref), SK(SK) {
-    assert(Ref.getOffsetKind() == InternalRef::OffsetKind::IndexRecord);
+      : Region(std::move(Region)), SK(SK) {
 #ifndef NDEBUG
     bool IsStandalone = false;
     switch (SK) {
@@ -573,11 +506,11 @@ public:
 };
 
 struct InternalHandle {
-  InternalRef getRef() const { return DirectRef ? *DirectRef : SDIM->Ref; }
+  FileOffset getAsFileOffset() const { return *DataOffset; }
 
   uint64_t getRawData() const {
-    if (DirectRef) {
-      uint64_t Raw = DirectRef->getRawData();
+    if (DataOffset) {
+      uint64_t Raw = DataOffset->get();
       assert(!(Raw & 0x1));
       return Raw;
     }
@@ -586,13 +519,10 @@ struct InternalHandle {
     return Raw | 1;
   }
 
-  explicit InternalHandle(InternalRef DirectRef) : DirectRef(DirectRef) {
-    assert(DirectRef.getOffsetKind() != InternalRef::OffsetKind::IndexRecord);
-  }
-  explicit InternalHandle(const StandaloneDataInMemory &SDIM) : SDIM(&SDIM) {
-    assert(SDIM.Ref.getOffsetKind() == InternalRef::OffsetKind::IndexRecord);
-  }
-  Optional<InternalRef> DirectRef;
+  explicit InternalHandle(FileOffset DataOffset) : DataOffset(DataOffset) {}
+  explicit InternalHandle(uint64_t DataOffset) : DataOffset(FileOffset(DataOffset)) {}
+  explicit InternalHandle(const StandaloneDataInMemory &SDIM) : SDIM(&SDIM) {}
+  Optional<FileOffset> DataOffset;
   const StandaloneDataInMemory *SDIM = nullptr;
 };
 
@@ -601,7 +531,7 @@ template <size_t NumShards> class StandaloneDataMap {
   static_assert(isPowerOf2_64(NumShards), "Expected power of 2");
 
 public:
-  const StandaloneDataInMemory &insert(ArrayRef<uint8_t> Hash, InternalRef Ref,
+  const StandaloneDataInMemory &insert(ArrayRef<uint8_t> Hash,
                                        TrieRecord::StorageKind SK,
                                        std::unique_ptr<MemoryBuffer> Buffer);
 
@@ -697,7 +627,7 @@ public:
   static constexpr StringLiteral IndexFile = "index";
   static constexpr StringLiteral DataPoolFile = "data";
 
-  static constexpr StringLiteral FilePrefix = "v6.";
+  static constexpr StringLiteral FilePrefix = "v7.";
   static constexpr StringLiteral FileSuffixData = ".data";
   static constexpr StringLiteral FileSuffixLeaf = ".leaf";
   static constexpr StringLiteral FileSuffixLeaf0 = ".leaf+0";
@@ -729,8 +659,7 @@ public:
     return getContentFromHandle(getInternalHandle(H));
   }
   Expected<InternalHandle> loadContentForRef(const IndexProxy &I,
-                                             TrieRecord::Data Object,
-                                             InternalRef Ref);
+                                             TrieRecord::Data Object);
   OnDiskContent getContentFromHandle(InternalHandle Ref) const;
 
   InternalRef getInternalRef(ObjectRef Ref) const {
@@ -743,15 +672,14 @@ public:
     if (Data & 1)
       return InternalHandle(*reinterpret_cast<const StandaloneDataInMemory *>(
           Data & (-1ULL << 1)));
-    return InternalHandle(InternalRef::getFromRawData(Data));
+    return InternalHandle(Data);
   }
   ObjectRef getExternalReference(InternalRef Ref) const {
     return ObjectRef::getFromInternalRef(*this, Ref.getRawData());
   }
 
   Expected<ObjectHandle> load(ObjectRef Ref) final;
-  Expected<ObjectHandle> load(const IndexProxy &I, TrieRecord::Data Object,
-                              InternalRef Ref);
+  Expected<ObjectHandle> load(const IndexProxy &I, TrieRecord::Data Object);
 
   Expected<ObjectHandle> getLoadedObject(const IndexProxy &I,
                                          TrieRecord::Data Object,
@@ -767,10 +695,7 @@ public:
 
   CASID getID(InternalRef Ref) const;
   CASID getID(ObjectRef Ref) const final { return getID(getInternalRef(Ref)); }
-  CASID getID(ObjectHandle Handle) const final {
-    return getID(getInternalHandle(Handle).getRef());
-  }
-  Optional<FileOffset> getIndexOffset(InternalRef Ref) const;
+  FileOffset getIndexOffset(InternalRef Ref) const;
 
   CASID getID(const IndexProxy &I) const {
     StringRef Hash = toStringRef(I.Hash);
@@ -785,8 +710,7 @@ public:
 
   OnDiskHashMappedTrie::const_pointer
   getInternalIndexPointer(const CASID &ID) const;
-  Optional<InternalRef> makeInternalRef(FileOffset IndexOffset,
-                                        TrieRecord::Data Object) const;
+  InternalRef makeInternalRef(FileOffset IndexOffset) const;
 
   IndexProxy
   getIndexProxyFromPointer(OnDiskHashMappedTrie::const_pointer P) const;
@@ -855,14 +779,13 @@ constexpr StringLiteral OnDiskCAS::FileSuffixLeaf0;
 
 template <size_t N>
 const StandaloneDataInMemory &
-StandaloneDataMap<N>::insert(ArrayRef<uint8_t> Hash, InternalRef Ref,
-                             TrieRecord::StorageKind SK,
+StandaloneDataMap<N>::insert(ArrayRef<uint8_t> Hash, TrieRecord::StorageKind SK,
                              std::unique_ptr<MemoryBuffer> Buffer) {
   auto &S = getShard(Hash);
   std::lock_guard<std::mutex> Lock(S.Mutex);
   auto &V = S.Map[Hash.data()];
   if (!V)
-    V = std::make_unique<StandaloneDataInMemory>(std::move(Buffer), Ref, SK);
+    V = std::make_unique<StandaloneDataInMemory>(std::move(Buffer), SK);
   return *V;
 }
 
@@ -998,33 +921,30 @@ DataRecordHandle DataRecordHandle::construct(char *Mem, const Input &I) {
 
 DataRecordHandle DataRecordHandle::constructImpl(char *Mem, const Input &I,
                                                  const Layout &L) {
-  assert(I.TrieRecordOffset && "Expected an offset into index");
-  assert(L.TrieRecordOffset == (uint64_t)I.TrieRecordOffset.get() &&
-         "Offset has drifted?");
   char *Next = Mem + sizeof(Header);
 
   // Fill in Packed and set other data, then come back to construct the header.
-  uint64_t Packed = 0;
-  Packed |= LayoutFlags::pack(L.Flags) << 56 | L.TrieRecordOffset;
+  Header::PackTy Packed = 0;
+  Packed |= LayoutFlags::pack(L.Flags) << Header::LayoutFlagsShift;
 
   // Construct DataSize.
   switch (L.Flags.DataSize) {
   case DataSizeFlags::Uses1B:
     assert(I.Data.size() <= UINT8_MAX);
-    Packed |= (uint64_t)I.Data.size() << 48;
+    Packed |= (Header::PackTy)I.Data.size()
+              << ((sizeof(Packed) - 2) * CHAR_BIT);
     break;
   case DataSizeFlags::Uses2B:
     assert(I.Data.size() <= UINT16_MAX);
-    Packed |= (uint64_t)I.Data.size() << 32;
+    Packed |= (Header::PackTy)I.Data.size()
+              << ((sizeof(Packed) - 4) * CHAR_BIT);
     break;
   case DataSizeFlags::Uses4B:
-    assert(isAddrAligned(Align(4), Next));
-    new (Next) uint32_t(I.Data.size());
+    support::endian::write32le(Next, I.Data.size());
     Next += 4;
     break;
   case DataSizeFlags::Uses8B:
-    assert(isAddrAligned(Align(8), Next));
-    new (Next) uint64_t(I.Data.size());
+    support::endian::write64le(Next, I.Data.size());
     Next += 8;
     break;
   }
@@ -1038,41 +958,30 @@ DataRecordHandle DataRecordHandle::constructImpl(char *Mem, const Input &I,
     break;
   case NumRefsFlags::Uses1B:
     assert(I.Refs.size() <= UINT8_MAX);
-    Packed |= (uint64_t)I.Refs.size() << 48;
+    Packed |= (Header::PackTy)I.Refs.size()
+              << ((sizeof(Packed) - 2) * CHAR_BIT);
     break;
   case NumRefsFlags::Uses2B:
     assert(I.Refs.size() <= UINT16_MAX);
-    Packed |= (uint64_t)I.Refs.size() << 32;
+    Packed |= (Header::PackTy)I.Refs.size()
+              << ((sizeof(Packed) - 4) * CHAR_BIT);
     break;
   case NumRefsFlags::Uses4B:
-    assert(isAddrAligned(Align(4), Next));
-    new (Next) uint32_t(I.Refs.size());
+    support::endian::write32le(Next, I.Refs.size());
     Next += 4;
     break;
   case NumRefsFlags::Uses8B:
-    assert(isAddrAligned(Align(8), Next));
-    new (Next) uint64_t(I.Refs.size());
+    support::endian::write64le(Next, I.Refs.size());
     Next += 8;
     break;
   }
 
   // Construct Refs[].
   if (!I.Refs.empty()) {
-    if (L.Flags.RefKind == RefKindFlags::InternalRef4B) {
-      assert(I.Refs.is4B());
-      assert(isAddrAligned(Align::Of<InternalRef4B>(), Next));
-      for (InternalRef4B Ref : I.Refs.as4B()) {
-        new (Next) InternalRef4B(Ref);
-        Next += sizeof(InternalRef4B);
-      }
-    } else {
-      assert(I.Refs.is8B());
-      assert(isAddrAligned(Align::Of<InternalRef>(), Next));
-      for (InternalRef Ref : I.Refs.as8B()) {
-        new (Next) InternalRef(Ref);
-        Next += sizeof(InternalRef);
-      }
-    }
+    assert((L.Flags.RefKind == RefKindFlags::InternalRef4B) == I.Refs.is4B());
+    ArrayRef<uint8_t> RefsBuffer = I.Refs.getBuffer();
+    llvm::copy(RefsBuffer, Next);
+    Next += RefsBuffer.size();
   }
 
   // Construct Data and the trailing null.
@@ -1089,7 +998,6 @@ DataRecordHandle DataRecordHandle::constructImpl(char *Mem, const Input &I,
   assert(Record.getLayoutFlags().DataSize == L.Flags.DataSize);
   assert(Record.getLayoutFlags().NumRefs == L.Flags.NumRefs);
   assert(Record.getLayoutFlags().RefKind == L.Flags.RefKind);
-  assert(Record.getLayoutFlags().TrieOffset == L.Flags.TrieOffset);
   return Record;
 }
 
@@ -1105,15 +1013,9 @@ DataRecordHandle::Layout::Layout(const Input &I) {
   Flags.RefKind =
       I.Refs.is4B() ? RefKindFlags::InternalRef4B : RefKindFlags::InternalRef;
 
-  // Set the trie offset.
-  TrieRecordOffset = (uint64_t)I.TrieRecordOffset.get();
-  assert(TrieRecordOffset <= (UINT64_MAX >> 16));
-  Flags.TrieOffset = TrieRecordOffset <= UINT32_MAX ? TrieOffsetFlags::Uses4B
-                                                    : TrieOffsetFlags::Uses6B;
-
   // Find the smallest slot available for DataSize.
   bool Has1B = true;
-  bool Has2B = Flags.TrieOffset == TrieOffsetFlags::Uses4B;
+  bool Has2B = true;
   if (DataSize <= UINT8_MAX && Has1B) {
     Flags.DataSize = DataSizeFlags::Uses1B;
     Has1B = false;
@@ -1184,6 +1086,9 @@ DataRecordHandle::Layout::Layout(const Input &I) {
     // The array of 4B refs doesn't need 8B alignment, but the data will need
     // to be 8B-aligned. Detect this now, and, if necessary, shift everything
     // by 4B by growing one of the sizes.
+    // If we remove the need for 8B-alignment for data there is <1% savings in
+    // disk storage for a clang build using MCCAS but the 8B-alignment may be
+    // useful in the future so keep it for now.
     uint64_t RefListSize = 4 * NumRefs;
     if (!isAligned(Align(8), RelOffset + RefListSize))
       GrowSizeFieldsBy4B();
@@ -1200,13 +1105,14 @@ uint64_t DataRecordHandle::getDataSize() const {
   auto *DataSizePtr = reinterpret_cast<const char *>(H) + RelOffset;
   switch (getLayoutFlags().DataSize) {
   case DataSizeFlags::Uses1B:
-    return (H->Packed >> 48) & UINT8_MAX;
+    return (H->Packed >> ((sizeof(Header::PackTy) - 2) * CHAR_BIT)) & UINT8_MAX;
   case DataSizeFlags::Uses2B:
-    return (H->Packed >> 32) & UINT16_MAX;
+    return (H->Packed >> ((sizeof(Header::PackTy) - 4) * CHAR_BIT)) &
+           UINT16_MAX;
   case DataSizeFlags::Uses4B:
-    return *reinterpret_cast<const uint32_t *>(DataSizePtr);
+    return support::endian::read32le(DataSizePtr);
   case DataSizeFlags::Uses8B:
-    return *reinterpret_cast<const uint64_t *>(DataSizePtr);
+    return support::endian::read64le(DataSizePtr);
   }
 }
 
@@ -1226,13 +1132,14 @@ uint32_t DataRecordHandle::getNumRefs() const {
   case NumRefsFlags::Uses0B:
     return 0;
   case NumRefsFlags::Uses1B:
-    return (H->Packed >> 48) & UINT8_MAX;
+    return (H->Packed >> ((sizeof(Header::PackTy) - 2) * CHAR_BIT)) & UINT8_MAX;
   case NumRefsFlags::Uses2B:
-    return (H->Packed >> 32) & UINT16_MAX;
+    return (H->Packed >> ((sizeof(Header::PackTy) - 4) * CHAR_BIT)) &
+           UINT16_MAX;
   case NumRefsFlags::Uses4B:
-    return *reinterpret_cast<const uint32_t *>(NumRefsPtr);
+    return support::endian::read32le(NumRefsPtr);
   case NumRefsFlags::Uses8B:
-    return *reinterpret_cast<const uint64_t *>(NumRefsPtr);
+    return support::endian::read64le(NumRefsPtr);
   }
 }
 
@@ -1345,14 +1252,17 @@ IndexProxy OnDiskCAS::getIndexProxyFromPointer(
                         reinterpret_cast<const TrieRecord *>(P->Data.data()))};
 }
 
+// FIXME: Rename this \p getExistingReference and add an \p OnDiskCAS API that
+// can always create a \p ObjectRef from a valid \p CASID.
 Optional<ObjectRef> OnDiskCAS::getReference(const CASID &ID) const {
   OnDiskHashMappedTrie::const_pointer P = getInternalIndexPointer(ID);
   if (!P)
     return None;
   IndexProxy I = getIndexProxyFromPointer(P);
-  if (Optional<InternalRef> Ref = makeInternalRef(I.Offset, I.Ref.load()))
-    return getExternalReference(*Ref);
-  return None;
+  TrieRecord::Data Obj = I.Ref.load();
+  if (Obj.OK == TrieRecord::ObjectKind::Invalid)
+    return std::nullopt;
+  return getExternalReference(makeInternalRef(I.Offset));
 }
 
 OnDiskHashMappedTrie::const_pointer
@@ -1376,15 +1286,8 @@ Optional<IndexProxy> OnDiskCAS::getIndexProxyFromRef(InternalRef Ref) const {
   return None;
 }
 
-Optional<FileOffset> OnDiskCAS::getIndexOffset(InternalRef Ref) const {
-  switch (Ref.getOffsetKind()) {
-  case InternalRef::OffsetKind::IndexRecord:
-    return Ref.getFileOffset();
-
-  case InternalRef::OffsetKind::DataRecord:
-    return DataRecordHandle::get(DataPool.beginData(Ref.getFileOffset()))
-        .getTrieRecordOffset();
-  }
+FileOffset OnDiskCAS::getIndexOffset(InternalRef Ref) const {
+  return Ref.getFileOffset();
 }
 
 CASID OnDiskCAS::getID(InternalRef Ref) const {
@@ -1410,7 +1313,7 @@ Expected<ObjectHandle> OnDiskCAS::load(ObjectRef ExternalRef) {
   if (!I)
     report_fatal_error(
         "OnDiskCAS: corrupt internal reference to unknown object");
-  return load(*I, I->Ref.load(), Ref);
+  return load(*I, I->Ref.load());
 }
 
 Expected<ObjectHandle> OnDiskCAS::getLoadedObject(const IndexProxy &I,
@@ -1424,32 +1327,17 @@ Expected<ObjectHandle> OnDiskCAS::getLoadedObject(const IndexProxy &I,
   return createCorruptObjectError(getID(I));
 }
 
-Expected<ObjectHandle>
-OnDiskCAS::load(const IndexProxy &I, TrieRecord::Data Object, InternalRef Ref) {
+Expected<ObjectHandle> OnDiskCAS::load(const IndexProxy &I,
+                                       TrieRecord::Data Object) {
   Optional<InternalHandle> Handle;
-  if (Error E = loadContentForRef(I, Object, Ref).moveInto(Handle))
+  if (Error E = loadContentForRef(I, Object).moveInto(Handle))
     return std::move(E);
 
   return getLoadedObject(I, Object, *Handle);
 }
 
-Optional<InternalRef>
-OnDiskCAS::makeInternalRef(FileOffset IndexOffset,
-                           TrieRecord::Data Object) const {
-  switch (Object.SK) {
-  case TrieRecord::StorageKind::Unknown:
-    return None;
-
-  case TrieRecord::StorageKind::DataPool:
-    return InternalRef::getFromOffset(InternalRef::OffsetKind::DataRecord,
-                                      Object.Offset);
-
-  case TrieRecord::StorageKind::Standalone:
-  case TrieRecord::StorageKind::StandaloneLeaf:
-  case TrieRecord::StorageKind::StandaloneLeaf0:
-    return InternalRef::getFromOffset(InternalRef::OffsetKind::IndexRecord,
-                                      IndexOffset);
-  }
+InternalRef OnDiskCAS::makeInternalRef(FileOffset IndexOffset) const {
+  return InternalRef::getFromOffset(IndexOffset);
 }
 
 void OnDiskCAS::getStandalonePath(TrieRecord::StorageKind SK,
@@ -1476,13 +1364,9 @@ void OnDiskCAS::getStandalonePath(TrieRecord::StorageKind SK,
 }
 
 Expected<InternalHandle> OnDiskCAS::loadContentForRef(const IndexProxy &I,
-                                                      TrieRecord::Data Object,
-                                                      InternalRef Ref) {
-  if (Ref.getOffsetKind() != InternalRef::OffsetKind::IndexRecord)
-    return InternalHandle(Ref);
-
-  assert(Ref.getOffsetKind() == InternalRef::OffsetKind::IndexRecord &&
-         "Expected isContentLoaded() to check for 'IndexRecord'");
+                                                      TrieRecord::Data Object) {
+  if (Object.SK == TrieRecord::StorageKind::DataPool)
+    return InternalHandle(Object.Offset);
 
   // Only TrieRecord::StorageKind::Standalone (and variants) need to be
   // explicitly loaded.
@@ -1513,25 +1397,17 @@ Expected<InternalHandle> OnDiskCAS::loadContentForRef(const IndexProxy &I,
     return createCorruptObjectError(getID(I));
 
   return InternalHandle(
-      StandaloneData.insert(I.Hash, Ref, Object.SK, std::move(*OwnedBuffer)));
+      StandaloneData.insert(I.Hash, Object.SK, std::move(*OwnedBuffer)));
 }
 
 OnDiskContent OnDiskCAS::getContentFromHandle(InternalHandle Handle) const {
   if (Handle.SDIM)
     return Handle.SDIM->getContent();
 
-  InternalRef DirectRef = *Handle.DirectRef;
-  switch (DirectRef.getOffsetKind()) {
-  case InternalRef::OffsetKind::DataRecord: {
-    auto Handle =
-        DataRecordHandle::get(DataPool.beginData(DirectRef.getFileOffset()));
-    assert(Handle.getData().end()[0] == 0 && "Null termination");
-    return OnDiskContent{Handle, None};
-  }
-
-  case InternalRef::OffsetKind::IndexRecord:
-    report_fatal_error("Invalid standalone internal handle without SDIM");
-  }
+  auto DataHandle =
+      DataRecordHandle::get(DataPool.beginData(Handle.getAsFileOffset()));
+  assert(DataHandle.getData().end()[0] == 0 && "Null termination");
+  return OnDiskContent{DataHandle, std::nullopt};
 }
 
 OnDiskContent StandaloneDataInMemory::getContent() const {
@@ -1618,7 +1494,7 @@ Expected<ObjectRef> OnDiskCAS::createStandaloneLeaf(IndexProxy &I,
   {
     TrieRecord::Data Leaf{SK, TrieRecord::ObjectKind::Object, FileOffset()};
     if (I.Ref.compare_exchange_strong(Existing, Leaf))
-      return getExternalReference(*makeInternalRef(I.Offset, Leaf));
+      return getExternalReference(makeInternalRef(I.Offset));
   }
 
   // If there was a race, confirm that the new value has valid storage.
@@ -1627,7 +1503,7 @@ Expected<ObjectRef> OnDiskCAS::createStandaloneLeaf(IndexProxy &I,
     return createCorruptObjectError(getID(I));
 
   // Get and return the inserted leaf node.
-  return getExternalReference(*makeInternalRef(I.Offset, Existing));
+  return getExternalReference(makeInternalRef(I.Offset));
 }
 
 Expected<ObjectRef> OnDiskCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
@@ -1639,7 +1515,7 @@ Expected<ObjectRef> OnDiskCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
   {
     TrieRecord::Data Existing = I.Ref.load();
     if (Existing.OK == TrieRecord::ObjectKind::Object)
-      return getExternalReference(*makeInternalRef(I.Offset, Existing));
+      return getExternalReference(makeInternalRef(I.Offset));
     if (Existing.SK != TrieRecord::StorageKind::Unknown)
       return createCorruptObjectError(getID(I));
   }
@@ -1656,9 +1532,8 @@ Expected<ObjectRef> OnDiskCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
     InternalRefs.push_back(getInternalRef(Ref));
 
   // Create the object.
-  return loadOrCreateDataRecord(
-      I, TrieRecord::ObjectKind::Object,
-      DataRecordHandle::Input{I.Offset, InternalRefs, Data});
+  return loadOrCreateDataRecord(I, TrieRecord::ObjectKind::Object,
+                                DataRecordHandle::Input{InternalRefs, Data});
 }
 
 Expected<ObjectRef>
@@ -1722,7 +1597,7 @@ OnDiskCAS::loadOrCreateDataRecord(IndexProxy &I, TrieRecord::ObjectKind OK,
     // handle.
     if (Existing.SK == TrieRecord::StorageKind::Unknown) {
       if (I.Ref.compare_exchange_strong(Existing, NewObject))
-        return getExternalReference(*makeInternalRef(I.Offset, NewObject));
+        return getExternalReference(makeInternalRef(I.Offset));
     }
   }
 
@@ -1730,7 +1605,7 @@ OnDiskCAS::loadOrCreateDataRecord(IndexProxy &I, TrieRecord::ObjectKind OK,
     return createCorruptObjectError(getID(I));
 
   // Load existing object.
-  return getExternalReference(*makeInternalRef(I.Offset, Existing));
+  return getExternalReference(makeInternalRef(I.Offset));
 }
 
 OnDiskCAS::PooledDataRecord

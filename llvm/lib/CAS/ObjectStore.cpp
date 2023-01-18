@@ -39,13 +39,7 @@ static void printReferenceBase(raw_ostream &OS, StringRef Kind,
 
 void ReferenceBase::print(raw_ostream &OS, const ObjectHandle &This) const {
   assert(this == &This);
-
-  Optional<CASID> ID;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (CAS)
-    ID = CAS->getID(This);
-#endif
-  printReferenceBase(OS, "object-handle", InternalRef, ID);
+  printReferenceBase(OS, "object-handle", InternalRef, std::nullopt);
 }
 
 void ReferenceBase::print(raw_ostream &OS, const ObjectRef &This) const {
