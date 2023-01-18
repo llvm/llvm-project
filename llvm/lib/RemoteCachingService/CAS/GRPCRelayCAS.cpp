@@ -267,7 +267,7 @@ Expected<CASID> GRPCRelayCAS::parseID(StringRef Reference) {
   std::vector<char> Binary;
   if (Error Err = decodeBase64(Reference, Binary))
     return std::move(Err);
-  return getID(indexHash(arrayRefFromStringRef(toStringRef(Binary))));
+  return CASID::create(&getContext(), toStringRef(Binary));
 }
 
 Expected<ObjectRef> GRPCRelayCAS::store(ArrayRef<ObjectRef> Refs,

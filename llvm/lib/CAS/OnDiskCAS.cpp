@@ -636,9 +636,6 @@ public:
   class MappedTempFile;
 
   IndexProxy indexHash(ArrayRef<uint8_t> Hash);
-  Expected<CASID> parseIDImpl(ArrayRef<uint8_t> Hash) final {
-    return getID(indexHash(Hash));
-  }
 
   Expected<ObjectRef> storeImpl(ArrayRef<uint8_t> ComputedHash,
                                 ArrayRef<ObjectRef> Refs,
