@@ -2581,7 +2581,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
           ReferencedBF->registerReferencedOffset(RefFunctionOffset);
         }
         if (opts::Verbosity > 1 &&
-            !BinarySection(*BC, RelocatedSection).isReadOnly())
+            BinarySection(*BC, RelocatedSection).isWritable())
           errs() << "BOLT-WARNING: writable reference into the middle of the "
                  << formatv("function {0} detected at address {1:x}\n",
                             *ReferencedBF, Rel.getOffset());
@@ -3913,7 +3913,7 @@ void RewriteInstance::mapAllocatableSections(RuntimeDyld &RTDyld) {
       if (!Section.hasValidSectionID())
         continue;
 
-      if (Section.isReadOnly() != (SType == ST_READONLY))
+      if (Section.isWritable() == (SType == ST_READONLY))
         continue;
 
       if (Section.getOutputAddress()) {
@@ -4163,7 +4163,7 @@ void RewriteInstance::rewriteNoteSections() {
     // Set/modify section info.
     BinarySection &NewSection = BC->registerOrUpdateNoteSection(
         SectionName, SectionData, Size, Section.sh_addralign,
-        BSec->isReadOnly(), BSec->getELFType());
+        !BSec->isWritable(), BSec->getELFType());
     NewSection.setOutputAddress(0);
     NewSection.setOutputFileOffset(NextAvailableOffset);
 
