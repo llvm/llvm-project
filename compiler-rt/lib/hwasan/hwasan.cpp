@@ -86,6 +86,8 @@ static void InitializeFlags() {
     cf.clear_shadow_mmap_threshold = 4096 * (SANITIZER_ANDROID ? 2 : 8);
     // Sigtrap is used in error reporting.
     cf.handle_sigtrap = kHandleSignalExclusive;
+    // FIXME: enable once all false positives have been fixed.
+    cf.detect_leaks = false;
 
 #if SANITIZER_ANDROID
     // Let platform handle other signals. It is better at reporting them then we
@@ -106,6 +108,15 @@ static void InitializeFlags() {
   RegisterHwasanFlags(&parser, f);
   RegisterCommonFlags(&parser);
 
+#if CAN_SANITIZE_LEAKS
+  __lsan::Flags *lf = __lsan::flags();
+  lf->SetDefaults();
+
+  FlagParser lsan_parser;
+  __lsan::RegisterLsanFlags(&lsan_parser, lf);
+  RegisterCommonFlags(&lsan_parser);
+#endif
+
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::Flags *uf = __ubsan::flags();
   uf->SetDefaults();
@@ -124,6 +135,9 @@ static void InitializeFlags() {
 #endif
 
   parser.ParseStringFromEnv("HWASAN_OPTIONS");
+#if CAN_SANITIZE_LEAKS
+  lsan_parser.ParseStringFromEnv("LSAN_OPTIONS");
+#endif
 #if HWASAN_CONTAINS_UBSAN
   ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
 #endif
@@ -133,6 +147,12 @@ static void InitializeFlags() {
   if (Verbosity()) ReportUnrecognizedFlags();
 
   if (common_flags()->help) parser.PrintFlagDescriptions();
+  // Flag validation:
+  if (!CAN_SANITIZE_LEAKS && common_flags()->detect_leaks) {
+    Report("%s: detect_leaks is not supported on this platform.\n",
+           SanitizerToolName);
+    Die();
+  }
 }
 
 static void CheckUnwind() {
