@@ -2,7 +2,9 @@
 // in Windows and Linux. So we disable the test on Windows
 // here.
 // REQUIRES: !system-windows
-// REQUIRES: x86-registered-target
+// On AIX, the default output for `-c` may be `.s` instead of `.o`,
+// which makes the test fail. So disable the test on AIX.
+// REQUIRES: !system-aix
 //
 // RUN: rm -rf %t
 // RUN: mkdir %t
