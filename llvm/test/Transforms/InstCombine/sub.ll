@@ -2465,6 +2465,60 @@ define <2 x i5> @diff_of_squares_partial_nsw(<2 x i5> %x, <2 x i5> %y) {
   ret <2 x i5> %r
 }
 
+; TODO: This should simplify more.
+
+define i1 @diff_of_squares_nsw_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: @diff_of_squares_nsw_i1(
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x2 = mul nsw i1 %x, %x
+  %y2 = mul nsw i1 %y, %y
+  %r = sub nsw i1 %x2, %y2
+  ret i1 %r
+}
+
+define i1 @diff_of_squares_nuw_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: @diff_of_squares_nuw_i1(
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x2 = mul nuw i1 %x, %x
+  %y2 = mul nuw i1 %y, %y
+  %r = sub nuw i1 %x2, %y2
+  ret i1 %r
+}
+
+; FIXME: It is not correct to propagate nsw.
+
+define i2 @diff_of_squares_nsw_i2(i2 %x, i2 %y) {
+; CHECK-LABEL: @diff_of_squares_nsw_i2(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i2 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i2 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul nsw i2 [[ADD]], [[SUB]]
+; CHECK-NEXT:    ret i2 [[R]]
+;
+  %x2 = mul nsw i2 %x, %x
+  %y2 = mul nsw i2 %y, %y
+  %r = sub nsw i2 %x2, %y2
+  ret i2 %r
+}
+
+; TODO: This should reduce more.
+
+define i2 @diff_of_squares_nuw_i2(i2 %x, i2 %y) {
+; CHECK-LABEL: @diff_of_squares_nuw_i2(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i2 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i2 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw i2 [[ADD]], [[SUB]]
+; CHECK-NEXT:    ret i2 [[R]]
+;
+  %x2 = mul nuw i2 %x, %x
+  %y2 = mul nuw i2 %y, %y
+  %r = sub nuw i2 %x2, %y2
+  ret i2 %r
+}
+
 ; negative test
 
 define i8 @diff_of_squares_use1(i8 %x, i8 %y) {
