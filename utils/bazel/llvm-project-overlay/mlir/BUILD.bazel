@@ -24,6 +24,7 @@ licenses(["notice"])
 exports_files([
     "LICENSE.TXT",
     "run_lit.sh",
+    "utils/textmate/mlir.json",
 ])
 
 filegroup(
