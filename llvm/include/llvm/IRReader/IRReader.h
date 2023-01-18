@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Bitcode/BitcodeReader.h"
 #include <memory>
 #include <optional>
 
@@ -27,6 +26,9 @@ class MemoryBufferRef;
 class Module;
 class SMDiagnostic;
 class LLVMContext;
+
+typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
+    DataLayoutCallbackTy;
 
 /// If the given MemoryBuffer holds a bitcode image, return a Module
 /// for it which does lazy deserialization of function bodies.  Otherwise,
@@ -51,17 +53,21 @@ getLazyIRFileModule(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
 /// for it.  Otherwise, attempt to parse it as LLVM Assembly and return
 /// a Module for it.
 /// \param DataLayoutCallback Override datalayout in the llvm assembly.
-std::unique_ptr<Module> parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
-                                LLVMContext &Context,
-                                ParserCallbacks Callbacks = {});
+std::unique_ptr<Module> parseIR(
+    MemoryBufferRef Buffer, SMDiagnostic &Err, LLVMContext &Context,
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+      return std::nullopt;
+    });
 
 /// If the given file holds a bitcode image, return a Module for it.
 /// Otherwise, attempt to parse it as LLVM Assembly and return a Module
 /// for it.
 /// \param DataLayoutCallback Override datalayout in the llvm assembly.
-std::unique_ptr<Module> parseIRFile(StringRef Filename, SMDiagnostic &Err,
-                                    LLVMContext &Context,
-                                    ParserCallbacks Callbacks = {});
+std::unique_ptr<Module> parseIRFile(
+    StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
+    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+      return std::nullopt;
+    });
 }
 
 #endif
