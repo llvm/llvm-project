@@ -83,18 +83,3 @@ struct Derived : virtual Base {
                                                               expected-error {{invalid application of 'offsetof' to a field of a virtual base}}
 };
 }
-
-int test_definition(void) {
-  return __builtin_offsetof(struct A // expected-error {{'A' cannot be defined in a type specifier}}
-  {
-    int a;
-    struct B // FIXME: error diagnostic message for nested definitions
-             // https://reviews.llvm.org/D133574
-             // fixme-error{{'A' cannot be defined in '__builtin_offsetof'}}
-    {
-      int c;
-      int d;
-    };
-    B x;
-  }, a);
-}

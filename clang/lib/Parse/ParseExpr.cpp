@@ -2592,21 +2592,10 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
   }
   case tok::kw___builtin_offsetof: {
     SourceLocation TypeLoc = Tok.getLocation();
-    auto OOK = Sema::OffsetOfKind::OOK_Builtin;
-    if (Tok.getLocation().isMacroID()) {
-      StringRef MacroName = Lexer::getImmediateMacroNameForDiagnostics(
-          Tok.getLocation(), PP.getSourceManager(), getLangOpts());
-      if (MacroName == "offsetof")
-        OOK = Sema::OffsetOfKind::OOK_Macro;
-    }
-    TypeResult Ty;
-    {
-      OffsetOfStateRAIIObject InOffsetof(*this, OOK);
-      Ty = ParseTypeName();
-      if (Ty.isInvalid()) {
-        SkipUntil(tok::r_paren, StopAtSemi);
-        return ExprError();
-      }
+    TypeResult Ty = ParseTypeName();
+    if (Ty.isInvalid()) {
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
     }
 
     if (ExpectAndConsume(tok::comma)) {
@@ -2629,12 +2618,6 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
     Comps.back().LocStart = Comps.back().LocEnd = ConsumeToken();
 
-    enum class Kind { MemberAccess, ArraySubscript };
-    auto DiagExt = [&](SourceLocation Loc, Kind K) {
-      Diag(Loc, diag::ext_offsetof_member_designator)
-          << (K == Kind::ArraySubscript) << (OOK == Sema::OOK_Macro);
-    };
-
     // FIXME: This loop leaks the index expressions on error.
     while (true) {
       if (Tok.is(tok::period)) {
@@ -2648,9 +2631,9 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           SkipUntil(tok::r_paren, StopAtSemi);
           return ExprError();
         }
-        DiagExt(Comps.back().LocStart, Kind::MemberAccess);
         Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
         Comps.back().LocEnd = ConsumeToken();
+
       } else if (Tok.is(tok::l_square)) {
         if (CheckProhibitedCXX11Attribute())
           return ExprError();
@@ -2666,7 +2649,6 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
           SkipUntil(tok::r_paren, StopAtSemi);
           return Res;
         }
-        DiagExt(Comps.back().LocStart, Kind::ArraySubscript);
         Comps.back().U.E = Res.get();
 
         ST.consumeClose();
