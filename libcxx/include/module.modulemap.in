@@ -1256,6 +1256,7 @@ module std [system] {
       module reverse_view           { private header "__ranges/reverse_view.h" }
       module single_view            { private header "__ranges/single_view.h" }
       module size                   { private header "__ranges/size.h" }
+      module split_view             { private header "__ranges/split_view.h" }
       module subrange               {
         private header "__ranges/subrange.h"
 

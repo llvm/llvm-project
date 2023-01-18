@@ -194,7 +194,7 @@
 "","","","","","",""
 "`P2231R1 <https://wg21.link/P2231R1>`__","LWG","Missing constexpr in std::optional and std::variant","June 2021","|Partial| [#note-P2231]_","13.0"
 "`P2325R3 <https://wg21.link/P2325R3>`__","LWG","Views should not be required to be default constructible","June 2021","|Complete|","16.0","|ranges|"
-"`P2210R2 <https://wg21.link/P2210R2>`__","LWG","Superior String Splitting","June 2021","|In progress|","","|ranges|"
+"`P2210R2 <https://wg21.link/P2210R2>`__","LWG","Superior String Splitting","June 2021","|Complete|","16.0","|ranges|"
 "`P2216R3 <https://wg21.link/P2216R3>`__","LWG","std::format improvements","June 2021","|Complete|","15.0"
 "`P2281R1 <https://wg21.link/P2281R1>`__","LWG","Clarifying range adaptor objects","June 2021","|Complete|","14.0","|ranges|"
 "`P2328R1 <https://wg21.link/P2328R1>`__","LWG","join_view should join all views of ranges","June 2021","|Complete|","15.0","|ranges|"

@@ -69,7 +69,8 @@ Implemented Papers
 - P1035R7 - Input Range Adaptors
 - P2325R3 - Views should not be required to be default constructible
 - P2446R2 - ``views::as_rvalue``
-- P1020 - Smart pointer creation with default initialization
+- P1020R1 - Smart pointer creation with default initialization
+- P2210R2 - Superior String Splitting
 
 Improvements and New Features
 -----------------------------
