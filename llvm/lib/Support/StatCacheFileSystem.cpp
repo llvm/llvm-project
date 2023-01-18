@@ -156,7 +156,7 @@ StatCacheFileSystem::create(std::unique_ptr<MemoryBuffer> CacheBuffer,
   uint64_t ValidityToken;
   if (auto E = validateCacheFile(*CacheBuffer, BaseDir, IsCaseSensitive,
                                  VersionMatch, ValidityToken))
-    return E;
+    return std::move(E);
   if (!VersionMatch) {
     return createStringError(inconvertibleErrorCode(),
                              CacheBuffer->getBufferIdentifier() +
