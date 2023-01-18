@@ -3231,12 +3231,62 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
               return true;
             }
             return shape == constTileSize.value();
-
           })) {
     return op->emitError("mismatch in inner tile sizes specified and shaped of "
                          "tiled dimension in the packed type");
   }
   return success();
+}
+
+namespace {
+/// Subset of PackOp/UnPackOp fields used to compute the result of applying
+/// various permutations to the op.
+// TODO: Add linalg.transpose + pack/unpack folding patterns that just reuse
+// these. These may or may not become true foldings / canonicalizations
+// depending on how aggressive we want to be in automatically folding
+// transposes.
+struct PackOrUnPackTransposeResult {
+  SmallVector<int64_t> innerDimsPos;
+  SmallVector<OpFoldResult> innerTiles;
+  SmallVector<int64_t> outerDimsPerm;
+};
+} // namespace
+
+template <typename OpTy>
+static PackOrUnPackTransposeResult
+commonPermutationOfPackAndUnPackOp(OpTy packOrUnPackOp,
+                                   ArrayRef<int64_t> innerPermutation,
+                                   ArrayRef<int64_t> outerPermutation) {
+  static_assert(llvm::is_one_of<OpTy, PackOp, UnPackOp>::value,
+                "applies to only pack or unpack operations");
+  assert((!innerPermutation.empty() || !outerPermutation.empty()) &&
+         "some permutation must be non-empty");
+  PackOrUnPackTransposeResult metadata;
+  metadata.innerDimsPos =
+      SmallVector<int64_t>(packOrUnPackOp.getInnerDimsPos());
+  metadata.innerTiles =
+      SmallVector<OpFoldResult>(packOrUnPackOp.getMixedTiles());
+  int64_t numOuterDims = std::is_same<OpTy, PackOp>::value
+                             ? packOrUnPackOp.getSourceRank()
+                             : packOrUnPackOp.getDestRank();
+  metadata.outerDimsPerm =
+      packOrUnPackOp.getOuterDimsPerm().empty()
+          ? llvm::to_vector(llvm::seq<int64_t>(0, numOuterDims))
+          : SmallVector<int64_t>(packOrUnPackOp.getOuterDimsPerm());
+  if (!innerPermutation.empty()) {
+    assert(innerPermutation.size() == metadata.innerDimsPos.size() &&
+           isPermutationVector(innerPermutation) &&
+           "invalid inner permutation");
+    applyPermutationToVector(metadata.innerDimsPos, innerPermutation);
+    applyPermutationToVector(metadata.innerTiles, innerPermutation);
+  }
+  if (!outerPermutation.empty()) {
+    assert(outerPermutation.size() == metadata.outerDimsPerm.size() &&
+           isPermutationVector(outerPermutation) &&
+           "invalid outer permutation");
+    applyPermutationToVector(metadata.outerDimsPerm, outerPermutation);
+  }
+  return metadata;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3386,6 +3436,19 @@ Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
   return b.create<tensor::EmptyOp>(loc, mixedSizes, elemType);
 }
 
+PackOp PackOp::createTransposedClone(OpBuilder &b, Location loc,
+                                     ArrayRef<int64_t> innerPermutation,
+                                     ArrayRef<int64_t> outerPermutation) {
+  PackOrUnPackTransposeResult metadata = commonPermutationOfPackAndUnPackOp(
+      *this, innerPermutation, outerPermutation);
+  Value transposedDest =
+      createDestinationTensor(b, loc, getSource(), metadata.innerTiles,
+                              metadata.innerDimsPos, metadata.outerDimsPerm);
+  return b.create<PackOp>(loc, getSource(), transposedDest,
+                          metadata.innerDimsPos, metadata.innerTiles,
+                          getPaddingValue(), metadata.outerDimsPerm);
+}
+
 /// Returns true if the tiles and the tiled dims are constant.
 template <typename OpTy>
 bool areTilesAndTiledDimsAllConstant(OpTy op) {
@@ -3506,6 +3569,17 @@ void UnPackOp::build(OpBuilder &builder, OperationState &state, Value source,
                               : builder.getDenseI64ArrayAttr(outerDimsPerm),
         builder.getDenseI64ArrayAttr(innerDimsPos), dynamicTileSizes,
         builder.getDenseI64ArrayAttr(staticTileSizes));
+}
+
+UnPackOp UnPackOp::createTransposedClone(OpBuilder &b, Location loc,
+                                         Value transposedSource,
+                                         ArrayRef<int64_t> innerPermutation,
+                                         ArrayRef<int64_t> outerPermutation) {
+  PackOrUnPackTransposeResult metadata = commonPermutationOfPackAndUnPackOp(
+      *this, innerPermutation, outerPermutation);
+  return b.create<UnPackOp>(loc, transposedSource, getDest(),
+                            metadata.innerDimsPos, metadata.innerTiles,
+                            metadata.outerDimsPerm);
 }
 
 /// pack(unpack(x)) -> x
