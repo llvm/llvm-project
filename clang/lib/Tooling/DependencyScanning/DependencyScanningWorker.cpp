@@ -449,7 +449,11 @@ public:
       Opts->Targets = {
           deduceDepTarget(ScanInstance.getFrontendOpts().OutputFile,
                           ScanInstance.getFrontendOpts().Inputs)};
-    Opts->IncludeSystemHeaders = true;
+    if (Format == ScanningOutputFormat::Make) {
+      // Only 'Make' scanning needs to force this because that mode depends on
+      // getting the dependencies directly from \p DependencyFileGenerator.
+      Opts->IncludeSystemHeaders = true;
+    }
 
     auto reportError = [&ScanInstance](Error &&E) -> bool {
       ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
