@@ -39,6 +39,84 @@ exit:
   ret i32 %res.2
 }
 
+define i32 @test_pointer_phi_select_simp_non_local(ptr %a, ptr %b, ptr %c)  {
+; CHECK-LABEL: @test_pointer_phi_select_simp_non_local(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[L_1]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[MIN_SELECT:%.*]] = select i1 [[CMP_I_I_I]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[MIN_SELECT]], [[THEN]] ], [ [[C:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[RES_2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    ret i32 [[RES_2]]
+;
+entry:
+  %l.1 = load i32, ptr %a, align 4
+  %cond = icmp sgt i32 %l.1, 0
+  br i1 %cond, label %then, label %else
+
+then:
+  %l.2 = load i32, ptr %b, align 4
+  %cmp.i.i.i = icmp ult i32 %l.1, %l.2
+  %min.select  = select i1 %cmp.i.i.i, ptr %a, ptr %b
+  br label %exit
+
+else:
+  br label %exit
+
+exit:
+  %p = phi ptr [ %min.select, %then ], [ %c, %else ]
+  %res.2 = load i32, ptr %p, align 4
+  ret i32 %res.2
+}
+
+define i32 @test_pointer_phi_select_simp_non_local_mismatched_type(ptr %a, ptr %b, ptr %c)  {
+; CHECK-LABEL: @test_pointer_phi_select_simp_non_local_mismatched_type(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L_1:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[CONV:%.*]] = fptosi float [[L_1]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[CONV]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[CONV]], [[L_2]]
+; CHECK-NEXT:    [[MIN_SELECT:%.*]] = select i1 [[CMP_I_I_I]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[MIN_SELECT]], [[THEN]] ], [ [[C:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[RES_2:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    ret i32 [[RES_2]]
+;
+entry:
+  %l.1 = load float, ptr %a, align 4
+  %conv = fptosi float %l.1 to i32
+  %cond = icmp sgt i32 %conv, 0
+  br i1 %cond, label %then, label %else
+
+then:
+  %l.2 = load i32, ptr %b, align 4
+  %cmp.i.i.i = icmp ult i32 %conv, %l.2
+  %min.select  = select i1 %cmp.i.i.i, ptr %a, ptr %b
+  br label %exit
+
+else:
+  br label %exit
+
+exit:
+  %p = phi ptr [ %min.select, %then ], [ %c, %else ]
+  %res.2 = load i32, ptr %p, align 4
+  ret i32 %res.2
+}
+
 define i32 @test_pointer_phi_select_simp_no_load_for_select_op_1(ptr %a, ptr %b, ptr %c, i1 %cond)  {
 ; CHECK-LABEL: @test_pointer_phi_select_simp_no_load_for_select_op_1(
 ; CHECK-NEXT:  entry:
