@@ -2396,6 +2396,21 @@ cc_library(
 )
 
 cc_library(
+    name = "NVGPUUtils",
+    srcs = ["lib/Dialect/NVGPU/Utils/MMAUtils.cpp"],
+    hdrs = ["include/mlir/Dialect/NVGPU/Utils/MMAUtils.h"],
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":ArithDialect",
+        ":IR",
+        ":NVGPUDialect",
+        ":NVVMDialect",
+        ":VectorDialect",
+    ],
+)
+
+cc_library(
     name = "NVGPUTransforms",
     srcs = [
         "lib/Dialect/NVGPU/Transforms/MmaSyncTF32Transform.cpp",
@@ -8729,8 +8744,6 @@ cc_library(
     srcs = glob([
         "lib/Conversion/VectorToGPU/*.cpp",
         "lib/Conversion/VectorToGPU/*.h",
-        "lib/Dialect/NVGPU/Utils/*.cpp",
-        "include/mlir/Dialect/NVGPU/Utils/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/VectorToGPU/*.h",
@@ -8749,6 +8762,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":NVGPUDialect",
+        ":NVGPUUtils",
         ":NVVMDialect",
         ":Pass",
         ":SCFDialect",
