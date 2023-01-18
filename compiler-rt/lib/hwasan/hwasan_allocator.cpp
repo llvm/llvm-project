@@ -534,7 +534,8 @@ uptr GetUserBegin(uptr chunk) {
 
 LsanMetadata::LsanMetadata(uptr chunk) {
   metadata_ =
-      chunk ? (reinterpret_cast<__hwasan::Metadata *>(chunk) - 1) : nullptr;
+      chunk ? __hwasan::allocator.GetMetaData(reinterpret_cast<void *>(chunk))
+            : nullptr;
 }
 
 bool LsanMetadata::allocated() const {
