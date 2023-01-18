@@ -832,10 +832,10 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
   uint64_t offset = 0;
   bool needs_init = false;
 
-  bool is_result =
-      variable.MetadataIs<SwiftASTManipulatorBase::VariableMetadataResult>();
-  bool is_error =
-      variable.MetadataIs<SwiftASTManipulatorBase::VariableMetadataError>();
+  bool is_result = llvm::isa<SwiftASTManipulatorBase::VariableMetadataResult>(
+      variable.m_metadata.get());
+  bool is_error = llvm::isa<SwiftASTManipulatorBase::VariableMetadataError>(
+      variable.m_metadata.get());
 
   auto compiler_type = variable.GetType();
   // Add the persistent variable as a typeref compiler type.
@@ -909,13 +909,10 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     if (log)
       log->Printf("Added %s variable to struct at offset %llu",
                   is_result ? "result" : "error", (unsigned long long)offset);
-  } else if (variable.MetadataIs<
-                 SwiftASTManipulatorBase::VariableMetadataVariable>()) {
+  } else if (auto *variable_metadata = llvm::dyn_cast<
+                 SwiftASTManipulatorBase::VariableMetadataVariable>(
+                 variable.m_metadata.get())) {
     Status error;
-
-    SwiftASTManipulatorBase::VariableMetadataVariable *variable_metadata =
-        static_cast<SwiftASTManipulatorBase::VariableMetadataVariable *>(
-            variable.m_metadata.get());
 
     offset = materializer.AddVariable(variable_metadata->m_variable_sp, error);
 
@@ -930,12 +927,9 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       log->Printf("Added variable %s to struct at offset %llu",
                   variable_metadata->m_variable_sp->GetName().AsCString(),
                   (unsigned long long)offset);
-  } else if (variable.MetadataIs<
-                 SwiftASTManipulatorBase::VariableMetadataPersistent>()) {
-    SwiftASTManipulatorBase::VariableMetadataPersistent *variable_metadata =
-        static_cast<SwiftASTManipulatorBase::VariableMetadataPersistent *>(
-            variable.m_metadata.get());
-
+  } else if (auto *variable_metadata = llvm::dyn_cast<
+                 SwiftASTManipulatorBase::VariableMetadataPersistent>(
+                 variable.m_metadata.get())) {
     needs_init = llvm::cast<SwiftExpressionVariable>(
                      variable_metadata->m_persistent_variable_sp.get())
                      ->m_swift_flags &
