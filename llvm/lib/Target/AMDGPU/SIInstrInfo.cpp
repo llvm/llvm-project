@@ -8403,6 +8403,22 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
 
 InstructionUniformity
 SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
+  unsigned opcode = MI.getOpcode();
+  if (MI.isCopy()) {
+    const MachineOperand &srcOp = MI.getOperand(1);
+    if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
+      const TargetRegisterClass *regClass =
+          RI.getPhysRegBaseClass(srcOp.getReg());
+      return RI.isSGPRClass(regClass) ? InstructionUniformity::AlwaysUniform
+                                      : InstructionUniformity::NeverUniform;
+    }
+    return InstructionUniformity::Default;
+  }
+
+  // GMIR handling
+  if (MI.isPreISelOpcode())
+    return SIInstrInfo::getGenericInstructionUniformity(MI);
+
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each
   // thread after the first sees the value written by the previous thread as
@@ -8429,49 +8445,32 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::Default;
   }
 
-  unsigned opcode = MI.getOpcode();
-  if (opcode == AMDGPU::COPY) {
-    const MachineOperand &srcOp = MI.getOperand(1);
-    if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
-      const TargetRegisterClass *regClass = RI.getPhysRegBaseClass(srcOp.getReg());
-      return RI.isSGPRClass(regClass) ? InstructionUniformity::AlwaysUniform
-                                      : InstructionUniformity::NeverUniform;
-    }
-    return InstructionUniformity::Default;
-  }
-  if (opcode == AMDGPU::INLINEASM || opcode == AMDGPU::INLINEASM_BR) {
-    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-    for (auto &op : MI.operands()) {
-      if (!op.isReg() || !op.isDef())
-        continue;
-      auto *RC = MRI.getRegClass(op.getReg());
-      if (!RC || RI.isDivergentRegClass(RC))
-        return InstructionUniformity::NeverUniform;
-    }
-    return InstructionUniformity::AlwaysUniform;
-  }
   if (opcode == AMDGPU::V_READLANE_B32 || opcode == AMDGPU::V_READFIRSTLANE_B32)
     return InstructionUniformity::AlwaysUniform;
 
   if (opcode == AMDGPU::V_WRITELANE_B32)
     return InstructionUniformity::NeverUniform;
 
-  // GMIR handling
-  if (SIInstrInfo::isGenericOpcode(opcode))
-    return SIInstrInfo::getGenericInstructionUniformity(MI);
+  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
 
-  // Handling $vpgr reads
-  for (auto srcOp : MI.operands()) {
-    if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
-      const TargetRegisterClass *regClass = RI.getPhysRegBaseClass(srcOp.getReg());
+  // FIXME: It's conceptually broken to report this for an instruction, and not
+  // a specific def operand. For inline asm in particular, there could be mixed
+  // uniform and divergent results.
+  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+    const MachineOperand &SrcOp = MI.getOperand(I);
+    if (!SrcOp.isReg())
+      continue;
 
-      // If the class is missing it's an unallocatable scalar of some kind.
-      if (!regClass)
-        continue;
+    Register Reg = SrcOp.getReg();
+    if (!Reg || !SrcOp.readsReg())
+      continue;
 
-      if (RI.isVGPRClass(regClass))
-        return InstructionUniformity::NeverUniform;
-    }
+    // If RegBank is null, this is unassigned or an unallocatable special
+    // register, which are all scalars.
+    const RegisterBank *RegBank = RBI->getRegBank(Reg, MRI, RI);
+    if (RegBank && RegBank->getID() != AMDGPU::SGPRRegBankID)
+      return InstructionUniformity::NeverUniform;
   }
 
   // TODO: Uniformity check condtions above can be rearranged for more
