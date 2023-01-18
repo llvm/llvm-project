@@ -56,33 +56,51 @@ constexpr int pointerAssign2() {
 }
 static_assert(pointerAssign2() == 12, "");
 
-
 constexpr int unInitLocal() {
   int a;
-  return a; // ref-note{{read of uninitialized object}}
+  return a; // ref-note {{read of uninitialized object}} \
+            // expected-note {{read of object outside its lifetime}}
+            // FIXME: ^^^ Wrong diagnostic.
 }
-static_assert(unInitLocal() == 0, ""); // expected-error {{not an integral constant expression}} \
-                                       // ref-error {{not an integral constant expression}} \
-                                       // ref-note {{in call to 'unInitLocal()'}}
+static_assert(unInitLocal() == 0, ""); // ref-error {{not an integral constant expression}} \
+                                       // ref-note {{in call to 'unInitLocal()'}} \
+                                       // expected-error {{not an integral constant expression}} \
+                                       // expected-note {{in call to 'unInitLocal()'}} \
 
-/// TODO: The example above is correctly rejected by the new constexpr
-///   interpreter, but for the wrong reasons. We don't reject it because
-///   it is an uninitialized read, we reject it simply because
-///   the local variable does not have an initializer.
-///
-///   The code below should be accepted but is also being rejected
-///   right now.
-#if 0
 constexpr int initializedLocal() {
   int a;
-  int b;
-
   a = 20;
   return a;
 }
 static_assert(initializedLocal() == 20);
 
-/// Similar here, but the uninitialized local is passed as a function parameter.
+constexpr int initializedLocal2() {
+  int a[2];
+  return *a; // expected-note {{read of object outside its lifetime}} \
+             // ref-note {{read of uninitialized object is not allowed in a constant expression}}
+}
+static_assert(initializedLocal2() == 20); // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to}} \
+                                          // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to}}
+
+
+struct Int { int a; };
+constexpr int initializedLocal3() {
+  Int i;
+  return i.a; // expected-note {{read of object outside its lifetime}} \
+              // ref-note {{read of uninitialized object is not allowed in a constant expression}}
+}
+static_assert(initializedLocal3() == 20); // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to}} \
+                                          // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to}}
+
+
+
+#if 0
+// FIXME: This code should be rejected because we pass an uninitialized value
+//   as a function parameter.
 constexpr int inc(int a) { return a + 1; }
 constexpr int f() {
     int i;

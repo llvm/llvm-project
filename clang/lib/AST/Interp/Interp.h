@@ -569,7 +569,10 @@ bool Const(InterpState &S, CodePtr OpPC, const T &Arg) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
-  S.Stk.push<T>(S.Current->getLocal<T>(I));
+  const Pointer &Ptr = S.Current->getLocalPointer(I);
+  if (!CheckLoad(S, OpPC, Ptr))
+    return false;
+  S.Stk.push<T>(Ptr.deref<T>());
   return true;
 }
 
@@ -912,6 +915,8 @@ bool Store(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
+  if (!Ptr.isRoot())
+    Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -922,6 +927,8 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
+  if (!Ptr.isRoot())
+    Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -932,6 +939,8 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
+  if (!Ptr.isRoot())
+    Ptr.initialize();
   if (auto *FD = Ptr.getField()) {
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getCtx()));
   } else {
@@ -946,6 +955,8 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
+  if (!Ptr.isRoot())
+    Ptr.initialize();
   if (auto *FD = Ptr.getField()) {
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getCtx()));
   } else {
