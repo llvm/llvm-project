@@ -555,58 +555,6 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
         }
       }
 
-      // The remote stub may know about the "main binary" in
-      // the context of a firmware debug session, and can
-      // give us a UUID and an address/slide of where the
-      // binary is loaded in memory.
-      UUID standalone_uuid;
-      addr_t standalone_value;
-      bool standalone_value_is_offset;
-      if (m_gdb_comm.GetProcessStandaloneBinary(
-              standalone_uuid, standalone_value, standalone_value_is_offset)) {
-        ModuleSP module_sp;
-
-        if (standalone_uuid.IsValid()) {
-          const bool force_symbol_search = true;
-          const bool notify = true;
-          DynamicLoader::LoadBinaryWithUUIDAndAddress(
-              this, llvm::StringRef(), standalone_uuid, standalone_value,
-              standalone_value_is_offset, force_symbol_search, notify);
-        }
-      }
-
-      // The remote stub may know about a list of binaries to
-      // force load into the process -- a firmware type situation
-      // where multiple binaries are present in virtual memory,
-      // and we are only given the addresses of the binaries.
-      // Not intended for use with userland debugging when we
-      // a DynamicLoader plugin that knows how to find the loaded
-      // binaries and will track updates as binaries are added.
-
-      std::vector<addr_t> bin_addrs = m_gdb_comm.GetProcessStandaloneBinaries();
-      if (bin_addrs.size()) {
-        UUID uuid;
-        const bool value_is_slide = false;
-        for (addr_t addr : bin_addrs) {
-          const bool notify = true;
-          // First see if this is a special platform
-          // binary that may determine the DynamicLoader and
-          // Platform to be used in this Process/Target in the
-          // process of loading it.
-          if (GetTarget()
-                  .GetDebugger()
-                  .GetPlatformList()
-                  .LoadPlatformBinaryAndSetup(this, addr, notify))
-            continue;
-
-          const bool force_symbol_search = true;
-          // Second manually load this binary into the Target.
-          DynamicLoader::LoadBinaryWithUUIDAndAddress(
-              this, llvm::StringRef(), uuid, addr, value_is_slide,
-              force_symbol_search, notify);
-        }
-      }
-
       const StateType state = SetThreadStopInfo(response);
       if (state != eStateInvalid) {
         SetPrivateState(state);
@@ -1007,6 +955,9 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
     }
   }
 
+  // Target and Process are reasonably initailized;
+  // load any binaries we have metadata for / set load address.
+  LoadStubBinaries();
   MaybeLoadExecutableModule();
 
   // Find out which StructuredDataPlugins are supported by the debug monitor.
@@ -1025,6 +976,59 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
       SetUnixSignals(platform_sp->GetUnixSignals());
     else
       SetUnixSignals(UnixSignals::Create(GetTarget().GetArchitecture()));
+  }
+}
+
+void ProcessGDBRemote::LoadStubBinaries() {
+  // The remote stub may know about the "main binary" in
+  // the context of a firmware debug session, and can
+  // give us a UUID and an address/slide of where the
+  // binary is loaded in memory.
+  UUID standalone_uuid;
+  addr_t standalone_value;
+  bool standalone_value_is_offset;
+  if (m_gdb_comm.GetProcessStandaloneBinary(standalone_uuid, standalone_value,
+                                            standalone_value_is_offset)) {
+    ModuleSP module_sp;
+
+    if (standalone_uuid.IsValid()) {
+      const bool force_symbol_search = true;
+      const bool notify = true;
+      DynamicLoader::LoadBinaryWithUUIDAndAddress(
+          this, "", standalone_uuid, standalone_value,
+          standalone_value_is_offset, force_symbol_search, notify);
+    }
+  }
+
+  // The remote stub may know about a list of binaries to
+  // force load into the process -- a firmware type situation
+  // where multiple binaries are present in virtual memory,
+  // and we are only given the addresses of the binaries.
+  // Not intended for use with userland debugging, when we use
+  // a DynamicLoader plugin that knows how to find the loaded
+  // binaries, and will track updates as binaries are added.
+
+  std::vector<addr_t> bin_addrs = m_gdb_comm.GetProcessStandaloneBinaries();
+  if (bin_addrs.size()) {
+    UUID uuid;
+    const bool value_is_slide = false;
+    for (addr_t addr : bin_addrs) {
+      const bool notify = true;
+      // First see if this is a special platform
+      // binary that may determine the DynamicLoader and
+      // Platform to be used in this Process and Target.
+      if (GetTarget()
+              .GetDebugger()
+              .GetPlatformList()
+              .LoadPlatformBinaryAndSetup(this, addr, notify))
+        continue;
+
+      const bool force_symbol_search = true;
+      // Second manually load this binary into the Target.
+      DynamicLoader::LoadBinaryWithUUIDAndAddress(this, llvm::StringRef(), uuid,
+                                                  addr, value_is_slide,
+                                                  force_symbol_search, notify);
+    }
   }
 }
 
