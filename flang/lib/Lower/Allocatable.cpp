@@ -438,6 +438,8 @@ private:
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box);
+    if (alloc.getShapeSpecs().size() > 0 && sourceExv.rank() == 0)
+      TODO(loc, "allocate array object with scalar SOURCE specifier");
     if (alloc.hasCoarraySpec())
       TODO(loc, "coarray allocation");
     if (alloc.type.IsPolymorphic())
