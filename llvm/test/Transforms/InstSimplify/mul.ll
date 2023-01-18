@@ -61,8 +61,7 @@ define i1 @mul_i1(i1 %x, i1 %y) {
 
 define i1 @mul_i1_nsw(i1 %x, i1 %y) {
 ; CHECK-LABEL: @mul_i1_nsw(
-; CHECK-NEXT:    [[R:%.*]] = mul nsw i1 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %r = mul nsw i1 %x, %y
   ret i1 %r
@@ -87,7 +86,7 @@ define i1 @square_i1(i1 %x) {
 
 define i1 @square_i1_nsw(i1 %x) {
 ; CHECK-LABEL: @square_i1_nsw(
-; CHECK-NEXT:    ret i1 [[X:%.*]]
+; CHECK-NEXT:    ret i1 false
 ;
   %r = mul nsw i1 %x, %x
   ret i1 %r

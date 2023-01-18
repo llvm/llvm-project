@@ -2465,12 +2465,9 @@ define <2 x i5> @diff_of_squares_partial_nsw(<2 x i5> %x, <2 x i5> %y) {
   ret <2 x i5> %r
 }
 
-; TODO: This should simplify more.
-
 define i1 @diff_of_squares_nsw_i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @diff_of_squares_nsw_i1(
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x2 = mul nsw i1 %x, %x
   %y2 = mul nsw i1 %y, %y
