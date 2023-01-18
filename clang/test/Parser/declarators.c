@@ -80,6 +80,10 @@ struct test9 {
 struct test10 { int a; } static test10x;
 struct test11 { int a; } const test11x;
 
+// PR6216
+void test12(void) {
+  (void)__builtin_offsetof(struct { char c; int i; }, i);
+}
 
 // rdar://7608537
 struct test13 { int a; } (test13x);
