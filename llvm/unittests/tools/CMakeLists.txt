@@ -7,5 +7,6 @@ endif()
 add_subdirectory(
   llvm-exegesis
 )
+add_subdirectory(llvm-profdata)
 add_subdirectory(llvm-profgen)
 add_subdirectory(llvm-mca)
