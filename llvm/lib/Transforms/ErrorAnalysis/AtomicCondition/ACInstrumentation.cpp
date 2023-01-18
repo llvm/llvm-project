@@ -133,18 +133,21 @@ void ACInstrumentation::instrumentCallsForACComputation(
 
     OpRegisterNamesArray.push_back(OpRegisterNamePointer);
 
-    // TODO: If a constant if a float, manually insert a double of the same
-    //  constant.
     Value *OperandValue = BaseInstruction->getOperand(I);
     // Create a Cast Instruction to double in case operation is float operation.
-    if (OpRegisterNamePointer != EmptyValuePointer &&
-        isSingleFPOperation(&*BaseInstruction)) {
-      OperandValue = InstructionBuilder.CreateFPCast(
-          BaseInstruction->getOperand(I),
-          Type::getDoubleTy(BaseInstruction->getModule()->getContext()));
+    if (isSingleFPOperation(&*BaseInstruction)) {
+      if (OpRegisterNamePointer != EmptyValuePointer) {
+        OperandValue = InstructionBuilder.CreateFPCast(
+            BaseInstruction->getOperand(I),
+            Type::getDoubleTy(BaseInstruction->getModule()->getContext()));
 
-      (*InstructionIterator)++;
-      (*NumInstrumentedInstructions)++;
+        (*InstructionIterator)++;
+        (*NumInstrumentedInstructions)++;
+      } else if(isa<ConstantFP>(BaseInstruction->getOperand(I))){
+        OperandValue = ConstantFP::get(InstructionBuilder.getDoubleTy(),
+                                       APFloat(static_cast<ConstantFP*>(BaseInstruction->getOperand(I))->getValue().convertToDouble()));
+//        ConstantData(InstructionBuilder.getDoubleTy(), Value::ConstantFPVal);
+      }
     }
 
     OperandValuesArray.push_back(OperandValue);
@@ -690,13 +693,11 @@ bool ACInstrumentation::isFunctionOfInterest(const Function *Func) {
 
 void ACInstrumentation::mapFloatCastToAFValue(Instruction *Inst) {
   if (Inst->getOpcode() == Instruction::FPTrunc &&
-      static_cast<const FPTruncInst *>(Inst)->getSrcTy()->isDoubleTy() &&
       InstructionAFMap.count(static_cast<const FPTruncInst *>(Inst)->getOperand(0)) == 1) {
     std::pair<Value *, Value *> InstructionAFPair =
         std::make_pair((Value *)Inst, InstructionAFMap[static_cast<const FPTruncInst *>(Inst)->getOperand(0)]);
     InstructionAFMap.insert(InstructionAFPair);
   } else if(Inst->getOpcode() == Instruction::FPExt &&
-             static_cast<const FPExtInst *>(Inst)->getSrcTy()->isDoubleTy() &&
              InstructionAFMap.count(static_cast<const FPExtInst *>(Inst)->getOperand(0)) == 1) {
     std::pair<Value *, Value *> InstructionAFPair =
         std::make_pair((Value *)Inst, InstructionAFMap[static_cast<const FPExtInst *>(Inst)->getOperand(0)]);

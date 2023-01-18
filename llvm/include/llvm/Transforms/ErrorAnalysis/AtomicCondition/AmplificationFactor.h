@@ -566,7 +566,7 @@ void fAFPrintTopAmplificationPaths() {
   printf("The top Amplification Paths are:\n");
   for (int I = 0; I < min(5, AFs->AFItems[AFs->ListLength-1]->NumAFComponents); ++I) {
     AFProduct **ProductPath= fAFFlattenAFComponentsPath(AFs->AFItems[AFs->ListLength-1]->Components[I]);
-    printf("AF: %f of Node:%d WRT Input:%s through path: [",
+    printf("AF: %0.15lf of Node:%d WRT Input:%s through path: [",
            AFs->AFItems[AFs->ListLength-1]->Components[I]->AF,
            AFs->AFItems[AFs->ListLength-1]->Components[I]->ItemId,
            AFs->AFItems[AFs->ListLength-1]->Components[I]->Input);
@@ -591,7 +591,7 @@ void fAFPrintTopFromAllAmplificationPaths() {
   printf("The top Amplification Paths are:\n");
   for (int I = 0; I < min(10, AFComponentCounter); ++I) {
     AFProduct **ProductPath= fAFFlattenAFComponentsPath(Paths[I]);
-    printf("AF: %f of Node:%d WRT Input:%s through path: [",
+    printf("AF: %0.15lf of Node:%d WRT Input:%s through path: [",
            Paths[I]->AF,
            Paths[I]->ItemId,
            Paths[I]->Input);

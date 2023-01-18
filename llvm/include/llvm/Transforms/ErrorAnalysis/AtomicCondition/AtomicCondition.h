@@ -103,7 +103,7 @@ void fACStoreACItems(FILE *FP, ACItem **ObjectPointerList, uint64_t NumObjects) 
       for (int J = 0; J < ObjectPointerList[I]->NumOperands; ++J) {
         fprintf(FP,
                 "\t\t\t\"Operand %d Name\": \"%s\",\n"
-                "\t\t\t\"Operand %d Value\": %lf,\n",
+                "\t\t\t\"Operand %d Value\": %0.15lf,\n",
                 J,
                 ObjectPointerList[I]->OperandNames[J],
                 J,
