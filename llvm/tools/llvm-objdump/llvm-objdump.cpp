@@ -2011,7 +2011,7 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   // Package up features to be passed to target/subtarget
   Expected<SubtargetFeatures> FeaturesValue = Obj->getFeatures();
   if (!FeaturesValue)
-    WithColor::error(errs(), ToolName) << FeaturesValue.takeError();
+    reportError(FeaturesValue.takeError(), Obj->getFileName());
   SubtargetFeatures Features = *FeaturesValue;
   if (!MAttrs.empty()) {
     for (unsigned I = 0; I != MAttrs.size(); ++I)
