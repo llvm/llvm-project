@@ -46,13 +46,12 @@ STATISTIC(RISCVNumInstrsCompressed,
 
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
-  const MCSubtargetInfo *MCSTI;
   const RISCVSubtarget *STI;
 
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MCSTI(TM.getMCSubtargetInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer)) {}
 
   StringRef getPassName() const override { return "RISCV Assembly Printer"; }
 
@@ -189,12 +188,6 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
-  // Set the current MCSubtargetInfo to a copy which has the correct
-  // feature bits for the current MachineFunction
-  MCSubtargetInfo &NewSTI =
-    OutStreamer->getContext().getSubtargetCopy(*TM.getMCSubtargetInfo());
-  NewSTI.setFeatureBits(MF.getSubtarget().getFeatureBits());
-  MCSTI = &NewSTI;
   STI = &MF.getSubtarget<RISCVSubtarget>();
 
   SetupMachineFunction(MF);
@@ -224,7 +217,10 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
 void RISCVAsmPrinter::emitAttributes() {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
-  RTS.emitTargetAttributes(*MCSTI);
+  // Use MCSubtargetInfo from TargetMachine. Individual functions may have
+  // attributes that differ from other functions in the module and we have no
+  // way to know which function is correct.
+  RTS.emitTargetAttributes(*TM.getMCSubtargetInfo());
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {
