@@ -638,6 +638,12 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       EType == EmitterType::Compress || EType == EmitterType::CheckCompress;
   bool CompressOrUncompress =
       EType == EmitterType::Compress || EType == EmitterType::Uncompress;
+  std::string ValidatorName =
+      CompressOrUncompress
+          ? (TargetName + "ValidateMCOperandFor" +
+             (EType == EmitterType::Compress ? "Compress" : "Uncompress"))
+                .str()
+          : "";
 
   for (auto &CompressPat : CompressPatterns) {
     if (EType == EmitterType::Uncompress && CompressPat.IsCompressOnly)
@@ -774,7 +780,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                 getPredicates(MCOpPredicateMap, MCOpPredicates, DestOperand.Rec,
                               "MCOperandPredicate");
             CondStream.indent(6)
-                << TargetName << "ValidateMCOperand("
+                << ValidatorName << "("
                 << "MI.getOperand(" << OpIdx << "), STI, " << Entry << ") &&\n";
           } else {
             unsigned Entry =
@@ -797,7 +803,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
           unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
                                          DestOperand.Rec, "MCOperandPredicate");
           CondStream.indent(6)
-              << TargetName << "ValidateMCOperand("
+              << ValidatorName << "("
               << "MCOperand::createImm(" << DestOperandMap[OpNo].Data.Imm
               << "), STI, " << Entry << ") &&\n";
         } else {
@@ -837,8 +843,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
   Func.indent(2) << "return false;\n}\n";
 
   if (!MCOpPredicates.empty()) {
-    o << "static bool " << TargetName
-      << "ValidateMCOperand(const MCOperand &MCOp,\n"
+    o << "static bool " << ValidatorName << "(const MCOperand &MCOp,\n"
       << "                  const MCSubtargetInfo &STI,\n"
       << "                  unsigned PredicateIndex) {\n"
       << "  switch (PredicateIndex) {\n"
