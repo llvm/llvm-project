@@ -124,6 +124,9 @@ class TestSwiftPlaygrounds(TestBase):
         options = lldb.SBExpressionOptions()
         options.SetLanguage(lldb.eLanguageTypeSwift)
         options.SetPlaygroundTransformEnabled()
+        # The concurrency expressions will spawn multiple threads.
+        options.SetOneThreadTimeoutInMicroSeconds(1)
+        options.SetTryAllThreads(True)
 
         self.frame().EvaluateExpression(contents, options)
         ret = self.frame().EvaluateExpression("get_output()")
