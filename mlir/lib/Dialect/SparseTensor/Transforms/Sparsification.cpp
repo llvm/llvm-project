@@ -1348,75 +1348,75 @@ static bool translateBitsToTidLvlPairs(
 
   unsigned numloopCond = 0;
   bool hasNonUnique = false;
-  env.merger().foreachTensorLoopId(
-      li, [&, ldx](TensorLoopId b, TensorId tid, std::optional<Level> lvl,
-                   DimLevelType dlt) {
-        if (simple.test(b)) {
-          if (isUndefDLT(dlt)) {
-            // An undefined dlt in the lattices, we probably mean to
-            // iterate based on the level of output tensor.  E.g., this
-            // could be a synthetic tensor (for invariants and sparse
-            // output tensor).
-            // out[i][j] = invariant; or a broadcast
-            // out[i][j] = in[i] (j is undef for input)
-            tid = outTid;
-            lvl = outLvl;
-            // Skips invalid lvl (e.g., when this is a zero ranked tensor).
-            if (!lvl)
-              return;
-          }
-          hasNonUnique = !isUniqueDLT(dlt) || hasNonUnique;
-          tids.push_back(tid);
-          lvls.push_back(*lvl);
-          numloopCond++;
-        } else if (isDenseDLT(dlt)) {
-          tids.push_back(tid);
-          lvls.push_back(*lvl);
-        } else {
-          assert(isUndefDLT(dlt));
-          linalg::GenericOp op = env.op();
-          if (tid >= op.getNumDpsInputs())
-            // We only handle affine expression on input tensors (for now).
-            return;
-          OpOperand *operand = &op->getOpOperand(tid);
-          const auto stt = getSparseTensorType(operand->get());
-          // Non-annotated dense tensors requires no special handling.
-          if (!stt.hasEncoding())
-            return;
+  env.merger().foreachTensorLoopId(li, [&, ldx](TensorLoopId b, TensorId tid,
+                                                std::optional<Level> lvl,
+                                                DimLevelType dlt) {
+    if (simple.test(b)) {
+      if (isUndefDLT(dlt)) {
+        // An undefined dlt in the lattices, we probably mean to
+        // iterate based on the level of output tensor.  E.g., this
+        // could be a synthetic tensor (for invariants and sparse
+        // output tensor).
+        // out[i][j] = invariant; or a broadcast
+        // out[i][j] = in[i] (j is undef for input)
+        tid = outTid;
+        lvl = outLvl;
+        // Skips invalid lvl (e.g., when this is a zero ranked tensor).
+        if (!lvl)
+          return;
+      }
+      hasNonUnique = !isUniqueDLT(dlt) || hasNonUnique;
+      tids.push_back(tid);
+      lvls.push_back(*lvl);
+      numloopCond++;
+    } else if (isDenseDLT(dlt)) {
+      tids.push_back(tid);
+      lvls.push_back(*lvl);
+    } else {
+      assert(isUndefDLT(dlt));
+      linalg::GenericOp op = env.op();
+      if (tid >= op.getNumDpsInputs())
+        // We only handle affine expression on input tensors (for now).
+        return;
+      OpOperand *operand = &op->getOpOperand(tid);
+      const auto stt = getSparseTensorType(operand->get());
+      // Non-annotated dense tensors requires no special handling.
+      if (!stt.hasEncoding())
+        return;
 
-          ArrayRef<AffineExpr> affines =
-              op.getMatchingIndexingMap(operand).getResults();
-          const Level lvlRank = stt.getLvlRank();
-          assert(affines.size() == static_cast<size_t>(lvlRank));
-          for (Level l = 0; l < lvlRank; l++) {
-            // FIXME: `toOrigDim` is deprecated.
-            AffineExpr exp = affines[toOrigDim(stt.getEncoding(), l)];
-            // Skip simple affine expression and non-dense levels (which
-            // have their own filter loop).
-            if (exp.isa<AffineDimExpr>() || !stt.isDenseLvl(l))
-              continue;
+      ArrayRef<AffineExpr> affines =
+          op.getMatchingIndexingMap(operand).getResults();
+      const Level lvlRank = stt.getLvlRank();
+      assert(affines.size() == static_cast<size_t>(lvlRank));
+      for (Level l = 0; l < lvlRank; l++) {
+        // FIXME: `toOrigDim` is deprecated.
+        AffineExpr exp = affines[toOrigDim(stt.getEncoding(), l)];
+        // Skip simple affine expression and non-dense levels (which
+        // have their own filter loop).
+        if (exp.isa<AffineDimExpr>() || !stt.isDenseLvl(l))
+          continue;
 
-            // Constant affine expression are handled in genLoop
-            if (!exp.isa<AffineConstantExpr>()) {
-              bool isAtLoop = false;
-              if (isInvariantAffine(env, exp, ldx, isAtLoop) && isAtLoop) {
-                // If the compound affine is invariant and we are right at the
-                // level. We need to generate the address according to the
-                // affine expression. This is also the best place we can do it
-                // to avoid putting it inside inner loops.
-                // NOTE: It assumes that the levels of the input tensor are
-                // initialized in order (and it is also currently guaranteed by
-                // computeIterationGraph), another more admissible approach
-                // might be accepting out-of-order access between consecutive
-                // dense levels.
-                affineTids.push_back(tid);
-                affineLvls.push_back(l);
-                exps.push_back(exp);
-              }
-            }
+        // Constant affine expression are handled in genLoop
+        if (!exp.isa<AffineConstantExpr>()) {
+          bool isAtLoop = false;
+          if (isInvariantAffine(env, exp, ldx, isAtLoop) && isAtLoop) {
+            // If the compound affine is invariant and we are right at the
+            // level. We need to generate the address according to the
+            // affine expression. This is also the best place we can do it
+            // to avoid putting it inside inner loops.
+            // NOTE: It assumes that the levels of the input tensor are
+            // initialized in order (and it is also currently guaranteed by
+            // computeIterationGraph), another more admissible approach
+            // might be accepting out-of-order access between consecutive
+            // dense levels.
+            affineTids.push_back(tid);
+            affineLvls.push_back(l);
+            exps.push_back(exp);
           }
         }
-      });
+      }
+    }
+  });
 
   if (isDenseDLT(env.dlt(outTid, ldx))) {
     // Note that we generate dense indices of the output tensor
@@ -1598,6 +1598,9 @@ public:
     // output.
     if (op.getNumDpsInits() != 1 || hasCompoundAffineOnSparseOut(op))
       return failure();
+
+    if (options.enableIndexReduction)
+      llvm_unreachable("not yet implemented");
 
     // Sets up a code generation environment.
     const unsigned numTensors = op->getNumOperands();
