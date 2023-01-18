@@ -467,6 +467,11 @@ unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
 
 } // namespace RISCVVType
 
+namespace RISCVRVC {
+bool compress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);
+bool uncompress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);
+} // namespace RISCVRVC
+
 } // namespace llvm
 
 #endif
