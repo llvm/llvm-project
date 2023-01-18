@@ -409,8 +409,7 @@ define <2 x i64> @uabd_v2i64_nuw(<2 x i64> %a, <2 x i64> %b) #0 {
 define <16 x i8> @sabd_v16i8_nsw(<16 x i8> %a, <16 x i8> %b) #0 {
 ; CHECK-LABEL: sabd_v16i8_nsw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    abs v0.16b, v0.16b
+; CHECK-NEXT:    sabd v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %sub = sub nsw <16 x i8> %a, %b
   %abs = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %sub, i1 true)
@@ -420,8 +419,7 @@ define <16 x i8> @sabd_v16i8_nsw(<16 x i8> %a, <16 x i8> %b) #0 {
 define <8 x i16> @sabd_v8i16_nsw(<8 x i16> %a, <8 x i16> %b) #0 {
 ; CHECK-LABEL: sabd_v8i16_nsw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    abs v0.8h, v0.8h
+; CHECK-NEXT:    sabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %sub = sub nsw <8 x i16> %a, %b
   %abs = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %sub, i1 true)
@@ -431,8 +429,7 @@ define <8 x i16> @sabd_v8i16_nsw(<8 x i16> %a, <8 x i16> %b) #0 {
 define <4 x i32> @sabd_v4i32_nsw(<4 x i32> %a, <4 x i32> %b) #0 {
 ; CHECK-LABEL: sabd_v4i32_nsw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    abs v0.4s, v0.4s
+; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %sub = sub nsw <4 x i32> %a, %b
   %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 true)
