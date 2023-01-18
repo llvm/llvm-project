@@ -187,7 +187,9 @@ static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
 
 Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = simplifyMulInst(Op0, Op1, SQ.getWithInstruction(&I)))
+  if (Value *V =
+          simplifyMulInst(Op0, Op1, I.hasNoSignedWrap(), I.hasNoUnsignedWrap(),
+                          SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (SimplifyAssociativeOrCommutative(I))
