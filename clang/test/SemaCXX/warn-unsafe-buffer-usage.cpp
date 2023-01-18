@@ -49,11 +49,10 @@ void testArraySubscripts(int *p, int **pp) {
 
   int a[10], b[10][10];
 
-  // Not to warn subscripts on arrays
-  foo(a[1], 1[a],
-      b[3][4],
-      4[b][3],
-      4[3[b]]);
+  foo(a[1], 1[a], // expected-warning2{{unchecked operation on raw buffer in expression}}
+  b[3][4],  // expected-warning2{{unchecked operation on raw buffer in expression}}
+  4[b][3],  // expected-warning2{{unchecked operation on raw buffer in expression}}
+  4[3[b]]); // expected-warning2{{unchecked operation on raw buffer in expression}}
 
   // Not to warn when index is zero
   foo(p[0], pp[0][0], 0[0[pp]], 0[pp][0],
@@ -96,8 +95,7 @@ void testQualifiedParameters(const int * p, const int * const q,
   foo(p[1], 1[p], p[-1],   // expected-warning3{{unchecked operation on raw buffer in expression}}
       q[1], 1[q], q[-1],   // expected-warning3{{unchecked operation on raw buffer in expression}}
       a[1],                // expected-warning{{unchecked operation on raw buffer in expression}}     `a` is of pointer type
-      b[1][2],             // expected-warning{{unchecked operation on raw buffer in expression}}     `b[1]` is of array type
-      c[1]                 // `c` is of array type
+      b[1][2]              // expected-warning2{{unchecked operation on raw buffer in expression}}     `b[1]` is of array type
       );
 }
 
@@ -116,27 +114,27 @@ T_t funRetT();
 T_t * funRetTStar();
 
 void testStructMembers(struct T * sp, struct T s, T_t * sp2, T_t s2) {
-  foo(sp->a[1],
-      sp->b[1],     // expected-warning{{unchecked operation on raw buffer in expression}}
-      sp->c.a[1],
-      sp->c.b[1],   // expected-warning{{unchecked operation on raw buffer in expression}}
-      s.a[1],
-      s.b[1],       // expected-warning{{unchecked operation on raw buffer in expression}}
-      s.c.a[1],
-      s.c.b[1],     // expected-warning{{unchecked operation on raw buffer in expression}}
-      sp2->a[1],
-      sp2->b[1],    // expected-warning{{unchecked operation on raw buffer in expression}}
-      sp2->c.a[1],
-      sp2->c.b[1],  // expected-warning{{unchecked operation on raw buffer in expression}}
-      s2.a[1],
-      s2.b[1],      // expected-warning{{unchecked operation on raw buffer in expression}}
-      s2.c.a[1],
-      s2.c.b[1],           // expected-warning{{unchecked operation on raw buffer in expression}}
-      funRetT().a[1],
-      funRetT().b[1],      // expected-warning{{unchecked operation on raw buffer in expression}}
-      funRetTStar()->a[1],
-      funRetTStar()->b[1]  // expected-warning{{unchecked operation on raw buffer in expression}}
-      );
+  foo(sp->a[1],   // expected-warning{{unchecked operation on raw buffer in expression}}
+     sp->b[1],     // expected-warning{{unchecked operation on raw buffer in expression}}
+     sp->c.a[1],   // expected-warning{{unchecked operation on raw buffer in expression}}
+     sp->c.b[1],   // expected-warning{{unchecked operation on raw buffer in expression}}
+     s.a[1],       // expected-warning{{unchecked operation on raw buffer in expression}}
+     s.b[1],       // expected-warning{{unchecked operation on raw buffer in expression}}
+     s.c.a[1],     // expected-warning{{unchecked operation on raw buffer in expression}}
+     s.c.b[1],     // expected-warning{{unchecked operation on raw buffer in expression}}
+     sp2->a[1],    // expected-warning{{unchecked operation on raw buffer in expression}}
+     sp2->b[1],    // expected-warning{{unchecked operation on raw buffer in expression}}
+     sp2->c.a[1],  // expected-warning{{unchecked operation on raw buffer in expression}}
+     sp2->c.b[1],  // expected-warning{{unchecked operation on raw buffer in expression}}
+     s2.a[1],    // expected-warning{{unchecked operation on raw buffer in expression}}
+     s2.b[1],      // expected-warning{{unchecked operation on raw buffer in expression}}
+     s2.c.a[1],           // expected-warning{{unchecked operation on raw buffer in expression}}
+     s2.c.b[1],           // expected-warning{{unchecked operation on raw buffer in expression}}
+     funRetT().a[1],      // expected-warning{{unchecked operation on raw buffer in expression}}
+     funRetT().b[1],      // expected-warning{{unchecked operation on raw buffer in expression}}
+     funRetTStar()->a[1], // expected-warning{{unchecked operation on raw buffer in expression}}
+     funRetTStar()->b[1]  // expected-warning{{unchecked operation on raw buffer in expression}}
+  );
 }
 
 int garray[10];
@@ -148,7 +146,7 @@ void testLambdaCaptureAndGlobal(int * p) {
 
   auto Lam = [p, a]() {
     return p[1] // expected-warning{{unchecked operation on raw buffer in expression}}
-      + a[1] + garray[1]
+      + a[1] + garray[1] // expected-warning2{{unchecked operation on raw buffer in expression}}
       + gp[1];  // expected-warning{{unchecked operation on raw buffer in expression}}
   };
 }
@@ -157,7 +155,7 @@ typedef T_t * T_ptr_t;
 
 void testTypedefs(T_ptr_t p) {
   foo(p[1],      // expected-warning{{unchecked operation on raw buffer in expression}}
-      p[1].a[1], // expected-warning{{unchecked operation on raw buffer in expression}}
+      p[1].a[1], // expected-warning2{{unchecked operation on raw buffer in expression}}
       p[1].b[1]  // expected-warning2{{unchecked operation on raw buffer in expression}}
       );
 }
@@ -165,7 +163,7 @@ void testTypedefs(T_ptr_t p) {
 template<typename T, int N> T f(T t, T * pt, T a[N], T (&b)[N]) {
   foo(pt[1],    // expected-warning{{unchecked operation on raw buffer in expression}}
       a[1],     // expected-warning{{unchecked operation on raw buffer in expression}}
-      b[1]);    // `b` is of array type
+      b[1]);    // expected-warning{{unchecked operation on raw buffer in expression}}
   return &t[1]; // expected-warning{{unchecked operation on raw buffer in expression}}
 }
 
@@ -269,10 +267,48 @@ void testNestedCallableDefinition(int * p) {
      );
 }
 
-void testVariableDecls(int * p) {
+int testVariableDecls(int * p) {
   int * q = p++;      // expected-warning{{unchecked operation on raw buffer in expression}}
   int a[p[1]];        // expected-warning{{unchecked operation on raw buffer in expression}}
   int b = p[1];       // expected-warning{{unchecked operation on raw buffer in expression}}
+  return p[1];        // expected-warning{{unchecked operation on raw buffer in expression}}
+}
+    
+template<typename T> void fArr(T t[]) {
+  foo(t[1]);   // expected-warning{{unchecked operation on raw buffer in expression}}
+  T ar[8];
+  foo(ar[5]);  // expected-warning{{unchecked operation on raw buffer in expression}}
+}
+
+template void fArr<int>(int t[]); // expected-note {{in instantiation of function template specialization 'fArr<int>' requested here}}
+
+  int testReturn(int t[]) {
+  return t[1]; // expected-warning{{unchecked operation on raw buffer in expression}}
+ }
+    
+//FIXME: Array access warnings on 0-indices;ArraySubscriptGadget excludes 0 index for both raw pointers and arrays!
+int testArrayAccesses(int n) {
+          
+  // auto deduced array type
+  int cArr[2][3] = {{1, 2, 3}, {4, 5, 6}};
+  int d = cArr[0][0];
+  foo(cArr[0][0]);
+  foo(cArr[1][2]);     // expected-warning2{{unchecked operation on raw buffer in expression}}
+  auto cPtr = cArr[1][2];  // expected-warning2{{unchecked operation on raw buffer in expression}}
+  foo(cPtr);
+          
+          // Typdefs
+  typedef int A[3];
+  const A tArr = {4, 5, 6};
+  foo(tArr[0], tArr[1]);  // expected-warning{{unchecked operation on raw buffer in expression}}
+  return cArr[0][1];  // expected-warning{{unchecked operation on raw buffer in expression}}
+}
+    
+void testArrayPtrArithmetic(int x[]) {
+  foo (x + 3); // expected-warning{{unchecked operation on raw buffer in expression}}
+         
+  int y[3] = {0, 1, 2};
+  foo(y + 4); // expected-warning{{unchecked operation on raw buffer in expression}}
 }
 
 #endif
