@@ -37,6 +37,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
+#include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -127,6 +128,13 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
+
+static cl::opt<std::string> BasicBlockProfileDump(
+    "mbb-profile-dump", cl::Hidden,
+    cl::desc("Basic block profile dump for external cost modelling. If "
+             "matching up BBs with afterwards, the compilation must be "
+             "performed with -fbasic-block-sections=labels. Enabling this "
+             "flag during in-process ThinLTO is not supported."));
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -414,6 +422,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<GCModuleInfo>();
+  AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
@@ -583,6 +592,16 @@ bool AsmPrinter::doInitialization(Module &M) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
                        HI.TimerGroupDescription, TimePassesIsEnabled);
     HI.Handler->beginModule(&M);
+  }
+
+  if (!BasicBlockProfileDump.empty()) {
+    std::error_code PossibleFileError;
+    MBBProfileDumpFileOutput = std::make_unique<raw_fd_ostream>(
+        BasicBlockProfileDump, PossibleFileError);
+    if (PossibleFileError) {
+      M.getContext().emitError("Failed to open file for MBB Profile Dump: " +
+                               PossibleFileError.message() + "\n");
+    }
   }
 
   return false;
@@ -1888,6 +1907,18 @@ void AsmPrinter::emitFunctionBody() {
     OutStreamer->getCommentOS() << "-- End function\n";
 
   OutStreamer->addBlankLine();
+
+  // Output MBB numbers, function names, and frequencies if the flag to dump
+  // MBB profile information has been set
+  if (MBBProfileDumpFileOutput) {
+    MachineBlockFrequencyInfo &MBFI =
+        getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+    for (const auto &MBB : *MF) {
+      *MBBProfileDumpFileOutput.get()
+          << MF->getName() << "," << MBB.getNumber() << ","
+          << MBFI.getBlockFreqRelativeToEntryBlock(&MBB) << "\n";
+    }
+  }
 }
 
 /// Compute the number of Global Variables that uses a Constant.
