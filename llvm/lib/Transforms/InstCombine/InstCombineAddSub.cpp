@@ -2379,9 +2379,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     auto *OBO0 = cast<OverflowingBinaryOperator>(Op0);
     auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
     bool PropagateNSW = I.hasNoSignedWrap() && OBO0->hasNoSignedWrap() &&
-                        OBO1->hasNoSignedWrap();
+                        OBO1->hasNoSignedWrap() && BitWidth > 2;
     bool PropagateNUW = I.hasNoUnsignedWrap() && OBO0->hasNoUnsignedWrap() &&
-                        OBO1->hasNoUnsignedWrap();
+                        OBO1->hasNoUnsignedWrap() && BitWidth > 1;
     Value *Add = Builder.CreateAdd(X, Y, "add", PropagateNUW, PropagateNSW);
     Value *Sub = Builder.CreateSub(X, Y, "sub", PropagateNUW, PropagateNSW);
     Value *Mul = Builder.CreateMul(Add, Sub, "", PropagateNUW, PropagateNSW);
