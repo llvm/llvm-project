@@ -2673,6 +2673,12 @@ void __kmp_join_call(ident_t *loc, int gtid
       master_th->th.th_task_state =
           master_th->th
               .th_task_state_memo_stack[master_th->th.th_task_state_top];
+    } else if (team != root->r.r_hot_team) {
+      // Reset the task state of primary thread if we are not hot team because
+      // in this case all the worker threads will be free, and their task state
+      // will be reset. If not reset the primary's, the task state will be
+      // inconsistent.
+      master_th->th.th_task_state = 0;
     }
     // Copy the task team from the parent team to the primary thread
     master_th->th.th_task_team =
