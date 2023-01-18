@@ -24,7 +24,7 @@ public:
 
   virtual void GetValueAsync(
       std::string Key,
-      std::function<void(Expected<Optional<std::string>>)> Receiver) = 0;
+      std::function<void(Expected<std::optional<std::string>>)> Receiver) = 0;
   virtual void PutValueAsync(std::string Key, std::string Value,
                              std::function<void(Error)> Receiver) = 0;
 

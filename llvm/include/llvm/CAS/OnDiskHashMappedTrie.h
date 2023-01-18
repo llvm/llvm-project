@@ -209,9 +209,8 @@ public:
       return pointer(CP.getOffset(), *H);
     if (!CP)
       return pointer();
-    ValueProxy V{CP->Hash,
-                 makeMutableArrayRef(const_cast<char *>(CP->Data.data()),
-                                     CP->Data.size())};
+    ValueProxy V{CP->Hash, MutableArrayRef(const_cast<char *>(CP->Data.data()),
+                                           CP->Data.size())};
     return pointer(CP.getOffset(), V);
   }
 

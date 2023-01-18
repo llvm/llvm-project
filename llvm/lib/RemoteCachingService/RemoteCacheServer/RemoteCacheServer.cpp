@@ -72,7 +72,7 @@ GetValueAdapter(const GetValueRequest &Request, RemoteCacheProvider &Provider,
                 std::function<void(const GetValueResponse &)> Receiver) {
   Provider.GetValueAsync(
       Request.key(), [Receiver = std::move(Receiver)](
-                         Expected<Optional<std::string>> Response) {
+                         Expected<std::optional<std::string>> Response) {
         if (!Response)
           return Receiver(GetValueWithError(Response.takeError()));
 
