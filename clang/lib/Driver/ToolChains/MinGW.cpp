@@ -348,6 +348,15 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
+static bool isCrossCompiling(const llvm::Triple &T, bool RequireArchMatch) {
+  llvm::Triple HostTriple(llvm::Triple::normalize(LLVM_HOST_TRIPLE));
+  if (HostTriple.getOS() != llvm::Triple::Win32)
+    return true;
+  if (RequireArchMatch && HostTriple.getArch() != T.getArch())
+    return true;
+  return false;
+}
+
 // Simplified from Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple.
 static bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
                            std::string &Ver,
@@ -487,7 +496,13 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   getFilePaths().push_back(
       (Base + SubdirName + llvm::sys::path::get_separator() + "mingw/lib").str());
 
-  getFilePaths().push_back(Base + "lib");
+  // Only include <base>/lib if we're not cross compiling (not even for
+  // windows->windows to a different arch), or if the sysroot has been set
+  // (where we presume the user has pointed it at an arch specific
+  // subdirectory).
+  if (!::isCrossCompiling(getTriple(), /*RequireArchMatch=*/true) ||
+      getDriver().SysRoot.size())
+    getFilePaths().push_back(Base + "lib");
 
   NativeLLVMSupport =
       Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
@@ -649,7 +664,13 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args,
                    Base + SubdirName + llvm::sys::path::get_separator() + "usr/include");
 
-  addSystemInclude(DriverArgs, CC1Args, Base + "include");
+  // Only include <base>/include if we're not cross compiling (but do allow it
+  // if we're on Windows and building for Windows on another architecture),
+  // or if the sysroot has been set (where we presume the user has pointed it
+  // at an arch specific subdirectory).
+  if (!::isCrossCompiling(getTriple(), /*RequireArchMatch=*/false) ||
+      getDriver().SysRoot.size())
+    addSystemInclude(DriverArgs, CC1Args, Base + "include");
 }
 
 void toolchains::MinGW::addClangTargetOptions(

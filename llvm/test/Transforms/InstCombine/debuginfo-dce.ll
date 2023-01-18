@@ -1,4 +1,4 @@
-; RUN: opt -passes=instcombine %s -S -o - | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=instcombine %s -S -o - | FileCheck %s
 ; Verify that the eliminated instructions (bitcast, gep, load) are salvaged into
 ; a DIExpression.
 ;

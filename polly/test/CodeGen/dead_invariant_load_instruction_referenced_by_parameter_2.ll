@@ -14,23 +14,23 @@ entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @REGISTER, i64 0, i64 8), align 16
+  %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @REGISTER, i64 0, i64 8), align 16
   %add = add nsw i32 %0, 2
   %cmp = icmp sgt i32 %add, 1048575
   br i1 %cmp, label %if.end.36, label %if.else
 
 if.else:                                          ; preds = %entry.split
-  call void (i32, i32, i32*, ...) bitcast (void (...)* @BYTES_TO_BITS to void (i32, i32, i32*, ...)*)(i32 undef, i32 1, i32* undef) #2
-  %1 = load i32, i32* undef, align 4
+  call void (i32, i32, ptr, ...) @BYTES_TO_BITS(i32 undef, i32 1, ptr undef) #2
+  %1 = load i32, ptr undef, align 4
   %cmp14 = icmp eq i32 %1, 1
   br i1 %cmp14, label %land.lhs.true, label %if.end.36
 
 land.lhs.true:                                    ; preds = %if.else
-  %arrayidx16 = getelementptr inbounds [32 x i32], [32 x i32]* %INSTR, i64 0, i64 6
+  %arrayidx16 = getelementptr inbounds [32 x i32], ptr %INSTR, i64 0, i64 6
   br i1 false, label %land.lhs.true.19, label %if.then.23
 
 land.lhs.true.19:                                 ; preds = %land.lhs.true
-  %arrayidx20 = getelementptr inbounds [32 x i32], [32 x i32]* %INSTR, i64 0, i64 7
+  %arrayidx20 = getelementptr inbounds [32 x i32], ptr %INSTR, i64 0, i64 7
   br i1 false, label %if.end.36, label %if.then.23
 
 if.then.23:                                       ; preds = %land.lhs.true.19, %land.lhs.true

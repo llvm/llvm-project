@@ -2746,7 +2746,7 @@ void OpEmitter::genRegionVerifier(MethodBody &body) {
   ///
   /// {0}: The region's index.
   const char *const getSingleRegion =
-      "::llvm::makeMutableArrayRef((*this)->getRegion({0}))";
+      "::llvm::MutableArrayRef((*this)->getRegion({0}))";
 
   // If we have no regions, there is nothing more to do.
   const auto canSkip = [](const NamedRegion &region) {
@@ -2781,7 +2781,7 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
   /// Get a single successor.
   ///
   /// {0}: The successor's name.
-  const char *const getSingleSuccessor = "::llvm::makeMutableArrayRef({0}())";
+  const char *const getSingleSuccessor = "::llvm::MutableArrayRef({0}())";
 
   // If we have no successors, there is nothing more to do.
   const auto canSkip = [](const NamedSuccessor &successor) {

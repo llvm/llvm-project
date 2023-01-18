@@ -75,15 +75,15 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
 
   static constexpr size_t kRepMovsbThreshold =
       LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
-  if constexpr (kRepMovsbThreshold == 0)
+  if constexpr (kRepMovsbThreshold == 0) {
     return x86::Memcpy::repmovsb(dst, src, count);
-  else if constexpr (kRepMovsbThreshold > 0) {
+  } else if constexpr (kRepMovsbThreshold == size_t(-1)) {
+    return inline_memcpy_x86(dst, src, count);
+  } else {
     if (unlikely(count >= kRepMovsbThreshold))
       return x86::Memcpy::repmovsb(dst, src, count);
     else
       return inline_memcpy_x86(dst, src, count);
-  } else {
-    return inline_memcpy_x86(dst, src, count);
   }
 }
 #endif // defined(LLVM_LIBC_ARCH_X86)

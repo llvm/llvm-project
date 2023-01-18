@@ -1714,3 +1714,53 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
 
   return OFFLOAD_SUCCESS;
 }
+
+/// Executes a kernel using pre-recorded information for loading to
+/// device memory to launch the target kernel with the pre-recorded
+/// configuration.
+int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
+                  void *DeviceMemory, int64_t DeviceMemorySize, void **TgtArgs,
+                  ptrdiff_t *TgtOffsets, int32_t NumArgs, int32_t NumTeams,
+                  int32_t ThreadLimit, uint64_t LoopTripCount,
+                  AsyncInfoTy &AsyncInfo) {
+  int32_t DeviceId = Device.DeviceID;
+  TableMap *TM = getTableMap(HostPtr);
+  // Fail if the table map fails to find the target kernel pointer for the
+  // provided host pointer.
+  if (!TM) {
+    REPORT("Host ptr " DPxMOD " does not have a matching target pointer.\n",
+           DPxPTR(HostPtr));
+    return OFFLOAD_FAIL;
+  }
+
+  // Retrieve the target table of offloading entries.
+  __tgt_target_table *TargetTable = nullptr;
+  {
+    std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
+    assert(TM->Table->TargetsTable.size() > (size_t)DeviceId &&
+           "Not expecting a device ID outside the table's bounds!");
+    TargetTable = TM->Table->TargetsTable[DeviceId];
+  }
+  assert(TargetTable && "Global data has not been mapped\n");
+
+  // Retrieve the target kernel pointer, allocate and store the recorded device
+  // memory data, and launch device execution.
+  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].addr;
+  DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
+     TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
+
+  void *TgtPtr = Device.allocData(DeviceMemorySize, /* HstPtr */ nullptr,
+                                  TARGET_ALLOC_DEFAULT);
+  Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
+
+  int Ret =
+      Device.runTeamRegion(TgtEntryPtr, TgtArgs, TgtOffsets, NumArgs, NumTeams,
+                           ThreadLimit, LoopTripCount, AsyncInfo);
+
+  if (Ret != OFFLOAD_SUCCESS) {
+    REPORT("Executing target region abort target.\n");
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}

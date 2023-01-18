@@ -20,7 +20,7 @@
 ; CHECK-NEXT:         [m, n] -> { Stmt_body2[i0] -> MemRef_baseA[i0, i0] };
 ; CHECK-NEXT: }
 
-define void @foo(float** %A, i64 %n, i64 %m) {
+define void @foo(ptr %A, i64 %n, i64 %m) {
 start:
   br label %loop
 
@@ -31,19 +31,19 @@ loop:
   br i1 %icmp, label %body1, label %exit
 
 body1:
-  %baseB = load float*, float** %A
+  %baseB = load ptr, ptr %A
   %offsetB = mul i64 %indvar, %m
   %offsetB2 = add i64 %offsetB, %indvar
-  %ptrB = getelementptr float, float* %baseB, i64 %offsetB2
-  store float 42.0, float* %ptrB
+  %ptrB = getelementptr float, ptr %baseB, i64 %offsetB2
+  store float 42.0, ptr %ptrB
   br label %body2
 
 body2:
-  %baseA = load float*, float** %A
+  %baseA = load ptr, ptr %A
   %offsetA = mul i64 %indvar, %n
   %offsetA2 = add i64 %offsetA, %indvar
-  %ptrA = getelementptr float, float* %baseA, i64 %offsetA2
-  store float 42.0, float* %ptrA
+  %ptrA = getelementptr float, ptr %baseA, i64 %offsetA2
+  store float 42.0, ptr %ptrA
   br label %latch
 
 latch:

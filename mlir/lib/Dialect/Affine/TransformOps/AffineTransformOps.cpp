@@ -131,7 +131,12 @@ SimplifyBoundedAffineOpsOp::apply(TransformResults &results,
                   SimplifyAffineMinMaxOp<AffineMaxOp>>(getContext(), cstr);
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
   // Apply the simplification pattern to a fixpoint.
-  (void)applyOpPatternsAndFold(targets, frozenPatterns, /*strict=*/true);
+  if (failed(
+          applyOpPatternsAndFold(targets, frozenPatterns, /*strict=*/true))) {
+    auto diag = emitDefiniteFailure()
+                << "affine.min/max simplification did not converge";
+    return diag;
+  }
   return DiagnosedSilenceableFailure::success();
 }
 

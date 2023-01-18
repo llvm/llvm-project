@@ -59,13 +59,17 @@ bool AArch64InstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void AArch64InstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << markup("<reg:") << getRegisterName(RegNo) << markup(">");
+void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << markup("<reg:") << getRegisterName(Reg) << markup(">");
 }
 
-void AArch64InstPrinter::printRegName(raw_ostream &OS, unsigned RegNo,
+void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg,
                                       unsigned AltIdx) const {
-  OS << markup("<reg:") << getRegisterName(RegNo, AltIdx) << markup(">");
+  OS << markup("<reg:") << getRegisterName(Reg, AltIdx) << markup(">");
+}
+
+StringRef AArch64InstPrinter::getRegName(MCRegister Reg) const {
+  return getRegisterName(Reg);
 }
 
 void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -818,6 +822,10 @@ void AArch64AppleInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 
   AArch64InstPrinter::printInst(MI, Address, Annot, STI, O);
+}
+
+StringRef AArch64AppleInstPrinter::getRegName(MCRegister Reg) const {
+  return getRegisterName(Reg);
 }
 
 bool AArch64InstPrinter::printRangePrefetchAlias(const MCInst *MI,

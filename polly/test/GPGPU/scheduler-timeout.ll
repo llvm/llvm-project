@@ -69,10 +69,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start(i64, ptr nocapture) #0
 
 ; Function Attrs: nounwind uwtable
-define internal void @kernel_2mm(i32 %ni, i32 %nj, i32 %nk, i32 %nl, float %alpha, float %beta, [4096 x float]* %tmp, [4096 x float]* %A, [4096 x float]* %B, [4096 x float]* %C, [4096 x float]* %D) #1 {
+define internal void @kernel_2mm(i32 %ni, i32 %nj, i32 %nk, i32 %nl, float %alpha, float %beta, ptr %tmp, ptr %A, ptr %B, ptr %C, ptr %D) #1 {
 entry:
   br label %entry.split
 
@@ -88,22 +88,22 @@ for.cond31.preheader:                             ; preds = %for.inc28
 
 for.body6:                                        ; preds = %for.cond4.preheader, %for.inc25
   %indvars.iv16 = phi i64 [ 0, %for.cond4.preheader ], [ %indvars.iv.next17, %for.inc25 ]
-  %arrayidx8 = getelementptr inbounds [4096 x float], [4096 x float]* %tmp, i64 %indvars.iv19, i64 %indvars.iv16
-  store float 0.000000e+00, float* %arrayidx8, align 4, !tbaa !1
+  %arrayidx8 = getelementptr inbounds [4096 x float], ptr %tmp, i64 %indvars.iv19, i64 %indvars.iv16
+  store float 0.000000e+00, ptr %arrayidx8, align 4, !tbaa !1
   br label %for.body11
 
 for.body11:                                       ; preds = %for.body6, %for.body11
   %indvars.iv13 = phi i64 [ 0, %for.body6 ], [ %indvars.iv.next14, %for.body11 ]
-  %arrayidx15 = getelementptr inbounds [4096 x float], [4096 x float]* %A, i64 %indvars.iv19, i64 %indvars.iv13
-  %tmp22 = load float, float* %arrayidx15, align 4, !tbaa !1
+  %arrayidx15 = getelementptr inbounds [4096 x float], ptr %A, i64 %indvars.iv19, i64 %indvars.iv13
+  %tmp22 = load float, ptr %arrayidx15, align 4, !tbaa !1
   %mul = fmul float %tmp22, %alpha
-  %arrayidx19 = getelementptr inbounds [4096 x float], [4096 x float]* %B, i64 %indvars.iv13, i64 %indvars.iv16
-  %tmp23 = load float, float* %arrayidx19, align 4, !tbaa !1
+  %arrayidx19 = getelementptr inbounds [4096 x float], ptr %B, i64 %indvars.iv13, i64 %indvars.iv16
+  %tmp23 = load float, ptr %arrayidx19, align 4, !tbaa !1
   %mul20 = fmul float %mul, %tmp23
-  %arrayidx24 = getelementptr inbounds [4096 x float], [4096 x float]* %tmp, i64 %indvars.iv19, i64 %indvars.iv16
-  %tmp24 = load float, float* %arrayidx24, align 4, !tbaa !1
+  %arrayidx24 = getelementptr inbounds [4096 x float], ptr %tmp, i64 %indvars.iv19, i64 %indvars.iv16
+  %tmp24 = load float, ptr %arrayidx24, align 4, !tbaa !1
   %add = fadd float %tmp24, %mul20
-  store float %add, float* %arrayidx24, align 4, !tbaa !1
+  store float %add, ptr %arrayidx24, align 4, !tbaa !1
   %indvars.iv.next14 = add nuw nsw i64 %indvars.iv13, 1
   %exitcond15 = icmp ne i64 %indvars.iv.next14, 4096
   br i1 %exitcond15, label %for.body11, label %for.inc25
@@ -124,23 +124,23 @@ for.cond34.preheader:                             ; preds = %for.cond31.preheade
 
 for.body36:                                       ; preds = %for.cond34.preheader, %for.inc62
   %indvars.iv7 = phi i64 [ 0, %for.cond34.preheader ], [ %indvars.iv.next8, %for.inc62 ]
-  %arrayidx40 = getelementptr inbounds [4096 x float], [4096 x float]* %D, i64 %indvars.iv10, i64 %indvars.iv7
-  %tmp25 = load float, float* %arrayidx40, align 4, !tbaa !1
+  %arrayidx40 = getelementptr inbounds [4096 x float], ptr %D, i64 %indvars.iv10, i64 %indvars.iv7
+  %tmp25 = load float, ptr %arrayidx40, align 4, !tbaa !1
   %mul41 = fmul float %tmp25, %beta
-  store float %mul41, float* %arrayidx40, align 4, !tbaa !1
+  store float %mul41, ptr %arrayidx40, align 4, !tbaa !1
   br label %for.body44
 
 for.body44:                                       ; preds = %for.body36, %for.body44
   %indvars.iv = phi i64 [ 0, %for.body36 ], [ %indvars.iv.next, %for.body44 ]
-  %arrayidx48 = getelementptr inbounds [4096 x float], [4096 x float]* %tmp, i64 %indvars.iv10, i64 %indvars.iv
-  %tmp26 = load float, float* %arrayidx48, align 4, !tbaa !1
-  %arrayidx52 = getelementptr inbounds [4096 x float], [4096 x float]* %C, i64 %indvars.iv, i64 %indvars.iv7
-  %tmp27 = load float, float* %arrayidx52, align 4, !tbaa !1
+  %arrayidx48 = getelementptr inbounds [4096 x float], ptr %tmp, i64 %indvars.iv10, i64 %indvars.iv
+  %tmp26 = load float, ptr %arrayidx48, align 4, !tbaa !1
+  %arrayidx52 = getelementptr inbounds [4096 x float], ptr %C, i64 %indvars.iv, i64 %indvars.iv7
+  %tmp27 = load float, ptr %arrayidx52, align 4, !tbaa !1
   %mul53 = fmul float %tmp26, %tmp27
-  %arrayidx57 = getelementptr inbounds [4096 x float], [4096 x float]* %D, i64 %indvars.iv10, i64 %indvars.iv7
-  %tmp28 = load float, float* %arrayidx57, align 4, !tbaa !1
+  %arrayidx57 = getelementptr inbounds [4096 x float], ptr %D, i64 %indvars.iv10, i64 %indvars.iv7
+  %tmp28 = load float, ptr %arrayidx57, align 4, !tbaa !1
   %add58 = fadd float %tmp28, %mul53
-  store float %add58, float* %arrayidx57, align 4, !tbaa !1
+  store float %add58, ptr %arrayidx57, align 4, !tbaa !1
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 4096
   br i1 %exitcond, label %for.body44, label %for.inc62
@@ -160,7 +160,7 @@ for.end67:                                        ; preds = %for.inc65
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end(i64, ptr nocapture) #0
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

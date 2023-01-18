@@ -362,9 +362,11 @@ define i16 @urem_expand(i16 %x) {
 
 define i16 @urem_narrow(i16 %x) {
 ; CHECK-LABEL: @urem_narrow(
-; CHECK-NEXT:    [[UREM:%.*]] = urem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[UREM_LHS_TRUNC:%.*]] = trunc i16 [[X:%.*]] to i8
+; CHECK-NEXT:    [[UREM1:%.*]] = urem i8 [[UREM_LHS_TRUNC]], 42
+; CHECK-NEXT:    [[UREM_ZEXT:%.*]] = zext i8 [[UREM1]] to i16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 85
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[UREM]], i16 24
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[UREM_ZEXT]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %urem = urem i16 %x, 42
@@ -388,11 +390,10 @@ define i16 @urem_insufficient(i16 %x) {
 
 define i16 @srem_elide(i16 %x) {
 ; CHECK-LABEL: @srem_elide(
-; CHECK-NEXT:    [[SREM:%.*]] = srem i16 [[X:%.*]], 42
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i16 [[X]], 42
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i16 [[X:%.*]], 42
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i16 [[X]], -42
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], i16 [[SREM]], i16 24
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], i16 [[X]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %srem = srem i16 %x, 42
@@ -403,11 +404,32 @@ define i16 @srem_elide(i16 %x) {
   ret i16 %sel
 }
 
+define i16 @srem_narrow(i16 %x) {
+; CHECK-LABEL: @srem_narrow(
+; CHECK-NEXT:    [[SREM_LHS_TRUNC:%.*]] = trunc i16 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SREM1:%.*]] = srem i8 [[SREM_LHS_TRUNC]], 42
+; CHECK-NEXT:    [[SREM_SEXT:%.*]] = sext i8 [[SREM1]] to i16
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i16 [[X]], 43
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i16 [[X]], -43
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], i16 [[SREM_SEXT]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %srem = srem i16 %x, 42
+  %cmp1 = icmp slt i16 %x, 43
+  %cmp2 = icmp sgt i16 %x, -43
+  %and = and i1 %cmp1, %cmp2
+  %sel = select i1 %and, i16 %srem, i16 24
+  ret i16 %sel
+}
+
 define i16 @srem_convert(i16 %x) {
 ; CHECK-LABEL: @srem_convert(
-; CHECK-NEXT:    [[SREM:%.*]] = srem i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[X_NONNEG:%.*]] = sub i16 0, [[X:%.*]]
+; CHECK-NEXT:    [[SREM1:%.*]] = urem i16 [[X_NONNEG]], 42
+; CHECK-NEXT:    [[SREM1_NEG:%.*]] = sub i16 0, [[SREM1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM]], i16 24
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM1_NEG]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %srem = srem i16 %x, 42
@@ -418,9 +440,11 @@ define i16 @srem_convert(i16 %x) {
 
 define i16 @sdiv_convert(i16 %x) {
 ; CHECK-LABEL: @sdiv_convert(
-; CHECK-NEXT:    [[SREM:%.*]] = sdiv i16 [[X:%.*]], 42
+; CHECK-NEXT:    [[X_NONNEG:%.*]] = sub i16 0, [[X:%.*]]
+; CHECK-NEXT:    [[SREM1:%.*]] = udiv i16 [[X_NONNEG]], 42
+; CHECK-NEXT:    [[SREM1_NEG:%.*]] = sub i16 0, [[SREM1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM]], i16 24
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[SREM1_NEG]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %srem = sdiv i16 %x, 42
@@ -483,7 +507,7 @@ define i16 @umin_elide(i16 %x) {
 
 define i16 @ashr_convert(i16 %x, i16 %y) {
 ; CHECK-LABEL: @ashr_convert(
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ASHR:%.*]] = lshr i16 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[X]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[ASHR]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
@@ -496,7 +520,7 @@ define i16 @ashr_convert(i16 %x, i16 %y) {
 
 define i32 @sext_convert(i16 %x) {
 ; CHECK-LABEL: @sext_convert(
-; CHECK-NEXT:    [[EXT:%.*]] = sext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i16 [[X]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[EXT]], i32 24
 ; CHECK-NEXT:    ret i32 [[SEL]]
@@ -522,9 +546,8 @@ define i16 @infer_flags(i16 %x) {
 
 define i16 @and_elide(i16 %x) {
 ; CHECK-LABEL: @and_elide(
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 8
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[AND]], i16 24
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], 8
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[X]], i16 24
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %and = and i16 %x, 7

@@ -1,4 +1,4 @@
-; RUN: opt -passes=instcombine -S %s -o - -experimental-assignment-tracking \
+; RUN: opt -opaque-pointers=0 -passes=instcombine -S %s -o - -experimental-assignment-tracking \
 ; RUN: | FileCheck %s
 
 ;; NOTE: This test uses typed pointers because it is testing a code path that
@@ -18,7 +18,7 @@
 ;;   return e;
 ;; }
 ;; $ clang -O2 -c -g reduce.cpp -fno-inline -Xclang -disable-llvm-passes -emit-llvm -S \
-;;   | opt -passes=declare-to-assign -S
+;;   | opt -opaque-pointers=0 -passes=declare-to-assign -S
 
 ; CHECK: entry:
 ; CHECK-NEXT: %retval = alloca i64, align 8, !DIAssignID ![[ID:[0-9]+]]

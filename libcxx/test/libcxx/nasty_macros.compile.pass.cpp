@@ -193,7 +193,9 @@ END-SCRIPT
 #include <complex.h>
 #include <concepts>
 #include <condition_variable>
-#include <coroutine>
+#if (defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)
+#   include <coroutine>
+#endif
 #include <csetjmp>
 #include <csignal>
 #include <cstdarg>

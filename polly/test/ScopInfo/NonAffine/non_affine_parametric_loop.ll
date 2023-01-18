@@ -6,16 +6,16 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;     A[INDEX[i]] = i;
 ; }
 
-define void @foo(i64 %n, double* noalias %A, i64* noalias %INDEX) {
+define void @foo(i64 %n, ptr noalias %A, ptr noalias %INDEX) {
 entry:
   br label %for.body
 
 for.body:
   %i = phi i64 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i64, i64* %INDEX, i64 %i
-  %val = load i64, i64* %arrayidx
-  %arrayidx1 = getelementptr inbounds double, double* %A, i64 %val
-  store double 1.0, double* %arrayidx1
+  %arrayidx = getelementptr inbounds i64, ptr %INDEX, i64 %i
+  %val = load i64, ptr %arrayidx
+  %arrayidx1 = getelementptr inbounds double, ptr %A, i64 %val
+  store double 1.0, ptr %arrayidx1
   %inc = add nsw i64 %i, 1
   %exitcond = icmp eq i64 %inc, %n
   br i1 %exitcond, label %for.end, label %for.body

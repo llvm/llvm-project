@@ -1,4 +1,4 @@
-; RUN: opt < %s  -O0 -S | FileCheck  %s
+; RUN: opt -opaque-pointers=0 < %s  -O0 -S | FileCheck  %s
 
 target datalayout = "p:64:64:64"
 

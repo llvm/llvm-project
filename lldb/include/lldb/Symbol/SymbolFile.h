@@ -412,6 +412,15 @@ public:
   virtual bool GetDebugInfoHadFrameVariableErrors() const = 0;
   virtual void SetDebugInfoHadFrameVariableErrors() = 0;
 
+  virtual lldb::TypeSP
+  MakeType(lldb::user_id_t uid, ConstString name,
+           std::optional<uint64_t> byte_size, SymbolContextScope *context,
+           lldb::user_id_t encoding_uid,
+           Type::EncodingDataType encoding_uid_type, const Declaration &decl,
+           const CompilerType &compiler_qual_type,
+           Type::ResolveState compiler_type_resolve_state,
+           uint32_t opaque_payload = 0) = 0;
+
 protected:
   void AssertModuleLock();
 
@@ -490,6 +499,26 @@ public:
   }
   void SetDebugInfoHadFrameVariableErrors() override {
      m_debug_info_had_variable_errors = true;
+  }
+
+  /// This function is used to create types that belong to a SymbolFile. The
+  /// symbol file will own a strong reference to the type in an internal type
+  /// list.
+  lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
+                        std::optional<uint64_t> byte_size,
+                        SymbolContextScope *context,
+                        lldb::user_id_t encoding_uid,
+                        Type::EncodingDataType encoding_uid_type,
+                        const Declaration &decl,
+                        const CompilerType &compiler_qual_type,
+                        Type::ResolveState compiler_type_resolve_state,
+                        uint32_t opaque_payload = 0) override {
+     lldb::TypeSP type_sp (new Type(
+         uid, this, name, byte_size, context, encoding_uid,
+         encoding_uid_type, decl, compiler_qual_type,
+         compiler_type_resolve_state, opaque_payload));
+     m_type_list.Insert(type_sp);
+     return type_sp;
   }
 
 protected:

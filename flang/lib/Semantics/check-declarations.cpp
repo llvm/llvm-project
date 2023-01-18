@@ -798,7 +798,7 @@ void CheckHelper::CheckArraySpec(
   std::optional<parser::MessageFixedText> msg;
   if (symbol.test(Symbol::Flag::CrayPointee) && !isExplicit &&
       !canBeAssumedSize) {
-    msg = "Cray pointee '%s' must have must have explicit shape or"
+    msg = "Cray pointee '%s' must have explicit shape or"
           " assumed size"_err_en_US;
   } else if (IsAllocatableOrPointer(symbol) && !canBeDeferred &&
       !isAssumedRank) {

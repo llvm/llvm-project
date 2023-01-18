@@ -7242,10 +7242,12 @@ static void __kmp_do_serial_initialize(void) {
   __kmp_register_atfork();
 #endif
 
-#if !KMP_DYNAMIC_LIB
+#if !KMP_DYNAMIC_LIB ||                                                        \
+    ((KMP_COMPILER_ICC || KMP_COMPILER_ICX) && KMP_OS_DARWIN)
   {
     /* Invoke the exit handler when the program finishes, only for static
-       library. For dynamic library, we already have _fini and DllMain. */
+       library and macOS* dynamic. For other dynamic libraries, we already
+       have _fini and DllMain. */
     int rc = atexit(__kmp_internal_end_atexit);
     if (rc != 0) {
       __kmp_fatal(KMP_MSG(FunctionError, "atexit()"), KMP_ERR(rc),

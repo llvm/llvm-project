@@ -106,10 +106,11 @@ static states step(struct re_guts *, sopno, sopno, states, int, states);
 #define	NONCHAR(c)	((c) > CHAR_MAX)
 #define	NNONCHAR	(CODEMAX-CHAR_MAX)
 #ifdef REDEBUG
-static void print(struct match *, char *, states, int, FILE *);
+static void print(struct match *, const char *, states, int, FILE *);
 #endif
 #ifdef REDEBUG
-static void at(struct match *, char *, char *, char *, sopno, sopno);
+static void at(
+	struct match *, const char *, const char *, const char *, sopno, sopno);
 #endif
 #ifdef REDEBUG
 static char *pchar(int);
@@ -589,6 +590,7 @@ backref(struct match *m, const char *start, const char *stop, sopno startst,
 				return(NULL);
 			break;
 		case O_QUEST:
+		case O_CH:
 			break;
 		case OOR1:	/* matches null but needs to skip */
 			ss++;
@@ -661,7 +663,7 @@ backref(struct match *m, const char *start, const char *stop, sopno startst,
 		esub = ss + OPND(s) - 1;
 		assert(OP(m->g->strip[esub]) == OOR1);
 		for (;;) {	/* find first matching branch */
-			dp = backref(m, sp, stop, ssub, esub, lev, rec);
+			dp = backref(m, sp, stop, ssub, stopst, lev, rec);
 			if (dp != NULL)
 				return(dp);
 			/* that one missed, try next one */
@@ -997,7 +999,7 @@ step(struct re_guts *g,
  - print - print a set of states
  */
 static void
-print(struct match *m, char *caption, states st, int ch, FILE *d)
+print(struct match *m, const char *caption, states st, int ch, FILE *d)
 {
 	struct re_guts *g = m->g;
 	int i;
@@ -1021,8 +1023,8 @@ print(struct match *m, char *caption, states st, int ch, FILE *d)
  - at - print current situation
  */
 static void
-at(struct match *m, char *title, char *start, char *stop, sopno startst,
-    sopno stopst)
+at(struct match *m, const char *title, const char *start, const char *stop,
+	sopno startst, sopno stopst)
 {
 	if (!(m->eflags&REG_TRACE))
 		return;
@@ -1047,7 +1049,7 @@ pchar(int ch)
 {
 	static char pbuf[10];
 
-	if (isPrint(ch) || ch == ' ')
+	if (isprint(ch) || ch == ' ')
 		(void)snprintf(pbuf, sizeof pbuf, "%c", ch);
 	else
 		(void)snprintf(pbuf, sizeof pbuf, "\\%o", ch);

@@ -15,7 +15,7 @@
 
 ; IR: @GOMP_parallel_loop_runtime_start
 
-; LIBOMP-IR: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call
+; LIBOMP-IR: call void (ptr, i32, ptr, ...) @__kmpc_fork_call
 ; LIBOMP-IR: call void @__kmpc_dispatch_init_{{[4|8]}}
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -35,17 +35,17 @@ for.cond.533.preheader:                           ; preds = %for.inc.530
 
 for.cond.499.preheader:                           ; preds = %for.inc.530, %for.cond.463.preheader
   %indvars.iv140 = phi i64 [ 0, %for.cond.463.preheader ], [ %indvars.iv.next141, %for.inc.530 ]
-  %arrayidx483 = getelementptr inbounds [9 x [23 x i32]], [9 x [23 x i32]]* @longLimit, i64 0, i64 %indvars.iv140, i64 0
-  store i32 undef, i32* %arrayidx483, align 4, !tbaa !1
-  %arrayidx487 = getelementptr inbounds [9 x [23 x i32]], [9 x [23 x i32]]* @longLimit, i64 0, i64 %indvars.iv140, i64 0
-  %tmp = load i32, i32* %arrayidx487, align 4, !tbaa !1
+  %arrayidx483 = getelementptr inbounds [9 x [23 x i32]], ptr @longLimit, i64 0, i64 %indvars.iv140, i64 0
+  store i32 undef, ptr %arrayidx483, align 4, !tbaa !1
+  %arrayidx487 = getelementptr inbounds [9 x [23 x i32]], ptr @longLimit, i64 0, i64 %indvars.iv140, i64 0
+  %tmp = load i32, ptr %arrayidx487, align 4, !tbaa !1
   %indvars.iv.next135 = add nuw nsw i64 0, 1
   br label %for.body.502
 
 for.body.502:                                     ; preds = %for.inc.527, %for.cond.499.preheader
   %indvars.iv137 = phi i64 [ 0, %for.cond.499.preheader ], [ %indvars.iv.next138, %for.inc.527 ]
-  %arrayidx518 = getelementptr inbounds [9 x [14 x i32]], [9 x [14 x i32]]* @shortLimit, i64 0, i64 %indvars.iv140, i64 %indvars.iv137
-  %tmp1 = load i32, i32* %arrayidx518, align 4, !tbaa !1
+  %arrayidx518 = getelementptr inbounds [9 x [14 x i32]], ptr @shortLimit, i64 0, i64 %indvars.iv140, i64 %indvars.iv137
+  %tmp1 = load i32, ptr %arrayidx518, align 4, !tbaa !1
   %cmp519 = icmp sgt i32 %tmp1, %down_sample_sblimit
   br i1 %cmp519, label %if.then.521, label %for.inc.527
 

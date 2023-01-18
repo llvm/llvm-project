@@ -12,7 +12,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @wraps(i32* %A, i32 %p, i16 signext %q, i8 signext %r1, i8 signext %r2) {
+define void @wraps(ptr %A, i32 %p, i16 signext %q, i8 signext %r1, i8 signext %r2) {
 entry:
   br label %for.cond
 
@@ -25,13 +25,13 @@ for.body:                                         ; preds = %for.cond
   %conv3 = sext i8 %r1 to i64
   %conv4 = sext i8 %r2 to i64
   %add = add nsw i64 %conv3, %conv4
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %add
-  %tmp = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %add
+  %tmp = load i32, ptr %arrayidx, align 4
   %conv5 = sext i16 %q to i32
   %add6 = add nsw i32 %conv5, %p
   %idxprom7 = sext i32 %add6 to i64
-  %arrayidx8 = getelementptr inbounds i32, i32* %A, i64 %idxprom7
-  store i32 %tmp, i32* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %A, i64 %idxprom7
+  store i32 %tmp, ptr %arrayidx8, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

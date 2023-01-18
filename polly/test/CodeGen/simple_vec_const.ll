@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-codegen -polly-vectorizer=polly -S \
+; RUN: opt -opaque-pointers=0 %loadPolly -basic-aa -polly-codegen -polly-vectorizer=polly -S \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ;#define N 1024

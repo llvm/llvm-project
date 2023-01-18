@@ -3081,7 +3081,7 @@ void AMDGPULegalizerInfo::buildMultiply(
       } else {
         bool IsHighest = 2 * i >= Accum.size();
         Register SeparateOddOut[2];
-        auto LocalAccum = makeMutableArrayRef(SeparateOddOut)
+        auto LocalAccum = MutableArrayRef(SeparateOddOut)
                               .take_front(IsHighest ? 1 : 2);
         OddCarry = buildMadChain(LocalAccum, 2 * i - 1, OddCarryIn);
 

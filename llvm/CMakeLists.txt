@@ -974,10 +974,7 @@ endif()
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh
 set(LLVM_HAVE_TFLITE "" CACHE BOOL "Use tflite")
 if (LLVM_HAVE_TFLITE)
-  find_package(protobuf REQUIRED)
   find_package(tensorflow-lite REQUIRED)
-  set(LLVM_PROTOBUF_OUT_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/protobuf_gen)
-  include_directories(${LLVM_PROTOBUF_OUT_DIR})
 endif()
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
@@ -993,13 +990,7 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   set(TENSORFLOW_AOT_COMPILER
     "${TENSORFLOW_AOT_PATH}/../../../../bin/saved_model_cli"
     CACHE PATH "Path to the Tensorflow AOT compiler")
-  # This needs to happen to avoid clashing protobuf codegen when building both AOT and development mode.
-  # We plan to replace protobuf with a simpler alternative, so this will go away.
-  file(COPY ${TENSORFLOW_AOT_PATH}/include DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow
-    NO_SOURCE_PERMISSIONS
-    PATTERN "google/*" EXCLUDE
-    PATTERN "*.pb.h" EXCLUDE)
-  include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow/include)
+  include_directories(${TENSORFLOW_AOT_PATH}/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
   install(TARGETS tf_xla_runtime EXPORT LLVMExports

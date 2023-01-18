@@ -28,8 +28,10 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_convertible.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/declval.h>
 #include <__utility/move.h>
 

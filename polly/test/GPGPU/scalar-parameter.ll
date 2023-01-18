@@ -18,7 +18,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; KERNEL: define ptx_kernel void @kernel_0(i8* %MemRef_A, float %MemRef_b)
+; KERNEL: define ptx_kernel void @kernel_0(ptr %MemRef_A, float %MemRef_b)
 
 ; CODE: Code
 ; CODE-NEXT: ====
@@ -43,7 +43,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;        A[i] += b;
 ;    }
 ;
-define void @float(float* %A, float %b) {
+define void @float(ptr %A, float %b) {
 bb:
   br label %bb1
 
@@ -53,10 +53,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp3 = load float, float* %tmp, align 4
+  %tmp = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp3 = load float, ptr %tmp, align 4
   %tmp4 = fadd float %tmp3, %b
-  store float %tmp4, float* %tmp, align 4
+  store float %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -67,10 +67,10 @@ bb7:                                              ; preds = %bb1
   ret void
 }
 
-; KERNEL: define ptx_kernel void @kernel_0(i8* %MemRef_A, double %MemRef_b)
+; KERNEL: define ptx_kernel void @kernel_0(ptr %MemRef_A, double %MemRef_b)
 ; KERNEL-NEXT: entry:
 ; KERNEL-NEXT:   %b.s2a = alloca double
-; KERNEL-NEXT:   store double %MemRef_b, double* %b.s2a
+; KERNEL-NEXT:   store double %MemRef_b, ptr %b.s2a
 
 ; CODE: Code
 ; CODE-NEXT: ====
@@ -95,7 +95,7 @@ bb7:                                              ; preds = %bb1
 ;        A[i] += b;
 ;    }
 ;
-define void @double(double* %A, double %b) {
+define void @double(ptr %A, double %b) {
 bb:
   br label %bb1
 
@@ -105,10 +105,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds double, double* %A, i64 %i.0
-  %tmp3 = load double, double* %tmp, align 4
+  %tmp = getelementptr inbounds double, ptr %A, i64 %i.0
+  %tmp3 = load double, ptr %tmp, align 4
   %tmp4 = fadd double %tmp3, %b
-  store double %tmp4, double* %tmp, align 4
+  store double %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -142,7 +142,7 @@ bb7:                                              ; preds = %bb1
 ;        A[i] += b;
 ;    }
 ;
-define void @i1(i1* %A, i1 %b) {
+define void @i1(ptr %A, i1 %b) {
 bb:
   br label %bb1
 
@@ -152,10 +152,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i1, i1* %A, i64 %i.0
-  %tmp3 = load i1, i1* %tmp, align 4
+  %tmp = getelementptr inbounds i1, ptr %A, i64 %i.0
+  %tmp3 = load i1, ptr %tmp, align 4
   %tmp4 = add i1 %tmp3, %b
-  store i1 %tmp4, i1* %tmp, align 4
+  store i1 %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -189,7 +189,7 @@ bb7:                                              ; preds = %bb1
 ;        A[i] += b;
 ;    }
 ;
-define void @i3(i3* %A, i3 %b) {
+define void @i3(ptr %A, i3 %b) {
 bb:
   br label %bb1
 
@@ -199,10 +199,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i3, i3* %A, i64 %i.0
-  %tmp3 = load i3, i3* %tmp, align 4
+  %tmp = getelementptr inbounds i3, ptr %A, i64 %i.0
+  %tmp3 = load i3, ptr %tmp, align 4
   %tmp4 = add i3 %tmp3, %b
-  store i3 %tmp4, i3* %tmp, align 4
+  store i3 %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -236,7 +236,7 @@ bb7:                                              ; preds = %bb1
 ;        A[i] += b;
 ;    }
 ;
-define void @i8(i8* %A, i8 %b) {
+define void @i8(ptr %A, i8 %b) {
 bb:
   br label %bb1
 
@@ -246,10 +246,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i8, i8* %A, i64 %i.0
-  %tmp3 = load i8, i8* %tmp, align 4
+  %tmp = getelementptr inbounds i8, ptr %A, i64 %i.0
+  %tmp3 = load i8, ptr %tmp, align 4
   %tmp4 = add i8 %tmp3, %b
-  store i8 %tmp4, i8* %tmp, align 4
+  store i8 %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -262,14 +262,12 @@ bb7:                                              ; preds = %bb1
 
 ; IR-LABEL: @i8
 
-; IR: [[REGA:%.+]] = call i8* @polly_getDevicePtr(i8* %p_dev_array_MemRef_A)
-; IR-NEXT: [[REGB:%.+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 0
-; IR-NEXT: store i8* [[REGA:%.+]], i8** %polly_launch_0_param_0
-; IR-NEXT: [[REGC:%.+]] = bitcast i8** %polly_launch_0_param_0 to i8*
-; IR-NEXT: store i8* [[REGC]], i8** [[REGB]]
-; IR-NEXT: store i8 %b, i8* %polly_launch_0_param_1
-; IR-NEXT: [[REGD:%.+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
-; IR-NEXT: store i8* %polly_launch_0_param_1, i8** [[REGD]]
+; IR: [[REGA:%.+]] = call ptr @polly_getDevicePtr(ptr %p_dev_array_MemRef_A)
+; IR-NEXT: store ptr [[REGA:%.+]], ptr %polly_launch_0_param_0
+; IR-NEXT: store ptr %polly_launch_0_param_0, ptr %polly_launch_0_params
+; IR-NEXT: store i8 %b, ptr %polly_launch_0_param_1
+; IR-NEXT: [[REGD:%.+]] = getelementptr [2 x ptr], ptr %polly_launch_0_params, i64 0, i64 1
+; IR-NEXT: store ptr %polly_launch_0_param_1, ptr [[REGD]]
 
 ; CODE: Code
 ; CODE-NEXT: ====
@@ -294,7 +292,7 @@ bb7:                                              ; preds = %bb1
 ;        A[i] += b;
 ;    }
 ;
-define void @i32(i32* %A, i32 %b) {
+define void @i32(ptr %A, i32 %b) {
 bb:
   br label %bb1
 
@@ -304,10 +302,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i32, i32* %A, i64 %i.0
-  %tmp3 = load i32, i32* %tmp, align 4
+  %tmp = getelementptr inbounds i32, ptr %A, i64 %i.0
+  %tmp3 = load i32, ptr %tmp, align 4
   %tmp4 = add i32 %tmp3, %b
-  store i32 %tmp4, i32* %tmp, align 4
+  store i32 %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -341,7 +339,7 @@ bb7:                                              ; preds = %bb1
 ;        A[i] += b;
 ;    }
 ;
-define void @i60(i60* %A, i60 %b) {
+define void @i60(ptr %A, i60 %b) {
 bb:
   br label %bb1
 
@@ -351,10 +349,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i60, i60* %A, i64 %i.0
-  %tmp3 = load i60, i60* %tmp, align 4
+  %tmp = getelementptr inbounds i60, ptr %A, i64 %i.0
+  %tmp3 = load i60, ptr %tmp, align 4
   %tmp4 = add i60 %tmp3, %b
-  store i60 %tmp4, i60* %tmp, align 4
+  store i60 %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -388,7 +386,7 @@ bb7:                                              ; preds = %bb1
 ;        A[i] += b;
 ;    }
 ;
-define void @i64(i64* %A, i64 %b) {
+define void @i64(ptr %A, i64 %b) {
 bb:
   br label %bb1
 
@@ -398,10 +396,10 @@ bb1:                                              ; preds = %bb5, %bb
   br i1 %exitcond, label %bb2, label %bb7
 
 bb2:                                              ; preds = %bb1
-  %tmp = getelementptr inbounds i64, i64* %A, i64 %i.0
-  %tmp3 = load i64, i64* %tmp, align 4
+  %tmp = getelementptr inbounds i64, ptr %A, i64 %i.0
+  %tmp3 = load i64, ptr %tmp, align 4
   %tmp4 = add i64 %tmp3, %b
-  store i64 %tmp4, i64* %tmp, align 4
+  store i64 %tmp4, ptr %tmp, align 4
   br label %bb5
 
 bb5:                                              ; preds = %bb2

@@ -444,8 +444,16 @@ void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
 /// `new MachineBasicBlock'.
 MachineBasicBlock *
 MachineFunction::CreateMachineBasicBlock(const BasicBlock *bb) {
-  return new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
-             MachineBasicBlock(*this, bb);
+  MachineBasicBlock *MBB =
+      new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
+          MachineBasicBlock(*this, bb);
+  // Set BBID for `-basic-block=sections=labels` and
+  // `-basic-block-sections=list` to allow robust mapping of profiles to basic
+  // blocks.
+  if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
+      Target.getBBSectionsType() == BasicBlockSection::List)
+    MBB->setBBID(NextBBID++);
+  return MBB;
 }
 
 /// Delete the given MachineBasicBlock.
@@ -759,10 +767,6 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
 
   const Instruction *FirstI = LandingPad->getBasicBlock()->getFirstNonPHI();
   if (const auto *LPI = dyn_cast<LandingPadInst>(FirstI)) {
-    if (const auto *PF =
-            dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts()))
-      getMMI().addPersonality(PF);
-
     // If there's no typeid list specified, then "cleanup" is implicit.
     // Otherwise, id 0 is reserved for the cleanup action.
     if (LPI->isCleanup() && LPI->getNumClauses() != 0)
