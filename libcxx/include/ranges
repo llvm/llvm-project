@@ -265,8 +265,15 @@ namespace std::ranges {
              (forward_range<V> || tiny-range<Pattern>)
   class lazy_split_view;
 
+  // [range.split], split view
+  template<forward_range V, forward_range Pattern>
+    requires view<V> && view<Pattern> &&
+             indirectly_comparable<iterator_t<V>, iterator_t<Pattern>, ranges::equal_to>
+  class split_view;
+
   namespace views {
     inline constexpr unspecified lazy_split = unspecified;
+    inline constexpr unspecified split = unspecified;
   }
 
   // [range.istream], istream view
@@ -360,6 +367,7 @@ namespace std {
 #include <__ranges/reverse_view.h>
 #include <__ranges/single_view.h>
 #include <__ranges/size.h>
+#include <__ranges/split_view.h>
 #include <__ranges/subrange.h>
 #include <__ranges/take_view.h>
 #include <__ranges/take_while_view.h>
