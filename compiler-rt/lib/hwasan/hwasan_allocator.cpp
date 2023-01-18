@@ -389,16 +389,6 @@ HwasanChunkView FindHeapChunkByAddress(uptr address) {
   return HwasanChunkView(reinterpret_cast<uptr>(block), metadata);
 }
 
-static inline HwasanChunkView FindHeapChunkByAddressFastLocked(uptr address) {
-  void *block =
-      allocator.GetBlockBeginFastLocked(reinterpret_cast<void *>(address));
-  if (!block)
-    return HwasanChunkView();
-  Metadata *metadata =
-      reinterpret_cast<Metadata *>(allocator.GetMetaData(block));
-  return HwasanChunkView(reinterpret_cast<uptr>(block), metadata);
-}
-
 static uptr AllocationSize(const void *tagged_ptr) {
   const void *untagged_ptr = UntagPtr(tagged_ptr);
   if (!untagged_ptr) return 0;
@@ -513,23 +503,33 @@ void GetAllocatorGlobalRange(uptr *begin, uptr *end) {
 }
 
 uptr PointsIntoChunk(void *p) {
-  uptr addr = reinterpret_cast<uptr>(p);
-  __hwasan::HwasanChunkView view =
-      __hwasan::FindHeapChunkByAddressFastLocked(addr);
-  if (!view.IsAllocated())
+  void *block = __hwasan::allocator.GetBlockBeginFastLocked(p);
+  if (!block)
     return 0;
-  uptr chunk = view.Beg();
-  if (view.AddrIsInside(addr))
+  __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
+      __hwasan::allocator.GetMetaData(block));
+  if (!metadata || !metadata->IsAllocated())
+    return 0;
+
+  uptr chunk = reinterpret_cast<uptr>(p);
+  if (__hwasan::HwasanChunkView(chunk, metadata).AddrIsInside(chunk))
     return chunk;
-  if (IsSpecialCaseOfOperatorNew0(chunk, view.UsedSize(), addr))
+  if (IsSpecialCaseOfOperatorNew0(chunk, metadata->GetRequestedSize(), chunk))
     return chunk;
   return 0;
 }
 
 uptr GetUserBegin(uptr chunk) {
-  // FIXME: All usecases provide chunk address, FindHeapChunkByAddressFastLocked
-  // is not needed.
-  return __hwasan::FindHeapChunkByAddressFastLocked(chunk).Beg();
+  void *block =
+      __hwasan::allocator.GetBlockBeginFastLocked(reinterpret_cast<void *>(chunk));
+  if (!block)
+    return 0;
+  __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
+      __hwasan::allocator.GetMetaData(block));
+  if (!metadata || !metadata->IsAllocated())
+    return 0;
+
+  return reinterpret_cast<uptr>(block);
 }
 
 LsanMetadata::LsanMetadata(uptr chunk) {
