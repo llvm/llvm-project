@@ -450,9 +450,7 @@ define <2 x i64> @sabd_v2i64_nsw(<2 x i64> %a, <2 x i64> %b) #0 {
 define <16 x i8> @smaxmin_v16i8(<16 x i8> %0, <16 x i8> %1) {
 ; CHECK-LABEL: smaxmin_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smax v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    smin v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    sub v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    sabd v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %a = tail call <16 x i8> @llvm.smax.v16i8(<16 x i8> %0, <16 x i8> %1)
   %b = tail call <16 x i8> @llvm.smin.v16i8(<16 x i8> %0, <16 x i8> %1)
@@ -463,9 +461,7 @@ define <16 x i8> @smaxmin_v16i8(<16 x i8> %0, <16 x i8> %1) {
 define <8 x i16> @smaxmin_v8i16(<8 x i16> %0, <8 x i16> %1) {
 ; CHECK-LABEL: smaxmin_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smax v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    smin v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    sub v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    sabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %a = tail call <8 x i16> @llvm.smax.v8i16(<8 x i16> %0, <8 x i16> %1)
   %b = tail call <8 x i16> @llvm.smin.v8i16(<8 x i16> %0, <8 x i16> %1)
@@ -476,9 +472,7 @@ define <8 x i16> @smaxmin_v8i16(<8 x i16> %0, <8 x i16> %1) {
 define <4 x i32> @smaxmin_v4i32(<4 x i32> %0, <4 x i32> %1) {
 ; CHECK-LABEL: smaxmin_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smax v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sub v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %a = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> %0, <4 x i32> %1)
   %b = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> %0, <4 x i32> %1)
@@ -504,9 +498,7 @@ define <2 x i64> @smaxmin_v2i64(<2 x i64> %0, <2 x i64> %1) {
 define <16 x i8> @umaxmin_v16i8(<16 x i8> %0, <16 x i8> %1) {
 ; CHECK-LABEL: umaxmin_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    umin v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    sub v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    uabd v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %a = tail call <16 x i8> @llvm.umax.v16i8(<16 x i8> %0, <16 x i8> %1)
   %b = tail call <16 x i8> @llvm.umin.v16i8(<16 x i8> %0, <16 x i8> %1)
@@ -517,9 +509,7 @@ define <16 x i8> @umaxmin_v16i8(<16 x i8> %0, <16 x i8> %1) {
 define <8 x i16> @umaxmin_v8i16(<8 x i16> %0, <8 x i16> %1) {
 ; CHECK-LABEL: umaxmin_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v2.8h, v0.8h, v1.8h
-; CHECK-NEXT:    umin v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    sub v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    uabd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %a = tail call <8 x i16> @llvm.umax.v8i16(<8 x i16> %0, <8 x i16> %1)
   %b = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> %0, <8 x i16> %1)
@@ -530,9 +520,7 @@ define <8 x i16> @umaxmin_v8i16(<8 x i16> %0, <8 x i16> %1) {
 define <4 x i32> @umaxmin_v4i32(<4 x i32> %0, <4 x i32> %1) {
 ; CHECK-LABEL: umaxmin_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    sub v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    uabd v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %a = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> %0, <4 x i32> %1)
   %b = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> %0, <4 x i32> %1)
@@ -558,9 +546,7 @@ define <2 x i64> @umaxmin_v2i64(<2 x i64> %0, <2 x i64> %1) {
 define <16 x i8> @umaxmin_v16i8_com1(<16 x i8> %0, <16 x i8> %1) {
 ; CHECK-LABEL: umaxmin_v16i8_com1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umax v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    umin v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    sub v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    uabd v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %a = tail call <16 x i8> @llvm.umax.v16i8(<16 x i8> %0, <16 x i8> %1)
   %b = tail call <16 x i8> @llvm.umin.v16i8(<16 x i8> %1, <16 x i8> %0)
