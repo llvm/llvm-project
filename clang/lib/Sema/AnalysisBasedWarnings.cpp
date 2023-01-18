@@ -2153,12 +2153,15 @@ class UnsafeBufferUsageReporter : public UnsafeBufferUsageHandler {
 public:
   UnsafeBufferUsageReporter(Sema &S) : S(S) {}
 
-  void handleUnsafeOperation(const Stmt *Operation) override {
+  void handleUnsafeOperation(const Stmt *Operation,
+                             bool IsRelatedToDecl) override {
     SourceLocation Loc;
     SourceRange Range;
+    unsigned MsgParam = 0;
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Operation)) {
       Loc = ASE->getBase()->getExprLoc();
       Range = ASE->getBase()->getSourceRange();
+      MsgParam = 2;
     } else if (const auto *BO = dyn_cast<BinaryOperator>(Operation)) {
       BinaryOperator::Opcode Op = BO->getOpcode();
       if (Op == BO_Add || Op == BO_AddAssign || Op == BO_Sub ||
@@ -2170,6 +2173,7 @@ public:
           Loc = BO->getRHS()->getExprLoc();
           Range = BO->getRHS()->getSourceRange();
         }
+        MsgParam = 1;
       }
     } else if (const auto *UO = dyn_cast<UnaryOperator>(Operation)) {
       UnaryOperator::Opcode Op = UO->getOpcode();
@@ -2177,20 +2181,27 @@ public:
           Op == UO_PostDec) {
         Loc = UO->getSubExpr()->getExprLoc();
         Range = UO->getSubExpr()->getSourceRange();
+        MsgParam = 1;
       }
     } else {
       Loc = Operation->getBeginLoc();
       Range = Operation->getSourceRange();
     }
-    S.Diag(Loc, diag::warn_unsafe_buffer_expression) << Range;
+    if (IsRelatedToDecl)
+      S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
+    else
+      S.Diag(Loc, diag::warn_unsafe_buffer_operation) << MsgParam << Range;
   }
 
+  // FIXME: rename to handleUnsafeVariable
   void handleFixableVariable(const VarDecl *Variable,
                              FixItList &&Fixes) override {
     const auto &D =
-        S.Diag(Variable->getBeginLoc(), diag::warn_unsafe_buffer_variable);
-    D << Variable << Variable->getSourceRange();
-    for (const auto &F: Fixes)
+        S.Diag(Variable->getLocation(), diag::warn_unsafe_buffer_variable);
+    D << Variable;
+    D << (Variable->getType()->isPointerType() ? 0 : 1);
+    D << Variable->getSourceRange();
+    for (const auto &F : Fixes)
       D << F;
   }
 };
@@ -2489,7 +2500,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
         checkThrowInNonThrowingFunc(S, FD, AC);
 
   // Emit unsafe buffer usage warnings and fixits.
-  if (!Diags.isIgnored(diag::warn_unsafe_buffer_expression, D->getBeginLoc()) ||
+  if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_unsafe_buffer_variable, D->getBeginLoc())) {
     UnsafeBufferUsageReporter R(S);
     checkUnsafeBufferUsage(D, R);
