@@ -133,6 +133,10 @@ static auto hasPointerType() {
     return hasType(hasCanonicalType(pointerType()));
 }
 
+static auto hasArrayType() {
+    return hasType(hasCanonicalType(arrayType()));
+}
+
 namespace {
 /// Gadget is an individual operation in the code that may be of interest to
 /// this analysis. Each (non-abstract) subclass corresponds to a specific
@@ -292,9 +296,13 @@ public:
   static Matcher matcher() {
     // FIXME: What if the index is integer literal 0? Should this be
     // a safe gadget in this case?
-    return stmt(arraySubscriptExpr(hasBase(ignoringParenImpCasts(hasPointerType())),
-                                   unless(hasIndex(integerLiteral(equals(0)))))
-                .bind(ArraySubscrTag));
+      // clang-format off
+      return stmt(arraySubscriptExpr(
+            hasBase(ignoringParenImpCasts(
+              anyOf(hasPointerType(), hasArrayType()))),
+            unless(hasIndex(integerLiteral(equals(0)))))
+            .bind(ArraySubscrTag));
+      // clang-format on
   }
 
   const ArraySubscriptExpr *getBaseStmt() const override { return ASE; }
@@ -516,7 +524,8 @@ static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker> findGadg
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
         // In parallel, match all DeclRefExprs so that to find out
         // whether there are any uncovered by gadgets.
-        declRefExpr(hasPointerType(), to(varDecl())).bind("any_dre"),
+        declRefExpr(anyOf(hasPointerType(), hasArrayType()),
+                    to(varDecl())).bind("any_dre"),
         // Also match DeclStmts because we'll need them when fixing
         // their underlying VarDecls that otherwise don't have
         // any backreferences to DeclStmts.
