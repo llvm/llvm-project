@@ -71,8 +71,8 @@
 // RUN:   -emit-obj %t/src2/main.c -o %t/out2/main.o -include %t/src2/prefix.h -I %t/src2/inc \
 // RUN:   -MT deps -dependency-file %t/regular2.d
 
-// RUN: FileCheck %s -input-file %t/t1.d -check-prefix=CHECK-DEPS
-// CHECK-DEPS-NOT: ^src
+// RUN: diff -u %t/regular1.d %t/t1.d
+// RUN: diff -u %t/regular2.d %t/t2.d
 
 // Check with PCH.
 
@@ -154,8 +154,8 @@
 // RUN:   -emit-obj %t/src2/main.c -o %t/out2/main.o -include-pch %t/out2/reg-prefix.h.pch -I %t/src2/inc \
 // RUN:   -MT deps -dependency-file %t/regular2.pch.d
 
-// RUN: FileCheck %s -input-file %t/t1.d -check-prefix=CHECK-DEPS-PCH
-// CHECK-DEPS-PCH-NOT: ^src
+// RUN: diff -u %t/regular1.pch.d %t/t1.pch.d
+// RUN: diff -u %t/regular2.pch.d %t/t2.pch.d
 
 //--- main.c
 #include "t.h"
