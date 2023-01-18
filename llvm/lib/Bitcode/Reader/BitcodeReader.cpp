@@ -674,8 +674,6 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   std::vector<std::string> BundleTags;
   SmallVector<SyncScope::ID, 8> SSIDs;
 
-  std::optional<ValueTypeCallbackTy> ValueTypeCallback;
-
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                 StringRef ProducerIdentification, LLVMContext &Context);
@@ -688,8 +686,9 @@ public:
 
   /// Main interface to parsing a bitcode buffer.
   /// \returns true if an error occurred.
-  Error parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
-                         bool IsImporting, ParserCallbacks Callbacks = {});
+  Error parseBitcodeInto(
+      Module *M, bool ShouldLazyLoadMetadata, bool IsImporting,
+      DataLayoutCallbackTy DataLayoutCallback);
 
   static uint64_t decodeSignRotatedValue(uint64_t V);
 
@@ -710,7 +709,6 @@ private:
   unsigned getContainedTypeID(unsigned ID, unsigned Idx = 0);
   unsigned getVirtualTypeID(Type *Ty, ArrayRef<unsigned> ContainedTypeIDs = {});
 
-  void callValueTypeCallback(Value *F, unsigned TypeID);
   Expected<Value *> materializeValue(unsigned ValID, BasicBlock *InsertBB);
   Expected<Constant *> getValueForInitializer(unsigned ID);
 
@@ -821,8 +819,11 @@ private:
   /// a corresponding error code.
   Error parseAlignmentValue(uint64_t Exponent, MaybeAlign &Alignment);
   Error parseAttrKind(uint64_t Code, Attribute::AttrKind *Kind);
-  Error parseModule(uint64_t ResumeBit, bool ShouldLazyLoadMetadata = false,
-                    ParserCallbacks Callbacks = {});
+  Error parseModule(
+      uint64_t ResumeBit, bool ShouldLazyLoadMetadata = false,
+      DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
+        return std::nullopt;
+      });
 
   Error parseComdatRecord(ArrayRef<uint64_t> Record);
   Error parseGlobalVarRecord(ArrayRef<uint64_t> Record);
@@ -3918,14 +3919,6 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   return Error::success();
 }
 
-void BitcodeReader::callValueTypeCallback(Value *F, unsigned TypeID) {
-  if (ValueTypeCallback) {
-    (*ValueTypeCallback)(
-        F, TypeID, [this](unsigned I) { return getTypeByID(I); },
-        [this](unsigned I, unsigned J) { return getContainedTypeID(I, J); });
-  }
-}
-
 Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   // v1: [type, callingconv, isproto, linkage, paramattr, alignment, section,
   // visibility, gc, unnamed_addr, prologuedata, dllstorageclass, comdat,
@@ -3970,7 +3963,6 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   uint64_t RawLinkage = Record[3];
   Func->setLinkage(getDecodedLinkage(RawLinkage));
   Func->setAttributes(getAttributes(Record[4]));
-  callValueTypeCallback(Func, FTyID);
 
   // Upgrade any old-style byval or sret without a type by propagating the
   // argument's pointee type. There should be no opaque pointers where the byval
@@ -4188,8 +4180,7 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
-                                 ParserCallbacks Callbacks) {
-  this->ValueTypeCallback = std::move(Callbacks.ValueType);
+                                 DataLayoutCallbackTy DataLayoutCallback) {
   if (ResumeBit) {
     if (Error JumpFailed = Stream.JumpToBit(ResumeBit))
       return JumpFailed;
@@ -4219,11 +4210,9 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
         TentativeDataLayoutStr, TheModule->getTargetTriple());
 
     // Apply override
-    if (Callbacks.DataLayout) {
-      if (auto LayoutOverride = (*Callbacks.DataLayout)(
-              TheModule->getTargetTriple(), TentativeDataLayoutStr))
-        TentativeDataLayoutStr = *LayoutOverride;
-    }
+    if (auto LayoutOverride = DataLayoutCallback(TheModule->getTargetTriple(),
+                                                 TentativeDataLayoutStr))
+      TentativeDataLayoutStr = *LayoutOverride;
 
     // Now the layout string is finalized in TentativeDataLayoutStr. Parse it.
     Expected<DataLayout> MaybeDL = DataLayout::parse(TentativeDataLayoutStr);
@@ -4488,22 +4477,16 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     }
     Record.clear();
   }
-  this->ValueTypeCallback = std::nullopt;
   return Error::success();
 }
 
 Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
                                       bool IsImporting,
-                                      ParserCallbacks Callbacks) {
+                                      DataLayoutCallbackTy DataLayoutCallback) {
   TheModule = M;
-  MetadataLoaderCallbacks MDCallbacks;
-  MDCallbacks.GetTypeByID = [&](unsigned ID) { return getTypeByID(ID); };
-  MDCallbacks.GetContainedTypeID = [&](unsigned I, unsigned J) {
-    return getContainedTypeID(I, J);
-  };
-  MDCallbacks.MDType = Callbacks.MDType;
-  MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting, MDCallbacks);
-  return parseModule(0, ShouldLazyLoadMetadata, Callbacks);
+  MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting,
+                            [&](unsigned ID) { return getTypeByID(ID); });
+  return parseModule(0, ShouldLazyLoadMetadata, DataLayoutCallback);
 }
 
 Error BitcodeReader::typeCheckLoadStoreInst(Type *ValType, Type *PtrType) {
@@ -7936,7 +7919,7 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
 Expected<std::unique_ptr<Module>>
 BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
                              bool ShouldLazyLoadMetadata, bool IsImporting,
-                             ParserCallbacks Callbacks) {
+                             DataLayoutCallbackTy DataLayoutCallback) {
   BitstreamCursor Stream(Buffer);
 
   std::string ProducerIdentification;
@@ -7959,7 +7942,7 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
 
   // Delay parsing Metadata if ShouldLazyLoadMetadata is true.
   if (Error Err = R->parseBitcodeInto(M.get(), ShouldLazyLoadMetadata,
-                                      IsImporting, Callbacks))
+                                      IsImporting, DataLayoutCallback))
     return std::move(Err);
 
   if (MaterializeAll) {
@@ -7976,9 +7959,10 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
 
 Expected<std::unique_ptr<Module>>
 BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
-                             bool IsImporting, ParserCallbacks Callbacks) {
+                             bool IsImporting,
+                             DataLayoutCallbackTy DataLayoutCallback) {
   return getModuleImpl(Context, false, ShouldLazyLoadMetadata, IsImporting,
-                       Callbacks);
+                       DataLayoutCallback);
 }
 
 // Parse the specified bitcode buffer and merge the index into CombinedIndex.
@@ -8125,40 +8109,41 @@ static Expected<BitcodeModule> getSingleModule(MemoryBufferRef Buffer) {
 Expected<std::unique_ptr<Module>>
 llvm::getLazyBitcodeModule(MemoryBufferRef Buffer, LLVMContext &Context,
                            bool ShouldLazyLoadMetadata, bool IsImporting,
-                           ParserCallbacks Callbacks) {
+                           DataLayoutCallbackTy DataLayoutCallback) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
 
   return BM->getLazyModule(Context, ShouldLazyLoadMetadata, IsImporting,
-                           Callbacks);
+                           DataLayoutCallback);
 }
 
 Expected<std::unique_ptr<Module>> llvm::getOwningLazyBitcodeModule(
     std::unique_ptr<MemoryBuffer> &&Buffer, LLVMContext &Context,
-    bool ShouldLazyLoadMetadata, bool IsImporting, ParserCallbacks Callbacks) {
+    bool ShouldLazyLoadMetadata, bool IsImporting) {
   auto MOrErr = getLazyBitcodeModule(*Buffer, Context, ShouldLazyLoadMetadata,
-                                     IsImporting, Callbacks);
+                                     IsImporting);
   if (MOrErr)
     (*MOrErr)->setOwnedMemoryBuffer(std::move(Buffer));
   return MOrErr;
 }
 
 Expected<std::unique_ptr<Module>>
-BitcodeModule::parseModule(LLVMContext &Context, ParserCallbacks Callbacks) {
-  return getModuleImpl(Context, true, false, false, Callbacks);
+BitcodeModule::parseModule(LLVMContext &Context,
+                           DataLayoutCallbackTy DataLayoutCallback) {
+  return getModuleImpl(Context, true, false, false, DataLayoutCallback);
   // TODO: Restore the use-lists to the in-memory state when the bitcode was
   // written.  We must defer until the Module has been fully materialized.
 }
 
 Expected<std::unique_ptr<Module>>
 llvm::parseBitcodeFile(MemoryBufferRef Buffer, LLVMContext &Context,
-                       ParserCallbacks Callbacks) {
+                       DataLayoutCallbackTy DataLayoutCallback) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
 
-  return BM->parseModule(Context, Callbacks);
+  return BM->parseModule(Context, DataLayoutCallback);
 }
 
 Expected<std::string> llvm::getBitcodeTargetTriple(MemoryBufferRef Buffer) {
