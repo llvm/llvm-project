@@ -31,6 +31,7 @@ namespace {
       ++HelloCounter;
       errs() << "Hello: ";
       errs().write_escaped(F.getName()) << '\n';
+      F.setSectionPrefix("mySection")
       return false;
     }
   };
