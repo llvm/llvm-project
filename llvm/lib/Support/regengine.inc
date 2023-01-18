@@ -317,8 +317,14 @@ step_back(struct re_guts *g, const char *start, const char *stop, sopno startst,
 	/* Find the character that starts the following match. */
 	char ch = OPND(g->strip[startst]);
 	for (; res != start; --res) {
-		if (*res == ch)
-			break;
+		if (*res == ch) {
+			/* Try to check the next fixed character as well. */
+			sopno nextst = startst + 1;
+			const char *next = res + 1;
+			if (nextst >= stopst || OP(g->strip[nextst]) != OCHAR || next >= stop ||
+					*next == (char)OPND(g->strip[nextst]))
+				break;
+    }
 	}
 	return res;
 }
