@@ -2489,13 +2489,14 @@ define i1 @diff_of_squares_nuw_i1(i1 %x, i1 %y) {
   ret i1 %r
 }
 
-; FIXME: It is not correct to propagate nsw.
+; It is not correct to propagate nsw.
+; TODO: This should reduce more.
 
 define i2 @diff_of_squares_nsw_i2(i2 %x, i2 %y) {
 ; CHECK-LABEL: @diff_of_squares_nsw_i2(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i2 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i2 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = mul nsw i2 [[ADD]], [[SUB]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i2 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i2 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul i2 [[ADD]], [[SUB]]
 ; CHECK-NEXT:    ret i2 [[R]]
 ;
   %x2 = mul nsw i2 %x, %x
