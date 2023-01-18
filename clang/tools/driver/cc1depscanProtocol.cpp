@@ -343,7 +343,7 @@ CC1DepScanDProtocol::getDepscanPrefixMapping(llvm::StringSaver &Saver,
         Mapping.NewToolchainPath = Map;
       break;
     default:
-      Mapping.PrefixMap.push_back(Map);
+      Mapping.PrefixMap.push_back(std::string(Map));
       break;
     }
   }
