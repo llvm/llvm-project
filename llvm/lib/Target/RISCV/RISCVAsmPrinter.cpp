@@ -89,11 +89,9 @@ private:
 };
 }
 
-#define GEN_COMPRESS_INSTR
-#include "RISCVGenCompressInstEmitter.inc"
 void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = compressInst(CInst, Inst, *STI);
+  bool Res = RISCVRVC::compress(CInst, Inst, *STI);
   if (Res)
     ++RISCVNumInstrsCompressed;
   AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);
