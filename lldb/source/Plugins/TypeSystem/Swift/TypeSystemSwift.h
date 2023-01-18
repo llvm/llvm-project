@@ -190,135 +190,136 @@ public:
   ConstString DeclContextGetName(void *opaque_decl_ctx) override { return {}; }
   ConstString DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) override {
     return {};
-    }
-    bool DeclContextIsClassMethod(
-        void *opaque_decl_ctx, lldb::LanguageType *language_ptr,
-        bool *is_instance_method_ptr, ConstString *language_object_name_ptr)
-        override {
-      return false;
-    }
-    bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override {
-      return false;
-    }
-    bool IsCharType(lldb::opaque_compiler_type_t type) override {
-      return false;
-    }
-    bool IsCompleteType(lldb::opaque_compiler_type_t type) override {
-      return true;
-    }
-    bool IsConst(lldb::opaque_compiler_type_t type) override { return false; }
-    bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                             uint32_t & count, bool &is_complex) override;
-    bool IsIntegerType(lldb::opaque_compiler_type_t type, bool &is_signed)
-        override;
-    bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {
-      return false;
-    }
-    CompilerType GetEnumerationIntegerType(lldb::opaque_compiler_type_t type)
-        override {
-      return {};
-    }
-    bool IsScalarType(lldb::opaque_compiler_type_t type) override;
-    bool IsCStringType(lldb::opaque_compiler_type_t type, uint32_t & length)
-        override {
-      return false;
-    }
-    bool IsVectorType(lldb::opaque_compiler_type_t type,
-                      CompilerType * element_type, uint64_t * size) override {
-      return false;
-    }
-    uint32_t IsHomogeneousAggregate(lldb::opaque_compiler_type_t type,
-                                    CompilerType * base_type_ptr) override {
-      return 0;
-    }
-    bool IsBlockPointerType(lldb::opaque_compiler_type_t type,
-                            CompilerType * function_pointer_type_ptr) override {
-      return false;
-    }
-    bool IsPolymorphicClass(lldb::opaque_compiler_type_t type) override {
-      return false;
-    }
-    bool IsBeingDefined(lldb::opaque_compiler_type_t type) override {
-      return false;
-    }
-    bool GetCompleteType(lldb::opaque_compiler_type_t type) override {
-      return true;
-    }
-    bool CanPassInRegisters(const CompilerType &type) override {
-      // FIXME: Implement this. There was an abort() here to figure out which
-      // tests where hitting this code. At least TestSwiftReturns and
-      // TestSwiftStepping were failing because of this Darwin.
-      return false;
-    }
-    lldb::LanguageType GetMinimumLanguage(lldb::opaque_compiler_type_t type)
-        override {
-      assert(type && "CompilerType::GetMinimumLanguage() is not supposed to "
-                     "forward calls with NULL types ");
-      return lldb::eLanguageTypeSwift;
-    }
-    unsigned GetTypeQualifiers(lldb::opaque_compiler_type_t type) override {
-      return 0;
-    }
-    CompilerType GetTypeForDecl(lldb::opaque_compiler_type_t opaque_decl)
-        override {
-      llvm_unreachable("GetTypeForDecl not implemented");
-    }
-    CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override {
-      return {};
-    }
-    const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override {
-      // See: https://reviews.llvm.org/D67239. At this time of writing this API
-      // is only used by DumpDataExtractor for the C type system.
-      llvm_unreachable("GetFloatTypeSemantics not implemented.");
-    }
-    lldb::BasicType GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type)
-        override {
-      return lldb::eBasicTypeInvalid;
-    }
-    uint32_t GetNumVirtualBaseClasses(lldb::opaque_compiler_type_t opaque_type)
-        override {
-      return 0;
-    }
-    CompilerType GetVirtualBaseClassAtIndex(
-        lldb::opaque_compiler_type_t opaque_type, size_t idx,
-        uint32_t * bit_offset_ptr) override {
-      return {};
-    }
-    bool ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type)
-        override;
+  }
+  bool
+  DeclContextIsClassMethod(void *opaque_decl_ctx,
+                           lldb::LanguageType *language_ptr,
+                           bool *is_instance_method_ptr,
+                           ConstString *language_object_name_ptr) override {
+    return false;
+  }
+  bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
+  bool IsCharType(lldb::opaque_compiler_type_t type) override { return false; }
+  bool IsCompleteType(lldb::opaque_compiler_type_t type) override {
+    return true;
+  }
+  bool IsConst(lldb::opaque_compiler_type_t type) override { return false; }
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
+                           bool &is_complex) override;
+  bool IsIntegerType(lldb::opaque_compiler_type_t type,
+                     bool &is_signed) override;
+  bool IsBooleanType(lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
+  bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
+  CompilerType
+  GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
+  bool IsScalarType(lldb::opaque_compiler_type_t type) override;
+  bool IsCStringType(lldb::opaque_compiler_type_t type,
+                     uint32_t &length) override {
+    return false;
+  }
+  bool IsVectorType(lldb::opaque_compiler_type_t type,
+                    CompilerType *element_type, uint64_t *size) override {
+    return false;
+  }
+  uint32_t IsHomogeneousAggregate(lldb::opaque_compiler_type_t type,
+                                  CompilerType *base_type_ptr) override {
+    return 0;
+  }
+  bool IsBlockPointerType(lldb::opaque_compiler_type_t type,
+                          CompilerType *function_pointer_type_ptr) override {
+    return false;
+  }
+  bool IsPolymorphicClass(lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
+  bool IsBeingDefined(lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
+  bool GetCompleteType(lldb::opaque_compiler_type_t type) override {
+    return true;
+  }
+  bool CanPassInRegisters(const CompilerType &type) override {
+    // FIXME: Implement this. There was an abort() here to figure out which
+    // tests where hitting this code. At least TestSwiftReturns and
+    // TestSwiftStepping were failing because of this Darwin.
+    return false;
+  }
+  lldb::LanguageType
+  GetMinimumLanguage(lldb::opaque_compiler_type_t type) override {
+    assert(type && "CompilerType::GetMinimumLanguage() is not supposed to "
+                   "forward calls with NULL types ");
+    return lldb::eLanguageTypeSwift;
+  }
+  unsigned GetTypeQualifiers(lldb::opaque_compiler_type_t type) override {
+    return 0;
+  }
+  CompilerType
+  GetTypeForDecl(lldb::opaque_compiler_type_t opaque_decl) override {
+    llvm_unreachable("GetTypeForDecl not implemented");
+  }
+  CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override {
+    return {};
+  }
+  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override {
+    // See: https://reviews.llvm.org/D67239. At this time of writing this API
+    // is only used by DumpDataExtractor for the C type system.
+    llvm_unreachable("GetFloatTypeSemantics not implemented.");
+  }
+  lldb::BasicType
+  GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override {
+    return lldb::eBasicTypeInvalid;
+  }
+  uint32_t
+  GetNumVirtualBaseClasses(lldb::opaque_compiler_type_t opaque_type) override {
+    return 0;
+  }
+  CompilerType
+  GetVirtualBaseClassAtIndex(lldb::opaque_compiler_type_t opaque_type,
+                             size_t idx, uint32_t *bit_offset_ptr) override {
+    return {};
+  }
+  bool
+  ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) override;
 
-    /// Lookup a child given a name. This function will match base class names
-    /// and member names in \p type only, not descendants.
-    uint32_t GetIndexOfChildWithName(
-        lldb::opaque_compiler_type_t type, const char *name,
-        ExecutionContext *exe_ctx, bool omit_empty_base_classes) override;
+  /// Lookup a child given a name. This function will match base class names
+  /// and member names in \p type only, not descendants.
+  uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
+                                   const char *name, ExecutionContext *exe_ctx,
+                                   bool omit_empty_base_classes) override;
 
-    CompilerType GetLValueReferenceType(lldb::opaque_compiler_type_t type)
-        override {
-      return {};
-    }
+  CompilerType
+  GetLValueReferenceType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
 
-    CompilerType GetRValueReferenceType(lldb::opaque_compiler_type_t type)
-        override {
-      return {};
-    }
+  CompilerType
+  GetRValueReferenceType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
 
-    CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type)
-        override {
-      return {};
-    }
+  CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
 
-    // TODO: This method appear unused. Should they be removed?
-    void DumpSummary(lldb::opaque_compiler_type_t type,
-                     ExecutionContext * exe_ctx, Stream * s,
-                     const DataExtractor &data, lldb::offset_t data_offset,
-                     size_t data_byte_size) override {}
-    /// \}
-  protected:
-    /// Used in the logs.
-    std::string m_description;
-    /// The module this typesystem belongs to if any.
-    Module *m_module = nullptr;
+  // TODO: This method appear unused. Should they be removed?
+  void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
+                   Stream *s, const DataExtractor &data,
+                   lldb::offset_t data_offset, size_t data_byte_size) override {
+  }
+  /// \}
+protected:
+  /// Used in the logs.
+  std::string m_description;
+  /// The module this typesystem belongs to if any.
+  Module *m_module = nullptr;
   };
 
 } // namespace lldb_private
