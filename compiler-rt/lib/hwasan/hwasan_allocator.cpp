@@ -236,6 +236,10 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
 
   Metadata *meta =
       reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
+#if CAN_SANITIZE_LEAKS
+  meta->SetLsanTag(__lsan::DisabledInThisThread() ? __lsan::kIgnored
+                                                  : __lsan::kDirectlyLeaked);
+#endif
   meta->SetAllocated(StackDepotPut(*stack), orig_size);
   RunMallocHooks(user_ptr, size);
   return user_ptr;
@@ -386,6 +390,16 @@ HwasanChunkView FindHeapChunkByAddress(uptr address) {
   return HwasanChunkView(reinterpret_cast<uptr>(block), metadata);
 }
 
+static inline HwasanChunkView FindHeapChunkByAddressFastLocked(uptr address) {
+  void *block =
+      allocator.GetBlockBeginFastLocked(reinterpret_cast<void *>(address));
+  if (!block)
+    return HwasanChunkView();
+  Metadata *metadata =
+      reinterpret_cast<Metadata *>(allocator.GetMetaData(block));
+  return HwasanChunkView(reinterpret_cast<uptr>(block), metadata);
+}
+
 static uptr AllocationSize(const void *tagged_ptr) {
   const void *untagged_ptr = UntagPtr(tagged_ptr);
   if (!untagged_ptr) return 0;
@@ -501,8 +515,9 @@ void GetAllocatorGlobalRange(uptr *begin, uptr *end) {
 
 uptr PointsIntoChunk(void *p) {
   uptr addr = reinterpret_cast<uptr>(p);
-  __hwasan::HwasanChunkView view = __hwasan::FindHeapChunkByAddress(addr);
-  if (!view.IsAllocated()) 
+  __hwasan::HwasanChunkView view =
+      __hwasan::FindHeapChunkByAddressFastLocked(addr);
+  if (!view.IsAllocated())
     return 0;
   uptr chunk = view.Beg();
   if (view.AddrIsInside(addr))
@@ -513,7 +528,9 @@ uptr PointsIntoChunk(void *p) {
 }
 
 uptr GetUserBegin(uptr chunk) {
-  return __hwasan::FindHeapChunkByAddress(chunk).Beg();
+  // FIXME: All usecases provide chunk address, FindHeapChunkByAddressFastLocked
+  // is not needed.
+  return __hwasan::FindHeapChunkByAddressFastLocked(chunk).Beg();
 }
 
 LsanMetadata::LsanMetadata(uptr chunk) {
@@ -551,6 +568,24 @@ u32 LsanMetadata::stack_trace_id() const {
 
 void ForEachChunk(ForEachChunkCallback callback, void *arg) {
   __hwasan::allocator.ForEachChunk(callback, arg);
+}
+
+IgnoreObjectResult IgnoreObjectLocked(const void *p) {
+  void *block =
+      __hwasan::allocator.GetBlockBeginFastLocked(const_cast<void *>(p));
+  if (!block)
+    return kIgnoreObjectInvalid;
+  __hwasan::Metadata *metadata = reinterpret_cast<__hwasan::Metadata *>(
+      __hwasan::allocator.GetMetaData(block));
+  uptr addr = reinterpret_cast<uptr>(p);
+  __hwasan::HwasanChunkView view(reinterpret_cast<uptr>(block), metadata);
+  if (!view.IsAllocated() || !view.AddrIsInside(addr)) {
+    return kIgnoreObjectInvalid;
+  }
+  if (metadata->GetLsanTag() == kIgnored)
+    return kIgnoreObjectAlreadyIgnored;
+  metadata->SetLsanTag(kIgnored);
+  return kIgnoreObjectSuccess;
 }
 
 }  // namespace __lsan
