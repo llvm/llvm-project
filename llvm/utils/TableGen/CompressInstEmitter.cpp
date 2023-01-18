@@ -54,8 +54,7 @@
 // an instruction is compressable:
 //
 // bool isCompressibleInst(const MachineInstr& MI,
-//                         const <TargetName>Subtarget *Subtarget,
-//                         const MCSubtargetInfo &STI);
+//                         const <TargetName>Subtarget &STI);
 //
 // The clients that include this auto-generated header file and
 // invoke these functions can compress an instruction before emitting
@@ -613,8 +612,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     FuncH.indent(27) << "const MCSubtargetInfo &STI) {\n";
   } else if (EType == EmitterType::CheckCompress) {
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
-    FuncH.indent(31) << "const " << TargetName << "Subtarget *Subtarget,\n";
-    FuncH.indent(31) << "const MCSubtargetInfo &STI) {\n";
+    FuncH.indent(31) << "const " << TargetName << "Subtarget &STI) {\n";
   }
 
   if (CompressPatterns.empty()) {
@@ -786,7 +784,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                 << "MI.getOperand(" << OpIdx << ").isImm() &&\n";
             CondStream.indent(6) << TargetName << "ValidateMachineOperand("
                                  << "MI.getOperand(" << OpIdx
-                                 << "), Subtarget, " << Entry << ") &&\n";
+                                 << "), &STI, " << Entry << ") &&\n";
           }
           if (CompressOrUncompress)
             CodeStream.indent(6)
@@ -808,7 +806,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
           CondStream.indent(6)
               << TargetName
               << "ValidateMachineOperand(MachineOperand::CreateImm("
-              << DestOperandMap[OpNo].Data.Imm << "), SubTarget, " << Entry
+              << DestOperandMap[OpNo].Data.Imm << "), &STI, " << Entry
               << ") &&\n";
         }
         if (CompressOrUncompress)
