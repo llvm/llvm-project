@@ -18,15 +18,22 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstdlib> // ::getenv
+#include <memory>  // std::unique_ptr
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -2078,21 +2085,89 @@ std::optional<DarwinSDKInfo> parseSDKSettings(llvm::vfs::FileSystem &VFS,
 void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const OptTable &Opts = getDriver().getOpts();
 
-  // Support allowing the SDKROOT environment variable used by xcrun and other
-  // Xcode tools to define the default sysroot, by making it the default for
-  // isysroot.
+  // On Apple platforms, standard headers and libraries are not provided with
+  // the base system (e.g. in /usr/{include,lib}). Instead, they are provided
+  // in various SDKs for the different Apple platforms. Clang needs to know
+  // where that SDK lives, and there are a couple ways this can be achieved:
+  //
+  // (1) If `-isysroot <path-to-SDK>` is passed explicitly, use that.
   if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
     // Warn if the path does not exist.
     if (!getVFS().exists(A->getValue()))
       getDriver().Diag(clang::diag::warn_missing_sysroot) << A->getValue();
-  } else {
-    if (char *env = ::getenv("SDKROOT")) {
-      // We only use this value as the default if it is an absolute path,
-      // exists, and it is not the root path.
-      if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
-          StringRef(env) != "/") {
-        Args.append(Args.MakeSeparateArg(
-            nullptr, Opts.getOption(options::OPT_isysroot), env));
+  }
+
+  // (2) If the SDKROOT environment variable is defined and points to a valid
+  //     path, use that. $SDKROOT is set by `xcrun` and other Xcode tools, so
+  //     running `xcrun clang` will work by going through this path.
+  else if (char *env = ::getenv("SDKROOT")) {
+    // We only use this value as the default if it is an absolute path,
+    // exists, and it is not the root path.
+    if (llvm::sys::path::is_absolute(env) && getVFS().exists(env) &&
+        StringRef(env) != "/") {
+      Args.append(Args.MakeSeparateArg(
+          nullptr, Opts.getOption(options::OPT_isysroot), env));
+    }
+  }
+
+  // (3) Otherwise, we try to guess the path of the default SDK by running
+  //     `xcrun --show-sdk-path`. This won't always be correct, but if the
+  //      user wants to use the non-default SDK, they should specify it
+  //      explicitly with methods (1) or (2) above.
+  else {
+    llvm::SmallString<64> OutputFile;
+    llvm::sys::fs::createTemporaryFile("print-sdk-path", "" /* No Suffix */,
+                                       OutputFile);
+    llvm::FileRemover OutputRemover(OutputFile.c_str());
+    std::optional<llvm::StringRef> Redirects[] = {{""}, OutputFile.str(), {""}};
+
+    Optional<StringRef> SDKName = std::nullopt;
+    switch (getTriple().getOS()) {
+    case llvm::Triple::OSType::WatchOS:
+      if (getTriple().isSimulatorEnvironment())
+        SDKName = "watchsimulator";
+      else
+        SDKName = "watchos";
+      break;
+    case llvm::Triple::OSType::TvOS:
+      if (getTriple().isSimulatorEnvironment())
+        SDKName = "appletvsimulator";
+      else
+        SDKName = "appletvos";
+      break;
+    case llvm::Triple::OSType::IOS:
+      if (getTriple().isSimulatorEnvironment())
+        SDKName = "iphonesimulator";
+      else
+        SDKName = "iphoneos";
+      break;
+    case llvm::Triple::OSType::Darwin:
+    case llvm::Triple::OSType::MacOSX:
+      SDKName = "macosx";
+      break;
+    case llvm::Triple::OSType::DriverKit:
+      SDKName = "driverkit";
+      break;
+    default:
+      llvm_unreachable("unknown kind of Darwin platform");
+    }
+
+    if (SDKName) {
+      int Result = llvm::sys::ExecuteAndWait(
+          "/usr/bin/xcrun",
+          {"/usr/bin/xcrun", "--sdk", *SDKName, "--show-sdk-path"},
+          /* Inherit environment from parent process */ std::nullopt, Redirects,
+          /* SecondsToWait */ 0, /*MemoryLimit*/ 0);
+      if (Result == 0) {
+        llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> OutputBuf =
+            llvm::MemoryBuffer::getFile(OutputFile.c_str(), /* IsText */ true);
+        if (OutputBuf) {
+          llvm::StringRef SdkPath = (*OutputBuf)->getBuffer().trim();
+          if (getVFS().exists(SdkPath)) {
+            Args.append(Args.MakeSeparateArg(
+                nullptr, Opts.getOption(options::OPT_isysroot), SdkPath));
+          }
+        }
       }
     }
   }

@@ -42,10 +42,15 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   switch (short_option) {
   case 'l':
     language = Language::GetLanguageTypeFromString(option_arg);
-    if (language == eLanguageTypeUnknown)
-      error.SetErrorStringWithFormat(
-          "unknown language type: '%s' for expression",
-          option_arg.str().c_str());
+    if (language == eLanguageTypeUnknown) {
+      StreamString sstr;
+      sstr.Printf("unknown language type: '%s' for expression. "
+                  "List of supported languages:\n",
+                  option_arg.str().c_str());
+
+      Language::PrintSupportedLanguagesForExpressions(sstr, "  ", "\n");
+      error.SetErrorString(sstr.GetString());
+    }
     break;
 
   case 'a': {

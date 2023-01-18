@@ -277,6 +277,10 @@ Previously when emitting DWARF v4 and tuning for GDB, llc would use DWARF v2's
 Support for ``DW_AT_data_bit_offset`` was added in GDB 8.0. For earlier versions,
 you can use llc's ``-dwarf-version=3`` option to emit compatible DWARF.
 
+When emitting CodeView debug information, LLVM will now emit S_CONSTANT records
+for variables optimized into a constant via the SROA and SCCP passes.
+(`D138995 <https://reviews.llvm.org/D138995>`_)
+
 Changes to the LLVM tools
 ---------------------------------
 
