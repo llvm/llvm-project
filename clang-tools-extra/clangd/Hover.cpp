@@ -952,6 +952,15 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
   }
 }
 
+HoverInfo::PassType::PassMode getPassMode(QualType ParmType) {
+  if (ParmType->isReferenceType()) {
+    if (ParmType->getPointeeType().isConstQualified())
+      return HoverInfo::PassType::ConstRef;
+    return HoverInfo::PassType::Ref;
+  }
+  return HoverInfo::PassType::Value;
+}
+
 // If N is passed as argument to a function, fill HI.CalleeArgInfo with
 // information about that argument.
 void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
@@ -972,14 +981,19 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
   if (!FD || FD->isOverloadedOperator() || FD->isVariadic())
     return;
 
+  HoverInfo::PassType PassType;
+
   // Find argument index for N.
   for (unsigned I = 0; I < CE->getNumArgs() && I < FD->getNumParams(); ++I) {
     if (CE->getArg(I) != OuterNode.ASTNode.get<Expr>())
       continue;
 
     // Extract matching argument from function declaration.
-    if (const ParmVarDecl *PVD = FD->getParamDecl(I))
+    if (const ParmVarDecl *PVD = FD->getParamDecl(I)) {
       HI.CalleeArgInfo.emplace(toHoverInfoParam(PVD, PP));
+      if (N == &OuterNode)
+        PassType.PassBy = getPassMode(PVD->getType());
+    }
     break;
   }
   if (!HI.CalleeArgInfo)
@@ -988,14 +1002,9 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
   // If we found a matching argument, also figure out if it's a
   // [const-]reference. For this we need to walk up the AST from the arg itself
   // to CallExpr and check all implicit casts, constructor calls, etc.
-  HoverInfo::PassType PassType;
   if (const auto *E = N->ASTNode.get<Expr>()) {
     if (E->getType().isConstQualified())
       PassType.PassBy = HoverInfo::PassType::ConstRef;
-
-    // No implicit node, literal passed by value
-    if (isLiteral(E) && N->Parent == OuterNode.Parent)
-      PassType.PassBy = HoverInfo::PassType::Value;
   }
 
   for (auto *CastNode = N->Parent;
@@ -1067,9 +1076,8 @@ const NamedDecl *pickDeclToUse(llvm::ArrayRef<const NamedDecl *> Candidates) {
   //     template <typename T> void bar() { fo^o(T{}); }
   // we actually want to show the using declaration,
   // it's not clear which declaration to pick otherwise.
-  auto BaseDecls = llvm::make_filter_range(Candidates, [](const NamedDecl *D) {
-    return llvm::isa<UsingDecl>(D);
-  });
+  auto BaseDecls = llvm::make_filter_range(
+      Candidates, [](const NamedDecl *D) { return llvm::isa<UsingDecl>(D); });
   if (std::distance(BaseDecls.begin(), BaseDecls.end()) == 1)
     return *BaseDecls.begin();
 
