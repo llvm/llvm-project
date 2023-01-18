@@ -15,5 +15,5 @@ namespace ImplicitInt {
 // PR7180
 int f(a::b::c); // expected-error {{use of undeclared identifier 'a'}}
 
-class Foo::Bar { // expected-error {{use of undeclared identifier 'Foo'}}
-                 // expected-error {{expected unqualified-id}}
+class Foo::Bar { // expected-error {{use of undeclared identifier 'Foo'}} \
+                 // expected-error {{expected ';' after class}}

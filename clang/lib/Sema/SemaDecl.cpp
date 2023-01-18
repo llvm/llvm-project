@@ -16583,16 +16583,17 @@ static bool isAcceptableTagRedeclContext(Sema &S, DeclContext *OldDC,
 ///
 /// \param SkipBody If non-null, will be set to indicate if the caller should
 /// skip the definition of this tag and treat it as if it were a declaration.
-DeclResult
-Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
-               CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
-               const ParsedAttributesView &Attrs, AccessSpecifier AS,
-               SourceLocation ModulePrivateLoc,
-               MultiTemplateParamsArg TemplateParameterLists, bool &OwnedDecl,
-               bool &IsDependent, SourceLocation ScopedEnumKWLoc,
-               bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
-               bool IsTypeSpecifier, bool IsTemplateParamOrArg,
-               OffsetOfKind OOK, SkipBodyInfo *SkipBody) {
+Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
+                     SourceLocation KWLoc, CXXScopeSpec &SS,
+                     IdentifierInfo *Name, SourceLocation NameLoc,
+                     const ParsedAttributesView &Attrs, AccessSpecifier AS,
+                     SourceLocation ModulePrivateLoc,
+                     MultiTemplateParamsArg TemplateParameterLists,
+                     bool &OwnedDecl, bool &IsDependent,
+                     SourceLocation ScopedEnumKWLoc,
+                     bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
+                     bool IsTypeSpecifier, bool IsTemplateParamOrArg,
+                     OffsetOfKind OOK, SkipBodyInfo *SkipBody) {
   // If this is not a definition, it must have a name.
   IdentifierInfo *OrigName = Name;
   assert((Name != nullptr || TUK == TUK_Definition) &&
@@ -16618,7 +16619,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 TUK == TUK_Friend, isMemberSpecialization, Invalid)) {
       if (Kind == TTK_Enum) {
         Diag(KWLoc, diag::err_enum_template);
-        return true;
+        return nullptr;
       }
 
       if (TemplateParams->size() > 0) {
@@ -16626,7 +16627,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
         // be a member of another template).
 
         if (Invalid)
-          return true;
+          return nullptr;
 
         OwnedDecl = false;
         DeclResult Result = CheckClassTemplate(
@@ -16645,7 +16646,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
 
     if (!TemplateParameterLists.empty() && isMemberSpecialization &&
         CheckTemplateDeclScope(S, TemplateParameterLists.back()))
-      return true;
+      return nullptr;
   }
 
   // Figure out the underlying type if this a enum declaration. We need to do
@@ -16761,26 +16762,26 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       DC = computeDeclContext(SS, false);
       if (!DC) {
         IsDependent = true;
-        return true;
+        return nullptr;
       }
     } else {
       DC = computeDeclContext(SS, true);
       if (!DC) {
         Diag(SS.getRange().getBegin(), diag::err_dependent_nested_name_spec)
           << SS.getRange();
-        return true;
+        return nullptr;
       }
     }
 
     if (RequireCompleteDeclContext(SS, DC))
-      return true;
+      return nullptr;
 
     SearchDC = DC;
     // Look-up name inside 'foo::'.
     LookupQualifiedName(Previous, DC);
 
     if (Previous.isAmbiguous())
-      return true;
+      return nullptr;
 
     if (Previous.empty()) {
       // Name lookup did not find anything. However, if the
@@ -16792,7 +16793,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       if (Previous.wasNotFoundInCurrentInstantiation() &&
           (TUK == TUK_Reference || TUK == TUK_Friend)) {
         IsDependent = true;
-        return true;
+        return nullptr;
       }
 
       // A tag 'foo::bar' must already exist.
@@ -16809,7 +16810,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     //    -- every member of class T that is itself a type
     if (TUK != TUK_Reference && TUK != TUK_Friend &&
         DiagnoseClassNameShadow(SearchDC, DeclarationNameInfo(Name, NameLoc)))
-      return true;
+      return nullptr;
 
     // If this is a named struct, check to see if there was a previous forward
     // declaration or definition.
@@ -16873,7 +16874,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
 
     // Note:  there used to be some attempt at recovery here.
     if (Previous.isAmbiguous())
-      return true;
+      return nullptr;
 
     if (!getLangOpts().CPlusPlus && TUK != TUK_Reference) {
       // FIXME: This makes sure that we ignore the contexts associated
@@ -17530,7 +17531,7 @@ CreateNewDecl:
     if (New->isBeingDefined())
       if (auto RD = dyn_cast<RecordDecl>(New))
         RD->completeDefinition();
-    return true;
+    return nullptr;
   } else if (SkipBody && SkipBody->ShouldSkip) {
     return SkipBody->Previous;
   } else {
