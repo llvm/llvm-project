@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/SmallVector.h"
+#include <memory>
 #include <optional>
 
 using namespace llvm;
@@ -383,6 +384,7 @@ public:
   DeclUseTracker() = default;
   DeclUseTracker(const DeclUseTracker &) = delete; // Let's avoid copies.
   DeclUseTracker(DeclUseTracker &&) = default;
+  DeclUseTracker &operator=(DeclUseTracker &&) = default;
 
   // Start tracking a freshly discovered DRE.
   void discoverUse(const DeclRefExpr *DRE) { Uses->insert(DRE); }
@@ -556,97 +558,137 @@ static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker> findGadg
   return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets), std::move(CB.Tracker)};
 }
 
+struct WarningGadgetSets {
+  std::map<const VarDecl *, std::set<std::unique_ptr<WarningGadget>>> byVar;
+  // These Gadgets are not related to pointer variables (e. g. temporaries).
+  llvm::SmallVector<std::unique_ptr<WarningGadget>, 16> noVar;
+};
+
+static WarningGadgetSets
+groupWarningGadgetsByVar(WarningGadgetList &&AllUnsafeOperations) {
+  WarningGadgetSets result;
+  // If some gadgets cover more than one
+  // variable, they'll appear more than once in the map.
+  for (auto &G : AllUnsafeOperations) {
+    DeclUseList ClaimedVarUseSites = G->getClaimedVarUseSites();
+
+    bool AssociatedWithVarDecl = false;
+    for (const DeclRefExpr *DRE : ClaimedVarUseSites) {
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        result.byVar[VD].emplace(std::move(G));
+        AssociatedWithVarDecl = true;
+      }
+    }
+
+    if (!AssociatedWithVarDecl) {
+      result.noVar.emplace_back(std::move(G));
+      continue;
+    }
+  }
+  return result;
+}
+
+struct FixableGadgetSets {
+  std::map<const VarDecl *, std::set<std::unique_ptr<FixableGadget>>> byVar;
+};
+
+static FixableGadgetSets
+groupFixablesByVar(FixableGadgetList &&AllFixableOperations) {
+  FixableGadgetSets FixablesForUnsafeVars;
+  for (auto &F : AllFixableOperations) {
+    DeclUseList DREs = F->getClaimedVarUseSites();
+
+    for (const DeclRefExpr *DRE : DREs) {
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        FixablesForUnsafeVars.byVar[VD].emplace(std::move(F));
+      }
+    }
+  }
+  return FixablesForUnsafeVars;
+}
+
+static std::map<const VarDecl *, FixItList>
+getFixIts(FixableGadgetSets &FixablesForUnsafeVars, const Strategy &S) {
+  std::map<const VarDecl *, FixItList> FixItsForVariable;
+  for (const auto &[VD, Fixables] : FixablesForUnsafeVars.byVar) {
+    // TODO fixVariable - fixit for the variable itself
+    bool ImpossibleToFix = false;
+    llvm::SmallVector<FixItHint, 16> FixItsForVD;
+    for (const auto &F : Fixables) {
+      llvm::Optional<FixItList> Fixits = F->getFixits(S);
+      if (!Fixits) {
+        ImpossibleToFix = true;
+        break;
+      } else {
+        const FixItList CorrectFixes = Fixits.value();
+        FixItsForVD.insert(FixItsForVD.end(), CorrectFixes.begin(),
+                           CorrectFixes.end());
+      }
+    }
+    if (ImpossibleToFix)
+      FixItsForVariable.erase(VD);
+    else
+      FixItsForVariable[VD].insert(FixItsForVariable[VD].end(),
+                                   FixItsForVD.begin(), FixItsForVD.end());
+  }
+  return FixItsForVariable;
+}
+
+static Strategy
+getNaiveStrategy(const llvm::SmallVectorImpl<const VarDecl *> &UnsafeVars) {
+  Strategy S;
+  for (const VarDecl *VD : UnsafeVars) {
+    S.set(VD, Strategy::Kind::Span);
+  }
+  return S;
+}
+
 void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler) {
   assert(D && D->getBody());
 
-  SmallSet<const VarDecl *, 8> WarnedDecls;
+  WarningGadgetSets UnsafeOps;
+  FixableGadgetSets FixablesForUnsafeVars;
+  DeclUseTracker Tracker;
 
-  auto [FixableGadgets, WarningGadgets, Tracker] = findGadgets(D);
-
-  DenseMap<const VarDecl *, std::pair<std::vector<const FixableGadget *>,
-                                std::vector<const WarningGadget *>>> Map;
-
-  // First, let's sort gadgets by variables. If some gadgets cover more than one
-  // variable, they'll appear more than once in the map.
-  for (const auto &G : FixableGadgets) {
-    DeclUseList DREs = G->getClaimedVarUseSites();
-
-    // Populate the map.
-    for (const DeclRefExpr *DRE : DREs) {
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        Map[VD].first.push_back(G.get());
-      }
-    }
+  {
+    auto [FixableGadgets, WarningGadgets, TrackerRes] = findGadgets(D);
+    UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
+    FixablesForUnsafeVars = groupFixablesByVar(std::move(FixableGadgets));
+    Tracker = std::move(TrackerRes);
   }
 
-  for (const auto &G : WarningGadgets) {
-    DeclUseList ClaimedVarUseSites = G->getClaimedVarUseSites();
-
-    // Populate the map.
-    bool Pushed = false;
-    for (const DeclRefExpr *DRE : ClaimedVarUseSites) {
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        Map[VD].second.push_back(G.get());
-        Pushed = true;
-      }
-    }
-
-    if (!Pushed) {
-      // We won't return to this gadget later. Emit the warning right away.
-      Handler.handleUnsafeOperation(G->getBaseStmt());
-      continue;
-    }
-  }
-
-  Strategy S;
-
-  for (const auto &Item : Map) {
-
-    const VarDecl *VD = Item.first;
-    const std::vector<const FixableGadget *> &VDFixableGadgets = Item.second.first;
-    const std::vector<const WarningGadget *> &VDWarningGadgets = Item.second.second;
-
-    // If the variable has no unsafe gadgets, skip it entirely.
-    if (VDWarningGadgets.empty())
-      continue;
-
-    std::optional<FixItList> Fixes;
-
-    // Avoid suggesting fixes if not all uses of the variable are identified
-    // as known gadgets.
-    // FIXME: Support parameter variables as well.
-    if (!Tracker.hasUnclaimedUses(VD) && VD->isLocalVarDecl()) {
-      // Choose the appropriate strategy. FIXME: We should try different
-      // strategies.
-      S.set(VD, Strategy::Kind::Span);
-
-      // Check if it works.
-      // FIXME: This isn't sufficient (or even correct) when a gadget has
-      // already produced a fixit for a different variable i.e. it was mentioned
-      // in the map twice (or more). In such case the correct thing to do is
-      // to undo the previous fix first, and then if we can't produce the new
-      // fix for both variables, revert to the old one.
-      Fixes = FixItList{};
-      for (const FixableGadget *G : VDFixableGadgets) {
-        std::optional<FixItList> F = G->getFixits(S);
-        if (!F) {
-          Fixes = std::nullopt;
-          break;
-        }
-
-        for (auto &&Fixit: *F)
-          Fixes->push_back(std::move(Fixit));
-      }
-    }
-
-    if (Fixes) {
-      // If we reach this point, the strategy is applicable.
-      Handler.handleFixableVariable(VD, std::move(*Fixes));
+  // Filter out non-local vars and vars with unclaimed DeclRefExpr-s.
+  for (auto it = FixablesForUnsafeVars.byVar.cbegin();
+       it != FixablesForUnsafeVars.byVar.cend();) {
+    // FIXME: Support ParmVarDecl as well.
+    if (it->first->isLocalVarDecl() || Tracker.hasUnclaimedUses(it->first)) {
+      it = FixablesForUnsafeVars.byVar.erase(it);
     } else {
-      // The strategy has failed. Emit the warning without the fixit.
-      S.set(VD, Strategy::Kind::Wontfix);
-      for (const WarningGadget *G : VDWarningGadgets) {
+      ++it;
+    }
+  }
+
+  llvm::SmallVector<const VarDecl *, 16> UnsafeVars;
+  for (const auto &[VD, ignore] : FixablesForUnsafeVars.byVar)
+    UnsafeVars.push_back(VD);
+
+  Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);
+  std::map<const VarDecl *, FixItList> FixItsForVariable =
+      getFixIts(FixablesForUnsafeVars, NaiveStrategy);
+
+  // FIXME Detect overlapping FixIts.
+
+  for (const auto &G : UnsafeOps.noVar) {
+    Handler.handleUnsafeOperation(G->getBaseStmt());
+  }
+
+  for (const auto &[VD, WarningGadgets] : UnsafeOps.byVar) {
+    auto FixItsIt = FixItsForVariable.find(VD);
+    if (FixItsIt != FixItsForVariable.end()) {
+      Handler.handleFixableVariable(VD, std::move(FixItsIt->second));
+    } else {
+      for (const auto &G : WarningGadgets) {
         Handler.handleUnsafeOperation(G->getBaseStmt());
       }
     }
