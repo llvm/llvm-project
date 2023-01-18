@@ -2498,3 +2498,33 @@ define i8 @diff_of_squares_use2(i8 %x, i8 %y) {
   %r = sub i8 %x2, %y2
   ret i8 %r
 }
+
+; negative test - must be squares
+
+define i8 @diff_of_muls1(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @diff_of_muls1(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul i8 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[M]], [[Y2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %x, %z
+  %y2 = mul i8 %y, %y
+  %r = sub i8 %m, %y2
+  ret i8 %r
+}
+
+; negative test - must be squares
+
+define i8 @diff_of_muls2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @diff_of_muls2(
+; CHECK-NEXT:    [[X2:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X2]], [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x2 = mul i8 %x, %x
+  %m = mul i8 %y, %z
+  %r = sub i8 %x2, %m
+  ret i8 %r
+}
