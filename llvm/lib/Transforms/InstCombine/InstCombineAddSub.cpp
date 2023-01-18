@@ -2304,8 +2304,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   Value *A;
   const APInt *ShAmt;
   Type *Ty = I.getType();
+  unsigned BitWidth = Ty->getScalarSizeInBits();
   if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
-      Op1->hasNUses(2) && *ShAmt == Ty->getScalarSizeInBits() - 1 &&
+      Op1->hasNUses(2) && *ShAmt == BitWidth - 1 &&
       match(Op0, m_OneUse(m_c_Xor(m_Specific(A), m_Specific(Op1))))) {
     // B = ashr i32 A, 31 ; smear the sign bit
     // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)
@@ -2324,7 +2325,6 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   const APInt *AddC, *AndC;
   if (match(Op0, m_Add(m_Value(X), m_APInt(AddC))) &&
       match(Op1, m_And(m_Specific(X), m_APInt(AndC)))) {
-    unsigned BitWidth = Ty->getScalarSizeInBits();
     unsigned Cttz = AddC->countTrailingZeros();
     APInt HighMask(APInt::getHighBitsSet(BitWidth, BitWidth - Cttz));
     if ((HighMask & *AndC).isZero())
@@ -2366,7 +2366,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   }
 
   // C - ctpop(X) => ctpop(~X) if C is bitwidth
-  if (match(Op0, m_SpecificInt(Ty->getScalarSizeInBits())) &&
+  if (match(Op0, m_SpecificInt(BitWidth)) &&
       match(Op1, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(X)))))
     return replaceInstUsesWith(
         I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
