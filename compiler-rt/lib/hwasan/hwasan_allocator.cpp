@@ -106,7 +106,6 @@ inline u32 Metadata::GetAllocStackId() const {
   return atomic_load(&alloc_context_id, memory_order_relaxed);
 }
 
-static const uptr kChunkHeaderSize = sizeof(HwasanChunkView);
 
 void GetAllocatorStats(AllocatorStatCounters s) {
   allocator.GetStats(s);
@@ -534,9 +533,8 @@ uptr GetUserBegin(uptr chunk) {
 }
 
 LsanMetadata::LsanMetadata(uptr chunk) {
-  metadata_ = chunk ? reinterpret_cast<__hwasan::Metadata *>(
-                          chunk - __hwasan::kChunkHeaderSize)
-                    : nullptr;
+  metadata_ =
+      chunk ? (reinterpret_cast<__hwasan::Metadata *>(chunk) - 1) : nullptr;
 }
 
 bool LsanMetadata::allocated() const {
