@@ -118,6 +118,7 @@ if(LIBOMPTARGET_NVPTX_ARCH)
   string(SUBSTRING "${LIBOMPTARGET_NVPTX_ARCH_OUTPUT}" 0 ${first_arch_string}
          arch_string)
   if(arch_string)
+    set(LIBOMPTARGET_FOUND_NVIDIA_GPU TRUE)
     set(LIBOMPTARGET_DEP_CUDA_ARCH "${arch_string}")
   endif()
 endif()
@@ -157,6 +158,25 @@ find_package_handle_standard_args(
   LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)
 
 mark_as_advanced(LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)
+
+################################################################################
+# Looking for AMD GPUs...
+################################################################################
+
+find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch PATHS ${LLVM_BINARY_DIR}/bin)
+if(LIBOMPTARGET_AMDGPU_ARCH)
+  execute_process(COMMAND ${LIBOMPTARGET_AMDGPU_ARCH}
+                  OUTPUT_VARIABLE LIBOMPTARGET_AMDGPU_ARCH_OUTPUT
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(FIND "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}" "\n" first_arch_string)
+  string(SUBSTRING "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}" 0 ${first_arch_string}
+         arch_string)
+  if(arch_string)
+    set(LIBOMPTARGET_FOUND_AMDGPU_GPU TRUE)
+    set(LIBOMPTARGET_DEP_AMDGPU_ARCH "${arch_string}")
+  endif()
+endif()
+
 
 ################################################################################
 # Looking for VEO...
