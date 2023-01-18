@@ -2074,7 +2074,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         DSC == DeclSpecContext::DSC_type_specifier,
         DSC == DeclSpecContext::DSC_template_param ||
             DSC == DeclSpecContext::DSC_template_type_arg,
-        OffsetOfState, &SkipBody);
+        &SkipBody);
 
     // If ActOnTag said the type was dependent, try again with the
     // less common call.
