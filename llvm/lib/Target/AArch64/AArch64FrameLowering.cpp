@@ -1397,23 +1397,18 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                 MFnI.needsDwarfUnwindInfo(MF));
 
   if (MFnI.shouldSignReturnAddress(MF)) {
-    unsigned PACI;
     if (MFnI.shouldSignWithBKey()) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITBKEY))
           .setMIFlag(MachineInstr::FrameSetup);
-      // No SEH opcode for this one; it doesn't materialize into an
-      // instruction on Windows.
-      PACI = Subtarget.hasPAuth() ? AArch64::PACIB : AArch64::PACIBSP;
-    } else {
-      PACI = Subtarget.hasPAuth() ? AArch64::PACIA : AArch64::PACIASP;
     }
 
-    auto MI = BuildMI(MBB, MBBI, DL, TII->get(PACI));
-    if (Subtarget.hasPAuth())
-      MI.addReg(AArch64::LR, RegState::Define)
-          .addReg(AArch64::LR)
-          .addReg(AArch64::SP, RegState::InternalRead);
-    MI.setMIFlag(MachineInstr::FrameSetup);
+    // No SEH opcode for this one; it doesn't materialize into an
+    // instruction on Windows.
+    BuildMI(MBB, MBBI, DL,
+            TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSP
+                                               : AArch64::PACIASP))
+        .setMIFlag(MachineInstr::FrameSetup);
+
     if (EmitCFI) {
       unsigned CFIIndex =
           MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
