@@ -35,7 +35,7 @@ Expected<CASID> BuiltinCAS::parseID(StringRef Reference) {
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "invalid hash in cas-id '" + Reference + "'");
 
-  return parseIDImpl(arrayRefFromStringRef(Binary));
+  return CASID::create(&getContext(), Binary);
 }
 
 void BuiltinCASContext::printIDImpl(raw_ostream &OS, const CASID &ID) const {
