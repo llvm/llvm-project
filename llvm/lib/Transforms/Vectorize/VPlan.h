@@ -1396,9 +1396,7 @@ public:
   }
   ~VPInterleaveRecipe() override = default;
 
-  static inline bool classof(const VPDef *D) {
-    return D->getVPDefID() == VPDef::VPInterleaveSC;
-  }
+  VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const {
