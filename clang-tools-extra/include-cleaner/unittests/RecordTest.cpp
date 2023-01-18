@@ -11,6 +11,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -430,6 +431,21 @@ TEST_F(PragmaIncludeTest, IWYUExport) {
   EXPECT_TRUE(PI.getExporters(FM.getFile("export3.h").get(), FM).empty());
   EXPECT_TRUE(
       PI.getExporters(SM.getFileEntryForID(SM.getMainFileID()), FM).empty());
+}
+
+TEST_F(PragmaIncludeTest, IWYUExportForStandardHeaders) {
+  Inputs.Code = R"cpp(
+    #include "export.h"
+  )cpp";
+  Inputs.ExtraFiles["export.h"] = R"cpp(
+    #include <string> // IWYU pragma: export
+  )cpp";
+  Inputs.ExtraFiles["string"] = "";
+  Inputs.ExtraArgs = {"-isystem."};
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  EXPECT_THAT(PI.getExporters(*tooling::stdlib::Header::named("<string>"), FM),
+              testing::UnorderedElementsAre(FileNamed("export.h")));
 }
 
 TEST_F(PragmaIncludeTest, IWYUExportBlock) {

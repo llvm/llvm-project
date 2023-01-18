@@ -350,6 +350,8 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
       SM(*this) {
   VerboseAsm = OutStreamer->isVerboseAsm();
+  DwarfUsesRelocationsAcrossSections =
+      MAI->doesDwarfUseRelocationsAcrossSections();
 }
 
 AsmPrinter::~AsmPrinter() {
@@ -4033,7 +4035,7 @@ unsigned int AsmPrinter::getDwarfOffsetByteSize() const {
 dwarf::FormParams AsmPrinter::getDwarfFormParams() const {
   return {getDwarfVersion(), uint8_t(getPointerSize()),
           OutStreamer->getContext().getDwarfFormat(),
-          MAI->doesDwarfUseRelocationsAcrossSections()};
+          doesDwarfUseRelocationsAcrossSections()};
 }
 
 unsigned int AsmPrinter::getUnitLengthFieldByteSize() const {

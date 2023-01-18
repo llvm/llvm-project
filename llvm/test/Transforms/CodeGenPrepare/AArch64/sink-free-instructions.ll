@@ -313,12 +313,12 @@ define <4 x i32> @sink_insertelement(i16 %e, i8 %f) {
 ; CHECK-NEXT:  for.cond4.preheader.lr.ph:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[F:%.*]], 0
 ; CHECK-NEXT:    [[CONV25:%.*]] = sext i16 [[E:%.*]] to i32
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT143:%.*]] = insertelement <4 x i32> poison, i32 [[CONV25]], i32 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_COND4_PREHEADER_US_PREHEADER:%.*]], label [[FOR_COND4_PREHEADER_PREHEADER:%.*]]
 ; CHECK:       for.cond4.preheader.us.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[CONV25]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT144:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> zeroinitializer, [[BROADCAST_SPLAT144]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[BROADCAST_SPLAT144:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT143]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = mul <4 x i32> zeroinitializer, [[BROADCAST_SPLAT144]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 ; CHECK:       for.cond4.preheader.preheader:
 ; CHECK-NEXT:    ret <4 x i32> zeroinitializer
 ;

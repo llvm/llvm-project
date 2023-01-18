@@ -705,7 +705,7 @@ private:
     /// it to \p Die.
     /// \returns the size of the new attribute.
     unsigned cloneAddressAttribute(DIE &Die, AttributeSpec AttrSpec,
-                                   const DWARFFormValue &Val,
+                                   unsigned AttrSize, const DWARFFormValue &Val,
                                    const CompileUnit &Unit,
                                    AttributesInfo &Info);
 

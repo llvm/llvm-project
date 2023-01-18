@@ -11,7 +11,11 @@
 # RUN: llvm-lipo %t.i386.o -create -o %t.noarch.o
 # RUN: not %no-fatal-warnings-lld -o /dev/null %t.noarch.o 2>&1 | \
 # RUN:    FileCheck %s -DFILE=%t.noarch.o
-# CHECK: warning: unable to find matching architecture in [[FILE]]
+# CHECK: warning: [[FILE]]: ignoring file because it is universal (i386) but does not contain the x86_64 architecture
+
+# RUN: not %lld -arch arm64 -o /dev/null %t.fat.o 2>&1 | \
+# RUN:    FileCheck --check-prefix=CHECK-FAT %s -DFILE=%t.fat.o
+# CHECK-FAT: error: [[FILE]]: ignoring file because it is universal (i386,x86_64) but does not contain the arm64 architecture
 
 ## Validates that we read the cpu-subtype correctly from a fat exec.
 # RUN: %lld -o %t.x86_64.out %t.x86_64.o

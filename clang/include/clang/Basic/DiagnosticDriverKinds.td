@@ -489,6 +489,9 @@ def err_test_module_file_extension_format : Error<
   "-ftest-module-file-extension argument '%0' is not of the required form "
   "'blockname:major:minor:hashed:user info'">;
 
+def err_drv_module_output_with_multiple_arch : Error<
+  "option '-fmodule-output' can't be used with multiple arch options">;
+
 def err_drv_extract_api_wrong_kind : Error<
   "header file '%0' input '%1' does not match the type of prior input "
   "in api extraction; use '-x %2' to override">;

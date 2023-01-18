@@ -714,6 +714,8 @@ variables is defined below.
     * ``LIBOMPTARGET_SHARED_MEMORY_SIZE=<Num>``
     * ``LIBOMPTARGET_MAP_FORCE_ATOMIC=[TRUE/FALSE] (default TRUE)``
     * ``LIBOMPTARGET_JIT_OPT_LEVEL={0,1,2,3} (default 3)``
+    * ``LIBOMPTARGET_JIT_SKIP_OPT=[TRUE/FALSE] (default FALSE)``
+    * ``LIBOMPTARGET_JIT_REPLACEMENT_OBJECT=<in:Filename> (object file)``
     * ``LIBOMPTARGET_JIT_REPLACEMENT_MODULE=<in:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
@@ -1062,6 +1064,22 @@ This environment variable can be used to change the optimization pipeleine used
 to optimize the embedded device code as part of the device JIT. The value is
 corresponds to the ``-O{0,1,2,3}`` command line argument passed to ``clang``.
 
+LIBOMPTARGET_JIT_SKIP_OPT
+""""""""""""""""""""""""""
+
+This environment variable can be used to skip the optimization pipeline during
+JIT compilation. If set, the image will only be passed through the backend. The
+backend is invoked with the ``LIBOMPTARGET_JIT_OPT_LEVEL`` flag.
+
+LIBOMPTARGET_JIT_REPLACEMENT_OBJECT
+"""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to replace the embedded device code
+before the device JIT finishes compilation for the target. The value is
+expected to be a filename to an object file, thus containing the output of the
+assembler in object format for the respective target. The JIT optimization
+pipeline and backend are skipped and only target specific post-processing is
+performed on the object file before it is loaded onto the device.
 
 LIBOMPTARGET_JIT_REPLACEMENT_MODULE
 """""""""""""""""""""""""""""""""""

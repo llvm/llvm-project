@@ -1142,7 +1142,7 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
 static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
                                    ArrayRef<ISD::OutputArg> Outs) {
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    const CCValAssign &VA = ArgLocs[i];
+    CCValAssign &VA = ArgLocs[i];
     MVT ValTy = VA.getLocVT();
     // FIXME: What about f32 arguments? C promotes them to f64 when calling
     // varargs functions.
@@ -1153,8 +1153,6 @@ static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
       continue;
 
     // This floating point argument should be reassigned.
-    CCValAssign NewVA;
-
     // Determine the offset into the argument array.
     Register firstReg = (ValTy == MVT::f64) ? SP::D0 : SP::Q0;
     unsigned argSize  = (ValTy == MVT::f64) ? 8 : 16;
@@ -1166,21 +1164,20 @@ static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
       unsigned IReg = SP::I0 + Offset/8;
       if (ValTy == MVT::f64)
         // Full register, just bitconvert into i64.
-        NewVA = CCValAssign::getReg(VA.getValNo(), VA.getValVT(),
-                                    IReg, MVT::i64, CCValAssign::BCvt);
+        VA = CCValAssign::getReg(VA.getValNo(), VA.getValVT(), IReg, MVT::i64,
+                                 CCValAssign::BCvt);
       else {
         assert(ValTy == MVT::f128 && "Unexpected type!");
         // Full register, just bitconvert into i128 -- We will lower this into
         // two i64s in LowerCall_64.
-        NewVA = CCValAssign::getCustomReg(VA.getValNo(), VA.getValVT(),
-                                          IReg, MVT::i128, CCValAssign::BCvt);
+        VA = CCValAssign::getCustomReg(VA.getValNo(), VA.getValVT(), IReg,
+                                       MVT::i128, CCValAssign::BCvt);
       }
     } else {
       // This needs to go to memory, we're out of integer registers.
-      NewVA = CCValAssign::getMem(VA.getValNo(), VA.getValVT(),
-                                  Offset, VA.getLocVT(), VA.getLocInfo());
+      VA = CCValAssign::getMem(VA.getValNo(), VA.getValVT(), Offset,
+                               VA.getLocVT(), VA.getLocInfo());
     }
-    ArgLocs[i] = NewVA;
   }
 }
 

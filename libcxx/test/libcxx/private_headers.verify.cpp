@@ -396,6 +396,7 @@ END-SCRIPT
 #include <__fwd/span.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/span.h'}}
 #include <__fwd/string.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/string.h'}}
 #include <__fwd/string_view.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/string_view.h'}}
+#include <__fwd/subrange.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/subrange.h'}}
 #include <__fwd/tuple.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/tuple.h'}}
 #include <__ios/fpos.h> // expected-error@*:* {{use of private header from outside its module: '__ios/fpos.h'}}
 #include <__iterator/access.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/access.h'}}
@@ -534,6 +535,7 @@ END-SCRIPT
 #include <__ranges/data.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/data.h'}}
 #include <__ranges/drop_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/drop_view.h'}}
 #include <__ranges/drop_while_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/drop_while_view.h'}}
+#include <__ranges/elements_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/elements_view.h'}}
 #include <__ranges/empty.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/empty.h'}}
 #include <__ranges/empty_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/empty_view.h'}}
 #include <__ranges/enable_borrowed_range.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_borrowed_range.h'}}
@@ -567,10 +569,12 @@ END-SCRIPT
 #include <__thread/timed_backoff_policy.h> // expected-error@*:* {{use of private header from outside its module: '__thread/timed_backoff_policy.h'}}
 #include <__tuple_dir/apply_cv.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/apply_cv.h'}}
 #include <__tuple_dir/make_tuple_types.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/make_tuple_types.h'}}
+#include <__tuple_dir/pair_like.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/pair_like.h'}}
 #include <__tuple_dir/sfinae_helpers.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/sfinae_helpers.h'}}
 #include <__tuple_dir/tuple_element.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/tuple_element.h'}}
 #include <__tuple_dir/tuple_indices.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/tuple_indices.h'}}
 #include <__tuple_dir/tuple_like.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/tuple_like.h'}}
+#include <__tuple_dir/tuple_like_ext.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/tuple_like_ext.h'}}
 #include <__tuple_dir/tuple_size.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/tuple_size.h'}}
 #include <__tuple_dir/tuple_types.h> // expected-error@*:* {{use of private header from outside its module: '__tuple_dir/tuple_types.h'}}
 #include <__type_traits/add_const.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/add_const.h'}}

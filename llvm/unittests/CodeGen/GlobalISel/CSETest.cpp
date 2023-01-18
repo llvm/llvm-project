@@ -127,6 +127,13 @@ TEST_F(AArch64GISelMITest, TestCSE) {
                                      {Copies[0], static_cast<uint64_t>(1)});
   EXPECT_EQ(&*ExtractMIB, &*ExtractMIB1);
   EXPECT_NE(&*ExtractMIB, &*ExtractMIB2);
+
+
+  auto SextInRegMIB = CSEB.buildSExtInReg(s16, Copies[0], 0);
+  auto SextInRegMIB1 = CSEB.buildSExtInReg(s16, Copies[0], 0);
+  auto SextInRegMIB2 = CSEB.buildSExtInReg(s16, Copies[0], 1);
+  EXPECT_EQ(&*SextInRegMIB, &*SextInRegMIB1);
+  EXPECT_NE(&*SextInRegMIB, &*SextInRegMIB2);
 }
 
 TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {

@@ -12,18 +12,50 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
 
-static std::string getEnumFeatures(const Record &Rec) {
+using ISAInfoTy = llvm::Expected<std::unique_ptr<RISCVISAInfo>>;
+
+static int getXLen(const Record &Rec) {
   std::vector<Record *> Features = Rec.getValueAsListOfDefs("Features");
   if (find_if(Features, [](const Record *R) {
         return R->getName() == "Feature64Bit";
       }) != Features.end())
-    return "FK_64BIT";
+    return 64;
 
-  return "FK_NONE";
+  return 32;
+}
+
+// We can generate march string from target features as what has been described
+// in RISCV ISA specification (version 20191213) 'Chapter 27. ISA Extension
+// Naming Conventions'.
+//
+// This is almost the same as RISCVFeatures::parseFeatureBits, except that we
+// get feature name from feature records instead of feature bits.
+static std::string getMArch(int XLen, const Record &Rec) {
+  std::vector<std::string> FeatureVector;
+
+  // Convert features to FeatureVector.
+  for (auto *Feature : Rec.getValueAsListOfDefs("Features")) {
+    StringRef FeatureName = Feature->getValueAsString("Name");
+    if (llvm::RISCVISAInfo::isSupportedExtensionFeature(FeatureName))
+      FeatureVector.push_back((Twine("+") + FeatureName).str());
+  }
+
+  ISAInfoTy ISAInfo = llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
+  if (!ISAInfo)
+    report_fatal_error("Invalid features");
+
+  // RISCVISAInfo::toString will generate a march string with all the extensions
+  // we have added to it.
+  return (*ISAInfo)->toString();
+}
+
+static std::string getEnumFeatures(int XLen) {
+  return XLen == 64 ? "FK_64BIT" : "FK_NONE";
 }
 
 void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
@@ -39,11 +71,19 @@ void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   // Iterate on all definition records.
   for (const MapTy &Def : Map) {
     const Record &Rec = *(Def.second);
-    if (Rec.isSubClassOf("RISCVProcessorModel"))
+    if (Rec.isSubClassOf("RISCVProcessorModel")) {
+      int XLen = getXLen(Rec);
+      std::string MArch = Rec.getValueAsString("DefaultMarch").str();
+
+      // Compute MArch from features if we don't specify it.
+      if (MArch.empty())
+        MArch = getMArch(XLen, Rec);
+
       OS << "PROC(" << Rec.getName() << ", "
          << "{\"" << Rec.getValueAsString("Name") << "\"},"
-         << getEnumFeatures(Rec) << ", "
-         << "{\"" << Rec.getValueAsString("DefaultMarch") << "\"})\n";
+         << getEnumFeatures(XLen) << ", "
+         << "{\"" << MArch << "\"})\n";
+    }
   }
   OS << "\n#undef PROC\n";
   OS << "\n";

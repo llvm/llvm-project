@@ -434,7 +434,6 @@ module LLVM_Utils {
     module * { export * }
 
     // These are intended for textual inclusion.
-    textual header "TargetParser/AArch64TargetParser.def"
     textual header "TargetParser/ARMTargetParser.def"
     textual header "TargetParser/CSKYTargetParser.def"
     textual header "TargetParser/X86TargetParser.def"

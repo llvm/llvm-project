@@ -64,6 +64,7 @@ bool CSEConfigFull::shouldCSEOpc(unsigned Opc) {
   case TargetOpcode::G_SELECT:
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
+  case TargetOpcode::G_SEXT_INREG:
     return true;
   }
   return false;

@@ -66,6 +66,8 @@ public:
   /// Returns empty if there is none.
   llvm::SmallVector<const FileEntry *> getExporters(const FileEntry *File,
                                                     FileManager &FM) const;
+  llvm::SmallVector<const FileEntry *> getExporters(tooling::stdlib::Header,
+                                                    FileManager &FM) const;
 
   /// Returns true if the given file is a self-contained file.
   bool isSelfContained(const FileEntry *File) const;
@@ -100,6 +102,9 @@ private:
   llvm::DenseMap<llvm::sys::fs::UniqueID,
                  llvm::SmallVector</*FileEntry::getName()*/ llvm::StringRef>>
       IWYUExportBy;
+  llvm::DenseMap<tooling::stdlib::Header,
+                 llvm::SmallVector</*FileEntry::getName()*/ llvm::StringRef>>
+      StdIWYUExportBy;
 
   /// Contains all non self-contained files detected during the parsing.
   llvm::DenseSet<llvm::sys::fs::UniqueID> NonSelfContainedFiles;

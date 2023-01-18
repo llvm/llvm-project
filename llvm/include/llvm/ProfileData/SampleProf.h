@@ -648,7 +648,7 @@ public:
       return State < That.State;
 
     if (!hasContext()) {
-      return (Name.compare(That.Name)) == -1;
+      return Name < That.Name;
     }
 
     uint64_t I = 0;
@@ -657,7 +657,7 @@ public:
       auto &Context2 = That.FullContext[I];
       auto V = Context1.FuncName.compare(Context2.FuncName);
       if (V)
-        return V == -1;
+        return V < 0;
       if (Context1.Location != Context2.Location)
         return Context1.Location < Context2.Location;
       I++;
