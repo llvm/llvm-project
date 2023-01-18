@@ -497,6 +497,8 @@ bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
     return false;
+  if (!m_unsafe_ptr)
+    return false;
   if (!m_unsafe_ptr->Update())
     return false;
 
@@ -546,12 +548,12 @@ bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
 
 bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
     MightHaveChildren() {
-  return m_unsafe_ptr->GetCount();
+  return m_unsafe_ptr && m_unsafe_ptr->GetCount();
 }
 
 size_t lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  if (m_unsafe_ptr->HasPointee() && name == "pointee")
+  if (m_unsafe_ptr && m_unsafe_ptr->HasPointee() && name == "pointee")
     return 0;
   return UINT32_MAX;
 }
