@@ -41,9 +41,9 @@ void configureInvocationForCaching(CompilerInvocation &CI, CASOptions CASOpts,
                                    bool ProduceIncludeTree);
 
 struct DepscanPrefixMapping {
-  Optional<StringRef> NewSDKPath;
-  Optional<StringRef> NewToolchainPath;
-  SmallVector<StringRef> PrefixMap;
+  Optional<std::string> NewSDKPath;
+  Optional<std::string> NewToolchainPath;
+  SmallVector<std::string> PrefixMap;
 
   /// Add path mappings from the current path in \p Invocation to the new path
   /// from \c DepscanPrefixMapping to the \p Mapper.

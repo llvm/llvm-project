@@ -452,7 +452,7 @@ parseCASFSAutoPrefixMappings(DiagnosticsEngine &Diag, const ArgList &Args) {
       Diag.Report(diag::err_drv_invalid_argument_to_option)
           << Map << A->getOption().getName();
     else
-      Mapping.PrefixMap.push_back(Map);
+      Mapping.PrefixMap.push_back(std::string(Map));
     A->claim();
   }
   if (const Arg *A = Args.getLastArg(options::OPT_fdepscan_prefix_map_sdk_EQ))

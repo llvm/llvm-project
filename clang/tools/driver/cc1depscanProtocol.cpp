@@ -336,14 +336,14 @@ CC1DepScanDProtocol::getDepscanPrefixMapping(llvm::StringSaver &Saver,
     switch (Count++) {
     case 0:
       if (!Map.empty())
-        Mapping.NewSDKPath = Map;
+        Mapping.NewSDKPath = std::string(Map);
       break;
     case 1:
       if (!Map.empty())
-        Mapping.NewToolchainPath = Map;
+        Mapping.NewToolchainPath = std::string(Map);
       break;
     default:
-      Mapping.PrefixMap.push_back(Map);
+      Mapping.PrefixMap.push_back(std::string(Map));
       break;
     }
   }
