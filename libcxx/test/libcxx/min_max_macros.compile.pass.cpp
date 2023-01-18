@@ -95,8 +95,10 @@ TEST_MACROS();
 TEST_MACROS();
 #include <condition_variable>
 TEST_MACROS();
-#include <coroutine>
+#if (defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)
+#   include <coroutine>
 TEST_MACROS();
+#endif
 #include <csetjmp>
 TEST_MACROS();
 #include <csignal>

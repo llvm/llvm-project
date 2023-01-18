@@ -28,3 +28,4 @@ endmacro()
 
 add_subdirectory(deviceinfo)
 add_subdirectory(prep-libomptarget-bc)
+add_subdirectory(kernelreplay)

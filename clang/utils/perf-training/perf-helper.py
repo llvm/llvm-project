@@ -23,7 +23,7 @@ def findFilesWithExtension(path, extension):
   filenames = []
   for root, dirs, files in os.walk(path): 
     for filename in files:
-      if filename.endswith(extension):
+      if filename.endswith(f".{extension}"):
         filenames.append(os.path.join(root, filename))
   return filenames
 

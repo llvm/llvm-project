@@ -605,49 +605,57 @@ namespace llvm {
   /// @}
 
   /// Construct a MutableArrayRef from a single element.
-  template<typename T>
+  template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
   MutableArrayRef<T> makeMutableArrayRef(T &OneElt) {
     return OneElt;
   }
 
   /// Construct a MutableArrayRef from a pointer and length.
-  template<typename T>
+  template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
   MutableArrayRef<T> makeMutableArrayRef(T *data, size_t length) {
     return MutableArrayRef<T>(data, length);
   }
 
   /// Construct a MutableArrayRef from a SmallVector.
   template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
   MutableArrayRef<T> makeMutableArrayRef(SmallVectorImpl<T> &Vec) {
     return Vec;
   }
 
   /// Construct a MutableArrayRef from a SmallVector.
   template <typename T, unsigned N>
+  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
   MutableArrayRef<T> makeMutableArrayRef(SmallVector<T, N> &Vec) {
     return Vec;
   }
 
   /// Construct a MutableArrayRef from a std::vector.
-  template<typename T>
+  template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
   MutableArrayRef<T> makeMutableArrayRef(std::vector<T> &Vec) {
     return Vec;
   }
 
   /// Construct a MutableArrayRef from a std::array.
   template <typename T, std::size_t N>
+  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
   MutableArrayRef<T> makeMutableArrayRef(std::array<T, N> &Arr) {
     return Arr;
   }
 
   /// Construct a MutableArrayRef from a MutableArrayRef (no-op) (const)
   template <typename T>
+  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
   MutableArrayRef<T> makeMutableArrayRef(const MutableArrayRef<T> &Vec) {
     return Vec;
   }
 
   /// Construct a MutableArrayRef from a C array.
-  template<typename T, size_t N>
+  template <typename T, size_t N>
+  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
   MutableArrayRef<T> makeMutableArrayRef(T (&Arr)[N]) {
     return MutableArrayRef<T>(Arr);
   }

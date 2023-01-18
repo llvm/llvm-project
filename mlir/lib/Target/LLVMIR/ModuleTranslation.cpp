@@ -1285,7 +1285,12 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
                            << refName << "'";
           return failure();
         }
+        auto *tempMD = cast<llvm::MDNode>(descNode->getOperand(opNum).get());
         descNode->replaceOperandWith(opNum, refNode);
+        // Deallocate temporary MDNode's explicitly.
+        // Note that each temporary node has a single use by creation,
+        // so it is valid to deallocate it here.
+        llvm::MDNode::deleteTemporary(tempMD);
       }
     }
   }

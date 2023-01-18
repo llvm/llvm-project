@@ -816,6 +816,7 @@ SmallVector<OpFoldResult> transform::PackOp::getMixedPackedSizes() {
   return getMixedValues(getStaticPackedSizes(), getPackedSizes(), b);
 }
 
+#ifndef NDEBUG
 /// Return true if `map` has 0 or 1 result function of AffineDimExpr(dim).
 static bool hasAtMostOneResultFunctionOfDim(AffineMap map, int64_t dim) {
   bool found = false;
@@ -828,6 +829,7 @@ static bool hasAtMostOneResultFunctionOfDim(AffineMap map, int64_t dim) {
   }
   return true;
 }
+#endif // NDEBUG
 
 /// Return the index of the first result of `map` that is a function of
 /// AffineDimExpr(dim), std::nullopt otherwise.

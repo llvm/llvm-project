@@ -348,6 +348,8 @@ Bug Fixes
 - Fix issue that the standard C++ modules importer will call global
   constructor/destructor for the global varaibles in the importing modules.
   This fixes `Issue 59765 <https://github.com/llvm/llvm-project/issues/59765>`_
+- Reject in-class defaulting of previosly declared comparison operators. Fixes
+  `Issue 51227 <https://github.com/llvm/llvm-project/issues/51227>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -550,6 +552,10 @@ Deprecated Compiler Flags
   has been deprecated. The flag will be removed in Clang 18.
   ``-ftrivial-auto-var-init=zero`` is now available unconditionally, to be
   compatible with GCC.
+- ``-fcoroutines-ts`` has been deprecated. The flag will be removed in Clang 17.
+  Please use ``-std=c++20`` or higher to use standard C++ coroutines instead.
+- ``-fmodules-ts`` has been deprecated. The flag will be removed in Clang 17.
+  Please use ``-std=c++20`` or higher to use standard C++ modules instead.
 
 Modified Compiler Flags
 -----------------------

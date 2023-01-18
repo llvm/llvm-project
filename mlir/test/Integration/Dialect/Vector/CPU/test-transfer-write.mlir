@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
@@ -37,6 +37,34 @@ func.func @transfer_read_1d(%A : memref<?xf32>) -> vector<32xf32> {
     {permutation_map = affine_map<(d0) -> (d0)>}
     : memref<?xf32>, vector<32xf32>
   return %r : vector<32xf32>
+}
+
+func.func @transfer_write_inbounds_3d(%A : memref<4x4x4xf32>) {
+  %c0 = arith.constant 0: index
+  %f = arith.constant 0.0 : f32
+  %v0 = vector.splat %f : vector<2x3x4xf32>
+  %f1 = arith.constant 1.0 : f32
+  %f2 = arith.constant 2.0 : f32
+  %f3 = arith.constant 3.0 : f32
+  %f4 = arith.constant 4.0 : f32
+  %f5 = arith.constant 5.0 : f32
+  %f6 = arith.constant 6.0 : f32
+  %f7 = arith.constant 7.0 : f32
+  %f8 = arith.constant 8.0 : f32
+
+  %v1 = vector.insert %f1, %v0[0, 0, 0] : f32 into vector<2x3x4xf32>
+  %v2 = vector.insert %f2, %v1[0, 0, 3] : f32 into vector<2x3x4xf32>
+  %v3 = vector.insert %f3, %v2[0, 2, 0] : f32 into vector<2x3x4xf32>
+  %v4 = vector.insert %f4, %v3[0, 2, 3] : f32 into vector<2x3x4xf32>
+  %v5 = vector.insert %f5, %v4[1, 0, 0] : f32 into vector<2x3x4xf32>
+  %v6 = vector.insert %f6, %v5[1, 0, 3] : f32 into vector<2x3x4xf32>
+  %v7 = vector.insert %f7, %v6[1, 2, 0] : f32 into vector<2x3x4xf32>
+  %v8 = vector.insert %f8, %v7[1, 2, 3] : f32 into vector<2x3x4xf32>
+  vector.transfer_write %v8, %A[%c0, %c0, %c0]
+    {permutation_map = affine_map<(d0, d1, d2) -> (d2, d0, d1)>,
+    in_bounds = [true, true, true]}
+    : vector<2x3x4xf32>, memref<4x4x4xf32>
+  return
 }
 
 func.func @entry() {
@@ -90,6 +118,24 @@ func.func @entry() {
   vector.print %6 : vector<32xf32>
 
   memref.dealloc %A : memref<?xf32>
+
+  // 3D case
+  %c4 = arith.constant 4: index
+  %A1 = memref.alloc() {alignment=64} : memref<4x4x4xf32>
+  scf.for %i = %c0 to %c4 step %c1 {
+    scf.for %j = %c0 to %c4 step %c1 {
+      scf.for %k = %c0 to %c4 step %c1 {
+        %f = arith.constant 0.0: f32
+        memref.store %f, %A1[%i, %j, %k] : memref<4x4x4xf32>
+      }
+    }
+  }
+  call @transfer_write_inbounds_3d(%A1) : (memref<4x4x4xf32>) -> ()
+  %f = arith.constant 0.0: f32
+  %r = vector.transfer_read %A1[%c0, %c0, %c0], %f
+    : memref<4x4x4xf32>, vector<4x4x4xf32>
+  vector.print %r : vector<4x4x4xf32>
+
   return
 }
 
@@ -100,3 +146,7 @@ func.func @entry() {
 // CHECK: ( 0, 0, 0, 17, 17, 17, 17, 17, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
 // CHECK: ( 0, 0, 0, 17, 17, 17, 17, 17, 13, 13, 13, 13, 13, 13, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 0 )
 // CHECK: ( 0, 0, 0, 17, 17, 17, 17, 17, 13, 13, 13, 13, 13, 13, 17, 17, 17, 17, 17, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13 )
+
+// 3D case.
+// CHECK: ( ( ( 1, 5, 0, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 0, 0 ), ( 2, 6, 0, 0 ) ), ( ( 0, 0, 0, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 0, 0 ) ),
+// CHECK-SAME: ( ( 3, 7, 0, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 0, 0 ), ( 4, 8, 0, 0 ) ), ( ( 0, 0, 0, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 0, 0 ) ) )

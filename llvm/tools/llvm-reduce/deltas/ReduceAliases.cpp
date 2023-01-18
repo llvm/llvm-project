@@ -13,8 +13,10 @@
 
 #include "ReduceAliases.h"
 #include "Delta.h"
+#include "Utils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
@@ -29,6 +31,21 @@ static void extractAliasesFromModule(Oracle &O, Module &Program) {
   }
 }
 
+static void extractIFuncsFromModule(Oracle &O, Module &Program) {
+  std::vector<GlobalIFunc *> IFuncs;
+  for (GlobalIFunc &GI : Program.ifuncs()) {
+    if (!O.shouldKeep())
+      IFuncs.push_back(&GI);
+  }
+
+  if (!IFuncs.empty())
+    lowerGlobalIFuncUsersAsGlobalCtor(Program, IFuncs);
+}
+
 void llvm::reduceAliasesDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, extractAliasesFromModule, "Reducing Aliases");
+}
+
+void llvm::reduceIFuncsDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, extractIFuncsFromModule, "Reducing Ifuncs");
 }

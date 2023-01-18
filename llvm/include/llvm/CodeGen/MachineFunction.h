@@ -375,6 +375,9 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
 
+  /// BBID to assign to the next basic block of this function.
+  unsigned NextBBID = 0;
+
   /// Section Type for basic blocks, only relevant with basic block sections.
   BasicBlockSection BBSectionsType = BasicBlockSection::None;
 
