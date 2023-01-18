@@ -990,13 +990,15 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
 
   bool unowned_self = false;
   if (variable.IsSelf()) {
-    SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy;
-    if (SwiftASTContext::IsNonTriviallyManagedReferenceType(compiler_type,
-                                                            strategy))
-      unowned_self =
-          strategy ==
-          SwiftASTContext::NonTriviallyManagedReferenceStrategy::eUnowned;
-  }
+    if (auto swift_ts =
+            compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>())
+
+      if (auto kind = swift_ts->GetNonTriviallyManagedReferenceKind(
+              compiler_type.GetOpaqueQualType()))
+        unowned_self =
+            *kind ==
+            TypeSystemSwift::NonTriviallyManagedReferenceKind::eUnowned;
+    }
   return SwiftExpressionParser::SILVariableInfo(
       variable.GetType(), offset, needs_init, unowned_self);
 }
