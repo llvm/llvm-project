@@ -142,3 +142,22 @@ lldb::Format TypeSystemSwift::GetFormat(opaque_compiler_type_t type) {
 
   return eFormatBytes;
 }
+
+namespace llvm {
+llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           TypeSystemSwift::NonTriviallyManagedReferenceKind k) {
+  switch (k) {
+  case TypeSystemSwift::NonTriviallyManagedReferenceKind::eWeak:
+    os << "eWeak";
+    break;
+  case TypeSystemSwift::NonTriviallyManagedReferenceKind:: eUnowned:
+    os << "eUnowned";
+    break;
+  case TypeSystemSwift::NonTriviallyManagedReferenceKind::eUnmanaged:
+    os << "eUnmanaged";
+    break;
+  }
+  return os;
+}
+} // namespace llvm

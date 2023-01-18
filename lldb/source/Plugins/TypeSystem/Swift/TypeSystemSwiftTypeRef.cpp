@@ -3328,6 +3328,8 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
       tuple_element->addChild(type, dem);
       auto *element_type = GetDemangledType(
           dem, element.element_type.GetMangledTypeName().GetStringRef());
+      if (!element_type)
+        return {};
       type->addChild(element_type, dem);
     }
 
@@ -3367,15 +3369,40 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
 }
 
 bool TypeSystemSwiftTypeRef::IsTupleType(lldb::opaque_compiler_type_t type) {
-  auto impl = [&] {
+  auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
     NodePointer node = GetDemangledType(dem, AsMangledName(type));
-    return node->getKind() == Node::Kind::Tuple;
+    return node && node->getKind() == Node::Kind::Tuple;
   };
   VALIDATE_AND_RETURN(impl, IsTupleType, type, g_no_exe_ctx,
                       (ReconstructType(type)), (ReconstructType(type)));
-  return false;
+}
+
+llvm::Optional<TypeSystemSwift::NonTriviallyManagedReferenceKind>
+TypeSystemSwiftTypeRef::GetNonTriviallyManagedReferenceKind(
+    lldb::opaque_compiler_type_t type) {
+  auto impl = [&]()
+      -> llvm::Optional<TypeSystemSwift::NonTriviallyManagedReferenceKind> {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer node = GetDemangledType(dem, AsMangledName(type));
+    if (!node)
+      return {};
+    switch (node->getKind()) {
+    default:
+      return {};
+    case Node::Kind::Unmanaged:
+      return NonTriviallyManagedReferenceKind::eUnmanaged;
+    case Node::Kind::Unowned:
+      return NonTriviallyManagedReferenceKind::eUnowned;
+    case Node::Kind::Weak:
+      return NonTriviallyManagedReferenceKind::eWeak;
+    }
+  };
+  VALIDATE_AND_RETURN(impl, GetNonTriviallyManagedReferenceKind, type,
+                      g_no_exe_ctx, (ReconstructType(type)),
+                      (ReconstructType(type)));
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
@@ -3843,6 +3870,8 @@ TypeSystemSwiftTypeRef::GetDependentGenericParamListForType(
   llvm::SmallVector<std::pair<int, int>, 1> dependent_params;
   Demangler dem;
   NodePointer type_node = GetDemangledType(dem, type);
+  if (!type_node)
+    return dependent_params;
   if (type_node->getNumChildren() != 2)
     return dependent_params;
 
