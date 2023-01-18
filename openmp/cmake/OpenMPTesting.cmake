@@ -1,5 +1,3 @@
-# Modifications Copyright (c) 2022 Advanced Micro Devices, Inc. All rights reserved.
-# Notified per clause 4(b) of the license.
 # Keep track if we have all dependencies.
 set(ENABLE_CHECK_TARGETS TRUE)
 
