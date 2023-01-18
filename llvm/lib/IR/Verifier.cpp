@@ -73,6 +73,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -5361,11 +5362,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // relocated pointer. It can be casted to the correct type later if it's
     // desired. However, they must have the same address space and 'vectorness'
     GCRelocateInst &Relocate = cast<GCRelocateInst>(Call);
-    Check(Relocate.getDerivedPtr()->getType()->isPtrOrPtrVectorTy(),
-          "gc.relocate: relocated value must be a gc pointer", Call);
+    auto *ResultType = Call.getType();
+    auto *DerivedType = Relocate.getDerivedPtr()->getType();
+    auto *BaseType = Relocate.getBasePtr()->getType();
 
-    auto ResultType = Call.getType();
-    auto DerivedType = Relocate.getDerivedPtr()->getType();
+    Check(BaseType->isPtrOrPtrVectorTy(),
+          "gc.relocate: relocated value must be a pointer", Call);
+    Check(DerivedType->isPtrOrPtrVectorTy(),
+          "gc.relocate: relocated value must be a pointer", Call);
+
     Check(ResultType->isVectorTy() == DerivedType->isVectorTy(),
           "gc.relocate: vector relocates to vector and pointer to pointer",
           Call);
@@ -5374,6 +5379,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             DerivedType->getPointerAddressSpace(),
         "gc.relocate: relocating a pointer shouldn't change its address space",
         Call);
+
+    auto GC = llvm::getGCStrategy(Relocate.getFunction()->getGC());
+    Check(GC, "gc.relocate: calling function must have GCStrategy",
+          Call.getFunction());
+    if (GC) {
+      auto isGCPtr = [&GC](Type *PTy) {
+        return GC->isGCManagedPointer(PTy->getScalarType()).value_or(true);
+      };
+      Check(isGCPtr(ResultType), "gc.relocate: must return gc pointer", Call);
+      Check(isGCPtr(BaseType),
+            "gc.relocate: relocated value must be a gc pointer", Call);
+      Check(isGCPtr(DerivedType),
+            "gc.relocate: relocated value must be a gc pointer", Call);
+    }
     break;
   }
   case Intrinsic::eh_exceptioncode:

@@ -144,7 +144,9 @@ struct GraphTraits<Inverse<VPRegionBlock *>>
 /// entry node of VPRegionBlocks. Exit blocks of a region implicitly have their
 /// parent region's successors. This ensures all blocks in a region are visited
 /// before any blocks in a successor region when doing a reverse post-order
-// traversal of the graph.
+// traversal of the graph. Region blocks themselves traverse only their entries
+// directly and not their successors. Those will be traversed when a region's
+// exiting block is traversed
 template <typename BlockPtrTy>
 class VPAllSuccessorsIterator
     : public iterator_facade_base<VPAllSuccessorsIterator<BlockPtrTy>,
@@ -166,9 +168,8 @@ class VPAllSuccessorsIterator
   /// both the const and non-const operator* implementations.
   template <typename T1> static T1 deref(T1 Block, unsigned SuccIdx) {
     if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
-      if (SuccIdx == 0)
-        return R->getEntry();
-      SuccIdx--;
+      assert(SuccIdx == 0);
+      return R->getEntry();
     }
 
     // For exit blocks, use the next parent region with successors.
@@ -188,12 +189,13 @@ public:
   }
 
   static VPAllSuccessorsIterator end(BlockPtrTy Block) {
+    if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
+      // Traverse through the region's entry node.
+      return {R, 1};
+    }
     BlockPtrTy ParentWithSuccs = getBlockWithSuccs(Block);
     unsigned NumSuccessors =
         ParentWithSuccs ? ParentWithSuccs->getNumSuccessors() : 0;
-
-    if (auto *R = dyn_cast<VPRegionBlock>(Block))
-      return {R, NumSuccessors + 1};
     return {Block, NumSuccessors};
   }
 

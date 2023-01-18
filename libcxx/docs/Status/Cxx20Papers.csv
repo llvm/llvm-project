@@ -131,13 +131,8 @@
 "`P1651R0 <https://wg21.link/P1651R0>`__","LWG","bind_front should not unwrap reference_wrapper","Cologne","|Complete|","13.0"
 "`P1652R1 <https://wg21.link/P1652R1>`__","LWG","Printf corner cases in std::format","Cologne","|Complete|","14.0"
 "`P1661R1 <https://wg21.link/P1661R1>`__","LWG","Remove dedicated precalculated hash lookup interface","Cologne","|Nothing To Do|",""
-<<<<<<< HEAD
-"`P1754R1 <https://wg21.link/P1754R1>`__","LWG","Rename concepts to standard_case for C++20, while we still can","Cologne","|In Progress|","","|ranges|"
-"","","","","","",""
-=======
 "`P1754R1 <https://wg21.link/P1754R1>`__","LWG","Rename concepts to standard_case for C++20, while we still can","Cologne","|Complete|","15.0","|ranges|"
 "","","","","",""
->>>>>>> da0daa714aa9 ([libc++][ranges] Mark completed Ranges papers and issues as done, bump version macro)
 "`P0883R2 <https://wg21.link/P0883R2>`__","LWG","Fixing Atomic Initialization","Belfast","|Complete| [#note-P0883.1]_ [#note-P0883.2]_","14.0"
 "`P1391R4 <https://wg21.link/P1391R4>`__","LWG","Range constructor for std::string_view","Belfast","|Complete|","14.0","|ranges|"
 "`P1394R4 <https://wg21.link/P1394R4>`__","LWG","Range constructor for std::span","Belfast","|Complete|","14.0","|ranges|"

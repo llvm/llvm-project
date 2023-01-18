@@ -191,19 +191,22 @@ static BlockMoveFn getMoveArrayPrim(PrimType Type) {
   COMPOSITE_TYPE_SWITCH(Type, return moveArrayTy<T>, return nullptr);
 }
 
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsConst,
-                       bool IsTemporary, bool IsMutable)
-    : Source(D), ElemSize(primSize(Type)), Size(ElemSize), AllocSize(Size),
-      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
-      CtorFn(getCtorPrim(Type)), DtorFn(getDtorPrim(Type)),
-      MoveFn(getMovePrim(Type)) {
+Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
+                       bool IsConst, bool IsTemporary, bool IsMutable)
+    : Source(D), ElemSize(primSize(Type)), Size(ElemSize),
+      MDSize(MD.value_or(0)), AllocSize(align(Size + MDSize)), IsConst(IsConst),
+      IsMutable(IsMutable), IsTemporary(IsTemporary), CtorFn(getCtorPrim(Type)),
+      DtorFn(getDtorPrim(Type)), MoveFn(getMovePrim(Type)) {
+  assert(AllocSize >= Size);
   assert(Source && "Missing source");
 }
 
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, size_t NumElems,
-                       bool IsConst, bool IsTemporary, bool IsMutable)
+Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
+                       size_t NumElems, bool IsConst, bool IsTemporary,
+                       bool IsMutable)
     : Source(D), ElemSize(primSize(Type)), Size(ElemSize * NumElems),
-      AllocSize(align(Size) + sizeof(InitMap *)), IsConst(IsConst),
+      MDSize(MD.value_or(0)),
+      AllocSize(align(Size) + sizeof(InitMap *) + MDSize), IsConst(IsConst),
       IsMutable(IsMutable), IsTemporary(IsTemporary), IsArray(true),
       CtorFn(getCtorArrayPrim(Type)), DtorFn(getDtorArrayPrim(Type)),
       MoveFn(getMoveArrayPrim(Type)) {
@@ -212,39 +215,42 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, size_t NumElems,
 
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
                        UnknownSize)
-    : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
+    : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark), MDSize(0),
       AllocSize(alignof(void *)), IsConst(true), IsMutable(false),
       IsTemporary(IsTemporary), IsArray(true), CtorFn(getCtorArrayPrim(Type)),
       DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
   assert(Source && "Missing source");
 }
 
-Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, unsigned NumElems,
-                       bool IsConst, bool IsTemporary, bool IsMutable)
+Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
+                       unsigned NumElems, bool IsConst, bool IsTemporary,
+                       bool IsMutable)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
-      Size(ElemSize * NumElems),
-      AllocSize(std::max<size_t>(alignof(void *), Size)), ElemDesc(Elem),
-      IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
-      IsArray(true), CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc),
-      MoveFn(moveArrayDesc) {
+      Size(ElemSize * NumElems), MDSize(MD.value_or(0)),
+      AllocSize(std::max<size_t>(alignof(void *), Size) + MDSize),
+      ElemDesc(Elem), IsConst(IsConst), IsMutable(IsMutable),
+      IsTemporary(IsTemporary), IsArray(true), CtorFn(ctorArrayDesc),
+      DtorFn(dtorArrayDesc), MoveFn(moveArrayDesc) {
   assert(Source && "Missing source");
 }
 
 Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary,
                        UnknownSize)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
-      Size(UnknownSizeMark), AllocSize(alignof(void *)), ElemDesc(Elem),
-      IsConst(true), IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
-      CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc), MoveFn(moveArrayDesc) {
+      Size(UnknownSizeMark), MDSize(0), AllocSize(alignof(void *)),
+      ElemDesc(Elem), IsConst(true), IsMutable(false), IsTemporary(IsTemporary),
+      IsArray(true), CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc),
+      MoveFn(moveArrayDesc) {
   assert(Source && "Missing source");
 }
 
-Descriptor::Descriptor(const DeclTy &D, Record *R, bool IsConst,
-                       bool IsTemporary, bool IsMutable)
+Descriptor::Descriptor(const DeclTy &D, Record *R, MetadataSize MD,
+                       bool IsConst, bool IsTemporary, bool IsMutable)
     : Source(D), ElemSize(std::max<size_t>(alignof(void *), R->getFullSize())),
-      Size(ElemSize), AllocSize(Size), ElemRecord(R), IsConst(IsConst),
-      IsMutable(IsMutable), IsTemporary(IsTemporary), CtorFn(ctorRecord),
-      DtorFn(dtorRecord), MoveFn(moveRecord) {
+      Size(ElemSize), MDSize(MD.value_or(0)), AllocSize(Size + MDSize),
+      ElemRecord(R), IsConst(IsConst), IsMutable(IsMutable),
+      IsTemporary(IsTemporary), CtorFn(ctorRecord), DtorFn(dtorRecord),
+      MoveFn(moveRecord) {
   assert(Source && "Missing source");
 }
 

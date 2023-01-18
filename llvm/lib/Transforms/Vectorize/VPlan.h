@@ -1396,9 +1396,7 @@ public:
   }
   ~VPInterleaveRecipe() override = default;
 
-  static inline bool classof(const VPDef *D) {
-    return D->getVPDefID() == VPDef::VPInterleaveSC;
-  }
+  VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)
 
   /// Return the address accessed by this recipe.
   VPValue *getAddr() const {
@@ -1563,10 +1561,7 @@ public:
       addOperand(BlockInMask);
   }
 
-  /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPDef *D) {
-    return D->getVPDefID() == VPDef::VPBranchOnMaskSC;
-  }
+  VP_CLASSOF_IMPL(VPDef::VPBranchOnMaskSC)
 
   /// Generate the extraction of the appropriate bit from the block mask and the
   /// conditional branch.

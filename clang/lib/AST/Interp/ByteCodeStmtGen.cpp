@@ -402,24 +402,26 @@ bool ByteCodeStmtGen<Emitter>::visitVarDecl(const VarDecl *VD) {
   if (std::optional<PrimType> T = this->classify(VD->getType())) {
     const Expr *Init = VD->getInit();
 
-    if (!Init)
-      return false;
-
     unsigned Offset =
         this->allocateLocalPrimitive(VD, *T, VD->getType().isConstQualified());
     // Compile the initializer in its own scope.
-    {
+    if (Init) {
       ExprScope<Emitter> Scope(this);
       if (!this->visit(Init))
         return false;
+
+      return this->emitSetLocal(*T, Offset, VD);
     }
-    // Set the value.
-    return this->emitSetLocal(*T, Offset, VD);
+    return true;
   }
 
   // Composite types - allocate storage and initialize it.
-  if (std::optional<unsigned> Offset = this->allocateLocal(VD))
+  if (std::optional<unsigned> Offset = this->allocateLocal(VD)) {
+    if (!VD->getInit())
+      return true;
+
     return this->visitLocalInitializer(VD->getInit(), *Offset);
+  }
 
   return this->bail(VD);
 }
