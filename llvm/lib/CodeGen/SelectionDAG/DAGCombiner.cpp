@@ -23405,13 +23405,15 @@ static SDValue combineShuffleOfSplatVal(ShuffleVectorSDNode *Shuf,
     if (DAG.isSplatValue(Shuf->getOperand(0), DemandedElts, UndefElts)) {
       // Even if all demanded elements are splat, some of them could be undef.
       // Which lowest demanded element is *not* known-undef?
-      unsigned MinNonUndefIdx = ~0U;
+      std::optional<unsigned> MinNonUndefIdx;
       for (int Idx : Shuf->getMask()) {
         if (Idx < 0 || UndefElts[Idx])
           continue; // Ignore sentinel indices, and undef elements.
-        MinNonUndefIdx = std::min<unsigned>(Idx, MinNonUndefIdx);
+        MinNonUndefIdx = std::min<unsigned>(Idx, MinNonUndefIdx.value_or(~0U));
       }
-      assert(MinNonUndefIdx < NumElts && "Undef shuffle?");
+      if (!MinNonUndefIdx)
+        return DAG.getUNDEF(VT); // All undef - result is undef.
+      assert(*MinNonUndefIdx < NumElts && "Expected valid element index.");
       SmallVector<int, 8> SplatMask(Shuf->getMask().begin(),
                                     Shuf->getMask().end());
       for (int &Idx : SplatMask) {
@@ -23419,7 +23421,7 @@ static SDValue combineShuffleOfSplatVal(ShuffleVectorSDNode *Shuf,
           continue; // Passthrough sentinel indices.
         // Otherwise, just pick the lowest demanded non-undef element.
         // Or sentinel undef, if we know we'd pick a known-undef element.
-        Idx = UndefElts[Idx] ? -1 : MinNonUndefIdx;
+        Idx = UndefElts[Idx] ? -1 : *MinNonUndefIdx;
       }
       assert(SplatMask != Shuf->getMask() && "Expected mask to change!");
       return DAG.getVectorShuffle(VT, SDLoc(Shuf), Shuf->getOperand(0),
