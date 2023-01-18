@@ -1055,7 +1055,7 @@ std::optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
     if (!SplatValAndReg)
       SplatValAndReg = ElementValAndReg;
 
-    // Different constant then the one already recorded, not a constant splat.
+    // Different constant than the one already recorded, not a constant splat.
     if (SplatValAndReg->Value != ElementValAndReg->Value)
       return std::nullopt;
   }
