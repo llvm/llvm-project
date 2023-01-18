@@ -5418,6 +5418,10 @@ LogicalResult MaskOp::verify() {
     return emitOpError(
         "expects result type to match maskable operation result type");
 
+  if (llvm::count_if(maskableOp->getResultTypes(),
+                     [](Type t) { return t.isa<VectorType>(); }) > 1)
+    return emitOpError("multiple vector results not supported");
+
   // Mask checks.
   Type expectedMaskType = maskableOp.getExpectedMaskType();
   if (getMask().getType() != expectedMaskType)
