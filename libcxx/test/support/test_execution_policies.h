@@ -47,6 +47,16 @@ struct TestIteratorWithPolicies {
   }
 };
 
+struct Bool {
+  bool b_;
+  Bool() = default;
+  Bool(bool b) : b_(b) {}
+
+  operator bool&() {
+    return b_;
+  }
+};
+
 [[noreturn]] inline void terminate_successful() { std::exit(0); }
 
 #endif // TEST_SUPPORT_TEST_EXECUTION_POLICIES
