@@ -44,7 +44,7 @@ llvm::Error loadCUDA() {
       llvm::sys::DynamicLibrary::getPermanentLibrary(DynamicCudaPath, &ErrMsg));
   if (!DynlibHandle->isValid()) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to 'dlopen' %s\n", DynamicCudaPath);
+                                   "Failed to 'dlopen' %s", DynamicCudaPath);
   }
 #define DYNAMIC_INIT(SYMBOL)                                                   \
   {                                                                            \
