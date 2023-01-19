@@ -2537,12 +2537,12 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
             BC->getBinaryFunctionAtAddress(Address + 1)) {
       // Do an extra check that the function was referenced previously.
       // It's a linear search, but it should rarely happen.
-      bool Found =
-          llvm::any_of(llvm::make_second_range(ContainingBF->Relocations),
-                       [&](const Relocation &Rel) {
-                         return Rel.Symbol == RogueBF->getSymbol() &&
-                                !Relocation::isPCRelative(Rel.Type);
-                       });
+      auto CheckReloc = [&](const Relocation &Rel) {
+        return Rel.Symbol == RogueBF->getSymbol() &&
+               !Relocation::isPCRelative(Rel.Type);
+      };
+      bool Found = llvm::any_of(
+          llvm::make_second_range(ContainingBF->Relocations), CheckReloc);
 
       if (Found) {
         errs() << "BOLT-WARNING: detected possible compiler de-virtualization "
@@ -2675,15 +2675,13 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   auto checkMaxDataRelocations = [&]() {
     ++NumDataRelocations;
-    if (opts::MaxDataRelocations &&
-        NumDataRelocations + 1 == opts::MaxDataRelocations) {
-      LLVM_DEBUG({
-        dbgs() << "BOLT-DEBUG: processing ending on data relocation "
-               << NumDataRelocations << ": ";
-      });
+    LLVM_DEBUG(if (opts::MaxDataRelocations &&
+                   NumDataRelocations + 1 == opts::MaxDataRelocations) {
+      dbgs() << "BOLT-DEBUG: processing ending on data relocation "
+             << NumDataRelocations << ": ";
       printRelocationInfo(Rel, ReferencedSymbol->getName(), SymbolAddress,
                           Addend, ExtractedValue);
-    }
+    });
 
     return (!opts::MaxDataRelocations ||
             NumDataRelocations < opts::MaxDataRelocations);
