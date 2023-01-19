@@ -3,12 +3,15 @@
 
 ; Check that we can replace `atomicrmw <op> LHS, 0` with `load atomic LHS`.
 ; This is possible when:
-; - <op> LHS, 0 == LHS
-; - the ordering of atomicrmw is compatible with a load (i.e., no release semantic)
+; Check that we don't replace `atomicrmw <op> LHS, 0` with `load atomic LHS`.
+; Doing that would lose the store semantic of the `atomicrmw` operation.
+; This may enable some other optimizations that would otherwise be illegal when
+; the store semantic was present (e.g., like dropping a fence).
 
+; Idempotent atomicrmw are still canonicalized.
 define i32 @atomic_add_zero(ptr %addr) {
 ; CHECK-LABEL: @atomic_add_zero(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i32, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw add ptr %addr, i32 0 monotonic
@@ -17,70 +20,77 @@ define i32 @atomic_add_zero(ptr %addr) {
 
 define i32 @atomic_or_zero(ptr %addr) {
 ; CHECK-LABEL: @atomic_or_zero(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i32, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw add ptr %addr, i32 0 monotonic
   ret i32 %res
 }
 
+; Idempotent atomicrmw are still canonicalized.
 define i32 @atomic_sub_zero(ptr %addr) {
 ; CHECK-LABEL: @atomic_sub_zero(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i32, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw sub ptr %addr, i32 0 monotonic
   ret i32 %res
 }
 
+; Idempotent atomicrmw are still canonicalized.
 define i32 @atomic_and_allones(ptr %addr) {
 ; CHECK-LABEL: @atomic_and_allones(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i32, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw and ptr %addr, i32 -1 monotonic
   ret i32 %res
 }
 
+; Idempotent atomicrmw are still canonicalized.
 define i32 @atomic_umin_uint_max(ptr %addr) {
 ; CHECK-LABEL: @atomic_umin_uint_max(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i32, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw umin ptr %addr, i32 -1 monotonic
   ret i32 %res
 }
 
+; Idempotent atomicrmw are still canonicalized.
 define i32 @atomic_umax_zero(ptr %addr) {
 ; CHECK-LABEL: @atomic_umax_zero(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i32, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %res = atomicrmw umax ptr %addr, i32 0 monotonic
   ret i32 %res
 }
 
+; Idempotent atomicrmw are still canonicalized.
 define i8 @atomic_min_smax_char(ptr %addr) {
 ; CHECK-LABEL: @atomic_min_smax_char(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i8, ptr [[ADDR:%.*]] monotonic, align 1
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %res = atomicrmw min ptr %addr, i8 127 monotonic
   ret i8 %res
 }
 
+; Idempotent atomicrmw are still canonicalized.
 define i8 @atomic_max_smin_char(ptr %addr) {
 ; CHECK-LABEL: @atomic_max_smin_char(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i8, ptr [[ADDR:%.*]] monotonic, align 1
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %res = atomicrmw max ptr %addr, i8 -128 monotonic
   ret i8 %res
 }
 
+; Idempotent atomicrmw are still canonicalized.
 define float @atomic_fsub_zero(ptr %addr) {
 ; CHECK-LABEL: @atomic_fsub_zero(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic float, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 monotonic, align 4
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fsub ptr %addr, float 0.0 monotonic
@@ -89,13 +99,14 @@ define float @atomic_fsub_zero(ptr %addr) {
 
 define float @atomic_fadd_zero(ptr %addr) {
 ; CHECK-LABEL: @atomic_fadd_zero(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic float, ptr [[ADDR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 monotonic, align 4
 ; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = atomicrmw fadd ptr %addr, float -0.0 monotonic
   ret float %res
 }
 
+; Idempotent atomicrmw are still canonicalized.
 define float @atomic_fsub_canon(ptr %addr) {
 ; CHECK-LABEL: @atomic_fsub_canon(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 release, align 4
@@ -126,9 +137,10 @@ define i64 @atomic_sub_zero_volatile(ptr %addr) {
 
 
 ; Check that the transformation properly preserve the syncscope.
+; Idempotent atomicrmw are still canonicalized.
 define i16 @atomic_syncscope(ptr %addr) {
 ; CHECK-LABEL: @atomic_syncscope(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i16, ptr [[ADDR:%.*]] syncscope("some_syncscope") acquire, align 2
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i16 0 syncscope("some_syncscope") acquire, align 2
 ; CHECK-NEXT:    ret i16 [[RES]]
 ;
   %res = atomicrmw or ptr %addr, i16 0 syncscope("some_syncscope") acquire
@@ -157,9 +169,10 @@ define i16 @atomic_add_non_zero(ptr %addr) {
   ret i16 %res
 }
 
+; Idempotent atomicrmw are still canonicalized.
 define i16 @atomic_xor_zero(ptr %addr) {
 ; CHECK-LABEL: @atomic_xor_zero(
-; CHECK-NEXT:    [[RES:%.*]] = load atomic i16, ptr [[ADDR:%.*]] monotonic, align 2
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i16 0 monotonic, align 2
 ; CHECK-NEXT:    ret i16 [[RES]]
 ;
   %res = atomicrmw xor ptr %addr, i16 0 monotonic
