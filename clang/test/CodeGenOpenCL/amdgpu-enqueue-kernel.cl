@@ -298,7 +298,7 @@ kernel void test(global char *a, char b, global long *c, long d) {
 // CHECK: attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 // CHECK: attributes #3 = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64" }
 // CHECK: attributes #4 = { nounwind "enqueued-block" }
-// CHECK: attributes #5 = { convergent }
+// CHECK: attributes #5 = { convergent nounwind }
 //.
 // CHECK: !0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
 // CHECK: !1 = !{i32 1, !"wchar_size", i32 4}
