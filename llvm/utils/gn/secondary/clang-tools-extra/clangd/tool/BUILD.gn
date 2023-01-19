@@ -25,7 +25,12 @@ executable("clangd") {
     ]
   }
 
-  include_dirs = [ ".." ]
+  include_dirs = [
+    "..",
+
+    # For "clang-include-cleaner/..." includes.
+    "//clang-tools-extra/include-cleaner/include",
+  ]
   sources = [
     "Check.cpp",
     "ClangdMain.cpp",
