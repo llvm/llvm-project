@@ -484,6 +484,7 @@ bool generatePathComponents(
   SmallVector<PathComponent, 4> ReverseComponenents;
   ReverseComponenents.emplace_back(Record.USR, Record.Name, Record.getKind());
   const auto *CurrentParent = &Record.ParentInformation;
+  bool FailedToFindParent = false;
   while (CurrentParent && !CurrentParent->empty()) {
     PathComponent CurrentParentComponent(CurrentParent->ParentUSR,
                                          CurrentParent->ParentName,
@@ -506,8 +507,10 @@ bool generatePathComponents(
 
     // The parent record doesn't exist which means the symbol shouldn't be
     // treated as part of the current product.
-    if (!ParentRecord)
-      return true;
+    if (!ParentRecord) {
+      FailedToFindParent = true;
+      break;
+    }
 
     ReverseComponenents.push_back(std::move(CurrentParentComponent));
     CurrentParent = &ParentRecord->ParentInformation;
@@ -516,8 +519,9 @@ bool generatePathComponents(
   for (const auto &PC : reverse(ReverseComponenents))
     ComponentTransformer(PC);
 
-  return false;
+  return FailedToFindParent;
 }
+
 Object serializeParentContext(const PathComponent &PC, Language Lang) {
   Object ParentContextElem;
   ParentContextElem["usr"] = PC.USR;
@@ -530,12 +534,15 @@ template <typename RecordTy>
 Array generateParentContexts(const RecordTy &Record, const APISet &API,
                              Language Lang) {
   Array ParentContexts;
-  if (generatePathComponents(
-          Record, API, [Lang, &ParentContexts](const PathComponent &PC) {
-            ParentContexts.push_back(serializeParentContext(PC, Lang));
-          }))
-    ParentContexts.clear();
-  ParentContexts.pop_back();
+  generatePathComponents(Record, API,
+                         [Lang, &ParentContexts](const PathComponent &PC) {
+                           ParentContexts.push_back(
+                               serializeParentContext(PC, Lang));
+                         });
+
+  // The last component would be the record itself so let's remove it.
+  if (!ParentContexts.empty())
+    ParentContexts.pop_back();
 
   return ParentContexts;
 }
@@ -860,6 +867,9 @@ SymbolGraphSerializer::serializeSingleSymbolSGF(StringRef USR,
                                                 const APISet &API) {
   APIRecord *Record = API.findRecordForUSR(USR);
   if (!Record)
+    return {};
+
+  if (isa<ObjCCategoryRecord>(Record))
     return {};
 
   Object Root;
