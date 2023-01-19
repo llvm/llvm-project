@@ -64,6 +64,7 @@ private:
   bool visitContinueStmt(const ContinueStmt *S);
 
   /// Compiles a variable declaration.
+  bool visitVarDecl(const VarDecl *VD);
 
 private:
   /// Type of the expression returned by the function.
