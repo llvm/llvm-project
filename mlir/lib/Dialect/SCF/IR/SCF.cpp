@@ -1467,6 +1467,23 @@ bool mlir::scf::insideMutuallyExclusiveBranches(Operation *a, Operation *b) {
   return false;
 }
 
+LogicalResult
+IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
+                       ValueRange operands, DictionaryAttr attrs,
+                       RegionRange regions,
+                       SmallVectorImpl<Type> &inferredReturnTypes) {
+  if (regions.empty())
+    return failure();
+  Region *r = regions.front();
+  assert(!r->empty());
+  Block &b = r->front();
+  auto yieldOp = llvm::dyn_cast<YieldOp>(b.getTerminator());
+  TypeRange types = yieldOp.getOperandTypes();
+  inferredReturnTypes.insert(inferredReturnTypes.end(), types.begin(),
+                             types.end());
+  return success();
+}
+
 void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
                  bool withElseRegion) {
   build(builder, result, /*resultTypes=*/std::nullopt, cond, withElseRegion);
@@ -1516,19 +1533,24 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
   // Build then region.
   OpBuilder::InsertionGuard guard(builder);
   Region *thenRegion = result.addRegion();
-  Block *thenBlock = builder.createBlock(thenRegion);
+  builder.createBlock(thenRegion);
   thenBuilder(builder, result.location);
-
-  // Infer types if there are any.
-  if (auto yieldOp = llvm::dyn_cast<YieldOp>(thenBlock->getTerminator()))
-    result.addTypes(yieldOp.getOperandTypes());
 
   // Build else region.
   Region *elseRegion = result.addRegion();
-  if (!elseBuilder)
-    return;
-  builder.createBlock(elseRegion);
-  elseBuilder(builder, result.location);
+  if (elseBuilder) {
+    builder.createBlock(elseRegion);
+    elseBuilder(builder, result.location);
+  }
+
+  // Infer result types.
+  SmallVector<Type> inferredReturnTypes;
+  MLIRContext *ctx = builder.getContext();
+  auto attrDict = DictionaryAttr::get(ctx, result.attributes);
+  if (succeeded(inferReturnTypes(ctx, std::nullopt, result.operands, attrDict,
+                                 result.regions, inferredReturnTypes))) {
+    result.addTypes(inferredReturnTypes);
+  }
 }
 
 LogicalResult IfOp::verify() {
