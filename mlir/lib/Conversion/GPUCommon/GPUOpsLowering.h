@@ -112,6 +112,14 @@ public:
   }
 };
 
+/// A function that maps a MemorySpace enum to a target-specific integer value.
+using MemorySpaceMapping =
+    std::function<unsigned(gpu::AddressSpace gpuAddressSpace)>;
+
+/// Populates memory space attribute conversion rules for lowering
+/// gpu.address_space to integer values.
+void populateGpuMemorySpaceAttributeConversions(
+    TypeConverter &typeConverter, const MemorySpaceMapping &mapping);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_
