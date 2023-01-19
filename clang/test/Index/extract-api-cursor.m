@@ -25,6 +25,12 @@ struct Foo {
 - (void)derivedMethodWithValue:(id<Protocol>)value;
 @end
 
+/// This won't show up in docs because we can't serialize it
+@interface Derived ()
+/// Derived method in category docs, won't show up either.
+- (void)derivedMethodInCategory;
+@end
+
 // RUN: c-index-test -single-symbol-sgfs local %s | FileCheck %s
 
 // Checking for Foo
@@ -53,7 +59,7 @@ struct Foo {
 
 // Checking for baseProperty
 // CHECK-NEXT: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"}]
-// CHECK-SAME:"relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
+// CHECK-SAME: "relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
 // CHECK-SAME: "isSystem":false
 // CHECK-SAME: "usr":"c:@S@Foo"}]
 // CHECK-SAME: "relationships":[{"kind":"memberOf","source":"c:objc(cs)Base(py)baseProperty","target":"c:objc(cs)Base"
@@ -63,7 +69,7 @@ struct Foo {
 
 // Checking for baseMethodWithArg
 // CHECK-NEXT: "parentContexts":[{"kind":"objective-c.class","name":"Base","usr":"c:objc(cs)Base"}]
-// CHECK-SAME:"relatedSymbols":[]
+// CHECK-SAME: "relatedSymbols":[]
 // CHECK-SAME: "relationships":[{"kind":"memberOf","source":"c:objc(cs)Base(im)baseMethodWithArg:","target":"c:objc(cs)Base"
 // CHECK-SAME: "text":"Base method docs"
 // CHECK-SAME: "kind":{"displayName":"Instance Method","identifier":"objective-c.method"}
@@ -79,7 +85,7 @@ struct Foo {
 
 // Checking for protocolProperty
 // CHECK-NEXT: "parentContexts":[{"kind":"objective-c.protocol","name":"Protocol","usr":"c:objc(pl)Protocol"}]
-// CHECK-SAME:"relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
+// CHECK-SAME: "relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
 // CHECK-SAME: "isSystem":false
 // CHECK-SAME: "usr":"c:@S@Foo"}]
 // CHECK-SAME: "relationships":[{"kind":"memberOf","source":"c:objc(pl)Protocol(py)protocolProperty","target":"c:objc(pl)Protocol"
@@ -89,7 +95,7 @@ struct Foo {
 
 // Checking for Derived
 // CHECK-NEXT: "parentContexts":[]
-// CHECK-SAME:"relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
+// CHECK-SAME: "relatedSymbols":[{"accessLevel":"public","declarationLanguage":"objective-c"
 // CHECK-SAME: "isSystem":false
 // CHECK-SAME: "usr":"c:objc(cs)Base"}]
 // CHECK-SAME: "relationships":[{"kind":"inheritsFrom","source":"c:objc(cs)Derived","target":"c:objc(cs)Base"
@@ -99,8 +105,11 @@ struct Foo {
 
 // Checking for derivedMethodWithValue
 // CHECK-NEXT: "parentContexts":[{"kind":"objective-c.class","name":"Derived","usr":"c:objc(cs)Derived"}]
-// CHECK-SAME:"relatedSymbols":[]
+// CHECK-SAME: "relatedSymbols":[]
 // CHECK-SAME: "relationships":[{"kind":"memberOf","source":"c:objc(cs)Derived(im)derivedMethodWithValue:","target":"c:objc(cs)Derived"
 // CHECK-SAME: "text":"Derived method docs"
 // CHECK-SAME: "kind":{"displayName":"Instance Method","identifier":"objective-c.method"}
 // CHECK-SAME: "title":"derivedMethodWithValue:"
+
+// CHECK-NOT: This won't show up in docs because we can't serialize it
+// CHECK-NOT: Derived method in category docs, won't show up either.
