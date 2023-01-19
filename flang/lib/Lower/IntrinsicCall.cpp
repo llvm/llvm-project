@@ -4222,8 +4222,9 @@ IntrinsicLibrary::genReshape(mlir::Type resultType,
 
   // Create mutable fir.box to be passed to the runtime for the result.
   mlir::Type type = builder.getVarLenSeqTy(resultType, resultRank);
-  fir::MutableBoxValue resultMutableBox =
-      fir::factory::createTempMutableBox(builder, loc, type);
+  fir::MutableBoxValue resultMutableBox = fir::factory::createTempMutableBox(
+      builder, loc, type, {},
+      fir::isPolymorphicType(source.getType()) ? source : mlir::Value{});
 
   mlir::Value resultIrBox =
       fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
