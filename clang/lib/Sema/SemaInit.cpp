@@ -239,6 +239,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
     if (StrLength > CAT->getSize().getZExtValue())
       S.Diag(Str->getBeginLoc(),
              diag::err_initializer_string_for_char_array_too_long)
+          << CAT->getSize().getZExtValue() << StrLength
           << Str->getSourceRange();
   } else {
     // C99 6.7.8p14.
