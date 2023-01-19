@@ -21898,6 +21898,13 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   }
 
   assert(SrcVT == MVT::i64 && "Unexpected type in UINT_TO_FP");
+
+  // On Windows, the default precision control on x87 is only 53-bit, and FADD
+  // triggers rounding with that precision, so the final result may be less
+  // accurate. 18014397972611071 is one such case.
+  if (Subtarget.isOSWindows())
+    return SDValue();
+
   SDValue ValueToStore = Src;
   if (isScalarFPTypeInSSEReg(Op.getValueType()) && !Subtarget.is64Bit()) {
     // Bitcasting to f64 here allows us to do a single 64-bit store from
