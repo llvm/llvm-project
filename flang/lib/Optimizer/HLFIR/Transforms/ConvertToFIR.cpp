@@ -214,11 +214,19 @@ public:
         // - scalar%array(indices) [substring| complex part]
         mlir::Type componentType = baseEleTy.cast<fir::RecordType>().getType(
             designate.getComponent().value());
-        if (componentType.isa<fir::BaseBoxType>())
-          TODO(loc,
-               "addressing parametrized derived type automatic components");
         mlir::Type coorTy = fir::ReferenceType::get(componentType);
         base = builder.create<fir::CoordinateOp>(loc, coorTy, base, fieldIndex);
+        if (componentType.isa<fir::BaseBoxType>()) {
+          auto variableInterface = mlir::cast<fir::FortranVariableOpInterface>(
+              designate.getOperation());
+          if (variableInterface.isAllocatable() ||
+              variableInterface.isPointer()) {
+            rewriter.replaceOp(designate, base);
+            return mlir::success();
+          }
+          TODO(loc,
+               "addressing parametrized derived type automatic components");
+        }
         baseEleTy = hlfir::getFortranElementType(componentType);
         shape = designate.getComponentShape();
       } else {
