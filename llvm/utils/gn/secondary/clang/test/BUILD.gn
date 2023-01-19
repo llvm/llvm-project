@@ -155,6 +155,7 @@ group("test") {
     "//clang/tools/clang-rename",
     "//clang/tools/clang-repl",
     "//clang/tools/clang-scan-deps",
+    "//clang/tools/clang-stat-cache",
     "//clang/tools/diagtool",
     "//clang/tools/driver:symlinks",
     "//clang/unittests",
