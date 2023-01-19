@@ -1604,6 +1604,7 @@ static inline kmp_hw_t __kmp_hwloc_type_2_topology_type(hwloc_obj_t obj) {
   case HWLOC_OBJ_PU:
     return KMP_HW_THREAD;
   case HWLOC_OBJ_GROUP:
+#if HWLOC_API_VERSION >= 0x00020000
     if (obj->attr->group.kind == HWLOC_GROUP_KIND_INTEL_DIE)
       return KMP_HW_DIE;
     else if (obj->attr->group.kind == HWLOC_GROUP_KIND_INTEL_TILE)
@@ -1612,6 +1613,7 @@ static inline kmp_hw_t __kmp_hwloc_type_2_topology_type(hwloc_obj_t obj) {
       return KMP_HW_MODULE;
     else if (obj->attr->group.kind == HWLOC_GROUP_KIND_WINDOWS_PROCESSOR_GROUP)
       return KMP_HW_PROC_GROUP;
+#endif
     return KMP_HW_UNKNOWN;
 #if HWLOC_API_VERSION >= 0x00020100
   case HWLOC_OBJ_DIE:
@@ -1701,6 +1703,7 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
     return true;
   }
 
+#if HWLOC_API_VERSION >= 0x00020400
   // Handle multiple types of cores if they exist on the system
   int nr_cpu_kinds = hwloc_cpukinds_get_nr(tp, 0);
 
@@ -1739,6 +1742,7 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
       }
     }
   }
+#endif
 
   root = hwloc_get_root_obj(tp);
 
@@ -1800,6 +1804,7 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
       hw_thread.ids[index] = pu->logical_index;
       hw_thread.os_id = pu->os_index;
       // If multiple core types, then set that attribute for the hardware thread
+#if HWLOC_API_VERSION >= 0x00020400
       if (cpukinds) {
         int cpukind_index = -1;
         for (int i = 0; i < nr_cpu_kinds; ++i) {
@@ -1813,6 +1818,7 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
           hw_thread.attrs.set_core_eff(cpukinds[cpukind_index].efficiency);
         }
       }
+#endif
       index--;
     }
     obj = pu;
@@ -1857,12 +1863,14 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
       hw_thread_index++;
   }
 
+#if HWLOC_API_VERSION >= 0x00020400
   // Free the core types information
   if (cpukinds) {
     for (int idx = 0; idx < nr_cpu_kinds; ++idx)
       hwloc_bitmap_free(cpukinds[idx].mask);
     __kmp_free(cpukinds);
   }
+#endif
   __kmp_topology->sort_ids();
   return true;
 }
