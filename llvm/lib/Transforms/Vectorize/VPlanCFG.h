@@ -271,6 +271,65 @@ struct GraphTraits<VPBlockRecursiveTraversalWrapper<const VPBlockBase *>> {
   }
 };
 
+/// Helper for GraphTraits specialization that does not traverses through
+/// VPRegionBlocks.
+template <typename BlockTy> class VPBlockShallowTraversalWrapper {
+  BlockTy Entry;
+
+public:
+  VPBlockShallowTraversalWrapper(BlockTy Entry) : Entry(Entry) {}
+  BlockTy getEntry() { return Entry; }
+};
+
+template <> struct GraphTraits<VPBlockShallowTraversalWrapper<VPBlockBase *>> {
+  using NodeRef = VPBlockBase *;
+  using ChildIteratorType = SmallVectorImpl<VPBlockBase *>::iterator;
+
+  static NodeRef getEntryNode(VPBlockShallowTraversalWrapper<VPBlockBase *> N) {
+    return N.getEntry();
+  }
+
+  static inline ChildIteratorType child_begin(NodeRef N) {
+    return N->getSuccessors().begin();
+  }
+
+  static inline ChildIteratorType child_end(NodeRef N) {
+    return N->getSuccessors().end();
+  }
+};
+
+template <>
+struct GraphTraits<VPBlockShallowTraversalWrapper<const VPBlockBase *>> {
+  using NodeRef = const VPBlockBase *;
+  using ChildIteratorType = SmallVectorImpl<VPBlockBase *>::const_iterator;
+
+  static NodeRef
+  getEntryNode(VPBlockShallowTraversalWrapper<const VPBlockBase *> N) {
+    return N.getEntry();
+  }
+
+  static inline ChildIteratorType child_begin(NodeRef N) {
+    return N->getSuccessors().begin();
+  }
+
+  static inline ChildIteratorType child_end(NodeRef N) {
+    return N->getSuccessors().end();
+  }
+};
+
+/// Returns an iterator range to traverse the graph starting at \p G in
+/// depth-first order. The iterator won't traverse through region blocks.
+inline iterator_range<
+    df_iterator<VPBlockShallowTraversalWrapper<VPBlockBase *>>>
+vp_depth_first_shallow(VPBlockBase *G) {
+  return depth_first(VPBlockShallowTraversalWrapper<VPBlockBase *>(G));
+}
+inline iterator_range<
+    df_iterator<VPBlockShallowTraversalWrapper<const VPBlockBase *>>>
+vp_depth_first_shallow(const VPBlockBase *G) {
+  return depth_first(VPBlockShallowTraversalWrapper<const VPBlockBase *>(G));
+}
+
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANCFG_H
