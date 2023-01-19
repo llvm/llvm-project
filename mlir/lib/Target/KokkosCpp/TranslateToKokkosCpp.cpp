@@ -18,6 +18,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Target/KokkosCpp/KokkosCppEmitter.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -25,6 +26,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <utility>
+
+#include <iostream>
 
 #define DEBUG_TYPE "translate-to-kokkos-cpp"
 
@@ -2388,6 +2391,12 @@ LogicalResult KokkosCppEmitter::emitType(Location loc, Type type) {
     if (failed(emitType(loc, mrType.getElementType())))
       return failure();
     os << "*>";
+    return success();
+  }
+  if (auto mrType = type.dyn_cast<LLVM::LLVMPointerType>()) {
+    if (failed(emitType(loc, mrType.getElementType())))
+      return failure();
+    os << "*";
     return success();
   }
   return emitError(loc, "cannot emit type ") << type << "\n";

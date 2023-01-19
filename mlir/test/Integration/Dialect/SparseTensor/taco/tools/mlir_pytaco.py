@@ -778,6 +778,33 @@ class IndexExpr(abc.ABC):
 
         return engine
 
+  def get_module(
+      self,
+      dst: "Tensor",
+      dst_indices: Tuple["IndexVar", ...],
+  ) -> ir.Module:
+    """Get module
+
+    Args:
+      dst: The destination tensor.
+      dst_indices: The tuple of IndexVar used to access the destination tensor.
+
+    Returns:
+      The module.
+
+    Raises:
+      ValueError: If the expression is not proper or not supported.
+    """
+    expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
+    input_accesses = self.get_input_accesses()
+
+    # Build and compile the module to produce the execution engine.
+    with ir.Context(), ir.Location.unknown():
+      module = ir.Module.create()
+      self._emit_assignment(module, dst, dst_indices, expr_to_info,
+                            input_accesses)
+
+      return module
 
 class _AtomicCounter:
     """An atomic counter."""
@@ -1640,7 +1667,6 @@ def _emit_operand(
     opnd = lang.OperandDef(kind, lang.T, dim_sym)
     op_def.add_operand(name, opnd)
     return opnd
-
 
 @dataclasses.dataclass(frozen=True)
 class _DimInfo:
