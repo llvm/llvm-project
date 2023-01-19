@@ -227,9 +227,9 @@ class Test:
         self.gtest_json_file = gtest_json_file
 
         # A list of conditions under which this test is expected to fail.
-        # Each condition is a boolean expression of features, or '*'.
-        # These can optionally be provided by test format handlers,
-        # and will be honored when the test result is supplied.
+        # Each condition is a boolean expression of features and target
+        # triple parts. These can optionally be provided by test format
+        # handlers, and will be honored when the test result is supplied.
         self.xfails = []
 
         # If true, ignore all items in self.xfails.
@@ -238,11 +238,12 @@ class Test:
         # A list of conditions that must be satisfied before running the test.
         # Each condition is a boolean expression of features. All of them
         # must be True for the test to run.
+        # FIXME should target triple parts count here too?
         self.requires = []
 
         # A list of conditions that prevent execution of the test.
-        # Each condition is a boolean expression of features. All of them
-        # must be False for the test to run.
+        # Each condition is a boolean expression of features and target
+        # triple parts. All of them must be False for the test to run.
         self.unsupported = []
 
         # An optional number of retries allowed before the test finally succeeds.
@@ -316,16 +317,18 @@ class Test:
           return False
 
         features = self.config.available_features
+        triple = getattr(self.suite.config, 'target_triple', "")
 
-        # Check if any of the xfails match an available feature.
+        # Check if any of the xfails match an available feature or the target.
         for item in self.xfails:
             # If this is the wildcard, it always fails.
             if item == '*':
                 return True
 
-            # If this is a True expression of features, it fails.
+            # If this is a True expression of features and target triple parts,
+            # it fails.
             try:
-                if BooleanExpression.evaluate(item, features):
+                if BooleanExpression.evaluate(item, features, triple):
                     return True
             except ValueError as e:
                 raise ValueError('Error in XFAIL list:\n%s' % str(e))
@@ -382,15 +385,16 @@ class Test:
         getUnsupportedFeatures() -> list of strings
 
         Returns a list of features from UNSUPPORTED that are present
-        in the test configuration's features.
+        in the test configuration's features or target triple.
         Throws ValueError if an UNSUPPORTED line has a syntax error.
         """
 
         features = self.config.available_features
+        triple = getattr(self.suite.config, 'target_triple', "")
 
         try:
             return [item for item in self.unsupported
-                    if BooleanExpression.evaluate(item, features)]
+                    if BooleanExpression.evaluate(item, features, triple)]
         except ValueError as e:
             raise ValueError('Error in UNSUPPORTED list:\n%s' % str(e))
 

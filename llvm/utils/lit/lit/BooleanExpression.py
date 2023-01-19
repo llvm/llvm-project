@@ -22,22 +22,24 @@ class BooleanExpression:
     #
     # Variables in `variables` are true.
     # Regexes that match any variable in `variables` are true.
+    # Substrings of `triple` are true.
     # 'true' is true.
     # All other identifiers are false.
     @staticmethod
-    def evaluate(string, variables):
+    def evaluate(string, variables, triple=""):
         try:
-            parser = BooleanExpression(string, set(variables))
+            parser = BooleanExpression(string, set(variables), triple)
             return parser.parseAll()
         except ValueError as e:
             raise ValueError(str(e) + ('\nin expression: %r' % string))
 
     #####
 
-    def __init__(self, string, variables):
+    def __init__(self, string, variables, triple=""):
         self.tokens = BooleanExpression.tokenize(string)
         self.variables = variables
         self.variables.add('true')
+        self.triple = triple
         self.value = None
         self.token = None
 
@@ -99,7 +101,7 @@ class BooleanExpression:
             else:
                 regex += re.escape(part)
         regex = re.compile(regex)
-        self.value = any(regex.fullmatch(var) for var in self.variables)
+        self.value = self.token in self.triple or any(regex.fullmatch(var) for var in self.variables)
         self.token = next(self.tokens)
 
     def parseNOT(self):
@@ -171,6 +173,20 @@ class TestBooleanExpression(unittest.TestCase):
         self.assertFalse(BooleanExpression.evaluate('not_true', variables))
         self.assertFalse(BooleanExpression.evaluate('tru', variables))
         self.assertFalse(BooleanExpression.evaluate('{{its-true.+}}', variables))
+
+    def test_triple(self):
+        triple = 'arch-vendor-os'
+        self.assertTrue(BooleanExpression.evaluate('arch-', {}, triple))
+        self.assertTrue(BooleanExpression.evaluate('ar', {}, triple))
+        self.assertTrue(BooleanExpression.evaluate('ch-vend', {}, triple))
+        self.assertTrue(BooleanExpression.evaluate('-vendor-', {}, triple))
+        self.assertTrue(BooleanExpression.evaluate('-os', {}, triple))
+        self.assertFalse(BooleanExpression.evaluate('arch-os', {}, triple))
+
+        # When matching against the triple, a regex is treated as an identifier and checked
+        # for a literal match. This preserves existing behavior before regexes were introduced.
+        self.assertFalse(BooleanExpression.evaluate('arch-{{vendor}}-os', {}, triple))
+        self.assertTrue(BooleanExpression.evaluate('arch-{{vendor}}-os', {}, 'arch-{{vendor}}-os'))
 
     def test_matching(self):
         expr1 = 'linux && (target={{aarch64-.+}} || target={{x86_64-.+}})'
