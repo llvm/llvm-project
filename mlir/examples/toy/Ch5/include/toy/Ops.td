@@ -143,7 +143,7 @@ def CastOp : Toy_Op<"cast", [
 
 def FuncOp : Toy_Op<"func", [
     DeclareOpInterfaceMethods<CallableOpInterface>, FunctionOpInterface,
-    IsolatedFromAbove, Symbol
+    IsolatedFromAbove
   ]> {
   let summary = "user defined function operation";
   let description = [{
