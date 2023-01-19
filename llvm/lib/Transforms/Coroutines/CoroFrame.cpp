@@ -318,8 +318,6 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
   LLVM_DEBUG(dump());
 }
 
-static bool materializable(Instruction &V);
-
 namespace {
 
 // RematGraph is used to construct a DAG for rematerializable instructions
@@ -342,9 +340,12 @@ struct RematGraph {
   using RematNodeMap =
       SmallMapVector<Instruction *, std::unique_ptr<RematNode>, 8>;
   RematNodeMap Remats;
+  const std::function<bool(Instruction &)> &MaterializableCallback;
   SuspendCrossingInfo &Checker;
 
-  RematGraph(Instruction *I, SuspendCrossingInfo &Checker) : Checker(Checker) {
+  RematGraph(const std::function<bool(Instruction &)> &MaterializableCallback,
+             Instruction *I, SuspendCrossingInfo &Checker)
+      : MaterializableCallback(MaterializableCallback), Checker(Checker) {
     std::unique_ptr<RematNode> FirstNode = std::make_unique<RematNode>(I);
     EntryNode = FirstNode.get();
     std::deque<std::unique_ptr<RematNode>> WorkList;
@@ -367,7 +368,7 @@ struct RematGraph {
     Remats[N->Node] = std::move(NUPtr);
     for (auto &Def : N->Node->operands()) {
       Instruction *D = dyn_cast<Instruction>(Def.get());
-      if (!D || !materializable(*D) ||
+      if (!D || !MaterializableCallback(*D) ||
           !Checker.isDefinitionAcrossSuspend(*D, FirstUse))
         continue;
 
@@ -2211,11 +2212,12 @@ static void rewritePHIs(Function &F) {
     rewritePHIs(*BB);
 }
 
+/// Default materializable callback
 // Check for instructions that we can recreate on resume as opposed to spill
 // the result into a coroutine frame.
-static bool materializable(Instruction &V) {
-  return isa<CastInst>(&V) || isa<GetElementPtrInst>(&V) ||
-         isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<SelectInst>(&V);
+bool coro::defaultMaterializable(Instruction &V) {
+  return (isa<CastInst>(&V) || isa<GetElementPtrInst>(&V) ||
+          isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<SelectInst>(&V));
 }
 
 // Check for structural coroutine intrinsics that should not be spilled into
@@ -2887,14 +2889,16 @@ void coro::salvageDebugInfo(
   }
 }
 
-static void doRematerializations(Function &F, SuspendCrossingInfo &Checker) {
+static void doRematerializations(
+    Function &F, SuspendCrossingInfo &Checker,
+    const std::function<bool(Instruction &)> &MaterializableCallback) {
   SpillInfo Spills;
 
   // See if there are materializable instructions across suspend points
   // We record these as the starting point to also identify materializable
   // defs of uses in these operations
   for (Instruction &I : instructions(F)) {
-    if (!materializable(I))
+    if (!MaterializableCallback(I))
       continue;
     for (User *U : I.users())
       if (Checker.isDefinitionAcrossSuspend(I, U))
@@ -2925,7 +2929,8 @@ static void doRematerializations(Function &F, SuspendCrossingInfo &Checker) {
         continue;
 
       // Constructor creates the whole RematGraph for the given Use
-      auto RematUPtr = std::make_unique<RematGraph>(U, Checker);
+      auto RematUPtr =
+          std::make_unique<RematGraph>(MaterializableCallback, U, Checker);
 
       LLVM_DEBUG(dbgs() << "***** Next remat group *****\n";
                  ReversePostOrderTraversal<RematGraph *> RPOT(RematUPtr.get());
@@ -2943,7 +2948,9 @@ static void doRematerializations(Function &F, SuspendCrossingInfo &Checker) {
   rewriteMaterializableInstructions(AllRemats);
 }
 
-void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
+void coro::buildCoroutineFrame(
+    Function &F, Shape &Shape,
+    const std::function<bool(Instruction &)> &MaterializableCallback) {
   // Don't eliminate swifterror in async functions that won't be split.
   if (Shape.ABI != coro::ABI::Async || !Shape.CoroSuspends.empty())
     eliminateSwiftError(F, Shape);
@@ -2994,7 +3001,7 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   // Build suspend crossing info.
   SuspendCrossingInfo Checker(F, Shape);
 
-  doRematerializations(F, Checker);
+  doRematerializations(F, Checker, MaterializableCallback);
 
   FrameDataInfo FrameData;
   SmallVector<CoroAllocaAllocInst*, 4> LocalAllocas;
