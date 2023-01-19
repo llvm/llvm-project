@@ -100,7 +100,24 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const RT &RHS, unsigned Bits);
 
 /// Checks if Div/Rem operation on LHS and RHS is valid.
 template <typename T>
-bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS);
+bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
+  if (RHS.isZero()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_expr_divide_by_zero);
+    return false;
+  }
+
+  if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
+    APSInt LHSInt = LHS.toAPSInt();
+    SmallString<32> Trunc;
+    (-LHSInt.extend(LHSInt.getBitWidth() + 1)).toString(Trunc, 10);
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_overflow) << Trunc << E->getType();
+    return false;
+  }
+  return true;
+}
 
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
