@@ -294,6 +294,20 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   if (result.isDefiniteFailure())
     return result;
 
+  // If a silenceable failure was produced, some results may be unset, set them
+  // to empty lists.
+  if (result.isSilenceableFailure()) {
+    for (OpResult opResult : transform->getResults()) {
+      if (results.isSet(opResult.getResultNumber()))
+        continue;
+
+      if (opResult.getType().isa<TransformParamTypeInterface>())
+        results.setParams(opResult, {});
+      else
+        results.set(opResult, {});
+    }
+  }
+
   // Remove the mapping for the operand if it is consumed by the operation. This
   // allows us to catch use-after-free with assertions later on.
   auto memEffectInterface =
@@ -421,6 +435,13 @@ bool transform::TransformResults::isParam(unsigned resultNumber) const {
   return paramSegments[resultNumber].data() != nullptr;
 }
 
+bool transform::TransformResults::isSet(unsigned resultNumber) const {
+  assert(resultNumber < paramSegments.size() &&
+         "querying association for a non-existent handle");
+  return paramSegments[resultNumber].data() != nullptr ||
+         segments[resultNumber].data() != nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Utilities for TransformEachOpTrait.
 //===----------------------------------------------------------------------===//
@@ -432,57 +453,43 @@ transform::detail::checkApplyToOne(Operation *transformOp,
   Location transformOpLoc = transformOp->getLoc();
   StringRef transformOpName = transformOp->getName().getStringRef();
   unsigned expectedNumResults = transformOp->getNumResults();
-  // TODO: encode this implicit must always produce `expectedNumResults`
-  // and nullptr is fine with a proper trait.
-  if (partialResult.size() != expectedNumResults) {
-    auto diag = mlir::emitError(transformOpLoc, "applications of ")
-                << transformOpName << " expected to produce "
-                << expectedNumResults << " results (actually produced "
-                << partialResult.size() << ").";
-    diag.attachNote(transformOpLoc)
-        << "If you need variadic results, consider a generic `apply` "
-        << "instead of the specialized `applyToOne`.";
-    diag.attachNote(transformOpLoc)
-        << "Producing " << expectedNumResults << " null results is "
-        << "allowed if the use case warrants it.";
-    diag.attachNote(payloadOpLoc) << "when applied to this op";
-    return failure();
-  }
 
-  // Check that all is null or none is null
-  // TODO: relax this behavior and encode with a proper trait.
-  if (llvm::any_of(
-          partialResult,
-          [](llvm::PointerUnion<Operation *, Attribute> ptr) { return ptr; }) &&
-      llvm::any_of(partialResult,
-                   [](llvm::PointerUnion<Operation *, Attribute> ptr) {
-                     return !ptr;
-                   })) {
-    auto diag = mlir::emitError(transformOpLoc, "unexpected application of ")
-                << transformOpName
-                << " produces both null and non null results.";
+  // Reuse the emission of the diagnostic note.
+  auto emitDiag = [&]() {
+    auto diag = mlir::emitError(transformOpLoc);
     diag.attachNote(payloadOpLoc) << "when applied to this op";
+    return diag;
+  };
+
+  if (partialResult.size() != expectedNumResults) {
+    auto diag = emitDiag() << "application of " << transformOpName
+                           << " expected to produce " << expectedNumResults
+                           << " results (actually produced "
+                           << partialResult.size() << ").";
+    diag.attachNote(transformOpLoc)
+        << "if you need variadic results, consider a generic `apply` "
+        << "instead of the specialized `applyToOne`.";
     return failure();
   }
 
   // Check that the right kind of value was produced.
   for (const auto &[ptr, res] :
        llvm::zip(partialResult, transformOp->getResults())) {
+    if (ptr.isNull()) {
+      return emitDiag() << "null result #" << res.getResultNumber()
+                        << " produced";
+    }
     if (ptr.is<Operation *>() &&
         !res.getType().template isa<TransformHandleTypeInterface>()) {
-      mlir::emitError(transformOpLoc)
-          << "applications of " << transformOpName
-          << " expected to produce an Attribute for result #"
-          << res.getResultNumber();
-      return failure();
+      return emitDiag() << "application of " << transformOpName
+                        << " expected to produce an Attribute for result #"
+                        << res.getResultNumber();
     }
     if (ptr.is<Attribute>() &&
         !res.getType().template isa<TransformParamTypeInterface>()) {
-      mlir::emitError(transformOpLoc)
-          << "applications of " << transformOpName
-          << " expected to produce an Operation * for result #"
-          << res.getResultNumber();
-      return failure();
+      return emitDiag() << "application of " << transformOpName
+                        << " expected to produce an Operation * for result #"
+                        << res.getResultNumber();
     }
   }
   return success();

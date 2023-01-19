@@ -444,8 +444,6 @@ transform::GetProducerOfOperand::apply(transform::TransformResults &results,
           << "could not find a producer for operand number: " << operandNumber
           << " of " << *target;
       diag.attachNote(target->getLoc()) << "target op";
-      results.set(getResult().cast<OpResult>(),
-                  SmallVector<mlir::Operation *>{});
       return diag;
     }
     producers.push_back(producer);
@@ -518,10 +516,6 @@ transform::SplitHandlesOp::apply(transform::TransformResults &results,
       getHandle() ? state.getPayloadOps(getHandle()).size() : 0;
   int64_t expectedNumResultHandles = getNumResultHandles();
   if (numResultHandles != expectedNumResultHandles) {
-    // Failing case needs to propagate gracefully for both suppress and
-    // propagate modes.
-    for (int64_t idx = 0; idx < expectedNumResultHandles; ++idx)
-      results.set(getResults()[idx].cast<OpResult>(), {});
     // Empty input handle corner case: always propagates empty handles in both
     // suppress and propagate modes.
     if (numResultHandles == 0)
