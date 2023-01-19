@@ -182,7 +182,7 @@ public:
   unsigned findNearest(StringRef Option, std::string &NearestString,
                        unsigned FlagsToInclude = 0, unsigned FlagsToExclude = 0,
                        unsigned MinimumLength = 4,
-                       unsigned MaximumDistance = UINT_MAX - 1) const;
+                       unsigned MaximumDistance = UINT_MAX) const;
 
   bool findExact(StringRef Option, std::string &ExactString,
                  unsigned FlagsToInclude = 0,
