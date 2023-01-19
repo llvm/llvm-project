@@ -59,6 +59,13 @@ constexpr size_t align(size_t Size) {
   return ((Size + alignof(void *) - 1) / alignof(void *)) * alignof(void *);
 }
 
+constexpr bool aligned(uintptr_t Value) { return Value == align(Value); }
+static_assert(aligned(sizeof(void *)));
+
+static inline bool aligned(const void *P) {
+  return aligned(reinterpret_cast<uintptr_t>(P));
+}
+
 inline bool isPrimitiveIntegral(PrimType Type) {
   switch (Type) {
   case PT_Bool:

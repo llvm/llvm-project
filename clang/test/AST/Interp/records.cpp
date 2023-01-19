@@ -295,13 +295,14 @@ namespace DeriveFailures {
                                               // ref-note 2{{non-constexpr constructor 'Base' cannot be used in a constant expression}}
   };
 
-  // FIXME: This is currently not being diagnosed with the new constant interpreter.
   constexpr Derived D(12); // ref-error {{must be initialized by a constant expression}} \
                            // ref-note {{in call to 'Derived(12)'}} \
                            // ref-note {{declared here}} \
                            // expected-error {{must be initialized by a constant expression}}
   static_assert(D.Val == 0, ""); // ref-error {{not an integral constant expression}} \
-                                 // ref-note {{initializer of 'D' is not a constant expression}}
+                                 // ref-note {{initializer of 'D' is not a constant expression}} \
+                                 // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{read of object outside its lifetime}}
 
   struct AnotherBase {
     int Val;

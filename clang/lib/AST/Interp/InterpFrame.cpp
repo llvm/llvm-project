@@ -64,8 +64,6 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC)
 }
 
 InterpFrame::~InterpFrame() {
-  if (Func && Func->isConstructor() && This.isBaseClass())
-    This.initialize();
   for (auto &Param : Params)
     S.deallocate(reinterpret_cast<Block *>(Param.second.get()));
 }

@@ -60,8 +60,8 @@ enum PrimType : unsigned;
 ///                     Base
 class Pointer {
 private:
-  static constexpr unsigned PastEndMark = (unsigned)-1;
-  static constexpr unsigned RootPtrMark = (unsigned)-1;
+  static constexpr unsigned PastEndMark = ~0u;
+  static constexpr unsigned RootPtrMark = ~0u;
 
 public:
   Pointer() {}
