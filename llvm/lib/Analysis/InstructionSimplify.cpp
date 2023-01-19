@@ -948,10 +948,17 @@ static Value *simplifyMulInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
        match(Op1, m_Exact(m_IDiv(m_Value(X), m_Specific(Op0)))))) // Y * (X / Y)
     return X;
 
-  // i1 mul -> and.
-  if (MaxRecurse && Op0->getType()->isIntOrIntVectorTy(1))
-    if (Value *V = simplifyAndInst(Op0, Op1, Q, MaxRecurse - 1))
-      return V;
+   if (Op0->getType()->isIntOrIntVectorTy(1)) {
+    // mul i1 nsw is a special-case because -1 * -1 is poison (+1 is not
+    // representable). All other cases reduce to 0, so just return 0.
+    if (IsNSW)
+      return ConstantInt::getNullValue(Op0->getType());
+
+    // Treat "mul i1" as "and i1".
+    if (MaxRecurse)
+      if (Value *V = simplifyAndInst(Op0, Op1, Q, MaxRecurse - 1))
+        return V;
+  }
 
   // Try some generic simplifications for associative operations.
   if (Value *V =
