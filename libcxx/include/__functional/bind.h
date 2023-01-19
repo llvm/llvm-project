@@ -32,7 +32,7 @@ struct is_bind_expression : _If<
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr size_t is_bind_expression_v = is_bind_expression<_Tp>::value;
+inline constexpr bool is_bind_expression_v = is_bind_expression<_Tp>::value;
 #endif
 
 template<class _Tp>
@@ -44,7 +44,7 @@ struct is_placeholder : _If<
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr size_t is_placeholder_v = is_placeholder<_Tp>::value;
+inline constexpr int is_placeholder_v = is_placeholder<_Tp>::value;
 #endif
 
 namespace placeholders
