@@ -13,8 +13,8 @@ void foo(int i);
 // RUN: cd %S && %clang_cc1 -I %S/Inputs -isystem %S/Inputs/sys -fdebug-prefix-map=%S=SRC_ROOT -index-store-path %t/idx print-unit-remapped.c -o print-unit-remapped.c.o -triple x86_64-apple-macosx10.8
 // RUN: c-index-test core -print-unit %t/idx | FileCheck --check-prefixes=RELATIVE,ALL %s
 
-// ABSOLUTE: print-unit-remapped.c.o-[[HASH:.+]]
-// RELATIVE: print-unit-remapped.c.o-[[HASH]]
+// ABSOLUTE: print-unit-remapped.c.o-{{.+}}
+// RELATIVE: print-unit-remapped.c.o-{{.+}}
 // ALL: provider: clang-
 // ALL: is-system: 0
 // ALL: has-main: 1
