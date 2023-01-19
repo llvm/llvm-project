@@ -31,7 +31,8 @@ public:
   using FixItList = llvm::SmallVectorImpl<FixItHint>;
 
   /// Invoked when an unsafe operation over raw pointers is found.
-  virtual void handleUnsafeOperation(const Stmt *Operation) = 0;
+  virtual void handleUnsafeOperation(const Stmt *Operation,
+                                     bool IsRelatedToDecl) = 0;
 
   /// Invoked when a fix is suggested against a variable.
   virtual void handleFixableVariable(const VarDecl *Variable,

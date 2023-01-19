@@ -1152,7 +1152,7 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
       // memory operand. We are only interested in read-only sections.
       ErrorOr<BinarySection &> DataSection =
           BC.getSectionForAddress(TargetAddress);
-      if (!DataSection || !DataSection->isReadOnly())
+      if (!DataSection || DataSection->isWritable())
         continue;
 
       if (BC.getRelocationAt(TargetAddress) ||

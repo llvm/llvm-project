@@ -435,34 +435,6 @@ public:
     return getTargetAddend(Op.getExpr());
   }
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
-    size_t OpNum = 0;
-
-    if (isConditionalBranch(Inst)) {
-      assert(MCPlus::getNumPrimeOperands(Inst) >= 2 &&
-             "Invalid number of operands");
-      OpNum = 1;
-    }
-
-    if (isTB(Inst)) {
-      assert(MCPlus::getNumPrimeOperands(Inst) >= 3 &&
-             "Invalid number of operands");
-      OpNum = 2;
-    }
-
-    if (Info->get(Inst.getOpcode()).OpInfo[OpNum].OperandType !=
-        MCOI::OPERAND_PCREL) {
-      assert((isIndirectBranch(Inst) || isIndirectCall(Inst)) &&
-             "FAILED evaluateBranch");
-      return false;
-    }
-
-    int64_t Imm = Inst.getOperand(OpNum).getImm() << 2;
-    Target = Addr + Imm;
-    return true;
-  }
-
   bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&

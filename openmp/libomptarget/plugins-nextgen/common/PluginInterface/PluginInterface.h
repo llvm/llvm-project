@@ -113,13 +113,14 @@ class DeviceImageTy {
 
   /// The pointer to the raw __tgt_device_image.
   const __tgt_device_image *TgtImage;
+  const __tgt_device_image *TgtImageBitcode;
 
   /// Table of offload entries.
   OffloadEntryTableTy OffloadEntryTable;
 
 public:
   DeviceImageTy(int32_t Id, const __tgt_device_image *Image)
-      : ImageId(Id), TgtImage(Image) {
+      : ImageId(Id), TgtImage(Image), TgtImageBitcode(nullptr) {
     assert(TgtImage && "Invalid target image");
   }
 
@@ -128,6 +129,14 @@ public:
 
   /// Get the pointer to the raw __tgt_device_image.
   const __tgt_device_image *getTgtImage() const { return TgtImage; }
+
+  void setTgtImageBitcode(const __tgt_device_image *TgtImageBitcode) {
+    this->TgtImageBitcode = TgtImageBitcode;
+  }
+
+  const __tgt_device_image *getTgtImageBitcode() const {
+    return TgtImageBitcode;
+  }
 
   /// Get the image starting address.
   void *getStart() const { return TgtImage->ImageStart; }

@@ -662,7 +662,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   for (auto it = FixablesForUnsafeVars.byVar.cbegin();
        it != FixablesForUnsafeVars.byVar.cend();) {
     // FIXME: Support ParmVarDecl as well.
-    if (it->first->isLocalVarDecl() || Tracker.hasUnclaimedUses(it->first)) {
+    if (!it->first->isLocalVarDecl() || Tracker.hasUnclaimedUses(it->first)) {
       it = FixablesForUnsafeVars.byVar.erase(it);
     } else {
       ++it;
@@ -680,17 +680,16 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   // FIXME Detect overlapping FixIts.
 
   for (const auto &G : UnsafeOps.noVar) {
-    Handler.handleUnsafeOperation(G->getBaseStmt());
+    Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false);
   }
 
   for (const auto &[VD, WarningGadgets] : UnsafeOps.byVar) {
     auto FixItsIt = FixItsForVariable.find(VD);
-    if (FixItsIt != FixItsForVariable.end()) {
-      Handler.handleFixableVariable(VD, std::move(FixItsIt->second));
-    } else {
-      for (const auto &G : WarningGadgets) {
-        Handler.handleUnsafeOperation(G->getBaseStmt());
-      }
+    Handler.handleFixableVariable(VD, FixItsIt != FixItsForVariable.end()
+                                          ? std::move(FixItsIt->second)
+                                          : FixItList{});
+    for (const auto &G : WarningGadgets) {
+      Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/true);
     }
   }
 }

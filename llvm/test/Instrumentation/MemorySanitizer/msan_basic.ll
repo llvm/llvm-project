@@ -1032,13 +1032,13 @@ define ptr @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-LABEL: define internal void @msan.module_ctor() #[[#ATTR:]] {
 ; CHECK: call void @__msan_init()
 
-; CHECK-CALLS: declare void @__msan_maybe_warning_1(i8 zeroext, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_store_origin_1(i8 zeroext, ptr, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_warning_2(i16 zeroext, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_store_origin_2(i16 zeroext, ptr, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_warning_4(i32 zeroext, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_store_origin_4(i32 zeroext, ptr, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_warning_8(i64 zeroext, i32 zeroext)
-; CHECK-CALLS: declare void @__msan_maybe_store_origin_8(i64 zeroext, ptr, i32 zeroext)
+; CHECK-CALLS: declare void @__msan_maybe_warning_1(i8, i32)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_1(i8, ptr, i32)
+; CHECK-CALLS: declare void @__msan_maybe_warning_2(i16, i32)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_2(i16, ptr, i32)
+; CHECK-CALLS: declare void @__msan_maybe_warning_4(i32, i32)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_4(i32, ptr, i32)
+; CHECK-CALLS: declare void @__msan_maybe_warning_8(i64, i32)
+; CHECK-CALLS: declare void @__msan_maybe_store_origin_8(i64, ptr, i32)
 
 ; CHECK:       attributes #[[#ATTR]] = { nounwind }

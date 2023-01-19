@@ -6039,6 +6039,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::Solaris:
       TC = std::make_unique<toolchains::Solaris>(*this, Target, Args);
       break;
+    case llvm::Triple::CUDA:
+      TC = std::make_unique<toolchains::NVPTXToolChain>(*this, Target, Args);
+      break;
     case llvm::Triple::AMDHSA:
       TC = std::make_unique<toolchains::ROCMToolChain>(*this, Target, Args);
       break;
@@ -6157,11 +6160,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       }
     }
   }
-
-  // Intentionally omitted from the switch above: llvm::Triple::CUDA.  CUDA
-  // compiles always need two toolchains, the CUDA toolchain and the host
-  // toolchain.  So the only valid way to create a CUDA toolchain is via
-  // CreateOffloadingDeviceToolChains.
 
   return *TC;
 }
