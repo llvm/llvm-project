@@ -525,8 +525,8 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     const CompoundAssignOperator *E) {
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  std::optional<PrimType> LT = classify(E->getComputationLHSType());
-  std::optional<PrimType> RT = classify(E->getComputationResultType());
+  std::optional<PrimType> LT = classify(E->getLHS()->getType());
+  std::optional<PrimType> RT = classify(E->getRHS()->getType());
 
   if (!LT || !RT)
     return false;
@@ -552,18 +552,10 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     if (!this->emitSub(*LT, E))
       return false;
     break;
+
   case BO_MulAssign:
-    if (!this->emitMul(*LT, E))
-      return false;
-    break;
   case BO_DivAssign:
-    if (!this->emitDiv(*LT, E))
-      return false;
-    break;
   case BO_RemAssign:
-    if (!this->emitRem(*LT, E))
-      return false;
-    break;
   case BO_ShlAssign:
     if (!this->emitShl(*LT, *RT, E))
       return false;
@@ -573,17 +565,8 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
       return false;
     break;
   case BO_AndAssign:
-    if (!this->emitBitAnd(*LT, E))
-      return false;
-    break;
   case BO_XorAssign:
-    if (!this->emitBitXor(*LT, E))
-      return false;
-    break;
   case BO_OrAssign:
-    if (!this->emitBitOr(*LT, E))
-      return false;
-    break;
   default:
     llvm_unreachable("Unimplemented compound assign operator");
   }
