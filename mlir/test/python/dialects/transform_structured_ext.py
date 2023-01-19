@@ -56,8 +56,10 @@ def testInterchange():
 def testMultitileSizes():
   sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
-    structured.MultiTileSizesOp(
-        sequence.bodyTarget, dimension=1, target_size=42)
+    structured.MultiTileSizesOp(pdl.OperationType.get(),
+                                sequence.bodyTarget,
+                                dimension=1,
+                                target_size=42)
     transform.YieldOp()
   # CHECK-LABEL: TEST: testMultitileSizes
   # CHECK: transform.sequence
@@ -110,7 +112,9 @@ def testSplit():
 def testTileCompact():
   sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
-    structured.TileOp(sequence.bodyTarget, sizes=[4, 8], interchange=[0, 1])
+    structured.TileOp(sequence.bodyTarget,
+                      sizes=[4, 8],
+                      interchange=[0, 1])
     transform.YieldOp()
   # CHECK-LABEL: TEST: testTileCompact
   # CHECK: transform.sequence
@@ -123,7 +127,9 @@ def testTileAttributes():
   attr = DenseI64ArrayAttr.get([4, 8])
   ichange = DenseI64ArrayAttr.get([0, 1])
   with InsertionPoint(sequence.body):
-    structured.TileOp(sequence.bodyTarget, sizes=attr, interchange=ichange)
+    structured.TileOp(sequence.bodyTarget,
+                      sizes=attr,
+                      interchange=ichange)
     transform.YieldOp()
   # CHECK-LABEL: TEST: testTileAttributes
   # CHECK: transform.sequence
@@ -134,8 +140,9 @@ def testTileAttributes():
 def testTileZero():
   sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
-    structured.TileOp(
-        sequence.bodyTarget, sizes=[4, 0, 2, 0], interchange=[0, 1, 2, 3])
+    structured.TileOp(sequence.bodyTarget,
+                      sizes=[4, 0, 2, 0],
+                      interchange=[0, 1, 2, 3])
     transform.YieldOp()
   # CHECK-LABEL: TEST: testTileZero
   # CHECK: transform.sequence
@@ -151,13 +158,45 @@ def testTileDynamic():
     with InsertionPoint(sequence.body):
       m1 = transform.PDLMatchOp(pdl.OperationType.get(), sequence.bodyTarget, "first")
       m2 = transform.PDLMatchOp(pdl.OperationType.get(), sequence.bodyTarget, "second")
-      structured.TileOp(sequence.bodyTarget, sizes=[m1, 3, m2, 0])
+      structured.TileOp(sequence.bodyTarget,
+                        sizes=[m1, 3, m2, 0])
       transform.YieldOp()
   # CHECK-LABEL: TEST: testTileDynamic
   # CHECK: %[[FIRST:.+]] = pdl_match
   # CHECK: %[[SECOND:.+]] = pdl_match
   # CHECK: %{{.+}}, %{{.+}}:3 = transform.structured.tile %{{.*}}[%[[FIRST]], 3, %[[SECOND]], 0]
 
+
+@run
+def testTileExplicitLoopTypeSingle():
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                  [], transform.AnyOpType.get())
+  with InsertionPoint(sequence.body):
+    structured.TileOp(transform.OperationType.get("scf.for"),
+                      sequence.bodyTarget,
+                      sizes=[2, 3, 4])
+    transform.YieldOp()
+  # CHECK-LABEL: TEST: testTileExplicitLoopTypeSingle
+  # CHECK: = transform.structured.tile %{{.*}} : (!{{.*}}) ->
+  # CHECK-COUNT-3: !transform.op<"scf.for">
+
+
+
+@run
+def testTileExplicitLoopTypeAll():
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                  [], transform.AnyOpType.get())
+  types = [
+      transform.OperationType.get(x)
+      for x in ["scf.for", "scf.parallel", "scf.foreach_thread"]
+  ]
+  with InsertionPoint(sequence.body):
+    structured.TileOp(types, sequence.bodyTarget, sizes=[2, 3, 4])
+    transform.YieldOp()
+  # CHECK-LABEL: TEST: testTileExplicitLoopTypeAll
+  # CHECK: = transform.structured.tile
+  # CHECK-SAME : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
+  # CHECK-SAME: !transform.op<"scf.parallel">, !transform.op<"scf.foreach_thread">
 
 @run
 def testVectorize():

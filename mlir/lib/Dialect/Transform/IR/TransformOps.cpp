@@ -586,12 +586,23 @@ transform::ReplicateOp::apply(transform::TransformResults &results,
   unsigned numRepetitions = state.getPayloadOps(getPattern()).size();
   for (const auto &en : llvm::enumerate(getHandles())) {
     Value handle = en.value();
-    ArrayRef<Operation *> current = state.getPayloadOps(handle);
-    SmallVector<Operation *> payload;
-    payload.reserve(numRepetitions * current.size());
-    for (unsigned i = 0; i < numRepetitions; ++i)
-      llvm::append_range(payload, current);
-    results.set(getReplicated()[en.index()].cast<OpResult>(), payload);
+    if (handle.getType().isa<TransformHandleTypeInterface>()) {
+      ArrayRef<Operation *> current = state.getPayloadOps(handle);
+      SmallVector<Operation *> payload;
+      payload.reserve(numRepetitions * current.size());
+      for (unsigned i = 0; i < numRepetitions; ++i)
+        llvm::append_range(payload, current);
+      results.set(getReplicated()[en.index()].cast<OpResult>(), payload);
+    } else {
+      assert(handle.getType().isa<TransformParamTypeInterface>() &&
+             "expected param type");
+      ArrayRef<Attribute> current = state.getParams(handle);
+      SmallVector<Attribute> params;
+      params.reserve(numRepetitions * current.size());
+      for (unsigned i = 0; i < numRepetitions; ++i)
+        llvm::append_range(params, current);
+      results.setParams(getReplicated()[en.index()].cast<OpResult>(), params);
+    }
   }
   return DiagnosedSilenceableFailure::success();
 }
