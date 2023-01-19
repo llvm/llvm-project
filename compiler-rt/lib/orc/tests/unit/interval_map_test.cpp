@@ -186,3 +186,19 @@ TEST(IntervalMapTest, EraseSplittingBoth) {
   EXPECT_EQ(std::next(M.begin())->first.first, 9U);
   EXPECT_EQ(std::next(M.begin())->first.second, 10U);
 }
+
+TEST(IntervalMapTest, NonCoalescingMapPermitsNonComparableKeys) {
+  // Test that values that can't be equality-compared are still usable when
+  // coalescing is disabled and behave as expected.
+
+  struct S {}; // Struct with no equality comparison.
+
+  IntervalMap<unsigned, S, IntervalCoalescing::Disabled> M;
+
+  M.insert(7, 8, S());
+
+  EXPECT_FALSE(M.empty());
+  EXPECT_EQ(std::next(M.begin()), M.end());
+  EXPECT_EQ(M.find(7), M.begin());
+  EXPECT_EQ(M.find(8), M.end());
+}

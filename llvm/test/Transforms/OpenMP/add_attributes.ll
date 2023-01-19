@@ -1,10 +1,15 @@
-; RUN: opt < %s -S -passes=openmp-opt-cgscc | FileCheck %s
-; RUN: opt < %s -S -passes=openmp-opt-cgscc -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+; RUN: opt < %s -S -passes=openmp-opt-cgscc -mtriple=x86_64-unknown-unknown | FileCheck %s
+; RUN: opt < %s -S -passes=openmp-opt-cgscc -openmp-ir-builder-optimistic-attributes -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=OPTIMISTIC
+; RUN: opt < %s -S -passes=openmp-opt-cgscc -mtriple=s390x-unknown-linux | FileCheck %s --check-prefix=EXT
+; RUN: opt < %s -S -passes=openmp-opt-cgscc -mtriple=mips-linux-gnu | FileCheck %s --check-prefix=MIPS_EXT
+; RUN: opt < %s -S -passes=openmp-opt-cgscc -mtriple=riscv64 | FileCheck %s --check-prefix=RISCV_EXT
+; REQUIRES: x86-registered-target, systemz-registered-target, mips-registered-target, riscv-registered-target
 
 %struct.omp_lock_t = type { ptr }
 %struct.omp_nest_lock_t = type { ptr }
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
+%struct.__tgt_async_info = type { ptr }
+%struct.__tgt_kernel_arguments = type { i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, i64 }
 
 define void @call_all(i32 %schedule, ptr %lock, i32 %lock_hint, ptr %nest_lock, i32 %i, ptr %s, i64 %st, ptr %vp, double %d, i32 %proc_bind, i64 %allocator_handle, ptr %cp, i64 %event_handle, i32 %pause_resource) {
 entry:
@@ -669,6 +674,87 @@ declare void @__kmpc_barrier_simple_spmd(ptr nocapture nofree readonly, i32) #0
 
 attributes #0 = { noinline cold }
 
+declare ptr @__kmpc_aligned_alloc(i32, i64, i64, ptr);
+
+declare ptr @__kmpc_alloc_shared(i64);
+
+declare void @__kmpc_barrier_simple_generic(ptr, i32);
+
+declare void @__kmpc_begin_sharing_variables(ptr, i64);
+
+declare void @__kmpc_distribute_static_fini(ptr, i32);
+
+declare void @__kmpc_distribute_static_init_4(ptr, i32, i32, ptr, ptr, ptr, ptr, i32, i32);
+
+declare void @__kmpc_distribute_static_init_4u(ptr, i32, i32, ptr, ptr, ptr, ptr, i32, i32);
+
+declare void @__kmpc_distribute_static_init_8(ptr, i32, i32, ptr, ptr, ptr, ptr, i64, i64);
+
+declare void @__kmpc_distribute_static_init_8u(ptr, i32, i32, ptr, ptr, ptr, ptr, i64, i64);
+
+declare void @__kmpc_end_masked(ptr, i32);
+
+declare void @__kmpc_end_sharing_variables();
+
+declare void @__kmpc_error(ptr, i32, ptr);
+
+declare void @__kmpc_fork_call_if(ptr, i32, ptr, i32, ptr);
+
+declare void @__kmpc_free_shared(ptr, i64);
+
+declare i32 @__kmpc_get_hardware_num_blocks();
+
+declare i32 @__kmpc_get_hardware_num_threads_in_block();
+
+declare i32 @__kmpc_get_hardware_thread_id_in_block();
+
+declare void @__kmpc_get_shared_variables(ptr);
+
+declare i32 @__kmpc_get_warp_size();
+
+declare i8 @__kmpc_is_spmd_exec_mode();
+
+declare void @__kmpc_kernel_end_parallel();
+
+declare i1 @__kmpc_kernel_parallel(ptr);
+
+declare void @__kmpc_kernel_prepare_parallel(ptr);
+
+declare i32 @__kmpc_masked(ptr, i32, i32);
+
+declare void @__kmpc_nvptx_end_reduce_nowait(i32);
+
+declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32, i32, i64, ptr, ptr, ptr);
+
+declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, i32, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr);
+
+declare i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32, ptr, i32, ptr);
+
+declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64);
+
+declare i32 @__kmpc_shuffle_int32(i32, i16, i16);
+
+declare i64 @__kmpc_shuffle_int64(i64, i16, i16);
+
+declare void @__kmpc_target_deinit(ptr, i8);
+
+declare i32 @__kmpc_target_init(ptr, i8, i1);
+
+declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32);
+
+declare void @__tgt_interop_init(ptr, i32, ptr, i32, i32, i64, ptr, i32);
+
+declare void @__tgt_interop_use(ptr, i32, ptr, i32, i32, ptr, i32);
+
+declare void @__tgt_target_data_begin_mapper_issue(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr);
+
+declare void @__tgt_target_data_begin_mapper_wait(i64, ptr);
+
+declare i32 @__tgt_target_kernel(ptr, i64, i32, i32, ptr, ptr);
+
+declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, i32, ptr);
+
+
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare dso_local void @omp_set_num_threads(i32)
 
@@ -1209,6 +1295,126 @@ attributes #0 = { noinline cold }
 ; CHECK: ; Function Attrs: cold convergent noinline nounwind
 ; CHECK-NEXT: declare void @__kmpc_barrier_simple_spmd(ptr nocapture nofree readonly, i32)
 
+; CHECK: ; Function Attrs: nounwind
+; CHECK-NEXT: declare ptr @__kmpc_aligned_alloc(i32, i64, i64, ptr)
+
+; CHECK: ; Function Attrs: nosync nounwind allocsize(0)
+; CHECK-NEXT: declare ptr @__kmpc_alloc_shared(i64)
+
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK: declare void @__kmpc_barrier_simple_generic(ptr, i32)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_begin_sharing_variables(ptr, i64)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare void @__kmpc_distribute_static_fini(ptr, i32)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare void @__kmpc_distribute_static_init_4(ptr, i32, i32, ptr, ptr, ptr, ptr, i32, i32)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare void @__kmpc_distribute_static_init_4u(ptr, i32, i32, ptr, ptr, ptr, ptr, i32, i32)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare void @__kmpc_distribute_static_init_8(ptr, i32, i32, ptr, ptr, ptr, ptr, i64, i64)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare void @__kmpc_distribute_static_init_8u(ptr, i32, i32, ptr, ptr, ptr, ptr, i64, i64)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare void @__kmpc_end_masked(ptr, i32)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_end_sharing_variables()
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_error(ptr, i32, ptr)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_fork_call_if(ptr, i32, ptr, i32, ptr)
+
+; CHECK: ; Function Attrs: nosync nounwind
+; CHECK-NEXT: declare void @__kmpc_free_shared(ptr allocptr nocapture, i64)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK-NEXT: declare i32 @__kmpc_get_hardware_num_blocks()
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK-NEXT: declare i32 @__kmpc_get_hardware_num_threads_in_block()
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK-NEXT: declare i32 @__kmpc_get_hardware_thread_id_in_block()
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_get_shared_variables(ptr)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK-NEXT: declare i32 @__kmpc_get_warp_size()
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare i8 @__kmpc_is_spmd_exec_mode()
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_kernel_end_parallel()
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare i1 @__kmpc_kernel_parallel(ptr)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_kernel_prepare_parallel(ptr)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare i32 @__kmpc_masked(ptr, i32, i32)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_nvptx_end_reduce_nowait(i32)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32, i32, i64, ptr, ptr, ptr)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, i32, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32, ptr, i32, ptr)
+
+; CHECK: ; Function Attrs: alwaysinline
+; CHECK: declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare i32 @__kmpc_shuffle_int32(i32, i16, i16)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare i64 @__kmpc_shuffle_int64(i64, i16, i16)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__kmpc_target_deinit(ptr, i8)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare i32 @__kmpc_target_init(ptr, i8, i1)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__tgt_interop_init(ptr, i32, ptr, i32, i32, i64, ptr, i32)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__tgt_interop_use(ptr, i32, ptr, i32, i32, ptr, i32)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__tgt_target_data_begin_mapper_issue(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; CHECK-NOT: Function Attrs
+; CHECK: declare void @__tgt_target_data_begin_mapper_wait(i64, ptr)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare i32 @__tgt_target_kernel(ptr, i64, i32, i32, ptr, ptr)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK: declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, i32, ptr)
+
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: write)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_num_threads(i32)
 
@@ -1736,6 +1942,811 @@ attributes #0 = { noinline cold }
 
 ; OPTIMISTIC: ; Function Attrs: cold convergent noinline nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_barrier_simple_spmd(ptr nocapture nofree readonly, i32)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
+; OPTIMISTIC-NEXT: declare noalias ptr @__kmpc_aligned_alloc(i32, i64, i64, ptr)
+
+; OPTIMISTIC: ; Function Attrs: nosync nounwind allocsize(0)
+; OPTIMISTIC-NEXT: declare noalias ptr @__kmpc_alloc_shared(i64)
+
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
+; OPTIMISTIC: declare void @__kmpc_barrier_simple_generic(ptr nocapture nofree readonly, i32)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__kmpc_begin_sharing_variables(ptr, i64)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; OPTIMISTIC: declare void @__kmpc_distribute_static_fini(ptr nocapture nofree readonly, i32)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; OPTIMISTIC: declare void @__kmpc_distribute_static_init_4(ptr nocapture nofree readonly, i32, i32, ptr nocapture nofree, ptr nocapture nofree, ptr nocapture nofree, ptr nocapture nofree, i32, i32)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; OPTIMISTIC: declare void @__kmpc_distribute_static_init_4u(ptr nocapture nofree readonly, i32, i32, ptr nocapture nofree, ptr nocapture nofree, ptr nocapture nofree, ptr nocapture nofree, i32, i32)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; OPTIMISTIC: declare void @__kmpc_distribute_static_init_8(ptr nocapture nofree readonly, i32, i32, ptr nocapture nofree, ptr nocapture nofree, ptr nocapture nofree, ptr nocapture nofree, i64, i64)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; OPTIMISTIC: declare void @__kmpc_distribute_static_init_8u(ptr nocapture nofree readonly, i32, i32, ptr nocapture nofree, ptr nocapture nofree, ptr nocapture nofree, ptr nocapture nofree, i64, i64)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; OPTIMISTIC: declare void @__kmpc_end_masked(ptr nocapture nofree readonly, i32)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__kmpc_end_sharing_variables()
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__kmpc_error(ptr, i32, ptr)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__kmpc_fork_call_if(ptr nocapture nofree readonly, i32, ptr nocapture nofree readonly, i32, ptr)
+
+; OPTIMISTIC: ; Function Attrs: nosync nounwind
+; OPTIMISTIC-NEXT: declare void @__kmpc_free_shared(ptr allocptr nocapture, i64)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
+; OPTIMISTIC-NEXT: declare i32 @__kmpc_get_hardware_num_blocks()
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
+; OPTIMISTIC-NEXT: declare i32 @__kmpc_get_hardware_num_threads_in_block()
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
+; OPTIMISTIC-NEXT: declare i32 @__kmpc_get_hardware_thread_id_in_block()
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__kmpc_get_shared_variables(ptr)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
+; OPTIMISTIC-NEXT: declare i32 @__kmpc_get_warp_size()
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare i8 @__kmpc_is_spmd_exec_mode()
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__kmpc_kernel_end_parallel()
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare i1 @__kmpc_kernel_parallel(ptr)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__kmpc_kernel_prepare_parallel(ptr)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; OPTIMISTIC: declare i32 @__kmpc_masked(ptr nocapture nofree readonly, i32, i32)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__kmpc_nvptx_end_reduce_nowait(i32)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32, i32, i64, ptr, ptr, ptr)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, i32, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; OPTIMISTIC: nofree nosync nounwind willreturn
+; OPTIMISTIC: declare i32 @__kmpc_omp_reg_task_with_affinity(ptr nocapture nofree readonly, i32, ptr nocapture nofree readonly, i32, ptr nocapture nofree readonly)
+
+; OPTIMISTIC: alwaysinline
+; OPTIMISTIC: declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare i32 @__kmpc_shuffle_int32(i32, i16, i16)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare i64 @__kmpc_shuffle_int64(i64, i16, i16)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__kmpc_target_deinit(ptr, i8)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare i32 @__kmpc_target_init(ptr, i8, i1)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__tgt_interop_init(ptr, i32, ptr, i32, i32, i64, ptr, i32)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__tgt_interop_use(ptr, i32, ptr, i32, i32, ptr, i32)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__tgt_target_data_begin_mapper_issue(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; OPTIMISTIC-NOT: Function Attrs
+; OPTIMISTIC: declare void @__tgt_target_data_begin_mapper_wait(i64, ptr)
+
+; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: declare i32 @__tgt_target_kernel(ptr, i64, i32, i32, ptr, ptr)
+
+; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, i32, ptr)
+
+;;; Check extensions of integer params / retvals <= i32. Only functions in this file which are handled in OMPIRBuilder will get these attributes.
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local void @omp_set_num_threads(i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local void @omp_set_dynamic(i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local void @omp_set_nested(i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local void @omp_set_max_active_levels(i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local void @omp_set_schedule(i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_num_threads()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @use_int(i32)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_dynamic()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_nested()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_max_threads()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_thread_num()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_num_procs()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_in_parallel()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_in_final()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_active_level()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_level()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_ancestor_thread_num(i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_team_size(i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_thread_limit()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_max_active_levels()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local void @omp_get_schedule(ptr nocapture writeonly, ptr nocapture writeonly)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_get_max_task_priority()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_init_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_set_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_unset_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_destroy_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_test_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_init_nest_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_set_nest_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_unset_nest_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_destroy_nest_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_test_nest_lock(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_init_lock_with_hint(ptr, i32)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_init_nest_lock_with_hint(ptr, i32)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local double @omp_get_wtime()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @use_double(double)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local double @omp_get_wtick()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_get_default_device()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_set_default_device(i32)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_is_initial_device()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_get_num_devices()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_get_num_teams()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_get_team_num()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_cancellation()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_get_initial_device()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local ptr @omp_target_alloc(i64, i32)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @use_voidptr(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_target_free(ptr, i32)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_target_is_present(ptr, i32)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_target_memcpy(ptr, ptr, i64, i64, i64, i32, i32)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_target_associate_ptr(ptr, ptr, i64, i64, i32)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_target_disassociate_ptr(ptr, i32)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_get_device_num()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_proc_bind()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_num_places()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_get_place_num_procs(i32)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local void @omp_get_place_proc_ids(i32 signext, ptr nocapture writeonly)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_place_num()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_partition_num_places()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local void @omp_get_partition_place_nums(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_control_tool(i32, i32, ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_destroy_allocator(i64)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_set_default_allocator(i64)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i64 @omp_get_default_allocator()
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local ptr @omp_alloc(i64, i64)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_free(ptr, i64)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @ompc_set_affinity_format(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i64 @ompc_get_affinity_format(ptr, i64)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @use_sizet(i64)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @ompc_display_affinity(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i64 @ompc_capture_affinity(ptr, i64, ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local void @omp_fulfill_event(i64)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_pause_resource(i32, i32)
+
+; EXT-NOT: Function Attrs
+; EXT: declare dso_local i32 @omp_pause_resource_all(i32)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare dso_local signext i32 @omp_get_supported_active_levels()
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_barrier(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_cancel(ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_cancel_barrier(ptr, i32 signext)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_flush(ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_global_thread_num(ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_fork_call(ptr, i32 signext, ptr, ...)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_omp_taskwait(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_omp_taskyield(ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_push_num_threads(ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_push_proc_bind(ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_serialized_parallel(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_end_serialized_parallel(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_master(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_end_master(ptr, i32 signext)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_critical(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_critical_with_hint(ptr, i32 signext, ptr, i32 zeroext)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_end_critical(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_begin(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_end(ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_reduce(ptr, i32 signext, i32 signext, i64, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_reduce_nowait(ptr, i32 signext, i32 signext, i64, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_end_reduce(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_end_reduce_nowait(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_ordered(ptr, i32 signext)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_end_ordered(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_for_static_init_4(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_for_static_init_4u(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_for_static_init_8(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_for_static_init_8u(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_for_static_fini(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_team_static_init_4(ptr, i32 signext, ptr, ptr, ptr, ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_team_static_init_4u(ptr, i32 signext, ptr, ptr, ptr, ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_team_static_init_8(ptr, i32 signext, ptr, ptr, ptr, ptr, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_team_static_init_8u(ptr, i32 signext, ptr, ptr, ptr, ptr, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dist_for_static_init_4(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dist_for_static_init_4u(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dist_for_static_init_8(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, ptr, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dist_for_static_init_8u(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, ptr, i64, i64)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_single(ptr, i32 signext)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_end_single(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_omp_task_alloc(ptr, i32 signext, i32 signext, i64, i64, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_omp_task(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_end_taskgroup(ptr, i32 signext)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_taskgroup(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dist_dispatch_init_4(ptr, i32 signext, i32 signext, ptr, i32 signext, i32 signext, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dist_dispatch_init_4u(ptr, i32 signext, i32 signext, ptr, i32 zeroext, i32 zeroext, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dist_dispatch_init_8(ptr, i32 signext, i32 signext, ptr, i64, i64, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dist_dispatch_init_8u(ptr, i32 signext, i32 signext, ptr, i64, i64, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dispatch_init_4(ptr, i32 signext, i32 signext, i32 signext, i32 signext, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dispatch_init_4u(ptr, i32 signext, i32 signext, i32 zeroext, i32 zeroext, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dispatch_init_8(ptr, i32 signext, i32 signext, i64, i64, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dispatch_init_8u(ptr, i32 signext, i32 signext, i64, i64, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_dispatch_next_4(ptr, i32 signext, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_dispatch_next_4u(ptr, i32 signext, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_dispatch_next_8(ptr, i32 signext, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_dispatch_next_8u(ptr, i32 signext, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dispatch_fini_4(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dispatch_fini_4u(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dispatch_fini_8(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_dispatch_fini_8u(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_omp_task_begin_if0(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_omp_task_complete_if0(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_omp_task_with_deps(ptr, i32 signext, ptr, i32 signext, ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_omp_wait_deps(ptr, i32 signext, i32 signext, ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__kmpc_cancellationpoint(ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_push_num_teams(ptr, i32 signext, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_fork_teams(ptr, i32 signext, ptr, ...)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_taskloop(ptr, i32 signext, ptr, i32 signext, ptr, ptr, i64, i32 signext, i32 signext, i64, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_omp_target_task_alloc(ptr, i32 signext, i32 signext, i64, i64, ptr, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_taskred_modifier_init(ptr, i32 signext, i32 signext, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_taskred_init(i32 signext, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_task_reduction_modifier_fini(ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_copyprivate(ptr, i32 signext, i64, ptr, ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_threadprivate_cached(ptr, i32 signext, ptr, i64, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_threadprivate_register(ptr, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_doacross_init(ptr, i32 signext, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_doacross_wait(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_doacross_post(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_doacross_fini(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_alloc(i32 signext, i64, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_free(i32 signext, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_init_allocator(i32 signext, ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_destroy_allocator(i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_push_target_tripcount_mapper(ptr, i64, i64)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare i64 @__kmpc_warp_active_thread_mask()
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_syncwarp(i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__tgt_target_mapper(ptr, i64, ptr, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__tgt_target_nowait_mapper(ptr, i64, ptr, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr, i32 signext, ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__tgt_target_teams_mapper(ptr, i64, ptr, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare signext i32 @__tgt_target_teams_nowait_mapper(ptr, i64, ptr, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr, i32 signext, i32 signext, i32 signext, ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__tgt_register_requires(i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__tgt_target_data_begin_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__tgt_target_data_end_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__tgt_target_data_end_nowait_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__tgt_target_data_update_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__tgt_target_data_update_nowait_mapper(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare i64 @__tgt_mapper_num_components(ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__tgt_push_mapper_component(ptr, ptr, ptr, i64, i64, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_task_allow_completion_event(ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_task_reduction_get_th_data(i32 signext, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_task_reduction_init(i32 signext, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_task_reduction_modifier_init(ptr, i32 signext, i32 signext, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_proxy_task_completed_ooo(ptr)
+
+; EXT: ; Function Attrs: cold convergent noinline nounwind
+; EXT-NEXT: declare void @__kmpc_barrier_simple_spmd(ptr nocapture nofree readonly, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare ptr @__kmpc_aligned_alloc(i32 signext, i64, i64, ptr)
+
+; EXT: ; Function Attrs: nosync nounwind allocsize(0)
+; EXT-NEXT: declare ptr @__kmpc_alloc_shared(i64)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT: declare void @__kmpc_barrier_simple_generic(ptr, i32 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__kmpc_begin_sharing_variables(ptr, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare void @__kmpc_distribute_static_fini(ptr, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare void @__kmpc_distribute_static_init_4(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare void @__kmpc_distribute_static_init_4u(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare void @__kmpc_distribute_static_init_8(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare void @__kmpc_distribute_static_init_8u(ptr, i32 signext, i32 signext, ptr, ptr, ptr, ptr, i64, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare void @__kmpc_end_masked(ptr, i32 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__kmpc_end_sharing_variables()
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__kmpc_error(ptr, i32 signext, ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__kmpc_fork_call_if(ptr, i32 signext, ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: nosync nounwind
+; EXT-NEXT: declare void @__kmpc_free_shared(ptr allocptr nocapture, i64)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare zeroext i32 @__kmpc_get_hardware_num_blocks()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare zeroext i32 @__kmpc_get_hardware_num_threads_in_block()
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare zeroext i32 @__kmpc_get_hardware_thread_id_in_block()
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__kmpc_get_shared_variables(ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare zeroext i32 @__kmpc_get_warp_size()
+
+; EXT-NOT: Function Attrs
+; EXT: declare signext i8 @__kmpc_is_spmd_exec_mode()
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__kmpc_kernel_end_parallel()
+
+; EXT-NOT: Function Attrs
+; EXT: declare i1 @__kmpc_kernel_parallel(ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__kmpc_kernel_prepare_parallel(ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare signext i32 @__kmpc_masked(ptr, i32 signext, i32 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__kmpc_nvptx_end_reduce_nowait(i32 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare signext i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i32 signext, i32 signext, i64, ptr, ptr, ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare signext i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, i32 signext, ptr, i32 zeroext, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare signext i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32 signext, ptr, i32 signext, ptr)
+
+; EXT: ; Function Attrs: alwaysinline
+; EXT: declare void @__kmpc_parallel_51(ptr, i32 signext, i32 signext, i32 signext, i32 signext, ptr, ptr, ptr, i64)
+
+; EXT-NOT: Function Attrs
+; EXT: declare signext i32 @__kmpc_shuffle_int32(i32 signext, i16 signext, i16 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare i64 @__kmpc_shuffle_int64(i64, i16 signext, i16 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__kmpc_target_deinit(ptr, i8 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare signext i32 @__kmpc_target_init(ptr, i8 signext, i1 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__tgt_interop_destroy(ptr, i32 signext, ptr, i32 signext, i32 signext, ptr, i32 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__tgt_interop_init(ptr, i32 signext, ptr, i32 signext, i32 signext, i64, ptr, i32 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__tgt_interop_use(ptr, i32 signext, ptr, i32 signext, i32 signext, ptr, i32 signext)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__tgt_target_data_begin_mapper_issue(ptr, i64, i32 signext, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+
+; EXT-NOT: Function Attrs
+; EXT: declare void @__tgt_target_data_begin_mapper_wait(i64, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare signext i32 @__tgt_target_kernel(ptr, i64, i32 signext, i32 signext, ptr, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT: declare signext i32 @__tgt_target_kernel_nowait(ptr, i64, i32 signext, i32 signext, ptr, ptr, i32 signext, ptr, i32 signext, ptr)
+
+; MIPS_EXT: ; Function Attrs: nounwind
+; MIPS_EXT: declare dso_local void @omp_set_num_threads(i32 signext)
+
+; MIPS_EXT: ; Function Attrs: nounwind
+; MIPS_EXT: declare dso_local i32 @omp_get_num_threads()
+
+; MIPS_EXT: ; Function Attrs: convergent nounwind
+; MIPS_EXT: declare void @__kmpc_critical_with_hint(ptr, i32 signext, ptr, i32 signext)
+
+; MIPS_EXT: ; Function Attrs: nounwind
+; MIPS_EXT: declare i32 @__kmpc_get_hardware_num_blocks()
+
+; RISCV_EXT: ; Function Attrs: nounwind
+; RISCV_EXT: declare signext i32 @__kmpc_get_hardware_num_blocks()
+
+; RISCV_EXT: ; Function Attrs: nounwind
+; RISCV_EXT: declare signext i32 @__kmpc_get_hardware_num_threads_in_block()
+
+; RISCV_EXT: ; Function Attrs: nounwind
+; RISCV_EXT: declare signext i32 @__kmpc_get_hardware_thread_id_in_block()
+
+; RISCV_EXT: ; Function Attrs: nounwind
+; RISCV_EXT: declare signext i32 @__kmpc_get_warp_size()
 
 !llvm.module.flags = !{!0}
 

@@ -539,9 +539,9 @@ private:
   friend struct VarArgSystemZHelper;
 
   void initializeModule(Module &M);
-  void initializeCallbacks(Module &M);
-  void createKernelApi(Module &M);
-  void createUserspaceApi(Module &M);
+  void initializeCallbacks(Module &M, const TargetLibraryInfo &TLI);
+  void createKernelApi(Module &M, const TargetLibraryInfo &TLI);
+  void createUserspaceApi(Module &M, const TargetLibraryInfo &TLI);
 
   /// True if we're compiling the Linux kernel.
   bool CompileKernel;
@@ -730,7 +730,7 @@ static GlobalVariable *createPrivateConstGlobalForString(Module &M,
 }
 
 /// Create KMSAN API callbacks.
-void MemorySanitizer::createKernelApi(Module &M) {
+void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
   IRBuilder<> IRB(*C);
 
   // These will be initialized in insertKmsanPrologue().
@@ -742,8 +742,10 @@ void MemorySanitizer::createKernelApi(Module &M) {
   VAArgOriginTLS = nullptr;
   VAArgOverflowSizeTLS = nullptr;
 
-  WarningFn = M.getOrInsertFunction("__msan_warning", IRB.getVoidTy(),
-                                    IRB.getInt32Ty());
+  WarningFn = M.getOrInsertFunction("__msan_warning",
+                                    TLI.getAttrList(C, {0}, /*Signed=*/false),
+                                    IRB.getVoidTy(), IRB.getInt32Ty());
+
   // Requests the per-task context state (kmsan_context_state*) from the
   // runtime library.
   MsanContextStateTy = StructType::get(
@@ -794,7 +796,7 @@ static Constant *getOrInsertGlobal(Module &M, StringRef Name, Type *Ty) {
 }
 
 /// Insert declarations for userspace-specific functions and globals.
-void MemorySanitizer::createUserspaceApi(Module &M) {
+void MemorySanitizer::createUserspaceApi(Module &M, const TargetLibraryInfo &TLI) {
   IRBuilder<> IRB(*C);
 
   // Create the callback.
@@ -803,8 +805,9 @@ void MemorySanitizer::createUserspaceApi(Module &M) {
   if (TrackOrigins) {
     StringRef WarningFnName = Recover ? "__msan_warning_with_origin"
                                       : "__msan_warning_with_origin_noreturn";
-    WarningFn =
-        M.getOrInsertFunction(WarningFnName, IRB.getVoidTy(), IRB.getInt32Ty());
+    WarningFn = M.getOrInsertFunction(WarningFnName,
+                                      TLI.getAttrList(C, {0}, /*Signed=*/false),
+                                      IRB.getVoidTy(), IRB.getInt32Ty());
   } else {
     StringRef WarningFnName =
         Recover ? "__msan_warning" : "__msan_warning_noreturn";
@@ -841,23 +844,13 @@ void MemorySanitizer::createUserspaceApi(Module &M) {
        AccessSizeIndex++) {
     unsigned AccessSize = 1 << AccessSizeIndex;
     std::string FunctionName = "__msan_maybe_warning_" + itostr(AccessSize);
-    SmallVector<std::pair<unsigned, Attribute>, 2> MaybeWarningFnAttrs;
-    MaybeWarningFnAttrs.push_back(std::make_pair(
-        AttributeList::FirstArgIndex, Attribute::get(*C, Attribute::ZExt)));
-    MaybeWarningFnAttrs.push_back(std::make_pair(
-        AttributeList::FirstArgIndex + 1, Attribute::get(*C, Attribute::ZExt)));
     MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
-        FunctionName, AttributeList::get(*C, MaybeWarningFnAttrs),
+        FunctionName, TLI.getAttrList(C, {0, 1}, /*Signed=*/false),
         IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt32Ty());
 
     FunctionName = "__msan_maybe_store_origin_" + itostr(AccessSize);
-    SmallVector<std::pair<unsigned, Attribute>, 2> MaybeStoreOriginFnAttrs;
-    MaybeStoreOriginFnAttrs.push_back(std::make_pair(
-        AttributeList::FirstArgIndex, Attribute::get(*C, Attribute::ZExt)));
-    MaybeStoreOriginFnAttrs.push_back(std::make_pair(
-        AttributeList::FirstArgIndex + 2, Attribute::get(*C, Attribute::ZExt)));
     MaybeStoreOriginFn[AccessSizeIndex] = M.getOrInsertFunction(
-        FunctionName, AttributeList::get(*C, MaybeStoreOriginFnAttrs),
+        FunctionName, TLI.getAttrList(C, {0, 2}, /*Signed=*/false),
         IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt8PtrTy(),
         IRB.getInt32Ty());
   }
@@ -873,7 +866,7 @@ void MemorySanitizer::createUserspaceApi(Module &M) {
 }
 
 /// Insert extern declaration of runtime-provided functions and globals.
-void MemorySanitizer::initializeCallbacks(Module &M) {
+void MemorySanitizer::initializeCallbacks(Module &M, const TargetLibraryInfo &TLI) {
   // Only do this once.
   if (CallbacksInitialized)
     return;
@@ -881,29 +874,31 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(*C);
   // Initialize callbacks that are common for kernel and userspace
   // instrumentation.
-  MsanChainOriginFn = M.getOrInsertFunction("__msan_chain_origin",
-                                            IRB.getInt32Ty(), IRB.getInt32Ty());
-  MsanSetOriginFn =
-      M.getOrInsertFunction("__msan_set_origin", IRB.getVoidTy(),
-                            IRB.getInt8PtrTy(), IntptrTy, IRB.getInt32Ty());
+  MsanChainOriginFn = M.getOrInsertFunction(
+      "__msan_chain_origin",
+      TLI.getAttrList(C, {0}, /*Signed=*/false, /*Ret=*/true), IRB.getInt32Ty(),
+      IRB.getInt32Ty());
+  MsanSetOriginFn = M.getOrInsertFunction(
+      "__msan_set_origin", TLI.getAttrList(C, {2}, /*Signed=*/false),
+      IRB.getVoidTy(), IRB.getInt8PtrTy(), IntptrTy, IRB.getInt32Ty());
   MemmoveFn =
       M.getOrInsertFunction("__msan_memmove", IRB.getInt8PtrTy(),
                             IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
   MemcpyFn =
       M.getOrInsertFunction("__msan_memcpy", IRB.getInt8PtrTy(),
                             IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
-  MemsetFn =
-      M.getOrInsertFunction("__msan_memset", IRB.getInt8PtrTy(),
-                            IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy);
+  MemsetFn = M.getOrInsertFunction(
+      "__msan_memset", TLI.getAttrList(C, {1}, /*Signed=*/true),
+      IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy);
 
   MsanInstrumentAsmStoreFn =
       M.getOrInsertFunction("__msan_instrument_asm_store", IRB.getVoidTy(),
                             PointerType::get(IRB.getInt8Ty(), 0), IntptrTy);
 
   if (CompileKernel) {
-    createKernelApi(M);
+    createKernelApi(M, TLI);
   } else {
-    createUserspaceApi(M);
+    createUserspaceApi(M, TLI);
   }
   CallbacksInitialized = true;
 }
@@ -1132,7 +1127,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // It's easier to remove unreachable blocks than deal with missing shadow.
     removeUnreachableBlocks(F);
 
-    MS.initializeCallbacks(*F.getParent());
+    MS.initializeCallbacks(*F.getParent(), TLI);
     FnPrologueEnd = IRBuilder<>(F.getEntryBlock().getFirstNonPHI())
                         .CreateIntrinsic(Intrinsic::donothing, {}, {});
 

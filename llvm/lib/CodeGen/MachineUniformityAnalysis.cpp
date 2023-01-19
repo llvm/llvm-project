@@ -113,6 +113,8 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
 // This ensures explicit instantiation of
 // GenericUniformityAnalysisImpl::ImplDeleter::operator()
 template class llvm::GenericUniformityInfo<MachineSSAContext>;
+template struct llvm::GenericUniformityAnalysisImplDeleter<
+    llvm::GenericUniformityAnalysisImpl<MachineSSAContext>>;
 
 MachineUniformityInfo
 llvm::computeMachineUniformityInfo(MachineFunction &F,
