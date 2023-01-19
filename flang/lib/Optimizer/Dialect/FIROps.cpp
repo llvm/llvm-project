@@ -600,6 +600,26 @@ mlir::LogicalResult fir::ArrayModifyOp::verify() {
 // BoxAddrOp
 //===----------------------------------------------------------------------===//
 
+void fir::BoxAddrOp::build(mlir::OpBuilder &builder,
+                           mlir::OperationState &result, mlir::Value val) {
+  mlir::Type type =
+      llvm::TypeSwitch<mlir::Type, mlir::Type>(val.getType())
+          .Case<fir::BoxType>([&](fir::BoxType ty) -> mlir::Type {
+            mlir::Type eleTy = ty.getEleTy();
+            if (fir::isa_ref_type(eleTy))
+              return eleTy;
+            return fir::ReferenceType::get(eleTy);
+          })
+          .Case<fir::BoxCharType>([&](fir::BoxCharType ty) -> mlir::Type {
+            return fir::ReferenceType::get(ty.getEleTy());
+          })
+          .Case<fir::BoxProcType>(
+              [&](fir::BoxProcType ty) { return ty.getEleTy(); })
+          .Default([&](const auto &) { return mlir::Type{}; });
+  assert(type && "bad val type");
+  build(builder, result, type, val);
+}
+
 mlir::OpFoldResult fir::BoxAddrOp::fold(FoldAdaptor adaptor) {
   if (auto *v = getVal().getDefiningOp()) {
     if (auto box = mlir::dyn_cast<fir::EmboxOp>(v)) {

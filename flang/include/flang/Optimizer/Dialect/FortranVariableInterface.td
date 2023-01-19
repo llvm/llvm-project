@@ -122,6 +122,15 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
                         fir::FortranVariableFlagsEnum::optional);
     }
 
+    /// Does this variable have the Fortran CONTIGUOUS attribute?
+    /// Note that not having this attribute does not imply the
+    /// variable is not contiguous.
+    bool hasContiguousAttr() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::contiguous);
+    }
+
     /// Is this a Fortran character variable?
     bool isCharacter() {
       return getElementType().isa<fir::CharacterType>();
