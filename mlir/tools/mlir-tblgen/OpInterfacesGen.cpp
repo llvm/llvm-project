@@ -62,12 +62,19 @@ static void emitMethodNameAndArgs(const InterfaceMethod &method,
 /// Get an array of all OpInterface definitions but exclude those subclassing
 /// "DeclareOpInterfaceMethods".
 static std::vector<llvm::Record *>
-getAllOpInterfaceDefinitions(const llvm::RecordKeeper &recordKeeper) {
+getAllInterfaceDefinitions(const llvm::RecordKeeper &recordKeeper,
+                           StringRef name) {
   std::vector<llvm::Record *> defs =
-      recordKeeper.getAllDerivedDefinitions("OpInterface");
+      recordKeeper.getAllDerivedDefinitions((name + "Interface").str());
 
-  llvm::erase_if(defs, [](const llvm::Record *def) {
-    return def->isSubClassOf("DeclareOpInterfaceMethods");
+  std::string declareName = ("Declare" + name + "InterfaceMethods").str();
+  llvm::erase_if(defs, [&](const llvm::Record *def) {
+    // Ignore any "declare methods" interfaces.
+    if (def->isSubClassOf(declareName))
+      return true;
+    // Ignore interfaces defined outside of the top-level file.
+    return llvm::SrcMgr.FindBufferContainingLoc(def->getLoc()[0]) !=
+           llvm::SrcMgr.getMainFileID();
   });
   return defs;
 }
@@ -110,8 +117,7 @@ protected:
 /// A specialized generator for attribute interfaces.
 struct AttrInterfaceGenerator : public InterfaceGenerator {
   AttrInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
-      : InterfaceGenerator(records.getAllDerivedDefinitions("AttrInterface"),
-                           os) {
+      : InterfaceGenerator(getAllInterfaceDefinitions(records, "Attr"), os) {
     valueType = "::mlir::Attribute";
     interfaceBaseType = "AttributeInterface";
     valueTemplate = "ConcreteAttr";
@@ -125,7 +131,7 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
 /// A specialized generator for operation interfaces.
 struct OpInterfaceGenerator : public InterfaceGenerator {
   OpInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
-      : InterfaceGenerator(getAllOpInterfaceDefinitions(records), os) {
+      : InterfaceGenerator(getAllInterfaceDefinitions(records, "Op"), os) {
     valueType = "::mlir::Operation *";
     interfaceBaseType = "OpInterface";
     valueTemplate = "ConcreteOp";
@@ -140,8 +146,7 @@ struct OpInterfaceGenerator : public InterfaceGenerator {
 /// A specialized generator for type interfaces.
 struct TypeInterfaceGenerator : public InterfaceGenerator {
   TypeInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
-      : InterfaceGenerator(records.getAllDerivedDefinitions("TypeInterface"),
-                           os) {
+      : InterfaceGenerator(getAllInterfaceDefinitions(records, "Type"), os) {
     valueType = "::mlir::Type";
     interfaceBaseType = "TypeInterface";
     valueTemplate = "ConcreteType";
