@@ -44,9 +44,7 @@ def testInterchange():
   with InsertionPoint(sequence.body):
     structured.InterchangeOp(
         sequence.bodyTarget,
-        iterator_interchange=[
-            IntegerAttr.get(IntegerType.get_signless(64), 1), 0
-        ])
+        iterator_interchange=[1, 0])
     transform.YieldOp()
   # CHECK-LABEL: TEST: testInterchange
   # CHECK: transform.sequence
