@@ -141,9 +141,20 @@ struct SparseCompilerOptions
 void buildSparseCompiler(OpPassManager &pm,
                          const SparseCompilerOptions &options);
 
+/// Adds the "sparse-compiler" pipeline to the `OpPassManager`.  This
+/// is the standard pipeline for taking sparsity-agnostic IR using
+/// the sparse-tensor type and lowering it to LLVM IR with concrete
+/// representations and algorithms for sparse tensors.
+void buildSparseKokkosCompiler(OpPassManager &pm,
+                         const SparseCompilerOptions &options);
+
 /// Registers all pipelines for the `sparse_tensor` dialect.  At present,
 /// this includes only "sparse-compiler".
 void registerSparseTensorPipelines();
+
+/// Registers all pipelines for the `sparse_tensor` dialect.  At present,
+/// this includes only "sparse-compiler".
+void registerSparseTensorKokkosPipelines();
 
 } // namespace sparse_tensor
 } // namespace mlir

@@ -78,6 +78,7 @@ inline void registerAllPasses() {
 
   // Dialect pipelines
   sparse_tensor::registerSparseTensorPipelines();
+  sparse_tensor::registerSparseTensorKokkosPipelines();
 }
 
 } // namespace mlir
