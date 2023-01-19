@@ -256,11 +256,6 @@ def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
   "(%3.%4)">;
 
-def err_missing_vfs_stat_cache_file : Error<
-  "stat cache file '%0' not found">, DefaultFatal;
-def err_invalid_vfs_stat_cache : Error<
-  "invalid stat cache file '%0'">, DefaultFatal;
-
 def err_missing_vfs_overlay_file : Error<
   "virtual filesystem overlay file '%0' not found">, DefaultFatal;
 def err_invalid_vfs_overlay : Error<
