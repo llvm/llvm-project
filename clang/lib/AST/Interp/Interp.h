@@ -91,6 +91,9 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 /// Checks if a method is pure virtual.
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 
+/// Checks that all fields are initialized after a constructor call.
+bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This);
+
 /// Checks if Div/Rem operation on LHS and RHS is valid.
 template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
@@ -1256,8 +1259,10 @@ inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
 
 inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
+  Pointer ThisPtr;
   if (Func->hasThisPointer()) {
-    if (!CheckInvoke(S, PC, NewFrame->getThis())) {
+    ThisPtr = NewFrame->getThis();
+    if (!CheckInvoke(S, PC, ThisPtr)) {
       return false;
     }
   }
@@ -1275,6 +1280,11 @@ inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
   if (Interpret(S, CallResult)) {
     NewFrame.release(); // Frame was delete'd already.
     assert(S.Current == FrameBefore);
+
+    // For constructors, check that all fields have been initialized.
+    if (Func->isConstructor() && !CheckCtorCall(S, PC, ThisPtr))
+      return false;
+
     return true;
   }
 
