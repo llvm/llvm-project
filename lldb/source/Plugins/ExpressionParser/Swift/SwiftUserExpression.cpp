@@ -731,7 +731,9 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       if (m_options.GetBindGenericTypes() != lldb::eBindAuto) 
         return false;
       diagnostic_manager.Clear();
-      diagnostic_manager.PutString(eDiagnosticSeverityRemark, "asdfasdf");
+      diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                   "Expression evaluation failed. Retrying "
+                                   "without binding generic parameters");
       // Retry without binding generic parameters, this is the only
       // case that will loop.
       m_options.SetBindGenericTypes(lldb::eDontBind);
