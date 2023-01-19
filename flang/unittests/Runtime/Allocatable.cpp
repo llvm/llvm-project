@@ -9,13 +9,6 @@
 #include "flang/Runtime/allocatable.h"
 #include "gtest/gtest.h"
 #include "tools.h"
-#include "flang/Common/Fortran.h"
-#include "flang/ISO_Fortran_binding.h"
-#include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Support/InitFIR.h"
-#include "flang/Optimizer/Support/KindMapping.h"
-#include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/memory.h"
 
 using namespace Fortran::runtime;
 
