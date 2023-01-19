@@ -412,8 +412,7 @@ private:
   MutableArrayRef<SlotT> Slots;
 
   static MutableArrayRef<SlotT> getSlots(Header &H) {
-    return makeMutableArrayRef(reinterpret_cast<SlotT *>(&H + 1),
-                               1u << H.NumBits);
+    return MutableArrayRef(reinterpret_cast<SlotT *>(&H + 1), 1u << H.NumBits);
   }
 };
 
@@ -616,7 +615,7 @@ HashMappedTrieHandle::RecordData
 HashMappedTrieHandle::getRecord(SubtrieSlotValue Offset) {
   char *Begin = LMFR->data() + Offset.asData();
   OnDiskHashMappedTrie::ValueProxy Proxy;
-  Proxy.Data = makeMutableArrayRef(Begin, getRecordDataSize());
+  Proxy.Data = MutableArrayRef(Begin, getRecordDataSize());
   Proxy.Hash = ArrayRef(reinterpret_cast<const uint8_t *>(Proxy.Data.end()),
                             getNumHashBytes());
   return RecordData{Proxy, Offset};
@@ -1155,7 +1154,7 @@ public:
   MutableArrayRef<char> allocate(LazyMappedFileRegionBumpPtr &Alloc,
                                  size_t DataSize) {
     assert(&Alloc.getRegion() == LMFR);
-    return makeMutableArrayRef(Alloc.allocate(DataSize), DataSize);
+    return MutableArrayRef(Alloc.allocate(DataSize), DataSize);
   }
 
   explicit operator bool() const { return H; }
