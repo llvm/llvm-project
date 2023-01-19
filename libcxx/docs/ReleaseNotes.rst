@@ -71,6 +71,7 @@ Implemented Papers
 - P2446R2 - ``views::as_rvalue``
 - P1020R1 - Smart pointer creation with default initialization
 - P2210R2 - Superior String Splitting
+- P2286R8 - Formatting Ranges
 
 Improvements and New Features
 -----------------------------
