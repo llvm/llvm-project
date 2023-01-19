@@ -819,7 +819,7 @@ OpEmitter::OpEmitter(const Operator &op,
               formatExtraDefinitions(op)),
       staticVerifierEmitter(staticVerifierEmitter),
       emitHelper(op, /*emitForOp=*/true) {
-  verifyCtx.withOp("(*this->getOperation())");
+  verifyCtx.addSubst("_op", "(*this->getOperation())");
   verifyCtx.addSubst("_ctxt", "this->getOperation()->getContext()");
 
   genTraits();

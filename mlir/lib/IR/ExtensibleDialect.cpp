@@ -299,7 +299,7 @@ DynamicOpDefinition::DynamicOpDefinition(
     : Impl(StringAttr::get(dialect->getContext(),
                            (dialect->getNamespace() + "." + name).str()),
            dialect, dialect->allocateTypeID(),
-           /*interfaceMap=*/detail::InterfaceMap(std::nullopt)),
+           /*interfaceMap=*/detail::InterfaceMap()),
       verifyFn(std::move(verifyFn)), verifyRegionFn(std::move(verifyRegionFn)),
       parseFn(std::move(parseFn)), printFn(std::move(printFn)),
       foldHookFn(std::move(foldHookFn)),
