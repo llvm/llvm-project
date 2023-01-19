@@ -4,10 +4,11 @@
 void foo(int i);
 
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -I %S/Inputs -isystem %S/Inputs/sys -fdebug-prefix-map=%S=SRC_ROOT -fdebug-prefix-map=$PWD=BUILD_ROOT -index-store-path %t/idx %s -triple x86_64-apple-macosx10.8
+// RUN: mkdir -p %t
+// RUN: cd %t && %clang_cc1 -I %S/Inputs -isystem %S/Inputs/sys -fdebug-prefix-map=%S=SRC_ROOT -fdebug-prefix-map=%t=BUILD_ROOT -index-store-path %t/idx %s -triple x86_64-apple-macosx10.8
 // RUN: c-index-test core -print-unit %t/idx -index-store-prefix-map SRC_ROOT=%S -index-store-prefix-map BUILD_ROOT=$PWD | FileCheck %s
 
-// CHECK: print-unit-roundtrip-remapping.c.o-KVNGTXKJLMEX
+// CHECK: print-unit-roundtrip-remapping.c.o-{{.+}}
 // CHECK: provider: clang-
 // CHECK: is-system: 0
 // CHECK: has-main: 1

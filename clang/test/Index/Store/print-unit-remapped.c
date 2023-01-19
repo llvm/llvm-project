@@ -4,7 +4,8 @@
 void foo(int i);
 
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -I %S/Inputs -isystem %S/Inputs/sys -fdebug-prefix-map=%S/Inputs=INPUT_ROOT -fdebug-prefix-map=%S=SRC_ROOT -fdebug-prefix-map=$PWD=BUILD_ROOT -index-store-path %t/idx %s -triple x86_64-apple-macosx10.8
+// RUN: mkdir -p %t
+// RUN: cd %t && %clang_cc1 -I %S/Inputs -isystem %S/Inputs/sys -fdebug-prefix-map=%S/Inputs=INPUT_ROOT -fdebug-prefix-map=%S=SRC_ROOT -fdebug-prefix-map=%t=BUILD_ROOT -index-store-path %t/idx %s -triple x86_64-apple-macosx10.8
 // RUN: c-index-test core -print-unit %t/idx | FileCheck --check-prefixes=ABSOLUTE,ALL %s
 
 // Relative paths should work as well - the unit name, main-path, and out-file should not change.
@@ -12,7 +13,8 @@ void foo(int i);
 // RUN: cd %S && %clang_cc1 -I %S/Inputs -isystem %S/Inputs/sys -fdebug-prefix-map=%S=SRC_ROOT -index-store-path %t/idx print-unit-remapped.c -o print-unit-remapped.c.o -triple x86_64-apple-macosx10.8
 // RUN: c-index-test core -print-unit %t/idx | FileCheck --check-prefixes=RELATIVE,ALL %s
 
-// ALL: print-unit-remapped.c.o-20EK9G967JO97
+// ABSOLUTE: print-unit-remapped.c.o-[[HASH:.+]]
+// RELATIVE: print-unit-remapped.c.o-[[HASH]]
 // ALL: provider: clang-
 // ALL: is-system: 0
 // ALL: has-main: 1
