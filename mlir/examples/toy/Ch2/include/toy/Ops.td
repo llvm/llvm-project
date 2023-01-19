@@ -114,7 +114,7 @@ def AddOp : Toy_Op<"add"> {
 //===----------------------------------------------------------------------===//
 
 def FuncOp : Toy_Op<"func", [
-    FunctionOpInterface, IsolatedFromAbove, Symbol
+    FunctionOpInterface, IsolatedFromAbove
   ]> {
   let summary = "user defined function operation";
   let description = [{

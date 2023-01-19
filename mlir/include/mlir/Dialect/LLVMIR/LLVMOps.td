@@ -1443,7 +1443,7 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface,
-    CallableOpInterface, Symbol
+    CallableOpInterface
   ]> {
   let summary = "LLVM dialect function.";
 
