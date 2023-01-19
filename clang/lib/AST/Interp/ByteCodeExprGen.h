@@ -132,6 +132,8 @@ protected:
   bool visitArrayInitializer(const Expr *Initializer);
   /// Compiles a record initializer.
   bool visitRecordInitializer(const Expr *Initializer);
+  /// Creates and initializes a variable from the given decl.
+  bool visitVarDecl(const VarDecl *VD);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
@@ -232,6 +234,12 @@ private:
     if (const auto *RD = T->getPointeeCXXRecordDecl())
       return RD;
     return T->getAsCXXRecordDecl();
+  }
+
+  /// Returns whether we should create a global variable for the
+  /// given VarDecl.
+  bool shouldBeGloballyIndexed(const VarDecl *VD) const {
+    return VD->hasGlobalStorage() || VD->isConstexpr();
   }
 
 protected:
