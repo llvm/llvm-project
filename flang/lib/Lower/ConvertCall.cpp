@@ -637,7 +637,41 @@ genUserCall(PreparedActualArguments &loweredActuals,
       TODO(loc, "HLFIR PassBy::Box");
     } break;
     case PassBy::MutableBox: {
-      TODO(loc, "HLFIR PassBy::MutableBox");
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+              *expr)) {
+        // If expr is NULL(), the mutableBox created must be a deallocated
+        // pointer with the dummy argument characteristics (see table 16.5
+        // in Fortran 2018 standard).
+        // No length parameters are set for the created box because any non
+        // deferred type parameters of the dummy will be evaluated on the
+        // callee side, and it is illegal to use NULL without a MOLD if any
+        // dummy length parameters are assumed.
+        mlir::Type boxTy = fir::dyn_cast_ptrEleTy(argTy);
+        assert(boxTy && boxTy.isa<fir::BoxType>() && "must be a fir.box type");
+        mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
+        mlir::Value nullBox = fir::factory::createUnallocatedBox(
+            builder, loc, boxTy, /*nonDeferredParams=*/{});
+        builder.create<fir::StoreOp>(loc, nullBox, boxStorage);
+        caller.placeInput(arg, boxStorage);
+        continue;
+      }
+      if (fir::isPointerType(argTy) &&
+          !Fortran::evaluate::IsObjectPointer(
+              *expr, callContext.converter.getFoldingContext())) {
+        // Passing a non POINTER actual argument to a POINTER dummy argument.
+        // Create a pointer of the dummy argument type and assign the actual
+        // argument to it.
+        TODO(loc, "Associate POINTER dummy to TARGET argument in HLFIR");
+        continue;
+      }
+      // Passing a POINTER to a POINTER, or an ALLOCATABLE to an ALLOCATABLE.
+      assert(actual.isMutableBox() && "actual must be a mutable box");
+      caller.placeInput(arg, actual);
+      if (fir::isAllocatableType(argTy) && arg.isIntentOut() &&
+          Fortran::semantics::IsBindCProcedure(
+              *callContext.procRef.proc().GetSymbol())) {
+        TODO(loc, "BIND(C) INTENT(OUT) allocatable deallocation in HLFIR");
+      }
     } break;
     }
   }
