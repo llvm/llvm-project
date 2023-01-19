@@ -438,7 +438,7 @@ public:
     return getBlockEnd(Ptr) - reinterpret_cast<uptr>(Ptr);
   }
 
-  void getStats(ScopedString *Str) const;
+  void getStats(ScopedString *Str);
 
   void disable() {
     Mutex.lock();
@@ -615,7 +615,8 @@ void MapAllocator<Config>::deallocate(Options Options, void *Ptr) {
 }
 
 template <typename Config>
-void MapAllocator<Config>::getStats(ScopedString *Str) const {
+void MapAllocator<Config>::getStats(ScopedString *Str) {
+  ScopedLock L(Mutex);
   Str->append("Stats: MapAllocator: allocated %u times (%zuK), freed %u times "
               "(%zuK), remains %u (%zuK) max %zuM\n",
               NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees,
