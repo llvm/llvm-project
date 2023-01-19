@@ -711,13 +711,19 @@ void Operator::populateOpStructure() {
           continue;
         }
 
+        // Ignore duplicates.
+        if (!traitSet.insert(traitInit).second)
+          continue;
+
+        // If this is an interface with base classes, add the bases to the
+        // trait list.
+        if (def->isSubClassOf("Interface"))
+          insert(def->getValueAsListInit("baseInterfaces"));
+
         // Verify if the trait has all the dependent traits declared before
         // itself.
         verifyTraitValidity(def);
-
-        // Keep traits in the same order while skipping over duplicates.
-        if (traitSet.insert(traitInit).second)
-          traits.push_back(Trait::create(traitInit));
+        traits.push_back(Trait::create(traitInit));
       }
     };
     insert(traitList);
