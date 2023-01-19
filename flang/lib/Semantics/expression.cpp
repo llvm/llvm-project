@@ -207,6 +207,9 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
           last.name());
     }
     if (auto *component{std::get_if<Component>(&ref.u)}) {
+      if (!CheckDataRef(ref)) {
+        return std::nullopt;
+      }
       return Expr<SomeType>{ProcedureDesignator{std::move(*component)}};
     } else if (!std::holds_alternative<SymbolRef>(ref.u)) {
       DIE("unexpected alternative in DataRef");
