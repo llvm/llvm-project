@@ -76,8 +76,8 @@ define ptr @test_load_cast_combine_align(ptr %ptr) {
 ; metadata.
 ; CHECK-LABEL: @test_load_cast_combine_align(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L1:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !align !8
-; CHECK-NEXT:    ret ptr [[L1]]
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !align !8
+; CHECK-NEXT:    ret ptr [[L]]
 ;
 entry:
   %l = load ptr, ptr %ptr, !align !9
@@ -89,8 +89,8 @@ define ptr @test_load_cast_combine_deref(ptr %ptr) {
 ; metadata.
 ; CHECK-LABEL: @test_load_cast_combine_deref(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L1:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable !8
-; CHECK-NEXT:    ret ptr [[L1]]
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable !8
+; CHECK-NEXT:    ret ptr [[L]]
 ;
 entry:
   %l = load ptr, ptr %ptr, !dereferenceable !9
@@ -102,8 +102,8 @@ define ptr @test_load_cast_combine_deref_or_null(ptr %ptr) {
 ; dereferenceable_or_null metadata.
 ; CHECK-LABEL: @test_load_cast_combine_deref_or_null(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[L1:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable_or_null !8
-; CHECK-NEXT:    ret ptr [[L1]]
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !dereferenceable_or_null !8
+; CHECK-NEXT:    ret ptr [[L]]
 ;
 entry:
   %l = load ptr, ptr %ptr, !dereferenceable_or_null !9
@@ -122,7 +122,7 @@ define void @test_load_cast_combine_loop(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[SRC_GEP]], align 4, !llvm.access.group !9
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[SRC_GEP]], align 4, !llvm.access.group [[ACC_GRP9:![0-9]+]]
 ; CHECK-NEXT:    store i32 [[L1]], ptr [[DST_GEP]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_NEXT]], [[N:%.*]]
@@ -161,6 +161,16 @@ entry:
   %gep = getelementptr ptr, ptr %ptr, i32 42
   store ptr %p, ptr %gep
   ret void
+}
+
+define i32 @test_load_cast_combine_noundef(ptr %ptr) {
+; CHECK-LABEL: @test_load_cast_combine_noundef(
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[L1]]
+;
+  %l = load float, ptr %ptr, !noundef !{}
+  %c = bitcast float %l to i32
+  ret i32 %c
 }
 
 !0 = !{!1, !1, i64 0}
