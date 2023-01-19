@@ -342,7 +342,7 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
   if (can_create) {
     return GetTypeSystemForLanguage(
         language,
-        llvm::Optional<CreateCallback>([language, target, compiler_options]() {
+        std::optional<CreateCallback>([language, target, compiler_options]() {
           return TypeSystem::CreateInstance(language, target, compiler_options);
         }));
   }
