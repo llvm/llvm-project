@@ -748,6 +748,33 @@ class IndexExpr(abc.ABC):
 
     return engine
 
+  def get_module(
+      self,
+      dst: "Tensor",
+      dst_indices: Tuple["IndexVar", ...],
+  ) -> ir.Module:
+    """Get module
+
+    Args:
+      dst: The destination tensor.
+      dst_indices: The tuple of IndexVar used to access the destination tensor.
+
+    Returns:
+      The module.
+
+    Raises:
+      ValueError: If the expression is not proper or not supported.
+    """
+    expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
+    input_accesses = self.get_input_accesses()
+
+    # Build and compile the module to produce the execution engine.
+    with ir.Context(), ir.Location.unknown():
+      module = ir.Module.create()
+      self._emit_assignment(module, dst, dst_indices, expr_to_info,
+                            input_accesses)
+
+      return module
 
 class _AtomicCounter:
   """An atomic counter."""
@@ -1414,6 +1441,25 @@ class Tensor:
 
     self._engine = self._assignment.expression.compile(self,
                                                        self._assignment.indices)
+
+  def get_module(self, force_recompile: bool = False) -> ir.Module:
+    """Compiles the tensor assignment to an execution engine.
+
+    Calling compile the second time does not do anything unless
+    force_recompile is True.
+
+    Args:
+      force_recompile: A boolean value to enable recompilation, such as for the
+        purpose of timing.
+
+    Raises:
+      ValueError: If the assignment is not proper or not supported.
+    """
+    if self._assignment is None or (self._engine is not None and
+                                    not force_recompile):
+      return
+
+    return self._assignment.expression.get_module(self, self._assignment.indices)
 
   def compute(self) -> None:
     """Executes the engine for the tensor assignment.

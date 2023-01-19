@@ -1,4 +1,5 @@
 add_subdirectory(IR)
 add_subdirectory(Transforms)
+add_subdirectory(KokkosPipelines)
 add_subdirectory(Pipelines)
 add_subdirectory(Utils)
