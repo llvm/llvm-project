@@ -449,10 +449,10 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                                                                             8),
         MCSTI);
     if (Reg != RISCV::X10)
-      OutStreamer->emitInstruction(MCInstBuilder(RISCV::OR)
+      OutStreamer->emitInstruction(MCInstBuilder(RISCV::ADDI)
                                        .addReg(RISCV::X10)
-                                       .addReg(RISCV::X0)
-                                       .addReg(Reg),
+                                       .addReg(Reg)
+                                       .addImm(0),
                                    MCSTI);
     OutStreamer->emitInstruction(
         MCInstBuilder(RISCV::ADDI)
