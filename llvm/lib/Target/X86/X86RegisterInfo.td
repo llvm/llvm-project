@@ -311,7 +311,9 @@ def MXCSR : X86Reg<"mxcsr", 0>;
 // reading and updating those flags independently of all the others. We don't
 // want to create false dependencies between these instructions and so we use
 // a separate register to model them.
-def EFLAGS : X86Reg<"flags", 0>;
+def EFLAGS : X86Reg<"flags", 0>, DwarfRegNum<[49, 9, 9]>;
+def _EFLAGS : X86Reg<"eflags", 0>, DwarfRegAlias<EFLAGS>;
+def RFLAGS : X86Reg<"rflags", 0>, DwarfRegNum<[49, -2, -2]>;
 
 // The direction flag.
 def DF : X86Reg<"dirflag", 0>;
@@ -324,6 +326,9 @@ def SS : X86Reg<"ss", 2>;
 def ES : X86Reg<"es", 0>;
 def FS : X86Reg<"fs", 4>;
 def GS : X86Reg<"gs", 5>;
+
+def FS_BASE : X86Reg<"fs.base", 0>, DwarfRegNum<[58, -2, -2]>;
+def GS_BASE : X86Reg<"gs.base", 0>, DwarfRegNum<[59, -2, -2]>;
 
 // Debug registers
 def DR0  : X86Reg<"dr0",   0>;
