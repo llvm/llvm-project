@@ -839,17 +839,20 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
     }
 
     if (sc.target_sp) {
+      ModuleList images = sc.target_sp->GetImages();
+      // BEGIN SWIFT
+      if (m_in_populate_symtab)
+        if (lldb::ModuleSP module_sp = m_jit_module_wp.lock())
+        images.Remove(module_sp);
+      // END SWIFT
+
       SymbolContextList sc_list;
-      sc.target_sp->GetImages().FindFunctions(name, lldb::eFunctionNameTypeFull,
-                                              function_options, sc_list);
+      images.FindFunctions(name, lldb::eFunctionNameTypeFull, function_options,
+                           sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
-    }
 
-    if (sc.target_sp) {
-      SymbolContextList sc_list;
-      sc.target_sp->GetImages().FindSymbolsWithNameAndType(
-          name, lldb::eSymbolTypeAny, sc_list);
+      images.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny, sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
         return *load_addr;
     }
@@ -1194,6 +1197,9 @@ uint32_t IRExecutionUnit::GetAddressByteSize() const {
 
 void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
                                      lldb_private::Symtab &symtab) {
+  // BEGIN SWIFT
+  m_in_populate_symtab = true;
+  auto _ = llvm::make_scope_exit([this]() { m_in_populate_symtab = false; });
   if (m_execution_engine_up) {
     uint32_t symbol_id = 0;
     lldb_private::SectionList *section_list = obj_file->GetSectionList();
@@ -1271,6 +1277,7 @@ void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
       }
     }
   }
+  // END SWIFT
 }
 
 void IRExecutionUnit::PopulateSectionList(
