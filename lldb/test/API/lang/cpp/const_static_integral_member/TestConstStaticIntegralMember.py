@@ -102,9 +102,6 @@ class TestCase(TestBase):
 
         self.expect_expr("ClassWithOnlyConstStatic::member", result_value="3")
 
-    # With older versions of Clang, LLDB fails to evaluate classes with only
-    # constexpr members when dsymutil is enabled
-    @expectedFailureAll(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "14.0"])
     def test_class_with_only_constexpr_static(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
