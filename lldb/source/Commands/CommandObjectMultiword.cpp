@@ -174,11 +174,6 @@ bool CommandObjectMultiword::Execute(const char *args_string,
     return result.Succeeded();
   }
 
-  if (sub_command.equals_insensitive("help")) {
-    this->CommandObject::GenerateHelpText(result);
-    return result.Succeeded();
-  }
-
   if (m_subcommand_dict.empty()) {
     result.AppendErrorWithFormat("'%s' does not have any subcommands.\n",
                                  GetCommandName().str().c_str());
