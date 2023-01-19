@@ -261,7 +261,10 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   void buildFrom(Function &F);
 };
 
-void buildCoroutineFrame(Function &F, Shape &Shape);
+bool defaultMaterializable(Instruction &V);
+void buildCoroutineFrame(
+    Function &F, Shape &Shape,
+    const std::function<bool(Instruction &)> &MaterializableCallback);
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);
 } // End namespace coro.
