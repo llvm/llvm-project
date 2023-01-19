@@ -321,11 +321,6 @@ void MCPlusBuilder::printAnnotations(const MCInst &Inst,
   }
 }
 
-bool MCPlusBuilder::evaluateBranch(const MCInst &Inst, uint64_t Addr,
-                                   uint64_t Size, uint64_t &Target) const {
-  return Analysis->evaluateBranch(Inst, Addr, Size, Target);
-}
-
 void MCPlusBuilder::getClobberedRegs(const MCInst &Inst,
                                      BitVector &Regs) const {
   if (isPrefix(Inst) || isCFI(Inst))
