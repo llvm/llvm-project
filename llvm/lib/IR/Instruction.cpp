@@ -211,6 +211,18 @@ void Instruction::dropPoisonGeneratingFlags() {
   assert(!hasPoisonGeneratingFlags() && "must be kept in sync");
 }
 
+bool Instruction::hasPoisonGeneratingMetadata() const {
+  return hasMetadata(LLVMContext::MD_range) ||
+         hasMetadata(LLVMContext::MD_nonnull) ||
+         hasMetadata(LLVMContext::MD_align);
+}
+
+void Instruction::dropPoisonGeneratingMetadata() {
+  eraseMetadata(LLVMContext::MD_range);
+  eraseMetadata(LLVMContext::MD_nonnull);
+  eraseMetadata(LLVMContext::MD_align);
+}
+
 void Instruction::dropUndefImplyingAttrsAndUnknownMetadata(
     ArrayRef<unsigned> KnownIDs) {
   dropUnknownNonDebugMetadata(KnownIDs);
