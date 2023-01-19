@@ -91,10 +91,18 @@ endif()
 # Add the dependency on the generation step.
 add_file_dependencies(${CMAKE_CURRENT_SOURCE_DIR}/llvm-config.cpp ${BUILDVARIABLES_OBJPATH})
 
-if(CMAKE_CROSSCOMPILING AND NOT LLVM_CONFIG_PATH)
-  build_native_tool(llvm-config LLVM_CONFIG_PATH)
-  set(LLVM_CONFIG_PATH "${LLVM_CONFIG_PATH}" CACHE STRING "")
+if(CMAKE_CROSSCOMPILING)
+  if (LLVM_NATIVE_TOOL_DIR AND NOT LLVM_CONFIG_PATH)
+    if (EXISTS "${LLVM_NATIVE_TOOL_DIR}/llvm-config${LLVM_HOST_EXECUTABLE_SUFFIX}")
+      set(LLVM_CONFIG_PATH "${LLVM_NATIVE_TOOL_DIR}/llvm-config${LLVM_HOST_EXECUTABLE_SUFFIX}")
+    endif()
+  endif()
 
-  add_custom_target(NativeLLVMConfig DEPENDS ${LLVM_CONFIG_PATH})
-  add_dependencies(llvm-config NativeLLVMConfig)
+  if (NOT LLVM_CONFIG_PATH)
+    build_native_tool(llvm-config LLVM_CONFIG_PATH)
+    set(LLVM_CONFIG_PATH "${LLVM_CONFIG_PATH}" CACHE STRING "")
+
+    add_custom_target(NativeLLVMConfig DEPENDS ${LLVM_CONFIG_PATH})
+    add_dependencies(llvm-config NativeLLVMConfig)
+  endif()
 endif()
