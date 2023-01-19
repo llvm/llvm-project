@@ -32,9 +32,9 @@ namespace llvm {
     void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
                                  unsigned OpIdx, unsigned PrintMethodIdx,
                                  raw_ostream &O);
-    static const char *getRegisterName(unsigned RegNo);
+    static const char *getRegisterName(MCRegister Reg);
 
-private:
+  private:
     void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                       const char *Modifier = nullptr);
     void printPCRelImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);

@@ -1,9 +1,9 @@
 ; RUN: not mlir-translate -import-llvm -split-input-file %s 2>&1 | FileCheck %s
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled instruction: indirectbr i8* %dst, [label %bb1, label %bb2]
-define i32 @unhandled_instruction(i8* %dst) {
-  indirectbr i8* %dst, [label %bb1, label %bb2]
+; CHECK-SAME: error: unhandled instruction: indirectbr ptr %dst, [label %bb1, label %bb2]
+define i32 @unhandled_instruction(ptr %dst) {
+  indirectbr ptr %dst, [label %bb1, label %bb2]
 bb1:
   ret i32 0
 bb2:
@@ -22,21 +22,21 @@ define i32 @unhandled_value(i32 %arg1) {
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled constant: i8* blockaddress(@unhandled_constant, %bb1)
+; CHECK-SAME: error: unhandled constant: ptr blockaddress(@unhandled_constant, %bb1)
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled instruction: ret i8* blockaddress(@unhandled_constant, %bb1)
-define i8* @unhandled_constant() {
+; CHECK-SAME: error: unhandled instruction: ret ptr blockaddress(@unhandled_constant, %bb1)
+define ptr @unhandled_constant() {
 bb1:
-  ret i8* blockaddress(@unhandled_constant, %bb1)
+  ret ptr blockaddress(@unhandled_constant, %bb1)
 }
 
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled constant: i8* blockaddress(@unhandled_global, %bb1)
+; CHECK-SAME: error: unhandled constant: ptr blockaddress(@unhandled_global, %bb1)
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: unhandled global variable: @private = private global i8* blockaddress(@unhandled_global, %bb1)
-@private = private global i8* blockaddress(@unhandled_global, %bb1)
+; CHECK-SAME: error: unhandled global variable: @private = private global ptr blockaddress(@unhandled_global, %bb1)
+@private = private global ptr blockaddress(@unhandled_global, %bb1)
 
 define void @unhandled_global() {
 bb1:

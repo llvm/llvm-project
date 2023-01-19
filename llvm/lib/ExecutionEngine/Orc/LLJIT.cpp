@@ -716,6 +716,7 @@ Error LLJITBuilderState::prepareForConstruction() {
   if (!CreateObjectLinkingLayer) {
     auto &TT = JTMB->getTargetTriple();
     if (TT.getArch() == Triple::riscv64 ||
+        TT.getArch() == Triple::loongarch64 ||
         (TT.isOSBinFormatMachO() &&
          (TT.getArch() == Triple::aarch64 || TT.getArch() == Triple::x86_64))) {
 

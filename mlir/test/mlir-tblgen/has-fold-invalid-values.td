@@ -2,10 +2,12 @@
 
 include "mlir/IR/OpBase.td"
 
+def Bad : EmitFolderBase;
+
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "NS";
-  let useFoldAPI = 3;
+  let useFoldAPI = Bad;
 }
 
 def InvalidValue_Op : Op<Test_Dialect, "invalid_op"> {

@@ -18,8 +18,8 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <tuple>
 #include <optional>
+#include <tuple>
 
 //===----------------------------------------------------------------------===//
 // DeclareOp
@@ -456,7 +456,8 @@ void hlfir::EndAssociateOp::build(mlir::OpBuilder &builder,
 //===----------------------------------------------------------------------===//
 
 void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
-                            mlir::OperationState &result, mlir::Value var) {
+                            mlir::OperationState &result, mlir::Value var,
+                            mlir::Value mustFree) {
   hlfir::ExprType::Shape typeShape;
   mlir::Type type = getFortranElementOrSequenceType(var.getType());
   if (auto seqType = type.dyn_cast<fir::SequenceType>()) {
@@ -466,7 +467,7 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
 
   auto resultType = hlfir::ExprType::get(builder.getContext(), typeShape, type,
                                          /*isPolymorphic: TODO*/ false);
-  return build(builder, result, resultType, var);
+  return build(builder, result, resultType, var, mustFree);
 }
 
 //===----------------------------------------------------------------------===//

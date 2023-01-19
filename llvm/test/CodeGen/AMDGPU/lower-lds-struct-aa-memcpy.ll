@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -O3 --amdgpu-lower-module-lds-strategy=module < %s | FileCheck -check-prefix=GCN %s
-; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
+; RUN: llc -opaque-pointers=0 -march=amdgcn -mcpu=gfx900 -O3 --amdgpu-lower-module-lds-strategy=module < %s | FileCheck -check-prefix=GCN %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
 %vec_type = type { %vec_base }
 %vec_base = type { %union.anon }

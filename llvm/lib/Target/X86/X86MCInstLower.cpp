@@ -1903,8 +1903,8 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   // names. Fortunately most people use the ATT style (outside of Windows)
   // and they actually agree on register naming here. Ultimately, this is
   // a comment, and so its OK if it isn't perfect.
-  auto GetRegisterName = [](unsigned RegNum) -> StringRef {
-    return X86ATTInstPrinter::getRegisterName(RegNum);
+  auto GetRegisterName = [](MCRegister Reg) -> StringRef {
+    return X86ATTInstPrinter::getRegisterName(Reg);
   };
 
   const MachineOperand &DstOp = MI->getOperand(0);

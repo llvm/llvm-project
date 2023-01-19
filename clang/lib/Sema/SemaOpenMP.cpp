@@ -4067,9 +4067,13 @@ public:
         Visit(C);
       }
     }
-    if (Expr *Callee = S->getCallee())
-      if (auto *CE = dyn_cast<MemberExpr>(Callee->IgnoreParenImpCasts()))
+    if (Expr *Callee = S->getCallee()) {
+      auto *CI = Callee->IgnoreParenImpCasts();
+      if (auto *CE = dyn_cast<MemberExpr>(CI))
         Visit(CE->getBase());
+      else if (auto *CE = dyn_cast<DeclRefExpr>(CI))
+        Visit(CE);
+    }
   }
   void VisitStmt(Stmt *S) {
     for (Stmt *C : S->children()) {

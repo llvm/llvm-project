@@ -64,6 +64,11 @@ void SliceAnalysisTestPass::runOnOperation() {
   auto funcOps = module.getOps<func::FuncOp>();
   unsigned opNum = 0;
   for (auto funcOp : funcOps) {
+    if (!llvm::hasSingleElement(funcOp.getBody())) {
+      funcOp->emitOpError("Does not support functions with multiple blocks");
+      signalPassFailure();
+      return;
+    }
     // TODO: For now this is just looking for Linalg ops. It can be generalized
     // to look for other ops using flags.
     funcOp.walk([&](Operation *op) {

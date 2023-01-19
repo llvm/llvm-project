@@ -12,10 +12,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include <optional>
 
-namespace fir {
-class ExtendedValue;
-}
-
 namespace Fortran::lower {
 
 class StatementContext;
@@ -31,6 +27,14 @@ fir::ExtendedValue genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
                                     std::optional<mlir::Type> resultType,
                                     llvm::ArrayRef<fir::ExtendedValue> args,
                                     StatementContext &);
+
+/// Same as the other genIntrinsicCall version above, except that the result
+/// deallocation, if required, is not added to a StatementContext. Instead, an
+/// extra boolean result indicates if the result must be freed after use.
+std::pair<fir::ExtendedValue, bool>
+genIntrinsicCall(fir::FirOpBuilder &, mlir::Location, llvm::StringRef name,
+                 std::optional<mlir::Type> resultType,
+                 llvm::ArrayRef<fir::ExtendedValue> args);
 
 /// Enum specifying how intrinsic argument evaluate::Expr should be
 /// lowered to fir::ExtendedValue to be passed to genIntrinsicCall.

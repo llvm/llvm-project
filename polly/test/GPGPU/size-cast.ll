@@ -27,7 +27,7 @@
 ; CODE-NEXT:   if (arg >= 32 * b0 + t0 + 1048576 * c0 + 1)
 ; CODE-NEXT:     Stmt_bb6(0, 32 * b0 + t0 + 1048576 * c0);
 
-; IR-LABEL:  call i8* @polly_initContextCUDA()
+; IR-LABEL:  call ptr @polly_initContextCUDA()
 ; IR:        sext i32 %arg to i64
 ; IR-NEXT:   mul i64
 ; IR-NEXT:   @polly_allocateMemoryForDevice
@@ -35,7 +35,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @hoge(i32 %arg, i32 %arg1, [1000 x double]* %arg2, double* %arg3) {
+define void @hoge(i32 %arg, i32 %arg1, ptr %arg2, ptr %arg3) {
 bb:
   br label %bb4
 
@@ -47,10 +47,10 @@ bb5:                                              ; preds = %bb13
 
 bb6:                                              ; preds = %bb6, %bb4
   %tmp = phi i64 [ 0, %bb4 ], [ %tmp10, %bb6 ]
-  %tmp7 = getelementptr inbounds double, double* %arg3, i64 %tmp
-  %tmp8 = load double, double* %tmp7, align 8
-  %tmp9 = getelementptr inbounds [1000 x double], [1000 x double]* %arg2, i64 0, i64 %tmp
-  store double %tmp8, double* %tmp9, align 8
+  %tmp7 = getelementptr inbounds double, ptr %arg3, i64 %tmp
+  %tmp8 = load double, ptr %tmp7, align 8
+  %tmp9 = getelementptr inbounds [1000 x double], ptr %arg2, i64 0, i64 %tmp
+  store double %tmp8, ptr %tmp9, align 8
   %tmp10 = add nuw nsw i64 %tmp, 1
   %tmp11 = zext i32 %arg to i64
   %tmp12 = icmp ne i64 %tmp10, %tmp11

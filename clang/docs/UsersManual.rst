@@ -3824,6 +3824,20 @@ backend.
 Operating System Features and Limitations
 -----------------------------------------
 
+Apple
+^^^^^
+
+On Apple platforms, the standard headers and libraries are not provided by
+the base system and are instead part of the Xcode SDK application. The location
+of the SDK is determined any of the following ways:
+
+- If passed to Clang, the ``-isysroot`` option specifies the path to the SDK.
+
+- If the sysroot isn't provided, the ``SDKROOT`` environment variable is checked.
+  This variable is set by various Xcode tools.
+
+- Otherwise, Clang uses Xcode's ``xcrun`` tool to find the SDK.
+
 Windows
 ^^^^^^^
 

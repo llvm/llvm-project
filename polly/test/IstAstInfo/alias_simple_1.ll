@@ -22,7 +22,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @A = common global [1024 x i32] zeroinitializer, align 16
 
-define void @jd(float* nocapture readonly %B, i32 %N) {
+define void @jd(ptr nocapture readonly %B, i32 %N) {
 entry:
   %cmp6 = icmp sgt i32 %N, 0
   br i1 %cmp6, label %for.body.preheader, label %for.end
@@ -32,11 +32,11 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  %tmp = load float, float* %arrayidx, align 4, !tbaa !1
+  %arrayidx = getelementptr inbounds float, ptr %B, i64 %indvars.iv
+  %tmp = load float, ptr %arrayidx, align 4, !tbaa !1
   %conv = fptosi float %tmp to i32
-  %arrayidx2 = getelementptr inbounds [1024 x i32], [1024 x i32]* @A, i64 0, i64 %indvars.iv
-  store i32 %conv, i32* %arrayidx2, align 4, !tbaa !5
+  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @A, i64 0, i64 %indvars.iv
+  store i32 %conv, ptr %arrayidx2, align 4, !tbaa !5
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv1 = trunc i64 %indvars.iv.next to i32
   %exitcond2 = icmp eq i32 %lftr.wideiv1, %N

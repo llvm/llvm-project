@@ -48,7 +48,8 @@ public:
   /// Parse RISCV ISA info from arch string.
   static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
   parseArchString(StringRef Arch, bool EnableExperimentalExtension,
-                  bool ExperimentalExtensionVersionCheck = true);
+                  bool ExperimentalExtensionVersionCheck = true,
+                  bool IgnoreUnknown = false);
 
   /// Parse RISCV ISA info from feature vector.
   static llvm::Expected<std::unique_ptr<RISCVISAInfo>>

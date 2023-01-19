@@ -5425,7 +5425,7 @@ protected:
   MutableArrayRef<Expr *> getUDMapperRefs() {
     assert(SupportsMapper &&
            "Must be a clause that is possible to have user-defined mappers");
-    return llvm::makeMutableArrayRef<Expr *>(
+    return llvm::MutableArrayRef<Expr *>(
         static_cast<T *>(this)->template getTrailingObjects<Expr *>() +
             OMPVarListClause<T>::varlist_size(),
         OMPVarListClause<T>::varlist_size());
@@ -8920,7 +8920,7 @@ public:
 
   /// Get the clauses storage.
   MutableArrayRef<OMPClause *> getClauses() {
-    return llvm::makeMutableArrayRef(getTrailingObjects<OMPClause *>(),
+    return llvm::MutableArrayRef(getTrailingObjects<OMPClause *>(),
                                      NumClauses);
   }
   ArrayRef<OMPClause *> getClauses() const {

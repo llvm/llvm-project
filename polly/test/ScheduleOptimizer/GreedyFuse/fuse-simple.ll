@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-reschedule=0 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-reschedule=1 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s
 
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for1
 
@@ -11,8 +11,8 @@ for1:
   br i1 %j1.cmp, label %body1, label %exit1
 
     body1:
-      %arrayidx1 = getelementptr inbounds double, double* %A, i32 %j1
-      store double 21.0, double* %arrayidx1
+      %arrayidx1 = getelementptr inbounds double, ptr %A, i32 %j1
+      store double 21.0, ptr %arrayidx1
       br label %inc1
 
 inc1:
@@ -28,8 +28,8 @@ for2:
   br i1 %j2.cmp, label %body2, label %exit2
 
     body2:
-      %arrayidx2 = getelementptr inbounds double, double* %A, i32 %j2
-      store double 42.0, double* %arrayidx2
+      %arrayidx2 = getelementptr inbounds double, ptr %A, i32 %j2
+      store double 42.0, ptr %arrayidx2
       br label %inc2
 
 inc2:

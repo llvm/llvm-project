@@ -19,7 +19,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; IR: %polly.access.mul.MemRef_A = mul nsw i64 {{.*}}, %n
 
-define void @foo(i64 %n, float* %A) {
+define void @foo(i64 %n, ptr %A) {
 bb:
   br label %bb2
 
@@ -40,15 +40,15 @@ bb5:                                              ; preds = %bb4
   %tmp = add nuw nsw i64 %j.0, 1
   %tmp6 = add nuw nsw i64 %i.0, 1
   %tmp7 = mul nsw i64 %tmp6, %n
-  %tmp8 = getelementptr inbounds float, float* %A, i64 %tmp7
-  %tmp9 = getelementptr inbounds float, float* %tmp8, i64 %tmp
-  %tmp10 = load float, float* %tmp9, align 4
+  %tmp8 = getelementptr inbounds float, ptr %A, i64 %tmp7
+  %tmp9 = getelementptr inbounds float, ptr %tmp8, i64 %tmp
+  %tmp10 = load float, ptr %tmp9, align 4
   %tmp11 = mul nsw i64 %i.0, %n
-  %tmp12 = getelementptr inbounds float, float* %A, i64 %tmp11
-  %tmp13 = getelementptr inbounds float, float* %tmp12, i64 %j.0
-  %tmp14 = load float, float* %tmp13, align 4
+  %tmp12 = getelementptr inbounds float, ptr %A, i64 %tmp11
+  %tmp13 = getelementptr inbounds float, ptr %tmp12, i64 %j.0
+  %tmp14 = load float, ptr %tmp13, align 4
   %tmp15 = fadd float %tmp14, %tmp10
-  store float %tmp15, float* %tmp13, align 4
+  store float %tmp15, ptr %tmp13, align 4
   br label %bb16
 
 bb16:                                             ; preds = %bb5

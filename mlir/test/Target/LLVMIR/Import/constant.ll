@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -opaque-pointers=0 -import-llvm -split-input-file %s | FileCheck %s
 
 ; CHECK-LABEL: @int_constants
 define void @int_constants(i16 %arg0, i32 %arg1, i1 %arg2) {

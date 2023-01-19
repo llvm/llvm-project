@@ -643,7 +643,7 @@ public:
   unsigned getElementContainingOffset(uint64_t Offset) const;
 
   MutableArrayRef<uint64_t> getMemberOffsets() {
-    return llvm::makeMutableArrayRef(getTrailingObjects<uint64_t>(),
+    return llvm::MutableArrayRef(getTrailingObjects<uint64_t>(),
                                      NumElements);
   }
 

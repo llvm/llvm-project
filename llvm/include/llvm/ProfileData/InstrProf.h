@@ -862,7 +862,7 @@ private:
     // cast away the constness from the result.
     auto AR = const_cast<const InstrProfRecord *>(this)->getValueSitesForKind(
         ValueKind);
-    return makeMutableArrayRef(
+    return MutableArrayRef(
         const_cast<InstrProfValueSiteRecord *>(AR.data()), AR.size());
   }
   ArrayRef<InstrProfValueSiteRecord>

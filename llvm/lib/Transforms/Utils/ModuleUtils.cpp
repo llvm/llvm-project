@@ -347,3 +347,102 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
 
   appendToCompilerUsed(M, GV);
 }
+
+bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
+    Module &M, ArrayRef<GlobalIFunc *> FilteredIFuncsToLower) {
+  SmallVector<GlobalIFunc *, 32> AllIFuncs;
+  ArrayRef<GlobalIFunc *> IFuncsToLower = FilteredIFuncsToLower;
+  if (FilteredIFuncsToLower.empty()) { // Default to lowering all ifuncs
+    for (GlobalIFunc &GI : M.ifuncs())
+      AllIFuncs.push_back(&GI);
+    IFuncsToLower = AllIFuncs;
+  }
+
+  bool UnhandledUsers = false;
+  LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
+
+  PointerType *TableEntryTy =
+      Ctx.supportsTypedPointers()
+          ? PointerType::get(Type::getInt8Ty(Ctx), DL.getProgramAddressSpace())
+          : PointerType::get(Ctx, DL.getProgramAddressSpace());
+
+  ArrayType *FuncPtrTableTy =
+      ArrayType::get(TableEntryTy, IFuncsToLower.size());
+
+  Align PtrAlign = DL.getABITypeAlign(TableEntryTy);
+
+  // Create a global table of function pointers we'll initialize in a global
+  // constructor.
+  auto *FuncPtrTable = new GlobalVariable(
+      M, FuncPtrTableTy, false, GlobalValue::InternalLinkage,
+      PoisonValue::get(FuncPtrTableTy), "", nullptr,
+      GlobalVariable::NotThreadLocal, DL.getDefaultGlobalsAddressSpace());
+  FuncPtrTable->setAlignment(PtrAlign);
+
+  // Create a function to initialize the function pointer table.
+  Function *NewCtor = Function::Create(
+      FunctionType::get(Type::getVoidTy(Ctx), false), Function::InternalLinkage,
+      DL.getProgramAddressSpace(), "", &M);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "", NewCtor);
+  IRBuilder<> InitBuilder(BB);
+
+  size_t TableIndex = 0;
+  for (GlobalIFunc *GI : IFuncsToLower) {
+    Function *ResolvedFunction = GI->getResolverFunction();
+
+    // We don't know what to pass to a resolver function taking arguments
+    //
+    // FIXME: Is this even valid? clang and gcc don't complain but this
+    // probably should be invalid IR. We could just pass through undef.
+    if (!std::empty(ResolvedFunction->getFunctionType()->params())) {
+      LLVM_DEBUG(dbgs() << "Not lowering ifunc resolver function "
+                        << ResolvedFunction->getName() << " with parameters\n");
+      UnhandledUsers = true;
+      continue;
+    }
+
+    // Initialize the function pointer table.
+    CallInst *ResolvedFunc = InitBuilder.CreateCall(ResolvedFunction);
+    Value *Casted = InitBuilder.CreatePointerCast(ResolvedFunc, TableEntryTy);
+    Constant *GEP = cast<Constant>(InitBuilder.CreateConstInBoundsGEP2_32(
+        FuncPtrTableTy, FuncPtrTable, 0, TableIndex++));
+    InitBuilder.CreateAlignedStore(Casted, GEP, PtrAlign);
+
+    // Update all users to load a pointer from the global table.
+    for (User *User : make_early_inc_range(GI->users())) {
+      Instruction *UserInst = dyn_cast<Instruction>(User);
+      if (!UserInst) {
+        // TODO: Should handle constantexpr casts in user instructions. Probably
+        // can't do much about constant initializers.
+        UnhandledUsers = true;
+        continue;
+      }
+
+      IRBuilder<> UseBuilder(UserInst);
+      LoadInst *ResolvedTarget =
+          UseBuilder.CreateAlignedLoad(TableEntryTy, GEP, PtrAlign);
+      Value *ResolvedCast =
+          UseBuilder.CreatePointerCast(ResolvedTarget, GI->getType());
+      UserInst->replaceUsesOfWith(GI, ResolvedCast);
+    }
+
+    // If we handled all users, erase the ifunc.
+    if (GI->use_empty())
+      GI->eraseFromParent();
+  }
+
+  InitBuilder.CreateRetVoid();
+
+  PointerType *ConstantDataTy = Ctx.supportsTypedPointers()
+                                    ? PointerType::get(Type::getInt8Ty(Ctx), 0)
+                                    : PointerType::get(Ctx, 0);
+
+  // TODO: Is this the right priority? Probably should be before any other
+  // constructors?
+  const int Priority = 10;
+  appendToGlobalCtors(M, NewCtor, Priority,
+                      ConstantPointerNull::get(ConstantDataTy));
+  return UnhandledUsers;
+}

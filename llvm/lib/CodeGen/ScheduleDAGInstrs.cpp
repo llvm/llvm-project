@@ -84,6 +84,12 @@ static cl::opt<unsigned> ReductionSize(
     cl::desc("A huge scheduling region will have maps reduced by this many "
              "nodes at a time. Defaults to HugeRegion / 2."));
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static cl::opt<bool> SchedPrintCycles(
+    "sched-print-cycles", cl::Hidden, cl::init(false),
+    cl::desc("Report top/bottom cycles when dumping SUnit instances"));
+#endif
+
 static unsigned getReductionSize() {
   // Always reduce a huge region with half of the elements, except
   // when user sets this number explicitly.
@@ -1158,6 +1164,9 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
 void ScheduleDAGInstrs::dumpNode(const SUnit &SU) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dumpNodeName(SU);
+  if (SchedPrintCycles)
+    dbgs() << " [TopReadyCycle = " << SU.TopReadyCycle
+           << ", BottomReadyCycle = " << SU.BotReadyCycle << "]";
   dbgs() << ": ";
   SU.getInstr()->dump();
 #endif

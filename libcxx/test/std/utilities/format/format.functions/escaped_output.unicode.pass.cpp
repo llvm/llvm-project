@@ -30,6 +30,7 @@
 #include "test_macros.h"
 #include "make_string.h"
 #include "test_format_string.h"
+#include "assert_macros.h"
 
 #ifndef TEST_HAS_NO_LOCALIZATION
 #  include <iostream>
@@ -41,19 +42,9 @@ auto test_format = []<class CharT, class... Args>(
                        std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) {
   {
     std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
-#ifndef TEST_HAS_NO_LOCALIZATION
-    if (out != expected) {
-      if constexpr (std::same_as<CharT, char>)
-        std::cerr << "\nFormat string   " << fmt.get() << "\nExpected output " << expected << "\nActual output   "
-                  << out << '\n';
-#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
-      else
-        std::wcerr << L"\nFormat string   " << fmt.get() << L"\nExpected output " << expected << L"\nActual output   "
-                   << out << L'\n';
-#  endif // TEST_HAS_NO_WIDE_CHARACTERS
-    }
-#endif // TEST_HAS_NO_LOCALIZATION
-    assert(out == expected);
+    TEST_REQUIRE(out == expected,
+                 test_concat_message(
+                     "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
   }
 #ifndef TEST_HAS_NO_LOCALIZATION
   {

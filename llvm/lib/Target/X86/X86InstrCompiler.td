@@ -864,6 +864,17 @@ def x86btc : SDNode<"X86ISD::LBTC", X86LBTest,
 def x86btr : SDNode<"X86ISD::LBTR", X86LBTest,
                     [SDNPHasChain, SDNPMayLoad, SDNPMayStore, SDNPMemOperand]>;
 
+def X86LBTestRM : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisPtrTy<1>,
+                                       SDTCisInt<2>]>;
+
+def x86_rm_bts : SDNode<"X86ISD::LBTS_RM", X86LBTestRM,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMayStore, SDNPMemOperand]>;
+def x86_rm_btc : SDNode<"X86ISD::LBTC_RM", X86LBTestRM,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMayStore, SDNPMemOperand]>;
+def x86_rm_btr : SDNode<"X86ISD::LBTR_RM", X86LBTestRM,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMayStore, SDNPMemOperand]>;
+
+
 multiclass ATOMIC_LOGIC_OP<Format Form, string s> {
   let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
       SchedRW = [WriteBitTestSetRegRMW]  in {
@@ -882,9 +893,32 @@ multiclass ATOMIC_LOGIC_OP<Format Form, string s> {
   }
 }
 
+multiclass ATOMIC_LOGIC_OP_RM<bits<8> Opc8, string s> {
+  let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+      SchedRW = [WriteBitTestSetRegRMW]  in {
+    def 16rm : Ii8<Opc8, MRMDestMem, (outs), (ins i16mem:$src1, GR16:$src2),
+                  !strconcat(s, "{w}\t{$src2, $src1|$src1, $src2}"),
+                  [(set EFLAGS, (!cast<SDNode>("x86_rm_" # s) addr:$src1, GR16:$src2))]>,
+               OpSize16, TB, LOCK;
+    def 32rm : Ii8<Opc8, MRMDestMem, (outs), (ins i32mem:$src1, GR32:$src2),
+                  !strconcat(s, "{l}\t{$src2, $src1|$src1, $src2}"),
+                  [(set EFLAGS, (!cast<SDNode>("x86_rm_" # s) addr:$src1, GR32:$src2))]>,
+               OpSize32, TB, LOCK;
+    def 64rm : RIi8<Opc8, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
+                   !strconcat(s, "{q}\t{$src2, $src1|$src1, $src2}"),
+                   [(set EFLAGS, (!cast<SDNode>("x86_rm_" # s) addr:$src1, GR64:$src2))]>,
+               TB, LOCK;
+  }
+}
+
+
 defm LOCK_BTS : ATOMIC_LOGIC_OP<MRM5m, "bts">;
 defm LOCK_BTC : ATOMIC_LOGIC_OP<MRM7m, "btc">;
 defm LOCK_BTR : ATOMIC_LOGIC_OP<MRM6m, "btr">;
+
+defm LOCK_BTS_RM : ATOMIC_LOGIC_OP_RM<0xAB, "bts">;
+defm LOCK_BTC_RM : ATOMIC_LOGIC_OP_RM<0xBB, "btc">;
+defm LOCK_BTR_RM : ATOMIC_LOGIC_OP_RM<0xB3, "btr">;
 
 // Atomic compare and swap.
 multiclass LCMPXCHG_BinOp<bits<8> Opc8, bits<8> Opc, Format Form,

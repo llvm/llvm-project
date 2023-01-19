@@ -1067,7 +1067,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
   MutableArrayRef<Expr *> getCounters() {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind())]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the private counters storage.
@@ -1075,7 +1075,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the updates storage.
@@ -1083,7 +1083,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              2 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the updates storage.
@@ -1091,7 +1091,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              3 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the final counter updates storage.
@@ -1099,7 +1099,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              4 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the dependent counters storage.
@@ -1107,7 +1107,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              5 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the dependent inits storage.
@@ -1115,7 +1115,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              6 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
   /// Get the finals conditions storage.
@@ -1123,7 +1123,7 @@ class OMPLoopDirective : public OMPLoopBasedDirective {
     auto **Storage = reinterpret_cast<Expr **>(
         &Data->getChildren()[getArraysOffset(getDirectiveKind()) +
                              7 * getLoopsNumber()]);
-    return llvm::makeMutableArrayRef(Storage, getLoopsNumber());
+    return llvm::MutableArrayRef(Storage, getLoopsNumber());
   }
 
 protected:

@@ -17,7 +17,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define void @__radiation_rg_MOD_coe_so() #0 {
 entry:
-  %polly.access.kspec.load = load i32, i32* undef, align 4
+  %polly.access.kspec.load = load i32, ptr undef, align 4
   %0 = or i1 undef, undef
   br label %polly.preload.cond29
 
@@ -33,8 +33,8 @@ polly.preload.exec31:                             ; preds = %polly.preload.cond2
   %2 = mul nsw i64 7, %1
   %3 = add nsw i64 0, %2
   %4 = add nsw i64 %3, 48
-  %polly.access.__data_radiation_MOD_cobi = getelementptr double, double* getelementptr inbounds ([168 x double], [168 x double]* @__data_radiation_MOD_cobi, i32 0, i32 0), i64 %4
-  %polly.access.__data_radiation_MOD_cobi.load = load double, double* %polly.access.__data_radiation_MOD_cobi, align 8
+  %polly.access.__data_radiation_MOD_cobi = getelementptr double, ptr @__data_radiation_MOD_cobi, i64 %4
+  %polly.access.__data_radiation_MOD_cobi.load = load double, ptr %polly.access.__data_radiation_MOD_cobi, align 8
   br label %polly.preload.merge30
 }
 

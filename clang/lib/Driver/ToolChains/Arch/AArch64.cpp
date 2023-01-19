@@ -485,18 +485,6 @@ fp16_fml_fallthrough:
     }
   }
 
-  // FIXME: these insertions should ideally be automated using default
-  // extensions support from the backend target parser.
-  if (V8Version >= 6 || V9Version >= 1)
-    Features.insert(std::next(Features.begin() + ArchFeatPos),
-                    {"+i8mm", "+bf16"});
-
-  // For Armv8.8-a/Armv9.3-a or later, FEAT_HBC and FEAT_MOPS are enabled by
-  // default.
-  if (V8Version >= 8 || V9Version >= 3)
-    Features.insert(std::next(Features.begin() + ArchFeatPos),
-                    {"+hbc", "+mops"});
-
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access)) {
     if (A->getOption().matches(options::OPT_mno_unaligned_access))

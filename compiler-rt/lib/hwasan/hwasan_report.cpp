@@ -102,6 +102,15 @@ static StackTrace GetStackTraceFromId(u32 id) {
   return res;
 }
 
+static void MaybePrintAndroidHelpUrl() {
+#if SANITIZER_ANDROID
+  Printf(
+      "Learn more about HWASan reports: "
+      "https://source.android.com/docs/security/test/memory-safety/"
+      "hwasan-reports\n");
+#endif
+}
+
 // A RAII object that holds a copy of the current thread stack ring buffer.
 // The actual stack buffer may change while we are iterating over it (for
 // example, Printf may call syslog() which can itself be built with hwasan).
@@ -600,6 +609,7 @@ void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
   if (tag_ptr)
     PrintTagsAroundAddr(tag_ptr);
 
+  MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
 
@@ -673,6 +683,7 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
   tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
   PrintTagsAroundAddr(tag_ptr);
 
+  MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
 
@@ -742,6 +753,7 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
   if (registers_frame)
     ReportRegisters(registers_frame, pc);
 
+  MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
 

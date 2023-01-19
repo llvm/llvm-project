@@ -265,6 +265,48 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                    HostPtr, Args);
 }
 
+/// Implements a target kernel entry that replays a pre-recorded kernel.
+/// \param Loc Source location associated with this target region (unused).
+/// \param DeviceId The device identifier to execute the target region.
+/// \param HostPtr A pointer to an address that uniquely identifies the kernel.
+/// \param DeviceMemory A pointer to an array storing device memory data to move
+///                     prior to kernel execution.
+/// \param DeviceMemorySize The size of the above device memory data in bytes.
+/// \param TgtArgs An array of pointers of the pre-recorded target kernel
+///                arguments.
+/// \param TgtOffsets An array of pointers of the pre-recorded target kernel
+///                   argument offsets.
+/// \param NumArgs The number of kernel arguments.
+/// \param NumTeams Number of teams to launch the target region with.
+/// \param ThreadLimit Limit to the number of threads to use in kernel
+///                    execution.
+/// \param LoopTripCount The pre-recorded value of the loop tripcount, if any.
+/// \return OMP_TGT_SUCCESS on success, OMP_TGT_FAIL on failure.
+EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
+                                      void *HostPtr, void *DeviceMemory,
+                                      int64_t DeviceMemorySize, void **TgtArgs,
+                                      ptrdiff_t *TgtOffsets, int32_t NumArgs,
+                                      int32_t NumTeams, int32_t ThreadLimit,
+                                      uint64_t LoopTripCount) {
+
+  if (checkDeviceAndCtors(DeviceId, Loc)) {
+    DP("Not offloading to device %" PRId64 "\n", DeviceId);
+    return OMP_TGT_FAIL;
+  }
+  DeviceTy &Device = *PM->Devices[DeviceId];
+
+  AsyncInfoTy AsyncInfo(Device);
+  int Rc = target_replay(Loc, Device, HostPtr, DeviceMemory, DeviceMemorySize,
+                         TgtArgs, TgtOffsets, NumArgs, NumTeams, ThreadLimit,
+                         LoopTripCount, AsyncInfo);
+  if (Rc == OFFLOAD_SUCCESS)
+    Rc = AsyncInfo.synchronize();
+  handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
+  assert(Rc == OFFLOAD_SUCCESS &&
+         "__tgt_target_kernel_replay unexpected failure!");
+  return OMP_TGT_SUCCESS;
+}
+
 EXTERN int __tgt_target_kernel_nowait(
     ident_t *Loc, int64_t DeviceId, int32_t NumTeams, int32_t ThreadLimit,
     void *HostPtr, __tgt_kernel_arguments *Args, int32_t DepNum, void *DepList,

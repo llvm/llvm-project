@@ -44,6 +44,8 @@ public:
   std::vector<Chunk *> getChunks();
   std::vector<Chunk *> getDataChunks();
   ArrayRef<Chunk *> getCodeChunks() { return thunks; }
+  ArrayRef<Chunk *> getCodePData() { return pdata; }
+  ArrayRef<Chunk *> getCodeUnwindInfo() { return unwindinfo; }
 
   uint64_t getDirRVA() { return dirs[0]->getRVA(); }
   uint64_t getDirSize();
@@ -51,6 +53,8 @@ public:
 private:
   Chunk *newThunkChunk(DefinedImportData *s, Chunk *tailMerge);
   Chunk *newTailMergeChunk(Chunk *dir);
+  Chunk *newTailMergePDataChunk(Chunk *tm, Chunk *unwind);
+  Chunk *newTailMergeUnwindInfoChunk();
 
   Defined *helper;
   std::vector<DefinedImportData *> imports;
@@ -60,6 +64,8 @@ private:
   std::vector<Chunk *> names;
   std::vector<Chunk *> hintNames;
   std::vector<Chunk *> thunks;
+  std::vector<Chunk *> pdata;
+  std::vector<Chunk *> unwindinfo;
   std::vector<Chunk *> dllNames;
 
   COFFLinkerContext &ctx;

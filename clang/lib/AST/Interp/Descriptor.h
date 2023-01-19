@@ -47,6 +47,34 @@ using BlockMoveFn = void (*)(Block *Storage, char *SrcFieldPtr,
 /// Object size as used by the interpreter.
 using InterpSize = unsigned;
 
+/// Inline descriptor embedded in structures and arrays.
+///
+/// Such descriptors precede all composite array elements and structure fields.
+/// If the base of a pointer is not zero, the base points to the end of this
+/// structure. The offset field is used to traverse the pointer chain up
+/// to the root structure which allocated the object.
+struct InlineDescriptor {
+  /// Offset inside the structure/array.
+  unsigned Offset;
+
+  /// Flag indicating if the storage is constant or not.
+  /// Relevant for primitive fields.
+  unsigned IsConst : 1;
+  /// For primitive fields, it indicates if the field was initialized.
+  /// Primitive fields in static storage are always initialized.
+  /// Arrays are always initialized, even though their elements might not be.
+  /// Base classes are initialized after the constructor is invoked.
+  unsigned IsInitialized : 1;
+  /// Flag indicating if the field is an embedded base class.
+  unsigned IsBase : 1;
+  /// Flag indicating if the field is the active member of a union.
+  unsigned IsActive : 1;
+  /// Flag indicating if the field is mutable (if in a record).
+  unsigned IsMutable : 1; // TODO: Rename to IsFieldMutable.
+
+  Descriptor *Desc;
+};
+
 /// Describes a memory block created by an allocation site.
 struct Descriptor final {
 private:
@@ -56,6 +84,8 @@ private:
   const InterpSize ElemSize;
   /// Size of the storage, in host bytes.
   const InterpSize Size;
+  // Size of the metadata.
+  const InterpSize MDSize;
   /// Size of the allocation (storage + metadata), in host bytes.
   const InterpSize AllocSize;
 
@@ -65,6 +95,9 @@ private:
 public:
   /// Token to denote structures of unknown size.
   struct UnknownSize {};
+
+  using MetadataSize = std::optional<InterpSize>;
+  static constexpr MetadataSize InlineDescMD = sizeof(InlineDescriptor);
 
   /// Pointer to the record, if block contains records.
   Record *const ElemRecord = nullptr;
@@ -85,26 +118,26 @@ public:
   const BlockMoveFn MoveFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
-  Descriptor(const DeclTy &D, PrimType Type, bool IsConst, bool IsTemporary,
-             bool IsMutable);
+  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, bool IsConst,
+             bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of primitives.
-  Descriptor(const DeclTy &D, PrimType Type, size_t NumElems, bool IsConst,
-             bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, size_t NumElems,
+             bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of primitives of unknown size.
   Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
-  Descriptor(const DeclTy &D, Descriptor *Elem, unsigned NumElems, bool IsConst,
-             bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
+             unsigned NumElems, bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
   Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for a record.
-  Descriptor(const DeclTy &D, Record *R, bool IsConst, bool IsTemporary,
-             bool IsMutable);
+  Descriptor(const DeclTy &D, Record *R, MetadataSize MD, bool IsConst,
+             bool IsTemporary, bool IsMutable);
 
   QualType getType() const;
   SourceLocation getLocation() const;
@@ -134,6 +167,8 @@ public:
   unsigned getAllocSize() const { return AllocSize; }
   /// returns the size of an element when the structure is viewed as an array.
   unsigned getElemSize()  const { return ElemSize; }
+  /// Returns the size of the metadata.
+  unsigned getMetadataSize() const { return MDSize; }
 
   /// Returns the number of elements stored in the block.
   unsigned getNumElems() const {
@@ -152,34 +187,6 @@ public:
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }
-};
-
-/// Inline descriptor embedded in structures and arrays.
-///
-/// Such descriptors precede all composite array elements and structure fields.
-/// If the base of a pointer is not zero, the base points to the end of this
-/// structure. The offset field is used to traverse the pointer chain up
-/// to the root structure which allocated the object.
-struct InlineDescriptor {
-  /// Offset inside the structure/array.
-  unsigned Offset;
-
-  /// Flag indicating if the storage is constant or not.
-  /// Relevant for primitive fields.
-  unsigned IsConst : 1;
-  /// For primitive fields, it indicates if the field was initialized.
-  /// Primitive fields in static storage are always initialized.
-  /// Arrays are always initialized, even though their elements might not be.
-  /// Base classes are initialized after the constructor is invoked.
-  unsigned IsInitialized : 1;
-  /// Flag indicating if the field is an embedded base class.
-  unsigned IsBase : 1;
-  /// Flag indicating if the field is the active member of a union.
-  unsigned IsActive : 1;
-  /// Flag indicating if the field is mutable (if in a record).
-  unsigned IsMutable : 1;
-
-  Descriptor *Desc;
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

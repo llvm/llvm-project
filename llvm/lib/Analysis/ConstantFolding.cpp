@@ -1867,7 +1867,7 @@ Constant *ConstantFoldSSEConvertToInt(const APFloat &Val, bool roundTowardZero,
   APFloat::roundingMode mode = roundTowardZero? APFloat::rmTowardZero
                                               : APFloat::rmNearestTiesToEven;
   APFloat::opStatus status =
-      Val.convertToInteger(makeMutableArrayRef(UIntVal), ResultWidth,
+      Val.convertToInteger(MutableArrayRef(UIntVal), ResultWidth,
                            IsSigned, mode, &isExact);
   if (status != APFloat::opOK &&
       (!roundTowardZero || status != APFloat::opInexact))

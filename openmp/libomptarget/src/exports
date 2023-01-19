@@ -27,6 +27,7 @@ VERS1.0 {
     __tgt_target_kernel;
     __tgt_target_kernel_nowait;
     __tgt_target_nowait_query;
+    __tgt_target_kernel_replay;
     __tgt_mapper_num_components;
     __tgt_push_mapper_component;
     __kmpc_push_target_tripcount;

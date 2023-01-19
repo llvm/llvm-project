@@ -29,22 +29,14 @@
 
 #include "test_macros.h"
 #include "format.functions.tests.h"
-
-#ifndef TEST_HAS_NO_LOCALIZATION
-#  include <iostream>
-#  include <concepts>
-#endif
+#include "assert_macros.h"
 
 auto test = []<class CharT, class... Args>(
                 std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt, Args&&... args) {
   std::basic_string<CharT> out = std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
-#ifndef TEST_HAS_NO_LOCALIZATION
-  if constexpr (std::same_as<CharT, char>)
-    if (out != expected)
-      std::cerr << "\nFormat string   " << fmt << "\nExpected output " << expected << "\nActual output   " << out
-                << '\n';
-#endif // TEST_HAS_NO_LOCALIZATION
-  assert(out == expected);
+  TEST_REQUIRE(
+      out == expected,
+      test_concat_message("\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 };
 
 auto test_exception =
@@ -55,22 +47,13 @@ auto test_exception =
 #ifndef TEST_HAS_NO_EXCEPTIONS
       try {
         TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
-#  if !defined(TEST_HAS_NO_LOCALIZATION)
-        if constexpr (std::same_as<CharT, char>)
-          std::cerr << "\nFormat string   " << fmt << "\nDidn't throw an exception.\n";
-#  endif //  !defined(TEST_HAS_NO_LOCALIZATION
-        assert(false);
+        TEST_FAIL(test_concat_message("\nFormat string   ", fmt, "\nDidn't throw an exception.\n"));
       } catch ([[maybe_unused]] const std::format_error& e) {
-#  if defined(_LIBCPP_VERSION)
-#    if !defined(TEST_HAS_NO_LOCALIZATION)
-        if constexpr (std::same_as<CharT, char>) {
-          if (e.what() != what)
-            std::cerr << "\nFormat string   " << fmt << "\nExpected exception " << what << "\nActual exception   "
-                      << e.what() << '\n';
-        }
-#    endif // !defined(TEST_HAS_NO_LOCALIZATION
-        assert(e.what() == what);
-#  endif   // defined(_LIBCPP_VERSION)
+        TEST_LIBCPP_REQUIRE(
+            e.what() == what,
+            test_concat_message(
+                "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
+
         return;
       }
       assert(false);

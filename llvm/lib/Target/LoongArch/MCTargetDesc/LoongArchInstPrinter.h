@@ -26,7 +26,7 @@ public:
 
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
-  void printRegName(raw_ostream &O, unsigned RegNo) const override;
+  void printRegName(raw_ostream &O, MCRegister Reg) const override;
   void printAtomicMemOp(const MCInst *MI, unsigned OpNo,
                         const MCSubtargetInfo &STI, raw_ostream &O);
 
@@ -39,8 +39,8 @@ public:
   void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
                                unsigned OpIdx, unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(unsigned RegNo);
-  static const char *getRegisterName(unsigned RegNo, unsigned AltIdx);
+  static const char *getRegisterName(MCRegister Reg);
+  static const char *getRegisterName(MCRegister Reg, unsigned AltIdx);
 
 private:
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

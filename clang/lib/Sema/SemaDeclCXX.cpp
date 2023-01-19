@@ -8734,10 +8734,8 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
 
   bool First = FD == FD->getCanonicalDecl();
 
-  // If we want to delete the function, then do so; there's nothing else to
-  // check in that case.
-  if (Info.Deleted) {
-    if (!First) {
+  if (!First) {
+    if (Info.Deleted) {
       // C++11 [dcl.fct.def.default]p4:
       //   [For a] user-provided explicitly-defaulted function [...] if such a
       //   function is implicitly defined as deleted, the program is ill-formed.
@@ -8751,7 +8749,21 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
           .visit();
       return true;
     }
+    if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
+      // C++20 [class.compare.default]p1:
+      //   [...] A definition of a comparison operator as defaulted that appears
+      //   in a class shall be the first declaration of that function.
+      Diag(FD->getLocation(), diag::err_non_first_default_compare_in_class)
+          << (int)DCK;
+      Diag(FD->getCanonicalDecl()->getLocation(),
+           diag::note_previous_declaration);
+      return true;
+    }
+  }
 
+  // If we want to delete the function, then do so; there's nothing else to
+  // check in that case.
+  if (Info.Deleted) {
     SetDeclDeleted(FD, FD->getLocation());
     if (!inTemplateInstantiation() && !FD->isImplicit()) {
       Diag(FD->getLocation(), diag::warn_defaulted_comparison_deleted)
@@ -16910,12 +16922,10 @@ FriendDecl *Sema::CheckFriendTypeDecl(SourceLocation LocStart,
 
 /// Handle a friend tag declaration where the scope specifier was
 /// templated.
-Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
-                                    unsigned TagSpec, SourceLocation TagLoc,
-                                    CXXScopeSpec &SS, IdentifierInfo *Name,
-                                    SourceLocation NameLoc,
-                                    const ParsedAttributesView &Attr,
-                                    MultiTemplateParamsArg TempParamLists) {
+DeclResult Sema::ActOnTemplatedFriendTag(
+    Scope *S, SourceLocation FriendLoc, unsigned TagSpec, SourceLocation TagLoc,
+    CXXScopeSpec &SS, IdentifierInfo *Name, SourceLocation NameLoc,
+    const ParsedAttributesView &Attr, MultiTemplateParamsArg TempParamLists) {
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
 
   bool IsMemberSpecialization = false;
@@ -16928,7 +16938,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
     if (TemplateParams->size() > 0) {
       // This is a declaration of a class template.
       if (Invalid)
-        return nullptr;
+        return true;
 
       return CheckClassTemplate(S, TagSpec, TUK_Friend, TagLoc, SS, Name,
                                 NameLoc, Attr, TemplateParams, AS_public,
@@ -16943,7 +16953,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
     }
   }
 
-  if (Invalid) return nullptr;
+  if (Invalid) return true;
 
   bool isAllExplicitSpecializations = true;
   for (unsigned I = TempParamLists.size(); I-- > 0; ) {
@@ -16962,15 +16972,15 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
     if (SS.isEmpty()) {
       bool Owned = false;
       bool IsDependent = false;
-      return ActOnTag(S, TagSpec, TUK_Friend, TagLoc, SS, Name, NameLoc,
-                      Attr, AS_public,
+      return ActOnTag(S, TagSpec, TUK_Friend, TagLoc, SS, Name, NameLoc, Attr,
+                      AS_public,
                       /*ModulePrivateLoc=*/SourceLocation(),
                       MultiTemplateParamsArg(), Owned, IsDependent,
                       /*ScopedEnumKWLoc=*/SourceLocation(),
                       /*ScopedEnumUsesClassTag=*/false,
                       /*UnderlyingType=*/TypeResult(),
                       /*IsTypeSpecifier=*/false,
-                      /*IsTemplateParamOrArg=*/false);
+                      /*IsTemplateParamOrArg=*/false, /*OOK=*/OOK_Outside);
     }
 
     NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
@@ -16979,7 +16989,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
     QualType T = CheckTypenameType(Keyword, TagLoc, QualifierLoc,
                                    *Name, NameLoc);
     if (T.isNull())
-      return nullptr;
+      return true;
 
     TypeSourceInfo *TSI = Context.CreateTypeSourceInfo(T);
     if (isa<DependentNameType>(T)) {

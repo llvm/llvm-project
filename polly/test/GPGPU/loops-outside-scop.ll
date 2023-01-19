@@ -18,7 +18,7 @@
 target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:128:128-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare void @fn_to_fence(i32 *%val)
+declare void @fn_to_fence(ptr %val)
 
 ; void f(int *arr, bool shouldcont) {
 ;     for(int i = 0; ; i++) {
@@ -32,7 +32,7 @@ declare void @fn_to_fence(i32 *%val)
 
 
 ; Function Attrs: nounwind uwtable
-define void @f(i32 *%arr, i1 %shouldcont) #1 {
+define void @f(ptr %arr, i1 %shouldcont) #1 {
 entry:
   br label %for.init
 
@@ -43,14 +43,14 @@ for.init:                                             ; preds = %for.end, %entry
 for2.body:                                             ; preds = %"65", %"64"
   %j = phi i32 [ %j.next, %for2.body ], [ 0, %for.init ]
   %j.sext = sext i32 %j to i64
-  %arr.slot = getelementptr i32, i32* %arr, i64 %j.sext
-  store i32 %i, i32* %arr.slot, align 4
+  %arr.slot = getelementptr i32, ptr %arr, i64 %j.sext
+  store i32 %i, ptr %arr.slot, align 4
   %exitcond = icmp eq i32 %j, 10
   %j.next = add i32 %j, 1
   br i1 %exitcond, label %for2.body.fence, label %for2.body
 
 for2.body.fence:                                             ; preds = %"65"
-  call void @fn_to_fence(i32* %arr) #2
+  call void @fn_to_fence(ptr %arr) #2
   br i1 %shouldcont, label %for.end, label %exit
 for.end:                                             ; preds = %"69"
   %i.next = add i32 %i, 1

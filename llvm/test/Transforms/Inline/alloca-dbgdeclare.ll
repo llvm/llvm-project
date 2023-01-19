@@ -1,5 +1,5 @@
-; RUN: opt -passes=inline -S < %s | FileCheck %s
-; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=inline -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes='cgscc(inline)' -S < %s | FileCheck %s
 ; struct A {
 ;   int arg0;
 ;   double arg1[2];

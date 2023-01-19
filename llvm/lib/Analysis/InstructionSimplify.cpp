@@ -922,8 +922,8 @@ Value *llvm::simplifySubInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
 
 /// Given operands for a Mul, see if we can fold the result.
 /// If not, this returns null.
-static Value *simplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
-                              unsigned MaxRecurse) {
+static Value *simplifyMulInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
+                              const SimplifyQuery &Q, unsigned MaxRecurse) {
   if (Constant *C = foldOrCommuteConstant(Instruction::Mul, Op0, Op1, Q))
     return C;
 
@@ -948,10 +948,17 @@ static Value *simplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
        match(Op1, m_Exact(m_IDiv(m_Value(X), m_Specific(Op0)))))) // Y * (X / Y)
     return X;
 
-  // i1 mul -> and.
-  if (MaxRecurse && Op0->getType()->isIntOrIntVectorTy(1))
-    if (Value *V = simplifyAndInst(Op0, Op1, Q, MaxRecurse - 1))
-      return V;
+   if (Op0->getType()->isIntOrIntVectorTy(1)) {
+    // mul i1 nsw is a special-case because -1 * -1 is poison (+1 is not
+    // representable). All other cases reduce to 0, so just return 0.
+    if (IsNSW)
+      return ConstantInt::getNullValue(Op0->getType());
+
+    // Treat "mul i1" as "and i1".
+    if (MaxRecurse)
+      if (Value *V = simplifyAndInst(Op0, Op1, Q, MaxRecurse - 1))
+        return V;
+  }
 
   // Try some generic simplifications for associative operations.
   if (Value *V =
@@ -980,8 +987,9 @@ static Value *simplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   return nullptr;
 }
 
-Value *llvm::simplifyMulInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
-  return ::simplifyMulInst(Op0, Op1, Q, RecursionLimit);
+Value *llvm::simplifyMulInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
+                             const SimplifyQuery &Q) {
+  return ::simplifyMulInst(Op0, Op1, IsNSW, IsNUW, Q, RecursionLimit);
 }
 
 /// Check for common or similar folds of integer division or integer remainder.
@@ -5707,7 +5715,8 @@ static Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
     return simplifySubInst(LHS, RHS,  /* IsNSW */ false, /* IsNUW */ false, Q,
                            MaxRecurse);
   case Instruction::Mul:
-    return simplifyMulInst(LHS, RHS, Q, MaxRecurse);
+    return simplifyMulInst(LHS, RHS, /* IsNSW */ false, /* IsNUW */ false, Q,
+                           MaxRecurse);
   case Instruction::SDiv:
     return simplifySDivInst(LHS, RHS, /* IsExact */ false, Q, MaxRecurse);
   case Instruction::UDiv:
@@ -6582,7 +6591,9 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
   case Instruction::FMul:
     return simplifyFMulInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
   case Instruction::Mul:
-    return simplifyMulInst(NewOps[0], NewOps[1], Q);
+    return simplifyMulInst(NewOps[0], NewOps[1],
+                           Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
+                           Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
   case Instruction::SDiv:
     return simplifySDivInst(NewOps[0], NewOps[1],
                             Q.IIQ.isExact(cast<BinaryOperator>(I)), Q);
