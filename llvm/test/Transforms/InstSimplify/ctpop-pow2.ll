@@ -10,9 +10,7 @@ declare void @llvm.assume(i1)
 
 define i64 @ctpop_1_shl(i64 %x) {
 ; CHECK-LABEL: @ctpop_1_shl(
-; CHECK-NEXT:    [[V:%.*]] = shl i64 1, [[X:%.*]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i64 @llvm.ctpop.i64(i64 [[V]])
-; CHECK-NEXT:    ret i64 [[CNT]]
+; CHECK-NEXT:    ret i64 1
 ;
   %v = shl i64 1, %x
   %cnt = call i64 @llvm.ctpop.i64(i64 %v)
@@ -21,9 +19,7 @@ define i64 @ctpop_1_shl(i64 %x) {
 
 define i32 @ctpop_imin_lshr(i32 %x) {
 ; CHECK-LABEL: @ctpop_imin_lshr(
-; CHECK-NEXT:    [[V:%.*]] = lshr i32 -2147483648, [[X:%.*]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[V]])
-; CHECK-NEXT:    ret i32 [[CNT]]
+; CHECK-NEXT:    ret i32 1
 ;
   %v = lshr i32 2147483648, %x
   %cnt = call i32 @llvm.ctpop.i32(i32 %v)
@@ -129,9 +125,7 @@ define i64 @ctpop_x_and_negx_nz(i64 %x) {
 
 define <2 x i32> @ctpop_shl1_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_shl1_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[X:%.*]]
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL]])
-; CHECK-NEXT:    ret <2 x i32> [[CNT]]
+; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 1>
 ;
   %shl = shl <2 x i32> <i32 1 ,i32 1>, %x
   %cnt = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %shl)
@@ -151,9 +145,7 @@ define <2 x i32> @ctpop_shl2_1_vec(<2 x i32> %x) {
 
 define <2 x i32> @ctpop_lshr_intmin_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_lshr_intmin_vec(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> <i32 -2147483648, i32 -2147483648>, [[X:%.*]]
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHR]])
-; CHECK-NEXT:    ret <2 x i32> [[CNT]]
+; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 1>
 ;
   %shr = lshr <2 x i32> <i32 2147483648 ,i32 2147483648>, %x
   %cnt = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %shr)
