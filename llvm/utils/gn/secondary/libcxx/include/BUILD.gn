@@ -377,6 +377,7 @@ if (current_toolchain == default_toolchain) {
       "__filesystem/u8path.h",
       "__format/buffer.h",
       "__format/concepts.h",
+      "__format/container_adaptor.h",
       "__format/enable_insertable.h",
       "__format/escaped_output_table.h",
       "__format/extended_grapheme_cluster_table.h",
