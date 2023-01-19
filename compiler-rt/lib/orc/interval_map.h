@@ -26,8 +26,7 @@ enum class IntervalCoalescing { Enabled, Disabled };
 /// NOTE: The interface is kept mostly compatible with LLVM's IntervalMap
 ///       collection to make it easy to swap over in the future if we choose
 ///       to.
-template <typename KeyT, typename ValT, IntervalCoalescing Coalescing>
-class IntervalMap {
+template <typename KeyT, typename ValT> class IntervalMapBase {
 private:
   using KeyPairT = std::pair<KeyT, KeyT>;
 
@@ -76,7 +75,7 @@ public:
   }
 
   const_iterator find(KeyT K) const {
-    return const_cast<IntervalMap<KeyT, ValT, Coalescing> *>(this)->find(K);
+    return const_cast<IntervalMapBase<KeyT, ValT> *>(this)->find(K);
   }
 
   ValT lookup(KeyT K, ValT NotFound = ValT()) const {
@@ -84,31 +83,6 @@ public:
     if (I == end())
       return NotFound;
     return I->second;
-  }
-
-  void insert(KeyT KS, KeyT KE, ValT V) {
-    if (Coalescing == IntervalCoalescing::Enabled) {
-      auto J = Impl.upper_bound(KS);
-
-      // Coalesce-right if possible. Either way, J points at our insertion
-      // point.
-      if (J != end() && KE == J->first.first && J->second == V) {
-        KE = J->first.second;
-        auto Tmp = J++;
-        Impl.erase(Tmp);
-      }
-
-      // Coalesce-left if possible.
-      if (J != begin()) {
-        auto I = std::prev(J);
-        if (I->first.second == KS && I->second == V) {
-          KS = I->first.first;
-          Impl.erase(I);
-        }
-      }
-      Impl.insert(J, std::make_pair(std::make_pair(KS, KE), std::move(V)));
-    } else
-      Impl.insert(std::make_pair(std::make_pair(KS, KE), std::move(V)));
   }
 
   // Erase [KS, KE), which must be entirely containing within one existing
@@ -144,8 +118,49 @@ public:
           J, std::make_pair(std::make_pair(Tmp.first.first, KS), Tmp.second));
   }
 
-private:
+protected:
   ImplMap Impl;
+};
+
+template <typename KeyT, typename ValT, IntervalCoalescing Coalescing>
+class IntervalMap;
+
+template <typename KeyT, typename ValT>
+class IntervalMap<KeyT, ValT, IntervalCoalescing::Enabled>
+    : public IntervalMapBase<KeyT, ValT> {
+public:
+  // Coalescing insert. Requires that ValTs be equality-comparable.
+  void insert(KeyT KS, KeyT KE, ValT V) {
+    auto J = this->Impl.upper_bound(KS);
+
+    // Coalesce-right if possible. Either way, J points at our insertion
+    // point.
+    if (J != this->end() && KE == J->first.first && J->second == V) {
+      KE = J->first.second;
+      auto Tmp = J++;
+      this->Impl.erase(Tmp);
+    }
+
+    // Coalesce-left if possible.
+    if (J != this->begin()) {
+      auto I = std::prev(J);
+      if (I->first.second == KS && I->second == V) {
+        KS = I->first.first;
+        this->Impl.erase(I);
+      }
+    }
+    this->Impl.insert(J, std::make_pair(std::make_pair(KS, KE), std::move(V)));
+  }
+};
+
+template <typename KeyT, typename ValT>
+class IntervalMap<KeyT, ValT, IntervalCoalescing::Disabled>
+    : public IntervalMapBase<KeyT, ValT> {
+public:
+  // Non-coalescing insert. Does not require ValT to be equality-comparable.
+  void insert(KeyT KS, KeyT KE, ValT V) {
+    this->Impl.insert(std::make_pair(std::make_pair(KS, KE), std::move(V)));
+  }
 };
 
 } // End namespace __orc_rt
