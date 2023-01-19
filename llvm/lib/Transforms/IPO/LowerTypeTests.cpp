@@ -172,7 +172,7 @@ BitSetInfo BitSetBuilder::build() {
 
   BSI.AlignLog2 = 0;
   if (Mask != 0)
-    BSI.AlignLog2 = countTrailingZeros(Mask, ZB_Undefined);
+    BSI.AlignLog2 = countTrailingZeros(Mask);
 
   // Build the compressed bitset while normalizing the offsets against the
   // computed alignment.
