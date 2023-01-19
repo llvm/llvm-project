@@ -147,6 +147,7 @@ enum ArchExtKind : uint64_t {
   AEK_LSE128 =      1ULL << 52, // FEAT_LSE128
   AEK_SPECRES2 =    1ULL << 53, // FEAT_SPECRES2
   AEK_RASv2 =       1ULL << 54, // FEAT_RASv2
+  AEK_ITE =         1ULL << 55, // FEAT_ITE
 };
 // clang-format on
 
@@ -196,6 +197,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"frintts", AArch64::AEK_NONE, {}, {}, FEAT_FRINTTS, "+fptoint", 250},
     {"hbc", AArch64::AEK_HBC, "+hbc", "-hbc", FEAT_MAX, "", 0},
     {"i8mm", AArch64::AEK_I8MM, "+i8mm", "-i8mm", FEAT_I8MM, "+i8mm", 270},
+    {"ite", AArch64::AEK_ITE, "+ite", "-ite", FEAT_MAX, "", 0},
     {"jscvt", AArch64::AEK_NONE, {}, {}, FEAT_JSCVT, "+fp-armv8,+neon,+jsconv", 210},
     {"ls64_accdata", AArch64::AEK_NONE, {}, {}, FEAT_LS64_ACCDATA, "+ls64", 540},
     {"ls64_v", AArch64::AEK_NONE, {}, {}, FEAT_LS64_V, "", 530},
