@@ -15,7 +15,7 @@
 ; Note that it is undefined which one will be mapped. We keep the test
 ; symmetric so it passes if either one is mapped.
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -52,9 +52,9 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
       %sum = fadd double %phi1, %phi2
-      store double %sum, double* %A_idx
+      store double %sum, ptr %A_idx
       br label %outer.inc
 
 

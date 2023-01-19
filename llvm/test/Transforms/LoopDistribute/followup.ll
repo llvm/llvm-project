@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-distribute -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=loop-distribute -S < %s | FileCheck %s
 ;
 ; Check that followup loop-attributes are applied to the loops after
 ; loop distribution.

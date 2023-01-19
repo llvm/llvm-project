@@ -675,7 +675,7 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
       Version = Data.getU8(Cur);
       if (!Cur)
         break;
-      if (Version > 1)
+      if (Version > 2)
         return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                            Twine(static_cast<int>(Version)));
       Data.getU8(Cur); // Feature byte
@@ -684,8 +684,9 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
     uint32_t NumBlocks = ReadULEB128AsUInt32();
     std::vector<BBAddrMap::BBEntry> BBEntries;
     uint32_t PrevBBEndOffset = 0;
-    for (uint32_t BlockID = 0; !ULEBSizeErr && Cur && (BlockID < NumBlocks);
-         ++BlockID) {
+    for (uint32_t BlockIndex = 0;
+         !ULEBSizeErr && Cur && (BlockIndex < NumBlocks); ++BlockIndex) {
+      uint32_t ID = Version >= 2 ? ReadULEB128AsUInt32() : BlockIndex;
       uint32_t Offset = ReadULEB128AsUInt32();
       uint32_t Size = ReadULEB128AsUInt32();
       uint32_t Metadata = ReadULEB128AsUInt32();
@@ -694,7 +695,7 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
         Offset += PrevBBEndOffset;
         PrevBBEndOffset = Offset + Size;
       }
-      BBEntries.push_back({Offset, Size, Metadata});
+      BBEntries.push_back({ID, Offset, Size, Metadata});
     }
     FunctionEntries.push_back({Address, std::move(BBEntries)});
   }

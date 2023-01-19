@@ -46,7 +46,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @or(float* nocapture %A, i64 %n, i64 %m) #0 {
+define void @or(ptr nocapture %A, i64 %n, i64 %m) #0 {
 entry:
   br label %for.body
 
@@ -59,10 +59,10 @@ for.body:                                         ; preds = %for.inc, %entry
 
 if.then:                                          ; preds = %for.body
   %conv = sitofp i64 %i.03 to float
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %i.03
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %i.03
+  %0 = load float, ptr %arrayidx, align 4
   %add = fadd float %conv, %0
-  store float %add, float* %arrayidx, align 4
+  store float %add, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.then, %for.body
@@ -75,7 +75,7 @@ for.end:                                          ; preds = %for.inc
 }
 
 ; Function Attrs: nounwind uwtable
-define void @and(float* nocapture %A, i64 %n, i64 %m) #0 {
+define void @and(ptr nocapture %A, i64 %n, i64 %m) #0 {
 entry:
   br label %for.body
 
@@ -88,10 +88,10 @@ for.body:                                         ; preds = %for.inc, %entry
 
 if.then:                                          ; preds = %for.body
   %conv = sitofp i64 %i.03 to float
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %i.03
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %i.03
+  %0 = load float, ptr %arrayidx, align 4
   %add = fadd float %conv, %0
-  store float %add, float* %arrayidx, align 4
+  store float %add, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then

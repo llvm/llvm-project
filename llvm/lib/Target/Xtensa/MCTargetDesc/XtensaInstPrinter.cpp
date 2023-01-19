@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -73,8 +74,8 @@ void XtensaInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(O, Annot);
 }
 
-void XtensaInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
-  O << getRegisterName(RegNo);
+void XtensaInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+  O << getRegisterName(Reg);
 }
 
 void XtensaInstPrinter::printOperand(const MCInst *MI, int OpNum,

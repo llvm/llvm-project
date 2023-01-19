@@ -3000,19 +3000,19 @@ _mm_reduce_or_epi8(__m128i __W) {
 }
 
 static __inline__ signed char __DEFAULT_FN_ATTRS128
-_mm_mask_reduce_add_epi8( __mmask16 __M, __m128i __W) {
+_mm_mask_reduce_add_epi8(__mmask16 __M, __m128i __W) {
   __W = _mm_maskz_mov_epi8(__M, __W);
   return __builtin_reduce_add((__v16qs)__W);
 }
 
 static __inline__ signed char __DEFAULT_FN_ATTRS128
-_mm_mask_reduce_mul_epi8( __mmask16 __M, __m128i __W) {
+_mm_mask_reduce_mul_epi8(__mmask16 __M, __m128i __W) {
   __W = _mm_mask_mov_epi8(_mm_set1_epi8(1), __M, __W);
   return __builtin_reduce_mul((__v16qs)__W);
 }
 
 static __inline__ signed char __DEFAULT_FN_ATTRS128
-_mm_mask_reduce_and_epi8( __mmask16 __M, __m128i __W) {
+_mm_mask_reduce_and_epi8(__mmask16 __M, __m128i __W) {
   __W = _mm_mask_mov_epi8(_mm_set1_epi8(-1), __M, __W);
   return __builtin_reduce_and((__v16qs)__W);
 }
@@ -3088,19 +3088,19 @@ _mm256_reduce_or_epi8(__m256i __W) {
 }
 
 static __inline__ signed char __DEFAULT_FN_ATTRS256
-_mm256_mask_reduce_add_epi8( __mmask32 __M, __m256i __W) {
+_mm256_mask_reduce_add_epi8(__mmask32 __M, __m256i __W) {
   __W = _mm256_maskz_mov_epi8(__M, __W);
   return __builtin_reduce_add((__v32qs)__W);
 }
 
 static __inline__ signed char __DEFAULT_FN_ATTRS256
-_mm256_mask_reduce_mul_epi8( __mmask32 __M, __m256i __W) {
+_mm256_mask_reduce_mul_epi8(__mmask32 __M, __m256i __W) {
   __W = _mm256_mask_mov_epi8(_mm256_set1_epi8(1), __M, __W);
   return __builtin_reduce_mul((__v32qs)__W);
 }
 
 static __inline__ signed char __DEFAULT_FN_ATTRS256
-_mm256_mask_reduce_and_epi8( __mmask32 __M, __m256i __W) {
+_mm256_mask_reduce_and_epi8(__mmask32 __M, __m256i __W) {
   __W = _mm256_mask_mov_epi8(_mm256_set1_epi8(-1), __M, __W);
   return __builtin_reduce_and((__v32qs)__W);
 }

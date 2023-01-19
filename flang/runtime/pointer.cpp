@@ -168,8 +168,14 @@ int RTNAME(PointerDeallocatePolymorphic)(Descriptor &pointer,
       pointer, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
     DescriptorAddendum *addendum{pointer.Addendum()};
-    INTERNAL_CHECK(addendum != nullptr);
-    addendum->set_derivedType(derivedType);
+    if (addendum) {
+      addendum->set_derivedType(derivedType);
+    } else {
+      // Unlimited polymorphic descriptors initialized with
+      // PointerNullifyIntrinsic do not have an addendum. Make sure the
+      // derivedType is null in that case.
+      INTERNAL_CHECK(!derivedType);
+    }
   }
   return stat;
 }

@@ -156,20 +156,29 @@ exit:                                             ; preds = %outer.latch
 
 ; Make sure we do not crash for loops without reachable exits.
 define void @no_reachable_exits() {
-; Check we interchanged.
-; CHECK-LABEL: @no_reachable_exits() {
+; Check we do not crash.
+; CHECK-LABEL: @no_reachable_exits(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label %inner.ph
-; CHECK-LABEL: outer.ph:
-; CHECK-NEXT:    br label %outer.header
-; CHECK-LABEL: inner.ph:
-; CHECK-NEXT:    br label %inner.body
-; CHECK-LABEL: inner.body:
-; CHECK-NEXT:    %tmp31 = phi i32 [ 0, %inner.ph ], [ %[[IVNEXT:[0-9]]], %inner.body.split ]
-; CHECK-NEXT:    br label %outer.ph
-; CHECK-LABEL: inner.body.split:
-; CHECK-NEXT:    %[[IVNEXT]] = add nsw i32 %tmp31, 1
-; CHECK-NEXT:    br i1 false, label %inner.body, label %exit
+; CHECK-NEXT:    br label [[OUTER_PH:%.*]]
+; CHECK:       outer.ph:
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 0, [[OUTER_PH]] ], [ [[TMP8:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 undef, label [[INNER_PH:%.*]], label [[OUTER_LATCH]]
+; CHECK:       inner.ph:
+; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
+; CHECK:       inner.body:
+; CHECK-NEXT:    [[TMP31:%.*]] = phi i32 [ 0, [[INNER_PH]] ], [ [[TMP6:%.*]], [[INNER_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr undef, align 8
+; CHECK-NEXT:    [[TMP6]] = add nsw i32 [[TMP31]], 1
+; CHECK-NEXT:    br i1 false, label [[INNER_BODY]], label [[OUTER_LATCH_LOOPEXIT:%.*]]
+; CHECK:       outer.latch.loopexit:
+; CHECK-NEXT:    br label [[OUTER_LATCH]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    [[TMP8]] = add nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    br i1 false, label [[OUTER_HEADER]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    unreachable
 
 
 bb:

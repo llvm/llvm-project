@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=loop-vectorize -force-vector-width=4 -S %s | FileCheck %s
 
 @dst = external global [32 x i16], align 1
 

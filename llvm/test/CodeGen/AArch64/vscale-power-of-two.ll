@@ -7,8 +7,8 @@ define i64 @vscale_lshr(i64 %TC) {
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    lsr x8, x8, #3
-; CHECK-NEXT:    udiv x9, x0, x8
-; CHECK-NEXT:    msub x0, x9, x8, x0
+; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    and x0, x0, x8
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %shifted = lshr i64 %vscale, 3
@@ -21,8 +21,8 @@ define i64 @vscale(i64 %TC) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    udiv x9, x0, x8
-; CHECK-NEXT:    msub x0, x9, x8, x0
+; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    and x0, x0, x8
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %urem = urem i64 %TC, %vscale
@@ -33,8 +33,8 @@ define i64 @vscale_shl(i64 %TC) {
 ; CHECK-LABEL: vscale_shl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    udiv x9, x0, x8
-; CHECK-NEXT:    msub x0, x9, x8, x0
+; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    and x0, x0, x8
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %shifted = shl i64 %vscale, 3

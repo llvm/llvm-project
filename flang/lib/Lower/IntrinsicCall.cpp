@@ -132,17 +132,17 @@ static bool isStaticallyPresent(const fir::ExtendedValue &exv) {
 struct IntrinsicLibrary {
 
   // Constructors.
-  explicit IntrinsicLibrary(fir::FirOpBuilder &builder, mlir::Location loc,
-                            Fortran::lower::StatementContext *stmtCtx = nullptr)
-      : builder{builder}, loc{loc}, stmtCtx{stmtCtx} {}
+  explicit IntrinsicLibrary(fir::FirOpBuilder &builder, mlir::Location loc)
+      : builder{builder}, loc{loc} {}
   IntrinsicLibrary() = delete;
   IntrinsicLibrary(const IntrinsicLibrary &) = delete;
 
   /// Generate FIR for call to Fortran intrinsic \p name with arguments \p arg
-  /// and expected result type \p resultType.
-  fir::ExtendedValue genIntrinsicCall(llvm::StringRef name,
-                                      std::optional<mlir::Type> resultType,
-                                      llvm::ArrayRef<fir::ExtendedValue> arg);
+  /// and expected result type \p resultType. Return the result and a boolean
+  /// that, if true, indicates that the result must be freed after use.
+  std::pair<fir::ExtendedValue, bool>
+  genIntrinsicCall(llvm::StringRef name, std::optional<mlir::Type> resultType,
+                   llvm::ArrayRef<fir::ExtendedValue> arg);
 
   /// Search a runtime function that is associated to the generic intrinsic name
   /// and whose signature matches the intrinsic arguments and result types.
@@ -394,16 +394,16 @@ struct IntrinsicLibrary {
   getUnrestrictedIntrinsicSymbolRefAttr(llvm::StringRef name,
                                         mlir::FunctionType signature);
 
-  /// Add clean-up for \p temp to the current statement context;
-  void addCleanUpForTemp(mlir::Location loc, mlir::Value temp);
   /// Helper function for generating code clean-up for result descriptors
   fir::ExtendedValue readAndAddCleanUp(fir::MutableBoxValue resultMutableBox,
                                        mlir::Type resultType,
                                        llvm::StringRef errMsg);
 
+  void setResultMustBeFreed() { resultMustBeFreed = true; }
+
   fir::FirOpBuilder &builder;
   mlir::Location loc;
-  Fortran::lower::StatementContext *stmtCtx;
+  bool resultMustBeFreed = false;
 };
 
 struct IntrinsicDummyArgument {
@@ -1719,19 +1719,20 @@ invokeHandler(IntrinsicLibrary::SubroutineGenerator generator,
   return mlir::Value{};
 }
 
-fir::ExtendedValue
+std::pair<fir::ExtendedValue, bool>
 IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
                                    std::optional<mlir::Type> resultType,
                                    llvm::ArrayRef<fir::ExtendedValue> args) {
   llvm::StringRef name = genericName(specificName);
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name)) {
     bool outline = handler->outline || outlineAllIntrinsics;
-    return std::visit(
-        [&](auto &generator) -> fir::ExtendedValue {
-          return invokeHandler(generator, *handler, resultType, args, outline,
-                               *this);
-        },
-        handler->generator);
+    return {std::visit(
+                [&](auto &generator) -> fir::ExtendedValue {
+                  return invokeHandler(generator, *handler, resultType, args,
+                                       outline, *this);
+                },
+                handler->generator),
+            this->resultMustBeFreed};
   }
 
   if (!resultType)
@@ -1758,8 +1759,9 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
 
   IntrinsicLibrary::RuntimeCallGenerator runtimeCallGenerator =
       getRuntimeCallGenerator(name, soughtFuncType);
-  return genElementalCall(runtimeCallGenerator, name, *resultType, args,
-                          /*outline=*/outlineAllIntrinsics);
+  return {genElementalCall(runtimeCallGenerator, name, *resultType, args,
+                           /*outline=*/outlineAllIntrinsics),
+          resultMustBeFreed};
 }
 
 mlir::Value
@@ -1987,12 +1989,6 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
   return mlir::SymbolRefAttr::get(funcOp);
 }
 
-void IntrinsicLibrary::addCleanUpForTemp(mlir::Location loc, mlir::Value temp) {
-  assert(stmtCtx);
-  fir::FirOpBuilder *bldr = &builder;
-  stmtCtx->attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, temp); });
-}
-
 fir::ExtendedValue
 IntrinsicLibrary::readAndAddCleanUp(fir::MutableBoxValue resultMutableBox,
                                     mlir::Type resultType,
@@ -2001,30 +1997,25 @@ IntrinsicLibrary::readAndAddCleanUp(fir::MutableBoxValue resultMutableBox,
       fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
   return res.match(
       [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-        // Add cleanup code
-        addCleanUpForTemp(loc, box.getAddr());
+        setResultMustBeFreed();
         return box;
       },
       [&](const fir::BoxValue &box) -> fir::ExtendedValue {
-        // Add cleanup code
-        auto addr =
-            builder.create<fir::BoxAddrOp>(loc, box.getMemTy(), box.getAddr());
-        addCleanUpForTemp(loc, addr);
+        setResultMustBeFreed();
         return box;
       },
       [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
-        // Add cleanup code
-        addCleanUpForTemp(loc, box.getAddr());
+        setResultMustBeFreed();
         return box;
       },
       [&](const mlir::Value &tempAddr) -> fir::ExtendedValue {
-        // Add cleanup code
-        addCleanUpForTemp(loc, tempAddr);
-        return builder.create<fir::LoadOp>(loc, resultType, tempAddr);
+        auto load = builder.create<fir::LoadOp>(loc, resultType, tempAddr);
+        // Temp can be freed right away since it was loaded.
+        builder.create<fir::FreeMemOp>(loc, tempAddr);
+        return load;
       },
       [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
-        // Add cleanup code
-        addCleanUpForTemp(loc, box.getAddr());
+        setResultMustBeFreed();
         return box;
       },
       [&](const auto &) -> fir::ExtendedValue {
@@ -5216,8 +5207,25 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                                  std::optional<mlir::Type> resultType,
                                  llvm::ArrayRef<fir::ExtendedValue> args,
                                  Fortran::lower::StatementContext &stmtCtx) {
-  return IntrinsicLibrary{builder, loc, &stmtCtx}.genIntrinsicCall(
-      name, resultType, args);
+  auto [result, mustBeFreed] =
+      IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType, args);
+  if (mustBeFreed) {
+    mlir::Value addr = fir::getBase(result);
+    if (auto *box = result.getBoxOf<fir::BoxValue>())
+      addr =
+          builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), box->getAddr());
+    fir::FirOpBuilder *bldr = &builder;
+    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, addr); });
+  }
+  return result;
+}
+std::pair<fir::ExtendedValue, bool>
+Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 llvm::StringRef name,
+                                 std::optional<mlir::Type> resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  return IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType,
+                                                         args);
 }
 
 mlir::Value Fortran::lower::genMax(fir::FirOpBuilder &builder,

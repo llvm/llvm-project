@@ -121,7 +121,7 @@ getSCFMinMaxExpr(Value value, SmallVectorImpl<Value> &dims,
 /// Replace a perfect nest of "for" loops with a single linearized loop. Assumes
 /// `loops` contains a list of perfectly nested loops with bounds and steps
 /// independent of any loop induction variable involved in the nest.
-void coalesceLoops(MutableArrayRef<scf::ForOp> loops);
+LogicalResult coalesceLoops(MutableArrayRef<scf::ForOp> loops);
 
 /// Take the ParallelLoop and for each set of dimension indices, combine them
 /// into a single dimension. combinedDimensions must contain each index into

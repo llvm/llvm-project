@@ -1120,31 +1120,26 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
 /// 1. The pointer select (\p Address) must be defined in \p DepBB.
 /// 2. Both value operands of the pointer select must be loaded in the same
 /// basic block, before the pointer select.
-/// 3. There must be no instructions between the found loads and \p End that may
+/// 3. There must be no instructions between the found loads and \p Sel that may
 /// clobber the loads.
 static std::optional<AvailableValue>
-tryToConvertLoadOfPtrSelect(BasicBlock *DepBB, BasicBlock::iterator End,
-                            Value *Address, Type *LoadTy, DominatorTree &DT,
+tryToConvertLoadOfPtrSelect(SelectInst *Sel, Type *LoadTy, DominatorTree &DT,
                             AAResults *AA) {
-
-  auto *Sel = dyn_cast_or_null<SelectInst>(Address);
-  if (!Sel || DepBB != Sel->getParent())
-    return std::nullopt;
-
   LoadInst *L1 = findDominatingLoad(Sel->getOperand(1), LoadTy, Sel, DT);
   LoadInst *L2 = findDominatingLoad(Sel->getOperand(2), LoadTy, Sel, DT);
   if (!L1 || !L2)
     return std::nullopt;
 
   // Ensure there are no accesses that may modify the locations referenced by
-  // either L1 or L2 between L1, L2 and the specified End iterator.
+  // either L1 or L2 between L1, L2 and the specified Sel instruction.
   Instruction *EarlierLoad = L1->comesBefore(L2) ? L1 : L2;
   MemoryLocation L1Loc = MemoryLocation::get(L1);
   MemoryLocation L2Loc = MemoryLocation::get(L2);
-  if (any_of(make_range(EarlierLoad->getIterator(), End), [&](Instruction &I) {
-        return isModSet(AA->getModRefInfo(&I, L1Loc)) ||
-               isModSet(AA->getModRefInfo(&I, L2Loc));
-      }))
+  if (any_of(make_range(EarlierLoad->getIterator(), Sel->getIterator()),
+             [&](Instruction &I) {
+               return isModSet(AA->getModRefInfo(&I, L1Loc)) ||
+                      isModSet(AA->getModRefInfo(&I, L2Loc));
+             }))
     return std::nullopt;
 
   return AvailableValue::getSelect(Sel);
@@ -1153,20 +1148,12 @@ tryToConvertLoadOfPtrSelect(BasicBlock *DepBB, BasicBlock::iterator End,
 std::optional<AvailableValue>
 GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
                                  Value *Address) {
-  if (!DepInfo.isDef() && !DepInfo.isClobber()) {
-    assert(isa<SelectInst>(Address));
-    return tryToConvertLoadOfPtrSelect(Load->getParent(), Load->getIterator(),
-                                       Address, Load->getType(),
-                                       getDominatorTree(), getAliasAnalysis());
-  }
-
-  assert((DepInfo.isDef() || DepInfo.isClobber()) &&
-         "expected a local dependence");
   assert(Load->isUnordered() && "rules below are incorrect for ordered access");
-
-  const DataLayout &DL = Load->getModule()->getDataLayout();
+  assert(DepInfo.isLocal() && "expected a local dependence");
 
   Instruction *DepInst = DepInfo.getInst();
+
+  const DataLayout &DL = Load->getModule()->getDataLayout();
   if (DepInfo.isClobber()) {
     // If the dependence is to a store that writes to a superset of the bits
     // read by the load, we can extract the bits we need for the load from the
@@ -1272,6 +1259,13 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
     return AvailableValue::getLoad(LD);
   }
 
+  // Check if load with Addr dependent from select can be converted to select
+  // between load values. There must be no instructions between the found
+  // loads and DepInst that may clobber the loads.
+  if (auto *Sel = dyn_cast<SelectInst>(DepInst))
+    return tryToConvertLoadOfPtrSelect(Sel, Load->getType(), getDominatorTree(),
+                                       getAliasAnalysis());
+
   // Unknown def - must be conservative
   LLVM_DEBUG(
       // fast print dep, using operator<< on instruction is too slow.
@@ -1298,24 +1292,15 @@ void GVNPass::AnalyzeLoadAvailability(LoadInst *Load, LoadDepVect &Deps,
       continue;
     }
 
-    // The address being loaded in this non-local block may not be the same as
-    // the pointer operand of the load if PHI translation occurs.  Make sure
-    // to consider the right address.
-    Value *Address = Dep.getAddress();
-
-    if (!DepInfo.isDef() && !DepInfo.isClobber()) {
-      if (auto R = tryToConvertLoadOfPtrSelect(
-              DepBB, DepBB->end(), Address, Load->getType(), getDominatorTree(),
-              getAliasAnalysis())) {
-        ValuesPerBlock.push_back(
-            AvailableValueInBlock::get(DepBB, std::move(*R)));
-        continue;
-      }
+    if (!DepInfo.isLocal()) {
       UnavailableBlocks.push_back(DepBB);
       continue;
     }
 
-    if (auto AV = AnalyzeLoadAvailability(Load, DepInfo, Address)) {
+    // The address being loaded in this non-local block may not be the same as
+    // the pointer operand of the load if PHI translation occurs.  Make sure
+    // to consider the right address.
+    if (auto AV = AnalyzeLoadAvailability(Load, DepInfo, Dep.getAddress())) {
       // subtlety: because we know this was a non-local dependency, we know
       // it's safe to materialize anywhere between the instruction within
       // DepInfo and the end of it's block.
@@ -2043,9 +2028,8 @@ bool GVNPass::processLoad(LoadInst *L) {
   if (Dep.isNonLocal())
     return processNonLocalLoad(L);
 
-  Value *Address = L->getPointerOperand();
   // Only handle the local case below
-  if (!Dep.isDef() && !Dep.isClobber() && !isa<SelectInst>(Address)) {
+  if (!Dep.isLocal()) {
     // This might be a NonFuncLocal or an Unknown
     LLVM_DEBUG(
         // fast print dep, using operator<< on instruction is too slow.
@@ -2054,7 +2038,7 @@ bool GVNPass::processLoad(LoadInst *L) {
     return false;
   }
 
-  auto AV = AnalyzeLoadAvailability(L, Dep, Address);
+  auto AV = AnalyzeLoadAvailability(L, Dep, L->getPointerOperand());
   if (!AV)
     return false;
 

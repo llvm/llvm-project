@@ -1708,7 +1708,7 @@ struct DeviceEnvironment {
   // If the symbol is in .data (aomp, rocm) it can be written directly.
   // If it is in .bss, we must wait for it to be allocated space on the
   // gpu (trunk) and initialize after loading.
-  const char *sym() { return "omptarget_device_environment"; }
+  const char *sym() { return "__omp_rtl_device_environment"; }
 
   DeviceEnvironmentTy HostDeviceEnv;
   SymbolInfo SI;
@@ -2102,7 +2102,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
   // per-image initialization work. Specifically:
   //
   // - Initialize an DeviceEnvironmentTy instance embedded in the
-  //   image at the symbol "omptarget_device_environment"
+  //   image at the symbol "__omp_rtl_device_environment"
   //   Fields DebugKind, DeviceNum, NumDevices. Used by the deviceRTL.
   //
   // - Allocate a large array per-gpu (could be moved to init_device)

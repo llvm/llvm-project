@@ -411,7 +411,6 @@ contains
     allocate(a)
     allocate(a%element)
   end subroutine
-end module
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_type_with_polymorphic_pointer_component()
 ! CHECK: %[[TYPE_PTR:.*]] = fir.alloca !fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>> {uniq_name = "_QMpolyFtest_type_with_polymorphic_pointer_componentEa.addr"}
@@ -429,6 +428,85 @@ end module
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerNullifyDerived(%[[ELEMENT_DESC_CAST]], %[[TYPE_DESC_P1_CAST]], %[[RANK]], %[[CORANK]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
 ! CHECK: %[[ELEMENT_DESC_CAST:.*]] = fir.convert %[[ELEMENT_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%[[ELEMENT_DESC_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+  subroutine test_allocate_with_mold()
+    type(p2) :: x(10)
+    class(p1), pointer :: p(:)
+    integer(4) :: i(20)
+    class(*), pointer :: up(:)
+
+    allocate(p, mold=x)
+    allocate(up, mold=i)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolyPtest_allocate_with_mold() {
+! CHECK: %[[I:.*]] = fir.alloca !fir.array<20xi32> {bindc_name = "i", uniq_name = "_QMpolyFtest_allocate_with_moldEi"}
+! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> {bindc_name = "p", uniq_name = "_QMpolyFtest_allocate_with_moldEp"}
+! CHECK: %[[UP:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?xnone>>> {bindc_name = "up", uniq_name = "_QMpolyFtest_allocate_with_moldEup"}
+! CHECK: %[[X:.*]] = fir.alloca !fir.array<10x!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>> {bindc_name = "x", uniq_name = "_QMpolyFtest_allocate_with_moldEx"}
+! CHECK: %[[EMBOX_X:.*]] = fir.embox %[[X]](%{{.*}}) : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>>>
+! CHECK: %[[P_BOX_NONE:.*]] = fir.convert %[[P]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[X_BOX_NONE:.*]] = fir.convert %[[EMBOX_X]] : (!fir.box<!fir.array<10x!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerApplyMold(%[[P_BOX_NONE]], %[[X_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+! CHECK: %[[P_BOX_NONE:.*]] = fir.convert %[[P]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%[[P_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK: %[[EMBOX_I:.*]] = fir.embox %[[I]](%{{.*}}) : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<20xi32>>
+! CHECK: %[[UP_BOX_NONE:.*]] = fir.convert %[[UP]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[I_BOX_NONE:.*]] = fir.convert %[[EMBOX_I]] : (!fir.box<!fir.array<20xi32>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerApplyMold(%[[UP_BOX_NONE]], %[[I_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+! CHECK: %[[UP_BOX_NONE:.*]] = fir.convert %[[UP]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%[[UP_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+  subroutine test_allocate_with_source()
+    type(p2) :: x(10)
+    class(p1), pointer :: p(:)
+    integer(4) :: i(20)
+    class(*), pointer :: up(:)
+
+    allocate(p, source=x)
+    allocate(up, source=i)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolyPtest_allocate_with_source() {
+! CHECK: %[[I:.*]] = fir.alloca !fir.array<20xi32> {bindc_name = "i", uniq_name = "_QMpolyFtest_allocate_with_sourceEi"}
+! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>> {bindc_name = "p", uniq_name = "_QMpolyFtest_allocate_with_sourceEp"}
+! CHECK: %[[UP:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?xnone>>> {bindc_name = "up", uniq_name = "_QMpolyFtest_allocate_with_sourceEup"}
+! CHECK: %[[X:.*]] = fir.alloca !fir.array<10x!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>> {bindc_name = "x", uniq_name = "_QMpolyFtest_allocate_with_sourceEx"}
+! CHECK: %[[EMBOX_X:.*]] = fir.embox %[[X]](%{{.*}}) : (!fir.ref<!fir.array<10x!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>>>
+! CHECK: %[[P_BOX_NONE:.*]] = fir.convert %[[P]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[X_BOX_NONE:.*]] = fir.convert %[[EMBOX_X]] : (!fir.box<!fir.array<10x!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerApplyMold(%[[P_BOX_NONE]], %[[X_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+! CHECK: %{{.*}} = fir.call @_FortranAPointerSetBounds
+! CHECK: %[[BOX_NONE_P:.*]] = fir.convert %[[P]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[BOX_NONE_X:.*]] = fir.convert %[[EMBOX_X]] : (!fir.box<!fir.array<10x!fir.type<_QMpolyTp2{a:i32,b:i32,c:i32}>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocateSource(%[[BOX_NONE_P]], %[[BOX_NONE_X]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK: %[[EMBOX_I:.*]] = fir.embox %[[I]](%{{.*}}) : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<20xi32>>
+! CHECK: %[[UP_BOX_NONE:.*]] = fir.convert %[[UP]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[I_BOX_NONE:.*]] = fir.convert %[[EMBOX_I]] : (!fir.box<!fir.array<20xi32>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerApplyMold(%[[UP_BOX_NONE]], %[[I_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+! CHECK: %{{.*}} = fir.call @_FortranAPointerSetBounds
+! CHECK: %[[UP_BOX_NONE:.*]] = fir.convert %[[UP]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[I_BOX_NONE:.*]] = fir.convert %[[EMBOX_I]] : (!fir.box<!fir.array<20xi32>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocateSource(%[[UP_BOX_NONE]], %[[I_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+  subroutine test_allocatable_up_from_up_mold(a, b)
+    class(*), allocatable :: a
+    class(*), pointer :: b
+    allocate(a, source = b)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolyPtest_allocatable_up_from_up_mold(
+! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.class<!fir.heap<none>>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_name = "b"}) {
+! CHECK: %[[LOAD_B:.*]] = fir.load %[[B]] : !fir.ref<!fir.class<!fir.ptr<none>>>
+! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[B_BOX_NONE:.*]] = fir.convert %[[LOAD_B]] : (!fir.class<!fir.ptr<none>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[B_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[B_BOX_NONE:.*]] = fir.convert %[[LOAD_B]] : (!fir.class<!fir.ptr<none>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocateSource(%[[A_BOX_NONE]], %[[B_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+end module
+
 
 program test_alloc
   use poly

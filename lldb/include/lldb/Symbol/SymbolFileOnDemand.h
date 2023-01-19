@@ -227,6 +227,20 @@ public:
     return m_sym_file_impl->SetDebugInfoHadFrameVariableErrors();
   }
 
+  lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,
+                        std::optional<uint64_t> byte_size,
+                        SymbolContextScope *context,
+                        lldb::user_id_t encoding_uid,
+                        Type::EncodingDataType encoding_uid_type,
+                        const Declaration &decl,
+                        const CompilerType &compiler_qual_type,
+                        Type::ResolveState compiler_type_resolve_state,
+                        uint32_t opaque_payload = 0) override {
+    return m_sym_file_impl->MakeType(
+        uid, name, byte_size, context, encoding_uid, encoding_uid_type, decl,
+        compiler_qual_type, compiler_type_resolve_state, opaque_payload);
+  }
+
 private:
   Log *GetLog() const { return ::lldb_private::GetLog(LLDBLog::OnDemand); }
 

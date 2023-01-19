@@ -311,11 +311,18 @@ public:
   bool isProfitable(const Loop *InnerLoop, const Loop *OuterLoop,
                     unsigned InnerLoopId, unsigned OuterLoopId,
                     CharMatrix &DepMatrix,
-                    const DenseMap<const Loop *, unsigned> &CostMap);
+                    const DenseMap<const Loop *, unsigned> &CostMap,
+                    std::unique_ptr<CacheCost> &CC);
 
 private:
   int getInstrOrderCost();
-
+  std::optional<bool> isProfitablePerLoopCacheAnalysis(
+      const DenseMap<const Loop *, unsigned> &CostMap,
+      std::unique_ptr<CacheCost> &CC);
+  std::optional<bool> isProfitablePerInstrOrderCost();
+  std::optional<bool> isProfitableForVectorization(unsigned InnerLoopId,
+                                                   unsigned OuterLoopId,
+                                                   CharMatrix &DepMatrix);
   Loop *OuterLoop;
   Loop *InnerLoop;
 
@@ -512,7 +519,7 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
-                          DependencyMatrix, CostMap)) {
+                          DependencyMatrix, CostMap, CC)) {
       LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
       return false;
     }
@@ -1091,31 +1098,10 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
   return GoodOrder - BadOrder;
 }
 
-static bool isProfitableForVectorization(unsigned InnerLoopId,
-                                         unsigned OuterLoopId,
-                                         CharMatrix &DepMatrix) {
-  // TODO: Improve this heuristic to catch more cases.
-  // If the inner loop is loop independent or doesn't carry any dependency it is
-  // profitable to move this to outer position.
-  for (auto &Row : DepMatrix) {
-    if (Row[InnerLoopId] != 'S' && Row[InnerLoopId] != 'I')
-      return false;
-    // TODO: We need to improve this heuristic.
-    if (Row[OuterLoopId] != '=')
-      return false;
-  }
-  // If outer loop has dependence and inner loop is loop independent then it is
-  // profitable to interchange to enable parallelism.
-  // If there are no dependences, interchanging will not improve anything.
-  return !DepMatrix.empty();
-}
-
-bool LoopInterchangeProfitability::isProfitable(
-    const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
-    unsigned OuterLoopId, CharMatrix &DepMatrix,
-    const DenseMap<const Loop *, unsigned> &CostMap) {
-  // TODO: Remove the legacy cost model.
-
+std::optional<bool>
+LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
+    const DenseMap<const Loop *, unsigned> &CostMap,
+    std::unique_ptr<CacheCost> &CC) {
   // This is the new cost model returned from loop cache analysis.
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
@@ -1127,30 +1113,91 @@ bool LoopInterchangeProfitability::isProfitable(
     LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
                       << ", OuterIndex = " << OuterIndex << "\n");
     if (InnerIndex < OuterIndex)
-      return true;
-  } else {
-    // Legacy cost model: this is rough cost estimation algorithm. It counts the
-    // good and bad order of induction variables in the instruction and allows
-    // reordering if number of bad orders is more than good.
-    int Cost = getInstrOrderCost();
-    LLVM_DEBUG(dbgs() << "Cost = " << Cost << "\n");
-    if (Cost < -LoopInterchangeCostThreshold)
-      return true;
+      return std::optional<bool>(true);
+    assert(InnerIndex != OuterIndex && "CostMap should assign unique "
+                                       "numbers to each loop");
+    if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
+      return std::nullopt;
+    return std::optional<bool>(false);
   }
+  return std::nullopt;
+}
 
-  // It is not profitable as per current cache profitability model. But check if
-  // we can move this loop outside to improve parallelism.
-  if (isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix))
-    return true;
+std::optional<bool>
+LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
+  // Legacy cost model: this is rough cost estimation algorithm. It counts the
+  // good and bad order of induction variables in the instruction and allows
+  // reordering if number of bad orders is more than good.
+  int Cost = getInstrOrderCost();
+  LLVM_DEBUG(dbgs() << "Cost = " << Cost << "\n");
+  if (Cost < 0 && Cost < LoopInterchangeCostThreshold)
+    return std::optional<bool>(true);
 
-  ORE->emit([&]() {
-    return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
-                                    InnerLoop->getStartLoc(),
-                                    InnerLoop->getHeader())
-           << "Interchanging loops is too costly and it does not improve "
-              "parallelism.";
-  });
-  return false;
+  return std::nullopt;
+}
+
+std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
+    unsigned InnerLoopId, unsigned OuterLoopId, CharMatrix &DepMatrix) {
+  for (auto &Row : DepMatrix) {
+    // If the inner loop is loop independent or doesn't carry any dependency
+    // it is not profitable to move this to outer position, since we are
+    // likely able to do inner loop vectorization already.
+    if (Row[InnerLoopId] == 'I' || Row[InnerLoopId] == '=')
+      return std::optional<bool>(false);
+
+    // If the outer loop is not loop independent it is not profitable to move
+    // this to inner position, since doing so would not enable inner loop
+    // parallelism.
+    if (Row[OuterLoopId] != 'I' && Row[OuterLoopId] != '=')
+      return std::optional<bool>(false);
+  }
+  // If inner loop has dependence and outer loop is loop independent then it
+  // is/ profitable to interchange to enable inner loop parallelism.
+  // If there are no dependences, interchanging will not improve anything.
+  return std::optional<bool>(!DepMatrix.empty());
+}
+
+bool LoopInterchangeProfitability::isProfitable(
+    const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
+    unsigned OuterLoopId, CharMatrix &DepMatrix,
+    const DenseMap<const Loop *, unsigned> &CostMap,
+    std::unique_ptr<CacheCost> &CC) {
+  // isProfitable() is structured to avoid endless loop interchange.
+  // If loop cache analysis could decide the profitability then,
+  // profitability check will stop and return the analysis result.
+  // If cache analysis failed to analyze the loopnest (e.g.,
+  // due to delinearization issues) then only check whether it is
+  // profitable for InstrOrderCost. Likewise, if InstrOrderCost failed to
+  // analysis the profitability then only, isProfitableForVectorization
+  // will decide.
+  std::optional<bool> shouldInterchange =
+      isProfitablePerLoopCacheAnalysis(CostMap, CC);
+  if (!shouldInterchange.has_value()) {
+    shouldInterchange = isProfitablePerInstrOrderCost();
+    if (!shouldInterchange.has_value())
+      shouldInterchange =
+          isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
+  }
+  if (!shouldInterchange.has_value()) {
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
+                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getHeader())
+             << "Insufficient information to calculate the cost of loop for "
+                "interchange.";
+    });
+    return false;
+  } else if (!shouldInterchange.value()) {
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
+                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getHeader())
+             << "Interchanging loops is not considered to improve cache "
+                "locality nor vectorization.";
+    });
+    return false;
+  }
+  return true;
 }
 
 void LoopInterchangeTransform::removeChildLoop(Loop *OuterLoop,

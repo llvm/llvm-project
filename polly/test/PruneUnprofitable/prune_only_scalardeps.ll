@@ -14,7 +14,7 @@
 ;   }
 ; return x;
 ;
-define double @func(i32 %n, i32 %m, double* noalias nonnull %A, double* noalias nonnull %B) {
+define double @func(i32 %n, i32 %m, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %outer.for
 
@@ -31,8 +31,8 @@ outer.for:
       br i1 %j.cmp, label %body, label %inner.exit
 
         body:
-          store double %inner.phi, double* %B
-          %load = load double, double* %A
+          store double %inner.phi, ptr %B
+          %load = load double, ptr %A
           br label %inner.inc
 
     inner.inc:

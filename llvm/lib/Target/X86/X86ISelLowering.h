@@ -798,6 +798,9 @@ namespace llvm {
     LBTS,
     LBTC,
     LBTR,
+    LBTS_RM,
+    LBTC_RM,
+    LBTR_RM,
 
     /// RAO arithmetic instructions.
     /// OUTCHAIN = AADD(INCHAIN, PTR, RHS)
@@ -1090,6 +1093,8 @@ namespace llvm {
         SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
         unsigned OldShiftOpcode, unsigned NewShiftOpcode,
         SelectionDAG &DAG) const override;
+
+    bool preferScalarizeSplat(unsigned Opc) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;

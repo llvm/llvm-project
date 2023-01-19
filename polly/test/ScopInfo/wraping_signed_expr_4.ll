@@ -15,7 +15,7 @@
 
 target datalayout = "e-m:e-i8:64-f80:128-n8:16:32:64-S128"
 
-define void @wrap(i8* %A, i8 %N, i8 %p) {
+define void @wrap(ptr %A, i8 %N, i8 %p) {
 bb:
   br label %bb2
 
@@ -26,8 +26,8 @@ bb2:                                              ; preds = %bb7, %bb
 
 bb4:                                              ; preds = %bb2
   %tmp5 = add i8 %p, -1
-  %tmp6 = getelementptr i8, i8* %A, i8 %tmp5
-  store i8 0, i8* %tmp6, align 4
+  %tmp6 = getelementptr i8, ptr %A, i8 %tmp5
+  store i8 0, ptr %tmp6, align 4
   br label %bb7
 
 bb7:                                              ; preds = %bb4

@@ -115,13 +115,12 @@ struct AArch64OutgoingValueAssigner
     bool IsCalleeWin = Subtarget.isCallingConvWin64(State.getCallingConv());
     bool UseVarArgsCCForFixed = IsCalleeWin && State.isVarArg();
 
-    if (!State.isVarArg() && !UseVarArgsCCForFixed && !IsReturn)
-      applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
-
     bool Res;
-    if (Info.IsFixed && !UseVarArgsCCForFixed)
+    if (Info.IsFixed && !UseVarArgsCCForFixed) {
+      if (!IsReturn)
+        applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
       Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
-    else
+    } else
       Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, State);
 
     StackOffset = State.getNextStackOffset();

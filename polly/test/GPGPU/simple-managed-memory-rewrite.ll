@@ -12,15 +12,14 @@
 ; SCOP: i32 MemRef_A[*];
 
 ; Check that we generate a constructor call for @A.toptr
-; HOST-IR: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* {{.*}}, i8* bitcast (i32** @A.toptr to i8*) }]
+; HOST-IR: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr {{.*}}, ptr @A.toptr }]
 
 ; Check that we generate a constructor
 ; 4 bytes * 100 = 400
 ; HOST-IR: define void {{.*}}constructor() {
 ; HOST-IR-NEXT: entry:
-; HOST-IR-NEXT:   %mem.raw = call i8* @polly_mallocManaged(i64 400)
-; HOST-IR-NEXT:   %mem.typed = bitcast i8* %mem.raw to i32*
-; HOST-IR-NEXT:   store i32* %mem.typed, i32** @A.toptr
+; HOST-IR-NEXT:   %mem.raw = call ptr @polly_mallocManaged(i64 400)
+; HOST-IR-NEXT:   store ptr %mem.raw, ptr @A.toptr
 ; HOST-IR-NEXT:   ret void
 ; HOST-IR-NEXT: }
 
@@ -41,8 +40,8 @@ entry.split:                                      ; preds = %entry
 
 for.body:                                         ; preds = %entry.split, %for.body
   %indvars.iv1 = phi i64 [ 0, %entry.split ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [100 x i32], [100 x i32]* @A, i64 0, i64 %indvars.iv1
-  store i32 42, i32* %arrayidx, align 4, !tbaa !3
+  %arrayidx = getelementptr inbounds [100 x i32], ptr @A, i64 0, i64 %indvars.iv1
+  store i32 42, ptr %arrayidx, align 4, !tbaa !3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv1, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 100
   br i1 %exitcond, label %for.end, label %for.body
@@ -52,11 +51,11 @@ for.end:                                          ; preds = %for.body
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
 
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
 
 attributes #0 = { argmemonly nounwind }
 

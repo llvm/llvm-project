@@ -198,14 +198,11 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
     GetClangASTImporter().RequireCompleteType(ClangUtil::GetQualType(type));
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
-  TypeSP type_sp(new Type(die.GetID(), dwarf, pcm_type_sp->GetName(),
-                          pcm_type_sp->GetByteSize(nullptr), nullptr,
-                          LLDB_INVALID_UID, Type::eEncodingInvalid,
-                          &pcm_type_sp->GetDeclaration(), type,
-                          Type::ResolveState::Forward,
-                          TypePayloadClang(GetOwningClangModule(die))));
-
-  dwarf->GetTypeList().Insert(type_sp);
+  auto type_sp = dwarf->MakeType(
+      die.GetID(), pcm_type_sp->GetName(), pcm_type_sp->GetByteSize(nullptr),
+      nullptr, LLDB_INVALID_UID, Type::eEncodingInvalid,
+      &pcm_type_sp->GetDeclaration(), type, Type::ResolveState::Forward,
+      TypePayloadClang(GetOwningClangModule(die)));
   dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
   clang::TagDecl *tag_decl = TypeSystemClang::GetAsTagDecl(type);
   if (tag_decl) {
@@ -734,8 +731,8 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     }
   }
 
-  type_sp = std::make_shared<Type>(
-      die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
+  type_sp = dwarf->MakeType(
+      die.GetID(), attrs.name, attrs.byte_size, nullptr,
       dwarf->GetUID(attrs.type.Reference()), encoding_data_type, &attrs.decl,
       clang_type, resolve_state, TypePayloadClang(GetOwningClangModule(die)));
 
@@ -856,11 +853,11 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
 
   LinkDeclContextToDIE(TypeSystemClang::GetDeclContextForType(clang_type), die);
 
-  type_sp = std::make_shared<Type>(
-      die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
-      dwarf->GetUID(attrs.type.Reference()), Type::eEncodingIsUID, &attrs.decl,
-      clang_type, Type::ResolveState::Forward,
-      TypePayloadClang(GetOwningClangModule(die)));
+  type_sp = dwarf->MakeType(die.GetID(), attrs.name, attrs.byte_size, nullptr,
+                            dwarf->GetUID(attrs.type.Reference()),
+                            Type::eEncodingIsUID, &attrs.decl, clang_type,
+                            Type::ResolveState::Forward,
+                            TypePayloadClang(GetOwningClangModule(die)));
 
   if (TypeSystemClang::StartTagDeclarationDefinition(clang_type)) {
     if (die.HasChildren()) {
@@ -1306,8 +1303,8 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       }
     }
   }
-  return std::make_shared<Type>(
-      die.GetID(), dwarf, attrs.name, std::nullopt, nullptr, LLDB_INVALID_UID,
+  return dwarf->MakeType(
+      die.GetID(), attrs.name, std::nullopt, nullptr, LLDB_INVALID_UID,
       Type::eEncodingIsUID, &attrs.decl, clang_type, Type::ResolveState::Full);
 }
 
@@ -1356,10 +1353,10 @@ DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
         m_ast.CreateArrayType(array_element_type, 0, attrs.is_vector);
   }
   ConstString empty_name;
-  TypeSP type_sp = std::make_shared<Type>(
-      die.GetID(), dwarf, empty_name, array_element_bit_stride / 8, nullptr,
-      dwarf->GetUID(type_die), Type::eEncodingIsUID, &attrs.decl, clang_type,
-      Type::ResolveState::Full);
+  TypeSP type_sp =
+      dwarf->MakeType(die.GetID(), empty_name, array_element_bit_stride / 8,
+                      nullptr, dwarf->GetUID(type_die), Type::eEncodingIsUID,
+                      &attrs.decl, clang_type, Type::ResolveState::Full);
   type_sp->SetEncodingType(element_type);
   const clang::Type *type = ClangUtil::GetQualType(clang_type).getTypePtr();
   m_ast.SetMetadataAsUserID(type, die.GetID());
@@ -1381,10 +1378,9 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
 
   if (std::optional<uint64_t> clang_type_size =
           clang_type.GetByteSize(nullptr)) {
-    return std::make_shared<Type>(die.GetID(), dwarf, attrs.name,
-                                  *clang_type_size, nullptr, LLDB_INVALID_UID,
-                                  Type::eEncodingIsUID, nullptr, clang_type,
-                                  Type::ResolveState::Forward);
+    return dwarf->MakeType(die.GetID(), attrs.name, *clang_type_size, nullptr,
+                           LLDB_INVALID_UID, Type::eEncodingIsUID, nullptr,
+                           clang_type, Type::ResolveState::Forward);
   }
   return nullptr;
 }
@@ -1831,9 +1827,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   // parameters in any class methods need it for the clang types for
   // function prototypes.
   LinkDeclContextToDIE(m_ast.GetDeclContextForType(clang_type), die);
-  type_sp = std::make_shared<Type>(
-      die.GetID(), dwarf, attrs.name, attrs.byte_size, nullptr,
-      LLDB_INVALID_UID, Type::eEncodingIsUID, &attrs.decl, clang_type,
+  type_sp = dwarf->MakeType(
+      die.GetID(), attrs.name, attrs.byte_size, nullptr, LLDB_INVALID_UID,
+      Type::eEncodingIsUID, &attrs.decl, clang_type,
       Type::ResolveState::Forward,
       TypePayloadClang(OptionalClangModuleID(), attrs.is_complete_objc_class));
 

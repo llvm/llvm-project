@@ -368,10 +368,6 @@ std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
   return std::move(pImpl->DiagHandler);
 }
 
-bool LLVMContext::hasSetOpaquePointersValue() const {
-  return pImpl->hasOpaquePointersValue();
-}
-
 void LLVMContext::setOpaquePointers(bool Enable) const {
   pImpl->setOpaquePointers(Enable);
 }

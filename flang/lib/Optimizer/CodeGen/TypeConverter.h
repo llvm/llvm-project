@@ -14,6 +14,7 @@
 #define FORTRAN_OPTIMIZER_CODEGEN_TYPECONVERTER_H
 
 #include "DescriptorModel.h"
+#include "TBAABuilder.h"
 #include "Target.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -45,12 +46,13 @@ namespace fir {
 /// This converts FIR types to LLVM types (for now)
 class LLVMTypeConverter : public mlir::LLVMTypeConverter {
 public:
-  LLVMTypeConverter(mlir::ModuleOp module)
+  LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA)
       : mlir::LLVMTypeConverter(module.getContext()),
         kindMapping(getKindMapping(module)),
         specifics(CodeGenSpecifics::get(module.getContext(),
                                         getTargetTriple(module),
-                                        getKindMapping(module))) {
+                                        getKindMapping(module))),
+        tbaaBuilder(module, applyTBAA) {
     LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
     // Each conversion should return a value of type mlir::Type.
@@ -273,6 +275,8 @@ public:
               mlir::LLVM::LLVMArrayType::get(rowTy, numLenParams));
         }
     }
+    // TODO: send the box type and the converted LLVM structure layout
+    // to tbaaBuilder for proper creation of TBAATypeDescriptorOp.
     return mlir::LLVM::LLVMPointerType::get(
         mlir::LLVM::LLVMStructType::getLiteral(&getContext(), dataDescFields,
                                                /*isPacked=*/false));
@@ -385,9 +389,16 @@ public:
 
   KindMapping &getKindMap() { return kindMapping; }
 
+  // Relay TBAA tag attachment to TBAABuilder.
+  void attachTBAATag(mlir::Operation *op, mlir::Type baseFIRType,
+                     mlir::Type accessFIRType, mlir::LLVM::GEPOp gep) {
+    tbaaBuilder.attachTBAATag(op, baseFIRType, accessFIRType, gep);
+  }
+
 private:
   KindMapping kindMapping;
   std::unique_ptr<CodeGenSpecifics> specifics;
+  TBAABuilder tbaaBuilder;
 };
 
 } // namespace fir

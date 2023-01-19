@@ -1,6 +1,6 @@
-; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S \
+; RUN: opt -opaque-pointers=0 -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S \
 ; RUN:   < %s | FileCheck %s
-; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 \
+; RUN: opt -opaque-pointers=0 -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 \
 ; RUN:   -scalable-vectorization=on -S < %s | FileCheck %s -check-prefix=SCALABLE
 
 target triple = "riscv64"

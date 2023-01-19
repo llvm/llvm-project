@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-reduce -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -loop-reduce -S | FileCheck %s
 ; CHECK-NOT: {{inttoptr|ptrtoint}}
 ; CHECK: scevgep
 ; CHECK-NOT: {{inttoptr|ptrtoint}}

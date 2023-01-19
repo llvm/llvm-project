@@ -5512,6 +5512,7 @@ defm PseudoVFCVT_X_F : VPseudoVCVTI_V;
 }
 defm PseudoVFCVT_RTZ_XU_F : VPseudoVCVTI_V;
 defm PseudoVFCVT_RTZ_X_F : VPseudoVCVTI_V;
+defm PseudoVFCVT_RM_XU_F : VPseudoVCVTI_RM_V;
 defm PseudoVFCVT_RM_X_F : VPseudoVCVTI_RM_V;
 defm PseudoVFROUND_NOEXCEPT : VPseudoVFROUND_NOEXCEPT_V;
 let Uses = [FRM] in {

@@ -16,7 +16,7 @@
 ; ModuleID = 'pattern_matching_based_opts_splitmap.ll'
 ;
 ; Function Attrs: noinline nounwind uwtable
-define void @pattern_matching_based_opts_splitmap([2 x double]* noalias dereferenceable(32) %C, [784 x double]* noalias dereferenceable(12544) %A, [2 x double]* noalias dereferenceable(12544) %B) {
+define void @pattern_matching_based_opts_splitmap(ptr noalias dereferenceable(32) %C, ptr noalias dereferenceable(12544) %A, ptr noalias dereferenceable(12544) %B) {
 entry:
   br label %for.body
 
@@ -30,15 +30,15 @@ for.body3:                                        ; preds = %for.body, %for.inc1
 
 for.body6:                                        ; preds = %for.body3, %for.body6
   %k = phi i64 [ 0, %for.body3 ], [ %add17, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [784 x double], [784 x double]* %A, i64 %i, i64 %k
-  %tmp6 = load double, double* %arrayidx8, align 8
-  %arrayidx12 = getelementptr inbounds [2 x double], [2 x double]* %B, i64 %k, i64 %j
-  %tmp10 = load double, double* %arrayidx12, align 8
+  %arrayidx8 = getelementptr inbounds [784 x double], ptr %A, i64 %i, i64 %k
+  %tmp6 = load double, ptr %arrayidx8, align 8
+  %arrayidx12 = getelementptr inbounds [2 x double], ptr %B, i64 %k, i64 %j
+  %tmp10 = load double, ptr %arrayidx12, align 8
   %mul = fmul double %tmp6, %tmp10
-  %arrayidx16 = getelementptr inbounds [2 x double], [2 x double]* %C, i64 %i, i64 %j
-  %tmp14 = load double, double* %arrayidx16, align 8
+  %arrayidx16 = getelementptr inbounds [2 x double], ptr %C, i64 %i, i64 %j
+  %tmp14 = load double, ptr %arrayidx16, align 8
   %add = fadd double %tmp14, %mul
-  store double %add, double* %arrayidx16, align 8
+  store double %add, ptr %arrayidx16, align 8
   %add17 = add nsw i64 %k, 1
   %cmp5 = icmp slt i64 %add17, 784
   br i1 %cmp5, label %for.body6, label %for.inc18

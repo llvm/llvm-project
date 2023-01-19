@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -force-vector-width=2 -debug-only=loop-vectorize -S -o - < %s 2>&1 | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=loop-vectorize -force-vector-width=2 -debug-only=loop-vectorize -S -o - < %s 2>&1 | FileCheck %s
 
 %struct.foo = type { i32, i64 }
 

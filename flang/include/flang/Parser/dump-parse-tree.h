@@ -190,6 +190,7 @@ public:
   NODE(CommonStmt, Block)
   NODE(parser, CompilerDirective)
   NODE(CompilerDirective, IgnoreTKR)
+  NODE(CompilerDirective, LoopCount)
   NODE(CompilerDirective, NameValue)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)

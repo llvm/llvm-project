@@ -127,10 +127,10 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:         for (auto [[$RET_VALUE:.*]] : [[$RET_VALUE_GROUP]])
 // CHECK-NEXT:      if (::mlir::failed([[$A_TYPE_CONSTRAINT]](*this, [[$RET_VALUE]].getType(), "result", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto &region : ::llvm::makeMutableArrayRef((*this)->getRegion(0)))
+// CHECK:         for (auto &region : ::llvm::MutableArrayRef((*this)->getRegion(0)))
 // CHECK-NEXT:      if (::mlir::failed([[$A_REGION_CONSTRAINT]](*this, region, "d", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto *successor : ::llvm::makeMutableArrayRef(c()))
+// CHECK:         for (auto *successor : ::llvm::MutableArrayRef(c()))
 // CHECK-NEXT:      if (::mlir::failed([[$A_SUCCESSOR_CONSTRAINT]](*this, successor, "c", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
 
@@ -148,9 +148,9 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:         for (auto [[$RET_VALUE:.*]] : [[$RET_VALUE_GROUP]])
 // CHECK-NEXT:      if (::mlir::failed([[$O_TYPE_CONSTRAINT]](*this, [[$RET_VALUE]].getType(), "result", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto &region : ::llvm::makeMutableArrayRef((*this)->getRegion(0)))
+// CHECK:         for (auto &region : ::llvm::MutableArrayRef((*this)->getRegion(0)))
 // CHECK-NEXT:      if (::mlir::failed([[$O_REGION_CONSTRAINT]](*this, region, "d", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         for (auto *successor : ::llvm::makeMutableArrayRef(c()))
+// CHECK:         for (auto *successor : ::llvm::MutableArrayRef(c()))
 // CHECK-NEXT:      if (::mlir::failed([[$O_SUCCESSOR_CONSTRAINT]](*this, successor, "c", index++)))
 // CHECK-NEXT:        return ::mlir::failure();
