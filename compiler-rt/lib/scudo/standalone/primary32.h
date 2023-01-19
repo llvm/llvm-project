@@ -230,6 +230,7 @@ public:
     uptr PushedBlocks = 0;
     for (uptr I = 0; I < NumClasses; I++) {
       SizeClassInfo *Sci = getSizeClassInfo(I);
+      ScopedLock L(Sci->Mutex);
       TotalMapped += Sci->AllocatedUser;
       PoppedBlocks += Sci->Stats.PoppedBlocks;
       PushedBlocks += Sci->Stats.PushedBlocks;
@@ -237,8 +238,11 @@ public:
     Str->append("Stats: SizeClassAllocator32: %zuM mapped in %zu allocations; "
                 "remains %zu\n",
                 TotalMapped >> 20, PoppedBlocks, PoppedBlocks - PushedBlocks);
-    for (uptr I = 0; I < NumClasses; I++)
+    for (uptr I = 0; I < NumClasses; I++) {
+      SizeClassInfo *Sci = getSizeClassInfo(I);
+      ScopedLock L(Sci->Mutex);
       getStats(Str, I, 0);
+    }
   }
 
   bool setOption(Option O, sptr Value) {
