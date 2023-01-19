@@ -13,4 +13,6 @@ module m
   !dir$ integer = 64
   !dir$ optimize:1
   !dir$ optimize : 1
+  !dir$ loop count (10000)
+  !dir$ loop count (1, 500, 5000, 10000)
 end

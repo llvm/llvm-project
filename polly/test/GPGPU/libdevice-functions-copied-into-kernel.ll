@@ -25,7 +25,7 @@
 
 ; Check that kernel launch is generated in host IR.
 ; the declare would not be generated unless a call to a kernel exists.
-; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
+; HOST-IR: declare void @polly_launchKernel(ptr, i32, i32, i32, i32, i32, ptr)
 
 
 ; void f(float *A, float *B, int N) {
@@ -42,7 +42,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(float* %A, float* %B, i32 %N) {
+define void @f(ptr %A, ptr %B, i32 %N) {
 entry:
   br label %entry.split
 
@@ -55,16 +55,16 @@ for.body.lr.ph:                                   ; preds = %entry.split
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
-  %A.arr.i = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %A.arr.i.val = load float, float* %A.arr.i, align 4
+  %A.arr.i = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %A.arr.i.val = load float, ptr %A.arr.i, align 4
   ; Call to intrinsics that should be part of the kernel.
   %expf = tail call float @expf(float %A.arr.i.val)
   %cosf = tail call float @cosf(float %expf)
   %logf = tail call float @logf(float %cosf)
   %powi = tail call float @llvm.powi.f32.i32(float %logf, i32 2)
   %exp = tail call float @llvm.exp.f32(float %powi)
-  %B.arr.i = getelementptr inbounds float, float* %B, i64 %indvars.iv
-  store float %exp, float* %B.arr.i, align 4
+  %B.arr.i = getelementptr inbounds float, ptr %B, i64 %indvars.iv
+  store float %exp, ptr %B.arr.i, align 4
 
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %wide.trip.count = zext i32 %N to i64

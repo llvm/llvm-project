@@ -1,4 +1,4 @@
-; RUN: opt -passes=mem2reg %s -S -o - | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=mem2reg %s -S -o - | FileCheck %s
 
 ;; Check that mem2reg removes dbg.value(%local, DIExpression(DW_OP_deref...))
 ;; that instcombine LowerDbgDeclare inserted before the call to 'esc' when
@@ -7,7 +7,7 @@
 ;; throughout after inlining.
 ;;
 ;; $ clang reduce.c -O2 -g -emit-llvm -S -o tmp.ll -Xclang -disable-llvm-passes
-;; $ opt tmp.ll -o - -instcombine -inline -S
+;; $ opt -opaque-pointers=0 tmp.ll -o - -instcombine -inline -S
 ;; $ cat reduce.c
 ;; __attribute__((__always_inline__))
 ;; static void esc(unsigned char **c) {

@@ -593,7 +593,5 @@ Value sparse_tensor::genToValues(OpBuilder &builder, Location loc,
 
 Value sparse_tensor::genValMemSize(OpBuilder &builder, Location loc,
                                    Value tensor) {
-  SmallVector<Value> fields;
-  auto desc = getMutDescriptorFromTensorTuple(tensor, fields);
-  return desc.getValMemSize(builder, loc);
+  return getDescriptorFromTensorTuple(tensor).getValMemSize(builder, loc);
 }

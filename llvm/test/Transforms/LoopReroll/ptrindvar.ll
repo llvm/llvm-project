@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=loop-reroll   %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -S -passes=loop-reroll   %s | FileCheck %s
 target triple = "aarch64--linux-gnu"
 
 define i32 @test(i32* readonly %buf, i32* readnone %end) #0 {

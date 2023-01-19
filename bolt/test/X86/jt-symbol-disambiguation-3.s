@@ -7,7 +7,7 @@
 # Before assembler: Instruction operand is: jumptable - 32
 # After linking:    Instruction operand is: another_jumptable
 
-# REQUIRES: system-linux
+# REQUIRES: system-linux, asserts
 
 # XFAIL: *
 

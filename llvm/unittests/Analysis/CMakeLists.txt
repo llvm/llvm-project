@@ -57,7 +57,7 @@ set(ANALYSIS_TEST_SOURCES
 # complain about unused file.
 set(LLVM_OPTIONAL_SOURCES InlineAdvisorPlugin.cpp)
 
-set(MLGO_TESTS TFUtilsTest.cpp TrainingLoggerTest.cpp)
+set(MLGO_TESTS TFUtilsTest.cpp)
 if (LLVM_HAVE_TFLITE)
   LIST(APPEND ANALYSIS_TEST_SOURCES ${MLGO_TESTS})
 else()

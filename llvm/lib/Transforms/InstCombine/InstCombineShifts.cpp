@@ -346,8 +346,8 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
   Value *X, *Y;
   auto matchFirstShift = [&](Value *V) {
     APInt Threshold(Ty->getScalarSizeInBits(), Ty->getScalarSizeInBits());
-    return match(V, m_BinOp(ShiftOpcode, m_Value(), m_Value())) &&
-           match(V, m_OneUse(m_Shift(m_Value(X), m_Constant(C0)))) &&
+    return match(V,
+                 m_OneUse(m_BinOp(ShiftOpcode, m_Value(X), m_Constant(C0)))) &&
            match(ConstantExpr::getAdd(C0, C1),
                  m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold));
   };
@@ -363,7 +363,7 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
   // shift (logic (shift X, C0), Y), C1 -> logic (shift X, C0+C1), (shift Y, C1)
   Constant *ShiftSumC = ConstantExpr::getAdd(C0, C1);
   Value *NewShift1 = Builder.CreateBinOp(ShiftOpcode, X, ShiftSumC);
-  Value *NewShift2 = Builder.CreateBinOp(ShiftOpcode, Y, I.getOperand(1));
+  Value *NewShift2 = Builder.CreateBinOp(ShiftOpcode, Y, C1);
   return BinaryOperator::Create(LogicInst->getOpcode(), NewShift1, NewShift2);
 }
 

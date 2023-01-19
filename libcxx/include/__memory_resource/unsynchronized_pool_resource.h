@@ -70,7 +70,7 @@ public:
 
   unsynchronized_pool_resource(const unsynchronized_pool_resource&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI ~unsynchronized_pool_resource() override { release(); }
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~unsynchronized_pool_resource() override { release(); }
 
   unsynchronized_pool_resource& operator=(const unsynchronized_pool_resource&) = delete;
 

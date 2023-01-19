@@ -534,7 +534,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["iomanip"],
   }, {
     "name": "__cpp_lib_ranges",
-    "values": { "c++20": 201811 },
+    "values": { "c++20": 202106 },
     "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
   }, {
     "name": "__cpp_lib_ranges_chunk",

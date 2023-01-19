@@ -6283,6 +6283,158 @@ define void @store_v24i32_v24i32_stride6_vf4_only_even_numbered_elts(ptr %trigge
   ret void
 }
 
+; From https://reviews.llvm.org/rGf8d9097168b7#1165311
+define void @undefshuffle(<8 x i1> %i0, ptr %src, ptr %dst) #0 {
+; SSE-LABEL: undefshuffle:
+; SSE:       ## %bb.0:
+; SSE-NEXT:    movb $1, %al
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    psllw $15, %xmm0
+; SSE-NEXT:    packsswb %xmm0, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    testb $1, %al
+; SSE-NEXT:    jne LBB32_1
+; SSE-NEXT:  ## %bb.2: ## %else23
+; SSE-NEXT:    testb $2, %al
+; SSE-NEXT:    jne LBB32_3
+; SSE-NEXT:  LBB32_4: ## %else25
+; SSE-NEXT:    testb $4, %al
+; SSE-NEXT:    jne LBB32_5
+; SSE-NEXT:  LBB32_6: ## %else27
+; SSE-NEXT:    testb $8, %al
+; SSE-NEXT:    jne LBB32_7
+; SSE-NEXT:  LBB32_8: ## %else29
+; SSE-NEXT:    testb $16, %al
+; SSE-NEXT:    jne LBB32_9
+; SSE-NEXT:  LBB32_10: ## %else31
+; SSE-NEXT:    testb $32, %al
+; SSE-NEXT:    jne LBB32_11
+; SSE-NEXT:  LBB32_12: ## %else33
+; SSE-NEXT:    testb $64, %al
+; SSE-NEXT:    jne LBB32_13
+; SSE-NEXT:  LBB32_14: ## %else35
+; SSE-NEXT:    testb $-128, %al
+; SSE-NEXT:    jne LBB32_15
+; SSE-NEXT:  LBB32_16: ## %else37
+; SSE-NEXT:    retq
+; SSE-NEXT:  LBB32_1: ## %cond.store
+; SSE-NEXT:    movl $0, (%rsi)
+; SSE-NEXT:    testb $2, %al
+; SSE-NEXT:    je LBB32_4
+; SSE-NEXT:  LBB32_3: ## %cond.store24
+; SSE-NEXT:    movl $0, 4(%rsi)
+; SSE-NEXT:    testb $4, %al
+; SSE-NEXT:    je LBB32_6
+; SSE-NEXT:  LBB32_5: ## %cond.store26
+; SSE-NEXT:    movl $0, 8(%rsi)
+; SSE-NEXT:    testb $8, %al
+; SSE-NEXT:    je LBB32_8
+; SSE-NEXT:  LBB32_7: ## %cond.store28
+; SSE-NEXT:    movl $0, 12(%rsi)
+; SSE-NEXT:    testb $16, %al
+; SSE-NEXT:    je LBB32_10
+; SSE-NEXT:  LBB32_9: ## %cond.store30
+; SSE-NEXT:    movl $0, 16(%rsi)
+; SSE-NEXT:    testb $32, %al
+; SSE-NEXT:    je LBB32_12
+; SSE-NEXT:  LBB32_11: ## %cond.store32
+; SSE-NEXT:    movl $0, 20(%rsi)
+; SSE-NEXT:    testb $64, %al
+; SSE-NEXT:    je LBB32_14
+; SSE-NEXT:  LBB32_13: ## %cond.store34
+; SSE-NEXT:    movl $0, 24(%rsi)
+; SSE-NEXT:    testb $-128, %al
+; SSE-NEXT:    je LBB32_16
+; SSE-NEXT:  LBB32_15: ## %cond.store36
+; SSE-NEXT:    movl $0, 28(%rsi)
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: undefshuffle:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vmaskmovps %ymm1, %ymm0, (%rsi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: undefshuffle:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpmaskmovd %ymm1, %ymm0, (%rsi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: undefshuffle:
+; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
+; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
+; AVX512F-NEXT:    movb $15, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1 {%k1}
+; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovdqu32 %zmm0, (%rsi) {%k1}
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: undefshuffle:
+; AVX512VLDQ:       ## %bb.0:
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX512VLDQ-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX512VLDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VLDQ-NEXT:    movb $15, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    vpcmpgtd %ymm0, %ymm1, %k1 {%k1}
+; AVX512VLDQ-NEXT:    vmovdqu32 %ymm1, (%rsi) {%k1}
+; AVX512VLDQ-NEXT:    vzeroupper
+; AVX512VLDQ-NEXT:    retq
+;
+; AVX512VLBW-LABEL: undefshuffle:
+; AVX512VLBW:       ## %bb.0:
+; AVX512VLBW-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX512VLBW-NEXT:    vpmovw2m %xmm0, %k0
+; AVX512VLBW-NEXT:    movl $15, %eax
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    kandd %k1, %k0, %k1
+; AVX512VLBW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512VLBW-NEXT:    vmovdqu32 %ymm0, (%rsi) {%k1}
+; AVX512VLBW-NEXT:    vzeroupper
+; AVX512VLBW-NEXT:    retq
+;
+; X86-AVX512-LABEL: undefshuffle:
+; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    vpsllw $15, %xmm0, %xmm0
+; X86-AVX512-NEXT:    vpmovw2m %xmm0, %k0
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    movl $15, %ecx
+; X86-AVX512-NEXT:    kmovd %ecx, %k1
+; X86-AVX512-NEXT:    kandd %k1, %k0, %k1
+; X86-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X86-AVX512-NEXT:    vmovdqu32 %ymm0, (%eax) {%k1}
+; X86-AVX512-NEXT:    vzeroupper
+; X86-AVX512-NEXT:    retl
+  %i1 = shufflevector <8 x i1> %i0, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %i2 = shufflevector <16 x i1> %i1, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %it51 = and <32 x i1> %i2, <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>
+  %i3 = shufflevector <32 x i1> %it51, <32 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %i4 = shufflevector <32 x i1> %it51, <32 x i1> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %i5 = tail call <8 x i32> @llvm.masked.load.v8i32.p0(ptr %src, i32 1, <8 x i1> %i4, <8 x i32> zeroinitializer)
+  tail call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr %dst, i32 1, <8 x i1> %i3)
+  ret void
+}
+declare <8 x i32> @llvm.masked.load.v8i32.p0(ptr nocapture, i32 immarg, <8 x i1>, <8 x i32>)
+
 declare void @llvm.masked.store.v8f64.p0(<8 x double>, ptr, i32, <8 x i1>)
 declare void @llvm.masked.store.v4f64.p0(<4 x double>, ptr, i32, <4 x i1>)
 declare void @llvm.masked.store.v2f64.p0(<2 x double>, ptr, i32, <2 x i1>)

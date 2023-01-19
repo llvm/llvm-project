@@ -119,28 +119,24 @@
 ; IR-NEXT: br label %polly.acc.initialize
 
 ; IR: polly.acc.initialize:
-; IR-NEXT:    [[GPUContext:%.*]] = call i8* @polly_initContext()
-; IR-NEXT:    %p_dev_array_MemRef_A = call i8* @polly_allocateMemoryForDevice(i64 4194304)
-; IR-NEXT:    [[HostPtr:%.*]] = bitcast [1024 x float]* %A to i8*
-; IR-NEXT:    call void @polly_copyFromHostToDevice(i8* [[HostPtr]], i8* %p_dev_array_MemRef_A, i64 4194304)
-; IR-NEXT:    [[DevPtr:%.*]]  = call i8* @polly_getDevicePtr(i8* %p_dev_array_MemRef_A)
-; IR-NEXT:    [[ParamSlot:%.*]] = getelementptr [1 x i8*], [1 x i8*]* %polly_launch_0_params, i64 0, i64 0
-; IR-NEXT:    store i8* [[DevPtr]], i8** %polly_launch_0_param_0
-; IR-NEXT:    [[ParamTyped:%.*]] = bitcast i8** %polly_launch_0_param_0 to i8*
-; IR-NEXT:    store i8* [[ParamTyped]], i8** [[ParamSlot]]
-; IR-NEXT:    call i8* @polly_getKernel
-; IR-NEXT:    call void @polly_launchKernel(i8* %11, i32 32, i32 32, i32 32, i32 16, i32 1, i8* %polly_launch_0_params_i8ptr)
+; IR-NEXT:    [[GPUContext:%.*]] = call ptr @polly_initContext()
+; IR-NEXT:    %p_dev_array_MemRef_A = call ptr @polly_allocateMemoryForDevice(i64 4194304)
+; IR-NEXT:    call void @polly_copyFromHostToDevice(ptr %A, ptr %p_dev_array_MemRef_A, i64 4194304)
+; IR-NEXT:    [[DevPtr:%.*]]  = call ptr @polly_getDevicePtr(ptr %p_dev_array_MemRef_A)
+; IR-NEXT:    store ptr [[DevPtr]], ptr %polly_launch_0_param_0
+; IR-NEXT:    store ptr %polly_launch_0_param_0, ptr %polly_launch_0_params
+; IR-NEXT:    call ptr @polly_getKernel
+; IR-NEXT:    call void @polly_launchKernel(ptr %11, i32 32, i32 32, i32 32, i32 16, i32 1, ptr %polly_launch_0_params_i8ptr)
 ; IR-NEXT:    call void @polly_freeKernel
-; IR-NEXT:    [[HostPtr2:%.*]] = bitcast [1024 x float]* %A to i8*
-; IR-NEXT:    call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_A, i8* [[HostPtr2]], i64 4194304)
-; IR-NEXT:    call void @polly_freeDeviceMemory(i8* %p_dev_array_MemRef_A)
-; IR-NEXT:    call void @polly_freeContext(i8* [[GPUContext]])
+; IR-NEXT:    call void @polly_copyFromDeviceToHost(ptr %p_dev_array_MemRef_A, ptr %A, i64 4194304)
+; IR-NEXT:    call void @polly_freeDeviceMemory(ptr %p_dev_array_MemRef_A)
+; IR-NEXT:    call void @polly_freeContext(ptr [[GPUContext]])
 ; IR-NEXT:    br label %polly.exiting
 
 ; IR: polly.exiting:
 ; IR-NEXT:    br label %polly.merge_new_and_old
 
-; KERNEL-IR-LABEL: define ptx_kernel void @kernel_0(i8* %MemRef_A) #0 {
+; KERNEL-IR-LABEL: define ptx_kernel void @kernel_0(ptr %MemRef_A) #0 {
 ; KERNEL-IR-NEXT: entry:
 ; KERNEL-IR-NEXT:   %0 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; KERNEL-IR-NEXT:   %b0 = zext i32 %0 to i64
@@ -168,7 +164,6 @@
 ; KERNEL-IR-LABEL: polly.stmt.bb5:                                   ; preds = %polly.loop_header
 ; KERNEL-IR-NEXT:   %10 = mul i64 %5, %9
 ; KERNEL-IR-NEXT:   %p_tmp6 = sitofp i64 %10 to float
-; KERNEL-IR-NEXT:   %polly.access.cast.MemRef_A = bitcast i8* %MemRef_A to float*
 ; KERNEL-IR-NEXT:   %11 = mul nsw i64 32, %b0
 ; KERNEL-IR-NEXT:   %12 = add nsw i64 %11, %t0
 ; KERNEL-IR-NEXT:   %polly.access.mul.MemRef_A = mul nsw i64 %12, 1024
@@ -177,10 +172,9 @@
 ; KERNEL-IR-NEXT:   %15 = mul nsw i64 16, %polly.indvar
 ; KERNEL-IR-NEXT:   %16 = add nsw i64 %14, %15
 ; KERNEL-IR-NEXT:   %polly.access.add.MemRef_A = add nsw i64 %polly.access.mul.MemRef_A, %16
-; KERNEL-IR-NEXT:   %polly.access.MemRef_A = getelementptr float, float* %polly.access.cast.MemRef_A, i64 %polly.access.add.MemRef_A
-; KERNEL-IR-NEXT:   %tmp8_p_scalar_ = load float, float* %polly.access.MemRef_A, align 4
+; KERNEL-IR-NEXT:   %polly.access.MemRef_A = getelementptr float, ptr %MemRef_A, i64 %polly.access.add.MemRef_A
+; KERNEL-IR-NEXT:   %tmp8_p_scalar_ = load float, ptr %polly.access.MemRef_A, align 4
 ; KERNEL-IR-NEXT:   %p_tmp9 = fadd float %tmp8_p_scalar_, %p_tmp6
-; KERNEL-IR-NEXT:   %polly.access.cast.MemRef_A1 = bitcast i8* %MemRef_A to float*
 ; KERNEL-IR-NEXT:   %17 = mul nsw i64 32, %b0
 ; KERNEL-IR-NEXT:   %18 = add nsw i64 %17, %t0
 ; KERNEL-IR-NEXT:   %polly.access.mul.MemRef_A2 = mul nsw i64 %18, 1024
@@ -189,8 +183,8 @@
 ; KERNEL-IR-NEXT:   %21 = mul nsw i64 16, %polly.indvar
 ; KERNEL-IR-NEXT:   %22 = add nsw i64 %20, %21
 ; KERNEL-IR-NEXT:   %polly.access.add.MemRef_A3 = add nsw i64 %polly.access.mul.MemRef_A2, %22
-; KERNEL-IR-NEXT:   %polly.access.MemRef_A4 = getelementptr float, float* %polly.access.cast.MemRef_A1, i64 %polly.access.add.MemRef_A3
-; KERNEL-IR-NEXT:   store float %p_tmp9, float* %polly.access.MemRef_A4, align 4
+; KERNEL-IR-NEXT:   %polly.access.MemRef_A4 = getelementptr float, ptr %MemRef_A, i64 %polly.access.add.MemRef_A3
+; KERNEL-IR-NEXT:   store float %p_tmp9, ptr %polly.access.MemRef_A4, align 4
 ; KERNEL-IR-NEXT:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
 ; KERNEL-IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar, 0
 ; KERNEL-IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
@@ -218,7 +212,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @double_parallel_loop([1024 x float]* %A) {
+define void @double_parallel_loop(ptr %A) {
 bb:
   br label %bb2
 
@@ -238,10 +232,10 @@ bb4:                                              ; preds = %bb10, %bb3
 bb5:                                              ; preds = %bb4
   %tmp = mul nuw nsw i64 %i.0, %j.0
   %tmp6 = sitofp i64 %tmp to float
-  %tmp7 = getelementptr inbounds [1024 x float], [1024 x float]* %A, i64 %i.0, i64 %j.0
-  %tmp8 = load float, float* %tmp7, align 4
+  %tmp7 = getelementptr inbounds [1024 x float], ptr %A, i64 %i.0, i64 %j.0
+  %tmp8 = load float, ptr %tmp7, align 4
   %tmp9 = fadd float %tmp8, %tmp6
-  store float %tmp9, float* %tmp7, align 4
+  store float %tmp9, ptr %tmp7, align 4
   br label %bb10
 
 bb10:                                             ; preds = %bb5

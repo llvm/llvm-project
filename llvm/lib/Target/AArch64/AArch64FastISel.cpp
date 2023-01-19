@@ -189,9 +189,9 @@ private:
   void addLoadStoreOperands(Address &Addr, const MachineInstrBuilder &MIB,
                             MachineMemOperand::Flags Flags,
                             unsigned ScaleFactor, MachineMemOperand *MMO);
-  bool isMemCpySmall(uint64_t Len, unsigned Alignment);
+  bool isMemCpySmall(uint64_t Len, MaybeAlign Alignment);
   bool tryEmitSmallMemCpy(Address Dest, Address Src, uint64_t Len,
-                          unsigned Alignment);
+                          MaybeAlign Alignment);
   bool foldXALUIntrinsic(AArch64CC::CondCode &CC, const Instruction *I,
                          const Value *Cond);
   bool optimizeIntExtLoad(const Instruction *I, MVT RetVT, MVT SrcVT);
@@ -3290,15 +3290,15 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   return finishCall(CLI, RetVT, NumBytes);
 }
 
-bool AArch64FastISel::isMemCpySmall(uint64_t Len, unsigned Alignment) {
+bool AArch64FastISel::isMemCpySmall(uint64_t Len, MaybeAlign Alignment) {
   if (Alignment)
-    return Len / Alignment <= 4;
+    return Len / Alignment->value() <= 4;
   else
     return Len < 32;
 }
 
 bool AArch64FastISel::tryEmitSmallMemCpy(Address Dest, Address Src,
-                                         uint64_t Len, unsigned Alignment) {
+                                         uint64_t Len, MaybeAlign Alignment) {
   // Make sure we don't bloat code by inlining very large memcpy's.
   if (!isMemCpySmall(Len, Alignment))
     return false;
@@ -3309,7 +3309,7 @@ bool AArch64FastISel::tryEmitSmallMemCpy(Address Dest, Address Src,
 
   while (Len) {
     MVT VT;
-    if (!Alignment || Alignment >= 8) {
+    if (!Alignment || *Alignment >= 8) {
       if (Len >= 8)
         VT = MVT::i64;
       else if (Len >= 4)
@@ -3320,10 +3320,11 @@ bool AArch64FastISel::tryEmitSmallMemCpy(Address Dest, Address Src,
         VT = MVT::i8;
       }
     } else {
+      assert(Alignment && "Alignment is set in this branch");
       // Bound based on alignment.
-      if (Len >= 4 && Alignment == 4)
+      if (Len >= 4 && *Alignment == 4)
         VT = MVT::i32;
-      else if (Len >= 2 && Alignment == 2)
+      else if (Len >= 2 && *Alignment == 2)
         VT = MVT::i16;
       else {
         VT = MVT::i8;
@@ -3498,8 +3499,10 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       // Small memcpy's are common enough that we want to do them without a call
       // if possible.
       uint64_t Len = cast<ConstantInt>(MTI->getLength())->getZExtValue();
-      unsigned Alignment = MinAlign(MTI->getDestAlignment(),
-                                    MTI->getSourceAlignment());
+      MaybeAlign Alignment;
+      if (MTI->getDestAlign() || MTI->getSourceAlign())
+        Alignment = std::min(MTI->getDestAlign().valueOrOne(),
+                             MTI->getSourceAlign().valueOrOne());
       if (isMemCpySmall(Len, Alignment)) {
         Address Dest, Src;
         if (!computeAddress(MTI->getRawDest(), Dest) ||

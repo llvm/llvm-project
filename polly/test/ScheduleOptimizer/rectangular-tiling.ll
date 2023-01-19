@@ -67,7 +67,7 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 
 ; Function Attrs: nounwind
-define void @rect([512 x i32]* %A) {
+define void @rect(ptr %A) {
 entry:
   br label %entry.split
 
@@ -82,8 +82,8 @@ for.body3:                                        ; preds = %for.body3.lr.ph, %f
   %j.0 = phi i32 [ 0, %for.body3.lr.ph ], [ %inc, %for.body3 ]
   %mul = mul nsw i32 %j.0, %i.0
   %rem = srem i32 %mul, 42
-  %arrayidx4 = getelementptr inbounds [512 x i32], [512 x i32]* %A, i32 %i.0, i32 %j.0
-  store i32 %rem, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds [512 x i32], ptr %A, i32 %i.0, i32 %j.0
+  store i32 %rem, ptr %arrayidx4, align 4
   %inc = add nsw i32 %j.0, 1
   %cmp2 = icmp slt i32 %inc, 512
   br i1 %cmp2, label %for.body3, label %for.inc5

@@ -1,7 +1,7 @@
-; RUN: opt -S -mtriple=amdgcn--amdhsa -passes=amdgpu-lower-module-lds < %s --amdgpu-lower-module-lds-strategy=table | FileCheck -check-prefix=OPT %s
-; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s --amdgpu-lower-module-lds-strategy=table | FileCheck -check-prefix=GCN %s
+; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn--amdhsa -passes=amdgpu-lower-module-lds < %s --amdgpu-lower-module-lds-strategy=table | FileCheck -check-prefix=OPT %s
+; RUN: llc -opaque-pointers=0 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s --amdgpu-lower-module-lds-strategy=table | FileCheck -check-prefix=GCN %s
 
-; Opt checks from utils/update_test_checks.py, llc checks from utils/update_llc_test_checks.py, both modified.
+; Opt checks from utils/update_test_checks.py, llc -opaque-pointers=0 checks from utils/update_llc_test_checks.py, both modified.
 
 ; Define four variables and four non-kernel functions which access exactly one variable each
 @v0 = addrspace(3) global float undef

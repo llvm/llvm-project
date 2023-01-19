@@ -1650,8 +1650,9 @@ def err_type_defined_in_condition : Error<
   "%0 cannot be defined in a condition">;
 def err_type_defined_in_enum : Error<
   "%0 cannot be defined in an enumeration">;
-def err_type_defined_in_offsetof : Error<
-  "%0 cannot be defined in '%select{__builtin_offsetof|offsetof}1'">;
+def ext_type_defined_in_offsetof : Extension<
+  "defining a type within '%select{__builtin_offsetof|offsetof}0' is a Clang "
+  "extension">, InGroup<GNUOffsetofExtensions>;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;
@@ -9362,6 +9363,9 @@ def err_non_first_default_compare_deletes : Error<
   "defaulting %select{this %sub{select_defaulted_comparison_kind}1|"
   "the corresponding implicit 'operator==' for this defaulted 'operator<=>'}0 "
   "would delete it after its first declaration">;
+def err_non_first_default_compare_in_class : Error<
+  "defaulting this %sub{select_defaulted_comparison_kind}0 "
+  "is not allowed because it was already declared outside the class">;
 def note_defaulted_comparison_union : Note<
   "defaulted %0 is implicitly deleted because "
   "%2 is a %select{union-like class|union}1 with variant members">;
@@ -11362,6 +11366,9 @@ def warn_non_aligned_allocation_function : Warning <
 def err_conflicting_aligned_options : Error <
   "conflicting option '-fcoro-aligned-allocation' and '-fno-aligned-allocation'"
 >;
+def err_coro_invalid_addr_of_label : Error<
+  "the GNU address of label extension is not allowed in coroutines."
+>;
 } // end of coroutines issue category
 
 let CategoryName = "Documentation Issue" in {
@@ -11771,12 +11778,16 @@ def err_loongarch_builtin_requires_la64 : Error<
   "this builtin requires target: loongarch64">;
 
 // Unsafe buffer usage diagnostics.
-def warn_unsafe_buffer_expression : Warning<
-  "unchecked operation on raw buffer in expression">,
-  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_variable : Warning<
-  "variable %0 participates in unchecked buffer operations">,
+  "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
+  "does not perform bounds checks}1">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_operation : Warning<
+  "%select{unsafe pointer operation|unsafe pointer arithmetic|"
+  "unsafe buffer access}0">,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def note_unsafe_buffer_operation : Note<
+  "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def err_loongarch_builtin_requires_la32 : Error<
   "this builtin requires target: loongarch32">;
 } // end of sema component.

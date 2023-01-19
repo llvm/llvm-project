@@ -154,7 +154,7 @@ llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
   Head.range = std::move(Ranges.front());
   SelectionRange *Tail = &Head;
   for (auto &Range :
-       llvm::makeMutableArrayRef(Ranges.data(), Ranges.size()).drop_front()) {
+       llvm::MutableArrayRef(Ranges.data(), Ranges.size()).drop_front()) {
     Tail->parent = std::make_unique<SelectionRange>();
     Tail = Tail->parent.get();
     Tail->range = std::move(Range);

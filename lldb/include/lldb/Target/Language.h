@@ -279,6 +279,16 @@ public:
   static void PrintAllLanguages(Stream &s, const char *prefix,
                                 const char *suffix);
 
+  /// Prints to the specified stream 's' each language type that the
+  /// current target supports for expression evaluation.
+  ///
+  /// \param[out] s      Stream to which the language types are written.
+  /// \param[in]  prefix String that is prepended to the language type.
+  /// \param[in]  suffix String that is appended to the language type.
+  static void PrintSupportedLanguagesForExpressions(Stream &s,
+                                                    llvm::StringRef prefix,
+                                                    llvm::StringRef suffix);
+
   // return false from callback to stop iterating
   static void ForAllLanguages(std::function<bool(lldb::LanguageType)> callback);
 

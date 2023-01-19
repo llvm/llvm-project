@@ -22,11 +22,14 @@
 #include "test_macros.h"
 #include "format_tests.h"
 #include "string_literal.h"
+#include "assert_macros.h"
 
 auto test = []<class CharT, class... Args>(
                 std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt, Args&&... args) constexpr {
   std::basic_string<CharT> out = std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
-  assert(out == expected);
+  TEST_REQUIRE(
+      out == expected,
+      test_concat_message("\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 };
 
 auto test_exception =
@@ -37,9 +40,13 @@ auto test_exception =
 #ifndef TEST_HAS_NO_EXCEPTIONS
       try {
         TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
-        assert(false);
+        TEST_FAIL(test_concat_message("\nFormat string   ", fmt, "\nDidn't throw an exception.\n"));
       } catch ([[maybe_unused]] const std::format_error& e) {
-        LIBCPP_ASSERT(e.what() == what);
+        TEST_LIBCPP_REQUIRE(
+            e.what() == what,
+            test_concat_message(
+                "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
+
         return;
       }
       assert(false);

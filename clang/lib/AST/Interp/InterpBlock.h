@@ -31,7 +31,21 @@ enum PrimType : unsigned;
 
 /// A memory block, either on the stack or in the heap.
 ///
-/// The storage described by the block immediately follows it in memory.
+/// The storage described by the block is immediately followed by
+/// optional metadata, which is followed by the actual data.
+///
+/// Block*        rawData()                  data()
+/// │               │                         │
+/// │               │                         │
+/// ▼               ▼                         ▼
+/// ┌───────────────┬─────────────────────────┬─────────────────┐
+/// │ Block         │ Metadata                │ Data            │
+/// │ sizeof(Block) │ Desc->getMetadataSize() │ Desc->getSize() │
+/// └───────────────┴─────────────────────────┴─────────────────┘
+///
+/// Desc->getAllocSize() describes the size after the Block, i.e.
+/// the data size and the metadata size.
+///
 class Block final {
 public:
   // Creates a new block.
@@ -59,7 +73,24 @@ public:
   std::optional<unsigned> getDeclID() const { return DeclID; }
 
   /// Returns a pointer to the stored data.
-  char *data() { return reinterpret_cast<char *>(this + 1); }
+  /// You are allowed to read Desc->getSize() bytes from this address.
+  char *data() {
+    // rawData might contain metadata as well.
+    size_t DataOffset = Desc->getMetadataSize();
+    return rawData() + DataOffset;
+  }
+  const char *data() const {
+    // rawData might contain metadata as well.
+    size_t DataOffset = Desc->getMetadataSize();
+    return rawData() + DataOffset;
+  }
+
+  /// Returns a pointer to the raw data, including metadata.
+  /// You are allowed to read Desc->getAllocSize() bytes from this address.
+  char *rawData() { return reinterpret_cast<char *>(this) + sizeof(Block); }
+  const char *rawData() const {
+    return reinterpret_cast<const char *>(this) + sizeof(Block);
+  }
 
   /// Returns a view over the data.
   template <typename T>
@@ -67,7 +98,7 @@ public:
 
   /// Invokes the constructor.
   void invokeCtor() {
-    std::memset(data(), 0, getSize());
+    std::memset(rawData(), 0, Desc->getAllocSize());
     if (Desc->CtorFn)
       Desc->CtorFn(this, data(), Desc->IsConst, Desc->IsMutable,
                    /*isActive=*/true, Desc);

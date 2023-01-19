@@ -29,23 +29,16 @@
 #include "format_tests.h"
 #include "string_literal.h"
 #include "test_format_string.h"
-
-#ifndef TEST_HAS_NO_LOCALIZATION
-#  include <iostream>
-#  include <type_traits>
-#endif
+#include "assert_macros.h"
 
 auto test =
     []<class CharT, class... Args>(
         std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) constexpr {
       std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
-#ifndef TEST_HAS_NO_LOCALIZATION
-      if constexpr (std::same_as<CharT, char>)
-        if (out != expected)
-          std::cerr << "\nFormat string   " << fmt.get() << "\nExpected output " << expected << "\nActual output   "
-                    << out << '\n';
-#endif
-      assert(out == expected);
+      TEST_REQUIRE(
+          out == expected,
+          test_concat_message(
+              "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
     };
 
 auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, Args&&...) {

@@ -1,4 +1,4 @@
-; RUN: opt -passes=consthoist -consthoist-gep -S -o - %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=consthoist -consthoist-gep -S -o - %s | FileCheck %s
 
 target triple = "aarch64-none--musleabi"
 

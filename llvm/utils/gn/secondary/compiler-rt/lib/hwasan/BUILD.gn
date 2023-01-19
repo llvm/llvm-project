@@ -29,6 +29,7 @@ source_set("sources") {
   }
   deps = [
     "//compiler-rt/lib/interception:sources",
+    "//compiler-rt/lib/lsan:common_sources",
     "//compiler-rt/lib/sanitizer_common:sources",
     "//compiler-rt/lib/ubsan:sources",
   ]

@@ -114,14 +114,15 @@ public:
 
   /// Creates a descriptor for a primitive type.
   Descriptor *createDescriptor(const DeclTy &D, PrimType Type,
-                               bool IsConst = false,
-                               bool IsTemporary = false,
+                               Descriptor::MetadataSize MDSize = std::nullopt,
+                               bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false) {
-    return allocateDescriptor(D, Type, IsConst, IsTemporary, IsMutable);
+    return allocateDescriptor(D, Type, MDSize, IsConst, IsTemporary, IsMutable);
   }
 
   /// Creates a descriptor for a composite type.
   Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
+                               Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false,
                                const Expr *Init = nullptr);

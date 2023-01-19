@@ -256,16 +256,21 @@ bool RISCVTargetInfo::initFeatureMap(
 
 std::optional<std::pair<unsigned, unsigned>>
 RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
-  if (LangOpts.VScaleMin || LangOpts.VScaleMax)
-    return std::pair<unsigned, unsigned>(
-        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
+  // RISCV::RVVBitsPerBlock is 64.
+  unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
 
-  if (unsigned MinVLen = ISAInfo->getMinVLen();
-      MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
-    unsigned MaxVLen = ISAInfo->getMaxVLen();
-    // RISCV::RVVBitsPerBlock is 64.
-    return std::make_pair(MinVLen / llvm::RISCV::RVVBitsPerBlock,
-                          MaxVLen / llvm::RISCV::RVVBitsPerBlock);
+  if (LangOpts.VScaleMin || LangOpts.VScaleMax) {
+    // Treat Zvl*b as a lower bound on vscale.
+    VScaleMin = std::max(VScaleMin, LangOpts.VScaleMin);
+    unsigned VScaleMax = LangOpts.VScaleMax;
+    if (VScaleMax != 0 && VScaleMax < VScaleMin)
+      VScaleMax = VScaleMin;
+    return std::pair<unsigned, unsigned>(VScaleMin ? VScaleMin : 1, VScaleMax);
+  }
+
+  if (VScaleMin > 0) {
+    unsigned VScaleMax = ISAInfo->getMaxVLen() / llvm::RISCV::RVVBitsPerBlock;
+    return std::make_pair(VScaleMin, VScaleMax);
   }
 
   return std::nullopt;

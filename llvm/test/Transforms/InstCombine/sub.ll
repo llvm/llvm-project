@@ -1307,8 +1307,8 @@ define <2 x i32> @test69(<2 x i32> %x) {
 ; Check (X | Y) - Y --> X & ~Y when Y is a constant
 define i32 @test70(i32 %A) {
 ; CHECK-LABEL: @test70(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -124
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = and i32 [[A:%.*]], -124
+; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = or i32 %A, 123
   %C = sub i32 %B, 123
@@ -2388,4 +2388,195 @@ define <2 x i8> @sub_to_and_vector4(<2 x i8> %x) {
   %and = and <2 x i8> %sub, <i8 120, i8 120>
   %r = sub <2 x i8>  <i8 88, i8 undef>, %and
   ret <2 x i8> %r
+}
+
+; (X * X) - (Y * Y) --> (X + Y) * (X - Y)
+
+define i8 @diff_of_squares(i8 %x, i8 %y) {
+; CHECK-LABEL: @diff_of_squares(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul i8 [[ADD]], [[SUB]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x2 = mul i8 %x, %x
+  %y2 = mul i8 %y, %y
+  %r = sub i8 %x2, %y2
+  ret i8 %r
+}
+
+; All-or-nothing for propagation of no-wrap flags (possibly conservative)
+
+define i5 @diff_of_squares_nuw(i5 %x, i5 %y) {
+; CHECK-LABEL: @diff_of_squares_nuw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i5 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i5 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw i5 [[ADD]], [[SUB]]
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %x2 = mul nuw i5 %x, %x
+  %y2 = mul nuw i5 %y, %y
+  %r = sub nuw i5 %x2, %y2
+  ret i5 %r
+}
+
+; All-or-nothing for propagation of no-wrap flags (possibly conservative)
+
+define i5 @diff_of_squares_partial_nuw(i5 %x, i5 %y) {
+; CHECK-LABEL: @diff_of_squares_partial_nuw(
+; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i5 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul i5 [[ADD]], [[SUB]]
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %x2 = mul nuw i5 %x, %x
+  %y2 = mul nuw i5 %y, %y
+  %r = sub i5 %x2, %y2
+  ret i5 %r
+}
+
+; All-or-nothing for propagation of no-wrap flags (possibly conservative)
+
+define <2 x i5> @diff_of_squares_nsw(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @diff_of_squares_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i5> [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul nsw <2 x i5> [[ADD]], [[SUB]]
+; CHECK-NEXT:    ret <2 x i5> [[R]]
+;
+  %x2 = mul nsw <2 x i5> %x, %x
+  %y2 = mul nsw <2 x i5> %y, %y
+  %r = sub nsw <2 x i5> %x2, %y2
+  ret <2 x i5> %r
+}
+
+; All-or-nothing for propagation of no-wrap flags (possibly conservative)
+
+define <2 x i5> @diff_of_squares_partial_nsw(<2 x i5> %x, <2 x i5> %y) {
+; CHECK-LABEL: @diff_of_squares_partial_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i5> [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul <2 x i5> [[ADD]], [[SUB]]
+; CHECK-NEXT:    ret <2 x i5> [[R]]
+;
+  %x2 = mul nsw <2 x i5> %x, %x
+  %y2 = mul <2 x i5> %y, %y
+  %r = sub nsw <2 x i5> %x2, %y2
+  ret <2 x i5> %r
+}
+
+define i1 @diff_of_squares_nsw_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: @diff_of_squares_nsw_i1(
+; CHECK-NEXT:    ret i1 false
+;
+  %x2 = mul nsw i1 %x, %x
+  %y2 = mul nsw i1 %y, %y
+  %r = sub nsw i1 %x2, %y2
+  ret i1 %r
+}
+
+define i1 @diff_of_squares_nuw_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: @diff_of_squares_nuw_i1(
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x2 = mul nuw i1 %x, %x
+  %y2 = mul nuw i1 %y, %y
+  %r = sub nuw i1 %x2, %y2
+  ret i1 %r
+}
+
+; It is not correct to propagate nsw.
+; TODO: This should reduce more.
+
+define i2 @diff_of_squares_nsw_i2(i2 %x, i2 %y) {
+; CHECK-LABEL: @diff_of_squares_nsw_i2(
+; CHECK-NEXT:    [[ADD:%.*]] = add i2 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i2 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul i2 [[ADD]], [[SUB]]
+; CHECK-NEXT:    ret i2 [[R]]
+;
+  %x2 = mul nsw i2 %x, %x
+  %y2 = mul nsw i2 %y, %y
+  %r = sub nsw i2 %x2, %y2
+  ret i2 %r
+}
+
+; TODO: This should reduce more.
+
+define i2 @diff_of_squares_nuw_i2(i2 %x, i2 %y) {
+; CHECK-LABEL: @diff_of_squares_nuw_i2(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i2 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i2 [[X]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw i2 [[ADD]], [[SUB]]
+; CHECK-NEXT:    ret i2 [[R]]
+;
+  %x2 = mul nuw i2 %x, %x
+  %y2 = mul nuw i2 %y, %y
+  %r = sub nuw i2 %x2, %y2
+  ret i2 %r
+}
+
+; negative test
+
+define i8 @diff_of_squares_use1(i8 %x, i8 %y) {
+; CHECK-LABEL: @diff_of_squares_use1(
+; CHECK-NEXT:    [[X2:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    call void @use8(i8 [[X2]])
+; CHECK-NEXT:    [[Y2:%.*]] = mul i8 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X2]], [[Y2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x2 = mul i8 %x, %x
+  call void @use8(i8 %x2)
+  %y2 = mul i8 %y, %y
+  %r = sub i8 %x2, %y2
+  ret i8 %r
+}
+
+; negative test
+
+define i8 @diff_of_squares_use2(i8 %x, i8 %y) {
+; CHECK-LABEL: @diff_of_squares_use2(
+; CHECK-NEXT:    [[X2:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul i8 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    call void @use8(i8 [[Y2]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X2]], [[Y2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x2 = mul i8 %x, %x
+  %y2 = mul i8 %y, %y
+  call void @use8(i8 %y2)
+  %r = sub i8 %x2, %y2
+  ret i8 %r
+}
+
+; negative test - must be squares
+
+define i8 @diff_of_muls1(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @diff_of_muls1(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul i8 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[M]], [[Y2]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %x, %z
+  %y2 = mul i8 %y, %y
+  %r = sub i8 %m, %y2
+  ret i8 %r
+}
+
+; negative test - must be squares
+
+define i8 @diff_of_muls2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @diff_of_muls2(
+; CHECK-NEXT:    [[X2:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X2]], [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x2 = mul i8 %x, %x
+  %m = mul i8 %y, %z
+  %r = sub i8 %x2, %m
+  ret i8 %r
 }

@@ -51,7 +51,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[counted.iter.cmp] <https://wg21.link/counted.iter.cmp>`_,| counted_iterator,None,Unassigned,|Not Started|
 | `[range.iota.iterator] <https://wg21.link/range.iota.iterator>`_,| `ranges::iota_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
 | `[range.transform.iterator] <https://wg21.link/range.transform.iterator>`_,| `ranges::transform_view::iterator <https://reviews.llvm.org/D110774>`_,[concepts.cmp],Arthur O'Dwyer,|Complete|
-| `[range.elements.iterator] <https://wg21.link/range.elements.iterator>`_,| ranges::elements_view::iterator,[concepts.cmp],Unassigned,|Not Started|
+| `[range.elements.iterator] <https://wg21.link/range.elements.iterator>`_,| ranges::elements_view::iterator,[concepts.cmp],Hui Xie,|Complete|
 | `[time.duration.comparisons] <https://wg21.link/time.duration.comparisons>`_, "chrono::duration", None, Mark de Wever, |Not Started|
 | `[time.point.comparisons] <https://wg21.link/time.point.comparisons>`_, "chrono::time_point", None, Mark de Wever, |Not Started|
 "| `[time.cal.day.nonmembers] <https://wg21.link/time.cal.day.nonmembers>`_

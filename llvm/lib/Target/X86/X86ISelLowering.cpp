@@ -5654,6 +5654,18 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                     MachineMemOperand::MOVolatile;
       return true;
     }
+    case Intrinsic::x86_atomic_bts_rm:
+    case Intrinsic::x86_atomic_btc_rm:
+    case Intrinsic::x86_atomic_btr_rm: {
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
+      Info.ptrVal = I.getArgOperand(0);
+      unsigned Size = I.getArgOperand(1)->getType()->getScalarSizeInBits();
+      Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), Size);
+      Info.align = Align(Size);
+      Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+                    MachineMemOperand::MOVolatile;
+      return true;
+    }
     case Intrinsic::x86_aadd32:
     case Intrinsic::x86_aadd64:
     case Intrinsic::x86_aand32:
@@ -6010,6 +6022,10 @@ bool X86TargetLowering::
     return true;
   // Pre-AVX2 vector codegen for this pattern is best for variant with 'shl'.
   return NewShiftOpcode == ISD::SHL;
+}
+
+bool X86TargetLowering::preferScalarizeSplat(unsigned Opc) const {
+  return Opc != ISD::FP_EXTEND;
 }
 
 bool X86TargetLowering::shouldFoldConstantShiftPairToMask(
@@ -14648,6 +14664,21 @@ static bool isSingleSHUFPSMask(ArrayRef<int> Mask) {
   return true;
 }
 
+/// Test whether the specified input (0 or 1) is in-place blended by the
+/// given mask.
+///
+/// This returns true if the elements from a particular input are already in the
+/// slot required by the given mask and require no permutation.
+static bool isShuffleMaskInputInPlace(int Input, ArrayRef<int> Mask) {
+  assert((Input == 0 || Input == 1) && "Only two inputs to shuffles.");
+  int Size = Mask.size();
+  for (int i = 0; i < Size; ++i)
+    if (Mask[i] >= 0 && Mask[i] / Size == Input && Mask[i] % Size != i)
+      return false;
+
+  return true;
+}
+
 /// If we are extracting two 128-bit halves of a vector and shuffling the
 /// result, match that to a 256-bit AVX2 vperm* instruction to avoid a
 /// multi-shuffle lowering.
@@ -17564,21 +17595,6 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
 
   // NumUpperHalves != 0: don't bother with extract, shuffle, and then insert.
   return SDValue();
-}
-
-/// Test whether the specified input (0 or 1) is in-place blended by the
-/// given mask.
-///
-/// This returns true if the elements from a particular input are already in the
-/// slot required by the given mask and require no permutation.
-static bool isShuffleMaskInputInPlace(int Input, ArrayRef<int> Mask) {
-  assert((Input == 0 || Input == 1) && "Only two inputs to shuffles.");
-  int Size = Mask.size();
-  for (int i = 0; i < Size; ++i)
-    if (Mask[i] >= 0 && Mask[i] / Size == Input && Mask[i] % Size != i)
-      return false;
-
-  return true;
 }
 
 /// Handle case where shuffle sources are coming from the same 128-bit lane and
@@ -28360,6 +28376,25 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
                          Operation.getValue(1));
     }
+    case Intrinsic::x86_atomic_bts_rm:
+    case Intrinsic::x86_atomic_btc_rm:
+    case Intrinsic::x86_atomic_btr_rm: {
+      SDLoc DL(Op);
+      MVT VT = Op.getSimpleValueType();
+      SDValue Chain = Op.getOperand(0);
+      SDValue Op1 = Op.getOperand(2);
+      SDValue Op2 = Op.getOperand(3);
+      unsigned Opc = IntNo == Intrinsic::x86_atomic_bts_rm   ? X86ISD::LBTS_RM
+                     : IntNo == Intrinsic::x86_atomic_btc_rm ? X86ISD::LBTC_RM
+                                                             : X86ISD::LBTR_RM;
+      MachineMemOperand *MMO = cast<MemIntrinsicSDNode>(Op)->getMemOperand();
+      SDValue Res =
+          DAG.getMemIntrinsicNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::Other),
+                                  {Chain, Op1, Op2}, VT, MMO);
+      Chain = Res.getValue(1);
+      Res = DAG.getZExtOrTrunc(getSETCC(X86::COND_B, Res, DL, DAG), DL, VT);
+      return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(), Res, Chain);
+    }
     case Intrinsic::x86_atomic_bts:
     case Intrinsic::x86_atomic_btc:
     case Intrinsic::x86_atomic_btr: {
@@ -31397,6 +31432,75 @@ X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
                                  : AtomicExpansionKind::None;
 }
 
+enum BitTestKind : unsigned {
+  UndefBit,
+  ConstantBit,
+  NotConstantBit,
+  ShiftBit,
+  NotShiftBit
+};
+
+static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
+  using namespace llvm::PatternMatch;
+  BitTestKind BTK = UndefBit;
+  auto *C = dyn_cast<ConstantInt>(V);
+  if (C) {
+    // Check if V is a power of 2 or NOT power of 2.
+    if (isPowerOf2_64(C->getZExtValue()))
+      BTK = ConstantBit;
+    else if (isPowerOf2_64((~C->getValue()).getZExtValue()))
+      BTK = NotConstantBit;
+    return {V, BTK};
+  }
+
+  // Check if V is some power of 2 pattern known to be non-zero
+  auto *I = dyn_cast<Instruction>(V);
+  if (I) {
+    bool Not = false;
+    // Check if we have a NOT
+    Value *PeekI;
+    if (match(I, m_c_Xor(m_Value(PeekI), m_AllOnes())) ||
+        match(I, m_Sub(m_AllOnes(), m_Value(PeekI)))) {
+      Not = true;
+      I = dyn_cast<Instruction>(PeekI);
+      assert(I != nullptr);
+    }
+    // We can only use 1 << X without more sophisticated analysis. C << X where
+    // C is a power of 2 but not 1 can result in zero which cannot be translated
+    // to bittest. Likewise any C >> X (either arith or logical) can be zero.
+    if (I->getOpcode() == Instruction::Shl) {
+      // Todo(1): The cmpxchg case is pretty costly so matching `BLSI(X)`, `X &
+      // -X` and some other provable power of 2 patterns that we can use CTZ on
+      // may be profitable.
+      // Todo(2): It may be possible in some cases to prove that Shl(C, X) is
+      // non-zero even where C != 1. Likewise LShr(C, X) and AShr(C, X) may also
+      // be provably a non-zero power of 2.
+      // Todo(3): ROTL and ROTR patterns on a power of 2 C should also be
+      // transformable to bittest.
+      auto *ShiftVal = dyn_cast<ConstantInt>(I->getOperand(0));
+      if (!ShiftVal)
+        return {nullptr, UndefBit};
+      if (ShiftVal->equalsInt(1))
+        BTK = Not ? NotShiftBit : ShiftBit;
+
+      if (BTK == UndefBit)
+        return {nullptr, UndefBit};
+
+      Value *BitV = I->getOperand(1);
+
+      Value *AndOp;
+      const APInt *AndC;
+      if (match(BitV, m_c_And(m_Value(AndOp), m_APInt(AndC)))) {
+        // Read past a shiftmask instruction to find count
+        if (*AndC == (I->getType()->getPrimitiveSizeInBits() - 1))
+          BitV = AndOp;
+      }
+      return {BitV, BTK};
+    }
+  }
+  return {nullptr, UndefBit};
+}
+
 TargetLowering::AtomicExpansionKind
 X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
   // If the atomicrmw's result isn't actually used, we can just add a "lock"
@@ -31406,51 +31510,138 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   // If the atomicrmw's result is used by a single bit AND, we may use
   // bts/btr/btc instruction for these operations.
-  auto *C1 = dyn_cast<ConstantInt>(AI->getValOperand());
+  // Note: InstCombinePass can cause a de-optimization here. It replaces the
+  // SETCC(And(AtomicRMW(P, power_of_2), power_of_2)) with LShr and Xor
+  // (depending on CC). This pattern can only use bts/btr/btc but we don't
+  // detect it.
   Instruction *I = AI->user_back();
-  if (!C1 || !AI->hasOneUse() || I->getOpcode() != Instruction::And ||
+  auto BitChange = FindSingleBitChange(AI->getValOperand());
+  if (BitChange.second == UndefBit || !AI->hasOneUse() ||
+      I->getOpcode() != Instruction::And ||
+      AI->getType()->getPrimitiveSizeInBits() == 8 ||
       AI->getParent() != I->getParent())
     return AtomicExpansionKind::CmpXChg;
+
+  assert(I->getOperand(0) == AI);
   // The following instruction must be a AND single bit.
-  auto *C2 = dyn_cast<ConstantInt>(I->getOperand(1));
-  unsigned Bits = AI->getType()->getPrimitiveSizeInBits();
-  if (!C2 || Bits == 8 || !isPowerOf2_64(C2->getZExtValue()))
+  if (BitChange.second == ConstantBit || BitChange.second == NotConstantBit) {
+    auto *C1 = dyn_cast<ConstantInt>(AI->getValOperand());
+    assert(C1 != nullptr);
+    auto *C2 = dyn_cast<ConstantInt>(I->getOperand(1));
+    if (!C2 || !isPowerOf2_64(C2->getZExtValue())) {
+      return AtomicExpansionKind::CmpXChg;
+    }
+    if (AI->getOperation() == AtomicRMWInst::And) {
+      return ~C1->getValue() == C2->getValue()
+                 ? AtomicExpansionKind::BitTestIntrinsic
+                 : AtomicExpansionKind::CmpXChg;
+    }
+    return C1 == C2 ? AtomicExpansionKind::BitTestIntrinsic
+                    : AtomicExpansionKind::CmpXChg;
+  }
+
+  assert(BitChange.second == ShiftBit || BitChange.second == NotShiftBit);
+
+  auto BitTested = FindSingleBitChange(I->getOperand(1));
+  if (BitTested.second != ShiftBit && BitTested.second != NotShiftBit)
     return AtomicExpansionKind::CmpXChg;
 
+  assert(BitChange.first != nullptr && BitTested.first != nullptr);
+
+  // If shift amounts are not the same we can't use BitTestIntrinsic.
+  if (BitChange.first != BitTested.first)
+    return AtomicExpansionKind::CmpXChg;
+
+  // If atomic AND need to be masking all be one bit and testing the one bit
+  // unset in the mask.
   if (AI->getOperation() == AtomicRMWInst::And)
-    return ~C1->getValue() == C2->getValue()
+    return (BitChange.second == NotShiftBit && BitTested.second == ShiftBit)
                ? AtomicExpansionKind::BitTestIntrinsic
                : AtomicExpansionKind::CmpXChg;
 
-  return C1 == C2 ? AtomicExpansionKind::BitTestIntrinsic
-                  : AtomicExpansionKind::CmpXChg;
+  // If atomic XOR/OR need to be setting and testing the same bit.
+  return (BitChange.second == ShiftBit && BitTested.second == ShiftBit)
+             ? AtomicExpansionKind::BitTestIntrinsic
+             : AtomicExpansionKind::CmpXChg;
 }
 
 void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   IRBuilder<> Builder(AI);
-  Intrinsic::ID IID = Intrinsic::not_intrinsic;
+  Intrinsic::ID IID_C = Intrinsic::not_intrinsic;
+  Intrinsic::ID IID_I = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
   default:
     llvm_unreachable("Unknown atomic operation");
   case AtomicRMWInst::Or:
-    IID = Intrinsic::x86_atomic_bts;
+    IID_C = Intrinsic::x86_atomic_bts;
+    IID_I = Intrinsic::x86_atomic_bts_rm;
     break;
   case AtomicRMWInst::Xor:
-    IID = Intrinsic::x86_atomic_btc;
+    IID_C = Intrinsic::x86_atomic_btc;
+    IID_I = Intrinsic::x86_atomic_btc_rm;
     break;
   case AtomicRMWInst::And:
-    IID = Intrinsic::x86_atomic_btr;
+    IID_C = Intrinsic::x86_atomic_btr;
+    IID_I = Intrinsic::x86_atomic_btr_rm;
     break;
   }
   Instruction *I = AI->user_back();
   LLVMContext &Ctx = AI->getContext();
-  unsigned Imm =
-      countTrailingZeros(cast<ConstantInt>(I->getOperand(1))->getZExtValue());
-  Function *BitTest =
-      Intrinsic::getDeclaration(AI->getModule(), IID, AI->getType());
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
                                           Type::getInt8PtrTy(Ctx));
-  Value *Result = Builder.CreateCall(BitTest, {Addr, Builder.getInt8(Imm)});
+  Function *BitTest = nullptr;
+  Value *Result = nullptr;
+  auto BitTested = FindSingleBitChange(AI->getValOperand());
+  assert(BitTested.first != nullptr);
+  if (BitTested.second == ConstantBit || BitTested.second == NotConstantBit) {
+    auto *C = dyn_cast<ConstantInt>(I->getOperand(1));
+    assert(C != nullptr);
+
+    BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_C, AI->getType());
+
+    unsigned Imm = countTrailingZeros(C->getZExtValue());
+    Result = Builder.CreateCall(BitTest, {Addr, Builder.getInt8(Imm)});
+  } else {
+    BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_I, AI->getType());
+
+    assert(BitTested.second == ShiftBit || BitTested.second == NotShiftBit);
+
+    Value *SI = BitTested.first;
+    assert(SI != nullptr);
+
+    // BT{S|R|C} on memory operand don't modulo bit position so we need to
+    // mask it.
+    unsigned ShiftBits = SI->getType()->getPrimitiveSizeInBits();
+    Value *BitPos =
+        Builder.CreateAnd(SI, Builder.getIntN(ShiftBits, ShiftBits - 1));
+    // Todo(1): In many cases it may be provable that SI is less than
+    // ShiftBits in which case this mask is unnecessary
+    // Todo(2): In the fairly idiomatic case of P[X / sizeof_bits(X)] OP 1
+    // << (X % sizeof_bits(X)) we can drop the shift mask and AGEN in
+    // favor of just a raw BT{S|R|C}.
+
+    Result = Builder.CreateCall(BitTest, {Addr, BitPos});
+    Result = Builder.CreateZExtOrTrunc(Result, AI->getType());
+
+    // If the result is only used for zero/non-zero status then we don't need to
+    // shift value back. Otherwise do so.
+    for (auto It = I->user_begin(); It != I->user_end(); ++It) {
+      if (auto *ICmp = dyn_cast<ICmpInst>(*It)) {
+        if (ICmp->isEquality()) {
+          auto *C0 = dyn_cast<ConstantInt>(ICmp->getOperand(0));
+          auto *C1 = dyn_cast<ConstantInt>(ICmp->getOperand(1));
+          if (C0 || C1) {
+            assert(C0 == nullptr || C1 == nullptr);
+            if ((C0 ? C0 : C1)->isZero())
+              continue;
+          }
+        }
+      }
+      Result = Builder.CreateShl(Result, BitPos);
+      break;
+    }
+  }
+
   I->replaceAllUsesWith(Result);
   I->eraseFromParent();
   AI->eraseFromParent();
@@ -34238,6 +34429,9 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(LBTS)
   NODE_NAME_CASE(LBTC)
   NODE_NAME_CASE(LBTR)
+  NODE_NAME_CASE(LBTS_RM)
+  NODE_NAME_CASE(LBTC_RM)
+  NODE_NAME_CASE(LBTR_RM)
   NODE_NAME_CASE(AADD)
   NODE_NAME_CASE(AOR)
   NODE_NAME_CASE(AXOR)
@@ -34853,7 +35047,7 @@ bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,
     return false;
   if (!Subtarget.hasVLX() && !VT.is512BitVector())
     return false;
-  if (!VT.isVector())
+  if (!VT.isVector() || VT.getScalarType() == MVT::i1)
     return false;
 
   return true;
@@ -42998,6 +43192,7 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
 bool X86TargetLowering::isSplatValueForTargetNode(SDValue Op,
                                                   const APInt &DemandedElts,
                                                   APInt &UndefElts,
+                                                  const SelectionDAG &DAG,
                                                   unsigned Depth) const {
   unsigned NumElts = DemandedElts.getBitWidth();
   unsigned Opc = Op.getOpcode();
@@ -43010,7 +43205,7 @@ bool X86TargetLowering::isSplatValueForTargetNode(SDValue Op,
   }
 
   return TargetLowering::isSplatValueForTargetNode(Op, DemandedElts, UndefElts,
-                                                   Depth);
+                                                   DAG, Depth);
 }
 
 // Helper to peek through bitops/trunc/setcc to determine size of source vector.

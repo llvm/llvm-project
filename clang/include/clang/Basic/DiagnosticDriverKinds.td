@@ -215,6 +215,8 @@ def err_drv_malformed_sanitizer_coverage_allowlist : Error<
   "malformed sanitizer coverage allowlist: '%0'">;
 def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
   "malformed sanitizer coverage ignorelist: '%0'">;
+def err_drv_unsupported_static_ubsan_darwin : Error<
+  "static UndefinedBehaviorSanitizer runtime is not supported on darwin">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
 def err_drv_cannot_open_config_file : Error<
@@ -489,6 +491,9 @@ def err_test_module_file_extension_format : Error<
   "-ftest-module-file-extension argument '%0' is not of the required form "
   "'blockname:major:minor:hashed:user info'">;
 
+def err_drv_module_output_with_multiple_arch : Error<
+  "option '-fmodule-output' can't be used with multiple arch options">;
+
 def err_drv_extract_api_wrong_kind : Error<
   "header file '%0' input '%1' does not match the type of prior input "
   "in api extraction; use '-x %2' to override">;
@@ -626,6 +631,15 @@ def warn_drv_libstdcxx_not_found : Warning<
   "include path for libstdc++ headers not found; pass '-stdlib=libc++' on the "
   "command line to use the libc++ standard library instead">,
   InGroup<DiagGroup<"stdlibcxx-not-found">>;
+
+def warn_deperecated_fcoroutines_ts_flag : Warning<
+  "the '-fcoroutines-ts' flag is deprecated and it will be removed in Clang 17; "
+  "use '-std=c++20' or higher to use standard C++ coroutines instead">,
+  InGroup<DeprecatedExperimentalCoroutine>;
+def warn_deprecated_fmodules_ts_flag : Warning<
+  "the '-fmodules-ts' flag is deprecated and it will be removed in Clang 17; "
+  "use '-std=c++20' or higher to use standard C++ modules instead">,
+  InGroup<DiagGroup<"deprecated-module-ts">>;
 
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 

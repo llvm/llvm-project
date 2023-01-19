@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -canonicalize | FileCheck %s
 
+// CHECK: emitc.include <"test.h">
+// CHECK: emitc.include "test.h"
 emitc.include <"test.h">
 emitc.include "test.h"
 

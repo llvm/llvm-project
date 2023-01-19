@@ -221,6 +221,17 @@ const char *Language::GetNameForLanguageType(LanguageType language) {
     return language_names[eLanguageTypeUnknown].name;
 }
 
+void Language::PrintSupportedLanguagesForExpressions(Stream &s,
+                                                     llvm::StringRef prefix,
+                                                     llvm::StringRef suffix) {
+  auto supported = Language::GetLanguagesSupportingTypeSystemsForExpressions();
+  for (size_t idx = 0; idx < num_languages; ++idx) {
+    auto const &lang = language_names[idx];
+    if (supported[lang.type])
+      s << prefix << lang.name << suffix;
+  }
+}
+
 void Language::PrintAllLanguages(Stream &s, const char *prefix,
                                  const char *suffix) {
   for (uint32_t i = 1; i < num_languages; i++) {

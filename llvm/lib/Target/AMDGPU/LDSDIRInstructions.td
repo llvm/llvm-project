@@ -143,12 +143,12 @@ def DS_PARAM_LOAD : DSDIR_Pseudo<"ds_param_load", VDSDIR_getIns<0>.ret, 0>;
 
 def : GCNPat <
   (f32 (int_amdgcn_lds_direct_load M0)),
-  (DS_DIRECT_LOAD 0, 0)
+  (DS_DIRECT_LOAD 0, 1)
 >;
 
 def : GCNPat <
   (f32 (int_amdgcn_lds_param_load timm:$attrchan, timm:$attr, M0)),
-  (DS_PARAM_LOAD timm:$attr, timm:$attrchan, 0, 0)
+  (DS_PARAM_LOAD timm:$attr, timm:$attrchan, 0, 1)
 >;
 
 } // End SubtargetPredicate = isGFX12Only

@@ -13,10 +13,10 @@
 ; CHECK-NEXT:     Invalid Context:
 ; CHECK-NEXT:     {  : false }
 ; CHECK:          Arrays {
-; CHECK-NEXT:         i32* MemRef_team2_0_in; // Element size 8
+; CHECK-NEXT:         ptr MemRef_team2_0_in; // Element size 8
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Arrays (Bounds as pw_affs) {
-; CHECK-NEXT:         i32* MemRef_team2_0_in; // Element size 8
+; CHECK-NEXT:         ptr MemRef_team2_0_in; // Element size 8
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Alias Groups (0):
 ; CHECK-NEXT:         n/a
@@ -50,14 +50,14 @@ for.body58:                                       ; preds = %for.cond56.preheade
   br i1 %cmp59, label %if.then60, label %if.else71
 
 if.then60:                                        ; preds = %for.body58
-  %arrayidx70 = getelementptr inbounds [18 x [15 x [3 x i32]]], [18 x [15 x [3 x i32]]]* @sched, i64 0, i64 1, i64 %indvars.iv78, i64 1
+  %arrayidx70 = getelementptr inbounds [18 x [15 x [3 x i32]]], ptr @sched, i64 0, i64 1, i64 %indvars.iv78, i64 1
   br label %land.lhs.true
 
 if.else71:                                        ; preds = %for.body58
   br label %land.lhs.true
 
 land.lhs.true:                                    ; preds = %if.else71, %if.then60
-  %team2.0.in = phi i32* [ %arrayidx70, %if.then60 ], [ undef, %if.else71 ]
+  %team2.0.in = phi ptr [ %arrayidx70, %if.then60 ], [ undef, %if.else71 ]
   br i1 undef, label %for.inc158, label %if.then86
 
 if.then86:                                        ; preds = %land.lhs.true

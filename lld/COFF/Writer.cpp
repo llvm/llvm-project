@@ -188,7 +188,7 @@ public:
 
   bool operator<(const PartialSectionKey &other) const {
     int c = name.compare(other.name);
-    if (c == 1)
+    if (c > 0)
       return false;
     if (c == 0)
       return characteristics < other.characteristics;
@@ -498,11 +498,11 @@ bool Writer::createThunks(OutputSection *os, int margin) {
     ArrayRef<coff_relocation> curRelocs = sc->getRelocs();
     MutableArrayRef<coff_relocation> newRelocs;
     if (originalRelocs.data() == curRelocs.data()) {
-      newRelocs = makeMutableArrayRef(
+      newRelocs = MutableArrayRef(
           bAlloc().Allocate<coff_relocation>(originalRelocs.size()),
           originalRelocs.size());
     } else {
-      newRelocs = makeMutableArrayRef(
+      newRelocs = MutableArrayRef(
           const_cast<coff_relocation *>(curRelocs.data()), curRelocs.size());
     }
 
@@ -1121,6 +1121,10 @@ void Writer::appendImportThunks() {
       dataSec->addChunk(c);
     for (Chunk *c : delayIdata.getCodeChunks())
       textSec->addChunk(c);
+    for (Chunk *c : delayIdata.getCodePData())
+      pdataSec->addChunk(c);
+    for (Chunk *c : delayIdata.getCodeUnwindInfo())
+      rdataSec->addChunk(c);
   }
 }
 

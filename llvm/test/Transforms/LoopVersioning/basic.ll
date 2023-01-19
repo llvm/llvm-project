@@ -1,5 +1,5 @@
-; RUN: opt -passes=loop-versioning -S < %s | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes=loop-versioning -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=loop-versioning -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -aa-pipeline=basic-aa -passes=loop-versioning -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 

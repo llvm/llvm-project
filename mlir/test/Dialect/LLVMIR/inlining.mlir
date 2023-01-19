@@ -56,3 +56,17 @@ func.func @test_not_inline(%ptr : !llvm.ptr) -> () {
   call @with_mem_attr(%ptr) : (!llvm.ptr) -> ()
   return
 }
+
+// -----
+// Check that llvm.return is correctly handled
+
+func.func @func(%arg0 : i32) -> i32  {
+  llvm.return %arg0 : i32
+}
+// CHECK-LABEL: @llvm_ret
+// CHECK-NOT: call
+// CHECK:  return %arg0
+func.func @llvm_ret(%arg0 : i32) -> i32 {
+  %res = call @func(%arg0) : (i32) -> (i32)
+  return %res : i32
+}

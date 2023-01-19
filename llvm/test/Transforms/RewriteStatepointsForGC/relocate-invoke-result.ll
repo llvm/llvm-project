@@ -1,4 +1,4 @@
-;; RUN: opt -passes=rewrite-statepoints-for-gc,verify -S < %s | FileCheck %s
+;; RUN: opt -opaque-pointers=0 -passes=rewrite-statepoints-for-gc,verify -S < %s | FileCheck %s
 ;; This test is to verify that RewriteStatepointsForGC correctly relocates values
 ;; defined by invoke instruction results.
 

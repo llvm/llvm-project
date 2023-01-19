@@ -1,4 +1,4 @@
-; RUN: opt -S --passes=instcombine %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -S --passes=instcombine %s | FileCheck %s
 
 ; https://github.com/llvm/llvm-project/issues/56807
 %si16 = type { i8, i8 }

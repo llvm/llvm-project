@@ -32,7 +32,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32* %A, i32 %c) {
+define void @jd(ptr %A, i32 %c) {
 entry:
   br label %for.cond
 
@@ -53,8 +53,8 @@ if.else:                                          ; preds = %for.body
 
 if.end:                                           ; preds = %if.else, %if.then
   %phi = phi i32 [ 1, %if.then], [ 2, %if.else ]
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %phi, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %phi, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.end

@@ -14,11 +14,11 @@
 #ifndef LLVM_XRAY_INSTRUMENTATIONMAP_H
 #define LLVM_XRAY_INSTRUMENTATIONMAP_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 

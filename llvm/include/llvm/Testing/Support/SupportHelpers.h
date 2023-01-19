@@ -9,7 +9,6 @@
 #ifndef LLVM_TESTING_SUPPORT_SUPPORTHELPERS_H
 #define LLVM_TESTING_SUPPORT_SUPPORTHELPERS_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -18,6 +17,7 @@
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest-printers.h"
 
+#include <optional>
 #include <string>
 
 namespace llvm {

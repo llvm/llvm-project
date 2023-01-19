@@ -2387,7 +2387,7 @@ thread
 kmp_int32 __kmpc_next_section(ident_t *loc, kmp_int32 gtid,
                               kmp_int32 numberOfSections) {
 
-  KMP_TIME_PARTITIONED_BLOCK(OMP_sections);
+  KMP_TIME_PARTITIONED_BLOCK(OMP_sections_overhead);
 
   kmp_info_t *th = __kmp_threads[gtid];
 #ifdef KMP_DEBUG
@@ -2460,7 +2460,6 @@ kmp_int32 __kmpc_next_section(ident_t *loc, kmp_int32 gtid,
           ompt_dispatch_section, instance);
     }
 #endif
-    KMP_POP_PARTITIONED_TIMER();
   }
 
   return sectionIndex;
@@ -2492,9 +2491,9 @@ void __kmpc_end_sections(ident_t *loc, kmp_int32 gtid) {
           &(task_info->task_data), 0, OMPT_GET_RETURN_ADDRESS(0));
     }
 #endif
-    KMP_POP_PARTITIONED_TIMER();
   }
 
+  KMP_POP_PARTITIONED_TIMER();
   KD_TRACE(100, ("__kmpc_end_sections: T#%d returned\n", gtid));
 }
 

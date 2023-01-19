@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --tls-load-hoist=true --stop-after=tlshoist -o - %s | FileCheck %s
-; RUN: llc -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --stop-after=tlshoist -o - %s | FileCheck %s
+; RUN: llc -opaque-pointers=0 -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --tls-load-hoist=true --stop-after=tlshoist -o - %s | FileCheck %s
+; RUN: llc -opaque-pointers=0 -mtriple=x86_64-unknown-unknown -O2 --relocation-model=pic --stop-after=tlshoist -o - %s | FileCheck %s
 
 ; This test come from compiling clang/test/CodeGen/intel/tls_loads.cpp with:
 ; (clang tls_loads.cpp -fPIC -ftls-model=global-dynamic -O2 -S -emit-llvm)

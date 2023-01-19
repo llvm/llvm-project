@@ -85,8 +85,8 @@ bool ARMInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void ARMInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << markup("<reg:") << getRegisterName(RegNo, DefaultAltIdx) << markup(">");
+void ARMInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  OS << markup("<reg:") << getRegisterName(Reg, DefaultAltIdx) << markup(">");
 }
 
 void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,

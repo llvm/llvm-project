@@ -3095,7 +3095,7 @@ void AMDGPULegalizerInfo::buildMultiply(
       } else {
         bool IsHighest = 2 * i >= Accum.size();
         Register SeparateOddOut[2];
-        auto LocalAccum = makeMutableArrayRef(SeparateOddOut)
+        auto LocalAccum = MutableArrayRef(SeparateOddOut)
                               .take_front(IsHighest ? 1 : 2);
         OddCarry = buildMadChain(LocalAccum, 2 * i - 1, OddCarryIn);
 
@@ -5565,7 +5565,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeBVHDualIntersectRayIntrinsic(
+bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B) const {
   const LLT S32 = LLT::scalar(32);
   const LLT V2S32 = LLT::fixed_vector(2, 32);
@@ -5589,11 +5589,14 @@ bool AMDGPULegalizerInfo::legalizeBVHDualIntersectRayIntrinsic(
     return false;
   }
 
+  bool IsBVH8 =
+      MI.getIntrinsicID() == Intrinsic::amdgcn_image_bvh8_intersect_ray;
   const unsigned NumVDataDwords = 10;
-  const unsigned NumVAddrDwords = 12;
-  int Opcode = AMDGPU::getMIMGOpcode(AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
-                                     AMDGPU::MIMGEncGfx12,
-                                     NumVDataDwords, NumVAddrDwords);
+  const unsigned NumVAddrDwords = IsBVH8 ? 11 : 12;
+  int Opcode = AMDGPU::getMIMGOpcode(
+      IsBVH8 ? AMDGPU::IMAGE_BVH8_INTERSECT_RAY
+             : AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+      AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
   assert(Opcode != -1);
 
   SmallVector<Register, 12> Ops;
@@ -5605,7 +5608,8 @@ bool AMDGPULegalizerInfo::legalizeBVHDualIntersectRayIntrinsic(
   Ops.push_back(RayDir);
   Ops.push_back(Offsets);
 
-  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+  auto MIB = B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY :
+                            AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
     .addDef(DstReg)
     .addDef(DstOrigin)
     .addDef(DstDir)
@@ -5885,7 +5889,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
     return legalizeBVHIntersectRayIntrinsic(MI, B);
   case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
-    return legalizeBVHDualIntersectRayIntrinsic(MI, B);
+  case Intrinsic::amdgcn_image_bvh8_intersect_ray:
+    return legalizeBVHDualOrBVH8IntersectRayIntrinsic(MI, B);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

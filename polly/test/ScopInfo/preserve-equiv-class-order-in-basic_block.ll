@@ -18,16 +18,16 @@ entry.split:                                      ; preds = %entry
 
 for.body:                                         ; preds = %for.body, %entry.split
   %indvars.iv = phi i64 [ 0, %entry.split ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [56 x i32], [56 x i32]* @a, i64 0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds [56 x i32], ptr @a, i64 0, i64 %indvars.iv
   %0 = trunc i64 %indvars.iv to i32
-  store i32 %0, i32* %arrayidx, align 4, !tbaa !0
+  store i32 %0, ptr %arrayidx, align 4, !tbaa !0
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 56
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  %1 = load i32, i32* @e, align 4, !tbaa !0
-  store i32 2, i32* @e, align 4, !tbaa !0
+  %1 = load i32, ptr @e, align 4, !tbaa !0
+  store i32 2, ptr @e, align 4, !tbaa !0
   %2 = trunc i32 %1 to i16
   %conv = and i16 %2, 1
   %tobool = icmp eq i16 %conv, 0
@@ -35,14 +35,14 @@ for.end:                                          ; preds = %for.body
 
 for.body3:                                        ; preds = %for.end, %for.inc11
   %storemerge20 = phi i32 [ 2, %for.end ], [ %dec12, %for.inc11 ]
-  %3 = load i8, i8* @d, align 1
+  %3 = load i8, ptr @d, align 1
   %cmp6 = icmp eq i8 %3, 8
   %or.cond = or i1 %tobool, %cmp6
   br i1 %or.cond, label %for.inc11, label %for.inc11.loopexit
 
 for.inc11.loopexit:                               ; preds = %for.body3
-  store i32 0, i32* @b, align 4, !tbaa !0
-  store i8 8, i8* @d, align 1, !tbaa !4
+  store i32 0, ptr @b, align 4, !tbaa !0
+  store i8 8, ptr @d, align 1, !tbaa !4
   br label %for.inc11
 
 for.inc11:                                        ; preds = %for.inc11.loopexit, %for.body3
@@ -51,9 +51,9 @@ for.inc11:                                        ; preds = %for.inc11.loopexit,
   br i1 %cmp2, label %for.body3, label %for.end13
 
 for.end13:                                        ; preds = %for.inc11
-  store i16 %conv, i16* @f, align 2, !tbaa !5
-  store i32 -19, i32* @e, align 4, !tbaa !0
-  %4 = load i32, i32* @b, align 4, !tbaa !0
+  store i16 %conv, ptr @f, align 2, !tbaa !5
+  store i32 -19, ptr @e, align 4, !tbaa !0
+  %4 = load i32, ptr @b, align 4, !tbaa !0
   ret i32 %4
 }
 
@@ -77,7 +77,7 @@ for.end13:                                        ; preds = %for.inc11
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                { Stmt_for_end_a[] -> MemRef_conv[] };
 ; CHECK-NEXT:            Instructions {
-; CHECK-NEXT:                  %1 = load i32, i32* @e, align 4, !tbaa !0
+; CHECK-NEXT:                  %1 = load i32, ptr @e, align 4, !tbaa !0
 ; CHECK-NEXT:                  %2 = trunc i32 %1 to i16
 ; CHECK-NEXT:                  %conv = and i16 %2, 1
 ; CHECK-NEXT:                  %tobool = icmp eq i16 %conv, 0
@@ -90,5 +90,5 @@ for.end13:                                        ; preds = %for.inc11
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                { Stmt_for_end[] -> MemRef_e[0] };
 ; CHECK-NEXT:            Instructions {
-; CHECK-NEXT:                  store i32 2, i32* @e, align 4, !tbaa !0
+; CHECK-NEXT:                  store i32 2, ptr @e, align 4, !tbaa !0
 ; CHECK-NEXT:            }

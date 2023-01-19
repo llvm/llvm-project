@@ -13,7 +13,7 @@
 
 ; Check that kernel launch is generated in host IR.
 ; the declare would not be generated unless a call to a kernel exists.
-; HOST-IR: declare void @polly_launchKernel(i8*, i32, i32, i32, i32, i32, i8*)
+; HOST-IR: declare void @polly_launchKernel(ptr, i32, i32, i32, i32, i32, ptr)
 
 ; Check that we add variables that are local to a scop into the kills that we
 ; pass to PPCG. This should enable PPCG to codegen this example.
@@ -36,7 +36,7 @@
 ; ModuleID = 'test.ll'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @checkScalarKill(i32* %A, i32* %B, i32* %C, i32 %control1, i32 %control2) {
+define void @checkScalarKill(ptr %A, ptr %B, ptr %C, i32 %control1, i32 %control2) {
 entry:
   br label %entry.split
 
@@ -51,17 +51,17 @@ XLoopInit:                                        ; preds = %entry.split, %BLoop
   br i1 %cmp2, label %C2Add, label %BLoopAccumX
 
 C2Add:                                            ; preds = %XLoopInit
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp6 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp6 = load i32, ptr %arrayidx, align 4
   %add4 = add nsw i32 %tmp6, %x.0
   br label %BLoopAccumX
 
 BLoopAccumX:                                      ; preds = %XLoopInit, %C2Add
   %x.1 = phi i32 [ %add4, %C2Add ], [ %x.0, %XLoopInit ]
-  %arrayidx7 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  %tmp11 = load i32, i32* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  %tmp11 = load i32, ptr %arrayidx7, align 4
   %add8 = add nsw i32 %tmp11, %x.1
-  store i32 %add8, i32* %arrayidx7, align 4
+  store i32 %add8, ptr %arrayidx7, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %XLoopInit, label %for.end

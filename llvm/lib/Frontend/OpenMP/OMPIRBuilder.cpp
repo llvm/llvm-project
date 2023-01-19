@@ -330,6 +330,7 @@ BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
+  Triple T(M.getTargetTriple());
 
   // Get the function's current attributes.
   auto Attrs = Fn.getAttributes();
@@ -339,6 +340,25 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   for (size_t ArgNo = 0; ArgNo < Fn.arg_size(); ++ArgNo)
     ArgAttrs.emplace_back(Attrs.getParamAttrs(ArgNo));
 
+  // Add AS to FnAS while taking special care with integer extensions.
+  auto addAttrSet = [&](AttributeSet &FnAS, const AttributeSet &AS,
+                        bool Param = true) -> void {
+    bool HasSignExt = AS.hasAttribute(Attribute::SExt);
+    bool HasZeroExt = AS.hasAttribute(Attribute::ZExt);
+    if (HasSignExt || HasZeroExt) {
+      assert(AS.getNumAttributes() == 1 &&
+             "Currently not handling extension attr combined with others.");
+      if (Param) {
+        if (auto AK = TargetLibraryInfo::getExtAttrForI32Param(T, HasSignExt))
+          FnAS = FnAS.addAttribute(Ctx, AK);
+      } else
+        if (auto AK = TargetLibraryInfo::getExtAttrForI32Return(T, HasSignExt))
+          FnAS = FnAS.addAttribute(Ctx, AK);
+    } else {
+      FnAS = FnAS.addAttributes(Ctx, AS);
+    }
+  };
+
 #define OMP_ATTRS_SET(VarName, AttrSet) AttributeSet VarName = AttrSet;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
@@ -347,10 +367,9 @@ void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
 #define OMP_RTL_ATTRS(Enum, FnAttrSet, RetAttrSet, ArgAttrSets)                \
   case Enum:                                                                   \
     FnAttrs = FnAttrs.addAttributes(Ctx, FnAttrSet);                           \
-    RetAttrs = RetAttrs.addAttributes(Ctx, RetAttrSet);                        \
+    addAttrSet(RetAttrs, RetAttrSet, /*Param*/false);                          \
     for (size_t ArgNo = 0; ArgNo < ArgAttrSets.size(); ++ArgNo)                \
-      ArgAttrs[ArgNo] =                                                        \
-          ArgAttrs[ArgNo].addAttributes(Ctx, ArgAttrSets[ArgNo]);              \
+      addAttrSet(ArgAttrs[ArgNo], ArgAttrSets[ArgNo]);                         \
     Fn.setAttributes(AttributeList::get(Ctx, FnAttrs, RetAttrs, ArgAttrs));    \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
@@ -3762,9 +3781,9 @@ CallInst *OpenMPIRBuilder::createOMPInteropInit(
   Value *ThreadId = getOrCreateThreadID(Ident);
   if (Device == nullptr)
     Device = ConstantInt::get(Int32, -1);
-  Constant *InteropTypeVal = ConstantInt::get(Int64, (int)InteropType);
+  Constant *InteropTypeVal = ConstantInt::get(Int32, (int)InteropType);
   if (NumDependences == nullptr) {
-    NumDependences = ConstantInt::get(Int32, 0);
+    NumDependences = ConstantInt::get(Int64, 0);
     PointerType *PointerTypeVar = Type::getInt8PtrTy(M.getContext());
     DependenceAddress = ConstantPointerNull::get(PointerTypeVar);
   }

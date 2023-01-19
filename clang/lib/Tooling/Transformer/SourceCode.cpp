@@ -122,7 +122,7 @@ static CharSourceRange getRange(const CharSourceRange &EditRange,
   return Range;
 }
 
-std::optional<CharSourceRange> clang::tooling::getRangeForEdit(
+std::optional<CharSourceRange> clang::tooling::getFileRangeForEdit(
     const CharSourceRange &EditRange, const SourceManager &SM,
     const LangOptions &LangOpts, bool IncludeMacroExpansion) {
   CharSourceRange Range =

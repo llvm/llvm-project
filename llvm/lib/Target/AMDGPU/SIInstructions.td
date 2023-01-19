@@ -3723,6 +3723,14 @@ def G_AMDGPU_BVH_DUAL_INTERSECT_RAY : AMDGPUGenericInstruction {
   let mayStore = 0;
 }
 
+def G_AMDGPU_BVH8_INTERSECT_RAY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$ray_origin, type1:$ray_dir);
+  let InOperandList = (ins unknown:$opcode, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
 // Generic instruction for SI_CALL, so we can select the register bank and insert a waterfall loop
 // if necessary.
 def G_SI_CALL : AMDGPUGenericInstruction {

@@ -52,14 +52,15 @@ public:
   };
 
 private:
+  // Holds one of:
+  // - the register that the value is assigned to;
+  // - the memory offset at which the value resides;
+  // - additional information about pending location; the exact interpretation
+  //   of the data is target-dependent.
+  std::variant<Register, int64_t, unsigned> Data;
+
   /// ValNo - This is the value number being assigned (e.g. an argument number).
   unsigned ValNo;
-
-  /// Loc is either a stack offset or a register number.
-  unsigned Loc;
-
-  /// isMem - True if this is a memory loc, false if it is a register loc.
-  unsigned isMem : 1;
 
   /// isCustom - True if this arg/retval requires special handling.
   unsigned isCustom : 1;
@@ -72,82 +73,60 @@ private:
 
   /// LocVT - The type of the location being assigned to.
   MVT LocVT;
+
+  CCValAssign(LocInfo HTP, unsigned ValNo, MVT ValVT, MVT LocVT, bool IsCustom)
+      : ValNo(ValNo), isCustom(IsCustom), HTP(HTP), ValVT(ValVT), LocVT(LocVT) {
+  }
+
 public:
-
-  static CCValAssign getReg(unsigned ValNo, MVT ValVT,
-                            unsigned RegNo, MVT LocVT,
-                            LocInfo HTP) {
-    CCValAssign Ret;
-    Ret.ValNo = ValNo;
-    Ret.Loc = RegNo;
-    Ret.isMem = false;
-    Ret.isCustom = false;
-    Ret.HTP = HTP;
-    Ret.ValVT = ValVT;
-    Ret.LocVT = LocVT;
+  static CCValAssign getReg(unsigned ValNo, MVT ValVT, unsigned RegNo,
+                            MVT LocVT, LocInfo HTP, bool IsCustom = false) {
+    CCValAssign Ret(HTP, ValNo, ValVT, LocVT, IsCustom);
+    Ret.Data = Register(RegNo);
     return Ret;
   }
 
-  static CCValAssign getCustomReg(unsigned ValNo, MVT ValVT,
-                                  unsigned RegNo, MVT LocVT,
-                                  LocInfo HTP) {
-    CCValAssign Ret;
-    Ret = getReg(ValNo, ValVT, RegNo, LocVT, HTP);
-    Ret.isCustom = true;
+  static CCValAssign getCustomReg(unsigned ValNo, MVT ValVT, unsigned RegNo,
+                                  MVT LocVT, LocInfo HTP) {
+    return getReg(ValNo, ValVT, RegNo, LocVT, HTP, /*IsCustom=*/true);
+  }
+
+  static CCValAssign getMem(unsigned ValNo, MVT ValVT, unsigned Offset,
+                            MVT LocVT, LocInfo HTP, bool IsCustom = false) {
+    CCValAssign Ret(HTP, ValNo, ValVT, LocVT, IsCustom);
+    Ret.Data = int64_t(Offset);
     return Ret;
   }
 
-  static CCValAssign getMem(unsigned ValNo, MVT ValVT,
-                            unsigned Offset, MVT LocVT,
-                            LocInfo HTP) {
-    CCValAssign Ret;
-    Ret.ValNo = ValNo;
-    Ret.Loc = Offset;
-    Ret.isMem = true;
-    Ret.isCustom = false;
-    Ret.HTP = HTP;
-    Ret.ValVT = ValVT;
-    Ret.LocVT = LocVT;
-    return Ret;
+  static CCValAssign getCustomMem(unsigned ValNo, MVT ValVT, unsigned Offset,
+                                  MVT LocVT, LocInfo HTP) {
+    return getMem(ValNo, ValVT, Offset, LocVT, HTP, /*IsCustom=*/true);
   }
 
-  static CCValAssign getCustomMem(unsigned ValNo, MVT ValVT,
-                                  unsigned Offset, MVT LocVT,
-                                  LocInfo HTP) {
-    CCValAssign Ret;
-    Ret = getMem(ValNo, ValVT, Offset, LocVT, HTP);
-    Ret.isCustom = true;
-    return Ret;
-  }
-
-  // There is no need to differentiate between a pending CCValAssign and other
-  // kinds, as they are stored in a different list.
   static CCValAssign getPending(unsigned ValNo, MVT ValVT, MVT LocVT,
                                 LocInfo HTP, unsigned ExtraInfo = 0) {
-    return getReg(ValNo, ValVT, ExtraInfo, LocVT, HTP);
+    CCValAssign Ret(HTP, ValNo, ValVT, LocVT, false);
+    Ret.Data = ExtraInfo;
+    return Ret;
   }
 
-  void convertToReg(unsigned RegNo) {
-    Loc = RegNo;
-    isMem = false;
-  }
+  void convertToReg(unsigned RegNo) { Data = Register(RegNo); }
 
-  void convertToMem(unsigned Offset) {
-    Loc = Offset;
-    isMem = true;
-  }
+  void convertToMem(unsigned Offset) { Data = int64_t(Offset); }
 
   unsigned getValNo() const { return ValNo; }
   MVT getValVT() const { return ValVT; }
 
-  bool isRegLoc() const { return !isMem; }
-  bool isMemLoc() const { return isMem; }
+  bool isRegLoc() const { return std::holds_alternative<Register>(Data); }
+  bool isMemLoc() const { return std::holds_alternative<int64_t>(Data); }
+  bool isPendingLoc() const { return std::holds_alternative<unsigned>(Data); }
 
   bool needsCustom() const { return isCustom; }
 
-  Register getLocReg() const { assert(isRegLoc()); return Loc; }
-  unsigned getLocMemOffset() const { assert(isMemLoc()); return Loc; }
-  unsigned getExtraInfo() const { return Loc; }
+  Register getLocReg() const { return std::get<Register>(Data); }
+  unsigned getLocMemOffset() const { return std::get<int64_t>(Data); }
+  unsigned getExtraInfo() const { return std::get<unsigned>(Data); }
+
   MVT getLocVT() const { return LocVT; }
 
   LocInfo getLocInfo() const { return HTP; }

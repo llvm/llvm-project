@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=instcombine -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes=instcombine -S | FileCheck %s
 
 define i32 @inttoptr_followed_by_bitcast(i32 %i0, i32 %i1, float %i2) {
 ; CHECK-LABEL: @inttoptr_followed_by_bitcast(

@@ -125,7 +125,7 @@ unsigned Context::getCharBit() const {
 
 bool Context::Run(State &Parent, Function *Func, APValue &Result) {
   InterpState State(Parent, *P, Stk, *this);
-  State.Current = new InterpFrame(State, Func, nullptr, {}, {});
+  State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});
   if (Interpret(State, Result))
     return true;
   Stk.clear();

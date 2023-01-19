@@ -3029,8 +3029,8 @@ define amdgpu_ps float @extract_elt0_dmask_0111_image_sample_1d_v4f32_f32(float 
 define amdgpu_ps <2 x float> @extract_elt0_elt1_dmask_0001_image_sample_1d_v4f32_f32(float %s, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
 ; CHECK-LABEL: @extract_elt0_elt1_dmask_0001_image_sample_1d_v4f32_f32(
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32(i32 1, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[DATA]], i64 0
-; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <2 x float> undef, float [[DATA]], i64 0
+; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 1, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 0, i32 1>
@@ -3070,8 +3070,8 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_dmask_0101_image_sample_1d_v4f32
 define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0001_image_sample_1d_v4f32_f32(float %s, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_dmask_0001_image_sample_1d_v4f32_f32(
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32(i32 1, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> undef, float [[DATA]], i64 0
-; CHECK-NEXT:    ret <3 x float> [[TMP1]]
+; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <3 x float> undef, float [[DATA]], i64 0
+; CHECK-NEXT:    ret <3 x float> [[SHUF]]
 ;
   %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 1, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -4225,8 +4225,8 @@ define amdgpu_ps <2 x float> @test_waterfall_non_uniform_img_simplify_demanded(<
 ; CHECK-NEXT:    [[WF_TOKEN:%.*]] = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 [[INDEX:%.*]])
 ; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 [[WF_TOKEN]], i32 [[INDEX]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <8 x i32>, <8 x i32> addrspace(4)* [[IN:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[RSRC:%.*]] = load <8 x i32>, <8 x i32> addrspace(4)* [[PTR]], align 32
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <8 x i32>, ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[RSRC:%.*]] = load <8 x i32>, ptr addrspace(4) [[PTR]], align 32
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32 3, float [[S:%.*]], <8 x i32> [[RSRC]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[R]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[R1:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 [[WF_TOKEN]], <4 x float> [[TMP2]])

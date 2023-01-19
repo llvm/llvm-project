@@ -1366,19 +1366,19 @@ multiclass MIMG_Gather <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
 multiclass MIMG_Gather_WQM <mimgopc op, AMDGPUSampleVariant sample>
     : MIMG_Gather<op, sample, 1>;
 
-class MIMG_IntersectRay_Helper<bit Is64, bit IsA16, bit isDual> {
-  int num_addrs = !if(Is64, !if(IsA16, 9, 12), !if(IsA16, 8, 11));
+class MIMG_IntersectRay_Helper<bit Is64, bit IsA16, bit isDual, bit isBVH8> {
+  int num_addrs = !if(isBVH8, 11, !if(Is64, !if(IsA16, 9, 12), !if(IsA16, 8, 11)));
   RegisterClass RegClass = MIMGAddrSize<num_addrs, 0>.RegClass;
   int VAddrDwords = !srl(RegClass.Size, 5);
 
-  int gfx11_nsa_addrs = !if(IsA16, 4, 5);
+  int GFX11PlusNSAAddrs = !if(IsA16, 4, 5);
   RegisterClass node_ptr_type = !if(Is64, VReg_64, VGPR_32);
-  list<RegisterClass> gfx11_addr_types =
-    !if(isDual,
-        [VReg_64, VReg_64, VReg_96, VReg_96, VReg_64],
-        !if(IsA16,
-            [node_ptr_type, VGPR_32, VReg_96, VReg_96],
-            [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96]));
+  list<RegisterClass> GFX11PlusAddrTypes =
+    !if(isBVH8, [VReg_64, VReg_64, VReg_96, VReg_96, VGPR_32],
+      !if(isDual, [VReg_64, VReg_64, VReg_96, VReg_96, VReg_64],
+          !if(IsA16,
+              [node_ptr_type, VGPR_32, VReg_96, VReg_96],
+              [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96])));
 }
 
 class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC, bit IsA16>
@@ -1420,23 +1420,25 @@ class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
 }
 
 class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
-                                bit IsA16, bit isDual,
+                                bit IsA16, bit isDual, bit isBVH8,
                                 list<RegisterClass> addr_types>
-    : VIMAGE_gfx12<op.GFX12, !if(isDual,
+    : VIMAGE_gfx12<op.GFX12, !if(!or(isDual, isBVH8),
                                  (outs VReg_320:$vdata, VReg_96:$ray_origin_out,
                                        VReg_96:$ray_dir_out),
                                  (outs VReg_128:$vdata)),
                    num_addrs, "GFX12", addr_types> {
-  let Constraints = !if(isDual, "$ray_origin_out = $vaddr2, $ray_dir_out = $vaddr3", "");
+  let Constraints = !if(!or(isDual, isBVH8),
+                        "$ray_origin_out = $vaddr2, $ray_dir_out = $vaddr3", "");
   let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$rsrc), (ins NV:$nv),
                            !if(IsA16, (ins A16:$a16), (ins)));
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $rsrc$nv"#!if(IsA16, "$a16", "");
-  let SchedRW = !if(isDual, [WriteVMEM, WriteVMEM, WriteVMEM], [WriteVMEM]);
+  let SchedRW = !if(!or(isDual, isBVH8),
+                    [WriteVMEM, WriteVMEM, WriteVMEM], [WriteVMEM]);
 }
 
 multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
-                             bit isDual> {
-  defvar info = MIMG_IntersectRay_Helper<Is64, IsA16, isDual>;
+                             bit isDual, bit isBVH8 = 0> {
+  defvar info = MIMG_IntersectRay_Helper<Is64, IsA16, isDual, isBVH8>;
   def "" : MIMGBaseOpcode {
     let BVH = 1;
   }
@@ -1468,17 +1470,17 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
       }
       if op.HAS_GFX11 then
       def _nsa_gfx11 : MIMG_IntersectRay_nsa_gfx11<op, opcode,
-                                                  info.gfx11_nsa_addrs, IsA16,
-                                                  info.gfx11_addr_types> {
+                                                  info.GFX11PlusNSAAddrs, IsA16,
+                                                  info.GFX11PlusAddrTypes> {
         let VAddrDwords = info.num_addrs;
       }
     }
     let scope = 0,
         th = 0 in {
-      def _gfx12 : VIMAGE_IntersectRay_gfx12<op, opcode, info.gfx11_nsa_addrs,
-                                             IsA16, isDual,
-                                             info.gfx11_addr_types> {
-        let VDataDwords = !if(isDual, 10, 4);
+      def _gfx12 : VIMAGE_IntersectRay_gfx12<op, opcode, info.GFX11PlusNSAAddrs,
+                                             IsA16, isDual, isBVH8,
+                                             info.GFX11PlusAddrTypes> {
+        let VDataDwords = !if(!or(isDual, isBVH8), 10, 4);
         let VAddrDwords = info.num_addrs;
       }
     }
@@ -1652,8 +1654,8 @@ defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>
 defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1, 0>;
 } // End OtherPredicates = [HasGFX10_AEncoding]
 
-let SubtargetPredicate = isGFX12Plus in
 defm IMAGE_BVH_DUAL_INTERSECT_RAY  : MIMG_IntersectRay<mimgopc<0x80, MIMG.NOP, MIMG.NOP>, "image_bvh_dual_intersect_ray", 1, 0, 1>;
+defm IMAGE_BVH8_INTERSECT_RAY      : MIMG_IntersectRay<mimgopc<0x81, MIMG.NOP, MIMG.NOP>, "image_bvh8_intersect_ray", 1, 0, 0, 1>;
 
 } // End let OtherPredicates = [HasImageInsts]
 

@@ -190,8 +190,8 @@ public:
   bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
                                         MachineIRBuilder &B) const;
 
-  bool legalizeBVHDualIntersectRayIntrinsic(MachineInstr &MI,
-                                            MachineIRBuilder &B) const;
+  bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
+                                                  MachineIRBuilder &B) const;
 
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
 

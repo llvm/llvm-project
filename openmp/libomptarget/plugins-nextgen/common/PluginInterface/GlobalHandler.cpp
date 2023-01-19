@@ -13,6 +13,7 @@
 #include "GlobalHandler.h"
 #include "ELFSymbols.h"
 #include "PluginInterface.h"
+#include "Utilities.h"
 
 #include <cstring>
 
@@ -52,8 +53,8 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromELF(
 
   // The global's address is computed as the image begin + the ELF section
   // offset + the ELF symbol value.
-  ImageGlobal.setPtr((char *)Image.getStart() + Section.sh_offset +
-                     Symbol.st_value);
+  ImageGlobal.setPtr(
+      advanceVoidPtr(Image.getStart(), Section.sh_offset + Symbol.st_value));
 
   // Set the global's size.
   ImageGlobal.setSize(Symbol.st_size);

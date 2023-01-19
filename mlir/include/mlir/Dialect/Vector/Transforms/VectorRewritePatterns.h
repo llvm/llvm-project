@@ -13,6 +13,7 @@
 #include <optional>
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -25,48 +26,6 @@ namespace vector {
 //===----------------------------------------------------------------------===//
 // Vector transformation options exposed as auxiliary structs.
 //===----------------------------------------------------------------------===//
-/// Enum to control the lowering of `vector.transpose` operations.
-enum class VectorTransposeLowering {
-  /// Lower transpose into element-wise extract and inserts.
-  EltWise = 0,
-  /// Lower 2-D transpose to `vector.flat_transpose`, maps 1-1 to LLVM matrix
-  /// intrinsics.
-  Flat = 1,
-  /// Lower 2-D transpose to `vector.shuffle`.
-  Shuffle = 2,
-};
-/// Enum to control the lowering of `vector.multi_reduction` operations.
-enum class VectorMultiReductionLowering {
-  /// Lower multi_reduction into outer-reduction and inner-parallel ops.
-  InnerParallel = 0,
-  /// Lower multi_reduction into outer-parallel and inner-reduction ops.
-  InnerReduction = 1,
-};
-/// Enum to control the lowering of `vector.contract` operations.
-enum class VectorContractLowering {
-  /// Progressively lower to finer grained `vector.contract` and dot-products.
-  Dot = 0,
-  /// Lower to `vector.matrix_multiply`, maps 1-1 to LLVM matrix intrinsics.
-  Matmul = 1,
-  /// Lower to `vector.outerproduct`.
-  OuterProduct = 2,
-  /// Lower contract with all reduction dimensions unrolled to 1 to a vector
-  /// elementwise operations.
-  ParallelArith = 3,
-};
-/// Enum to control the splitting of `vector.transfer` operations into
-/// in-bounds and out-of-bounds variants.
-enum class VectorTransferSplit {
-  /// Do not split vector transfer operations.
-  None = 0,
-  /// Split using in-bounds + out-of-bounds vector.transfer operations.
-  VectorTransfer = 1,
-  /// Split using an in-bounds vector.transfer + linalg.fill + linalg.copy
-  /// operations.
-  LinalgCopy = 2,
-  /// Do not split vector transfer operation but instead mark it as "in-bounds".
-  ForceInBounds = 3
-};
 /// Structure to control the behavior of vector transform patterns.
 struct VectorTransformsOptions {
   /// Option to control the lowering of vector.contract.

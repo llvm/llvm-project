@@ -87,6 +87,8 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
 // This ensures explicit instantiation of
 // GenericUniformityAnalysisImpl::ImplDeleter::operator()
 template class llvm::GenericUniformityInfo<SSAContext>;
+template struct llvm::GenericUniformityAnalysisImplDeleter<
+    llvm::GenericUniformityAnalysisImpl<SSAContext>>;
 
 //===----------------------------------------------------------------------===//
 //  UniformityInfoAnalysis and related pass implementations

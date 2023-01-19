@@ -823,6 +823,30 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
   return F->hasAddressTaken() || F->hasLinkOnceLinkage();
 }
 
+static inline bool shouldUsePublicSymbol(Function *Fn) {
+  // It isn't legal to make an alias of this function at all
+  if (Fn->isDeclarationForLinker())
+    return true;
+
+  // Symbols with local linkage can just use the symbol directly without
+  // introducing relocations
+  if (Fn->hasLocalLinkage())
+    return true;
+
+  // For comdat functions, an alias would need the same linkage as the original
+  // function and hidden visibility, and there is not point in adding an alias
+  // with identical linkage an visibility to avoid introducing relocations.
+  // This caused duplicate symbols to be introduced under the combination of
+  // PGO + ThinLTO + CFI, due to some unfavorable interaction between the new
+  // alias, and alias related transforms in GlobalOpt and LowerTypeTests.
+  if (Fn->hasComdat() &&
+      (Fn->getVisibility() == GlobalValue::VisibilityTypes::HiddenVisibility))
+    return true;
+
+  // its OK to use an alias
+  return false;
+}
+
 static inline Constant *getFuncAddrForProfData(Function *Fn) {
   auto *Int8PtrTy = Type::getInt8PtrTy(Fn->getContext());
   // Store a nullptr in __llvm_profd, if we shouldn't use a real address
@@ -830,9 +854,8 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
     return ConstantPointerNull::get(Int8PtrTy);
 
   // If we can't use an alias, we must use the public symbol, even though this
-  // may require a symbolic relocation. When the function has local linkage, we
-  // can use the symbol directly without introducing relocations.
-  if (Fn->isDeclarationForLinker() || Fn->hasLocalLinkage())
+  // may require a symbolic relocation.
+  if (shouldUsePublicSymbol(Fn))
     return ConstantExpr::getBitCast(Fn, Int8PtrTy);
 
   // When possible use a private alias to avoid symbolic relocations.
@@ -846,6 +869,9 @@ static inline Constant *getFuncAddrForProfData(Function *Fn) {
   // section. So, for COMDAT functions, we need to adjust the linkage of the
   // alias. Using hidden visibility avoids a dynamic relocation and an entry in
   // the dynamic symbol table.
+  //
+  // Note that this handles COMDAT functions with visibility other than Hidden,
+  // since that case is covered in shouldUsePublicSymbol()
   if (Fn->hasComdat()) {
     GA->setLinkage(Fn->getLinkage());
     GA->setVisibility(GlobalValue::VisibilityTypes::HiddenVisibility);

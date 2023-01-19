@@ -430,7 +430,7 @@ public:
   }
 
   void print(raw_ostream &OS) const override {
-    auto RegName = [](unsigned Reg) {
+    auto RegName = [](MCRegister Reg) {
       if (Reg)
         return CSKYInstPrinter::getRegisterName(Reg);
       else
@@ -1747,7 +1747,7 @@ void CSKYAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = false;
   if (EnableCompressedInst)
-    Res = compressInst(CInst, Inst, getSTI(), S.getContext());
+    Res = compressInst(CInst, Inst, getSTI());
   if (Res)
     ++CSKYNumInstrsCompressed;
   S.emitInstruction((Res ? CInst : Inst), getSTI());

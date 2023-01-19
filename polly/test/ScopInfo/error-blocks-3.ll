@@ -28,7 +28,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @g(i32* %A, i32 %N) {
+define void @g(ptr %A, i32 %N) {
 entry:
   %tmp = sext i32 %N to i64
   br label %for.cond
@@ -48,17 +48,17 @@ if.then:                                          ; preds = %for.body
 
 S:                                                ; preds = %if.then
   %idxprom = sext i32 %call to i64
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  %tmp1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  %tmp1 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %tmp1, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   br label %if.end3
 
 if.end3:                                          ; preds = %if.end, %for.body
-  %arrayidx5 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp2 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp2 = load i32, ptr %arrayidx5, align 4
   %inc6 = add nsw i32 %tmp2, 1
-  store i32 %inc6, i32* %arrayidx5, align 4
+  store i32 %inc6, ptr %arrayidx5, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %if.end3, %if.then2

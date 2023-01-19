@@ -45,8 +45,11 @@ llvm::SmallVector<Header> findHeaders(const SymbolLocation &Loc,
     return Results;
   }
   case SymbolLocation::Standard: {
-    for (const auto &H : Loc.standard().headers())
+    for (const auto &H : Loc.standard().headers()) {
       Results.push_back(H);
+      for (const auto *Export : PI->getExporters(H, SM.getFileManager()))
+        Results.push_back(Header(Export));
+    }
     return Results;
   }
   }

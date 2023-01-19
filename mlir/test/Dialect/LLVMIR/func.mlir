@@ -1,6 +1,7 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | mlir-opt | FileCheck %s
 // RUN: mlir-opt -split-input-file -verify-diagnostics -mlir-print-op-generic %s | FileCheck %s --check-prefix=GENERIC
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s -mlir-print-debuginfo | mlir-opt -mlir-print-debuginfo | FileCheck %s --check-prefix=LOCINFO
+// RUN: mlir-translate -mlir-to-llvmir -split-input-file -verify-diagnostics %s | FileCheck %s --check-prefix=CHECK-LLVM
 
 module {
   // GENERIC: "llvm.func"
@@ -8,7 +9,7 @@ module {
   // GENERIC-SAME: sym_name = "foo"
   // GENERIC-SAME: () -> ()
   // CHECK: llvm.func @foo()
-  "llvm.func"() ({
+  "llvm.func" () ({
   }) {sym_name = "foo", function_type = !llvm.func<void ()>} : () -> ()
 
   // GENERIC: "llvm.func"
@@ -139,6 +140,11 @@ module {
 
   // CHECK: llvm.func weak
   llvm.func weak @weak_linkage() {
+    llvm.return
+  }
+
+  // CHECK-LLVM: define ptx_kernel void @calling_conv
+  llvm.func ptx_kernelcc @calling_conv() {
     llvm.return
   }
 

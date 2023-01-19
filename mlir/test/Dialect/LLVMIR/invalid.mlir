@@ -645,6 +645,13 @@ func.func @cmpxchg_mismatched_operands(%i64_ptr : !llvm.ptr<i64>, %i32 : i32) {
 
 // -----
 
+func.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 : i64) {
+  // expected-error@+1 {{expected both value operands to have the same type}}
+  %0 = "llvm.cmpxchg"(%ptr, %i32, %i64) {success_ordering=2,failure_ordering=2} : (!llvm.ptr, i32, i64) -> !llvm.struct<(i32, i1)>
+  llvm.return
+}
+// -----
+
 func.func @cmpxchg_unexpected_type(%i1_ptr : !llvm.ptr<i1>, %i1 : i1) {
   // expected-error@+1 {{unexpected LLVM IR type}}
   %0 = llvm.cmpxchg %i1_ptr, %i1, %i1 monotonic monotonic : i1

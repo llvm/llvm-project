@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64-unknown-unknown -mcpu=cyclone -pre-RA-sched=list-hybrid < %s | FileCheck %s
+; RUN: llc -opaque-pointers=0 -mtriple=arm64-unknown-unknown -mcpu=cyclone -pre-RA-sched=list-hybrid < %s | FileCheck %s
 ; rdar://10232252
 ; Prevent LSR of doing poor choice that cannot be folded in addressing mode
 

@@ -13,17 +13,28 @@
 #ifndef DIALECTBASE_TD
 #define DIALECTBASE_TD
 
+// Helper for marking deprecated classes or defs. To mark a def as deprecated,
+// mix in the `Deprecate` class with a reason.
+class Deprecated<string reason> {
+  string odsDeprecated = reason;
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect definitions
 //===----------------------------------------------------------------------===//
 
+class EmitFolderBase;
 // Generate 'fold' method with 'ArrayRef<Attribute>' parameter.
 // New code should prefer using 'kEmitFoldAdaptorFolder' and
 // consider 'kEmitRawAttributesFolder' deprecated and to be
 // removed in the future.
-defvar kEmitRawAttributesFolder = 0;
+def kEmitRawAttributesFolder : EmitFolderBase, Deprecated<
+  "'useFoldAPI' of 'kEmitRawAttributesFolder' (default) has been deprecated "
+  # "and is pending removal. Please switch to 'kEmitFoldAdaptorFolder'. See "
+  # "https://discourse.llvm.org/t/psa-new-improved-fold-method-signature-has-landed-please-update-your-downstream-projects/67618"
+> {}
 // Generate 'fold' method with 'FoldAdaptor' parameter.
-defvar kEmitFoldAdaptorFolder = 1;
+def kEmitFoldAdaptorFolder : EmitFolderBase {}
 
 class Dialect {
   // The name of the dialect.
@@ -95,7 +106,7 @@ class Dialect {
   bit isExtensible = 0;
 
   // Fold API to use for operations in this dialect.
-  int useFoldAPI = kEmitRawAttributesFolder;
+  EmitFolderBase useFoldAPI = kEmitRawAttributesFolder;
 }
 
 #endif // DIALECTBASE_TD
