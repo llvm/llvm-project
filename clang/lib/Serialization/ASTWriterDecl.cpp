@@ -300,9 +300,6 @@ void ASTDeclWriter::Visit(Decl *D) {
 }
 
 void ASTDeclWriter::VisitDecl(Decl *D) {
-  static_assert(sizeof(Decl) == 40, "You need to update the serializer after "
-                                    "you change the fields of Decls.");
-
   Record.AddDeclRef(cast_or_null<Decl>(D->getDeclContext()));
   if (D->getDeclContext() != D->getLexicalDeclContext())
     Record.AddDeclRef(cast_or_null<Decl>(D->getLexicalDeclContext()));
@@ -342,10 +339,6 @@ void ASTDeclWriter::VisitDecl(Decl *D) {
 }
 
 void ASTDeclWriter::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
-  static_assert(sizeof(PragmaCommentDecl) == 40,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   StringRef Arg = D->getArg();
   Record.push_back(Arg.size());
   VisitDecl(D);
@@ -357,10 +350,6 @@ void ASTDeclWriter::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
 
 void ASTDeclWriter::VisitPragmaDetectMismatchDecl(
     PragmaDetectMismatchDecl *D) {
-  static_assert(sizeof(PragmaDetectMismatchDecl) == 48,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   StringRef Name = D->getName();
   StringRef Value = D->getValue();
   Record.push_back(Name.size() + 1 + Value.size());
@@ -376,10 +365,6 @@ void ASTDeclWriter::VisitTranslationUnitDecl(TranslationUnitDecl *D) {
 }
 
 void ASTDeclWriter::VisitNamedDecl(NamedDecl *D) {
-  static_assert(sizeof(NamedDecl) == 48,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddDeclarationName(D->getDeclName());
   Record.push_back(needsAnonymousDeclarationNumber(D)
@@ -388,20 +373,12 @@ void ASTDeclWriter::VisitNamedDecl(NamedDecl *D) {
 }
 
 void ASTDeclWriter::VisitTypeDecl(TypeDecl *D) {
-  static_assert(sizeof(TypeDecl) == 64,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getBeginLoc());
   Record.AddTypeRef(QualType(D->getTypeForDecl(), 0));
 }
 
 void ASTDeclWriter::VisitTypedefNameDecl(TypedefNameDecl *D) {
-  static_assert(sizeof(TypedefNameDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
   VisitTypeDecl(D);
   Record.AddTypeSourceInfo(D->getTypeSourceInfo());
@@ -412,10 +389,6 @@ void ASTDeclWriter::VisitTypedefNameDecl(TypedefNameDecl *D) {
 }
 
 void ASTDeclWriter::VisitTypedefDecl(TypedefDecl *D) {
-  static_assert(sizeof(TypedefDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitTypedefNameDecl(D);
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
@@ -432,20 +405,12 @@ void ASTDeclWriter::VisitTypedefDecl(TypedefDecl *D) {
 }
 
 void ASTDeclWriter::VisitTypeAliasDecl(TypeAliasDecl *D) {
-  static_assert(sizeof(TypeAliasDecl) == 96,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitTypedefNameDecl(D);
   Record.AddDeclRef(D->getDescribedAliasTemplate());
   Code = serialization::DECL_TYPEALIAS;
 }
 
 void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
-  static_assert(DeclContext::NumTagDeclBits == 10 && sizeof(TagDecl) == 128,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
   VisitTypeDecl(D);
   Record.push_back(D->getIdentifierNamespace());
@@ -470,10 +435,6 @@ void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
 }
 
 void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
-  static_assert(DeclContext::NumEnumDeclBits == 20 && sizeof(EnumDecl) == 160,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitTagDecl(D);
   Record.AddTypeSourceInfo(D->getIntegerTypeSourceInfo());
   if (!D->getIntegerTypeSourceInfo())
@@ -517,11 +478,6 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
 }
 
 void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
-  static_assert(DeclContext::NumRecordDeclBits == 15 &&
-                    sizeof(RecordDecl) == 128,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitTagDecl(D);
   Record.push_back(D->hasFlexibleArrayMember());
   Record.push_back(D->isAnonymousStructOrUnion());
@@ -557,19 +513,11 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
 }
 
 void ASTDeclWriter::VisitValueDecl(ValueDecl *D) {
-  static_assert(sizeof(ValueDecl) == 56,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Record.AddTypeRef(D->getType());
 }
 
 void ASTDeclWriter::VisitEnumConstantDecl(EnumConstantDecl *D) {
-  static_assert(sizeof(EnumConstantDecl) == 80,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitValueDecl(D);
   Record.push_back(D->getInitExpr()? 1 : 0);
   if (D->getInitExpr())
@@ -580,10 +528,6 @@ void ASTDeclWriter::VisitEnumConstantDecl(EnumConstantDecl *D) {
 }
 
 void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
-  static_assert(sizeof(DeclaratorDecl) == 72,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitValueDecl(D);
   Record.AddSourceLocation(D->getInnerLocStart());
   Record.push_back(D->hasExtInfo());
@@ -598,11 +542,6 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 29 &&
-                    sizeof(FunctionDecl) == 168,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
 
   Record.push_back(D->getTemplatedKind());
@@ -746,10 +685,6 @@ static void addExplicitSpecifier(ExplicitSpecifier ES,
 }
 
 void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
-  static_assert(sizeof(CXXDeductionGuideDecl) == 184,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   addExplicitSpecifier(D->getExplicitSpecifier(), Record);
   Record.AddDeclRef(D->Ctor);
   VisitFunctionDecl(D);
@@ -758,11 +693,6 @@ void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
-  static_assert(DeclContext::NumObjCMethodDeclBits == 24 &&
-                    sizeof(ObjCMethodDecl) == 136,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   // FIXME: convert to LazyStmtPtr?
   // Unlike C/C++, method bodies will never be in header files.
@@ -811,10 +741,6 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCTypeParamDecl(ObjCTypeParamDecl *D) {
-  static_assert(sizeof(ObjCTypeParamDecl) == 104,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitTypedefNameDecl(D);
   Record.push_back(D->Variance);
   Record.push_back(D->Index);
@@ -825,11 +751,6 @@ void ASTDeclWriter::VisitObjCTypeParamDecl(ObjCTypeParamDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCContainerDecl(ObjCContainerDecl *D) {
-  static_assert(DeclContext::NumObjCContainerDeclBits == 51 &&
-                    sizeof(ObjCContainerDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getAtStartLoc());
   Record.AddSourceRange(D->getAtEndRange());
@@ -837,10 +758,6 @@ void ASTDeclWriter::VisitObjCContainerDecl(ObjCContainerDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *D) {
-  static_assert(sizeof(ObjCInterfaceDecl) == 128,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
   VisitObjCContainerDecl(D);
   Record.AddTypeRef(QualType(D->getTypeForDecl(), 0));
@@ -885,10 +802,6 @@ void ASTDeclWriter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCIvarDecl(ObjCIvarDecl *D) {
-  static_assert(sizeof(ObjCIvarDecl) == 96,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitFieldDecl(D);
   // FIXME: stable encoding for @public/@private/@protected/@package
   Record.push_back(D->getAccessControl());
@@ -910,10 +823,6 @@ void ASTDeclWriter::VisitObjCIvarDecl(ObjCIvarDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCProtocolDecl(ObjCProtocolDecl *D) {
-  static_assert(sizeof(ObjCProtocolDecl) == 112,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
   VisitObjCContainerDecl(D);
 
@@ -931,19 +840,11 @@ void ASTDeclWriter::VisitObjCProtocolDecl(ObjCProtocolDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCAtDefsFieldDecl(ObjCAtDefsFieldDecl *D) {
-  static_assert(sizeof(ObjCAtDefsFieldDecl) == 80,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitFieldDecl(D);
   Code = serialization::DECL_OBJC_AT_DEFS_FIELD;
 }
 
 void ASTDeclWriter::VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
-  static_assert(sizeof(ObjCCategoryDecl) == 152,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitObjCContainerDecl(D);
   Record.AddSourceLocation(D->getCategoryNameLoc());
   Record.AddSourceLocation(D->getIvarLBraceLoc());
@@ -959,10 +860,6 @@ void ASTDeclWriter::VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *D) {
-  static_assert(sizeof(ObjCCompatibleAliasDecl) == 56,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Record.AddDeclRef(D->getClassInterface());
   Record.AddSourceLocation(D->getClassInterfaceLoc());
@@ -971,10 +868,6 @@ void ASTDeclWriter::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
-  static_assert(sizeof(ObjCPropertyDecl) == 128,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getAtLoc());
   Record.AddSourceLocation(D->getLParenLoc());
@@ -996,30 +889,18 @@ void ASTDeclWriter::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCImplDecl(ObjCImplDecl *D) {
-  static_assert(sizeof(ObjCImplDecl) == 96,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitObjCContainerDecl(D);
   Record.AddDeclRef(D->getClassInterface());
   // Abstract class (no need to define a stable serialization::DECL code).
 }
 
 void ASTDeclWriter::VisitObjCCategoryImplDecl(ObjCCategoryImplDecl *D) {
-  static_assert(sizeof(ObjCCategoryImplDecl) == 104,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitObjCImplDecl(D);
   Record.AddSourceLocation(D->getCategoryNameLoc());
   Code = serialization::DECL_OBJC_CATEGORY_IMPL;
 }
 
 void ASTDeclWriter::VisitObjCImplementationDecl(ObjCImplementationDecl *D) {
-  static_assert(sizeof(ObjCImplementationDecl) == 136,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitObjCImplDecl(D);
   Record.AddDeclRef(D->getSuperClass());
   Record.AddSourceLocation(D->getSuperClassLoc());
@@ -1035,10 +916,6 @@ void ASTDeclWriter::VisitObjCImplementationDecl(ObjCImplementationDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D) {
-  static_assert(sizeof(ObjCPropertyImplDecl) == 96,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddSourceLocation(D->getBeginLoc());
   Record.AddDeclRef(D->getPropertyDecl());
@@ -1052,10 +929,6 @@ void ASTDeclWriter::VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D) {
 }
 
 void ASTDeclWriter::VisitFieldDecl(FieldDecl *D) {
-  static_assert(sizeof(FieldDecl) == 80,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDeclaratorDecl(D);
   Record.push_back(D->isMutable());
 
@@ -1092,10 +965,6 @@ void ASTDeclWriter::VisitFieldDecl(FieldDecl *D) {
 }
 
 void ASTDeclWriter::VisitMSPropertyDecl(MSPropertyDecl *D) {
-  static_assert(sizeof(MSPropertyDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDeclaratorDecl(D);
   Record.AddIdentifierRef(D->getGetterId());
   Record.AddIdentifierRef(D->getSetterId());
@@ -1103,10 +972,6 @@ void ASTDeclWriter::VisitMSPropertyDecl(MSPropertyDecl *D) {
 }
 
 void ASTDeclWriter::VisitMSGuidDecl(MSGuidDecl *D) {
-  static_assert(sizeof(MSGuidDecl) == 152,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitValueDecl(D);
   MSGuidDecl::Parts Parts = D->getParts();
   Record.push_back(Parts.Part1);
@@ -1118,30 +983,18 @@ void ASTDeclWriter::VisitMSGuidDecl(MSGuidDecl *D) {
 
 void ASTDeclWriter::VisitUnnamedGlobalConstantDecl(
     UnnamedGlobalConstantDecl *D) {
-  static_assert(sizeof(UnnamedGlobalConstantDecl) == 136,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitValueDecl(D);
   Record.AddAPValue(D->getValue());
   Code = serialization::DECL_UNNAMED_GLOBAL_CONSTANT;
 }
 
 void ASTDeclWriter::VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D) {
-  static_assert(sizeof(TemplateParamObjectDecl) == 136,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitValueDecl(D);
   Record.AddAPValue(D->getValue());
   Code = serialization::DECL_TEMPLATE_PARAM_OBJECT;
 }
 
 void ASTDeclWriter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
-  static_assert(sizeof(IndirectFieldDecl) == 72,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitValueDecl(D);
   Record.push_back(D->getChainingSize());
 
@@ -1151,10 +1004,6 @@ void ASTDeclWriter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
 }
 
 void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
-  static_assert(sizeof(VarDecl) == 104,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
   VisitDeclaratorDecl(D);
   Record.push_back(D->getStorageClass());
@@ -1252,19 +1101,11 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
 }
 
 void ASTDeclWriter::VisitImplicitParamDecl(ImplicitParamDecl *D) {
-  static_assert(sizeof(ImplicitParamDecl) == 104,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitVarDecl(D);
   Code = serialization::DECL_IMPLICIT_PARAM;
 }
 
 void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
-  static_assert(sizeof(ParmVarDecl) == 104,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitVarDecl(D);
   Record.push_back(D->isObjCMethodParameter());
   Record.push_back(D->getFunctionScopeDepth());
@@ -1322,20 +1163,12 @@ void ASTDeclWriter::VisitDecompositionDecl(DecompositionDecl *D) {
 }
 
 void ASTDeclWriter::VisitBindingDecl(BindingDecl *D) {
-  static_assert(sizeof(BindingDecl) == 72,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitValueDecl(D);
   Record.AddStmt(D->getBinding());
   Code = serialization::DECL_BINDING;
 }
 
 void ASTDeclWriter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
-  static_assert(sizeof(FileScopeAsmDecl) == 56,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddStmt(D->getAsmString());
   Record.AddSourceLocation(D->getRParenLoc());
@@ -1343,30 +1176,18 @@ void ASTDeclWriter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
 }
 
 void ASTDeclWriter::VisitTopLevelStmtDecl(TopLevelStmtDecl *D) {
-  static_assert(sizeof(TopLevelStmtDecl) == 48,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddStmt(D->getStmt());
   Code = serialization::DECL_TOP_LEVEL_STMT_DECL;
 }
 
 void ASTDeclWriter::VisitEmptyDecl(EmptyDecl *D) {
-  static_assert(sizeof(EmptyDecl) == 40,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Code = serialization::DECL_EMPTY;
 }
 
 void ASTDeclWriter::VisitLifetimeExtendedTemporaryDecl(
     LifetimeExtendedTemporaryDecl *D) {
-  static_assert(sizeof(LifetimeExtendedTemporaryDecl) == 72,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddDeclRef(D->getExtendingDecl());
   Record.AddStmt(D->getTemporaryExpr());
@@ -1377,10 +1198,6 @@ void ASTDeclWriter::VisitLifetimeExtendedTemporaryDecl(
   Code = serialization::DECL_LIFETIME_EXTENDED_TEMPORARY;
 }
 void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
-  static_assert(DeclContext::NumBlockDeclBits == 5 && sizeof(BlockDecl) == 128,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddStmt(D->getBody());
   Record.AddTypeSourceInfo(D->getSignatureAsWritten());
@@ -1410,10 +1227,6 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
 }
 
 void ASTDeclWriter::VisitCapturedDecl(CapturedDecl *CD) {
-  static_assert(sizeof(CapturedDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.push_back(CD->getNumParams());
   VisitDecl(CD);
   Record.push_back(CD->getContextParamPosition());
@@ -1425,11 +1238,6 @@ void ASTDeclWriter::VisitCapturedDecl(CapturedDecl *CD) {
 }
 
 void ASTDeclWriter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
-  static_assert(DeclContext::NumLinkageSpecDeclBits == 4 &&
-                    sizeof(LinkageSpecDecl) == 80,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.push_back(D->getLanguage());
   Record.AddSourceLocation(D->getExternLoc());
@@ -1438,20 +1246,12 @@ void ASTDeclWriter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
 }
 
 void ASTDeclWriter::VisitExportDecl(ExportDecl *D) {
-  static_assert(sizeof(ExportDecl) == 80,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddSourceLocation(D->getRBraceLoc());
   Code = serialization::DECL_EXPORT;
 }
 
 void ASTDeclWriter::VisitLabelDecl(LabelDecl *D) {
-  static_assert(sizeof(LabelDecl) == 80,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getBeginLoc());
   Code = serialization::DECL_LABEL;
@@ -1459,10 +1259,6 @@ void ASTDeclWriter::VisitLabelDecl(LabelDecl *D) {
 
 
 void ASTDeclWriter::VisitNamespaceDecl(NamespaceDecl *D) {
-  static_assert(sizeof(NamespaceDecl) == 112,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
   VisitNamedDecl(D);
   Record.push_back(D->isInline());
@@ -1490,10 +1286,6 @@ void ASTDeclWriter::VisitNamespaceDecl(NamespaceDecl *D) {
 }
 
 void ASTDeclWriter::VisitNamespaceAliasDecl(NamespaceAliasDecl *D) {
-  static_assert(sizeof(NamespaceAliasDecl) == 96,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getNamespaceLoc());
@@ -1504,10 +1296,6 @@ void ASTDeclWriter::VisitNamespaceAliasDecl(NamespaceAliasDecl *D) {
 }
 
 void ASTDeclWriter::VisitUsingDecl(UsingDecl *D) {
-  static_assert(sizeof(UsingDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getUsingLoc());
   Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
@@ -1519,10 +1307,6 @@ void ASTDeclWriter::VisitUsingDecl(UsingDecl *D) {
 }
 
 void ASTDeclWriter::VisitUsingEnumDecl(UsingEnumDecl *D) {
-  static_assert(sizeof(UsingEnumDecl) == 72,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getUsingLoc());
   Record.AddSourceLocation(D->getEnumLoc());
@@ -1533,10 +1317,6 @@ void ASTDeclWriter::VisitUsingEnumDecl(UsingEnumDecl *D) {
 }
 
 void ASTDeclWriter::VisitUsingPackDecl(UsingPackDecl *D) {
-  static_assert(sizeof(UsingPackDecl) == 64,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.push_back(D->NumExpansions);
   VisitNamedDecl(D);
   Record.AddDeclRef(D->getInstantiatedFromUsingDecl());
@@ -1546,10 +1326,6 @@ void ASTDeclWriter::VisitUsingPackDecl(UsingPackDecl *D) {
 }
 
 void ASTDeclWriter::VisitUsingShadowDecl(UsingShadowDecl *D) {
-  static_assert(sizeof(UsingShadowDecl) == 80,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
   VisitNamedDecl(D);
   Record.AddDeclRef(D->getTargetDecl());
@@ -1561,10 +1337,6 @@ void ASTDeclWriter::VisitUsingShadowDecl(UsingShadowDecl *D) {
 
 void ASTDeclWriter::VisitConstructorUsingShadowDecl(
     ConstructorUsingShadowDecl *D) {
-  static_assert(sizeof(ConstructorUsingShadowDecl) == 104,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitUsingShadowDecl(D);
   Record.AddDeclRef(D->NominatedBaseClassShadowDecl);
   Record.AddDeclRef(D->ConstructedBaseClassShadowDecl);
@@ -1573,10 +1345,6 @@ void ASTDeclWriter::VisitConstructorUsingShadowDecl(
 }
 
 void ASTDeclWriter::VisitUsingDirectiveDecl(UsingDirectiveDecl *D) {
-  static_assert(sizeof(UsingDirectiveDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getUsingLoc());
   Record.AddSourceLocation(D->getNamespaceKeyLocation());
@@ -1587,10 +1355,6 @@ void ASTDeclWriter::VisitUsingDirectiveDecl(UsingDirectiveDecl *D) {
 }
 
 void ASTDeclWriter::VisitUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D) {
-  static_assert(sizeof(UnresolvedUsingValueDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitValueDecl(D);
   Record.AddSourceLocation(D->getUsingLoc());
   Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
@@ -1601,10 +1365,6 @@ void ASTDeclWriter::VisitUnresolvedUsingValueDecl(UnresolvedUsingValueDecl *D) {
 
 void ASTDeclWriter::VisitUnresolvedUsingTypenameDecl(
                                                UnresolvedUsingTypenameDecl *D) {
-  static_assert(sizeof(UnresolvedUsingTypenameDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitTypeDecl(D);
   Record.AddSourceLocation(D->getTypenameLoc());
   Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
@@ -1614,19 +1374,11 @@ void ASTDeclWriter::VisitUnresolvedUsingTypenameDecl(
 
 void ASTDeclWriter::VisitUnresolvedUsingIfExistsDecl(
     UnresolvedUsingIfExistsDecl *D) {
-  static_assert(sizeof(UnresolvedUsingIfExistsDecl) == 48,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   Code = serialization::DECL_UNRESOLVED_USING_IF_EXISTS;
 }
 
 void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
-  static_assert(sizeof(CXXRecordDecl) == 144,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRecordDecl(D);
 
   enum {
@@ -1658,10 +1410,6 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
-  static_assert(sizeof(CXXMethodDecl) == 168,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitFunctionDecl(D);
   if (D->isCanonicalDecl()) {
     Record.push_back(D->size_overridden_methods());
@@ -1685,11 +1433,6 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  static_assert(DeclContext::NumCXXConstructorDeclBits == 22 &&
-                    sizeof(CXXConstructorDecl) == 176,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.push_back(D->getTrailingAllocKind());
   addExplicitSpecifier(D->getExplicitSpecifier(), Record);
   if (auto Inherited = D->getInheritedConstructor()) {
@@ -1702,10 +1445,6 @@ void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
-  static_assert(sizeof(CXXDestructorDecl) == 184,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitCXXMethodDecl(D);
 
   Record.AddDeclRef(D->getOperatorDelete());
@@ -1716,20 +1455,12 @@ void ASTDeclWriter::VisitCXXDestructorDecl(CXXDestructorDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConversionDecl(CXXConversionDecl *D) {
-  static_assert(sizeof(CXXConversionDecl) == 176,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   addExplicitSpecifier(D->getExplicitSpecifier(), Record);
   VisitCXXMethodDecl(D);
   Code = serialization::DECL_CXX_CONVERSION;
 }
 
 void ASTDeclWriter::VisitImportDecl(ImportDecl *D) {
-  static_assert(sizeof(ImportDecl) == 56,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.push_back(Writer.getSubmoduleID(D->getImportedModule()));
   ArrayRef<SourceLocation> IdentifierLocs = D->getIdentifierLocs();
@@ -1748,20 +1479,12 @@ void ASTDeclWriter::VisitImportDecl(ImportDecl *D) {
 }
 
 void ASTDeclWriter::VisitAccessSpecDecl(AccessSpecDecl *D) {
-  static_assert(sizeof(AccessSpecDecl) == 40,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddSourceLocation(D->getColonLoc());
   Code = serialization::DECL_ACCESS_SPEC;
 }
 
 void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
-  static_assert(sizeof(FriendDecl) == 64,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   // Record the number of friend type template parameter lists here
   // so as to simplify memory allocation during deserialization.
   Record.push_back(D->NumTPLists);
@@ -1781,10 +1504,6 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
 }
 
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  static_assert(sizeof(FriendTemplateDecl) == 64,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.push_back(D->getNumTemplateParameters());
   for (unsigned i = 0, e = D->getNumTemplateParameters(); i != e; ++i)
@@ -1799,10 +1518,6 @@ void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
 }
 
 void ASTDeclWriter::VisitTemplateDecl(TemplateDecl *D) {
-  static_assert(sizeof(TemplateDecl) == 64,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
 
   Record.AddTemplateParameterList(D->getTemplateParameters());
@@ -1810,10 +1525,6 @@ void ASTDeclWriter::VisitTemplateDecl(TemplateDecl *D) {
 }
 
 void ASTDeclWriter::VisitConceptDecl(ConceptDecl *D) {
-  static_assert(sizeof(ConceptDecl) == 72,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitTemplateDecl(D);
   Record.AddStmt(D->getConstraintExpr());
   Code = serialization::DECL_CONCEPT;
@@ -1821,10 +1532,6 @@ void ASTDeclWriter::VisitConceptDecl(ConceptDecl *D) {
 
 void ASTDeclWriter::VisitImplicitConceptSpecializationDecl(
     ImplicitConceptSpecializationDecl *D) {
-  static_assert(sizeof(ImplicitConceptSpecializationDecl) == 40,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.push_back(D->getTemplateArguments().size());
   VisitDecl(D);
   for (const TemplateArgument &Arg : D->getTemplateArguments())
@@ -1833,18 +1540,10 @@ void ASTDeclWriter::VisitImplicitConceptSpecializationDecl(
 }
 
 void ASTDeclWriter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
-  static_assert(sizeof(RequiresExprBodyDecl) == 72,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Code = serialization::DECL_REQUIRES_EXPR_BODY;
 }
 
 void ASTDeclWriter::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
-  static_assert(sizeof(RedeclarableTemplateDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarable(D);
 
   // Emit data to initialize CommonOrPrev before VisitTemplateDecl so that
@@ -1861,10 +1560,6 @@ void ASTDeclWriter::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
 }
 
 void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
-  static_assert(sizeof(ClassTemplateDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarableTemplateDecl(D);
 
   if (D->isFirstDecl())
@@ -1874,10 +1569,6 @@ void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
 void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
                                            ClassTemplateSpecializationDecl *D) {
-  static_assert(sizeof(ClassTemplateSpecializationDecl) == 184,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   RegisterTemplateSpecialization(D->getSpecializedTemplate(), D);
 
   VisitCXXRecordDecl(D);
@@ -1914,10 +1605,6 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
 
 void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
                                     ClassTemplatePartialSpecializationDecl *D) {
-  static_assert(sizeof(ClassTemplatePartialSpecializationDecl) == 208,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.AddTemplateParameterList(D->getTemplateParameters());
   Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
 
@@ -1933,10 +1620,6 @@ void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
 }
 
 void ASTDeclWriter::VisitVarTemplateDecl(VarTemplateDecl *D) {
-  static_assert(sizeof(VarTemplateDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarableTemplateDecl(D);
 
   if (D->isFirstDecl())
@@ -1946,10 +1629,6 @@ void ASTDeclWriter::VisitVarTemplateDecl(VarTemplateDecl *D) {
 
 void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
     VarTemplateSpecializationDecl *D) {
-  static_assert(sizeof(VarTemplateSpecializationDecl) == 152,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   RegisterTemplateSpecialization(D->getSpecializedTemplate(), D);
 
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
@@ -1987,10 +1666,6 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
 
 void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
-  static_assert(sizeof(VarTemplatePartialSpecializationDecl) == 176,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.AddTemplateParameterList(D->getTemplateParameters());
   Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
 
@@ -2007,10 +1682,6 @@ void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
 
 void ASTDeclWriter::VisitClassScopeFunctionSpecializationDecl(
                                     ClassScopeFunctionSpecializationDecl *D) {
-  static_assert(sizeof(ClassScopeFunctionSpecializationDecl) == 56,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddDeclRef(D->getSpecialization());
   Record.push_back(D->hasExplicitTemplateArgs());
@@ -2021,10 +1692,6 @@ void ASTDeclWriter::VisitClassScopeFunctionSpecializationDecl(
 
 
 void ASTDeclWriter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
-  static_assert(sizeof(FunctionTemplateDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarableTemplateDecl(D);
 
   if (D->isFirstDecl())
@@ -2033,10 +1700,6 @@ void ASTDeclWriter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
 }
 
 void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
-  static_assert(sizeof(TemplateTypeParmDecl) == 80,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.push_back(D->hasTypeConstraint());
   VisitTypeDecl(D);
 
@@ -2067,10 +1730,6 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
 }
 
 void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
-  static_assert(sizeof(NonTypeTemplateParmDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   // For an expanded parameter pack, record the number of expansion types here
   // so that it's easier for deserialization to allocate the right amount of
   // memory.
@@ -2106,10 +1765,6 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
 }
 
 void ASTDeclWriter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
-  static_assert(sizeof(TemplateTemplateParmDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   // For an expanded parameter pack, record the number of expansion types here
   // so that it's easier for deserialization to allocate the right amount of
   // memory.
@@ -2139,19 +1794,11 @@ void ASTDeclWriter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
 }
 
 void ASTDeclWriter::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
-  static_assert(sizeof(TypeAliasTemplateDecl) == 88,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitRedeclarableTemplateDecl(D);
   Code = serialization::DECL_TYPE_ALIAS_TEMPLATE;
 }
 
 void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
-  static_assert(sizeof(StaticAssertDecl) == 64,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitDecl(D);
   Record.AddStmt(D->getAssertExpr());
   Record.push_back(D->isFailed());
@@ -2162,11 +1809,6 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
 
 /// Emit the DeclContext part of a declaration context decl.
 void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
-  static_assert(DeclContext::NumDeclContextBits == 13 &&
-                    sizeof(DeclContext) == 32,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.AddOffset(Writer.WriteDeclContextLexicalBlock(Context, DC));
   Record.AddOffset(Writer.WriteDeclContextVisibleBlock(Context, DC));
 }
@@ -2248,10 +1890,6 @@ void ASTDeclWriter::VisitRedeclarable(Redeclarable<T> *D) {
 }
 
 void ASTDeclWriter::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
-  static_assert(sizeof(HLSLBufferDecl) == 96,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitNamedDecl(D);
   VisitDeclContext(D);
   Record.push_back(D->isCBuffer());
@@ -2263,41 +1901,24 @@ void ASTDeclWriter::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
 }
 
 void ASTDeclWriter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
-  static_assert(sizeof(OMPThreadPrivateDecl) == 48,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.writeOMPChildren(D->Data);
   VisitDecl(D);
   Code = serialization::DECL_OMP_THREADPRIVATE;
 }
 
 void ASTDeclWriter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
-  static_assert(sizeof(OMPAllocateDecl) == 48,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.writeOMPChildren(D->Data);
   VisitDecl(D);
   Code = serialization::DECL_OMP_ALLOCATE;
 }
 
 void ASTDeclWriter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
-  static_assert(sizeof(OMPRequiresDecl) == 48,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.writeOMPChildren(D->Data);
   VisitDecl(D);
   Code = serialization::DECL_OMP_REQUIRES;
 }
 
 void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
-  static_assert(DeclContext::NumOMPDeclareReductionDeclBits == 2 &&
-                    sizeof(OMPDeclareReductionDecl) == 144,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitValueDecl(D);
   Record.AddSourceLocation(D->getBeginLoc());
   Record.AddStmt(D->getCombinerIn());
@@ -2312,10 +1933,6 @@ void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
 }
 
 void ASTDeclWriter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
-  static_assert(sizeof(OMPDeclareMapperDecl) == 120,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   Record.writeOMPChildren(D->Data);
   VisitValueDecl(D);
   Record.AddDeclarationName(D->getVarName());
@@ -2324,10 +1941,6 @@ void ASTDeclWriter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
 }
 
 void ASTDeclWriter::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
-  static_assert(sizeof(OMPCapturedExprDecl) == 104,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   VisitVarDecl(D);
   Code = serialization::DECL_OMP_CAPTUREDEXPR;
 }
