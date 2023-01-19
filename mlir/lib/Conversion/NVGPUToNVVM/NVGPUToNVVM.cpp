@@ -572,16 +572,24 @@ struct NVGPUAsyncCopyLowering
     Value dstPtr = getStridedElementPtr(loc, dstMemrefType, adaptor.getDst(),
                                         adaptor.getDstIndices(), rewriter);
     auto i8Ty = IntegerType::get(op.getContext(), 8);
-    auto dstPointerType =
-        LLVM::LLVMPointerType::get(i8Ty, dstMemrefType.getMemorySpaceAsInt());
+    FailureOr<unsigned> dstAddressSpace =
+        getTypeConverter()->getMemRefAddressSpace(dstMemrefType);
+    if (failed(dstAddressSpace))
+      return rewriter.notifyMatchFailure(
+          loc, "destination memref address space not convertible to integer");
+    auto dstPointerType = LLVM::LLVMPointerType::get(i8Ty, *dstAddressSpace);
     dstPtr = rewriter.create<LLVM::BitcastOp>(loc, dstPointerType, dstPtr);
 
     auto srcMemrefType = op.getSrc().getType().cast<MemRefType>();
+    FailureOr<unsigned> srcAddressSpace =
+        getTypeConverter()->getMemRefAddressSpace(srcMemrefType);
+    if (failed(srcAddressSpace))
+      return rewriter.notifyMatchFailure(
+          loc, "source memref address space not convertible to integer");
 
     Value scrPtr = getStridedElementPtr(loc, srcMemrefType, adaptor.getSrc(),
                                         adaptor.getSrcIndices(), rewriter);
-    auto srcPointerType =
-        LLVM::LLVMPointerType::get(i8Ty, srcMemrefType.getMemorySpaceAsInt());
+    auto srcPointerType = LLVM::LLVMPointerType::get(i8Ty, *srcAddressSpace);
     scrPtr = rewriter.create<LLVM::BitcastOp>(loc, srcPointerType, scrPtr);
     // Intrinsics takes a global pointer so we need an address space cast.
     auto srcPointerGlobalType = LLVM::LLVMPointerType::get(

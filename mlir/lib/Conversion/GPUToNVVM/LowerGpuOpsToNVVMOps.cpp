@@ -241,38 +241,26 @@ struct LowerGpuOpsToNVVMOpsPass
         return signalPassFailure();
     }
 
-    // MemRef conversion for GPU to NVVM lowering.
-    {
-      RewritePatternSet patterns(m.getContext());
-      TypeConverter typeConverter;
-      typeConverter.addConversion([](Type t) { return t; });
-      // NVVM uses alloca in the default address space to represent private
-      // memory allocations, so drop private annotations. NVVM uses address
-      // space 3 for shared memory. NVVM uses the default address space to
-      // represent global memory.
-      gpu::populateMemorySpaceAttributeTypeConversions(
-          typeConverter, [](gpu::AddressSpace space) -> unsigned {
-            switch (space) {
-            case gpu::AddressSpace::Global:
-              return static_cast<unsigned>(
-                  NVVM::NVVMMemorySpace::kGlobalMemorySpace);
-            case gpu::AddressSpace::Workgroup:
-              return static_cast<unsigned>(
-                  NVVM::NVVMMemorySpace::kSharedMemorySpace);
-            case gpu::AddressSpace::Private:
-              return 0;
-            }
-            llvm_unreachable("unknown address space enum value");
-            return 0;
-          });
-      gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
-      ConversionTarget target(getContext());
-      gpu::populateLowerMemorySpaceOpLegality(target);
-      if (failed(applyFullConversion(m, target, std::move(patterns))))
-        return signalPassFailure();
-    }
-
     LLVMTypeConverter converter(m.getContext(), options);
+    // NVVM uses alloca in the default address space to represent private
+    // memory allocations, so drop private annotations. NVVM uses address
+    // space 3 for shared memory. NVVM uses the default address space to
+    // represent global memory.
+    populateGpuMemorySpaceAttributeConversions(
+        converter, [](gpu::AddressSpace space) -> unsigned {
+          switch (space) {
+          case gpu::AddressSpace::Global:
+            return static_cast<unsigned>(
+                NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+          case gpu::AddressSpace::Workgroup:
+            return static_cast<unsigned>(
+                NVVM::NVVMMemorySpace::kSharedMemorySpace);
+          case gpu::AddressSpace::Private:
+            return 0;
+          }
+          llvm_unreachable("unknown address space enum value");
+          return 0;
+        });
     // Lowering for MMAMatrixType.
     converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
       return convertMMAToLLVMType(type);

@@ -112,8 +112,10 @@ bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
   auto elementType = type.getElementType();
   auto structElementType = typeConverter->convertType(elementType);
-  return getTypeConverter()->getPointerType(structElementType,
-                                            type.getMemorySpaceAsInt());
+  auto addressSpace = getTypeConverter()->getMemRefAddressSpace(type);
+  if (failed(addressSpace))
+    return {};
+  return getTypeConverter()->getPointerType(structElementType, *addressSpace);
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
