@@ -33,7 +33,7 @@ namespace neon {
 template <size_t Size> struct BzeroCacheLine {
   static constexpr size_t SIZE = Size;
 
-  static inline void block(Ptr dst, uint8_t) {
+  LIBC_INLINE void block(Ptr dst, uint8_t) {
     static_assert(Size == 64);
 #if __SIZEOF_POINTER__ == 4
     asm("dc zva, %w[dst]" : : [dst] "r"(dst) : "memory");
@@ -42,7 +42,7 @@ template <size_t Size> struct BzeroCacheLine {
 #endif
   }
 
-  static inline void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
+  LIBC_INLINE void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     size_t offset = 0;
     do {
@@ -73,11 +73,11 @@ template <size_t Size> struct Bcmp {
   static constexpr size_t SIZE = Size;
   static constexpr size_t BlockSize = 32;
 
-  static const unsigned char *as_u8(CPtr ptr) {
+  LIBC_INLINE static const unsigned char *as_u8(CPtr ptr) {
     return reinterpret_cast<const unsigned char *>(ptr);
   }
 
-  static inline BcmpReturnType block(CPtr p1, CPtr p2) {
+  LIBC_INLINE static BcmpReturnType block(CPtr p1, CPtr p2) {
     if constexpr (Size == 16) {
       auto _p1 = as_u8(p1);
       auto _p2 = as_u8(p2);
@@ -113,11 +113,11 @@ template <size_t Size> struct Bcmp {
     return BcmpReturnType::ZERO();
   }
 
-  static inline BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
     return block(p1 + count - SIZE, p2 + count - SIZE);
   }
 
-  static inline BcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static BcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
     if constexpr (Size == 16) {
       auto _p1 = as_u8(p1);
       auto _p2 = as_u8(p2);
@@ -159,7 +159,8 @@ template <size_t Size> struct Bcmp {
     return BcmpReturnType::ZERO();
   }
 
-  static inline BcmpReturnType loop_and_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
+                                                  size_t count) {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     size_t offset = 0;
     do {

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
 
 #include "multiply_add.h"
+#include "src/__support/common.h"
 
 // Evaluate polynomial using Horner's Scheme:
 // With polyeval(x, a_0, a_1, ..., a_n) = a_n * x^n + ... + a_1 * x + a_0, we
@@ -21,10 +22,10 @@
 namespace __llvm_libc {
 namespace fputil {
 
-template <typename T> static inline T polyeval(T, T a0) { return a0; }
+template <typename T> LIBC_INLINE T polyeval(T, T a0) { return a0; }
 
 template <typename T, typename... Ts>
-static inline T polyeval(T x, T a0, Ts... a) {
+LIBC_INLINE T polyeval(T x, T a0, Ts... a) {
   return multiply_add(x, polyeval(x, a...), a0);
 }
 

@@ -20,7 +20,7 @@
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
-[[maybe_unused]] static inline MemcmpReturnType
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_embedded_tiny(CPtr p1, CPtr p2, size_t count) {
   LLVM_LIBC_LOOP_NOUNROLL
   for (size_t offset = 0; offset < count; ++offset)
@@ -30,7 +30,7 @@ inline_memcmp_embedded_tiny(CPtr p1, CPtr p2, size_t count) {
 }
 
 #if defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
-[[maybe_unused]] static inline MemcmpReturnType
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
   if (unlikely(count >= 384)) {
     if (auto value = generic::Memcmp<16>::block(p1, p2))
@@ -42,7 +42,7 @@ inline_memcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
 #endif // defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
 
 #if defined(LLVM_LIBC_ARCH_X86)
-[[maybe_unused]] static inline MemcmpReturnType
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_x86_sse2_gt16(CPtr p1, CPtr p2, size_t count) {
   if (unlikely(count >= 384)) {
     if (auto value = x86::sse2::Memcmp<16>::block(p1, p2))
@@ -52,7 +52,7 @@ inline_memcmp_x86_sse2_gt16(CPtr p1, CPtr p2, size_t count) {
   return x86::sse2::Memcmp<16>::loop_and_tail(p1, p2, count);
 }
 
-[[maybe_unused]] static inline MemcmpReturnType
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_x86_avx2_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
     return x86::sse2::Memcmp<16>::head_tail(p1, p2, count);
@@ -68,7 +68,7 @@ inline_memcmp_x86_avx2_gt16(CPtr p1, CPtr p2, size_t count) {
   return x86::avx2::Memcmp<32>::loop_and_tail(p1, p2, count);
 }
 
-[[maybe_unused]] static inline MemcmpReturnType
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
   if (count <= 32)
     return x86::sse2::Memcmp<16>::head_tail(p1, p2, count);
@@ -87,7 +87,7 @@ inline_memcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
 #endif // defined(LLVM_LIBC_ARCH_X86)
 
 #if defined(LLVM_LIBC_ARCH_AARCH64)
-[[maybe_unused]] static inline MemcmpReturnType
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_aarch64_neon_gt16(CPtr p1, CPtr p2, size_t count) {
   if (unlikely(count >= 128)) { // [128, ∞]
     if (auto value = generic::Memcmp<16>::block(p1, p2))
@@ -108,7 +108,7 @@ inline_memcmp_aarch64_neon_gt16(CPtr p1, CPtr p2, size_t count) {
 }
 #endif // defined(LLVM_LIBC_ARCH_AARCH64)
 
-static inline MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
+LIBC_INLINE MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
 #if defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
   if (count == 0)
     return MemcmpReturnType::ZERO();
@@ -146,7 +146,7 @@ static inline MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
 #endif
 }
 
-static inline int inline_memcmp(const void *p1, const void *p2, size_t count) {
+LIBC_INLINE int inline_memcmp(const void *p1, const void *p2, size_t count) {
   return static_cast<int>(inline_memcmp(reinterpret_cast<CPtr>(p1),
                                         reinterpret_cast<CPtr>(p2), count));
 }

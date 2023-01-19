@@ -29,9 +29,10 @@ add_object_library(
     libc.config.linux.app_h
     libc.include.sys_syscall
     libc.src.__support.CPP.atomic
-    libc.src.__support.error_or
     libc.src.__support.CPP.stringstream
     libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.threads.thread_common
   COMPILE_OPTIONS
     -O3
