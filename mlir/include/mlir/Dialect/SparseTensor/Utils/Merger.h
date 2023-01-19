@@ -435,18 +435,57 @@ public:
 
   /// Iterates over a set of `TensorLoopId`s, invoking the callback
   /// for each `TensorLoopId` and passing it the corresponding tensor
-  /// identifier, level, and level-type.
-  void
-  foreachTensorLoopId(LatPointId p,
-                      function_ref<void(TensorLoopId, TensorId,
-                                        std::optional<Level>, DimLevelType)>
-                          callback) const {
-    for (const TensorLoopId b : latPoints[p].bits.set_bits())
-      callback(b, tensor(b), getLvl(b), getDimLevelType(b));
+  /// identifier, level, and level-type, following with a boolean value
+  /// indicating whether it is a dependent index reduction loop condition.
+  void foreachTensorLoopId(
+      LatPointId p, function_ref<void(TensorLoopId, TensorId,
+                                      std::optional<Level>, DimLevelType, bool)>
+                        callback) {
+    for (const TensorLoopId b : latPoints[p].bits.set_bits()) {
+      TensorId t = tensor(b);
+      if (isLvlWithNonTrivialIdxExp(b)) {
+        // This must be an undefined level.
+        assert(!getLvl(b).has_value());
+        // Slice the tid along the dependent level to iterate current loop.
+        callback(b, t, loopToDependencies[loop(b)][t], getDimLevelType(b),
+                 /*isIdxReduc=*/true);
+      } else {
+        callback(b, t, getLvl(b), getDimLevelType(b), /*isIdxReduc=*/false);
+      }
+    }
   }
 
   /// Sets whether the output tensor is sparse or not.
   void setHasSparseOut(bool s) { hasSparseOut = s; }
+
+  /// Establishes the two-way map that i <-> <t, lvl>.
+  void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl) {
+    assert(lvl < numLoops);
+    loopToDependencies[i][t] = lvl;
+    levelToDependentIdx[t][lvl].push_back(i);
+  }
+
+  /// Whether the loop has dependent slice.
+  bool hasDependentLvl(LoopId i, TensorId tid) {
+    return loopToDependencies[i][tid].has_value();
+  }
+
+  /// Returns the list of loop indices which appear in the non-trivial index
+  /// expression on t_l, e.g., A[i+j] => {i, j}
+  std::vector<LoopId> &getDependentLoops(TensorId t, Level lvl) {
+    return levelToDependentIdx[t][lvl];
+  }
+
+  /// Returns the defining [tid, lvl] for the loop.
+  std::pair<TensorId, Level> getLoopDefiningLvl(LoopId i) const {
+    return loopBounds[i];
+  }
+
+  /// Checks whether the TensorLoopId represents a tensor level with
+  /// non-trivial index expression on it.
+  bool isLvlWithNonTrivialIdxExp(TensorLoopId b) const {
+    return loopToDependencies[loop(b)][tensor(b)].has_value();
+  }
 
   /// Convenience getters to immediately access the stored nodes.
   /// Typically it is inadvisible to keep the reference around, as in
@@ -510,6 +549,20 @@ private:
 
   // Map that converts pair<TensorId, Level> to the corresponding LoopId.
   std::vector<std::vector<std::optional<LoopId>>> lvlToLoop;
+
+  // Map from a loop to its dependencies if any.
+  // The dependencies of a loop is a set of (tensor, level) pairs.
+  // It is currently only set for non-trivial index expressions.
+  // E.g., A[i+j] => i and j will have dependencies {A0} to indicate that
+  // i and j are used in the non-trivial index expression on A0.
+  std::vector<std::vector<std::optional<Level>>> loopToDependencies;
+  // The inverse map of ldxToDependencies from tensor level -> dependent loop
+  // E.g., A[i+j], we have A0 => {i, j}, to indicate that A0 uses both {i, j}
+  // to compute its indices.
+  std::vector<std::vector<std::vector<LoopId>>> levelToDependentIdx;
+
+  // Map from a loop to the [tid, lvl] pair that defines the loop boundary.
+  std::vector<std::pair<TensorId, Level>> loopBounds;
 
   llvm::SmallVector<TensorExp> tensorExps;
   llvm::SmallVector<LatPoint> latPoints;
