@@ -2133,6 +2133,7 @@ private:
     llvm::SmallVector<mlir::Attribute> attrList;
     llvm::SmallVector<mlir::Block *> blockList;
     unsigned typeGuardIdx = 0;
+    std::size_t defaultAttrPos = std::numeric_limits<size_t>::max();
     bool hasLocalScope = false;
 
     for (Fortran::lower::pft::Evaluation &eval :
@@ -2162,6 +2163,9 @@ private:
           // CLASS DEFAULT
           if (std::holds_alternative<Fortran::parser::Default>(guard.u)) {
             defaultBlock = e->block;
+            // Keep track of the actual position of the CLASS DEFAULT type guard
+            // in the SELECT TYPE construct.
+            defaultAttrPos = attrList.size();
             continue;
           }
 
@@ -2197,6 +2201,21 @@ private:
         blockList.push_back(defaultBlock);
         builder->create<fir::SelectTypeOp>(loc, fir::getBase(selector),
                                            attrList, blockList);
+
+        // If the actual position of CLASS DEFAULT type guard is not the last
+        // one, it needs to be put back at its correct position for the rest of
+        // the processing. TypeGuardStmt are processed in the same order they
+        // appear in the Fortran code.
+        if (defaultAttrPos < attrList.size() - 1) {
+          auto attrIt = attrList.begin();
+          attrIt = attrIt + defaultAttrPos;
+          auto blockIt = blockList.begin();
+          blockIt = blockIt + defaultAttrPos;
+          attrList.insert(attrIt, mlir::UnitAttr::get(context));
+          blockList.insert(blockIt, defaultBlock);
+          attrList.pop_back();
+          blockList.pop_back();
+        }
       } else if (auto *typeGuardStmt =
                      eval.getIf<Fortran::parser::TypeGuardStmt>()) {
         // Map the type guard local symbol for the selector to a more precise
