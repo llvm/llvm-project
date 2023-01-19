@@ -1115,19 +1115,6 @@ define i32 @freeze_ctpop(i32 %x) {
   ret i32 %fr
 }
 
-declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
-
-define ptr @freeze_ptrmask_align(ptr %p, i64 noundef %m) {
-; CHECK-LABEL: @freeze_ptrmask_align(
-; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P_FR]], i64 [[M:%.*]]), !aligned !1
-; CHECK-NEXT:    ret ptr [[MASK]]
-;
-  %mask = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m), !aligned !{i64 4}
-  %fr =  freeze ptr %mask
-  ret ptr %fr
-}
-
 !0 = !{}
 !1 = !{i64 4}
 !2 = !{i32 0, i32 100}
