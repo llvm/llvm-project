@@ -68,3 +68,12 @@ func.func @multiple_arg_attr_multiple_res_attr(%arg0: memref<f32> {test.argZero 
   %2 = arith.constant 2 : i32
   return %0, %1, %2 : f32, memref<i32>, i32
 }
+
+// CHECK: llvm.func @drop_linkage_attr() -> (!llvm.struct{{.*}} {test.returnOne})
+// CHECK-LABEL: llvm.func @_mlir_ciface_drop_linkage_attr
+// CHECK-NOT: llvm.linkage
+// CHECK: %{{.*}}: !llvm.ptr{{.*}} {test.returnOne}
+func.func @drop_linkage_attr() -> (memref<f32> {test.returnOne}) attributes { llvm.linkage = #llvm.linkage<external> } {
+  %0 = memref.alloc() : memref<f32>
+  return %0 : memref<f32>
+}

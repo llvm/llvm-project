@@ -56,6 +56,9 @@ using namespace mlir;
 
 #define PASS_NAME "convert-func-to-llvm"
 
+static constexpr StringRef varargsAttrName = "func.varargs";
+static constexpr StringRef linkageAttrName = "llvm.linkage";
+
 /// Only retain those attributes that are not constructed by
 /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out argument
 /// attributes.
@@ -64,7 +67,8 @@ static void filterFuncAttributes(func::FuncOp func, bool filterArgAndResAttrs,
   for (const NamedAttribute &attr : func->getAttrs()) {
     if (attr.getName() == SymbolTable::getSymbolAttrName() ||
         attr.getName() == func.getFunctionTypeAttrName() ||
-        attr.getName() == "func.varargs" ||
+        attr.getName() == linkageAttrName ||
+        attr.getName() == varargsAttrName ||
         (filterArgAndResAttrs &&
          (attr.getName() == func.getArgAttrsAttrName() ||
           attr.getName() == func.getResAttrsAttrName())))
@@ -290,7 +294,7 @@ protected:
                             ConversionPatternRewriter &rewriter) const {
     // Convert the original function arguments. They are converted using the
     // LLVMTypeConverter provided to this legalization pattern.
-    auto varargsAttr = funcOp->getAttrOfType<BoolAttr>("func.varargs");
+    auto varargsAttr = funcOp->getAttrOfType<BoolAttr>(varargsAttrName);
     TypeConverter::SignatureConversion result(funcOp.getNumArguments());
     auto llvmType = getTypeConverter()->convertFunctionSignature(
         funcOp.getFunctionType(), varargsAttr && varargsAttr.getValue(),
@@ -356,22 +360,16 @@ protected:
       attributes.push_back(rewriter.getNamedAttr(
           funcOp.getArgAttrsAttrName(), rewriter.getArrayAttr(newArgAttrs)));
     }
-    for (const auto &pair : llvm::enumerate(attributes)) {
-      if (pair.value().getName() == "llvm.linkage") {
-        attributes.erase(attributes.begin() + pair.index());
-        break;
-      }
-    }
 
     // Create an LLVM function, use external linkage by default until MLIR
     // functions have linkage.
     LLVM::Linkage linkage = LLVM::Linkage::External;
-    if (funcOp->hasAttr("llvm.linkage")) {
+    if (funcOp->hasAttr(linkageAttrName)) {
       auto attr =
-          funcOp->getAttr("llvm.linkage").dyn_cast<mlir::LLVM::LinkageAttr>();
+          funcOp->getAttr(linkageAttrName).dyn_cast<mlir::LLVM::LinkageAttr>();
       if (!attr) {
-        funcOp->emitError()
-            << "Contains llvm.linkage attribute not of type LLVM::LinkageAttr";
+        funcOp->emitError() << "Contains " << linkageAttrName
+                            << " attribute not of type LLVM::LinkageAttr";
         return nullptr;
       }
       linkage = attr.getLinkage();
