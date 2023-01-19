@@ -47,7 +47,7 @@ define ptr @propagate_noundef(ptr %v) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_1:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    store ptr [[V:%.*]], ptr [[A_SROA_1]], align 8
-; CHECK-NEXT:    [[A_SROA_1_0_A_SROA_1_8_LOAD:%.*]] = load volatile ptr, ptr [[A_SROA_1]], align 8
+; CHECK-NEXT:    [[A_SROA_1_0_A_SROA_1_8_LOAD:%.*]] = load volatile ptr, ptr [[A_SROA_1]], align 8, !noundef !0
 ; CHECK-NEXT:    ret ptr [[A_SROA_1_0_A_SROA_1_8_LOAD]]
 ;
 entry:
