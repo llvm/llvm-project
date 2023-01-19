@@ -4410,7 +4410,10 @@ cc_library(
         "lib/Conversion/PDLToPDLInterp/*.cpp",
         "lib/Conversion/PDLToPDLInterp/*.h",
     ]),
-    hdrs = ["include/mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"],
+    hdrs = [
+        "include/mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h",
+        "lib/Conversion/PDLToPDLInterp/RootOrdering.h",
+    ],
     includes = ["include"],
     deps = [
         ":ConversionPassIncGen",

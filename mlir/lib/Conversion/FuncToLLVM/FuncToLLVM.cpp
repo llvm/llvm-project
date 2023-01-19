@@ -69,6 +69,7 @@ static void filterFuncAttributes(func::FuncOp func, bool filterArgAndResAttrs,
         attr.getName() == func.getFunctionTypeAttrName() ||
         attr.getName() == linkageAttrName ||
         attr.getName() == varargsAttrName ||
+        attr.getName() == LLVM::LLVMDialect::getReadnoneAttrName() ||
         (filterArgAndResAttrs &&
          (attr.getName() == func.getArgAttrsAttrName() ||
           attr.getName() == func.getResAttrsAttrName())))
@@ -374,9 +375,28 @@ protected:
       }
       linkage = attr.getLinkage();
     }
+
+    // Create a memory effect attribute corresponding to readnone.
+    StringRef readnoneAttrName = LLVM::LLVMDialect::getReadnoneAttrName();
+    LLVM::MemoryEffectsAttr memoryAttr = {};
+    if (funcOp->hasAttr(readnoneAttrName)) {
+      auto attr = funcOp->getAttrOfType<UnitAttr>(readnoneAttrName);
+      if (!attr) {
+        funcOp->emitError() << "Contains " << readnoneAttrName
+                            << " attribute not of type UnitAttr";
+        return nullptr;
+      }
+      memoryAttr = LLVM::MemoryEffectsAttr::get(rewriter.getContext(),
+                                                {LLVM::ModRefInfo::NoModRef,
+                                                 LLVM::ModRefInfo::NoModRef,
+                                                 LLVM::ModRefInfo::NoModRef});
+    }
     auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
         funcOp.getLoc(), funcOp.getName(), llvmType, linkage,
         /*dsoLocal*/ false, /*cconv*/ LLVM::CConv::C, attributes);
+    // If the memory attribute was created, add it to the function.
+    if (memoryAttr)
+      newFuncOp.setMemoryAttr(memoryAttr);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
     if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), *typeConverter,
