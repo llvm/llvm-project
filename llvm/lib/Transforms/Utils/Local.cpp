@@ -2752,6 +2752,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_nontemporal:
     case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
+    case LLVMContext::MD_noundef:
       // All of these directly apply.
       Dest.setMetadata(ID, N);
       break;

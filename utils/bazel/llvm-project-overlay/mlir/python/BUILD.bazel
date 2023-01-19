@@ -805,6 +805,7 @@ gentbl_filegroup(
 filegroup(
     name = "TensorOpsPyFiles",
     srcs = [
+        "mlir/dialects/_tensor_ops_ext.py",
         "mlir/dialects/tensor.py",
         ":TensorOpsPyGen",
     ],

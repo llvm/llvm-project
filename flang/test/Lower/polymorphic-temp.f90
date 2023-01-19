@@ -47,4 +47,24 @@ contains
 ! CHECK: fir.call @_QMpoly_tmpPpass_unlimited_poly_1d(%[[REBOX]]) {{.*}} : (!fir.class<!fir.array<?xnone>>) -> ()
 ! CHECK: fir.freemem %[[RES_ADDR]] : !fir.heap<!fir.array<?xnone>>
 
+  subroutine test_temp_from_intrinsic_reshape(i)
+    class(*), allocatable :: a(:,:)
+    class(*), intent(in) :: i(20,20)
+    allocate(a(10,10), source=reshape(i,[10,10]))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_reshape(
+! CHECK-SAME: %[[I:.*]]: !fir.class<!fir.array<20x20xnone>> {fir.bindc_name = "i"}) {
+! CHECK: %[[TMP_RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x?xnone>>>
+! CHECK: %[[A:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x?xnone>>> {bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_temp_from_intrinsic_reshapeEa"}
+! CHECK: %[[EMBOX_WITH_SOURCE:.*]] = fir.embox %{{.*}}(%{{.*}}) source_box %[[I]] : (!fir.heap<!fir.array<?x?xnone>>, !fir.shape<2>, !fir.class<!fir.array<20x20xnone>>) -> !fir.class<!fir.heap<!fir.array<?x?xnone>>>
+! CHECK: fir.store %[[EMBOX_WITH_SOURCE]] to %[[TMP_RES]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
+! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[I_BOX_NONE:.*]] = fir.convert %[[I]] : (!fir.class<!fir.array<20x20xnone>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAReshape(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK: %[[LOAD_RES:.*]] = fir.load %[[TMP_RES]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
+! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[LOAD_RES]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[RES_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+
 end module

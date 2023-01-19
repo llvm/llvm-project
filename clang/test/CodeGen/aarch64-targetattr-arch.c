@@ -8,6 +8,7 @@
 #endif
 
 #include <arm_acle.h>
+#include <arm_fp16.h>
 #include <arm_sve.h>
 
 __attribute__((target("arch=armv8.1-a")))
@@ -20,6 +21,12 @@ __attribute__((target("arch=armv9-a")))
 svint8_t test_svadd_attr(svbool_t pg, svint8_t op1, svint8_t op2)
 {
   return svadd_s8_z(pg, op1, op2);
+}
+
+__attribute__((target("arch=armv9-a")))
+float16_t test_fp16_on_v9(float16_t x, float16_t y)
+{
+  return vabdh_f16(x, y);
 }
 
 void test_errors()

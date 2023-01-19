@@ -60,14 +60,14 @@ void AArch64TargetInfo::setArchFeatures() {
     HasLSE = true;
     HasRDM = true;
   } else if (ArchInfo->Version.getMajor() == 8) {
-    if (ArchInfo->Version.getMinor() >= 7) {
+    if (ArchInfo->Version.getMinor() >= 7u) {
       HasWFxT = true;
     }
-    if (ArchInfo->Version.getMinor() >= 6) {
+    if (ArchInfo->Version.getMinor() >= 6u) {
       HasBFloat16 = true;
       HasMatMul = true;
     }
-    if (ArchInfo->Version.getMinor() >= 5) {
+    if (ArchInfo->Version.getMinor() >= 5u) {
       HasAlternativeNZCV = true;
       HasFRInt3264 = true;
       HasSSBS = true;
@@ -75,28 +75,28 @@ void AArch64TargetInfo::setArchFeatures() {
       HasPredRes = true;
       HasBTI = true;
     }
-    if (ArchInfo->Version.getMinor() >= 4) {
+    if (ArchInfo->Version.getMinor() >= 4u) {
       HasDotProd = true;
       HasDIT = true;
       HasFlagM = true;
     }
-    if (ArchInfo->Version.getMinor() >= 3) {
+    if (ArchInfo->Version.getMinor() >= 3u) {
       HasRCPC = true;
       FPU |= NeonMode;
     }
-    if (ArchInfo->Version.getMinor() >= 2) {
+    if (ArchInfo->Version.getMinor() >= 2u) {
       HasCCPP = true;
     }
-    if (ArchInfo->Version.getMinor() >= 1) {
+    if (ArchInfo->Version.getMinor() >= 1u) {
       HasCRC = true;
       HasLSE = true;
       HasRDM = true;
     }
   } else if (ArchInfo->Version.getMajor() == 9) {
-    if (ArchInfo->Version.getMinor() >= 2) {
+    if (ArchInfo->Version.getMinor() >= 2u) {
       HasWFxT = true;
     }
-    if (ArchInfo->Version.getMinor() >= 1) {
+    if (ArchInfo->Version.getMinor() >= 1u) {
       HasBFloat16 = true;
       HasMatMul = true;
     }

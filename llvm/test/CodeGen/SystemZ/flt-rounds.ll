@@ -8,11 +8,10 @@ define dso_local signext i32 @test_flt_rounds() nounwind {
 ; CHECK-LABEL: test_flt_rounds:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    efpc %r0
-; CHECK-NEXT:    lr %r1, %r0
-; CHECK-NEXT:    nilf %r1, 3
-; CHECK-NEXT:    rxsbg %r1, %r0, 63, 63, 63
-; CHECK-NEXT:    xilf %r1, 1
-; CHECK-NEXT:    llgfr %r2, %r1
+; CHECK-NEXT:    nilf %r0, 3
+; CHECK-NEXT:    rxsbg %r0, %r0, 33, 63, 63
+; CHECK-NEXT:    xilf %r0, 1
+; CHECK-NEXT:    llgfr %r2, %r0
 ; CHECK-NEXT:    br %r14
   %1 = call i32 @llvm.get.rounding()
   ret i32 %1
@@ -25,18 +24,16 @@ define dso_local signext i32 @test_order(i32 noundef signext %0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
 ; CHECK-NEXT:    aghi %r15, -160
-; CHECK-NEXT:    efpc %r0
-; CHECK-NEXT:    lr %r13, %r0
+; CHECK-NEXT:    efpc %r13
 ; CHECK-NEXT:    nilf %r13, 3
-; CHECK-NEXT:    rxsbg %r13, %r0, 63, 63, 63
+; CHECK-NEXT:    rxsbg %r13, %r13, 33, 63, 63
 ; CHECK-NEXT:    xilf %r13, 1
 ; CHECK-NEXT:    brasl %r14, fesetround@PLT
 ; CHECK-NEXT:    efpc %r0
-; CHECK-NEXT:    lr %r1, %r0
-; CHECK-NEXT:    nilf %r1, 3
-; CHECK-NEXT:    rxsbg %r1, %r0, 63, 63, 63
-; CHECK-NEXT:    xilf %r1, 1
-; CHECK-NEXT:    crje %r13, %r1, .LBB1_2
+; CHECK-NEXT:    nilf %r0, 3
+; CHECK-NEXT:    rxsbg %r0, %r0, 33, 63, 63
+; CHECK-NEXT:    xilf %r0, 1
+; CHECK-NEXT:    crje %r13, %r0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lhi %r0, 1
 ; CHECK-NEXT:    strl %r0, changed

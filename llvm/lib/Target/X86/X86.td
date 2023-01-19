@@ -886,7 +886,6 @@ def ProcessorFeatures {
                                                   FeatureFSRM];
   list<SubtargetFeature> ICLTuning = [TuningFastGather,
                                       TuningMacroFusion,
-                                      TuningSlow3OpsLEA,
                                       TuningSlowDivide64,
                                       TuningFastScalarFSQRT,
                                       TuningFastVectorFSQRT,

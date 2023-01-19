@@ -329,14 +329,7 @@ static ExprResult calculateConstraintSatisfaction(
           Sema::SFINAETrap Trap(S);
           SubstitutedExpression =
               S.SubstConstraintExpr(const_cast<Expr *>(AtomicExpr), MLTAL);
-          // Substitution might have stripped off a contextual conversion to
-          // bool if this is the operand of an '&&' or '||'. For example, we
-          // might lose an lvalue-to-rvalue conversion here. If so, put it back
-          // before we try to evaluate.
-          if (SubstitutedExpression.isUsable() &&
-              !SubstitutedExpression.isInvalid())
-            SubstitutedExpression =
-                S.PerformContextuallyConvertToBool(SubstitutedExpression.get());
+
           if (SubstitutedExpression.isInvalid() || Trap.hasErrorOccurred()) {
             // C++2a [temp.constr.atomic]p1
             //   ...If substitution results in an invalid type or expression, the
@@ -372,6 +365,22 @@ static ExprResult calculateConstraintSatisfaction(
 
         if (!S.CheckConstraintExpression(SubstitutedExpression.get()))
           return ExprError();
+
+        // [temp.constr.atomic]p3: To determine if an atomic constraint is
+        // satisfied, the parameter mapping and template arguments are first
+        // substituted into its expression.  If substitution results in an
+        // invalid type or expression, the constraint is not satisfied.
+        // Otherwise, the lvalue-to-rvalue conversion is performed if necessary,
+        // and E shall be a constant expression of type bool.
+        //
+        // Perform the L to R Value conversion if necessary. We do so for all
+        // non-PRValue categories, else we fail to extend the lifetime of
+        // temporaries, and that fails the constant expression check.
+        if (!SubstitutedExpression.get()->isPRValue())
+          SubstitutedExpression = ImplicitCastExpr::Create(
+              S.Context, SubstitutedExpression.get()->getType(),
+              CK_LValueToRValue, SubstitutedExpression.get(),
+              /*BasePath=*/nullptr, VK_PRValue, FPOptionsOverride());
 
         return SubstitutedExpression;
       });

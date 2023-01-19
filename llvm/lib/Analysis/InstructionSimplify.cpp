@@ -5928,6 +5928,10 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
       return X;
     break;
   case Intrinsic::ctpop: {
+    // ctpop(X) -> 1 iff X is non-zero power of 2.
+    if (isKnownToBeAPowerOfTwo(Op0, Q.DL, /*OrZero*/ false, 0, Q.AC, Q.CxtI,
+                               Q.DT))
+      return ConstantInt::get(Op0->getType(), 1);
     // If everything but the lowest bit is zero, that bit is the pop-count. Ex:
     // ctpop(and X, 1) --> and X, 1
     unsigned BitWidth = Op0->getType()->getScalarSizeInBits();

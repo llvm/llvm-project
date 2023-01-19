@@ -38,6 +38,7 @@
 #include <variant>
 
 #include "test_macros.h"
+#include "min_allocator.h"
 
 #ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
 #  include <filesystem>
@@ -194,38 +195,45 @@ void test_P1636() {
   assert_is_not_formattable<std::unique_ptr<int>, CharT>();
 }
 
+template <class CharT, class Vector>
+void test_P2286_vector_bool() {
+  assert_is_formattable<Vector, CharT>();
+  assert_is_formattable<typename Vector::reference, CharT>();
+}
+
 // Tests for P2286 Formatting ranges
-//
-// The paper hasn't been voted in so currently all formatters are disabled.
-// TODO validate whether the test is correct after the paper has been accepted.
 template <class CharT>
 void test_P2286() {
-  assert_is_not_formattable<std::array<int, 42>, CharT>();
-  assert_is_not_formattable<std::vector<int>, CharT>();
-  assert_is_not_formattable<std::deque<int>, CharT>();
-  assert_is_not_formattable<std::forward_list<int>, CharT>();
-  assert_is_not_formattable<std::list<int>, CharT>();
+  assert_is_formattable<std::array<int, 42>, CharT>();
+  assert_is_formattable<std::vector<int>, CharT>();
+  assert_is_formattable<std::deque<int>, CharT>();
+  assert_is_formattable<std::forward_list<int>, CharT>();
+  assert_is_formattable<std::list<int>, CharT>();
 
   assert_is_not_formattable<std::set<int>, CharT>();
-  assert_is_not_formattable<std::map<int, int>, CharT>();
+  assert_is_formattable<std::map<int, int>, CharT>();
   assert_is_not_formattable<std::multiset<int>, CharT>();
-  assert_is_not_formattable<std::multimap<int, int>, CharT>();
+  assert_is_formattable<std::multimap<int, int>, CharT>();
 
   assert_is_not_formattable<std::unordered_set<int>, CharT>();
-  assert_is_not_formattable<std::unordered_map<int, int>, CharT>();
+  assert_is_formattable<std::unordered_map<int, int>, CharT>();
   assert_is_not_formattable<std::unordered_multiset<int>, CharT>();
-  assert_is_not_formattable<std::unordered_multimap<int, int>, CharT>();
+  assert_is_formattable<std::unordered_multimap<int, int>, CharT>();
 
-  assert_is_not_formattable<std::stack<int>, CharT>();
-  assert_is_not_formattable<std::queue<int>, CharT>();
-  assert_is_not_formattable<std::priority_queue<int>, CharT>();
+  assert_is_formattable<std::stack<int>, CharT>();
+  assert_is_formattable<std::queue<int>, CharT>();
+  assert_is_formattable<std::priority_queue<int>, CharT>();
 
-  assert_is_not_formattable<std::span<int>, CharT>();
+  assert_is_formattable<std::span<int>, CharT>();
 
-  assert_is_not_formattable<std::valarray<int>, CharT>();
+  assert_is_formattable<std::valarray<int>, CharT>();
 
   assert_is_formattable<std::pair<int, int>, CharT>();
   assert_is_formattable<std::tuple<int>, CharT>();
+
+  test_P2286_vector_bool<CharT, std::vector<bool>>();
+  test_P2286_vector_bool<CharT, std::vector<bool, std::allocator<bool>>>();
+  test_P2286_vector_bool<CharT, std::vector<bool, min_allocator<bool>>>();
 }
 
 class c {

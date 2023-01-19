@@ -683,6 +683,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsWMMA;
   }
 
+  static bool isMFMAorWMMA(const MachineInstr &MI) {
+    return isMFMA(MI) || isWMMA(MI);
+  }
+
   bool isDOT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }

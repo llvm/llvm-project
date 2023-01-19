@@ -1071,10 +1071,13 @@ bool SystemZDAGToDAGISel::tryRxSBG(SDNode *N, unsigned Opcode) {
   };
   unsigned Count[] = { 0, 0 };
   for (unsigned I = 0; I < 2; ++I)
-    while (expandRxSBG(RxSBG[I]))
-      // The widening or narrowing is expected to be free.
-      // Counting widening or narrowing as a saved operation will result in
-      // preferring an R*SBG over a simple shift/logical instruction.
+    while (RxSBG[I].Input->hasOneUse() && expandRxSBG(RxSBG[I]))
+      // In cases of multiple users it seems better to keep the simple
+      // instruction as they are one cycle faster, and it also helps in cases
+      // where both inputs share a common node.
+      // The widening or narrowing is expected to be free.  Counting widening
+      // or narrowing as a saved operation will result in preferring an R*SBG
+      // over a simple shift/logical instruction.
       if (RxSBG[I].Input.getOpcode() != ISD::ANY_EXTEND &&
           RxSBG[I].Input.getOpcode() != ISD::TRUNCATE)
         Count[I] += 1;

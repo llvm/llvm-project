@@ -14177,6 +14177,11 @@ static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
 
 bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
                                                                Loop *L) const {
+  // shuffle_vector instructions are serialized when targeting SVE,
+  // see LowerSPLAT_VECTOR. This peephole is not beneficial.
+  if (Subtarget->useSVEForFixedLengthVectors())
+    return false;
+
   // Try to optimize conversions using tbl. This requires materializing constant
   // index vectors, which can increase code size and add loads. Skip the
   // transform unless the conversion is in a loop block guaranteed to execute
