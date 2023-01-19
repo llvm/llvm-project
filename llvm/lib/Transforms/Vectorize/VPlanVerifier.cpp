@@ -252,8 +252,7 @@ verifyVPBasicBlock(const VPBasicBlock *VPBB,
 bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
   DenseMap<const VPBlockBase *, unsigned> BlockNumbering;
   unsigned Cnt = 0;
-  auto Iter = depth_first(
-      VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
+  auto Iter = vp_depth_first_deep(Plan.getEntry());
   for (const VPBlockBase *VPB : Iter) {
     BlockNumbering[VPB] = Cnt++;
     auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
@@ -298,8 +297,7 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
 
   for (const VPRegionBlock *Region :
        VPBlockUtils::blocksOnly<const VPRegionBlock>(
-           depth_first(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(
-               Plan.getEntry())))) {
+           vp_depth_first_deep(Plan.getEntry()))) {
     if (Region->getEntry()->getNumPredecessors() != 0) {
       errs() << "region entry block has predecessors\n";
       return false;
