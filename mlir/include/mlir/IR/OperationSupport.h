@@ -284,8 +284,9 @@ public:
 
   /// Attach the given models as implementations of the corresponding
   /// interfaces for the concrete operation.
-  template <typename... Models> void attachInterface() {
-    getImpl()->getInterfaceMap().insert<Models...>();
+  template <typename... Models>
+  void attachInterface() {
+    getImpl()->getInterfaceMap().insertModels<Models...>();
   }
 
   /// Returns true if this operation has the given interface registered to it.
@@ -378,7 +379,8 @@ class RegisteredOperationName : public OperationName {
 public:
   /// Implementation of the InterfaceConcept for operation APIs that forwarded
   /// to a concrete op implementation.
-  template <typename ConcreteOp> struct Model : public Impl {
+  template <typename ConcreteOp>
+  struct Model : public Impl {
     Model(Dialect *dialect)
         : Impl(ConcreteOp::getOperationName(), dialect,
                TypeID::get<ConcreteOp>(), ConcreteOp::getInterfaceMap()) {}
@@ -418,7 +420,8 @@ public:
   /// Register a new operation in a Dialect object.
   /// This constructor is used by Dialect objects when they register the list
   /// of operations they contain.
-  template <typename T> static void insert(Dialect &dialect) {
+  template <typename T>
+  static void insert(Dialect &dialect) {
     insert(std::make_unique<Model<T>>(&dialect), T::getAttributeNames());
   }
   /// The use of this method is in general discouraged in favor of

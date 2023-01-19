@@ -257,7 +257,7 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
 
 def SPIRV_FuncOp : SPIRV_Op<"func", [
     AutomaticAllocationScope, DeclareOpInterfaceMethods<CallableOpInterface>,
-    FunctionOpInterface, InModuleScope, IsolatedFromAbove, Symbol
+    FunctionOpInterface, InModuleScope, IsolatedFromAbove
   ]> {
   let summary = "Declare or define a function";
 
