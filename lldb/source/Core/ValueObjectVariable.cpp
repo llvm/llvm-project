@@ -32,7 +32,9 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
+#if defined(LLDB_ENABLE_SWIFT)
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
+#endif
 
 #include "llvm/ADT/StringRef.h"
 
@@ -141,7 +143,7 @@ bool ValueObjectVariable::UpdateValue() {
   CompilerType var_type(GetCompilerTypeImpl());
   if (var_type.IsValid() && var_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    llvm::Optional<uint64_t> size =
+    std::optional<uint64_t> size =
       var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
     if (size && *size == 0) {
       m_value.SetCompilerType(var_type);
