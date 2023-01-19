@@ -242,6 +242,8 @@ public:
 
   /// Returns the record descriptor of a class.
   Record *getRecord() const { return getFieldDesc()->ElemRecord; }
+  // Returns the element record type, if this is a non-primive array.
+  Record *getElemRecord() const { return getFieldDesc()->ElemDesc->ElemRecord; }
   /// Returns the field information.
   const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
 
