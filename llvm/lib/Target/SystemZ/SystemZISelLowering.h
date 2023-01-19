@@ -600,6 +600,10 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth) const override;
 
+  bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      bool PoisonOnly, unsigned Depth) const override;
+
   ISD::NodeType getExtendForAtomicOps() const override {
     return ISD::ANY_EXTEND;
   }
