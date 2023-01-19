@@ -1371,6 +1371,20 @@ func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32
 
 // -----
 
+// Masked reduction can't be folded.
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions
+func.func @masked_vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32>,
+                                                         %acc: vector<5x4x20xf32>,
+                                                         %mask: vector<5x1x4x1x20xi1>) -> vector<5x4x20xf32> {
+//       CHECK:   vector.mask %{{.*}} { vector.multi_reduction <mul>
+    %0 = vector.mask %mask { vector.multi_reduction <mul>, %source, %acc [1, 3] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32> } :
+           vector<5x1x4x1x20xi1> -> vector<5x4x20xf32>
+    return %0 : vector<5x4x20xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @vector_multi_reduction_unit_dimensions_fail(
 //  CHECK-SAME: %[[SRC:.+]]: vector<5x1x4x1x20xf32>, %[[ACCUM:.+]]: vector<5x1x20xf32>
 func.func @vector_multi_reduction_unit_dimensions_fail(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x1x20xf32>) -> vector<5x1x20xf32> {
@@ -1916,6 +1930,18 @@ func.func @reduce_one_element_vector_extract(%a : vector<1xf32>) -> f32 {
 //       CHECK:   return %[[S]]
 func.func @reduce_one_element_vector_addf(%a : vector<1xf32>, %b: f32) -> f32 {
   %s = vector.reduction <add>, %a, %b : vector<1xf32> into f32
+  return %s : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @masked_reduce_one_element_vector_addf
+//       CHECK:   vector.mask %{{.*}} { vector.reduction <add>
+func.func @masked_reduce_one_element_vector_addf(%a: vector<1xf32>,
+                                                 %b: f32,
+                                                 %mask: vector<1xi1>) -> f32 {
+  %s = vector.mask %mask { vector.reduction <add>, %a, %b : vector<1xf32> into f32 }
+         : vector<1xi1> -> f32
   return %s : f32
 }
 

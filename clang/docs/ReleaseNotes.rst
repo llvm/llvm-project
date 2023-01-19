@@ -192,6 +192,10 @@ code bases.
   these definitions were allowed.  Note that such definitions are ODR
   violations if the header is included more than once.
 
+- Clang now diagnoses if structs/unions with the same name are different in
+  different used modules. Behavior in C and Objective-C language modes now is
+  the same as in C++.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -458,6 +462,9 @@ Improvements to Clang's diagnostics
   only when ``x`` is a string literal.
 - Clang will now reject the GNU extension address of label in coroutines explicitly.
   This fixes `Issue 56436 <https://github.com/llvm/llvm-project/issues/56436>`_.
+- Clang now automatically adds ``[[clang::lifetimebound]]`` to the parameters of
+  ``std::move, std::forward`` et al, this enables Clang to diagnose more cases
+  where the returned reference outlives the object.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

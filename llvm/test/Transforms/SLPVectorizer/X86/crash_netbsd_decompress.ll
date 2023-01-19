@@ -15,15 +15,15 @@ target triple = "x86_64-apple-macosx10.8.0"
 define i32 @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @b, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([[STRUCT_DSTATE:%.*]], ptr @b, i32 0, i32 1), align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @d, align 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr @b, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @d, align 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[SW_BB:%.*]], label [[SAVE_STATE_AND_RETURN:%.*]]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @c, align 4
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP3]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @c, align 4
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP2]], 7
 ; CHECK-NEXT:    store i32 [[AND]], ptr @a, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> <i32 poison, i32 0>, <2 x i32> [[TMP0]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    switch i32 [[AND]], label [[IF_END:%.*]] [
 ; CHECK-NEXT:    i32 7, label [[SAVE_STATE_AND_RETURN]]
 ; CHECK-NEXT:    i32 0, label [[SAVE_STATE_AND_RETURN]]
@@ -31,10 +31,8 @@ define i32 @fn1() {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    br label [[SAVE_STATE_AND_RETURN]]
 ; CHECK:       save_state_and_return:
-; CHECK-NEXT:    [[T_0:%.*]] = phi i32 [ 0, [[IF_END]] ], [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP0]], [[SW_BB]] ], [ [[TMP0]], [[SW_BB]] ]
-; CHECK-NEXT:    [[F_0:%.*]] = phi i32 [ 0, [[IF_END]] ], [ [[TMP1]], [[ENTRY]] ], [ 0, [[SW_BB]] ], [ 0, [[SW_BB]] ]
-; CHECK-NEXT:    store i32 [[T_0]], ptr @b, align 4
-; CHECK-NEXT:    store i32 [[F_0]], ptr getelementptr inbounds ([[STRUCT_DSTATE]], ptr @b, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ zeroinitializer, [[IF_END]] ], [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP3]], [[SW_BB]] ], [ [[TMP3]], [[SW_BB]] ]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr @b, align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:

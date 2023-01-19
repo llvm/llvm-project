@@ -4408,6 +4408,22 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     MIOpt.ReadToken();
   }
 
+  if (ParsingFilename && DDTok.is(tok::less)) {
+    BufferPtr = BufferStart + DDTok.Offset;
+    LexAngledStringLiteral(Result, BufferPtr + 1);
+    if (Result.isNot(tok::header_name))
+      return true;
+    // Advance the index of lexed tokens.
+    while (true) {
+      const dependency_directives_scan::Token &NextTok =
+          DepDirectives.front().Tokens[NextDepDirectiveTokenIndex];
+      if (BufferStart + NextTok.Offset >= BufferPtr)
+        break;
+      ++NextDepDirectiveTokenIndex;
+    }
+    return true;
+  }
+
   const char *TokPtr = convertDependencyDirectiveToken(DDTok, Result);
 
   if (Result.is(tok::hash) && Result.isAtStartOfLine()) {

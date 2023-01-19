@@ -2341,10 +2341,14 @@ private:
 
   /// Checks if the gathered \p VL can be represented as shuffle(s) of previous
   /// tree entries.
+  /// \param TE Tree entry checked for permutation.
+  /// \param VL List of scalars (a subset of the TE scalar), checked for
+  /// permutations.
   /// \returns ShuffleKind, if gathered values can be represented as shuffles of
   /// previous tree entries. \p Mask is filled with the shuffle mask.
   std::optional<TargetTransformInfo::ShuffleKind>
-  isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
+  isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
+                        SmallVectorImpl<int> &Mask,
                         SmallVectorImpl<const TreeEntry *> &Entries);
 
   /// \returns the scalarization cost for this list of values. Assuming that
@@ -6696,13 +6700,36 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       return 0;
     if (isa<InsertElementInst>(VL[0]))
       return InstructionCost::getInvalid();
+    SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
+    // Build a mask out of the reorder indices and reorder scalars per this
+    // mask.
+    SmallVector<int> ReorderMask;
+    inversePermutation(E->ReorderIndices, ReorderMask);
+    if (!ReorderMask.empty())
+      reorderScalars(GatheredScalars, ReorderMask);
     SmallVector<int> Mask;
+    std::optional<TargetTransformInfo::ShuffleKind> GatherShuffle;
     SmallVector<const TreeEntry *> Entries;
-    std::optional<TargetTransformInfo::ShuffleKind> Shuffle =
-        isGatherShuffledEntry(E, Mask, Entries);
-    if (Shuffle) {
+    // Do not try to look for reshuffled loads for gathered loads (they will be
+    // handled later), for vectorized scalars, and cases, which are definitely
+    // not profitable (splats and small gather nodes.)
+    if (E->getOpcode() != Instruction::Load || E->isAltShuffle() ||
+        all_of(E->Scalars, [this](Value *V) { return getTreeEntry(V); }) ||
+        isSplat(E->Scalars) ||
+        (E->Scalars != GatheredScalars && GatheredScalars.size() <= 2))
+      GatherShuffle = isGatherShuffledEntry(E, GatheredScalars, Mask, Entries);
+    if (GatherShuffle) {
+      // Remove shuffled elements from list of gathers.
+      for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
+        if (Mask[I] != UndefMaskElem)
+          GatheredScalars[I] = PoisonValue::get(ScalarTy);
+      }
+      assert((Entries.size() == 1 || Entries.size() == 2) &&
+             "Expected shuffle of 1 or 2 entries.");
       InstructionCost GatherCost = 0;
-      if (ShuffleVectorInst::isIdentityMask(Mask)) {
+      int Limit = Mask.size() * 2;
+      if (all_of(Mask, [=](int Idx) { return Idx < Limit; }) &&
+          ShuffleVectorInst::isIdentityMask(Mask)) {
         // Perfect match in the graph, will reuse the previously vectorized
         // node. Cost is 0.
         LLVM_DEBUG(
@@ -6721,8 +6748,10 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         // previously vectorized nodes. Add the cost of the permutation rather
         // than gather.
         ::addMask(Mask, E->ReuseShuffleIndices);
-        GatherCost = TTI->getShuffleCost(*Shuffle, FinalVecTy, Mask);
+        GatherCost = TTI->getShuffleCost(*GatherShuffle, FinalVecTy, Mask);
       }
+      if (!all_of(GatheredScalars, UndefValue::classof))
+        GatherCost += getGatherCost(GatheredScalars);
       return GatherCost;
     }
     if ((E->getOpcode() == Instruction::ExtractElement ||
@@ -8071,21 +8100,88 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 }
 
 std::optional<TargetTransformInfo::ShuffleKind>
-BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
+BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
+                               SmallVectorImpl<int> &Mask,
                                SmallVectorImpl<const TreeEntry *> &Entries) {
+  Entries.clear();
+  // No need to check for the topmost gather node.
+  if (TE == VectorizableTree.front().get())
+    return std::nullopt;
+  Mask.assign(VL.size(), UndefMaskElem);
+  assert(TE->UserTreeIndices.size() == 1 &&
+         "Expected only single user of the gather node.");
   // TODO: currently checking only for Scalars in the tree entry, need to count
   // reused elements too for better cost estimation.
-  Mask.assign(TE->Scalars.size(), UndefMaskElem);
-  Entries.clear();
+  Instruction &UserInst =
+      getLastInstructionInBundle(TE->UserTreeIndices.front().UserTE);
+  auto *PHI = dyn_cast<PHINode>(&UserInst);
+  auto *NodeUI = DT->getNode(
+      PHI ? PHI->getIncomingBlock(TE->UserTreeIndices.front().EdgeIdx)
+          : UserInst.getParent());
+  assert(NodeUI && "Should only process reachable instructions");
+  SmallPtrSet<Value *, 4> GatheredScalars(VL.begin(), VL.end());
+  auto CheckOrdering = [&](Instruction *LastEI) {
+    // Check if the user node of the TE comes after user node of EntryPtr,
+    // otherwise EntryPtr depends on TE.
+    // Gather nodes usually are not scheduled and inserted before their first
+    // user node. So, instead of checking dependency between the gather nodes
+    // themselves, we check the dependency between their user nodes.
+    // If one user node comes before the second one, we cannot use the second
+    // gather node as the source vector for the first gather node, because in
+    // the list of instructions it will be emitted later.
+    auto *EntryParent = LastEI->getParent();
+    auto *NodeEUI = DT->getNode(EntryParent);
+    if (!NodeEUI)
+      return false;
+    assert((NodeUI == NodeEUI) ==
+               (NodeUI->getDFSNumIn() == NodeEUI->getDFSNumIn()) &&
+           "Different nodes should have different DFS numbers");
+    // Check the order of the gather nodes users.
+    if (UserInst.getParent() != EntryParent &&
+        (DT->dominates(NodeUI, NodeEUI) || !DT->dominates(NodeEUI, NodeUI)))
+      return false;
+    if (UserInst.getParent() == EntryParent && UserInst.comesBefore(LastEI))
+      return false;
+    return true;
+  };
   // Build a lists of values to tree entries.
   DenseMap<Value *, SmallPtrSet<const TreeEntry *, 4>> ValueToTEs;
   for (const std::unique_ptr<TreeEntry> &EntryPtr : VectorizableTree) {
     if (EntryPtr.get() == TE)
-      break;
+      continue;
     if (EntryPtr->State != TreeEntry::NeedToGather)
       continue;
+    if (!any_of(EntryPtr->Scalars, [&GatheredScalars](Value *V) {
+          return GatheredScalars.contains(V);
+        }))
+      continue;
+    assert(EntryPtr->UserTreeIndices.size() == 1 &&
+           "Expected only single user of the gather node.");
+    Instruction &EntryUserInst =
+        getLastInstructionInBundle(EntryPtr->UserTreeIndices.front().UserTE);
+    if (&UserInst == &EntryUserInst) {
+      // If 2 gathers are operands of the same entry, compare operands indices,
+      // use the earlier one as the base.
+      if (TE->UserTreeIndices.front().UserTE ==
+              EntryPtr->UserTreeIndices.front().UserTE &&
+          TE->UserTreeIndices.front().EdgeIdx <
+              EntryPtr->UserTreeIndices.front().EdgeIdx)
+        continue;
+    }
+    // Check if the user node of the TE comes after user node of EntryPtr,
+    // otherwise EntryPtr depends on TE.
+    auto *EntryPHI = dyn_cast<PHINode>(&EntryUserInst);
+    auto *EntryI =
+        EntryPHI
+            ? EntryPHI
+                  ->getIncomingBlock(EntryPtr->UserTreeIndices.front().EdgeIdx)
+                  ->getTerminator()
+            : &EntryUserInst;
+    if (!CheckOrdering(EntryI))
+      continue;
     for (Value *V : EntryPtr->Scalars)
-      ValueToTEs.try_emplace(V).first->getSecond().insert(EntryPtr.get());
+      if (!isConstant(V))
+        ValueToTEs.try_emplace(V).first->getSecond().insert(EntryPtr.get());
   }
   // Find all tree entries used by the gathered values. If no common entries
   // found - not a shuffle.
@@ -8097,7 +8193,7 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
   SmallVector<SmallPtrSet<const TreeEntry *, 4>> UsedTEs;
   DenseMap<Value *, int> UsedValuesEntry;
   for (Value *V : TE->Scalars) {
-    if (isa<UndefValue>(V))
+    if (isConstant(V))
       continue;
     // Build a list of tree entries where V is used.
     SmallPtrSet<const TreeEntry *, 4> VToTEs;
@@ -8107,10 +8203,11 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
     if (const TreeEntry *VTE = getTreeEntry(V))
       VToTEs.insert(VTE);
     if (VToTEs.empty())
-      return std::nullopt;
+      continue;
     if (UsedTEs.empty()) {
       // The first iteration, just insert the list of nodes to vector.
       UsedTEs.push_back(VToTEs);
+      UsedValuesEntry.try_emplace(V, 0);
     } else {
       // Need to check if there are any previously used tree nodes which use V.
       // If there are no such nodes, consider that we have another one input
@@ -8135,8 +8232,9 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
       if (Idx == UsedTEs.size()) {
         // If the number of input vectors is greater than 2 - not a permutation,
         // fallback to the regular gather.
+        // TODO: support multiple reshuffled nodes.
         if (UsedTEs.size() == 2)
-          return std::nullopt;
+          continue;
         UsedTEs.push_back(SavedVToTEs);
         Idx = UsedTEs.size() - 1;
       }
@@ -8144,32 +8242,55 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
     }
   }
 
-  if (UsedTEs.empty()) {
-    assert(all_of(TE->Scalars, UndefValue::classof) &&
-           "Expected vector of undefs only.");
+  if (UsedTEs.empty())
     return std::nullopt;
-  }
 
   unsigned VF = 0;
   if (UsedTEs.size() == 1) {
-    // Try to find the perfect match in another gather node at first.
-    auto It = find_if(UsedTEs.front(), [TE](const TreeEntry *EntryPtr) {
-      return EntryPtr->isSame(TE->Scalars);
+    // Keep the order to avoid non-determinism.
+    SmallVector<const TreeEntry *> FirstEntries(UsedTEs.front().begin(),
+                                                UsedTEs.front().end());
+    sort(FirstEntries, [](const TreeEntry *TE1, const TreeEntry *TE2) {
+      return TE1->Idx < TE2->Idx;
     });
-    if (It != UsedTEs.front().end()) {
+    // Try to find the perfect match in another gather node at first.
+    auto *It = find_if(FirstEntries, [=](const TreeEntry *EntryPtr) {
+      return EntryPtr->isSame(VL) || EntryPtr->isSame(TE->Scalars);
+    });
+    if (It != FirstEntries.end()) {
       Entries.push_back(*It);
       std::iota(Mask.begin(), Mask.end(), 0);
+      // Clear undef scalars.
+      for (int I = 0, Sz = VL.size(); I < Sz; ++I)
+        if (isa<PoisonValue>(TE->Scalars[I]))
+          Mask[I] = UndefMaskElem;
       return TargetTransformInfo::SK_PermuteSingleSrc;
     }
-    // No perfect match, just shuffle, so choose the first tree node.
-    Entries.push_back(*UsedTEs.front().begin());
+    // No perfect match, just shuffle, so choose the first tree node from the
+    // tree.
+    Entries.push_back(FirstEntries.front());
   } else {
     // Try to find nodes with the same vector factor.
     assert(UsedTEs.size() == 2 && "Expected at max 2 permuted entries.");
+    // Keep the order of tree nodes to avoid non-determinism.
     DenseMap<int, const TreeEntry *> VFToTE;
-    for (const TreeEntry *TE : UsedTEs.front())
-      VFToTE.try_emplace(TE->getVectorFactor(), TE);
-    for (const TreeEntry *TE : UsedTEs.back()) {
+    for (const TreeEntry *TE : UsedTEs.front()) {
+      unsigned VF = TE->getVectorFactor();
+      auto It = VFToTE.find(VF);
+      if (It != VFToTE.end()) {
+        if (It->second->Idx > TE->Idx)
+          It->getSecond() = TE;
+        continue;
+      }
+      VFToTE.try_emplace(VF, TE);
+    }
+    // Same, keep the order to avoid non-determinism.
+    SmallVector<const TreeEntry *> SecondEntries(UsedTEs.back().begin(),
+                                                 UsedTEs.back().end());
+    sort(SecondEntries, [](const TreeEntry *TE1, const TreeEntry *TE2) {
+      return TE1->Idx < TE2->Idx;
+    });
+    for (const TreeEntry *TE : SecondEntries) {
       auto It = VFToTE.find(TE->getVectorFactor());
       if (It != VFToTE.end()) {
         VF = It->first;
@@ -8184,28 +8305,122 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
       return std::nullopt;
   }
 
+  bool IsSplatOrUndefs = isSplat(VL) || all_of(VL, UndefValue::classof);
+  // Checks if the 2 PHIs are compatible in terms of high possibility to be
+  // vectorized.
+  auto AreCompatiblePHIs = [&](Value *V, Value *V1) {
+    auto *PHI = cast<PHINode>(V);
+    auto *PHI1 = cast<PHINode>(V1);
+    // Check that all incoming values are compatible/from same parent (if they
+    // are instructions).
+    // The incoming values are compatible if they all are constants, or
+    // instruction with the same/alternate opcodes from the same basic block.
+    for (int I = 0, E = PHI->getNumIncomingValues(); I < E; ++I) {
+      Value *In = PHI->getIncomingValue(I);
+      Value *In1 = PHI1->getIncomingValue(I);
+      if (isConstant(In) && isConstant(In1))
+        continue;
+      if (!getSameOpcode({In, In1}, *TLI).getOpcode())
+        return false;
+      if (cast<Instruction>(In)->getParent() !=
+          cast<Instruction>(In1)->getParent())
+        return false;
+    }
+    return true;
+  };
+  // Check if the value can be ignored during analysis for shuffled gathers.
+  // We suppose it is better to ignore instruction, which do not form splats,
+  // are not vectorized/not extractelements (these instructions will be handled
+  // by extractelements processing) or may form vector node in future.
+  auto MightBeIgnored = [=](Value *V) {
+    auto *I = dyn_cast<Instruction>(V);
+    SmallVector<Value *> IgnoredVals;
+    if (UserIgnoreList)
+      IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
+    return I && !IsSplatOrUndefs && !ScalarToTreeEntry.count(I) &&
+           !isVectorLikeInstWithConstOps(I) &&
+           !areAllUsersVectorized(I, IgnoredVals) && isSimple(I);
+  };
+  // Check that the neighbor instruction may form a full vector node with the
+  // current instruction V. It is possible, if they have same/alternate opcode
+  // and same parent basic block.
+  auto NeighborMightBeIgnored = [&](Value *V, int Idx) {
+    Value *V1 = VL[Idx];
+    bool UsedInSameVTE = false;
+    auto It = UsedValuesEntry.find(V1);
+    if (It != UsedValuesEntry.end())
+      UsedInSameVTE = It->second == UsedValuesEntry.find(V)->second;
+    return V != V1 && MightBeIgnored(V1) && !UsedInSameVTE &&
+           getSameOpcode({V, V1}, *TLI).getOpcode() &&
+           cast<Instruction>(V)->getParent() ==
+               cast<Instruction>(V1)->getParent() &&
+           (!isa<PHINode>(V1) || AreCompatiblePHIs(V, V1));
+  };
   // Build a shuffle mask for better cost estimation and vector emission.
-  for (int I = 0, E = TE->Scalars.size(); I < E; ++I) {
-    Value *V = TE->Scalars[I];
-    if (isa<UndefValue>(V))
+  SmallBitVector UsedIdxs(Entries.size());
+  SmallVector<std::pair<unsigned, int>> EntryLanes;
+  for (int I = 0, E = VL.size(); I < E; ++I) {
+    Value *V = VL[I];
+    auto It = UsedValuesEntry.find(V);
+    if (It == UsedValuesEntry.end())
       continue;
-    unsigned Idx = UsedValuesEntry.lookup(V);
-    const TreeEntry *VTE = Entries[Idx];
-    int FoundLane = VTE->findLaneForValue(V);
-    Mask[I] = Idx * VF + FoundLane;
-    // Extra check required by isSingleSourceMaskImpl function (called by
-    // ShuffleVectorInst::isSingleSourceMask).
-    if (Mask[I] >= 2 * E)
-      return std::nullopt;
+    // Do not try to shuffle scalars, if they are constants, or instructions
+    // that can be vectorized as a result of the following vector build
+    // vectorization.
+    if (isConstant(V) || (MightBeIgnored(V) &&
+                          ((I > 0 && NeighborMightBeIgnored(V, I - 1)) ||
+                           (I != E - 1 && NeighborMightBeIgnored(V, I + 1)))))
+      continue;
+    unsigned Idx = It->second;
+    EntryLanes.emplace_back(Idx, I);
+    UsedIdxs.set(Idx);
+  }
+  // Iterate through all shuffled scalars and select entries, which can be used
+  // for final shuffle.
+  SmallVector<const TreeEntry *> TempEntries;
+  for (unsigned I = 0, Sz = Entries.size(); I < Sz; ++I) {
+    if (!UsedIdxs.test(I))
+      continue;
+    // Fix the entry number for the given scalar. If it is the first entry, set
+    // Pair.first to 0, otherwise to 1 (currently select at max 2 nodes).
+    // These indices are used when calculating final shuffle mask as the vector
+    // offset.
+    for (std::pair<unsigned, int> &Pair : EntryLanes)
+      if (Pair.first == I)
+        Pair.first = TempEntries.size();
+    TempEntries.push_back(Entries[I]);
+  }
+  Entries.swap(TempEntries);
+  if (EntryLanes.size() == Entries.size() && !VL.equals(TE->Scalars)) {
+    // We may have here 1 or 2 entries only. If the number of scalars is equal
+    // to the number of entries, no need to do the analysis, it is not very
+    // profitable. Since VL is not the same as TE->Scalars, it means we already
+    // have some shuffles before. Cut off not profitable case.
+    Entries.clear();
+    return std::nullopt;
+  }
+  // Build the final mask, check for the identity shuffle, if possible.
+  bool IsIdentity = Entries.size() == 1;
+  // Pair.first is the offset to the vector, while Pair.second is the index of
+  // scalar in the list.
+  for (const std::pair<unsigned, int> &Pair : EntryLanes) {
+    Mask[Pair.second] = Pair.first * VF +
+                        Entries[Pair.first]->findLaneForValue(VL[Pair.second]);
+    IsIdentity &= Mask[Pair.second] == Pair.second;
   }
   switch (Entries.size()) {
   case 1:
-    return TargetTransformInfo::SK_PermuteSingleSrc;
+    if (IsIdentity || EntryLanes.size() > 1 || VL.size() <= 2)
+      return TargetTransformInfo::SK_PermuteSingleSrc;
+    break;
   case 2:
-    return TargetTransformInfo::SK_PermuteTwoSrc;
+    if (EntryLanes.size() > 2 || VL.size() <= 2)
+      return TargetTransformInfo::SK_PermuteTwoSrc;
+    break;
   default:
     break;
   }
+  Entries.clear();
   return std::nullopt;
 }
 
@@ -8966,11 +9181,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     if (E->getMainOp())
       setInsertPointAfterBundle(E);
+    SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
+    // Build a mask out of the reorder indices and reorder scalars per this
+    // mask.
+    SmallVector<int> ReorderMask;
+    inversePermutation(E->ReorderIndices, ReorderMask);
+    if (!ReorderMask.empty())
+      reorderScalars(GatheredScalars, ReorderMask);
     Value *Vec;
     SmallVector<int> Mask;
     SmallVector<const TreeEntry *> Entries;
     std::optional<TargetTransformInfo::ShuffleKind> Shuffle =
-        isGatherShuffledEntry(E, Mask, Entries);
+        isGatherShuffledEntry(E, GatheredScalars, Mask, Entries);
     if (Shuffle) {
       assert((Entries.size() == 1 || Entries.size() == 2) &&
              "Expected shuffle of 1 or 2 entries.");
