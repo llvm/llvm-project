@@ -116,7 +116,8 @@ void ByteCodeEmitter::emitLabel(LabelTy Label) {
       using namespace llvm::support;
 
       /// Rewrite the operand of all jumps to this label.
-      void *Location = Code.data() + Reloc - sizeof(int32_t);
+      void *Location = Code.data() + Reloc - align(sizeof(int32_t));
+      assert(aligned(Location));
       const int32_t Offset = Target - static_cast<int64_t>(Reloc);
       endian::write<int32_t, endianness::native, 1>(Location, Offset);
     }
@@ -126,7 +127,9 @@ void ByteCodeEmitter::emitLabel(LabelTy Label) {
 
 int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
   // Compute the PC offset which the jump is relative to.
-  const int64_t Position = Code.size() + sizeof(Opcode) + sizeof(int32_t);
+  const int64_t Position =
+      Code.size() + align(sizeof(Opcode)) + align(sizeof(int32_t));
+  assert(aligned(Position));
 
   // If target is known, compute jump offset.
   auto It = LabelOffsets.find(Label);
@@ -162,13 +165,17 @@ static void emit(Program &P, std::vector<char> &Code, const T &Val,
     return;
   }
 
+  // Access must be aligned!
+  size_t ValPos = align(Code.size());
+  Size = align(Size);
+  assert(aligned(ValPos + Size));
+  Code.resize(ValPos + Size);
+
   if constexpr (!std::is_pointer_v<T>) {
-    const char *Data = reinterpret_cast<const char *>(&Val);
-    Code.insert(Code.end(), Data, Data + Size);
+    new (Code.data() + ValPos) T(Val);
   } else {
     uint32_t ID = P.getOrCreateNativePointer(Val);
-    const char *Data = reinterpret_cast<const char *>(&ID);
-    Code.insert(Code.end(), Data, Data + Size);
+    new (Code.data() + ValPos) uint32_t(ID);
   }
 }
 
