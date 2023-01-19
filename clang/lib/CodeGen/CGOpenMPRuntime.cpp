@@ -9903,9 +9903,22 @@ void CGOpenMPRuntime::emitTargetCall(
     llvm::Value *NumIterations =
         emitTargetNumIterationsCall(CGF, D, SizeEmitter);
 
+    llvm::Value *DynCGroupMem = CGF.Builder.getInt32(0);
+
+    llvm::Value *ZeroArray =
+        llvm::Constant::getNullValue(llvm::ArrayType::get(CGF.CGM.Int32Ty, 3));
+
+    bool HasNoWait = D.hasClausesOfKind<OMPNowaitClause>();
+    llvm::Value *Flags = CGF.Builder.getInt64(HasNoWait);
+
+    llvm::Value *NumTeams3D =
+        CGF.Builder.CreateInsertValue(ZeroArray, NumTeams, {0});
+    llvm::Value *NumThreads3D =
+        CGF.Builder.CreateInsertValue(ZeroArray, NumThreads, {0});
+
     // Arguments for the target kernel.
     SmallVector<llvm::Value *> KernelArgs{
-        CGF.Builder.getInt32(/* Version */ 1),
+        CGF.Builder.getInt32(/* Version */ 2),
         PointerNum,
         InputInfo.BasePointersArray.getPointer(),
         InputInfo.PointersArray.getPointer(),
@@ -9913,17 +9926,12 @@ void CGOpenMPRuntime::emitTargetCall(
         MapTypesArray,
         MapNamesArray,
         InputInfo.MappersArray.getPointer(),
-        NumIterations};
-
-    // Arguments passed to the 'nowait' variant.
-    SmallVector<llvm::Value *> NoWaitKernelArgs{
-        CGF.Builder.getInt32(0),
-        llvm::ConstantPointerNull::get(CGM.VoidPtrTy),
-        CGF.Builder.getInt32(0),
-        llvm::ConstantPointerNull::get(CGM.VoidPtrTy),
+        NumIterations,
+        Flags,
+        NumTeams3D,
+        NumThreads3D,
+        DynCGroupMem,
     };
-
-    bool HasNoWait = D.hasClausesOfKind<OMPNowaitClause>();
 
     // The target region is an outlined function launched by the runtime
     // via calls to __tgt_target_kernel().
@@ -9938,13 +9946,9 @@ void CGOpenMPRuntime::emitTargetCall(
     // __tgt_target_teams() launches a GPU kernel with the requested number
     // of teams and threads so no additional calls to the runtime are required.
     // Check the error code and execute the host version if required.
-    CGF.Builder.restoreIP(
-        HasNoWait ? OMPBuilder.emitTargetKernel(
-                        CGF.Builder, Return, RTLoc, DeviceID, NumTeams,
-                        NumThreads, OutlinedFnID, KernelArgs, NoWaitKernelArgs)
-                  : OMPBuilder.emitTargetKernel(CGF.Builder, Return, RTLoc,
-                                                DeviceID, NumTeams, NumThreads,
-                                                OutlinedFnID, KernelArgs));
+    CGF.Builder.restoreIP(OMPBuilder.emitTargetKernel(
+        CGF.Builder, Return, RTLoc, DeviceID, NumTeams, NumThreads,
+        OutlinedFnID, KernelArgs));
 
     llvm::BasicBlock *OffloadFailedBlock =
         CGF.createBasicBlock("omp_offload.failed");

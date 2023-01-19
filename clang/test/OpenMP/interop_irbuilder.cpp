@@ -98,26 +98,26 @@ void S::member_test() {
 // CHECK-NEXT:    store i64 2, ptr [[DEP_COUNTER_ADDR]], align 8
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-NEXT:    call void @__tgt_interop_use(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM4]], ptr [[INTEROP]], i32 -1, i32 2, ptr [[TMP2]], i32 1)
-// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [2 x %struct.kmp_depend_info], ptr [[DOTDEP_ARR_ADDR5]], i64 0, i64 0
-// CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[D0]] to i64
-// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP14]], i64 0
-// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP16]], i32 0, i32 0
-// CHECK-NEXT:    store i64 [[TMP15]], ptr [[TMP17]], align 8
-// CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP16]], i32 0, i32 1
-// CHECK-NEXT:    store i64 4, ptr [[TMP18]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP16]], i32 0, i32 2
-// CHECK-NEXT:    store i8 1, ptr [[TMP19]], align 8
-// CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[D1]] to i64
-// CHECK-NEXT:    [[TMP21:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP14]], i64 1
-// CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP21]], i32 0, i32 0
-// CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP22]], align 8
-// CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP21]], i32 0, i32 1
-// CHECK-NEXT:    store i64 4, ptr [[TMP23]], align 8
-// CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP21]], i32 0, i32 2
-// CHECK-NEXT:    store i8 1, ptr [[TMP24]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x %struct.kmp_depend_info], ptr [[DOTDEP_ARR_ADDR5]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[D0]] to i64
+// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP13]], i64 0
+// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP15]], i32 0, i32 0
+// CHECK-NEXT:    store i64 [[TMP14]], ptr [[TMP16]], align 8
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP15]], i32 0, i32 1
+// CHECK-NEXT:    store i64 4, ptr [[TMP17]], align 8
+// CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP15]], i32 0, i32 2
+// CHECK-NEXT:    store i8 1, ptr [[TMP18]], align 8
+// CHECK-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[D1]] to i64
+// CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP13]], i64 1
+// CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP20]], i32 0, i32 0
+// CHECK-NEXT:    store i64 [[TMP19]], ptr [[TMP21]], align 8
+// CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP20]], i32 0, i32 1
+// CHECK-NEXT:    store i64 4, ptr [[TMP22]], align 8
+// CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP20]], i32 0, i32 2
+// CHECK-NEXT:    store i8 1, ptr [[TMP23]], align 8
 // CHECK-NEXT:    store i64 2, ptr [[DEP_COUNTER_ADDR6]], align 8
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM7:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK-NEXT:    call void @__tgt_interop_destroy(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM7]], ptr [[INTEROP]], i32 -1, i32 2, ptr [[TMP14]], i32 0)
+// CHECK-NEXT:    call void @__tgt_interop_destroy(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM7]], ptr [[INTEROP]], i32 -1, i32 2, ptr [[TMP13]], i32 0)
 // CHECK-NEXT:    ret void
 //
 //
@@ -169,26 +169,26 @@ void S::member_test() {
 // CHECK-NEXT:    [[INTEROP8:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM9:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-NEXT:    call void @__tgt_interop_use(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM9]], ptr [[INTEROP8]], i32 -1, i32 2, ptr [[TMP2]], i32 1)
-// CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [2 x %struct.kmp_depend_info], ptr [[DOTDEP_ARR_ADDR10]], i64 0, i64 0
-// CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[D0]] to i64
-// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP14]], i64 0
-// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP16]], i32 0, i32 0
-// CHECK-NEXT:    store i64 [[TMP15]], ptr [[TMP17]], align 8
-// CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP16]], i32 0, i32 1
-// CHECK-NEXT:    store i64 4, ptr [[TMP18]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP16]], i32 0, i32 2
-// CHECK-NEXT:    store i8 1, ptr [[TMP19]], align 8
-// CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[D1]] to i64
-// CHECK-NEXT:    [[TMP21:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP14]], i64 1
-// CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP21]], i32 0, i32 0
-// CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP22]], align 8
-// CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP21]], i32 0, i32 1
-// CHECK-NEXT:    store i64 4, ptr [[TMP23]], align 8
-// CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP21]], i32 0, i32 2
-// CHECK-NEXT:    store i8 1, ptr [[TMP24]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x %struct.kmp_depend_info], ptr [[DOTDEP_ARR_ADDR10]], i64 0, i64 0
+// CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[D0]] to i64
+// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP13]], i64 0
+// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP15]], i32 0, i32 0
+// CHECK-NEXT:    store i64 [[TMP14]], ptr [[TMP16]], align 8
+// CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP15]], i32 0, i32 1
+// CHECK-NEXT:    store i64 4, ptr [[TMP17]], align 8
+// CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP15]], i32 0, i32 2
+// CHECK-NEXT:    store i8 1, ptr [[TMP18]], align 8
+// CHECK-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[D1]] to i64
+// CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP13]], i64 1
+// CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP20]], i32 0, i32 0
+// CHECK-NEXT:    store i64 [[TMP19]], ptr [[TMP21]], align 8
+// CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP20]], i32 0, i32 1
+// CHECK-NEXT:    store i64 4, ptr [[TMP22]], align 8
+// CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], ptr [[TMP20]], i32 0, i32 2
+// CHECK-NEXT:    store i8 1, ptr [[TMP23]], align 8
 // CHECK-NEXT:    store i64 2, ptr [[DEP_COUNTER_ADDR11]], align 8
 // CHECK-NEXT:    [[INTEROP12:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM13:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK-NEXT:    call void @__tgt_interop_destroy(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM13]], ptr [[INTEROP12]], i32 -1, i32 2, ptr [[TMP14]], i32 0)
+// CHECK-NEXT:    call void @__tgt_interop_destroy(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM13]], ptr [[INTEROP12]], i32 -1, i32 2, ptr [[TMP13]], i32 0)
 // CHECK-NEXT:    ret void
 //

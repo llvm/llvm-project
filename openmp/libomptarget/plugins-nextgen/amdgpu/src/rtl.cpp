@@ -428,7 +428,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// The default number of blocks is common to the whole device.
-  uint64_t getDefaultNumBlocks(GenericDeviceTy &GenericDevice) const override {
+  uint32_t getDefaultNumBlocks(GenericDeviceTy &GenericDevice) const override {
     return GenericDevice.getDefaultNumBlocks();
   }
 
