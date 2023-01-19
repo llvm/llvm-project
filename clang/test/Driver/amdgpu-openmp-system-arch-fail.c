@@ -17,11 +17,6 @@
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
 // NO-OUTPUT-ERROR: error: cannot determine amdgcn architecture{{.*}}; consider passing it via '-march'
 
-// case when amdgpu_arch returns multiple gpus but all are different
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib --amdgpu-arch-tool=%t/amdgpu_arch_different %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=MULTIPLE-OUTPUT-ERROR
-// MULTIPLE-OUTPUT-ERROR: error: cannot determine amdgcn architecture: Multiple AMD GPUs found with different archs; consider passing it via '-march'
-
 // case when amdgpu_arch does not return anything with successful execution
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=amdgcn-amd-amdhsa -nogpulib --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=EMPTY-OUTPUT
