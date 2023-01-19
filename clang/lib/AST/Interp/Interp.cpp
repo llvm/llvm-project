@@ -401,6 +401,48 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
   return false;
 }
 
+static void DiagnoseUninitializedSubobject(InterpState &S, const SourceInfo &SI,
+                                           QualType SubObjType,
+                                           SourceLocation SubObjLoc) {
+  S.FFDiag(SI, diag::note_constexpr_uninitialized) << true << SubObjType;
+  if (SubObjLoc.isValid())
+    S.Note(SubObjLoc, diag::note_constexpr_subobject_declared_here);
+}
+
+static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
+                                   const Pointer &BasePtr, const Record *R);
+
+static bool CheckArrayInitialized(InterpState &S, CodePtr OpPC,
+                                  const Pointer &BasePtr,
+                                  const ConstantArrayType *CAT) {
+  bool Result = true;
+  size_t NumElems = CAT->getSize().getZExtValue();
+  QualType ElemType = CAT->getElementType();
+
+  if (isa<RecordType>(ElemType.getTypePtr())) {
+    const Record *R = BasePtr.getElemRecord();
+    for (size_t I = 0; I != NumElems; ++I) {
+      Pointer ElemPtr = BasePtr.atIndex(I).narrow();
+      Result &= CheckFieldsInitialized(S, OpPC, ElemPtr, R);
+    }
+  } else if (auto *ElemCAT = dyn_cast<ConstantArrayType>(ElemType)) {
+    for (size_t I = 0; I != NumElems; ++I) {
+      Pointer ElemPtr = BasePtr.atIndex(I).narrow();
+      Result &= CheckArrayInitialized(S, OpPC, ElemPtr, ElemCAT);
+    }
+  } else {
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!BasePtr.atIndex(I).isInitialized()) {
+        DiagnoseUninitializedSubobject(S, S.Current->getSource(OpPC), ElemType,
+                                       BasePtr.getFieldDesc()->getLocation());
+        Result = false;
+      }
+    }
+  }
+
+  return Result;
+}
+
 static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
                                    const Pointer &BasePtr, const Record *R) {
   assert(R);
@@ -408,19 +450,17 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
   // Check all fields of this record are initialized.
   for (const Record::Field &F : R->fields()) {
     Pointer FieldPtr = BasePtr.atField(F.Offset);
-    QualType FieldType = FieldPtr.getType();
+    QualType FieldType = F.Decl->getType();
 
     if (FieldType->isRecordType()) {
       Result &= CheckFieldsInitialized(S, OpPC, FieldPtr, FieldPtr.getRecord());
     } else if (FieldType->isArrayType()) {
-      // FIXME: Arrays need to be handled here as well I think.
+      const auto *CAT =
+          cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());
+      Result &= CheckArrayInitialized(S, OpPC, FieldPtr, CAT);
     } else if (!FieldPtr.isInitialized()) {
-      const SourceInfo &SI = S.Current->getSource(OpPC);
-      S.FFDiag(SI, diag::note_constexpr_uninitialized)
-          << true << F.Decl->getType();
-      SourceLocation SubobjectLoc = F.Decl->getLocation();
-      if (SubobjectLoc.isValid())
-        S.Note(SubobjectLoc, diag::note_constexpr_subobject_declared_here);
+      DiagnoseUninitializedSubobject(S, S.Current->getSource(OpPC),
+                                     F.Decl->getType(), F.Decl->getLocation());
       Result = false;
     }
   }

@@ -137,8 +137,8 @@ static_assert(!b4); // ref-error {{not an integral constant expression}} \
 namespace UninitializedFields {
   class A {
   public:
-    int a; // expected-note {{subobject declared here}} \
-           // ref-note {{subobject declared here}}
+    int a; // expected-note 2{{subobject declared here}} \
+           // ref-note 2{{subobject declared here}}
     constexpr A() {}
   };
   constexpr A a; // expected-error {{must be initialized by a constant expression}} \
@@ -164,4 +164,40 @@ constexpr Derived D; // expected-error {{must be initialized by a constant expre
                      // expected-note {{in call to 'Derived()'}} \
                      // ref-error {{must be initialized by a constant expression}} \
                      // ref-note {{subobject of type 'int' is not initialized}}
+
+  class C2 {
+  public:
+    A a;
+    constexpr C2() {} // expected-note {{subobject of type 'int' is not initialized}}
+  };
+  constexpr C2 c2; // expected-error {{must be initialized by a constant expression}} \
+                   // expected-note {{in call to 'C2()'}} \
+                   // ref-error {{must be initialized by a constant expression}} \
+                   // ref-note {{subobject of type 'int' is not initialized}}
+
+
+  // FIXME: These two are currently disabled because the array fields
+  //   cannot be initialized.
+#if 0
+  class C3 {
+  public:
+    A a[2];
+    constexpr C3() {}
+  };
+  constexpr C3 c3; // expected-error {{must be initialized by a constant expression}} \
+                   // expected-note {{subobject of type 'int' is not initialized}} \
+                   // ref-error {{must be initialized by a constant expression}} \
+                   // ref-note {{subobject of type 'int' is not initialized}}
+
+  class C4 {
+  public:
+    bool B[2][3]; // expected-note {{subobject declared here}} \
+                  // ref-note {{subobject declared here}}
+    constexpr C4(){}
+  };
+  constexpr C4 c4; // expected-error {{must be initialized by a constant expression}} \
+                   // expected-note {{subobject of type 'bool' is not initialized}} \
+                   // ref-error {{must be initialized by a constant expression}} \
+                   // ref-note {{subobject of type 'bool' is not initialized}}
+#endif
 };

@@ -371,8 +371,8 @@ def ReplicateOp : TransformDialectOp<"replicate",
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$pattern,
-                       Variadic<TransformHandleTypeInterface>:$handles);
-  let results = (outs Variadic<TransformHandleTypeInterface>:$replicated);
+                       Variadic<Transform_AnyHandleOrParamType>:$handles);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$replicated);
   let assemblyFormat = "`num` `(` $pattern `)` $handles attr-dict `:` "
                        "type($pattern) `,` type($handles)";
 }
