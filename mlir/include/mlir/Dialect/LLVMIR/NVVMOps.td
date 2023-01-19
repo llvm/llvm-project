@@ -136,6 +136,45 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM redux op definitions
+//===----------------------------------------------------------------------===//
+
+def ReduxKindNone : I32EnumAttrCase<"NONE", 0, "none">;
+def ReduxKindAdd  : I32EnumAttrCase<"ADD", 1, "add">;
+def ReduxKindAnd  : I32EnumAttrCase<"AND", 2, "and">;
+def ReduxKindMax  : I32EnumAttrCase<"MAX", 3, "max">;
+def ReduxKindMin  : I32EnumAttrCase<"MIN", 4, "min">;
+def ReduxKindOr   : I32EnumAttrCase<"OR", 5, "or">;
+def ReduxKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
+def ReduxKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
+def ReduxKindXor  : I32EnumAttrCase<"XOR", 8, "xor">; 
+
+/// Enum attribute of the different kinds.
+def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
+  [ReduxKindAdd, ReduxKindAnd, ReduxKindMax, ReduxKindMin, ReduxKindOr, 
+    ReduxKindUmax, ReduxKindUmin, ReduxKindXor]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def ReduxKindAttr : EnumAttr<NVVM_Dialect, ReduxKind, "redux_kind">;
+
+def NVVM_ReduxOp :
+  NVVM_Op<"redux.sync">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$val,
+                 ReduxKindAttr:$kind,
+                 I32:$mask_and_clamp)> {
+  string llvmBuilder = [{
+      auto intId = getReduxIntrinsicId($_resultType, $kind);
+      $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
+  }];
+  let assemblyFormat = [{
+    $kind $val `,` $mask_and_clamp  attr-dict `:` type($val) `->` type($res)
+   }];   
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
 
