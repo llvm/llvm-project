@@ -17,6 +17,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -610,12 +611,11 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
 // IfOp
 //===----------------------------------------------------------------------===//
 
-def IfOp : SCF_Op<"if",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                 ["getNumRegionInvocations",
-                                  "getRegionInvocationBounds"]>,
-       SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveMemoryEffects,
-       NoRegionArguments]> {
+def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+    "getNumRegionInvocations", "getRegionInvocationBounds"]>,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>,
+    SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveMemoryEffects,
+    NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for
