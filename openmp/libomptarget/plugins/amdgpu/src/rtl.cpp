@@ -2545,58 +2545,24 @@ int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr, int32_t) {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,
-                                         void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                         int32_t ArgNum, int32_t NumTeams,
-                                         int32_t ThreadLimit,
-                                         uint64_t LoopTripcount) {
-
-  DeviceInfo().LoadRunLock.lock_shared();
-  int32_t Res = runRegionLocked(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
-                                ArgNum, NumTeams, ThreadLimit, LoopTripcount);
-
-  DeviceInfo().LoadRunLock.unlock_shared();
-  return Res;
-}
-
-int32_t __tgt_rtl_run_target_region(int32_t DeviceId, void *TgtEntryPtr,
-                                    void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                    int32_t ArgNum) {
-  // use one team and one thread
-  // fix thread num
-  int32_t TeamNum = 1;
-  int32_t ThreadLimit = 0; // use default
-  return __tgt_rtl_run_target_team_region(DeviceId, TgtEntryPtr, TgtArgs,
-                                          TgtOffsets, ArgNum, TeamNum,
-                                          ThreadLimit, 0);
-}
-
-int32_t __tgt_rtl_run_target_team_region_async(
-    int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs, ptrdiff_t *TgtOffsets,
-    int32_t ArgNum, int32_t NumTeams, int32_t ThreadLimit,
-    uint64_t LoopTripcount, __tgt_async_info *AsyncInfo) {
+int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfo) {
+  assert(!KernelArgs->NumTeams[1] && !KernelArgs->NumTeams[2] &&
+         !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
+         "Only one dimensional kernels supported.");
   assert(AsyncInfo && "AsyncInfo is nullptr");
   initAsyncInfo(AsyncInfo);
 
   DeviceInfo().LoadRunLock.lock_shared();
-  int32_t Res = runRegionLocked(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
-                                ArgNum, NumTeams, ThreadLimit, LoopTripcount);
+  int32_t Res =
+      runRegionLocked(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
+                      KernelArgs->NumArgs, KernelArgs->NumTeams[0],
+                      KernelArgs->ThreadLimit[0], KernelArgs->Tripcount);
 
   DeviceInfo().LoadRunLock.unlock_shared();
   return Res;
-}
-
-int32_t __tgt_rtl_run_target_region_async(int32_t DeviceId, void *TgtEntryPtr,
-                                          void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                          int32_t ArgNum,
-                                          __tgt_async_info *AsyncInfo) {
-  // use one team and one thread
-  // fix thread num
-  int32_t TeamNum = 1;
-  int32_t ThreadLimit = 0; // use default
-  return __tgt_rtl_run_target_team_region_async(DeviceId, TgtEntryPtr, TgtArgs,
-                                                TgtOffsets, ArgNum, TeamNum,
-                                                ThreadLimit, 0, AsyncInfo);
 }
 
 int32_t __tgt_rtl_synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfo) {

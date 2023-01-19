@@ -38,12 +38,8 @@ extern int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                             void **ArgMappers, AsyncInfoTy &AsyncInfo,
                             bool FromMapper = false);
 
-extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
-                  void **ArgBases, void **Args, int64_t *ArgSizes,
-                  int64_t *ArgTypes, map_var_info_t *ArgNames,
-                  void **ArgMappers, int32_t TeamNum, int32_t ThreadLimit,
-                  uint64_t Tripcount, int IsTeamConstruct,
-                  AsyncInfoTy &AsyncInfo);
+extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
+                  const KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
 
 extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          void *DeviceMemory, int64_t DeviceMemorySize,

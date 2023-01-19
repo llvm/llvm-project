@@ -175,8 +175,7 @@ struct GenericKernelTy {
   /// Launch the kernel on the specific device. The device must be the same
   /// one used to initialize the kernel.
   Error launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-               ptrdiff_t *ArgOffsets, int32_t NumArgs, uint64_t NumTeamsClause,
-               uint32_t ThreadLimitClause, uint64_t LoopTripCount,
+               ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
                            uint64_t NumBlocks, uint32_t DynamicMemorySize,
@@ -207,14 +206,14 @@ private:
 
   /// Get the default number of threads and blocks for the kernel.
   virtual uint32_t getDefaultNumThreads(GenericDeviceTy &Device) const = 0;
-  virtual uint64_t getDefaultNumBlocks(GenericDeviceTy &Device) const = 0;
+  virtual uint32_t getDefaultNumBlocks(GenericDeviceTy &Device) const = 0;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
-                         uint32_t ThreadLimitClause) const;
+                         uint32_t ThreadLimitClause[3]) const;
   uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
-                        uint64_t BlockLimitClause, uint64_t LoopTripCount,
+                        uint32_t BlockLimitClause[3], uint64_t LoopTripCount,
                         uint32_t NumThreads) const;
 
   /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
@@ -335,12 +334,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                  void *DstPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
-  /// Run the target region with multiple teams.
-  Error runTargetTeamRegion(void *EntryPtr, void **ArgPtrs,
-                            ptrdiff_t *ArgOffsets, int32_t NumArgs,
-                            uint64_t NumTeamsClause, uint32_t ThreadLimitClause,
-                            uint64_t LoopTripCount,
-                            __tgt_async_info *AsyncInfo);
+  /// Run the kernel associated with \p EntryPtr
+  Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
+                     KernelArgsTy &KernelArgs, __tgt_async_info *AsyncInfo);
 
   /// Initialize a __tgt_async_info structure. Related to interop features.
   Error initAsyncInfo(__tgt_async_info **AsyncInfoPtr);
@@ -380,11 +376,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Getters of the grid values.
   uint32_t getWarpSize() const { return GridValues.GV_Warp_Size; }
   uint32_t getThreadLimit() const { return GridValues.GV_Max_WG_Size; }
-  uint64_t getBlockLimit() const { return GridValues.GV_Max_Teams; }
+  uint32_t getBlockLimit() const { return GridValues.GV_Max_Teams; }
   uint32_t getDefaultNumThreads() const {
     return GridValues.GV_Default_WG_Size;
   }
-  uint64_t getDefaultNumBlocks() const {
+  uint32_t getDefaultNumBlocks() const {
     return GridValues.GV_Default_Num_Teams;
   }
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }

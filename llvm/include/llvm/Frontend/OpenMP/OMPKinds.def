@@ -40,6 +40,7 @@ __OMP_TYPE(Int64Ptr)
 __OMP_TYPE(Double)
 
 OMP_TYPE(SizeTy, M.getDataLayout().getIntPtrType(Ctx))
+OMP_TYPE(Int63, Type::getIntNTy(Ctx, 63))
 
 #define __OMP_PTR_TYPE(NAME, BASE) OMP_TYPE(NAME, BASE->getPointerTo())
 
@@ -69,6 +70,7 @@ __OMP_PTR_TYPE(Int8PtrPtrPtr, Int8PtrPtr)
   OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)
 
 __OMP_ARRAY_TYPE(KmpCriticalName, Int32, 8)
+__OMP_ARRAY_TYPE(Int32Arr3, Int32, 3)
 
 #undef __OMP_ARRAY_TYPE
 #undef OMP_ARRAY_TYPE
@@ -80,19 +82,20 @@ __OMP_ARRAY_TYPE(KmpCriticalName, Int32, 8)
 ///{
 
 #ifndef OMP_STRUCT_TYPE
-#define OMP_STRUCT_TYPE(VarName, StructName, ...)
+#define OMP_STRUCT_TYPE(VarName, StructName, Packed, ...)
 #endif
 
-#define __OMP_STRUCT_TYPE(VarName, Name, ...)                                  \
-  OMP_STRUCT_TYPE(VarName, "struct." #Name, __VA_ARGS__)
+#define __OMP_STRUCT_TYPE(VarName, Name, Packed, ...)                                  \
+  OMP_STRUCT_TYPE(VarName, "struct." #Name, Packed, __VA_ARGS__)
 
-__OMP_STRUCT_TYPE(Ident, ident_t, Int32, Int32, Int32, Int32, Int8Ptr)
-__OMP_STRUCT_TYPE(OffloadEntry, __tgt_offload_entry, Int8Ptr, Int8Ptr, SizeTy,
+__OMP_STRUCT_TYPE(Ident, ident_t, false, Int32, Int32, Int32, Int32, Int8Ptr)
+__OMP_STRUCT_TYPE(OffloadEntry, __tgt_offload_entry, false, Int8Ptr, Int8Ptr, SizeTy,
                   Int32, Int32)
-__OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, Int32, Int32, VoidPtrPtr,
-                  VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr, Int64)
-__OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, Int8Ptr)
-__OMP_STRUCT_TYPE(DependInfo, kmp_dep_info, SizeTy, SizeTy, Int8)
+__OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, false, Int32, Int32, VoidPtrPtr,
+		  VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr,
+		  Int64, Int64, Int32Arr3Ty, Int32Arr3Ty, Int32)
+__OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, false, Int8Ptr)
+__OMP_STRUCT_TYPE(DependInfo, kmp_dep_info, false, SizeTy, SizeTy, Int8)
 
 #undef __OMP_STRUCT_TYPE
 #undef OMP_STRUCT_TYPE

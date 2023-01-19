@@ -14,6 +14,7 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
+#include <cstdint>
 #include <deque>
 #include <functional>
 #include <stddef.h>
@@ -114,20 +115,31 @@ enum TargetAllocTy : int32_t {
 };
 
 /// This struct contains all of the arguments to a target kernel region launch.
-struct __tgt_kernel_arguments {
-  int32_t Version;    // Version of this struct for ABI compatibility.
-  int32_t NumArgs;    // Number of arguments in each input pointer.
-  void **ArgBasePtrs; // Base pointer of each argument (e.g. a struct).
-  void **ArgPtrs;     // Pointer to the argument data.
-  int64_t *ArgSizes;  // Size of the argument data in bytes.
-  int64_t *ArgTypes;  // Type of the data (e.g. to / from).
-  void **ArgNames;    // Name of the data for debugging, possibly null.
-  void **ArgMappers;  // User-defined mappers, possibly null.
-  int64_t Tripcount;  // Tripcount for the teams / distribute loop, 0 otherwise.
+struct KernelArgsTy {
+  uint32_t Version;       // Version of this struct for ABI compatibility.
+  uint32_t NumArgs;       // Number of arguments in each input pointer.
+  void **ArgBasePtrs;     // Base pointer of each argument (e.g. a struct).
+  void **ArgPtrs;         // Pointer to the argument data.
+  int64_t *ArgSizes;      // Size of the argument data in bytes.
+  int64_t *ArgTypes;      // Type of the data (e.g. to / from).
+  void **ArgNames;        // Name of the data for debugging, possibly null.
+  void **ArgMappers;      // User-defined mappers, possibly null.
+  uint64_t Tripcount;     // Tripcount for the teams / distribute loop, 0 otherwise.
+  struct {
+    uint64_t NoWait : 1;  // Was this kernel spawned with a `nowait` clause.
+    uint64_t Unused : 63;
+  } Flags;
+  uint32_t NumTeams[3];    // The number of teams (for x,y,z dimension).
+  uint32_t ThreadLimit[3]; // The number of threads (for x,y,z dimension).
+  uint32_t DynCGroupMem;   // Amount of dynamic cgroup memory requested.
 };
-static_assert(sizeof(__tgt_kernel_arguments) == 64 ||
-                  sizeof(__tgt_kernel_arguments) == 40,
+static_assert(sizeof(KernelArgsTy().Flags) == sizeof(uint64_t),
               "Invalid struct size");
+static_assert(sizeof(KernelArgsTy) == (8 * sizeof(int32_t) + 3 * sizeof(int64_t) + 4 * sizeof(void**) + 2 * sizeof(int64_t*)),
+              "Invalid struct size");
+constexpr KernelArgsTy CTorDTorKernelArgs = {1,       0,       nullptr,   nullptr,
+	     nullptr, nullptr, nullptr,   nullptr,
+	     0,      {0,0},       {1, 0, 0}, {1, 0, 0}, 0};
 
 /// This struct is a record of an entry point or global. For a function
 /// entry point the size is expected to be zero
@@ -399,13 +411,7 @@ void __tgt_target_data_update_nowait_mapper(
 // function returns 0 if it was able to transfer the execution to a
 // target and an int different from zero otherwise.
 int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
-                        int32_t ThreadLimit, void *HostPtr,
-                        __tgt_kernel_arguments *Args);
-int __tgt_target_kernel_nowait(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
-                               int32_t ThreadLimit, void *HostPtr,
-                               __tgt_kernel_arguments *Args, int32_t DepNum,
-                               void *DepList, int32_t NoAliasDepNum,
-                               void *NoAliasDepList);
+                        int32_t ThreadLimit, void *HostPtr, KernelArgsTy *Args);
 
 // Non-blocking synchronization for target nowait regions. This function
 // acquires the asynchronous context from task data of the current task being
