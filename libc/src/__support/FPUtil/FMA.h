@@ -11,6 +11,7 @@
 
 #include "src/__support/architectures.h"
 #include "src/__support/common.h"
+#include "src/__support/cpu_features.h"
 
 #if defined(LIBC_TARGET_HAS_FMA)
 
