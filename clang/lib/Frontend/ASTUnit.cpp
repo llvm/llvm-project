@@ -574,7 +574,7 @@ public:
     // performs the initialization too late (once both target and language
     // options are read).
     PP.getFileManager().setVirtualFileSystem(createVFSFromOverlayFiles(
-        HSOpts.VFSOverlayFiles, PP.getDiagnostics(),
+        HSOpts.VFSOverlayFiles, HSOpts.VFSStatCacheFiles, PP.getDiagnostics(),
         PP.getFileManager().getVirtualFileSystemPtr()));
 
     InitializedHeaderSearchPaths = true;
