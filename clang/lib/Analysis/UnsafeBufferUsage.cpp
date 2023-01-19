@@ -680,17 +680,16 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   // FIXME Detect overlapping FixIts.
 
   for (const auto &G : UnsafeOps.noVar) {
-    Handler.handleUnsafeOperation(G->getBaseStmt());
+    Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/false);
   }
 
   for (const auto &[VD, WarningGadgets] : UnsafeOps.byVar) {
     auto FixItsIt = FixItsForVariable.find(VD);
-    if (FixItsIt != FixItsForVariable.end()) {
-      Handler.handleFixableVariable(VD, std::move(FixItsIt->second));
-    } else {
-      for (const auto &G : WarningGadgets) {
-        Handler.handleUnsafeOperation(G->getBaseStmt());
-      }
+    Handler.handleFixableVariable(VD, FixItsIt != FixItsForVariable.end()
+                                          ? std::move(FixItsIt->second)
+                                          : FixItList{});
+    for (const auto &G : WarningGadgets) {
+      Handler.handleUnsafeOperation(G->getBaseStmt(), /*IsRelatedToDecl=*/true);
     }
   }
 }
