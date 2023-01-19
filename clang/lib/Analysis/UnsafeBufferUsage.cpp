@@ -662,7 +662,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   for (auto it = FixablesForUnsafeVars.byVar.cbegin();
        it != FixablesForUnsafeVars.byVar.cend();) {
     // FIXME: Support ParmVarDecl as well.
-    if (it->first->isLocalVarDecl() || Tracker.hasUnclaimedUses(it->first)) {
+    if (!it->first->isLocalVarDecl() || Tracker.hasUnclaimedUses(it->first)) {
       it = FixablesForUnsafeVars.byVar.erase(it);
     } else {
       ++it;
