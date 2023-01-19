@@ -822,7 +822,9 @@ public:
   /// \brief Given a branch instruction try to get the address the branch
   /// targets. Return true on success, and the address in Target.
   virtual bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                              uint64_t &Target) const;
+                              uint64_t &Target) const {
+    return Analysis->evaluateBranch(Inst, Addr, Size, Target);
+  }
 
   /// Return true if one of the operands of the \p Inst instruction uses
   /// PC-relative addressing.

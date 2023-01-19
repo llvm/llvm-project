@@ -14,9 +14,11 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/StatCacheFileSystem.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <list>
 #include <map>
 #include <string>
 
@@ -3227,4 +3229,307 @@ TEST(RedirectingFileSystemTest, PrintOutput) {
             "ExternalFS:\n"
             "  DummyFileSystem (RecursiveContents)\n",
             Output);
+}
+
+class StatCacheFileSystemTest : public ::testing::Test {
+public:
+  void SetUp() override {}
+
+  template <typename StringCollection>
+  void createStatCacheFileSystem(
+      StringRef OutputFile, StringRef BaseDir, bool IsCaseSensitive,
+      IntrusiveRefCntPtr<vfs::StatCacheFileSystem> &Result,
+      StringCollection &Filenames,
+      IntrusiveRefCntPtr<vfs::FileSystem> Lower = new ErrorDummyFileSystem(),
+      uint64_t ValidityToken = 0) {
+    sys::fs::file_status s;
+    status(BaseDir, s);
+    vfs::StatCacheFileSystem::StatCacheWriter Generator(
+        BaseDir, s, IsCaseSensitive, ValidityToken);
+    std::error_code ErrorCode;
+
+    Result.reset();
+
+    // Base path should be present in the stat cache.
+    Filenames.push_back(std::string(BaseDir));
+
+    for (sys::fs::recursive_directory_iterator I(BaseDir, ErrorCode), E;
+         I != E && !ErrorCode; I.increment(ErrorCode)) {
+      Filenames.push_back(I->path());
+      StringRef Path(Filenames.back().c_str());
+      status(Path, s);
+      Generator.addEntry(Path, s);
+    }
+
+    {
+      raw_fd_ostream StatCacheFile(OutputFile, ErrorCode);
+      ASSERT_FALSE(ErrorCode);
+      Generator.writeStatCache(StatCacheFile);
+    }
+
+    loadCacheFile(OutputFile, ValidityToken, Lower, Result);
+  }
+
+  void loadCacheFile(StringRef OutputFile, uint64_t ExpectedValidityToken,
+                     IntrusiveRefCntPtr<vfs::FileSystem> Lower,
+                     IntrusiveRefCntPtr<vfs::StatCacheFileSystem> &Result) {
+    auto ErrorOrBuffer = MemoryBuffer::getFile(OutputFile);
+    EXPECT_TRUE(ErrorOrBuffer);
+    StringRef CacheBaseDir;
+    bool IsCaseSensitive;
+    bool VersionMatch;
+    uint64_t FileValidityToken;
+    auto E = vfs::StatCacheFileSystem::validateCacheFile(
+        (*ErrorOrBuffer)->getMemBufferRef(), CacheBaseDir, IsCaseSensitive,
+        VersionMatch, FileValidityToken);
+    ASSERT_FALSE(E);
+    EXPECT_TRUE(VersionMatch);
+    EXPECT_EQ(FileValidityToken, ExpectedValidityToken);
+    auto ExpectedCache =
+        vfs::StatCacheFileSystem::create(std::move(*ErrorOrBuffer), Lower);
+    ASSERT_FALSE(ExpectedCache.takeError());
+    Result = *ExpectedCache;
+  }
+
+  template <typename StringCollection>
+  void
+  compareStatCacheToRealFS(IntrusiveRefCntPtr<vfs::StatCacheFileSystem> CacheFS,
+                           const StringCollection &Files) {
+    IntrusiveRefCntPtr<vfs::FileSystem> RealFS = vfs::getRealFileSystem();
+
+    for (auto &File : Files) {
+      auto ErrorOrStatus1 = RealFS->status(File);
+      auto ErrorOrStatus2 = CacheFS->status(File);
+
+      EXPECT_EQ((bool)ErrorOrStatus1, (bool)ErrorOrStatus2);
+      if (!ErrorOrStatus1 || !ErrorOrStatus2)
+        continue;
+
+      vfs::Status s1 = *ErrorOrStatus1, s2 = *ErrorOrStatus2;
+      EXPECT_EQ(s1.getName(), s2.getName());
+      EXPECT_EQ(s1.getType(), s2.getType());
+      EXPECT_EQ(s1.getPermissions(), s2.getPermissions());
+      EXPECT_EQ(s1.getLastModificationTime(), s2.getLastModificationTime());
+      EXPECT_EQ(s1.getUniqueID(), s2.getUniqueID());
+      EXPECT_EQ(s1.getUser(), s2.getUser());
+      EXPECT_EQ(s1.getGroup(), s2.getGroup());
+      EXPECT_EQ(s1.getSize(), s2.getSize());
+    }
+  }
+};
+
+TEST_F(StatCacheFileSystemTest, Basic) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  TempDir _a(TestDirectory.path("a"));
+  TempFile _ab(TestDirectory.path("a/b"));
+  TempDir _ac(TestDirectory.path("a/c"));
+  TempFile _acd(TestDirectory.path("a/c/d"), "", "Dummy contents");
+  TempFile _ace(TestDirectory.path("a/c/e"));
+  TempFile _acf(TestDirectory.path("a/c/f"), "", "More dummy contents");
+  TempDir _ag(TestDirectory.path("a/g"));
+  TempFile _agh(TestDirectory.path("a/g/h"));
+
+  StringRef BaseDir(_a.path());
+
+  SmallVector<std::string, 10> Filenames;
+  IntrusiveRefCntPtr<vfs::StatCacheFileSystem> StatCacheFS;
+  createStatCacheFileSystem(TestDirectory.path("stat.cache"), BaseDir,
+                            /* IsCaseSensitive= */ true, StatCacheFS,
+                            Filenames);
+  ASSERT_TRUE(StatCacheFS);
+  compareStatCacheToRealFS(StatCacheFS, Filenames);
+}
+
+TEST_F(StatCacheFileSystemTest, CaseSensitivity) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  TempDir _a(TestDirectory.path("a"));
+  TempDir _ac(TestDirectory.path("a/c"));
+  TempFile _acd(TestDirectory.path("a/c/d"), "", "Dummy contents");
+  TempDir _b(TestDirectory.path("B"));
+  TempDir _bc(TestDirectory.path("B/c"));
+  TempFile _bcd(TestDirectory.path("B/c/D"), "", "Dummy contents");
+
+  StringRef BaseDir(TestDirectory.path());
+  SmallVector<std::string, 10> Filenames;
+  IntrusiveRefCntPtr<vfs::StatCacheFileSystem> StatCacheFS;
+  createStatCacheFileSystem(TestDirectory.path("stat.cache"), BaseDir,
+                            /* IsCaseSensitive= */ true, StatCacheFS,
+                            Filenames);
+  ASSERT_TRUE(StatCacheFS);
+
+  auto ErrorOrStatus = StatCacheFS->status(_acd.path());
+  EXPECT_TRUE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(_bcd.path());
+  EXPECT_TRUE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("a/C/d"));
+  EXPECT_FALSE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("A/C/d"));
+  EXPECT_FALSE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("a/c/D"));
+  EXPECT_FALSE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("b/c/d"));
+  EXPECT_FALSE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("b/C/d"));
+  EXPECT_FALSE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("B/C/D"));
+  EXPECT_FALSE(ErrorOrStatus);
+
+  createStatCacheFileSystem(TestDirectory.path("stat.cache"), BaseDir,
+                            /* IsCaseSensitive= */ false, StatCacheFS,
+                            Filenames);
+  ASSERT_TRUE(StatCacheFS);
+  ErrorOrStatus = StatCacheFS->status(_acd.path());
+  EXPECT_TRUE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(_bcd.path());
+  EXPECT_TRUE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("a/C/d"));
+  EXPECT_TRUE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("A/C/d"));
+  EXPECT_TRUE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("a/c/D"));
+  EXPECT_TRUE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("b/c/d"));
+  EXPECT_TRUE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("b/C/d"));
+  EXPECT_TRUE(ErrorOrStatus);
+  ErrorOrStatus = StatCacheFS->status(TestDirectory.path("B/C/D"));
+  EXPECT_TRUE(ErrorOrStatus);
+}
+
+TEST_F(StatCacheFileSystemTest, DotDot) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  TempDir _a(TestDirectory.path("a"));
+  TempDir _ab(TestDirectory.path("a/b"));
+  TempFile _abd(TestDirectory.path("a/b/d"));
+  TempDir _ac(TestDirectory.path("a/c"));
+  TempFile _acd(TestDirectory.path("a/c/d"));
+
+  StringRef BaseDir(_a.path());
+  SmallVector<std::string, 10> Filenames;
+  IntrusiveRefCntPtr<vfs::StatCacheFileSystem> StatCacheFS;
+  auto RealFS = vfs::getRealFileSystem();
+  createStatCacheFileSystem(TestDirectory.path("stat.cache"), BaseDir,
+                            /* IsCaseSensitive= */ true, StatCacheFS, Filenames,
+                            RealFS);
+  ASSERT_TRUE(StatCacheFS);
+
+  // Create a file in the cached prefix after the cache was created.
+  TempFile _abe(TestDirectory.path("a/b/e"));
+  // Verify the cache is kicking in.
+  ASSERT_FALSE(StatCacheFS->status(_abe.path()));
+  // We can access the new file using a ".." because the StatCache will
+  // just pass that request to the FileSystem below it.
+  const SmallString<128> PathsToTest[] = {
+      TestDirectory.path("a/b/../e"),
+      TestDirectory.path("a/b/../c/d"),
+      TestDirectory.path("a/b/.."),
+  };
+  compareStatCacheToRealFS(StatCacheFS, PathsToTest);
+}
+
+#ifdef LLVM_ON_UNIX
+TEST_F(StatCacheFileSystemTest, Links) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  TempDir _a(TestDirectory.path("a"));
+  TempLink _ab("d", TestDirectory.path("a/b"));
+  TempFile _ac(TestDirectory.path("a/c"));
+  TempDir _ad(TestDirectory.path("a/d"));
+  TempFile _add(TestDirectory.path("a/d/d"), "", "Dummy contents");
+  TempFile _ade(TestDirectory.path("a/d/e"));
+  TempFile _adf(TestDirectory.path("a/d/f"), "", "More dummy contents");
+  TempLink _adg(_ad.path(), TestDirectory.path("a/d/g"));
+  TempDir _ah(TestDirectory.path("a/h"));
+  TempLink _ahi(_ad.path(), TestDirectory.path("a/h/i"));
+  TempLink _ahj("no_such_file", TestDirectory.path("a/h/j"));
+
+  StringRef BaseDir(_a.path());
+
+  SmallVector<std::string, 10> Filenames;
+  IntrusiveRefCntPtr<vfs::StatCacheFileSystem> StatCacheFS;
+  createStatCacheFileSystem(TestDirectory.path("stat.cache"), BaseDir,
+                            /* IsCaseSensitive= */ true, StatCacheFS,
+                            Filenames);
+  ASSERT_TRUE(StatCacheFS);
+  EXPECT_NE(std::find(Filenames.begin(), Filenames.end(),
+                      TestDirectory.path("a/d/g/g")),
+            Filenames.end());
+  EXPECT_NE(std::find(Filenames.begin(), Filenames.end(),
+                      TestDirectory.path("a/b/e")),
+            Filenames.end());
+  EXPECT_NE(std::find(Filenames.begin(), Filenames.end(),
+                      TestDirectory.path("a/h/i/f")),
+            Filenames.end());
+  EXPECT_NE(std::find(Filenames.begin(), Filenames.end(),
+                      TestDirectory.path("a/h/j")),
+            Filenames.end());
+  compareStatCacheToRealFS(StatCacheFS, Filenames);
+
+  createStatCacheFileSystem(TestDirectory.path("stat.cache"), BaseDir,
+                            /* IsCaseSensitive= */ true, StatCacheFS, Filenames,
+                            vfs::getRealFileSystem());
+  const SmallString<128> PathsToTest[] = {
+      TestDirectory.path("a/h/i/../c"),
+      TestDirectory.path("a/b/../d"),
+      TestDirectory.path("a/g/g/../c"),
+      TestDirectory.path("a/b/.."),
+  };
+  compareStatCacheToRealFS(StatCacheFS, PathsToTest);
+}
+#endif
+
+TEST_F(StatCacheFileSystemTest, Canonical) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  TempDir _a(TestDirectory.path("a"));
+  TempFile _ab(TestDirectory.path("a/b"));
+  TempDir _ac(TestDirectory.path("a/c"));
+  TempFile _acd(TestDirectory.path("a/c/d"), "", "Dummy contents");
+
+  StringRef BaseDir(_a.path());
+  SmallVector<std::string, 10> Filenames;
+  IntrusiveRefCntPtr<vfs::StatCacheFileSystem> StatCacheFS;
+  createStatCacheFileSystem(TestDirectory.path("stat.cache"), BaseDir,
+                            /* IsCaseSensitive= */ true, StatCacheFS,
+                            Filenames);
+  ASSERT_TRUE(StatCacheFS);
+
+  const SmallString<128> PathsToTest[] = {
+      TestDirectory.path("./a/b"),        TestDirectory.path("a//./b"),
+      TestDirectory.path("a///b"),        TestDirectory.path("a//c//d"),
+      TestDirectory.path("a//c/./d"),     TestDirectory.path("a/./././b"),
+      TestDirectory.path("a/.//.//.//b"),
+  };
+  compareStatCacheToRealFS(StatCacheFS, PathsToTest);
+}
+
+TEST_F(StatCacheFileSystemTest, ValidityToken) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  TempDir _a(TestDirectory.path("a"));
+  TempFile _ab(TestDirectory.path("a/b"));
+  TempDir _ac(TestDirectory.path("a/c"));
+  TempFile _acd(TestDirectory.path("a/c/d"), "", "Dummy contents");
+
+  StringRef BaseDir(_a.path());
+  IntrusiveRefCntPtr<vfs::StatCacheFileSystem> StatCacheFS;
+  {
+    SmallVector<std::string, 10> Filenames;
+    uint64_t ValidityToken = 0x1234567890abcfef;
+    createStatCacheFileSystem(TestDirectory.path("stat.cache"), BaseDir,
+                              /* IsCaseSensitive= */ true, StatCacheFS,
+                              Filenames, new DummyFileSystem(), ValidityToken);
+    ASSERT_TRUE(StatCacheFS);
+  }
+
+  uint64_t UpdatedValidityToken = 0xabcdef0123456789;
+  {
+    std::error_code EC;
+    raw_fd_ostream CacheFile(TestDirectory.path("stat.cache"), EC,
+                             sys::fs::CD_OpenAlways);
+    ASSERT_FALSE(EC);
+    vfs::StatCacheFileSystem::updateValidityToken(CacheFile,
+                                                  UpdatedValidityToken);
+  }
+
+  loadCacheFile(TestDirectory.path("stat.cache"), UpdatedValidityToken,
+                new DummyFileSystem(), StatCacheFS);
+  EXPECT_TRUE(StatCacheFS);
 }
