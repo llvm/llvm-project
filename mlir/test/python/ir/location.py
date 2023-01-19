@@ -25,6 +25,21 @@ def testUnknown():
 run(testUnknown)
 
 
+# CHECK-LABEL: TEST: testLocationAttr
+def testLocationAttr():
+  with Context() as ctxt:
+    loc = Location.unknown()
+    attr = loc.get_attr()
+    clone = Location.from_attr(attr)
+  gc.collect()
+  # CHECK: loc: loc(unknown)
+  print("loc:", str(loc))
+  # CHECK: clone: loc(unknown)
+  print("clone:", str(clone))
+  assert loc == clone
+
+run(testLocationAttr)
+
 # CHECK-LABEL: TEST: testFileLineCol
 def testFileLineCol():
   with Context() as ctx:

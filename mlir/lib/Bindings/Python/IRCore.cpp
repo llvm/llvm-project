@@ -2543,10 +2543,24 @@ void mlir::python::populateIRCore(py::module &m) {
           },
           py::arg("name"), py::arg("childLoc") = py::none(),
           py::arg("context") = py::none(), kContextGetNameLocationDocString)
+      .def_static(
+          "from_attr",
+          [](PyAttribute &attribute, DefaultingPyMlirContext context) {
+            return PyLocation(context->getRef(),
+                              mlirLocationFromAttr(attribute));
+          },
+          py::arg("attribute"), py::arg("context") = py::none(),
+          "Gets a Location from a LocationAttr")
       .def_property_readonly(
           "context",
           [](PyLocation &self) { return self.getContext().getObject(); },
           "Context that owns the Location")
+      .def(
+          "get_attr",
+          [](PyLocation &self) {
+            return PyAttribute(self.getContext(), mlirLocationGetAttr(self));
+          },
+          "Get the underlying LocationAttr")
       .def(
           "emit_error",
           [](PyLocation &self, std::string message) {

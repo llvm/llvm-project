@@ -144,6 +144,14 @@ void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
 // Location API.
 //===----------------------------------------------------------------------===//
 
+MlirAttribute mlirLocationGetAttr(MlirLocation location) {
+  return wrap(LocationAttr(unwrap(location)));
+}
+
+MlirLocation mlirLocationFromAttr(MlirAttribute attribute) {
+  return wrap(Location(unwrap(attribute).cast<LocationAttr>()));
+}
+
 MlirLocation mlirLocationFileLineColGet(MlirContext context,
                                         MlirStringRef filename, unsigned line,
                                         unsigned col) {
