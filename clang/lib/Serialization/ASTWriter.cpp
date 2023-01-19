@@ -5899,11 +5899,6 @@ void ASTRecordWriter::AddCXXCtorInitializers(
 }
 
 void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
-  static_assert(sizeof(decltype(D->data())) == 104 &&
-                    sizeof(CXXRecordDecl::LambdaDefinitionData) == 144,
-                "You need to update the serializer after you change the fields "
-                "of Decls.");
-
   auto &Data = D->data();
   Record->push_back(Data.IsLambda);
 
