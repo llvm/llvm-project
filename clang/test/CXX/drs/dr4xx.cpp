@@ -301,9 +301,8 @@ namespace dr417 { // dr417: no
     struct F;
     struct H;
   }
-  // FIXME: This is ill-formed.
   using N::D;
-  struct dr417::D {}; // expected-warning {{extra qualification}}
+  struct dr417::D {}; // expected-error {{forward declaration of struct cannot}} expected-warning {{extra qualification}}
   using namespace N;
   struct dr417::E {}; // expected-warning {{extra qualification}} expected-error {{no struct named 'E'}}
   struct N::F {};

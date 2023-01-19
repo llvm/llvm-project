@@ -59,6 +59,7 @@ if(MSVC AND NOT CLANG_CL)
 endif()
 
 include_directories(BEFORE "${CMAKE_CURRENT_BINARY_DIR}/../clang-tidy")
+include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/../include-cleaner/include")
 
 add_clang_library(clangDaemon
   AST.cpp
@@ -162,6 +163,7 @@ clang_target_link_libraries(clangDaemon
   clangDriver
   clangFormat
   clangFrontend
+  clangIncludeCleaner
   clangIndex
   clangLex
   clangSema

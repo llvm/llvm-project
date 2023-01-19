@@ -786,8 +786,28 @@ bool Environment::flowConditionImplies(BoolValue &Val) const {
   return DACtx->flowConditionImplies(*FlowConditionToken, Val);
 }
 
-void Environment::dump() const {
+void Environment::dump(raw_ostream &OS) const {
+  // FIXME: add printing for remaining fields and allow caller to decide what
+  // fields are printed.
+  OS << "DeclToLoc:\n";
+  for (auto [D, L] : DeclToLoc)
+    OS << "  [" << D->getName() << ", " << L << "]\n";
+
+  OS << "ExprToLoc:\n";
+  for (auto [E, L] : ExprToLoc)
+    OS << "  [" << E << ", " << L << "]\n";
+
+  OS << "LocToVal:\n";
+  for (auto [L, V] : LocToVal) {
+    OS << "  [" << L << ", " << V << ": " << *V << "]\n";
+  }
+
+  OS << "FlowConditionToken:\n";
   DACtx->dumpFlowCondition(*FlowConditionToken);
+}
+
+void Environment::dump() const {
+  dump(llvm::dbgs());
 }
 
 } // namespace dataflow

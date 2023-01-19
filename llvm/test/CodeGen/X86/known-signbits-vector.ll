@@ -679,8 +679,6 @@ define i64 @signbits_cmpsd(double %0, double %1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    andl $1, %eax
-; X64-NEXT:    negq %rax
 ; X64-NEXT:    retq
   %3 = fcmp oeq double %0, %1
   %4 = sext i1 %3 to i64
