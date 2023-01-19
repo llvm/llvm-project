@@ -99,11 +99,6 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
             return false;
         }
 
-        ExecutionContextScope *exe_scope =
-            exe_ctx.GetBestExecutionContextScope();
-        std::optional<uint64_t> size = compiler_type.GetByteSize(exe_scope);
-        if (!size)
-          return false;
         StreamString sstr;
         compiler_type.DumpTypeValue(
             &sstr,                          // The stream to use for display

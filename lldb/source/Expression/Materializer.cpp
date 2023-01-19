@@ -537,7 +537,7 @@ public:
         valobj_sp->GetData(data, extract_error);
         if (!extract_error.Success()) {
           if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
-            llvm::Optional<uint64_t> size =
+            std::optional<uint64_t> size =
                 valobj_type.GetByteSize(frame_sp.get());
             if (size && *size == 0) {
               // We don't need to materialize empty structs in Swift.
@@ -676,7 +676,7 @@ public:
 
       if (!extract_error.Success()) {
         if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
-          llvm::Optional<uint64_t> size =
+          std::optional<uint64_t> size =
               valobj_type.GetByteSize(frame_sp.get());
           if (size && *size == 0)
             // We don't need to dematerialize empty structs in Swift.
