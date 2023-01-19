@@ -1544,7 +1544,7 @@ bool Instruction::extractProfTotalWeight(uint64_t &TotalVal) const {
        getOpcode() == Instruction::Switch) &&
       "Looking for branch weights on something besides branch");
 
-  return ::extractProfTotalWeight(getMetadata(LLVMContext::MD_prof), TotalVal);
+  return ::extractProfTotalWeight(*this, TotalVal);
 }
 
 void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
