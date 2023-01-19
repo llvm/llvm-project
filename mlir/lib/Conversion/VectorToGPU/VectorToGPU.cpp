@@ -669,6 +669,16 @@ createNonLdMatrixLoads(vector::TransferReadOp op, OpBuilder &builder,
   return success();
 }
 
+/// Return true if this is a shared memory memref type.
+static bool isSharedMemory(MemRefType type) {
+  auto addressSpace =
+      type.getMemorySpace().dyn_cast_or_null<gpu::AddressSpaceAttr>();
+  if (addressSpace &&
+      addressSpace.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace())
+    return true;
+  return false;
+}
+
 /// Converts a `vector.transfer_read` operation directly to either a
 /// `vector.load` or a `nvgpu.ldmatrix` operation. This function should only be
 /// used when converting to `nvgpu.mma.sync` operations.
@@ -683,7 +693,7 @@ convertTransferReadToLoads(vector::TransferReadOp op,
     return failure();
 
   bool isLdMatrixCompatible =
-      op.getSource().getType().cast<MemRefType>().getMemorySpaceAsInt() == 3 &&
+      isSharedMemory(op.getSource().getType().cast<MemRefType>()) &&
       nvgpu::inferTileWidthInBits(*warpMatrixInfo) == 128;
 
   VectorType vecTy = op.getVectorType();
