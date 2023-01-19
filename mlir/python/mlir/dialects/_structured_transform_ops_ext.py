@@ -110,7 +110,7 @@ class InterchangeOp:
                loc=None,
                ip=None):
     pdl_operation_type = pdl.OperationType.get()
-    interchange_attr = _get_int_array_attr(iterator_interchange)
+    interchange_attr = _get_dense_int64_array_attr(iterator_interchange)
     super().__init__(
         pdl_operation_type,
         _get_op_result_or_value(target),
