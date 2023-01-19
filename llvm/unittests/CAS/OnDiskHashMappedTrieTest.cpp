@@ -40,9 +40,9 @@ TEST(OnDiskHashMappedTrieTest, Insertion) {
           /*NewInitialFileSize=*/std::nullopt);
     };
 
-    Optional<OnDiskHashMappedTrie> Trie1;
+    std::optional<OnDiskHashMappedTrie> Trie1;
     ASSERT_THAT_ERROR(createTrie().moveInto(Trie1), Succeeded());
-    Optional<OnDiskHashMappedTrie> Trie2;
+    std::optional<OnDiskHashMappedTrie> Trie2;
     ASSERT_THAT_ERROR(createTrie().moveInto(Trie2), Succeeded());
 
     uint8_t Hash0Bytes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -65,8 +65,8 @@ TEST(OnDiskHashMappedTrieTest, Insertion) {
     EXPECT_FALSE(Trie1->find(Hash0));
 
     // Insert.
-    Optional<FileOffset> Offset;
-    Optional<MutableArrayRef<char>> Data;
+    std::optional<FileOffset> Offset;
+    std::optional<MutableArrayRef<char>> Data;
     {
       auto Insertion = Trie1->insert({Hash0, Data0v1});
       ASSERT_TRUE(Insertion);
