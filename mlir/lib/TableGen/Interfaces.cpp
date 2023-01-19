@@ -116,6 +116,11 @@ std::optional<StringRef> Interface::getExtraSharedClassDeclaration() const {
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
+std::optional<StringRef> Interface::getExtraClassOf() const {
+  auto value = def->getValueAsString("extraClassOf");
+  return value.empty() ? std::optional<StringRef>() : value;
+}
+
 // Return the body for this method if it has one.
 std::optional<StringRef> Interface::getVerify() const {
   // Only OpInterface supports the verify method.

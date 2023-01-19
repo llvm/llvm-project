@@ -2048,6 +2048,13 @@ class Interface<string name> {
   // An optional code block containing extra declarations to place in both
   // the interface and trait declaration.
   code extraSharedClassDeclaration = "";
+
+  // An optional code block for adding additional "classof" logic. This can
+  // be used to better enable "optional" interfaces, where an entity only
+  // implements the interface if some dynamic characteristic holds.
+  // `$_attr`/`$_op`/`$_type` may be used to refer to an instance of the
+  // entity being checked.
+  code extraClassOf = "";
 }
 
 // AttrInterface represents an interface registered to an attribute.

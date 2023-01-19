@@ -110,6 +110,12 @@ public:
            "expected value to provide interface instance");
   }
 
+  /// Constructor for a known concept.
+  Interface(ValueT t, Concept *conceptImpl)
+      : BaseType(t), conceptImpl(conceptImpl) {
+    assert(!t || ConcreteType::getInterfaceFor(t) == conceptImpl);
+  }
+
   /// Constructor for DenseMapInfo's empty key and tombstone key.
   Interface(ValueT t, std::nullptr_t) : BaseType(t), conceptImpl(nullptr) {}
 
