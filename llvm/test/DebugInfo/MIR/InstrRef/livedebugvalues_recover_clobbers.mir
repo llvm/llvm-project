@@ -50,6 +50,7 @@
 ...
 ---
 name: _Z8bb_to_bb
+debugInstrRef: true
 stack:
   - { id: 0, type: spill-slot, offset: -12, size: 4, alignment: 4 }
 body:  |

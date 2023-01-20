@@ -77,6 +77,7 @@
 name:            bees
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0

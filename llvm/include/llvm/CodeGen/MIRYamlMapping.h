@@ -707,6 +707,7 @@ struct MachineFunction {
 
   bool FailsVerification = false;
   bool TracksDebugUserValues = false;
+  bool UseDebugInstrRef = false;
   std::vector<VirtualRegisterDefinition> VirtualRegisters;
   std::vector<MachineFunctionLiveIn> LiveIns;
   std::optional<std::vector<FlowStringValue>> CalleeSavedRegisters;
@@ -741,6 +742,7 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("hasEHCatchret", MF.HasEHCatchret, false);
     YamlIO.mapOptional("hasEHScopes", MF.HasEHScopes, false);
     YamlIO.mapOptional("hasEHFunclets", MF.HasEHFunclets, false);
+    YamlIO.mapOptional("debugInstrRef", MF.UseDebugInstrRef, false);
 
     YamlIO.mapOptional("failsVerification", MF.FailsVerification, false);
     YamlIO.mapOptional("tracksDebugUserValues", MF.TracksDebugUserValues,

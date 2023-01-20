@@ -86,6 +86,7 @@
 name:            main
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rsi' }
 frameInfo:

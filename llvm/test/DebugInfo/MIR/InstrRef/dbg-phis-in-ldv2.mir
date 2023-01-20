@@ -45,6 +45,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }

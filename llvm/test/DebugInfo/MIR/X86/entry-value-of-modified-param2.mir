@@ -1,9 +1,9 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s \
-# RUN:  -experimental-debug-variable-locations=true \
-# RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s  \
+# RUN:  -experimental-debug-variable-locations=false \
+# RUN: | FileCheck %s --check-prefixes=CHECK,VARLOCLDV
 #
-# NB: clone of this test for VarLocBasedLDV is in
-# entry-value-of-modified-param2.mir.
+# NB: clone of this file testing InstrRefBasedLDV is in
+# llvm/test/DebugInfo/MIR/X86/entry-value-of-modified-param.mir
 #
 #extern void fn1 (int, int, int);
 #
@@ -25,8 +25,9 @@
 # CHECK: ![[ARG_B:.*]] = !DILocalVariable(name: "b"
 # CHECK: ![[ARG_C:.*]] = !DILocalVariable(name: "c"
 ## TODO: Support KILL instruction, which doesn't clobber parameter value.
+# VARLOCLDV: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression()
 # CHECK: DBG_VALUE $edx, $noreg, ![[ARG_C]], !DIExpression(DW_OP_LLVM_entry_value, 1)
-# INSTRREFLDV: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+# VARLOCLDV-NOT: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK-NOT: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 #
 --- |
@@ -91,7 +92,6 @@
 ---
 name:            fn2
 alignment:       16
-debugInstrRef: true
 body:             |
   bb.0.entry:
     liveins: $edi, $esi, $rbx

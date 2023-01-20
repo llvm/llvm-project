@@ -392,8 +392,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
-  UseInstrRefDebugInfo = mf.useDebugInstrRef();
-  CurDAG->useInstrRefDebugInfo(UseInstrRefDebugInfo);
+  bool InstrRef = mf.shouldUseDebugInstrRef();
+  mf.setUseDebugInstrRef(InstrRef);
 
   // Reset the target options before resetting the optimization
   // level below.
@@ -546,7 +546,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
         LiveInMap.insert(LI);
 
   // Insert DBG_VALUE instructions for function arguments to the entry block.
-  bool InstrRef = MF->useDebugInstrRef();
   for (unsigned i = 0, e = FuncInfo->ArgDbgValues.size(); i != e; ++i) {
     MachineInstr *MI = FuncInfo->ArgDbgValues[e - i - 1];
     assert(MI->getOpcode() != TargetOpcode::DBG_VALUE_LIST &&
@@ -624,7 +623,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   // For debug-info, in instruction referencing mode, we need to perform some
   // post-isel maintenence.
-  if (UseInstrRefDebugInfo)
+  if (MF->useDebugInstrRef())
     MF->finalizeDebugInstrRefs();
 
   // Determine if there are any calls in this machine function.
@@ -1380,8 +1379,6 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   if (TM.Options.EnableFastISel) {
     LLVM_DEBUG(dbgs() << "Enabling fast-isel\n");
     FastIS = TLI->createFastISel(*FuncInfo, LibInfo);
-    if (FastIS)
-      FastIS->useInstrRefDebugInfo(UseInstrRefDebugInfo);
   }
 
   ReversePostOrderTraversal<const Function*> RPOT(&Fn);
