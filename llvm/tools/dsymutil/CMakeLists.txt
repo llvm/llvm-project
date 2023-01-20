@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   AsmPrinter
   DebugInfoDWARF
   DWARFLinker
+  DWARFLinkerParallel
   MC
   Object
   CodeGen
