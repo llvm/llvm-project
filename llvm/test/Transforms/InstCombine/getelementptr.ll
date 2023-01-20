@@ -13,6 +13,8 @@ target datalayout = "e-p:64:64-p1:16:16-p2:32:32:32-p3:64:64:64"
 @Global = external global [10 x i8]
 @Global_as1 = external addrspace(1) global [10 x i8]
 
+declare void @use(ptr)
+
 ; Test noop elimination
 define ptr @test1(ptr %I) {
 ; CHECK-LABEL: @test1(
@@ -1264,6 +1266,45 @@ entry:
   %g3 = getelementptr %struct.A, ptr %call, i32 0, i32 2
   %a_c = load i32, ptr %g3, align 4
   ret i32 %a_c
+}
+
+define ptr @gep_of_gep_multiuse_const_and_const(ptr %p, i64 %idx) {
+; CHECK-LABEL: @gep_of_gep_multiuse_const_and_const(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr { i32, i32 }, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    call void @use(ptr [[GEP1]])
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr { i32, i32 }, ptr [[P]], i64 1, i32 1
+; CHECK-NEXT:    ret ptr [[GEP2]]
+;
+  %gep1 = getelementptr { i32, i32 }, ptr %p, i64 1
+  call void @use(ptr %gep1)
+  %gep2 = getelementptr { i32, i32 }, ptr %gep1, i64 0, i32 1
+  ret ptr %gep2
+}
+
+define ptr @gep_of_gep_multiuse_var_and_const(ptr %p, i64 %idx) {
+; CHECK-LABEL: @gep_of_gep_multiuse_var_and_const(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr { i32, i32 }, ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[GEP1]])
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr { i32, i32 }, ptr [[P]], i64 [[IDX]], i32 1
+; CHECK-NEXT:    ret ptr [[GEP2]]
+;
+  %gep1 = getelementptr { i32, i32 }, ptr %p, i64 %idx
+  call void @use(ptr %gep1)
+  %gep2 = getelementptr { i32, i32 }, ptr %gep1, i64 0, i32 1
+  ret ptr %gep2
+}
+
+define ptr @gep_of_gep_multiuse_var_and_var(ptr %p, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_of_gep_multiuse_var_and_var(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr [4 x i32], ptr [[P:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    call void @use(ptr [[GEP1]])
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [4 x i32], ptr [[P]], i64 [[IDX]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP2]]
+;
+  %gep1 = getelementptr [4 x i32], ptr %p, i64 %idx
+  call void @use(ptr %gep1)
+  %gep2 = getelementptr [4 x i32], ptr %gep1, i64 0, i64 %idx2
+  ret ptr %gep2
 }
 
 !0 = !{!"branch_weights", i32 2, i32 10}
