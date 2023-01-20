@@ -2975,6 +2975,20 @@ cc_library(
 )
 
 cc_library(
+    name = "InferIntRangeCommon",
+    srcs = [
+        "lib/Interfaces/Utils/InferIntRangeCommon.cpp",
+    ],
+    hdrs = ["include/mlir/Interfaces/Utils/InferIntRangeCommon.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":InferIntRangeInterface",
+        "//third_party/llvm/llvm-project/llvm:Support",
+    ],
+)
+
+cc_library(
     name = "DataLayoutInterfaces",
     srcs = ["lib/Interfaces/DataLayoutInterfaces.cpp"],
     hdrs = ["include/mlir/Interfaces/DataLayoutInterfaces.h"],
@@ -7874,6 +7888,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":CastInterfacesTdFiles",
+        ":InferIntRangeInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -7986,6 +8001,8 @@ cc_library(
         ":IR",
         ":IndexEnumsIncGen",
         ":IndexOpsIncGen",
+        ":InferIntRangeCommon",
+        ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         "//llvm:Support",
     ],
@@ -9585,6 +9602,7 @@ cc_library(
         ":ArithOpsInterfacesIncGen",
         ":CommonFolders",
         ":IR",
+        ":InferIntRangeCommon",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":SideEffectInterfaces",
