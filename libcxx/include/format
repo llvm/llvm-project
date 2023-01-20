@@ -130,6 +130,11 @@ namespace std {
       requires same_as<R, remove_cvref_t<R>>
     constexpr range_format format_kind<R> = see below;          // since C++23
 
+  // [format.range.formatter], class template range_formatter
+  template<class T, class charT = char>
+    requires same_as<remove_cvref_t<T>, T> && formattable<T, charT>
+  class range_formatter;                                        // since C++23
+
   // [format.range.fmtdef], class template range-default-formatter
   template<range_format K, ranges::input_range R, class charT>
     struct range-default-formatter;                             // exposition only, since C++23
@@ -194,6 +199,7 @@ namespace std {
 #include <__format/formatter_tuple.h>
 #include <__format/parser_std_format_spec.h>
 #include <__format/range_default_formatter.h>
+#include <__format/range_formatter.h>
 #include <__format/unicode.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
