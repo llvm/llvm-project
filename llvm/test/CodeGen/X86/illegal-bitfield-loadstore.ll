@@ -114,12 +114,8 @@ define void @i56_or(ptr %a) {
 ;
 ; X64-LABEL: i56_or:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl 6(%rdi), %eax
-; X64-NEXT:    shll $16, %eax
-; X64-NEXT:    movzwl 4(%rdi), %ecx
-; X64-NEXT:    movw %cx, 4(%rdi)
-; X64-NEXT:    shrq $16, %rax
-; X64-NEXT:    movb %al, 6(%rdi)
+; X64-NEXT:    movzwl 4(%rdi), %eax
+; X64-NEXT:    movw %ax, 4(%rdi)
 ; X64-NEXT:    orl $384, (%rdi) # imm = 0x180
 ; X64-NEXT:    retq
   %aa = load i56, ptr %a, align 1

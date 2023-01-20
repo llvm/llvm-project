@@ -14,10 +14,9 @@ define i16 @func(i16 %x, i16 %y) nounwind {
 ; X64-LABEL: func:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    movzwl %ax, %edx
-; X64-NEXT:    movl %edx, %eax
+; X64-NEXT:    movl %edi, %edx
+; X64-NEXT:    shll %cl, %edx
+; X64-NEXT:    movzwl %dx, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %eax
 ; X64-NEXT:    cmpw %ax, %di
@@ -33,8 +32,7 @@ define i16 @func(i16 %x, i16 %y) nounwind {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    movzwl %dx, %edx
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movzwl %dx, %esi
 ; X86-NEXT:    shrl %cl, %esi
 ; X86-NEXT:    cmpw %si, %ax
 ; X86-NEXT:    movl $65535, %eax # imm = 0xFFFF
@@ -54,8 +52,7 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X64-NEXT:    addl %eax, %eax
 ; X64-NEXT:    movl %eax, %edx
 ; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movzwl %dx, %edx
-; X64-NEXT:    movl %edx, %esi
+; X64-NEXT:    movzwl %dx, %esi
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %esi
 ; X64-NEXT:    cmpw %si, %ax
@@ -74,8 +71,7 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    movzwl %dx, %edx
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movzwl %dx, %esi
 ; X86-NEXT:    shrl %cl, %esi
 ; X86-NEXT:    cmpw %si, %ax
 ; X86-NEXT:    movl $65535, %eax # imm = 0xFFFF
@@ -100,8 +96,7 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-NEXT:    addl %edi, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movl %eax, %edx
+; X64-NEXT:    movzwl %ax, %edx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %edx
 ; X64-NEXT:    cmpw %dx, %di
@@ -121,8 +116,7 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    movzwl %dx, %edx
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movzwl %dx, %esi
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %esi
 ; X86-NEXT:    cmpw %si, %ax
