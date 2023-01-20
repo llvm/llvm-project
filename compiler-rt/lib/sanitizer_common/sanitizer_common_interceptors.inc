@@ -10357,6 +10357,20 @@ INTERCEPTOR(int, __xuname, int size, void *utsname) {
 #define INIT___XUNAME
 #endif
 
+#if SANITIZER_INTERCEPT_HEXDUMP
+INTERCEPTOR(void, hexdump, const void *ptr, int length, const char *header, int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, hexdump, ptr, length, header, flags);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, length);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, header, internal_strlen(header) + 1);
+  REAL(hexdump)(ptr, length, header, flags);
+}
+
+#define INIT_HEXDUMP COMMON_INTERCEPT_FUNCTION(hexdump);
+#else
+#define INIT_HEXDUMP
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 static void InitializeCommonInterceptors() {
@@ -10675,6 +10689,7 @@ static void InitializeCommonInterceptors() {
   INIT_PROCCTL
   INIT_UNAME;
   INIT___XUNAME;
+  INIT_HEXDUMP;
 
   INIT___PRINTF_CHK;
 }
