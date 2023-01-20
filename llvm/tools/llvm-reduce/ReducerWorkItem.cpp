@@ -449,8 +449,7 @@ bool ReducerWorkItem::isReduced(const TestRunner &Test) const {
 
   ToolOutputFile Out(CurrentFilepath, FD);
 
-  // FIXME: This should be UseBitcode
-  writeOutput(Out.os(), TmpFilesAsBitcode);
+  writeOutput(Out.os(), UseBitcode);
 
   Out.os().close();
   if (Out.os().has_error()) {
