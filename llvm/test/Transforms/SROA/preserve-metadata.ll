@@ -25,8 +25,58 @@ entry:
   ret ptr %load
 }
 
-define ptr @turn_nonnull_into_assume(ptr %arg) {
-; CHECK-LABEL: @turn_nonnull_into_assume(
+define i32 @propagate_range(i32 %v) {
+; CHECK-LABEL: @propagate_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SROA_1:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 [[V:%.*]], ptr [[A_SROA_1]], align 4
+; CHECK-NEXT:    [[A_SROA_1_0_A_SROA_1_4_LOAD:%.*]] = load volatile i32, ptr [[A_SROA_1]], align 4
+; CHECK-NEXT:    ret i32 [[A_SROA_1_0_A_SROA_1_4_LOAD]]
+;
+entry:
+  %a = alloca [2 x i32]
+  %a.gep1 = getelementptr [2 x i32], ptr %a, i32 0, i32 1
+  store i32 %v, ptr %a.gep1
+  store i32 0, ptr %a
+  %load = load volatile i32, ptr %a.gep1, !range !{i32 0, i32 10}
+  ret i32 %load
+}
+
+define ptr @propagate_noundef(ptr %v) {
+; CHECK-LABEL: @propagate_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_SROA_1:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr [[V:%.*]], ptr [[A_SROA_1]], align 8
+; CHECK-NEXT:    [[A_SROA_1_0_A_SROA_1_8_LOAD:%.*]] = load volatile ptr, ptr [[A_SROA_1]], align 8
+; CHECK-NEXT:    ret ptr [[A_SROA_1_0_A_SROA_1_8_LOAD]]
+;
+entry:
+  %a = alloca [2 x ptr]
+  %a.gep1 = getelementptr [2 x ptr], ptr %a, i32 0, i32 1
+  store ptr %v, ptr %a.gep1
+  store ptr null, ptr %a
+  %load = load volatile ptr, ptr %a.gep1, !noundef !0
+  ret ptr %load
+}
+
+define ptr @turn_nonnull_noundef_into_assume(ptr %arg) {
+; CHECK-LABEL: @turn_nonnull_noundef_into_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BUF_0_COPYLOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[BUF_0_COPYLOAD]], null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    ret ptr [[BUF_0_COPYLOAD]]
+;
+entry:
+  %buf = alloca ptr
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %buf, ptr align 8 %arg, i64 8, i1 false)
+  %ret = load ptr, ptr %buf, align 8, !nonnull !0, !noundef !0
+  ret ptr %ret
+}
+
+; FIXME: Should not produce assume.
+define ptr @dont_turn_nonnull_without_noundef_into_assume(ptr %arg) {
+; CHECK-LABEL: @dont_turn_nonnull_without_noundef_into_assume(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BUF_0_COPYLOAD:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr [[BUF_0_COPYLOAD]], null
