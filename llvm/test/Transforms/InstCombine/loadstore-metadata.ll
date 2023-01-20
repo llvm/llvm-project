@@ -157,7 +157,7 @@ define void @test_load_cast_combine_nonnull(ptr %ptr) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %p = load ptr, ptr %ptr, !nonnull !6
+  %p = load ptr, ptr %ptr, !nonnull !{}
   %gep = getelementptr ptr, ptr %ptr, i32 42
   store ptr %p, ptr %gep
   ret void
