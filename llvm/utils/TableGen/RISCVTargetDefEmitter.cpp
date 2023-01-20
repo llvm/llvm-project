@@ -19,23 +19,30 @@ using namespace llvm;
 
 using ISAInfoTy = llvm::Expected<std::unique_ptr<RISCVISAInfo>>;
 
+static int getXLen(const Record &Rec) {
+  std::vector<Record *> Features = Rec.getValueAsListOfDefs("Features");
+  if (find_if(Features, [](const Record *R) {
+        return R->getName() == "Feature64Bit";
+      }) != Features.end())
+    return 64;
+
+  return 32;
+}
+
 // We can generate march string from target features as what has been described
 // in RISCV ISA specification (version 20191213) 'Chapter 27. ISA Extension
 // Naming Conventions'.
 //
 // This is almost the same as RISCVFeatures::parseFeatureBits, except that we
 // get feature name from feature records instead of feature bits.
-static std::string getMArch(const Record &Rec) {
+static std::string getMArch(int XLen, const Record &Rec) {
   std::vector<std::string> FeatureVector;
-  int XLen = 32;
 
   // Convert features to FeatureVector.
   for (auto *Feature : Rec.getValueAsListOfDefs("Features")) {
     StringRef FeatureName = Feature->getValueAsString("Name");
     if (llvm::RISCVISAInfo::isSupportedExtensionFeature(FeatureName))
       FeatureVector.push_back((Twine("+") + FeatureName).str());
-    else if (FeatureName == "Feature64Bit")
-      XLen = 64;
   }
 
   ISAInfoTy ISAInfo = llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
@@ -55,11 +62,12 @@ void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "PROC(INVALID, {\"invalid\"}, {\"\"})\n";
   // Iterate on all definition records.
   for (const Record *Rec : RK.getAllDerivedDefinitions("RISCVProcessorModel")) {
+    int XLen = getXLen(*Rec);
     std::string MArch = Rec->getValueAsString("DefaultMarch").str();
 
     // Compute MArch from features if we don't specify it.
     if (MArch.empty())
-      MArch = getMArch(*Rec);
+      MArch = getMArch(XLen, *Rec);
 
     OS << "PROC(" << Rec->getName() << ", "
        << "{\"" << Rec->getValueAsString("Name") << "\"}, "
