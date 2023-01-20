@@ -122,6 +122,11 @@ static cl::opt<uint32_t> MaxBBSpeculations(
              "into) when deducing if a value is fully available or not in GVN "
              "(default = 600)"));
 
+static cl::opt<uint32_t> MaxNumVisitedInsts(
+    "gvn-max-num-visited-insts", cl::Hidden, cl::init(100),
+    cl::desc("Max number of visited instructions when trying to find "
+             "dominating value of select dependency (default = 100)"));
+
 struct llvm::GVNPass::Expression {
   uint32_t opcode;
   bool commutative = false;
@@ -193,6 +198,8 @@ struct llvm::gvn::AvailableValue {
 
   /// Offset - The byte offset in Val that is interesting for the load query.
   unsigned Offset = 0;
+  /// V1, V2 - The dominating non-clobbered values of SelectVal.
+  Value *V1 = nullptr, *V2 = nullptr;
 
   static AvailableValue get(Value *V, unsigned Offset = 0) {
     AvailableValue Res;
@@ -226,11 +233,13 @@ struct llvm::gvn::AvailableValue {
     return Res;
   }
 
-  static AvailableValue getSelect(SelectInst *Sel) {
+  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2) {
     AvailableValue Res;
     Res.Val = Sel;
     Res.Kind = ValType::SelectVal;
     Res.Offset = 0;
+    Res.V1 = V1;
+    Res.V2 = V2;
     return Res;
   }
 
@@ -291,8 +300,9 @@ struct llvm::gvn::AvailableValueInBlock {
     return get(BB, AvailableValue::getUndef());
   }
 
-  static AvailableValueInBlock getSelect(BasicBlock *BB, SelectInst *Sel) {
-    return get(BB, AvailableValue::getSelect(Sel));
+  static AvailableValueInBlock getSelect(BasicBlock *BB, SelectInst *Sel,
+                                         Value *V1, Value *V2) {
+    return get(BB, AvailableValue::getSelect(Sel, V1, V2));
   }
 
   /// Emit code at the end of this block to adjust the value defined here to
@@ -967,17 +977,6 @@ ConstructSSAForLoadSet(LoadInst *Load,
   return SSAUpdate.GetValueInMiddleOfBlock(Load->getParent());
 }
 
-static LoadInst *findDominatingLoad(Value *Ptr, Type *LoadTy, SelectInst *Sel,
-                                    DominatorTree &DT) {
-  for (Value *U : Ptr->users()) {
-    auto *LI = dyn_cast<LoadInst>(U);
-    if (LI && LI->getType() == LoadTy && LI->getParent() == Sel->getParent() &&
-        DT.dominates(LI, Sel))
-      return LI;
-  }
-  return nullptr;
-}
-
 Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
                                                 Instruction *InsertPt,
                                                 GVNPass &gvn) const {
@@ -1021,14 +1020,8 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
   } else if (isSelectValue()) {
     // Introduce a new value select for a load from an eligible pointer select.
     SelectInst *Sel = getSelectValue();
-    LoadInst *L1 = findDominatingLoad(Sel->getOperand(1), LoadTy, Sel,
-                                      gvn.getDominatorTree());
-    LoadInst *L2 = findDominatingLoad(Sel->getOperand(2), LoadTy, Sel,
-                                      gvn.getDominatorTree());
-    assert(L1 && L2 &&
-           "must be able to obtain dominating loads for both value operands of "
-           "the select");
-    Res = SelectInst::Create(Sel->getCondition(), L1, L2, "", Sel);
+    assert(V1 && V2 && "both value operands of the select must be present");
+    Res = SelectInst::Create(Sel->getCondition(), V1, V2, "", Sel);
   } else {
     llvm_unreachable("Should not materialize value from dead block");
   }
@@ -1115,34 +1108,28 @@ static void reportMayClobberedLoad(LoadInst *Load, MemDepResult DepInfo,
   ORE->emit(R);
 }
 
-/// Check if a load from pointer-select \p Address in \p DepBB can be converted
-/// to a value select. The following conditions need to be satisfied:
-/// 1. The pointer select (\p Address) must be defined in \p DepBB.
-/// 2. Both value operands of the pointer select must be loaded in the same
-/// basic block, before the pointer select.
-/// 3. There must be no instructions between the found loads and \p Sel that may
-/// clobber the loads.
-static std::optional<AvailableValue>
-tryToConvertLoadOfPtrSelect(SelectInst *Sel, Type *LoadTy, DominatorTree &DT,
-                            AAResults *AA) {
-  LoadInst *L1 = findDominatingLoad(Sel->getOperand(1), LoadTy, Sel, DT);
-  LoadInst *L2 = findDominatingLoad(Sel->getOperand(2), LoadTy, Sel, DT);
-  if (!L1 || !L2)
-    return std::nullopt;
-
-  // Ensure there are no accesses that may modify the locations referenced by
-  // either L1 or L2 between L1, L2 and the specified Sel instruction.
-  Instruction *EarlierLoad = L1->comesBefore(L2) ? L1 : L2;
-  MemoryLocation L1Loc = MemoryLocation::get(L1);
-  MemoryLocation L2Loc = MemoryLocation::get(L2);
-  if (any_of(make_range(EarlierLoad->getIterator(), Sel->getIterator()),
-             [&](Instruction &I) {
-               return isModSet(AA->getModRefInfo(&I, L1Loc)) ||
-                      isModSet(AA->getModRefInfo(&I, L2Loc));
-             }))
-    return std::nullopt;
-
-  return AvailableValue::getSelect(Sel);
+// Find non-clobbered value for Loc memory location in extended basic block
+// (chain of basic blocks with single predecessors) starting From instruction.
+static Value *findDominatingValue(const MemoryLocation &Loc, Type *LoadTy,
+                                  Instruction *From, AAResults *AA) {
+  uint32_t NumVisitedInsts = 0;
+  BasicBlock *FromBB = From->getParent();
+  BatchAAResults BatchAA(*AA);
+  for (BasicBlock *BB = FromBB; BB; BB = BB->getSinglePredecessor())
+    for (auto I = BB == FromBB ? From->getReverseIterator() : BB->rbegin(),
+              E = BB->rend();
+         I != E; ++I) {
+      // Stop the search if limit is reached.
+      if (++NumVisitedInsts > MaxNumVisitedInsts)
+        return nullptr;
+      Instruction *Inst = &*I;
+      if (isModSet(BatchAA.getModRefInfo(Inst, Loc)))
+        return nullptr;
+      if (auto *LI = dyn_cast<LoadInst>(Inst))
+        if (LI->getPointerOperand() == Loc.Ptr && LI->getType() == LoadTy)
+          return LI;
+    }
+  return nullptr;
 }
 
 std::optional<AvailableValue>
@@ -1262,9 +1249,21 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
   // Check if load with Addr dependent from select can be converted to select
   // between load values. There must be no instructions between the found
   // loads and DepInst that may clobber the loads.
-  if (auto *Sel = dyn_cast<SelectInst>(DepInst))
-    return tryToConvertLoadOfPtrSelect(Sel, Load->getType(), getDominatorTree(),
-                                       getAliasAnalysis());
+  if (auto *Sel = dyn_cast<SelectInst>(DepInst)) {
+    assert(Sel->getType() == Load->getPointerOperandType());
+    auto Loc = MemoryLocation::get(Load);
+    Value *V1 =
+        findDominatingValue(Loc.getWithNewPtr(Sel->getTrueValue()),
+                            Load->getType(), DepInst, getAliasAnalysis());
+    if (!V1)
+      return std::nullopt;
+    Value *V2 =
+        findDominatingValue(Loc.getWithNewPtr(Sel->getFalseValue()),
+                            Load->getType(), DepInst, getAliasAnalysis());
+    if (!V2)
+      return std::nullopt;
+    return AvailableValue::getSelect(Sel, V1, V2);
+  }
 
   // Unknown def - must be conservative
   LLVM_DEBUG(
