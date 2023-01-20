@@ -21,7 +21,7 @@ define i8 @remove_alloca_use_arg(i1 %cond) {
 ;
 entry:
   %alloca = alloca [32 x i8], align 4, addrspace(1)
-  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 256, i1 false)
+  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 32, i1 false)
   br i1 %cond, label %if, label %else
 
 if:
@@ -42,7 +42,7 @@ define i8 @volatile_load_keep_alloca(i1 %cond) {
 ; CHECK-LABEL: @volatile_load_keep_alloca(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(1)
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 4 dereferenceable(256) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(256) @g1, i64 256, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 4 dereferenceable(32) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[VAL_IF:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(1) [[ALLOCA]], i64 0, i64 1
@@ -57,7 +57,7 @@ define i8 @volatile_load_keep_alloca(i1 %cond) {
 ;
 entry:
   %alloca = alloca [32 x i8], align 4, addrspace(1)
-  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 256, i1 false)
+  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 32, i1 false)
   br i1 %cond, label %if, label %else
 
 if:
@@ -124,7 +124,7 @@ define i8 @loop_phi_remove_alloca(i1 %cond) {
 ;
 entry:
   %alloca = alloca [32 x i8], align 4, addrspace(1)
-  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 256, i1 false)
+  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 32, i1 false)
   %val1 = getelementptr inbounds [32 x i8], ptr addrspace(1) %alloca, i32 0, i32 1
   br label %bb.0
 
@@ -190,7 +190,7 @@ bb.0:
 
 bb.1:
   %val2 = getelementptr inbounds [32 x i8], ptr addrspace(1) %alloca, i32 0, i32 2
-  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 256, i1 false)
+  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 32, i1 false)
   br label %bb.0
 
 exit:
@@ -335,6 +335,78 @@ loop:
 exit:
   %v = load i32, ptr %ptr
   ret i32 %v
+}
+
+define i8 @select_same_addrspace_remove_alloca(i1 %cond, ptr %p) {
+; CHECK-LABEL: @select_same_addrspace_remove_alloca(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(32) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOCA]], ptr [[P:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+entry:
+  %alloca = alloca [32 x i8]
+  call void @llvm.memcpy.p0.p0.i64(ptr %alloca, ptr @g1, i64 32, i1 false)
+  %ptr = select i1 %cond, ptr %alloca, ptr %p
+  %load = load i8, ptr %ptr
+  ret i8 %load
+}
+
+define i8 @select_after_memcpy_keep_alloca(i1 %cond, ptr %p) {
+; CHECK-LABEL: @select_after_memcpy_keep_alloca(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOCA]], ptr [[P:%.*]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(32) [[PTR]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+entry:
+  %alloca = alloca [32 x i8]
+  %ptr = select i1 %cond, ptr %alloca, ptr %p
+  call void @llvm.memcpy.p0.p0.i64(ptr %ptr, ptr @g1, i64 32, i1 false)
+  %load = load i8, ptr %ptr
+  ret i8 %load
+}
+
+define i8 @select_diff_addrspace_keep_alloca(i1 %cond, ptr addrspace(1) %p) {
+; CHECK-LABEL: @select_diff_addrspace_keep_alloca(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1, addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 1 dereferenceable(32) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr addrspace(1) [[ALLOCA]], ptr addrspace(1) [[P:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(1) [[PTR]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+entry:
+  %alloca = alloca [32 x i8], addrspace(1)
+  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 32, i1 false)
+  %ptr = select i1 %cond, ptr addrspace(1) %alloca, ptr addrspace(1) %p
+  %load = load i8, ptr addrspace(1) %ptr
+  ret i8 %load
+}
+
+define i8 @select_diff_addrspace_remove_alloca(i1 %cond, ptr %p) {
+; CHECK-LABEL: @select_diff_addrspace_remove_alloca(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 1 dereferenceable(32) [[ALLOCA]], ptr addrspace(1) noundef align 16 dereferenceable(32) @g2, i64 32, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], ptr [[ALLOCA]], i64 0, i64 2
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOCA]], ptr [[GEP]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[SEL]], i64 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP2]], align 1
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+entry:
+  %alloca = alloca [32 x i8]
+  call void @llvm.memcpy.p0.p1.i64(ptr %alloca, ptr addrspace(1) @g2, i64 32, i1 false)
+  %gep = getelementptr inbounds [32 x i8], ptr %alloca, i32 0, i32 2
+  %sel = select i1 %cond, ptr %alloca, ptr %gep
+  %gep2 = getelementptr inbounds i8, ptr %sel, i64 4
+  %load = load i8, ptr %gep2
+  ret i8 %load
 }
 
 declare void @llvm.memcpy.p1.p0.i64(ptr addrspace(1), ptr, i64, i1)
