@@ -58,6 +58,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-bridge"
@@ -3785,8 +3787,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
     fir::KindMapping &kindMap,
     const Fortran::lower::LoweringOptions &loweringOptions,
-    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
-    llvm::StringRef filePath)
+    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -3814,10 +3815,30 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     return mlir::success();
   });
 
+  auto getPathLocation = [&semanticsContext, &context]() -> mlir::Location {
+    std::optional<std::string> path;
+    const auto &allSources{semanticsContext.allCookedSources().allSources()};
+    if (auto initial{allSources.GetFirstFileProvenance()};
+        initial && !initial->empty()) {
+      if (const auto *sourceFile{allSources.GetSourceFile(initial->start())}) {
+        path = sourceFile->path();
+      }
+    }
+
+    if (path.has_value()) {
+      llvm::SmallString<256> curPath(*path);
+      llvm::sys::fs::make_absolute(curPath);
+      llvm::sys::path::remove_dots(curPath);
+      return mlir::FileLineColLoc::get(&context, curPath.str(), /*line=*/0,
+                                       /*col=*/0);
+    } else {
+      return mlir::UnknownLoc::get(&context);
+    }
+  };
+
   // Create the module and attach the attributes.
   module = std::make_unique<mlir::ModuleOp>(
-      mlir::ModuleOp::create(mlir::FileLineColLoc::get(
-          &getMLIRContext(), filePath, /*line=*/0, /*col=*/0)));
+      mlir::ModuleOp::create(getPathLocation()));
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);
