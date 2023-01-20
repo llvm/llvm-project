@@ -1,5 +1,7 @@
-import Darwin
+import Dispatch
 // Test that the pass pipeline is set up to support concurrency.
+
+let semaphore = DispatchSemaphore(value: 0)
 var i: Int = 0
 
 if #available(macOS 12, iOS 15, watchOS 8, tvOS 15, *) {
@@ -9,14 +11,16 @@ if #available(macOS 12, iOS 15, watchOS 8, tvOS 15, *) {
   }
 
   let queue = Actor()
-  async {
+  Task.detached() {
     i = await queue.f()
+    semaphore.signal()
   }
 
 } else {
   // Still make the test pass if we don't have concurrency.
   i = 42
+  semaphore.signal()
 }
 
-while (i == 0) { sleep(1) }
+semaphore.wait()
 i - 19
