@@ -350,6 +350,8 @@ Bug Fixes
   This fixes `Issue 59765 <https://github.com/llvm/llvm-project/issues/59765>`_
 - Reject in-class defaulting of previosly declared comparison operators. Fixes
   `Issue 51227 <https://github.com/llvm/llvm-project/issues/51227>`_.
+- Fix the bug of inserting the ``ZeroInitializationFixit`` before the template
+  argument list of ``VarTemplateSpecializationDecl``.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
