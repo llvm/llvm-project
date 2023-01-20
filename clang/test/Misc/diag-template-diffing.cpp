@@ -850,7 +850,7 @@ namespace rdar12931988 {
 
   void foo(A::X<int> &ax, B::X<int> bx) {
     // CHECK-ELIDE-NOTREE: no viable overloaded '='
-    // CHECK-ELIDE-NOTREE: no known conversion from 'B::X<int>' to 'const rdar12931988::A::X<int>'
+    // CHECK-ELIDE-NOTREE: no known conversion from 'B::X<int>' to 'const X<int>'
     ax = bx;
   }
 
