@@ -14,6 +14,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 
 using namespace llvm;
@@ -57,7 +58,7 @@ int TestRunner::run(StringRef Filename) const {
     Error E = make_error<StringError>("Error running interesting-ness test: " +
                                           ErrMsg,
                                       inconvertibleErrorCode());
-    errs() << toString(std::move(E)) << '\n';
+    WithColor::error(errs(), ToolName) << toString(std::move(E)) << '\n';
     exit(1);
   }
 
