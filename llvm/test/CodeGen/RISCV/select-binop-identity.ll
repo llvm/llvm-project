@@ -272,7 +272,7 @@ define i64 @add_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; RV32I-NEXT:    and a1, a0, a1
 ; RV32I-NEXT:    add a0, a1, a3
 ; RV32I-NEXT:    sltu a1, a0, a1
-; RV32I-NEXT:    add a1, a4, a1
+; RV32I-NEXT:    add a2, a2, a4
 ; RV32I-NEXT:    add a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
@@ -343,7 +343,7 @@ define i64 @sub_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; RV32I-NEXT:    and a2, a0, a2
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    sltu a1, a3, a0
-; RV32I-NEXT:    add a1, a2, a1
+; RV32I-NEXT:    sub a4, a4, a2
 ; RV32I-NEXT:    sub a1, a4, a1
 ; RV32I-NEXT:    sub a0, a3, a0
 ; RV32I-NEXT:    ret

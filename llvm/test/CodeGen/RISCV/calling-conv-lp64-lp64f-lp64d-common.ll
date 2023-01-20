@@ -53,12 +53,12 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i128 %d, i32 %e, i32 %f, 
 ; RV64I-NEXT:    andi a0, a0, 255
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srli a1, a1, 48
-; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    xor a2, a4, t1
-; RV64I-NEXT:    xor a3, a3, a7
-; RV64I-NEXT:    or a2, a3, a2
-; RV64I-NEXT:    seqz a2, a2
-; RV64I-NEXT:    add a1, a2, a1
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    xor a1, a4, t1
+; RV64I-NEXT:    xor a2, a3, a7
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    seqz a1, a1
 ; RV64I-NEXT:    add a0, a0, a5
 ; RV64I-NEXT:    add a0, a0, a6
 ; RV64I-NEXT:    add a0, a0, t0
@@ -119,8 +119,8 @@ define i64 @callee_large_scalars(i256 %a, i256 %b) nounwind {
 ; RV64I-NEXT:    or a4, a4, a5
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    xor a2, a3, a2
-; RV64I-NEXT:    or a0, a0, a4
 ; RV64I-NEXT:    or a0, a2, a0
+; RV64I-NEXT:    or a0, a0, a4
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
   %1 = icmp eq i256 %a, %b
@@ -174,8 +174,8 @@ define i64 @callee_large_scalars_exhausted_regs(i64 %a, i64 %b, i64 %c, i64 %d, 
 ; RV64I-NEXT:    or a3, a3, a4
 ; RV64I-NEXT:    xor a0, a7, a0
 ; RV64I-NEXT:    xor a1, a2, a1
-; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
   %1 = icmp eq i256 %h, %j
@@ -328,15 +328,15 @@ define i64 @callee_aligned_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i128 %f
 ; should only be 8-byte aligned
 ; RV64I-LABEL: callee_aligned_stack:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    ld a0, 0(sp)
-; RV64I-NEXT:    ld a1, 16(sp)
-; RV64I-NEXT:    ld a2, 32(sp)
+; RV64I-NEXT:    ld a0, 32(sp)
+; RV64I-NEXT:    ld a1, 0(sp)
+; RV64I-NEXT:    ld a2, 16(sp)
 ; RV64I-NEXT:    ld a3, 40(sp)
-; RV64I-NEXT:    add a0, a7, a0
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    add a5, a5, a7
+; RV64I-NEXT:    add a1, a5, a1
+; RV64I-NEXT:    add a0, a2, a0
+; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    add a0, a0, a3
-; RV64I-NEXT:    add a0, a5, a0
 ; RV64I-NEXT:    ret
   %f_trunc = trunc i128 %f to i64
   %1 = add i64 %f_trunc, %g

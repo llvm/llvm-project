@@ -450,18 +450,13 @@ define i64 @test6(i64 %a) {
 ;
 ; X86-LABEL: test6:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    shll $5, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shll $5, %ecx
+; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    movl $33, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    addl %esi, %edx
 ; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
 	%tmp3 = mul i64 %a, 33

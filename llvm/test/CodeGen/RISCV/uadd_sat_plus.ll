@@ -54,10 +54,10 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV32I-LABEL: func64:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a2, a1, a5
 ; RV32I-NEXT:    add a4, a0, a4
 ; RV32I-NEXT:    sltu a0, a4, a0
-; RV32I-NEXT:    add a2, a5, a0
-; RV32I-NEXT:    add a2, a1, a2
+; RV32I-NEXT:    add a2, a2, a0
 ; RV32I-NEXT:    beq a2, a1, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    sltu a0, a2, a1
@@ -77,10 +77,10 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ;
 ; RV32IZbb-LABEL: func64:
 ; RV32IZbb:       # %bb.0:
+; RV32IZbb-NEXT:    add a2, a1, a5
 ; RV32IZbb-NEXT:    add a4, a0, a4
 ; RV32IZbb-NEXT:    sltu a0, a4, a0
-; RV32IZbb-NEXT:    add a2, a5, a0
-; RV32IZbb-NEXT:    add a2, a1, a2
+; RV32IZbb-NEXT:    add a2, a2, a0
 ; RV32IZbb-NEXT:    beq a2, a1, .LBB1_2
 ; RV32IZbb-NEXT:  # %bb.1:
 ; RV32IZbb-NEXT:    sltu a0, a2, a1
