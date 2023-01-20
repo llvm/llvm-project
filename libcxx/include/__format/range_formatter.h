@@ -132,7 +132,10 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT range_formatter {
     // characters. Which means there will be
     //   (n - 1) * 2 + 1 + 1 = n * 2 character
     // So estimate 8 times the range size as buffer.
-    __format::__retarget_buffer<_CharT> __buffer{8 * ranges::size(__range)};
+    std::size_t __capacity_hint = 0;
+    if constexpr (std::ranges::sized_range<_Rp>)
+      __capacity_hint = 8 * ranges::size(__range);
+    __format::__retarget_buffer<_CharT> __buffer{__capacity_hint};
     basic_format_context<typename __format::__retarget_buffer<_CharT>::__iterator, _CharT> __c{
         __buffer.__make_output_iterator(), __ctx};
 
