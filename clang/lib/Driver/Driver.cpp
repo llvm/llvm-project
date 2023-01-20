@@ -313,8 +313,8 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
     std::string Nearest;
     if (getOpts().findNearest(ArgString, Nearest, IncludedFlagsBitmask,
                               ExcludedFlagsBitmask) > 1) {
-      if (getOpts().findNearest(ArgString, Nearest, options::CC1Option) == 0 &&
-          !IsCLMode()) {
+      if (!IsCLMode() &&
+          getOpts().findExact(ArgString, Nearest, options::CC1Option)) {
         DiagID = diag::err_drv_unknown_argument_with_suggestion;
         Diags.Report(DiagID) << ArgString << "-Xclang " + Nearest;
       } else {
@@ -339,8 +339,8 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
     // Warn on joined arguments that are similar to a long argument.
     std::string ArgString = ArgStrings[A->getIndex()];
     std::string Nearest;
-    if (getOpts().findNearest("-" + ArgString, Nearest, IncludedFlagsBitmask,
-                              ExcludedFlagsBitmask) == 0)
+    if (getOpts().findExact("-" + ArgString, Nearest, IncludedFlagsBitmask,
+                            ExcludedFlagsBitmask))
       Diags.Report(diag::warn_drv_potentially_misspelled_joined_argument)
           << A->getAsString(Args) << Nearest;
   }
