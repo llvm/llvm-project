@@ -21944,20 +21944,15 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   // Extend everything to 80 bits to force it to be done on x87.
   // TODO: Are there any fast-math-flags to propagate here?
   if (IsStrict) {
-    unsigned Opc = Subtarget.isOSWindows() && DstVT == MVT::f32
-                       ? X86ISD::STRICT_FP80_ADD
-                       : ISD::STRICT_FADD;
-    SDValue Add =
-        DAG.getNode(Opc, dl, {MVT::f80, MVT::Other}, {Chain, Fild, Fudge});
+    SDValue Add = DAG.getNode(ISD::STRICT_FADD, dl, {MVT::f80, MVT::Other},
+                              {Chain, Fild, Fudge});
     // STRICT_FP_ROUND can't handle equal types.
     if (DstVT == MVT::f80)
       return Add;
     return DAG.getNode(ISD::STRICT_FP_ROUND, dl, {DstVT, MVT::Other},
                        {Add.getValue(1), Add, DAG.getIntPtrConstant(0, dl)});
   }
-  unsigned Opc = Subtarget.isOSWindows() && DstVT == MVT::f32 ? X86ISD::FP80_ADD
-                                                              : ISD::FADD;
-  SDValue Add = DAG.getNode(Opc, dl, MVT::f80, Fild, Fudge);
+  SDValue Add = DAG.getNode(ISD::FADD, dl, MVT::f80, Fild, Fudge);
   return DAG.getNode(ISD::FP_ROUND, dl, DstVT, Add,
                      DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
 }
@@ -34744,8 +34739,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(AESDECWIDE256KL)
   NODE_NAME_CASE(CMPCCXADD)
   NODE_NAME_CASE(TESTUI)
-  NODE_NAME_CASE(FP80_ADD)
-  NODE_NAME_CASE(STRICT_FP80_ADD)
   }
   return nullptr;
 #undef NODE_NAME_CASE
@@ -37253,57 +37246,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BuildMI(*BB, MI, DL, TII->get(PopF));
 
     MI.eraseFromParent(); // The pseudo is gone now.
-    return BB;
-  }
-
-  case X86::FP80_ADD: {
-    // Change the floating point control register to use double extended
-    // precision when performing the addition.
-    int OrigCWFrameIdx =
-        MF->getFrameInfo().CreateStackObject(2, Align(2), false);
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::FNSTCW16m)),
-                      OrigCWFrameIdx);
-
-    // Load the old value of the control word...
-    Register OldCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOVZX32rm16), OldCW),
-                      OrigCWFrameIdx);
-
-    // OR 0b11 into bit 8 and 9. 0b11 is the encoding for double extended
-    // precision.
-    Register NewCW = MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
-    BuildMI(*BB, MI, DL, TII->get(X86::OR32ri), NewCW)
-        .addReg(OldCW, RegState::Kill)
-        .addImm(0x300);
-
-    // Extract to 16 bits.
-    Register NewCW16 =
-        MF->getRegInfo().createVirtualRegister(&X86::GR16RegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), NewCW16)
-        .addReg(NewCW, RegState::Kill, X86::sub_16bit);
-
-    // Prepare memory for FLDCW.
-    int NewCWFrameIdx =
-        MF->getFrameInfo().CreateStackObject(2, Align(2), false);
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOV16mr)),
-                      NewCWFrameIdx)
-        .addReg(NewCW16, RegState::Kill);
-
-    // Reload the modified control word now...
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::FLDCW16m)),
-                      NewCWFrameIdx);
-
-    // Do the addition.
-    BuildMI(*BB, MI, DL, TII->get(X86::ADD_Fp80))
-        .add(MI.getOperand(0))
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2));
-
-    // Reload the original control word now.
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::FLDCW16m)),
-                      OrigCWFrameIdx);
-
-    MI.eraseFromParent(); // The pseudo instruction is gone now.
     return BB;
   }
 
