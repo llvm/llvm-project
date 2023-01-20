@@ -1148,6 +1148,7 @@ cc_library(
         ":BinaryFormat",
         ":BitWriter",
         ":Core",
+        ":ProfileData",
         ":Support",
         ":Target",
         ":config",
@@ -1628,6 +1629,7 @@ cc_library(
         ":DebugInfoDWARF",
         ":IPO",
         ":Instrumentation",
+        ":IRPrinter",
         ":MC",
         ":MCParser",
         ":ProfileData",
@@ -1654,6 +1656,7 @@ cc_library(
     ],
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":MC",
         ":Support",
         ":config",
