@@ -369,9 +369,9 @@ public:
     return SelectSVERegRegAddrMode(N, Scale, Base, Offset);
   }
 
-  template <unsigned Scale>
+  template <unsigned MaxIdx, unsigned Scale>
   bool SelectSMETileSlice(SDValue N, SDValue &Vector, SDValue &Offset) {
-    return SelectSMETileSlice(N, Scale, Vector, Offset);
+    return SelectSMETileSlice(N, MaxIdx, Vector, Offset, Scale);
   }
 
   void SelectStore(SDNode *N, unsigned NumVecs, unsigned Opc);
@@ -443,8 +443,8 @@ private:
   bool SelectSVEArithImm(SDValue N, MVT VT, SDValue &Imm);
   bool SelectSVERegRegAddrMode(SDValue N, unsigned Scale, SDValue &Base,
                                SDValue &Offset);
-  bool SelectSMETileSlice(SDValue N, unsigned Scale, SDValue &Vector,
-                          SDValue &Offset);
+  bool SelectSMETileSlice(SDValue N, unsigned MaxSize, SDValue &Vector,
+                          SDValue &Offset, unsigned Scale = 1);
 
   bool SelectAllActivePredicate(SDValue N);
 };
@@ -5895,8 +5895,9 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
   return TLI->isAllActivePredicate(*CurDAG, N);
 }
 
-bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned Scale,
-                                             SDValue &Base, SDValue &Offset) {
+bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
+                                             SDValue &Base, SDValue &Offset,
+                                             unsigned Scale) {
   if (N.getOpcode() != ISD::ADD) {
     Base = N;
     Offset = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
@@ -5909,13 +5910,12 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned Scale,
 
   if (auto C = dyn_cast<ConstantSDNode>(RHS)) {
     int64_t ImmOff = C->getSExtValue();
-    unsigned MaxSize = (1 << Scale) - 1;
 
-    if (ImmOff < 0 || ImmOff > MaxSize)
+    if ((ImmOff < 0 || ImmOff > MaxSize) || (ImmOff % Scale != 0))
       return false;
 
     Base = LHS;
-    Offset = CurDAG->getTargetConstant(ImmOff, SDLoc(N), MVT::i64);
+    Offset = CurDAG->getTargetConstant(ImmOff / Scale, SDLoc(N), MVT::i64);
     return true;
   }
 
