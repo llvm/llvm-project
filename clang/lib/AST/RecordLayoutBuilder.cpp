@@ -3280,6 +3280,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
 
   if (D->hasExternalLexicalStorage() && !D->getDefinition())
     getExternalSource()->CompleteType(const_cast<RecordDecl*>(D));
+  // Complete the redecl chain (if necessary).
+  (void)D->getMostRecentDecl();
 
   D = D->getDefinition();
   assert(D && "Cannot get layout of forward declarations!");
