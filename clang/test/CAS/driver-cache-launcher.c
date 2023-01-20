@@ -22,9 +22,12 @@
 // CLANGPP: "-greproducible"
 // CLANGPP: "-x" "c++"
 
-// RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_ENABLE_INCLUDE_TREE=1 %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=INCLUDE-TREE -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=INCLUDE-TREE -DPREFIX=%t
 // INCLUDE-TREE: "-cc1depscan" "-fdepscan=auto"
 // INCLUDE-TREE: "-fdepscan-include-tree"
+
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_USE_CASFS_DEPSCAN=1 %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CASFS-SCAN -DPREFIX=%t
+// CASFS-SCAN-NOT: "-fdepscan-include-tree"
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas cache-build-session %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=SESSION -DPREFIX=%t
 // SESSION: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"

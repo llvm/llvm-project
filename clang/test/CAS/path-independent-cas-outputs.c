@@ -58,15 +58,12 @@
 // RUN: diff %t/a/t1.d %t/b/t2.d
 // RUN: diff %t/t.d %t/a/t1.d
 
-// Baseline to check we got expected output.
-// RUN: %clang -target x86_64-apple-macos11 -x c-header %s -o %t/t.pch -Xclang -fno-pch-timestamp
 // RUN: env LLVM_CACHE_CAS_PATH=%t/a/cas %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -x c-header %s -o %t/a/t1.pch
 // RUN: env LLVM_CACHE_CAS_PATH=%t/b/cas %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -x c-header %s -o %t/b/t2.pch
 
 // RUN: diff %t/a/t1.pch %t/b/t2.pch
-// RUN: diff %t/t.pch %t/a/t1.pch
 
 // Check that caching is independent of whether '--serialize-diagnostics' exists or not.
 
