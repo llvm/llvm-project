@@ -363,8 +363,11 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// PackOp
+//===----------------------------------------------------------------------===//
 def PackOp : Op<Transform_Dialect, "structured.pack", [
-                TransformOpInterface,
+                DeclareOpInterfaceMethods<TransformOpInterface>,
                 DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,]> {
   let description = [{
     Pack a LinalgOp by applying a data tiling transformation on the op and
@@ -439,12 +442,71 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
   }];
 
   let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure apply(
-      transform::TransformResults &transformResults,
-      transform::TransformState &state);
-
     ::llvm::SmallVector<::mlir::OpFoldResult> getMixedPackedSizes();
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// PackTransposeOp
+//===----------------------------------------------------------------------===//
+def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
+                         FunctionalStyleTransformOpTrait,
+                         MemoryEffectsOpInterface,
+                         DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Apply a transposition to a single `tensor.pack` (resp. `tensor.unpack`) and 
+    update the `linalg.generic` op that consumes (resp. produces) the operation.
+
+    This transform allows composing a simple `structured.pack` with additional
+    transpositions to e.g. match the data format required by a specific library
+    call or ISA instruction.
+
+    The transpose spec must specify at least one of `outer_perm` or `inner_perm`
+    attributes, which will act upon the `outer_dims_perm` or `inner_dims_pos` of
+    the specified `tensor.pack` or `tensor.unpack` op.
+
+    If the `target` of this op is a `tensor.pack` then a new `tensor.empty` will
+    be created along with transposed versions of the `tensor.pack` and the 
+    consuming `linalg.generic`, which is expected to be the sole consumer.
+
+    If the `target` of this op is a `tensor.unpack` then the whole pack / compute
+    / unpack chain will be transposed and transposed clones of `tensor.pack`,
+    the consuming `linalg.generic` and the tail `tensor.pack` will be created.
+
+    #### Return modes
+
+    This operation targets a single `tensor.pack` / `tensor.unpack` op and a
+    single matching `linalg.generic` that consumes / produces the op. Otherwise,
+    it produces a silenceableFailure.
+
+    This operation may produce a silenceableFailure if the transpose spec is
+    ill-formed (i.e. `outer_perm` or `inner_perm` are not permutations of the
+    proper rank) or if the tranposition of all involved operations fails for any
+    reason.
+
+    This operation returns 3 handles, one to the transformed LinalgOp, one to
+    the transformed `tensor.pack` and one to the transformed `tensor.unpack`.
+    The last handle for `tensor.unpack` is empty if `target_pack_or_unpack_op` 
+    was not itself a `tensor.unpack`.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target_pack_or_un_pack_op,
+                       TransformHandleTypeInterface:$target_linalg_op,
+                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_perm,
+                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$inner_perm);
+  let results = (outs TransformHandleTypeInterface:$packed_op,
+                      TransformHandleTypeInterface:$pack_op,
+                      TransformHandleTypeInterface:$un_pack_op);
+  let assemblyFormat = [{
+    $target_pack_or_un_pack_op
+    `with_compute_op` `(` $target_linalg_op `)`
+    (`outer_perm` `=` $outer_perm^ )?
+    (`inner_perm` `=` $inner_perm^ )?
+    attr-dict
+    `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

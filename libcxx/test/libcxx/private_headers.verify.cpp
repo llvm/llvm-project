@@ -423,6 +423,7 @@ END-SCRIPT
 #include <__iterator/iter_swap.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iter_swap.h'}}
 #include <__iterator/iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iterator.h'}}
 #include <__iterator/iterator_traits.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iterator_traits.h'}}
+#include <__iterator/iterator_with_data.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iterator_with_data.h'}}
 #include <__iterator/mergeable.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/mergeable.h'}}
 #include <__iterator/move_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_iterator.h'}}
 #include <__iterator/move_sentinel.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_sentinel.h'}}
@@ -530,6 +531,7 @@ END-SCRIPT
 #include <__random/weibull_distribution.h> // expected-error@*:* {{use of private header from outside its module: '__random/weibull_distribution.h'}}
 #include <__ranges/access.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/access.h'}}
 #include <__ranges/all.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/all.h'}}
+#include <__ranges/as_rvalue_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/as_rvalue_view.h'}}
 #include <__ranges/common_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/common_view.h'}}
 #include <__ranges/concepts.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/concepts.h'}}
 #include <__ranges/copyable_box.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/copyable_box.h'}}

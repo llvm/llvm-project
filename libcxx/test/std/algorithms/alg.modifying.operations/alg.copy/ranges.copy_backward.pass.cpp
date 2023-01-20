@@ -123,17 +123,69 @@ constexpr void test_containers() {
   }
 }
 
+template <class Iter, class Sent>
+constexpr void test_join_view() {
+  auto to_subranges = std::views::transform([](auto& vec) {
+          return std::ranges::subrange(Iter(vec.begin()), Sent(Iter(vec.end())));
+        });
+
+  { // segmented -> contiguous
+    std::vector<std::vector<int>> vectors = {};
+    auto range = vectors | to_subranges;
+    std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range.begin(), range.end());
+    std::array<int, 0> arr;
+
+    std::ranges::copy_backward(subrange_vector | std::views::join, arr.end());
+    assert(std::ranges::equal(arr, std::array<int, 0>{}));
+  }
+  { // segmented -> contiguous
+    std::vector<std::vector<int>> vectors = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10}, {}};
+    auto range = vectors | to_subranges;
+    std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range.begin(), range.end());
+    std::array<int, 10> arr;
+
+    std::ranges::copy_backward(subrange_vector | std::views::join, arr.end());
+    assert(std::ranges::equal(arr, std::array{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
+  }
+  { // contiguous -> segmented
+    std::vector<std::vector<int>> vectors = {{0, 0, 0, 0}, {0, 0}, {0, 0, 0, 0}, {}};
+    auto range = vectors | to_subranges;
+    std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range.begin(), range.end());
+    std::array arr = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    std::ranges::copy_backward(arr, (subrange_vector | std::views::join).end());
+    assert(std::ranges::equal(subrange_vector | std::views::join, std::array{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
+  }
+  { // segmented -> segmented
+    std::vector<std::vector<int>> vectors = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10}, {}};
+    auto range1 = vectors | to_subranges;
+    std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range1.begin(), range1.end());
+    std::vector<std::vector<int>> to_vectors = {{0, 0, 0, 0}, {0, 0, 0, 0}, {}, {0, 0}};
+    auto range2 = to_vectors | to_subranges;
+    std::vector<std::ranges::subrange<Iter, Sent>> to_subrange_vector(range2.begin(), range2.end());
+
+    std::ranges::copy_backward(subrange_vector | std::views::join, (to_subrange_vector | std::views::join).end());
+    assert(std::ranges::equal(to_subrange_vector | std::views::join, std::array{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
+  }
+}
+
+template <class>
+constexpr bool is_proxy_iterator = false;
+
+template <class Iter>
+constexpr bool is_proxy_iterator<ProxyIterator<Iter>> = true;
+
 template <template <class> class InIter, template <class> class OutIter>
 constexpr void test_sentinels() {
   test_iterators<InIter<int*>, OutIter<int*>, InIter<int*>>();
   test_iterators<InIter<int*>, OutIter<int*>, sentinel_wrapper<InIter<int*>>>();
   test_iterators<InIter<int*>, OutIter<int*>, sized_sentinel<InIter<int*>>>();
 
-  if (!std::is_constant_evaluated()) {
-    if constexpr (!std::is_same_v<InIter<int*>, contiguous_iterator<int*>> &&
-                  !std::is_same_v<OutIter<int*>, contiguous_iterator<int*>> &&
-                  !std::is_same_v<InIter<int*>, ContiguousProxyIterator<int*>> &&
-                  !std::is_same_v<OutIter<int*>, ContiguousProxyIterator<int*>>) {
+  if constexpr (!std::is_same_v<InIter<int*>, contiguous_iterator<int*>> &&
+                !std::is_same_v<OutIter<int*>, contiguous_iterator<int*>> &&
+                !std::is_same_v<InIter<int*>, ContiguousProxyIterator<int*>> &&
+                !std::is_same_v<OutIter<int*>, ContiguousProxyIterator<int*>>) {
+    if (!std::is_constant_evaluated()) {
       test_containers<std::deque<int>,
                       std::deque<int>,
                       InIter<std::deque<int>::iterator>,
@@ -151,6 +203,8 @@ constexpr void test_sentinels() {
                       InIter<std::vector<int>::iterator>,
                       OutIter<std::vector<int>::iterator>>();
     }
+    if constexpr (!is_proxy_iterator<InIter<int*>>)
+      test_join_view<InIter<std::vector<int>::iterator>, InIter<std::vector<int>::iterator>>();
   }
 }
 
