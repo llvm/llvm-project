@@ -6625,7 +6625,6 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return std::nullopt;
   }
 
-  BasicBlock *LoopPreheader = L->getLoopPreheader();
   BasicBlock *LoopLatch = L->getLoopLatch();
 
   // TODO: Can we do something for greater than and less than?
@@ -6712,12 +6711,7 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                  << "\n");
       return {false, nullptr};
     }
-    // TODO: Right now we limit the phi node to help the folding be of a start
-    // value of getelementptr. We can extend to any kinds of IV as long as it is
-    // an affine AddRec. Add a switch to cover more types of instructions here
-    // and down in the actual transformation.
-    return {isa<GetElementPtrInst>(PN.getIncomingValueForBlock(LoopPreheader)),
-            TermValueS};
+    return {true, TermValueS};
   };
 
   PHINode *ToFold = nullptr;
@@ -6850,15 +6844,12 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       SCEVExpanderCleaner ExpCleaner(Expander);
 
       // Create new terminating value at loop header
-      GetElementPtrInst *StartValueGEP = cast<GetElementPtrInst>(StartValue);
-      Type *PtrTy = StartValueGEP->getPointerOperand()->getType();
-
       const SCEV *TermValueS = CanFoldTerminatingCondition->second.second;
       assert(
           Expander.isSafeToExpand(TermValueS) &&
           "Terminating value was checked safe in canFoldTerminatingCondition");
 
-      Value *TermValue = Expander.expandCodeFor(TermValueS, PtrTy,
+      Value *TermValue = Expander.expandCodeFor(TermValueS, ToHelpFold->getType(),
                                                 LoopPreheader->getTerminator());
 
       LLVM_DEBUG(dbgs() << "Start value of new term-cond phi-node:\n"
