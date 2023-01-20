@@ -1224,7 +1224,7 @@ defm experimental_library : BoolFOption<"experimental-library",
   NegFlag<SetFalse>>;
 
 def fembed_offload_object_EQ : Joined<["-"], "fembed-offload-object=">,
-  Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
+  Group<f_Group>, Flags<[NoXarchOption, CC1Option, FC1Option]>,
   HelpText<"Embed Offloading device-side binary into host object file as a section.">,
   MarshallingInfoStringVector<CodeGenOpts<"OffloadObjects">>;
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
