@@ -935,7 +935,11 @@ void Fortran::lower::associateMutableBox(
     fir::factory::disassociateMutableBox(builder, loc, box);
     return;
   }
-
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    fir::ExtendedValue rhs = converter.genExprAddr(loc, source, stmtCtx);
+    fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
+    return;
+  }
   // The right hand side is not be evaluated into a temp. Array sections can
   // typically be represented as a value of type `!fir.box`. However, an
   // expression that uses vector subscripts cannot be emboxed. In that case,

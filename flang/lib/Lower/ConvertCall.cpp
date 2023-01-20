@@ -724,16 +724,10 @@ static hlfir::EntityWithAttributes genIntrinsicRefCore(
       operands.emplace_back(
           Fortran::lower::convertToValue(loc, converter, actual, stmtCtx));
       continue;
-    case Fortran::lower::LowerIntrinsicArgAs::Addr: {
-      const auto *argExpr = callContext.procRef.UnwrapArgExpr(arg.index());
-      bool isSimplyContiguous =
-          actual.isScalar() ||
-          (argExpr && Fortran::evaluate::IsSimplyContiguous(
-                          *argExpr, converter.getFoldingContext()));
-      operands.emplace_back(Fortran::lower::convertToAddress(
-          loc, converter, actual, isSimplyContiguous, stmtCtx));
+    case Fortran::lower::LowerIntrinsicArgAs::Addr:
+      operands.emplace_back(
+          Fortran::lower::convertToAddress(loc, converter, actual, stmtCtx));
       continue;
-    }
     case Fortran::lower::LowerIntrinsicArgAs::Box:
       operands.emplace_back(
           Fortran::lower::convertToBox(loc, converter, actual, stmtCtx));
