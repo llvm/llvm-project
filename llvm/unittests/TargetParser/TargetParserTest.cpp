@@ -68,19 +68,26 @@ std::string FormatExtensionFlags(uint64_t Flags) {
   return llvm::join(Features, ", ");
 }
 
-template <ARM::ISAKind ISAKind>
-testing::AssertionResult
-AssertSameExtensionFlags(const char *m_expr, const char *n_expr,
-                         uint64_t ExpectedFlags, uint64_t GotFlags) {
-  if (ExpectedFlags == GotFlags)
-    return testing::AssertionSuccess();
+template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
+  AssertSameExtensionFlags(StringRef CPUName) : CPUName(CPUName) {}
 
-  return testing::AssertionFailure() << llvm::formatv(
-             "Expected extension flags: {0} ({1:x})\n"
-             "     Got extension flags: {2} ({3:x})\n",
-             FormatExtensionFlags<ISAKind>(ExpectedFlags), ExpectedFlags,
-             FormatExtensionFlags<ISAKind>(GotFlags), GotFlags);
-}
+  testing::AssertionResult operator()(const char *m_expr, const char *n_expr,
+                                      uint64_t ExpectedFlags,
+                                      uint64_t GotFlags) {
+    if (ExpectedFlags == GotFlags)
+      return testing::AssertionSuccess();
+
+    return testing::AssertionFailure() << llvm::formatv(
+               "CPU: {4}\n"
+               "Expected extension flags: {0} ({1:x})\n"
+               "     Got extension flags: {2} ({3:x})\n",
+               FormatExtensionFlags<ISAKind>(ExpectedFlags), ExpectedFlags,
+               FormatExtensionFlags<ISAKind>(GotFlags), GotFlags, CPUName);
+  }
+
+private:
+  StringRef CPUName;
+};
 
 struct ARMCPUTestParams {
   ARMCPUTestParams(StringRef CPUName, StringRef ExpectedArch,
@@ -116,8 +123,9 @@ TEST_P(ARMCPUTestFixture, ARMCPUTests) {
   EXPECT_EQ(params.ExpectedFPU, ARM::getFPUName(FPUKind));
 
   uint64_t default_extensions = ARM::getDefaultExtensions(params.CPUName, AK);
-  EXPECT_PRED_FORMAT2(AssertSameExtensionFlags<ARM::ISAKind::ARM>,
-                      params.ExpectedFlags, default_extensions);
+  EXPECT_PRED_FORMAT2(
+      AssertSameExtensionFlags<ARM::ISAKind::ARM>(params.CPUName),
+      params.ExpectedFlags, default_extensions);
 
   EXPECT_EQ(params.CPUAttr, ARM::getCPUAttr(AK));
 }
@@ -958,8 +966,9 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
 
   uint64_t default_extensions =
       AArch64::getDefaultExtensions(params.CPUName, AI);
-  EXPECT_PRED_FORMAT2(AssertSameExtensionFlags<ARM::ISAKind::AARCH64>,
-                      params.ExpectedFlags, default_extensions);
+  EXPECT_PRED_FORMAT2(
+      AssertSameExtensionFlags<ARM::ISAKind::AARCH64>(params.CPUName),
+      params.ExpectedFlags, default_extensions);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -997,7 +1006,8 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_SVE | AArch64::AEK_SVE2 |
                              AArch64::AEK_SVE2BITPERM | AArch64::AEK_PAUTH |
                              AArch64::AEK_MTE | AArch64::AEK_SSBS |
-                             AArch64::AEK_FP16FML | AArch64::AEK_SB,
+                             AArch64::AEK_FP16 | AArch64::AEK_FP16FML |
+                             AArch64::AEK_SB,
                          "9-A"),
         ARMCPUTestParams("cortex-a57", "armv8-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
@@ -1076,17 +1086,16 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_PROFILE | AArch64::AEK_FLAGM |
                              AArch64::AEK_PAUTH | AArch64::AEK_FP16FML,
                          "8.2-A"),
-        ARMCPUTestParams("cortex-a710", "armv9-a", "neon-fp-armv8",
-                         AArch64::AEK_CRC | AArch64::AEK_FP |
-                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
-                             AArch64::AEK_LSE | AArch64::AEK_RDM |
-                             AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                             AArch64::AEK_MTE | AArch64::AEK_FP16FML |
-                             AArch64::AEK_SVE | AArch64::AEK_SVE2 |
-                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_PAUTH |
-                             AArch64::AEK_FLAGM | AArch64::AEK_SB |
-                             AArch64::AEK_I8MM | AArch64::AEK_BF16,
-                         "9-A"),
+        ARMCPUTestParams(
+            "cortex-a710", "armv9-a", "neon-fp-armv8",
+            AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_SIMD |
+                AArch64::AEK_RAS | AArch64::AEK_LSE | AArch64::AEK_RDM |
+                AArch64::AEK_RCPC | AArch64::AEK_DOTPROD | AArch64::AEK_MTE |
+                AArch64::AEK_FP16 | AArch64::AEK_FP16FML | AArch64::AEK_SVE |
+                AArch64::AEK_SVE2 | AArch64::AEK_SVE2BITPERM |
+                AArch64::AEK_PAUTH | AArch64::AEK_FLAGM | AArch64::AEK_SB |
+                AArch64::AEK_I8MM | AArch64::AEK_BF16,
+            "9-A"),
         ARMCPUTestParams("cortex-a715", "armv9-a", "neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_BF16 |
                              AArch64::AEK_SIMD | AArch64::AEK_RAS |
@@ -1155,7 +1164,8 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_I8MM | AArch64::AEK_BF16 |
                              AArch64::AEK_SVE | AArch64::AEK_SVE2 |
                              AArch64::AEK_SVE2BITPERM | AArch64::AEK_SSBS |
-                             AArch64::AEK_SB | AArch64::AEK_FP16FML,
+                             AArch64::AEK_SB | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML,
                          "9-A"),
         ARMCPUTestParams("cortex-x3", "armv9-a", "neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_BF16 |

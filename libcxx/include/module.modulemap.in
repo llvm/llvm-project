@@ -839,6 +839,7 @@ module std [system] {
     module __format {
       module buffer                          { private header "__format/buffer.h" }
       module concepts                        { private header "__format/concepts.h" }
+      module container_adaptor               { private header "__format/container_adaptor.h" }
       module enable_insertable               { private header "__format/enable_insertable.h" }
       module escaped_output_table            { private header "__format/escaped_output_table.h" }
       module extended_grapheme_cluster_table { private header "__format/extended_grapheme_cluster_table.h" }
@@ -871,6 +872,7 @@ module std [system] {
       module formatter_tuple                 { private header "__format/formatter_tuple.h" }
       module parser_std_format_spec          { private header "__format/parser_std_format_spec.h" }
       module range_default_formatter         { private header "__format/range_default_formatter.h" }
+      module range_formatter                 { private header "__format/range_formatter.h" }
       module unicode                         { private header "__format/unicode.h" }
     }
   }
@@ -1012,6 +1014,7 @@ module std [system] {
       module readable_traits       { private header "__iterator/readable_traits.h" }
       module reverse_access        { private header "__iterator/reverse_access.h" }
       module reverse_iterator      { private header "__iterator/reverse_iterator.h" }
+      module segmented_iterator    { private header "__iterator/segmented_iterator.h" }
       module size                  { private header "__iterator/size.h" }
       module sortable {
         private header "__iterator/sortable.h"

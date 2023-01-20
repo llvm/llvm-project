@@ -342,6 +342,8 @@ TEST(IncludeCleaner, StdlibUnused) {
   auto AST = TU.build();
   EXPECT_THAT(computeUnusedIncludes(AST),
               ElementsAre(Pointee(writtenInclusion("<queue>"))));
+  EXPECT_THAT(computeUnusedIncludesExperimental(AST),
+              ElementsAre(Pointee(writtenInclusion("<queue>"))));
 }
 
 TEST(IncludeCleaner, GetUnusedHeaders) {
@@ -375,6 +377,10 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
   ParsedAST AST = TU.build();
   EXPECT_THAT(
       computeUnusedIncludes(AST),
+      UnorderedElementsAre(Pointee(writtenInclusion("\"unused.h\"")),
+                           Pointee(writtenInclusion("\"dir/unused.h\""))));
+  EXPECT_THAT(
+      computeUnusedIncludesExperimental(AST),
       UnorderedElementsAre(Pointee(writtenInclusion("\"unused.h\"")),
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
 }
@@ -531,6 +537,9 @@ TEST(IncludeCleaner, IWYUPragmas) {
     // IWYU pragma: private, include "public.h"
     void foo() {}
   )cpp");
+  Config Cfg;
+  Cfg.Diagnostics.UnusedIncludes = Config::Experiment;
+  WithContextValue Ctx(Config::Key, std::move(Cfg));
   ParsedAST AST = TU.build();
 
   auto ReferencedFiles = findReferencedFiles(
@@ -545,6 +554,7 @@ TEST(IncludeCleaner, IWYUPragmas) {
       ReferencedFiles.User.contains(AST.getSourceManager().getMainFileID()));
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
+  EXPECT_THAT(computeUnusedIncludesExperimental(AST), IsEmpty());
 }
 
 TEST(IncludeCleaner, RecursiveInclusion) {
@@ -573,6 +583,7 @@ TEST(IncludeCleaner, RecursiveInclusion) {
 
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
+  EXPECT_THAT(computeUnusedIncludesExperimental(AST), IsEmpty());
 }
 
 TEST(IncludeCleaner, IWYUPragmaExport) {
@@ -597,6 +608,7 @@ TEST(IncludeCleaner, IWYUPragmaExport) {
   // FIXME: This is not correct: foo.h is unused but is not diagnosed as such
   // because we ignore headers with IWYU export pragmas for now.
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
+  EXPECT_THAT(computeUnusedIncludesExperimental(AST), IsEmpty());
 }
 
 TEST(IncludeCleaner, NoDiagsForObjC) {

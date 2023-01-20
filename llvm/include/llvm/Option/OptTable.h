@@ -175,11 +175,21 @@ public:
   /// \param [in] MinimumLength - Don't find options shorter than this length.
   /// For example, a minimum length of 3 prevents "-x" from being considered
   /// near to "-S".
+  /// \param [in] MaximumDistance - Don't find options whose distance is greater
+  /// than this value.
   ///
   /// \return The edit distance of the nearest string found.
   unsigned findNearest(StringRef Option, std::string &NearestString,
                        unsigned FlagsToInclude = 0, unsigned FlagsToExclude = 0,
-                       unsigned MinimumLength = 4) const;
+                       unsigned MinimumLength = 4,
+                       unsigned MaximumDistance = UINT_MAX - 1) const;
+
+  bool findExact(StringRef Option, std::string &ExactString,
+                 unsigned FlagsToInclude = 0,
+                 unsigned FlagsToExclude = 0) const {
+    return findNearest(Option, ExactString, FlagsToInclude, FlagsToExclude, 4,
+                       0) == 0;
+  }
 
   /// Parse a single argument; returning the new argument and
   /// updating Index.

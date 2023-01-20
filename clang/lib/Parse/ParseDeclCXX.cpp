@@ -1934,6 +1934,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   // Create the tag portion of the class or class template.
   DeclResult TagOrTempResult = true; // invalid
   TypeResult TypeResult = true;      // invalid
+  UsingShadowDecl *FoundUsing = nullptr;
 
   bool Owned = false;
   Sema::SkipBodyInfo SkipBody;
@@ -2074,7 +2075,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         DSC == DeclSpecContext::DSC_type_specifier,
         DSC == DeclSpecContext::DSC_template_param ||
             DSC == DeclSpecContext::DSC_template_type_arg,
-        OffsetOfState, &SkipBody);
+        OffsetOfState, FoundUsing, &SkipBody);
 
     // If ActOnTag said the type was dependent, try again with the
     // less common call.
@@ -2133,7 +2134,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   } else if (!TagOrTempResult.isInvalid()) {
     Result = DS.SetTypeSpecType(
         TagType, StartLoc, NameLoc.isValid() ? NameLoc : StartLoc, PrevSpec,
-        DiagID, TagOrTempResult.get(), Owned, Policy);
+        DiagID, FoundUsing ? FoundUsing : TagOrTempResult.get(), Owned, Policy);
   } else {
     DS.SetTypeSpecError();
     return;

@@ -395,3 +395,44 @@ TEST(PWMAFunction, unionLexMinComplex) {
   EXPECT_TRUE(func1.unionLexMin(func2).isEqual(result));
   EXPECT_TRUE(func2.unionLexMin(func1).isEqual(result));
 }
+
+TEST(PWMAFunction, unionLexMinWithDivs) {
+  {
+    PWMAFunction func1 = parsePWMAF({
+        {"(x, y) : (x mod 5 == 0)", "(x, y) -> (x, 1)"},
+    });
+
+    PWMAFunction func2 = parsePWMAF({
+        {"(x, y) : (x mod 7 == 0)", "(x, y) -> (x + y, 2)"},
+    });
+
+    PWMAFunction result = parsePWMAF({
+        {"(x, y) : (x mod 5 == 0, x mod 7 >= 1)", "(x, y) -> (x, 1)"},
+        {"(x, y) : (x mod 7 == 0, x mod 5 >= 1)", "(x, y) -> (x + y, 2)"},
+        {"(x, y) : (x mod 5 == 0, x mod 7 == 0, y >= 0)", "(x, y) -> (x, 1)"},
+        {"(x, y) : (x mod 7 == 0, x mod 5 == 0, y <= -1)",
+         "(x, y) -> (x + y, 2)"},
+    });
+
+    EXPECT_TRUE(func1.unionLexMin(func2).isEqual(result));
+  }
+
+  {
+    PWMAFunction func1 = parsePWMAF({
+        {"(x) : (x >= 0, x <= 1000)", "(x) -> (x floordiv 16)"},
+    });
+
+    PWMAFunction func2 = parsePWMAF({
+        {"(x) : (x >= 0, x <= 1000)", "(x) -> ((x + 10) floordiv 17)"},
+    });
+
+    PWMAFunction result = parsePWMAF({
+        {"(x) : (x >= 0, x <= 1000, x floordiv 16 <= (x + 10) floordiv 17)",
+         "(x) -> (x floordiv 16)"},
+        {"(x) : (x >= 0, x <= 1000, x floordiv 16 >= (x + 10) floordiv 17 + 1)",
+         "(x) -> ((x + 10) floordiv 17)"},
+    });
+
+    EXPECT_TRUE(func1.unionLexMin(func2).isEqual(result));
+  }
+}

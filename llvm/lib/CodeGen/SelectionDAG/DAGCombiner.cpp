@@ -2793,16 +2793,26 @@ static SDValue getAsCarry(const TargetLowering &TLI, SDValue V) {
 /// the opcode and bypass the mask operation.
 static SDValue foldAddSubMasked1(bool IsAdd, SDValue N0, SDValue N1,
                                  SelectionDAG &DAG, const SDLoc &DL) {
+  if (N1.getOpcode() == ISD::ZERO_EXTEND)
+    N1 = N1.getOperand(0);
+
   if (N1.getOpcode() != ISD::AND || !isOneOrOneSplat(N1->getOperand(1)))
     return SDValue();
 
   EVT VT = N0.getValueType();
-  if (DAG.ComputeNumSignBits(N1.getOperand(0)) != VT.getScalarSizeInBits())
+  SDValue N10 = N1.getOperand(0);
+  if (N10.getValueType() != VT && N10.getOpcode() == ISD::TRUNCATE)
+    N10 = N10.getOperand(0);
+
+  if (N10.getValueType() != VT)
+    return SDValue();
+
+  if (DAG.ComputeNumSignBits(N10) != VT.getScalarSizeInBits())
     return SDValue();
 
   // add N0, (and (AssertSext X, i1), 1) --> sub N0, X
   // sub N0, (and (AssertSext X, i1), 1) --> add N0, X
-  return DAG.getNode(IsAdd ? ISD::SUB : ISD::ADD, DL, VT, N0, N1.getOperand(0));
+  return DAG.getNode(IsAdd ? ISD::SUB : ISD::ADD, DL, VT, N0, N10);
 }
 
 /// Helper for doing combines based on N0 and N1 being added to each other.
@@ -6342,19 +6352,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     SDValue N0Op0 = N0.getOperand(0);
     APInt Mask = ~N1C->getAPIntValue();
     Mask = Mask.trunc(N0Op0.getScalarValueSizeInBits());
-    if (DAG.MaskedValueIsZero(N0Op0, Mask)) {
-      SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N),
-                                 N0.getValueType(), N0Op0);
-
-      // Replace uses of the AND with uses of the Zero extend node.
-      CombineTo(N, Zext);
-
-      // We actually want to replace all uses of the any_extend with the
-      // zero_extend, to avoid duplicating things.  This will later cause this
-      // AND to be folded.
-      CombineTo(N0.getNode(), Zext);
-      return SDValue(N, 0);   // Return N so it doesn't get rechecked!
-    }
+    if (DAG.MaskedValueIsZero(N0Op0, Mask))
+      return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N0.getValueType(), N0Op0);
   }
 
   // similarly fold (and (X (load ([non_ext|any_ext|zero_ext] V))), c) ->

@@ -41,7 +41,7 @@ func.func @pass_through(%arg0: () -> ()) -> (() -> ()) {
 func.func private @llvmlinkage(i32) attributes { "llvm.linkage" = #llvm.linkage<extern_weak> }
 
 // CHECK-LABEL: llvm.func @llvmreadnone(i32)
-// CHECK-SAME: llvm.readnone
+// CHECK-SAME: memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>
 func.func private @llvmreadnone(i32) attributes { llvm.readnone }
 
 // CHECK-LABEL: llvm.func @body(i32)

@@ -22,7 +22,9 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <deque>
 #include <ranges>
+#include <vector>
 
 #include "almost_satisfies_types.h"
 #include "MoveOnly.h"
@@ -77,6 +79,28 @@ constexpr void test(std::array<int, N> in) {
   }
 }
 
+template <class InContainer, class OutContainer, class In, class Out, class Sent = In>
+constexpr void test_containers() {
+  {
+    InContainer in {1, 2, 3, 4};
+    OutContainer out(4);
+    std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
+      std::ranges::move(In(in.begin()), Sent(In(in.end())), Out(out.begin()));
+    assert(std::ranges::equal(in, out));
+    assert(base(ret.in) == in.end());
+    assert(base(ret.out) == out.end());
+  }
+  {
+    InContainer in {1, 2, 3, 4};
+    OutContainer out(4);
+    auto range = std::ranges::subrange(In(in.begin()), Sent(In(in.end())));
+    std::same_as<std::ranges::in_out_result<In, Out>> auto ret = std::ranges::move(range, Out(out.begin()));
+    assert(std::ranges::equal(in, out));
+    assert(base(ret.in) == in.end());
+    assert(base(ret.out) == out.end());
+  }
+}
+
 template <class In, class Out, class Sent = In>
 constexpr void test_iterators() {
   // simple test
@@ -85,23 +109,57 @@ constexpr void test_iterators() {
   test<In, Out, Sent, 0>({});
 }
 
-template <class Out>
-constexpr void test_in_iterators() {
-  test_iterators<cpp20_input_iterator<int*>, Out, sentinel_wrapper<cpp20_input_iterator<int*>>>();
-  test_iterators<forward_iterator<int*>, Out>();
-  test_iterators<bidirectional_iterator<int*>, Out>();
-  test_iterators<random_access_iterator<int*>, Out>();
-  test_iterators<contiguous_iterator<int*>, Out>();
-  test_iterators<int*, Out>();
+template <template <class> class In, template <class> class Out>
+constexpr void test_sentinels() {
+  test_iterators<In<int*>, Out<int*>>();
+  test_iterators<In<int*>, Out<int*>, sized_sentinel<In<int*>>>();
+  test_iterators<In<int*>, Out<int*>, sentinel_wrapper<In<int*>>>();
+
+  if (!std::is_constant_evaluated()) {
+    if constexpr (!std::is_same_v<In<int*>, contiguous_iterator<int*>> &&
+                  !std::is_same_v<Out<int*>, contiguous_iterator<int*>> &&
+                  !std::is_same_v<In<int*>, ContiguousProxyIterator<int*>> &&
+                  !std::is_same_v<Out<int*>, ContiguousProxyIterator<int*>>) {
+      test_containers<std::deque<int>,
+                      std::deque<int>,
+                      In<std::deque<int>::iterator>,
+                      Out<std::deque<int>::iterator>>();
+      test_containers<std::deque<int>,
+                      std::vector<int>,
+                      In<std::deque<int>::iterator>,
+                      Out<std::vector<int>::iterator>>();
+      test_containers<std::vector<int>,
+                      std::deque<int>,
+                      In<std::vector<int>::iterator>,
+                      Out<std::deque<int>::iterator>>();
+      test_containers<std::vector<int>,
+                      std::vector<int>,
+                      In<std::vector<int>::iterator>,
+                      Out<std::vector<int>::iterator>>();
+    }
+  }
 }
 
-template <class Out>
+template <template <class> class Out>
+constexpr void test_in_iterators() {
+  test_iterators<cpp20_input_iterator<int*>, Out<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>();
+  test_sentinels<forward_iterator, Out>();
+  test_sentinels<bidirectional_iterator, Out>();
+  test_sentinels<random_access_iterator, Out>();
+  test_sentinels<contiguous_iterator, Out>();
+  test_sentinels<std::type_identity_t, Out>();
+}
+
+template <template <class> class Out>
 constexpr void test_proxy_in_iterators() {
-  test_iterators<ProxyIterator<cpp20_input_iterator<int*>>, Out, sentinel_wrapper<ProxyIterator<cpp20_input_iterator<int*>>>>();
-  test_iterators<ProxyIterator<forward_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<bidirectional_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<random_access_iterator<int*>>, Out>();
-  test_iterators<ProxyIterator<contiguous_iterator<int*>>, Out>();
+  test_iterators<ProxyIterator<cpp20_input_iterator<int*>>,
+                 Out<int*>,
+                 sentinel_wrapper<ProxyIterator<cpp20_input_iterator<int*>>>>();
+  test_sentinels<ForwardProxyIterator, Out>();
+  test_sentinels<BidirectionalProxyIterator, Out>();
+  test_sentinels<RandomAccessProxyIterator, Out>();
+  test_sentinels<ContiguousProxyIterator, Out>();
+  test_sentinels<ProxyIterator, Out>();
 }
 
 struct IteratorWithMoveIter {
@@ -121,22 +179,27 @@ struct IteratorWithMoveIter {
   constexpr bool operator==(const IteratorWithMoveIter& other) const = default;
 };
 
-constexpr bool test() {
-  test_in_iterators<cpp17_output_iterator<int*>>();
-  test_in_iterators<cpp20_output_iterator<int*>>();
-  test_in_iterators<cpp17_input_iterator<int*>>();
-  test_in_iterators<cpp20_input_iterator<int*>>();
-  test_in_iterators<forward_iterator<int*>>();
-  test_in_iterators<bidirectional_iterator<int*>>();
-  test_in_iterators<random_access_iterator<int*>>();
-  test_in_iterators<contiguous_iterator<int*>>();
-  test_in_iterators<int*>();
+// cpp17_intput_iterator has a defaulted template argument
+template <class Iter>
+using Cpp17InIter = cpp17_input_iterator<Iter>;
 
-  test_proxy_in_iterators<ProxyIterator<cpp20_input_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<forward_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<bidirectional_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<random_access_iterator<int*>>>();
-  test_proxy_in_iterators<ProxyIterator<contiguous_iterator<int*>>>();
+constexpr bool test() {
+  test_in_iterators<cpp17_output_iterator>();
+  test_in_iterators<cpp20_output_iterator>();
+  test_in_iterators<Cpp17InIter>();
+  test_in_iterators<cpp20_input_iterator>();
+  test_in_iterators<forward_iterator>();
+  test_in_iterators<bidirectional_iterator>();
+  test_in_iterators<random_access_iterator>();
+  test_in_iterators<contiguous_iterator>();
+  test_in_iterators<std::type_identity_t>();
+
+  test_proxy_in_iterators<Cpp20InputProxyIterator>();
+  test_proxy_in_iterators<ForwardProxyIterator>();
+  test_proxy_in_iterators<BidirectionalProxyIterator>();
+  test_proxy_in_iterators<RandomAccessProxyIterator>();
+  test_proxy_in_iterators<ContiguousProxyIterator>();
+  test_proxy_in_iterators<ProxyIterator>();
 
   { // check that a move-only type works
     {

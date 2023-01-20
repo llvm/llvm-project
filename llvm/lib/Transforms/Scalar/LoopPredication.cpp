@@ -191,6 +191,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -974,37 +975,24 @@ bool LoopPredication::isLoopProfitableToPredicate() {
       LatchExitBlock->getTerminatingDeoptimizeCall())
     return false;
 
-  auto IsValidProfileData = [](MDNode *ProfileData, const Instruction *Term) {
-    if (!ProfileData || !ProfileData->getOperand(0))
-      return false;
-    if (MDString *MDS = dyn_cast<MDString>(ProfileData->getOperand(0)))
-      if (!MDS->getString().equals("branch_weights"))
-        return false;
-    if (ProfileData->getNumOperands() != 1 + Term->getNumSuccessors())
-      return false;
-    return true;
-  };
-  MDNode *LatchProfileData = LatchTerm->getMetadata(LLVMContext::MD_prof);
   // Latch terminator has no valid profile data, so nothing to check
   // profitability on.
-  if (!IsValidProfileData(LatchProfileData, LatchTerm))
+  if (!hasValidBranchWeightMD(*LatchTerm))
     return true;
 
   auto ComputeBranchProbability =
       [&](const BasicBlock *ExitingBlock,
           const BasicBlock *ExitBlock) -> BranchProbability {
     auto *Term = ExitingBlock->getTerminator();
-    MDNode *ProfileData = Term->getMetadata(LLVMContext::MD_prof);
     unsigned NumSucc = Term->getNumSuccessors();
-    if (IsValidProfileData(ProfileData, Term)) {
-      uint64_t Numerator = 0, Denominator = 0, ProfVal = 0;
-      for (unsigned i = 0; i < NumSucc; i++) {
-        ConstantInt *CI =
-            mdconst::extract<ConstantInt>(ProfileData->getOperand(i + 1));
-        ProfVal = CI->getValue().getZExtValue();
+    if (MDNode *ProfileData = getValidBranchWeightMDNode(*Term)) {
+      SmallVector<uint32_t> Weights;
+      extractBranchWeights(ProfileData, Weights);
+      uint64_t Numerator = 0, Denominator = 0;
+      for (auto [i, Weight] : llvm::enumerate(Weights)) {
         if (Term->getSuccessor(i) == ExitBlock)
-          Numerator += ProfVal;
-        Denominator += ProfVal;
+          Numerator += Weight;
+        Denominator += Weight;
       }
       return BranchProbability::getBranchProbability(Numerator, Denominator);
     } else {

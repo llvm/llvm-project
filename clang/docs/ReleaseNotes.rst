@@ -192,6 +192,10 @@ code bases.
   these definitions were allowed.  Note that such definitions are ODR
   violations if the header is included more than once.
 
+- Clang now diagnoses if structs/unions with the same name are different in
+  different used modules. Behavior in C and Objective-C language modes now is
+  the same as in C++.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -350,6 +354,8 @@ Bug Fixes
   This fixes `Issue 59765 <https://github.com/llvm/llvm-project/issues/59765>`_
 - Reject in-class defaulting of previosly declared comparison operators. Fixes
   `Issue 51227 <https://github.com/llvm/llvm-project/issues/51227>`_.
+- Fix the bug of inserting the ``ZeroInitializationFixit`` before the template
+  argument list of ``VarTemplateSpecializationDecl``.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -456,6 +462,9 @@ Improvements to Clang's diagnostics
   only when ``x`` is a string literal.
 - Clang will now reject the GNU extension address of label in coroutines explicitly.
   This fixes `Issue 56436 <https://github.com/llvm/llvm-project/issues/56436>`_.
+- Clang now automatically adds ``[[clang::lifetimebound]]`` to the parameters of
+  ``std::move, std::forward`` et al, this enables Clang to diagnose more cases
+  where the returned reference outlives the object.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -771,6 +780,9 @@ C++20 Feature Support
 - Implemented `P0960R3: <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0960r3.html>`_
   and `P1975R0: <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1975r0.html>`_,
   which allows parenthesized aggregate-initialization.
+
+- Fixed an issue with concept requirement evaluation, where we incorrectly allowed implicit
+  conversions to bool for a requirement.  This fixes `GH54524 <https://github.com/llvm/llvm-project/issues/54524>`_.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
