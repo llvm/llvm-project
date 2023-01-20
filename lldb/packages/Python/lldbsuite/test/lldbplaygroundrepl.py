@@ -74,7 +74,6 @@ class PlaygroundREPLTest(TestBase):
 
         with open(inputFile, 'r') as contents_file:
             contents = contents_file.read()
-        self.expect("log enable lldb types expr -f /tmp/types.log")
         result = self.frame.EvaluateExpression(contents, self.options)
         output = self.frame.EvaluateExpression("get_output()")
         with recording(self, self.TraceOn()) as sbuf:
