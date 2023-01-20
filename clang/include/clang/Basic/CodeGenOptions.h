@@ -60,6 +60,7 @@ public:
     LIBMVEC,           // GLIBC vector math library.
     MASSV,             // IBM MASS vector library.
     SVML,              // Intel short vector math library.
+    SLEEF,             // SLEEF SIMD Library for Evaluating Elementary Functions.
     Darwin_libsystem_m // Use Darwin's libsytem_m vector functions.
   };
 
