@@ -274,13 +274,16 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; // -----
 
 ; CHECK-LABEL: @class_method
-define void @class_method(ptr %arg1) {
+define void @class_method() {
   ; CHECK: llvm.return loc(#[[LOC:.+]])
-  ret void, !dbg !5
+  ret void, !dbg !9
 }
 
+; Verify the elements parameter is dropped due to the cyclic dependencies.
 ; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial">
-; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition>
+; CHECK: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
+; CHECK: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
+; CHECK: #[[SP:.+]] = #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
 ; CHECK: #[[LOC]] = loc(fused<#[[SP]]>
 
 !llvm.dbg.cu = !{!1}
@@ -288,6 +291,40 @@ define void @class_method(ptr %arg1) {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = !DICompositeType(tag: DW_TAG_class_type, name: "class_name", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial)
-!4 = distinct !DISubprogram(name: "class_method", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
-!5 = !DILocation(line: 1, column: 2, scope: !4)
+!3 = !DICompositeType(tag: DW_TAG_class_type, name: "class_name", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !4)
+!4 = !{!5}
+!5 = distinct !DISubprogram(name: "class_method", scope: !3, file: !2, type: !6, spFlags: DISPFlagDefinition, unit: !1)
+!6 = !DISubroutineType(types: !7)
+!7 = !{null, !8}
+!8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, size: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
+!9 = !DILocation(line: 1, column: 2, scope: !5)
+
+; // -----
+
+; Verify the elements parameter is dropped due to the cyclic dependencies.
+; CHECK: #[[$COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial">
+; CHECK: #[[$COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[$COMP]]>
+; CHECK: #[[$VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[$COMP_PTR]]>
+
+; CHECK-LABEL: @class_field
+; CHECK-SAME:  %[[ARG0:[a-zA-Z0-9]+]]
+define void @class_field(ptr %arg1) {
+  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] = %[[ARG0]] : !llvm.ptr
+  call void @llvm.dbg.value(metadata ptr %arg1, metadata !7, metadata !DIExpression()), !dbg !9
+  ret void
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = !DICompositeType(tag: DW_TAG_class_type, name: "class_field", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !4)
+!4 = !{!6}
+!5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, flags: DIFlagArtificial | DIFlagObjectPointer)
+!6 = !DIDerivedType(tag: DW_TAG_member, name: "call_field", file: !2, baseType: !5)
+!7 = !DILocalVariable(scope: !8, name: "class_field", file: !2, type: !5);
+!8 = distinct !DISubprogram(name: "class_field", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!9 = !DILocation(line: 1, column: 2, scope: !8)
