@@ -4365,6 +4365,7 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":MemRefDialect",
         ":MemRefToLLVM",
         ":NVVMToLLVMIRTranslation",
         ":Pass",
