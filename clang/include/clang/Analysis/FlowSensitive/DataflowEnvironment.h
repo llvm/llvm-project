@@ -430,6 +430,7 @@ public:
   }
 
   LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
 
 private:
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
