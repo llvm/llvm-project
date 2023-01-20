@@ -1125,5 +1125,5 @@ define i32 @freeze_ctpop(i32 %x) {
 ; CHECK: [[META0:![0-9]+]] = !{}
 ; CHECK: [[META1:![0-9]+]] = !{i64 4}
 ; CHECK: [[RNG2]] = !{i32 0, i32 100}
-; CHECK: [[RNG3]] = !{i32 0, i32 12}
+; CHECK: [[RNG3]] = !{i32 0, i32 33}
 ;.
