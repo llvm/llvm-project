@@ -103,6 +103,9 @@ public:
   mlir::Type getFortranElementType() const {
     return hlfir::getFortranElementType(getType());
   }
+  mlir::Type getElementOrSequenceType() const {
+    return hlfir::getFortranElementOrSequenceType(getType());
+  }
 
   bool hasLengthParameters() const {
     mlir::Type eleTy = getFortranElementType();
