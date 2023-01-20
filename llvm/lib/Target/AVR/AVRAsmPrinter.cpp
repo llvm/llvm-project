@@ -101,56 +101,51 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
                                     const char *ExtraCode, raw_ostream &O) {
   // Default asm printer can only deal with some extra codes,
   // so try it first.
-  bool Error = AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
+  if (!AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O))
+    return false;
 
-  if (Error && ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0)
-      return true; // Unknown modifier.
+  const MachineOperand &MO = MI->getOperand(OpNum);
 
-    if (ExtraCode[0] >= 'A' && ExtraCode[0] <= 'Z') {
-      const MachineOperand &RegOp = MI->getOperand(OpNum);
+  if (ExtraCode && ExtraCode[0]) {
+    // Unknown extra code.
+    if (ExtraCode[1] != 0 || ExtraCode[0] < 'A' || ExtraCode[0] > 'Z')
+      return true;
 
-      assert(RegOp.isReg() && "Operand must be a register when you're"
-                              "using 'A'..'Z' operand extracodes.");
-      Register Reg = RegOp.getReg();
+    // Operand must be a register when using 'A' ~ 'Z' extra code.
+    if (!MO.isReg())
+      return true;
 
-      unsigned ByteNumber = ExtraCode[0] - 'A';
+    Register Reg = MO.getReg();
 
-      unsigned OpFlags = MI->getOperand(OpNum - 1).getImm();
-      unsigned NumOpRegs = InlineAsm::getNumOperandRegisters(OpFlags);
-      (void)NumOpRegs;
+    unsigned ByteNumber = ExtraCode[0] - 'A';
+    unsigned OpFlags = MI->getOperand(OpNum - 1).getImm();
+    unsigned NumOpRegs = InlineAsm::getNumOperandRegisters(OpFlags);
 
-      const AVRSubtarget &STI = MF->getSubtarget<AVRSubtarget>();
-      const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+    const AVRSubtarget &STI = MF->getSubtarget<AVRSubtarget>();
+    const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
-      const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
-      unsigned BytesPerReg = TRI.getRegSizeInBits(*RC) / 8;
-      assert(BytesPerReg <= 2 && "Only 8 and 16 bit regs are supported.");
+    const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+    unsigned BytesPerReg = TRI.getRegSizeInBits(*RC) / 8;
+    assert(BytesPerReg <= 2 && "Only 8 and 16 bit regs are supported.");
 
-      unsigned RegIdx = ByteNumber / BytesPerReg;
-      if (RegIdx >= NumOpRegs)
-        return true;
-      Reg = MI->getOperand(OpNum + RegIdx).getReg();
+    unsigned RegIdx = ByteNumber / BytesPerReg;
+    if (RegIdx >= NumOpRegs)
+      return true;
+    Reg = MI->getOperand(OpNum + RegIdx).getReg();
 
-      if (BytesPerReg == 2) {
-        Reg = TRI.getSubReg(Reg, ByteNumber % BytesPerReg ? AVR::sub_hi
-                                                          : AVR::sub_lo);
-      }
-
-      O << AVRInstPrinter::getPrettyRegisterName(Reg, MRI);
-      return false;
+    if (BytesPerReg == 2) {
+      Reg = TRI.getSubReg(Reg,
+                          ByteNumber % BytesPerReg ? AVR::sub_hi : AVR::sub_lo);
     }
-  }
 
-  // Print global symbols.
-  const auto &MO = MI->getOperand(OpNum);
-  if (Error && MO.getType() == MachineOperand::MO_GlobalAddress) {
-    PrintSymbolOperand(MO, O);
+    O << AVRInstPrinter::getPrettyRegisterName(Reg, MRI);
     return false;
   }
 
-  if (Error)
-    printOperand(MI, OpNum, O);
+  if (MO.getType() == MachineOperand::MO_GlobalAddress)
+    PrintSymbolOperand(MO, O); // Print global symbols.
+  else
+    printOperand(MI, OpNum, O); // Fallback to ordinary cases.
 
   return false;
 }
