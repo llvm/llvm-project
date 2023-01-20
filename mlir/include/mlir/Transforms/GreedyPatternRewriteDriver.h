@@ -18,6 +18,17 @@
 
 namespace mlir {
 
+/// This enum controls which ops are put on the worklist during a greedy
+/// pattern rewrite.
+enum class GreedyRewriteStrictness {
+  /// No restrictions wrt. which ops are processed.
+  AnyOp,
+  /// Only pre-existing and newly created ops are processed.
+  ExistingAndNewOps,
+  /// Only pre-existing ops are processed.
+  ExistingOps
+};
+
 /// This class allows control over how the GreedyPatternRewriteDriver works.
 class GreedyRewriteConfig {
 public:
@@ -88,21 +99,29 @@ LogicalResult applyOpPatternsAndFold(Operation *op,
                                      bool *erased = nullptr);
 
 /// Applies the specified rewrite patterns on `ops` while also trying to fold
-/// these ops as well as any other ops that were in turn created due to such
-/// rewrites. Furthermore, any pre-existing ops in the IR outside of `ops`
-/// remain completely unmodified if `strict` is set to true. If `strict` is
-/// false, other operations that use results of rewritten ops or supply operands
-/// to such ops are in turn simplified; any other ops still remain unmodified
-/// (i.e., regardless of `strict`). Note that ops in `ops` could be erased as a
-/// result of folding, becoming dead, or via pattern rewrites. If more far
-/// reaching simplification is desired, applyPatternsAndFoldGreedily should be
-/// used.
+/// these ops.
+///
+/// Newly created ops and other pre-existing ops that use results of rewritten
+/// ops or supply operands to such ops are simplified, unless such ops are
+/// excluded via `strictMode`. Any other ops remain unmodified (i.e., regardless
+/// of `strictMode`).
+///
+/// * GreedyRewriteStrictness::AnyOp: No ops are excluded.
+/// * GreedyRewriteStrictness::ExistingAndNewOps: Only pre-existing and newly
+///   created ops are simplified. All other ops are excluded.
+/// * GreedyRewriteStrictness::ExistingOps: Only pre-existing ops are
+///   simplified. All other ops are excluded.
+///
+/// Note that ops in `ops` could be erased as result of folding, becoming dead,
+/// or via pattern rewrites. If more far reaching simplification is desired,
+/// applyPatternsAndFoldGreedily should be used.
 ///
 /// Returns success if the iterative process converged and no more patterns can
 /// be matched. `changed` is set to true if the IR was modified at all.
 LogicalResult applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                                      const FrozenRewritePatternSet &patterns,
-                                     bool strict, bool *changed = nullptr);
+                                     GreedyRewriteStrictness strictMode,
+                                     bool *changed = nullptr);
 
 } // namespace mlir
 
