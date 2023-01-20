@@ -44,6 +44,7 @@
 ; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       InstructionSelect
 ; CHECK-NEXT:       ResetMachineFunction
+; CHECK-NEXT:       Assignment Tracking Analysis
 ; CHECK-NEXT:       AArch64 Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation
