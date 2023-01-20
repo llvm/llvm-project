@@ -51,6 +51,13 @@ public:
   bool diagnoseMismatch(const RecordDecl *FirstRecord,
                         const RecordDecl *SecondRecord) const;
 
+  /// Diagnose ODR mismatch between 2 ObjCInterfaceDecl.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  bool diagnoseMismatch(
+      const ObjCInterfaceDecl *FirstID, const ObjCInterfaceDecl *SecondID,
+      const struct ObjCInterfaceDecl::DefinitionData *SecondDD) const;
+
   /// Diagnose ODR mismatch between 2 ObjCProtocolDecl.
   ///
   /// Returns true if found a mismatch and diagnosed it.
@@ -97,6 +104,7 @@ private:
     Friend,
     FunctionTemplate,
     ObjCMethod,
+    ObjCIvar,
     ObjCProperty,
     Other
   };
