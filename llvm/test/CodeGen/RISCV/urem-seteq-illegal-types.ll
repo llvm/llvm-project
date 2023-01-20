@@ -579,8 +579,8 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    andi a3, a3, 2047
 ; RV32MV-NEXT:    slli a3, a3, 11
 ; RV32MV-NEXT:    slli a1, a1, 22
-; RV32MV-NEXT:    or a1, a3, a1
 ; RV32MV-NEXT:    or a1, a2, a1
+; RV32MV-NEXT:    or a1, a1, a3
 ; RV32MV-NEXT:    sw a1, 0(a0)
 ; RV32MV-NEXT:    addi sp, sp, 16
 ; RV32MV-NEXT:    ret
@@ -641,7 +641,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64MV-NEXT:    vmv.x.s a3, v8
 ; RV64MV-NEXT:    slli a3, a3, 22
-; RV64MV-NEXT:    or a2, a2, a3
+; RV64MV-NEXT:    or a1, a1, a3
 ; RV64MV-NEXT:    or a1, a1, a2
 ; RV64MV-NEXT:    sw a1, 0(a0)
 ; RV64MV-NEXT:    slli a1, a1, 31

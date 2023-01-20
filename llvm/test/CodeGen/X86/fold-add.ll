@@ -171,10 +171,10 @@ define dso_local i64 @neg_0x80000001() #0 {
 ;
 ; MPIC-LABEL: neg_0x80000001:
 ; MPIC:       # %bb.0: # %entry
-; MPIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rcx
-; MPIC-NEXT:    movabsq $foo@GOTOFF, %rdx
+; MPIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
+; MPIC-NEXT:    movabsq $foo@GOTOFF, %rcx
+; MPIC-NEXT:    addq %rax, %rcx
 ; MPIC-NEXT:    movabsq $-2147483649, %rax # imm = 0xFFFFFFFF7FFFFFFF
-; MPIC-NEXT:    addq %rdx, %rax
 ; MPIC-NEXT:    addq %rcx, %rax
 ; MPIC-NEXT:    retq
 entry:

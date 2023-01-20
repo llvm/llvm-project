@@ -1260,6 +1260,7 @@ static LinalgOp transposeOneLinalgOperandAndReplace(
   // Sanity check of the expected transposed tensor type.
   auto tensorType = permuteShape(
       opOperand.get().getType().cast<RankedTensorType>(), permutation);
+  (void)tensorType;
   assert(tensorType == transposedValue.getType() &&
          "expected tensor type mismatch");
 

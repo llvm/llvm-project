@@ -2752,6 +2752,17 @@ let TargetPrefix = "aarch64" in {
                  LLVMMatchType<0>, llvm_i32_ty],
                 [ImmArg<ArgIndex<6>>]>;
 
+  class SME2_CVT_VG2_SINGLE_Intrinsic
+    : DefaultAttrsIntrinsic<[LLVMSubdivide2VectorType<0>],
+                            [llvm_anyvector_ty, LLVMMatchType<0>],
+                            [IntrNoMem]>;
+
+  class SME2_CVT_VG2_SINGLE_BF16_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_nxv8bf16_ty],
+                            [llvm_nxv4f32_ty, llvm_nxv4f32_ty],
+                            [IntrNoMem]>;
+
+
   //
   // Multi-vector fused multiply-add/subtract
   //
@@ -2804,4 +2815,10 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sme_suvdot_lane_za32_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
   def int_aarch64_sme_usvdot_lane_za32_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
+
+  //
+  // Multi-vector floating-point CVT from single-precision to interleaved half-precision/BFloat16
+  //
+  def int_aarch64_sve_fcvtn_x2  : SME2_CVT_VG2_SINGLE_Intrinsic;
+  def int_aarch64_sve_bfcvtn_x2 : SME2_CVT_VG2_SINGLE_BF16_Intrinsic;
 }

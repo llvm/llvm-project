@@ -36,7 +36,7 @@ entry:
 define cc 11 {i32, i32, i32} @addfour(i32 %hp, i32 %p, i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-LABEL: addfour:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addl %edx, %ecx
+; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    retl
 entry:
