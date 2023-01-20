@@ -252,7 +252,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
   Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
   Value memref = xferOp.getSource();
   return b.create<scf::IfOp>(
-      loc, returnTypes, inBoundsCond,
+      loc, inBoundsCond,
       [&](OpBuilder &b, Location loc) {
         Value res = memref;
         if (compatibleMemRefType != xferOp.getShapedType())
@@ -307,7 +307,7 @@ static scf::IfOp createFullPartialVectorTransferRead(
   Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
   Value memref = xferOp.getSource();
   return b.create<scf::IfOp>(
-      loc, returnTypes, inBoundsCond,
+      loc, inBoundsCond,
       [&](OpBuilder &b, Location loc) {
         Value res = memref;
         if (compatibleMemRefType != xferOp.getShapedType())
@@ -358,7 +358,7 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
   Value memref = xferOp.getSource();
   return b
       .create<scf::IfOp>(
-          loc, returnTypes, inBoundsCond,
+          loc, inBoundsCond,
           [&](OpBuilder &b, Location loc) {
             Value res = memref;
             if (compatibleMemRefType != xferOp.getShapedType())
