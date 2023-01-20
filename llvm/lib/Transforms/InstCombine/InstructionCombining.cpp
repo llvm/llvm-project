@@ -4604,7 +4604,7 @@ static bool combineInstructionsOverFunction(
   // LowerDbgDeclare calls RemoveRedundantDbgInstrs, but LowerDbgDeclare will
   // almost never return true when running an assignment tracking build. Take
   // this opportunity to do some clean up for assignment tracking builds too.
-  if (!MadeIRChange && getEnableAssignmentTracking()) {
+  if (!MadeIRChange && isAssignmentTrackingEnabled(*F.getParent())) {
     for (auto &BB : F)
       RemoveRedundantDbgInstrs(&BB);
   }

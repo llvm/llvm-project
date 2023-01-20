@@ -1,9 +1,7 @@
 ; RUN: llc %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 ; RUN: llc %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
@@ -98,7 +96,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noa
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #2
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!11, !12, !13, !14}
+!llvm.module.flags = !{!11, !12, !13, !14, !1000}
 !llvm.ident = !{!15}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -145,3 +143,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !67 = !{!68}
 !68 = !DIBasicType(name: "bool", size: 8, encoding: DW_ATE_boolean)
 !69 = !{}
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
