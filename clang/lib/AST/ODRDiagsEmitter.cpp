@@ -1547,6 +1547,101 @@ bool ODRDiagsEmitter::diagnoseMismatch(
   return true;
 }
 
+bool ODRDiagsEmitter::diagnoseMismatch(const RecordDecl *FirstRecord,
+                                       const RecordDecl *SecondRecord) const {
+  if (FirstRecord == SecondRecord)
+    return false;
+
+  std::string FirstModule = getOwningModuleNameForDiagnostic(FirstRecord);
+  std::string SecondModule = getOwningModuleNameForDiagnostic(SecondRecord);
+
+  auto PopulateHashes = [](DeclHashes &Hashes, const RecordDecl *Record,
+                           const DeclContext *DC) {
+    for (const Decl *D : Record->decls()) {
+      if (!ODRHash::isSubDeclToBeProcessed(D, DC))
+        continue;
+      Hashes.emplace_back(D, computeODRHash(D));
+    }
+  };
+
+  DeclHashes FirstHashes;
+  DeclHashes SecondHashes;
+  const DeclContext *DC = FirstRecord;
+  PopulateHashes(FirstHashes, FirstRecord, DC);
+  PopulateHashes(SecondHashes, SecondRecord, DC);
+
+  DiffResult DR = FindTypeDiffs(FirstHashes, SecondHashes);
+  ODRMismatchDecl FirstDiffType = DR.FirstDiffType;
+  ODRMismatchDecl SecondDiffType = DR.SecondDiffType;
+  const Decl *FirstDecl = DR.FirstDecl;
+  const Decl *SecondDecl = DR.SecondDecl;
+
+  if (FirstDiffType == Other || SecondDiffType == Other) {
+    diagnoseSubMismatchUnexpected(DR, FirstRecord, FirstModule, SecondRecord,
+                                  SecondModule);
+    return true;
+  }
+
+  if (FirstDiffType != SecondDiffType) {
+    diagnoseSubMismatchDifferentDeclKinds(DR, FirstRecord, FirstModule,
+                                          SecondRecord, SecondModule);
+    return true;
+  }
+
+  assert(FirstDiffType == SecondDiffType);
+  switch (FirstDiffType) {
+  // Already handled.
+  case EndOfClass:
+  case Other:
+  // C++ only, invalid in this context.
+  case PublicSpecifer:
+  case PrivateSpecifer:
+  case ProtectedSpecifer:
+  case StaticAssert:
+  case CXXMethod:
+  case TypeAlias:
+  case Friend:
+  case FunctionTemplate:
+  // Cannot be contained by RecordDecl, invalid in this context.
+  case ObjCMethod:
+  case ObjCProperty:
+    llvm_unreachable("Invalid diff type");
+
+  case Field: {
+    if (diagnoseSubMismatchField(FirstRecord, FirstModule, SecondModule,
+                                 cast<FieldDecl>(FirstDecl),
+                                 cast<FieldDecl>(SecondDecl)))
+      return true;
+    break;
+  }
+  case TypeDef: {
+    if (diagnoseSubMismatchTypedef(FirstRecord, FirstModule, SecondModule,
+                                   cast<TypedefNameDecl>(FirstDecl),
+                                   cast<TypedefNameDecl>(SecondDecl),
+                                   /*IsTypeAlias=*/false))
+      return true;
+    break;
+  }
+  case Var: {
+    if (diagnoseSubMismatchVar(FirstRecord, FirstModule, SecondModule,
+                               cast<VarDecl>(FirstDecl),
+                               cast<VarDecl>(SecondDecl)))
+      return true;
+    break;
+  }
+  }
+
+  Diag(FirstDecl->getLocation(),
+       diag::err_module_odr_violation_mismatch_decl_unknown)
+      << FirstRecord << FirstModule.empty() << FirstModule << FirstDiffType
+      << FirstDecl->getSourceRange();
+  Diag(SecondDecl->getLocation(),
+       diag::note_module_odr_violation_mismatch_decl_unknown)
+      << SecondModule.empty() << SecondModule << FirstDiffType
+      << SecondDecl->getSourceRange();
+  return true;
+}
+
 bool ODRDiagsEmitter::diagnoseMismatch(
     const FunctionDecl *FirstFunction,
     const FunctionDecl *SecondFunction) const {
