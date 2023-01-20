@@ -79,7 +79,7 @@
 # POSTCHECK-NEXT: [0x[[#ADDR3]], 0x[[#ADDR3 + 4]])
 # POSTCHECK-NEXT: [0x[[#ADDR4]], 0x[[#ADDR4 + 4]])
 # POSTCHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000030)
-# POSTCHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x00000043)
+# POSTCHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x00000045)
 # POSTCHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x00000035)
 # POSTCHECK-EMPTY
 
