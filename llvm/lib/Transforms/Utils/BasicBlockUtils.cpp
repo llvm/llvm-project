@@ -179,8 +179,7 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
 bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
                                      LoopInfo *LI, MemorySSAUpdater *MSSAU,
                                      MemoryDependenceResults *MemDep,
-                                     bool PredecessorWithTwoSuccessors,
-                                     DominatorTree *DT) {
+                                     bool PredecessorWithTwoSuccessors) {
   if (BB->hasAddressTaken())
     return false;
 
@@ -233,21 +232,10 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     FoldSingleEntryPHINodes(BB, MemDep);
   }
 
-  if (DT) {
-    assert(!DTU && "cannot use both DT and DTU for updates");
-    DomTreeNode *PredNode = DT->getNode(PredBB);
-    DomTreeNode *BBNode = DT->getNode(BB);
-    if (PredNode) {
-      assert(BBNode && "PredNode unreachable but BBNode reachable?");
-      for (DomTreeNode *C : to_vector(BBNode->children()))
-        C->setIDom(PredNode);
-    }
-  }
   // DTU update: Collect all the edges that exit BB.
   // These dominator edges will be redirected from Pred.
   std::vector<DominatorTree::UpdateType> Updates;
   if (DTU) {
-    assert(!DT && "cannot use both DT and DTU for updates");
     // To avoid processing the same predecessor more than once.
     SmallPtrSet<BasicBlock *, 8> SeenSuccs;
     SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(succ_begin(PredBB),
@@ -322,12 +310,6 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
   if (DTU)
     DTU->applyUpdates(Updates);
-
-  if (DT) {
-    assert(succ_empty(BB) &&
-           "successors should have been transferred to PredBB");
-    DT->eraseNode(BB);
-  }
 
   // Finally, erase the old block and update dominator info.
   DeleteDeadBlock(BB, DTU);
