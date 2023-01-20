@@ -2697,6 +2697,12 @@ let TargetPrefix = "aarch64" in {
   // SME2 Intrinsics
   //
 
+  class SME2_Matrix_ArrayVector_Single_Single_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+                [llvm_i32_ty,
+                 llvm_anyvector_ty, LLVMMatchType<0>],
+                []>;
+
   class SME2_Matrix_ArrayVector_VG2_Multi_Single_Intrinsic
     : DefaultAttrsIntrinsic<[],
                 [llvm_i32_ty,
@@ -2724,6 +2730,13 @@ let TargetPrefix = "aarch64" in {
                  llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                 []>;
+
+  class SME2_Matrix_ArrayVector_Single_Index_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+                [llvm_i32_ty,
+                llvm_anyvector_ty,
+                LLVMMatchType<0>, llvm_i32_ty],
+                [ImmArg<ArgIndex<3>>]>;
 
   class SME2_Matrix_ArrayVector_VG2_Multi_Index_Intrinsic
     : DefaultAttrsIntrinsic<[],
@@ -2757,4 +2770,23 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_fmls_lane_vg1x2 : SME2_Matrix_ArrayVector_VG2_Multi_Index_Intrinsic;
   def int_aarch64_sme_fmla_lane_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
   def int_aarch64_sme_fmls_lane_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
+
+  //
+  // Multi-vector multiply-add/subtract long
+  //
+
+  foreach ty = ["f", "s", "u"] in {
+    foreach instr = ["mlal", "mlsl"] in {
+      def int_aarch64_sme_ # ty # instr # _single_vg2x1  : SME2_Matrix_ArrayVector_Single_Single_Intrinsic;
+      def int_aarch64_sme_ # ty # instr # _single_vg2x2  : SME2_Matrix_ArrayVector_VG2_Multi_Single_Intrinsic;
+      def int_aarch64_sme_ # ty # instr # _single_vg2x4  : SME2_Matrix_ArrayVector_VG4_Multi_Single_Intrinsic;
+
+      def int_aarch64_sme_ # ty # instr # _vg2x2 : SME2_Matrix_ArrayVector_VG2_Multi_Multi_Intrinsic;
+      def int_aarch64_sme_ # ty # instr # _vg2x4 : SME2_Matrix_ArrayVector_VG4_Multi_Multi_Intrinsic;
+
+      def int_aarch64_sme_ # ty # instr # _lane_vg2x1  : SME2_Matrix_ArrayVector_Single_Index_Intrinsic;
+      def int_aarch64_sme_ # ty # instr # _lane_vg2x2  : SME2_Matrix_ArrayVector_VG2_Multi_Index_Intrinsic;
+      def int_aarch64_sme_ # ty # instr # _lane_vg2x4  : SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic;
+    }
+  }
 }
