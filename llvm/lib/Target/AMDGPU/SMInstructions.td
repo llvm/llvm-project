@@ -84,7 +84,7 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   bits<7>  sdst;
   bits<32> offset;
   bits<8>  soffset;
-  bits<5> cpol;
+  bits<5>  cpol;
 }
 
 class OffsetMode<bit hasOffset, bit hasSOffset, string variant,
@@ -1293,7 +1293,7 @@ def SMInfoTable : GenericTable {
 class SMEM_Real_gfx11<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
     SMEM_Real_10Plus_common<op, ps, opName, SIEncodingFamily.GFX11,
                             SGPR_NULL_gfx11plus> {
-  let AssemblerPredicate = isGFX11Plus;
+  let AssemblerPredicate = isGFX11Only;
   let DecoderNamespace = "GFX11";
   let Inst{13}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, 0);
   let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, 0);
@@ -1349,20 +1349,33 @@ defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx11 <0x23, "S_ATC_PROBE_BUFFER">;
 //===----------------------------------------------------------------------===//
 // GFX12.
 //===----------------------------------------------------------------------===//
+class SMEM_Real_gfx12Plus<bits<6> op, SM_Pseudo ps, string opName,
+                              int subtarget, RegisterWithSubRegs sgpr_null> :
+    SM_Real<ps, opName>, SIMCInstr<ps.PseudoInstr, subtarget>, Enc64 {
+    
+  let Inst{18-13} = op;
+  let Inst{31-26} = 0x3d;
 
-class SMEM_Real_gfx12<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
-    SMEM_Real_10Plus_common<op, ps, opName, SIEncodingFamily.GFX12,
+  let Inst{55-32} = !if(ps.has_offset, offset{23-0}, !if(ps.has_soffset, 0, ?));
+  let Inst{63-57} = !if(ps.has_soffset, soffset{6-0},
+                        !if(ps.has_offset, sgpr_null.HWEncoding{6-0}, ?));
+}
+
+class SMEM_Real_gfx12<bits<6> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
+    SMEM_Real_gfx12Plus<op, ps, opName, SIEncodingFamily.GFX12,
                             SGPR_NULL_gfx11plus> {
   let AssemblerPredicate = isGFX12Plus;
   let DecoderNamespace = "GFX12";
-  let Inst{18-13} = op{5-0};
-  let Inst{19}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, 0);
-  let Inst{24-20} = ?; // TODO-GFX12: Add new bits {24-20}: TH, Scope, NV
-  let Inst{25}    = !if(ps.has_glc, cpol{CPolBit.GLC}, 0);
-  let Inst{55-32} = offset{23-0};
+
+  let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);
+  let Inst{12-6}  = !if(ps.has_sdst, sdst{6-0}, ?);
+
+  let Inst{22-21} = ?; // TODO-GFX12: cpol SCOPE
+  let Inst{24-23} = ?; // TODO-GFX12: cpol TH
 }
 
-class SMEM_Real_Prefetch_gfx12 <bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx12<op, ps> {
+class SMEM_Real_Prefetch_gfx12<bits<6> op, SM_Pseudo ps> :
+      SMEM_Real_gfx12<op, ps> {
   bits<7> sdata; // Only 5 bits of sdata are supported.
 
   let sdst = ?;
@@ -1370,28 +1383,43 @@ class SMEM_Real_Prefetch_gfx12 <bits<8> op, SM_Pseudo ps> : SMEM_Real_gfx12<op, 
   let Inst{10-6}  = !if(ps.has_sdst, sdata{4-0}, ?);
 }
 
-def S_PREFETCH_INST_gfx12        : SMEM_Real_Prefetch_gfx12<0x24, S_PREFETCH_INST>;
-def S_PREFETCH_INST_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x25, S_PREFETCH_INST_PC_REL>;
-def S_PREFETCH_DATA_gfx12        : SMEM_Real_Prefetch_gfx12<0x26, S_PREFETCH_DATA>;
-def S_BUFFER_PREFETCH_DATA_gfx12 : SMEM_Real_Prefetch_gfx12<0x27, S_BUFFER_PREFETCH_DATA>;
-def S_PREFETCH_DATA_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x28, S_PREFETCH_DATA_PC_REL>;
-
-class SMEM_Real_Load_gfx12<bits<8> op, string ps, string opName, OffsetMode offsets> :
+class SMEM_Real_Load_gfx12<bits<6> op, string ps, string opName, OffsetMode offsets> :
     SMEM_Real_gfx12<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName> {
   RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
   let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
 }
 
-multiclass SM_Real_Loads_gfx12<bits<8> op, string ps, string opName> {
+multiclass SM_Real_Loads_gfx12<bits<6> op, string ps, string opName> {
   def _IMM_gfx12 : SMEM_Real_Load_gfx12<op, ps, opName, IMM_Offset>;
   def _SGPR_IMM_gfx12 : SMEM_Real_Load_gfx12<op, ps, opName, SGPR_IMM_Offset>;
 }
 
-defm S_LOAD_I8         : SM_Real_Loads_gfx12<0x8, "S_LOAD_I8", "s_load_i8">;
-defm S_LOAD_U8         : SM_Real_Loads_gfx12<0x9, "S_LOAD_U8", "s_load_u8">;
+defm S_LOAD_B32  : SM_Real_Loads_gfx12<0x00, "S_LOAD_DWORD", "s_load_b32">;
+defm S_LOAD_B64  : SM_Real_Loads_gfx12<0x01, "S_LOAD_DWORDX2", "s_load_b64">;
+defm S_LOAD_B128 : SM_Real_Loads_gfx12<0x02, "S_LOAD_DWORDX4", "s_load_b128">;
+defm S_LOAD_B256 : SM_Real_Loads_gfx12<0x03, "S_LOAD_DWORDX8", "s_load_b256">;
+defm S_LOAD_B512 : SM_Real_Loads_gfx12<0x04, "S_LOAD_DWORDX16", "s_load_b512">;
+
+defm S_LOAD_I8   : SM_Real_Loads_gfx12<0x08, "S_LOAD_I8", "s_load_i8">;
+defm S_LOAD_U8   : SM_Real_Loads_gfx12<0x09, "S_LOAD_U8", "s_load_u8">;
+defm S_LOAD_I16  : SM_Real_Loads_gfx12<0x0a, "S_LOAD_I16", "s_load_i16">;
+defm S_LOAD_U16  : SM_Real_Loads_gfx12<0x0b, "S_LOAD_U16", "s_load_u16">;
+
+defm S_BUFFER_LOAD_B32  : SM_Real_Loads_gfx12<0x10, "S_BUFFER_LOAD_DWORD", "s_buffer_load_b32">;
+defm S_BUFFER_LOAD_B64  : SM_Real_Loads_gfx12<0x11, "S_BUFFER_LOAD_DWORDX2", "s_buffer_load_b64">;
+defm S_BUFFER_LOAD_B128 : SM_Real_Loads_gfx12<0x12, "S_BUFFER_LOAD_DWORDX4", "s_buffer_load_b128">;
+defm S_BUFFER_LOAD_B256 : SM_Real_Loads_gfx12<0x13, "S_BUFFER_LOAD_DWORDX8", "s_buffer_load_b256">;
+defm S_BUFFER_LOAD_B512 : SM_Real_Loads_gfx12<0x14, "S_BUFFER_LOAD_DWORDX16", "s_buffer_load_b512">;
+
 defm S_BUFFER_LOAD_I8  : SM_Real_Loads_gfx12<0x18, "S_BUFFER_LOAD_I8", "s_buffer_load_i8">;
 defm S_BUFFER_LOAD_U8  : SM_Real_Loads_gfx12<0x19, "S_BUFFER_LOAD_U8", "s_buffer_load_u8">;
-defm S_LOAD_I16        : SM_Real_Loads_gfx12<0xa, "S_LOAD_I16", "s_load_i16">;
-defm S_LOAD_U16        : SM_Real_Loads_gfx12<0xb, "S_LOAD_U16", "s_load_u16">;
 defm S_BUFFER_LOAD_I16 : SM_Real_Loads_gfx12<0x1a, "S_BUFFER_LOAD_I16", "s_buffer_load_i16">;
 defm S_BUFFER_LOAD_U16 : SM_Real_Loads_gfx12<0x1b, "S_BUFFER_LOAD_U16", "s_buffer_load_u16">;
+
+def S_DCACHE_INV_gfx12 : SMEM_Real_gfx12<0x021, S_DCACHE_INV>;
+
+def S_PREFETCH_INST_gfx12        : SMEM_Real_Prefetch_gfx12<0x24, S_PREFETCH_INST>;
+def S_PREFETCH_INST_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x25, S_PREFETCH_INST_PC_REL>;
+def S_PREFETCH_DATA_gfx12        : SMEM_Real_Prefetch_gfx12<0x26, S_PREFETCH_DATA>;
+def S_BUFFER_PREFETCH_DATA_gfx12 : SMEM_Real_Prefetch_gfx12<0x27, S_BUFFER_PREFETCH_DATA>;
+def S_PREFETCH_DATA_PC_REL_gfx12 : SMEM_Real_Prefetch_gfx12<0x28, S_PREFETCH_DATA_PC_REL>;
