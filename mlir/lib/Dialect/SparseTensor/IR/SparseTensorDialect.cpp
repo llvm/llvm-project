@@ -525,7 +525,8 @@ Type StorageSpecifierType::getFieldType(StorageSpecifierKind kind,
 //===----------------------------------------------------------------------===//
 
 static LogicalResult isInBounds(uint64_t dim, Value tensor) {
-  return success(dim < tensor.getType().cast<RankedTensorType>().getRank());
+  return success(dim <
+                 (uint64_t)tensor.getType().cast<RankedTensorType>().getRank());
 }
 
 static LogicalResult isMatchingWidth(Value result, unsigned width) {
