@@ -2322,6 +2322,7 @@ mlir::LogicalResult fir::ReboxOp::verify() {
     // character type.
     const bool typeCanMismatch =
         inputEleTy.isa<fir::RecordType>() || outEleTy.isa<mlir::NoneType>() ||
+        (inputEleTy.isa<mlir::NoneType>() && outEleTy.isa<fir::RecordType>()) ||
         (getSlice() && inputEleTy.isa<fir::CharacterType>()) ||
         areCompatibleCharacterTypes(inputEleTy, outEleTy);
     if (!typeCanMismatch)
