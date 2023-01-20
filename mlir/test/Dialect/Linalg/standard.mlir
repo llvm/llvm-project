@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-linalg-to-std | FileCheck %s
+// RUN: mlir-opt %s -convert-linalg-to-std --split-input-file -verify-diagnostics | FileCheck %s
 
 func.func @dot(%arg0: memref<?xf32, strided<[1], offset: ?>>,
           %arg1: memref<?xf32, strided<[1], offset: ?>>,
@@ -21,6 +21,8 @@ func.func @dot(%arg0: memref<?xf32, strided<[1], offset: ?>>,
 //       CHECK:   call @linalg_dot_viewsxf32_viewsxf32_viewf32(
 //  CHECK-SAME:     %[[o0]], %[[o1]], %[[o2]]) :
 //  CHECK-SAME:   memref<?xf32, strided<[?], offset: ?>>, memref<?xf32, strided<[?], offset: ?>>, memref<f32, strided<[], offset: ?>>
+
+// -----
 
 #matmul_accesses = [
   affine_map<(m, n, k) -> (m, k)>,
@@ -53,3 +55,19 @@ func.func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_t
 }
 // CHECK-LABEL: func @matmul_vec_impl(
 // CHECK:  call @external_outerproduct_matmul(%{{.*}}) :
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#map1 = affine_map<(d0, d1) -> (d0)>
+
+func.func @func(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>)  {
+  // expected-error @below {{failed to legalize}}
+  %0 = linalg.generic {
+    indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]}
+  ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?xf32>) {
+  ^bb0(%in: f32, %out: f32): 
+    linalg.yield %in : f32
+  } -> tensor<?xf32>
+  return 
+}
