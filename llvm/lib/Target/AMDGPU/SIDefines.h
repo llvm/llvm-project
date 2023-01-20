@@ -194,6 +194,12 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_AC_V2INT32,
   OPERAND_REG_INLINE_AC_V2FP32,
 
+  // Operand for source modifiers for VOP instructions
+  OPERAND_INPUT_MODS,
+
+  // Operand for SDWA instructions
+  OPERAND_SDWA_VOPC_DST,
+
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
 
@@ -207,13 +213,7 @@ enum OperandType : unsigned {
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
-  OPERAND_KIMM_LAST = OPERAND_KIMM16,
-
-  // Operand for source modifiers for VOP instructions
-  OPERAND_INPUT_MODS,
-
-  // Operand for SDWA instructions
-  OPERAND_SDWA_VOPC_DST
+  OPERAND_KIMM_LAST = OPERAND_KIMM16
 
 };
 }
