@@ -469,6 +469,9 @@ public:
   bool isUnimportable(const LangOptions &LangOpts, const TargetInfo &Target,
                       Requirement &Req, Module *&ShadowingModule) const;
 
+  /// Determine whether this module can be built in this compilation.
+  bool isForBuilding(const LangOptions &LangOpts) const;
+
   /// Determine whether this module is available for use within the
   /// current translation unit.
   bool isAvailable() const { return IsAvailable; }

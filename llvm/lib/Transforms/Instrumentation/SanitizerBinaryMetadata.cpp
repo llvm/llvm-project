@@ -271,31 +271,11 @@ void SanitizerBinaryMetadata::runOn(Function &F, MetadataInfoSet &MIS) {
   }
 }
 
-bool isUARSafeCall(CallInst *CI) {
-  auto *F = CI->getCalledFunction();
-  // There are no intrinsic functions that leak arguments.
-  // If the called function does not return, the current function
-  // does not return as well, so no possibility of use-after-return.
-  // Sanitizer function also don't leak or don't return.
-  // It's safe to both pass pointers to local variables to them
-  // and to tail-call them.
-  return F && (F->isIntrinsic() || F->doesNotReturn() ||
-               F->getName().startswith("__asan_") ||
-               F->getName().startswith("__hwsan_") ||
-               F->getName().startswith("__ubsan_") ||
-               F->getName().startswith("__msan_") ||
-               F->getName().startswith("__tsan_"));
-}
-
 bool hasUseAfterReturnUnsafeUses(Value &V) {
   for (User *U : V.users()) {
     if (auto *I = dyn_cast<Instruction>(U)) {
       if (I->isLifetimeStartOrEnd() || I->isDroppable())
         continue;
-      if (auto *CI = dyn_cast<CallInst>(U)) {
-        if (isUARSafeCall(CI))
-          continue;
-      }
       if (isa<LoadInst>(U))
         continue;
       if (auto *SI = dyn_cast<StoreInst>(U)) {
@@ -323,7 +303,7 @@ bool useAfterReturnUnsafe(Instruction &I) {
   // at runtime because there is no call instruction.
   // So conservatively mark the caller as requiring checking.
   else if (auto *CI = dyn_cast<CallInst>(&I))
-    return CI->isTailCall() && !isUARSafeCall(CI);
+    return CI->isTailCall();
   return false;
 }
 

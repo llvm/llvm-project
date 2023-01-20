@@ -14,6 +14,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/UInt.h"
+#include "src/__support/common.h"
 #include "src/__support/ryu_constants.h"
 
 // This implementation is based on the Ryu Printf algorithm by Ulf Adams:
@@ -177,7 +178,7 @@ inline cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i,
   return num;
 }
 
-static inline uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
+LIBC_INLINE uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
   // The formula for mult_const is:
   //  1 + floor((2^(bits in target integer size + log_2(divider))) / divider)
   // Where divider is 10^9 and target integer size is 128.
@@ -189,9 +190,9 @@ static inline uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
   return static_cast<uint32_t>(val) - (1000000000 * shifted);
 }
 
-static inline uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
-                                         const cpp::UInt<MID_INT_SIZE> &large,
-                                         const int32_t shift_amount) {
+LIBC_INLINE uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
+                                       const cpp::UInt<MID_INT_SIZE> &large,
+                                       const int32_t shift_amount) {
   constexpr size_t MANT_INT_SIZE = sizeof(MantissaInt) * 8;
   cpp::UInt<MID_INT_SIZE + MANT_INT_SIZE> val(large);
   // TODO: Find a better way to force __uint128_t to be UInt<128>

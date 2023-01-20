@@ -23,7 +23,7 @@
 namespace __llvm_libc {
 namespace fputil {
 
-static inline long double nextafter(long double from, long double to) {
+LIBC_INLINE long double nextafter(long double from, long double to) {
   using FPBits = FPBits<long double>;
   FPBits from_bits(from);
   if (from_bits.is_nan())
