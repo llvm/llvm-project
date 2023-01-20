@@ -1803,14 +1803,16 @@ static LogicalResult appendMangledType(llvm::raw_string_ostream &ss, Type t) {
         ss << "sx";
       else
         ss << size << "x";
-    appendMangledType(ss, memref.getElementType());
+    if (failed(appendMangledType(ss, memref.getElementType())))
+      return failure();
     return success();
   }
   if (auto vec = t.dyn_cast<VectorType>()) {
     ss << "vector";
     llvm::interleave(
         vec.getShape(), [&](int64_t i) { ss << i; }, [&]() { ss << "x"; });
-    appendMangledType(ss, vec.getElementType());
+    if (failed(appendMangledType(ss, vec.getElementType())))
+      return failure();
     return success();
   } else if (t.isSignlessIntOrIndexOrFloat()) {
     ss << t;
