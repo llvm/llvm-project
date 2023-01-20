@@ -4367,8 +4367,6 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":MemRefToLLVM",
-        ":NVVMToLLVMIRTranslation",
-        ":Pass",
         ":Support",
         ":VectorToLLVM",
         "//llvm:Support",
