@@ -71,3 +71,11 @@ func.func @func(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>)  {
   } -> tensor<?xf32>
   return 
 }
+
+// -----
+
+func.func @func(%arg0: tensor<4x8xf32>, %arg1: tensor<4x8xf32>) -> tensor<4x8xf32> {
+  // expected-error @below {{failed to legalize}}
+  %0 = linalg.copy ins(%arg0 : tensor<4x8xf32>) outs(%arg1 : tensor<4x8xf32>) -> tensor<4x8xf32>
+  return %0 : tensor<4x8xf32>
+}
