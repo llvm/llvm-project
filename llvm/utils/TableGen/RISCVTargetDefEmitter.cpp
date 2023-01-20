@@ -54,16 +54,12 @@ static std::string getMArch(int XLen, const Record &Rec) {
   return (*ISAInfo)->toString();
 }
 
-static std::string getEnumFeatures(int XLen) {
-  return XLen == 64 ? "FK_64BIT" : "FK_NONE";
-}
-
 void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
-     << "#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH)\n"
+     << "#define PROC(ENUM, NAME, DEFAULT_MARCH)\n"
      << "#endif\n\n";
 
-  OS << "PROC(INVALID, {\"invalid\"}, FK_INVALID, {\"\"})\n";
+  OS << "PROC(INVALID, {\"invalid\"}, {\"\"})\n";
   // Iterate on all definition records.
   for (const Record *Rec : RK.getAllDerivedDefinitions("RISCVProcessorModel")) {
     int XLen = getXLen(*Rec);
@@ -74,8 +70,7 @@ void llvm::EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
       MArch = getMArch(XLen, *Rec);
 
     OS << "PROC(" << Rec->getName() << ", "
-       << "{\"" << Rec->getValueAsString("Name") << "\"},"
-       << getEnumFeatures(XLen) << ", "
+       << "{\"" << Rec->getValueAsString("Name") << "\"}, "
        << "{\"" << MArch << "\"})\n";
   }
   OS << "\n#undef PROC\n";

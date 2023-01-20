@@ -21,14 +21,14 @@ namespace RISCV {
 struct CPUInfo {
   StringLiteral Name;
   CPUKind Kind;
-  unsigned Features;
   StringLiteral DefaultMarch;
-  bool is64Bit() const { return (Features & FK_64BIT); }
+  bool isInvalid() const { return DefaultMarch.empty(); }
+  bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
 };
 
 constexpr CPUInfo RISCVCPUInfo[] = {
-#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH)                              \
-  {NAME, CK_##ENUM, FEATURES, DEFAULT_MARCH},
+#define PROC(ENUM, NAME, DEFAULT_MARCH)                              \
+  {NAME, CK_##ENUM, DEFAULT_MARCH},
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
@@ -50,14 +50,14 @@ bool checkTuneCPUKind(CPUKind Kind, bool IsRV64) {
 
 CPUKind parseCPUKind(StringRef CPU) {
   return llvm::StringSwitch<CPUKind>(CPU)
-#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
+#define PROC(ENUM, NAME, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
       .Default(CK_INVALID);
 }
 
 CPUKind parseTuneCPUKind(StringRef TuneCPU, bool IsRV64) {
   return llvm::StringSwitch<CPUKind>(TuneCPU)
-#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
+#define PROC(ENUM, NAME, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
 #define TUNE_PROC(ENUM, NAME) .Case(NAME, CK_##ENUM)
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
       .Default(CK_INVALID);
@@ -87,12 +87,12 @@ void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
 // Get all features except standard extension feature
 bool getCPUFeaturesExceptStdExt(CPUKind Kind,
                                 std::vector<StringRef> &Features) {
-  unsigned CPUFeatures = RISCVCPUInfo[static_cast<unsigned>(Kind)].Features;
+  const CPUInfo &Info = RISCVCPUInfo[static_cast<unsigned>(Kind)];
 
-  if (CPUFeatures == FK_INVALID)
+  if (Info.isInvalid())
     return false;
 
-  if (CPUFeatures & FK_64BIT)
+  if (Info.is64Bit())
     Features.push_back("+64bit");
   else
     Features.push_back("-64bit");
