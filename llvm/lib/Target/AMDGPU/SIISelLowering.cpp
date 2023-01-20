@@ -7836,7 +7836,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     Ops.push_back(RayDir);
     Ops.push_back(Offsets);
     Ops.push_back(TDescr);
-    Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i1));
     Ops.push_back(M->getChain());
 
     auto *NewNode = DAG.getMachineNode(Opcode, DL, M->getVTList(), Ops);
@@ -7968,8 +7967,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
 
     Ops.push_back(TDescr);
-    if (IsGFX12Plus)
-      Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i1)); // nv
     if (IsA16)
       Ops.push_back(DAG.getTargetConstant(1, DL, MVT::i1));
     Ops.push_back(M->getChain());

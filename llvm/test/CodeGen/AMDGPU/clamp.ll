@@ -514,7 +514,7 @@ define amdgpu_kernel void @v_clamp_multi_use_max_f32(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    v_max_num_f32_e32 v1, 0, v1
 ; GFX12-NEXT:    v_min_num_f32_e32 v2, 1.0, v1
 ; GFX12-NEXT:    global_store_b32 v0, v2, s[0:1]
-; GFX12-NEXT:    global_store_b32 v[0:1], v1, off dlc
+; GFX12-NEXT:    global_store_b32 v[0:1], v1, off th:TH_STORE_NT_RT
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm

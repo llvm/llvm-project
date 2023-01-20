@@ -3043,12 +3043,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY: {
-    // On GFX12+ we have NV modifiers in addition to A16 ones.
-    bool IsGFX12Plus = AMDGPU::isGFX12Plus(Subtarget);
     bool IsDualOrBVH8 =
         MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY ||
         MI.getOpcode() == AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY;
-    unsigned NumMods = IsGFX12Plus && !IsDualOrBVH8 ? 2 : 1;
+    unsigned NumMods = !IsDualOrBVH8 ? 1 : 0; // Has A16 modifier
     unsigned LastRegOpIdx = (MI.getNumExplicitOperands() - 1) - NumMods;
     applyDefaultMapping(OpdMapper);
     executeInWaterfallLoop(MI, MRI, {LastRegOpIdx});
@@ -4616,12 +4614,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY: {
-    // On GFX12+ we have NV modifiers in addition to A16 ones.
-    bool IsGFX12Plus = AMDGPU::isGFX12Plus(Subtarget);
     bool IsDualOrBVH8 =
         MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY ||
         MI.getOpcode() == AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY;
-    unsigned NumMods = IsGFX12Plus && !IsDualOrBVH8 ? 2 : 1;
+    unsigned NumMods = !IsDualOrBVH8 ? 1 : 0; // Has A16 modifier
     unsigned LastRegOpIdx = (MI.getNumExplicitOperands() - 1) - NumMods;
     unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);

@@ -316,51 +316,47 @@ enum CPol {
   SC0 = GLC,
   SC1 = SCC,
   NT = SLC,
-  ALL = GLC | SLC | DLC | SCC
+  ALL = GLC | SLC | DLC | SCC,
+
+  // Below are GFX12+ cache policy bits
+
+  // Temporal hint
+  TH = 0x7,      // All TH bits
+  TH_RT = 0,     // regular
+  TH_NT = 1,     // non-temporal
+  TH_HT = 2,     // high-temporal
+  TH_LU = 3,     // last use
+  TH_RT_WB = 3,  // regular (CU, SE), high-temporal with write-back (MALL)
+  TH_NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
+  TH_RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
+  TH_NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
+  TH_NT_WB = 7,  // non-temporal (CU, SE), high-temporal with write-back (MALL)
+  TH_BYPASS = 3, // only to be used with scope = 3
+
+  TH_RESERVED = 7, // unused value for load insts
+
+  // Bits of TH for atomics
+  TH_ATOMIC_RETURN = 1,  // Returning vs non-returning
+  TH_ATOMIC_NT = 2,      // Non-temporal vs regular
+  TH_ATOMIC_CASCADE = 4, // Cascading vs regular
+
+  // Scope
+  SCOPE = 0x3 << 3, // All Scope bits
+  SCOPE_CU = 0 << 3,
+  SCOPE_SE = 1 << 3,
+  SCOPE_DEV = 2 << 3,
+  SCOPE_SYS = 3 << 3,
+
+  NV = 1 << 5, // Non-volatile bit
+
+  // Helper bits
+  TH_TYPE_LOAD = 1 << 6,   // TH_LOAD policy
+  TH_TYPE_STORE = 1 << 7,  // TH_STORE policy
+  TH_TYPE_ATOMIC = 1 << 8, // TH_ATOMIC policy
+  TH_REAL_BYPASS = 1 << 9, // is TH=3 bypass policy or not
 };
 
 } // namespace CPol
-
-namespace Scope {
-
-enum Scope {
-  SCOPE_CU = 0,
-  SCOPE_SE = 1,
-  SCOPE_DEV = 2,
-  SCOPE_SYS = 3
-};
-
-} // namespace Scope
-
-namespace TH {
-
-enum TH {
-  RT = 0,     // regular
-  NT = 1,     // non-temporal
-  HT = 2,     // high-temporal
-  LU = 3,     // last use
-  RT_WB = 3,  // regular (CU, SE), high-temporal with write-back (MALL)
-  NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
-  RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
-  NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
-  NT_WB = 7,  // non-temporal (CU, SE), high-temporal with write-back (MALL)
-  BYPASS = 3, // only to be used with scope = 3
-
-  RESERVED = 7, // unused value for load insts
-
-  // Bits of TH for atomics
-  ATOMIC_RETURN = 1,  // Returning vs non-returning
-  ATOMIC_NT = 2,      // Non-temporal vs regular
-  ATOMIC_CASCADE = 4, // Cascading vs regular
-
-  // Helper bits
-  TYPE_LOAD = 8,    // TH_LOAD policy
-  TYPE_STORE = 16,  // TH_STORE policy
-  TYPE_ATOMIC = 32, // TH_ATOMIC policy
-  REAL_BYPASS = 64, // is TH=3 bypass policy or not
-};
-
-} // namespace TH
 
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 

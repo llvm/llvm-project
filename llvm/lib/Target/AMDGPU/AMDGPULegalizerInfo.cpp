@@ -5555,9 +5555,6 @@ bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
 
   MIB.addUse(TDescr);
 
-  if (IsGFX12Plus)
-    MIB.addImm(0); // nv
-
   MIB.addImm(IsA16 ? 1 : 0)
      .cloneMemRefs(MI);
 
@@ -5619,7 +5616,6 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
     MIB.addUse(R);
 
   MIB.addUse(TDescr)
-     .addImm(0) // A16
      .cloneMemRefs(MI);
 
   MI.eraseFromParent();
