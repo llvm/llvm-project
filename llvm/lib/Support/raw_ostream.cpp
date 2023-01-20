@@ -56,6 +56,7 @@
 
 #ifdef _WIN32
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
@@ -775,6 +776,15 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
           )
         continue;
 
+#ifdef _WIN32
+      // Windows equivalents of SIGPIPE/EPIPE.
+      DWORD WinLastError = GetLastError();
+      if (WinLastError == ERROR_BROKEN_PIPE ||
+          (WinLastError == ERROR_NO_DATA && errno == EINVAL)) {
+        llvm::sys::CallOneShotPipeSignalHandler();
+        errno = EPIPE;
+      }
+#endif
       // Otherwise it's a non-recoverable error. Note it and quit.
       error_detected(std::error_code(errno, std::generic_category()));
       break;
