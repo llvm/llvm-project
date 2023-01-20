@@ -1436,7 +1436,7 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
   return std::nullopt;
 }
 
-bool SimplifyValuePattern(SmallVector<Value *> &Vec) {
+bool SimplifyValuePattern(SmallVector<Value *> &Vec, bool AllowPoison) {
   size_t VecSize = Vec.size();
   if (VecSize == 1)
     return true;
@@ -1446,13 +1446,20 @@ bool SimplifyValuePattern(SmallVector<Value *> &Vec) {
 
   for (auto LHS = Vec.begin(), RHS = Vec.begin() + HalfVecSize;
        RHS != Vec.end(); LHS++, RHS++) {
-    if (*LHS != nullptr && *RHS != nullptr && *LHS == *RHS)
-      continue;
-    return false;
+    if (*LHS != nullptr && *RHS != nullptr) {
+      if (*LHS == *RHS)
+        continue;
+      else
+        return false;
+    }
+    if (!AllowPoison)
+      return false;
+    if (*LHS == nullptr && *RHS != nullptr)
+      *LHS = *RHS;
   }
 
   Vec.resize(HalfVecSize);
-  SimplifyValuePattern(Vec);
+  SimplifyValuePattern(Vec, AllowPoison);
   return true;
 }
 
@@ -1476,7 +1483,9 @@ static std::optional<Instruction *> instCombineSVEDupqLane(InstCombiner &IC,
     CurrentInsertElt = InsertElt->getOperand(0);
   }
 
-  if (!SimplifyValuePattern(Elts))
+  bool AllowPoison =
+      isa<PoisonValue>(CurrentInsertElt) && isa<PoisonValue>(Default);
+  if (!SimplifyValuePattern(Elts, AllowPoison))
     return std::nullopt;
 
   // Rebuild the simplified chain of InsertElements. e.g. (a, b, a, b) as (a, b)
@@ -1484,9 +1493,13 @@ static std::optional<Instruction *> instCombineSVEDupqLane(InstCombiner &IC,
   Builder.SetInsertPoint(&II);
   Value *InsertEltChain = PoisonValue::get(CurrentInsertElt->getType());
   for (size_t I = 0; I < Elts.size(); I++) {
+    if (Elts[I] == nullptr)
+      continue;
     InsertEltChain = Builder.CreateInsertElement(InsertEltChain, Elts[I],
                                                  Builder.getInt64(I));
   }
+  if (InsertEltChain == nullptr)
+    return std::nullopt;
 
   // Splat the simplified sequence, e.g. (f16 a, f16 b, f16 c, f16 d) as one i64
   // value or (f16 a, f16 b) as one i32 value. This requires an InsertSubvector
