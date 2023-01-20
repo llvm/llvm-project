@@ -6090,7 +6090,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::dbg_addr:
   case Intrinsic::dbg_declare: {
     // Debug intrinsics are handled seperately in assignment tracking mode.
-    if (getEnableAssignmentTracking())
+    if (isAssignmentTrackingEnabled(*I.getFunction()->getParent()))
       return;
     // Assume dbg.addr and dbg.declare can not currently use DIArgList, i.e.
     // they are non-variadic.
@@ -6193,13 +6193,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::dbg_assign: {
     // Debug intrinsics are handled seperately in assignment tracking mode.
-    assert(getEnableAssignmentTracking() &&
+    assert(isAssignmentTrackingEnabled(*I.getFunction()->getParent()) &&
            "expected assignment tracking to be enabled");
     return;
   }
   case Intrinsic::dbg_value: {
     // Debug intrinsics are handled seperately in assignment tracking mode.
-    if (getEnableAssignmentTracking())
+    if (isAssignmentTrackingEnabled(*I.getFunction()->getParent()))
       return;
     const DbgValueInst &DI = cast<DbgValueInst>(I);
     assert(DI.getVariable() && "Missing variable");

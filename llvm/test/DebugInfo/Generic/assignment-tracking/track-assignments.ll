@@ -1,4 +1,4 @@
-; RUN: opt -passes='declare-to-assign,verify' %s -S -o - -experimental-assignment-tracking \
+; RUN: opt -passes='declare-to-assign,verify' %s -S -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; This test checks that `trackAssignments` is working correctly by using the
@@ -337,7 +337,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
 declare dso_local void @_ZN9LCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenceable(16)) unnamed_addr
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!26, !27, !28, !29}
+!llvm.module.flags = !{!26, !27, !28, !29, !1000}
 !llvm.ident = !{!30}
 
 ; CHECK-DAG: ![[VAR_0]] = !DILocalVariable(name: "Z",
@@ -503,3 +503,4 @@ declare dso_local void @_ZN9LCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenc
 !146 = !DILocation(line: 2, column: 29, scope: !129, inlinedAt: !144)
 !147 = !DILocation(line: 2, column: 27, scope: !129, inlinedAt: !144)
 !148 = !DILocation(line: 3, column: 18, scope: !139)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
