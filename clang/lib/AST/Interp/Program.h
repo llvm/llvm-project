@@ -79,8 +79,7 @@ public:
   std::optional<unsigned> getGlobal(const ValueDecl *VD);
 
   /// Returns or creates a global an creates an index to it.
-  std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,
-                                            const Expr *Init = nullptr);
+  std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD);
 
   /// Returns or creates a dummy value for parameters.
   std::optional<unsigned> getOrCreateDummy(const ParmVarDecl *PD);
