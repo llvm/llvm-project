@@ -15,6 +15,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/Local.h"
 
+using namespace llvm;
+
 static void reduceInvokesInFunction(Oracle &O, Function &F) {
   for (BasicBlock &BB : F) {
     InvokeInst *Invoke = dyn_cast<InvokeInst>(BB.getTerminator());

@@ -17,6 +17,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 
+using namespace llvm;
+
 static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
   for (Function &F : WorkItem.getModule()) {
     for (Instruction &I : instructions(F)) {

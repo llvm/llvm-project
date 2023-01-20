@@ -19,6 +19,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
+using namespace llvm;
+
 // Assume outgoing undef arguments aren't relevant.
 // TODO: Maybe skip any trivial constant arguments.
 static bool shouldIgnoreArgument(const Value *V) {
