@@ -333,7 +333,7 @@ func.func @omp_simdloop(%lb : index, %ub : index, %step : index) -> () {
   "omp.simdloop" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = array<i32: 1,1,1,0,0>} :
+  }) {operand_segment_sizes = array<i32: 1,1,1,0,0,0>} :
     (index, index, index) -> ()
 
   return
@@ -349,7 +349,7 @@ func.func @omp_simdloop_aligned_list(%arg0 : index, %arg1 : index, %arg2 : index
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
   }) {alignment_values = [32, 128],
-      operand_segment_sizes = array<i32: 1, 1, 1,2, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+      operand_segment_sizes = array<i32: 1, 1, 1, 2, 0, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 
@@ -362,7 +362,37 @@ func.func @omp_simdloop_aligned_single(%arg0 : index, %arg1 : index, %arg2 : ind
     ^bb0(%arg5: index):
       "omp.yield"() : () -> ()
   }) {alignment_values = [32],
-      operand_segment_sizes = array<i32: 1, 1, 1,1, 0>} : (index, index, index, memref<i32>) -> ()
+      operand_segment_sizes = array<i32: 1, 1, 1, 1, 0, 0>} : (index, index, index, memref<i32>) -> ()
+  return
+}
+
+// CHECK-LABEL: omp_simdloop_nontemporal_list
+func.func @omp_simdloop_nontemporal_list(%arg0 : index,
+                                         %arg1 : index,
+                                         %arg2 : index,
+                                         %arg3 : memref<i32>,
+                                         %arg4 : memref<i64>) -> () {
+  // CHECK:      omp.simdloop   nontemporal(%{{.*}}, %{{.*}} : memref<i32>, memref<i64>)
+  // CHECK-SAME: for  (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
+  "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg4) ({
+    ^bb0(%arg5: index):
+      "omp.yield"() : () -> ()
+  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 2>} : (index, index, index, memref<i32>, memref<i64>) -> ()
+  return
+}
+
+// CHECK-LABEL: omp_simdloop_nontemporal_single
+func.func @omp_simdloop_nontemporal_single(%arg0 : index,
+                                           %arg1 : index,
+                                           %arg2 : index,
+                                           %arg3 : memref<i32>,
+                                           %arg4 : memref<i64>) -> () {
+  // CHECK:      omp.simdloop   nontemporal(%{{.*}} : memref<i32>)
+  // CHECK-SAME: for  (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
+  "omp.simdloop"(%arg0, %arg1, %arg2, %arg3) ({
+    ^bb0(%arg5: index):
+      "omp.yield"() : () -> ()
+  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 1>} : (index, index, index, memref<i32>) -> ()
   return
 }
 
@@ -398,6 +428,20 @@ func.func @omp_simdloop_pretty_if(%lb : index, %ub : index, %step : index, %if_c
   return
 }
 
+// CHECK-LABEL:   func.func @omp_simdloop_pretty_nontemporal
+func.func @omp_simdloop_pretty_nontemporal(%lb : index,
+                                           %ub : index,
+                                           %step : index,
+                                           %data_var : memref<i32>,
+                                           %data_var1 : memref<i32>) -> () {
+  // CHECK:      omp.simdloop   nontemporal(%{{.*}}, %{{.*}} : memref<i32>, memref<i32>)
+  // CHECK-SAME: for  (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
+  omp.simdloop nontemporal(%data_var, %data_var1 : memref<i32>, memref<i32>)
+    for (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+  }
+  return
+}
 // CHECK-LABEL: omp_simdloop_pretty_order
 func.func @omp_simdloop_pretty_order(%lb : index, %ub : index, %step : index) -> () {
   // CHECK: omp.simdloop order(concurrent)
