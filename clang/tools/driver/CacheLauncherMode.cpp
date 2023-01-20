@@ -88,11 +88,11 @@ static int executeAsProcess(ArrayRef<const char *> Args,
 /// functionalities.
 static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
                           llvm::StringSaver &Saver) {
-  if (::getenv("CLANG_CACHE_ENABLE_INCLUDE_TREE")) {
+  if (!llvm::sys::Process::GetEnv("CLANG_CACHE_USE_CASFS_DEPSCAN")) {
     Args.push_back("-fdepscan-include-tree");
   }
-  if (const char *CASPath = ::getenv("LLVM_CACHE_CAS_PATH")) {
-    llvm::SmallString<256> CASArg(CASPath);
+  if (auto CASPath = llvm::sys::Process::GetEnv("LLVM_CACHE_CAS_PATH")) {
+    llvm::SmallString<256> CASArg(*CASPath);
     llvm::sys::path::append(CASArg, "cas");
     if (ForDriver) {
       Args.append({"-Xclang", "-fcas-path", "-Xclang",
@@ -100,7 +100,7 @@ static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
     } else {
       Args.append({"-fcas-path", Saver.save(CASArg.str()).data()});
     }
-    llvm::SmallString<256> CacheArg(CASPath);
+    llvm::SmallString<256> CacheArg(*CASPath);
     llvm::sys::path::append(CacheArg, "actioncache");
     if (ForDriver) {
       Args.append({"-Xclang", "-faction-cache-path", "-Xclang",

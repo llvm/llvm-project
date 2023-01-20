@@ -2,7 +2,7 @@
 // RUN: touch %t/asan_ignorelist.txt
 // RUN: touch %t/sys_asan_ignorelist.txt
 
-// RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_ENABLE_INCLUDE_TREE=1 %clang-cache \
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
 // RUN:   %clang -fsanitize=address -Xclang -fsanitize-ignorelist=%t/asan_ignorelist.txt -Xclang -fsanitize-system-ignorelist=%t/sys_asan_ignorelist.txt \
 // RUN:   -target x86_64-apple-macos11 -c %s -o %t/output.o -Rcompile-job-cache 2> %t/output-tree.txt
 
