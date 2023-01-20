@@ -97,6 +97,10 @@ getUnused(ParsedAST &AST,
           const llvm::StringSet<> &ReferencedPublicHeaders);
 
 std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST);
+// The same as computeUnusedIncludes, but it is an experimental and
+// include-cleaner-lib-based implementation.
+std::vector<const Inclusion *>
+computeUnusedIncludesExperimental(ParsedAST &AST);
 
 std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
                                                  llvm::StringRef Code);
