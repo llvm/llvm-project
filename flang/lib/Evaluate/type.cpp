@@ -157,7 +157,7 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
     }
     break;
   case TypeCategory::Derived:
-    if (derived_ && derived_->scope()) {
+    if (!IsPolymorphic() && derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};
       auto align{aligned ? derived_->scope()->alignment().value_or(0) : 0};
       auto alignedSize{align > 0 ? ((size + align - 1) / align) * align : size};
