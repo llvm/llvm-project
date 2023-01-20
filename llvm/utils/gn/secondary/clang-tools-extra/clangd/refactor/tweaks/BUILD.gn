@@ -11,7 +11,12 @@ source_set("tweaks") {
     "//clang/lib/Tooling/Core",
     "//llvm/lib/Support",
   ]
-  include_dirs = [ "../.." ]
+  include_dirs = [
+    "../..",
+
+    # For "clang-include-cleaner/..." includes.
+    "//clang-tools-extra/include-cleaner/include",
+  ]
   sources = [
     "AddUsing.cpp",
     "AnnotateHighlightings.cpp",
