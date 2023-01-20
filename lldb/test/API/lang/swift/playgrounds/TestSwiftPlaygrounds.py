@@ -100,8 +100,7 @@ class TestSwiftPlaygrounds(TestBase):
     def test_import(self):
         """Test that a dylib can be imported in playgrounds"""
         self.launch(True)
-        self.do_concurrency_test()
-
+        self.do_import_test()
         
     def launch(self, force_target):
         """Test that playgrounds work"""
