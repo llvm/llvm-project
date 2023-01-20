@@ -1667,8 +1667,8 @@ class Tensor_RelayoutOp<string mnemonic, list<Trait> traits = []> :
                    "$_self">])> {
 
   code commonExtraClassDeclaration = [{
-    int64_t getSourceRank() { return getSource().getType().getRank(); };
-    int64_t getDestRank() { return getDest().getType().getRank(); };
+    size_t getSourceRank() { return getSource().getType().getRank(); };
+    size_t getDestRank() { return getDest().getType().getRank(); };
     RankedTensorType getSourceType() {
       return getSource().getType().cast<RankedTensorType>(); };
     RankedTensorType getDestType() {
