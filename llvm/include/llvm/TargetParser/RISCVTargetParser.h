@@ -24,15 +24,9 @@ namespace RISCV {
 static constexpr unsigned RVVBitsPerBlock = 64;
 
 enum CPUKind : unsigned {
-#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH) CK_##ENUM,
+#define PROC(ENUM, NAME, DEFAULT_MARCH) CK_##ENUM,
 #define TUNE_PROC(ENUM, NAME) CK_##ENUM,
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
-};
-
-enum FeatureKind : unsigned {
-  FK_INVALID = 0,
-  FK_NONE = 1,
-  FK_64BIT = 1 << 2,
 };
 
 bool checkCPUKind(CPUKind Kind, bool IsRV64);
