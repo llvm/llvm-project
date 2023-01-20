@@ -249,6 +249,7 @@ private:
 StringRef DataCommonSectionName = "__DATA,__common";
 StringRef DataDataSectionName = "__DATA,__data";
 StringRef EHFrameSectionName = "__TEXT,__eh_frame";
+StringRef CompactUnwindInfoSectionName = "__TEXT,__unwind_info";
 StringRef ModInitFuncSectionName = "__DATA,__mod_init_func";
 StringRef ObjCClassListSectionName = "__DATA,__objc_classlist";
 StringRef ObjCImageInfoSectionName = "__DATA,__objc_image_info";
@@ -1068,6 +1069,81 @@ Error MachOPlatform::MachOPlatformPlugin::fixTLVSectionsAndEdges(
   return Error::success();
 }
 
+std::optional<MachOPlatform::MachOPlatformPlugin::UnwindSections>
+MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
+    jitlink::LinkGraph &G) {
+  using namespace jitlink;
+
+  UnwindSections US;
+
+  // ScanSection records a section range and adds any executable blocks that
+  // that section points to to the CodeBlocks vector.
+  SmallVector<Block *> CodeBlocks;
+  auto ScanUnwindInfoSection = [&](Section &Sec, ExecutorAddrRange &SecRange) {
+    if (Sec.blocks().empty())
+      return;
+    SecRange = (*Sec.blocks().begin())->getRange();
+    for (auto *B : Sec.blocks()) {
+      auto R = B->getRange();
+      SecRange.Start = std::min(SecRange.Start, R.Start);
+      SecRange.End = std::max(SecRange.End, R.End);
+      for (auto &E : B->edges()) {
+        if (!E.getTarget().isDefined())
+          continue;
+        auto &TargetBlock = E.getTarget().getBlock();
+        auto &TargetSection = TargetBlock.getSection();
+        if ((TargetSection.getMemProt() & MemProt::Exec) == MemProt::Exec)
+          CodeBlocks.push_back(&TargetBlock);
+      }
+    }
+  };
+
+  if (Section *EHFrameSec = G.findSectionByName(EHFrameSectionName))
+    ScanUnwindInfoSection(*EHFrameSec, US.DwarfSection);
+
+  if (Section *CUInfoSec = G.findSectionByName(CompactUnwindInfoSectionName))
+    ScanUnwindInfoSection(*CUInfoSec, US.CompactUnwindSection);
+
+  // If we didn't find any pointed-to code-blocks then there's no need to
+  // register any info.
+  if (CodeBlocks.empty())
+    return std::nullopt;
+
+  // We have info to register. Sort the code blocks into address order and
+  // build a list of contiguous address ranges covering them all.
+  llvm::sort(CodeBlocks, [](const Block *LHS, const Block *RHS) {
+    return LHS->getAddress() < RHS->getAddress();
+  });
+  for (auto *B : CodeBlocks) {
+    if (US.CodeRanges.empty() || US.CodeRanges.back().End != B->getAddress())
+      US.CodeRanges.push_back(B->getRange());
+    else
+      US.CodeRanges.back().End = B->getRange().End;
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform identified unwind info in " << G.getName() << ":\n"
+           << "  DWARF: ";
+    if (US.DwarfSection.Start)
+      dbgs() << US.DwarfSection << "\n";
+    else
+      dbgs() << "none\n";
+    dbgs() << "  Compact-unwind: ";
+    if (US.CompactUnwindSection.Start)
+      dbgs() << US.CompactUnwindSection << "\n";
+    else
+      dbgs() << "none\n"
+             << "for code ranges:\n";
+    for (auto &CR : US.CodeRanges)
+      dbgs() << "  " << CR << "\n";
+    if (US.CodeRanges.size() >= G.sections_size())
+      dbgs() << "WARNING: High number of discontiguous code ranges! "
+                "Padding may be interfering with coalescing.\n";
+  });
+
+  return US;
+}
+
 Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     jitlink::LinkGraph &G, JITDylib &JD, bool InBootstrapPhase) {
 
@@ -1128,7 +1204,14 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     MachOPlatformSecs.push_back({SecName, R.getRange()});
   }
 
-  if (!MachOPlatformSecs.empty()) {
+  std::optional<std::tuple<SmallVector<ExecutorAddrRange>, ExecutorAddrRange,
+                           ExecutorAddrRange>>
+      UnwindInfo;
+  if (auto UI = findUnwindSectionInfo(G))
+    UnwindInfo = std::make_tuple(std::move(UI->CodeRanges), UI->DwarfSection,
+                                 UI->CompactUnwindSection);
+
+  if (!MachOPlatformSecs.empty() || UnwindInfo) {
     ExecutorAddr HeaderAddr;
     {
       std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
@@ -1145,9 +1228,11 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
         dbgs() << "  " << KV.first << ": " << KV.second << "\n";
     });
 
-    using SPSRegisterObjectPlatformSectionsArgs =
-        SPSArgList<SPSExecutorAddr,
-                   SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>>;
+    using SPSRegisterObjectPlatformSectionsArgs = SPSArgList<
+        SPSExecutorAddr,
+        SPSOptional<SPSTuple<SPSSequence<SPSExecutorAddrRange>,
+                             SPSExecutorAddrRange, SPSExecutorAddrRange>>,
+        SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>>;
 
     shared::AllocActions &allocActions = LLVM_LIKELY(!InBootstrapPhase)
                                              ? G.allocActions()
@@ -1156,12 +1241,12 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     allocActions.push_back(
         {cantFail(
              WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
-                 MP.RegisterObjectPlatformSections.Addr, HeaderAddr,
+                 MP.RegisterObjectPlatformSections.Addr, HeaderAddr, UnwindInfo,
                  MachOPlatformSecs)),
          cantFail(
              WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
                  MP.DeregisterObjectPlatformSections.Addr, HeaderAddr,
-                 MachOPlatformSecs))});
+                 UnwindInfo, MachOPlatformSecs))});
   }
 
   return Error::success();
