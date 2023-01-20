@@ -132,6 +132,8 @@ protected:
   bool visitArrayInitializer(const Expr *Initializer);
   /// Compiles a record initializer.
   bool visitRecordInitializer(const Expr *Initializer);
+  /// Creates and initializes a variable from the given decl.
+  bool visitVarDecl(const VarDecl *VD);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
@@ -234,6 +236,12 @@ private:
     return T->getAsCXXRecordDecl();
   }
 
+  /// Returns whether we should create a global variable for the
+  /// given VarDecl.
+  bool shouldBeGloballyIndexed(const VarDecl *VD) const {
+    return VD->hasGlobalStorage() || VD->isConstexpr();
+  }
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;
@@ -260,6 +268,11 @@ extern template class ByteCodeExprGen<EvalEmitter>;
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
+  VariableScope(ByteCodeExprGen<Emitter> *Ctx)
+      : Ctx(Ctx), Parent(Ctx->VarScope) {
+    Ctx->VarScope = this;
+  }
+
   virtual ~VariableScope() { Ctx->VarScope = this->Parent; }
 
   void add(const Scope::Local &Local, bool IsExtended) {
@@ -284,11 +297,6 @@ public:
   VariableScope *getParent() { return Parent; }
 
 protected:
-  VariableScope(ByteCodeExprGen<Emitter> *Ctx)
-      : Ctx(Ctx), Parent(Ctx->VarScope) {
-    Ctx->VarScope = this;
-  }
-
   /// ByteCodeExprGen instance.
   ByteCodeExprGen<Emitter> *Ctx;
   /// Link to the parent scope.
