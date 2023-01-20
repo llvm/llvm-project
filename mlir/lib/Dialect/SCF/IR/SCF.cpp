@@ -1471,9 +1471,14 @@ IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
   if (regions.empty())
     return failure();
   Region *r = regions.front();
-  assert(!r->empty());
+  if (r->empty())
+    return failure();
   Block &b = r->front();
-  auto yieldOp = llvm::dyn_cast<YieldOp>(b.getTerminator());
+  if (b.empty())
+    return failure();
+  auto yieldOp = llvm::dyn_cast<YieldOp>(b.back());
+  if (!yieldOp)
+    return failure();
   TypeRange types = yieldOp.getOperandTypes();
   inferredReturnTypes.insert(inferredReturnTypes.end(), types.begin(),
                              types.end());
