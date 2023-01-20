@@ -458,6 +458,9 @@ Improvements to Clang's diagnostics
   only when ``x`` is a string literal.
 - Clang will now reject the GNU extension address of label in coroutines explicitly.
   This fixes `Issue 56436 <https://github.com/llvm/llvm-project/issues/56436>`_.
+- Clang now automatically adds ``[[clang::lifetimebound]]`` to the parameters of
+  ``std::move, std::forward`` et al, this enables Clang to diagnose more cases
+  where the returned reference outlives the object.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
