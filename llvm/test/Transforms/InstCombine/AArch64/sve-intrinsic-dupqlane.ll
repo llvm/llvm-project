@@ -96,12 +96,11 @@ define dso_local <vscale x 8 x half> @dupq_f16_abcnull_pattern(half %a, half %b,
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x half> poison, half [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x half> [[TMP2]], half [[C:%.*]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x half> [[TMP3]], half [[A]], i64 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x half> [[TMP4]], half [[B]], i64 5
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x half> [[TMP5]], half [[C]], i64 6
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> [[TMP6]], i64 0)
-; CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> [[TMP7]], i64 0)
-; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP8]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> [[TMP3]], i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <vscale x 8 x half> [[TMP4]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <vscale x 2 x i64> [[TMP5]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <vscale x 2 x i64> [[TMP6]] to <vscale x 8 x half>
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP7]]
 ;
   %1 = insertelement <8 x half> poison, half %a, i64 0
   %2 = insertelement <8 x half> %1, half %b, i64 1
@@ -112,6 +111,57 @@ define dso_local <vscale x 8 x half> @dupq_f16_abcnull_pattern(half %a, half %b,
   %7 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> %6, i64 0)
   %8 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %7, i64 0)
   ret <vscale x 8 x half> %8
+}
+
+define dso_local <vscale x 8 x half> @dupq_f16_abnull_pattern(half %a, half %b) {
+; CHECK-LABEL: @dupq_f16_abnull_pattern(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x half> poison, half [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <vscale x 8 x half> [[TMP3]] to <vscale x 4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <vscale x 4 x i32> [[TMP4]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <vscale x 4 x i32> [[TMP5]] to <vscale x 8 x half>
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP6]]
+;
+  %1 = insertelement <8 x half> poison, half %a, i64 0
+  %2 = insertelement <8 x half> %1, half %b, i64 1
+  %3 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> %2, i64 0)
+  %4 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %3, i64 0)
+  ret <vscale x 8 x half> %4
+}
+
+define dso_local <vscale x 8 x half> @neg_dupq_f16_non_poison_fixed(half %a, half %b, <8 x half> %v) {
+; CHECK-LABEL: @neg_dupq_f16_non_poison_fixed(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x half> [[V:%.*]], half [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> [[TMP3]], i64 0)
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP4]]
+;
+  %1 = insertelement <8 x half> %v, half %a, i64 0
+  %2 = insertelement <8 x half> %1, half %b, i64 1
+  %3 = insertelement <8 x half> %2, half %a, i64 0
+  %4 = insertelement <8 x half> %3, half %b, i64 1
+  %5 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> %4, i64 0)
+  %6 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %5, i64 0)
+  ret <vscale x 8 x half> %6
+}
+
+define dso_local <vscale x 8 x half> @neg_dupq_f16_into_non_poison_scalable(half %a, half %b, <vscale x 8 x half> %v) {
+; CHECK-LABEL: @neg_dupq_f16_into_non_poison_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x half> poison, half [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x half> [[TMP1]], half [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> [[V:%.*]], <8 x half> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> [[TMP3]], i64 0)
+; CHECK-NEXT:    ret <vscale x 8 x half> [[TMP4]]
+;
+  %1 = insertelement <8 x half> poison, half %a, i64 0
+  %2 = insertelement <8 x half> %1, half %b, i64 1
+  %3 = insertelement <8 x half> %2, half %a, i64 0
+  %4 = insertelement <8 x half> %3, half %b, i64 1
+  %5 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> %v, <8 x half> %4, i64 0)
+  %6 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %5, i64 0)
+  ret <vscale x 8 x half> %6
 }
 
 ; Insert %c to override the last element in the insertelement chain, which will fail to combine

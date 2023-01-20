@@ -251,6 +251,9 @@ private:
   // Counter for unique naming of TBAA operations' symbols.
   unsigned tbaaNodeCounter = 0;
 
+  // Number of attached TBAA tags (used for debugging).
+  unsigned tagAttachmentCounter = 0;
+
   // Mapping from a FIR type to the symbol defined by the corresponding
   // TBAATypeDescriptorOp. It must be populated during the type conversion.
   // Currently unused.

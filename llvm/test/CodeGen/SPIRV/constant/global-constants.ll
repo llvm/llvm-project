@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 @global   = addrspace(1) constant i32 1 ; OpenCL global memory
 @constant = addrspace(2) constant i32 2 ; OpenCL constant memory

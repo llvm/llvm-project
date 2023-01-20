@@ -44,9 +44,7 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 /// \p Region. Checks in this function are generic for VPBlockBases. They are
 /// not specific for VPBasicBlocks or VPRegionBlocks.
 static void verifyBlocksInRegion(const VPRegionBlock *Region) {
-  for (const VPBlockBase *VPB : make_range(
-           df_iterator<const VPBlockBase *>::begin(Region->getEntry()),
-           df_iterator<const VPBlockBase *>::end(Region->getExiting()))) {
+  for (const VPBlockBase *VPB : vp_depth_first_shallow(Region->getEntry())) {
     // Check block's parent.
     assert(VPB->getParent() == Region && "VPBlockBase has wrong parent");
 

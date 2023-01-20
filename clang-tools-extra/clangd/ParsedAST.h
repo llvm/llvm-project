@@ -25,6 +25,7 @@
 #include "Diagnostics.h"
 #include "Headers.h"
 #include "Preamble.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/CanonicalIncludes.h"
 #include "support/Path.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -106,6 +107,9 @@ public:
   /// Tokens recorded while parsing the main file.
   /// (!) does not have tokens from the preamble.
   const syntax::TokenBuffer &getTokens() const { return Tokens; }
+  /// Returns the PramaIncludes from the preamble.
+  /// Might be null if AST is built without a preamble.
+  const include_cleaner::PragmaIncludes *getPragmaIncludes() const;
 
   /// Returns the version of the ParseInputs this AST was built from.
   llvm::StringRef version() const { return Version; }

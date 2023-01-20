@@ -751,17 +751,16 @@ struct PostProcessingInfo {
   /// The mapping type (bitfield).
   int64_t ArgType;
 
+  /// Index of the argument in the data mapping scheme.
+  int32_t ArgIndex;
+
   /// The target pointer information.
   TargetPointerResultTy TPR;
 
-  /// Are we expecting to delete this entry or not. Even if set, we might not
-  /// delete the entry if another thread reused the entry in the meantime.
-  bool DelEntry;
-
-  PostProcessingInfo(void *HstPtr, int64_t Size, int64_t ArgType, bool DelEntry,
-                     TargetPointerResultTy TPR)
-      : HstPtrBegin(HstPtr), DataSize(Size), ArgType(ArgType), TPR(TPR),
-        DelEntry(DelEntry) {}
+  PostProcessingInfo(void *HstPtr, int64_t Size, int64_t ArgType,
+                     int32_t ArgIndex, TargetPointerResultTy TPR)
+      : HstPtrBegin(HstPtr), DataSize(Size), ArgType(ArgType),
+        ArgIndex(ArgIndex), TPR(TPR) {}
 };
 
 /// Apply \p CB to the shadow map pointer entries in the range \p Begin, to
@@ -811,42 +810,55 @@ static void applyToShadowMapEntries(DeviceTy &Device, CBTy CB, void *Begin,
 /// data end. This includes the update of pointers at the host and removal of
 /// device buffer when needed. It returns OFFLOAD_FAIL or OFFLOAD_SUCCESS
 /// according to the successfulness of the operations.
-static int
+[[nodiscard]] static int
 postProcessingTargetDataEnd(DeviceTy *Device,
                             SmallVector<PostProcessingInfo> EntriesInfo,
-                            void *FromMapperBase) {
+                            bool FromMapper) {
   int Ret = OFFLOAD_SUCCESS;
+  void *FromMapperBase = nullptr;
 
-  for (PostProcessingInfo &Info : EntriesInfo) {
+  for (auto &[HstPtrBegin, DataSize, ArgType, ArgIndex, TPR] : EntriesInfo) {
+    bool DelEntry = !TPR.isHostPointer();
+
+    // If the last element from the mapper (for end transfer args comes in
+    // reverse order), do not remove the partial entry, the parent struct still
+    // exists.
+    if ((ArgType & OMP_TGT_MAPTYPE_MEMBER_OF) &&
+        !(ArgType & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
+      DelEntry = false; // protect parent struct from being deallocated
+    }
+
+    if (DelEntry && FromMapper && ArgIndex == 0) {
+      DelEntry = false;
+      FromMapperBase = HstPtrBegin;
+    }
+
     // If we marked the entry to be deleted we need to verify no other
     // thread reused it by now. If deletion is still supposed to happen by
     // this thread LR will be set and exclusive access to the HDTT map
     // will avoid another thread reusing the entry now. Note that we do
-    // not request (exclusive) access to the HDTT map if Info.DelEntry is
+    // not request (exclusive) access to the HDTT map if DelEntry is
     // not set.
-    LookupResult LR;
     DeviceTy::HDTTMapAccessorTy HDTTMap =
-        Device->HostDataToTargetMap.getExclusiveAccessor(!Info.DelEntry);
+        Device->HostDataToTargetMap.getExclusiveAccessor(!DelEntry);
 
-    if (Info.DelEntry) {
-      LR = Device->lookupMapping(HDTTMap, Info.HstPtrBegin, Info.DataSize);
-      if (LR.Entry->getTotalRefCount() != 0 ||
-          LR.Entry->getDeleteThreadId() != std::this_thread::get_id()) {
-        // The thread is not in charge of deletion anymore. Give up access
-        // to the HDTT map and unset the deletion flag.
-        HDTTMap.destroy();
-        Info.DelEntry = false;
-      }
+    const bool IsNotLastUser = TPR.Entry->decDataEndThreadCount() != 0;
+    if (DelEntry && (TPR.Entry->getTotalRefCount() != 0 || IsNotLastUser)) {
+      // The thread is not in charge of deletion anymore. Give up access
+      // to the HDTT map and unset the deletion flag.
+      HDTTMap.destroy();
+      DelEntry = false;
     }
 
     // If we copied back to the host a struct/array containing pointers,
     // we need to restore the original host pointer values from their
     // shadow copies. If the struct is going to be deallocated, remove any
     // remaining shadow pointer entries for this struct.
+    const bool HasFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
     auto CB = [&](ShadowPtrListTy::iterator &Itr) {
       // If we copied the struct to the host, we need to restore the
       // pointer.
-      if (Info.ArgType & OMP_TGT_MAPTYPE_FROM) {
+      if (HasFrom) {
         void **ShadowHstPtrAddr = (void **)Itr->first;
         *ShadowHstPtrAddr = Itr->second.HstPtrVal;
         DP("Restoring original host pointer value " DPxMOD " for host "
@@ -854,7 +866,7 @@ postProcessingTargetDataEnd(DeviceTy *Device,
            DPxPTR(Itr->second.HstPtrVal), DPxPTR(ShadowHstPtrAddr));
       }
       // If the struct is to be deallocated, remove the shadow entry.
-      if (Info.DelEntry) {
+      if (DelEntry) {
         DP("Removing shadow pointer " DPxMOD "\n", DPxPTR((void **)Itr->first));
         auto OldItr = Itr;
         Itr++;
@@ -864,19 +876,20 @@ postProcessingTargetDataEnd(DeviceTy *Device,
       }
       return OFFLOAD_SUCCESS;
     };
-    applyToShadowMapEntries(*Device, CB, Info.HstPtrBegin, Info.DataSize,
-                            Info.TPR);
+    applyToShadowMapEntries(*Device, CB, HstPtrBegin, DataSize, TPR);
+
+    if (!DelEntry || (FromMapperBase && FromMapperBase == HstPtrBegin))
+      continue;
 
     // If we are deleting the entry the DataMapMtx is locked and we own
     // the entry.
-    if (Info.DelEntry) {
-      if (!FromMapperBase || FromMapperBase != Info.HstPtrBegin)
-        Ret = Device->deallocTgtPtr(HDTTMap, LR, Info.DataSize);
-
-      if (Ret != OFFLOAD_SUCCESS) {
-        REPORT("Deallocating data from device failed.\n");
-        break;
-      }
+    Ret = Device->eraseMapEntry(HDTTMap, TPR.Entry, DataSize);
+    // Entry is already remove from the map, we can unlock it now.
+    HDTTMap.destroy();
+    Ret |= Device->deallocTgtPtrAndEntry(TPR.Entry, DataSize);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT("Deallocating data from device failed.\n");
+      break;
     }
   }
 
@@ -950,7 +963,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // If PTR_AND_OBJ, HstPtrBegin is address of pointee
     TargetPointerResultTy TPR = Device.getTgtPtrBegin(
         HstPtrBegin, DataSize, IsLast, UpdateRef, HasHoldModifier, IsHostPtr,
-        !IsImplicit, ForceDelete);
+        !IsImplicit, ForceDelete, /*FromDataEnd=*/true);
     void *TgtPtrBegin = TPR.TargetPointer;
     if (!TPR.isPresent() && !TPR.isHostPointer() &&
         (DataSize || HasPresentModifier)) {
@@ -991,61 +1004,42 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if (!TPR.isPresent())
       continue;
 
-    bool DelEntry = IsLast;
+    // Move data back to the host
+    const bool HasAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
+    const bool HasFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
+    if (HasFrom && (HasAlways || IsLast) && !IsHostPtr) {
+      DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
+         DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
 
-    // If the last element from the mapper (for end transfer args comes in
-    // reverse order), do not remove the partial entry, the parent struct still
-    // exists.
-    if ((ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-        !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
-      DelEntry = false; // protect parent struct from being deallocated
-    }
-
-    if ((ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) || DelEntry) {
-      // Move data back to the host
-      if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
-        bool Always = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
-        if ((Always || IsLast) && !IsHostPtr) {
-          DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-             DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-
-          std::lock_guard<decltype(*TPR.Entry)> LG(*TPR.Entry);
-          // Wait for any previous transfer if an event is present.
-          if (void *Event = TPR.Entry->getEvent()) {
-            if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
-              REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
-              return OFFLOAD_FAIL;
-            }
-          }
-
-          Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize,
-                                    AsyncInfo);
-          if (Ret != OFFLOAD_SUCCESS) {
-            REPORT("Copying data from device failed.\n");
-            return OFFLOAD_FAIL;
-          }
-
-          // As we are expecting to delete the entry the d2h copy might race
-          // with another one that also tries to delete the entry. This happens
-          // as the entry can be reused and the reuse might happen after the
-          // copy-back was issued but before it completed. Since the reuse might
-          // also copy-back a value we would race.
-          if (IsLast) {
-            if (TPR.Entry->addEventIfNecessary(Device, AsyncInfo) !=
-                OFFLOAD_SUCCESS)
-              return OFFLOAD_FAIL;
-          }
+      std::lock_guard<decltype(*TPR.Entry)> LG(*TPR.Entry);
+      // Wait for any previous transfer if an event is present.
+      if (void *Event = TPR.Entry->getEvent()) {
+        if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
+          REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
+          return OFFLOAD_FAIL;
         }
       }
-      if (DelEntry && FromMapper && I == 0) {
-        DelEntry = false;
-        FromMapperBase = HstPtrBegin;
+
+      Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize, AsyncInfo);
+      if (Ret != OFFLOAD_SUCCESS) {
+        REPORT("Copying data from device failed.\n");
+        return OFFLOAD_FAIL;
       }
 
-      // Add pointer to the buffer for post-synchronize processing.
-      PostProcessingPtrs.emplace_back(HstPtrBegin, DataSize, ArgTypes[I],
-                                      DelEntry && !IsHostPtr, TPR);
+      // As we are expecting to delete the entry the d2h copy might race
+      // with another one that also tries to delete the entry. This happens
+      // as the entry can be reused and the reuse might happen after the
+      // copy-back was issued but before it completed. Since the reuse might
+      // also copy-back a value we would race.
+      if (IsLast) {
+        if (TPR.Entry->addEventIfNecessary(Device, AsyncInfo) !=
+            OFFLOAD_SUCCESS)
+          return OFFLOAD_FAIL;
+      }
     }
+
+    // Add pointer to the buffer for post-synchronize processing.
+    PostProcessingPtrs.emplace_back(HstPtrBegin, DataSize, ArgTypes[I], I, TPR);
   }
 
   // Add post-processing functions

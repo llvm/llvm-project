@@ -10181,11 +10181,14 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
 
   bool Owned = false;
   bool IsDependent = false;
-  Decl *TagD = ActOnTag(S, TagSpec, Sema::TUK_Reference, KWLoc, SS, Name,
-               NameLoc, Attr, AS_none, /*ModulePrivateLoc=*/SourceLocation(),
+  UsingShadowDecl* FoundUsing = nullptr;
+  Decl *TagD =
+      ActOnTag(S, TagSpec, Sema::TUK_Reference, KWLoc, SS, Name, NameLoc, Attr,
+               AS_none, /*ModulePrivateLoc=*/SourceLocation(),
                MultiTemplateParamsArg(), Owned, IsDependent, SourceLocation(),
                false, TypeResult(), /*IsTypeSpecifier*/ false,
-               /*IsTemplateParamOrArg*/ false, /*OOK=*/OOK_Outside).get();
+               /*IsTemplateParamOrArg*/ false, /*OOK=*/OOK_Outside, FoundUsing)
+          .get();
   assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)

@@ -126,7 +126,7 @@ static void ctorRecord(Block *B, char *Ptr, bool IsConst, bool IsMutable,
     auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + SubOff) - 1;
     Desc->Offset = SubOff;
     Desc->Desc = F;
-    Desc->IsInitialized = (B->isStatic() || F->IsArray) && !IsBase;
+    Desc->IsInitialized = F->IsArray && !IsBase;
     Desc->IsBase = IsBase;
     Desc->IsActive = IsActive && !IsUnion;
     Desc->IsConst = IsConst || F->IsConst;

@@ -298,7 +298,6 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
   auto transformOp = cast<TransformOpInterface>(getOperation());
 
   if (!getGenerateGpuLaunch() && !gpuLaunch) {
-    results.push_back(target);
     DiagnosedSilenceableFailure diag =
         emitSilenceableError()
         << "Given target is not gpu.launch, set `generate_gpu_launch` "
@@ -312,7 +311,6 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
       mlir::transform::gpu::findTopLevelForeachThreadOp(
           target, topLevelForeachThreadOp, transformOp);
   if (!diag.succeeded()) {
-    results.push_back(target);
     diag.attachNote(target->getLoc()) << "when applied to this payload op";
     return diag;
   }
@@ -325,7 +323,6 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
     DiagnosedSilenceableFailure diag =
         createGpuLaunch(rewriter, target->getLoc(), transformOp, gpuLaunch);
     if (!diag.succeeded()) {
-      results.push_back(target);
       return diag;
     }
     rewriter.setInsertionPointToStart(&gpuLaunch.getBody().front());
@@ -363,7 +360,7 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
 /// Searches `scf.foreach_thread` ops nested under `target` and maps each such
 /// op to GPU threads. Mapping is one-to-one and the induction variables of
 /// `scf.foreach_thread` are rewritten to gpu.thread_id according to the
-/// thread_dim_apping attribute. Sibling `scf.foreach_thread` are supported in
+/// thread_dim_mapping attribute. Sibling `scf.foreach_thread` are supported in
 /// which case, the union of the number of threads is computed and may result
 /// in predication. Dynamic, `scf.foreach_thread` trip counts are currently
 /// not supported. Dynamic block dim sizes are currently not supported.
@@ -531,7 +528,6 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
   auto transformOp = cast<TransformOpInterface>(getOperation());
 
   if (!gpuLaunch) {
-    results.push_back(target);
     return emitSilenceableError() << "Given target is not gpu.launch";
   }
 
@@ -542,7 +538,6 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
       checkGpuLimits(transformOp, std::nullopt, std::nullopt, std::nullopt,
                      blockDim[0], blockDim[1], blockDim[2]);
   if (diag.isSilenceableFailure()) {
-    results.push_back(target);
     diag.attachNote(getLoc()) << getBlockDimAttrName() << " is very large";
     return diag;
   }

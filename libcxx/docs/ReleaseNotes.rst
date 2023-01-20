@@ -76,6 +76,8 @@ Improvements and New Features
   the C library.
 - Implemented ``<memory_resource>`` header from C++17
 - `D122780 <https://reviews.llvm.org/D122780>`_ Improved the performance of std::sort
+- The ``ranges`` versions of ``copy``, ``move``, ``copy_backward`` and ``move_backward`` are now also optimized for
+  ``std::deque<>::iterator``, which can lead to up to 20x performance improvements on certain algorithms.
 
 Deprecations and Removals
 -------------------------

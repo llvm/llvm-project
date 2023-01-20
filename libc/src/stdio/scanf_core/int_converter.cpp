@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/scanf_core/string_converter.h"
+#include "src/stdio/scanf_core/int_converter.h"
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"

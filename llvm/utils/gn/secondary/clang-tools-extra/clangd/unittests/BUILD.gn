@@ -36,6 +36,9 @@ unittest("ClangdTests") {
     ".",
     "//clang-tools-extra/clangd",
 
+    # For "clang-include-cleaner/..." includes.
+    "//clang-tools-extra/include-cleaner/include",
+
     # To pick up the generated inc files.
     "$target_gen_dir/../../clangd/tool",
 

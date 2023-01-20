@@ -1588,6 +1588,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
 
     // TypeQuals handled by caller.
     Result = Context.getTypeDeclType(D);
+    if (const auto *Using =
+            dyn_cast_or_null<UsingShadowDecl>(DS.getRepAsFoundDecl()))
+      Result = Context.getUsingType(Using, Result);
 
     // In both C and C++, make an ElaboratedType.
     ElaboratedTypeKeyword Keyword

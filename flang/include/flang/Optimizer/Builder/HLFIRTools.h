@@ -77,13 +77,20 @@ public:
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
-  bool isArray() const {
+  /// Is this an array or an assumed ranked entity?
+  bool isArray() const { return getRank() != 0; }
+
+  /// Return the rank of this entity or -1 if it is an assumed rank.
+  int getRank() const {
     mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
-    if (type.isa<fir::SequenceType>())
-      return true;
+    if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
+      if (seqTy.hasUnknownShape())
+        return -1;
+      return seqTy.getDimension();
+    }
     if (auto exprType = type.dyn_cast<hlfir::ExprType>())
-      return exprType.isArray();
-    return false;
+      return exprType.getRank();
+    return 0;
   }
   bool isScalar() const { return !isArray(); }
 
@@ -107,6 +114,10 @@ public:
     return getFortranElementType().isa<fir::CharacterType>();
   }
 
+  bool isDerivedWithLengthParameters() const {
+    return fir::isRecordWithTypeParameters(getFortranElementType());
+  }
+
   bool hasNonDefaultLowerBounds() const {
     if (!isBoxAddressOrValue() || isScalar())
       return false;
@@ -123,8 +134,35 @@ public:
     return true;
   }
 
+  // Is this entity known to be contiguous at compile time?
+  // Note that when this returns false, the entity may still
+  // turn-out to be contiguous at runtime.
+  bool isSimplyContiguous() const {
+    // If this can be described without a fir.box in FIR, this must
+    // be contiguous.
+    if (!hlfir::isBoxAddressOrValueType(getFirBase().getType()))
+      return true;
+    // Otherwise, if this entity has a visible declaration in FIR,
+    // or is the dereference of an allocatable or contiguous pointer
+    // it is simply contiguous.
+    if (auto varIface = getMaybeDereferencedVariableInterface())
+      return varIface.isAllocatable() || varIface.hasContiguousAttr();
+    return false;
+  }
+
   fir::FortranVariableOpInterface getIfVariableInterface() const {
     return this->getDefiningOp<fir::FortranVariableOpInterface>();
+  }
+
+  // Return a "declaration" operation for this variable if visible,
+  // or the "declaration" operation of the allocatable/pointer this
+  // variable was dereferenced from (if it is visible).
+  fir::FortranVariableOpInterface
+  getMaybeDereferencedVariableInterface() const {
+    mlir::Value base = *this;
+    if (auto loadOp = base.getDefiningOp<fir::LoadOp>())
+      base = loadOp.getMemref();
+    return base.getDefiningOp<fir::FortranVariableOpInterface>();
   }
 
   // Get the entity as an mlir SSA value containing all the shape, type

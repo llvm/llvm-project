@@ -26,6 +26,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -276,12 +277,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     if (Attrs.size())
       return Attrs;
 
-    MDNode *WeightsNode = TI->getMetadata(LLVMContext::MD_prof);
+    MDNode *WeightsNode = getBranchWeightMDNode(*TI);
     if (!WeightsNode)
-      return "";
-
-    MDString *MDName = cast<MDString>(WeightsNode->getOperand(0));
-    if (MDName->getString() != "branch_weights")
       return "";
 
     OpNo = I.getSuccessorIndex() + 1;

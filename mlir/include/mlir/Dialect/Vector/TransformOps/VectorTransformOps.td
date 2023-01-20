@@ -46,6 +46,18 @@ def LowerVectorsOp : Op<Transform_Dialect, "vector.lower_vectors",
   );
   let results = (outs PDL_Operation:$results);
 
+  let builders = [
+    OpBuilder<(ins "Type":$resultType, "Value":$target,
+      "const vector::LowerVectorsOptions &":$options), [{
+        return build($_builder, $_state, resultType, target,
+          options.vectorContractLowering,
+          options.vectorMultiReductionLowering, options.vectorTransferSplit,
+          options.vectorTransposeLowering, options.transposeAVX2Lowering,
+          options.unrollVectorTransfers);
+      }]
+    >
+  ];
+
   let assemblyFormat = [{
     $target
     oilist (

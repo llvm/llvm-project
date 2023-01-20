@@ -75,8 +75,10 @@ def LLVM_Dialect : Dialect {
     /// Returns `true` if the given type is compatible with the LLVM dialect.
     static bool isCompatibleType(Type);
 
-    /// Name of the attribute mapped to LLVM's 'readnone' function attribute.
-    /// It is allowed on any FunctionOpInterface operations.
+    /// TODO Remove this once there is an alternative way of modeling memory
+    /// effects on FunctionOpInterface.
+    /// Name of the attribute that will cause the creation of a readnone memory
+    /// effect when lowering to the LLVMDialect.
     static StringRef getReadnoneAttrName() {
       return "llvm.readnone";
     }

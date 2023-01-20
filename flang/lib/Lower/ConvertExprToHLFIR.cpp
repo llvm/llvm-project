@@ -17,6 +17,7 @@
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
@@ -136,12 +137,17 @@ private:
                                                const T &designatorNode) {
     mlir::Type designatorType =
         computeDesignatorType(resultValueType, partInfo, designatorNode);
+    return genDesignate(designatorType, partInfo, /*attributes=*/{});
+  }
+  fir::FortranVariableOpInterface
+  genDesignate(mlir::Type designatorType, PartInfo &partInfo,
+               fir::FortranVariableFlagsAttr attributes) {
     std::optional<bool> complexPart;
     auto designate = getBuilder().create<hlfir::DesignateOp>(
         getLoc(), designatorType, partInfo.base.getBase(),
         partInfo.componentName, partInfo.componentShape, partInfo.subscripts,
         partInfo.substring, complexPart, partInfo.resultShape,
-        partInfo.typeParams);
+        partInfo.typeParams, attributes);
     return mlir::cast<fir::FortranVariableOpInterface>(
         designate.getOperation());
   }
@@ -157,6 +163,17 @@ private:
   fir::FortranVariableOpInterface
   gen(const Fortran::evaluate::Component &component) {
     PartInfo partInfo;
+    if (Fortran::semantics::IsAllocatableOrPointer(component.GetLastSymbol())) {
+      // Generate whole allocatable or pointer component reference. The
+      // hlfir.designate result will be a pointer/allocatable.
+      auto [_, componentType] = visitComponentImpl(
+          component, partInfo, /*dereferencePointerAndAllocComponents=*/false);
+      mlir::Type designatorType = fir::ReferenceType::get(componentType);
+      fir::FortranVariableFlagsAttr attributes =
+          Fortran::lower::translateSymbolAttributes(getBuilder().getContext(),
+                                                    component.GetLastSymbol());
+      return genDesignate(designatorType, partInfo, attributes);
+    }
     mlir::Type resultType = visit(component, partInfo);
     return genDesignate(resultType, partInfo, component);
   }
@@ -280,7 +297,8 @@ private:
                    PartInfo &partInfo) {
     mlir::Type baseType;
     if (const auto *component = arrayRef.base().UnwrapComponent())
-      baseType = visitComponentImpl(*component, partInfo).second;
+      baseType = hlfir::getFortranElementOrSequenceType(
+          visitComponentImpl(*component, partInfo).second);
     else
       baseType = visit(arrayRef.base().GetLastSymbol(), partInfo);
 
@@ -428,6 +446,8 @@ private:
     // array. The code below determines the shape of the component reference if
     // any.
     auto [baseType, componentType] = visitComponentImpl(component, partInfo);
+    mlir::Type componentBaseType =
+        hlfir::getFortranElementOrSequenceType(componentType);
     if (partInfo.base.isArray()) {
       // For array%scalar_comp, the result shape is
       // the one of the base. Compute it here. Note that the lower bounds of the
@@ -436,13 +456,13 @@ private:
       partInfo.resultShape = hlfir::genShape(loc, getBuilder(), partInfo.base);
       assert(!partInfo.componentShape &&
              "Fortran designators can only have one ranked part");
-      return changeElementType(baseType, componentType);
+      return changeElementType(baseType, componentBaseType);
     }
     // scalar%array_comp or scalar%scalar. In any case the shape of this
     // part-ref is coming from the component.
     partInfo.resultShape = partInfo.componentShape;
     partInfo.componentShape = {};
-    return componentType;
+    return componentBaseType;
   }
 
   // Returns the <BaseType, ComponentType> pair, computes partInfo.base,
@@ -451,7 +471,8 @@ private:
   // processing a following ArrayRef, if any, and in "visit" otherwise.
   std::pair<mlir::Type, mlir::Type>
   visitComponentImpl(const Fortran::evaluate::Component &component,
-                     PartInfo &partInfo) {
+                     PartInfo &partInfo,
+                     bool dereferencePointerAndAllocComponents = true) {
     fir::FirOpBuilder &builder = getBuilder();
     // Break the Designator visit here: if the base is an array-ref, a
     // coarray-ref, or another component, this creates another hlfir.designate
@@ -473,10 +494,11 @@ private:
     if (recordType.isDependentType())
       TODO(getLoc(), "Designate derived type with length parameters in HLFIR");
     mlir::Type fieldType = recordType.getType(partInfo.componentName);
-    fieldType = hlfir::getFortranElementOrSequenceType(fieldType);
-    partInfo.componentShape = genComponentShape(componentSym, fieldType);
+    mlir::Type fieldBaseType =
+        hlfir::getFortranElementOrSequenceType(fieldType);
+    partInfo.componentShape = genComponentShape(componentSym, fieldBaseType);
 
-    mlir::Type fieldEleType = hlfir::getFortranElementType(fieldType);
+    mlir::Type fieldEleType = hlfir::getFortranElementType(fieldBaseType);
     if (fir::isRecordWithTypeParameters(fieldEleType))
       TODO(loc,
            "lower a component that is a parameterized derived type to HLFIR");
@@ -496,7 +518,8 @@ private:
     // For pointers and allocatables, if there is a substring, complex part or
     // array ref, the designator should be broken here and the pointer or
     // allocatable dereferenced.
-    if (Fortran::semantics::IsAllocatableOrPointer(componentSym))
+    if (Fortran::semantics::IsAllocatableOrPointer(componentSym) &&
+        dereferencePointerAndAllocComponents)
       TODO(loc, "lowering ref to allocatable or pointer component to HLFIR");
 
     return {baseType, fieldType};

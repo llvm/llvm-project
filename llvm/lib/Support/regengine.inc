@@ -810,11 +810,33 @@ static const char *			/* where it ended */
 slow(struct match *m, const char *start, const char *stop, sopno startst,
      sopno stopst)
 {
+	/* Quickly skip over fixed character matches at the start. */
+	const char *p = start;
+	for (; startst < stopst; ++startst) {
+		int hard = 0;
+		sop s = m->g->strip[startst];
+		switch (OP(s)) {
+		case OLPAREN:
+		case ORPAREN:
+			/* Not relevant here. */
+			break;
+		case OCHAR:
+			if (p == stop || *p != (char)OPND(s))
+				return NULL;
+			++p;
+			break;
+		default:
+			hard = 1;
+			break;
+		}
+		if (hard)
+			break;
+	}
+
 	states st = m->st;
 	states empty = m->empty;
 	states tmp = m->tmp;
-	const char *p = start;
-	int c = (start == m->beginp) ? OUT : *(start-1);
+	int c = (p == m->beginp) ? OUT : *(p-1);
 	int lastc;	/* previous c */
 	int flagch;
 	int i;

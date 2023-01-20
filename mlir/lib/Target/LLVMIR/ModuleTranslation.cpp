@@ -874,6 +874,28 @@ LogicalResult ModuleTranslation::convertDialectAttributes(Operation *op) {
   return success();
 }
 
+/// Converts the function attributes from LLVMFuncOp and attaches them to the
+/// llvm::Function.
+static void convertFunctionAttributes(LLVMFuncOp func,
+                                      llvm::Function *llvmFunc) {
+  if (!func.getMemory())
+    return;
+
+  MemoryEffectsAttr memEffects = func.getMemoryAttr();
+
+  // Add memory effects incrementally.
+  llvm::MemoryEffects newMemEffects =
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::ArgMem,
+                          convertModRefInfoToLLVM(memEffects.getArgMem()));
+  newMemEffects |= llvm::MemoryEffects(
+      llvm::MemoryEffects::Location::InaccessibleMem,
+      convertModRefInfoToLLVM(memEffects.getInaccessibleMem()));
+  newMemEffects |=
+      llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
+                          convertModRefInfoToLLVM(memEffects.getOther()));
+  llvmFunc->setMemoryEffects(newMemEffects);
+}
+
 LogicalResult ModuleTranslation::convertFunctionSignatures() {
   // Declare all functions first because there may be function calls that form a
   // call graph with cycles, or global initializers that reference functions.
@@ -888,8 +910,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.
-    if (function->getAttrOfType<UnitAttr>(LLVMDialect::getReadnoneAttrName()))
-      llvmFunc->setDoesNotAccessMemory();
+    convertFunctionAttributes(function, llvmFunc);
 
     // Convert function_entry_count attribute to metadata.
     if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())

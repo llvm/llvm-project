@@ -271,99 +271,13 @@ void printVersion(raw_ostream &OS) {
 }
 
 namespace nvptx {
-Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args,
-                             bool RDC = true) {
-  llvm::TimeTraceScope TimeScope("NVPTX Assembler");
-  // NVPTX uses the ptxas binary to create device object files.
-  Expected<std::string> PtxasPath = findProgram("ptxas", {CudaBinaryPath});
-  if (!PtxasPath)
-    return PtxasPath.takeError();
-
-  const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  // Create a new file to write the linked device image to. Assume that the
-  // input filename already has the device and architecture.
-  auto TempFileOrErr = createOutputFile(sys::path::stem(InputFile), "cubin");
-  if (!TempFileOrErr)
-    return TempFileOrErr.takeError();
-
-  SmallVector<StringRef, 16> CmdArgs;
-  StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
-  CmdArgs.push_back(*PtxasPath);
-  CmdArgs.push_back(Triple.isArch64Bit() ? "-m64" : "-m32");
-  if (Verbose)
-    CmdArgs.push_back("-v");
-  for (StringRef Arg : Args.getAllArgValues(OPT_ptxas_arg))
-    CmdArgs.push_back(Args.MakeArgString(Arg));
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(*TempFileOrErr);
-  CmdArgs.push_back(Args.MakeArgString("-" + OptLevel));
-  CmdArgs.push_back("--gpu-name");
-  CmdArgs.push_back(Arch);
-  if (Args.hasArg(OPT_debug) && OptLevel[1] == '0')
-    CmdArgs.push_back("-g");
-  else if (Args.hasArg(OPT_debug))
-    CmdArgs.push_back("-lineinfo");
-  if (RDC)
-    CmdArgs.push_back("-c");
-
-  CmdArgs.push_back(InputFile);
-
-  if (Error Err = executeCommands(*PtxasPath, CmdArgs))
-    return std::move(Err);
-
-  return *TempFileOrErr;
-}
-
-Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
-  llvm::TimeTraceScope TimeScope("NVPTX linker");
-  // NVPTX uses the nvlink binary to link device object files.
-  Expected<std::string> NvlinkPath = findProgram("nvlink", {CudaBinaryPath});
-  if (!NvlinkPath)
-    return NvlinkPath.takeError();
-
-  const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-
-  // Create a new file to write the linked device image to.
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "." +
-                           Triple.getArchName() + "." + Arch,
-                       "img");
-  if (!TempFileOrErr)
-    return TempFileOrErr.takeError();
-
-  SmallVector<StringRef, 16> CmdArgs;
-  CmdArgs.push_back(*NvlinkPath);
-  CmdArgs.push_back(Triple.isArch64Bit() ? "-m64" : "-m32");
-  if (Args.hasArg(OPT_debug))
-    CmdArgs.push_back("-g");
-  if (Verbose)
-    CmdArgs.push_back("-v");
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(*TempFileOrErr);
-  CmdArgs.push_back("-arch");
-  CmdArgs.push_back(Arch);
-
-  // Add extracted input files.
-  for (StringRef Input : InputFiles)
-    CmdArgs.push_back(Input);
-
-  for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
-    CmdArgs.push_back(Args.MakeArgString(Arg));
-  if (Error Err = executeCommands(*NvlinkPath, CmdArgs))
-    return std::move(Err);
-
-  return *TempFileOrErr;
-}
-
 Expected<StringRef>
 fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
           const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("NVPTX fatbinary");
   // NVPTX uses the fatbinary program to bundle the linked images.
   Expected<std::string> FatBinaryPath =
-      findProgram("fatbinary", {CudaBinaryPath});
+      findProgram("fatbinary", {CudaBinaryPath + "/bin"});
   if (!FatBinaryPath)
     return FatBinaryPath.takeError();
 
@@ -393,49 +307,6 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 } // namespace nvptx
 
 namespace amdgcn {
-Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
-  llvm::TimeTraceScope TimeScope("AMDGPU linker");
-  // AMDGPU uses lld to link device object files.
-  Expected<std::string> LLDPath =
-      findProgram("lld", {getMainExecutable("lld")});
-  if (!LLDPath)
-    return LLDPath.takeError();
-
-  const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-
-  // Create a new file to write the linked device image to.
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "." +
-                           Triple.getArchName() + "." + Arch,
-                       "img");
-  if (!TempFileOrErr)
-    return TempFileOrErr.takeError();
-  std::string ArchArg = ("-plugin-opt=mcpu=" + Arch).str();
-
-  SmallVector<StringRef, 16> CmdArgs;
-  CmdArgs.push_back(*LLDPath);
-  CmdArgs.push_back("-flavor");
-  CmdArgs.push_back("gnu");
-  CmdArgs.push_back("--no-undefined");
-  CmdArgs.push_back("-shared");
-  CmdArgs.push_back("-plugin-opt=-amdgpu-internalize-symbols");
-  CmdArgs.push_back(ArchArg);
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(*TempFileOrErr);
-
-  // Add extracted input files.
-  for (StringRef Input : InputFiles)
-    CmdArgs.push_back(Input);
-
-  for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
-    CmdArgs.push_back(Args.MakeArgString(Arg));
-  if (Error Err = executeCommands(*LLDPath, CmdArgs))
-    return std::move(Err);
-
-  return *TempFileOrErr;
-}
-
 Expected<StringRef>
 fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
           const ArgList &Args) {
@@ -483,35 +354,9 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 } // namespace amdgcn
 
 namespace generic {
-
-const char *getLDMOption(const llvm::Triple &T) {
-  switch (T.getArch()) {
-  case llvm::Triple::x86:
-    if (T.isOSIAMCU())
-      return "elf_iamcu";
-    return "elf_i386";
-  case llvm::Triple::aarch64:
-    return "aarch64linux";
-  case llvm::Triple::aarch64_be:
-    return "aarch64linuxb";
-  case llvm::Triple::ppc64:
-    return "elf64ppc";
-  case llvm::Triple::ppc64le:
-    return "elf64lppc";
-  case llvm::Triple::x86_64:
-    if (T.isX32())
-      return "elf32_x86_64";
-    return "elf_x86_64";
-  case llvm::Triple::ve:
-    return "elf64ve";
-  default:
-    return nullptr;
-  }
-}
-
-Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args) {
-  llvm::TimeTraceScope TimeScope("Clang Assembler");
-  // Use `clang` to invoke the generic assembler.
+Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
+  llvm::TimeTraceScope TimeScope("Clang");
+  // Use `clang` to invoke the appropriate device tools.
   Expected<std::string> ClangPath =
       findProgram("clang", {getMainExecutable("clang")});
   if (!ClangPath)
@@ -519,9 +364,14 @@ Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args) {
 
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  if (Arch.empty())
+    Arch = "native";
   // Create a new file to write the linked device image to. Assume that the
   // input filename already has the device and architecture.
-  auto TempFileOrErr = createOutputFile(sys::path::stem(InputFile), "o");
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName) + "." +
+                           Triple.getArchName() + "." + Arch,
+                       "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -530,65 +380,47 @@ Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args) {
       *ClangPath,
       "-o",
       *TempFileOrErr,
-      "-fPIC",
-      "-c",
       Args.MakeArgString("--target=" + Triple.getTriple()),
-      Args.MakeArgString("-" + OptLevel),
       Triple.isAMDGPU() ? Args.MakeArgString("-mcpu=" + Arch)
                         : Args.MakeArgString("-march=" + Arch),
-      InputFile,
+      Args.MakeArgString("-" + OptLevel),
+      "-Wl,--no-undefined",
   };
 
-  if (Error Err = executeCommands(*ClangPath, CmdArgs))
-    return std::move(Err);
-
-  return *TempFileOrErr;
-}
-
-Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
-  llvm::TimeTraceScope TimeScope("Generic linker");
-  const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-
-  // Create a new file to write the linked device image to.
-  auto TempFileOrErr =
-      createOutputFile(sys::path::filename(ExecutableName) + "." +
-                           Triple.getArchName() + "." + Arch,
-                       "img");
-  if (!TempFileOrErr)
-    return TempFileOrErr.takeError();
-
-  // Use the host linker to perform generic offloading. Use the same libraries
-  // and paths as the host application does.
-  SmallVector<StringRef, 16> CmdArgs;
-  CmdArgs.push_back(Args.getLastArgValue(OPT_linker_path_EQ));
-  CmdArgs.push_back("-m");
-  CmdArgs.push_back(getLDMOption(Triple));
-  CmdArgs.push_back("-shared");
-
-  ArgStringList LinkerArgs;
-  for (const opt::Arg *Arg : Args) {
-    auto Op = Arg->getOption();
-    if (Op.matches(OPT_library) || Op.matches(OPT_library_path) ||
-        Op.matches(OPT_as_needed) || Op.matches(OPT_no_as_needed) ||
-        Op.matches(OPT_rpath) || Op.matches(OPT_dynamic_linker))
+  // If this is CPU offloading we copy the input libraries.
+  if (!Triple.isAMDGPU() && !Triple.isNVPTX()) {
+    CmdArgs.push_back("-Bsymbolic");
+    CmdArgs.push_back("-shared");
+    ArgStringList LinkerArgs;
+    for (const opt::Arg *Arg :
+         Args.filtered(OPT_library, OPT_rpath, OPT_library_path))
       Arg->render(Args, LinkerArgs);
+    llvm::copy(LinkerArgs, std::back_inserter(CmdArgs));
   }
-  for (StringRef Arg : LinkerArgs)
-    CmdArgs.push_back(Arg);
 
-  CmdArgs.push_back("-Bsymbolic");
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(*TempFileOrErr);
+  if (Args.hasArg(OPT_debug))
+    CmdArgs.push_back("-g");
 
-  // Add extracted input files.
-  for (StringRef Input : InputFiles)
-    CmdArgs.push_back(Input);
+  if (SaveTemps)
+    CmdArgs.push_back("-save-temps");
+
+  if (Verbose)
+    CmdArgs.push_back("-v");
+
+  if (!CudaBinaryPath.empty())
+    CmdArgs.push_back(Args.MakeArgString("--cuda-path=" + CudaBinaryPath));
+
+  for (StringRef Arg : Args.getAllArgValues(OPT_ptxas_arg))
+    llvm::copy(SmallVector<StringRef>({"-Xcuda-ptxas", Arg}),
+               std::back_inserter(CmdArgs));
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
-    CmdArgs.push_back(Args.MakeArgString(Arg));
-  if (Error Err =
-          executeCommands(Args.getLastArgValue(OPT_linker_path_EQ), CmdArgs))
+    CmdArgs.push_back(Args.MakeArgString("-Wl," + Arg));
+
+  for (StringRef InputFile : InputFiles)
+    CmdArgs.push_back(InputFile);
+
+  if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);
 
   return *TempFileOrErr;
@@ -601,16 +433,14 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   switch (Triple.getArch()) {
   case Triple::nvptx:
   case Triple::nvptx64:
-    return nvptx::link(InputFiles, Args);
   case Triple::amdgcn:
-    return amdgcn::link(InputFiles, Args);
   case Triple::x86:
   case Triple::x86_64:
   case Triple::aarch64:
   case Triple::aarch64_be:
   case Triple::ppc64:
   case Triple::ppc64le:
-    return generic::link(InputFiles, Args);
+    return generic::clang(InputFiles, Args);
   default:
     return createStringError(inconvertibleErrorCode(),
                              Triple.getArchName() +
@@ -933,19 +763,6 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
     return Error::success();
   }
 
-  // Is we are compiling for NVPTX we need to run the assembler first.
-  if (Triple.isNVPTX() || SaveTemps) {
-    for (StringRef &File : Files) {
-
-      auto FileOrErr = Triple.isNVPTX()
-                           ? nvptx::assemble(File, Args, !SingleOutput)
-                           : generic::assemble(File, Args);
-      if (!FileOrErr)
-        return FileOrErr.takeError();
-      File = *FileOrErr;
-    }
-  }
-
   // Append the new inputs to the device linker input.
   for (StringRef File : Files)
     OutputFiles.push_back(File);
@@ -1226,12 +1043,9 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
     }
 
     // Link the remaining device files using the device linker.
-    llvm::Triple Triple(LinkerArgs.getLastArgValue(OPT_triple_EQ));
-    bool RequiresLinking =
-        !Args.hasArg(OPT_embed_bitcode) &&
-        !(Input.empty() && InputFiles.size() == 1 && Triple.isNVPTX());
-    auto OutputOrErr = RequiresLinking ? linkDevice(InputFiles, LinkerArgs)
-                                       : InputFiles.front();
+    auto OutputOrErr = !Args.hasArg(OPT_embed_bitcode)
+                           ? linkDevice(InputFiles, LinkerArgs)
+                           : InputFiles.front();
     if (!OutputOrErr)
       return OutputOrErr.takeError();
 
@@ -1457,8 +1271,6 @@ int main(int Argc, char **Argv) {
   SaveTemps = Args.hasArg(OPT_save_temps);
   ExecutableName = Args.getLastArgValue(OPT_o, "a.out");
   CudaBinaryPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
-  if (!CudaBinaryPath.empty())
-    CudaBinaryPath = CudaBinaryPath + "/bin";
 
   parallel::strategy = hardware_concurrency(1);
   if (auto *Arg = Args.getLastArg(OPT_wrapper_jobs)) {
