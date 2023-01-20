@@ -357,11 +357,15 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   }
   if (CSPGOKindFlag != NoCSPGO) {
     if (P && (P->Action == PGOOptions::IRInstr ||
-              P->Action == PGOOptions::SampleUse))
+              P->Action == PGOOptions::SampleUse)) {
       errs() << "CSPGOKind cannot be used with IRInstr or SampleUse";
+      return false;
+    }
     if (CSPGOKindFlag == CSInstrGen) {
-      if (CSProfileGenFile.empty())
+      if (CSProfileGenFile.empty()) {
         errs() << "CSInstrGen needs to specify CSProfileGenFile";
+        return false;
+      }
       if (P) {
         P->CSAction = PGOOptions::CSIRInstr;
         P->CSProfileGenFile = CSProfileGenFile;
@@ -369,8 +373,10 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
         P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile, FS,
                        PGOOptions::NoAction, PGOOptions::CSIRInstr);
     } else /* CSPGOKindFlag == CSInstrUse */ {
-      if (!P)
+      if (!P) {
         errs() << "CSInstrUse needs to be together with InstrUse";
+        return false;
+      }
       P->CSAction = PGOOptions::CSIRUse;
     }
   }
