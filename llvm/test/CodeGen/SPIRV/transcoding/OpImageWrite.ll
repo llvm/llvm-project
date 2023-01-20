@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV: %[[#VOID_TY:]] = OpTypeVoid
 ; CHECK-SPIRV: %[[#IMG2D_WO_TY:]] = OpTypeImage %[[#VOID_TY]] 2D 0 0 0 0 Unknown WriteOnly
