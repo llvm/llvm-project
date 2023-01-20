@@ -1221,6 +1221,7 @@ module std [system] {
         export functional.__functional.compose
         export functional.__functional.perfect_forward
       }
+      module as_rvalue_view         { private header "__ranges/as_rvalue_view.h" }
       module common_view            { private header "__ranges/common_view.h" }
       module concepts               { private header "__ranges/concepts.h" }
       module copyable_box           { private header "__ranges/copyable_box.h" }

@@ -68,6 +68,7 @@ Implemented Papers
 - P0323R12 - ``std::expected``
 - P1035R7 - Input Range Adaptors
 - P2325R3 - Views should not be required to be default constructible
+- P2446R2 - ``views::as_rvalue``
 
 Improvements and New Features
 -----------------------------
