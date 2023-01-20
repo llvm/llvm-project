@@ -720,8 +720,8 @@ define i64 @abs_i64(i64 %x) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    snez a2, a0
 ; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    neg a2, a2
-; CHECK-NEXT:    sub a1, a2, a1
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    sub a1, a1, a2
 ; CHECK-NEXT:  .LBB19_2:
 ; CHECK-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
@@ -774,7 +774,7 @@ define i32 @bswap_i32(i32 %a) nounwind {
 ; RV32I-NEXT:    and a2, a0, a2
 ; RV32I-NEXT:    slli a2, a2, 8
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    or a1, a2, a1
+; RV32I-NEXT:    or a0, a0, a2
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -800,7 +800,7 @@ define i64 @bswap_i64(i64 %a) {
 ; RV32I-NEXT:    and a4, a1, a3
 ; RV32I-NEXT:    slli a4, a4, 8
 ; RV32I-NEXT:    slli a1, a1, 24
-; RV32I-NEXT:    or a2, a4, a2
+; RV32I-NEXT:    or a1, a1, a4
 ; RV32I-NEXT:    or a2, a1, a2
 ; RV32I-NEXT:    srli a1, a0, 8
 ; RV32I-NEXT:    and a1, a1, a3
@@ -809,7 +809,7 @@ define i64 @bswap_i64(i64 %a) {
 ; RV32I-NEXT:    and a3, a0, a3
 ; RV32I-NEXT:    slli a3, a3, 8
 ; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    or a1, a3, a1
+; RV32I-NEXT:    or a0, a0, a3
 ; RV32I-NEXT:    or a1, a0, a1
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    ret

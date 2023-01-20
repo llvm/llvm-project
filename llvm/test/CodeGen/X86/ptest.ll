@@ -104,11 +104,11 @@ define i32 @veccond512(<16 x i32> %input) {
 ; SSE2-LABEL: veccond512:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    je .LBB2_2
 ; SSE2-NEXT:  # %bb.1: # %if-true-block
@@ -121,9 +121,9 @@ define i32 @veccond512(<16 x i32> %input) {
 ; SSE41-LABEL: veccond512:
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    por %xmm3, %xmm1
-; SSE41-NEXT:    por %xmm2, %xmm1
-; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    ptest %xmm1, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    je .LBB2_2
 ; SSE41-NEXT:  # %bb.1: # %if-true-block
 ; SSE41-NEXT:    xorl %eax, %eax
@@ -237,11 +237,11 @@ define i32 @vectest512(<16 x i32> %input) {
 ; SSE2-LABEL: vectest512:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %ecx
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %ecx
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
 ; SSE2-NEXT:    setne %al
@@ -250,10 +250,10 @@ define i32 @vectest512(<16 x i32> %input) {
 ; SSE41-LABEL: vectest512:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm3, %xmm1
-; SSE41-NEXT:    por %xmm2, %xmm1
-; SSE41-NEXT:    por %xmm0, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    xorl %eax, %eax
-; SSE41-NEXT:    ptest %xmm1, %xmm1
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
@@ -349,11 +349,11 @@ define i32 @vecsel512(<16 x i32> %input, i32 %a, i32 %b) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl %edi, %eax
 ; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %ecx
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %ecx
 ; SSE2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
 ; SSE2-NEXT:    cmovel %esi, %eax
 ; SSE2-NEXT:    retq
@@ -362,9 +362,9 @@ define i32 @vecsel512(<16 x i32> %input, i32 %a, i32 %b) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movl %edi, %eax
 ; SSE41-NEXT:    por %xmm3, %xmm1
-; SSE41-NEXT:    por %xmm2, %xmm1
-; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    ptest %xmm1, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    cmovel %esi, %eax
 ; SSE41-NEXT:    retq
 ;

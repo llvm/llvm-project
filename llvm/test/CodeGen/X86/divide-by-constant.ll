@@ -785,9 +785,9 @@ define i64 @udiv_i64_3(i64 %x) nounwind {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    mull %ebx
 ; X32-NEXT:    imull $-1431655766, %ecx, %ecx # imm = 0xAAAAAAAA
-; X32-NEXT:    imull $-1431655765, %edi, %esi # imm = 0xAAAAAAAB
-; X32-NEXT:    addl %ecx, %esi
-; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    imull $-1431655765, %edi, %ecx # imm = 0xAAAAAAAB
+; X32-NEXT:    addl %ecx, %edx
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx
@@ -828,9 +828,9 @@ define i64 @udiv_i64_5(i64 %x) nounwind {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    mull %ebx
 ; X32-NEXT:    imull $-858993460, %ecx, %ecx # imm = 0xCCCCCCCC
-; X32-NEXT:    imull $-858993459, %edi, %esi # imm = 0xCCCCCCCD
-; X32-NEXT:    addl %ecx, %esi
-; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    imull $-858993459, %edi, %ecx # imm = 0xCCCCCCCD
+; X32-NEXT:    addl %ecx, %edx
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx
@@ -872,9 +872,9 @@ define i64 @udiv_i64_15(i64 %x) nounwind {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    mull %edx
 ; X32-NEXT:    imull $-286331154, %ecx, %ecx # imm = 0xEEEEEEEE
-; X32-NEXT:    imull $-286331153, %edi, %esi # imm = 0xEEEEEEEF
-; X32-NEXT:    addl %ecx, %esi
-; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    imull $-286331153, %edi, %ecx # imm = 0xEEEEEEEF
+; X32-NEXT:    addl %ecx, %edx
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    retl
@@ -916,9 +916,9 @@ define i64 @udiv_i64_17(i64 %x) nounwind {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    mull %ebx
 ; X32-NEXT:    imull $-252645136, %ecx, %ecx # imm = 0xF0F0F0F0
-; X32-NEXT:    imull $-252645135, %edi, %esi # imm = 0xF0F0F0F1
-; X32-NEXT:    addl %ecx, %esi
-; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    imull $-252645135, %edi, %ecx # imm = 0xF0F0F0F1
+; X32-NEXT:    addl %ecx, %edx
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx
@@ -961,9 +961,9 @@ define i64 @udiv_i64_255(i64 %x) nounwind {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    mull %edx
 ; X32-NEXT:    imull $-16843010, %ecx, %ecx # imm = 0xFEFEFEFE
-; X32-NEXT:    imull $-16843009, %esi, %esi # imm = 0xFEFEFEFF
-; X32-NEXT:    addl %ecx, %esi
-; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    imull $-16843009, %esi, %ecx # imm = 0xFEFEFEFF
+; X32-NEXT:    addl %ecx, %edx
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
@@ -1004,9 +1004,9 @@ define i64 @udiv_i64_257(i64 %x) nounwind {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    mull %ebx
 ; X32-NEXT:    imull $-16711936, %ecx, %ecx # imm = 0xFF00FF00
-; X32-NEXT:    imull $-16711935, %edi, %esi # imm = 0xFF00FF01
-; X32-NEXT:    addl %ecx, %esi
-; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    imull $-16711935, %edi, %ecx # imm = 0xFF00FF01
+; X32-NEXT:    addl %ecx, %edx
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx
@@ -1140,9 +1140,9 @@ define i64 @udiv_i64_12(i64 %x) nounwind {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    mull %ebx
 ; X32-NEXT:    imull $-1431655766, %ecx, %ecx # imm = 0xAAAAAAAA
-; X32-NEXT:    imull $-1431655765, %edi, %esi # imm = 0xAAAAAAAB
-; X32-NEXT:    addl %ecx, %esi
-; X32-NEXT:    addl %esi, %edx
+; X32-NEXT:    addl %ecx, %edx
+; X32-NEXT:    imull $-1431655765, %edi, %ecx # imm = 0xAAAAAAAB
+; X32-NEXT:    addl %ecx, %edx
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx

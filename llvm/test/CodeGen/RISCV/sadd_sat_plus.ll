@@ -65,10 +65,10 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    mv a2, a1
 ; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    add a3, a2, a5
 ; RV32I-NEXT:    add a0, a0, a4
 ; RV32I-NEXT:    sltu a1, a0, a1
-; RV32I-NEXT:    add a1, a5, a1
-; RV32I-NEXT:    add a1, a2, a1
+; RV32I-NEXT:    add a1, a3, a1
 ; RV32I-NEXT:    xor a3, a2, a1
 ; RV32I-NEXT:    xor a2, a2, a5
 ; RV32I-NEXT:    not a2, a2
@@ -100,10 +100,10 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV32IZbb:       # %bb.0:
 ; RV32IZbb-NEXT:    mv a2, a1
 ; RV32IZbb-NEXT:    mv a1, a0
+; RV32IZbb-NEXT:    add a3, a2, a5
 ; RV32IZbb-NEXT:    add a0, a0, a4
 ; RV32IZbb-NEXT:    sltu a1, a0, a1
-; RV32IZbb-NEXT:    add a1, a5, a1
-; RV32IZbb-NEXT:    add a1, a2, a1
+; RV32IZbb-NEXT:    add a1, a3, a1
 ; RV32IZbb-NEXT:    xor a3, a2, a1
 ; RV32IZbb-NEXT:    xor a2, a2, a5
 ; RV32IZbb-NEXT:    andn a2, a3, a2
