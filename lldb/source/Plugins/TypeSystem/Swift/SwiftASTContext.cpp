@@ -943,6 +943,10 @@ SwiftASTContext::SwiftASTContext(std::string description,
   // for the protocol conforming types.
   lang_opts.AllowModuleWithCompilerErrors = true;
   lang_opts.EnableTargetOSChecking = false;
+
+  // Bypass deserialization safety to allow deserializing internal details from
+  // swiftmodule files.
+  lang_opts.EnableDeserializationSafety = false;
 }
 
 SwiftASTContext::~SwiftASTContext() {
