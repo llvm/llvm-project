@@ -34,8 +34,8 @@ template <> struct SpecialLongDouble<long double> {
 #endif // SPECIAL_X86_LONG_DOUBLE
 
 template <typename T>
-static inline void normalize(int &exponent,
-                             typename FPBits<T>::UIntType &mantissa) {
+LIBC_INLINE void normalize(int &exponent,
+                           typename FPBits<T>::UIntType &mantissa) {
   const int shift = unsafe_clz(mantissa) -
                     (8 * sizeof(mantissa) - 1 - MantissaWidth<T>::VALUE);
   exponent -= shift;
@@ -64,7 +64,7 @@ inline void normalize<long double>(int &exponent, UInt128 &mantissa) {
 // Correctly rounded IEEE 754 SQRT for all rounding modes.
 // Shift-and-add algorithm.
 template <typename T>
-static inline cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
 
   if constexpr (internal::SpecialLongDouble<T>::VALUE) {
     // Special 80-bit long double.
