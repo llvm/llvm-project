@@ -29,6 +29,7 @@
 #include <__memory/destruct_n.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/disjunction.h>
 #include <__type_traits/is_arithmetic.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -40,52 +41,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-// Wraps an algorithm policy tag and a comparator in a single struct, used to pass the policy tag around without
-// changing the number of template arguments (to keep the ABI stable). This is only used for the "range" policy tag.
-//
-// To create an object of this type, use `_WrapAlgPolicy<T, C>::type` -- see the specialization below for the rationale.
-template <class _PolicyT, class _CompT, class = void>
-struct _WrapAlgPolicy {
-  using type = _WrapAlgPolicy;
-
-  using _AlgPolicy = _PolicyT;
-  using _Comp = _CompT;
-  _Comp& __comp;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-  _WrapAlgPolicy(_Comp& __c) : __comp(__c) {}
-};
-
-// Specialization for the "classic" policy tag that avoids creating a struct and simply defines an alias for the
-// comparator. When unwrapping, a pristine comparator is always considered to have the "classic" tag attached. Passing
-// the pristine comparator where possible allows using template instantiations from the dylib.
-template <class _PolicyT, class _CompT>
-struct _WrapAlgPolicy<_PolicyT, _CompT, __enable_if_t<std::is_same<_PolicyT, _ClassicAlgPolicy>::value> > {
-  using type = _CompT;
-};
-
-// Unwraps a pristine functor (e.g. `std::less`) as if it were wrapped using `_WrapAlgPolicy`. The policy tag is always
-// set to "classic".
-template <class _CompT>
-struct _UnwrapAlgPolicy {
-  using _AlgPolicy = _ClassicAlgPolicy;
-  using _Comp = _CompT;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static
-  _Comp __get_comp(_Comp __comp) { return __comp; }
-};
-
-// Unwraps a `_WrapAlgPolicy` struct.
-template <class... _Ts>
-struct _UnwrapAlgPolicy<_WrapAlgPolicy<_Ts...> > {
-  using _Wrapped = _WrapAlgPolicy<_Ts...>;
-  using _AlgPolicy = typename _Wrapped::_AlgPolicy;
-  using _Comp = typename _Wrapped::_Comp;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static
-  _Comp __get_comp(_Wrapped& __w) { return __w.__comp; }
-};
 
 // stable, 2-3 compares, 0-2 swaps
 
@@ -151,27 +106,22 @@ unsigned __sort4(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator 
 
 // stable, 4-10 compares, 0-9 swaps
 
-template <class _WrappedComp, class _ForwardIterator>
-_LIBCPP_HIDDEN unsigned __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
-                                _ForwardIterator __x4, _ForwardIterator __x5, _WrappedComp __wrapped_comp) {
-  using _Unwrap = _UnwrapAlgPolicy<_WrappedComp>;
-  using _AlgPolicy = typename _Unwrap::_AlgPolicy;
+template <class _AlgPolicy, class _Comp, class _ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI unsigned __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
+                                       _ForwardIterator __x4, _ForwardIterator __x5, _Comp __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
 
-  using _Compare = typename _Unwrap::_Comp;
-  _Compare __c = _Unwrap::__get_comp(__wrapped_comp);
-
-  unsigned __r = std::__sort4<_AlgPolicy, _Compare>(__x1, __x2, __x3, __x4, __c);
-  if (__c(*__x5, *__x4)) {
+  unsigned __r = std::__sort4<_AlgPolicy, _Comp>(__x1, __x2, __x3, __x4, __comp);
+  if (__comp(*__x5, *__x4)) {
     _Ops::iter_swap(__x4, __x5);
     ++__r;
-    if (__c(*__x4, *__x3)) {
+    if (__comp(*__x4, *__x3)) {
       _Ops::iter_swap(__x3, __x4);
       ++__r;
-      if (__c(*__x3, *__x2)) {
+      if (__comp(*__x3, *__x2)) {
         _Ops::iter_swap(__x2, __x3);
         ++__r;
-        if (__c(*__x2, *__x1)) {
+        if (__comp(*__x2, *__x1)) {
           _Ops::iter_swap(__x1, __x2);
           ++__r;
         }
@@ -179,16 +129,6 @@ _LIBCPP_HIDDEN unsigned __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _F
     }
   }
   return __r;
-}
-
-template <class _AlgPolicy, class _Compare, class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI unsigned __sort5_wrap_policy(
-    _ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3, _ForwardIterator __x4, _ForwardIterator __x5,
-    _Compare __c) {
-  using _WrappedComp = typename _WrapAlgPolicy<_AlgPolicy, _Compare>::type;
-  _WrappedComp __wrapped_comp(__c);
-  return std::__sort5<_WrappedComp, _ForwardIterator>(
-      std::move(__x1), std::move(__x2), std::move(__x3), std::move(__x4), std::move(__x5), __wrapped_comp);
 }
 
 // The comparator being simple is a prerequisite for using the branchless optimization.
@@ -299,7 +239,8 @@ template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
 __sort5_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
                          _RandomAccessIterator __x4, _RandomAccessIterator __x5, _Compare __c) {
-  std::__sort5_wrap_policy<_AlgPolicy, _Compare>(__x1, __x2, __x3, __x4, __x5, __c);
+  std::__sort5<_AlgPolicy, _Compare, _RandomAccessIterator>(
+      std::move(__x1), std::move(__x2), std::move(__x3), std::move(__x4), std::move(__x5), __c);
 }
 
 // Assumes size > 0
@@ -370,15 +311,10 @@ __insertion_sort_unguarded(_RandomAccessIterator __first, _RandomAccessIterator 
   }
 }
 
-template <class _WrappedComp, class _RandomAccessIterator>
-_LIBCPP_HIDDEN bool __insertion_sort_incomplete(
-    _RandomAccessIterator __first, _RandomAccessIterator __last, _WrappedComp __wrapped_comp) {
-  using _Unwrap = _UnwrapAlgPolicy<_WrappedComp>;
-  using _AlgPolicy = typename _Unwrap::_AlgPolicy;
+template <class _AlgPolicy, class _Comp, class _RandomAccessIterator>
+_LIBCPP_HIDE_FROM_ABI bool __insertion_sort_incomplete(
+    _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
-
-  using _Compare = typename _Unwrap::_Comp;
-  _Compare __comp = _Unwrap::__get_comp(__wrapped_comp);
 
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   switch (__last - __first) {
@@ -390,21 +326,21 @@ _LIBCPP_HIDDEN bool __insertion_sort_incomplete(
       _Ops::iter_swap(__first, __last);
     return true;
   case 3:
-    std::__sort3_maybe_branchless<_AlgPolicy, _Compare>(__first, __first + difference_type(1), --__last, __comp);
+    std::__sort3_maybe_branchless<_AlgPolicy, _Comp>(__first, __first + difference_type(1), --__last, __comp);
     return true;
   case 4:
-    std::__sort4_maybe_branchless<_AlgPolicy, _Compare>(
+    std::__sort4_maybe_branchless<_AlgPolicy, _Comp>(
         __first, __first + difference_type(1), __first + difference_type(2), --__last, __comp);
     return true;
   case 5:
-    std::__sort5_maybe_branchless<_AlgPolicy, _Compare>(
+    std::__sort5_maybe_branchless<_AlgPolicy, _Comp>(
         __first, __first + difference_type(1), __first + difference_type(2), __first + difference_type(3),
         --__last, __comp);
     return true;
   }
   typedef typename iterator_traits<_RandomAccessIterator>::value_type value_type;
   _RandomAccessIterator __j = __first + difference_type(2);
-  std::__sort3_maybe_branchless<_AlgPolicy, _Compare>(__first, __first + difference_type(1), __j, __comp);
+  std::__sort3_maybe_branchless<_AlgPolicy, _Comp>(__first, __first + difference_type(1), __j, __comp);
   const unsigned __limit = 8;
   unsigned __count = 0;
   for (_RandomAccessIterator __i = __j + difference_type(1); __i != __last; ++__i) {
@@ -862,10 +798,8 @@ void __introsort(_RandomAccessIterator __first,
     // [__first, __i) < *__i and *__i <= [__i+1, __last)
     // If we were given a perfect partition, see if insertion sort is quick...
     if (__ret.second) {
-      using _WrappedComp = typename _WrapAlgPolicy<_AlgPolicy, _Compare>::type;
-      _WrappedComp __wrapped_comp(__comp);
-      bool __fs = std::__insertion_sort_incomplete<_WrappedComp>(__first, __i, __wrapped_comp);
-      if (std::__insertion_sort_incomplete<_WrappedComp>(__i + difference_type(1), __last, __wrapped_comp)) {
+      bool __fs = std::__insertion_sort_incomplete<_AlgPolicy, _Compare>(__first, __i, __comp);
+      if (std::__insertion_sort_incomplete<_AlgPolicy, _Compare>(__i + difference_type(1), __last, __comp)) {
         if (__fs)
           return;
         __last = __i;
@@ -904,30 +838,8 @@ inline _LIBCPP_HIDE_FROM_ABI _Number __log2i(_Number __n) {
   return __log2;
 }
 
-template <class _WrappedComp, class _RandomAccessIterator>
-_LIBCPP_HIDDEN void __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _WrappedComp __wrapped_comp) {
-  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
-  difference_type __depth_limit = 2 * std::__log2i(__last - __first);
-
-  using _Unwrap = _UnwrapAlgPolicy<_WrappedComp>;
-  using _AlgPolicy = typename _Unwrap::_AlgPolicy;
-  using _Compare = typename _Unwrap::_Comp;
-  _Compare __comp = _Unwrap::__get_comp(__wrapped_comp);
-  // Only use bitset partitioning for arithmetic types.  We should also check
-  // that the default comparator is in use so that we are sure that there are no
-  // branches in the comparator.
-  std::__introsort<_AlgPolicy,
-                   _Compare,
-                   _RandomAccessIterator,
-                   __use_branchless_sort<_Compare, _RandomAccessIterator>::value>(
-      __first, __last, __comp, __depth_limit);
-}
-
-template <class _Compare, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY void __sort(_Tp** __first, _Tp** __last, __less<_Tp*>&) {
-  __less<uintptr_t> __comp;
-  std::__sort<__less<uintptr_t>&, uintptr_t*>((uintptr_t*)__first, (uintptr_t*)__last, __comp);
-}
+template <class _Comp, class _RandomAccessIterator>
+void __sort(_RandomAccessIterator, _RandomAccessIterator, _Comp);
 
 extern template _LIBCPP_FUNC_VIS void __sort<__less<char>&, char*>(char*, char*, __less<char>&);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -948,19 +860,82 @@ extern template _LIBCPP_FUNC_VIS void __sort<__less<double>&, double*>(double*, 
 extern template _LIBCPP_FUNC_VIS void __sort<__less<long double>&, long double*>(long double*, long double*, __less<long double>&);
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Comp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+__sort_dispatch(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  difference_type __depth_limit = 2 * std::__log2i(__last - __first);
+
+  // Only use bitset partitioning for arithmetic types.  We should also check
+  // that the default comparator is in use so that we are sure that there are no
+  // branches in the comparator.
+  std::__introsort<_AlgPolicy,
+                   _Comp&,
+                   _RandomAccessIterator,
+                   __use_branchless_sort<_Comp, _RandomAccessIterator>::value>(
+      __first, __last, __comp, __depth_limit);
+}
+
+template <class _Type, class... _Options>
+using __is_any_of = _Or<is_same<_Type, _Options>...>;
+
+template <class _Type>
+using __sort_is_specialized_in_library = __is_any_of<
+    _Type,
+    char,
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+    wchar_t,
+#endif
+    signed char,
+    unsigned char,
+    short,
+    unsigned short,
+    int,
+    unsigned int,
+    long,
+    unsigned long,
+    long long,
+    unsigned long long,
+    float,
+    double,
+    long double>;
+
+template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI void __sort_dispatch(_Type* __first, _Type* __last, __less<_Type>& __comp) {
+  std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
+}
+
+template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI void __sort_dispatch(_Type* __first, _Type* __last, less<_Type>&) {
+  __less<_Type> __comp;
+  std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
+}
+
+#if _LIBCPP_STD_VER >= 14
+template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI void __sort_dispatch(_Type* __first, _Type* __last, less<>&) {
+  __less<_Type> __comp;
+  std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
+}
+#endif
+
+#if _LIBCPP_STD_VER >= 20
+template <class _AlgPolicy, class _Type, __enable_if_t<__sort_is_specialized_in_library<_Type>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI void __sort_dispatch(_Type* __first, _Type* __last, ranges::less&) {
+  __less<_Type> __comp;
+  std::__sort<__less<_Type>&, _Type*>(__first, __last, __comp);
+}
+#endif
+
+template <class _AlgPolicy, class _RandomAccessIterator, class _Comp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 void __sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
   std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 
-  using _Comp_ref = __comp_ref_type<_Comp>;
   if (__libcpp_is_constant_evaluated()) {
-    std::__partial_sort<_AlgPolicy>(__first, __last, __last, __comp);
-
+    std::__partial_sort<_AlgPolicy>(
+        std::__unwrap_iter(__first), std::__unwrap_iter(__last), std::__unwrap_iter(__last), __comp);
   } else {
-    using _WrappedComp = typename _WrapAlgPolicy<_AlgPolicy, _Comp_ref>::type;
-    _Comp_ref __comp_ref(__comp);
-    _WrappedComp __wrapped_comp(__comp_ref);
-    std::__sort<_WrappedComp>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __wrapped_comp);
+    std::__sort_dispatch<_AlgPolicy>(std::__unwrap_iter(__first), std::__unwrap_iter(__last), __comp);
   }
 }
 
