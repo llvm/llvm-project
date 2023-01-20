@@ -1126,7 +1126,7 @@ struct WarpOpInsertElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
     Value newResult =
         rewriter
             .create<scf::IfOp>(
-                loc, distrType, isInsertingLane,
+                loc, isInsertingLane,
                 /*thenBuilder=*/
                 [&](OpBuilder &builder, Location loc) {
                   Value newInsert = builder.create<vector::InsertElementOp>(
@@ -1257,7 +1257,7 @@ struct WarpOpInsert : public OpRewritePattern<WarpExecuteOnLane0Op> {
         builder.create<scf::YieldOp>(loc, distributedDest);
       };
       newResult = rewriter
-                      .create<scf::IfOp>(loc, distrDestType, isInsertingLane,
+                      .create<scf::IfOp>(loc, isInsertingLane,
                                          /*thenBuilder=*/insertingBuilder,
                                          /*elseBuilder=*/nonInsertingBuilder)
                       .getResult(0);

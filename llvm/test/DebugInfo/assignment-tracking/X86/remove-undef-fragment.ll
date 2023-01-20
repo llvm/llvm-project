@@ -1,5 +1,4 @@
 ; RUN: llc %s -o - -stop-after=finalize-isel \
-; RUN:    -experimental-assignment-tracking  \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
 ;; In the IR below, for variable n, we get dbg intrinsics that describe this:
@@ -86,7 +85,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3, !4, !5, !6}
+!llvm.module.flags = !{!2, !3, !4, !5, !6, !1000}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 14.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "reduce.cpp", directory: "/")
@@ -105,3 +104,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !14 = distinct !DIAssignID()
 !15 = !DILocation(line: 0, scope: !7)
 !16 = distinct !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

@@ -607,6 +607,21 @@ struct ScalarEnumerationTraits<FormatStyle::SortJavaStaticImportOptions> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::SortUsingDeclarationsOptions> {
+  static void enumeration(IO &IO,
+                          FormatStyle::SortUsingDeclarationsOptions &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SUD_Never);
+    IO.enumCase(Value, "Lexicographic", FormatStyle::SUD_Lexicographic);
+    IO.enumCase(Value, "LexicographicNumeric",
+                FormatStyle::SUD_LexicographicNumeric);
+
+    // For backward compatibility.
+    IO.enumCase(Value, "false", FormatStyle::SUD_Never);
+    IO.enumCase(Value, "true", FormatStyle::SUD_LexicographicNumeric);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::SpaceAroundPointerQualifiersStyle> {
   static void
   enumeration(IO &IO, FormatStyle::SpaceAroundPointerQualifiersStyle &Value) {
@@ -1404,7 +1419,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SortIncludes = FormatStyle::SI_CaseSensitive;
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
-  LLVMStyle.SortUsingDeclarations = true;
+  LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
   LLVMStyle.SpaceAfterLogicalNot = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;
@@ -1772,7 +1787,7 @@ FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
   NoStyle.DisableFormat = true;
   NoStyle.SortIncludes = FormatStyle::SI_Never;
-  NoStyle.SortUsingDeclarations = false;
+  NoStyle.SortUsingDeclarations = FormatStyle::SUD_Never;
   return NoStyle;
 }
 
@@ -3480,7 +3495,7 @@ reformat(const FormatStyle &Style, StringRef Code,
       });
     }
 
-    if (Style.SortUsingDeclarations) {
+    if (Style.SortUsingDeclarations != FormatStyle::SUD_Never) {
       Passes.emplace_back([&](const Environment &Env) {
         return UsingDeclarationsSorter(Env, Expanded).process();
       });

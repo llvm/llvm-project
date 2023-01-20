@@ -1,4 +1,4 @@
-; RUN: opt -passes=simplifycfg %s -S -experimental-assignment-tracking  \
+; RUN: opt -passes=simplifycfg %s -S  \
 ; RUN: | FileCheck %s
 
 ;; Ensure that we correctly update the value component of dbg.assign intrinsics
@@ -55,7 +55,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !1000}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -84,3 +84,4 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
 !27 = !DILocation(line: 6, column: 1, scope: !11)
 !36 = distinct !DIAssignID()
 !37 = distinct !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

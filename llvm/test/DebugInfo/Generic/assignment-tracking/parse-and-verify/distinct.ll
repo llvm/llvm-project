@@ -1,4 +1,4 @@
-; RUN: not opt -S %s -experimental-assignment-tracking 2>&1 \
+; RUN: not opt -S %s 2>&1 \
 ; RUN: | FileCheck %s
 
 ;; Check that badly formed assignment tracking metadata is caught either
@@ -7,3 +7,4 @@
 ; CHECK: error: missing 'distinct', required for !DIAssignID()
 
 !1 = !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

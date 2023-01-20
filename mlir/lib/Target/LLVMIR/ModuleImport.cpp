@@ -1423,9 +1423,63 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   funcOp.setMemoryAttr(memAttr);
 }
 
+static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
+  MLIRContext *context = funcOp.getContext();
+  SmallVector<Attribute> passthroughs;
+  llvm::AttributeSet funcAttrs = func->getAttributes().getAttributes(
+      llvm::AttributeList::AttrIndex::FunctionIndex);
+  for (llvm::Attribute attr : funcAttrs) {
+    // Skip the memory attribute since the LLVMFuncOp has an explicit memory
+    // attribute.
+    if (attr.hasAttribute(llvm::Attribute::Memory))
+      continue;
+
+    // Skip invalid type attributes.
+    if (attr.isTypeAttribute()) {
+      emitWarning(funcOp.getLoc(),
+                  "type attributes on a function are invalid, skipping it");
+      continue;
+    }
+
+    StringRef attrName;
+    if (attr.isStringAttribute())
+      attrName = attr.getKindAsString();
+    else
+      attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
+    auto keyAttr = StringAttr::get(context, attrName);
+
+    if (attr.isStringAttribute()) {
+      StringRef val = attr.getValueAsString();
+      if (val.empty()) {
+        passthroughs.push_back(keyAttr);
+        continue;
+      }
+      passthroughs.push_back(
+          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
+      continue;
+    }
+    if (attr.isIntAttribute()) {
+      auto val = std::to_string(attr.getValueAsInt());
+      passthroughs.push_back(
+          ArrayAttr::get(context, {keyAttr, StringAttr::get(context, val)}));
+      continue;
+    }
+    if (attr.isEnumAttribute()) {
+      passthroughs.push_back(keyAttr);
+      continue;
+    }
+
+    llvm_unreachable("unexpected attribute kind");
+  }
+
+  if (!passthroughs.empty())
+    funcOp.setPassthroughAttr(ArrayAttr::get(context, passthroughs));
+}
+
 void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
   processMemoryEffects(func, funcOp);
+  processPassthroughAttrs(func, funcOp);
 }
 
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {

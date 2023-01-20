@@ -155,6 +155,7 @@ name:            _Z3fooii
 alignment:       16
 tracksRegLiveness: true
 tracksDebugUserValues: true
+debugInstrRef: true
 registers:       []
 liveins:
   - { reg: '$edi', virtual-reg: '' }

@@ -2916,6 +2916,11 @@ void llvm::copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
 void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
                              MDNode *N, LoadInst &NewLI) {
   auto *NewTy = NewLI.getType();
+  // Simply copy the metadata if the type did not change.
+  if (NewTy == OldLI.getType()) {
+    NewLI.setMetadata(LLVMContext::MD_range, N);
+    return;
+  }
 
   // Give up unless it is converted to a pointer where there is a single very
   // valuable mapping we can do reliably.

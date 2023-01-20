@@ -676,7 +676,7 @@ public:
 
   /// Sets the umbrella header of the given module to the given
   /// header.
-  void setUmbrellaHeader(Module *Mod, const FileEntry *UmbrellaHeader,
+  void setUmbrellaHeader(Module *Mod, FileEntryRef UmbrellaHeader,
                          const Twine &NameAsWritten,
                          const Twine &PathRelativeToRootModuleDirectory);
 

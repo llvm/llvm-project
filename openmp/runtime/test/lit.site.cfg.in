@@ -19,6 +19,7 @@ config.has_libm = @LIBOMP_HAVE_LIBM@
 config.has_libatomic = @LIBOMP_HAVE_LIBATOMIC@
 config.is_standalone_build = @OPENMP_STANDALONE_BUILD@
 config.has_omit_frame_pointer_flag = @OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS@
+config.target_arch = "@LIBOMP_ARCH@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@LIBOMP_BASE_DIR@/test/lit.cfg")

@@ -291,15 +291,20 @@ std::optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
 /// intrinsics by treating stores to the dbg.declare'd address as assignments
 /// to the variable. Not all kinds of variables are supported yet; those will
 /// be left with their dbg.declare intrinsics.
+/// The pass sets the debug-info-assignment-tracking module flag to true to
+/// indicate assignment tracking has been enabled.
 class AssignmentTrackingPass : public PassInfoMixin<AssignmentTrackingPass> {
-public:
+  /// Note: this method does not set the debug-info-assignment-tracking module
+  /// flag.
   void runOnFunction(Function &F);
+
+public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-/// Return true if assignment tracking is enabled.
-bool getEnableAssignmentTracking();
+/// Return true if assignment tracking is enabled for module \p M.
+bool isAssignmentTrackingEnabled(const Module &M);
 } // end namespace llvm
 
 #endif // LLVM_IR_DEBUGINFO_H

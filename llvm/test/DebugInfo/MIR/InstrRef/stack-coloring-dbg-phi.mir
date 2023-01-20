@@ -1,29 +1,17 @@
-# RUN: sed 's_;AAAAAA __' < %s \
-# RUN: | llc -x mir -o - -start-before=phi-node-elimination \
+# RUN: llc %s -o - -start-before=phi-node-elimination \
 # RUN:     -stop-after=stack-slot-coloring -simplify-mir \
 # RUN:     -experimental-debug-variable-locations=true \
 # RUN: | FileCheck %s --check-prefix=DBGPHIS
-# RUN: sed 's_;BBBBBB __' < %s \
-# RUN: | llc -x mir -o - -start-before=phi-node-elimination \
-# RUN:     -stop-after=stack-slot-coloring -simplify-mir \
-# RUN:     -experimental-debug-variable-locations=false \
-# RUN: | FileCheck %s --check-prefix=DBGVALS
 #
 # Test that DBG_PHI instructions do not add "weight" to stack slots and cause
 # their coalescing / coloring to change. This is hard to trigger, because it's
 # closely coupled with the register allocator. Thus, the test is very
 # complicated and hard to reduce.
 #
-# In block 13 there are two implementations of variable location tracking, but
-# both are commented out. Use sed in the command lines above to un-comment
-# each one and test what it does: in each case, the PHI should occur in
-# %stack.4 rather than anywhere else.
-#
 # Future register allocator changes might change the slot; in that case, just
 # update the slot number, so long as it's the same between each RUN.
 #
 # DBGPHIS: DBG_PHI %stack.4,
-# DBGVALS: DBG_VALUE %stack.4, 
 
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -55,6 +43,7 @@
 name:            amd64_push_arguments
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }
@@ -216,11 +205,9 @@ body:             |
   
     %2:gr32 = PHI undef %35:gr32, %bb.11, %14, %bb.21
     %3:gr64 = PHI %36, %bb.11, %13, %bb.21
-    ;AAAAAA %4:gr32 = PHI %0, %bb.11, %10, %bb.21, debug-instr-number 1
-    ;BBBBBB %4:gr32 = PHI %0, %bb.11, %10, %bb.21
+    %4:gr32 = PHI %0, %bb.11, %10, %bb.21, debug-instr-number 1
     %5:gr32 = PHI undef %35:gr32, %bb.11, %9, %bb.21
-    ;AAAAAA DBG_INSTR_REF !10, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !9
-    ;BBBBBB DBG_VALUE %4, 0, !10, !DIExpression(), debug-location !9
+    DBG_INSTR_REF !10, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !9
     %39:gr8 = COPY %27.sub_8bit
     TEST8rr killed %39, %39, implicit-def $eflags, debug-location !9
     JCC_1 %bb.18, 5, implicit killed $eflags, debug-location !9

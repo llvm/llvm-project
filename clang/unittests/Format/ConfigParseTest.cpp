@@ -174,7 +174,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(ReflowComments);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
   CHECK_PARSE_BOOL(RemoveSemicolon);
-  CHECK_PARSE_BOOL(SortUsingDeclarations);
   CHECK_PARSE_BOOL(SpacesInParentheses);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
   CHECK_PARSE_BOOL(SpacesInConditionalStatement);
@@ -713,6 +712,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::SJSIO_After);
   CHECK_PARSE("SortJavaStaticImport: Before", SortJavaStaticImport,
               FormatStyle::SJSIO_Before);
+
+  Style.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
+  CHECK_PARSE("SortUsingDeclarations: Never", SortUsingDeclarations,
+              FormatStyle::SUD_Never);
+  CHECK_PARSE("SortUsingDeclarations: Lexicographic", SortUsingDeclarations,
+              FormatStyle::SUD_Lexicographic);
+  CHECK_PARSE("SortUsingDeclarations: LexicographicNumeric",
+              SortUsingDeclarations, FormatStyle::SUD_LexicographicNumeric);
+  // For backward compatibility:
+  CHECK_PARSE("SortUsingDeclarations: false", SortUsingDeclarations,
+              FormatStyle::SUD_Never);
+  CHECK_PARSE("SortUsingDeclarations: true", SortUsingDeclarations,
+              FormatStyle::SUD_LexicographicNumeric);
 
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.

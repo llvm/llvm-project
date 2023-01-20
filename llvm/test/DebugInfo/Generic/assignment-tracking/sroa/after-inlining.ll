@@ -1,4 +1,4 @@
-; RUN: opt %s -S -passes=sroa -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt %s -S -passes=sroa -o - | FileCheck %s
 
 ;; Check that SROA preserves the InlinedAt status of new dbg.assign intriniscs
 ;; it inserts.
@@ -59,7 +59,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!11, !12, !13}
+!llvm.module.flags = !{!11, !12, !13, !1000}
 !llvm.ident = !{!14}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -142,3 +142,4 @@ entry:
 !81 = !DILocation(line: 14, column: 5, scope: !40, inlinedAt: !79)
 !82 = !DILocation(line: 20, column: 1, scope: !60, inlinedAt: !76)
 !83 = !DILocation(line: 21, column: 17, scope: !73)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

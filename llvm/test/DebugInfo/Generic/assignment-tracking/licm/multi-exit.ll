@@ -1,4 +1,4 @@
-; RUN: opt %s -S -passes=licm -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt %s -S -passes=licm -o - | FileCheck %s
 
 ;; $ cat test.c
 ;; int b, c, d;
@@ -112,7 +112,7 @@ declare !dbg !64 dso_local void @e(...) local_unnamed_addr #4
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!11, !12, !13}
+!llvm.module.flags = !{!11, !12, !13, !1000}
 !llvm.ident = !{!14}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -178,3 +178,4 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 !64 = !DISubprogram(name: "e", scope: !3, file: !3, line: 2, type: !65, spFlags: DISPFlagOptimized, retainedNodes: !4)
 !65 = !DISubroutineType(types: !66)
 !66 = !{null, null}
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
