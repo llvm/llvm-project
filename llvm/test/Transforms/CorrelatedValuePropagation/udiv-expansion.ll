@@ -9,7 +9,6 @@ define i8 @constant.divisor.v3(i8 %x) {
 ; CHECK-LABEL: @constant.divisor.v3(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 3
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
 ; CHECK-NEXT:    ret i8 0
 ;
   %cmp.x.upper = icmp ult i8 %x, 3
@@ -21,7 +20,8 @@ define i8 @constant.divisor.v4(i8 %x) {
 ; CHECK-LABEL: @constant.divisor.v4(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %cmp.x.upper = icmp ult i8 %x, 4
@@ -32,7 +32,8 @@ define i8 @constant.divisor.v4(i8 %x) {
 define i8 @constant.divisor.x.range.v4(ptr %x.ptr) {
 ; CHECK-LABEL: @constant.divisor.x.range.v4(
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[X_PTR:%.*]], align 1, !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %x = load i8, ptr %x.ptr, !range !{ i8 0, i8 4 }
@@ -42,7 +43,8 @@ define i8 @constant.divisor.x.range.v4(ptr %x.ptr) {
 define i8 @constant.divisor.x.mask.v4(i8 %x) {
 ; CHECK-LABEL: @constant.divisor.x.mask.v4(
 ; CHECK-NEXT:    [[X_MASKED:%.*]] = and i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X_MASKED]], 3
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X_MASKED]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %x.masked = and i8 %x, 3
@@ -53,7 +55,8 @@ define i8 @constant.divisor.v5(i8 %x) {
 ; CHECK-LABEL: @constant.divisor.v5(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 5
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %cmp.x.upper = icmp ult i8 %x, 5
@@ -65,7 +68,8 @@ define i8 @constant.divisor.v6(i8 %x) {
 ; CHECK-LABEL: @constant.divisor.v6(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 6
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 3
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], 3
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %cmp.x.upper = icmp ult i8 %x, 6
@@ -96,7 +100,6 @@ define i8 @variable.v3(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_LOWER]])
 ; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 0
 ;
   %cmp.x = icmp ult i8 %x, 3
@@ -116,7 +119,8 @@ define i8 @variable.v4(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_LOWER]])
 ; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %cmp.x = icmp ult i8 %x, 4
@@ -132,7 +136,8 @@ define i8 @variable.v4.range(ptr %x.ptr, ptr %y.ptr) {
 ; CHECK-LABEL: @variable.v4.range(
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[X_PTR:%.*]], align 1, !range [[RNG0]]
 ; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[Y_PTR:%.*]], align 1, !range [[RNG1:![0-9]+]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %x = load i8, ptr %x.ptr, !range !{ i8 0, i8 4 }
@@ -148,7 +153,8 @@ define i8 @variable.v5(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_LOWER]])
 ; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %cmp.x = icmp ult i8 %x, 5
@@ -168,7 +174,8 @@ define i8 @variable.v6(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_LOWER]])
 ; CHECK-NEXT:    [[CMP_Y_UPPER:%.*]] = icmp ule i8 [[Y]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_Y_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %cmp.x = icmp ult i8 %x, 6
@@ -207,7 +214,6 @@ define i8 @large.divisor.v0(i8 %x) {
 ; CHECK-LABEL: @large.divisor.v0(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], 127
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 127
 ; CHECK-NEXT:    ret i8 0
 ;
   %cmp.x.upper = icmp ult i8 %x, 127
@@ -219,7 +225,8 @@ define i8 @large.divisor.v1(i8 %x) {
 ; CHECK-LABEL: @large.divisor.v1(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], -128
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 127
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], 127
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %cmp.x.upper = icmp ult i8 %x, 128
@@ -230,7 +237,8 @@ define i8 @large.divisor.v1(i8 %x) {
 define i8 @large.divisor.v1.range(ptr %x.ptr) {
 ; CHECK-LABEL: @large.divisor.v1.range(
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[X_PTR:%.*]], align 1, !range [[RNG2:![0-9]+]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], 127
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], 127
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %x = load i8, ptr %x.ptr, !range !{ i8 0, i8 128 }
@@ -250,7 +258,6 @@ define i8 @large.divisor.with.overflow.v0(i8 %x) {
 ; CHECK-LABEL: @large.divisor.with.overflow.v0(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], -128
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], -128
 ; CHECK-NEXT:    ret i8 0
 ;
   %cmp.x.upper = icmp ult i8 %x, 128
@@ -262,7 +269,8 @@ define i8 @large.divisor.with.overflow.v1(i8 %x) {
 ; CHECK-LABEL: @large.divisor.with.overflow.v1(
 ; CHECK-NEXT:    [[CMP_X_UPPER:%.*]] = icmp ult i8 [[X:%.*]], -127
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_X_UPPER]])
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], -128
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], -128
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %cmp.x.upper = icmp ult i8 %x, 129
@@ -273,7 +281,8 @@ define i8 @large.divisor.with.overflow.v1(i8 %x) {
 define i8 @large.divisor.with.overflow.v1.range(ptr %x.ptr) {
 ; CHECK-LABEL: @large.divisor.with.overflow.v1.range(
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[X_PTR:%.*]], align 1, !range [[RNG3:![0-9]+]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X]], -128
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X]], -128
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %x = load i8, ptr %x.ptr, !range !{ i8 0, i8 129 }
@@ -282,7 +291,8 @@ define i8 @large.divisor.with.overflow.v1.range(ptr %x.ptr) {
 }
 define i8 @large.divisor.with.overflow.v2.unbound.x(i8 %x) {
 ; CHECK-LABEL: @large.divisor.with.overflow.v2.unbound.x(
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[DIV_CMP:%.*]] = icmp uge i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[DIV_CMP]] to i8
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %div = udiv i8 %x, 128

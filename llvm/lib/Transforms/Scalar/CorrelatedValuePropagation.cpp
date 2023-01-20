@@ -94,7 +94,8 @@ STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
-STATISTIC(NumURemExpanded, "Number of bound urem's expanded");
+STATISTIC(NumUDivURemsNarrowedExpanded,
+          "Number of bound udiv's/urem's expanded");
 
 namespace {
 
@@ -752,19 +753,23 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, const ConstantRange &LCR,
   return true;
 }
 
-static bool processURem(BinaryOperator *Instr, const ConstantRange &XCR,
-                        const ConstantRange &YCR) {
-  assert(Instr->getOpcode() == Instruction::URem);
-  assert(!Instr->getType()->isVectorTy());
+static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
+                             const ConstantRange &YCR) {
+  Type *Ty = Instr->getType();
+  assert(Instr->getOpcode() == Instruction::UDiv ||
+         Instr->getOpcode() == Instruction::URem);
+  assert(!Ty->isVectorTy());
+  bool IsRem = Instr->getOpcode() == Instruction::URem;
 
   Value *X = Instr->getOperand(0);
   Value *Y = Instr->getOperand(1);
 
+  // X u/ Y -> 0  iff X u< Y
   // X u% Y -> X  iff X u< Y
   if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
-    Instr->replaceAllUsesWith(X);
+    Instr->replaceAllUsesWith(IsRem ? X : Constant::getNullValue(Ty));
     Instr->eraseFromParent();
-    ++NumURemExpanded;
+    ++NumUDivURemsNarrowedExpanded;
     return true;
   }
 
@@ -798,17 +803,24 @@ static bool processURem(BinaryOperator *Instr, const ConstantRange &XCR,
     return false;
 
   IRBuilder<> B(Instr);
-  // NOTE: this transformation introduces two uses of X,
-  //       but it may be undef so we must freeze it first.
-  Value *FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
-  auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
-  auto *Cmp =
-      B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
-  auto *ExpandedURem = B.CreateSelect(Cmp, FrozenX, AdjX);
-  ExpandedURem->takeName(Instr);
-  Instr->replaceAllUsesWith(ExpandedURem);
+  Value *ExpandedOp;
+  if (IsRem) {
+    // NOTE: this transformation introduces two uses of X,
+    //       but it may be undef so we must freeze it first.
+    Value *FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
+    auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
+    auto *Cmp =
+        B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
+    ExpandedOp = B.CreateSelect(Cmp, FrozenX, AdjX);
+  } else {
+    auto *Cmp =
+        B.CreateICmp(ICmpInst::ICMP_UGE, X, Y, Instr->getName() + ".cmp");
+    ExpandedOp = B.CreateZExt(Cmp, Ty, Instr->getName() + ".udiv");
+  }
+  ExpandedOp->takeName(Instr);
+  Instr->replaceAllUsesWith(ExpandedOp);
   Instr->eraseFromParent();
-  ++NumURemExpanded;
+  ++NumUDivURemsNarrowedExpanded;
   return true;
 }
 
@@ -860,7 +872,7 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
 
   ConstantRange XCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(0));
   ConstantRange YCR = LVI->getConstantRangeAtUse(Instr->getOperandUse(1));
-  if (Instr->getOpcode() == Instruction::URem && processURem(Instr, XCR, YCR))
+  if (expandUDivOrURem(Instr, XCR, YCR))
     return true;
 
   return narrowUDivOrURem(Instr, XCR, YCR);
