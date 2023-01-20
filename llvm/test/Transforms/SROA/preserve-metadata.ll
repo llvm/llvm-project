@@ -30,7 +30,7 @@ define i32 @propagate_range(i32 %v) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[V:%.*]], ptr [[A_SROA_1]], align 4
-; CHECK-NEXT:    [[A_SROA_1_0_A_SROA_1_4_LOAD:%.*]] = load volatile i32, ptr [[A_SROA_1]], align 4
+; CHECK-NEXT:    [[A_SROA_1_0_A_SROA_1_4_LOAD:%.*]] = load volatile i32, ptr [[A_SROA_1]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[A_SROA_1_0_A_SROA_1_4_LOAD]]
 ;
 entry:
