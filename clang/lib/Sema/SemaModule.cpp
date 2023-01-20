@@ -541,7 +541,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   // of the same top-level module. Until we do, make it an error rather than
   // silently ignoring the import.
   // FIXME: Should we warn on a redundant import of the current module?
-  if (Mod->getTopLevelModuleName() == getLangOpts().CurrentModule &&
+  if (Mod->isForBuilding(getLangOpts()) &&
       (getLangOpts().isCompilingModule() || !getLangOpts().ModulesTS)) {
     Diag(ImportLoc, getLangOpts().isCompilingModule()
                         ? diag::err_module_self_import
