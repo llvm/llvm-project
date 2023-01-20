@@ -2790,25 +2790,19 @@ private:
       LoadInst *NewLI = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), NewPtr,
                                               NewAI.getAlign(), LI.isVolatile(),
                                               LI.getName());
-      if (AATags)
-        NewLI->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
       if (NewLI->isAtomic())
         NewLI->setAlignment(LI.getAlign());
 
-      // Any !nonnull metadata or !range metadata on the old load is also valid
-      // on the new load. This is even true in some cases even when the loads
-      // are different types, for example by mapping !nonnull metadata to
-      // !range metadata by modeling the null pointer constant converted to the
-      // integer type.
-      // FIXME: Add support for range metadata here. Currently the utilities
-      // for this don't propagate range metadata in trivial cases from one
-      // integer load to another, don't handle non-addrspace-0 null pointers
-      // correctly, and don't have any support for mapping ranges as the
-      // integer type becomes winder or narrower.
-      if (MDNode *N = LI.getMetadata(LLVMContext::MD_nonnull))
-        copyNonnullMetadata(LI, N, *NewLI);
+      // Copy any metadata that is valid for the new load. This may require
+      // conversion to a different kind of metadata, e.g. !nonnull might change
+      // to !range or vice versa.
+      copyMetadataForLoad(*NewLI, LI);
+
+      // Do this after copyMetadataForLoad() to preserve the TBAA shift.
+      if (AATags)
+        NewLI->setAAMetadata(AATags.shift(NewBeginOffset - BeginOffset));
 
       // Try to preserve nonnull metadata
       V = NewLI;
