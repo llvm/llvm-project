@@ -42,13 +42,11 @@ namespace llvm {
 namespace bolt {
 
 std::optional<StringRef> getLTOCommonName(const StringRef Name) {
-  size_t LTOSuffixPos = Name.find(".lto_priv.");
-  if (LTOSuffixPos != StringRef::npos)
-    return Name.substr(0, LTOSuffixPos + 10);
-  if ((LTOSuffixPos = Name.find(".constprop.")) != StringRef::npos)
-    return Name.substr(0, LTOSuffixPos + 11);
-  if ((LTOSuffixPos = Name.find(".llvm.")) != StringRef::npos)
-    return Name.substr(0, LTOSuffixPos + 6);
+  for (StringRef Suffix : {".__uniq.", ".lto_priv.", ".constprop.", ".llvm."}) {
+    size_t LTOSuffixPos = Name.find(Suffix);
+    if (LTOSuffixPos != StringRef::npos)
+      return Name.substr(0, LTOSuffixPos + Suffix.size());
+  }
   return std::nullopt;
 }
 
