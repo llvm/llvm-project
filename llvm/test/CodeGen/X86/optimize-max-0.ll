@@ -171,9 +171,10 @@ define void @foo(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    jne LBB0_17
 ; CHECK-NEXT:  LBB0_18: ## %bb26
 ; CHECK-NEXT:    movl (%esp), %ecx ## 4-byte Reload
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi ## 4-byte Reload
+; CHECK-NEXT:    addl %ecx, %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    addl %ecx, %edx
-; CHECK-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %edx ## 4-byte Folded Reload
+; CHECK-NEXT:    addl %esi, %edx
 ; CHECK-NEXT:    jmp LBB0_23
 ; CHECK-NEXT:  LBB0_19: ## %bb29
 ; CHECK-NEXT:    testl %edx, %edx
@@ -605,9 +606,15 @@ define void @bar(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    jne LBB1_17
 ; CHECK-NEXT:  LBB1_18: ## %bb26
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax ## 4-byte Reload
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Folded Reload
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    addl %eax, %edx
+; CHECK-NEXT:    shrl %ecx
+; CHECK-NEXT:    subl $4, %esp
+; CHECK-NEXT:    pushl %ecx
+; CHECK-NEXT:    pushl $128
+; CHECK-NEXT:    pushl %edx
 ; CHECK-NEXT:    jmp LBB1_23
 ; CHECK-NEXT:  LBB1_19: ## %bb29
 ; CHECK-NEXT:    testl %ebp, %ebp
@@ -638,12 +645,12 @@ define void @bar(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax ## 4-byte Reload
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:  LBB1_23: ## %bb33
 ; CHECK-NEXT:    shrl %eax
 ; CHECK-NEXT:    subl $4, %esp
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    pushl $128
 ; CHECK-NEXT:    pushl %ecx
+; CHECK-NEXT:  LBB1_23: ## %bb33
 ; CHECK-NEXT:    calll _memset
 ; CHECK-NEXT:    addl $44, %esp
 ; CHECK-NEXT:  LBB1_25: ## %return

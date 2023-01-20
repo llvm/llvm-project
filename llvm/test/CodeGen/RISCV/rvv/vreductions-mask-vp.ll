@@ -378,8 +378,8 @@ define zeroext i1 @vpreduce_or_nxv128i1(i1 zeroext %s, <vscale x 128 x i1> %v, <
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vcpop.m a1, v11, v0.t
 ; CHECK-NEXT:    snez a1, a1
+; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    or a0, a3, a0
-; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret
   %r = call i1 @llvm.vp.reduce.or.nxv128i1(i1 %s, <vscale x 128 x i1> %v, <vscale x 128 x i1> %m, i32 %evl)
   ret i1 %r

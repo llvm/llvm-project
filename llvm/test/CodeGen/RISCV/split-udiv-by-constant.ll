@@ -21,11 +21,11 @@ define iXLen2 @test_udiv_3(iXLen2 %x) nounwind {
 ; RV32-NEXT:    addi a3, a3, -1366
 ; RV32-NEXT:    mul a3, a5, a3
 ; RV32-NEXT:    mulhu a6, a5, a4
+; RV32-NEXT:    add a3, a6, a3
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    mul a0, a1, a4
-; RV32-NEXT:    add a0, a3, a0
-; RV32-NEXT:    add a1, a6, a0
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, a3, a1
 ; RV32-NEXT:    mul a0, a5, a4
 ; RV32-NEXT:    ret
 ;
@@ -46,11 +46,11 @@ define iXLen2 @test_udiv_3(iXLen2 %x) nounwind {
 ; RV64-NEXT:    sub a4, a0, a3
 ; RV64-NEXT:    mul a5, a4, a6
 ; RV64-NEXT:    mulhu a6, a4, a2
+; RV64-NEXT:    add a5, a6, a5
 ; RV64-NEXT:    sltu a0, a0, a3
 ; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    mul a0, a1, a2
-; RV64-NEXT:    add a0, a5, a0
-; RV64-NEXT:    add a1, a6, a0
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    add a1, a5, a1
 ; RV64-NEXT:    mul a0, a4, a2
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 3
@@ -74,11 +74,11 @@ define iXLen2 @test_udiv_5(iXLen2 %x) nounwind {
 ; RV32-NEXT:    addi a3, a3, -820
 ; RV32-NEXT:    mul a3, a5, a3
 ; RV32-NEXT:    mulhu a6, a5, a4
+; RV32-NEXT:    add a3, a6, a3
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    mul a0, a1, a4
-; RV32-NEXT:    add a0, a3, a0
-; RV32-NEXT:    add a1, a6, a0
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, a3, a1
 ; RV32-NEXT:    mul a0, a5, a4
 ; RV32-NEXT:    ret
 ;
@@ -99,11 +99,11 @@ define iXLen2 @test_udiv_5(iXLen2 %x) nounwind {
 ; RV64-NEXT:    sub a4, a0, a3
 ; RV64-NEXT:    mul a5, a4, a6
 ; RV64-NEXT:    mulhu a6, a4, a2
+; RV64-NEXT:    add a5, a6, a5
 ; RV64-NEXT:    sltu a0, a0, a3
 ; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    mul a0, a1, a2
-; RV64-NEXT:    add a0, a5, a0
-; RV64-NEXT:    add a1, a6, a0
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    add a1, a5, a1
 ; RV64-NEXT:    mul a0, a4, a2
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 5
@@ -181,11 +181,11 @@ define iXLen2 @test_udiv_15(iXLen2 %x) nounwind {
 ; RV32-NEXT:    mul a5, a3, a5
 ; RV32-NEXT:    addi a4, a4, -273
 ; RV32-NEXT:    mulhu a6, a3, a4
+; RV32-NEXT:    add a5, a6, a5
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    mul a0, a1, a4
-; RV32-NEXT:    add a0, a5, a0
-; RV32-NEXT:    add a1, a6, a0
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, a5, a1
 ; RV32-NEXT:    mul a0, a3, a4
 ; RV32-NEXT:    ret
 ;
@@ -208,11 +208,11 @@ define iXLen2 @test_udiv_15(iXLen2 %x) nounwind {
 ; RV64-NEXT:    sub a3, a0, a2
 ; RV64-NEXT:    mul a4, a3, a4
 ; RV64-NEXT:    mulhu a6, a3, a5
+; RV64-NEXT:    add a4, a6, a4
 ; RV64-NEXT:    sltu a0, a0, a2
 ; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    mul a0, a1, a5
-; RV64-NEXT:    add a0, a4, a0
-; RV64-NEXT:    add a1, a6, a0
+; RV64-NEXT:    mul a1, a1, a5
+; RV64-NEXT:    add a1, a4, a1
 ; RV64-NEXT:    mul a0, a3, a5
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 15
@@ -236,11 +236,11 @@ define iXLen2 @test_udiv_17(iXLen2 %x) nounwind {
 ; RV32-NEXT:    addi a3, a3, 240
 ; RV32-NEXT:    mul a3, a5, a3
 ; RV32-NEXT:    mulhu a6, a5, a4
+; RV32-NEXT:    add a3, a6, a3
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    mul a0, a1, a4
-; RV32-NEXT:    add a0, a3, a0
-; RV32-NEXT:    add a1, a6, a0
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, a3, a1
 ; RV32-NEXT:    mul a0, a5, a4
 ; RV32-NEXT:    ret
 ;
@@ -261,11 +261,11 @@ define iXLen2 @test_udiv_17(iXLen2 %x) nounwind {
 ; RV64-NEXT:    sub a4, a0, a3
 ; RV64-NEXT:    mul a5, a4, a6
 ; RV64-NEXT:    mulhu a6, a4, a2
+; RV64-NEXT:    add a5, a6, a5
 ; RV64-NEXT:    sltu a0, a0, a3
 ; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    mul a0, a1, a2
-; RV64-NEXT:    add a0, a5, a0
-; RV64-NEXT:    add a1, a6, a0
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    add a1, a5, a1
 ; RV64-NEXT:    mul a0, a4, a2
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 17
@@ -291,11 +291,11 @@ define iXLen2 @test_udiv_255(iXLen2 %x) nounwind {
 ; RV32-NEXT:    mul a5, a3, a5
 ; RV32-NEXT:    addi a4, a4, -257
 ; RV32-NEXT:    mulhu a6, a3, a4
+; RV32-NEXT:    add a5, a6, a5
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    mul a0, a1, a4
-; RV32-NEXT:    add a0, a5, a0
-; RV32-NEXT:    add a1, a6, a0
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, a5, a1
 ; RV32-NEXT:    mul a0, a3, a4
 ; RV32-NEXT:    ret
 ;
@@ -318,11 +318,11 @@ define iXLen2 @test_udiv_255(iXLen2 %x) nounwind {
 ; RV64-NEXT:    sub a3, a0, a2
 ; RV64-NEXT:    mul a4, a3, a4
 ; RV64-NEXT:    mulhu a6, a3, a5
+; RV64-NEXT:    add a4, a6, a4
 ; RV64-NEXT:    sltu a0, a0, a2
 ; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    mul a0, a1, a5
-; RV64-NEXT:    add a0, a4, a0
-; RV64-NEXT:    add a1, a6, a0
+; RV64-NEXT:    mul a1, a1, a5
+; RV64-NEXT:    add a1, a4, a1
 ; RV64-NEXT:    mul a0, a3, a5
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 255
@@ -346,11 +346,11 @@ define iXLen2 @test_udiv_257(iXLen2 %x) nounwind {
 ; RV32-NEXT:    addi a3, a3, -256
 ; RV32-NEXT:    mul a3, a5, a3
 ; RV32-NEXT:    mulhu a6, a5, a4
+; RV32-NEXT:    add a3, a6, a3
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    mul a0, a1, a4
-; RV32-NEXT:    add a0, a3, a0
-; RV32-NEXT:    add a1, a6, a0
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, a3, a1
 ; RV32-NEXT:    mul a0, a5, a4
 ; RV32-NEXT:    ret
 ;
@@ -371,11 +371,11 @@ define iXLen2 @test_udiv_257(iXLen2 %x) nounwind {
 ; RV64-NEXT:    sub a4, a0, a3
 ; RV64-NEXT:    mul a5, a4, a6
 ; RV64-NEXT:    mulhu a6, a4, a2
+; RV64-NEXT:    add a5, a6, a5
 ; RV64-NEXT:    sltu a0, a0, a3
 ; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    mul a0, a1, a2
-; RV64-NEXT:    add a0, a5, a0
-; RV64-NEXT:    add a1, a6, a0
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    add a1, a5, a1
 ; RV64-NEXT:    mul a0, a4, a2
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 257
@@ -401,12 +401,12 @@ define iXLen2 @test_udiv_65535(iXLen2 %x) nounwind {
 ; RV32-NEXT:    mul a5, a3, a5
 ; RV32-NEXT:    addi a4, a4, -1
 ; RV32-NEXT:    mulhu a4, a3, a4
+; RV32-NEXT:    add a4, a4, a5
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a1, a1, a0
 ; RV32-NEXT:    slli a0, a1, 16
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    sub a1, a5, a0
-; RV32-NEXT:    add a1, a4, a1
+; RV32-NEXT:    sub a1, a4, a0
 ; RV32-NEXT:    slli a0, a3, 16
 ; RV32-NEXT:    neg a2, a3
 ; RV32-NEXT:    sub a0, a2, a0
@@ -433,11 +433,11 @@ define iXLen2 @test_udiv_65535(iXLen2 %x) nounwind {
 ; RV64-NEXT:    mul a5, a3, a5
 ; RV64-NEXT:    addi a4, a4, -1
 ; RV64-NEXT:    mulhu a6, a3, a4
+; RV64-NEXT:    add a5, a6, a5
 ; RV64-NEXT:    sltu a0, a0, a2
 ; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    mul a0, a1, a4
-; RV64-NEXT:    add a0, a5, a0
-; RV64-NEXT:    add a1, a6, a0
+; RV64-NEXT:    mul a1, a1, a4
+; RV64-NEXT:    add a1, a5, a1
 ; RV64-NEXT:    mul a0, a3, a4
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 65535
@@ -460,12 +460,12 @@ define iXLen2 @test_udiv_65537(iXLen2 %x) nounwind {
 ; RV32-NEXT:    sub a3, a0, a2
 ; RV32-NEXT:    mulhu a4, a3, a4
 ; RV32-NEXT:    slli a5, a3, 16
+; RV32-NEXT:    sub a4, a4, a5
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a1, a1, a0
 ; RV32-NEXT:    slli a0, a1, 16
 ; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    sub a0, a5, a1
-; RV32-NEXT:    sub a1, a4, a0
+; RV32-NEXT:    add a1, a4, a1
 ; RV32-NEXT:    sub a0, a3, a5
 ; RV32-NEXT:    ret
 ;
@@ -488,11 +488,11 @@ define iXLen2 @test_udiv_65537(iXLen2 %x) nounwind {
 ; RV64-NEXT:    sub a5, a0, a2
 ; RV64-NEXT:    mul a3, a5, a3
 ; RV64-NEXT:    mulhu a6, a5, a4
+; RV64-NEXT:    add a3, a6, a3
 ; RV64-NEXT:    sltu a0, a0, a2
 ; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    mul a0, a1, a4
-; RV64-NEXT:    add a0, a3, a0
-; RV64-NEXT:    add a1, a6, a0
+; RV64-NEXT:    mul a1, a1, a4
+; RV64-NEXT:    add a1, a3, a1
 ; RV64-NEXT:    mul a0, a5, a4
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 65537
@@ -520,11 +520,11 @@ define iXLen2 @test_udiv_12(iXLen2 %x) nounwind {
 ; RV32-NEXT:    addi a3, a3, -1366
 ; RV32-NEXT:    mul a3, a5, a3
 ; RV32-NEXT:    mulhu a6, a5, a4
+; RV32-NEXT:    add a3, a6, a3
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    mul a0, a1, a4
-; RV32-NEXT:    add a0, a3, a0
-; RV32-NEXT:    add a1, a6, a0
+; RV32-NEXT:    mul a1, a1, a4
+; RV32-NEXT:    add a1, a3, a1
 ; RV32-NEXT:    mul a0, a5, a4
 ; RV32-NEXT:    ret
 ;
@@ -549,11 +549,11 @@ define iXLen2 @test_udiv_12(iXLen2 %x) nounwind {
 ; RV64-NEXT:    sub a4, a0, a3
 ; RV64-NEXT:    mul a5, a4, a6
 ; RV64-NEXT:    mulhu a6, a4, a2
+; RV64-NEXT:    add a5, a6, a5
 ; RV64-NEXT:    sltu a0, a0, a3
 ; RV64-NEXT:    sub a1, a1, a0
-; RV64-NEXT:    mul a0, a1, a2
-; RV64-NEXT:    add a0, a5, a0
-; RV64-NEXT:    add a1, a6, a0
+; RV64-NEXT:    mul a1, a1, a2
+; RV64-NEXT:    add a1, a5, a1
 ; RV64-NEXT:    mul a0, a4, a2
 ; RV64-NEXT:    ret
   %a = udiv iXLen2 %x, 12

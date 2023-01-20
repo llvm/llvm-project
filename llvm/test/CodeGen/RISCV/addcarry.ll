@@ -19,11 +19,11 @@ define i64 @addcarry(i64 %x, i64 %y) nounwind {
 ; RISCV32-NEXT:    sltu a5, a6, a5
 ; RISCV32-NEXT:    mulhu a6, a0, a3
 ; RISCV32-NEXT:    mulhu t0, a1, a2
-; RISCV32-NEXT:    add a5, a5, t0
-; RISCV32-NEXT:    add a5, a5, a7
-; RISCV32-NEXT:    mul a7, a1, a3
-; RISCV32-NEXT:    add a5, a5, a7
+; RISCV32-NEXT:    add a6, a6, t0
 ; RISCV32-NEXT:    add a5, a6, a5
+; RISCV32-NEXT:    add a5, a5, a7
+; RISCV32-NEXT:    mul a6, a1, a3
+; RISCV32-NEXT:    add a5, a5, a6
 ; RISCV32-NEXT:    bgez a1, .LBB0_2
 ; RISCV32-NEXT:  # %bb.1:
 ; RISCV32-NEXT:    sub a5, a5, a2

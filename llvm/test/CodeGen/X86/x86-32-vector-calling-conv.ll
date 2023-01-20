@@ -5,16 +5,16 @@
 define <4 x i32> @test_sse(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) nounwind {
 ; DARWIN-LABEL: test_sse:
 ; DARWIN:       ## %bb.0:
-; DARWIN-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
-; DARWIN-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; DARWIN-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; DARWIN-NEXT:    vpaddd %xmm3, %xmm2, %xmm1
 ; DARWIN-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; DARWIN-NEXT:    retl
 ;
 ; LINUX-LABEL: test_sse:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    subl $12, %esp
-; LINUX-NEXT:    vpaddd {{[0-9]+}}(%esp), %xmm2, %xmm2
-; LINUX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; LINUX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; LINUX-NEXT:    vpaddd {{[0-9]+}}(%esp), %xmm2, %xmm1
 ; LINUX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; LINUX-NEXT:    addl $12, %esp
 ; LINUX-NEXT:    retl
@@ -27,8 +27,8 @@ define <4 x i32> @test_sse(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %
 define <8 x i32> @test_avx(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d) nounwind {
 ; DARWIN-LABEL: test_avx:
 ; DARWIN:       ## %bb.0:
-; DARWIN-NEXT:    vpaddd %ymm3, %ymm2, %ymm2
-; DARWIN-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
+; DARWIN-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; DARWIN-NEXT:    vpaddd %ymm3, %ymm2, %ymm1
 ; DARWIN-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; DARWIN-NEXT:    retl
 ;
@@ -38,8 +38,8 @@ define <8 x i32> @test_avx(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %
 ; LINUX-NEXT:    movl %esp, %ebp
 ; LINUX-NEXT:    andl $-32, %esp
 ; LINUX-NEXT:    subl $32, %esp
-; LINUX-NEXT:    vpaddd 8(%ebp), %ymm2, %ymm2
-; LINUX-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
+; LINUX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; LINUX-NEXT:    vpaddd 8(%ebp), %ymm2, %ymm1
 ; LINUX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; LINUX-NEXT:    movl %ebp, %esp
 ; LINUX-NEXT:    popl %ebp
@@ -53,8 +53,8 @@ define <8 x i32> @test_avx(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %
 define <16 x i32> @test_avx512(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 x i32> %d) nounwind {
 ; DARWIN-LABEL: test_avx512:
 ; DARWIN:       ## %bb.0:
-; DARWIN-NEXT:    vpaddd %zmm3, %zmm2, %zmm2
-; DARWIN-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
+; DARWIN-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; DARWIN-NEXT:    vpaddd %zmm3, %zmm2, %zmm1
 ; DARWIN-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; DARWIN-NEXT:    retl
 ;
@@ -64,8 +64,8 @@ define <16 x i32> @test_avx512(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 
 ; LINUX-NEXT:    movl %esp, %ebp
 ; LINUX-NEXT:    andl $-64, %esp
 ; LINUX-NEXT:    subl $64, %esp
-; LINUX-NEXT:    vpaddd 8(%ebp), %zmm2, %zmm2
-; LINUX-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
+; LINUX-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; LINUX-NEXT:    vpaddd 8(%ebp), %zmm2, %zmm1
 ; LINUX-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; LINUX-NEXT:    movl %ebp, %esp
 ; LINUX-NEXT:    popl %ebp
