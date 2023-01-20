@@ -359,6 +359,23 @@ transform.sequence failures(propagate) {
   %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
   %2 = transform.structured.vectorize %1
 }
+
+// -----
+
+// CHECK-LABEL: func @test_vectorize_copy_complex
+// CHECK-NOT: vector<
+func.func @test_vectorize_copy_complex(%A : memref<8x16xcomplex<f32>>, %B : memref<8x16xcomplex<f32>>) {
+  memref.copy %A, %B :  memref<8x16xcomplex<f32>> to memref<8x16xcomplex<f32>>
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["memref.copy"]} in %arg1
+  %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
+  %2 = transform.structured.vectorize %1
+}
+
 // -----
 
 // CHECK-LABEL: func @test_vectorize_trailing_index
@@ -806,6 +823,25 @@ transform.sequence failures(propagate) {
   %2 = transform.structured.vectorize %1  { vectorize_padding }
 }
 
+// -----
+
+// CHECK-LABEL: func @pad_static_complex(
+//   CHECK-NOT:   vector<
+func.func @pad_static_complex(%arg0: tensor<2x5x2xcomplex<f32>>, %pad_value: complex<f32>) -> tensor<2x6x4xcomplex<f32>> {
+  %0 = tensor.pad %arg0 low[0, 0, 2] high[0, 1, 0] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index):
+      tensor.yield %pad_value : complex<f32>
+    } : tensor<2x5x2xcomplex<f32>> to tensor<2x6x4xcomplex<f32>>
+  return %0 : tensor<2x6x4xcomplex<f32>>
+}
+
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+  %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
+  %2 = transform.structured.vectorize %1  { vectorize_padding }
+}
 
 // -----
 
