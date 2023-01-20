@@ -444,8 +444,6 @@ transform::GetProducerOfOperand::apply(transform::TransformResults &results,
           << "could not find a producer for operand number: " << operandNumber
           << " of " << *target;
       diag.attachNote(target->getLoc()) << "target op";
-      results.set(getResult().cast<OpResult>(),
-                  SmallVector<mlir::Operation *>{});
       return diag;
     }
     producers.push_back(producer);
@@ -518,10 +516,6 @@ transform::SplitHandlesOp::apply(transform::TransformResults &results,
       getHandle() ? state.getPayloadOps(getHandle()).size() : 0;
   int64_t expectedNumResultHandles = getNumResultHandles();
   if (numResultHandles != expectedNumResultHandles) {
-    // Failing case needs to propagate gracefully for both suppress and
-    // propagate modes.
-    for (int64_t idx = 0; idx < expectedNumResultHandles; ++idx)
-      results.set(getResults()[idx].cast<OpResult>(), {});
     // Empty input handle corner case: always propagates empty handles in both
     // suppress and propagate modes.
     if (numResultHandles == 0)
@@ -586,12 +580,23 @@ transform::ReplicateOp::apply(transform::TransformResults &results,
   unsigned numRepetitions = state.getPayloadOps(getPattern()).size();
   for (const auto &en : llvm::enumerate(getHandles())) {
     Value handle = en.value();
-    ArrayRef<Operation *> current = state.getPayloadOps(handle);
-    SmallVector<Operation *> payload;
-    payload.reserve(numRepetitions * current.size());
-    for (unsigned i = 0; i < numRepetitions; ++i)
-      llvm::append_range(payload, current);
-    results.set(getReplicated()[en.index()].cast<OpResult>(), payload);
+    if (handle.getType().isa<TransformHandleTypeInterface>()) {
+      ArrayRef<Operation *> current = state.getPayloadOps(handle);
+      SmallVector<Operation *> payload;
+      payload.reserve(numRepetitions * current.size());
+      for (unsigned i = 0; i < numRepetitions; ++i)
+        llvm::append_range(payload, current);
+      results.set(getReplicated()[en.index()].cast<OpResult>(), payload);
+    } else {
+      assert(handle.getType().isa<TransformParamTypeInterface>() &&
+             "expected param type");
+      ArrayRef<Attribute> current = state.getParams(handle);
+      SmallVector<Attribute> params;
+      params.reserve(numRepetitions * current.size());
+      for (unsigned i = 0; i < numRepetitions; ++i)
+        llvm::append_range(params, current);
+      results.setParams(getReplicated()[en.index()].cast<OpResult>(), params);
+    }
   }
   return DiagnosedSilenceableFailure::success();
 }

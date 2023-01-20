@@ -524,4 +524,21 @@ def UnnamedAddr : LLVM_EnumAttr<
   let cppNamespace = "::mlir::LLVM";
 }
 
+//===----------------------------------------------------------------------===//
+// ModRefInfo
+//===----------------------------------------------------------------------===//
+
+def ModRefInfoNoModRef : LLVM_EnumAttrCase<"NoModRef", "none", "NoModRef", 0>;
+def ModRefInfoRef : LLVM_EnumAttrCase<"Ref", "read", "Ref", 1>;
+def ModRefInfoMod : LLVM_EnumAttrCase<"Mod", "write", "Mod", 2>;
+def ModRefInfoModRef : LLVM_EnumAttrCase<"ModRef", "readwrite", "ModRef", 3>;
+
+def ModRefInfoEnum : LLVM_EnumAttr<
+    "ModRefInfo",
+    "::llvm::ModRefInfo",
+    "LLVM ModRefInfo",
+    [ModRefInfoNoModRef, ModRefInfoRef, ModRefInfoMod, ModRefInfoModRef]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
 #endif // LLVMIR_ENUMS_TD

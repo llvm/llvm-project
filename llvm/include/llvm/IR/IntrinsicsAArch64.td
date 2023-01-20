@@ -2683,4 +2683,13 @@ let TargetPrefix = "aarch64" in {
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                LLVMMatchType<0>, llvm_i32_ty]>;
+
+  //
+  // Predicate-pair intrinsics
+  //
+  foreach cmp = ["ge", "gt", "hi", "hs", "le", "lo", "ls", "lt"] in {
+    def int_aarch64_sve_while # cmp # _x2
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                                [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
+  }
 }

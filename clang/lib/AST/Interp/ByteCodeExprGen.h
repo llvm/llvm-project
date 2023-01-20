@@ -106,29 +106,12 @@ protected:
   // If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  /// Returns the size int bits of an integer.
-  unsigned getIntWidth(QualType Ty) {
-    auto &ASTContext = Ctx.getASTContext();
-    return ASTContext.getIntWidth(Ty);
-  }
-
-  /// Returns the value of CHAR_BIT.
-  unsigned getCharBit() const {
-    auto &ASTContext = Ctx.getASTContext();
-    return ASTContext.getTargetInfo().getCharWidth();
-  }
-
   /// Classifies a type.
   std::optional<PrimType> classify(const Expr *E) const {
     return E->isGLValue() ? PT_Ptr : classify(E->getType());
   }
   std::optional<PrimType> classify(QualType Ty) const {
     return Ctx.classify(Ty);
-  }
-
-  /// Checks if a pointer needs adjustment.
-  bool needsAdjust(QualType Ty) const {
-    return true;
   }
 
   /// Classifies a known primitive type

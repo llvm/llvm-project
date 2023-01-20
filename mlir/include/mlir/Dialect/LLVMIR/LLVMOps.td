@@ -1486,7 +1486,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<ArrayAttr>:$passthrough,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
-    OptionalAttr<I64Attr>:$function_entry_count
+    OptionalAttr<I64Attr>:$function_entry_count,
+    OptionalAttr<LLVM_MemoryEffectsAttr>:$memory
   );
 
   let regions = (region AnyRegion:$body);
@@ -1520,8 +1521,14 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     /// is external, returns null.
     Region *getCallableRegion();
 
-    /// Returns the callable result type, which is the function return type.
-    ArrayRef<Type> getCallableResults() { return getFunctionType().getReturnTypes(); }
+    /// Returns the callable result type, which is the single function return
+    /// type if it is not void, or an empty array if the function's return type
+    /// is void, as void is not assignable to a value.
+    ArrayRef<Type> getCallableResults() {
+      if (getFunctionType().getReturnType().isa<LLVM::LLVMVoidType>())
+        return {};
+      return getFunctionType().getReturnTypes();
+    }
 
   }];
 

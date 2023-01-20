@@ -29,7 +29,7 @@ func.func @conv_1d_nwc_wcf(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>, %
 transform.sequence failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.conv_1d_nwc_wcf"]} in %arg1
-    %1, %loops:2 = transform.structured.tile %0 [2, 4]
+    %1, %loops:2 = transform.structured.tile %0 [2, 4] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
 }
 
 func.func @main() {

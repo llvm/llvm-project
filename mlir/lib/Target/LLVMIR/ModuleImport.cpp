@@ -32,6 +32,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/ModRef.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -1405,13 +1406,26 @@ FlatSymbolRefAttr ModuleImport::getPersonalityAsAttr(llvm::Function *f) {
   return FlatSymbolRefAttr();
 }
 
+static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
+  llvm::MemoryEffects memEffects = func->getMemoryEffects();
+
+  auto othermem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+  auto argMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
+  auto inaccessibleMem = convertModRefInfoFromLLVM(
+      memEffects.getModRef(llvm::MemoryEffects::Location::InaccessibleMem));
+  auto memAttr = MemoryEffectsAttr::get(funcOp.getContext(), othermem, argMem,
+                                        inaccessibleMem);
+  // Only set the attr when it does not match the default value.
+  if (memAttr.isReadWrite())
+    return;
+  funcOp.setMemoryAttr(memAttr);
+}
+
 void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
-  auto addNamedUnitAttr = [&](StringRef name) {
-    return funcOp->setAttr(name, UnitAttr::get(context));
-  };
-  if (func->doesNotAccessMemory())
-    addNamedUnitAttr(LLVMDialect::getReadnoneAttrName());
+  processMemoryEffects(func, funcOp);
 }
 
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {

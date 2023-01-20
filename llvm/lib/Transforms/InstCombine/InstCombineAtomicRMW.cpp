@@ -151,13 +151,5 @@ Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
     return replaceOperand(RMWI, 1, ConstantFP::getNegativeZero(RMWI.getType()));
   }
 
-  // Check if the required ordering is compatible with an atomic load.
-  if (Ordering != AtomicOrdering::Acquire &&
-      Ordering != AtomicOrdering::Monotonic)
-    return nullptr;
-
-  LoadInst *Load = new LoadInst(RMWI.getType(), RMWI.getPointerOperand(), "",
-                                false, DL.getABITypeAlign(RMWI.getType()),
-                                Ordering, RMWI.getSyncScopeID());
-  return Load;
+  return nullptr;
 }

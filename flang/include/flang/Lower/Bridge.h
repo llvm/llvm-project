@@ -57,11 +57,10 @@ public:
          const Fortran::parser::AllCookedSources &allCooked,
          llvm::StringRef triple, fir::KindMapping &kindMap,
          const Fortran::lower::LoweringOptions &loweringOptions,
-         const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
-         llvm::StringRef filePath) {
+         const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults) {
     return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
                           targetCharacteristics, allCooked, triple, kindMap,
-                          loweringOptions, envDefaults, filePath);
+                          loweringOptions, envDefaults);
   }
 
   //===--------------------------------------------------------------------===//
@@ -130,8 +129,7 @@ private:
       const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
       fir::KindMapping &kindMap,
       const Fortran::lower::LoweringOptions &loweringOptions,
-      const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
-      llvm::StringRef filePath);
+      const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 

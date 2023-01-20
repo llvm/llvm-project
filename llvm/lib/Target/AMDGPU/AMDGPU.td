@@ -542,6 +542,12 @@ def FeatureDLInsts : SubtargetFeature<"dl-insts",
   "Has v_fmac_f32 and v_xnor_b32 instructions"
 >;
 
+def FeatureVFmacF64Inst : SubtargetFeature<"vfmacf64-inst",
+  "HasVFmacF64Inst",
+  "true",
+  "Has v_fmac_f64 instruction"
+>;
+
 def FeatureDot1Insts : SubtargetFeature<"dot1-insts",
   "HasDot1Insts",
   "true",
@@ -1132,6 +1138,7 @@ def FeatureISAVersion9_0_A : FeatureSet<
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
+   FeatureVFmacF64Inst,
    FeatureDot1Insts,
    FeatureDot2Insts,
    FeatureDot3Insts,
@@ -1170,6 +1177,7 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
+   FeatureVFmacF64Inst,
    FeatureDot1Insts,
    FeatureDot2Insts,
    FeatureDot3Insts,
@@ -1749,6 +1757,9 @@ def HasFmaMixInsts : Predicate<"Subtarget->hasFmaMixInsts()">,
 
 def HasDLInsts : Predicate<"Subtarget->hasDLInsts()">,
   AssemblerPredicate<(all_of FeatureDLInsts)>;
+
+def HasVFmacF64Inst : Predicate<"Subtarget->hasVFmacF64Inst()">,
+  AssemblerPredicate<(all_of FeatureVFmacF64Inst)>;
 
 def HasDot1Insts : Predicate<"Subtarget->hasDot1Insts()">,
   AssemblerPredicate<(all_of FeatureDot1Insts)>;

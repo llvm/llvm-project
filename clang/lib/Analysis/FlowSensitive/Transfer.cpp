@@ -110,6 +110,8 @@ static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
 // Unpacks the value (if any) associated with `E` and updates `E` to the new
 // value, if any unpacking occured.
 static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
+  // FIXME: this is too flexible: it _allows_ a reference, while it should
+  // _require_ one, since lvalues should always be wrapped in `ReferenceValue`.
   auto *Loc = Env.getStorageLocation(E, SkipPast::Reference);
   if (Loc == nullptr)
     return nullptr;

@@ -129,6 +129,37 @@ TEST(DataflowAnalysisTest, NonConvergingAnalysis) {
             "maximum number of iterations reached");
 }
 
+// Regression test for joins of bool-typed lvalue expressions. The first loop
+// results in two passes through the code that follows. Each pass results in a
+// different `ReferenceValue` for the pointee of `v`. Then, the second loop
+// causes a join at the loop head where the two environments map expresssion
+// `*v` to different `ReferenceValue`s.
+//
+// An earlier version crashed for this condition (for boolean-typed lvalues), so
+// this test only verifies that the analysis runs successfully, without
+// examining any details of the results.
+TEST(DataflowAnalysisTest, JoinBoolLValues) {
+  std::string Code = R"(
+    void target() {
+      for (int x = 1; x; x = 0)
+        (void)x;
+      bool *v;
+      if (*v)
+        for (int x = 1; x; x = 0)
+          (void)x;
+    }
+  )";
+  ASSERT_THAT_ERROR(
+      runAnalysis<NoopAnalysis>(Code,
+                                [](ASTContext &C) {
+                                  auto EnableBuiltIns = DataflowAnalysisOptions{
+                                      DataflowAnalysisContext::Options{}};
+                                  return NoopAnalysis(C, EnableBuiltIns);
+                                })
+          .takeError(),
+      llvm::Succeeded());
+}
+
 struct FunctionCallLattice {
   using FunctionSet = llvm::SmallSet<std::string, 8>;
   FunctionSet CalledFunctions;
