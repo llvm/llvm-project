@@ -40,6 +40,10 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
       ID->Desc = Local.Desc;
       ID->IsActive = true;
       ID->Offset = sizeof(InlineDescriptor);
+      ID->IsBase = false;
+      ID->IsMutable = false;
+      ID->IsConst = false;
+      ID->IsInitialized = false;
     }
   }
 }
