@@ -128,6 +128,7 @@ const int SIGSYS = 12;
 const int SIGBUS = 7;
 const int SIGSYS = 31;
 #endif
+const int SI_TIMER = -2;
 void *const MAP_FAILED = (void*)-1;
 #if SANITIZER_NETBSD
 const int PTHREAD_BARRIER_SERIAL_THREAD = 1234567;
@@ -2165,11 +2166,19 @@ void ProcessPendingSignalsImpl(ThreadState *thr) {
 
 }  // namespace __tsan
 
-static bool is_sync_signal(ThreadSignalContext *sctx, int sig) {
+static bool is_sync_signal(ThreadSignalContext *sctx, int sig,
+                           __sanitizer_siginfo *info) {
+  // If we are sending signal to ourselves, we must process it now.
+  if (sctx && sig == sctx->int_signal_send)
+    return true;
+#if SANITIZER_HAS_SIGINFO
+  // POSIX timers can be configured to send any kind of signal; however, it
+  // doesn't make any sense to consider a timer signal as synchronous!
+  if (info->si_code == SI_TIMER)
+    return false;
+#endif
   return sig == SIGSEGV || sig == SIGBUS || sig == SIGILL || sig == SIGTRAP ||
-         sig == SIGABRT || sig == SIGFPE || sig == SIGPIPE || sig == SIGSYS ||
-         // If we are sending signal to ourselves, we must process it now.
-         (sctx && sig == sctx->int_signal_send);
+         sig == SIGABRT || sig == SIGFPE || sig == SIGPIPE || sig == SIGSYS;
 }
 
 void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
@@ -2180,7 +2189,7 @@ void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
     return;
   }
   // Don't mess with synchronous signals.
-  const bool sync = is_sync_signal(sctx, sig);
+  const bool sync = is_sync_signal(sctx, sig, info);
   if (sync ||
       // If we are in blocking function, we can safely process it now
       // (but check if we are in a recursive interceptor,
