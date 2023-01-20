@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 -passes='declare-to-assign,verify' %s -S -o - -experimental-assignment-tracking \
+; RUN: opt -passes='declare-to-assign,verify' %s -S -o - -experimental-assignment-tracking \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; This test checks that `trackAssignments` is working correctly by using the
@@ -90,16 +90,16 @@ define dso_local void @_Z8zeroInitv() #0 !dbg !31 {
 entry:
   %Z = alloca [3 x i32], align 4
 ; CHECK:      %Z = alloca [3 x i32], align 4, !DIAssignID ![[ID_0:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_0:[0-9]+]], metadata !DIExpression(), metadata ![[ID_0]], metadata [3 x i32]* %Z, metadata !DIExpression())
-  %0 = bitcast [3 x i32]* %Z to i8*, !dbg !39
-  call void @llvm.lifetime.start.p0i8(i64 12, i8* %0) #5, !dbg !39
-  call void @llvm.dbg.declare(metadata [3 x i32]* %Z, metadata !35, metadata !DIExpression()), !dbg !40
-  %1 = bitcast [3 x i32]* %Z to i8*, !dbg !40
-  call void @llvm.memset.p0i8.i64(i8* align 4 %1, i8 0, i64 12, i1 false), !dbg !40
-; CHECK:       @llvm.memset.p0i8.i64{{.*}}, !DIAssignID ![[ID_1:[0-9]+]]
-; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR_0]], metadata !DIExpression(), metadata ![[ID_1]], metadata i8* %1, metadata !DIExpression())
-  %2 = bitcast [3 x i32]* %Z to i8*, !dbg !41
-  call void @llvm.lifetime.end.p0i8(i64 12, i8* %2) #5, !dbg !41
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_0:[0-9]+]], metadata !DIExpression(), metadata ![[ID_0]], metadata ptr %Z, metadata !DIExpression())
+  %0 = bitcast ptr %Z to ptr, !dbg !39
+  call void @llvm.lifetime.start.p0i8(i64 12, ptr %0) #5, !dbg !39
+  call void @llvm.dbg.declare(metadata ptr %Z, metadata !35, metadata !DIExpression()), !dbg !40
+  %1 = bitcast ptr %Z to ptr, !dbg !40
+  call void @llvm.memset.p0i8.i64(ptr align 4 %1, i8 0, i64 12, i1 false), !dbg !40
+; CHECK:       @llvm.memset{{.*}}, !DIAssignID ![[ID_1:[0-9]+]]
+; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR_0]], metadata !DIExpression(), metadata ![[ID_1]], metadata ptr %1, metadata !DIExpression())
+  %2 = bitcast ptr %Z to ptr, !dbg !41
+  call void @llvm.lifetime.end.p0i8(i64 12, ptr %2) #5, !dbg !41
   ret void, !dbg !41
 }
 
@@ -115,16 +115,16 @@ define dso_local void @_Z10memcpyInitv() #0 !dbg !42 {
 entry:
   %A = alloca [4 x i32], align 16
 ; CHECK:      %A = alloca [4 x i32], align 16, !DIAssignID ![[ID_2:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_1:[0-9]+]], metadata !DIExpression(), metadata ![[ID_2]], metadata [4 x i32]* %A, metadata !DIExpression())
-  %0 = bitcast [4 x i32]* %A to i8*, !dbg !48
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %0) #5, !dbg !48
-  call void @llvm.dbg.declare(metadata [4 x i32]* %A, metadata !44, metadata !DIExpression()), !dbg !49
-  %1 = bitcast [4 x i32]* %A to i8*, !dbg !49
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %1, i8* align 16 bitcast ([4 x i32]* @__const._Z10memcpyInitv.A to i8*), i64 16, i1 false), !dbg !49
-; CHECK:       @llvm.memcpy.p0i8.p0i8.i64{{.*}}, !DIAssignID ![[ID_3:[0-9]+]]
-; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_1]], metadata !DIExpression(), metadata ![[ID_3]], metadata i8* %1, metadata !DIExpression())
-  %2 = bitcast [4 x i32]* %A to i8*, !dbg !50
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %2) #5, !dbg !50
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_1:[0-9]+]], metadata !DIExpression(), metadata ![[ID_2]], metadata ptr %A, metadata !DIExpression())
+  %0 = bitcast ptr %A to ptr, !dbg !48
+  call void @llvm.lifetime.start.p0i8(i64 16, ptr %0) #5, !dbg !48
+  call void @llvm.dbg.declare(metadata ptr %A, metadata !44, metadata !DIExpression()), !dbg !49
+  %1 = bitcast ptr %A to ptr, !dbg !49
+  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 16 %1, ptr align 16 bitcast (ptr @__const._Z10memcpyInitv.A to ptr), i64 16, i1 false), !dbg !49
+; CHECK:       @llvm.memcpy{{.*}}, !DIAssignID ![[ID_3:[0-9]+]]
+; CHECK-NEXT:  call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_1]], metadata !DIExpression(), metadata ![[ID_3]], metadata ptr %1, metadata !DIExpression())
+  %2 = bitcast ptr %A to ptr, !dbg !50
+  call void @llvm.lifetime.end.p0i8(i64 16, ptr %2) #5, !dbg !50
   ret void, !dbg !50
 }
 
@@ -144,18 +144,18 @@ define dso_local void @_Z8setFieldv() #0 !dbg !51 {
 entry:
   %O = alloca %struct.Outer, align 4
 ; CHECK:      %O = alloca %struct.Outer, align 4, !DIAssignID ![[ID_4:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_2:[0-9]+]], metadata !DIExpression(), metadata ![[ID_4]], metadata %struct.Outer* %O, metadata !DIExpression())
-  %0 = bitcast %struct.Outer* %O to i8*, !dbg !58
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %0) #5, !dbg !58
-  call void @llvm.dbg.declare(metadata %struct.Outer* %O, metadata !53, metadata !DIExpression()), !dbg !59
-  %1 = load i32, i32* @Value, align 4, !dbg !60, !tbaa !61
-  %A = getelementptr inbounds %struct.Outer, %struct.Outer* %O, i32 0, i32 0, !dbg !65
-  %B = getelementptr inbounds %struct.Inner, %struct.Inner* %A, i32 0, i32 1, !dbg !66
-  store i32 %1, i32* %B, align 4, !dbg !67, !tbaa !68
-; CHECK:      store i32 %1, i32* %B, align 4,{{.*}}!DIAssignID ![[ID_5:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %1, metadata ![[VAR_2]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID_5]], metadata i32* %B, metadata !DIExpression())
-  %2 = bitcast %struct.Outer* %O to i8*, !dbg !71
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %2) #5, !dbg !71
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_2:[0-9]+]], metadata !DIExpression(), metadata ![[ID_4]], metadata ptr %O, metadata !DIExpression())
+  %0 = bitcast ptr %O to ptr, !dbg !58
+  call void @llvm.lifetime.start.p0i8(i64 16, ptr %0) #5, !dbg !58
+  call void @llvm.dbg.declare(metadata ptr %O, metadata !53, metadata !DIExpression()), !dbg !59
+  %1 = load i32, ptr @Value, align 4, !dbg !60, !tbaa !61
+  %A = getelementptr inbounds %struct.Outer, ptr %O, i32 0, i32 0, !dbg !65
+  %B = getelementptr inbounds %struct.Inner, ptr %A, i32 0, i32 1, !dbg !66
+  store i32 %1, ptr %B, align 4, !dbg !67, !tbaa !68
+; CHECK:      store i32 %1, ptr %B, align 4,{{.*}}!DIAssignID ![[ID_5:[0-9]+]]
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %1, metadata ![[VAR_2]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID_5]], metadata ptr %B, metadata !DIExpression())
+  %2 = bitcast ptr %O to ptr, !dbg !71
+  call void @llvm.lifetime.end.p0i8(i64 16, ptr %2) #5, !dbg !71
   ret void, !dbg !71
 }
 
@@ -176,17 +176,17 @@ define dso_local void @_Z13unknownOffsetv() #0 !dbg !72 {
 entry:
   %A = alloca [2 x i32], align 4
 ; CHECK:      %A = alloca [2 x i32], align 4, !DIAssignID ![[ID_6:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_3:[0-9]+]], metadata !DIExpression(), metadata ![[ID_6]], metadata [2 x i32]* %A, metadata !DIExpression())
-  %0 = bitcast [2 x i32]* %A to i8*, !dbg !78
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %0) #5, !dbg !78
-  call void @llvm.dbg.declare(metadata [2 x i32]* %A, metadata !74, metadata !DIExpression()), !dbg !79
-  %1 = load i32, i32* @Value, align 4, !dbg !80, !tbaa !61
-  %2 = load i32, i32* @Index, align 4, !dbg !81, !tbaa !61
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_3:[0-9]+]], metadata !DIExpression(), metadata ![[ID_6]], metadata ptr %A, metadata !DIExpression())
+  %0 = bitcast ptr %A to ptr, !dbg !78
+  call void @llvm.lifetime.start.p0i8(i64 8, ptr %0) #5, !dbg !78
+  call void @llvm.dbg.declare(metadata ptr %A, metadata !74, metadata !DIExpression()), !dbg !79
+  %1 = load i32, ptr @Value, align 4, !dbg !80, !tbaa !61
+  %2 = load i32, ptr @Index, align 4, !dbg !81, !tbaa !61
   %idxprom = sext i32 %2 to i64, !dbg !82
-  %arrayidx = getelementptr inbounds [2 x i32], [2 x i32]* %A, i64 0, i64 %idxprom, !dbg !82
-  store i32 %1, i32* %arrayidx, align 4, !dbg !83, !tbaa !61
-  %3 = bitcast [2 x i32]* %A to i8*, !dbg !84
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %3) #5, !dbg !84
+  %arrayidx = getelementptr inbounds [2 x i32], ptr %A, i64 0, i64 %idxprom, !dbg !82
+  store i32 %1, ptr %arrayidx, align 4, !dbg !83, !tbaa !61
+  %3 = bitcast ptr %A to ptr, !dbg !84
+  call void @llvm.lifetime.end.p0i8(i64 8, ptr %3) #5, !dbg !84
   ret void, !dbg !84
 }
 
@@ -207,35 +207,35 @@ define dso_local i64 @_Z12sharedAllocav() #0 !dbg !85 {
 entry:
   %retval = alloca %struct.Inner, align 4
 ; CHECK:      %retval = alloca %struct.Inner, align 4, !DIAssignID ![[ID_7:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4:[0-9]+]], metadata !DIExpression(), metadata ![[ID_7]], metadata %struct.Inner* %retval, metadata !DIExpression())
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5:[0-9]+]], metadata !DIExpression(), metadata ![[ID_7]], metadata %struct.Inner* %retval, metadata !DIExpression())
-  %0 = load i32, i32* @Cond, align 4, !dbg !94, !tbaa !61
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4:[0-9]+]], metadata !DIExpression(), metadata ![[ID_7]], metadata ptr %retval, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5:[0-9]+]], metadata !DIExpression(), metadata ![[ID_7]], metadata ptr %retval, metadata !DIExpression())
+  %0 = load i32, ptr @Cond, align 4, !dbg !94, !tbaa !61
   %tobool = icmp ne i32 %0, 0, !dbg !94
   br i1 %tobool, label %if.then, label %if.else, !dbg !95
 
 if.then:                                          ; preds = %entry
 ; CHECK:      if.then:
-  call void @llvm.dbg.declare(metadata %struct.Inner* %retval, metadata !89, metadata !DIExpression()), !dbg !96
-  %1 = bitcast %struct.Inner* %retval to i8*, !dbg !97
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 bitcast (%struct.Inner* @InnerA to i8*), i64 8, i1 false), !dbg !97, !tbaa.struct !98
+  call void @llvm.dbg.declare(metadata ptr %retval, metadata !89, metadata !DIExpression()), !dbg !96
+  %1 = bitcast ptr %retval to ptr, !dbg !97
+  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 4 %1, ptr align 4 bitcast (ptr @InnerA to ptr), i64 8, i1 false), !dbg !97, !tbaa.struct !98
 ; CHECK:      call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_8:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4]], metadata !DIExpression(), metadata ![[ID_8]], metadata i8* %1, metadata !DIExpression())
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5]], metadata !DIExpression(), metadata ![[ID_8]], metadata i8* %1, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4]], metadata !DIExpression(), metadata ![[ID_8]], metadata ptr %1, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5]], metadata !DIExpression(), metadata ![[ID_8]], metadata ptr %1, metadata !DIExpression())
   br label %return, !dbg !99
 
 if.else:                                          ; preds = %entry
 ; CHECK:      if.else:
-  call void @llvm.dbg.declare(metadata %struct.Inner* %retval, metadata !92, metadata !DIExpression()), !dbg !100
-  %2 = bitcast %struct.Inner* %retval to i8*, !dbg !101
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %2, i8* align 4 bitcast (%struct.Inner* @InnerB to i8*), i64 8, i1 false), !dbg !101, !tbaa.struct !98
+  call void @llvm.dbg.declare(metadata ptr %retval, metadata !92, metadata !DIExpression()), !dbg !100
+  %2 = bitcast ptr %retval to ptr, !dbg !101
+  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 4 %2, ptr align 4 bitcast (ptr @InnerB to ptr), i64 8, i1 false), !dbg !101, !tbaa.struct !98
 ; CHECK:      call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_9:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4]], metadata !DIExpression(), metadata ![[ID_9]], metadata i8* %2, metadata !DIExpression())
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5]], metadata !DIExpression(), metadata ![[ID_9]], metadata i8* %2, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_4]], metadata !DIExpression(), metadata ![[ID_9]], metadata ptr %2, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_5]], metadata !DIExpression(), metadata ![[ID_9]], metadata ptr %2, metadata !DIExpression())
   br label %return, !dbg !102
 
 return:                                           ; preds = %if.else, %if.then
-  %3 = bitcast %struct.Inner* %retval to i64*, !dbg !103
-  %4 = load i64, i64* %3, align 4, !dbg !103
+  %3 = bitcast ptr %retval to ptr, !dbg !103
+  %4 = load i64, ptr %3, align 4, !dbg !103
   ret i64 %4, !dbg !103
 }
 
@@ -250,13 +250,13 @@ return:                                           ; preds = %if.else, %if.then
 ;; assignment tracking pipeline). In lieu of being able to xfail a part of a
 ;; test, check that the dbg.declare is preserved so the test fails (and can be
 ;; updated) when this is fixed.
-define dso_local void @_Z4sretv(%struct.Large* noalias sret(%struct.Large) align 4 %agg.result) #0 !dbg !104 {
+define dso_local void @_Z4sretv(ptr noalias sret(%struct.Large) align 4 %agg.result) #0 !dbg !104 {
 ; CHECK-LABEL: define dso_local void @_Z4sretv
 entry:
 ; CHECK: call void @llvm.dbg.declare
-  call void @llvm.dbg.declare(metadata %struct.Large* %agg.result, metadata !108, metadata !DIExpression()), !dbg !109
-  %0 = bitcast %struct.Large* %agg.result to i8*, !dbg !110
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %0, i8* align 4 bitcast (%struct.Large* @L to i8*), i64 40, i1 false), !dbg !110, !tbaa.struct !111
+  call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !108, metadata !DIExpression()), !dbg !109
+  %0 = bitcast ptr %agg.result to ptr, !dbg !110
+  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 4 %0, ptr align 4 bitcast (ptr @L to ptr), i64 40, i1 false), !dbg !110, !tbaa.struct !111
   ret void, !dbg !113
 }
 
@@ -265,11 +265,11 @@ entry:
 ;;    void byval(Large X) {}
 ;;
 ;; TODO: See comment for sret parameters above.
-define dso_local void @_Z5byval5Large(%struct.Large* noundef byval(%struct.Large) align 8 %X) #0 !dbg !114 {
+define dso_local void @_Z5byval5Large(ptr noundef byval(%struct.Large) align 8 %X) #0 !dbg !114 {
 ; CHECK-LABEL: define dso_local void @_Z5byval5Large
 entry:
 ; CHECK: llvm.dbg.declare
-  call void @llvm.dbg.declare(metadata %struct.Large* %X, metadata !118, metadata !DIExpression()), !dbg !119
+  call void @llvm.dbg.declare(metadata ptr %X, metadata !118, metadata !DIExpression()), !dbg !119
   ret void, !dbg !120
 }
 
@@ -285,15 +285,15 @@ entry:
 ;; to store the passed-in address for the storage for the variable. The
 ;; dbg.declare for the local R therefore requires a DW_OP_deref expression.
 ;; TODO: This isn't supported yet, so check the dbg.declare remains.
-define dso_local void @_Z14indirectReturnv(%struct.LCopyCtor* noalias sret(%struct.LCopyCtor) align 4 %agg.result) #0 !dbg !121 {
+define dso_local void @_Z14indirectReturnv(ptr noalias sret(%struct.LCopyCtor) align 4 %agg.result) #0 !dbg !121 {
 ; CHECK-LABEL: define dso_local void @_Z14indirectReturnv
 entry:
-  %result.ptr = alloca i8*, align 8
-  %0 = bitcast %struct.LCopyCtor* %agg.result to i8*
-  store i8* %0, i8** %result.ptr, align 8
-  call void @llvm.dbg.declare(metadata i8** %result.ptr, metadata !126, metadata !DIExpression(DW_OP_deref)), !dbg !127
+  %result.ptr = alloca ptr, align 8
+  %0 = bitcast ptr %agg.result to ptr
+  store ptr %0, ptr %result.ptr, align 8
+  call void @llvm.dbg.declare(metadata ptr %result.ptr, metadata !126, metadata !DIExpression(DW_OP_deref)), !dbg !127
 ; CHECK: call void @llvm.dbg.declare
-  call void @_ZN9LCopyCtorC1Ev(%struct.LCopyCtor* noundef nonnull align 4 dereferenceable(16) %agg.result), !dbg !127
+  call void @_ZN9LCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenceable(16) %agg.result), !dbg !127
   ret void, !dbg !128
 }
 
@@ -310,31 +310,31 @@ define dso_local noundef i32 @_Z3funi(i32 noundef %X) !dbg !139 {
 entry:
   %Y.addr.i = alloca i32, align 4
 ; CHECK:      %Y.addr.i = alloca i32, align 4, !DIAssignID ![[ID_10:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_6:[0-9]+]], metadata !DIExpression(), metadata ![[ID_10]], metadata i32* %Y.addr.i, metadata !DIExpression()), !dbg ![[DBG_0:[0-9]+]]
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_6:[0-9]+]], metadata !DIExpression(), metadata ![[ID_10]], metadata ptr %Y.addr.i, metadata !DIExpression()), !dbg ![[DBG_0:[0-9]+]]
   %X.addr = alloca i32, align 4
 ; CHECK-NEXT: %X.addr = alloca i32, align 4, !DIAssignID ![[ID_11:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_7:[0-9]+]], metadata !DIExpression(), metadata ![[ID_11]], metadata i32* %X.addr, metadata !DIExpression()), !dbg ![[DBG_1:[0-9]+]]
-  store i32 %X, i32* %X.addr, align 4
-; CHECK-NEXT: store i32 %X, i32* %X.addr, align 4, !DIAssignID ![[ID_12:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %X, metadata ![[VAR_7]], metadata !DIExpression(), metadata ![[ID_12]], metadata i32* %X.addr, metadata !DIExpression()), !dbg ![[DBG_1]]
-  call void @llvm.dbg.declare(metadata i32* %X.addr, metadata !140, metadata !DIExpression()), !dbg !141
-  %0 = load i32, i32* %X.addr, align 4, !dbg !142
-  store i32 %0, i32* %Y.addr.i, align 4
-; CHECK:      store i32 %0, i32* %Y.addr.i, align 4, !DIAssignID ![[ID_13:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %0, metadata ![[VAR_6]], metadata !DIExpression(), metadata ![[ID_13]], metadata i32* %Y.addr.i, metadata !DIExpression()), !dbg ![[DBG_0]]
-  call void @llvm.dbg.declare(metadata i32* %Y.addr.i, metadata !133, metadata !DIExpression()), !dbg !143
-  %1 = load i32, i32* %Y.addr.i, align 4, !dbg !145
-  %2 = load i32, i32* %Y.addr.i, align 4, !dbg !146
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i1 undef, metadata ![[VAR_7:[0-9]+]], metadata !DIExpression(), metadata ![[ID_11]], metadata ptr %X.addr, metadata !DIExpression()), !dbg ![[DBG_1:[0-9]+]]
+  store i32 %X, ptr %X.addr, align 4
+; CHECK-NEXT: store i32 %X, ptr %X.addr, align 4, !DIAssignID ![[ID_12:[0-9]+]]
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %X, metadata ![[VAR_7]], metadata !DIExpression(), metadata ![[ID_12]], metadata ptr %X.addr, metadata !DIExpression()), !dbg ![[DBG_1]]
+  call void @llvm.dbg.declare(metadata ptr %X.addr, metadata !140, metadata !DIExpression()), !dbg !141
+  %0 = load i32, ptr %X.addr, align 4, !dbg !142
+  store i32 %0, ptr %Y.addr.i, align 4
+; CHECK:      store i32 %0, ptr %Y.addr.i, align 4, !DIAssignID ![[ID_13:[0-9]+]]
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %0, metadata ![[VAR_6]], metadata !DIExpression(), metadata ![[ID_13]], metadata ptr %Y.addr.i, metadata !DIExpression()), !dbg ![[DBG_0]]
+  call void @llvm.dbg.declare(metadata ptr %Y.addr.i, metadata !133, metadata !DIExpression()), !dbg !143
+  %1 = load i32, ptr %Y.addr.i, align 4, !dbg !145
+  %2 = load i32, ptr %Y.addr.i, align 4, !dbg !146
   %mul.i = mul nsw i32 %1, %2, !dbg !147
   ret i32 %mul.i, !dbg !148
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #3
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #4
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
-declare dso_local void @_ZN9LCopyCtorC1Ev(%struct.LCopyCtor* noundef nonnull align 4 dereferenceable(16)) unnamed_addr
+declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #3
+declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #4
+declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare dso_local void @_ZN9LCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenceable(16)) unnamed_addr
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!26, !27, !28, !29}
