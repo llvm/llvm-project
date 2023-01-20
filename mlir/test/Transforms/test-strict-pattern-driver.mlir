@@ -1,9 +1,15 @@
-// RUN: mlir-opt -allow-unregistered-dialect -test-strict-pattern-driver %s | FileCheck %s
+// RUN: mlir-opt \
+// RUN:     -test-strict-pattern-driver="strictness=ExistingAndNewOps" \
+// RUN:     --split-input-file %s | FileCheck %s --check-prefix=CHECK-EN
 
-// CHECK-LABEL: func @test_erase
-//       CHECK:   test.arg0
-//       CHECK:   test.arg1
-//   CHECK-NOT:   test.erase_op
+// RUN: mlir-opt \
+// RUN:     -test-strict-pattern-driver="strictness=ExistingOps" \
+// RUN:     --split-input-file %s | FileCheck %s --check-prefix=CHECK-EX
+
+// CHECK-EN-LABEL: func @test_erase
+//       CHECK-EN:   test.arg0
+//       CHECK-EN:   test.arg1
+//   CHECK-EN-NOT:   test.erase_op
 func.func @test_erase() {
   %0 = "test.arg0"() : () -> (i32)
   %1 = "test.arg1"() : () -> (i32)
@@ -11,18 +17,22 @@ func.func @test_erase() {
   return
 }
 
-// CHECK-LABEL: func @test_insert_same_op
-//       CHECK:   "test.insert_same_op"() {skip = true}
-//       CHECK:   "test.insert_same_op"() {skip = true}
+// -----
+
+// CHECK-EN-LABEL: func @test_insert_same_op
+//       CHECK-EN:   "test.insert_same_op"() {skip = true}
+//       CHECK-EN:   "test.insert_same_op"() {skip = true}
 func.func @test_insert_same_op() {
   %0 = "test.insert_same_op"() : () -> (i32)
   return
 }
 
-// CHECK-LABEL: func @test_replace_with_new_op
-//       CHECK:   %[[n:.*]] = "test.new_op"
-//       CHECK:   "test.dummy_user"(%[[n]])
-//       CHECK:   "test.dummy_user"(%[[n]])
+// -----
+
+// CHECK-EN-LABEL: func @test_replace_with_new_op
+//       CHECK-EN:   %[[n:.*]] = "test.new_op"
+//       CHECK-EN:   "test.dummy_user"(%[[n]])
+//       CHECK-EN:   "test.dummy_user"(%[[n]])
 func.func @test_replace_with_new_op() {
   %0 = "test.replace_with_new_op"() : () -> (i32)
   %1 = "test.dummy_user"(%0) : (i32) -> (i32)
@@ -30,9 +40,15 @@ func.func @test_replace_with_new_op() {
   return
 }
 
-// CHECK-LABEL: func @test_replace_with_erase_op
-//   CHECK-NOT:   test.replace_with_new_op
-//   CHECK-NOT:   test.erase_op
+// -----
+
+// CHECK-EN-LABEL: func @test_replace_with_erase_op
+//   CHECK-EN-NOT:   test.replace_with_new_op
+//   CHECK-EN-NOT:   test.erase_op
+
+// CHECK-EX-LABEL: func @test_replace_with_erase_op
+//   CHECK-EX-NOT:   test.replace_with_new_op
+//       CHECK-EX:   test.erase_op
 func.func @test_replace_with_erase_op() {
   "test.replace_with_new_op"() {create_erase_op} : () -> ()
   return
