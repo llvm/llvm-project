@@ -363,14 +363,14 @@ defm UMLSL_VG4_M4ZZ  : sme2_int_mla_long_array_vg4_single<"umlsl", 0b11, int_aar
 defm UMLSL_VG2_M2Z2Z : sme2_int_mla_long_array_vg2_multi<"umlsl",  0b11, int_aarch64_sme_umlsl_vg2x2>;
 defm UMLSL_VG4_M4Z4Z : sme2_int_mla_long_array_vg4_multi<"umlsl",  0b11, int_aarch64_sme_umlsl_vg2x4>;
 
-defm FCVT_Z2Z_StoH   : sme2_cvt_vg2_single<"fcvt",   0b0000>;
-defm FCVTN_Z2Z_StoH  : sme2_cvt_vg2_single<"fcvtn",  0b0001>;
-defm BFCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"bfcvt",  0b1000>;
-defm BFCVTN_Z2Z_StoH : sme2_cvt_vg2_single<"bfcvtn", 0b1001>;
+defm FCVT_Z2Z_StoH   : sme2_cvt_vg2_single<"fcvt",   0b0000, nxv8f16, nxv4f32, null_frag>;
+defm FCVTN_Z2Z_StoH  : sme2_cvt_vg2_single<"fcvtn",  0b0001, nxv8f16, nxv4f32, int_aarch64_sve_fcvtn_x2>;
+defm BFCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"bfcvt",  0b1000, nxv8bf16, nxv4f32, null_frag>;
+defm BFCVTN_Z2Z_StoH : sme2_cvt_vg2_single<"bfcvtn", 0b1001, nxv8bf16, nxv4f32, int_aarch64_sve_bfcvtn_x2>;
 
-defm SQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"sqcvt",  0b0110>;
-defm UQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"uqcvt",  0b0111>;
-defm SQCVTU_Z2Z_StoH : sme2_cvt_vg2_single<"sqcvtu", 0b1110>;
+defm SQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"sqcvt",  0b0110, nxv8i16, nxv4i32, null_frag>;
+defm UQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"uqcvt",  0b0111, nxv8i16, nxv4i32, null_frag>;
+defm SQCVTU_Z2Z_StoH : sme2_cvt_vg2_single<"sqcvtu", 0b1110, nxv8i16, nxv4i32, null_frag>;
 defm SQCVT_Z4Z      : sme2_int_cvt_vg4_single<"sqcvt", 0b000>;
 defm UQCVT_Z4Z      : sme2_int_cvt_vg4_single<"uqcvt", 0b001>;
 defm SQCVTU_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtu", 0b100>;
