@@ -229,7 +229,7 @@ Objective-C/C++ conformance
 OpenMP conformance
 ~~~~~~~~~~~~~~~~~~
 | Alexey Bataev
-| a.bataev\@hotmail.com (email), ABataev (Phabricator), cilkplus (GitHub)
+| a.bataev\@hotmail.com (email), ABataev (Phabricator), alexey-bataev (GitHub)
 
 
 OpenCL conformance
