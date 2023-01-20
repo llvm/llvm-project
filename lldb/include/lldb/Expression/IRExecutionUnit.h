@@ -391,6 +391,9 @@ private:
   std::vector<ConstString> m_failed_lookups;
 
   std::atomic<bool> m_did_jit;
+  // BEGIN SWIFT
+  std::atomic<bool> m_in_populate_symtab = false;
+  // END SWIFT
 
   lldb::addr_t m_function_load_addr;
   lldb::addr_t m_function_end_load_addr;
