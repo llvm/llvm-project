@@ -162,8 +162,10 @@ bool RegBankSelect::repairReg(
     MI = MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY)
       .addDef(Dst)
       .addUse(Src);
-    LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
-               << '\n');
+    LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << ':'
+                      << printRegClassOrBank(Src, *MRI, TRI)
+                      << " to: " << printReg(Dst) << ':'
+                      << printRegClassOrBank(Dst, *MRI, TRI) << '\n');
   } else {
     // TODO: Support with G_IMPLICIT_DEF + G_INSERT sequence or G_EXTRACT
     // sequence.
