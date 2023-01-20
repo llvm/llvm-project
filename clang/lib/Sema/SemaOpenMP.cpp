@@ -7259,7 +7259,7 @@ ExprResult Sema::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   if (LangOpts.OpenMP >= 51 && CalleeFnDecl->getIdentifier() &&
       CalleeFnDecl->getName().startswith_insensitive("omp_")) {
     // checking for any calls inside an Order region
-    if (Scope->isOpenMPOrderClauseScope())
+    if (Scope && Scope->isOpenMPOrderClauseScope())
       Diag(LParenLoc, diag::err_omp_unexpected_call_to_omp_runtime_api);
   }
 
