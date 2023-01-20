@@ -99,7 +99,6 @@ public:
     topSort.reserve(capacity);
   }
 
-  ArrayRef<LoopId> getTopSort() const { return topSort; };
   ArrayRef<LoopId> getTopSortSlice(LoopOrd n, LoopOrd m) const;
   ArrayRef<LoopId> getLoopStackUpTo(LoopOrd n) const;
   ArrayRef<LoopId> getCurrentLoopStack() const;
