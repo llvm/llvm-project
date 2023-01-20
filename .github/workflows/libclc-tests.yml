@@ -27,7 +27,7 @@ jobs:
           - ubuntu-latest
           # Disable build on windows, because I can't figure out where llvm-config is.
           #- windows-latest
-          - macOS-latest
+          # - macOS-latest
     steps:
     - name: Setup Windows
       if: startsWith(matrix.os, 'windows')

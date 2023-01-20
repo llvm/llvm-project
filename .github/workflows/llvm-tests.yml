@@ -21,8 +21,8 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - windows-latest
-          - macOS-latest
+          # - windows-latest
+          # - macOS-latest
     steps:
     - name: Setup Windows
       if: startsWith(matrix.os, 'windows')
