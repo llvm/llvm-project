@@ -423,6 +423,7 @@ END-SCRIPT
 #include <__iterator/iter_swap.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iter_swap.h'}}
 #include <__iterator/iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iterator.h'}}
 #include <__iterator/iterator_traits.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iterator_traits.h'}}
+#include <__iterator/iterator_with_data.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/iterator_with_data.h'}}
 #include <__iterator/mergeable.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/mergeable.h'}}
 #include <__iterator/move_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_iterator.h'}}
 #include <__iterator/move_sentinel.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/move_sentinel.h'}}
