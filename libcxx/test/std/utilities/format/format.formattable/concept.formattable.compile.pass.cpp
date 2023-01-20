@@ -38,6 +38,7 @@
 #include <variant>
 
 #include "test_macros.h"
+#include "min_allocator.h"
 
 #ifndef TEST_HAS_NO_FILESYSTEM_LIBRARY
 #  include <filesystem>
@@ -194,6 +195,12 @@ void test_P1636() {
   assert_is_not_formattable<std::unique_ptr<int>, CharT>();
 }
 
+template <class CharT, class Vector>
+void test_P2286_vector_bool() {
+  assert_is_formattable<Vector, CharT>();
+  assert_is_formattable<typename Vector::reference, CharT>();
+}
+
 // Tests for P2286 Formatting ranges
 template <class CharT>
 void test_P2286() {
@@ -223,6 +230,10 @@ void test_P2286() {
 
   assert_is_formattable<std::pair<int, int>, CharT>();
   assert_is_formattable<std::tuple<int>, CharT>();
+
+  test_P2286_vector_bool<CharT, std::vector<bool>>();
+  test_P2286_vector_bool<CharT, std::vector<bool, std::allocator<bool>>>();
+  test_P2286_vector_bool<CharT, std::vector<bool, min_allocator<bool>>>();
 }
 
 class c {

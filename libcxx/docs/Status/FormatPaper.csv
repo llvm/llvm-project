@@ -34,4 +34,4 @@ Section,Description,Dependencies,Assignee,Status,First released version
 `[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: associative",,Mark de Wever,,
 `[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: container adaptors",,Mark de Wever,|Complete|,Clang 16
 `[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: ``pair`` and ``tuple``",,Mark de Wever,|Complete|,Clang 16
-`[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: ``vector<bool>``",,Mark de Wever,,
+`[format.range] <https://wg21.link/format.range>`_,"Formatting for ranges: ``vector<bool>``",,Mark de Wever,|Complete|,Clang 16
