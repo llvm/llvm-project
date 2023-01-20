@@ -188,6 +188,12 @@ module {
   llvm.func @variadic_def(...) {
     llvm.return
   }
+
+  // CHECK-LABEL: llvm.func @memory_attr
+  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
+  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
+    llvm.return
+  }
 }
 
 // -----
@@ -346,22 +352,4 @@ module {
   // expected-error @below {{invalid Calling Conventions specification: cc_12}}
   // expected-error @below {{failed to parse CConvAttr parameter 'CallingConv' which is to be a `CConv`}}
   }) {sym_name = "generic_unknown_calling_convention", CConv = #llvm.cconv<cc_12>, function_type = !llvm.func<i64 (i64, i64)>} : () -> ()
-}
-
-// -----
-
-module {
-  // expected-error@+3 {{'llvm.readnone' is permitted only on FunctionOpInterface operations}}
-  "llvm.func"() ({
-  ^bb0:
-    llvm.return {llvm.readnone}
-  }) {sym_name = "readnone_return", function_type = !llvm.func<void ()>} : () -> ()
-}
-
-// -----
-
-module {
-  // expected-error@+1 {{op expected 'llvm.readnone' to be a unit attribute}}
-  "llvm.func"() ({
-  }) {sym_name = "readnone_func", llvm.readnone = true, function_type = !llvm.func<void ()>} : () -> ()
 }
