@@ -125,6 +125,7 @@ chrono string
 chrono string_view
 chrono tuple
 chrono type_traits
+chrono vector
 chrono version
 cinttypes cstdint
 cmath type_traits
@@ -364,11 +365,14 @@ format initializer_list
 format limits
 format locale
 format optional
+format queue
+format stack
 format stdexcept
 format string
 format string_view
 format tuple
 format type_traits
+format vector
 format version
 forward_list algorithm
 forward_list atomic

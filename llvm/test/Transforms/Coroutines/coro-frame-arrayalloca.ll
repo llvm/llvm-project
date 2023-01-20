@@ -1,5 +1,5 @@
 ; Check that we can handle spills of array allocas
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 declare void @consume.double.ptr(double*)
 declare void @consume.i32.ptr(i32*)

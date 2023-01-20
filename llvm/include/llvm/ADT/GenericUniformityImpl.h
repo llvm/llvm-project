@@ -467,9 +467,8 @@ private:
                            ConstValueRefT Val) const;
 };
 
-template <typename ContextT>
-void GenericUniformityInfo<ContextT>::ImplDeleter::operator()(
-    GenericUniformityAnalysisImpl<ContextT> *Impl) {
+template <typename ImplT>
+void GenericUniformityAnalysisImplDeleter<ImplT>::operator()(ImplT *Impl) {
   delete Impl;
 }
 

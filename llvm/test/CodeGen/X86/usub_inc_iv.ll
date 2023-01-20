@@ -13,10 +13,8 @@ define i32 @test_01(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[MATH]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, i8* [[TMP1]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SUNKADDR1]] to i32*
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[TMP2]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR1]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -60,11 +58,9 @@ define i32 @test_01a(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[MATH]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, i8* [[TMP1]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, i8* [[SUNKADDR1]], i64 -24
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SUNKADDR2]] to i32*
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[TMP2]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR1]], i64 -24
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR2]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -108,10 +104,8 @@ define i32 @test_02(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[MATH]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, i8* [[TMP1]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SUNKADDR1]] to i32*
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[TMP2]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR1]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -160,10 +154,8 @@ define i32 @test_03_neg(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IV_NEXT]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SUNKADDR1]] to i32*
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[TMP1]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR1]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE]], label [[LOOP]]
 ; CHECK:       exit:
@@ -213,11 +205,9 @@ define i32 @test_04_neg(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    br i1 [[COND_INNER]], label [[INNER]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IV]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, i8* [[SUNKADDR1]], i64 -4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SUNKADDR2]] to i32*
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[TMP1]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR1]], i64 -4
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR2]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
@@ -270,10 +260,8 @@ define i32 @test_05_neg(i32* %p, i64 %len, i32 %x, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[COND_1]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IV_NEXT]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SUNKADDR1]] to i32*
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[TMP1]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR1]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -321,10 +309,8 @@ define i32 @test_06(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[MATH]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, i8* [[TMP1]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SUNKADDR1]] to i32*
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[TMP2]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR1]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -367,10 +353,8 @@ define i32 @test_07_neg(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[LEN:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IV_NEXT]], 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to i8*
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, i8* [[TMP0]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[SUNKADDR1]] to i32*
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, i32* [[TMP1]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR1]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:

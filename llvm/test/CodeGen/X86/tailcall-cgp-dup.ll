@@ -7,14 +7,45 @@
 
 define i32 @foo(i32 %x) nounwind ssp {
 ; CHECK-LABEL: foo:
+; OPT-LABEL: @foo(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    switch i32 [[X:%.*]], label [[RETURN:%.*]] [
+; OPT-NEXT:    i32 1, label [[SW_BB:%.*]]
+; OPT-NEXT:    i32 2, label [[SW_BB1:%.*]]
+; OPT-NEXT:    i32 3, label [[SW_BB3:%.*]]
+; OPT-NEXT:    i32 4, label [[SW_BB5:%.*]]
+; OPT-NEXT:    i32 5, label [[SW_BB7:%.*]]
+; OPT-NEXT:    i32 6, label [[SW_BB9:%.*]]
+; OPT-NEXT:    ]
+; OPT:       sw.bb:
+; OPT-NEXT:    [[CALL:%.*]] = tail call i32 @f1() #[[ATTR3:[0-9]+]]
+; OPT-NEXT:    ret i32 [[CALL]]
+; OPT:       sw.bb1:
+; OPT-NEXT:    [[CALL2:%.*]] = tail call i32 @f2() #[[ATTR3]]
+; OPT-NEXT:    ret i32 [[CALL2]]
+; OPT:       sw.bb3:
+; OPT-NEXT:    [[CALL4:%.*]] = tail call i32 @f3() #[[ATTR3]]
+; OPT-NEXT:    ret i32 [[CALL4]]
+; OPT:       sw.bb5:
+; OPT-NEXT:    [[CALL6:%.*]] = tail call i32 @f4() #[[ATTR3]]
+; OPT-NEXT:    ret i32 [[CALL6]]
+; OPT:       sw.bb7:
+; OPT-NEXT:    [[CALL8:%.*]] = tail call i32 @f5() #[[ATTR3]]
+; OPT-NEXT:    ret i32 [[CALL8]]
+; OPT:       sw.bb9:
+; OPT-NEXT:    [[CALL10:%.*]] = tail call i32 @f6() #[[ATTR3]]
+; OPT-NEXT:    ret i32 [[CALL10]]
+; OPT:       return:
+; OPT-NEXT:    ret i32 0
+;
 entry:
   switch i32 %x, label %return [
-    i32 1, label %sw.bb
-    i32 2, label %sw.bb1
-    i32 3, label %sw.bb3
-    i32 4, label %sw.bb5
-    i32 5, label %sw.bb7
-    i32 6, label %sw.bb9
+  i32 1, label %sw.bb
+  i32 2, label %sw.bb1
+  i32 3, label %sw.bb3
+  i32 4, label %sw.bb5
+  i32 5, label %sw.bb7
+  i32 6, label %sw.bb9
   ]
 
 sw.bb:                                            ; preds = %entry
@@ -70,6 +101,17 @@ declare i32 @f6()
 declare i8* @bar(i8*) uwtable optsize noinline ssp
 
 define hidden %0* @thingWithValue(i8* %self) uwtable ssp {
+; OPT-LABEL: @thingWithValue(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    br i1 undef, label [[SOMETHINGWITHVALUE_EXIT:%.*]], label [[IF_ELSE_I:%.*]]
+; OPT:       if.else.i:
+; OPT-NEXT:    [[CALL4_I:%.*]] = tail call ptr @bar(ptr undef) #[[ATTR4:[0-9]+]]
+; OPT-NEXT:    [[TMP0:%.*]] = bitcast ptr [[CALL4_I]] to ptr
+; OPT-NEXT:    ret ptr [[TMP0]]
+; OPT:       someThingWithValue.exit:
+; OPT-NEXT:    [[RETVAL_0_I:%.*]] = bitcast ptr undef to ptr
+; OPT-NEXT:    ret ptr [[RETVAL_0_I]]
+;
 entry:
 ; CHECK-LABEL: thingWithValue:
 ; CHECK: jmp _bar
@@ -95,6 +137,15 @@ declare zeroext i1 @foo_i1()
 ; CHECK-LABEL: zext_i1
 ; CHECK: jmp _foo_i1
 define zeroext i1 @zext_i1(i1 %k) {
+; OPT-LABEL: @zext_i1(
+; OPT-NEXT:  entry:
+; OPT-NEXT:    br i1 [[K:%.*]], label [[LAND_END:%.*]], label [[LAND_RHS:%.*]]
+; OPT:       land.rhs:
+; OPT-NEXT:    [[CALL1:%.*]] = tail call zeroext i1 @foo_i1()
+; OPT-NEXT:    ret i1 [[CALL1]]
+; OPT:       land.end:
+; OPT-NEXT:    ret i1 false
+;
 entry:
   br i1 %k, label %land.end, label %land.rhs
 
@@ -113,14 +164,14 @@ declare i32* @g_ret32()
 define i8* @f_ret8(i8* %obj) nounwind {
 ; OPT-LABEL: @f_ret8(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[CMP:%.*]] = icmp eq i8* [[OBJ:%.*]], null
+; OPT-NEXT:    [[CMP:%.*]] = icmp eq ptr [[OBJ:%.*]], null
 ; OPT-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_THEN:%.*]]
 ; OPT:       if.then:
-; OPT-NEXT:    [[PTR:%.*]] = tail call i32* @g_ret32()
-; OPT-NEXT:    [[CASTED:%.*]] = bitcast i32* [[PTR]] to i8*
-; OPT-NEXT:    ret i8* [[CASTED]]
+; OPT-NEXT:    [[PTR:%.*]] = tail call ptr @g_ret32()
+; OPT-NEXT:    [[CASTED:%.*]] = bitcast ptr [[PTR]] to ptr
+; OPT-NEXT:    ret ptr [[CASTED]]
 ; OPT:       return:
-; OPT-NEXT:    ret i8* [[OBJ]]
+; OPT-NEXT:    ret ptr [[OBJ]]
 ;
 ; CHECK-LABEL: f_ret8:
 ; CHECK:       ## %bb.0: ## %entry

@@ -558,30 +558,15 @@ private:
     genAllocateObjectInit(box);
     if (alloc.hasCoarraySpec())
       TODO(loc, "coarray allocation");
+    if (alloc.getShapeSpecs().size() > 0 && sourceExv.rank() == 0)
+      TODO(loc, "allocate array object with scalar SOURCE specifier");
     // Set length of the allocate object if it has. Otherwise, get the length
     // from source for the deferred length parameter.
     if (lenParams.empty() && box.isCharacter() &&
         !box.hasNonDeferredLenParams())
       lenParams.push_back(fir::factory::readCharLen(builder, loc, sourceExv));
-    if (alloc.type.IsPolymorphic()) {
-      assert(sourceExpr->GetType() && "null type not expected");
-      if (alloc.type.IsUnlimitedPolymorphic() &&
-          sourceExpr->GetType()->IsUnlimitedPolymorphic())
-        TODO(loc, "allocate unlimited polymorphic entity from unlimited "
-                  "polymorphic source");
-
-      if (sourceExpr->GetType()->category() == TypeCategory::Derived) {
-        mlir::Type tdescType =
-            fir::TypeDescType::get(mlir::NoneType::get(builder.getContext()));
-        mlir::Value typeDescAddr = builder.create<fir::BoxTypeDescOp>(
-            loc, tdescType, fir::getBase(sourceExv));
-        genInitDerived(box, typeDescAddr, alloc.getSymbol().Rank());
-      } else {
-        genInitIntrinsic(box, sourceExpr->GetType()->category(),
-                         sourceExpr->GetType()->kind(),
-                         alloc.getSymbol().Rank());
-      }
-    }
+    if (alloc.type.IsPolymorphic())
+      genRuntimeAllocateApplyMold(builder, loc, box, sourceExv);
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat =
@@ -851,7 +836,7 @@ static fir::MutableProperties
 createMutableProperties(Fortran::lower::AbstractConverter &converter,
                         mlir::Location loc,
                         const Fortran::lower::pft::Variable &var,
-                        mlir::ValueRange nonDeferredParams) {
+                        mlir::ValueRange nonDeferredParams, bool alwaysUseBox) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   // Globals and dummies may be associated, creating local variables would
@@ -865,7 +850,7 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
   // Pointer/Allocatable in internal procedure are descriptors in the host link,
   // and it would increase complexity to sync this descriptor with the local
   // values every time the host link is escaping.
-  if (var.isGlobal() || Fortran::semantics::IsDummy(sym) ||
+  if (alwaysUseBox || var.isGlobal() || Fortran::semantics::IsDummy(sym) ||
       Fortran::semantics::IsFunctionResult(sym) ||
       sym.attrs().test(Fortran::semantics::Attr::VOLATILE) ||
       isNonContiguousArrayPointer(sym) || useAllocateRuntime ||
@@ -918,10 +903,10 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
 fir::MutableBoxValue Fortran::lower::createMutableBox(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::pft::Variable &var, mlir::Value boxAddr,
-    mlir::ValueRange nonDeferredParams) {
+    mlir::ValueRange nonDeferredParams, bool alwaysUseBox) {
 
-  fir::MutableProperties mutableProperties =
-      createMutableProperties(converter, loc, var, nonDeferredParams);
+  fir::MutableProperties mutableProperties = createMutableProperties(
+      converter, loc, var, nonDeferredParams, alwaysUseBox);
   fir::MutableBoxValue box(boxAddr, nonDeferredParams, mutableProperties);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (!var.isGlobal() && !Fortran::semantics::IsDummy(var.getSymbol()))

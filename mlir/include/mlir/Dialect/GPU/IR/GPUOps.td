@@ -180,7 +180,7 @@ def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
-    IsolatedFromAbove, Symbol
+    IsolatedFromAbove
   ]> {
   let summary = "Function executable on a GPU";
 

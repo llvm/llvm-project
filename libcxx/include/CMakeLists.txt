@@ -302,6 +302,7 @@ set(files
   __filesystem/u8path.h
   __format/buffer.h
   __format/concepts.h
+  __format/container_adaptor.h
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
@@ -327,6 +328,7 @@ set(files
   __format/formatter_tuple.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
+  __format/range_formatter.h
   __format/unicode.h
   __functional/binary_function.h
   __functional/binary_negate.h
@@ -390,6 +392,7 @@ set(files
   __iterator/iter_swap.h
   __iterator/iterator.h
   __iterator/iterator_traits.h
+  __iterator/iterator_with_data.h
   __iterator/mergeable.h
   __iterator/move_iterator.h
   __iterator/move_sentinel.h
@@ -402,6 +405,7 @@ set(files
   __iterator/readable_traits.h
   __iterator/reverse_access.h
   __iterator/reverse_iterator.h
+  __iterator/segmented_iterator.h
   __iterator/size.h
   __iterator/sortable.h
   __iterator/unreachable_sentinel.h
@@ -496,6 +500,7 @@ set(files
   __random/weibull_distribution.h
   __ranges/access.h
   __ranges/all.h
+  __ranges/as_rvalue_view.h
   __ranges/common_view.h
   __ranges/concepts.h
   __ranges/copyable_box.h

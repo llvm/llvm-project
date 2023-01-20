@@ -4,12 +4,12 @@
 define i32* @ret_ptr() {
   ; X32ABI-LABEL: name: ret_ptr
   ; X32ABI: bb.1 (%ir-block.0):
-  ; X32ABI:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; X32ABI:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[DEF]](p0) :: (load (p0) from `i32** undef`)
-  ; X32ABI:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[LOAD]](p0)
-  ; X32ABI:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
-  ; X32ABI:   $rax = COPY [[ZEXT]](s64)
-  ; X32ABI:   RET 0, implicit $rax
+  ; X32ABI-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+  ; X32ABI-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[DEF]](p0) :: (load (p0) from `ptr undef`)
+  ; X32ABI-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[LOAD]](p0)
+  ; X32ABI-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
+  ; X32ABI-NEXT:   $rax = COPY [[ZEXT]](s64)
+  ; X32ABI-NEXT:   RET 0, implicit $rax
   %ptr = load i32*, i32** undef
   ret i32* %ptr
 }
@@ -17,13 +17,14 @@ define i32* @ret_ptr() {
 define void @arg_ptr(i32* %ptr) {
   ; X32ABI-LABEL: name: arg_ptr
   ; X32ABI: bb.1 (%ir-block.0):
-  ; X32ABI:   liveins: $rdi
-  ; X32ABI:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
-  ; X32ABI:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-  ; X32ABI:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[TRUNC]](s32)
-  ; X32ABI:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; X32ABI:   G_STORE [[C]](s32), [[INTTOPTR]](p0) :: (store (s32) into %ir.ptr)
-  ; X32ABI:   RET 0
+  ; X32ABI-NEXT:   liveins: $rdi
+  ; X32ABI-NEXT: {{  $}}
+  ; X32ABI-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; X32ABI-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+  ; X32ABI-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[TRUNC]](s32)
+  ; X32ABI-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; X32ABI-NEXT:   G_STORE [[C]](s32), [[INTTOPTR]](p0) :: (store (s32) into %ir.ptr)
+  ; X32ABI-NEXT:   RET 0
   store i32 1, i32* %ptr
   ret void
 }

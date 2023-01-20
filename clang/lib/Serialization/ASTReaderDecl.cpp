@@ -829,6 +829,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
 
 void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
   VisitRecordDeclImpl(RD);
+  RD->setODRHash(Record.readInt());
 
   // Maintain the invariant of a redeclaration chain containing only
   // a single definition.
@@ -849,6 +850,8 @@ void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
       Reader.MergedDeclContexts.insert(std::make_pair(RD, OldDef));
       RD->demoteThisDefinitionToDeclaration();
       Reader.mergeDefinitionVisibility(OldDef, RD);
+      if (OldDef->getODRHash() != RD->getODRHash())
+        Reader.PendingRecordOdrMergeFailures[OldDef].push_back(RD);
     } else {
       OldDef = RD;
     }

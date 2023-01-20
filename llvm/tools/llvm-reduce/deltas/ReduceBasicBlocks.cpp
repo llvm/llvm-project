@@ -132,11 +132,11 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
+static void extractBasicBlocksFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   DenseSet<BasicBlock *> BBsToDelete;
   df_iterator_default_set<BasicBlock *> Reachable;
 
-  for (auto &F : Program) {
+  for (auto &F : WorkItem.getModule()) {
     if (F.empty())
       continue;
 
@@ -183,11 +183,12 @@ void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, extractBasicBlocksFromModule, "Reducing Basic Blocks");
 }
 
-static void removeUnreachableBasicBlocksFromModule(Oracle &O, Module &M) {
+static void removeUnreachableBasicBlocksFromModule(Oracle &O,
+                                                   ReducerWorkItem &WorkItem) {
   std::vector<BasicBlock *> DeadBlocks;
   df_iterator_default_set<BasicBlock *> Reachable;
 
-  for (Function &F : M) {
+  for (Function &F : WorkItem.getModule()) {
     if (F.empty())
       continue;
 

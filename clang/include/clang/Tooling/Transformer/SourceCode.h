@@ -104,13 +104,14 @@ llvm::Error validateEditRange(const CharSourceRange &Range,
 /// will be rewritten to
 ///    foo(6)
 std::optional<CharSourceRange>
-getRangeForEdit(const CharSourceRange &EditRange, const SourceManager &SM,
-                const LangOptions &LangOpts, bool IncludeMacroExpansion = true);
+getFileRangeForEdit(const CharSourceRange &EditRange, const SourceManager &SM,
+                    const LangOptions &LangOpts,
+                    bool IncludeMacroExpansion = true);
 inline std::optional<CharSourceRange>
-getRangeForEdit(const CharSourceRange &EditRange, const ASTContext &Context,
-                bool IncludeMacroExpansion = true) {
-  return getRangeForEdit(EditRange, Context.getSourceManager(),
-                         Context.getLangOpts(), IncludeMacroExpansion);
+getFileRangeForEdit(const CharSourceRange &EditRange, const ASTContext &Context,
+                    bool IncludeMacroExpansion = true) {
+  return getFileRangeForEdit(EditRange, Context.getSourceManager(),
+                             Context.getLangOpts(), IncludeMacroExpansion);
 }
 
 /// Attempts to resolve the given range to one that starts and ends in a

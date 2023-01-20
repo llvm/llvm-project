@@ -187,6 +187,7 @@ void link_ELF_loongarch(std::unique_ptr<LinkGraph> G,
     Config.PrePrunePasses.push_back(
         EHFrameEdgeFixer(".eh_frame", G->getPointerSize(), Pointer32, Pointer64,
                          Delta32, Delta64, NegDelta32));
+    Config.PrePrunePasses.push_back(EHFrameNullTerminator(".eh_frame"));
 
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(TT))

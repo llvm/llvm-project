@@ -10,10 +10,10 @@ define float @convphi1(i32 *%s, i32 *%d, i32 %n) {
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP15]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[LS:%.*]] = load i32, i32* [[S:%.*]], align 4
+; CHECK-NEXT:    [[LS:%.*]] = load i32, ptr [[S:%.*]], align 4
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[D:%.*]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[D:%.*]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[LS]], [[THEN]] ], [ [[LD]], [[ELSE]] ]

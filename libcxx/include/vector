@@ -267,6 +267,13 @@ template <class T, class Allocator, class Predicate>
 typename vector<T, Allocator>::size_type
 erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 
+
+template<class T>
+ inline constexpr bool is-vector-bool-reference = see below;        // exposition only, since C++23
+
+template<class T, class charT> requires is-vector-bool-reference<T> // Since C++23
+ struct formatter<T, charT>;
+
 }  // std
 
 */
@@ -281,9 +288,11 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__algorithm/unwrap_iter.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__bit_reference>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__debug>
 #include <__format/enable_insertable.h>
+#include <__format/formatter.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__iterator/advance.h>
@@ -3311,6 +3320,27 @@ inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
 #endif
 
 #endif // _LIBCPP_STD_VER > 17
+
+#if _LIBCPP_STD_VER > 20
+template <class _Tp, class CharT>
+// Since is-vector-bool-reference is only used once it's inlined here.
+  requires same_as<typename _Tp::__container, vector<bool, typename _Tp::__container::allocator_type>>
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<_Tp, CharT> {
+private:
+  formatter<bool, CharT> __underlying_;
+
+public:
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+        return __underlying_.parse(__ctx);
+  }
+
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(const _Tp& __ref, _FormatContext& __ctx) const {
+        return __underlying_.format(__ref, __ctx);
+  }
+};
+#endif // _LIBCPP_STD_VER > 20
 
 _LIBCPP_END_NAMESPACE_STD
 

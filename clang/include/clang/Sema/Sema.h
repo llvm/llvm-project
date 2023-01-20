@@ -3304,22 +3304,36 @@ public:
     TUK_Friend       // Friend declaration:  'friend struct foo;'
   };
 
-  Decl *ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
-                 SourceLocation KWLoc, CXXScopeSpec &SS, IdentifierInfo *Name,
-                 SourceLocation NameLoc, const ParsedAttributesView &Attr,
-                 AccessSpecifier AS, SourceLocation ModulePrivateLoc,
-                 MultiTemplateParamsArg TemplateParameterLists, bool &OwnedDecl,
-                 bool &IsDependent, SourceLocation ScopedEnumKWLoc,
-                 bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
-                 bool IsTypeSpecifier, bool IsTemplateParamOrArg,
-                 SkipBodyInfo *SkipBody = nullptr);
+  enum OffsetOfKind {
+    // Not parsing a type within __builtin_offsetof.
+    OOK_Outside,
+    // Parsing a type within __builtin_offsetof.
+    OOK_Builtin,
+    // Parsing a type within macro "offsetof", defined in __buitin_offsetof
+    // To improve our diagnostic message.
+    OOK_Macro,
+  };
 
-  Decl *ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
-                                unsigned TagSpec, SourceLocation TagLoc,
-                                CXXScopeSpec &SS, IdentifierInfo *Name,
-                                SourceLocation NameLoc,
-                                const ParsedAttributesView &Attr,
-                                MultiTemplateParamsArg TempParamLists);
+  DeclResult ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
+                      SourceLocation KWLoc, CXXScopeSpec &SS,
+                      IdentifierInfo *Name, SourceLocation NameLoc,
+                      const ParsedAttributesView &Attr, AccessSpecifier AS,
+                      SourceLocation ModulePrivateLoc,
+                      MultiTemplateParamsArg TemplateParameterLists,
+                      bool &OwnedDecl, bool &IsDependent,
+                      SourceLocation ScopedEnumKWLoc,
+                      bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
+                      bool IsTypeSpecifier, bool IsTemplateParamOrArg,
+                      OffsetOfKind OOK,
+                      UsingShadowDecl*& FoundUsingShadow,
+                      SkipBodyInfo *SkipBody = nullptr);
+
+  DeclResult ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
+                                     unsigned TagSpec, SourceLocation TagLoc,
+                                     CXXScopeSpec &SS, IdentifierInfo *Name,
+                                     SourceLocation NameLoc,
+                                     const ParsedAttributesView &Attr,
+                                     MultiTemplateParamsArg TempParamLists);
 
   TypeResult ActOnDependentTag(Scope *S,
                                unsigned TagSpec,

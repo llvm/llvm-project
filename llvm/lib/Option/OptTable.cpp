@@ -227,12 +227,14 @@ OptTable::findByPrefix(StringRef Cur, unsigned int DisableFlags) const {
 
 unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
                                unsigned FlagsToInclude, unsigned FlagsToExclude,
-                               unsigned MinimumLength) const {
+                               unsigned MinimumLength,
+                               unsigned MaximumDistance) const {
   assert(!Option.empty());
 
   // Consider each [option prefix + option name] pair as a candidate, finding
   // the closest match.
-  unsigned BestDistance = UINT_MAX;
+  unsigned BestDistance =
+      MaximumDistance == UINT_MAX ? UINT_MAX : MaximumDistance + 1;
   SmallString<16> Candidate;
   SmallString<16> NormalizedName;
 
@@ -276,6 +278,18 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
     // appropriate one. For example, if a user asks for "--helm", suggest
     // "--help" over "-help".
     for (auto CandidatePrefix : CandidateInfo.Prefixes) {
+      // If Candidate and NormalizedName have more than 'BestDistance'
+      // characters of difference, no need to compute the edit distance, it's
+      // going to be greater than BestDistance. Don't bother computing Candidate
+      // at all.
+      size_t CandidateSize = CandidatePrefix.size() + CandidateName.size(),
+             NormalizedSize = NormalizedName.size();
+      size_t AbsDiff = CandidateSize > NormalizedSize
+                           ? CandidateSize - NormalizedSize
+                           : NormalizedSize - CandidateSize;
+      if (AbsDiff > BestDistance) {
+        continue;
+      }
       Candidate = CandidatePrefix;
       Candidate += CandidateName;
       unsigned Distance = StringRef(Candidate).edit_distance(

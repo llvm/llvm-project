@@ -621,6 +621,22 @@ LinalgOp::reifyResultShapes(OpBuilder &b,
   return success();
 }
 
+/// Return the index in the indexingMaps vector that corresponds to this
+/// `opOperand`.
+int64_t LinalgOp::getIndexingMapIndex(OpOperand *opOperand) {
+  auto operandNumber = opOperand->getOperandNumber();
+  auto dpsIface = cast<DestinationStyleOpInterface>(*this->getOperation());
+  if (!dpsIface.isDpsInput(opOperand))
+    return operandNumber;
+  auto [start, end] = dpsIface.getDpsInitsPositionRange();
+  assert(!dpsIface.isDpsInit(opOperand));
+  // Account for potential inputs that are not DPS and may not appear in
+  // `indexingMaps`.
+  return cast<DestinationStyleOpInterface>(*this->getOperation())
+             .getNumDpsInputs() +
+         operandNumber - start;
+}
+
 LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   LinalgOp linalgOp = cast<LinalgOp>(op);
 

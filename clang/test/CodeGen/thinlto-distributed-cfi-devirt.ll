@@ -6,7 +6,7 @@
 
 ; RUN: opt --opaque-pointers=0 -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
-; RUN: llvm-lto2 run --opaque-pointers=0 -thinlto-distributed-indexes -disable-thinlto-funcattrs=0 %t.o \
+; RUN: llvm-lto2 run -thinlto-distributed-indexes -disable-thinlto-funcattrs=0 %t.o \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t2.index \
 ; RUN:   -r=%t.o,test,px \

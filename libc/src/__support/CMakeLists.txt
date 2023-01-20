@@ -146,6 +146,12 @@ add_header_library(
 )
 
 add_header_library(
+  char_vector
+  HDRS
+    char_vector.h
+)
+
+add_header_library(
   number_pair
   HDRS
     number_pair.h

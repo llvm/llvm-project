@@ -891,7 +891,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     if (!Value)
       return IndirectBranchType::UNKNOWN;
 
-    if (!BC.getSectionForAddress(ArrayStart)->isReadOnly())
+    if (BC.getSectionForAddress(ArrayStart)->isWritable())
       return IndirectBranchType::UNKNOWN;
 
     outs() << "BOLT-INFO: fixed indirect branch detected in " << *this

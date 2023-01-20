@@ -506,8 +506,16 @@ public:
     assert(isTypeRep((TST) TypeSpecType) && "DeclSpec does not store a type");
     return TypeRep;
   }
+  // Returns the underlying decl, if any.
   Decl *getRepAsDecl() const {
-    assert(isDeclRep((TST) TypeSpecType) && "DeclSpec does not store a decl");
+    auto *D = getRepAsFoundDecl();
+    if (const auto *Using = dyn_cast_or_null<UsingShadowDecl>(D))
+      return Using->getTargetDecl();
+    return D;
+  }
+  // Returns the originally found decl, if any.
+  Decl *getRepAsFoundDecl() const {
+    assert(isDeclRep((TST)TypeSpecType) && "DeclSpec does not store a decl");
     return DeclRep;
   }
   Expr *getRepAsExpr() const {

@@ -25,6 +25,7 @@
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/readable_traits.h>
+#include <__iterator/segmented_iterator.h>
 #include <__memory/addressof.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>

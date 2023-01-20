@@ -2124,13 +2124,14 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; KNL-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testb %al, %al
-; KNL-NEXT:    je LBB44_2
-; KNL-NEXT:  ## %bb.1: ## %L1
+; KNL-NEXT:    je LBB44_1
+; KNL-NEXT:  ## %bb.2: ## %End
 ; KNL-NEXT:    vmovapd %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
-; KNL-NEXT:  LBB44_2: ## %L2
-; KNL-NEXT:    vmovapd %zmm0, 8(%rdi)
+; KNL-NEXT:  LBB44_1: ## %L2
+; KNL-NEXT:    addq $8, %rdi
+; KNL-NEXT:    vmovapd %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -2140,13 +2141,14 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; SKX-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
 ; SKX-NEXT:    vcmpltpd %zmm1, %zmm0, %k0
 ; SKX-NEXT:    ktestb %k0, %k1
-; SKX-NEXT:    je LBB44_2
-; SKX-NEXT:  ## %bb.1: ## %L1
+; SKX-NEXT:    je LBB44_1
+; SKX-NEXT:  ## %bb.2: ## %End
 ; SKX-NEXT:    vmovapd %zmm0, (%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
-; SKX-NEXT:  LBB44_2: ## %L2
-; SKX-NEXT:    vmovapd %zmm0, 8(%rdi)
+; SKX-NEXT:  LBB44_1: ## %L2
+; SKX-NEXT:    addq $8, %rdi
+; SKX-NEXT:    vmovapd %zmm0, (%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
@@ -2157,13 +2159,14 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; AVX512BW-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    testb %al, %al
-; AVX512BW-NEXT:    je LBB44_2
-; AVX512BW-NEXT:  ## %bb.1: ## %L1
+; AVX512BW-NEXT:    je LBB44_1
+; AVX512BW-NEXT:  ## %bb.2: ## %End
 ; AVX512BW-NEXT:    vmovapd %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-; AVX512BW-NEXT:  LBB44_2: ## %L2
-; AVX512BW-NEXT:    vmovapd %zmm0, 8(%rdi)
+; AVX512BW-NEXT:  LBB44_1: ## %L2
+; AVX512BW-NEXT:    addq $8, %rdi
+; AVX512BW-NEXT:    vmovapd %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -2173,13 +2176,14 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; AVX512DQ-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
 ; AVX512DQ-NEXT:    vcmpltpd %zmm1, %zmm0, %k0
 ; AVX512DQ-NEXT:    ktestb %k0, %k1
-; AVX512DQ-NEXT:    je LBB44_2
-; AVX512DQ-NEXT:  ## %bb.1: ## %L1
+; AVX512DQ-NEXT:    je LBB44_1
+; AVX512DQ-NEXT:  ## %bb.2: ## %End
 ; AVX512DQ-NEXT:    vmovapd %zmm0, (%rdi)
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
-; AVX512DQ-NEXT:  LBB44_2: ## %L2
-; AVX512DQ-NEXT:    vmovapd %zmm0, 8(%rdi)
+; AVX512DQ-NEXT:  LBB44_1: ## %L2
+; AVX512DQ-NEXT:    addq $8, %rdi
+; AVX512DQ-NEXT:    vmovapd %zmm0, (%rdi)
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -2190,13 +2194,14 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; X86-NEXT:    vmovupd 8(%eax), %zmm1 {%k1} {z}
 ; X86-NEXT:    vcmpltpd %zmm1, %zmm0, %k0
 ; X86-NEXT:    ktestb %k0, %k1
-; X86-NEXT:    je LBB44_2
-; X86-NEXT:  ## %bb.1: ## %L1
+; X86-NEXT:    je LBB44_1
+; X86-NEXT:  ## %bb.2: ## %End
 ; X86-NEXT:    vmovapd %zmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-; X86-NEXT:  LBB44_2: ## %L2
-; X86-NEXT:    vmovapd %zmm0, 8(%eax)
+; X86-NEXT:  LBB44_1: ## %L2
+; X86-NEXT:    addl $8, %eax
+; X86-NEXT:    vmovapd %zmm0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
   %addr1 = getelementptr double, double * %base, i64 0
@@ -2239,15 +2244,12 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; KNL-NEXT:    korw %k3, %k2, %k2
 ; KNL-NEXT:    korw %k0, %k1, %k0
 ; KNL-NEXT:    kortestw %k2, %k0
-; KNL-NEXT:    je LBB45_2
-; KNL-NEXT:  ## %bb.1: ## %L1
+; KNL-NEXT:    jne LBB45_2
+; KNL-NEXT:  ## %bb.1: ## %L2
+; KNL-NEXT:    addq $4, %rdi
+; KNL-NEXT:  LBB45_2: ## %End
 ; KNL-NEXT:    vmovaps %zmm0, (%rdi)
 ; KNL-NEXT:    vmovaps %zmm1, 64(%rdi)
-; KNL-NEXT:    vzeroupper
-; KNL-NEXT:    retq
-; KNL-NEXT:  LBB45_2: ## %L2
-; KNL-NEXT:    vmovaps %zmm0, 4(%rdi)
-; KNL-NEXT:    vmovaps %zmm1, 68(%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -2262,15 +2264,12 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; SKX-NEXT:    vcmpltps %zmm2, %zmm1, %k2
 ; SKX-NEXT:    kunpckwd %k1, %k2, %k1
 ; SKX-NEXT:    kortestd %k1, %k0
-; SKX-NEXT:    je LBB45_2
-; SKX-NEXT:  ## %bb.1: ## %L1
+; SKX-NEXT:    jne LBB45_2
+; SKX-NEXT:  ## %bb.1: ## %L2
+; SKX-NEXT:    addq $4, %rdi
+; SKX-NEXT:  LBB45_2: ## %End
 ; SKX-NEXT:    vmovaps %zmm0, (%rdi)
 ; SKX-NEXT:    vmovaps %zmm1, 64(%rdi)
-; SKX-NEXT:    vzeroupper
-; SKX-NEXT:    retq
-; SKX-NEXT:  LBB45_2: ## %L2
-; SKX-NEXT:    vmovaps %zmm0, 4(%rdi)
-; SKX-NEXT:    vmovaps %zmm1, 68(%rdi)
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
 ;
@@ -2285,15 +2284,12 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; AVX512BW-NEXT:    vcmpltps %zmm2, %zmm1, %k2
 ; AVX512BW-NEXT:    kunpckwd %k1, %k2, %k1
 ; AVX512BW-NEXT:    kortestd %k1, %k0
-; AVX512BW-NEXT:    je LBB45_2
-; AVX512BW-NEXT:  ## %bb.1: ## %L1
+; AVX512BW-NEXT:    jne LBB45_2
+; AVX512BW-NEXT:  ## %bb.1: ## %L2
+; AVX512BW-NEXT:    addq $4, %rdi
+; AVX512BW-NEXT:  LBB45_2: ## %End
 ; AVX512BW-NEXT:    vmovaps %zmm0, (%rdi)
 ; AVX512BW-NEXT:    vmovaps %zmm1, 64(%rdi)
-; AVX512BW-NEXT:    vzeroupper
-; AVX512BW-NEXT:    retq
-; AVX512BW-NEXT:  LBB45_2: ## %L2
-; AVX512BW-NEXT:    vmovaps %zmm0, 4(%rdi)
-; AVX512BW-NEXT:    vmovaps %zmm1, 68(%rdi)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
@@ -2308,15 +2304,12 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; AVX512DQ-NEXT:    korw %k3, %k2, %k2
 ; AVX512DQ-NEXT:    korw %k0, %k1, %k0
 ; AVX512DQ-NEXT:    kortestw %k2, %k0
-; AVX512DQ-NEXT:    je LBB45_2
-; AVX512DQ-NEXT:  ## %bb.1: ## %L1
+; AVX512DQ-NEXT:    jne LBB45_2
+; AVX512DQ-NEXT:  ## %bb.1: ## %L2
+; AVX512DQ-NEXT:    addq $4, %rdi
+; AVX512DQ-NEXT:  LBB45_2: ## %End
 ; AVX512DQ-NEXT:    vmovaps %zmm0, (%rdi)
 ; AVX512DQ-NEXT:    vmovaps %zmm1, 64(%rdi)
-; AVX512DQ-NEXT:    vzeroupper
-; AVX512DQ-NEXT:    retq
-; AVX512DQ-NEXT:  LBB45_2: ## %L2
-; AVX512DQ-NEXT:    vmovaps %zmm0, 4(%rdi)
-; AVX512DQ-NEXT:    vmovaps %zmm1, 68(%rdi)
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
@@ -2332,15 +2325,12 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; X86-NEXT:    vcmpltps %zmm2, %zmm1, %k2
 ; X86-NEXT:    kunpckwd %k1, %k2, %k1
 ; X86-NEXT:    kortestd %k1, %k0
-; X86-NEXT:    je LBB45_2
-; X86-NEXT:  ## %bb.1: ## %L1
+; X86-NEXT:    jne LBB45_2
+; X86-NEXT:  ## %bb.1: ## %L2
+; X86-NEXT:    addl $4, %eax
+; X86-NEXT:  LBB45_2: ## %End
 ; X86-NEXT:    vmovaps %zmm0, (%eax)
 ; X86-NEXT:    vmovaps %zmm1, 64(%eax)
-; X86-NEXT:    vzeroupper
-; X86-NEXT:    retl
-; X86-NEXT:  LBB45_2: ## %L2
-; X86-NEXT:    vmovaps %zmm0, 4(%eax)
-; X86-NEXT:    vmovaps %zmm1, 68(%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
   %addr1 = getelementptr float, float * %base, i64 0

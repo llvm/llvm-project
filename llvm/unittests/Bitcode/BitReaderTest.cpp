@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BitReaderTestCode.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -344,23 +345,10 @@ static Metadata *getTypeMetadataEntry(unsigned TypeID, LLVMContext &Context,
 // opaque pointers, the type information of function signatures can be extracted
 // and stored in metadata.
 TEST(BitReaderTest, AccessFunctionTypeInfo) {
-  SmallString<1024> Mem;
-  LLVMContext WriteContext;
-  writeModuleToBuffer(
-      parseAssembly(
-          WriteContext,
-          "define void @func() {\n"
-          "  unreachable\n"
-          "}\n"
-          "declare i32 @func_header()\n"
-          "declare i8* @ret_ptr()\n"
-          "declare i8* @ret_and_arg_ptr(i32 addrspace(8)*)\n"
-          "declare i8 addrspace(1)* @double_ptr(i32* addrspace(2)*, i32***)\n"),
-      Mem);
+  StringRef Bitcode(reinterpret_cast<const char *>(AccessFunctionTypeInfoBc),
+                    sizeof(AccessFunctionTypeInfoBc));
 
   LLVMContext Context;
-  Context.setOpaquePointers(true);
-
   ParserCallbacks Callbacks;
   // Supply a callback that stores the signature of a function into metadata,
   // so that the types behind pointers can be accessed.
@@ -379,7 +367,7 @@ TEST(BitReaderTest, AccessFunctionTypeInfo) {
   };
 
   Expected<std::unique_ptr<Module>> ModuleOrErr =
-      parseBitcodeFile(MemoryBufferRef(Mem.str(), "test"), Context, Callbacks);
+      parseBitcodeFile(MemoryBufferRef(Bitcode, "test"), Context, Callbacks);
 
   if (!ModuleOrErr)
     report_fatal_error("Could not parse bitcode module");
@@ -401,23 +389,10 @@ TEST(BitReaderTest, AccessFunctionTypeInfo) {
 // opaque pointers, the type information of pointers in metadata can be
 // extracted and stored in metadata.
 TEST(BitReaderTest, AccessMetadataTypeInfo) {
-  SmallString<1024> Mem;
-  LLVMContext WriteContext;
-  writeModuleToBuffer(
-      parseAssembly(WriteContext,
-                    "%dx.types.f32 = type { float }\n"
-                    "declare void @main()\n"
-                    "!md = !{!0}\n"
-                    "!md2 = !{!1}\n"
-                    "!0 = !{i32 2, %dx.types.f32 addrspace(1)* undef, void ()* "
-                    "@main, void() addrspace(3)* null}\n"
-                    "!1 = !{i8*(i32* addrspace(2)*) addrspace(4)* undef, "
-                    "i32*** undef}\n"),
-      Mem);
+  StringRef Bitcode(reinterpret_cast<const char *>(AccessMetadataTypeInfoBc),
+                    sizeof(AccessFunctionTypeInfoBc));
 
   LLVMContext Context;
-  Context.setOpaquePointers(true);
-
   ParserCallbacks Callbacks;
   // Supply a callback that stores types from metadata,
   // so that the types behind pointers can be accessed.
@@ -445,7 +420,7 @@ TEST(BitReaderTest, AccessMetadataTypeInfo) {
   };
 
   Expected<std::unique_ptr<Module>> ModuleOrErr =
-      parseBitcodeFile(MemoryBufferRef(Mem.str(), "test"), Context, Callbacks);
+      parseBitcodeFile(MemoryBufferRef(Bitcode, "test"), Context, Callbacks);
 
   if (!ModuleOrErr)
     report_fatal_error("Could not parse bitcode module");

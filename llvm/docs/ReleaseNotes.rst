@@ -132,6 +132,7 @@ Changes to the AArch64 Backend
 * Added support for the Cortex-X3 CPU.
 * Added support for the Neoverse V2 CPU.
 * Added support for assembly for RME MEC (Memory Encryption Contexts).
+* Added codegen support for the Armv8.3 Complex Number extension.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -142,6 +143,7 @@ Changes to the ARM Backend
 * Support for targeting armv2, armv2A, armv3 and armv3M has been removed.
   LLVM did not, and was not ever likely to generate correct code for those
   architecture versions so their presence was misleading.
+* Added codegen support for the complex arithmetic instructions in MVE.
 
 Changes to the AVR Backend
 --------------------------
@@ -277,6 +279,10 @@ Previously when emitting DWARF v4 and tuning for GDB, llc would use DWARF v2's
 Support for ``DW_AT_data_bit_offset`` was added in GDB 8.0. For earlier versions,
 you can use llc's ``-dwarf-version=3`` option to emit compatible DWARF.
 
+When emitting CodeView debug information, LLVM will now emit S_CONSTANT records
+for variables optimized into a constant via the SROA and SCCP passes.
+(`D138995 <https://reviews.llvm.org/D138995>`_)
+
 Changes to the LLVM tools
 ---------------------------------
 
@@ -304,6 +310,13 @@ Changes to Sanitizers
 
 Other Changes
 -------------
+
+* lit no longer supports using substrings of the default target triple as
+  feature names in ``UNSUPPORTED:`` and ``XFAIL:`` directives. These have been
+  replaced by the ``target=<triple>`` feature, and tests can use regex
+  matching to achieve the same effect. For example, ``UNSUPPORTED: arm``
+  would now be ``UNSUPPORTED: target=arm{{.*}}`` and ``XFAIL: windows``
+  would now be ``XFAIL: target={{.*}}-windows{{.*}}``.
 
 External Open Source Projects Using LLVM 15
 ===========================================

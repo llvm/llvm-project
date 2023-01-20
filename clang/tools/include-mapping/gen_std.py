@@ -28,9 +28,11 @@ Usage:
      get a "cppreference/reference" directory.
   4. Run the command:
        // Generate C++ symbols
-       python3 gen_std.py -cppreference cppreference/reference -language=cpp > StdSymbolMap.inc
+       python3 gen_std.py -cppreference cppreference/reference -symbols=cpp > StdSymbolMap.inc
+       // Generate C++ removed symbols
+       python3 gen_std.py -cppreference cppreference/reference -symbols=cpp_removed > RemovedSymbolMap.inc
        // Generate C symbols
-       python3 gen_std.py -cppreference cppreference/reference -language=c > CSymbolMap.inc
+       python3 gen_std.py -cppreference cppreference/reference -symbols=c > CSymbolMap.inc
 """
 
 
@@ -60,16 +62,16 @@ def ParseArg():
                       help='path to the cppreference offline HTML directory',
                       required=True
                      )
-  parser.add_argument('-language',
+  parser.add_argument('-symbols',
                       default='cpp',
-                      help='Generate c or cpp symbols',
-                      required=True)
+                      help='Generate c or cpp (removed) symbols. One of {cpp, c, cpp_removed}.',
+                      required=True) 
   return parser.parse_args()
 
 
 def main():
   args = ParseArg()
-  if args.language == 'cpp':
+  if args.symbols == 'cpp':
     page_root = os.path.join(args.cppreference, "en", "cpp")
     symbol_index_root = os.path.join(page_root, "symbol_index")
     parse_pages =  [
@@ -87,22 +89,26 @@ def main():
       (symbol_index_root, "regex_constants.html", "std::regex_constants::"),
       (symbol_index_root, "this_thread.html", "std::this_thread::"),
     ]
-  elif args.language == 'c':
+  elif args.symbols == 'cpp_removed':
+    page_root = os.path.join(args.cppreference, "en", "cpp")
+    symbol_index_root = os.path.join(page_root, "symbol_index")
+    parse_pages = [(symbol_index_root, "zombie_names.html", "std::")]
+  elif args.symbols == 'c':
     page_root = os.path.join(args.cppreference, "en", "c")
     symbol_index_root = page_root
-    parse_pages = [(page_root, "index.html", None)]
-
+    parse_pages = [(page_root, "index.html", None)]  
+    
   if not os.path.exists(symbol_index_root):
     exit("Path %s doesn't exist!" % symbol_index_root)
 
   symbols = cppreference_parser.GetSymbols(parse_pages)
-
+  
   # We don't have version information from the unzipped offline HTML files.
   # so we use the modified time of the symbol_index.html as the version.
   index_page_path = os.path.join(page_root, "index.html")
   cppreference_modified_date = datetime.datetime.fromtimestamp(
     os.stat(index_page_path).st_mtime).strftime('%Y-%m-%d')
-  print(CODE_PREFIX % (args.language.upper(), cppreference_modified_date))
+  print(CODE_PREFIX % (args.symbols.upper(), cppreference_modified_date))
   for symbol in symbols:
     if len(symbol.headers) == 1:
       # SYMBOL(unqualified_name, namespace, header)

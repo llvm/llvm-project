@@ -63,6 +63,10 @@ public:
   /// Return true if this operator has flags which may cause this operator
   /// to evaluate to poison despite having non-poison inputs.
   bool hasPoisonGeneratingFlags() const;
+
+  /// Return true if this operator has poison-generating flags or metadata.
+  /// The latter is only possible for instructions.
+  bool hasPoisonGeneratingFlagsOrMetadata() const;
 };
 
 /// Utility class for integer operators which may exhibit overflow - Add, Sub,

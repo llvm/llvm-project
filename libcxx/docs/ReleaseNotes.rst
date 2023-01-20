@@ -68,6 +68,7 @@ Implemented Papers
 - P0323R12 - ``std::expected``
 - P1035R7 - Input Range Adaptors
 - P2325R3 - Views should not be required to be default constructible
+- P2446R2 - ``views::as_rvalue``
 
 Improvements and New Features
 -----------------------------
@@ -76,6 +77,11 @@ Improvements and New Features
   the C library.
 - Implemented ``<memory_resource>`` header from C++17
 - `D122780 <https://reviews.llvm.org/D122780>`_ Improved the performance of std::sort
+- The ``ranges`` versions of ``copy``, ``move``, ``copy_backward`` and ``move_backward`` are now also optimized for
+  ``std::deque<>::iterator``, which can lead to up to 20x performance improvements on certain algorithms.
+- The ``std`` and ``ranges`` versions of ``copy``, ``move``, ``copy_backward`` and ``move_backward`` are now also
+  optimized for ``join_view::iterator``, which can lead to up to 20x performance improvements on certain combinations of
+  iterators and algorithms.
 
 Deprecations and Removals
 -------------------------

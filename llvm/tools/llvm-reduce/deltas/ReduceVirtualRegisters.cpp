@@ -13,6 +13,7 @@
 
 #include "ReduceVirtualRegisters.h"
 #include "Delta.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;

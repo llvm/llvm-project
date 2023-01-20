@@ -56,33 +56,50 @@ constexpr int pointerAssign2() {
 }
 static_assert(pointerAssign2() == 12, "");
 
-
 constexpr int unInitLocal() {
   int a;
-  return a; // ref-note{{read of uninitialized object}}
+  return a; // ref-note {{read of uninitialized object}} \
+            // expected-note {{read of object outside its lifetime}}
+            // FIXME: ^^^ Wrong diagnostic.
 }
-static_assert(unInitLocal() == 0, ""); // expected-error {{not an integral constant expression}} \
-                                       // ref-error {{not an integral constant expression}} \
-                                       // ref-note {{in call to 'unInitLocal()'}}
+static_assert(unInitLocal() == 0, ""); // ref-error {{not an integral constant expression}} \
+                                       // ref-note {{in call to 'unInitLocal()'}} \
+                                       // expected-error {{not an integral constant expression}} \
+                                       // expected-note {{in call to 'unInitLocal()'}} \
 
-/// TODO: The example above is correctly rejected by the new constexpr
-///   interpreter, but for the wrong reasons. We don't reject it because
-///   it is an uninitialized read, we reject it simply because
-///   the local variable does not have an initializer.
-///
-///   The code below should be accepted but is also being rejected
-///   right now.
-#if 0
 constexpr int initializedLocal() {
   int a;
-  int b;
-
   a = 20;
   return a;
 }
 static_assert(initializedLocal() == 20);
 
-/// Similar here, but the uninitialized local is passed as a function parameter.
+constexpr int initializedLocal2() {
+  int a[2];
+  return *a; // expected-note {{read of object outside its lifetime}} \
+             // ref-note {{read of uninitialized object is not allowed in a constant expression}}
+}
+static_assert(initializedLocal2() == 20); // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to}} \
+                                          // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to}}
+
+
+struct Int { int a; }; // expected-note {{subobject declared here}}
+constexpr int initializedLocal3() {
+  Int i; // expected-note {{subobject of type 'int' is not initialized}}
+  return i.a; // ref-note {{read of uninitialized object is not allowed in a constant expression}}
+}
+static_assert(initializedLocal3() == 20); // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to}} \
+                                          // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to}}
+
+
+
+#if 0
+// FIXME: This code should be rejected because we pass an uninitialized value
+//   as a function parameter.
 constexpr int inc(int a) { return a + 1; }
 constexpr int f() {
     int i;
@@ -116,3 +133,71 @@ constexpr auto b4 = name1() == name2(); // ref-error {{must be initialized by a 
                                         // ref-note {{declared here}}
 static_assert(!b4); // ref-error {{not an integral constant expression}} \
                     // ref-note {{not a constant expression}}
+
+namespace UninitializedFields {
+  class A {
+  public:
+    int a; // expected-note 2{{subobject declared here}} \
+           // ref-note 2{{subobject declared here}}
+    constexpr A() {}
+  };
+  constexpr A a; // expected-error {{must be initialized by a constant expression}} \
+                 // expected-note {{subobject of type 'int' is not initialized}} \
+                 // ref-error {{must be initialized by a constant expression}} \
+                 // ref-note {{subobject of type 'int' is not initialized}}
+
+
+  class Base {
+  public:
+    bool b;
+    int a; // expected-note {{subobject declared here}} \
+           // ref-note {{subobject declared here}}
+    constexpr Base() : b(true) {}
+  };
+
+  class Derived : public Base {
+  public:
+    constexpr Derived() : Base() {} // expected-note {{subobject of type 'int' is not initialized}}
+  };
+
+constexpr Derived D; // expected-error {{must be initialized by a constant expression}} \\
+                     // expected-note {{in call to 'Derived()'}} \
+                     // ref-error {{must be initialized by a constant expression}} \
+                     // ref-note {{subobject of type 'int' is not initialized}}
+
+  class C2 {
+  public:
+    A a;
+    constexpr C2() {} // expected-note {{subobject of type 'int' is not initialized}}
+  };
+  constexpr C2 c2; // expected-error {{must be initialized by a constant expression}} \
+                   // expected-note {{in call to 'C2()'}} \
+                   // ref-error {{must be initialized by a constant expression}} \
+                   // ref-note {{subobject of type 'int' is not initialized}}
+
+
+  // FIXME: These two are currently disabled because the array fields
+  //   cannot be initialized.
+#if 0
+  class C3 {
+  public:
+    A a[2];
+    constexpr C3() {}
+  };
+  constexpr C3 c3; // expected-error {{must be initialized by a constant expression}} \
+                   // expected-note {{subobject of type 'int' is not initialized}} \
+                   // ref-error {{must be initialized by a constant expression}} \
+                   // ref-note {{subobject of type 'int' is not initialized}}
+
+  class C4 {
+  public:
+    bool B[2][3]; // expected-note {{subobject declared here}} \
+                  // ref-note {{subobject declared here}}
+    constexpr C4(){}
+  };
+  constexpr C4 c4; // expected-error {{must be initialized by a constant expression}} \
+                   // expected-note {{subobject of type 'bool' is not initialized}} \
+                   // ref-error {{must be initialized by a constant expression}} \
+                   // ref-note {{subobject of type 'bool' is not initialized}}
+#endif
+};

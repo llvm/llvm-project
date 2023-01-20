@@ -11,8 +11,8 @@ target datalayout = "e-p:8:8"
 define dso_local void @main(i32 %a, [3 x { i8, i8 }*]* %p) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], -1229216766
-; CHECK-NEXT:    [[ARRAYIDX926:%.*]] = getelementptr inbounds [3 x { i8, i8 }*], [3 x { i8, i8 }*]* [[P:%.*]], i32 0, i32 [[SHL]]
-; CHECK-NEXT:    [[L0:%.*]] = load { i8, i8 }*, { i8, i8 }** [[ARRAYIDX926]], align 1
+; CHECK-NEXT:    [[ARRAYIDX926:%.*]] = getelementptr inbounds [3 x ptr], ptr [[P:%.*]], i32 0, i32 [[SHL]]
+; CHECK-NEXT:    [[L0:%.*]] = load ptr, ptr [[ARRAYIDX926]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %shl = shl i32 %a, -1229216766

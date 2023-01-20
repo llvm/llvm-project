@@ -55,8 +55,15 @@ bool DINodeAttr::classof(Attribute attr) {
 
 bool DIScopeAttr::classof(Attribute attr) {
   return llvm::isa<DICompileUnitAttr, DICompositeTypeAttr, DIFileAttr,
-                   DILexicalBlockAttr, DILexicalBlockFileAttr,
-                   DISubprogramAttr>(attr);
+                   DILexicalBlockFileAttr, DILocalScopeAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
+// DILocalScopeAttr
+//===----------------------------------------------------------------------===//
+
+bool DILocalScopeAttr::classof(Attribute attr) {
+  return llvm::isa<DILexicalBlockAttr, DISubprogramAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -253,4 +260,29 @@ Attribute LoopOptionsAttr::parse(AsmParser &parser, Type type) {
 
   llvm::sort(options, llvm::less_first());
   return get(parser.getContext(), options);
+}
+
+//===----------------------------------------------------------------------===//
+// MemoryEffectsAttr
+//===----------------------------------------------------------------------===//
+
+MemoryEffectsAttr MemoryEffectsAttr::get(MLIRContext *context,
+                                         ArrayRef<ModRefInfo> memInfoArgs) {
+  if (memInfoArgs.empty())
+    return MemoryEffectsAttr::get(context, ModRefInfo::ModRef,
+                                  ModRefInfo::ModRef, ModRefInfo::ModRef);
+  if (memInfoArgs.size() == 3)
+    return MemoryEffectsAttr::get(context, memInfoArgs[0], memInfoArgs[1],
+                                  memInfoArgs[2]);
+  return {};
+}
+
+bool MemoryEffectsAttr::isReadWrite() {
+  if (this->getArgMem() != ModRefInfo::ModRef)
+    return false;
+  if (this->getInaccessibleMem() != ModRefInfo::ModRef)
+    return false;
+  if (this->getOther() != ModRefInfo::ModRef)
+    return false;
+  return true;
 }

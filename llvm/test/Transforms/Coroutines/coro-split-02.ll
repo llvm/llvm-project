@@ -1,7 +1,7 @@
 ; Tests that coro-split can handle the case when a code after coro.suspend uses
 ; a value produces between coro.save and coro.suspend (%Result.i19)
 ; and checks whether stray coro.saves are properly removed
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
 %"struct.std::coroutine_handle" = type { i8* }
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }

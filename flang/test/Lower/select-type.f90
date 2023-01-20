@@ -722,6 +722,40 @@ contains
 ! CHECK: ^bb{{.*}}:  // pred: ^bb0
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>
 
+
+  ! Test correct lowering when CLASS DEFAULT is not at the last position in the
+  ! SELECT TYPE construct.
+  subroutine select_type13(a)
+    class(p1), pointer :: a(:)
+    select type (a)
+      class default
+        print*, 'default'
+      class is (p1)
+        print*, 'class'
+    end select
+
+    select type (a)
+      type is (p1)
+        print*, 'type'
+      class default
+        print*, 'default'
+      class is (p1)
+        print*, 'class'
+    end select
+
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type13
+! CHECK: fir.select_type %{{.*}} : !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> [#fir.class_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb2, unit, ^bb1]
+! CHECK: ^bb1:
+! CHECK: ^bb2:
+! CHECK: ^bb3:
+! CHECK: fir.select_type %{{.*}} : !fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>> [#fir.type_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb4, #fir.class_is<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, ^bb6, unit, ^bb5]
+! CHECK: ^bb4:
+! CHECK: ^bb5:
+! CHECK: ^bb6:
+! CHECK: ^bb7:
+
 end module
 
 program test_select_type

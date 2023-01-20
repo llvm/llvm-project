@@ -25,7 +25,7 @@ using llvm::ValueIs;
 using tooling::getAssociatedRange;
 using tooling::getExtendedRange;
 using tooling::getExtendedText;
-using tooling::getRangeForEdit;
+using tooling::getFileRangeForEdit;
 using tooling::getText;
 using tooling::maybeExtendRange;
 using tooling::validateEditRange;
@@ -453,11 +453,11 @@ TEST(SourceCodeTest, getAssociatedRangeInvalidForPartialExpansions) {
   Visitor.runOver(Code);
 }
 
-class GetRangeForEditTest : public testing::TestWithParam<bool> {};
-INSTANTIATE_TEST_SUITE_P(WithAndWithoutExpansions, GetRangeForEditTest,
+class GetFileRangeForEditTest : public testing::TestWithParam<bool> {};
+INSTANTIATE_TEST_SUITE_P(WithAndWithoutExpansions, GetFileRangeForEditTest,
                          testing::Bool());
 
-TEST_P(GetRangeForEditTest, EditRangeWithMacroExpansionsShouldSucceed) {
+TEST_P(GetFileRangeForEditTest, EditRangeWithMacroExpansionsShouldSucceed) {
   // The call expression, whose range we are extracting, includes two macro
   // expansions.
   llvm::Annotations Code(R"cpp(
@@ -469,7 +469,7 @@ int a = $r[[foo(M(1), M(2))]];
   CallsVisitor Visitor;
   Visitor.OnCall = [&Code](CallExpr *CE, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(CE->getSourceRange());
-    EXPECT_THAT(getRangeForEdit(Range, *Context, GetParam()),
+    EXPECT_THAT(getFileRangeForEdit(Range, *Context, GetParam()),
                 ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
   };
   Visitor.runOver(Code.code());
@@ -484,7 +484,7 @@ int a = $r[[FOO]];
   IntLitVisitor Visitor;
   Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_THAT(getRangeForEdit(Range, *Context),
+    EXPECT_THAT(getFileRangeForEdit(Range, *Context),
                 ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
   };
   Visitor.runOver(Code.code());
@@ -507,12 +507,12 @@ int c = M3(3);
   Visitor.OnCall = [](CallExpr *CE, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(CE->getSourceRange());
     EXPECT_FALSE(
-        getRangeForEdit(Range, *Context, /*IncludeMacroExpansion=*/false));
+        getFileRangeForEdit(Range, *Context, /*IncludeMacroExpansion=*/false));
   };
   Visitor.runOver(Code.code());
 }
 
-TEST_P(GetRangeForEditTest, EditPartialMacroExpansionShouldFail) {
+TEST_P(GetFileRangeForEditTest, EditPartialMacroExpansionShouldFail) {
   std::string Code = R"cpp(
 #define BAR 10+
 int c = BAR 3.0;
@@ -521,12 +521,12 @@ int c = BAR 3.0;
   IntLitVisitor Visitor;
   Visitor.OnIntLit = [](IntegerLiteral *Expr, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_FALSE(getRangeForEdit(Range, *Context, GetParam()));
+    EXPECT_FALSE(getFileRangeForEdit(Range, *Context, GetParam()));
   };
   Visitor.runOver(Code);
 }
 
-TEST_P(GetRangeForEditTest, EditWholeMacroArgShouldSucceed) {
+TEST_P(GetFileRangeForEditTest, EditWholeMacroArgShouldSucceed) {
   llvm::Annotations Code(R"cpp(
 #define FOO(a) a + 7.0;
 int a = FOO($r[[10]]);
@@ -535,13 +535,13 @@ int a = FOO($r[[10]]);
   IntLitVisitor Visitor;
   Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_THAT(getRangeForEdit(Range, *Context, GetParam()),
+    EXPECT_THAT(getFileRangeForEdit(Range, *Context, GetParam()),
                 ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
   };
   Visitor.runOver(Code.code());
 }
 
-TEST_P(GetRangeForEditTest, EditPartialMacroArgShouldSucceed) {
+TEST_P(GetFileRangeForEditTest, EditPartialMacroArgShouldSucceed) {
   llvm::Annotations Code(R"cpp(
 #define FOO(a) a + 7.0;
 int a = FOO($r[[10]] + 10.0);
@@ -550,7 +550,7 @@ int a = FOO($r[[10]] + 10.0);
   IntLitVisitor Visitor;
   Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_THAT(getRangeForEdit(Range, *Context, GetParam()),
+    EXPECT_THAT(getFileRangeForEdit(Range, *Context, GetParam()),
                 ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
   };
   Visitor.runOver(Code.code());

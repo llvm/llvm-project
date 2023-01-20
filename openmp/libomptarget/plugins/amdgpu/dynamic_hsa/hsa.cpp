@@ -77,7 +77,9 @@ DLWRAP_FINALIZE()
 #ifndef TARGET_NAME
 #error "Missing TARGET_NAME macro"
 #endif
+#ifndef DEBUG_PREFIX
 #define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+#endif
 
 static bool checkForHSA() {
   // return true if dlopen succeeded and all functions found

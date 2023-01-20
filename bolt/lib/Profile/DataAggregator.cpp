@@ -644,13 +644,12 @@ void DataAggregator::processProfile(BinaryContext &BC) {
   processMemEvents();
 
   // Mark all functions with registered events as having a valid profile.
+  const auto Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
+                                            : BinaryFunction::PF_LBR;
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
-    if (getBranchData(BF) || getFuncSampleData(BF.getNames())) {
-      const auto Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
-                                                : BinaryFunction::PF_LBR;
+    if (getBranchData(BF) || getFuncSampleData(BF.getNames()))
       BF.markProfiled(Flags);
-    }
   }
 
   // Release intermediate storage.
@@ -727,17 +726,14 @@ bool DataAggregator::doIntraBranch(BinaryFunction &Func, uint64_t From,
 
   From -= Func.getAddress();
   To -= Func.getAddress();
-  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: bumpBranchCount: " << Func.getPrintName()
-                    << " @ " << Twine::utohexstr(From) << " -> "
-                    << Func.getPrintName() << " @ " << Twine::utohexstr(To)
-                    << '\n');
+  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: bumpBranchCount: "
+                    << formatv("{0} @ {1:x} -> {0} @ {2:x}\n", Func, From, To));
   if (BAT) {
     From = BAT->translate(Func.getAddress(), From, /*IsBranchSrc=*/true);
     To = BAT->translate(Func.getAddress(), To, /*IsBranchSrc=*/false);
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: BAT translation on bumpBranchCount: "
-                      << Func.getPrintName() << " @ " << Twine::utohexstr(From)
-                      << " -> " << Func.getPrintName() << " @ "
-                      << Twine::utohexstr(To) << '\n');
+    LLVM_DEBUG(
+        dbgs() << "BOLT-DEBUG: BAT translation on bumpBranchCount: "
+               << formatv("{0} @ {1:x} -> {0} @ {2:x}\n", Func, From, To));
   }
 
   AggrData->bumpBranchCount(From, To, Count, Mispreds);
@@ -1712,8 +1708,7 @@ void DataAggregator::processMemEvents() {
     BinaryFunction *Func = getBinaryFunctionContainingAddress(PC);
     if (!Func) {
       LLVM_DEBUG(if (PC != 0) {
-        dbgs() << "Skipped mem event: 0x" << Twine::utohexstr(PC) << " => 0x"
-               << Twine::utohexstr(Addr) << "\n";
+        dbgs() << formatv("Skipped mem event: {0:x} => {1:x}\n", PC, Addr);
       });
       continue;
     }
@@ -2139,10 +2134,10 @@ std::error_code DataAggregator::parseTaskEvents() {
          << BinaryMMapInfo.size() << " PID(s)\n";
 
   LLVM_DEBUG({
-    for (std::pair<const uint64_t, MMapInfo> &MMI : BinaryMMapInfo)
-      outs() << "  " << MMI.second.PID << (MMI.second.Forked ? " (forked)" : "")
-             << ": (0x" << Twine::utohexstr(MMI.second.MMapAddress) << ": 0x"
-             << Twine::utohexstr(MMI.second.Size) << ")\n";
+    for (const MMapInfo &MMI : llvm::make_second_range(BinaryMMapInfo))
+      outs() << formatv("  {0}{1}: ({2:x}: {3:x})\n", MMI.PID,
+                        (MMI.Forked ? " (forked)" : ""), MMI.MMapAddress,
+                        MMI.Size);
   });
 
   return std::error_code();

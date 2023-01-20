@@ -78,15 +78,21 @@ public:
   // An error margin is necessary because of poor performance of the generic RP
   // tracker and can be adjusted up for tuning heuristics to try and more
   // aggressively reduce register pressure.
-  const unsigned DefaultErrorMargin = 3;
+  unsigned ErrorMargin = 3;
 
-  const unsigned HighRPErrorMargin = 10;
+  // Bias for SGPR limits under a high register pressure.
+  const unsigned HighRPSGPRBias = 7;
 
-  unsigned ErrorMargin = DefaultErrorMargin;
+  // Bias for VGPR limits under a high register pressure.
+  const unsigned HighRPVGPRBias = 7;
 
   unsigned SGPRCriticalLimit;
 
   unsigned VGPRCriticalLimit;
+
+  unsigned SGPRLimitBias = 0;
+
+  unsigned VGPRLimitBias = 0;
 
   GCNSchedStrategy(const MachineSchedContext *C);
 

@@ -23,6 +23,10 @@
 namespace mlir {
 namespace presburger {
 
+/// Enum representing a binary comparison operator: equal, not equal, less than,
+/// less than or equal, greater than, greater than or equal.
+enum class OrderingKind { EQ, NE, LT, LE, GT, GE };
+
 /// This class represents a multi-affine function with the domain as Z^d, where
 /// `d` is the number of domain variables of the function. For example:
 ///
@@ -65,7 +69,10 @@ public:
   /// Get the `i^th` output expression.
   ArrayRef<MPInt> getOutputExpr(unsigned i) const { return output.getRow(i); }
 
-  // Remove the specified range of outputs.
+  /// Get the divisions used in this function.
+  const DivisionRepr &getDivs() const { return divs; }
+
+  /// Remove the specified range of outputs.
   void removeOutputs(unsigned start, unsigned end);
 
   /// Given a MAF `other`, merges division variables such that both functions
@@ -88,6 +95,14 @@ public:
                const PresburgerSet &domain) const;
 
   void subtract(const MultiAffineFunction &other);
+
+  /// Return the set of domain points where the output of `this` and `other`
+  /// are ordered lexicographically according to the given ordering.
+  /// For example, if the given comparison is `LT`, then the returned set
+  /// contains all points where the first output of `this` is lexicographically
+  /// less than `other`.
+  PresburgerSet getLexSet(OrderingKind comp,
+                          const MultiAffineFunction &other) const;
 
   /// Get this function as a relation.
   IntegerRelation getAsRelation() const;
@@ -180,6 +195,9 @@ public:
   std::optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<int64_t> point) const {
     return valueAt(getMPIntVec(point));
   }
+
+  /// Return all the pieces of this piece-wise function.
+  ArrayRef<Piece> getAllPieces() const { return pieces; }
 
   /// Return whether `this` and `other` are equal as PWMAFunctions, i.e. whether
   /// they have the same dimensions, the same domain and they take the same

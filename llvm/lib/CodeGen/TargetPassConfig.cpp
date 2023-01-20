@@ -1270,6 +1270,8 @@ void TargetPassConfig::addMachinePasses() {
   if (!DisableCFIFixup && TM->Options.EnableCFIFixup)
     addPass(createCFIFixup());
 
+  PM->add(createStackFrameLayoutAnalysisPass());
+
   // Add passes that directly emit MI after all other MI passes.
   addPreEmitPass2();
 

@@ -595,6 +595,24 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   }
 }
 
+void ODRHash::AddRecordDecl(const RecordDecl *Record) {
+  assert(!isa<CXXRecordDecl>(Record) &&
+         "For CXXRecordDecl should call AddCXXRecordDecl.");
+  AddDecl(Record);
+
+  // Filter out sub-Decls which will not be processed in order to get an
+  // accurate count of Decl's.
+  llvm::SmallVector<const Decl *, 16> Decls;
+  for (Decl *SubDecl : Record->decls()) {
+    if (isSubDeclToBeProcessed(SubDecl, Record))
+      Decls.push_back(SubDecl);
+  }
+
+  ID.AddInteger(Decls.size());
+  for (const Decl *SubDecl : Decls)
+    AddSubDecl(SubDecl);
+}
+
 void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
                               bool SkipBody) {
   assert(Function && "Expecting non-null pointer.");

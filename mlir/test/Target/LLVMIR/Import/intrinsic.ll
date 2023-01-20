@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm %s | FileCheck %s
+; RUN: mlir-translate -opaque-pointers=0 -import-llvm %s | FileCheck %s
 
 ; CHECK-LABEL:  llvm.func @fmuladd_test
 define void @fmuladd_test(float %0, float %1, <8 x float> %2, i8* %3) {

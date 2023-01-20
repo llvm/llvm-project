@@ -44,6 +44,11 @@ module polymorphic_test
     type(p1) :: inner
   end type
 
+  type non_extensible
+    sequence
+    integer :: d
+  end type
+
   contains
 
   elemental subroutine assign_p1_int(lhs, rhs)
@@ -748,6 +753,19 @@ module polymorphic_test
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAInitialize(%[[BOX_NONE]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+
+  subroutine rebox_up_to_record_type(p)
+    class(*), allocatable, target :: p(:,:)
+    type(non_extensible), pointer :: t(:,:)
+    t => p
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPrebox_up_to_record_type(
+! CHECK-SAME: %[[P:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>> {fir.bindc_name = "p", fir.target}) {
+! CHECK: %[[T:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QMpolymorphic_testTnon_extensible{d:i32}>>>> {bindc_name = "t", uniq_name = "_QMpolymorphic_testFrebox_up_to_record_typeEt"}
+! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
+! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD_P]](%{{.*}}) : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>, !fir.shift<2>) -> !fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QMpolymorphic_testTnon_extensible{d:i32}>>>>
+! CHECK: fir.store %[[REBOX]] to %[[T]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QMpolymorphic_testTnon_extensible{d:i32}>>>>>
 
 end module
 

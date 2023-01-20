@@ -73,12 +73,18 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   VGPRCriticalLimit =
       std::min(ST.getMaxNumVGPRs(TargetOccupancy), VGPRExcessLimit);
 
-  // Subtract error margin from register limits and avoid overflow.
+  // Subtract error margin and bias from register limits and avoid overflow.
+  SGPRCriticalLimit =
+      std::min(SGPRCriticalLimit - SGPRLimitBias, SGPRCriticalLimit);
   SGPRCriticalLimit =
       std::min(SGPRCriticalLimit - ErrorMargin, SGPRCriticalLimit);
   VGPRCriticalLimit =
+      std::min(VGPRCriticalLimit - VGPRLimitBias, VGPRCriticalLimit);
+  VGPRCriticalLimit =
       std::min(VGPRCriticalLimit - ErrorMargin, VGPRCriticalLimit);
+  SGPRExcessLimit = std::min(SGPRExcessLimit - SGPRLimitBias, SGPRExcessLimit);
   SGPRExcessLimit = std::min(SGPRExcessLimit - ErrorMargin, SGPRExcessLimit);
+  VGPRExcessLimit = std::min(VGPRExcessLimit - VGPRLimitBias, VGPRExcessLimit);
   VGPRExcessLimit = std::min(VGPRExcessLimit - ErrorMargin, VGPRExcessLimit);
 }
 
@@ -670,7 +676,8 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
   // stage. Temporarily increase occupancy target in the region.
-  S.ErrorMargin = S.HighRPErrorMargin;
+  S.SGPRLimitBias = S.HighRPSGPRBias;
+  S.VGPRLimitBias = S.HighRPVGPRBias;
   if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy)
     MFI.increaseOccupancy(MF, ++DAG.MinOccupancy);
 
@@ -735,7 +742,7 @@ void GCNSchedStage::finalizeGCNSchedStage() {
 
 void UnclusteredHighRPStage::finalizeGCNSchedStage() {
   SavedMutations.swap(DAG.Mutations);
-  S.ErrorMargin = S.DefaultErrorMargin;
+  S.SGPRLimitBias = S.VGPRLimitBias = 0;
   if (DAG.MinOccupancy > InitialOccupancy) {
     for (unsigned IDX = 0; IDX < DAG.Pressure.size(); ++IDX)
       DAG.RegionsWithMinOcc[IDX] =

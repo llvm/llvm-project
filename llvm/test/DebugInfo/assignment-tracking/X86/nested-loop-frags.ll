@@ -200,7 +200,7 @@ if.else:                                          ; preds = %do.body1
 ; CHECK-NEXT: {{^ *$}}
 ; CHECK-NEXT:    MOV32mi %stack.3.d.addr, 1, $noreg, 0, $noreg, 6
 ; CHECK-NEXT:    MOV32mi %stack.4.e.addr, 1, $noreg, 4, $noreg, 15
-; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, !34, !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
+; CHECK-NEXT:    DBG_VALUE %stack.4.e.addr, $noreg, ![[e]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 ; CHECK: {{^ *$}}
 
 do.cond:                                          ; preds = %if.then, %if.else

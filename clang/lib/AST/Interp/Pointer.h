@@ -33,14 +33,40 @@ enum PrimType : unsigned;
 ///
 /// This object can be allocated into interpreter stack frames. If pointing to
 /// a live block, it is a link in the chain of pointers pointing to the block.
+///
+/// In the simplest form, a Pointer has a Block* (the pointee) and both Base
+/// and Offset are 0, which means it will point to raw data.
+///
+/// The Base field is used to access metadata about the data. For primitive
+/// arrays, the Base is followed by an InitMap. In a variety of cases, the
+/// Base is preceded by an InlineDescriptor, which is used to track the
+/// initialization state, among other things.
+///
+/// The Offset field is used to access the actual data. In other words, the
+/// data the pointer decribes can be found at
+/// Pointee->rawData() + Pointer.Offset.
+///
+///
+/// Pointee                      Offset
+/// │                              │
+/// │                              │
+/// ▼                              ▼
+/// ┌───────┬────────────┬─────────┬────────────────────────────┐
+/// │ Block │ InlineDesc │ InitMap │ Actual Data                │
+/// └───────┴────────────┴─────────┴────────────────────────────┘
+///                      ▲
+///                      │
+///                      │
+///                     Base
 class Pointer {
 private:
-  static constexpr unsigned PastEndMark = (unsigned)-1;
-  static constexpr unsigned RootPtrMark = (unsigned)-1;
+  static constexpr unsigned PastEndMark = ~0u;
+  static constexpr unsigned RootPtrMark = ~0u;
 
 public:
   Pointer() {}
   Pointer(Block *B);
+  Pointer(Block *B, unsigned BaseAndOffset);
   Pointer(const Pointer &P);
   Pointer(Pointer &&P);
   ~Pointer();
@@ -216,6 +242,8 @@ public:
 
   /// Returns the record descriptor of a class.
   Record *getRecord() const { return getFieldDesc()->ElemRecord; }
+  // Returns the element record type, if this is a non-primive array.
+  Record *getElemRecord() const { return getFieldDesc()->ElemDesc->ElemRecord; }
   /// Returns the field information.
   const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
 
@@ -276,12 +304,12 @@ public:
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {
     assert(isLive() && "Invalid pointer");
-    return *reinterpret_cast<T *>(Pointee->data() + Offset);
+    return *reinterpret_cast<T *>(Pointee->rawData() + Offset);
   }
 
   /// Dereferences a primitive element.
   template <typename T> T &elem(unsigned I) const {
-    return reinterpret_cast<T *>(Pointee->data())[I];
+    return reinterpret_cast<T *>(Pointee->rawData())[I];
   }
 
   /// Initializes a field.
@@ -318,12 +346,13 @@ private:
   /// Returns a descriptor at a given offset.
   InlineDescriptor *getDescriptor(unsigned Offset) const {
     assert(Offset != 0 && "Not a nested pointer");
-    return reinterpret_cast<InlineDescriptor *>(Pointee->data() + Offset) - 1;
+    return reinterpret_cast<InlineDescriptor *>(Pointee->rawData() + Offset) -
+           1;
   }
 
   /// Returns a reference to the pointer which stores the initialization map.
   InitMap *&getInitMap() const {
-    return *reinterpret_cast<InitMap **>(Pointee->data() + Base);
+    return *reinterpret_cast<InitMap **>(Pointee->rawData() + Base);
   }
 
   /// The block the pointer is pointing to.

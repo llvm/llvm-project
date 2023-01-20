@@ -122,7 +122,15 @@ public:
     raw_fd_ostream OS(ImageName.str(), EC);
     if (EC)
       report_fatal_error("Error saving image : " + StringRef(EC.message()));
-    OS << Image.getMemoryBuffer().getBuffer();
+    if (auto TgtImageBitcode = Image.getTgtImageBitcode()) {
+      size_t Size =
+          getPtrDiff(TgtImageBitcode->ImageEnd, TgtImageBitcode->ImageStart);
+      MemoryBufferRef MBR = MemoryBufferRef(
+          StringRef((const char *)TgtImageBitcode->ImageStart, Size), "");
+      OS << MBR.getBuffer();
+    } else {
+      OS << Image.getMemoryBuffer().getBuffer();
+    }
     OS.close();
   }
 
@@ -407,6 +415,8 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
   DeviceImageTy *Image = *ImageOrErr;
   assert(Image != nullptr && "Invalid image");
+  if (InputTgtImage != PostJITImageOrErr.get())
+    Image->setTgtImageBitcode(InputTgtImage);
 
   // Add the image to list.
   LoadedImages.push_back(Image);

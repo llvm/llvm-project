@@ -459,6 +459,10 @@ private:
   /// is associated with the list of payload IR operations.
   bool isParam(unsigned resultNumber) const;
 
+  /// Returns `true` if the result identified by its number in the list of
+  /// operation results is associated with something.
+  bool isSet(unsigned resultNumber) const;
+
   /// Storage for pointers to payload IR ops that are associated with results of
   /// a transform IR op. `segments` contains as many entries as the transform IR
   /// op has results, even if some of them are not associated with payload IR
@@ -849,16 +853,19 @@ applyTransformToEach(TransformOpTy transformOp, ArrayRef<Operation *> targets,
     Location specificOpLoc = specificOp->getLoc();
     DiagnosedSilenceableFailure res =
         transformOp.applyToOne(specificOp, partialResults, state);
-    if (res.isDefiniteFailure() ||
-        failed(detail::checkApplyToOne(transformOp, specificOpLoc,
+    if (res.isDefiniteFailure())
+      return DiagnosedSilenceableFailure::definiteFailure();
+
+    if (res.isSilenceableFailure()) {
+      res.takeDiagnostics(silenceableStack);
+      continue;
+    }
+
+    if (failed(detail::checkApplyToOne(transformOp, specificOpLoc,
                                        partialResults))) {
       return DiagnosedSilenceableFailure::definiteFailure();
     }
-
-    if (res.isSilenceableFailure())
-      res.takeDiagnostics(silenceableStack);
-    else
-      results.push_back(std::move(partialResults));
+    results.push_back(std::move(partialResults));
   }
   if (!silenceableStack.empty()) {
     return DiagnosedSilenceableFailure::silenceableFailure(

@@ -90,10 +90,13 @@ public:
                            numLocals);
   }
 
-  // Get the domain/range space of this space. The returned space is a set
-  // space.
+  /// Get the domain/range space of this space. The returned space is a set
+  /// space.
   PresburgerSpace getDomainSpace() const;
   PresburgerSpace getRangeSpace() const;
+
+  /// Get the space without local variables.
+  PresburgerSpace getSpaceWithoutLocals() const;
 
   unsigned getNumDomainVars() const { return numDomain; }
   unsigned getNumRangeVars() const { return numRange; }

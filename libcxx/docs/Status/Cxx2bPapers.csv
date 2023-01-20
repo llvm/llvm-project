@@ -73,7 +73,7 @@
 "`P2419R2 <https://wg21.link/P2419R2>`__","LWG","Clarify handling of encodings in localized formatting of chrono types","July 2022","",""
 "`P2438R2 <https://wg21.link/P2438R2>`__","LWG","``std::string::substr() &&``","July 2022","|Complete|","16.0"
 "`P2445R1 <https://wg21.link/P2445R1>`__","LWG","``forward_like``","July 2022","|Complete|","16.0"
-"`P2446R2 <https://wg21.link/P2446R2>`__","LWG","``views::as_rvalue``","July 2022","","","|ranges|"
+"`P2446R2 <https://wg21.link/P2446R2>`__","LWG","``views::as_rvalue``","July 2022","|Complete|","16.0","|ranges|"
 "`P2460R2 <https://wg21.link/P2460R2>`__","LWG","Relax requirements on ``wchar_t`` to match existing practices","July 2022","",""
 "`P2465R3 <https://wg21.link/P2465R3>`__","LWG","Standard Library Modules ``std`` and ``std.compat``","July 2022","",""
 "`P2467R1 <https://wg21.link/P2467R1>`__","LWG","Support exclusive mode for ``fstreams``","July 2022","",""

@@ -9,25 +9,24 @@ define dso_local void @test_amx_load_non_O0(i16 signext %row, i16 signext %col, 
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_ROWS_HEADER:%.*]]
 ; CHECK:       tileload.scalarize.rows.header:
 ; CHECK-NEXT:    [[TILELOAD_SCALARIZE_ROWS_IV:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[TILELOAD_SCALARIZE_ROWS_STEP:%.*]], [[TILELOAD_SCALARIZE_ROWS_LATCH:%.*]] ]
-; CHECK-NEXT:    [[VEC_PHI_ROW:%.*]] = phi <256 x i32> [ zeroinitializer, [[ENTRY]] ], [ [[TMP11:%.*]], [[TILELOAD_SCALARIZE_ROWS_LATCH]] ]
+; CHECK-NEXT:    [[VEC_PHI_ROW:%.*]] = phi <256 x i32> [ zeroinitializer, [[ENTRY]] ], [ [[TMP10:%.*]], [[TILELOAD_SCALARIZE_ROWS_LATCH]] ]
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_ROWS_BODY:%.*]]
 ; CHECK:       tileload.scalarize.rows.body:
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_COLS_HEADER:%.*]]
 ; CHECK:       tileload.scalarize.cols.header:
 ; CHECK-NEXT:    [[TILELOAD_SCALARIZE_COLS_IV:%.*]] = phi i16 [ 0, [[TILELOAD_SCALARIZE_ROWS_BODY]] ], [ [[TILELOAD_SCALARIZE_COLS_STEP:%.*]], [[TILELOAD_SCALARIZE_COLS_LATCH:%.*]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <256 x i32> [ [[VEC_PHI_ROW]], [[TILELOAD_SCALARIZE_ROWS_BODY]] ], [ [[TMP11]], [[TILELOAD_SCALARIZE_COLS_LATCH]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <256 x i32> [ [[VEC_PHI_ROW]], [[TILELOAD_SCALARIZE_ROWS_BODY]] ], [ [[TMP10]], [[TILELOAD_SCALARIZE_COLS_LATCH]] ]
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_COLS_BODY:%.*]]
 ; CHECK:       tileload.scalarize.cols.body:
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TILELOAD_SCALARIZE_ROWS_IV]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TILELOAD_SCALARIZE_COLS_IV]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[PTR:%.*]] to i32*
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP6]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i16 [[TILELOAD_SCALARIZE_ROWS_IV]], 16
-; CHECK-NEXT:    [[TMP9:%.*]] = add i16 [[TMP8]], [[TILELOAD_SCALARIZE_COLS_IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP11]] = insertelement <256 x i32> [[VEC_PHI]], i32 [[TMP10]], i16 [[TMP9]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i16 [[TILELOAD_SCALARIZE_ROWS_IV]], 16
+; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[TMP7]], [[TILELOAD_SCALARIZE_COLS_IV]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP10]] = insertelement <256 x i32> [[VEC_PHI]], i32 [[TMP9]], i16 [[TMP8]]
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_COLS_LATCH]]
 ; CHECK:       tileload.scalarize.cols.latch:
 ; CHECK-NEXT:    [[TILELOAD_SCALARIZE_COLS_STEP]] = add i16 [[TILELOAD_SCALARIZE_COLS_IV]], 1
@@ -38,8 +37,8 @@ define dso_local void @test_amx_load_non_O0(i16 signext %row, i16 signext %col, 
 ; CHECK-NEXT:    [[TILELOAD_SCALARIZE_ROWS_COND:%.*]] = icmp ne i16 [[TILELOAD_SCALARIZE_ROWS_STEP]], [[ROW:%.*]]
 ; CHECK-NEXT:    br i1 [[TILELOAD_SCALARIZE_ROWS_COND]], label [[TILELOAD_SCALARIZE_ROWS_HEADER]], label [[CONTINUE:%.*]]
 ; CHECK:       continue:
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <256 x i32> [[TMP11]] to x86_amx
-; CHECK-NEXT:    store <256 x i32> [[TMP11]], <256 x i32>* [[VPTR:%.*]], align 64
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <256 x i32> [[TMP10]] to x86_amx
+; CHECK-NEXT:    store <256 x i32> [[TMP10]], ptr [[VPTR:%.*]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -57,25 +56,24 @@ define dso_local void @test_amx_load(i16 signext %row, i16 signext %col, i8 *%pt
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_ROWS_HEADER:%.*]]
 ; CHECK:       tileload.scalarize.rows.header:
 ; CHECK-NEXT:    [[TILELOAD_SCALARIZE_ROWS_IV:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[TILELOAD_SCALARIZE_ROWS_STEP:%.*]], [[TILELOAD_SCALARIZE_ROWS_LATCH:%.*]] ]
-; CHECK-NEXT:    [[VEC_PHI_ROW:%.*]] = phi <256 x i32> [ zeroinitializer, [[ENTRY]] ], [ [[TMP11:%.*]], [[TILELOAD_SCALARIZE_ROWS_LATCH]] ]
+; CHECK-NEXT:    [[VEC_PHI_ROW:%.*]] = phi <256 x i32> [ zeroinitializer, [[ENTRY]] ], [ [[TMP10:%.*]], [[TILELOAD_SCALARIZE_ROWS_LATCH]] ]
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_ROWS_BODY:%.*]]
 ; CHECK:       tileload.scalarize.rows.body:
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_COLS_HEADER:%.*]]
 ; CHECK:       tileload.scalarize.cols.header:
 ; CHECK-NEXT:    [[TILELOAD_SCALARIZE_COLS_IV:%.*]] = phi i16 [ 0, [[TILELOAD_SCALARIZE_ROWS_BODY]] ], [ [[TILELOAD_SCALARIZE_COLS_STEP:%.*]], [[TILELOAD_SCALARIZE_COLS_LATCH:%.*]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <256 x i32> [ [[VEC_PHI_ROW]], [[TILELOAD_SCALARIZE_ROWS_BODY]] ], [ [[TMP11]], [[TILELOAD_SCALARIZE_COLS_LATCH]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <256 x i32> [ [[VEC_PHI_ROW]], [[TILELOAD_SCALARIZE_ROWS_BODY]] ], [ [[TMP10]], [[TILELOAD_SCALARIZE_COLS_LATCH]] ]
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_COLS_BODY:%.*]]
 ; CHECK:       tileload.scalarize.cols.body:
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TILELOAD_SCALARIZE_ROWS_IV]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TILELOAD_SCALARIZE_COLS_IV]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[PTR:%.*]] to i32*
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP6]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i16 [[TILELOAD_SCALARIZE_ROWS_IV]], 16
-; CHECK-NEXT:    [[TMP9:%.*]] = add i16 [[TMP8]], [[TILELOAD_SCALARIZE_COLS_IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP11]] = insertelement <256 x i32> [[VEC_PHI]], i32 [[TMP10]], i16 [[TMP9]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i16 [[TILELOAD_SCALARIZE_ROWS_IV]], 16
+; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[TMP7]], [[TILELOAD_SCALARIZE_COLS_IV]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP10]] = insertelement <256 x i32> [[VEC_PHI]], i32 [[TMP9]], i16 [[TMP8]]
 ; CHECK-NEXT:    br label [[TILELOAD_SCALARIZE_COLS_LATCH]]
 ; CHECK:       tileload.scalarize.cols.latch:
 ; CHECK-NEXT:    [[TILELOAD_SCALARIZE_COLS_STEP]] = add i16 [[TILELOAD_SCALARIZE_COLS_IV]], 1
@@ -86,8 +84,8 @@ define dso_local void @test_amx_load(i16 signext %row, i16 signext %col, i8 *%pt
 ; CHECK-NEXT:    [[TILELOAD_SCALARIZE_ROWS_COND:%.*]] = icmp ne i16 [[TILELOAD_SCALARIZE_ROWS_STEP]], [[ROW:%.*]]
 ; CHECK-NEXT:    br i1 [[TILELOAD_SCALARIZE_ROWS_COND]], label [[TILELOAD_SCALARIZE_ROWS_HEADER]], label [[CONTINUE:%.*]]
 ; CHECK:       continue:
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <256 x i32> [[TMP11]] to x86_amx
-; CHECK-NEXT:    store <256 x i32> [[TMP11]], <256 x i32>* [[VPTR:%.*]], align 64
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <256 x i32> [[TMP10]] to x86_amx
+; CHECK-NEXT:    store <256 x i32> [[TMP10]], ptr [[VPTR:%.*]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -159,7 +157,7 @@ define dso_local void @test_amx_dpbssd(i16 signext %row, i16 signext %col, i16 s
 ; CHECK-NEXT:    br i1 [[TILEDPBSSD_SCALARIZE_ROWS_COND]], label [[TILEDPBSSD_SCALARIZE_ROWS_HEADER]], label [[CONTINUE:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <256 x i32> [[TMP20]] to x86_amx
-; CHECK-NEXT:    store <256 x i32> [[TMP20]], <256 x i32>* [[VPTR:%.*]], align 64
+; CHECK-NEXT:    store <256 x i32> [[TMP20]], ptr [[VPTR:%.*]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -234,7 +232,7 @@ define dso_local void @test_amx_dpbsud(i16 signext %row, i16 signext %col, i16 s
 ; CHECK-NEXT:    br i1 [[TILEDPBSUD_SCALARIZE_ROWS_COND]], label [[TILEDPBSUD_SCALARIZE_ROWS_HEADER]], label [[CONTINUE:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <256 x i32> [[TMP20]] to x86_amx
-; CHECK-NEXT:    store <256 x i32> [[TMP20]], <256 x i32>* [[VPTR:%.*]], align 64
+; CHECK-NEXT:    store <256 x i32> [[TMP20]], ptr [[VPTR:%.*]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -309,7 +307,7 @@ define dso_local void @test_amx_dpbusd(i16 signext %row, i16 signext %col, i16 s
 ; CHECK-NEXT:    br i1 [[TILEDPBUSD_SCALARIZE_ROWS_COND]], label [[TILEDPBUSD_SCALARIZE_ROWS_HEADER]], label [[CONTINUE:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <256 x i32> [[TMP20]] to x86_amx
-; CHECK-NEXT:    store <256 x i32> [[TMP20]], <256 x i32>* [[VPTR:%.*]], align 64
+; CHECK-NEXT:    store <256 x i32> [[TMP20]], ptr [[VPTR:%.*]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -384,7 +382,7 @@ define dso_local void @test_amx_dpbuud(i16 signext %row, i16 signext %col, i16 s
 ; CHECK-NEXT:    br i1 [[TILEDPBUUD_SCALARIZE_ROWS_COND]], label [[TILEDPBUUD_SCALARIZE_ROWS_HEADER]], label [[CONTINUE:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <256 x i32> [[TMP20]] to x86_amx
-; CHECK-NEXT:    store <256 x i32> [[TMP20]], <256 x i32>* [[VPTR:%.*]], align 64
+; CHECK-NEXT:    store <256 x i32> [[TMP20]], ptr [[VPTR:%.*]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -462,7 +460,7 @@ define dso_local void @test_amx_dpbf16ps(i16 signext %row, i16 signext %col, i16
 ; CHECK-NEXT:    br i1 [[TILEDPBF16PS_SCALARIZE_ROWS_COND]], label [[TILEDPBF16PS_SCALARIZE_ROWS_HEADER]], label [[CONTINUE:%.*]]
 ; CHECK:       continue:
 ; CHECK-NEXT:    [[TMP24:%.*]] = bitcast <256 x i32> [[TMP23]] to x86_amx
-; CHECK-NEXT:    store <256 x i32> [[TMP23]], <256 x i32>* [[VPTR:%.*]], align 64
+; CHECK-NEXT:    store <256 x i32> [[TMP23]], ptr [[VPTR:%.*]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -495,12 +493,11 @@ define dso_local void @test_amx_store(i16 signext %row, i16 signext %col, i8 *%p
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TILESTORE_SCALARIZE_COLS_IV]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[PTR:%.*]] to i32*
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP6]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i16 [[TILESTORE_SCALARIZE_ROWS_IV]], 16
-; CHECK-NEXT:    [[TMP9:%.*]] = add i16 [[TMP8]], [[TILESTORE_SCALARIZE_COLS_IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <256 x i32> [[VEC]], i16 [[TMP9]]
-; CHECK-NEXT:    store i32 [[TMP10]], i32* [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i16 [[TILESTORE_SCALARIZE_ROWS_IV]], 16
+; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[TMP7]], [[TILESTORE_SCALARIZE_COLS_IV]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <256 x i32> [[VEC]], i16 [[TMP8]]
+; CHECK-NEXT:    store i32 [[TMP9]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    br label [[TILESTORE_SCALARIZE_COLS_LATCH]]
 ; CHECK:       tilestore.scalarize.cols.latch:
 ; CHECK-NEXT:    [[TILESTORE_SCALARIZE_COLS_STEP]] = add i16 [[TILESTORE_SCALARIZE_COLS_IV]], 1
@@ -522,7 +519,7 @@ entry:
 define dso_local void @test_amx_zero(i16 signext %row, i16 signext %col, <256 x i32>* %vptr) #0 {
 ; CHECK-LABEL: @test_amx_zero(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <256 x i32> zeroinitializer, <256 x i32>* [[VPTR:%.*]], align 64
+; CHECK-NEXT:    store <256 x i32> zeroinitializer, ptr [[VPTR:%.*]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:

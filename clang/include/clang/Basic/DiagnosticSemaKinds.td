@@ -1650,6 +1650,9 @@ def err_type_defined_in_condition : Error<
   "%0 cannot be defined in a condition">;
 def err_type_defined_in_enum : Error<
   "%0 cannot be defined in an enumeration">;
+def ext_type_defined_in_offsetof : Extension<
+  "defining a type within '%select{__builtin_offsetof|offsetof}0' is a Clang "
+  "extension">, InGroup<GNUOffsetofExtensions>;
 
 def note_pure_virtual_function : Note<
   "unimplemented pure virtual method %0 in %1">;
@@ -5962,7 +5965,7 @@ def ext_excess_initializers_in_char_array_initializer : ExtWarn<
   "excess elements in char array initializer">,
   InGroup<ExcessInitializers>;
 def err_initializer_string_for_char_array_too_long : Error<
-  "initializer-string for char array is too long">;
+  "initializer-string for char array is too long, array size is %0 but initializer has size %1 (including the null terminating character)">;
 def ext_initializer_string_for_char_array_too_long : ExtWarn<
   "initializer-string for char array is too long">,
   InGroup<ExcessInitializers>;
@@ -11775,12 +11778,16 @@ def err_loongarch_builtin_requires_la64 : Error<
   "this builtin requires target: loongarch64">;
 
 // Unsafe buffer usage diagnostics.
-def warn_unsafe_buffer_expression : Warning<
-  "unchecked operation on raw buffer in expression">,
-  InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_variable : Warning<
-  "variable %0 participates in unchecked buffer operations">,
+  "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
+  "does not perform bounds checks}1">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_unsafe_buffer_operation : Warning<
+  "%select{unsafe pointer operation|unsafe pointer arithmetic|"
+  "unsafe buffer access}0">,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def note_unsafe_buffer_operation : Note<
+  "used%select{| in pointer arithmetic| in buffer access}0 here">;
 def err_loongarch_builtin_requires_la32 : Error<
   "this builtin requires target: loongarch32">;
 } // end of sema component.

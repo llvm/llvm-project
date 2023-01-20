@@ -14,7 +14,7 @@ define void @undef_2phi(i8 *%buf) {
 ; CHECK-NEXT:    br i1 undef, label [[L3]], label [[EXIT:%.*]]
 ; CHECK:       l3:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi x86_amx [ [[TMP1]], [[L2]] ], [ [[T1]], [[L1]] ]
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, i8* [[BUF:%.*]], i64 1024, x86_amx [[TMP2]])
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, ptr [[BUF:%.*]], i64 1024, x86_amx [[TMP2]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -51,7 +51,7 @@ define void @foo_undef(i8 *%buf) {
 ; CHECK-NEXT:    br i1 undef, label [[L2]], label [[EXIT:%.*]]
 ; CHECK:       l2:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi x86_amx [ [[TMP0]], [[ENTRY:%.*]] ], [ [[T1]], [[L1]] ]
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, i8* [[BUF:%.*]], i64 1024, x86_amx [[TMP1]])
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, ptr [[BUF:%.*]], i64 1024, x86_amx [[TMP1]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -84,7 +84,7 @@ define void @foo_zero(i8 *%buf) {
 ; CHECK-NEXT:    br i1 undef, label [[L2]], label [[EXIT:%.*]]
 ; CHECK:       l2:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi x86_amx [ [[TMP0]], [[ENTRY:%.*]] ], [ [[T1]], [[L1]] ]
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, i8* [[BUF:%.*]], i64 1024, x86_amx [[TMP1]])
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, ptr [[BUF:%.*]], i64 1024, x86_amx [[TMP1]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -115,16 +115,14 @@ define void @foo_vrow(i8 *%buf, i16 %row) {
 ; CHECK-NEXT:    br i1 undef, label [[L1:%.*]], label [[L2:%.*]]
 ; CHECK:       l1:
 ; CHECK-NEXT:    [[T1:%.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 [[ROW:%.*]], i16 32)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i32>* [[TMP1]] to i8*
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[ROW]], i16 32, i8* [[TMP2]], i64 32, x86_amx [[T1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = load <256 x i32>, <256 x i32>* [[TMP1]], align 1024
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[ROW]], i16 32, ptr [[TMP1]], i64 32, x86_amx [[T1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = load <256 x i32>, ptr [[TMP1]], align 1024
 ; CHECK-NEXT:    br i1 undef, label [[L2]], label [[EXIT:%.*]]
 ; CHECK:       l2:
-; CHECK-NEXT:    [[T3:%.*]] = phi <256 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP3]], [[L1]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <256 x i32>* [[TMP0]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T3]], <256 x i32>* [[TMP0]], align 1024
-; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[ROW]], i16 32, i8* [[TMP4]], i64 32)
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[ROW]], i16 32, i8* [[BUF:%.*]], i64 1024, x86_amx [[TMP5]])
+; CHECK-NEXT:    [[T3:%.*]] = phi <256 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP2]], [[L1]] ]
+; CHECK-NEXT:    store <256 x i32> [[T3]], ptr [[TMP0]], align 1024
+; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 [[ROW]], i16 32, ptr [[TMP0]], i64 32)
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 [[ROW]], i16 32, ptr [[BUF:%.*]], i64 1024, x86_amx [[TMP3]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -155,18 +153,16 @@ define void @foo_vcol(i8 *%buf, i16 %col) {
 ; CHECK-NEXT:    br i1 undef, label [[L1:%.*]], label [[L2:%.*]]
 ; CHECK:       l1:
 ; CHECK-NEXT:    [[T1:%.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 8, i16 [[COL:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <256 x i32>* [[TMP1]] to i8*
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i16 [[COL]] to i64
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 [[COL]], i8* [[TMP2]], i64 [[TMP3]], x86_amx [[T1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = load <256 x i32>, <256 x i32>* [[TMP1]], align 1024
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i16 [[COL]] to i64
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 [[COL]], ptr [[TMP1]], i64 [[TMP2]], x86_amx [[T1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = load <256 x i32>, ptr [[TMP1]], align 1024
 ; CHECK-NEXT:    br i1 undef, label [[L2]], label [[EXIT:%.*]]
 ; CHECK:       l2:
-; CHECK-NEXT:    [[T3:%.*]] = phi <256 x i32> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[TMP4]], [[L1]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <256 x i32>* [[TMP0]] to i8*
-; CHECK-NEXT:    store <256 x i32> [[T3]], <256 x i32>* [[TMP0]], align 1024
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i16 [[COL]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 [[COL]], i8* [[TMP5]], i64 [[TMP6]])
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 [[COL]], i8* [[BUF:%.*]], i64 1024, x86_amx [[TMP7]])
+; CHECK-NEXT:    [[T3:%.*]] = phi <256 x i32> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[TMP3]], [[L1]] ]
+; CHECK-NEXT:    store <256 x i32> [[T3]], ptr [[TMP0]], align 1024
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i16 [[COL]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 [[COL]], ptr [[TMP0]], i64 [[TMP4]])
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 [[COL]], ptr [[BUF:%.*]], i64 1024, x86_amx [[TMP5]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -196,14 +192,13 @@ define void @noshape(i8 *%buf) {
 ; CHECK-NEXT:    br i1 undef, label [[L1:%.*]], label [[L2:%.*]]
 ; CHECK:       l1:
 ; CHECK-NEXT:    [[T1:%.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 8, i16 32)
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <256 x i32>* [[TMP0]] to i8*
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, i8* [[TMP1]], i64 32, x86_amx [[T1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <256 x i32>, <256 x i32>* [[TMP0]], align 1024
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, ptr [[TMP0]], i64 32, x86_amx [[T1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i32>, ptr [[TMP0]], align 1024
 ; CHECK-NEXT:    br i1 undef, label [[L2]], label [[EXIT:%.*]]
 ; CHECK:       l2:
-; CHECK-NEXT:    [[T3:%.*]] = phi <256 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP2]], [[L1]] ]
-; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[BUF:%.*]] to <256 x i32>*
-; CHECK-NEXT:    store <256 x i32> [[T3]], <256 x i32>* [[P]], align 1024
+; CHECK-NEXT:    [[T3:%.*]] = phi <256 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP1]], [[L1]] ]
+; CHECK-NEXT:    [[P:%.*]] = bitcast ptr [[BUF:%.*]] to ptr
+; CHECK-NEXT:    store <256 x i32> [[T3]], ptr [[P]], align 1024
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -235,15 +230,14 @@ define void @noshape2(i8 *%buf) {
 ; CHECK-NEXT:    br i1 undef, label [[L1:%.*]], label [[L2:%.*]]
 ; CHECK:       l1:
 ; CHECK-NEXT:    [[T1:%.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 8, i16 32)
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <256 x i32>* [[TMP0]] to i8*
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, i8* [[TMP1]], i64 32, x86_amx [[T1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <256 x i32>, <256 x i32>* [[TMP0]], align 1024
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 8, i16 32, ptr [[TMP0]], i64 32, x86_amx [[T1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <256 x i32>, ptr [[TMP0]], align 1024
 ; CHECK-NEXT:    br i1 undef, label [[L2]], label [[EXIT:%.*]]
 ; CHECK:       l2:
-; CHECK-NEXT:    [[T3:%.*]] = phi <256 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP2]], [[L1]] ]
+; CHECK-NEXT:    [[T3:%.*]] = phi <256 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP1]], [[L1]] ]
 ; CHECK-NEXT:    [[T6:%.*]] = call <256 x i32> @llvm.abs.v256i32(<256 x i32> [[T3]], i1 true)
-; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[BUF:%.*]] to <256 x i32>*
-; CHECK-NEXT:    store <256 x i32> [[T6]], <256 x i32>* [[P]], align 1024
+; CHECK-NEXT:    [[P:%.*]] = bitcast ptr [[BUF:%.*]] to ptr
+; CHECK-NEXT:    store <256 x i32> [[T6]], ptr [[P]], align 1024
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

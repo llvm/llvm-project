@@ -356,6 +356,7 @@ public:
   void SelectPredicatedLoad(SDNode *N, unsigned NumVecs, unsigned Scale,
                             unsigned Opc_rr, unsigned Opc_ri,
                             bool IsIntr = false);
+  void SelectWhilePair(SDNode *N, unsigned Opc);
 
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
@@ -368,9 +369,9 @@ public:
     return SelectSVERegRegAddrMode(N, Scale, Base, Offset);
   }
 
-  template <unsigned Scale>
+  template <unsigned MaxIdx, unsigned Scale>
   bool SelectSMETileSlice(SDValue N, SDValue &Vector, SDValue &Offset) {
-    return SelectSMETileSlice(N, Scale, Vector, Offset);
+    return SelectSMETileSlice(N, MaxIdx, Vector, Offset, Scale);
   }
 
   void SelectStore(SDNode *N, unsigned NumVecs, unsigned Opc);
@@ -442,8 +443,8 @@ private:
   bool SelectSVEArithImm(SDValue N, MVT VT, SDValue &Imm);
   bool SelectSVERegRegAddrMode(SDValue N, unsigned Scale, SDValue &Base,
                                SDValue &Offset);
-  bool SelectSMETileSlice(SDValue N, unsigned Scale, SDValue &Vector,
-                          SDValue &Offset);
+  bool SelectSMETileSlice(SDValue N, unsigned MaxSize, SDValue &Vector,
+                          SDValue &Offset, unsigned Scale = 1);
 
   bool SelectAllActivePredicate(SDValue N);
 };
@@ -1686,6 +1687,64 @@ AArch64DAGToDAGISel::findAddrModeSVELoadStore(SDNode *N, unsigned Opc_rr,
 
   // Select the instruction.
   return std::make_tuple(IsRegReg ? Opc_rr : Opc_ri, NewBase, NewOffset);
+}
+
+enum class SelectTypeKind {
+  Int1 = 0,
+};
+
+/// This function selects an opcode from a list of opcodes, which is
+/// expected to be the opcode for { 8-bit, 16-bit, 32-bit, 64-bit }
+/// element types, in this order.
+template <SelectTypeKind Kind>
+static unsigned SelectOpcodeFromVT(EVT VT, ArrayRef<unsigned> Opcodes) {
+  // Only match scalable vector VTs
+  if (!VT.isScalableVector())
+    return 0;
+
+  EVT EltVT = VT.getVectorElementType();
+  switch (Kind) {
+  case SelectTypeKind::Int1:
+    if (EltVT != MVT::i1)
+      return 0;
+    break;
+  }
+
+  unsigned Offset;
+  switch (VT.getVectorMinNumElements()) {
+  case 16: // 8-bit
+    Offset = 0;
+    break;
+  case 8: // 16-bit
+    Offset = 1;
+    break;
+  case 4: // 32-bit
+    Offset = 2;
+    break;
+  case 2: // 64-bit
+    Offset = 3;
+    break;
+  default:
+    return 0;
+  }
+
+  return (Opcodes.size() <= Offset) ? 0 : Opcodes[Offset];
+}
+
+void AArch64DAGToDAGISel::SelectWhilePair(SDNode *N, unsigned Opc) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  SDValue Ops[] = {N->getOperand(1), N->getOperand(2)};
+
+  SDNode *WhilePair = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Ops);
+  SDValue SuperReg = SDValue(WhilePair, 0);
+
+  for (unsigned I = 0; I < 2; ++I)
+    ReplaceUses(SDValue(N, I), CurDAG->getTargetExtractSubreg(
+                                   AArch64::psub0 + I, DL, VT, SuperReg));
+
+  CurDAG->RemoveDeadNode(N);
 }
 
 void AArch64DAGToDAGISel::SelectPredicatedLoad(SDNode *N, unsigned NumVecs,
@@ -4623,6 +4682,62 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (tryMULLV64LaneV128(IntNo, Node))
         return;
       break;
+    case Intrinsic::aarch64_sve_whilege_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
+              Node->getValueType(0),
+              {AArch64::WHILEGE_2PXX_B, AArch64::WHILEGE_2PXX_H,
+               AArch64::WHILEGE_2PXX_S, AArch64::WHILEGE_2PXX_D}))
+        SelectWhilePair(Node, Op);
+      return;
+    case Intrinsic::aarch64_sve_whilegt_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
+              Node->getValueType(0),
+              {AArch64::WHILEGT_2PXX_B, AArch64::WHILEGT_2PXX_H,
+               AArch64::WHILEGT_2PXX_S, AArch64::WHILEGT_2PXX_D}))
+        SelectWhilePair(Node, Op);
+      return;
+    case Intrinsic::aarch64_sve_whilehi_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
+              Node->getValueType(0),
+              {AArch64::WHILEHI_2PXX_B, AArch64::WHILEHI_2PXX_H,
+               AArch64::WHILEHI_2PXX_S, AArch64::WHILEHI_2PXX_D}))
+        SelectWhilePair(Node, Op);
+      return;
+    case Intrinsic::aarch64_sve_whilehs_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
+              Node->getValueType(0),
+              {AArch64::WHILEHS_2PXX_B, AArch64::WHILEHS_2PXX_H,
+               AArch64::WHILEHS_2PXX_S, AArch64::WHILEHS_2PXX_D}))
+        SelectWhilePair(Node, Op);
+      return;
+    case Intrinsic::aarch64_sve_whilele_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
+              Node->getValueType(0),
+              {AArch64::WHILELE_2PXX_B, AArch64::WHILELE_2PXX_H,
+               AArch64::WHILELE_2PXX_S, AArch64::WHILELE_2PXX_D}))
+      SelectWhilePair(Node, Op);
+      return;
+    case Intrinsic::aarch64_sve_whilelo_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
+              Node->getValueType(0),
+              {AArch64::WHILELO_2PXX_B, AArch64::WHILELO_2PXX_H,
+               AArch64::WHILELO_2PXX_S, AArch64::WHILELO_2PXX_D}))
+      SelectWhilePair(Node, Op);
+      return;
+    case Intrinsic::aarch64_sve_whilels_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
+              Node->getValueType(0),
+              {AArch64::WHILELS_2PXX_B, AArch64::WHILELS_2PXX_H,
+               AArch64::WHILELS_2PXX_S, AArch64::WHILELS_2PXX_D}))
+        SelectWhilePair(Node, Op);
+      return;
+    case Intrinsic::aarch64_sve_whilelt_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
+              Node->getValueType(0),
+              {AArch64::WHILELT_2PXX_B, AArch64::WHILELT_2PXX_H,
+               AArch64::WHILELT_2PXX_S, AArch64::WHILELT_2PXX_D}))
+        SelectWhilePair(Node, Op);
+      return;
     }
     break;
   }
@@ -5780,8 +5895,9 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
   return TLI->isAllActivePredicate(*CurDAG, N);
 }
 
-bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned Scale,
-                                             SDValue &Base, SDValue &Offset) {
+bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
+                                             SDValue &Base, SDValue &Offset,
+                                             unsigned Scale) {
   if (N.getOpcode() != ISD::ADD) {
     Base = N;
     Offset = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i64);
@@ -5794,13 +5910,12 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned Scale,
 
   if (auto C = dyn_cast<ConstantSDNode>(RHS)) {
     int64_t ImmOff = C->getSExtValue();
-    unsigned MaxSize = (1 << Scale) - 1;
 
-    if (ImmOff < 0 || ImmOff > MaxSize)
+    if ((ImmOff < 0 || ImmOff > MaxSize) || (ImmOff % Scale != 0))
       return false;
 
     Base = LHS;
-    Offset = CurDAG->getTargetConstant(ImmOff, SDLoc(N), MVT::i64);
+    Offset = CurDAG->getTargetConstant(ImmOff / Scale, SDLoc(N), MVT::i64);
     return true;
   }
 

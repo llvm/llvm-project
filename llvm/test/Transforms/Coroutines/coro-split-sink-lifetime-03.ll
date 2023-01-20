@@ -1,6 +1,6 @@
 ; Corresponding to coro-split-sink-lifetime-01.ll. This file tests that whether the CoroFrame
 ; pass knows the operand of lifetime.start intrinsic may be GEP as well.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
 %"struct.std::coroutine_handle" = type { i8* }
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }

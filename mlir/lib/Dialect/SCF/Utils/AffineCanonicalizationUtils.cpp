@@ -169,7 +169,8 @@ LogicalResult scf::rewritePeeledMinMaxOp(RewriterBase &rewriter, Operation *op,
                                          Value iv, Value ub, Value step,
                                          bool insideLoop) {
   FlatAffineValueConstraints constraints;
-  constraints.appendDimVar({iv, ub, step});
+  constraints.appendDimVar({iv});
+  constraints.appendSymbolVar({ub, step});
   if (auto constUb = getConstantIntValue(ub))
     constraints.addBound(IntegerPolyhedron::EQ, 1, *constUb);
   if (auto constStep = getConstantIntValue(step))
