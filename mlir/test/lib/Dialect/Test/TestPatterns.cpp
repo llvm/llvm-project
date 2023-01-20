@@ -244,11 +244,13 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestStrictPatternDriver)
 
   TestStrictPatternDriver() = default;
-  TestStrictPatternDriver(const TestStrictPatternDriver &other) = default;
+  TestStrictPatternDriver(const TestStrictPatternDriver &other) {
+    strictMode = other.strictMode;
+  }
 
   StringRef getArgument() const final { return "test-strict-pattern-driver"; }
   StringRef getDescription() const final {
-    return "Run strict mode of pattern driver";
+    return "Test strict mode of pattern driver";
   }
 
   void runOnOperation() override {
@@ -263,12 +265,27 @@ public:
       }
     });
 
+    GreedyRewriteStrictness mode;
+    if (strictMode == "AnyOp") {
+      mode = GreedyRewriteStrictness::AnyOp;
+    } else if (strictMode == "ExistingAndNewOps") {
+      mode = GreedyRewriteStrictness::ExistingAndNewOps;
+    } else if (strictMode == "ExistingOps") {
+      mode = GreedyRewriteStrictness::ExistingOps;
+    } else {
+      llvm_unreachable("invalid strictness option");
+    }
+
     // Check if these transformations introduce visiting of operations that
     // are not in the `ops` set (The new created ops are valid). An invalid
     // operation will trigger the assertion while processing.
-    (void)applyOpPatternsAndFold(ArrayRef(ops), std::move(patterns),
-                                 /*strict=*/true);
+    (void)applyOpPatternsAndFold(ArrayRef(ops), std::move(patterns), mode);
   }
+
+  Option<std::string> strictMode{
+      *this, "strictness",
+      llvm::cl::desc("Can be {AnyOp, ExistingAndNewOps, ExistingOps}"),
+      llvm::cl::init("AnyOp")};
 
 private:
   // New inserted operation is valid for further transformation.
