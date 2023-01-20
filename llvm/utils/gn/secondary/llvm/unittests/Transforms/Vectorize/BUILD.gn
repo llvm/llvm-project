@@ -9,6 +9,7 @@ unittest("VectorizeTests") {
     "//llvm/lib/Transforms/Vectorize",
   ]
   sources = [
+    "VPDomTreeTest.cpp",
     "VPlanHCFGTest.cpp",
     "VPlanSlpTest.cpp",
     "VPlanTest.cpp",
