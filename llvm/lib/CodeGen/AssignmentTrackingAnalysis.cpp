@@ -2389,6 +2389,9 @@ static void analyzeFunction(Function &Fn, const DataLayout &Layout,
 }
 
 bool AssignmentTrackingAnalysis::runOnFunction(Function &F) {
+  if (!isAssignmentTrackingEnabled(*F.getParent()))
+    return false;
+
   LLVM_DEBUG(dbgs() << "AssignmentTrackingAnalysis run on " << F.getName()
                     << "\n");
   auto DL = std::make_unique<DataLayout>(F.getParent());

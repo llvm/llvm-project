@@ -531,7 +531,8 @@ bool llvm::RemoveRedundantDbgInstrs(BasicBlock *BB) {
   // getting (2) out of the way, the foward scan will remove (3) since "x"
   // already is described as having the value V1 at (1).
   MadeChanges |= removeRedundantDbgInstrsUsingBackwardScan(BB);
-  if (BB->isEntryBlock() && getEnableAssignmentTracking())
+  if (BB->isEntryBlock() &&
+      isAssignmentTrackingEnabled(*BB->getParent()->getParent()))
     MadeChanges |= remomveUndefDbgAssignsFromEntryBlock(BB);
   MadeChanges |= removeRedundantDbgInstrsUsingForwardScan(BB);
 

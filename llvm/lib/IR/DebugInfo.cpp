@@ -43,13 +43,6 @@ using namespace llvm;
 using namespace llvm::at;
 using namespace llvm::dwarf;
 
-static cl::opt<bool>
-    ExperimentalAssignmentTracking("experimental-assignment-tracking",
-                                   cl::init(false));
-bool llvm::getEnableAssignmentTracking() {
-  return ExperimentalAssignmentTracking;
-}
-
 /// Finds all intrinsics declaring local variables as living in the memory that
 /// 'V' points to. This may include a mix of dbg.declare and
 /// dbg.addr intrinsics.
@@ -1959,9 +1952,33 @@ void AssignmentTrackingPass::runOnFunction(Function &F) {
   }
 }
 
+static const char *AssignmentTrackingModuleFlag =
+    "debug-info-assignment-tracking";
+
+static void setAssignmentTrackingModuleFlag(Module &M) {
+  M.setModuleFlag(Module::ModFlagBehavior::Max, AssignmentTrackingModuleFlag,
+                  ConstantAsMetadata::get(
+                      ConstantInt::get(Type::getInt1Ty(M.getContext()), 1)));
+}
+
+static bool getAssignmentTrackingModuleFlag(const Module &M) {
+  Metadata *Value = M.getModuleFlag(AssignmentTrackingModuleFlag);
+  return Value && !cast<ConstantAsMetadata>(Value)->getValue()->isZeroValue();
+}
+
+bool llvm::isAssignmentTrackingEnabled(const Module &M) {
+  return getAssignmentTrackingModuleFlag(M);
+}
+
 PreservedAnalyses AssignmentTrackingPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   runOnFunction(F);
+
+  // Record that this module uses assignment tracking. It doesn't matter that
+  // some functons in the module may not use it - the debug info in those
+  // functions will still be handled properly.
+  setAssignmentTrackingModuleFlag(*F.getParent());
+
   // Q: Can we return a less conservative set than just CFGAnalyses? Can we
   // return PreservedAnalyses::all()?
   PreservedAnalyses PA;
@@ -1973,6 +1990,10 @@ PreservedAnalyses AssignmentTrackingPass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
   for (auto &F : M)
     runOnFunction(F);
+
+  // Record that this module uses assignment tracking.
+  setAssignmentTrackingModuleFlag(M);
+
   // Q: Can we return a less conservative set than just CFGAnalyses? Can we
   // return PreservedAnalyses::all()?
   PreservedAnalyses PA;

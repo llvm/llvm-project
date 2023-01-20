@@ -1,4 +1,4 @@
-; RUN: opt -passes=sroa -S %s -o - -experimental-assignment-tracking \
+; RUN: opt -passes=sroa -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Check that the fragments generated in SROA for a split alloca that has a
@@ -101,7 +101,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!96, !97, !98}
+!llvm.module.flags = !{!96, !97, !98, !1000}
 !llvm.ident = !{!99}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, imports: !3, splitDebugInlining: false, nameTableKind: None)
@@ -233,3 +233,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !131 = !DILocation(line: 8, column: 32, scope: !100)
 !132 = distinct !DIAssignID()
 !133 = !DILocation(line: 9, column: 1, scope: !100)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

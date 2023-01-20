@@ -7109,11 +7109,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       if (StringRef(Arg->getValue()) == "-finclude-default-header")
         continue;
     }
-    if (StringRef(Arg->getValue()) == "-fexperimental-assignment-tracking") {
-      // Add the llvm version of this flag too.
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-experimental-assignment-tracking");
-    }
     CmdArgs.push_back(Arg->getValue());
   }
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {

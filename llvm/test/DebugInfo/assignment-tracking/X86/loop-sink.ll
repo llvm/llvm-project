@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-after=finalize-isel -o - -experimental-assignment-tracking \
+; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
 ;; Tiny loop with a store sunk out of it:
@@ -70,7 +70,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 declare dso_local i32 @getInt()
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9, !10}
+!llvm.module.flags = !{!7, !8, !9, !10, !1000}
 !llvm.ident = !{!11}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -112,3 +112,4 @@ declare dso_local i32 @getInt()
 !42 = !DISubprogram(name: "es", linkageName: "_Z2esPi", scope: !3, file: !3, line: 3, type: !43, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !41)
 !43 = !DISubroutineType(types: !44)
 !44 = !{null, !5}
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
