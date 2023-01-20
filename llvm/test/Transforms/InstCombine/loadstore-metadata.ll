@@ -165,7 +165,7 @@ entry:
 
 define i32 @test_load_cast_combine_noundef(ptr %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_noundef(
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !noundef !6
 ; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %l = load float, ptr %ptr, !noundef !{}
