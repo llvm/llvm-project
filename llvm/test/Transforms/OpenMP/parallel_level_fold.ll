@@ -7,15 +7,18 @@ target triple = "nvptx64"
 @no_spmd_exec_mode = weak constant i8 1
 @spmd_exec_mode = weak constant i8 0
 @parallel_exec_mode = weak constant i8 0
-@G = external global i8
+@G = external global i16
 @llvm.compiler.used = appending global [3 x ptr] [ptr @no_spmd_exec_mode, ptr @spmd_exec_mode, ptr @parallel_exec_mode], section "llvm.metadata"
 
 ;.
 ; CHECK: @[[NO_SPMD_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; CHECK: @[[SPMD_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[PARALLEL_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i8
+; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i16
 ; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [3 x ptr] [ptr @no_spmd_exec_mode, ptr @spmd_exec_mode, ptr @parallel_exec_mode], section "llvm.metadata"
+; CHECK: @[[NONE_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[PARALLEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
 define weak void @none_spmd() {
 ; CHECK-LABEL: define {{[^@]+}}@none_spmd() {
@@ -64,19 +67,19 @@ define weak void @parallel() {
 
 define internal void @mixed_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@mixed_helper() {
-; CHECK-NEXT:    [[LEVEL:%.*]] = call i8 @__kmpc_parallel_level()
-; CHECK-NEXT:    store i8 [[LEVEL]], ptr @G, align 1
+; CHECK-NEXT:    [[LEVEL:%.*]] = call zeroext i16 @__kmpc_parallel_level(ptr null, i32 0)
+; CHECK-NEXT:    store i16 [[LEVEL]], ptr @G, align 2
 ; CHECK-NEXT:    ret void
 ;
-  %level = call i8 @__kmpc_parallel_level()
-  store i8 %level, ptr @G
+  %level = call zeroext i16 @__kmpc_parallel_level(ptr null, i32 0)
+  store i16 %level, ptr @G
   ret void
 }
 
 define internal void @none_spmd_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@none_spmd_helper() {
-; CHECK-NEXT:    [[LEVEL12:%.*]] = call i8 @__kmpc_parallel_level()
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[LEVEL12]], 0
+; CHECK-NEXT:    [[LEVEL12:%.*]] = call zeroext i16 @__kmpc_parallel_level(ptr null, i32 0)
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i16 [[LEVEL12]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    call void @foo()
@@ -85,8 +88,8 @@ define internal void @none_spmd_helper() {
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    ret void
 ;
-  %level12 = call i8 @__kmpc_parallel_level()
-  %c = icmp eq i8 %level12, 0
+  %level12 = call zeroext i16 @__kmpc_parallel_level(ptr null, i32 0)
+  %c = icmp eq i16 %level12, 0
   br i1 %c, label %t, label %f
 t:
   call void @foo()
@@ -98,11 +101,11 @@ f:
 
 define internal void @spmd_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@spmd_helper() {
-; CHECK-NEXT:    store i8 1, ptr @G, align 1
+; CHECK-NEXT:    store i8 1, ptr @G, align 2
 ; CHECK-NEXT:    ret void
 ;
-  %level = call i8 @__kmpc_parallel_level()
-  store i8 %level, ptr @G
+  %level = call zeroext i16 @__kmpc_parallel_level(ptr null, i32 0)
+  store i16 %level, ptr @G
   ret void
 }
 
@@ -118,18 +121,18 @@ define internal void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr,
 
 define internal void @parallel_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@parallel_helper() {
-; CHECK-NEXT:    [[LEVEL:%.*]] = call i8 @__kmpc_parallel_level()
-; CHECK-NEXT:    store i8 [[LEVEL]], ptr @G, align 1
+; CHECK-NEXT:    [[LEVEL:%.*]] = call zeroext i16 @__kmpc_parallel_level(ptr null, i32 0)
+; CHECK-NEXT:    store i16 [[LEVEL]], ptr @G, align 2
 ; CHECK-NEXT:    ret void
 ;
-  %level = call i8 @__kmpc_parallel_level()
-  store i8 %level, ptr @G
+  %level = call zeroext i16 @__kmpc_parallel_level(ptr null, i32 0)
+  store i16 %level, ptr @G
   ret void
 }
 
 declare void @foo()
 declare void @bar()
-declare i8 @__kmpc_parallel_level()
+declare zeroext i16 @__kmpc_parallel_level(ptr, i32)
 declare i32 @__kmpc_target_init(ptr, i8 zeroext, i1 zeroext) #1
 declare void @__kmpc_target_deinit(ptr nocapture readnone, i8 zeroext) #1
 
