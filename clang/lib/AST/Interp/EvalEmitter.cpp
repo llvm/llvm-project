@@ -60,6 +60,10 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   Desc.Desc = D;
   Desc.Offset = sizeof(InlineDescriptor);
   Desc.IsActive = true;
+  Desc.IsBase = false;
+  Desc.IsMutable = false;
+  Desc.IsConst = false;
+  Desc.IsInitialized = false;
 
   // Register the local.
   unsigned Off = Locals.size();
