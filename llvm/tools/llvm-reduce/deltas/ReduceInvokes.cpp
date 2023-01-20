@@ -27,8 +27,8 @@ static void reduceInvokesInFunction(Oracle &O, Function &F) {
   // reduction.
 }
 
-static void reduceInvokesInModule(Oracle &O, Module &Mod) {
-  for (Function &F : Mod) {
+static void reduceInvokesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  for (Function &F : WorkItem.getModule()) {
     if (F.hasPersonalityFn())
       reduceInvokesInFunction(O, F);
   }

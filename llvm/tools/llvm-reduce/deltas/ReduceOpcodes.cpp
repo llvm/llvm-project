@@ -253,7 +253,9 @@ static Value *reduceInstruction(Oracle &O, Module &M, Instruction &I) {
   return nullptr;
 }
 
-static void replaceOpcodesInModule(Oracle &O, Module &Mod) {
+static void replaceOpcodesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Mod = WorkItem.getModule();
+
   for (Function &F : Mod) {
     for (BasicBlock &BB : F)
       for (Instruction &I : make_early_inc_range(BB)) {

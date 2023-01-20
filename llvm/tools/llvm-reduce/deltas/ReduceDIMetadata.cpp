@@ -78,7 +78,9 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
   }
 }
 
-static void extractDIMetadataFromModule(Oracle &O, Module &Program) {
+static void extractDIMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+
   MDNodeList MDs;
   // Collect all !dbg metadata attachments.
   for (const auto &DC : Program.debug_compile_units())

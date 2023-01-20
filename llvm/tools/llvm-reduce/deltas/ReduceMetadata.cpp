@@ -42,7 +42,9 @@ static constexpr StringLiteral ListNamedMetadata[] = {
 };
 
 /// Remove unneeded arguments to named metadata.
-static void reduceNamedMetadataOperands(Oracle &O, Module &M) {
+static void reduceNamedMetadataOperands(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &M = WorkItem.getModule();
+
   for (StringRef MDName : ListNamedMetadata) {
     NamedMDNode *NamedNode = M.getNamedMetadata(MDName);
     if (!NamedNode)
@@ -67,7 +69,9 @@ static void reduceNamedMetadataOperands(Oracle &O, Module &M) {
 
 /// Removes all the Named and Unnamed Metadata Nodes, as well as any debug
 /// functions that aren't inside the desired Chunks.
-static void extractMetadataFromModule(Oracle &O, Module &Program) {
+static void extractMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+
   // Get out-of-chunk Named metadata nodes
   SmallVector<NamedMDNode *> NamedNodesToDelete;
   for (NamedMDNode &MD : Program.named_metadata())

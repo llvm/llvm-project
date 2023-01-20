@@ -26,6 +26,11 @@ public:
 
   bool isMIR() const { return MMI != nullptr; }
 
+  LLVMContext &getContext() {
+    return M->getContext();
+  }
+
+  Module &getModule() { return *M; }
   const Module &getModule() const { return *M; }
 
   void print(raw_ostream &ROS, void *p = nullptr) const;
