@@ -232,7 +232,7 @@ def int_amdgcn_wave_barrier : ClangBuiltin<"__builtin_amdgcn_wave_barrier">,
 //                         scheduled across SCHED_BARRIER, i.e. allow ALU instructions to pass.
 //     MASK = 0x0000 0002: VALU instructions may be scheduled across SCHED_BARRIER.
 //     MASK = 0x0000 0004: SALU instructions may be scheduled across SCHED_BARRIER.
-//     MASK = 0x0000 0008: MFMA instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0008: MFMA/WMMA instructions may be scheduled across SCHED_BARRIER.
 //     MASK = 0x0000 0010: ALL VMEM instructions may be scheduled across SCHED_BARRIER.
 //     MASK = 0x0000 0020: VMEM read instructions may be scheduled across SCHED_BARRIER.
 //     MASK = 0x0000 0040: VMEM write instructions may be scheduled across SCHED_BARRIER.

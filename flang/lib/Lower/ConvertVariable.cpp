@@ -1311,9 +1311,8 @@ recoverShapeVector(llvm::ArrayRef<std::int64_t> shapeVec, mlir::Value initVal) {
   return result;
 }
 
-static fir::FortranVariableFlagsAttr
-translateSymbolAttributes(mlir::MLIRContext *mlirContext,
-                          const Fortran::semantics::Symbol &sym) {
+fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
+    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
   fir::FortranVariableFlagsEnum flags = fir::FortranVariableFlagsEnum::None;
   const auto &attrs = sym.attrs();
   if (attrs.test(Fortran::semantics::Attr::ALLOCATABLE))
@@ -1372,7 +1371,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       lenParams.emplace_back(len);
     auto name = Fortran::lower::mangle::mangleName(sym);
     fir::FortranVariableFlagsAttr attributes =
-        translateSymbolAttributes(builder.getContext(), sym);
+        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
     auto newBase = builder.create<hlfir::DeclareOp>(
         loc, base, name, shapeOrShift, lenParams, attributes);
     symMap.addVariableDefinition(sym, newBase, force);
@@ -1411,7 +1410,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     fir::FortranVariableFlagsAttr attributes =
-        translateSymbolAttributes(builder.getContext(), sym);
+        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
     auto name = Fortran::lower::mangle::mangleName(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, exv, name, attributes);
@@ -1428,10 +1427,23 @@ genAllocatableOrPointerDeclare(Fortran::lower::AbstractConverter &converter,
                                Fortran::lower::SymMap &symMap,
                                const Fortran::semantics::Symbol &sym,
                                fir::MutableBoxValue box, bool force = false) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    TODO(genLocation(converter, sym),
-         "generate fir.declare for allocatable or pointers");
-  symMap.addAllocatableOrPointer(sym, box, force);
+  if (!converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    symMap.addAllocatableOrPointer(sym, box, force);
+    return;
+  }
+  assert(!box.isDescribedByVariables() &&
+         "HLFIR alloctables/pointers must be fir.ref<fir.box>");
+  mlir::Value base = box.getAddr();
+  mlir::Value explictLength;
+  if (box.hasNonDeferredLenParams()) {
+    if (!box.isCharacter())
+      TODO(genLocation(converter, sym),
+           "Pointer or Allocatable parametrized derived type");
+    explictLength = box.nonDeferredLenParams()[0];
+  }
+  genDeclareSymbol(converter, symMap, sym, base, explictLength,
+                   /*shape=*/std::nullopt,
+                   /*lbounds=*/std::nullopt, force);
 }
 
 /// Map a symbol represented with a runtime descriptor to its FIR fir.box and
@@ -1522,7 +1534,9 @@ void Fortran::lower::mapSymbolAttributes(
                "derived type allocatable or pointer with length parameters");
     }
     fir::MutableBoxValue box = Fortran::lower::createMutableBox(
-        converter, loc, var, boxAlloc, nonDeferredLenParams);
+        converter, loc, var, boxAlloc, nonDeferredLenParams,
+        /*alwaysUseBox=*/
+        converter.getLoweringOptions().getLowerToHighLevelFIR());
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;

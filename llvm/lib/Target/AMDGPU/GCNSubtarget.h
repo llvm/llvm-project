@@ -137,6 +137,7 @@ protected:
   bool GFX10_AEncoding = false;
   bool GFX10_BEncoding = false;
   bool HasDLInsts = false;
+  bool HasVFmacF64Inst = false;
   bool HasDot1Insts = false;
   bool HasDot2Insts = false;
   bool HasDot3Insts = false;
@@ -706,6 +707,8 @@ public:
   bool hasDLInsts() const {
     return HasDLInsts;
   }
+
+  bool hasVFmacF64Inst() const { return HasVFmacF64Inst; }
 
   bool hasDot1Insts() const {
     return HasDot1Insts;

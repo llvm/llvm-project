@@ -2926,6 +2926,14 @@ public:
     return ExplicitInfo ? ExplicitInfo->TemplateKeywordLoc : SourceLocation();
   }
 
+  SourceRange getSourceRange() const override LLVM_READONLY {
+    if (isExplicitSpecialization()) {
+      if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsInfo())
+        return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
+    }
+    return VarDecl::getSourceRange();
+  }
+
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, TemplateArgs->asArray(), getASTContext());
   }
@@ -3081,6 +3089,14 @@ public:
     assert(First->InstantiatedFromMember.getPointer() &&
            "Only member templates can be member template specializations");
     return First->InstantiatedFromMember.setInt(true);
+  }
+
+  SourceRange getSourceRange() const override LLVM_READONLY {
+    if (isExplicitSpecialization()) {
+      if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
+        return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
+    }
+    return VarDecl::getSourceRange();
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {

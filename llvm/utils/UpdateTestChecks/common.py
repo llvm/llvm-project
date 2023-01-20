@@ -744,6 +744,7 @@ ir_nameless_values = [
     NamelessValue(r'DIASSIGNID' , '!' , r'!DIAssignID '               , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'PROF'       , '!' , r'!prof '              , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'TBAA'       , '!' , r'!tbaa '              , None            , None                   , r'![0-9]+'   , None                 , False) ,
+    NamelessValue(r'TBAA_STRUCT', '!' , r'!tbaa.struct '       , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'RNG'        , '!' , r'!range '             , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'LOOP'       , '!' , r'!llvm.loop '         , None            , None                   , r'![0-9]+'   , None                 , False) ,
     NamelessValue(r'META'       , '!' , r'metadata '           , None            , None                   , r'![0-9]+'   , None                 , False) ,

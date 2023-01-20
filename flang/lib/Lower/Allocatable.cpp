@@ -836,7 +836,7 @@ static fir::MutableProperties
 createMutableProperties(Fortran::lower::AbstractConverter &converter,
                         mlir::Location loc,
                         const Fortran::lower::pft::Variable &var,
-                        mlir::ValueRange nonDeferredParams) {
+                        mlir::ValueRange nonDeferredParams, bool alwaysUseBox) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   // Globals and dummies may be associated, creating local variables would
@@ -850,7 +850,7 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
   // Pointer/Allocatable in internal procedure are descriptors in the host link,
   // and it would increase complexity to sync this descriptor with the local
   // values every time the host link is escaping.
-  if (var.isGlobal() || Fortran::semantics::IsDummy(sym) ||
+  if (alwaysUseBox || var.isGlobal() || Fortran::semantics::IsDummy(sym) ||
       Fortran::semantics::IsFunctionResult(sym) ||
       sym.attrs().test(Fortran::semantics::Attr::VOLATILE) ||
       isNonContiguousArrayPointer(sym) || useAllocateRuntime ||
@@ -903,10 +903,10 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
 fir::MutableBoxValue Fortran::lower::createMutableBox(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::pft::Variable &var, mlir::Value boxAddr,
-    mlir::ValueRange nonDeferredParams) {
+    mlir::ValueRange nonDeferredParams, bool alwaysUseBox) {
 
-  fir::MutableProperties mutableProperties =
-      createMutableProperties(converter, loc, var, nonDeferredParams);
+  fir::MutableProperties mutableProperties = createMutableProperties(
+      converter, loc, var, nonDeferredParams, alwaysUseBox);
   fir::MutableBoxValue box(boxAddr, nonDeferredParams, mutableProperties);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (!var.isGlobal() && !Fortran::semantics::IsDummy(var.getSymbol()))

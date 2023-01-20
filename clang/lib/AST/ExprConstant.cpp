@@ -925,10 +925,6 @@ namespace {
     /// fold (not just why it's not strictly a constant expression)?
     bool HasFoldFailureDiagnostic;
 
-    /// Whether or not we're in a context where the front end requires a
-    /// constant value.
-    bool InConstantContext;
-
     /// Whether we're checking that an expression is a potential constant
     /// expression. If so, do not fail on constructs that could become constant
     /// later on (such as a use of an undefined global).
@@ -984,8 +980,7 @@ namespace {
           BottomFrame(*this, SourceLocation(), nullptr, nullptr, CallRef()),
           EvaluatingDecl((const ValueDecl *)nullptr),
           EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-          HasFoldFailureDiagnostic(false), InConstantContext(false),
-          EvalMode(Mode) {}
+          HasFoldFailureDiagnostic(false), EvalMode(Mode) {}
 
     ~EvalInfo() {
       discardCleanups();

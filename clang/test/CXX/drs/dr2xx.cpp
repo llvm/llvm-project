@@ -992,7 +992,7 @@ namespace dr284 { // dr284: no
   }
   struct B::V {}; // expected-error {{no struct named 'V'}}
   struct B::W {};
-  struct B::X {}; // FIXME: ill-formed
+  struct B::X {}; // expected-error {{forward declaration of struct cannot have}}
   enum B::Y e; // ok per dr417
   class B::Z z; // ok per dr417
 
@@ -1009,7 +1009,7 @@ namespace dr284 { // dr284: no
   };
   struct D::V {}; // expected-error {{no struct named 'V'}}
   struct D::W {};
-  struct D::X {}; // FIXME: ill-formed
+  struct D::X {}; // expected-error {{forward declaration of struct cannot have}}
   enum D::Y e2; // ok per dr417
   class D::Z z2; // ok per dr417
 }

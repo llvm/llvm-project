@@ -93,18 +93,20 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
                                   Environment::ValueModel &Model) {
   // Join distinct boolean values preserving information about the constraints
   // in the respective path conditions.
-  if (Type->isBooleanType()) {
-    // FIXME: The type check above is a workaround and should be unnecessary.
-    // However, right now we can end up with BoolValue's in integer-typed
-    // variables due to our incorrect handling of boolean-to-integer casts (we
-    // just propagate the BoolValue to the result of the cast). For example:
+  if (isa<BoolValue>(&Val1) && isa<BoolValue>(&Val2)) {
+    // FIXME: Checking both values should be unnecessary, since they should have
+    // a consistent shape.  However, right now we can end up with BoolValue's in
+    // integer-typed variables due to our incorrect handling of
+    // boolean-to-integer casts (we just propagate the BoolValue to the result
+    // of the cast). So, a join can encounter an integer in one branch but a
+    // bool in the other.
+    // For example:
+    // ```
     // std::optional<bool> o;
-    //
-    //
     // int x;
-    // if (o.has_value()) {
+    // if (o.has_value())
     //   x = o.value();
-    // }
+    // ```
     auto *Expr1 = cast<BoolValue>(&Val1);
     auto *Expr2 = cast<BoolValue>(&Val2);
     auto &MergedVal = MergedEnv.makeAtomicBoolValue();
@@ -118,6 +120,8 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
 
   // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
   // returns false to avoid storing unneeded values in `DACtx`.
+  // FIXME: Creating the value based on the type alone creates misshapen values
+  // for lvalues, since the type does not reflect the need for `ReferenceValue`.
   if (Value *MergedVal = MergedEnv.createValue(Type))
     if (Model.merge(Type, Val1, Env1, Val2, Env2, *MergedVal, MergedEnv))
       return MergedVal;
@@ -786,8 +790,28 @@ bool Environment::flowConditionImplies(BoolValue &Val) const {
   return DACtx->flowConditionImplies(*FlowConditionToken, Val);
 }
 
-void Environment::dump() const {
+void Environment::dump(raw_ostream &OS) const {
+  // FIXME: add printing for remaining fields and allow caller to decide what
+  // fields are printed.
+  OS << "DeclToLoc:\n";
+  for (auto [D, L] : DeclToLoc)
+    OS << "  [" << D->getName() << ", " << L << "]\n";
+
+  OS << "ExprToLoc:\n";
+  for (auto [E, L] : ExprToLoc)
+    OS << "  [" << E << ", " << L << "]\n";
+
+  OS << "LocToVal:\n";
+  for (auto [L, V] : LocToVal) {
+    OS << "  [" << L << ", " << V << ": " << *V << "]\n";
+  }
+
+  OS << "FlowConditionToken:\n";
   DACtx->dumpFlowCondition(*FlowConditionToken);
+}
+
+void Environment::dump() const {
+  dump(llvm::dbgs());
 }
 
 } // namespace dataflow

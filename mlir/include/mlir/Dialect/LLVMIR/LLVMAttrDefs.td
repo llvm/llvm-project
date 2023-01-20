@@ -373,4 +373,25 @@ def LLVM_DISubroutineTypeAttr : LLVM_Attr<"DISubroutineType", "di_subroutine_typ
   let genVerifyDecl = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// MemoryEffectsAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects", [
+    SubElementAttrInterface
+  ]> {
+  let parameters = (ins
+    "ModRefInfo":$other,
+    "ModRefInfo":$argMem,
+    "ModRefInfo":$inaccessibleMem
+  );
+  let extraClassDeclaration = [{
+    bool isReadWrite();
+  }];
+  let builders = [
+    TypeBuilder<(ins "ArrayRef<ModRefInfo>":$memInfoArgs)>
+  ];
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 #endif // LLVMIR_ATTRDEFS

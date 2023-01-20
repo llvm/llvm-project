@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ;; FIXME: Write tests to ensure invalid usage of image are rejected, such as:
 ;;  - invalid AS (only global is allowed);

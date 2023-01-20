@@ -1555,7 +1555,7 @@ void IRLinker::updateAttributes(GlobalValue &GV) {
     // Remove nocallback attribute when it is on a call-site.
     for (BasicBlock &BB : *F)
       for (Instruction &I : BB)
-        if (CallInst *CI = dyn_cast<CallInst>(&I))
+        if (CallBase *CI = dyn_cast<CallBase>(&I))
           CI->removeFnAttr(Attribute::NoCallback);
   }
 }

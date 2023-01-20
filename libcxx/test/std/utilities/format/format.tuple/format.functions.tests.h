@@ -279,7 +279,7 @@ template <class CharT, class TestFunction, class ExceptionTest, class Nested>
 void test_nested(TestFunction check, ExceptionTest check_exception, Nested&& input) {
   // [format.formatter.spec]/2
   //   A debug-enabled specialization of formatter additionally provides a
-  //   public, constexpr, non-static member function set_­debug_­format()
+  //   public, constexpr, non-static member function set_debug_format()
   //   which modifies the state of the formatter to be as if the type of the
   //   std-format-spec parsed by the last call to parse were ?.
   // pair and tuple are not debug-enabled specializations to the

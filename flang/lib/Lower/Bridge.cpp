@@ -58,6 +58,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-bridge"
@@ -2133,6 +2135,7 @@ private:
     llvm::SmallVector<mlir::Attribute> attrList;
     llvm::SmallVector<mlir::Block *> blockList;
     unsigned typeGuardIdx = 0;
+    std::size_t defaultAttrPos = std::numeric_limits<size_t>::max();
     bool hasLocalScope = false;
 
     for (Fortran::lower::pft::Evaluation &eval :
@@ -2162,6 +2165,9 @@ private:
           // CLASS DEFAULT
           if (std::holds_alternative<Fortran::parser::Default>(guard.u)) {
             defaultBlock = e->block;
+            // Keep track of the actual position of the CLASS DEFAULT type guard
+            // in the SELECT TYPE construct.
+            defaultAttrPos = attrList.size();
             continue;
           }
 
@@ -2197,6 +2203,21 @@ private:
         blockList.push_back(defaultBlock);
         builder->create<fir::SelectTypeOp>(loc, fir::getBase(selector),
                                            attrList, blockList);
+
+        // If the actual position of CLASS DEFAULT type guard is not the last
+        // one, it needs to be put back at its correct position for the rest of
+        // the processing. TypeGuardStmt are processed in the same order they
+        // appear in the Fortran code.
+        if (defaultAttrPos < attrList.size() - 1) {
+          auto attrIt = attrList.begin();
+          attrIt = attrIt + defaultAttrPos;
+          auto blockIt = blockList.begin();
+          blockIt = blockIt + defaultAttrPos;
+          attrList.insert(attrIt, mlir::UnitAttr::get(context));
+          blockList.insert(blockIt, defaultBlock);
+          attrList.pop_back();
+          blockList.pop_back();
+        }
       } else if (auto *typeGuardStmt =
                      eval.getIf<Fortran::parser::TypeGuardStmt>()) {
         // Map the type guard local symbol for the selector to a more precise
@@ -3766,8 +3787,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
     fir::KindMapping &kindMap,
     const Fortran::lower::LoweringOptions &loweringOptions,
-    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
-    llvm::StringRef filePath)
+    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -3795,10 +3815,30 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     return mlir::success();
   });
 
+  auto getPathLocation = [&semanticsContext, &context]() -> mlir::Location {
+    std::optional<std::string> path;
+    const auto &allSources{semanticsContext.allCookedSources().allSources()};
+    if (auto initial{allSources.GetFirstFileProvenance()};
+        initial && !initial->empty()) {
+      if (const auto *sourceFile{allSources.GetSourceFile(initial->start())}) {
+        path = sourceFile->path();
+      }
+    }
+
+    if (path.has_value()) {
+      llvm::SmallString<256> curPath(*path);
+      llvm::sys::fs::make_absolute(curPath);
+      llvm::sys::path::remove_dots(curPath);
+      return mlir::FileLineColLoc::get(&context, curPath.str(), /*line=*/0,
+                                       /*col=*/0);
+    } else {
+      return mlir::UnknownLoc::get(&context);
+    }
+  };
+
   // Create the module and attach the attributes.
   module = std::make_unique<mlir::ModuleOp>(
-      mlir::ModuleOp::create(mlir::FileLineColLoc::get(
-          &getMLIRContext(), filePath, /*line=*/0, /*col=*/0)));
+      mlir::ModuleOp::create(getPathLocation()));
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);

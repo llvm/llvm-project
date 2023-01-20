@@ -102,6 +102,10 @@ _LIBCPP_HIDE_FROM_ABI auto __copy(basic_string_view<_CharT> __str, output_iterat
   if constexpr (_VSTD::same_as<decltype(__out_it), _VSTD::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__copy(__str);
     return __out_it;
+  } else if constexpr (_VSTD::same_as<decltype(__out_it),
+                                      typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
+    __out_it.__buffer_->__copy(__str);
+    return __out_it;
   } else {
     return std::ranges::copy(__str, _VSTD::move(__out_it)).out;
   }
@@ -132,6 +136,10 @@ __transform(const _CharT* __first,
   if constexpr (_VSTD::same_as<decltype(__out_it), _VSTD::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__transform(__first, __last, _VSTD::move(__operation));
     return __out_it;
+  } else if constexpr (_VSTD::same_as<decltype(__out_it),
+                                      typename __format::__retarget_buffer<_OutCharT>::__iterator>) {
+    __out_it.__buffer_->__transform(__first, __last, _VSTD::move(__operation));
+    return __out_it;
   } else {
     return std::ranges::transform(__first, __last, _VSTD::move(__out_it), __operation).out;
   }
@@ -144,6 +152,9 @@ template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
 _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
   if constexpr (_VSTD::same_as<decltype(__out_it), _VSTD::back_insert_iterator<__format::__output_buffer<_CharT>>>) {
     __out_it.__get_container()->__fill(__n, __value);
+    return __out_it;
+  } else if constexpr (_VSTD::same_as<decltype(__out_it), typename __format::__retarget_buffer<_CharT>::__iterator>) {
+    __out_it.__buffer_->__fill(__n, __value);
     return __out_it;
   } else {
     return std::ranges::fill_n(_VSTD::move(__out_it), __n, __value);

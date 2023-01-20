@@ -5965,7 +5965,7 @@ def ext_excess_initializers_in_char_array_initializer : ExtWarn<
   "excess elements in char array initializer">,
   InGroup<ExcessInitializers>;
 def err_initializer_string_for_char_array_too_long : Error<
-  "initializer-string for char array is too long">;
+  "initializer-string for char array is too long, array size is %0 but initializer has size %1 (including the null terminating character)">;
 def ext_initializer_string_for_char_array_too_long : ExtWarn<
   "initializer-string for char array is too long">,
   InGroup<ExcessInitializers>;

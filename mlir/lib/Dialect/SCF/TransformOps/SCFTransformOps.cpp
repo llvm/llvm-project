@@ -42,7 +42,6 @@ transform::GetParentForOp::apply(transform::TransformResults &results,
                             : scf::ForOp::getOperationName())
             << "' parent";
         diag.attachNote(target->getLoc()) << "target op";
-        results.set(getResult().cast<OpResult>(), {});
         return diag;
       }
       current = loop;
@@ -96,7 +95,6 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
       DiagnosedSilenceableFailure diag = emitSilenceableError()
                                          << "failed to outline";
       diag.attachNote(target->getLoc()) << "target op";
-      results.set(getTransformed().cast<OpResult>(), {});
       return diag;
     }
     func::CallOp call;
@@ -200,7 +198,6 @@ transform::LoopPipelineOp::applyToOne(scf::ForOp target,
     results.push_back(*patternResult);
     return DiagnosedSilenceableFailure::success();
   }
-  results.assign(1, nullptr);
   return emitDefaultSilenceableFailure(target);
 }
 
