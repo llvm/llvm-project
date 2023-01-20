@@ -90,14 +90,11 @@ bool DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI = nullptr,
 /// if BB's Pred has a branch to BB and to AnotherBB, and BB has a single
 /// successor Sing. In this case the branch will be updated with Sing instead of
 /// BB, and BB will still be merged into its predecessor and removed.
-/// If \p DT is not nullptr, update it directly; in that case, DTU must be
-/// nullptr.
 bool MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
                                LoopInfo *LI = nullptr,
                                MemorySSAUpdater *MSSAU = nullptr,
                                MemoryDependenceResults *MemDep = nullptr,
-                               bool PredecessorWithTwoSuccessors = false,
-                               DominatorTree *DT = nullptr);
+                               bool PredecessorWithTwoSuccessors = false);
 
 /// Merge block(s) sucessors, if possible. Return true if at least two
 /// of the blocks were merged together.
