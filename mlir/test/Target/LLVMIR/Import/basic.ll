@@ -8,9 +8,8 @@
 ; CHECK: llvm.func @fe(i32) -> f32
 declare float @fe(i32)
 
-; FIXME: function attributes.
-; CHECK-LABEL: llvm.func internal @f1(%arg0: i64) -> i32 attributes {dso_local} {
-; CHECK-DBG: llvm.func internal @f1(%arg0: i64 loc({{.*}}basic.ll{{.*}}:0:0)) -> i32 attributes {dso_local} {
+; CHECK-LABEL: llvm.func internal @f1(%arg0: i64) -> i32 attributes {dso_local, passthrough = ["norecurse"]} {
+; CHECK-DBG: llvm.func internal @f1(%arg0: i64 loc({{.*}}basic.ll{{.*}}:0:0)) -> i32 attributes {dso_local, passthrough = ["norecurse"]} {
 ; CHECK: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
 ; CHECK: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : i1
 ; CHECK: %[[c43:[0-9]+]] = llvm.mlir.constant(43 : i32) : i32
