@@ -192,7 +192,7 @@ static Value generateInBoundsCheck(
   // If the condition is non-empty, generate an SCF::IfOp.
   if (cond) {
     auto check = lb.create<scf::IfOp>(
-        resultTypes, cond,
+        cond,
         /*thenBuilder=*/
         [&](OpBuilder &b, Location loc) {
           maybeYieldValue(b, loc, hasRetVal, inBoundsCase(b, loc));
