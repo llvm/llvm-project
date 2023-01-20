@@ -435,6 +435,7 @@ END-SCRIPT
 #include <__iterator/readable_traits.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/readable_traits.h'}}
 #include <__iterator/reverse_access.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/reverse_access.h'}}
 #include <__iterator/reverse_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/reverse_iterator.h'}}
+#include <__iterator/segmented_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/segmented_iterator.h'}}
 #include <__iterator/size.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/size.h'}}
 #include <__iterator/sortable.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/sortable.h'}}
 #include <__iterator/unreachable_sentinel.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/unreachable_sentinel.h'}}

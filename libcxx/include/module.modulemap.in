@@ -1014,6 +1014,7 @@ module std [system] {
       module readable_traits       { private header "__iterator/readable_traits.h" }
       module reverse_access        { private header "__iterator/reverse_access.h" }
       module reverse_iterator      { private header "__iterator/reverse_iterator.h" }
+      module segmented_iterator    { private header "__iterator/segmented_iterator.h" }
       module size                  { private header "__iterator/size.h" }
       module sortable {
         private header "__iterator/sortable.h"

@@ -404,6 +404,7 @@ set(files
   __iterator/readable_traits.h
   __iterator/reverse_access.h
   __iterator/reverse_iterator.h
+  __iterator/segmented_iterator.h
   __iterator/size.h
   __iterator/sortable.h
   __iterator/unreachable_sentinel.h
