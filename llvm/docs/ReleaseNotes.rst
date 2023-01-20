@@ -124,6 +124,10 @@ Changes to the AArch64 Backend
   included in a higher level than what is specified on the command line,
   or for disabling unwanted extensions if setting it to a lower level.
   This fixes `PR32873 <https://github.com/llvm/llvm-project/issues/32220>`.
+* Implemented `Function Multi Versioning
+  <https://arm-software.github.io/acle/main/acle.html#function-multi-versioning>`_
+  in accordance with Arm C Language Extensions specification. Currently in Beta
+  state.
 
 Changes to the AMDGPU Backend
 -----------------------------

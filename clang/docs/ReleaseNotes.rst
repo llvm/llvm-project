@@ -96,6 +96,17 @@ C++ Language Changes
   disabled with ``-fno-assume-unique-vtables``. This optimization is not yet
   implemented for the MS C++ ABI.
 
+Attribute Changes in Clang
+--------------------------
+- Introduced new attribute ``__attribute__((target_version("cpu_features")))``
+  and expanded the functionality of the existing attribute
+  ``__attribute__((target_clones("cpu_features1","cpu_features2",...)))`` to
+  support Function Multi Versioning on AArch64 target. It detects at runtime
+  which function versions are supported by CPU and calls the one with highest
+  priority. Refer to `clang attributes
+  <https://clang.llvm.org/docs/AttributeReference.html#target-version>`_ for
+  more details.
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Implemented the rule introduced by `CA104 <https://wg21.link/P2103R0>`_  for comparison of
