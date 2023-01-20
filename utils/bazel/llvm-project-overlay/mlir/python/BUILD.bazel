@@ -764,6 +764,7 @@ gentbl_filegroup(
 filegroup(
     name = "SparseTensorOpsPyFiles",
     srcs = [
+        "mlir/dialects/_tensor_ops_ext.py",
         "mlir/dialects/sparse_tensor.py",
         ":SparseTensorOpsPyGen",
     ],
