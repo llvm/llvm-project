@@ -68,6 +68,7 @@
 ---
 name:            foo
 tracksRegLiveness: true
+debugInstrRef: true
 registers:
   - { id: 0, class: gr32, preferred-register: '' }
   - { id: 1, class: fr32, preferred-register: '' }
