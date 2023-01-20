@@ -354,6 +354,8 @@ format initializer_list
 format limits
 format locale
 format optional
+format queue
+format stack
 format stdexcept
 format string
 format string_view

@@ -146,8 +146,6 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatte
   __range_default_formatter() = delete; // TODO FMT Implement
 };
 
-// Dispatcher to select the specialization based on the type of the range.
-
 template <ranges::input_range _Rp, class _CharT>
   requires(format_kind<_Rp> != range_format::disabled && formattable<ranges::range_reference_t<_Rp>, _CharT>)
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<_Rp, _CharT>
