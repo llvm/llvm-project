@@ -146,9 +146,9 @@ public:
 } // namespace
 
 /// Removes out-of-chunk attributes from module.
-static void extractAttributesFromModule(Oracle &O, Module &Program) {
-  AttributeRemapper R(O, Program.getContext());
-  R.visit(Program);
+static void extractAttributesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  AttributeRemapper R(O, WorkItem.getContext());
+  R.visit(WorkItem.getModule());
 }
 
 void llvm::reduceAttributesDeltaPass(TestRunner &Test) {

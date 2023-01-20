@@ -23,7 +23,9 @@ static bool shouldAlwaysKeep(const GlobalVariable &GV) {
 }
 
 /// Removes all the GVs that aren't inside the desired Chunks.
-static void extractGVsFromModule(Oracle &O, Module &Program) {
+static void extractGVsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+
   // Get GVs inside desired chunks
   std::vector<Constant *> InitGVsToKeep;
   for (auto &GV : Program.globals()) {

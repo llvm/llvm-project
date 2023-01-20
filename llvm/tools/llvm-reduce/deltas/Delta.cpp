@@ -54,7 +54,7 @@ static cl::opt<bool> TmpFilesAsBitcode(
 static cl::opt<unsigned> NumJobs(
     "j",
     cl::desc("Maximum number of threads to use to process chunks. Set to 1 to "
-             "disables parallelism."),
+             "disable parallelism."),
     cl::init(1), cl::cat(LLVMReduceOptions));
 #else
 unsigned NumJobs = 1;

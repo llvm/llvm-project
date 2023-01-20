@@ -42,6 +42,16 @@ public:
   static bool classof(Attribute attr);
 };
 
+/// This class represents a LLVM attribute that describes a local debug info
+/// scope.
+class DILocalScopeAttr : public DIScopeAttr {
+public:
+  using DIScopeAttr::DIScopeAttr;
+
+  /// Support LLVM type casting.
+  static bool classof(Attribute attr);
+};
+
 /// This class represents a LLVM attribute that describes a debug info type.
 class DITypeAttr : public DINodeAttr {
 public:

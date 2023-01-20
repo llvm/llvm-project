@@ -142,6 +142,13 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     }
   }
 
+  // Print global symbols.
+  const auto &MO = MI->getOperand(OpNum);
+  if (Error && MO.getType() == MachineOperand::MO_GlobalAddress) {
+    PrintSymbolOperand(MO, O);
+    return false;
+  }
+
   if (Error)
     printOperand(MI, OpNum, O);
 
