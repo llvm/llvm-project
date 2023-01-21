@@ -522,13 +522,3 @@ void foo(int arg) {
 // CHECK-I386: attributes #0 = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" }
 // CHECK-I386: attributes #1 = { nounwind }
 // CHECK-I386: attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-//.
-// CHECK-PPC64LE: !0 = !{i32 1, !"wchar_size", i32 4}
-// CHECK-PPC64LE: !1 = !{i32 7, !"openmp", i32 50}
-// CHECK-PPC64LE: !2 = !{!"clang version 16.0.0"}
-//.
-// CHECK-I386: !0 = !{i32 1, !"NumRegisterParameters", i32 0}
-// CHECK-I386: !1 = !{i32 1, !"wchar_size", i32 4}
-// CHECK-I386: !2 = !{i32 7, !"openmp", i32 50}
-// CHECK-I386: !3 = !{!"clang version 16.0.0"}
-//.
