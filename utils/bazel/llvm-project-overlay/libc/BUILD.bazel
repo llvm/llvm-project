@@ -253,6 +253,7 @@ libc_support_library(
     deps = [
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
+        ":__support_common",
         ":libc_root",
     ],
 )
