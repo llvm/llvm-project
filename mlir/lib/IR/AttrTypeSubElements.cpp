@@ -1,4 +1,4 @@
-//===- SubElementInterfaces.cpp - Attr and Type SubElement Interfaces -----===//
+//===- AttrTypeSubElements.cpp - Attr and Type SubElement Interfaces ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,95 +6,76 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/SubElementInterfaces.h"
 #include "mlir/IR/Operation.h"
-
-#include "llvm/ADT/DenseSet.h"
 #include <optional>
 
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// SubElementInterface
+// AttrTypeWalker
 //===----------------------------------------------------------------------===//
 
-//===----------------------------------------------------------------------===//
-// WalkSubElements
-
-template <typename InterfaceT>
-static void walkSubElementsImpl(InterfaceT interface,
-                                function_ref<void(Attribute)> walkAttrsFn,
-                                function_ref<void(Type)> walkTypesFn,
-                                DenseSet<Attribute> &visitedAttrs,
-                                DenseSet<Type> &visitedTypes) {
-  interface.walkImmediateSubElements(
-      [&](Attribute attr) {
-        // Guard against potentially null inputs. This removes the need for the
-        // derived attribute/type to do it.
-        if (!attr)
-          return;
-
-        // Avoid infinite recursion when visiting sub attributes later, if this
-        // is a mutable attribute.
-        if (LLVM_UNLIKELY(attr.hasTrait<AttributeTrait::IsMutable>())) {
-          if (!visitedAttrs.insert(attr).second)
-            return;
-        }
-
-        // Walk any sub elements first.
-        if (auto interface = attr.dyn_cast<SubElementAttrInterface>())
-          walkSubElementsImpl(interface, walkAttrsFn, walkTypesFn, visitedAttrs,
-                              visitedTypes);
-
-        // Walk this attribute.
-        walkAttrsFn(attr);
-      },
-      [&](Type type) {
-        // Guard against potentially null inputs. This removes the need for the
-        // derived attribute/type to do it.
-        if (!type)
-          return;
-
-        // Avoid infinite recursion when visiting sub types later, if this
-        // is a mutable type.
-        if (LLVM_UNLIKELY(type.hasTrait<TypeTrait::IsMutable>())) {
-          if (!visitedTypes.insert(type).second)
-            return;
-        }
-
-        // Walk any sub elements first.
-        if (auto interface = type.dyn_cast<SubElementTypeInterface>())
-          walkSubElementsImpl(interface, walkAttrsFn, walkTypesFn, visitedAttrs,
-                              visitedTypes);
-
-        // Walk this type.
-        walkTypesFn(type);
-      });
+WalkResult AttrTypeWalker::walkImpl(Attribute attr, WalkOrder order) {
+  return walkImpl(attr, attrWalkFns, order);
+}
+WalkResult AttrTypeWalker::walkImpl(Type type, WalkOrder order) {
+  return walkImpl(type, typeWalkFns, order);
 }
 
-void SubElementAttrInterface::walkSubElements(
-    function_ref<void(Attribute)> walkAttrsFn,
-    function_ref<void(Type)> walkTypesFn) {
-  assert(walkAttrsFn && walkTypesFn && "expected valid walk functions");
-  DenseSet<Attribute> visitedAttrs;
-  DenseSet<Type> visitedTypes;
-  walkSubElementsImpl(*this, walkAttrsFn, walkTypesFn, visitedAttrs,
-                      visitedTypes);
+template <typename T, typename WalkFns>
+WalkResult AttrTypeWalker::walkImpl(T element, WalkFns &walkFns,
+                                    WalkOrder order) {
+  // Check if we've already walk this element before.
+  auto key = std::make_pair(element.getAsOpaquePointer(), (int)order);
+  auto it = visitedAttrTypes.find(key);
+  if (it != visitedAttrTypes.end())
+    return it->second;
+  visitedAttrTypes.try_emplace(key, WalkResult::advance());
+
+  // If we are walking in post order, walk the sub elements first.
+  if (order == WalkOrder::PostOrder) {
+    if (walkSubElements(element, order).wasInterrupted())
+      return visitedAttrTypes[key] = WalkResult::interrupt();
+  }
+
+  // Walk this element, bailing if skipped or interrupted.
+  for (auto &walkFn : llvm::reverse(walkFns)) {
+    WalkResult walkResult = walkFn(element);
+    if (walkResult.wasInterrupted())
+      return visitedAttrTypes[key] = WalkResult::interrupt();
+    if (walkResult.wasSkipped())
+      return WalkResult::advance();
+  }
+
+  // If we are walking in pre-order, walk the sub elements last.
+  if (order == WalkOrder::PreOrder) {
+    if (walkSubElements(element, order).wasInterrupted())
+      return WalkResult::interrupt();
+  }
+  return WalkResult::advance();
 }
 
-void SubElementTypeInterface::walkSubElements(
-    function_ref<void(Attribute)> walkAttrsFn,
-    function_ref<void(Type)> walkTypesFn) {
-  assert(walkAttrsFn && walkTypesFn && "expected valid walk functions");
-  DenseSet<Attribute> visitedAttrs;
-  DenseSet<Type> visitedTypes;
-  walkSubElementsImpl(*this, walkAttrsFn, walkTypesFn, visitedAttrs,
-                      visitedTypes);
+template <typename T>
+WalkResult AttrTypeWalker::walkSubElements(T interface, WalkOrder order) {
+  WalkResult result = WalkResult::advance();
+  auto walkFn = [&](auto element) {
+    if (element && !result.wasInterrupted())
+      result = walkImpl(element, order);
+  };
+  interface.walkImmediateSubElements(walkFn, walkFn);
+  return result.wasInterrupted() ? result : WalkResult::advance();
 }
 
 //===----------------------------------------------------------------------===//
 /// AttrTypeReplacer
 //===----------------------------------------------------------------------===//
+
+void AttrTypeReplacer::addReplacement(ReplaceFn<Attribute> fn) {
+  attrReplacementFns.emplace_back(std::move(fn));
+}
+void AttrTypeReplacer::addReplacement(ReplaceFn<Type> fn) {
+  typeReplacementFns.push_back(std::move(fn));
+}
 
 void AttrTypeReplacer::replaceElementsIn(Operation *op, bool replaceAttrs,
                                          bool replaceLocs, bool replaceTypes) {
@@ -157,7 +138,6 @@ void AttrTypeReplacer::recursivelyReplaceElementsIn(Operation *op,
 
 template <typename T>
 static void updateSubElementImpl(T element, AttrTypeReplacer &replacer,
-                                 DenseMap<T, T> &elementMap,
                                  SmallVectorImpl<T> &newElements,
                                  FailureOr<bool> &changed) {
   // Bail early if we failed at any point.
@@ -180,19 +160,18 @@ static void updateSubElementImpl(T element, AttrTypeReplacer &replacer,
   }
 }
 
-template <typename InterfaceT, typename T>
-T AttrTypeReplacer::replaceSubElements(InterfaceT interface,
-                                       DenseMap<T, T> &interfaceMap) {
+template <typename T>
+T AttrTypeReplacer::replaceSubElements(T interface) {
   // Walk the current sub-elements, replacing them as necessary.
   SmallVector<Attribute, 16> newAttrs;
   SmallVector<Type, 16> newTypes;
   FailureOr<bool> changed = false;
   interface.walkImmediateSubElements(
       [&](Attribute element) {
-        updateSubElementImpl(element, *this, attrMap, newAttrs, changed);
+        updateSubElementImpl(element, *this, newAttrs, changed);
       },
       [&](Type element) {
-        updateSubElementImpl(element, *this, typeMap, newTypes, changed);
+        updateSubElementImpl(element, *this, newTypes, changed);
       });
   if (failed(changed))
     return nullptr;
@@ -205,12 +184,12 @@ T AttrTypeReplacer::replaceSubElements(InterfaceT interface,
 }
 
 /// Shared implementation of replacing a given attribute or type element.
-template <typename InterfaceT, typename ReplaceFns, typename T>
-T AttrTypeReplacer::replaceImpl(T element, ReplaceFns &replaceFns,
-                                DenseMap<T, T> &map) {
-  auto [it, inserted] = map.try_emplace(element, element);
+template <typename T, typename ReplaceFns>
+T AttrTypeReplacer::replaceImpl(T element, ReplaceFns &replaceFns) {
+  const void *opaqueElement = element.getAsOpaquePointer();
+  auto [it, inserted] = attrTypeMap.try_emplace(opaqueElement, opaqueElement);
   if (!inserted)
-    return it->second;
+    return T::getFromOpaquePointer(it->second);
 
   T result = element;
   WalkResult walkResult = WalkResult::advance();
@@ -222,34 +201,42 @@ T AttrTypeReplacer::replaceImpl(T element, ReplaceFns &replaceFns,
   }
 
   // If an error occurred, return nullptr to indicate failure.
-  if (walkResult.wasInterrupted() || !result)
-    return map[element] = nullptr;
+  if (walkResult.wasInterrupted() || !result) {
+    attrTypeMap[opaqueElement] = nullptr;
+    return nullptr;
+  }
 
   // Handle replacing sub-elements if this element is also a container.
   if (!walkResult.wasSkipped()) {
-    if (auto interface = dyn_cast<InterfaceT>(result)) {
-      // Replace the sub elements of this element, bailing if we fail.
-      if (!(result = replaceSubElements(interface, map)))
-        return map[element] = nullptr;
+    // Replace the sub elements of this element, bailing if we fail.
+    if (!(result = replaceSubElements(result))) {
+      attrTypeMap[opaqueElement] = nullptr;
+      return nullptr;
     }
   }
 
-  return map[element] = result;
+  attrTypeMap[opaqueElement] = result.getAsOpaquePointer();
+  return result;
 }
 
 Attribute AttrTypeReplacer::replace(Attribute attr) {
-  return replaceImpl<SubElementAttrInterface>(attr, attrReplacementFns,
-                                              attrMap);
+  return replaceImpl(attr, attrReplacementFns);
 }
 
 Type AttrTypeReplacer::replace(Type type) {
-  return replaceImpl<SubElementTypeInterface>(type, typeReplacementFns,
-                                              typeMap);
+  return replaceImpl(type, typeReplacementFns);
 }
 
 //===----------------------------------------------------------------------===//
-// SubElementInterface Tablegen definitions
+// AttrTypeImmediateSubElementWalker
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/SubElementAttrInterfaces.cpp.inc"
-#include "mlir/IR/SubElementTypeInterfaces.cpp.inc"
+void AttrTypeImmediateSubElementWalker::walk(Attribute element) {
+  if (element)
+    walkAttrsFn(element);
+}
+
+void AttrTypeImmediateSubElementWalker::walk(Type element) {
+  if (element)
+    walkTypesFn(element);
+}
