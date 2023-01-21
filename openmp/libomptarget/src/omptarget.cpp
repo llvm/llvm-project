@@ -1619,7 +1619,7 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
 /// returns 0 if it was able to transfer the execution to a target and an
 /// integer different from zero otherwise.
 int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-           const KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo) {
+           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo) {
   int32_t DeviceId = Device.DeviceID;
   TableMap *TM = getTableMap(HostPtr);
   // No map for this host pointer found!
@@ -1655,10 +1655,11 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   PrivateArgumentManagerTy PrivateArgumentManager(Device, AsyncInfo);
 
+  int NumClangLaunchArgs = KernelArgs.NumArgs;
   int Ret = OFFLOAD_SUCCESS;
-  if (KernelArgs.NumArgs) {
+  if (NumClangLaunchArgs) {
     // Process data, such as data mapping, before launching the kernel
-    Ret = processDataBefore(Loc, DeviceId, HostPtr, KernelArgs.NumArgs,
+    Ret = processDataBefore(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
                             KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
                             KernelArgs.ArgSizes, KernelArgs.ArgTypes,
                             KernelArgs.ArgNames, KernelArgs.ArgMappers, TgtArgs,
@@ -1667,6 +1668,12 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
       REPORT("Failed to process data before launching the kernel.\n");
       return OFFLOAD_FAIL;
     }
+
+    // Clang might pass more values via the ArgPtrs to the runtime that we pass
+    // on to the kernel.
+    // TOOD: Next time we adjust the KernelArgsTy we should introduce a new
+    // NumKernelArgs field.
+    KernelArgs.NumArgs = TgtArgs.size();
   }
 
   // Launch device execution.
@@ -1675,6 +1682,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
      TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
 
   {
+    assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
     TIMESCOPE_WITH_NAME_AND_IDENT("Initiate Kernel Launch", Loc);
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
                               KernelArgs, AsyncInfo);
@@ -1685,10 +1693,10 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     return OFFLOAD_FAIL;
   }
 
-  if (KernelArgs.NumArgs) {
+  if (NumClangLaunchArgs) {
     // Transfer data back and deallocate target memory for (first-)private
     // variables
-    Ret = processDataAfter(Loc, DeviceId, HostPtr, KernelArgs.NumArgs,
+    Ret = processDataAfter(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
                            KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
                            KernelArgs.ArgSizes, KernelArgs.ArgTypes,
                            KernelArgs.ArgNames, KernelArgs.ArgMappers,

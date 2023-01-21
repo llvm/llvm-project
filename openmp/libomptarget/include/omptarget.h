@@ -137,7 +137,7 @@ static_assert(sizeof(KernelArgsTy().Flags) == sizeof(uint64_t),
               "Invalid struct size");
 static_assert(sizeof(KernelArgsTy) == (8 * sizeof(int32_t) + 3 * sizeof(int64_t) + 4 * sizeof(void**) + 2 * sizeof(int64_t*)),
               "Invalid struct size");
-constexpr KernelArgsTy CTorDTorKernelArgs = {1,       0,       nullptr,   nullptr,
+inline KernelArgsTy CTorDTorKernelArgs = {1,       0,       nullptr,   nullptr,
 	     nullptr, nullptr, nullptr,   nullptr,
 	     0,      {0,0},       {1, 0, 0}, {1, 0, 0}, 0};
 
