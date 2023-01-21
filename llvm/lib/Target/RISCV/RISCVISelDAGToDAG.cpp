@@ -2375,12 +2375,12 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
         return false;
       break;
     case RISCV::ANDI:
-      if (Bits >= (64 - countLeadingZeros(User->getConstantOperandVal(1))))
+      if (Bits >= (unsigned)llvm::bit_width(User->getConstantOperandVal(1)))
         break;
       goto RecCheck;
     case RISCV::ORI: {
       uint64_t Imm = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
-      if (Bits >= (64 - countLeadingOnes(Imm)))
+      if (Bits >= (unsigned)llvm::bit_width<uint64_t>(~Imm))
         break;
       [[fallthrough]];
     }
