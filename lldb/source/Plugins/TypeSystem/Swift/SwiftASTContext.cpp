@@ -935,6 +935,14 @@ SwiftASTContext::SwiftASTContext(std::string description,
   swift::LangOptions &lang_opts = m_compiler_invocation_ap->getLangOptions();
   lang_opts.AllowDeserializingImplementationOnly = true;
   lang_opts.DebuggerSupport = true;
+  // When loading Swift types that conform to ObjC protocols that have
+  // been renamed with NS_SWIFT_NAME the DwarfImporterDelegate will crash
+  // during protocol conformance checks as the underlying type cannot be
+  // found. Allowing module compilation to proceed with compiler
+  // errors will prevent crashing, instead we will have empty type info
+  // for the protocol conforming types.
+  lang_opts.AllowModuleWithCompilerErrors = true;
+  lang_opts.EnableTargetOSChecking = false;
 }
 
 SwiftASTContext::~SwiftASTContext() {
@@ -1551,8 +1559,6 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   swift_ast_sp->m_is_scratch_context = false;
   swift_ast_sp->m_module = &module;
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
-  swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
-
   swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
       Target::GetGlobalProperties().GetSwiftEnableCxxInterop();
   bool found_swift_modules = false;
@@ -1939,14 +1945,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   // This is a scratch AST context, mark it as such.
   swift_ast_sp->m_is_scratch_context = true;
 
-  // When loading Swift types that conform to ObjC protocols that have
-  // been renamed with NS_SWIFT_NAME the DwarfImporterDelegate will crash
-  // during protocol conformance checks as the underlying type cannot be
-  // found. Allowing module compilation to proceed with compiler
-  // errors will prevent crashing, instead we will have empty type info
-  // for the protocol conforming types.
-  swift_ast_sp->GetLanguageOptions().AllowModuleWithCompilerErrors = true;
-  swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
   swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
       target.GetSwiftEnableCxxInterop();
   bool handled_sdk_path = false;
