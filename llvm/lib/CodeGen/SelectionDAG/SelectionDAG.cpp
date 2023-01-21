@@ -6711,6 +6711,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Dest and insert subvector source types must match!");
     assert(VT.isVector() && N2VT.isVector() &&
            "Insert subvector VTs must be vectors!");
+    assert(VT.getVectorElementType() == N2VT.getVectorElementType() &&
+           "Insert subvector VTs must have the same element type!");
     assert((VT.isScalableVector() || N2VT.isFixedLengthVector()) &&
            "Cannot insert a scalable vector into a fixed length vector!");
     assert((VT.isScalableVector() != N2VT.isScalableVector() ||
