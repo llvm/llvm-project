@@ -561,6 +561,7 @@ namespace {
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
     SDValue foldSubToUSubSat(EVT DstVT, SDNode *N);
+    SDValue foldABSToABD(SDNode *N);
     SDValue unfoldMaskedMerge(SDNode *N);
     SDValue unfoldExtremeBitClearingToShifts(SDNode *N);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
@@ -10116,8 +10117,7 @@ SDValue DAGCombiner::visitSHLSAT(SDNode *N) {
 // Given a ABS node, detect the following pattern:
 // (ABS (SUB (EXTEND a), (EXTEND b))).
 // Generates UABD/SABD instruction.
-static SDValue combineABSToABD(SDNode *N, SelectionDAG &DAG,
-                               const TargetLowering &TLI) {
+SDValue DAGCombiner::foldABSToABD(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue AbsOp1 = N->getOperand(0);
   SDValue Op0, Op1;
@@ -10175,7 +10175,7 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
   if (DAG.SignBitIsZero(N0))
     return N0;
 
-  if (SDValue ABD = combineABSToABD(N, DAG, TLI))
+  if (SDValue ABD = foldABSToABD(N))
     return ABD;
 
   // fold (abs (sign_extend_inreg x)) -> (zero_extend (abs (truncate x)))
