@@ -444,12 +444,10 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
-  int32_t runRegion(void *TgtEntryPtr, void **TgtVarsPtr, ptrdiff_t *TgtOffsets,
-                    int32_t TgtVarsSize, AsyncInfoTy &AsyncInfo);
-  int32_t runTeamRegion(void *TgtEntryPtr, void **TgtVarsPtr,
-                        ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
-                        int32_t NumTeams, int32_t ThreadLimit,
-                        uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
+  // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
+  int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
+                       ptrdiff_t *TgtOffsets, const KernelArgsTy &KernelArgs,
+                       AsyncInfoTy &AsyncInfo);
 
   /// Synchronize device/queue/event based on \p AsyncInfo and return
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
