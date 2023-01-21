@@ -24,13 +24,14 @@
 #include "format_tests.h"
 #include "string_literal.h"
 #include "assert_macros.h"
+#include "concat_macros.h"
 
 auto test = []<class CharT, class... Args>(
                 std::basic_string_view<CharT> expected, std::basic_string_view<CharT> fmt, Args&&... args) constexpr {
   std::basic_string<CharT> out = std::vformat(std::locale(), fmt, std::make_format_args<context_t<CharT>>(args...));
-  TEST_REQUIRE(
-      out == expected,
-      test_concat_message("\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
+  TEST_REQUIRE(out == expected,
+               TEST_WRITE_CONCATENATED(
+                   "\nFormat string   ", fmt, "\nExpected output ", expected, "\nActual output   ", out, '\n'));
 };
 
 auto test_exception =
@@ -41,11 +42,11 @@ auto test_exception =
 #ifndef TEST_HAS_NO_EXCEPTIONS
       try {
         TEST_IGNORE_NODISCARD std::vformat(std::locale(), fmt, std::make_format_args<context_t<CharT>>(args...));
-        TEST_FAIL(test_concat_message("\nFormat string   ", fmt, "\nDidn't throw an exception.\n"));
+        TEST_FAIL(TEST_WRITE_CONCATENATED("\nFormat string   ", fmt, "\nDidn't throw an exception.\n"));
       } catch ([[maybe_unused]] const std::format_error& e) {
         TEST_LIBCPP_REQUIRE(
             e.what() == what,
-            test_concat_message(
+            TEST_WRITE_CONCATENATED(
                 "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
         return;
       }

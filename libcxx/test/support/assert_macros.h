@@ -29,78 +29,115 @@
 #include <cstdio>
 #include <cstdlib>
 
-#ifndef TEST_HAS_NO_LOCALIZATION
-#  include <sstream>
-#endif
-
-#if TEST_STD_VER > 17
-
-#  ifndef TEST_HAS_NO_LOCALIZATION
-template <class T>
-concept test_char_streamable = requires(T&& value) { std::stringstream{} << std::forward<T>(value); };
-#  endif
-
-// If possible concatenates message for the assertion function, else returns a
-// default message. Not being able to stream is not considered and error. For
-// example, streaming to std::wcerr doesn't work properly in the CI. Therefore
-// the formatting tests should only stream to std::string_string.
-template <class... Args>
-std::string test_concat_message([[maybe_unused]] Args&&... args) {
-#  ifndef TEST_HAS_NO_LOCALIZATION
-  if constexpr ((test_char_streamable<Args> && ...)) {
-    std::stringstream sstr;
-    ((sstr << std::forward<Args>(args)), ...);
-    return sstr.str();
-  } else
-#  endif
-    return "Message discarded since it can't be streamed to std::cerr.\n";
+void test_log(const char* condition, const char* file, int line, const char* message) {
+  const char* msg = condition ? "Assertion failure: " : "Unconditional failure:";
+  std::fprintf(stderr, "%s%s %s %d\n%s", msg, condition, file, line, message);
 }
 
-#endif // TEST_STD_VER > 17
+template <class F>
+void test_log(const char* condition, const char* file, int line, const F& functor) {
+  std::fprintf(stderr, "Assertion failure: %s %s %d\n", condition, file, line);
+  functor();
+}
 
-// Logs the error and calls exit.
-//
-// It shows a generic assert like message including a custom message. This
-// message should end with a newline.
-[[noreturn]] void test_log_error(const char* condition, const char* file, int line, std::string&& message) {
-  const char* msg = condition ? "Assertion failure: " : "Unconditional failure:";
-  std::fprintf(stderr, "%s%s %s %d\n%s", msg, condition, file, line, message.c_str());
+template <class Arg>
+[[noreturn]] void test_fail(const char* file, int line, Arg&& arg) {
+  test_log("", file, line, std::forward<Arg>(arg));
   std::abort();
 }
 
-inline void test_fail(const char* file, int line, std::string&& message) {
-  test_log_error("", file, line, std::move(message));
-}
-
-inline void test_require(bool condition, const char* condition_str, const char* file, int line, std::string&& message) {
+template <class Arg>
+void test_require(bool condition, const char* condition_str, const char* file, int line, Arg&& arg) {
   if (condition)
     return;
 
-  test_log_error(condition_str, file, line, std::move(message));
-}
-
-inline void test_libcpp_require(
-    [[maybe_unused]] bool condition,
-    [[maybe_unused]] const char* condition_str,
-    [[maybe_unused]] const char* file,
-    [[maybe_unused]] int line,
-    [[maybe_unused]] std::string&& message) {
-#if defined(_LIBCPP_VERSION)
-  test_require(condition, condition_str, file, line, std::move(message));
-#endif
+  test_log(condition_str, file, line, std::forward<Arg>(arg));
+  std::abort();
 }
 
 // assert(false) replacement
-#define TEST_FAIL(MSG) ::test_fail(__FILE__, __LINE__, MSG)
+// The ARG is either a
+// - c-ctring or std::string, in which case the string is printed to stderr,
+// - an invocable object, which will be invoked.
+#define TEST_FAIL(ARG) ::test_fail(__FILE__, __LINE__, ARG)
 
 // assert replacement.
-#define TEST_REQUIRE(CONDITION, MSG) ::test_require(CONDITION, #CONDITION, __FILE__, __LINE__, MSG)
+// ARG is the same as for TEST_FAIL
+#define TEST_REQUIRE(CONDITION, ARG) ::test_require(CONDITION, #CONDITION, __FILE__, __LINE__, ARG)
 
 // LIBCPP_ASSERT replacement
 //
 // This requirement is only tested when the test suite is used for libc++.
 // This allows checking libc++ specific requirements, for example the error
 // messages of exceptions.
-#define TEST_LIBCPP_REQUIRE(CONDITION, MSG) ::test_libcpp_require(CONDITION, #CONDITION, __FILE__, __LINE__, MSG)
+// ARG is the same as for TEST_FAIL
+#if defined(_LIBCPP_VERSION)
+#  define TEST_LIBCPP_REQUIRE(CONDITION, ARG) ::test_require(CONDITION, #CONDITION, __FILE__, __LINE__, ARG)
+#else
+#  define TEST_LIBCPP_REQUIRE(...) /* DO NOTHING */
+#endif
+
+// Helper macro to test an expression does not throw any exception.
+#ifndef TEST_HAS_NO_EXCEPTIONS
+#  define TEST_DOES_NOT_THROW(EXPR)                                                                                    \
+    do {                                                                                                               \
+      try {                                                                                                            \
+        static_cast<void>(EXPR);                                                                                       \
+      } catch (...) {                                                                                                  \
+        ::test_log(#EXPR, __FILE__, __LINE__, "no exception was expected\n");                                          \
+        ::std::abort();                                                                                                \
+      }                                                                                                                \
+    } while (false) /* */
+
+// Helper macro to test an expression throws an exception of the expected type.
+#  define TEST_THROWS_TYPE(TYPE, EXPR)                                                                                 \
+    do {                                                                                                               \
+      try {                                                                                                            \
+        static_cast<void>(EXPR);                                                                                       \
+        ::test_log(nullptr,                                                                                            \
+                   __FILE__,                                                                                           \
+                   __LINE__,                                                                                           \
+                   "no exception is thrown while an exception of type " #TYPE " was expected\n");                      \
+        ::std::abort();                                                                                                \
+      } catch (const TYPE&) {                                                                                          \
+        /* DO NOTHING */                                                                                               \
+      } catch (...) {                                                                                                  \
+        ::test_log(nullptr,                                                                                            \
+                   __FILE__,                                                                                           \
+                   __LINE__,                                                                                           \
+                   "the type of the exception caught differs from the expected type " #TYPE "\n");                     \
+        ::std::abort();                                                                                                \
+      }                                                                                                                \
+    } while (false) /* */
+
+// Helper macro to test an expression throws an exception of the expected type and satisfies a predicate.
+//
+// In order to log additional information the predicate can use log macros.
+// The exception caught is used as argument to the predicate.
+#  define TEST_VALIDATE_EXCEPTION(TYPE, PRED, EXPR)                                                                    \
+    do {                                                                                                               \
+      try {                                                                                                            \
+        static_cast<void>(EXPR);                                                                                       \
+        ::test_log(nullptr,                                                                                            \
+                   __FILE__,                                                                                           \
+                   __LINE__,                                                                                           \
+                   "no exception is thrown while an exception of type " #TYPE " was expected\n");                      \
+        ::std::abort();                                                                                                \
+      } catch (const TYPE& EXCEPTION) {                                                                                \
+        PRED(EXCEPTION);                                                                                               \
+      } catch (...) {                                                                                                  \
+        ::test_log(nullptr,                                                                                            \
+                   __FILE__,                                                                                           \
+                   __LINE__,                                                                                           \
+                   "the type of the exception caught differs from the expected type " #TYPE "\n");                     \
+        ::std::abort();                                                                                                \
+      }                                                                                                                \
+    } while (false)                    /* */
+
+#else                                  // TEST_HAS_NO_EXCEPTIONS
+#  define TEST_DOES_NOT_THROW(EXPR) static_cast<void>(EXPR);
+#  define TEST_THROWS_TYPE(...)        /* DO NOTHING */
+#  define TEST_VALIDATE_EXCEPTION(...) /* DO NOTHING */
+#endif                                 // TEST_HAS_NO_EXCEPTIONS
 
 #endif // TEST_SUPPORT_ASSERT_MACROS_H
