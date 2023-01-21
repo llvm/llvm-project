@@ -9798,7 +9798,8 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
 }
 
 const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
-  if (isa<SCEVConstant>(V)) return V;
+  if (isa<SCEVConstant>(V))
+    return V;
 
   // If this instruction is evolved from a constant-evolving PHI, compute the
   // exit value from the loop without using SCEVs.
@@ -9850,7 +9851,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
             // the specified iteration number.
             Constant *RV = getConstantEvolutionLoopExitValue(
                 PN, BTCC->getAPInt(), CurrLoop);
-            if (RV) return getSCEV(RV);
+            if (RV)
+              return getSCEV(RV);
           }
         }
 
@@ -9861,7 +9863,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           const SCEV *InputAtScope = getSCEVAtScope(Input, L);
           // TODO: We can generalize it using LI.replacementPreservesLCSSAForm,
           // for the simplest case just support constants.
-          if (isa<SCEVConstant>(InputAtScope)) return InputAtScope;
+          if (isa<SCEVConstant>(InputAtScope))
+            return InputAtScope;
         }
       }
 
@@ -9889,12 +9892,12 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           MadeImprovement |= OrigV != OpV;
 
           Constant *C = BuildConstantFromSCEV(OpV);
-          if (!C) return V;
+          if (!C)
+            return V;
           if (C->getType() != Op->getType())
-            C = ConstantExpr::getCast(CastInst::getCastOpcode(C, false,
-                                                              Op->getType(),
-                                                              false),
-                                      C, Op->getType());
+            C = ConstantExpr::getCast(
+                CastInst::getCastOpcode(C, false, Op->getType(), false), C,
+                Op->getType());
           Operands.push_back(C);
         }
 
@@ -9903,7 +9906,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           Constant *C = nullptr;
           const DataLayout &DL = getDataLayout();
           C = ConstantFoldInstOperands(I, Operands, DL, &TLI);
-          if (!C) return V;
+          if (!C)
+            return V;
           return getSCEV(C);
         }
       }
@@ -9948,7 +9952,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     const SCEV *LHS = getSCEVAtScope(Div->getLHS(), L);
     const SCEV *RHS = getSCEVAtScope(Div->getRHS(), L);
     if (LHS == Div->getLHS() && RHS == Div->getRHS())
-      return Div;   // must be loop invariant
+      return Div; // must be loop invariant
     return getUDivExpr(LHS, RHS);
   }
 
@@ -9970,9 +9974,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
       for (++i; i != e; ++i)
         NewOps.push_back(getSCEVAtScope(AddRec->getOperand(i), L));
 
-      const SCEV *FoldedRec =
-        getAddRecExpr(NewOps, AddRec->getLoop(),
-                      AddRec->getNoWrapFlags(SCEV::FlagNW));
+      const SCEV *FoldedRec = getAddRecExpr(
+          NewOps, AddRec->getLoop(), AddRec->getNoWrapFlags(SCEV::FlagNW));
       AddRec = dyn_cast<SCEVAddRecExpr>(FoldedRec);
       // The addrec may be folded to a nonrecurrence, for example, if the
       // induction variable is multiplied by zero after constant folding. Go
@@ -9988,7 +9991,8 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
       // To evaluate this recurrence, we need to know how many times the AddRec
       // loop iterates.  Compute this now.
       const SCEV *BackedgeTakenCount = getBackedgeTakenCount(AddRec->getLoop());
-      if (BackedgeTakenCount == getCouldNotCompute()) return AddRec;
+      if (BackedgeTakenCount == getCouldNotCompute())
+        return AddRec;
 
       // Then, evaluate the AddRec.
       return AddRec->evaluateAtIteration(BackedgeTakenCount, *this);
@@ -10000,7 +10004,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   if (const SCEVCastExpr *Cast = dyn_cast<SCEVCastExpr>(V)) {
     const SCEV *Op = getSCEVAtScope(Cast->getOperand(), L);
     if (Op == Cast->getOperand())
-      return Cast;  // must be loop invariant
+      return Cast; // must be loop invariant
     return getCastExpr(Cast->getSCEVType(), Op, Cast->getType());
   }
 
