@@ -66,8 +66,9 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index,
-                                     Value *Op0, Value *Op1);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     TTI::TargetCostKind CostKind,
+                                     unsigned Index, Value *Op0, Value *Op1);
 
   /// @}
 

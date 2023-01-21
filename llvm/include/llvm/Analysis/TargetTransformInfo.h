@@ -752,13 +752,16 @@ public:
   /// extracted from vectors.
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
-                                           bool Insert, bool Extract) const;
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind) const;
 
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The (potentially vector) types to use for each of
   /// argument are passes via Tys.
-  InstructionCost getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                                   ArrayRef<Type *> Tys) const;
+  InstructionCost
+  getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                   ArrayRef<Type *> Tys,
+                                   TTI::TargetCostKind CostKind) const;
 
   /// If target has efficient vector element load/store instructions, it can
   /// return true here so that insertion/extraction costs are not added to
@@ -1193,6 +1196,7 @@ public:
   /// case is to provision the cost of vectorization/scalarization in
   /// vectorizer passes.
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     TTI::TargetCostKind CostKind,
                                      unsigned Index = -1, Value *Op0 = nullptr,
                                      Value *Op1 = nullptr) const;
 
@@ -1203,6 +1207,7 @@ public:
   /// A typical suitable use case is cost estimation when vector instruction
   /// exists (e.g., from basic blocks during transformation).
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
+                                     TTI::TargetCostKind CostKind,
                                      unsigned Index = -1) const;
 
   /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
@@ -1675,11 +1680,12 @@ public:
   virtual bool useColdCCForColdCall(Function &F) = 0;
   virtual InstructionCost getScalarizationOverhead(VectorType *Ty,
                                                    const APInt &DemandedElts,
-                                                   bool Insert,
-                                                   bool Extract) = 0;
+                                                   bool Insert, bool Extract,
+                                                   TargetCostKind CostKind) = 0;
   virtual InstructionCost
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   ArrayRef<Type *> Tys) = 0;
+                                   ArrayRef<Type *> Tys,
+                                   TargetCostKind CostKind) = 0;
   virtual bool supportsEfficientVectorElementLoadStore() = 0;
   virtual bool supportsTailCalls() = 0;
   virtual bool supportsTailCallFor(const CallBase *CB) = 0;
@@ -1787,9 +1793,11 @@ public:
                                              TTI::TargetCostKind CostKind,
                                              const Instruction *I) = 0;
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                             TTI::TargetCostKind CostKind,
                                              unsigned Index, Value *Op0,
                                              Value *Op1) = 0;
   virtual InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
+                                             TTI::TargetCostKind CostKind,
                                              unsigned Index) = 0;
 
   virtual InstructionCost
@@ -2150,13 +2158,16 @@ public:
 
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
-                                           bool Insert, bool Extract) override {
-    return Impl.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
+                                           bool Insert, bool Extract,
+                                           TargetCostKind CostKind) override {
+    return Impl.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
+                                         CostKind);
   }
   InstructionCost
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   ArrayRef<Type *> Tys) override {
-    return Impl.getOperandsScalarizationOverhead(Args, Tys);
+                                   ArrayRef<Type *> Tys,
+                                   TargetCostKind CostKind) override {
+    return Impl.getOperandsScalarizationOverhead(Args, Tys, CostKind);
   }
 
   bool supportsEfficientVectorElementLoadStore() override {
@@ -2360,13 +2371,16 @@ public:
                                      const Instruction *I) override {
     return Impl.getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
   }
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index,
-                                     Value *Op0, Value *Op1) override {
-    return Impl.getVectorInstrCost(Opcode, Val, Index, Op0, Op1);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     TTI::TargetCostKind CostKind,
+                                     unsigned Index, Value *Op0,
+                                     Value *Op1) override {
+    return Impl.getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
   }
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
+                                     TTI::TargetCostKind CostKind,
                                      unsigned Index) override {
-    return Impl.getVectorInstrCost(I, Val, Index);
+    return Impl.getVectorInstrCost(I, Val, CostKind, Index);
   }
   InstructionCost
   getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,

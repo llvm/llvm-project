@@ -1198,13 +1198,14 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 }
 
 InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                                 TTI::TargetCostKind CostKind,
                                                  unsigned Index, Value *Op0,
                                                  Value *Op1) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   if (Opcode != Instruction::ExtractElement &&
       Opcode != Instruction::InsertElement)
-    return BaseT::getVectorInstrCost(Opcode, Val, Index, Op0, Op1);
+    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
@@ -1218,7 +1219,7 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return LT.first;
 
   if (!isTypeLegal(Val))
-    return BaseT::getVectorInstrCost(Opcode, Val, Index, Op0, Op1);
+    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
 
   // In RVV, we could use vslidedown + vmv.x.s to extract element from vector
   // and vslideup + vmv.s.x to insert element to vector.
