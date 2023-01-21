@@ -21,9 +21,9 @@
 #include <system_error>
 #include <vector>
 
+#include "assert_macros.h"
 #include "make_string.h"
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "format_string.h"
 
 // For creating socket files
@@ -672,9 +672,9 @@ struct ExceptionChecker {
         num_paths(2), func_name(fun_name), opt_message(opt_msg) {}
 
   void operator()(fs::filesystem_error const& Err) {
-    TEST_CHECK(ErrorIsImp(Err.code(), {expected_err}));
-    TEST_CHECK(Err.path1() == expected_path1);
-    TEST_CHECK(Err.path2() == expected_path2);
+    assert(ErrorIsImp(Err.code(), {expected_err}));
+    assert(Err.path1() == expected_path1);
+    assert(Err.path2() == expected_path2);
     LIBCPP_ONLY(check_libcxx_string(Err));
   }
 
@@ -703,11 +703,11 @@ struct ExceptionChecker {
                              transform_path(expected_path1).c_str(),
                              transform_path(expected_path2).c_str());
       default:
-        TEST_CHECK(false && "unexpected case");
+        TEST_FAIL("unexpected case");
         return "";
       }
     }();
-    TEST_CHECK(format == Err.what());
+    assert(format == Err.what());
     if (format != Err.what()) {
       fprintf(stderr,
               "filesystem_error::what() does not match expected output:\n");
