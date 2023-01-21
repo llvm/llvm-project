@@ -113,7 +113,8 @@ ModuleListProperties::ModuleListProperties() {
   if (llvm::sys::path::cache_directory(path)) {
     llvm::sys::path::append(path, "lldb");
     llvm::sys::path::append(path, "SwiftMetadataCache");
-    lldbassert(SetLLDBIndexCachePath(FileSpec(path)));
+    bool success = SetSwiftMetadataCachePath(FileSpec(path));
+    lldbassert(success);
   }
   // END SWIFT
   
