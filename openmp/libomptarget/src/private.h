@@ -39,7 +39,7 @@ extern int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                             bool FromMapper = false);
 
 extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                  const KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
+                  KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
 
 extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          void *DeviceMemory, int64_t DeviceMemorySize,
