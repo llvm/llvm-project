@@ -86,23 +86,25 @@ private:
 
   /// Estimate a cost of Broadcast as an extract and sequence of insert
   /// operations.
-  InstructionCost getBroadcastShuffleOverhead(FixedVectorType *VTy) {
+  InstructionCost getBroadcastShuffleOverhead(FixedVectorType *VTy,
+                                              TTI::TargetCostKind CostKind) {
     InstructionCost Cost = 0;
     // Broadcast cost is equal to the cost of extracting the zero'th element
     // plus the cost of inserting it into every element of the result vector.
-    Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, VTy, 0,
-                                        nullptr, nullptr);
+    Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, VTy,
+                                        CostKind, 0, nullptr, nullptr);
 
     for (int i = 0, e = VTy->getNumElements(); i < e; ++i) {
-      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, VTy, i,
-                                          nullptr, nullptr);
+      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, VTy,
+                                          CostKind, i, nullptr, nullptr);
     }
     return Cost;
   }
 
   /// Estimate a cost of shuffle as a sequence of extract and insert
   /// operations.
-  InstructionCost getPermuteShuffleOverhead(FixedVectorType *VTy) {
+  InstructionCost getPermuteShuffleOverhead(FixedVectorType *VTy,
+                                            TTI::TargetCostKind CostKind) {
     InstructionCost Cost = 0;
     // Shuffle cost is equal to the cost of extracting element from its argument
     // plus the cost of inserting them onto the result vector.
@@ -112,18 +114,20 @@ private:
     // vector and finally index 3 of second vector and insert them at index
     // <0,1,2,3> of result vector.
     for (int i = 0, e = VTy->getNumElements(); i < e; ++i) {
-      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, VTy, i,
-                                          nullptr, nullptr);
-      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, VTy, i,
-                                          nullptr, nullptr);
+      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, VTy,
+                                          CostKind, i, nullptr, nullptr);
+      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, VTy,
+                                          CostKind, i, nullptr, nullptr);
     }
     return Cost;
   }
 
   /// Estimate a cost of subvector extraction as a sequence of extract and
   /// insert operations.
-  InstructionCost getExtractSubvectorOverhead(VectorType *VTy, int Index,
-                                       FixedVectorType *SubVTy) {
+  InstructionCost getExtractSubvectorOverhead(VectorType *VTy,
+                                              TTI::TargetCostKind CostKind,
+                                              int Index,
+                                              FixedVectorType *SubVTy) {
     assert(VTy && SubVTy &&
            "Can only extract subvectors from vectors");
     int NumSubElts = SubVTy->getNumElements();
@@ -137,18 +141,21 @@ private:
     // the source type plus the cost of inserting them into the result vector
     // type.
     for (int i = 0; i != NumSubElts; ++i) {
-      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, VTy,
-                                          i + Index, nullptr, nullptr);
-      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SubVTy, i,
-                                          nullptr, nullptr);
+      Cost +=
+          thisT()->getVectorInstrCost(Instruction::ExtractElement, VTy,
+                                      CostKind, i + Index, nullptr, nullptr);
+      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, SubVTy,
+                                          CostKind, i, nullptr, nullptr);
     }
     return Cost;
   }
 
   /// Estimate a cost of subvector insertion as a sequence of extract and
   /// insert operations.
-  InstructionCost getInsertSubvectorOverhead(VectorType *VTy, int Index,
-                                      FixedVectorType *SubVTy) {
+  InstructionCost getInsertSubvectorOverhead(VectorType *VTy,
+                                             TTI::TargetCostKind CostKind,
+                                             int Index,
+                                             FixedVectorType *SubVTy) {
     assert(VTy && SubVTy &&
            "Can only insert subvectors into vectors");
     int NumSubElts = SubVTy->getNumElements();
@@ -163,9 +170,10 @@ private:
     // type.
     for (int i = 0; i != NumSubElts; ++i) {
       Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, SubVTy,
-                                          i, nullptr, nullptr);
-      Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, VTy,
-                                          i + Index, nullptr, nullptr);
+                                          CostKind, i, nullptr, nullptr);
+      Cost +=
+          thisT()->getVectorInstrCost(Instruction::InsertElement, VTy, CostKind,
+                                      i + Index, nullptr, nullptr);
     }
     return Cost;
   }
@@ -216,7 +224,7 @@ private:
                                  FixedVectorType::get(
                                      PointerType::get(VT->getElementType(), 0),
                                      VT->getNumElements()),
-                                 -1, nullptr, nullptr)
+                                 CostKind, -1, nullptr, nullptr)
             : 0;
     InstructionCost LoadCost =
         VT->getNumElements() *
@@ -224,8 +232,9 @@ private:
          getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind));
 
     // Next, compute the cost of packing the result in a vector.
-    InstructionCost PackingCost = getScalarizationOverhead(
-        VT, Opcode != Instruction::Store, Opcode == Instruction::Store);
+    InstructionCost PackingCost =
+        getScalarizationOverhead(VT, Opcode != Instruction::Store,
+                                 Opcode == Instruction::Store, CostKind);
 
     InstructionCost ConditionalCost = 0;
     if (VariableMask) {
@@ -241,7 +250,7 @@ private:
                Instruction::ExtractElement,
                FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()),
                                     VT->getNumElements()),
-               -1, nullptr, nullptr) +
+               CostKind, -1, nullptr, nullptr) +
            getCFInstrCost(Instruction::Br, CostKind) +
            getCFInstrCost(Instruction::PHI, CostKind));
     }
@@ -710,7 +719,8 @@ public:
   /// extracted from vectors.
   InstructionCost getScalarizationOverhead(VectorType *InTy,
                                            const APInt &DemandedElts,
-                                           bool Insert, bool Extract) {
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind) {
     /// FIXME: a bitfield is not a reasonable abstraction for talking about
     /// which elements are needed from a scalable vector
     if (isa<ScalableVectorType>(InTy))
@@ -726,11 +736,11 @@ public:
       if (!DemandedElts[i])
         continue;
       if (Insert)
-        Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, Ty, i,
-                                            nullptr, nullptr);
+        Cost += thisT()->getVectorInstrCost(Instruction::InsertElement, Ty,
+                                            CostKind, i, nullptr, nullptr);
       if (Extract)
-        Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, i,
-                                            nullptr, nullptr);
+        Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty,
+                                            CostKind, i, nullptr, nullptr);
     }
 
     return Cost;
@@ -738,20 +748,24 @@ public:
 
   /// Helper wrapper for the DemandedElts variant of getScalarizationOverhead.
   InstructionCost getScalarizationOverhead(VectorType *InTy, bool Insert,
-                                           bool Extract) {
+                                           bool Extract,
+                                           TTI::TargetCostKind CostKind) {
     if (isa<ScalableVectorType>(InTy))
       return InstructionCost::getInvalid();
     auto *Ty = cast<FixedVectorType>(InTy);
 
     APInt DemandedElts = APInt::getAllOnes(Ty->getNumElements());
-    return thisT()->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
+    return thisT()->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
+                                             CostKind);
   }
 
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The (potentially vector) types to use for each of
   /// argument are passes via Tys.
-  InstructionCost getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                                   ArrayRef<Type *> Tys) {
+  InstructionCost
+  getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                   ArrayRef<Type *> Tys,
+                                   TTI::TargetCostKind CostKind) {
     assert(Args.size() == Tys.size() && "Expected matching Args and Tys");
 
     InstructionCost Cost = 0;
@@ -766,7 +780,8 @@ public:
 
       if (!isa<Constant>(A) && UniqueOperands.insert(A).second) {
         if (auto *VecTy = dyn_cast<VectorType>(Ty))
-          Cost += getScalarizationOverhead(VecTy, false, true);
+          Cost += getScalarizationOverhead(VecTy, /*Insert*/ false,
+                                           /*Extract*/ true, CostKind);
       }
     }
 
@@ -779,14 +794,17 @@ public:
   /// added as a heuristic.
   InstructionCost getScalarizationOverhead(VectorType *RetTy,
                                            ArrayRef<const Value *> Args,
-                                           ArrayRef<Type *> Tys) {
-    InstructionCost Cost = getScalarizationOverhead(RetTy, true, false);
+                                           ArrayRef<Type *> Tys,
+                                           TTI::TargetCostKind CostKind) {
+    InstructionCost Cost = getScalarizationOverhead(
+        RetTy, /*Insert*/ true, /*Extract*/ false, CostKind);
     if (!Args.empty())
-      Cost += getOperandsScalarizationOverhead(Args, Tys);
+      Cost += getOperandsScalarizationOverhead(Args, Tys, CostKind);
     else
       // When no information on arguments is provided, we add the cost
       // associated with one argument as a heuristic.
-      Cost += getScalarizationOverhead(RetTy, false, true);
+      Cost += getScalarizationOverhead(RetTy, /*Insert*/ false,
+                                       /*Extract*/ true, CostKind);
 
     return Cost;
   }
@@ -898,7 +916,7 @@ public:
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);
-      return getScalarizationOverhead(VTy, Args, Tys) +
+      return getScalarizationOverhead(VTy, Args, Tys, CostKind) +
              VTy->getNumElements() * Cost;
     }
 
@@ -951,7 +969,7 @@ public:
     switch (improveShuffleKindFromMask(Kind, Mask)) {
     case TTI::SK_Broadcast:
       if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
-        return getBroadcastShuffleOverhead(FVT);
+        return getBroadcastShuffleOverhead(FVT, CostKind);
       return InstructionCost::getInvalid();
     case TTI::SK_Select:
     case TTI::SK_Splice:
@@ -960,13 +978,13 @@ public:
     case TTI::SK_PermuteSingleSrc:
     case TTI::SK_PermuteTwoSrc:
       if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
-        return getPermuteShuffleOverhead(FVT);
+        return getPermuteShuffleOverhead(FVT, CostKind);
       return InstructionCost::getInvalid();
     case TTI::SK_ExtractSubvector:
-      return getExtractSubvectorOverhead(Tp, Index,
+      return getExtractSubvectorOverhead(Tp, CostKind, Index,
                                          cast<FixedVectorType>(SubTp));
     case TTI::SK_InsertSubvector:
-      return getInsertSubvectorOverhead(Tp, Index,
+      return getInsertSubvectorOverhead(Tp, CostKind, Index,
                                         cast<FixedVectorType>(SubTp));
     }
     llvm_unreachable("Unknown TTI::ShuffleKind");
@@ -1110,7 +1128,9 @@ public:
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
-      return getScalarizationOverhead(DstVTy, true, true) + Num * Cost;
+      return getScalarizationOverhead(DstVTy, /*Insert*/ true, /*Extract*/ true,
+                                      CostKind) +
+             Num * Cost;
     }
 
     // We already handled vector-to-vector and scalar-to-scalar conversions.
@@ -1119,8 +1139,12 @@ public:
     //  that the conversion is scalarized in one way or another.
     if (Opcode == Instruction::BitCast) {
       // Illegal bitcasts are done by storing and loading from a stack slot.
-      return (SrcVTy ? getScalarizationOverhead(SrcVTy, false, true) : 0) +
-             (DstVTy ? getScalarizationOverhead(DstVTy, true, false) : 0);
+      return (SrcVTy ? getScalarizationOverhead(SrcVTy, /*Insert*/ false,
+                                                /*Extract*/ true, CostKind)
+                     : 0) +
+             (DstVTy ? getScalarizationOverhead(DstVTy, /*Insert*/ true,
+                                                /*Extract*/ false, CostKind)
+                     : 0);
     }
 
     llvm_unreachable("Unhandled cast");
@@ -1128,11 +1152,11 @@ public:
 
   InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
                                            VectorType *VecTy, unsigned Index) {
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     return thisT()->getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                       Index, nullptr, nullptr) +
+                                       CostKind, Index, nullptr, nullptr) +
            thisT()->getCastInstrCost(Opcode, Dst, VecTy->getElementType(),
-                                     TTI::CastContextHint::None,
-                                     TTI::TCK_RecipThroughput);
+                                     TTI::CastContextHint::None, CostKind);
   }
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
@@ -1183,19 +1207,23 @@ public:
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
-      return getScalarizationOverhead(ValVTy, true, false) + Num * Cost;
+      return getScalarizationOverhead(ValVTy, /*Insert*/ true,
+                                      /*Extract*/ false, CostKind) +
+             Num * Cost;
     }
 
     // Unknown scalar opcode.
     return 1;
   }
 
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index,
-                                     Value *Op0, Value *Op1) {
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     TTI::TargetCostKind CostKind,
+                                     unsigned Index, Value *Op0, Value *Op1) {
     return getRegUsageForType(Val->getScalarType());
   }
 
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
+                                     TTI::TargetCostKind CostKind,
                                      unsigned Index) {
     Value *Op0 = nullptr;
     Value *Op1 = nullptr;
@@ -1203,7 +1231,8 @@ public:
       Op0 = IE->getOperand(0);
       Op1 = IE->getOperand(1);
     }
-    return thisT()->getVectorInstrCost(I.getOpcode(), Val, Index, Op0, Op1);
+    return thisT()->getVectorInstrCost(I.getOpcode(), Val, CostKind, Index, Op0,
+                                       Op1);
   }
 
   InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
@@ -1231,10 +1260,10 @@ public:
     APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedDstElts, VF);
     Cost += thisT()->getScalarizationOverhead(SrcVT, DemandedSrcElts,
                                               /*Insert*/ false,
-                                              /*Extract*/ true);
-    Cost +=
-        thisT()->getScalarizationOverhead(ReplicatedVT, DemandedDstElts,
-                                          /*Insert*/ true, /*Extract*/ false);
+                                              /*Extract*/ true, CostKind);
+    Cost += thisT()->getScalarizationOverhead(ReplicatedVT, DemandedDstElts,
+                                              /*Insert*/ true,
+                                              /*Extract*/ false, CostKind);
 
     return Cost;
   }
@@ -1275,9 +1304,9 @@ public:
       if (LA != TargetLowering::Legal && LA != TargetLowering::Custom) {
         // This is a vector load/store for some illegal type that is scalarized.
         // We must account for the cost of building or decomposing the vector.
-        Cost += getScalarizationOverhead(cast<VectorType>(Src),
-                                         Opcode != Instruction::Store,
-                                         Opcode == Instruction::Store);
+        Cost += getScalarizationOverhead(
+            cast<VectorType>(Src), Opcode != Instruction::Store,
+            Opcode == Instruction::Store, CostKind);
       }
     }
 
@@ -1389,13 +1418,13 @@ public:
       //      %v0 = shuffle %vec, undef, <0, 2, 4, 6>         ; Index 0
       // The cost is estimated as extract elements at 0, 2, 4, 6 from the
       // <8 x i32> vector and insert them into a <4 x i32> vector.
-      InstructionCost InsSubCost =
-          thisT()->getScalarizationOverhead(SubVT, DemandedAllSubElts,
-                                            /*Insert*/ true, /*Extract*/ false);
+      InstructionCost InsSubCost = thisT()->getScalarizationOverhead(
+          SubVT, DemandedAllSubElts,
+          /*Insert*/ true, /*Extract*/ false, CostKind);
       Cost += Indices.size() * InsSubCost;
-      Cost +=
-          thisT()->getScalarizationOverhead(VT, DemandedLoadStoreElts,
-                                            /*Insert*/ false, /*Extract*/ true);
+      Cost += thisT()->getScalarizationOverhead(VT, DemandedLoadStoreElts,
+                                                /*Insert*/ false,
+                                                /*Extract*/ true, CostKind);
     } else {
       // The interleave cost is extract elements from sub vectors, and
       // insert them into the wide vector.
@@ -1410,13 +1439,13 @@ public:
       // The cost is estimated as extract all elements (of actual members,
       // excluding gaps) from both <4 x i32> vectors and insert into the <12 x
       // i32> vector.
-      InstructionCost ExtSubCost =
-          thisT()->getScalarizationOverhead(SubVT, DemandedAllSubElts,
-                                            /*Insert*/ false, /*Extract*/ true);
+      InstructionCost ExtSubCost = thisT()->getScalarizationOverhead(
+          SubVT, DemandedAllSubElts,
+          /*Insert*/ false, /*Extract*/ true, CostKind);
       Cost += ExtSubCost * Indices.size();
       Cost += thisT()->getScalarizationOverhead(VT, DemandedLoadStoreElts,
                                                 /*Insert*/ true,
-                                                /*Extract*/ false);
+                                                /*Extract*/ false, CostKind);
     }
 
     if (!UseMaskForCond)
@@ -1649,10 +1678,11 @@ public:
     if (RetVF.isVector() && !RetVF.isScalable()) {
       ScalarizationCost = 0;
       if (!RetTy->isVoidTy())
-        ScalarizationCost +=
-            getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
+        ScalarizationCost += getScalarizationOverhead(
+            cast<VectorType>(RetTy),
+            /*Insert*/ true, /*Extract*/ false, CostKind);
       ScalarizationCost +=
-          getOperandsScalarizationOverhead(Args, ICA.getArgTypes());
+          getOperandsScalarizationOverhead(Args, ICA.getArgTypes(), CostKind);
     }
 
     IntrinsicCostAttributes Attrs(IID, RetTy, ICA.getArgTypes(), FMF, I,
@@ -1704,7 +1734,8 @@ public:
       Type *ScalarRetTy = RetTy;
       if (auto *RetVTy = dyn_cast<VectorType>(RetTy)) {
         if (!SkipScalarizationCost)
-          ScalarizationCost = getScalarizationOverhead(RetVTy, true, false);
+          ScalarizationCost = getScalarizationOverhead(
+              RetVTy, /*Insert*/ true, /*Extract*/ false, CostKind);
         ScalarCalls = std::max(ScalarCalls,
                                cast<FixedVectorType>(RetVTy)->getNumElements());
         ScalarRetTy = RetTy->getScalarType();
@@ -1714,7 +1745,8 @@ public:
         Type *Ty = Tys[i];
         if (auto *VTy = dyn_cast<VectorType>(Ty)) {
           if (!SkipScalarizationCost)
-            ScalarizationCost += getScalarizationOverhead(VTy, false, true);
+            ScalarizationCost += getScalarizationOverhead(
+                VTy, /*Insert*/ false, /*Extract*/ true, CostKind);
           ScalarCalls = std::max(ScalarCalls,
                                  cast<FixedVectorType>(VTy)->getNumElements());
           Ty = Ty->getScalarType();
@@ -2124,8 +2156,10 @@ public:
         return InstructionCost::getInvalid();
 
       InstructionCost ScalarizationCost =
-          SkipScalarizationCost ? ScalarizationCostPassed
-                                : getScalarizationOverhead(RetVTy, true, false);
+          SkipScalarizationCost
+              ? ScalarizationCostPassed
+              : getScalarizationOverhead(RetVTy, /*Insert*/ true,
+                                         /*Extract*/ false, CostKind);
 
       unsigned ScalarCalls = cast<FixedVectorType>(RetVTy)->getNumElements();
       SmallVector<Type *, 4> ScalarTys;
@@ -2141,7 +2175,8 @@ public:
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         if (auto *VTy = dyn_cast<VectorType>(Tys[i])) {
           if (!ICA.skipScalarizationCost())
-            ScalarizationCost += getScalarizationOverhead(VTy, false, true);
+            ScalarizationCost += getScalarizationOverhead(
+                VTy, /*Insert*/ false, /*Extract*/ true, CostKind);
           ScalarCalls = std::max(ScalarCalls,
                                  cast<FixedVectorType>(VTy)->getNumElements());
         }
@@ -2258,8 +2293,8 @@ public:
     ArithCost +=
         NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty, CostKind);
     return ShuffleCost + ArithCost +
-           thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, 0,
-                                       nullptr, nullptr);
+           thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty,
+                                       CostKind, 0, nullptr, nullptr);
   }
 
   /// Try to calculate the cost of performing strict (in-order) reductions,
@@ -2286,8 +2321,8 @@ public:
       return InstructionCost::getInvalid();
 
     auto *VTy = cast<FixedVectorType>(Ty);
-    InstructionCost ExtractCost =
-        getScalarizationOverhead(VTy, /*Insert=*/false, /*Extract=*/true);
+    InstructionCost ExtractCost = getScalarizationOverhead(
+        VTy, /*Insert=*/false, /*Extract=*/true, CostKind);
     InstructionCost ArithCost = thisT()->getArithmeticInstrCost(
         Opcode, VTy->getElementType(), CostKind);
     ArithCost *= VTy->getNumElements();
@@ -2366,8 +2401,8 @@ public:
     // The last min/max should be in vector registers and we counted it above.
     // So just need a single extractelement.
     return ShuffleCost + MinMaxCost +
-           thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, 0,
-                                       nullptr, nullptr);
+           thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty,
+                                       CostKind, 0, nullptr, nullptr);
   }
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
