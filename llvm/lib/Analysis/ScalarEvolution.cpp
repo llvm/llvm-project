@@ -9904,117 +9904,118 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     // If this instruction is evolved from a constant-evolving PHI, compute the
     // exit value from the loop without using SCEVs.
     const SCEVUnknown *SU = cast<SCEVUnknown>(V);
-    if (Instruction *I = dyn_cast<Instruction>(SU->getValue())) {
-      if (PHINode *PN = dyn_cast<PHINode>(I)) {
-        const Loop *CurrLoop = this->LI[I->getParent()];
-        // Looking for loop exit value.
-        if (CurrLoop && CurrLoop->getParentLoop() == L &&
-            PN->getParent() == CurrLoop->getHeader()) {
-          // Okay, there is no closed form solution for the PHI node.  Check
-          // to see if the loop that contains it has a known backedge-taken
-          // count.  If so, we may be able to force computation of the exit
-          // value.
-          const SCEV *BackedgeTakenCount = getBackedgeTakenCount(CurrLoop);
-          // This trivial case can show up in some degenerate cases where
-          // the incoming IR has not yet been fully simplified.
-          if (BackedgeTakenCount->isZero()) {
-            Value *InitValue = nullptr;
-            bool MultipleInitValues = false;
-            for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
-              if (!CurrLoop->contains(PN->getIncomingBlock(i))) {
-                if (!InitValue)
-                  InitValue = PN->getIncomingValue(i);
-                else if (InitValue != PN->getIncomingValue(i)) {
-                  MultipleInitValues = true;
-                  break;
-                }
+    Instruction *I = dyn_cast<Instruction>(SU->getValue());
+    if (!I)
+      return V; // This is some other type of SCEVUnknown, just return it.
+
+    if (PHINode *PN = dyn_cast<PHINode>(I)) {
+      const Loop *CurrLoop = this->LI[I->getParent()];
+      // Looking for loop exit value.
+      if (CurrLoop && CurrLoop->getParentLoop() == L &&
+          PN->getParent() == CurrLoop->getHeader()) {
+        // Okay, there is no closed form solution for the PHI node.  Check
+        // to see if the loop that contains it has a known backedge-taken
+        // count.  If so, we may be able to force computation of the exit
+        // value.
+        const SCEV *BackedgeTakenCount = getBackedgeTakenCount(CurrLoop);
+        // This trivial case can show up in some degenerate cases where
+        // the incoming IR has not yet been fully simplified.
+        if (BackedgeTakenCount->isZero()) {
+          Value *InitValue = nullptr;
+          bool MultipleInitValues = false;
+          for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
+            if (!CurrLoop->contains(PN->getIncomingBlock(i))) {
+              if (!InitValue)
+                InitValue = PN->getIncomingValue(i);
+              else if (InitValue != PN->getIncomingValue(i)) {
+                MultipleInitValues = true;
+                break;
               }
             }
-            if (!MultipleInitValues && InitValue)
-              return getSCEV(InitValue);
           }
-          // Do we have a loop invariant value flowing around the backedge
-          // for a loop which must execute the backedge?
-          if (!isa<SCEVCouldNotCompute>(BackedgeTakenCount) &&
-              isKnownPositive(BackedgeTakenCount) &&
-              PN->getNumIncomingValues() == 2) {
-
-            unsigned InLoopPred =
-                CurrLoop->contains(PN->getIncomingBlock(0)) ? 0 : 1;
-            Value *BackedgeVal = PN->getIncomingValue(InLoopPred);
-            if (CurrLoop->isLoopInvariant(BackedgeVal))
-              return getSCEV(BackedgeVal);
-          }
-          if (auto *BTCC = dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
-            // Okay, we know how many times the containing loop executes.  If
-            // this is a constant evolving PHI node, get the final value at
-            // the specified iteration number.
-            Constant *RV = getConstantEvolutionLoopExitValue(
-                PN, BTCC->getAPInt(), CurrLoop);
-            if (RV)
-              return getSCEV(RV);
-          }
+          if (!MultipleInitValues && InitValue)
+            return getSCEV(InitValue);
         }
+        // Do we have a loop invariant value flowing around the backedge
+        // for a loop which must execute the backedge?
+        if (!isa<SCEVCouldNotCompute>(BackedgeTakenCount) &&
+            isKnownPositive(BackedgeTakenCount) &&
+            PN->getNumIncomingValues() == 2) {
 
-        // If there is a single-input Phi, evaluate it at our scope. If we can
-        // prove that this replacement does not break LCSSA form, use new value.
-        if (PN->getNumOperands() == 1) {
-          const SCEV *Input = getSCEV(PN->getOperand(0));
-          const SCEV *InputAtScope = getSCEVAtScope(Input, L);
-          // TODO: We can generalize it using LI.replacementPreservesLCSSAForm,
-          // for the simplest case just support constants.
-          if (isa<SCEVConstant>(InputAtScope))
-            return InputAtScope;
+          unsigned InLoopPred =
+              CurrLoop->contains(PN->getIncomingBlock(0)) ? 0 : 1;
+          Value *BackedgeVal = PN->getIncomingValue(InLoopPred);
+          if (CurrLoop->isLoopInvariant(BackedgeVal))
+            return getSCEV(BackedgeVal);
+        }
+        if (auto *BTCC = dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
+          // Okay, we know how many times the containing loop executes.  If
+          // this is a constant evolving PHI node, get the final value at
+          // the specified iteration number.
+          Constant *RV =
+              getConstantEvolutionLoopExitValue(PN, BTCC->getAPInt(), CurrLoop);
+          if (RV)
+            return getSCEV(RV);
         }
       }
 
-      // Okay, this is an expression that we cannot symbolically evaluate
-      // into a SCEV.  Check to see if it's possible to symbolically evaluate
-      // the arguments into constants, and if so, try to constant propagate the
-      // result.  This is particularly useful for computing loop exit values.
-      if (CanConstantFold(I)) {
-        SmallVector<Constant *, 4> Operands;
-        bool MadeImprovement = false;
-        for (Value *Op : I->operands()) {
-          if (Constant *C = dyn_cast<Constant>(Op)) {
-            Operands.push_back(C);
-            continue;
-          }
-
-          // If any of the operands is non-constant and if they are
-          // non-integer and non-pointer, don't even try to analyze them
-          // with scev techniques.
-          if (!isSCEVable(Op->getType()))
-            return V;
-
-          const SCEV *OrigV = getSCEV(Op);
-          const SCEV *OpV = getSCEVAtScope(OrigV, L);
-          MadeImprovement |= OrigV != OpV;
-
-          Constant *C = BuildConstantFromSCEV(OpV);
-          if (!C)
-            return V;
-          if (C->getType() != Op->getType())
-            C = ConstantExpr::getCast(
-                CastInst::getCastOpcode(C, false, Op->getType(), false), C,
-                Op->getType());
-          Operands.push_back(C);
-        }
-
-        // Check to see if getSCEVAtScope actually made an improvement.
-        if (MadeImprovement) {
-          Constant *C = nullptr;
-          const DataLayout &DL = getDataLayout();
-          C = ConstantFoldInstOperands(I, Operands, DL, &TLI);
-          if (!C)
-            return V;
-          return getSCEV(C);
-        }
+      // If there is a single-input Phi, evaluate it at our scope. If we can
+      // prove that this replacement does not break LCSSA form, use new value.
+      if (PN->getNumOperands() == 1) {
+        const SCEV *Input = getSCEV(PN->getOperand(0));
+        const SCEV *InputAtScope = getSCEVAtScope(Input, L);
+        // TODO: We can generalize it using LI.replacementPreservesLCSSAForm,
+        // for the simplest case just support constants.
+        if (isa<SCEVConstant>(InputAtScope))
+          return InputAtScope;
       }
     }
 
-    // This is some other type of SCEVUnknown, just return it.
-    return V;
+    // Okay, this is an expression that we cannot symbolically evaluate
+    // into a SCEV.  Check to see if it's possible to symbolically evaluate
+    // the arguments into constants, and if so, try to constant propagate the
+    // result.  This is particularly useful for computing loop exit values.
+    if (!CanConstantFold(I))
+      return V; // This is some other type of SCEVUnknown, just return it.
+
+    SmallVector<Constant *, 4> Operands;
+    bool MadeImprovement = false;
+    for (Value *Op : I->operands()) {
+      if (Constant *C = dyn_cast<Constant>(Op)) {
+        Operands.push_back(C);
+        continue;
+      }
+
+      // If any of the operands is non-constant and if they are
+      // non-integer and non-pointer, don't even try to analyze them
+      // with scev techniques.
+      if (!isSCEVable(Op->getType()))
+        return V;
+
+      const SCEV *OrigV = getSCEV(Op);
+      const SCEV *OpV = getSCEVAtScope(OrigV, L);
+      MadeImprovement |= OrigV != OpV;
+
+      Constant *C = BuildConstantFromSCEV(OpV);
+      if (!C)
+        return V;
+      if (C->getType() != Op->getType())
+        C = ConstantExpr::getCast(
+            CastInst::getCastOpcode(C, false, Op->getType(), false), C,
+            Op->getType());
+      Operands.push_back(C);
+    }
+
+    // Check to see if getSCEVAtScope actually made an improvement.
+    if (!MadeImprovement)
+      return V; // This is some other type of SCEVUnknown, just return it.
+
+    Constant *C = nullptr;
+    const DataLayout &DL = getDataLayout();
+    C = ConstantFoldInstOperands(I, Operands, DL, &TLI);
+    if (!C)
+      return V;
+    return getSCEV(C);
   }
   case scCouldNotCompute:
     llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
