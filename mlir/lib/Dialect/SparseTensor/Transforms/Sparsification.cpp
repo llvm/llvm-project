@@ -1589,7 +1589,7 @@ private:
       // TODO: investigate fusing the conversion with computation,
       //       especially if it is a direct yield!
       //
-      auto srcTp = tval.getType().cast<RankedTensorType>();
+      auto srcTp = getRankedTensorType(tval);
       auto dstEnc = SparseTensorEncodingAttr::get(
           getContext(), srcEnc.getDimLevelType(),
           permute(env, env.op().getMatchingIndexingMap(t)), // new order

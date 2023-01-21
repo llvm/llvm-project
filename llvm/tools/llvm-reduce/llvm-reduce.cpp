@@ -103,8 +103,6 @@ static cl::opt<int>
 
 static codegen::RegisterCodeGenFlags CGF;
 
-bool isReduced(const ReducerWorkItem &M, const TestRunner &Test);
-
 /// Turn off crash debugging features
 ///
 /// Crash is expected, so disable crash reports and symbolization to reduce
@@ -137,24 +135,6 @@ static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
   }
 
   return {OutputFilename, OutputBitcode};
-}
-
-void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
-                 StringRef ToolName) {
-  Expected<BitcodeFileContents> IF = llvm::getBitcodeFileContents(Data);
-  if (!IF) {
-    WithColor::error(errs(), ToolName) << IF.takeError();
-    exit(1);
-  }
-  BitcodeModule BM = IF->Mods[0];
-  Expected<BitcodeLTOInfo> LI = BM.getLTOInfo();
-  Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(Ctx);
-  if (!LI || !MOrErr) {
-    WithColor::error(errs(), ToolName) << IF.takeError();
-    exit(1);
-  }
-  M.LTOInfo = std::make_unique<BitcodeLTOInfo>(*LI);
-  M.M = std::move(MOrErr.get());
 }
 
 int main(int Argc, char **Argv) {
@@ -219,7 +199,7 @@ int main(int Argc, char **Argv) {
   // test, rather than evaluating the source IR directly. This is for the
   // convenience of lit tests; the stripped out comments may have broken the
   // interestingness checks.
-  if (!isReduced(Tester.getProgram(), Tester)) {
+  if (!Tester.getProgram().isReduced(Tester)) {
     errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
     return 1;
   }
