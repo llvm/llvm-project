@@ -43,14 +43,14 @@ template <
     typename = std::enable_if_t<std::is_trivially_constructible<To>::value>,
     typename = std::enable_if_t<std::is_trivially_copyable<To>::value>,
     typename = std::enable_if_t<std::is_trivially_copyable<From>::value>>
-inline To bit_cast(const From &from) noexcept {
+[[nodiscard]] inline To bit_cast(const From &from) noexcept {
   To to;
   std::memcpy(&to, &from, sizeof(To));
   return to;
 }
 
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-constexpr inline bool has_single_bit(T Value) noexcept {
+[[nodiscard]] constexpr inline bool has_single_bit(T Value) noexcept {
   return (Value != 0) && ((Value & (Value - 1)) == 0);
 }
 
@@ -119,7 +119,7 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
-template <typename T> int countr_zero(T Val) {
+template <typename T> [[nodiscard]] int countr_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::detail::TrailingZerosCounter<T, sizeof(T)>::count(Val);
@@ -185,7 +185,7 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
-template <typename T> int countl_zero(T Val) {
+template <typename T> [[nodiscard]] int countl_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::detail::LeadingZerosCounter<T, sizeof(T)>::count(Val);
@@ -198,7 +198,7 @@ template <typename T> int countl_zero(T Val) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of all ones.
-template <typename T> int countl_one(T Value) {
+template <typename T> [[nodiscard]] int countl_one(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countl_zero<T>(~Value);
@@ -211,7 +211,7 @@ template <typename T> int countl_one(T Value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of all ones.
-template <typename T> int countr_one(T Value) {
+template <typename T> [[nodiscard]] int countr_one(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countr_zero<T>(~Value);
@@ -221,7 +221,7 @@ template <typename T> int countr_one(T Value) {
 /// Returns 0 otherwise.
 ///
 /// Ex. bit_width(5) == 3.
-template <typename T> int bit_width(T Value) {
+template <typename T> [[nodiscard]] int bit_width(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return std::numeric_limits<T>::digits - llvm::countl_zero(Value);
@@ -231,7 +231,7 @@ template <typename T> int bit_width(T Value) {
 /// nonzero.  Returns 0 otherwise.
 ///
 /// Ex. bit_floor(5) == 4.
-template <typename T> T bit_floor(T Value) {
+template <typename T> [[nodiscard]] T bit_floor(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   if (!Value)
@@ -246,7 +246,7 @@ template <typename T> T bit_floor(T Value) {
 ///
 /// The return value is undefined if the input is larger than the largest power
 /// of two representable in T.
-template <typename T> T bit_ceil(T Value) {
+template <typename T> [[nodiscard]] T bit_ceil(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   if (Value < 2)
@@ -289,7 +289,7 @@ template <typename T> struct PopulationCounter<T, 8> {
 /// Ex. popcount(0xF000F000) = 8
 /// Returns 0 if the word is zero.
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-inline int popcount(T Value) noexcept {
+[[nodiscard]] inline int popcount(T Value) noexcept {
   return detail::PopulationCounter<T, sizeof(T)>::count(Value);
 }
 
