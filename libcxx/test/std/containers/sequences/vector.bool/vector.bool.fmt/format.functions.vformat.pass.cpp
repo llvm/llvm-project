@@ -45,20 +45,15 @@ auto test_exception =
         [[maybe_unused]] std::string_view what,
         [[maybe_unused]] std::basic_string_view<CharT> fmt,
         [[maybe_unused]] Args&&... args) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-      try {
-        TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
-        TEST_FAIL(TEST_WRITE_CONCATENATED("\nFormat string   ", fmt, "\nDidn't throw an exception.\n"));
-      } catch (const std::format_error& e) {
-        TEST_LIBCPP_REQUIRE(
-            e.what() == what,
-            TEST_WRITE_CONCATENATED(
-                "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
-
-        return;
-      }
-      assert(false);
-#endif
+      TEST_VALIDATE_EXCEPTION(
+          std::format_error,
+          [&]([[maybe_unused]] const std::format_error& e) {
+            TEST_LIBCPP_REQUIRE(
+                e.what() == what,
+                TEST_WRITE_CONCATENATED(
+                    "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
+          },
+          TEST_IGNORE_NODISCARD std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...)));
     };
 
 int main(int, char**) {
