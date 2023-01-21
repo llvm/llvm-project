@@ -162,7 +162,6 @@ Operation::~Operation() {
 
 /// Destroy this operation or one of its subclasses.
 void Operation::destroy() {
-  if (listeners) listeners->notifyOpDestroyed(this);
   // Operations may have additional prefixed allocation, which needs to be
   // accounted for here when computing the address to free.
   char *rawMem = reinterpret_cast<char *>(this) -
@@ -381,9 +380,8 @@ Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
 /// keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::addNodeToList(Operation *op) {
   assert(!op->getBlock() && "already in an operation block!");
-  auto oldBlock = op->block;
   op->block = getContainingBlock();
-  if (listeners) listeners->notifyOpInserted(op, oldBlock, newBlock);
+
   // Invalidate the order on the operation.
   op->orderIndex = Operation::kInvalidOrderIdx;
 }
@@ -392,7 +390,6 @@ void llvm::ilist_traits<::mlir::Operation>::addNodeToList(Operation *op) {
 /// We keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::removeNodeFromList(Operation *op) {
   assert(op->block && "not already in an operation block!");
-  if (listeners) listeners->notifyOpRemoved(op);
   op->block = nullptr;
 }
 

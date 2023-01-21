@@ -22,30 +22,6 @@
 #include <optional>
 
 namespace mlir {
-class IRListeners {
-public:
-  class ListenerInterface {
-   public:
-     ~ListenerInterface() = default;
-     virtual void notifyOpInserted(Operation *op, Block *oldBlock, Block *newBlock);
-     virtual void notifyOpDestroyed(Operation *op);
-  };
-  void notifyOpInserted(Operation *op, Block *oldBlock, Block *newBlock) { 
-    for (auto &listener : listeners)
-      listener.notifyOpInserted(op, oldBlock, newBlock);
-  }
-  void notifyOpDestroyed(Operation *op) {
-    for (auto &listener : listeners)
-      listener.notifyOpDestroyed(op);
-  }
-  void addListener(std::shared_ptr<ListenerInterface> listener) {
-    listeners.push_back(std::move(listener));
-  }
-  private:
-  std::vector<std::shared_ptr<ListenerInterface>> listeners;
-};
-
-
 /// Operation is the basic unit of execution within MLIR.
 ///
 /// The following documentation are recommended to understand this class:
@@ -759,12 +735,6 @@ private:
   /// Returns true if this operation has a valid order.
   bool hasValidOrder() { return orderIndex != kInvalidOrderIdx; }
 
-  /// Attach a listener to this operation.
-  void addListener(std::shared_ptr<ListenerInterface> listener) {
-    if (!listeners) listeners = std::make_unique<IRListeners>();
-    listeners->addListener(std::move(listener));
-  }
-
 private:
   Operation(Location location, OperationName name, unsigned numResults,
             unsigned numSuccessors, unsigned numRegions,
@@ -773,7 +743,7 @@ private:
   // Operations are deleted through the destroy() member because they are
   // allocated with malloc.
   ~Operation();
-g
+
   /// Returns the additional size necessary for allocating the given objects
   /// before an Operation in-memory.
   static size_t prefixAllocSize(unsigned numOutOfLineResults,
@@ -865,9 +835,6 @@ g
 
   /// This holds general named attributes for the operation.
   DictionaryAttr attrs;
-
-  /// Optionally defined listeners that register here to capture IR modification events.
-  std::unique_ptr<IRListeners> listeners;
 
   // allow ilist_traits access to 'block' field.
   friend struct llvm::ilist_traits<Operation>;
