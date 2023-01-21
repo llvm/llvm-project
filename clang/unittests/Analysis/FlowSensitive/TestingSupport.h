@@ -144,7 +144,7 @@ template <typename AnalysisT> struct AnalysisInputs {
 
   /// Required. Input code that is analyzed.
   llvm::StringRef Code;
-  /// Required. The body of the function which matches this matcher is analyzed.
+  /// Required. All functions that match this matcher are analyzed.
   ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher;
   /// Required. The analysis to be run is constructed with this function that
   /// takes as argument the AST generated from the code being analyzed and the
@@ -176,15 +176,16 @@ llvm::Expected<llvm::DenseMap<const Stmt *, std::string>>
 buildStatementToAnnotationMapping(const FunctionDecl *Func,
                                   llvm::Annotations AnnotatedCode);
 
-/// Returns line numbers and content of the annotations in `AnnotatedCode`.
-llvm::DenseMap<unsigned, std::string>
-buildLineToAnnotationMapping(SourceManager &SM,
-                             llvm::Annotations AnnotatedCode);
+/// Returns line numbers and content of the annotations in `AnnotatedCode`
+/// within the token range `BoundingRange`.
+llvm::DenseMap<unsigned, std::string> buildLineToAnnotationMapping(
+    const SourceManager &SM, const LangOptions &LangOpts,
+    SourceRange BoundingRange, llvm::Annotations AnnotatedCode);
 
-/// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on the
-/// body of the function that matches `AI.TargetFuncMatcher` in `AI.Code`.
-/// Given the analysis outputs, `VerifyResults` checks that the results from the
-/// analysis are correct.
+/// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on all
+/// functions that match `AI.TargetFuncMatcher` in `AI.Code`.  Given the
+/// analysis outputs, `VerifyResults` checks that the results from the analysis
+/// are correct.
 ///
 /// Requirements:
 ///
@@ -212,36 +213,13 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
                                       "they were printed to the test log");
   }
 
-  // Get AST node of target function.
-  const FunctionDecl *Target = ast_matchers::selectFirst<FunctionDecl>(
-      "target", ast_matchers::match(
-                    ast_matchers::functionDecl(ast_matchers::isDefinition(),
-                                               AI.TargetFuncMatcher)
-                        .bind("target"),
-                    Context));
-  if (Target == nullptr)
-    return llvm::make_error<llvm::StringError>(
-        llvm::errc::invalid_argument, "Could not find target function.");
-
-  // Build control flow graph from body of target function.
-  auto MaybeCFCtx =
-      ControlFlowContext::build(Target, *Target->getBody(), Context);
-  if (!MaybeCFCtx)
-    return MaybeCFCtx.takeError();
-  auto &CFCtx = *MaybeCFCtx;
-
-  // Initialize states for running dataflow analysis.
-  DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>(),
-                                {/*Opts=*/AI.BuiltinOptions});
-  Environment InitEnv(DACtx, *Target);
-  auto Analysis = AI.MakeAnalysis(Context, InitEnv);
   std::function<void(const CFGElement &,
                      const TypeErasedDataflowAnalysisState &)>
-      PostVisitCFGClosure = nullptr;
+      TypeErasedPostVisitCFG = nullptr;
   if (AI.PostVisitCFG) {
-    PostVisitCFGClosure = [&AI, &Context](
-                              const CFGElement &Element,
-                              const TypeErasedDataflowAnalysisState &State) {
+    TypeErasedPostVisitCFG = [&AI, &Context](
+                                 const CFGElement &Element,
+                                 const TypeErasedDataflowAnalysisState &State) {
       AI.PostVisitCFG(Context, Element,
                       TransferStateForDiagnostics<typename AnalysisT::Lattice>(
                           llvm::any_cast<const typename AnalysisT::Lattice &>(
@@ -250,32 +228,57 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     };
   }
 
-  // Additional test setup.
-  AnalysisOutputs AO{AnnotatedCode, Context, Target, CFCtx,
-                     Analysis,      InitEnv, {}};
-  if (AI.SetupTest) {
-    if (auto Error = AI.SetupTest(AO))
-      return Error;
+  for (const ast_matchers::BoundNodes &BN :
+       ast_matchers::match(ast_matchers::functionDecl(
+                               ast_matchers::hasBody(ast_matchers::stmt()),
+                               AI.TargetFuncMatcher)
+                               .bind("target"),
+                           Context)) {
+    // Get the AST node of the target function.
+    const FunctionDecl *Target = BN.getNodeAs<FunctionDecl>("target");
+    if (Target == nullptr)
+      return llvm::make_error<llvm::StringError>(
+          llvm::errc::invalid_argument, "Could not find the target function.");
+
+    // Build the control flow graph for the target function.
+    auto MaybeCFCtx =
+        ControlFlowContext::build(Target, *Target->getBody(), Context);
+    if (!MaybeCFCtx) return MaybeCFCtx.takeError();
+    auto &CFCtx = *MaybeCFCtx;
+
+    // Initialize states for running dataflow analysis.
+    DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>(),
+                                  {/*Opts=*/AI.BuiltinOptions});
+    Environment InitEnv(DACtx, *Target);
+    auto Analysis = AI.MakeAnalysis(Context, InitEnv);
+
+    AnalysisOutputs AO{AnnotatedCode, Context, Target, CFCtx,
+                       Analysis,      InitEnv, {}};
+
+    // Additional test setup.
+    if (AI.SetupTest) {
+      if (auto Error = AI.SetupTest(AO)) return Error;
+    }
+
+    // If successful, the dataflow analysis returns a mapping from block IDs to
+    // the post-analysis states for the CFG blocks that have been evaluated.
+    llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
+        MaybeBlockStates = runTypeErasedDataflowAnalysis(
+            CFCtx, Analysis, InitEnv, TypeErasedPostVisitCFG);
+    if (!MaybeBlockStates) return MaybeBlockStates.takeError();
+    AO.BlockStates = *MaybeBlockStates;
+
+    // Verify dataflow analysis outputs.
+    VerifyResults(AO);
   }
 
-  // If successful, the dataflow analysis returns a mapping from block IDs to
-  // the post-analysis states for the CFG blocks that have been evaluated.
-  llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
-      MaybeBlockStates = runTypeErasedDataflowAnalysis(CFCtx, Analysis, InitEnv,
-                                                       PostVisitCFGClosure);
-  if (!MaybeBlockStates)
-    return MaybeBlockStates.takeError();
-  AO.BlockStates = *MaybeBlockStates;
-
-  // Verify dataflow analysis outputs.
-  VerifyResults(AO);
   return llvm::Error::success();
 }
 
-/// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on the
-/// body of the function that matches `AI.TargetFuncMatcher` in `AI.Code`. Given
-/// the annotation line numbers and analysis outputs, `VerifyResults` checks
-/// that the results from the analysis are correct.
+/// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on all
+/// functions that match `AI.TargetFuncMatcher` in `AI.Code`. Given the
+/// annotation line numbers and analysis outputs, `VerifyResults` checks that
+/// the results from the analysis are correct.
 ///
 /// Requirements:
 ///
@@ -292,16 +295,17 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
                   VerifyResults) {
   return checkDataflow<AnalysisT>(
       std::move(AI), [&VerifyResults](const AnalysisOutputs &AO) {
-        auto AnnotationLinesAndContent =
-            buildLineToAnnotationMapping(AO.ASTCtx.getSourceManager(), AO.Code);
+        auto AnnotationLinesAndContent = buildLineToAnnotationMapping(
+            AO.ASTCtx.getSourceManager(), AO.ASTCtx.getLangOpts(),
+            AO.Target->getSourceRange(), AO.Code);
         VerifyResults(AnnotationLinesAndContent, AO);
       });
 }
 
-/// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on the
-/// body of the function that matches `AI.TargetFuncMatcher` in `AI.Code`. Given
-/// the state computed at each annotated statement and analysis outputs,
-/// `VerifyResults` checks that the results from the analysis are correct.
+/// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on all
+/// functions that match `AI.TargetFuncMatcher` in `AI.Code`. Given the state
+/// computed at each annotated statement and analysis outputs, `VerifyResults`
+/// checks that the results from the analysis are correct.
 ///
 /// Requirements:
 ///
@@ -371,6 +375,10 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
           .withPostVisitCFG(std::move(PostVisitCFG)),
       [&VerifyResults, &AnnotationStates](const AnalysisOutputs &AO) {
         VerifyResults(AnnotationStates, AO);
+
+        // `checkDataflow()` can analyze more than one function.  Reset the
+        // variables to prepare for analyzing the next function.
+        AnnotationStates.clear();
       });
 }
 
