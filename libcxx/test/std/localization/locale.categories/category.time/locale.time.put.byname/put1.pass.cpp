@@ -9,6 +9,8 @@
 // NetBSD does not support LC_TIME at the moment
 // XFAIL: netbsd
 
+// XFAIL: LIBCXX-FREEBSD-FIXME
+
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8

@@ -667,21 +667,15 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
 
   let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond)>,
     OpBuilder<(ins "Value":$cond, "bool":$withElseRegion)>,
     OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
       "bool":$withElseRegion)>,
-    // TODO: Remove builder when it is no longer used to create invalid `if` ops
-    // (with a type mispatch between the op and it's inner `yield` op).
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$cond,
-      CArg<"function_ref<void(OpBuilder &, Location)>",
-           "buildTerminatedBody">:$thenBuilder,
-      CArg<"function_ref<void(OpBuilder &, Location)>",
-           "nullptr">:$elseBuilder)>,
     OpBuilder<(ins "Value":$cond,
       CArg<"function_ref<void(OpBuilder &, Location)>",
            "buildTerminatedBody">:$thenBuilder,
       CArg<"function_ref<void(OpBuilder &, Location)>",
-           "nullptr">:$elseBuilder)>
+           "nullptr">:$elseBuilder)>,
   ];
 
   let extraClassDeclaration = [{

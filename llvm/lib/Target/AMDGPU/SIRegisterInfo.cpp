@@ -1556,7 +1556,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       auto MIB = spillVGPRtoAGPR(ST, MBB, MI, Index, Lane, Sub, IsKill);
       if (!MIB.getInstr())
         break;
-      if (NeedSuperRegDef || (IsSubReg && IsStore && Lane == LaneS && !i)) {
+      if (NeedSuperRegDef || (IsSubReg && IsStore && Lane == LaneS && IsFirstSubReg)) {
         MIB.addReg(ValueReg, RegState::ImplicitDefine);
         NeedSuperRegDef = false;
       }
@@ -1658,7 +1658,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);
     }
 
-    if (NeedSuperRegImpOperand)
+    if (NeedSuperRegImpOperand && (IsFirstSubReg || IsLastSubReg))
       MIB.addReg(ValueReg, RegState::Implicit | SrcDstRegState);
   }
 
@@ -1728,7 +1728,10 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
       SpilledReg Spill = VGPRSpills[i];
 
-      bool UseKill = SB.IsKill && i == SB.NumSubRegs - 1;
+      bool IsFirstSubreg = i == 0;
+      bool IsLastSubreg = i == SB.NumSubRegs - 1;
+      bool UseKill = SB.IsKill && IsLastSubreg;
+
 
       // Mark the "old value of vgpr" input undef only if this is the first sgpr
       // spill to this specific vgpr in the first basic block.
@@ -1738,19 +1741,19 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
                      .addImm(Spill.Lane)
                      .addReg(Spill.VGPR);
       if (Indexes) {
-        if (i == 0)
+        if (IsFirstSubreg)
           Indexes->replaceMachineInstrInMaps(*MI, *MIB);
         else
           Indexes->insertMachineInstrInMaps(*MIB);
       }
 
-      if (i == 0 && SB.NumSubRegs > 1) {
+      if (IsFirstSubreg && SB.NumSubRegs > 1) {
         // We may be spilling a super-register which is only partially defined,
         // and need to ensure later spills think the value is defined.
         MIB.addReg(SB.SuperReg, RegState::ImplicitDefine);
       }
 
-      if (SB.NumSubRegs > 1)
+      if (SB.NumSubRegs > 1 && (IsFirstSubreg || IsLastSubreg))
         MIB.addReg(SB.SuperReg, getKillRegState(UseKill) | RegState::Implicit);
 
       // FIXME: Since this spills to another register instead of an actual

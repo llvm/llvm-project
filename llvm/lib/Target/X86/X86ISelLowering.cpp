@@ -11166,19 +11166,17 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  // All undef vector. Return an UNDEF. All zero vectors were handled above.
-  unsigned NumFrozenUndefElts = FrozenUndefMask.countPopulation();
-  if (NonZeroMask == 0 && NumFrozenUndefElts != NumElems) {
-    assert(UndefMask.isAllOnes() && "Fully undef mask expected");
+  // All undef vector. Return an UNDEF.
+  if (UndefMask.isAllOnes())
     return DAG.getUNDEF(VT);
-  }
 
   // If we have multiple FREEZE-UNDEF operands, we are likely going to end up
   // lowering into a suboptimal insertion sequence. Instead, thaw the UNDEF in
   // our source BUILD_VECTOR, create another FREEZE-UNDEF splat BUILD_VECTOR,
   // and blend the FREEZE-UNDEF operands back in.
   // FIXME: is this worthwhile even for a single FREEZE-UNDEF operand?
-  if (NumFrozenUndefElts >= 2 && NumFrozenUndefElts < NumElems) {
+  if (unsigned NumFrozenUndefElts = FrozenUndefMask.countPopulation();
+      NumFrozenUndefElts >= 2 && NumFrozenUndefElts < NumElems) {
     SmallVector<int, 16> BlendMask(NumElems, -1);
     SmallVector<SDValue, 16> Elts(NumElems, DAG.getUNDEF(OpEltVT));
     for (unsigned i = 0; i < NumElems; ++i) {
@@ -21898,13 +21896,6 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   }
 
   assert(SrcVT == MVT::i64 && "Unexpected type in UINT_TO_FP");
-
-  // On Windows, the default precision control on x87 is only 53-bit, and FADD
-  // triggers rounding with that precision, so the final result may be less
-  // accurate. 18014397972611071 is one such case.
-  if (Subtarget.isOSWindows())
-    return SDValue();
-
   SDValue ValueToStore = Src;
   if (isScalarFPTypeInSSEReg(Op.getValueType()) && !Subtarget.is64Bit()) {
     // Bitcasting to f64 here allows us to do a single 64-bit store from

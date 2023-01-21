@@ -352,7 +352,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   // [OpenMP 5.0], 2.19.7.3. declare mapper Directive, Restrictions
   //  List-items in map clauses on this construct may only refer to the declared
   //  variable var and entities that could be referenced by a procedure defined
-  //  at the same location
+  //  at the same location.
+  // [OpenMP 5.2] Also allow iterator declared variables.
   if (LangOpts.OpenMP && isa<VarDecl>(D) &&
       !isOpenMPDeclareMapperVarDeclAllowed(cast<VarDecl>(D))) {
     Diag(Loc, diag::err_omp_declare_mapper_wrong_var)
@@ -5419,6 +5420,10 @@ ExprResult Sema::ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
     } else {
       CurContext->addDecl(VD);
     }
+
+    /// Act on the iterator variable declaration.
+    ActOnOpenMPIteratorVarDecl(VD);
+
     Expr *Begin = D.Range.Begin;
     if (!IsDeclTyDependent && Begin && !Begin->isTypeDependent()) {
       ExprResult BeginRes =

@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 -passes=instcombine -S %s -o - -experimental-assignment-tracking \
+; RUN: opt -opaque-pointers=0 -passes=instcombine -S %s -o - \
 ; RUN: | FileCheck %s
 
 ;; NOTE: This test uses typed pointers because it is testing a code path that
@@ -44,7 +44,7 @@ declare dso_local void @_ZN1cC1Ei(%struct.c*, i32) unnamed_addr
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
+!llvm.module.flags = !{!3, !4, !5, !1000}
 !llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -72,3 +72,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !22 = !DILocation(line: 0, scope: !7)
 !23 = !DILocation(line: 6, column: 5, scope: !7)
 !24 = !DILocation(line: 7, column: 3, scope: !7)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

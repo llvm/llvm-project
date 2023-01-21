@@ -109,25 +109,6 @@ enum PPElifDiag {
   PED_Elifndef
 };
 
-// The -fmodule-name option tells the compiler to textually include headers in
-// the specified module, meaning clang won't build the specified module. This is
-// useful in a number of situations, for instance, when building a library that
-// vends a module map, one might want to avoid hitting intermediate build
-// products containimg the module map or avoid finding the system installed
-// modulemap for that library.
-static bool isForModuleBuilding(Module *M, StringRef CurrentModule,
-                                StringRef ModuleName) {
-  StringRef TopLevelName = M->getTopLevelModuleName();
-
-  // When building framework Foo, we wanna make sure that Foo *and* Foo_Private
-  // are textually included and no modules are built for both.
-  if (M->getTopLevelModule()->IsFramework && CurrentModule == ModuleName &&
-      !CurrentModule.endswith("_Private") && TopLevelName.endswith("_Private"))
-    TopLevelName = TopLevelName.drop_back(8);
-
-  return TopLevelName == CurrentModule;
-}
-
 static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
   if (isReservedInAllContexts(II->isReserved(Lang))) {
@@ -2219,14 +2200,13 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       alreadyIncluded(*File))
     Action = IncludeLimitReached;
 
-  bool MaybeTranslateInclude = Action == Enter && File && SuggestedModule &&
-                               !isForModuleBuilding(SuggestedModule.getModule(),
-                                                    getLangOpts().CurrentModule,
-                                                    getLangOpts().ModuleName);
-
   // FIXME: We do not have a good way to disambiguate C++ clang modules from
   // C++ standard modules (other than use/non-use of Header Units).
   Module *SM = SuggestedModule.getModule();
+
+  bool MaybeTranslateInclude =
+      Action == Enter && File && SM && !SM->isForBuilding(getLangOpts());
+
   // Maybe a usable Header Unit
   bool UsableHeaderUnit = false;
   if (getLangOpts().CPlusPlusModules && SM && SM->isHeaderUnit()) {
@@ -2556,9 +2536,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // that behaves the same as the header would behave in a compilation using
     // that PCH, which means we should enter the submodule. We need to teach
     // the AST serialization layer to deal with the resulting AST.
-    if (getLangOpts().CompilingPCH &&
-        isForModuleBuilding(SM, getLangOpts().CurrentModule,
-                            getLangOpts().ModuleName))
+    if (getLangOpts().CompilingPCH && SM->isForBuilding(getLangOpts()))
       return {ImportAction::None};
 
     assert(!CurLexerSubmodule && "should not have marked this as a module yet");

@@ -99,6 +99,7 @@
 ; GCN-O0-NEXT:        Post-Dominator Tree Construction
 ; GCN-O0-NEXT:        Natural Loop Information
 ; GCN-O0-NEXT:        Legacy Divergence Analysis
+; GCN-O0-NEXT:        Assignment Tracking Analysis
 ; GCN-O0-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        SI Fix SGPR copies
@@ -293,6 +294,7 @@
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:        Branch Probability Analysis
+; GCN-O1-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-NEXT:        Lazy Branch Probability Analysis
 ; GCN-O1-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O1-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
@@ -591,6 +593,7 @@
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:        Branch Probability Analysis
+; GCN-O1-OPTS-NEXT:        Assignment Tracking Analysis
 ; GCN-O1-OPTS-NEXT:        Lazy Branch Probability Analysis
 ; GCN-O1-OPTS-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
@@ -895,6 +898,7 @@
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:        Branch Probability Analysis
+; GCN-O2-NEXT:        Assignment Tracking Analysis
 ; GCN-O2-NEXT:        Lazy Branch Probability Analysis
 ; GCN-O2-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
@@ -1211,6 +1215,7 @@
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:        Branch Probability Analysis
+; GCN-O3-NEXT:        Assignment Tracking Analysis
 ; GCN-O3-NEXT:        Lazy Branch Probability Analysis
 ; GCN-O3-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection

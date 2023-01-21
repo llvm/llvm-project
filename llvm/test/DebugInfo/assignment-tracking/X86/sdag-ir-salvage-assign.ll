@@ -1,10 +1,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare \
-; RUN:    -experimental-assignment-tracking   \
 ; RUN:    -stop-before finalize-isel %s -o -  \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
 ; RUN: llc -mtriple=x86_64-unknown-unknown -start-after=codegenprepare \
-; RUN:    -experimental-assignment-tracking   \
 ; RUN:    -stop-before finalize-isel %s -o -  \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
@@ -51,7 +49,7 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 attributes #0 = { nounwind readnone speculatable }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!25, !26, !27, !28}
+!llvm.module.flags = !{!25, !26, !27, !28, !1000}
 !llvm.ident = !{!29}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
@@ -70,3 +68,4 @@ attributes #0 = { nounwind readnone speculatable }
 !29 = !{!"clang"}
 !30 = !DILocation(line: 18, column: 14, scope: !6)
 !31 = distinct !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

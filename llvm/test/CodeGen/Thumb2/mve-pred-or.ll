@@ -384,7 +384,7 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    cset r1, eq
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csinc r0, r1, zr, eq
+; CHECK-NEXT:    csinc r0, r1, zr, ne
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #0, #8
@@ -394,7 +394,7 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqz_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    orrs r2, r3
 ; CHECK-NEXT:    cset r2, eq
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csinc r0, r2, zr, eq
+; CHECK-NEXT:    csinc r0, r2, zr, ne
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #8, #8
 ; CHECK-NEXT:    vmsr p0, r1
@@ -420,7 +420,7 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeq_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    vmov r12, r2, d5
-; CHECK-NEXT:    csinc r0, r0, zr, eq
+; CHECK-NEXT:    csinc r0, r0, zr, ne
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #0, #8
@@ -431,7 +431,7 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeq_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-NEXT:    vmov r2, r3, d1
 ; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    orrs r2, r3
-; CHECK-NEXT:    csinc r0, r0, zr, eq
+; CHECK-NEXT:    csinc r0, r0, zr, ne
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #8, #8
 ; CHECK-NEXT:    vmsr p0, r1

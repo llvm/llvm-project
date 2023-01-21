@@ -10,6 +10,7 @@ executable("dsymutil") {
     ":Options",
     "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/DWARFLinker",
+    "//llvm/lib/DWARFLinkerParallel",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/MC",
     "//llvm/lib/Object",

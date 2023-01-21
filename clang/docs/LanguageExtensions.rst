@@ -2933,7 +2933,8 @@ implementation details of ``__sync_lock_test_and_set()``.  The
 ``__builtin_addressof`` performs the functionality of the built-in ``&``
 operator, ignoring any ``operator&`` overload.  This is useful in constant
 expressions in C++11, where there is no other way to take the address of an
-object that overloads ``operator&``.
+object that overloads ``operator&``. Clang automatically adds
+``[[clang::lifetimebound]]`` to the parameter of ``__builtin_addressof``.
 
 **Example of use**:
 

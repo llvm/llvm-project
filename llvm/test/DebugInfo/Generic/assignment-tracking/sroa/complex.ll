@@ -1,4 +1,4 @@
-; RUN: opt -passes=sroa -S -o - %s -experimental-assignment-tracking | FileCheck %s
+; RUN: opt -passes=sroa -S -o - %s | FileCheck %s
 ;
 ;; Based on llvm/test/DebugInfo/ARM/sroa-complex.ll
 ;; generated from:
@@ -43,7 +43,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5, !6, !1000}
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
@@ -67,3 +67,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !18 = distinct !DIAssignID()
 !19 = distinct !DIAssignID()
 !20 = !DILocation(line: 2, column: 36, scope: !8)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

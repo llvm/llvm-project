@@ -1804,9 +1804,12 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
 bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::IntegerLiteral));
   const APSInt &Int = Token.integerValue();
-  if (Int.getMinSignedBits() > 64)
+  if (auto SImm = Int.trySExtValue(); Int.isSigned() && SImm.has_value())
+    Dest = MachineOperand::CreateImm(*SImm);
+  else if (auto UImm = Int.tryZExtValue(); !Int.isSigned() && UImm.has_value())
+    Dest = MachineOperand::CreateImm(*UImm);
+  else
     return error("integer literal is too large to be an immediate operand");
-  Dest = MachineOperand::CreateImm(Int.getExtValue());
   lex();
   return false;
 }

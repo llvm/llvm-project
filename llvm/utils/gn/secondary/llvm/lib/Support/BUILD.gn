@@ -127,7 +127,6 @@ static_library("Support") {
     "SmallVector.cpp",
     "SourceMgr.cpp",
     "SpecialCaseList.cpp",
-    "StatCacheFileSystem.cpp",
     "Statistic.cpp",
     "StringExtras.cpp",
     "StringMap.cpp",

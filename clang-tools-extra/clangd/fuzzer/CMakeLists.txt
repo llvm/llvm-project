@@ -14,7 +14,6 @@ clang_target_link_libraries(clangd-fuzzer
   clangBasic
   clangFormat
   clangFrontend
-  clangIncludeCleaner
   clangSema
   clangTooling
   clangToolingCore
@@ -22,5 +21,6 @@ clang_target_link_libraries(clangd-fuzzer
 target_link_libraries(clangd-fuzzer
   PRIVATE
   clangDaemon
+  clangIncludeCleaner
   clangdSupport
   )

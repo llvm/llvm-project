@@ -31,26 +31,25 @@
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR5:]]
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR6:]]
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR7:]]
-# POSTCHECK-NEXT: 0x[[#%.16x,ADDR8:]]
 
 # POSTCHECK: DW_TAG_compile_unit
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x0000000c)
 # POSTCHECK: DW_TAG_variable [5]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
 # POSTCHECK-NEXT: [0x[[#ADDR2]]
-# POSTCHECK-SAME: 0x[[#ADDR2 + 9]]
-# POSTCHECK-NEXT: [0x[[#ADDR3]]
-# POSTCHECK-SAME: 0x[[#ADDR3 + 6]]
+# POSTCHECK-SAME: 0x[[#ADDR2 + 0x9]]
+# POSTCHECK-NEXT: [0x[[#ADDR2 + 0x9]]
+# POSTCHECK-SAME: 0x[[#ADDR2 + 0xf]]
 # POSTCHECK: DW_TAG_variable [5]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x1)
 # POSTCHECK-NEXT: [0x[[#ADDR3]]
 # POSTCHECK-SAME: 0x[[#ADDR3 + 2]]
 
 # POSTCHECK: DW_TAG_compile_unit
-# POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x00000043)
+# POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x00000045)
 # POSTCHECK: DW_TAG_variable [11]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
 # POSTCHECK-NEXT: [0x[[#ADDR7]]
-# POSTCHECK-SAME: 0x[[#ADDR7 + 3]]
-# POSTCHECK-NEXT: [0x[[#ADDR8]]
-# POSTCHECK-SAME: 0x[[#ADDR8 + 1]]
+# POSTCHECK-SAME: 0x[[#ADDR7 + 0x3]]
+# POSTCHECK-NEXT: [0x[[#ADDR7 + 0x3]]
+# POSTCHECK-SAME: 0x[[#ADDR7 + 0x4]]

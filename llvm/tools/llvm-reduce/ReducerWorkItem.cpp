@@ -34,6 +34,11 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <optional>
 
+using namespace llvm;
+
+ReducerWorkItem::ReducerWorkItem() = default;
+ReducerWorkItem::~ReducerWorkItem() = default;
+
 extern cl::OptionCategory LLVMReduceOptions;
 static cl::opt<std::string> TargetTriple("mtriple",
                                          cl::desc("Set the target triple"),
@@ -706,7 +711,7 @@ uint64_t ReducerWorkItem::computeIRComplexityScore() const {
     ++Score;
 
     if (GV.hasInitializer())
-      ++Score;
+      Score += classifyReductivePower(GV.getInitializer());
 
     // TODO: Account for linkage?
 
@@ -714,6 +719,12 @@ uint64_t ReducerWorkItem::computeIRComplexityScore() const {
     Score += GlobalMetadata.size();
     GlobalMetadata.clear();
   }
+
+  for (const GlobalAlias &GA : M.aliases())
+    Score += classifyReductivePower(GA.getAliasee());
+
+  for (const GlobalIFunc &GI : M.ifuncs())
+    Score += classifyReductivePower(GI.getResolver());
 
   for (const Function &F : M)
     Score += computeIRComplexityScoreImpl(F);

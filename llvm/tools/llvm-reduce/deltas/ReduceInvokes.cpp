@@ -15,6 +15,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/Local.h"
 
+using namespace llvm;
+
 static void reduceInvokesInFunction(Oracle &O, Function &F) {
   for (BasicBlock &BB : F) {
     InvokeInst *Invoke = dyn_cast<InvokeInst>(BB.getTerminator());
@@ -27,8 +29,8 @@ static void reduceInvokesInFunction(Oracle &O, Function &F) {
   // reduction.
 }
 
-static void reduceInvokesInModule(Oracle &O, Module &Mod) {
-  for (Function &F : Mod) {
+static void reduceInvokesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  for (Function &F : WorkItem.getModule()) {
     if (F.hasPersonalityFn())
       reduceInvokesInFunction(O, F);
   }

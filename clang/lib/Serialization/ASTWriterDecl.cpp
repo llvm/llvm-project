@@ -491,6 +491,10 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->hasNonTrivialToPrimitiveCopyCUnion());
   Record.push_back(D->isParamDestroyedInCallee());
   Record.push_back(D->getArgPassingRestrictions());
+  // Only compute this for C/Objective-C, in C++ this is computed as part
+  // of CXXRecordDecl.
+  if (!isa<CXXRecordDecl>(D))
+    Record.push_back(D->getODRHash());
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
@@ -771,6 +775,7 @@ void ASTDeclWriter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *D) {
     Record.AddTypeSourceInfo(D->getSuperClassTInfo());
     Record.AddSourceLocation(D->getEndOfDefinitionLoc());
     Record.push_back(Data.HasDesignatedInitializers);
+    Record.push_back(D->getODRHash());
 
     // Write out the protocols that are directly referenced by the @interface.
     Record.push_back(Data.ReferencedProtocols.size());
@@ -2127,6 +2132,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
   // getArgPassingRestrictions
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));
+  // ODRHash
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 26));
 
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset

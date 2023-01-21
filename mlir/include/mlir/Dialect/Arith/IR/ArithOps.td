@@ -102,7 +102,7 @@ class Arith_CastOp<string mnemonic, TypeConstraint From, TypeConstraint To,
 // excluding indices: signless integers, vectors or tensors thereof.
 def SignlessFixedWidthIntegerLike : TypeConstraint<Or<[
         AnySignlessInteger.predicate,
-        VectorOf<[AnySignlessInteger]>.predicate,
+        VectorOfAnyRankOf<[AnySignlessInteger]>.predicate,
         TensorOf<[AnySignlessInteger]>.predicate]>,
     "signless-fixed-width-integer-like">;
 

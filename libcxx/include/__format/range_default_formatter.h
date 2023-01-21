@@ -161,7 +161,26 @@ public:
 
 template <ranges::input_range _Rp, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __range_default_formatter<range_format::set, _Rp, _CharT> {
-  __range_default_formatter() = delete; // TODO FMT Implement
+private:
+  using __maybe_const_set = __fmt_maybe_const<_Rp, _CharT>;
+  using __element_type    = remove_cvref_t<ranges::range_reference_t<__maybe_const_set>>;
+  range_formatter<__element_type, _CharT> __underlying_;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI constexpr __range_default_formatter() {
+    __underlying_.set_brackets(_LIBCPP_STATICALLY_WIDEN(_CharT, "{"), _LIBCPP_STATICALLY_WIDEN(_CharT, "}"));
+  }
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return __underlying_.parse(__ctx);
+  }
+
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  format(__maybe_const_set& __range, _FormatContext& __ctx) const {
+    return __underlying_.format(__range, __ctx);
+  }
 };
 
 template <range_format _Kp, ranges::input_range _Rp, class _CharT>

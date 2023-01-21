@@ -1143,6 +1143,60 @@ int main (int argc, char **argv) {
 }
 #endif // OMP51
 
+#ifdef OMP52
+
+///==========================================================================///
+// RUN: %clang_cc1 -DOMP52 -verify -fopenmp -fopenmp-version=52 -ast-print %s | FileCheck %s --check-prefix OMP52
+// RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP52 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix OMP52
+
+// RUN: %clang_cc1 -DOMP52 -verify -fopenmp-simd -fopenmp-version=52 -ast-print %s | FileCheck %s --check-prefix OMP52
+// RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP52 -fopenmp-simd -fopenmp-version=52 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix OMP52
+
+void foo() {}
+
+template <typename T, int C>
+T tmain(T argc, T *argv) {
+  int N = 100;
+  int v[N];
+  #pragma omp target map(iterator(it = 0:N:2), to: v[it])
+  foo();
+  #pragma omp target map(iterator(it = 0:N:4), from: v[it])
+  foo();
+
+  return 0;
+}
+
+// OMP52: template <typename T, int C> T tmain(T argc, T *argv) {
+// OMP52-NEXT: int N = 100;
+// OMP52-NEXT: int v[N];
+// OMP52-NEXT: #pragma omp target map(iterator(int it = 0:N:2),to: v[it])
+// OMP52-NEXT: foo()
+// OMP52-NEXT: #pragma omp target map(iterator(int it = 0:N:4),from: v[it])
+// OMP52-NEXT: foo()
+
+// OMP52-LABEL: int main(int argc, char **argv) {
+int main (int argc, char **argv) {
+  int i, j, a[20], always, close;
+// OMP52-NEXT: int i, j, a[20]
+#pragma omp target
+// OMP52-NEXT: #pragma omp target
+  foo();
+// OMP52-NEXT: foo();
+#pragma omp target map(iterator(it = 0:20:2), to: a[it])
+// OMP52-NEXT: #pragma omp target map(iterator(int it = 0:20:2),to: a[it])
+  foo();
+// OMP52-NEXT: foo();
+#pragma omp target map(iterator(it = 0:20:4), from: a[it])
+// OMP52-NEXT: #pragma omp target map(iterator(int it = 0:20:4),from: a[it])
+foo();
+// OMP52-NEXT: foo();
+
+  return tmain<int, 5>(argc, &argc) + tmain<char, 1>(argv[0][0], argv[0]);
+}
+#endif // OMP52
+
 #ifdef OMPX
 
 // RUN: %clang_cc1 -DOMPX -verify -fopenmp -fopenmp-extensions -ast-print %s | FileCheck %s --check-prefix=OMPX

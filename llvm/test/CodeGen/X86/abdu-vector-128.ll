@@ -1498,9 +1498,10 @@ define <8 x i16> @abd_minmax_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    psubusw %xmm1, %xmm2
 ; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
 ; SSE2-NEXT:    psubw %xmm0, %xmm2
 ; SSE2-NEXT:    paddw %xmm1, %xmm2
-; SSE2-NEXT:    paddw %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: abd_minmax_v8i16:

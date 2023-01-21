@@ -166,13 +166,11 @@
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR5:]]
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR6:]]
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDR7:]]
-# POSTCHECK-NEXT: 0x[[#%.16x,ADDR8:]]
 
 # POSTCHECK: Addrs: [
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDRB:]]
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDRB1:]]
 # POSTCHECK-NEXT: 0x[[#%.16x,ADDRB2:]]
-# POSTCHECK-NEXT: 0x[[#%.16x,ADDRB3:]]
 
 
 # main.cpp
@@ -202,20 +200,20 @@
 # POSTCHECK: DW_TAG_formal_parameter [9]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0) loclist = 0x00000018
 # POSTCHECK-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2 + 0x22]]
-# POSTCHECK-NEXT: [0x[[#ADDR3]], 0x[[#ADDR3 + 0x2f]]
+# POSTCHECK-NEXT: [0x[[#ADDR2 + 0x22]], 0x[[#ADDR2 + 0x51]]
 # POSTCHECK: DW_TAG_formal_parameter [9]
-# POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x1) loclist = 0x00000026
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x1) loclist = 0x00000028
 # POSTCHECK-NEXT: [0x[[#ADDR2]], 0x[[#ADDR2 + 0x27]]
-# POSTCHECK-NEXT: [0x[[#ADDR4]], 0x[[#ADDR4 + 0x2a]]
+# POSTCHECK-NEXT: [0x[[#ADDR2 + 0x27]], 0x[[#ADDR2 + 0x51]]
 # POSTCHECK: DW_TAG_variable
-# POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x2) loclist = 0x00000034
-# POSTCHECK-NEXT: [0x[[#ADDR5]], 0x[[#ADDR5 + 0x6]]
-# POSTCHECK-NEXT: [0x[[#ADDR6]], 0x[[#ADDR6 + 0x40]]
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x2) loclist = 0x00000038
+# POSTCHECK-NEXT: [0x[[#ADDR3]], 0x[[#ADDR3 + 0x6]]
+# POSTCHECK-NEXT: [0x[[#ADDR3 + 0x6]], 0x[[#ADDR3 + 0x46]]
 # POSTCHECK: DW_TAG_inlined_subroutine [12]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x3) rangelist =  0x0000002d
-# POSTCHECK-NEXT: [0x[[#ADDR7]], 0x[[#ADDR7 + 0x4]]
-# POSTCHECK-NEXT: [0x[[#ADDR7 + 0x10]], 0x[[#ADDR7 + 0x16]]
+# POSTCHECK-NEXT: [0x[[#ADDR4]], 0x[[#ADDR4 + 0x4]]
+# POSTCHECK-NEXT: [0x[[#ADDR4 + 0x10]], 0x[[#ADDR4 + 0x16]]
 
 # helper0.cpp
 # POSTCHECK: version = 0x0004
@@ -271,7 +269,7 @@
 # POSTCHECK: DW_TAG_variable [9]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
 # POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x3]]
-# POSTCHECK-NEXT: [0x[[#ADDRB3]], 0x[[#ADDRB3 + 0x1]]
+# POSTCHECK-NEXT: [0x[[#ADDRB + 0x3]], 0x[[#ADDRB + 0x4]]
 # POSTCHECK: DW_TAG_inlined_subroutine [10]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)

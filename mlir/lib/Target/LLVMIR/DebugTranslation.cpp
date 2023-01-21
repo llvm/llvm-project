@@ -153,6 +153,10 @@ DebugTranslation::translateImpl(DILexicalBlockFileAttr attr) {
       attr.getDiscriminator());
 }
 
+llvm::DILocalScope *DebugTranslation::translateImpl(DILocalScopeAttr attr) {
+  return cast<llvm::DILocalScope>(translate(DINodeAttr(attr)));
+}
+
 llvm::DILocalVariable *
 DebugTranslation::translateImpl(DILocalVariableAttr attr) {
   return llvm::DILocalVariable::get(
@@ -283,8 +287,8 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
 
     // Check for a scope encoded with the location.
     if (auto scopedAttr =
-            fusedLoc.getMetadata().dyn_cast_or_null<LLVM::DIScopeAttr>())
-      scope = cast<llvm::DILocalScope>(translate(scopedAttr));
+            fusedLoc.getMetadata().dyn_cast_or_null<LLVM::DILocalScopeAttr>())
+      scope = translate(scopedAttr);
 
     // For fused locations, merge each of the nodes.
     llvmLoc = translateLoc(locations.front(), scope, inlinedAt);
@@ -294,11 +298,10 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
     }
 
   } else if (auto nameLoc = loc.dyn_cast<NameLoc>()) {
-    llvmLoc = translateLoc(loc.cast<NameLoc>().getChildLoc(), scope, inlinedAt);
+    llvmLoc = translateLoc(nameLoc.getChildLoc(), scope, inlinedAt);
 
   } else if (auto opaqueLoc = loc.dyn_cast<OpaqueLoc>()) {
-    llvmLoc = translateLoc(loc.cast<OpaqueLoc>().getFallbackLocation(), scope,
-                           inlinedAt);
+    llvmLoc = translateLoc(opaqueLoc.getFallbackLocation(), scope, inlinedAt);
   } else {
     llvm_unreachable("unknown location kind");
   }

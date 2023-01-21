@@ -139,7 +139,7 @@ public:
   uint64_t getNextUnitOffset() const { return NextUnitOffset; }
   void setStartOffset(uint64_t DebugInfoSize) { StartOffset = DebugInfoSize; }
 
-  uint64_t getLowPc() const { return LowPc; }
+  std::optional<uint64_t> getLowPc() const { return LowPc; }
   uint64_t getHighPc() const { return HighPc; }
   bool hasLabelAt(uint64_t Addr) const { return Labels.count(Addr); }
 
@@ -257,7 +257,7 @@ private:
   uint64_t StartOffset;
   uint64_t NextUnitOffset;
 
-  uint64_t LowPc = std::numeric_limits<uint64_t>::max();
+  std::optional<uint64_t> LowPc;
   uint64_t HighPc = 0;
 
   /// A list of attributes to fixup with the absolute offset of

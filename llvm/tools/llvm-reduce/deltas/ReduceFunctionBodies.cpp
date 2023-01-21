@@ -21,9 +21,10 @@ using namespace llvm;
 
 /// Removes all the bodies of defined functions that aren't inside any of the
 /// desired Chunks.
-static void extractFunctionBodiesFromModule(Oracle &O, Module &Program) {
+static void extractFunctionBodiesFromModule(Oracle &O,
+                                            ReducerWorkItem &WorkItem) {
   // Delete out-of-chunk function bodies
-  for (auto &F : Program) {
+  for (auto &F : WorkItem.getModule()) {
     if (!F.isDeclaration() && !hasAliasUse(F) && !O.shouldKeep()) {
       F.deleteBody();
       F.setComdat(nullptr);
@@ -36,8 +37,8 @@ void llvm::reduceFunctionBodiesDeltaPass(TestRunner &Test) {
                "Reducing Function Bodies");
 }
 
-static void reduceFunctionData(Oracle &O, Module &M) {
-  for (Function &F : M) {
+static void reduceFunctionData(Oracle &O, ReducerWorkItem &WorkItem) {
+  for (Function &F : WorkItem.getModule()) {
     if (F.hasPersonalityFn()) {
       if (none_of(F,
                   [](const BasicBlock &BB) {

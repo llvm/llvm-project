@@ -1099,10 +1099,8 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
 
-  ReversePostOrderTraversal<
-      VPBlockRecursiveTraversalWrapper<const VPBlockBase *>>
-      RPOT(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(
-          Plan.getEntry()));
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
+      RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
   for (const VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
     for (const VPRecipeBase &Recipe : *VPBB)

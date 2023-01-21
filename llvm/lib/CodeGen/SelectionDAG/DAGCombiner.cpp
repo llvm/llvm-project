@@ -20149,12 +20149,6 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
   // We must know which element is being inserted for folds below here.
   unsigned Elt = IndexC->getZExtValue();
 
-  if (SDValue Shuf = mergeInsertEltWithShuffle(N, Elt))
-    return Shuf;
-
-  if (SDValue Shuf = combineInsertEltToShuffle(N, Elt))
-    return Shuf;
-
   // Handle <1 x ???> vector insertion special cases.
   if (NumElts == 1) {
     // insert_vector_elt(x, extract_vector_elt(y, 0), 0) -> y
@@ -20183,6 +20177,12 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
                          VT, NewOp, InVec.getOperand(1), InVec.getOperand(2));
     }
   }
+
+  if (SDValue Shuf = mergeInsertEltWithShuffle(N, Elt))
+    return Shuf;
+
+  if (SDValue Shuf = combineInsertEltToShuffle(N, Elt))
+    return Shuf;
 
   // Attempt to convert an insert_vector_elt chain into a legal build_vector.
   if (!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT)) {

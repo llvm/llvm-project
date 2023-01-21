@@ -30,6 +30,12 @@ id<TestProtocol> protocolDefinition(id<TestProtocol> t);
 id<ForwardDeclaredProtocolWithoutDefinition> forwardDeclaredProtocol(
     id<ForwardDeclaredProtocolWithoutDefinition> t);
 
+@interface NSObject @end
+@class ForwardDeclaredInterfaceWithoutDefinition;
+
+NSObject *interfaceDefinition(NSObject *o);
+NSObject *forwardDeclaredInterface(NSObject *o);
+
 #endif
 
 //--- include/empty.h

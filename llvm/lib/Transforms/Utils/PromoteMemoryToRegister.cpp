@@ -386,10 +386,12 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
 static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
                                      const DataLayout &DL, AssumptionCache *AC,
                                      const DominatorTree *DT) {
-  // If the load was marked as nonnull we don't want to lose
-  // that information when we erase this Load. So we preserve
-  // it with an assume.
+  // If the load was marked as nonnull we don't want to lose that information
+  // when we erase this Load. So we preserve it with an assume. As !nonnull
+  // returns poison while assume violations are immediate undefined behavior,
+  // we can only do this if the value is known non-poison.
   if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
+      LI->getMetadata(LLVMContext::MD_noundef) &&
       !isKnownNonZero(Val, DL, 0, AC, LI, DT))
     addAssumeNonNull(AC, LI);
 }

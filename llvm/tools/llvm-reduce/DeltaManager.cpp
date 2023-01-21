@@ -49,6 +49,7 @@
 #include "deltas/RunIRPasses.h"
 #include "deltas/SimplifyInstructions.h"
 #include "deltas/StripDebugInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
