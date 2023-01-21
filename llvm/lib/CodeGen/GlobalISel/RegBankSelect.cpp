@@ -715,6 +715,7 @@ bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
 }
 
 bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
+#ifndef NDEBUG
   if (!DisableGISelLegalityCheck) {
     if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
       reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
@@ -722,7 +723,7 @@ bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
       return false;
     }
   }
-
+#endif
   return true;
 }
 
