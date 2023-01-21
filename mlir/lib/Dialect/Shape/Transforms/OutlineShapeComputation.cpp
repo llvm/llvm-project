@@ -232,9 +232,24 @@ void OutlineShapeComputationPass::runOnOperation() {
 
     for (shape::WithOp withOp : allWithOps) {
       Value value = withOp.getOperand();
-      for (Operation *user : withOp.getResult().getUsers()) {
-        if (Value valueOf = llvm::dyn_cast<shape::ValueOfOp>(user))
-          valueOf.replaceAllUsesExcept(value, withOp);
+      for (Operation *user :
+           llvm::make_early_inc_range(withOp.getResult().getUsers())) {
+        if (auto valueOf = llvm::dyn_cast<shape::ValueOfOp>(user)) {
+          // For pattern like
+          //   %1 = shape.with_shape %arg1, %0
+          //   %2 = shape.value_of %1
+          // because shape.value doesn't care the shape, the shape.with_shape is
+          // redundant.
+          // If type of %arg1 and %2 has same type, just
+          //   replaced %2 with %arg1.
+          // If type of %arg1 has different type like !shape.value_shape,
+          // transform into
+          //   %2 = shape.value_of %arg1
+          if (valueOf.getType() == value.getType())
+            valueOf.replaceAllUsesWith(value);
+          else
+            valueOf.setOperand(value);
+        }
       }
     }
 
