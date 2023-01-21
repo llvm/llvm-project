@@ -280,6 +280,10 @@ public:
   llvm::Optional<TupleElement>
   GetTupleElement(lldb::opaque_compiler_type_t type, size_t idx);
 
+  /// Creates a GenericTypeParamType with the desired depth and index.
+  CompilerType CreateGenericTypeParamType(unsigned int depth,
+                                    unsigned int index) override;
+
   /// Get the Swift raw pointer type.
   CompilerType GetRawPointerType();
   /// Determine whether \p type is a protocol.

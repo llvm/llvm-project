@@ -162,6 +162,11 @@ public:
     return m_staged_decls;
   }
 
+  void RegisterTypeAliases(
+      llvm::SmallVectorImpl<swift::TypeAliasDecl *> &type_aliases) {
+    m_type_aliases.append(type_aliases.begin(), type_aliases.end());
+  }
+
 protected:
   Log *m_log;
   swift::SourceFile &m_source_file;
@@ -172,6 +177,7 @@ protected:
   // Subclasses stage globalized decls in this map. They get copied
   // over to the SwiftPersistentVariable store if the parse succeeds.
   SwiftPersistentExpressionState::SwiftDeclMap m_staged_decls;
+  llvm::SmallVector<swift::TypeAliasDecl *> m_type_aliases;
 };
 
 /// A name lookup class for debugger expr mode.
@@ -247,6 +253,13 @@ public:
 
     ConstString name_const_str(NameStr);
     std::vector<swift::ValueDecl *> results;
+
+    for (auto *alias : m_type_aliases) {
+      if (alias->getName().str() == NameStr) {
+        results.push_back(alias);
+        break;
+      }
+    }
 
     // First look up the matching decls we've made in this compile.
     // Later, when we look for persistent decls, these staged decls
@@ -619,7 +632,7 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   if (imported_self_type_flags.AllClear(lldb::eTypeIsGenericTypeParam)) {
     swift::ValueDecl *type_alias_decl = nullptr;
 
-    type_alias_decl = manipulator.MakeGlobalTypealias(
+    type_alias_decl = manipulator.MakeTypealias(
         swift_ast_context.GetASTContext()->getIdentifier("$__lldb_context"),
         imported_self_type);
 
@@ -638,7 +651,7 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   }
   // Alias the builtin type, since we can't use it directly in source code.
   auto builtin_ptr_t = swift_ast_context.GetBuiltinRawPointerType();
-  manipulator.MakeGlobalTypealias(
+  manipulator.MakeTypealias(
       swift_ast_context.GetASTContext()->getIdentifier("$__lldb_builtin_ptr_t"),
       builtin_ptr_t, false);
 }
@@ -1053,6 +1066,138 @@ struct ParsedExpression {
 
 } // namespace
 
+/// Adds typealiases from the archetypes as they appear in the source code to
+/// their bound  type. For example, in the following snippet, when stopped
+/// inside f, a typealias is added from T to Int:
+/// @code
+/// func f<T>(t: T) { ... }
+/// f<Int>(t: 5)
+/// \endcode
+/// \return The vector of newly created typealiases.
+static llvm::SmallVector<swift::TypeAliasDecl *>
+AddArchetypesTypeAliases(std::unique_ptr<SwiftASTManipulator> &code_manipulator,
+                         StackFrame &stack_frame,
+                         SwiftASTContextForExpressions &swift_ast_context) {
+  Log *log = GetLog(LLDBLog::Expressions);
+  llvm::SmallVector<swift::TypeAliasDecl *> type_aliases;
+  lldb::ProcessSP process_sp(stack_frame.CalculateProcess());
+  if (!process_sp) {
+    LLDB_LOG(log, "[AddArchetypesTypeAliases] Couldn't calculate process.");
+    return type_aliases;
+  }
+  auto *runtime = SwiftLanguageRuntime::Get(process_sp);
+  if (!runtime) {
+    LLDB_LOG(log, "[AddArchetypesTypeAliases] Couldn't get runtime.");
+    return type_aliases;
+  }
+
+  auto &typeref_typesystem = swift_ast_context.GetTypeSystemSwiftTypeRef();
+
+  struct MetadataPointerInfo {
+    unsigned int depth;
+    unsigned int index;
+    lldb_private::SwiftASTManipulator::VariableInfo &variable;
+  };
+
+  // Collect the metadata pointers that should be typealiased.
+  llvm::SmallDenseMap<llvm::StringRef, MetadataPointerInfo>
+      visible_metadata_pointers;
+  for (auto &variable : code_manipulator->GetVariableInfo()) {
+    if (!variable.IsMetadataPointer())
+      continue;
+
+    llvm::StringRef type_name;
+    if (auto *variable_metadata =
+            llvm::dyn_cast<SwiftASTManipulatorBase::VariableMetadataVariable>(
+                variable.m_metadata.get())) {
+      type_name =
+          variable_metadata->m_variable_sp->GetType()->GetName().GetStringRef();
+    }
+
+    if (type_name.empty())
+      continue;
+
+    auto name = variable.GetName().str();
+    if (!name.consume_front("$τ_"))
+      continue;
+
+    auto pair = name.split('_');
+    auto depth_str = pair.first;
+    auto index_str = pair.second;
+    unsigned int depth, index;
+    if (depth_str.getAsInteger(10, depth) || index_str.getAsInteger(10, index))
+      continue;
+
+    auto it = visible_metadata_pointers.find(type_name);
+    if (it != visible_metadata_pointers.end()) {
+      auto &info = it->getSecond();
+      // The current metadata pointer shadows the one we registered, replace it.
+      if (info.depth < depth) {
+        info.depth = depth;
+        info.index = index;
+        info.variable = variable;
+      }
+    } else {
+      visible_metadata_pointers.insert({type_name, {depth, index, variable}});
+    }
+  }
+
+  // Creata  a typealias from name -> type for each visible metadata pointer.
+  for (auto &pair : visible_metadata_pointers) {
+    llvm::StringRef &type_name = pair.getFirst();
+    MetadataPointerInfo &info = pair.getSecond();
+
+    auto dependent_type =
+        typeref_typesystem.CreateGenericTypeParamType(info.depth, info.index);
+    auto bound_type =
+        runtime->BindGenericTypeParameters(stack_frame, dependent_type);
+    if (!bound_type) {
+      LLDB_LOGV(
+          log,
+          "[AddArchetypesTypeAliases] Could not bind dependent generic param "
+          "type %s",
+          dependent_type.GetMangledTypeName().GetCString());
+      continue;
+    }
+
+    LLDB_LOGV(log,
+              "[AddArchetypesTypeAliases] Binding dependent generic param "
+              "type %s to %s",
+              dependent_type.GetMangledTypeName().GetCString(),
+              bound_type.GetMangledTypeName().GetCString());
+    auto identifier =
+        swift_ast_context.GetASTContext()->getIdentifier(type_name);
+
+    // The following code:
+    // class A<T> {
+    //   func f<T>(t: T) {
+    //     print(1) // break here
+    //   }
+    // }
+    // A<Int>.f<String>(t: "Hello")
+    //
+    // Will generate the following extension when evaluating the expression:
+    // extension A where T == Int { ... }
+    // Which is why we need to make the typealias inside the function with the
+    // user's code, as it needs to shadow the generic type requirement.
+    auto *type_alias_decl = code_manipulator->MakeTypealias(
+        identifier, bound_type, true, code_manipulator->GetFuncDecl());
+    if (type_alias_decl) {
+      type_aliases.push_back(type_alias_decl);
+      LLDB_LOGV(log,
+                "[AddArchetypesTypeAliases] Adding typealias from %s to "
+                "%s",
+                type_name, bound_type.GetMangledTypeName().GetCString());
+    } else {
+      LLDB_LOG(log,
+               "[AddArchetypesTypeAliases] Could not add typealias from %s to "
+               "%s",
+               type_name, bound_type.GetMangledTypeName().GetCString());
+    }
+  }
+  return type_aliases;
+}
+
 /// Attempt to parse an expression and import all the Swift modules
 /// the expression and its context depend on.
 static llvm::Expected<ParsedExpression> ParseAndImport(
@@ -1251,7 +1396,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
       AddRequiredAliases(sc.block, stack_frame_sp, swift_ast_context,
                          *code_manipulator, options.GetUseDynamic(),
                          options.GetBindGenericTypes());
-
     }
     //
     // Register all magic variables.
@@ -1269,6 +1413,10 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
       return make_error<StringError>(inconvertibleErrorCode(),
                                      "Could not add external variables.");
 
+    auto type_aliases = AddArchetypesTypeAliases(
+        code_manipulator, *stack_frame_sp.get(), swift_ast_context);
+
+    external_lookup->RegisterTypeAliases(type_aliases);
     stack_frame_sp.reset();
   }
 
