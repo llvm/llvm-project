@@ -299,47 +299,25 @@ FunctionPass *llvm::createLegacyDivergenceAnalysisPass() {
   return new LegacyDivergenceAnalysis();
 }
 
-void LegacyDivergenceAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<PostDominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<LoopInfoWrapperPass>();
-  AU.setPreservesAll();
-}
-
-bool LegacyDivergenceAnalysis::shouldUseGPUDivergenceAnalysis(
-    const Function &F, const TargetTransformInfo &TTI) const {
+bool LegacyDivergenceAnalysisImpl::shouldUseGPUDivergenceAnalysis(
+    const Function &F, const TargetTransformInfo &TTI, const LoopInfo &LI) {
   if (!(UseGPUDA || TTI.useGPUDivergenceAnalysis()))
     return false;
 
   // GPUDivergenceAnalysis requires a reducible CFG.
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   using RPOTraversal = ReversePostOrderTraversal<const Function *>;
   RPOTraversal FuncRPOT(&F);
   return !containsIrreducibleCFG<const BasicBlock *, const RPOTraversal,
                                  const LoopInfo>(FuncRPOT, LI);
 }
 
-bool LegacyDivergenceAnalysis::runOnFunction(Function &F) {
-  auto *TTIWP = getAnalysisIfAvailable<TargetTransformInfoWrapperPass>();
-  if (TTIWP == nullptr)
-    return false;
-
-  TargetTransformInfo &TTI = TTIWP->getTTI(F);
-  // Fast path: if the target does not have branch divergence, we do not mark
-  // any branch as divergent.
-  if (!TTI.hasBranchDivergence())
-    return false;
-
-  DivergentValues.clear();
-  DivergentUses.clear();
-  gpuDA = nullptr;
-
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-
-  if (shouldUseGPUDivergenceAnalysis(F, TTI)) {
+void LegacyDivergenceAnalysisImpl::run(Function &F,
+                                       llvm::TargetTransformInfo &TTI,
+                                       llvm::DominatorTree &DT,
+                                       llvm::PostDominatorTree &PDT,
+                                       const llvm::LoopInfo &LI) {
+  if (shouldUseGPUDivergenceAnalysis(F, TTI, LI)) {
     // run the new GPU divergence analysis
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     gpuDA = std::make_unique<DivergenceInfo>(F, DT, PDT, LI, TTI,
                                              /* KnownReducible  = */ true);
 
@@ -349,29 +327,24 @@ bool LegacyDivergenceAnalysis::runOnFunction(Function &F) {
     DP.populateWithSourcesOfDivergence();
     DP.propagate();
   }
-
-  LLVM_DEBUG(dbgs() << "\nAfter divergence analysis on " << F.getName()
-                    << ":\n";
-             print(dbgs(), F.getParent()));
-
-  return false;
 }
 
-bool LegacyDivergenceAnalysis::isDivergent(const Value *V) const {
+bool LegacyDivergenceAnalysisImpl::isDivergent(const Value *V) const {
   if (gpuDA) {
     return gpuDA->isDivergent(*V);
   }
   return DivergentValues.count(V);
 }
 
-bool LegacyDivergenceAnalysis::isDivergentUse(const Use *U) const {
+bool LegacyDivergenceAnalysisImpl::isDivergentUse(const Use *U) const {
   if (gpuDA) {
     return gpuDA->isDivergentUse(*U);
   }
   return DivergentValues.count(U->get()) || DivergentUses.count(U);
 }
 
-void LegacyDivergenceAnalysis::print(raw_ostream &OS, const Module *) const {
+void LegacyDivergenceAnalysisImpl::print(raw_ostream &OS,
+                                         const Module *) const {
   if ((!gpuDA || !gpuDA->hasDivergence()) && DivergentValues.empty())
     return;
 
@@ -406,4 +379,57 @@ void LegacyDivergenceAnalysis::print(raw_ostream &OS, const Module *) const {
     }
   }
   OS << "\n";
+}
+
+void LegacyDivergenceAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<PostDominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<LoopInfoWrapperPass>();
+  AU.setPreservesAll();
+}
+
+bool LegacyDivergenceAnalysis::runOnFunction(Function &F) {
+  auto *TTIWP = getAnalysisIfAvailable<TargetTransformInfoWrapperPass>();
+  if (TTIWP == nullptr)
+    return false;
+
+  TargetTransformInfo &TTI = TTIWP->getTTI(F);
+  // Fast path: if the target does not have branch divergence, we do not mark
+  // any branch as divergent.
+  if (!TTI.hasBranchDivergence())
+    return false;
+
+  DivergentValues.clear();
+  DivergentUses.clear();
+  gpuDA = nullptr;
+
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  LegacyDivergenceAnalysisImpl::run(F, TTI, DT, PDT, LI);
+  LLVM_DEBUG(dbgs() << "\nAfter divergence analysis on " << F.getName()
+                    << ":\n";
+             LegacyDivergenceAnalysisImpl::print(dbgs(), F.getParent()));
+
+  return false;
+}
+
+PreservedAnalyses
+LegacyDivergenceAnalysisPass::run(Function &F, FunctionAnalysisManager &AM) {
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  if (!TTI.hasBranchDivergence())
+    return PreservedAnalyses::all();
+
+  DivergentValues.clear();
+  DivergentUses.clear();
+  gpuDA = nullptr;
+
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  LegacyDivergenceAnalysisImpl::run(F, TTI, DT, PDT, LI);
+  LLVM_DEBUG(dbgs() << "\nAfter divergence analysis on " << F.getName()
+                    << ":\n";
+             LegacyDivergenceAnalysisImpl::print(dbgs(), F.getParent()));
+  return PreservedAnalyses::all();
 }
