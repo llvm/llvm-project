@@ -190,7 +190,7 @@ template<class _Ip>
 concept __cpp17_forward_iterator =
   __cpp17_input_iterator<_Ip> &&
   constructible_from<_Ip> &&
-  is_lvalue_reference_v<iter_reference_t<_Ip>> &&
+  is_reference_v<iter_reference_t<_Ip>> &&
   same_as<remove_cvref_t<iter_reference_t<_Ip>>,
           typename indirectly_readable_traits<_Ip>::value_type> &&
   requires(_Ip __i) {
