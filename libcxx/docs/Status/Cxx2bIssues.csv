@@ -218,7 +218,7 @@
 "`3760 <https://wg21.link/LWG3760>`__","``cartesian_product_view::iterator``'s ``parent_`` is never valid", "November 2022","","","|ranges|"
 "`3761 <https://wg21.link/LWG3761>`__","``cartesian_product_view::iterator::operator-`` should pass by reference", "November 2022","","","|ranges|"
 "`3762 <https://wg21.link/LWG3762>`__","``generator::iterator::operator==`` should pass by reference", "November 2022","","",""
-"`3764 <https://wg21.link/LWG3764>`__","``reference_wrapper::operator()`` should propagate noexcept", "November 2022","","",""
+"`3764 <https://wg21.link/LWG3764>`__","``reference_wrapper::operator()`` should propagate noexcept", "November 2022","17.0","|Complete|",""
 "`3765 <https://wg21.link/LWG3765>`__","``const_sentinel`` should be constrained", "November 2022","","","|ranges|"
 "`3766 <https://wg21.link/LWG3766>`__","``view_interface::cbegin`` is underconstrained", "November 2022","","","|ranges|"
 "`3770 <https://wg21.link/LWG3770>`__","``const_sentinel_t`` is missing", "November 2022","","","|ranges|"
