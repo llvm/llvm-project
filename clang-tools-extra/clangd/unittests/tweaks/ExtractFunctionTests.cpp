@@ -30,8 +30,8 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_EQ(apply("auto lam = [](){ [[int x;]] }; "), "unavailable");
   // Partial statements aren't extracted.
   EXPECT_THAT(apply("int [[x = 0]];"), "unavailable");
-  // FIXME: Support hoisting.
-  EXPECT_THAT(apply(" [[int a = 5;]] a++; "), "unavailable");
+  // Extract regions that require hoisting
+  EXPECT_THAT(apply(" [[int a = 5;]] a++; "), HasSubstr("extracted"));
 
   // Ensure that end of Zone and Beginning of PostZone being adjacent doesn't
   // lead to break being included in the extraction zone.
@@ -190,6 +190,395 @@ F (extracted();)
     }]]
   )cpp";
   EXPECT_EQ(apply(CompoundFailInput), "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, Hoisting) {
+  ExtraArgs.emplace_back("-std=c++17");
+  std::string HoistingInput = R"cpp(
+    int foo() {
+      int a = 3;
+      [[int x = 39 + a;
+      ++x;
+      int y = x * 2;
+      int z = 4;]]
+      return x + y + z;
+    }
+  )cpp";
+  std::string HoistingOutput = R"cpp(
+    auto extracted(int &a) {
+int x = 39 + a;
+      ++x;
+      int y = x * 2;
+      int z = 4;
+return std::tuple{x, y, z};
+}
+int foo() {
+      int a = 3;
+      auto [x, y, z] = extracted(a);
+      return x + y + z;
+    }
+  )cpp";
+  EXPECT_EQ(apply(HoistingInput), HoistingOutput);
+
+  std::string HoistingInput2 = R"cpp(
+    int foo() {
+      int a{};
+      [[int b = a + 1;]]
+      return b;
+    }
+  )cpp";
+  std::string HoistingOutput2 = R"cpp(
+    int extracted(int &a) {
+int b = a + 1;
+return b;
+}
+int foo() {
+      int a{};
+      auto b = extracted(a);
+      return b;
+    }
+  )cpp";
+  EXPECT_EQ(apply(HoistingInput2), HoistingOutput2);
+
+  std::string HoistingInput3 = R"cpp(
+    int foo(int b) {
+      int a{};
+      if (b == 42) {
+        [[a = 123;
+        return a + b;]]
+      }
+      a = 456;
+      return a;
+    }
+  )cpp";
+  std::string HoistingOutput3 = R"cpp(
+    int extracted(int &b, int &a) {
+a = 123;
+        return a + b;
+}
+int foo(int b) {
+      int a{};
+      if (b == 42) {
+        return extracted(b, a);
+      }
+      a = 456;
+      return a;
+    }
+  )cpp";
+  EXPECT_EQ(apply(HoistingInput3), HoistingOutput3);
+
+  std::string HoistingInput3B = R"cpp(
+    int foo(int b) {
+      [[int a{};
+      if (b == 42) {
+        a = 123;
+        return a + b;
+      }
+      a = 456;
+      return a;]]
+    }
+  )cpp";
+  std::string HoistingOutput3B = R"cpp(
+    int extracted(int &b) {
+int a{};
+      if (b == 42) {
+        a = 123;
+        return a + b;
+      }
+      a = 456;
+      return a;
+}
+int foo(int b) {
+      return extracted(b);
+    }
+  )cpp";
+  EXPECT_EQ(apply(HoistingInput3B), HoistingOutput3B);
+
+  std::string HoistingInput4 = R"cpp(
+    struct A {
+      bool flag;
+      int val;
+    };
+    A bar();
+    int foo(int b) {
+      int a = 0;
+      [[auto [flag, val] = bar();
+      int c = 4;
+      val = c + a;]]
+      return a + b + c + val;
+    }
+  )cpp";
+  std::string HoistingOutput4 = R"cpp(
+    struct A {
+      bool flag;
+      int val;
+    };
+    A bar();
+    auto extracted(int &a) {
+auto [flag, val] = bar();
+      int c = 4;
+      val = c + a;
+return std::pair{val, c};
+}
+int foo(int b) {
+      int a = 0;
+      auto [val, c] = extracted(a);
+      return a + b + c + val;
+    }
+  )cpp";
+  EXPECT_EQ(apply(HoistingInput4), HoistingOutput4);
+
+  // Cannot extract a selection that contains a type declaration that is used
+  // outside of the selected range
+  EXPECT_THAT(apply(R"cpp(
+      [[using MyType = int;]]
+      MyType x = 42;
+      MyType y = x;
+    )cpp"),
+              "unavailable");
+  EXPECT_THAT(apply(R"cpp(
+      [[using MyType = int;
+      MyType x = 42;]]
+      MyType y = x;
+    )cpp"),
+              "unavailable");
+  EXPECT_THAT(apply(R"cpp(
+      [[struct Bar {
+        int X;
+      };
+      auto Y = Bar{42};]]
+      auto Z = Bar{Y};
+    )cpp"),
+              "unavailable");
+
+  // Check that selections containing type declarations can be extracted if
+  // there are no uses of the type after the selection
+  std::string FullTypeAliasInput = R"cpp(
+    void foo() {
+      [[using MyType = int;
+      MyType x = 42;
+      MyType y = x;]]
+    }
+    )cpp";
+  std::string FullTypeAliasOutput = R"cpp(
+    void extracted() {
+using MyType = int;
+      MyType x = 42;
+      MyType y = x;
+}
+void foo() {
+      extracted();
+    }
+    )cpp";
+  EXPECT_EQ(apply(FullTypeAliasInput), FullTypeAliasOutput);
+
+  std::string FullStructInput = R"cpp(
+    int foo() {
+      [[struct Bar {
+        int X;
+      };
+      auto Y = Bar{42};
+      auto Z = Bar{Y};
+      return 42;]]
+    }
+    )cpp";
+  std::string FullStructOutput = R"cpp(
+    int extracted() {
+struct Bar {
+        int X;
+      };
+      auto Y = Bar{42};
+      auto Z = Bar{Y};
+      return 42;
+}
+int foo() {
+      return extracted();
+    }
+    )cpp";
+  EXPECT_EQ(apply(FullStructInput), FullStructOutput);
+
+  std::string ReturnTypeIsAliasedInput = R"cpp(
+    int foo() {
+      [[struct Bar {
+        int X;
+      };
+      auto Y = Bar{42};
+      auto Z = Bar{Y};
+      using MyInt = int;
+      MyInt A = 42;
+      return A;]]
+    }
+    )cpp";
+  std::string ReturnTypeIsAliasedOutput = R"cpp(
+    int extracted() {
+struct Bar {
+        int X;
+      };
+      auto Y = Bar{42};
+      auto Z = Bar{Y};
+      using MyInt = int;
+      MyInt A = 42;
+      return A;
+}
+int foo() {
+      return extracted();
+    }
+    )cpp";
+  EXPECT_EQ(apply(ReturnTypeIsAliasedInput), ReturnTypeIsAliasedOutput);
+
+  EXPECT_THAT(apply(R"cpp(
+      [[struct Bar {
+        int X;
+      };
+      auto Y = Bar{42};]]
+      auto Z = Bar{Y};
+    )cpp"),
+              "unavailable");
+
+  std::string ControlStmtInput1 = R"cpp(
+    float foo(float* p, int n) {
+      [[float sum = 0.0F;
+      for (int i = 0; i < n; ++i) {
+        if (p[i] > 0.0F) {
+          sum += p[i];
+        }
+      }
+      return sum]];
+    }
+    )cpp";
+
+  std::string ControlStmtOutput1 = R"cpp(
+    float extracted(float * &p, int &n) {
+float sum = 0.0F;
+      for (int i = 0; i < n; ++i) {
+        if (p[i] > 0.0F) {
+          sum += p[i];
+        }
+      }
+      return sum;
+}
+float foo(float* p, int n) {
+      return extracted(p, n);
+    }
+    )cpp";
+
+  EXPECT_EQ(apply(ControlStmtInput1), ControlStmtOutput1);
+
+  std::string ControlStmtInput2 = R"cpp(
+    float foo(float* p, int n) {
+      float sum = 0.0F;
+      [[for (int i = 0; i < n; ++i) {
+        if (p[i] > 0.0F) {
+          sum += p[i];
+        }
+      }
+      return sum]];
+    }
+    )cpp";
+
+  std::string ControlStmtOutput2 = R"cpp(
+    float extracted(float * &p, int &n, float &sum) {
+for (int i = 0; i < n; ++i) {
+        if (p[i] > 0.0F) {
+          sum += p[i];
+        }
+      }
+      return sum;
+}
+float foo(float* p, int n) {
+      float sum = 0.0F;
+      return extracted(p, n, sum);
+    }
+    )cpp";
+
+  EXPECT_EQ(apply(ControlStmtInput2), ControlStmtOutput2);
+}
+
+TEST_F(ExtractFunctionTest, HoistingCXX11) {
+  ExtraArgs.emplace_back("-std=c++11");
+  std::string HoistingInput = R"cpp(
+    int foo() {
+      int a = 3;
+      [[int x = 39 + a;
+      ++x;
+      int y = x * 2;
+      int z = 4;]]
+      return x + y + z;
+    }
+  )cpp";
+  EXPECT_THAT(apply(HoistingInput), HasSubstr("unavailable"));
+
+  std::string HoistingInput2 = R"cpp(
+    int foo() {
+      int a;
+      [[int b = a + 1;]]
+      return b;
+    }
+  )cpp";
+  std::string HoistingOutput2 = R"cpp(
+    int extracted(int &a) {
+int b = a + 1;
+return b;
+}
+int foo() {
+      int a;
+      auto b = extracted(a);
+      return b;
+    }
+  )cpp";
+  EXPECT_EQ(apply(HoistingInput2), HoistingOutput2);
+}
+
+TEST_F(ExtractFunctionTest, HoistingCXX14) {
+  ExtraArgs.emplace_back("-std=c++14");
+  std::string HoistingInput = R"cpp(
+    int foo() {
+      int a = 3;
+      [[int x = 39 + a;
+      ++x;
+      int y = x * 2;
+      int z = 4;]]
+      return x + y + z;
+    }
+  )cpp";
+  std::string HoistingOutput = R"cpp(
+    auto extracted(int &a) {
+int x = 39 + a;
+      ++x;
+      int y = x * 2;
+      int z = 4;
+return std::tuple{x, y, z};
+}
+int foo() {
+      int a = 3;
+      auto returned = extracted(a);
+auto x = std::get<0>(returned);
+auto y = std::get<1>(returned);
+auto z = std::get<2>(returned);
+      return x + y + z;
+    }
+  )cpp";
+  EXPECT_EQ(apply(HoistingInput), HoistingOutput);
+
+  std::string HoistingInput2 = R"cpp(
+    int foo() {
+      int a;
+      [[int b = a + 1;]]
+      return b;
+    }
+  )cpp";
+  std::string HoistingOutput2 = R"cpp(
+    int extracted(int &a) {
+int b = a + 1;
+return b;
+}
+int foo() {
+      int a;
+      auto b = extracted(a);
+      return b;
+    }
+  )cpp";
+  EXPECT_EQ(apply(HoistingInput2), HoistingOutput2);
 }
 
 TEST_F(ExtractFunctionTest, DifferentHeaderSourceTest) {

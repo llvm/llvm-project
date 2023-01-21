@@ -79,6 +79,13 @@ namespace {
 
 using Node = SelectionTree::Node;
 
+struct HoistSetComparator {
+  bool operator()(const Decl *const Lhs, const Decl *const Rhs) const {
+    return Lhs->getLocation() < Rhs->getLocation();
+  }
+};
+using HoistSet = llvm::SmallSet<const NamedDecl *, 1, HoistSetComparator>;
+
 // ExtractionZone is the part of code that is being extracted.
 // EnclosingFunction is the function/method inside which the zone lies.
 // We split the file into 4 parts relative to extraction zone.
@@ -171,12 +178,13 @@ struct ExtractionZone {
   // semicolon after the extraction.
   const Node *getLastRootStmt() const { return Parent->Children.back(); }
 
-  // Checks if declarations inside extraction zone are accessed afterwards.
+  // Checks if declarations inside extraction zone are accessed afterwards and
+  // adds these declarations to the returned set.
   //
   // This performs a partial AST traversal proportional to the size of the
   // enclosing function, so it is possibly expensive.
-  bool requiresHoisting(const SourceManager &SM,
-                        const HeuristicResolver *Resolver) const {
+  HoistSet getDeclsToHoist(const SourceManager &SM,
+                           const HeuristicResolver *Resolver) const {
     // First find all the declarations that happened inside extraction zone.
     llvm::SmallSet<const Decl *, 1> DeclsInExtZone;
     for (auto *RootStmt : RootStmts) {
@@ -191,29 +199,28 @@ struct ExtractionZone {
     }
     // Early exit without performing expensive traversal below.
     if (DeclsInExtZone.empty())
-      return false;
-    // Then make sure they are not used outside the zone.
+      return {};
+    // Add any decl used after the selection to the returned set
+    HoistSet DeclsToHoist{};
     for (const auto *S : EnclosingFunction->getBody()->children()) {
       if (SM.isBeforeInTranslationUnit(S->getSourceRange().getEnd(),
                                        ZoneRange.getEnd()))
         continue;
-      bool HasPostUse = false;
       findExplicitReferences(
           S,
           [&](const ReferenceLoc &Loc) {
-            if (HasPostUse ||
-                SM.isBeforeInTranslationUnit(Loc.NameLoc, ZoneRange.getEnd()))
+            if (SM.isBeforeInTranslationUnit(Loc.NameLoc, ZoneRange.getEnd()))
               return;
-            HasPostUse = llvm::any_of(Loc.Targets,
-                                      [&DeclsInExtZone](const Decl *Target) {
-                                        return DeclsInExtZone.contains(Target);
-                                      });
+            for (const NamedDecl *const PostUse : llvm::make_filter_range(
+                     Loc.Targets, [&DeclsInExtZone](const Decl *Target) {
+                       return DeclsInExtZone.contains(Target);
+                     })) {
+              DeclsToHoist.insert(PostUse);
+            }
           },
           Resolver);
-      if (HasPostUse)
-        return true;
     }
-    return false;
+    return DeclsToHoist;
   }
 };
 
@@ -367,14 +374,17 @@ struct NewFunction {
   bool Static = false;
   ConstexprSpecKind Constexpr = ConstexprSpecKind::Unspecified;
   bool Const = false;
+  const HoistSet &ToHoist;
 
   // Decides whether the extracted function body and the function call need a
   // semicolon after extraction.
   tooling::ExtractionSemicolonPolicy SemicolonPolicy;
   const LangOptions *LangOpts;
-  NewFunction(tooling::ExtractionSemicolonPolicy SemicolonPolicy,
+  NewFunction(const HoistSet &ToHoist,
+              tooling::ExtractionSemicolonPolicy SemicolonPolicy,
               const LangOptions *LangOpts)
-      : SemicolonPolicy(SemicolonPolicy), LangOpts(LangOpts) {}
+      : ToHoist(ToHoist), SemicolonPolicy(SemicolonPolicy), LangOpts(LangOpts) {
+  }
   // Render the call for this function.
   std::string renderCall() const;
   // Render the definition for this function.
@@ -390,6 +400,7 @@ private:
   std::string renderSpecifiers(FunctionDeclKind K) const;
   std::string renderQualifiers() const;
   std::string renderDeclarationName(FunctionDeclKind K) const;
+  std::string renderHoistedCall() const;
   // Generate the function body.
   std::string getFuncBody(const SourceManager &SM) const;
 };
@@ -462,7 +473,55 @@ std::string NewFunction::renderDeclarationName(FunctionDeclKind K) const {
   return llvm::formatv("{0}{1}", QualifierName, Name);
 }
 
+// Renders the HoistSet to a comma separated list or a single named decl.
+std::string renderHoistSet(const HoistSet &ToHoist) {
+  std::string Res{};
+  bool NeedsComma = false;
+
+  for (const NamedDecl *DeclToHoist : ToHoist) {
+    if (llvm::isa<VarDecl>(DeclToHoist) ||
+        llvm::isa<BindingDecl>(DeclToHoist)) {
+      if (NeedsComma) {
+        Res += ", ";
+      }
+      Res += DeclToHoist->getNameAsString();
+      NeedsComma = true;
+    }
+  }
+  return Res;
+}
+
+std::string NewFunction::renderHoistedCall() const {
+  auto HoistedVarDecls = std::string{};
+  auto ExplicitUnpacking = std::string{};
+  const auto HasStructuredBinding = LangOpts->CPlusPlus17;
+
+  if (ToHoist.size() > 1) {
+    if (HasStructuredBinding) {
+      HoistedVarDecls = "auto [" + renderHoistSet(ToHoist) + "] = ";
+    } else {
+      HoistedVarDecls = "auto returned = ";
+      auto DeclIter = ToHoist.begin();
+      for (size_t Index = 0U; Index < ToHoist.size(); ++Index, ++DeclIter) {
+        ExplicitUnpacking +=
+            llvm::formatv("\nauto {0} = std::get<{1}>(returned);",
+                          (*DeclIter)->getNameAsString(), Index);
+      }
+    }
+  } else {
+    HoistedVarDecls = "auto " + renderHoistSet(ToHoist) + " = ";
+  }
+
+  return llvm::formatv(
+      "{0}{1}({2}){3}{4}", HoistedVarDecls, Name, renderParametersForCall(),
+      (SemicolonPolicy.isNeededInOriginalFunction() ? ";" : ""),
+      ExplicitUnpacking);
+}
+
 std::string NewFunction::renderCall() const {
+  if (!ToHoist.empty())
+    return renderHoistedCall();
+
   return std::string(
       llvm::formatv("{0}{1}({2}){3}", CallerReturnsValue ? "return " : "", Name,
                     renderParametersForCall(),
@@ -495,8 +554,22 @@ std::string NewFunction::getFuncBody(const SourceManager &SM) const {
   // - hoist decls
   // - add return statement
   // - Add semicolon
-  return toSourceCode(SM, BodyRange).str() +
-         (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+  auto Body = toSourceCode(SM, BodyRange).str() +
+              (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+
+  if (ToHoist.empty())
+    return Body;
+
+  if (const bool NeedsTupleOrPair = ToHoist.size() > 1; NeedsTupleOrPair) {
+    const auto NeedsPair = ToHoist.size() == 2;
+
+    Body += "\nreturn " +
+            std::string(NeedsPair ? "std::pair{" : "std::tuple{") +
+            renderHoistSet(ToHoist) + "};";
+  } else {
+    Body += "\nreturn " + renderHoistSet(ToHoist) + ";";
+  }
+  return Body;
 }
 
 std::string NewFunction::Parameter::render(const DeclContext *Context) const {
@@ -674,10 +747,6 @@ bool createParameters(NewFunction &ExtractedFunc,
     const auto &DeclInfo = KeyVal.second;
     // If a Decl was Declared in zone and referenced in post zone, it
     // needs to be hoisted (we bail out in that case).
-    // FIXME: Support Decl Hoisting.
-    if (DeclInfo.DeclaredIn == ZoneRelative::Inside &&
-        DeclInfo.IsReferencedInPostZone)
-      return false;
     if (!DeclInfo.IsReferencedInZone)
       continue; // no need to pass as parameter, not referenced
     if (DeclInfo.DeclaredIn == ZoneRelative::Inside ||
@@ -723,6 +792,19 @@ getSemicolonPolicy(ExtractionZone &ExtZone, const SourceManager &SM,
   return SemicolonPolicy;
 }
 
+QualType getReturnTypeForHoisted(const FunctionDecl &EnclosingFunc,
+                                 const HoistSet &ToHoist) {
+  // Hoisting just one variable, use that variables type instead of auto
+  if (ToHoist.size() == 1) {
+    if (const auto *const VDecl = llvm::dyn_cast<VarDecl>(*ToHoist.begin());
+        VDecl != nullptr) {
+      return VDecl->getType();
+    }
+  }
+
+  return EnclosingFunc.getParentASTContext().getAutoDeductType();
+}
+
 // Generate return type for ExtractedFunc. Return false if unable to do so.
 bool generateReturnProperties(NewFunction &ExtractedFunc,
                               const FunctionDecl &EnclosingFunc,
@@ -744,7 +826,11 @@ bool generateReturnProperties(NewFunction &ExtractedFunc,
     return true;
   }
   // FIXME: Generate new return statement if needed.
-  ExtractedFunc.ReturnType = EnclosingFunc.getParentASTContext().VoidTy;
+  ExtractedFunc.ReturnType =
+      ExtractedFunc.ToHoist.empty()
+          ? EnclosingFunc.getParentASTContext().VoidTy
+          : getReturnTypeForHoisted(EnclosingFunc, ExtractedFunc.ToHoist);
+
   return true;
 }
 
@@ -758,6 +844,7 @@ void captureMethodInfo(NewFunction &ExtractedFunc,
 // FIXME: add support for adding other function return types besides void.
 // FIXME: assign the value returned by non void extracted function.
 llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
+                                                 const HoistSet &ToHoist,
                                                  const SourceManager &SM,
                                                  const LangOptions &LangOpts) {
   CapturedZoneInfo CapturedInfo = captureZoneInfo(ExtZone);
@@ -765,7 +852,7 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   if (CapturedInfo.BrokenControlFlow)
     return error("Cannot extract break/continue without corresponding "
                  "loop/switch statement.");
-  NewFunction ExtractedFunc(getSemicolonPolicy(ExtZone, SM, LangOpts),
+  NewFunction ExtractedFunc(ToHoist, getSemicolonPolicy(ExtZone, SM, LangOpts),
                             &LangOpts);
 
   ExtractedFunc.SyntacticDC =
@@ -814,6 +901,7 @@ public:
 
 private:
   ExtractionZone ExtZone;
+  HoistSet ToHoist;
 };
 
 REGISTER_TWEAK(ExtractFunction)
@@ -879,8 +967,19 @@ bool ExtractFunction::prepare(const Selection &Inputs) {
       (hasReturnStmt(*MaybeExtZone) && !alwaysReturns(*MaybeExtZone)))
     return false;
 
-  // FIXME: Get rid of this check once we support hoisting.
-  if (MaybeExtZone->requiresHoisting(SM, Inputs.AST->getHeuristicResolver()))
+  ToHoist =
+      MaybeExtZone->getDeclsToHoist(SM, Inputs.AST->getHeuristicResolver());
+
+  // Cannot extract a selection that contains a type declaration that is used
+  // outside of the selected range
+  if (llvm::any_of(ToHoist, [](const NamedDecl *NDecl) {
+        return llvm::isa<TypeDecl>(NDecl);
+      }))
+    return false;
+
+  const auto HasAutoReturnTypeDeduction = LangOpts.CPlusPlus14;
+  const auto RequiresPairOrTuple = ToHoist.size() > 1;
+  if (RequiresPairOrTuple && !HasAutoReturnTypeDeduction)
     return false;
 
   ExtZone = std::move(*MaybeExtZone);
@@ -890,7 +989,7 @@ bool ExtractFunction::prepare(const Selection &Inputs) {
 Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
   const SourceManager &SM = Inputs.AST->getSourceManager();
   const LangOptions &LangOpts = Inputs.AST->getLangOpts();
-  auto ExtractedFunc = getExtractedFunction(ExtZone, SM, LangOpts);
+  auto ExtractedFunc = getExtractedFunction(ExtZone, ToHoist, SM, LangOpts);
   // FIXME: Add more types of errors.
   if (!ExtractedFunc)
     return ExtractedFunc.takeError();
@@ -913,8 +1012,8 @@ Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
 
       tooling::Replacements OtherEdit(
           createForwardDeclaration(*ExtractedFunc, SM));
-      if (auto PathAndEdit = Tweak::Effect::fileEdit(SM, SM.getFileID(*FwdLoc),
-                                                 OtherEdit))
+      if (auto PathAndEdit =
+              Tweak::Effect::fileEdit(SM, SM.getFileID(*FwdLoc), OtherEdit))
         MultiFileEffect->ApplyEdits.try_emplace(PathAndEdit->first,
                                                 PathAndEdit->second);
       else
