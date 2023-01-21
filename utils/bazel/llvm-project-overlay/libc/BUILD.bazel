@@ -241,6 +241,7 @@ libc_support_library(
     name = "__support_str_to_integer",
     hdrs = ["src/__support/str_to_integer.h"],
     deps = [
+        ":__support_common",
         ":__support_cpp_limits",
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
@@ -348,6 +349,7 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/Hypot.h"],
     deps = [
         ":__support_builtin_wrappers",
+        ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
         ":__support_fputil_basic_operations",
@@ -379,6 +381,7 @@ libc_support_library(
     name = "__support_fputil_nearest_integer_operations",
     hdrs = ["src/__support/FPUtil/NearestIntegerOperations.h"],
     deps = [
+        ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
@@ -483,6 +486,7 @@ libc_support_library(
         "src/__support/FPUtil/PolyEval.h",
     ],
     deps = [
+        ":__support_common",
         ":__support_fputil_multiply_add",
     ],
 )
