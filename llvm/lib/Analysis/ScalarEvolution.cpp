@@ -9833,7 +9833,9 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
 
       // Okay, at least one of these operands is loop variant but might be
       // foldable.  Build a new instance of the folded commutative expression.
-      SmallVector<const SCEV *, 8> NewOps(AddRec->operands().take_front(i));
+      SmallVector<const SCEV *, 8> NewOps;
+      NewOps.reserve(AddRec->getNumOperands());
+      append_range(NewOps, AddRec->operands().take_front(i));
       NewOps.push_back(OpAtScope);
       for (++i; i != e; ++i)
         NewOps.push_back(getSCEVAtScope(AddRec->getOperand(i), L));
@@ -9879,7 +9881,9 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
       if (OpAtScope != Comm->getOperand(i)) {
         // Okay, at least one of these operands is loop variant but might be
         // foldable.  Build a new instance of the folded commutative expression.
-        SmallVector<const SCEV *, 8> NewOps(Comm->operands().take_front(i));
+        SmallVector<const SCEV *, 8> NewOps;
+        NewOps.reserve(Comm->getNumOperands());
+        append_range(NewOps, Comm->operands().take_front(i));
         NewOps.push_back(OpAtScope);
 
         for (++i; i != e; ++i) {
@@ -9979,6 +9983,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
       return V; // This is some other type of SCEVUnknown, just return it.
 
     SmallVector<Constant *, 4> Operands;
+    Operands.reserve(I->getNumOperands());
     bool MadeImprovement = false;
     for (Value *Op : I->operands()) {
       if (Constant *C = dyn_cast<Constant>(Op)) {
