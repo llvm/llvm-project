@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PrimType.h"
+#include "Boolean.h"
 #include "Pointer.h"
 
 using namespace clang;

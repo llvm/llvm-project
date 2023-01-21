@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Descriptor.h"
+#include "Boolean.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
