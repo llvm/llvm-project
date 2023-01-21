@@ -280,6 +280,11 @@ InitMap::T *InitMap::data() {
   return reinterpret_cast<T *>(Start);
 }
 
+const InitMap::T *InitMap::data() const {
+  auto *Start = reinterpret_cast<const char *>(this) + align(sizeof(InitMap));
+  return reinterpret_cast<const T *>(Start);
+}
+
 bool InitMap::initialize(unsigned I) {
   unsigned Bucket = I / PER_FIELD;
   T Mask = T(1) << (I % PER_FIELD);
@@ -290,7 +295,7 @@ bool InitMap::initialize(unsigned I) {
   return UninitFields == 0;
 }
 
-bool InitMap::isInitialized(unsigned I) {
+bool InitMap::isInitialized(unsigned I) const {
   unsigned Bucket = I / PER_FIELD;
   return data()[Bucket] & (T(1) << (I % PER_FIELD));
 }
