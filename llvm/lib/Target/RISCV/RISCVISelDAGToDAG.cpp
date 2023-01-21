@@ -727,7 +727,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // 32 leading zeros and C3 trailing zeros.
     if (ShAmt <= 32 && isShiftedMask_64(Mask)) {
       unsigned XLen = Subtarget->getXLen();
-      unsigned LeadingZeros = XLen - (64 - countLeadingZeros(Mask));
+      unsigned LeadingZeros = XLen - llvm::bit_width(Mask);
       unsigned TrailingZeros = countTrailingZeros(Mask);
       if (TrailingZeros > 0 && LeadingZeros == 32) {
         SDNode *SRLIW = CurDAG->getMachineNode(
@@ -756,7 +756,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // 32 leading zeros and C3 trailing zeros.
     if (isShiftedMask_64(Mask) && N0.hasOneUse()) {
       unsigned XLen = Subtarget->getXLen();
-      unsigned LeadingZeros = XLen - (64 - countLeadingZeros(Mask));
+      unsigned LeadingZeros = XLen - llvm::bit_width(Mask);
       unsigned TrailingZeros = countTrailingZeros(Mask);
       if (LeadingZeros == 32 && TrailingZeros > ShAmt) {
         SDNode *SRLIW = CurDAG->getMachineNode(
@@ -892,7 +892,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // Turn (and (srl x, c2) c1) -> (srli (slli x, c3-c2), c3) if c1 is a mask
       // with c3 leading zeros.
       if (!LeftShift && isMask_64(C1)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(C1));
+        unsigned Leading = XLen - llvm::bit_width(C1);
         if (C2 < Leading) {
           // If the number of leading zeros is C2+32 this can be SRLIW.
           if (C2 + 32 == Leading) {
@@ -943,7 +943,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // Turn (and (shl x, c2), c1) -> (srli (slli c2+c3), c3) if c1 is a mask
       // shifted by c2 bits with c3 leading zeros.
       if (LeftShift && isShiftedMask_64(C1)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(C1));
+        unsigned Leading = XLen - llvm::bit_width(C1);
 
         if (C2 + Leading < XLen &&
             C1 == (maskTrailingOnes<uint64_t>(XLen - (C2 + Leading)) << C2)) {
@@ -973,7 +973,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // Turn (and (shr x, c2), c1) -> (slli (srli x, c2+c3), c3) if c1 is a
       // shifted mask with c2 leading zeros and c3 trailing zeros.
       if (!LeftShift && isShiftedMask_64(C1)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(C1));
+        unsigned Leading = XLen - llvm::bit_width(C1);
         unsigned Trailing = countTrailingZeros(C1);
         if (Leading == C2 && C2 + Trailing < XLen && OneUseOrZExtW &&
             !IsCANDI) {
@@ -1011,7 +1011,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // Turn (and (shl x, c2), c1) -> (slli (srli x, c3-c2), c3) if c1 is a
       // shifted mask with no leading zeros and c3 trailing zeros.
       if (LeftShift && isShiftedMask_64(C1)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(C1));
+        unsigned Leading = XLen - llvm::bit_width(C1);
         unsigned Trailing = countTrailingZeros(C1);
         if (Leading == 0 && C2 < Trailing && OneUseOrZExtW && !IsCANDI) {
           SDNode *SRLI = CurDAG->getMachineNode(
@@ -1081,13 +1081,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     // How far left do we need to shift the AND input?
     unsigned XLen = Subtarget->getXLen();
-    unsigned LeadingZeros = XLen - (64 - countLeadingZeros(C2));
+    unsigned LeadingZeros = XLen - llvm::bit_width(C2);
 
     // The constant gets shifted by the remaining amount unless that would
     // shift bits out.
     uint64_t C1 = N1C->getZExtValue();
     unsigned ConstantShift = XLen - LeadingZeros;
-    if (ConstantShift > (XLen - (64 - countLeadingZeros(C1))))
+    if (ConstantShift > (XLen - llvm::bit_width(C1)))
       break;
 
     uint64_t ShiftedC1 = C1 << ConstantShift;
@@ -2186,7 +2186,7 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
       // leading zeros and c3 trailing zeros. We can use an SRLI by c2+c3
       // followed by a SHXADD with c3 for the X amount.
       if (isShiftedMask_64(Mask)) {
-        unsigned Leading = XLen - (64 - countLeadingZeros(Mask));
+        unsigned Leading = XLen - llvm::bit_width(Mask);
         unsigned Trailing = countTrailingZeros(Mask);
         if (LeftShift && Leading == 0 && C2 < Trailing && Trailing == ShAmt) {
           SDLoc DL(N);
@@ -2224,7 +2224,7 @@ bool RISCVDAGToDAGISel::selectSHXADDOp(SDValue N, unsigned ShAmt,
       if (isShiftedMask_64(Mask)) {
         unsigned C1 = N.getConstantOperandVal(1);
         unsigned XLen = Subtarget->getXLen();
-        unsigned Leading = XLen - (64 - countLeadingZeros(Mask));
+        unsigned Leading = XLen - llvm::bit_width(Mask);
         unsigned Trailing = countTrailingZeros(Mask);
         // Look for (shl (and X, Mask), C1) where Mask has 32 leading zeros and
         // C3 trailing zeros. If C1+C3==ShAmt we can use SRLIW+SHXADD.

@@ -1540,7 +1540,7 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
         CC = CC == ISD::SETEQ ? ISD::SETGE : ISD::SETLT;
         ShAmt = LHS.getValueSizeInBits() - 1 - Log2_64(Mask);
       } else {
-        ShAmt = LHS.getValueSizeInBits() - (64 - countLeadingZeros(Mask));
+        ShAmt = LHS.getValueSizeInBits() - llvm::bit_width(Mask);
       }
 
       LHS = LHS.getOperand(0);
