@@ -64,6 +64,9 @@ __attribute__((constructor(101))) void init() {
   // TODO: add a configuration option for time granularity
   if (ProfileTraceFile)
     timeTraceProfilerInitialize(500 /* us */, "libomptarget");
+
+  PM->RTLs.loadRTLs();
+  PM->registerDelayedLibraries();
 }
 
 __attribute__((destructor(101))) void deinit() {

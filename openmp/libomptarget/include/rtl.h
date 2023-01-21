@@ -171,10 +171,8 @@ struct RTLsTy {
   // Unregister a shared library from all RTLs.
   void unregisterLib(__tgt_bin_desc *Desc);
 
-  // Mutex-like object to guarantee thread-safety and unique initialization
-  // (i.e. the library attempts to load the RTLs (plugins) only once).
-  std::once_flag InitFlag;
-  void loadRTLs(); // not thread-safe
+  // not thread-safe, called from global constructor (i.e. once)
+  void loadRTLs();
 
 private:
   static bool attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL);
