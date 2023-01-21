@@ -11062,19 +11062,17 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  // All undef vector. Return an UNDEF. All zero vectors were handled above.
-  unsigned NumFrozenUndefElts = FrozenUndefMask.countPopulation();
-  if (NonZeroMask == 0 && NumFrozenUndefElts != NumElems) {
-    assert(UndefMask.isAllOnes() && "Fully undef mask expected");
+  // All undef vector. Return an UNDEF.
+  if (UndefMask.isAllOnes())
     return DAG.getUNDEF(VT);
-  }
 
   // If we have multiple FREEZE-UNDEF operands, we are likely going to end up
   // lowering into a suboptimal insertion sequence. Instead, thaw the UNDEF in
   // our source BUILD_VECTOR, create another FREEZE-UNDEF splat BUILD_VECTOR,
   // and blend the FREEZE-UNDEF operands back in.
   // FIXME: is this worthwhile even for a single FREEZE-UNDEF operand?
-  if (NumFrozenUndefElts >= 2 && NumFrozenUndefElts < NumElems) {
+  if (unsigned NumFrozenUndefElts = FrozenUndefMask.countPopulation();
+      NumFrozenUndefElts >= 2 && NumFrozenUndefElts < NumElems) {
     SmallVector<int, 16> BlendMask(NumElems, -1);
     SmallVector<SDValue, 16> Elts(NumElems, DAG.getUNDEF(OpEltVT));
     for (unsigned i = 0; i < NumElems; ++i) {
@@ -31329,12 +31327,16 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
       AI->getParent() != I->getParent())
     return AtomicExpansionKind::CmpXChg;
 
-  assert(I->getOperand(0) == AI);
+  unsigned OtherIdx = I->getOperand(0) == AI ? 1 : 0;
+
+  // This is a redundant AND, it should get cleaned up elsewhere.
+  if (AI == I->getOperand(OtherIdx))
+    return AtomicExpansionKind::CmpXChg;
+
   // The following instruction must be a AND single bit.
   if (BitChange.second == ConstantBit || BitChange.second == NotConstantBit) {
-    auto *C1 = dyn_cast<ConstantInt>(AI->getValOperand());
-    assert(C1 != nullptr);
-    auto *C2 = dyn_cast<ConstantInt>(I->getOperand(1));
+    auto *C1 = cast<ConstantInt>(AI->getValOperand());
+    auto *C2 = dyn_cast<ConstantInt>(I->getOperand(OtherIdx));
     if (!C2 || !isPowerOf2_64(C2->getZExtValue())) {
       return AtomicExpansionKind::CmpXChg;
     }
@@ -31349,7 +31351,7 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   assert(BitChange.second == ShiftBit || BitChange.second == NotShiftBit);
 
-  auto BitTested = FindSingleBitChange(I->getOperand(1));
+  auto BitTested = FindSingleBitChange(I->getOperand(OtherIdx));
   if (BitTested.second != ShiftBit && BitTested.second != NotShiftBit)
     return AtomicExpansionKind::CmpXChg;
 
@@ -31400,9 +31402,9 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   Value *Result = nullptr;
   auto BitTested = FindSingleBitChange(AI->getValOperand());
   assert(BitTested.first != nullptr);
+
   if (BitTested.second == ConstantBit || BitTested.second == NotConstantBit) {
-    auto *C = dyn_cast<ConstantInt>(I->getOperand(1));
-    assert(C != nullptr);
+    auto *C = cast<ConstantInt>(I->getOperand(I->getOperand(0) == AI ? 1 : 0));
 
     BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_C, AI->getType());
 

@@ -82,7 +82,7 @@ void LoopEmitter::initialize(ValueRange tensors, StringAttr loopTag,
     // a scalar or 0-dimension tensors
     if (isZeroRankedTensorOrScalar(t.getType()))
       continue;
-    auto rtp = t.getType().cast<RankedTensorType>();
+    auto rtp = getRankedTensorType(t);
     auto rank = static_cast<size_t>(rtp.getRank());
     auto enc = getSparseTensorEncoding(rtp);
     // We always treat sparse output tensor as dense so that we always iterate

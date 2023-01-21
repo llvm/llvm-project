@@ -29,6 +29,7 @@
 ---
 name: test
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 stack:

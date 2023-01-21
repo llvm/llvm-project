@@ -359,6 +359,7 @@ Bug Fixes
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Disabled FIT-IT suggested for a case of bad conversion in system headers.
 - Clang will now check compile-time determinable string literals as format strings.
   Fixes `Issue 55805: <https://github.com/llvm/llvm-project/issues/55805>`_.
 - ``-Wformat`` now recognizes ``%b`` for the ``printf``/``scanf`` family of

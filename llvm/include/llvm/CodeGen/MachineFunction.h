@@ -527,6 +527,10 @@ public:
   /// during register allocation. See DebugPHIRegallocPos.
   DenseMap<unsigned, DebugPHIRegallocPos> DebugPHIPositions;
 
+  /// Flag for whether this function contains DBG_VALUEs (false) or
+  /// DBG_INSTR_REF (true).
+  bool UseDebugInstrRef = false;
+
   /// Create a substitution between one <instr,operand> value to a different,
   /// new value.
   void makeDebugValueSubstitution(DebugInstrOperandPair, DebugInstrOperandPair,
@@ -567,9 +571,16 @@ public:
   /// (or DBG_PHI).
   void finalizeDebugInstrRefs();
 
-  /// Returns true if the function's variable locations should be tracked with
+  /// Determine whether, in the current machine configuration, we should use
+  /// instruction referencing or not.
+  bool shouldUseDebugInstrRef() const;
+
+  /// Returns true if the function's variable locations are tracked with
   /// instruction referencing.
   bool useDebugInstrRef() const;
+
+  /// Set whether this function will use instruction referencing or not.
+  void setUseDebugInstrRef(bool UseInstrRef);
 
   /// A reserved operand number representing the instructions memory operand,
   /// for instructions that have a stack spill fused into them.

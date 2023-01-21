@@ -46,8 +46,8 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32I-LABEL: func2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a4, a0, a2
-; RV32I-NEXT:    add a3, a3, a4
 ; RV32I-NEXT:    sub a3, a1, a3
+; RV32I-NEXT:    sub a3, a3, a4
 ; RV32I-NEXT:    sub a2, a0, a2
 ; RV32I-NEXT:    beq a3, a1, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
@@ -72,8 +72,8 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32IZbb-LABEL: func2:
 ; RV32IZbb:       # %bb.0:
 ; RV32IZbb-NEXT:    sltu a4, a0, a2
-; RV32IZbb-NEXT:    add a3, a3, a4
 ; RV32IZbb-NEXT:    sub a3, a1, a3
+; RV32IZbb-NEXT:    sub a3, a3, a4
 ; RV32IZbb-NEXT:    sub a2, a0, a2
 ; RV32IZbb-NEXT:    beq a3, a1, .LBB1_2
 ; RV32IZbb-NEXT:  # %bb.1:

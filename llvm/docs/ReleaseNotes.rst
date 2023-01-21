@@ -171,6 +171,9 @@ Changes to the LoongArch Backend
 
 * Support GHC calling convention.
 
+* Initial JITLink support is added.
+  (`D141036 <https://reviews.llvm.org/D141036>`_)
+
 Changes to the MIPS Backend
 ---------------------------
 

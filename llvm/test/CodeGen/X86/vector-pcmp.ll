@@ -322,12 +322,12 @@ define <4 x i64> @cmpeq_zext_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
-; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,1]
 ; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm3, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,3,2]
-; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,0,3,2]
+; SSE2-NEXT:    pand %xmm3, %xmm1
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;

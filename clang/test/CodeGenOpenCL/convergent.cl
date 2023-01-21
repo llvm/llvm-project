@@ -139,4 +139,5 @@ kernel void assume_convergent_asm()
 // CHECK: attributes #3 = { {{[^}]*}}convergent noduplicate{{[^}]*}} }
 // CHECK: attributes #4 = { {{[^}]*}}convergent{{[^}]*}} }
 // CHECK: attributes #5 = { {{[^}]*}}convergent{{[^}]*}} }
-// CHECK: attributes #6 = { {{[^}]*}}convergent noduplicate{{[^}]*}} }
+// CHECK: attributes #6 = { {{[^}]*}}nounwind{{[^}]*}} }
+// CHECK: attributes #7 = { {{[^}]*}}convergent noduplicate nounwind{{[^}]*}} }

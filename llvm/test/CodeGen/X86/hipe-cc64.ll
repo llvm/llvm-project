@@ -40,9 +40,9 @@ entry:
 define cc 11 {i64, i64, i64} @addfour(i64 %hp, i64 %p, i64 %x, i64 %y, i64 %z, i64 %w) nounwind {
 ; CHECK-LABEL: addfour:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    leaq (%rdx,%rcx), %rax
-; CHECK-NEXT:    addq %r8, %rax
-; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    addq %rsi, %rdx
+; CHECK-NEXT:    leaq (%rcx,%r8), %rax
+; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:
   %0 = add i64 %x, %y

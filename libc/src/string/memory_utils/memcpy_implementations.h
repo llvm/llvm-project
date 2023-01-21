@@ -21,7 +21,7 @@
 
 namespace __llvm_libc {
 
-[[maybe_unused]] static inline void
+[[maybe_unused]] LIBC_INLINE void
 inline_memcpy_embedded_tiny(Ptr __restrict dst, CPtr __restrict src,
                             size_t count) {
   LLVM_LIBC_LOOP_NOUNROLL
@@ -30,7 +30,7 @@ inline_memcpy_embedded_tiny(Ptr __restrict dst, CPtr __restrict src,
 }
 
 #if defined(LLVM_LIBC_ARCH_X86)
-[[maybe_unused]] static inline void
+[[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   if (count == 0)
     return;
@@ -60,7 +60,7 @@ inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   return builtin::Memcpy<kBlockSize>::loop_and_tail(dst, src, count);
 }
 
-[[maybe_unused]] static inline void
+[[maybe_unused]] LIBC_INLINE void
 inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
                                            CPtr __restrict src, size_t count) {
   // Whether to use rep;movsb exclusively, not at all, or only above a certain
@@ -89,7 +89,7 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
 #endif // defined(LLVM_LIBC_ARCH_X86)
 
 #if defined(LLVM_LIBC_ARCH_AARCH64)
-[[maybe_unused]] static inline void
+[[maybe_unused]] LIBC_INLINE void
 inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   if (count == 0)
     return;
@@ -117,8 +117,8 @@ inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
 }
 #endif // defined(LLVM_LIBC_ARCH_AARCH64)
 
-static inline void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
-                                 size_t count) {
+LIBC_INLINE void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
+                               size_t count) {
   using namespace __llvm_libc::builtin;
 #if defined(LLVM_LIBC_ARCH_X86)
   return inline_memcpy_x86_maybe_interpose_repmovsb(dst, src, count);
@@ -133,8 +133,8 @@ static inline void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
 #endif
 }
 
-static inline void inline_memcpy(void *__restrict dst,
-                                 const void *__restrict src, size_t count) {
+LIBC_INLINE void inline_memcpy(void *__restrict dst, const void *__restrict src,
+                               size_t count) {
   inline_memcpy(reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src), count);
 }
 

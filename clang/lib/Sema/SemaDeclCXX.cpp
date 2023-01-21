@@ -4098,9 +4098,11 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
     return;
   }
 
-  ExprResult Init = InitExpr;
-  if (!FD->getType()->isDependentType() && !InitExpr->isTypeDependent()) {
-    Init = ConvertMemberDefaultInitExpression(FD, InitExpr, InitLoc);
+  ExprResult Init = CorrectDelayedTyposInExpr(InitExpr, /*InitDecl=*/nullptr,
+                                              /*RecoverUncorrectedTypos=*/true);
+  assert(Init.isUsable() && "Init should at least have a RecoveryExpr");
+  if (!FD->getType()->isDependentType() && !Init.get()->isTypeDependent()) {
+    Init = ConvertMemberDefaultInitExpression(FD, Init.get(), InitLoc);
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a
     //   full-expression.
@@ -4112,9 +4114,7 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
     }
   }
 
-  InitExpr = Init.get();
-
-  FD->setInClassInitializer(InitExpr);
+  FD->setInClassInitializer(Init.get());
 }
 
 /// Find the direct and/or virtual base specifiers that
@@ -7526,6 +7526,7 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
     ReturnType = Type->getReturnType();
 
     QualType DeclType = Context.getTypeDeclType(RD);
+    DeclType = Context.getElaboratedType(ETK_None, nullptr, DeclType, nullptr);
     DeclType = Context.getAddrSpaceQualType(DeclType, MD->getMethodQualifiers().getAddressSpace());
     QualType ExpectedReturnType = Context.getLValueReferenceType(DeclType);
 
@@ -14441,6 +14442,7 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
     return nullptr;
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -14783,6 +14785,7 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   // constructor rules.
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -15155,6 +15158,7 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
 
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
   QualType ArgType = ClassType;
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   bool Const = ClassDecl->implicitCopyConstructorHasConstParam();
   if (Const)
     ArgType = ArgType.withConst();
@@ -15299,6 +15303,7 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
 
   QualType ArgType = ClassType;
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ClassType, AS);

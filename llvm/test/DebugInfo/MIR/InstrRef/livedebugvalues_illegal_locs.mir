@@ -37,6 +37,7 @@
 ...
 ---
 name: _Z8bb_to_bb
+debugInstrRef: true
 debugValueSubstitutions:
   - { srcinst: 4, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
 body:  |

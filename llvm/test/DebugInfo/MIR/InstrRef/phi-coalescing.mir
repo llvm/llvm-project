@@ -100,6 +100,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '%3' }
   - { reg: '$rsi', virtual-reg: '%5' }

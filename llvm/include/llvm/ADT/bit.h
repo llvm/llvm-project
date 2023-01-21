@@ -20,28 +20,6 @@
 #include <limits>
 #include <type_traits>
 
-namespace llvm {
-
-// This implementation of bit_cast is different from the C++20 one in two ways:
-//  - It isn't constexpr because that requires compiler support.
-//  - It requires trivially-constructible To, to avoid UB in the implementation.
-template <
-    typename To, typename From,
-    typename = std::enable_if_t<sizeof(To) == sizeof(From)>,
-    typename = std::enable_if_t<std::is_trivially_constructible<To>::value>,
-    typename = std::enable_if_t<std::is_trivially_copyable<To>::value>,
-    typename = std::enable_if_t<std::is_trivially_copyable<From>::value>>
-inline To bit_cast(const From &from) noexcept {
-  To to;
-  std::memcpy(&to, &from, sizeof(To));
-  return to;
-}
-
-template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-constexpr inline bool has_single_bit(T Value) noexcept {
-  return (Value != 0) && ((Value & (Value - 1)) == 0);
-}
-
 #ifdef _MSC_VER
 // Declare these intrinsics manually rather including intrin.h. It's very
 // expensive, and bit.h is popular via MathExtras.h.
@@ -53,6 +31,28 @@ unsigned char _BitScanReverse(unsigned long *_Index, unsigned long _Mask);
 unsigned char _BitScanReverse64(unsigned long *_Index, unsigned __int64 _Mask);
 }
 #endif
+
+namespace llvm {
+
+// This implementation of bit_cast is different from the C++20 one in two ways:
+//  - It isn't constexpr because that requires compiler support.
+//  - It requires trivially-constructible To, to avoid UB in the implementation.
+template <
+    typename To, typename From,
+    typename = std::enable_if_t<sizeof(To) == sizeof(From)>,
+    typename = std::enable_if_t<std::is_trivially_constructible<To>::value>,
+    typename = std::enable_if_t<std::is_trivially_copyable<To>::value>,
+    typename = std::enable_if_t<std::is_trivially_copyable<From>::value>>
+[[nodiscard]] inline To bit_cast(const From &from) noexcept {
+  To to;
+  std::memcpy(&to, &from, sizeof(To));
+  return to;
+}
+
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr inline bool has_single_bit(T Value) noexcept {
+  return (Value != 0) && ((Value & (Value - 1)) == 0);
+}
 
 namespace detail {
 template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
@@ -119,7 +119,7 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
-template <typename T> int countr_zero(T Val) {
+template <typename T> [[nodiscard]] int countr_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::detail::TrailingZerosCounter<T, sizeof(T)>::count(Val);
@@ -185,7 +185,7 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
-template <typename T> int countl_zero(T Val) {
+template <typename T> [[nodiscard]] int countl_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::detail::LeadingZerosCounter<T, sizeof(T)>::count(Val);
@@ -198,7 +198,7 @@ template <typename T> int countl_zero(T Val) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of all ones.
-template <typename T> int countl_one(T Value) {
+template <typename T> [[nodiscard]] int countl_one(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countl_zero<T>(~Value);
@@ -211,10 +211,47 @@ template <typename T> int countl_one(T Value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of all ones.
-template <typename T> int countr_one(T Value) {
+template <typename T> [[nodiscard]] int countr_one(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::countr_zero<T>(~Value);
+}
+
+/// Returns the number of bits needed to represent Value if Value is nonzero.
+/// Returns 0 otherwise.
+///
+/// Ex. bit_width(5) == 3.
+template <typename T> [[nodiscard]] int bit_width(T Value) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  return std::numeric_limits<T>::digits - llvm::countl_zero(Value);
+}
+
+/// Returns the largest integral power of two no greater than Value if Value is
+/// nonzero.  Returns 0 otherwise.
+///
+/// Ex. bit_floor(5) == 4.
+template <typename T> [[nodiscard]] T bit_floor(T Value) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  if (!Value)
+    return 0;
+  return T(1) << (llvm::bit_width(Value) - 1);
+}
+
+/// Returns the smallest integral power of two no smaller than Value if Value is
+/// nonzero.  Returns 0 otherwise.
+///
+/// Ex. bit_ceil(5) == 8.
+///
+/// The return value is undefined if the input is larger than the largest power
+/// of two representable in T.
+template <typename T> [[nodiscard]] T bit_ceil(T Value) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  if (Value < 2)
+    return 1;
+  return T(1) << llvm::bit_width<T>(Value - 1u);
 }
 
 namespace detail {
@@ -252,7 +289,7 @@ template <typename T> struct PopulationCounter<T, 8> {
 /// Ex. popcount(0xF000F000) = 8
 /// Returns 0 if the word is zero.
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-inline int popcount(T Value) noexcept {
+[[nodiscard]] inline int popcount(T Value) noexcept {
   return detail::PopulationCounter<T, sizeof(T)>::count(Value);
 }
 

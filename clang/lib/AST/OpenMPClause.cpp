@@ -1134,7 +1134,7 @@ OMPMapClause *OMPMapClause::Create(
     const ASTContext &C, const OMPVarListLocTy &Locs, ArrayRef<Expr *> Vars,
     ArrayRef<ValueDecl *> Declarations,
     MappableExprComponentListsRef ComponentLists, ArrayRef<Expr *> UDMapperRefs,
-    ArrayRef<OpenMPMapModifierKind> MapModifiers,
+    Expr *IteratorModifier, ArrayRef<OpenMPMapModifierKind> MapModifiers,
     ArrayRef<SourceLocation> MapModifiersLoc,
     NestedNameSpecifierLoc UDMQualifierLoc, DeclarationNameInfo MapperId,
     OpenMPMapClauseKind Type, bool TypeIsImplicit, SourceLocation TypeLoc) {
@@ -1157,7 +1157,7 @@ OMPMapClause *OMPMapClause::Create(
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
   OMPMapClause *Clause = new (Mem)
@@ -1166,6 +1166,7 @@ OMPMapClause *OMPMapClause::Create(
 
   Clause->setVarRefs(Vars);
   Clause->setUDMapperRefs(UDMapperRefs);
+  Clause->setIteratorModifier(IteratorModifier);
   Clause->setClauseInfo(Declarations, ComponentLists);
   Clause->setMapType(Type);
   Clause->setMapLoc(TypeLoc);
@@ -1178,10 +1179,12 @@ OMPMapClause::CreateEmpty(const ASTContext &C,
   void *Mem = C.Allocate(
       totalSizeToAlloc<Expr *, ValueDecl *, unsigned,
                        OMPClauseMappableExprCommon::MappableComponent>(
-          2 * Sizes.NumVars, Sizes.NumUniqueDeclarations,
+          2 * Sizes.NumVars + 1, Sizes.NumUniqueDeclarations,
           Sizes.NumUniqueDeclarations + Sizes.NumComponentLists,
           Sizes.NumComponents));
-  return new (Mem) OMPMapClause(Sizes);
+  OMPMapClause *Clause = new (Mem) OMPMapClause(Sizes);
+  Clause->setIteratorModifier(nullptr);
+  return Clause;
 }
 
 OMPToClause *OMPToClause::Create(
@@ -2249,16 +2252,27 @@ static void PrintMapper(raw_ostream &OS, T *Node,
   OS << Node->getMapperIdInfo() << ')';
 }
 
+template <typename T>
+static void PrintIterator(raw_ostream &OS, T *Node,
+                          const PrintingPolicy &Policy) {
+  if (Expr *IteratorModifier = Node->getIteratorModifier())
+    IteratorModifier->printPretty(OS, nullptr, Policy);
+}
+
 void OMPClausePrinter::VisitOMPMapClause(OMPMapClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "map(";
     if (Node->getMapType() != OMPC_MAP_unknown) {
       for (unsigned I = 0; I < NumberOfOMPMapClauseModifiers; ++I) {
         if (Node->getMapTypeModifier(I) != OMPC_MAP_MODIFIER_unknown) {
-          OS << getOpenMPSimpleClauseTypeName(OMPC_map,
-                                              Node->getMapTypeModifier(I));
-          if (Node->getMapTypeModifier(I) == OMPC_MAP_MODIFIER_mapper)
-            PrintMapper(OS, Node, Policy);
+          if (Node->getMapTypeModifier(I) == OMPC_MAP_MODIFIER_iterator) {
+            PrintIterator(OS, Node, Policy);
+          } else {
+            OS << getOpenMPSimpleClauseTypeName(OMPC_map,
+                                                Node->getMapTypeModifier(I));
+            if (Node->getMapTypeModifier(I) == OMPC_MAP_MODIFIER_mapper)
+              PrintMapper(OS, Node, Policy);
+          }
           OS << ',';
         }
       }

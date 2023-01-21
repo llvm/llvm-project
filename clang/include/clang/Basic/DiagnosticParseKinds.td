@@ -1362,7 +1362,7 @@ def err_omp_unknown_map_type : Error<
   "incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'">;
 def err_omp_unknown_map_type_modifier : Error<
   "incorrect map type modifier, expected one of: 'always', 'close', 'mapper'"
-  "%select{|, 'present'}0%select{|, 'ompx_hold'}1">;
+  "%select{|, 'present'|, 'present', 'iterator'}0%select{|, 'ompx_hold'}1">;
 def err_omp_map_type_missing : Error<
   "missing map type">;
 def err_omp_map_type_modifier_missing : Error<

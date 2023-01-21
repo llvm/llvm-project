@@ -98,6 +98,7 @@ public:
 // begin AOCC
     AMDLIBM,    // AMD Math Vector library.
 // end AOCC
+    SLEEFGNUABI       // SLEEF - SIMD Library for Evaluating Elementary Functions.
   };
 
   TargetLibraryInfoImpl();
@@ -157,7 +158,8 @@ public:
 
   /// Calls addVectorizableFunctions with a known preset of functions for the
   /// given vector library.
-  void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib);
+  void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
+                                          const llvm::Triple &TargetTriple);
 
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.

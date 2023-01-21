@@ -34,9 +34,11 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                           "Intel SVML library"),
                // begin AOCC
                clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
-                          "AMD vector math library")));
+                          "AMD vector math library"),
                //end AOCC
 
+               clEnumValN(TargetLibraryInfoImpl::SLEEFGNUABI, "sleefgnuabi",
+                          "SIMD Library for Evaluating Elementary Functions")));
 
 StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
     {
@@ -857,7 +859,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_vec_free);
   }
 
-  TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary);
+  TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary, T);
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
@@ -1139,7 +1141,7 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
 }
 
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
-    enum VectorLibrary VecLib) {
+    enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
   switch (VecLib) {
   case Accelerate: {
     const VecDesc VecFuncs[] = {
@@ -1179,6 +1181,27 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     #include "llvm/Analysis/VecFuncs.def"
     };
     addVectorizableFunctions(VecFuncs);
+    break;
+  }
+  case SLEEFGNUABI: {
+    const VecDesc VecFuncs_VF2[] = {
+#define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+    };
+    const VecDesc VecFuncs_VF4[] = {
+#define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+    };
+
+    switch (TargetTriple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+      addVectorizableFunctions(VecFuncs_VF2);
+      addVectorizableFunctions(VecFuncs_VF4);
+      break;
+    }
     break;
   }
   case NoLibrary:

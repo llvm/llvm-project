@@ -1288,7 +1288,7 @@ OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createTask(const LocationDescription &Loc,
                             InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                             bool Tied, Value *Final, Value *IfCondition,
-                            ArrayRef<DependData *> Dependencies) {
+                            SmallVector<DependData> Dependencies) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -1442,7 +1442,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
 
       unsigned P = 0;
-      for (DependData *Dep : Dependencies) {
+      for (const DependData &Dep : Dependencies) {
         Value *Base =
             Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, P);
         // Store the pointer to the variable
@@ -1450,14 +1450,14 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
             DependInfo, Base,
             static_cast<unsigned int>(RTLDependInfoFields::BaseAddr));
         Value *DepValPtr =
-            Builder.CreatePtrToInt(Dep->DepVal, Builder.getInt64Ty());
+            Builder.CreatePtrToInt(Dep.DepVal, Builder.getInt64Ty());
         Builder.CreateStore(DepValPtr, Addr);
         // Store the size of the variable
         Value *Size = Builder.CreateStructGEP(
             DependInfo, Base,
             static_cast<unsigned int>(RTLDependInfoFields::Len));
         Builder.CreateStore(Builder.getInt64(M.getDataLayout().getTypeStoreSize(
-                                Dep->DepValueType)),
+                                Dep.DepValueType)),
                             Size);
         // Store the dependency kind
         Value *Flags = Builder.CreateStructGEP(
@@ -1465,7 +1465,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
             static_cast<unsigned int>(RTLDependInfoFields::Flags));
         Builder.CreateStore(
             ConstantInt::get(Builder.getInt8Ty(),
-                             static_cast<unsigned int>(Dep->DepKind)),
+                             static_cast<unsigned int>(Dep.DepKind)),
             Flags);
         ++P;
       }

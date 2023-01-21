@@ -2485,9 +2485,9 @@ def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_
   Alias<fno_global_isel>;
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Use the given vector functions library">,
-    Values<"Accelerate,libmvec,MASSV,SVML,Darwin_libsystem_m,none">,
+    Values<"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,none">,
     NormalizedValuesScope<"CodeGenOptions">,
-    NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML",
+    NormalizedValues<["Accelerate", "LIBMVEC", "MASSV", "SVML", "SLEEF",
                       "Darwin_libsystem_m", "NoLibrary"]>,
     MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
@@ -3343,6 +3343,7 @@ def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
 def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
+def gno_modules : Flag <["-"], "gno-modules">, Group<gN_Group>;
 def gz_EQ : Joined<["-"], "gz=">, Group<g_flags_Group>,
     HelpText<"DWARF debug sections compression type">;
 def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>;
@@ -5896,10 +5897,11 @@ def fctor_dtor_return_this : Flag<["-"], "fctor-dtor-return-this">,
            "and non-deleting destructors. (No effect on Microsoft ABI)">,
   MarshallingInfoFlag<CodeGenOpts<"CtorDtorReturnThis">>;
 
-def fexperimental_assignment_tracking :
-  Flag<["-"], "fexperimental-assignment-tracking">, Group<f_Group>,
-  HelpText<"Enable assignment tracking debug info">,
-  MarshallingInfoFlag<CodeGenOpts<"EnableAssignmentTracking">>;
+defm experimental_assignment_tracking :
+  BoolOption<"f", "experimental-assignment-tracking",
+  CodeGenOpts<"EnableAssignmentTracking">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>, BothFlags<[CoreOption]>>,
+  Group<f_Group>;
 
 } // let Flags = [CC1Option, NoDriverOption]
 

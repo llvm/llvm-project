@@ -2302,7 +2302,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     fixupLineNumbers(Caller, FirstNewBlock, &CB,
                      CalledFunc->getSubprogram() != nullptr);
 
-    if (getEnableAssignmentTracking()) {
+    if (isAssignmentTrackingEnabled(*Caller->getParent())) {
       // Interpret inlined stores to caller-local variables as assignments.
       trackInlinedStores(FirstNewBlock, Caller->end(), CB);
 

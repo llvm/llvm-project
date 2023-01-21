@@ -32,6 +32,7 @@
 ---
 name:            foo
 tracksRegLiveness: true
+debugInstrRef: true
 debugValueSubstitutions:
   - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 0, subreg: 2 }
 body:             |

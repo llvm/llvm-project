@@ -321,6 +321,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     unsigned TripMultiple;
     unsigned BreakoutTrip;
     bool ExitOnTrue;
+    BasicBlock *FirstExitingBlock = nullptr;
     SmallVector<BasicBlock *> ExitingBlocks;
   };
   DenseMap<BasicBlock *, ExitInfo> ExitInfos;
@@ -680,8 +681,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(!UnrollVerifyDomtree ||
          DT->verify(DominatorTree::VerificationLevel::Fast));
 
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-
+  SmallVector<DominatorTree::UpdateType> DTUpdates;
   auto SetDest = [&](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
     auto *Term = cast<BranchInst>(Src->getTerminator());
     const unsigned Idx = ExitOnTrue ^ WillExit;
@@ -695,7 +695,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     BranchInst::Create(Dest, Term);
     Term->eraseFromParent();
 
-    DTU.applyUpdates({{DominatorTree::Delete, Src, DeadSucc}});
+    DTUpdates.emplace_back(DominatorTree::Delete, Src, DeadSucc);
   };
 
   auto WillExit = [&](const ExitInfo &Info, unsigned i, unsigned j,
@@ -733,26 +733,54 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // Fold branches for iterations where we know that they will exit or not
   // exit.
-  for (const auto &Pair : ExitInfos) {
-    const ExitInfo &Info = Pair.second;
+  for (auto &Pair : ExitInfos) {
+    ExitInfo &Info = Pair.second;
     for (unsigned i = 0, e = Info.ExitingBlocks.size(); i != e; ++i) {
       // The branch destination.
       unsigned j = (i + 1) % e;
       bool IsLatch = Pair.first == LatchBlock;
       std::optional<bool> KnownWillExit = WillExit(Info, i, j, IsLatch);
-      if (!KnownWillExit)
+      if (!KnownWillExit) {
+        if (!Info.FirstExitingBlock)
+          Info.FirstExitingBlock = Info.ExitingBlocks[i];
         continue;
+      }
 
       // We don't fold known-exiting branches for non-latch exits here,
       // because this ensures that both all loop blocks and all exit blocks
       // remain reachable in the CFG.
       // TODO: We could fold these branches, but it would require much more
       // sophisticated updates to LoopInfo.
-      if (*KnownWillExit && !IsLatch)
+      if (*KnownWillExit && !IsLatch) {
+        if (!Info.FirstExitingBlock)
+          Info.FirstExitingBlock = Info.ExitingBlocks[i];
         continue;
+      }
 
       SetDest(Info.ExitingBlocks[i], *KnownWillExit, Info.ExitOnTrue);
     }
+  }
+
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  DomTreeUpdater *DTUToUse = &DTU;
+  if (ExitingBlocks.size() == 1 && ExitInfos.size() == 1) {
+    // Manually update the DT if there's a single exiting node. In that case
+    // there's a single exit node and it is sufficient to update the nodes
+    // immediately dominated by the original exiting block. They will become
+    // dominated by the first exiting block that leaves the loop after
+    // unrolling. Note that the CFG inside the loop does not change, so there's
+    // no need to update the DT inside the unrolled loop.
+    DTUToUse = nullptr;
+    auto &[OriginalExit, Info] = *ExitInfos.begin();
+    if (!Info.FirstExitingBlock)
+      Info.FirstExitingBlock = Info.ExitingBlocks.back();
+    for (auto *C : to_vector(DT->getNode(OriginalExit)->children())) {
+      if (L->contains(C->getBlock()))
+        continue;
+      C->setIDom(DT->getNode(Info.FirstExitingBlock));
+    }
+  } else {
+    DTU.applyUpdates(DTUpdates);
   }
 
   // When completely unrolling, the last latch becomes unreachable.
@@ -774,16 +802,21 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     if (Term && Term->isUnconditional()) {
       BasicBlock *Dest = Term->getSuccessor(0);
       BasicBlock *Fold = Dest->getUniquePredecessor();
-      if (MergeBlockIntoPredecessor(Dest, &DTU, LI)) {
+      if (MergeBlockIntoPredecessor(Dest, /*DTU=*/DTUToUse, LI,
+                                    /*MSSAU=*/nullptr, /*MemDep=*/nullptr,
+                                    /*PredecessorWithTwoSuccessors=*/false,
+                                    DTUToUse ? nullptr : DT)) {
         // Dest has been folded into Fold. Update our worklists accordingly.
         std::replace(Latches.begin(), Latches.end(), Dest, Fold);
         llvm::erase_value(UnrolledLoopBlocks, Dest);
       }
     }
   }
-  // Apply updates to the DomTree.
-  DT = &DTU.getDomTree();
 
+  if (DTUToUse) {
+    // Apply updates to the DomTree.
+    DT = &DTU.getDomTree();
+  }
   assert(!UnrollVerifyDomtree ||
          DT->verify(DominatorTree::VerificationLevel::Fast));
 

@@ -9,6 +9,7 @@ add_flang_library(FIRBuilder
   HLFIRTools.cpp
   LowLevelIntrinsics.cpp
   MutableBox.cpp
+  Runtime/Allocatable.cpp
   Runtime/Assign.cpp
   Runtime/Character.cpp
   Runtime/Command.cpp

@@ -1221,7 +1221,7 @@ bool isValidPackingPermutation(
       "applies to only pack or unpack operations");
   if (!op || permutation.empty())
     return true;
-  int64_t innerRank = op.getInnerDimsPos().size();
+  size_t innerRank = op.getInnerDimsPos().size();
   if (outerOrInnerPerm == OuterOrInnerPerm::Inner)
     return permutation.size() == innerRank && isPermutationVector(permutation);
   // op.getOuterDimsPerm() may be empty, in which case it is identity.
@@ -1260,6 +1260,7 @@ static LinalgOp transposeOneLinalgOperandAndReplace(
   // Sanity check of the expected transposed tensor type.
   auto tensorType = permuteShape(
       opOperand.get().getType().cast<RankedTensorType>(), permutation);
+  (void)tensorType;
   assert(tensorType == transposedValue.getType() &&
          "expected tensor type mismatch");
 

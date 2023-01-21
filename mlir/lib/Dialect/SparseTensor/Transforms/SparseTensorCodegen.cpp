@@ -756,8 +756,7 @@ public:
       return failure();
     Location loc = op->getLoc();
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
-    RankedTensorType srcType =
-        op.getTensor().getType().cast<RankedTensorType>();
+    auto srcType = getRankedTensorType(op.getTensor());
     Type eltType = srcType.getElementType();
     Type boolType = rewriter.getIntegerType(1);
     Type idxType = rewriter.getIndexType();

@@ -6,6 +6,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
@@ -45,18 +46,23 @@ isAnnotationDirectlyAfterStatement(const Stmt *Stmt, unsigned AnnotationBegin,
   return true;
 }
 
-llvm::DenseMap<unsigned, std::string>
-test::buildLineToAnnotationMapping(SourceManager &SM,
-                                   llvm::Annotations AnnotatedCode) {
+llvm::DenseMap<unsigned, std::string> test::buildLineToAnnotationMapping(
+    const SourceManager &SM, const LangOptions &LangOpts,
+    SourceRange BoundingRange, llvm::Annotations AnnotatedCode) {
+  CharSourceRange CharBoundingRange =
+      Lexer::getAsCharRange(BoundingRange, SM, LangOpts);
+
   llvm::DenseMap<unsigned, std::string> LineNumberToContent;
   auto Code = AnnotatedCode.code();
   auto Annotations = AnnotatedCode.ranges();
   for (auto &AnnotationRange : Annotations) {
-    auto LineNumber =
-        SM.getPresumedLineNumber(SM.getLocForStartOfFile(SM.getMainFileID())
-                                     .getLocWithOffset(AnnotationRange.Begin));
-    auto Content = Code.slice(AnnotationRange.Begin, AnnotationRange.End).str();
-    LineNumberToContent[LineNumber] = Content;
+    SourceLocation Loc = SM.getLocForStartOfFile(SM.getMainFileID())
+                             .getLocWithOffset(AnnotationRange.Begin);
+    if (SM.isPointWithin(Loc, CharBoundingRange.getBegin(),
+                         CharBoundingRange.getEnd())) {
+      LineNumberToContent[SM.getPresumedLineNumber(Loc)] =
+          Code.slice(AnnotationRange.Begin, AnnotationRange.End).str();
+    }
   }
   return LineNumberToContent;
 }
@@ -83,11 +89,18 @@ test::buildStatementToAnnotationMapping(const FunctionDecl *Func,
     Stmts[Offset] = S;
   }
 
-  unsigned I = 0;
-  auto Annotations = AnnotatedCode.ranges();
+  unsigned FunctionBeginOffset =
+      SourceManager.getFileOffset(Func->getBeginLoc());
+  unsigned FunctionEndOffset = SourceManager.getFileOffset(Func->getEndLoc());
+
+  std::vector<llvm::Annotations::Range> Annotations = AnnotatedCode.ranges();
+  llvm::erase_if(Annotations, [=](llvm::Annotations::Range R) {
+    return R.Begin < FunctionBeginOffset || R.End >= FunctionEndOffset;
+  });
   std::reverse(Annotations.begin(), Annotations.end());
   auto Code = AnnotatedCode.code();
 
+  unsigned I = 0;
   for (auto OffsetAndStmt = Stmts.rbegin(); OffsetAndStmt != Stmts.rend();
        OffsetAndStmt++) {
     unsigned Offset = OffsetAndStmt->first;

@@ -133,3 +133,42 @@ for.end:                                 ; preds = %for.body
 }
 
 declare void @foo(ptr)
+
+define void @iv_start_non_preheader(ptr %mark, i32 signext %length) {
+; CHECK-LABEL: @iv_start_non_preheader(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT3:%.*]] = icmp eq i32 [[LENGTH:%.*]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT3]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[LENGTH]], 2
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[MARK:%.*]], i32 [[TMP0]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[DST_04:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[MARK]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DST_04]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @foo(ptr [[TMP1]])
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds ptr, ptr [[DST_04]], i64 1
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[UGLYGEP]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %tobool.not3 = icmp eq i32 %length, 0
+  br i1 %tobool.not3, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %dec, %for.body ], [ %length, %entry ]
+  %dst.04 = phi ptr [ %incdec.ptr, %for.body ], [ %mark, %entry ]
+  %0 = load ptr, ptr %dst.04, align 8
+  call ptr @foo(ptr %0)
+  %incdec.ptr = getelementptr inbounds ptr, ptr %dst.04, i64 1
+  %dec = add nsw i32 %i.05, -1
+  %tobool.not = icmp eq i32 %dec, 0
+  br i1 %tobool.not, label %for.cond.cleanup, label %for.body
+}

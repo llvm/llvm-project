@@ -81,8 +81,8 @@ struct SplitPadding final : public OpRewritePattern<tensor::PadOp> {
       Operation *newOp = builder.clone(*padOp);
       builder.create<scf::YieldOp>(loc, newOp->getResults());
     };
-    rewriter.replaceOpWithNewOp<scf::IfOp>(padOp, padOp.getType(), ifCond,
-                                           thenBuilder, elseBuilder);
+    rewriter.replaceOpWithNewOp<scf::IfOp>(padOp, ifCond, thenBuilder,
+                                           elseBuilder);
     return success();
   }
 };

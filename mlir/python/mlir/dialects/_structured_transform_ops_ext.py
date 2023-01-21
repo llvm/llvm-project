@@ -254,7 +254,7 @@ class TileOp:
 
   @overload
   def __init__(self,
-               target: Union[Operation, Value],
+               target: Union[Operation, Value, OpView],
                *,
                sizes: Optional[Union[Sequence[Union[int, IntegerAttr, Operation,
                                                     Value]], ArrayAttr]] = None,
@@ -265,7 +265,7 @@ class TileOp:
 
   def __init__(self,
                loop_types_or_target: Union[Type, List[Type], Operation, Value],
-               target_or_none: Optional[Union[Operation, Value]] = None,
+               target_or_none: Optional[Union[Operation, Value, OpView]] = None,
                *,
                sizes: Optional[Union[Sequence[Union[int, IntegerAttr, Operation,
                                                     Value]], ArrayAttr]] = None,
@@ -291,7 +291,7 @@ class TileOp:
     num_loops = sum(
         v if v == 0 else 1 for v in self.__extract_values(sizes_attr))
 
-    if isinstance(loop_types_or_target, (Operation, Value)):
+    if isinstance(loop_types_or_target, (Operation, Value, OpView)):
       loop_types = [transform.AnyOpType.get()] * num_loops
       target = loop_types_or_target
       assert target_or_none is None, "Cannot construct TileOp with two targets."

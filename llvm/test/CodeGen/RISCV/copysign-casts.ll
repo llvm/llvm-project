@@ -447,8 +447,8 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV32IF-NEXT:    srli a1, a1, 16
 ; RV32IF-NEXT:    slli a0, a0, 17
 ; RV32IF-NEXT:    srli a0, a0, 17
-; RV32IF-NEXT:    lui a2, 1048560
-; RV32IF-NEXT:    or a1, a1, a2
+; RV32IF-NEXT:    or a0, a0, a1
+; RV32IF-NEXT:    lui a1, 1048560
 ; RV32IF-NEXT:    or a0, a0, a1
 ; RV32IF-NEXT:    fmv.w.x fa0, a0
 ; RV32IF-NEXT:    ret
@@ -462,8 +462,8 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV32IFD-NEXT:    srli a1, a1, 16
 ; RV32IFD-NEXT:    slli a0, a0, 17
 ; RV32IFD-NEXT:    srli a0, a0, 17
-; RV32IFD-NEXT:    lui a2, 1048560
-; RV32IFD-NEXT:    or a1, a1, a2
+; RV32IFD-NEXT:    or a0, a0, a1
+; RV32IFD-NEXT:    lui a1, 1048560
 ; RV32IFD-NEXT:    or a0, a0, a1
 ; RV32IFD-NEXT:    fmv.w.x fa0, a0
 ; RV32IFD-NEXT:    ret
@@ -477,8 +477,8 @@ define half @fold_demote_h_s(half %a, float %b) nounwind {
 ; RV64IFD-NEXT:    srli a1, a1, 16
 ; RV64IFD-NEXT:    slli a0, a0, 49
 ; RV64IFD-NEXT:    srli a0, a0, 49
-; RV64IFD-NEXT:    lui a2, 1048560
-; RV64IFD-NEXT:    or a1, a1, a2
+; RV64IFD-NEXT:    or a0, a0, a1
+; RV64IFD-NEXT:    lui a1, 1048560
 ; RV64IFD-NEXT:    or a0, a0, a1
 ; RV64IFD-NEXT:    fmv.w.x fa0, a0
 ; RV64IFD-NEXT:    ret
@@ -581,8 +581,8 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV32IF-NEXT:    srli a1, a1, 16
 ; RV32IF-NEXT:    slli a0, a0, 17
 ; RV32IF-NEXT:    srli a0, a0, 17
-; RV32IF-NEXT:    lui a2, 1048560
-; RV32IF-NEXT:    or a1, a1, a2
+; RV32IF-NEXT:    or a0, a0, a1
+; RV32IF-NEXT:    lui a1, 1048560
 ; RV32IF-NEXT:    or a0, a0, a1
 ; RV32IF-NEXT:    fmv.w.x fa0, a0
 ; RV32IF-NEXT:    ret
@@ -599,7 +599,7 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV32IFD-NEXT:    slli a1, a1, 17
 ; RV32IFD-NEXT:    srli a1, a1, 17
 ; RV32IFD-NEXT:    lui a2, 1048560
-; RV32IFD-NEXT:    or a0, a0, a2
+; RV32IFD-NEXT:    or a1, a1, a2
 ; RV32IFD-NEXT:    or a0, a1, a0
 ; RV32IFD-NEXT:    fmv.w.x fa0, a0
 ; RV32IFD-NEXT:    addi sp, sp, 16
@@ -615,7 +615,7 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ; RV64IFD-NEXT:    slli a0, a0, 63
 ; RV64IFD-NEXT:    srli a0, a0, 48
 ; RV64IFD-NEXT:    lui a2, 1048560
-; RV64IFD-NEXT:    or a0, a0, a2
+; RV64IFD-NEXT:    or a1, a1, a2
 ; RV64IFD-NEXT:    or a0, a1, a0
 ; RV64IFD-NEXT:    fmv.w.x fa0, a0
 ; RV64IFD-NEXT:    ret
