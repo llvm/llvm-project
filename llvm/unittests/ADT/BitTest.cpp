@@ -48,6 +48,127 @@ TEST(BitTest, HasSingleBit) {
   EXPECT_TRUE(llvm::has_single_bit(static_cast<uint16_t>(kValueS16)));
 }
 
+TEST(BitTest, BitFloor) {
+  EXPECT_EQ(0u, llvm::bit_floor(uint8_t(0)));
+  EXPECT_EQ(0u, llvm::bit_floor(uint16_t(0)));
+  EXPECT_EQ(0u, llvm::bit_floor(uint32_t(0)));
+  EXPECT_EQ(0u, llvm::bit_floor(uint64_t(0)));
+
+  EXPECT_EQ(1u, llvm::bit_floor(uint8_t(1)));
+  EXPECT_EQ(1u, llvm::bit_floor(uint16_t(1)));
+  EXPECT_EQ(1u, llvm::bit_floor(uint32_t(1)));
+  EXPECT_EQ(1u, llvm::bit_floor(uint64_t(1)));
+
+  EXPECT_EQ(2u, llvm::bit_floor(uint8_t(2)));
+  EXPECT_EQ(2u, llvm::bit_floor(uint16_t(2)));
+  EXPECT_EQ(2u, llvm::bit_floor(uint32_t(2)));
+  EXPECT_EQ(2u, llvm::bit_floor(uint64_t(2)));
+
+  EXPECT_EQ(2u, llvm::bit_floor(uint8_t(3)));
+  EXPECT_EQ(2u, llvm::bit_floor(uint16_t(3)));
+  EXPECT_EQ(2u, llvm::bit_floor(uint32_t(3)));
+  EXPECT_EQ(2u, llvm::bit_floor(uint64_t(3)));
+
+  EXPECT_EQ(4u, llvm::bit_floor(uint8_t(4)));
+  EXPECT_EQ(4u, llvm::bit_floor(uint16_t(4)));
+  EXPECT_EQ(4u, llvm::bit_floor(uint32_t(4)));
+  EXPECT_EQ(4u, llvm::bit_floor(uint64_t(4)));
+
+  EXPECT_EQ(0x40u, llvm::bit_floor(uint8_t(0x7f)));
+  EXPECT_EQ(0x4000u, llvm::bit_floor(uint16_t(0x7fff)));
+  EXPECT_EQ(0x40000000u, llvm::bit_floor(uint32_t(0x7fffffffu)));
+  EXPECT_EQ(0x4000000000000000ull,
+            llvm::bit_floor(uint64_t(0x7fffffffffffffffull)));
+
+  EXPECT_EQ(0x80u, llvm::bit_floor(uint8_t(0x80)));
+  EXPECT_EQ(0x8000u, llvm::bit_floor(uint16_t(0x8000)));
+  EXPECT_EQ(0x80000000u, llvm::bit_floor(uint32_t(0x80000000u)));
+  EXPECT_EQ(0x8000000000000000ull,
+            llvm::bit_floor(uint64_t(0x8000000000000000ull)));
+
+  EXPECT_EQ(0x80u, llvm::bit_floor(uint8_t(0xff)));
+  EXPECT_EQ(0x8000u, llvm::bit_floor(uint16_t(0xffff)));
+  EXPECT_EQ(0x80000000u, llvm::bit_floor(uint32_t(0xffffffffu)));
+  EXPECT_EQ(0x8000000000000000ull,
+            llvm::bit_floor(uint64_t(0xffffffffffffffffull)));
+}
+
+TEST(BitTest, BitCeil) {
+  EXPECT_EQ(1u, llvm::bit_ceil(uint8_t(0)));
+  EXPECT_EQ(1u, llvm::bit_ceil(uint16_t(0)));
+  EXPECT_EQ(1u, llvm::bit_ceil(uint32_t(0)));
+  EXPECT_EQ(1u, llvm::bit_ceil(uint64_t(0)));
+
+  EXPECT_EQ(1u, llvm::bit_ceil(uint8_t(1)));
+  EXPECT_EQ(1u, llvm::bit_ceil(uint16_t(1)));
+  EXPECT_EQ(1u, llvm::bit_ceil(uint32_t(1)));
+  EXPECT_EQ(1u, llvm::bit_ceil(uint64_t(1)));
+
+  EXPECT_EQ(2u, llvm::bit_ceil(uint8_t(2)));
+  EXPECT_EQ(2u, llvm::bit_ceil(uint16_t(2)));
+  EXPECT_EQ(2u, llvm::bit_ceil(uint32_t(2)));
+  EXPECT_EQ(2u, llvm::bit_ceil(uint64_t(2)));
+
+  EXPECT_EQ(4u, llvm::bit_ceil(uint8_t(3)));
+  EXPECT_EQ(4u, llvm::bit_ceil(uint16_t(3)));
+  EXPECT_EQ(4u, llvm::bit_ceil(uint32_t(3)));
+  EXPECT_EQ(4u, llvm::bit_ceil(uint64_t(3)));
+
+  EXPECT_EQ(4u, llvm::bit_ceil(uint8_t(4)));
+  EXPECT_EQ(4u, llvm::bit_ceil(uint16_t(4)));
+  EXPECT_EQ(4u, llvm::bit_ceil(uint32_t(4)));
+  EXPECT_EQ(4u, llvm::bit_ceil(uint64_t(4)));
+
+  // The result is the largest representable value for each type.
+  EXPECT_EQ(0x80u, llvm::bit_ceil(uint8_t(0x7f)));
+  EXPECT_EQ(0x8000u, llvm::bit_ceil(uint16_t(0x7fff)));
+  EXPECT_EQ(0x80000000u, llvm::bit_ceil(uint32_t(0x7fffffffu)));
+  EXPECT_EQ(0x8000000000000000ull,
+            llvm::bit_ceil(uint64_t(0x7fffffffffffffffull)));
+}
+
+TEST(BitTest, BitWidth) {
+  EXPECT_EQ(0, llvm::bit_width(uint8_t(0)));
+  EXPECT_EQ(0, llvm::bit_width(uint16_t(0)));
+  EXPECT_EQ(0, llvm::bit_width(uint32_t(0)));
+  EXPECT_EQ(0, llvm::bit_width(uint64_t(0)));
+
+  EXPECT_EQ(1, llvm::bit_width(uint8_t(1)));
+  EXPECT_EQ(1, llvm::bit_width(uint16_t(1)));
+  EXPECT_EQ(1, llvm::bit_width(uint32_t(1)));
+  EXPECT_EQ(1, llvm::bit_width(uint64_t(1)));
+
+  EXPECT_EQ(2, llvm::bit_width(uint8_t(2)));
+  EXPECT_EQ(2, llvm::bit_width(uint16_t(2)));
+  EXPECT_EQ(2, llvm::bit_width(uint32_t(2)));
+  EXPECT_EQ(2, llvm::bit_width(uint64_t(2)));
+
+  EXPECT_EQ(2, llvm::bit_width(uint8_t(3)));
+  EXPECT_EQ(2, llvm::bit_width(uint16_t(3)));
+  EXPECT_EQ(2, llvm::bit_width(uint32_t(3)));
+  EXPECT_EQ(2, llvm::bit_width(uint64_t(3)));
+
+  EXPECT_EQ(3, llvm::bit_width(uint8_t(4)));
+  EXPECT_EQ(3, llvm::bit_width(uint16_t(4)));
+  EXPECT_EQ(3, llvm::bit_width(uint32_t(4)));
+  EXPECT_EQ(3, llvm::bit_width(uint64_t(4)));
+
+  EXPECT_EQ(7, llvm::bit_width(uint8_t(0x7f)));
+  EXPECT_EQ(15, llvm::bit_width(uint16_t(0x7fff)));
+  EXPECT_EQ(31, llvm::bit_width(uint32_t(0x7fffffffu)));
+  EXPECT_EQ(63, llvm::bit_width(uint64_t(0x7fffffffffffffffull)));
+
+  EXPECT_EQ(8, llvm::bit_width(uint8_t(0x80)));
+  EXPECT_EQ(16, llvm::bit_width(uint16_t(0x8000)));
+  EXPECT_EQ(32, llvm::bit_width(uint32_t(0x80000000u)));
+  EXPECT_EQ(64, llvm::bit_width(uint64_t(0x8000000000000000ull)));
+
+  EXPECT_EQ(8, llvm::bit_width(uint8_t(0xff)));
+  EXPECT_EQ(16, llvm::bit_width(uint16_t(0xffff)));
+  EXPECT_EQ(32, llvm::bit_width(uint32_t(0xffffffffu)));
+  EXPECT_EQ(64, llvm::bit_width(uint64_t(0xffffffffffffffffull)));
+}
+
 TEST(BitTest, CountlZero) {
   uint8_t Z8 = 0;
   uint16_t Z16 = 0;
