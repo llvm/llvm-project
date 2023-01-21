@@ -441,8 +441,8 @@ define { i129, i1 } @smul_ovf(i129 %x, i129 %y) nounwind {
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    movl %eax, %ebp
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    mull %ebx
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    movl %eax, %edi
