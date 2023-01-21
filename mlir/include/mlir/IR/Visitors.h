@@ -35,7 +35,7 @@ class WalkResult {
   enum ResultEnum { Interrupt, Advance, Skip } result;
 
 public:
-  WalkResult(ResultEnum result) : result(result) {}
+  WalkResult(ResultEnum result = Advance) : result(result) {}
 
   /// Allow LogicalResult to interrupt the walk on failure.
   WalkResult(LogicalResult result)

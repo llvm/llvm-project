@@ -8,7 +8,6 @@ add_mlir_unittest(MLIRIRTests
   OperationSupportTest.cpp
   PatternMatchTest.cpp
   ShapedTypeTest.cpp
-  SubElementInterfaceTest.cpp
   TypeTest.cpp
 
   DEPENDS
