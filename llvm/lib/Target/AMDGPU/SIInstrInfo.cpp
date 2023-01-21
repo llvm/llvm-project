@@ -1009,10 +1009,11 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     else
       SubIdx = SubIndices[SubIndices.size() - Idx - 1];
 
+    bool IsFirstSubreg = Idx == 0;
     bool UseKill = CanKillSuperReg && Idx == SubIndices.size() - 1;
 
     if (Opcode == AMDGPU::INSTRUCTION_LIST_END) {
-      Register ImpDefSuper = Idx == 0 ? Register(DestReg) : Register();
+      Register ImpDefSuper = IsFirstSubreg ? Register(DestReg) : Register();
       Register ImpUseSuper = SrcReg;
       indirectCopyToAGPR(*this, MBB, MI, DL, RI.getSubReg(DestReg, SubIdx),
                          RI.getSubReg(SrcReg, SubIdx), UseKill, *RS, Overlap,
@@ -1032,13 +1033,13 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addImm(0) // neg_hi
         .addImm(0) // clamp
         .addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
-      if (Idx == 0)
+      if (IsFirstSubreg)
         MIB.addReg(DestReg, RegState::Define | RegState::Implicit);
     } else {
       MachineInstrBuilder Builder =
         BuildMI(MBB, MI, DL, get(Opcode), RI.getSubReg(DestReg, SubIdx))
         .addReg(RI.getSubReg(SrcReg, SubIdx));
-      if (Idx == 0)
+      if (IsFirstSubreg)
         Builder.addReg(DestReg, RegState::Define | RegState::Implicit);
 
       Builder.addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);

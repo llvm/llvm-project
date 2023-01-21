@@ -156,8 +156,7 @@ public:
   /// InstrEmitter - Construct an InstrEmitter and set it to start inserting
   /// at the given position in the given block.
   InstrEmitter(const TargetMachine &TM, MachineBasicBlock *mbb,
-               MachineBasicBlock::iterator insertpos,
-               bool UseInstrRefDebugInfo);
+               MachineBasicBlock::iterator insertpos);
 
 private:
   void EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,

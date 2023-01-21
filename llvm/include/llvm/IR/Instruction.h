@@ -383,6 +383,23 @@ public:
   /// having non-poison inputs.
   void dropPoisonGeneratingFlags();
 
+  /// Return true if this instruction has poison-generating metadata.
+  bool hasPoisonGeneratingMetadata() const LLVM_READONLY;
+
+  /// Drops metadata that may generate poison.
+  void dropPoisonGeneratingMetadata();
+
+  /// Return true if this instruction has poison-generating flags or metadata.
+  bool hasPoisonGeneratingFlagsOrMetadata() const {
+    return hasPoisonGeneratingFlags() || hasPoisonGeneratingMetadata();
+  }
+
+  /// Drops flags and metadata that may generate poison.
+  void dropPoisonGeneratingFlagsAndMetadata() {
+    dropPoisonGeneratingFlags();
+    dropPoisonGeneratingMetadata();
+  }
+
   /// This function drops non-debug unknown metadata (through
   /// dropUnknownNonDebugMetadata). For calls, it also drops parameter and 
   /// return attributes that can cause undefined behaviour. Both of these should

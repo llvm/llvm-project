@@ -16,8 +16,8 @@ define signext i32 @addw(i32 signext %s, i32 signext %n, i32 signext %k) nounwin
 ; CHECK-NEXT:    slli a2, a2, 32
 ; CHECK-NEXT:    mulhu a1, a2, a1
 ; CHECK-NEXT:    srli a1, a1, 1
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    addw a0, a3, a0
+; CHECK-NEXT:    add a0, a3, a0
+; CHECK-NEXT:    addw a0, a0, a1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    li a0, 0
@@ -61,8 +61,8 @@ define signext i32 @subw(i32 signext %s, i32 signext %n, i32 signext %k) nounwin
 ; CHECK-NEXT:    slli a3, a3, 32
 ; CHECK-NEXT:    mulhu a1, a3, a1
 ; CHECK-NEXT:    srli a1, a1, 1
-; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    subw a0, a2, a0
+; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    li a0, 0

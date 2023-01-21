@@ -163,7 +163,6 @@ clang_target_link_libraries(clangDaemon
   clangDriver
   clangFormat
   clangFrontend
-  clangIncludeCleaner
   clangIndex
   clangLex
   clangSema
@@ -179,11 +178,11 @@ target_link_libraries(clangDaemon
   PRIVATE
   ${LLVM_PTHREAD_LIB}
 
+  clangIncludeCleaner
+  clangPseudo
   clangTidy
 
   clangdSupport
-
-  clangPseudo
   )
 if(CLANGD_TIDY_CHECKS)
   target_link_libraries(clangDaemon PRIVATE ${ALL_CLANG_TIDY_CHECKS})

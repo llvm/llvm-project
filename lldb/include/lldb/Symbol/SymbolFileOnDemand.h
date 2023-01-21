@@ -241,6 +241,10 @@ public:
         compiler_qual_type, compiler_type_resolve_state, opaque_payload);
   }
 
+  lldb::TypeSP CopyType(const lldb::TypeSP &other_type) override {
+    return m_sym_file_impl->CopyType(other_type);
+  }
+
 private:
   Log *GetLog() const { return ::lldb_private::GetLog(LLDBLog::OnDemand); }
 

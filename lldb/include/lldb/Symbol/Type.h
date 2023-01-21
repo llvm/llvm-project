@@ -241,6 +241,14 @@ private:
   // This makes an invalid type.  Used for functions that return a Type when
   // they get an error.
   Type();
+
+  Type(Type &t) = default;
+
+  Type(Type &&t) = default;
+
+  Type &operator=(const Type &t) = default;
+
+  Type &operator=(Type &&t) = default;
 };
 
 // the two classes here are used by the public API as a backend to the SBType

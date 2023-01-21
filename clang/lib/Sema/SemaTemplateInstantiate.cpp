@@ -1231,7 +1231,7 @@ namespace {
 
       // We recreated a local declaration, but not by instantiating it. There
       // may be pending dependent diagnostics to produce.
-      if (auto *DC = dyn_cast<DeclContext>(Old))
+      if (auto *DC = dyn_cast<DeclContext>(Old); DC && DC->isDependentContext())
         SemaRef.PerformDependentDiagnostics(DC, TemplateArgs);
     }
 

@@ -142,3 +142,7 @@ using c = decltype([]() static noexcept(noexcept([] { return 0; }())) { return 0
 using d = decltype(sizeof([] static { return 0; }));
 
 }
+
+namespace lambda_in_trailing_decltype {
+auto x = ([](auto) -> decltype([] {}()) {}(0), 2);
+}

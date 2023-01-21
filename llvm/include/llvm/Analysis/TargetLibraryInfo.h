@@ -94,7 +94,8 @@ public:
     DarwinLibSystemM, // Use Darwin's libsystem_m.
     LIBMVEC_X86,      // GLIBC Vector Math library.
     MASSV,            // IBM MASS vector library.
-    SVML              // Intel short vector math library.
+    SVML,             // Intel short vector math library.
+    SLEEFGNUABI       // SLEEF - SIMD Library for Evaluating Elementary Functions.
   };
 
   TargetLibraryInfoImpl();
@@ -154,7 +155,8 @@ public:
 
   /// Calls addVectorizableFunctions with a known preset of functions for the
   /// given vector library.
-  void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib);
+  void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
+                                          const llvm::Triple &TargetTriple);
 
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.

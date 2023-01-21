@@ -187,7 +187,9 @@ opportunities(Function &F,
   }
 }
 
-static void extractOperandsFromModule(Oracle &O, Module &Program) {
+static void extractOperandsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
+
   for (Function &F : Program.functions()) {
     SmallVector<std::pair<Use *, Value *>> Replacements;
     opportunities(F, [&](Use &Op, ArrayRef<Value *> Candidates) {

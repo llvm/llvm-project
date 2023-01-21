@@ -346,7 +346,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(VPBB2, VPBB4);
     VPBlockUtils::connectBlocks(VPBB3, VPBB4);
 
-    VPBlockRecursiveTraversalWrapper<const VPBlockBase *> Start(VPBB1);
+    VPBlockDeepTraversalWrapper<const VPBlockBase *> Start(VPBB1);
     SmallVector<const VPBlockBase *> FromIterator(depth_first(Start));
     EXPECT_EQ(4u, FromIterator.size());
     EXPECT_EQ(VPBB1, FromIterator[0]);
@@ -402,7 +402,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(R1BB1, FromIterator[0]);
 
     // Depth-first.
-    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(R1);
+    VPBlockDeepTraversalWrapper<VPBlockBase *> Start(R1);
     FromIterator.clear();
     copy(df_begin(Start), df_end(Start), std::back_inserter(FromIterator));
     EXPECT_EQ(8u, FromIterator.size());
@@ -500,7 +500,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(R1, VPBB2);
 
     // Depth-first.
-    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(VPBB1);
+    VPBlockDeepTraversalWrapper<VPBlockBase *> Start(VPBB1);
     SmallVector<VPBlockBase *> FromIterator(depth_first(Start));
     EXPECT_EQ(10u, FromIterator.size());
     EXPECT_EQ(VPBB1, FromIterator[0]);
@@ -557,7 +557,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(VPBB1, R1);
 
     // Depth-first.
-    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(VPBB1);
+    VPBlockDeepTraversalWrapper<VPBlockBase *> Start(VPBB1);
     SmallVector<VPBlockBase *> FromIterator(depth_first(Start));
     EXPECT_EQ(5u, FromIterator.size());
     EXPECT_EQ(VPBB1, FromIterator[0]);
@@ -617,7 +617,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPBlockUtils::connectBlocks(R1, VPBB2);
 
     // Depth-first.
-    VPBlockRecursiveTraversalWrapper<VPBlockBase *> Start(VPBB1);
+    VPBlockDeepTraversalWrapper<VPBlockBase *> Start(VPBB1);
     SmallVector<VPBlockBase *> FromIterator(depth_first(Start));
     EXPECT_EQ(7u, FromIterator.size());
     EXPECT_EQ(VPBB1, FromIterator[0]);
@@ -649,7 +649,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB1, FromIterator[6]);
 
     // Post-order, const VPRegionBlocks only.
-    VPBlockRecursiveTraversalWrapper<const VPBlockBase *> StartConst(VPBB1);
+    VPBlockDeepTraversalWrapper<const VPBlockBase *> StartConst(VPBB1);
     SmallVector<const VPRegionBlock *> FromIteratorVPRegion(
         VPBlockUtils::blocksOnly<const VPRegionBlock>(post_order(StartConst)));
     EXPECT_EQ(3u, FromIteratorVPRegion.size());

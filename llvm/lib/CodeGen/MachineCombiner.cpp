@@ -209,9 +209,6 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
                           DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
                           MachineTraceMetrics::Trace BlockTrace) {
   SmallVector<unsigned, 16> InstrDepth;
-  assert(TSchedModel.hasInstrSchedModelOrItineraries() &&
-         "Missing machine model\n");
-
   // For each instruction in the new sequence compute the depth based on the
   // operands. Use the trace information when possible. For new operands which
   // are tracked in the InstrIdxForVirtReg map depth is looked up in InstrDepth
@@ -267,9 +264,6 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
 /// \returns Latency of \p NewRoot
 unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
                                      MachineTraceMetrics::Trace BlockTrace) {
-  assert(TSchedModel.hasInstrSchedModelOrItineraries() &&
-         "Missing machine model\n");
-
   // Check each definition in NewRoot and compute the latency
   unsigned NewRootLatency = 0;
 
@@ -379,8 +373,6 @@ bool MachineCombiner::improvesCriticalPathLen(
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
     MachineCombinerPattern Pattern,
     bool SlackIsAccurate) {
-  assert(TSchedModel.hasInstrSchedModelOrItineraries() &&
-         "Missing machine model\n");
   // Get depth and latency of NewRoot and Root.
   unsigned NewRootDepth = getDepth(InsInstrs, InstrIdxForVirtReg, BlockTrace);
   unsigned RootDepth = BlockTrace.getInstrCycles(*Root).Depth;
@@ -691,13 +683,6 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         LLVM_DEBUG(dbgs() << "\t Replacing due to OptForSize ("
                           << InsInstrs.size() << " < "
                           << DelInstrs.size() << ")\n");
-        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
-                                 RegUnits, TII, P, IncrementalUpdate);
-        // Eagerly stop after the first pattern fires.
-        Changed = true;
-        break;
-      } else if (!TSchedModel.hasInstrSchedModelOrItineraries()) {
-        LLVM_DEBUG(dbgs() << "\t Replacing due to lack of schedule model\n");
         insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.

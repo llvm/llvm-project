@@ -61,6 +61,7 @@
 #include "llvm/Support/JSON.h"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -88,19 +89,18 @@ namespace llvm {
 /// Alternatively, don't call logReward at the end of each event, just
 /// log{Float|Int32|Int64}FinalReward at the end.
 class Logger final {
+  std::unique_ptr<raw_ostream> OS;
   const std::vector<TensorSpec> FeatureSpecs;
   const TensorSpec RewardSpec;
   const bool IncludeReward;
-  std::vector<std::unique_ptr<char[]>> FeatureStorage;
-  std::vector<std::unique_ptr<char[]>> RewardStorage;
-  raw_ostream &dumpHeader(raw_ostream &OS) const;
-  raw_ostream &startContext(raw_ostream &OS, StringRef Name) const;
-  raw_ostream &startObservation(raw_ostream &OS, size_t Nr) const;
-  raw_ostream &writeOutcome(raw_ostream &OS, size_t CurrentObservationID) const;
-  char *addNewTensor(size_t FeatureID);
-  size_t getNrRecords() const;
+  StringMap<size_t> ObservationIDs;
+  std::string CurrentContext;
 
-  void logRewardImpl(const char *Value, size_t Size);
+  void writeHeader();
+  void writeTensor(const TensorSpec &Spec, const char *RawData) {
+    OS->write(RawData, Spec.getTotalTensorBufferSize());
+  }
+  void logRewardImpl(const char *RawData);
 
 public:
   /// Construct a Logger. If IncludeReward is false, then logReward or
@@ -109,44 +109,27 @@ public:
   /// NOTE: the FeatureSpecs are expected to be in the same order (i.e. have
   /// corresponding indices) with any MLModelRunner implementations
   /// corresponding to the model being trained/logged.
-  Logger(const std::vector<TensorSpec> &FeatureSpecs,
-         const TensorSpec &RewardSpec, bool IncludeReward)
-      : FeatureSpecs(FeatureSpecs), RewardSpec(RewardSpec),
-        IncludeReward(IncludeReward) {}
+  Logger(std::unique_ptr<raw_ostream> OS,
+         const std::vector<TensorSpec> &FeatureSpecs,
+         const TensorSpec &RewardSpec, bool IncludeReward);
+
+  void switchContext(StringRef Name);
+  void startObservation();
+  void endObservation();
+
+  const std::string &currentContext() const { return CurrentContext; }
+
+  bool hasObservationInProgress() const {
+    return ObservationIDs.find(CurrentContext) != ObservationIDs.end();
+  }
 
   template <typename T> void logReward(T Value) {
-    logRewardImpl(reinterpret_cast<const char *>(&Value), sizeof(T));
+    logRewardImpl(reinterpret_cast<const char *>(&Value));
   }
-  void logFloatReward(float Value);
-  void logInt32Reward(int32_t Value);
-  void logInt64Reward(int64_t Value);
 
-  void logFloatFinalReward(float Value);
-  void logInt32FinalReward(int32_t Value);
-  void logInt64FinalReward(int64_t Value);
-
-  void logFloatValue(size_t FeatureID, const float *Value);
-  void logInt32Value(size_t FeatureID, const int32_t *Value);
-  void logInt64Value(size_t FeatureID, const int64_t *Value);
-
-  void logSpecifiedTensorValue(size_t FeatureID, const char *RawData);
-
-  // Warning! For int32_t, the return is set up for int64_t, so the caller needs
-  // to piecemeal cast their int32_t values.
-  // FIXME: let's drop int32_t support. While it's supported by evaluator, it's
-  // not supported by the tensorflow::SequenceExample proto. For small values,
-  // we can consider using bytes.
-  char *addEntryAndGetFloatOrInt64Buffer(size_t FeatureID);
-
-  // Flush the content of the log to the stream, clearing the stored data in the
-  // process.
-  raw_ostream &flush(raw_ostream &OS, bool WithHeader = true,
-                     StringRef Context = "default") const;
-
-  // Flush a set of logs that are produced from the same module, e.g.
-  // per-function regalloc traces.
-  static void flushLogs(raw_ostream &OS,
-                        const StringMap<std::unique_ptr<Logger>> &Loggers);
+  void logTensorValue(size_t FeatureID, const char *RawData) {
+    writeTensor(FeatureSpecs[FeatureID], RawData);
+  }
 };
 
 } // namespace llvm

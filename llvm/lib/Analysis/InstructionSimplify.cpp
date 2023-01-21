@@ -4607,6 +4607,15 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
           match(Cond, m_c_LogicalOr(m_Specific(X), m_Specific(Y))))
         return X;
     }
+
+    if (match(TrueVal, m_One())) {
+      // (X && Y) || Y --> Y (commuted 2 ways)
+      if (match(Cond, m_c_LogicalAnd(m_Specific(FalseVal), m_Value())))
+        return FalseVal;
+      // Y || (X && Y) --> Y (commuted 2 ways)
+      if (match(FalseVal, m_c_LogicalAnd(m_Specific(Cond), m_Value())))
+        return Cond;
+    }
   }
 
   // select ?, X, X -> X

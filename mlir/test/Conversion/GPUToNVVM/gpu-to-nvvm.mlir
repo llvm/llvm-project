@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-gpu-to-nvvm -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -convert-gpu-to-nvvm='index-bitwidth=32' -split-input-file | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='has-redux=1 index-bitwidth=32' -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_index_ops()
@@ -570,6 +570,47 @@ gpu.module @test_module {
     // CHECK-NEXT: %[[ARGPTR:.*]] = llvm.bitcast %[[ALLOC]] : !llvm.ptr<struct<(i32, f64)>> to !llvm.ptr<i8>
     // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ARGPTR]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> i32
     gpu.printf "Hello: %d\n" %arg0, %arg1 : i32, f32
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK-LABEL: func @subgroup_reduce_add
+  gpu.func @subgroup_reduce_add(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync add {{.*}}
+    %result = gpu.subgroup_reduce add %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
+  // CHECK-LABEL: func @subgroup_reduce_and
+  gpu.func @subgroup_reduce_and(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync and {{.*}}
+    %result = gpu.subgroup_reduce and %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
+  // CHECK-LABEL:  @subgroup_reduce_max
+  gpu.func @subgroup_reduce_max(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync max {{.*}}
+    %result = gpu.subgroup_reduce max %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
+  // CHECK-LABEL: @subgroup_reduce_min
+  gpu.func @subgroup_reduce_min(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync min {{.*}}
+    %result = gpu.subgroup_reduce min %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
+  // CHECK-LABEL:  @subgroup_reduce_or
+  gpu.func @subgroup_reduce_or(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync or {{.*}}
+    %result = gpu.subgroup_reduce or %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
+  // CHECK-LABEL: @subgroup_reduce_xor
+  gpu.func @subgroup_reduce_xor(%arg0 : i32) {
+    // CHECK nvvm.redux.sync xor {{.*}}
+    %result = gpu.subgroup_reduce xor %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }
 }

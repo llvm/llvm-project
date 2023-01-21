@@ -92,7 +92,7 @@ Value getBroadcastedDim(ImplicitLocOpBuilder lb, ValueRange extentTensors,
     Type indexTy = lb.getIndexType();
     broadcastedDim =
         lb.create<IfOp>(
-              TypeRange{indexTy}, outOfBounds,
+              outOfBounds,
               [&](OpBuilder &b, Location loc) {
                 b.create<scf::YieldOp>(loc, broadcastedDim);
               },
@@ -293,7 +293,7 @@ LogicalResult IsBroadcastableOpConverter::matchAndRewrite(
               loc, arith::CmpIPredicate::ult, iv, rankDiff);
           broadcastable =
               b.create<IfOp>(
-                   loc, TypeRange{i1Ty}, outOfBounds,
+                   loc, outOfBounds,
                    [&](OpBuilder &b, Location loc) {
                      // Non existent dimensions are always broadcastable
                      b.create<scf::YieldOp>(loc, broadcastable);
@@ -522,7 +522,7 @@ ShapeEqOpConverter::matchAndRewrite(ShapeEqOp op, OpAdaptor adaptor,
     Value eqRank = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
                                                   firstRank, rank);
     auto same = rewriter.create<IfOp>(
-        loc, i1Ty, eqRank,
+        loc, eqRank,
         [&](OpBuilder &b, Location loc) {
           Value one = b.create<arith::ConstantIndexOp>(loc, 1);
           Value init =

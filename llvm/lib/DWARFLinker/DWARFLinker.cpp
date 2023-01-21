@@ -1198,8 +1198,9 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
                   : Addr) +
              Info.PCOffset;
     } else if (Die.getTag() == dwarf::DW_TAG_compile_unit) {
-      Addr = Unit.getLowPc();
-      if (Addr == std::numeric_limits<uint64_t>::max())
+      if (std::optional<uint64_t> LowPC = Unit.getLowPc())
+        Addr = *LowPC;
+      else
         return 0;
     }
     Info.HasLowPc = true;
@@ -1276,10 +1277,11 @@ unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
 
   if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
       Die.getTag() == dwarf::DW_TAG_compile_unit) {
-    if (Unit.getLowPc() == -1ULL)
+    std::optional<uint64_t> LowPC = Unit.getLowPc();
+    if (!LowPC)
       return 0;
     // Dwarf >= 4 high_pc is an size, not an address.
-    Value = Unit.getHighPc() - Unit.getLowPc();
+    Value = Unit.getHighPc() - *LowPC;
   } else if (AttrSpec.Form == dwarf::DW_FORM_sec_offset)
     Value = *Val.getAsSectionOffset();
   else if (AttrSpec.Form == dwarf::DW_FORM_sdata)
@@ -1657,16 +1659,11 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
   DWARFDataExtractor RangeExtractor(OrigDwarf.getDWARFObj(),
                                     OrigDwarf.getDWARFObj().getRangesSection(),
                                     OrigDwarf.isLittleEndian(), AddressSize);
-  std::optional<std::pair<AddressRange, int64_t>> CurrRange;
+  std::optional<std::pair<AddressRange, int64_t>> CachedRange;
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
   auto OrigUnitDie = OrigUnit.getUnitDIE(false);
-  uint64_t OrigLowPc =
-      dwarf::toAddress(OrigUnitDie.find(dwarf::DW_AT_low_pc), -1ULL);
-  // Ranges addresses are based on the unit's low_pc. Compute the
-  // offset we need to apply to adapt to the new unit's low_pc.
-  int64_t UnitPcOffset = 0;
-  if (OrigLowPc != -1ULL)
-    UnitPcOffset = int64_t(OrigLowPc) - Unit.getLowPc();
+  uint64_t UnitBaseAddress =
+      dwarf::toAddress(OrigUnitDie.find(dwarf::DW_AT_low_pc), 0);
 
   for (const auto &RangeAttribute : Unit.getRangesAttributes()) {
     uint64_t Offset = RangeAttribute.get();
@@ -1677,22 +1674,36 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
       RangeList.clear();
     }
     const auto &Entries = RangeList.getEntries();
-    if (!Entries.empty()) {
-      const DWARFDebugRangeList::RangeListEntry &First = Entries.front();
 
-      if (!CurrRange ||
-          !CurrRange->first.contains(First.StartAddress + OrigLowPc)) {
-        CurrRange = FunctionRanges.getRangeValueThatContains(
-            First.StartAddress + OrigLowPc);
-        if (!CurrRange) {
-          reportWarning("no mapping for range.", File);
+    uint64_t BaseAddress = UnitBaseAddress;
+    AddressRanges LinkedRanges;
+
+    if (!Entries.empty()) {
+      for (const auto &Range : Entries) {
+        if (Range.isBaseAddressSelectionEntry(
+                Unit.getOrigUnit().getAddressByteSize())) {
+          BaseAddress = Range.EndAddress;
           continue;
         }
+
+        if (!CachedRange ||
+            !CachedRange->first.contains(Range.StartAddress + BaseAddress))
+          CachedRange = FunctionRanges.getRangeValueThatContains(
+              Range.StartAddress + BaseAddress);
+
+        // All range entries should lie in the function range.
+        if (!CachedRange) {
+          reportWarning("inconsistent range data.", File);
+          continue;
+        }
+
+        LinkedRanges.insert(
+            {Range.StartAddress + BaseAddress + CachedRange->second,
+             Range.EndAddress + BaseAddress + CachedRange->second});
       }
     }
 
-    TheDwarfEmitter->emitRangesEntries(UnitPcOffset, OrigLowPc, CurrRange,
-                                       Entries, AddressSize);
+    TheDwarfEmitter->emitDwarfDebugRangesTableFragment(Unit, LinkedRanges);
   }
 }
 

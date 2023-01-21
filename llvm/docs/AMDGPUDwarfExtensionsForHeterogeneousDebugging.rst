@@ -327,10 +327,17 @@ that can only be put on complete objects, such as a variable. That makes it only
 suitable for describing an entity (such as variable or subprogram code) that is
 in a single kind of memory.
 
-Therefore, AMDGPU uses the DWARF concept of address spaces. For example, a
-variable may be allocated in a register that is partially spilled to the call
-stack which is in the private address space, and partially spilled to the local
-address space.
+AMDGPU uses multiple address spaces. For example, a variable may be allocated in
+a register that is partially spilled to the call stack which is in the private
+address space, and partially spilled to the local address space. DWARF mentions
+address spaces, for example as an argument to the ``DW_OP_xderef*`` operations.
+A new section that defines address spaces is added (see
+:ref:`amdgpu-dwarf-address-spaces`).
+
+A new attribute ``DW_AT_LLVM_address_space`` is added to pointer and reference
+types (see :ref:`amdgpu-dwarf-type-modifier-entries`). This allows the compiler
+to specify which address space is being used to represent the pointer or
+reference type.
 
 DWARF uses the concept of an address in many expression operations but does not
 define how it relates to address spaces. For example,
@@ -687,6 +694,18 @@ with a register location overlaid at a runtime offset involving ``i``:
   // 5. Make a composite location description for dst that is the memory #1 with
   //    the register #2 positioned as an overlay at offset #3 of size #4:
   DW_OP_LLVM_overlay
+
+2.21 Support for Source Language Memory Spaces
+----------------------------------------------
+
+AMDGPU supports languages, such as OpenCL, that define source language memory
+spaces. Support is added to define language specific memory spaces so they can
+be used in a consistent way by consumers. See :ref:`amdgpu-dwarf-memory-spaces`.
+
+A new attribute ``DW_AT_LLVM_memory_space`` is added to support using memory
+spaces in defining source language pointer and reference types (see
+:ref:`amdgpu-dwarf-type-modifier-entries`) and data object allocation (see
+:ref:`amdgpu-dwarf-data-object-entries`).
 
 .. _amdgpu-dwarf-changes-relative-to-dwarf-version-5:
 
@@ -3597,6 +3616,8 @@ A.4 Data Object and Object List Entries
   attributes. These would be incorporated into the corresponding DWARF Version 5
   chapter 4 sections.
 
+.. _amdgpu-dwarf-data-object-entries:
+
 A.4.1 Data Object Entries
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3654,6 +3675,13 @@ constant may have the following attributes:
       used within a DWARF expression. This allows the ``DW_OP_call*`` operations
       to be used to push the location description of any variable regardless of
       how it is optimized.
+
+3.  ``DW_AT_LLVM_memory_space``
+
+    A ``DW_AT_memory_space`` attribute with a constant value representing a source
+    language specific DWARF memory space (see 2.14 "Memory Spaces"). If omitted,
+    defaults to ``DW_MSPACE_none``.
+
 
 A.4.2 Common Block Entries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3713,6 +3741,8 @@ A.5.1 Base Type Entries
       it better to add an attribute to the existing ``DW_TAG_base_type`` debug
       entry, or allow some forms of ``DW_TAG_array_type`` (those that have the
       ``DW_AT_GNU_vector`` attribute) to be used as stack entry value types?
+
+.. _amdgpu-dwarf-type-modifier-entries:
 
 A.5.3 Type Modifier Entries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1726,7 +1726,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
 /// conversion.
 static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
                                ImplicitConversionKind &ICK, Expr *From,
-                               bool InOverloadResolution) {
+                               bool InOverloadResolution, bool CStyle) {
   // We need at least one of these types to be a vector type to have a vector
   // conversion.
   if (!ToType->isVectorType() && !FromType->isVectorType())
@@ -1771,7 +1771,7 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
       if (S.isLaxVectorConversion(FromType, ToType) &&
           S.anyAltivecTypes(FromType, ToType) &&
           !S.areSameVectorElemTypes(FromType, ToType) &&
-          !InOverloadResolution) {
+          !InOverloadResolution && !CStyle) {
         S.Diag(From->getBeginLoc(), diag::warn_deprecated_lax_vec_conv_all)
             << FromType << ToType;
       }
@@ -2024,7 +2024,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // Pointer to member conversions (4.11).
     SCS.Second = ICK_Pointer_Member;
   } else if (IsVectorConversion(S, FromType, ToType, SecondICK, From,
-                                InOverloadResolution)) {
+                                InOverloadResolution, CStyle)) {
     SCS.Second = SecondICK;
     FromType = ToType.getUnqualifiedType();
   } else if (!S.getLangOpts().CPlusPlus &&
@@ -10917,10 +10917,13 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
         << ToTy << (unsigned)isObjectArgument << I + 1
         << (unsigned)(Cand->Fix.Kind);
 
-  // If we can fix the conversion, suggest the FixIts.
-  for (std::vector<FixItHint>::iterator HI = Cand->Fix.Hints.begin(),
-       HE = Cand->Fix.Hints.end(); HI != HE; ++HI)
-    FDiag << *HI;
+  // Check that location of Fn is not in system header.
+  if (!S.SourceMgr.isInSystemHeader(Fn->getLocation())) {
+    // If we can fix the conversion, suggest the FixIts.
+    for (const FixItHint &HI : Cand->Fix.Hints)
+        FDiag << HI;
+  }
+
   S.Diag(Fn->getLocation(), FDiag);
 
   MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);

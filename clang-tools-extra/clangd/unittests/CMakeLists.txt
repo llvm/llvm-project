@@ -164,11 +164,13 @@ clang_target_link_libraries(ClangdTests
   )
 target_link_libraries(ClangdTests
   PRIVATE
-  clangDaemon
-  clangdSupport
-  clangTidy
   LLVMTestingAnnotations
   LLVMTestingSupport
+
+  clangDaemon
+  clangIncludeCleaner
+  clangTidy
+  clangdSupport
   )
 
 if (CLANGD_ENABLE_REMOTE)

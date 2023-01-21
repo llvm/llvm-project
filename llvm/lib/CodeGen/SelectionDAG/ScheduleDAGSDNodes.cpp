@@ -848,8 +848,7 @@ EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
 /// not necessarily refer to returned BB. The emitter may split blocks.
 MachineBasicBlock *ScheduleDAGSDNodes::
 EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
-  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos,
-                       DAG->getUseInstrRefDebugInfo());
+  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
   DenseMap<SDValue, Register> VRBaseMap;
   DenseMap<SUnit*, Register> CopyVRBaseMap;
   SmallVector<std::pair<unsigned, MachineInstr*>, 32> Orders;

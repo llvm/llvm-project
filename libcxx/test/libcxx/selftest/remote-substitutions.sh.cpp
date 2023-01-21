@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-FREEBSD-FIXME
+
 // Make sure that test-executables can appear in RUN lines and be executed
 // effectively. This somewhat difficult-to-understand test checks that when
 // we run with a remote executor, test-executables are copied to the remote

@@ -1,4 +1,4 @@
-; RUN: opt %s -S -passes=instcombine -experimental-assignment-tracking | FileCheck %s
+; RUN: opt %s -S -passes=instcombine | FileCheck %s
 
 ;; Check that instcombine merges the DIAssignID metadata when merging two
 ;; stores into a successor. Filecheck directives inline.
@@ -66,7 +66,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !1000}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -106,3 +106,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !38 = !DISubroutineType(types: !39)
 !39 = !{null, !40}
 !40 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

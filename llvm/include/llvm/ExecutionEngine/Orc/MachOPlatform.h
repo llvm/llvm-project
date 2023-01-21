@@ -147,6 +147,12 @@ private:
     using InitSymbolDepMap =
         DenseMap<MaterializationResponsibility *, JITLinkSymbolSet>;
 
+    struct UnwindSections {
+      SmallVector<ExecutorAddrRange> CodeRanges;
+      ExecutorAddrRange DwarfSection;
+      ExecutorAddrRange CompactUnwindSection;
+    };
+
     Error bootstrapPipelineStart(jitlink::LinkGraph &G);
     Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
     Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
@@ -163,6 +169,8 @@ private:
                                MaterializationResponsibility &MR);
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
+
+    std::optional<UnwindSections> findUnwindSectionInfo(jitlink::LinkGraph &G);
 
     Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD,
                                          bool InBootstrapPhase);

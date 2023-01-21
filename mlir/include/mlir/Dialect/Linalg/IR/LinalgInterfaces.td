@@ -773,6 +773,9 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     LogicalResult reifyResultShapes(OpBuilder &b,
         ReifiedRankedShapedTypeDims &reifiedReturnShapes);
 
+    /// Return the index in the indexingMaps vector that corresponds to this `opOperand`
+    int64_t getIndexingMapIndex(OpOperand *opOperand);
+
     //========================================================================//
     // Forwarding functions to access interface methods from the
     // DestinationStyleOpInterface.

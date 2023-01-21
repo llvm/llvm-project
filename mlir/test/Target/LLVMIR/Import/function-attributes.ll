@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file %s --verify-diagnostics | FileCheck %s
 
 ; CHECK: llvm.func internal @func_internal
 define internal void @func_internal() {
@@ -55,5 +55,27 @@ define void @entry_count() !prof !1 {
 ; CHECK-SAME:  attributes {memory = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
 ; CHECK:   llvm.return
 define void @func_memory() memory(readwrite, argmem: none) {
+  ret void
+}
+
+; // -----
+
+; CHECK-LABEL: @passthrough_combined
+; CHECK-SAME: attributes {passthrough = [
+; CHECK-DAG: ["alignstack", "16"]
+; CHECK-DAG: "noinline"
+; CHECK-DAG: "probe-stack"
+; CHECK-DAG: ["alloc-family", "malloc"]
+; CHECK:   llvm.return
+define void @passthrough_combined() alignstack(16) noinline "probe-stack" "alloc-family"="malloc" {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: @passthrough_string_only
+; CHECK-SAME: attributes {passthrough = ["no-enum-attr"]}
+; CHECK:   llvm.return
+define void @passthrough_string_only() "no-enum-attr" {
   ret void
 }

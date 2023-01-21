@@ -1,9 +1,7 @@
 ; RUN: llc %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking   \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
 ; RUN: llc %s -stop-before finalize-isel -o - \
-; RUN:    -experimental-assignment-tracking   \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
@@ -158,7 +156,7 @@ attributes #0 = { nounwind readnone uwtable }
 attributes #1 = { nounwind readnone speculatable }
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!12, !13, !14, !15}
+!llvm.module.flags = !{!12, !13, !14, !15, !1000}
 !llvm.ident = !{!16}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -216,3 +214,4 @@ attributes #1 = { nounwind readnone speculatable }
 !52 = !DILocation(line: 33, column: 14, scope: !47)
 !53 = !DILocation(line: 35, column: 3, scope: !47)
 !54 = distinct !DIAssignID()
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

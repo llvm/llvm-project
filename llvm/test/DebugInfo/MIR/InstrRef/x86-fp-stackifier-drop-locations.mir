@@ -106,6 +106,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 frameInfo:
   hasCalls:        true
 fixedStack:

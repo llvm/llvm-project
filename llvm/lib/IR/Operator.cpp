@@ -44,6 +44,13 @@ bool Operator::hasPoisonGeneratingFlags() const {
   }
 }
 
+bool Operator::hasPoisonGeneratingFlagsOrMetadata() const {
+  if (hasPoisonGeneratingFlags())
+    return true;
+  auto *I = dyn_cast<Instruction>(this);
+  return I && I->hasPoisonGeneratingMetadata();
+}
+
 Type *GEPOperator::getSourceElementType() const {
   if (auto *I = dyn_cast<GetElementPtrInst>(this))
     return I->getSourceElementType();

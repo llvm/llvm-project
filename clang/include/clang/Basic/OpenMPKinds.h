@@ -83,7 +83,7 @@ enum OpenMPMapModifierKind {
   OMPC_MAP_MODIFIER_last
 };
 
-  /// Number of allowed map-type-modifiers.
+/// Number of allowed map-type-modifiers.
 static constexpr unsigned NumberOfOMPMapClauseModifiers =
     OMPC_MAP_MODIFIER_last - OMPC_MAP_MODIFIER_unknown - 1;
 

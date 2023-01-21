@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-after=finalize-isel -o - -experimental-assignment-tracking \
+; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
 ;; Hand-written to test untagged store handling on a simple case. Here's what
@@ -59,7 +59,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #1
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!2, !3, !4, !5, !6}
+!llvm.module.flags = !{!2, !3, !4, !5, !6, !1000}
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 14.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
@@ -80,3 +80,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !15 = !DILocation(line: 0, scope: !8)
 !16 = distinct !DIAssignID()
 !17 = !DILocalVariable(name: "b", arg: 2, scope: !8, file: !1, line: 1, type: !11)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

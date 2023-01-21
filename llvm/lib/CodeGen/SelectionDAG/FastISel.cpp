@@ -1247,7 +1247,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     if (Op) {
       assert(DI->getVariable()->isValidLocationForIntrinsic(MIMD.getDL()) &&
              "Expected inlined-at fields to agree");
-      if (UseInstrRefDebugInfo && Op->isReg()) {
+      if (FuncInfo.MF->useDebugInstrRef() && Op->isReg()) {
         // If using instruction referencing, produce this as a DBG_INSTR_REF,
         // to be later patched up by finalizeDebugInstrRefs. Tack a deref onto
         // the expression, we don't have an "indirect" flag in DBG_INSTR_REF.
@@ -1309,7 +1309,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
           .addMetadata(DI->getExpression());
     } else if (Register Reg = lookUpRegForValue(V)) {
       // FIXME: This does not handle register-indirect values at offset 0.
-      if (!UseInstrRefDebugInfo) {
+      if (!FuncInfo.MF->useDebugInstrRef()) {
         bool IsIndirect = false;
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD.getDL(), II, IsIndirect,
                 Reg, DI->getVariable(), DI->getExpression());

@@ -2245,7 +2245,9 @@ private:
 /// Class implementing the AMDGPU-specific functionalities of the plugin.
 struct AMDGPUPluginTy final : public GenericPluginTy {
   /// Create an AMDGPU plugin and initialize the AMDGPU driver.
-  AMDGPUPluginTy() : GenericPluginTy(getTripleArch()), HostDevice(nullptr) {}
+  AMDGPUPluginTy()
+      : GenericPluginTy(getTripleArch()), Initialized(false),
+        HostDevice(nullptr) {}
 
   /// This class should not be copied.
   AMDGPUPluginTy(const AMDGPUPluginTy &) = delete;
@@ -2256,9 +2258,13 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     hsa_status_t Status = hsa_init();
     if (Status != HSA_STATUS_SUCCESS) {
       // Cannot call hsa_success_string.
-      DP("Failed initialize AMDGPU's HSA library\n");
+      DP("Failed to initialize AMDGPU's HSA library\n");
       return 0;
     }
+
+    // The initialization of HSA was successful. It should be safe to call
+    // HSA functions from now on, e.g., hsa_shut_down.
+    Initialized = true;
 
     // Register event handler to detect memory errors on the devices.
     Status = hsa_amd_register_system_event_handler(eventHandler, nullptr);
@@ -2319,8 +2325,14 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
   /// Deinitialize the plugin.
   Error deinitImpl() override {
-    if (auto Err = HostDevice->deinit())
-      return Err;
+    // The HSA runtime was not initialized, so nothing from the plugin was
+    // actually initialized.
+    if (!Initialized)
+      return Plugin::success();
+
+    if (HostDevice)
+      if (auto Err = HostDevice->deinit())
+        return Err;
 
     // Finalize the HSA runtime.
     hsa_status_t Status = hsa_shut_down();
@@ -2426,6 +2438,11 @@ private:
 
     return HSA_STATUS_ERROR;
   }
+
+  /// Indicate whether the HSA runtime was correctly initialized. Even if there
+  /// is no available devices this boolean will be true. It indicates whether
+  /// we can safely call HSA functions (e.g., hsa_shut_down).
+  bool Initialized;
 
   /// Arrays of the available GPU and CPU agents. These arrays of handles should
   /// not be here but in the AMDGPUDeviceTy structures directly. However, the

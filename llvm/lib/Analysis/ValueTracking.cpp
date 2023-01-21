@@ -5236,9 +5236,9 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
 }
 
 static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
-                                   bool ConsiderFlags) {
+                                   bool ConsiderFlagsAndMetadata) {
 
-  if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
+  if (ConsiderFlagsAndMetadata && Op->hasPoisonGeneratingFlagsOrMetadata())
     return true;
 
   unsigned Opcode = Op->getOpcode();
@@ -5386,12 +5386,15 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
   }
 }
 
-bool llvm::canCreateUndefOrPoison(const Operator *Op, bool ConsiderFlags) {
-  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/false, ConsiderFlags);
+bool llvm::canCreateUndefOrPoison(const Operator *Op,
+                                  bool ConsiderFlagsAndMetadata) {
+  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/false,
+                                  ConsiderFlagsAndMetadata);
 }
 
-bool llvm::canCreatePoison(const Operator *Op, bool ConsiderFlags) {
-  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true, ConsiderFlags);
+bool llvm::canCreatePoison(const Operator *Op, bool ConsiderFlagsAndMetadata) {
+  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true,
+                                  ConsiderFlagsAndMetadata);
 }
 
 static bool directlyImpliesPoison(const Value *ValAssumedPoison,

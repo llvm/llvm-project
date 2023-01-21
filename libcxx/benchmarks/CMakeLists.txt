@@ -185,6 +185,7 @@ set(BENCHMARK_TESTS
     formatter_float.bench.cpp
     formatter_int.bench.cpp
     function.bench.cpp
+    join_view.bench.cpp
     map.bench.cpp
     monotonic_buffer.bench.cpp
     ordered_set.bench.cpp

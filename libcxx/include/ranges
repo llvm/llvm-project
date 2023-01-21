@@ -292,6 +292,13 @@ namespace std::ranges {
       (enable_borrowed_range<Views> && ...);
 
   namespace views { inline constexpr unspecified zip = unspecified; }    // C++2b
+
+  // [range.as.rvalue]
+  template <view V>
+    requires input_range<V>
+  class as_rvalue_view; // since C++23
+
+  namespace views { inline constexpr unspecified as_rvalue ) unspecified; } // since C++23
 }
 
 namespace std {
@@ -330,6 +337,7 @@ namespace std {
 #include <__config>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
+#include <__ranges/as_rvalue_view.h>
 #include <__ranges/common_view.h>
 #include <__ranges/concepts.h>
 #include <__ranges/counted.h>
