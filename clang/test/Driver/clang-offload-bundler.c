@@ -224,8 +224,11 @@
 // RUN: diff %t.empty %t.res.tgt2
 
 // Check that bindler prints an error if given host bundle does not exist in the fat binary.
-// RUN: not clang-offload-bundler -type=s -targets=host-amdgcn-xxx-linux-gnu,openmp-powerpc64le-ibm-linux-gnu -output=%t.res.s -output=%t.res.tgt1 -input=%t.bundle3.s -unbundle -allow-missing-bundles 2>&1 | FileCheck %s --check-prefix CK-NO-HOST-BUNDLE
-// CK-NO-HOST-BUNDLE: error: Can't find bundle for the host target
+// RUN: not clang-offload-bundler -type=s -targets=host-amdgcn-xxx-linux-gnu,openmp-powerpc64le-ibm-linux-gnu -output=%t.res.s -output=%t.res.tgt1 -input=%t.bundle3.s -unbundle 2>&1 | FileCheck %s --check-prefix CK-NO-HOST-BUNDLE
+// CK-NO-HOST-BUNDLE: error: Can't find bundles for host-amdgcn-xxx-linux-gnu
+
+// Check missing host entry is allowed with -allow-missing-bundles
+// RUN: clang-offload-bundler -type=s -targets=host-amdgcn-xxx-linux-gnu,openmp-powerpc64le-ibm-linux-gnu -output=%t.res.s -output=%t.res.tgt1 -input=%t.bundle3.s -unbundle -allow-missing-bundles
 
 //
 // Check binary bundle/unbundle. The content that we have before bundling must be the same we have after unbundling.

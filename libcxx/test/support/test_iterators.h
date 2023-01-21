@@ -1005,6 +1005,84 @@ class Iterator {
 
 } // namespace adl
 
+template <class T>
+class rvalue_iterator {
+public:
+  using iterator_category = std::input_iterator_tag;
+  using iterator_concept  = std::random_access_iterator_tag;
+  using difference_type   = std::ptrdiff_t;
+  using reference         = T&&;
+  using value_type        = T;
+
+  rvalue_iterator() = default;
+  constexpr rvalue_iterator(T* it) : it_(it) {}
+
+  constexpr reference operator*() const { return std::move(*it_); }
+
+  constexpr rvalue_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+
+  constexpr rvalue_iterator operator++(int) {
+    auto tmp = *this;
+    ++it_;
+    return tmp;
+  }
+
+  constexpr rvalue_iterator& operator--() {
+    --it_;
+    return *this;
+  }
+
+  constexpr rvalue_iterator operator--(int) {
+    auto tmp = *this;
+    --it_;
+    return tmp;
+  }
+
+  constexpr rvalue_iterator operator+(difference_type n) const {
+    auto tmp = *this;
+    tmp.it += n;
+    return tmp;
+  }
+
+  constexpr friend rvalue_iterator operator+(difference_type n, rvalue_iterator iter) {
+    iter += n;
+    return iter;
+  }
+
+  constexpr rvalue_iterator operator-(difference_type n) const {
+    auto tmp = *this;
+    tmp.it -= n;
+    return tmp;
+  }
+
+  constexpr difference_type operator-(const rvalue_iterator& other) const { return it_ - other.it_; }
+
+  constexpr rvalue_iterator& operator+=(difference_type n) {
+    it_ += n;
+    return *this;
+  }
+
+  constexpr rvalue_iterator& operator-=(difference_type n) {
+    it_ -= n;
+    return *this;
+  }
+
+  constexpr reference operator[](difference_type n) const { return std::move(it_[n]); }
+
+  auto operator<=>(const rvalue_iterator&) const noexcept = default;
+
+private:
+  T* it_;
+};
+
+template <class T>
+rvalue_iterator(T*) -> rvalue_iterator<T>;
+
+static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
+
 // Proxy
 // ======================================================================
 // Proxy that can wrap a value or a reference. It simulates C++23's tuple

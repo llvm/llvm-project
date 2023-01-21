@@ -109,6 +109,7 @@
 name:            "\x01?foo@@YAXH@Z"
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 hasWinCFI:       true
 frameInfo:
   stackSize:       8

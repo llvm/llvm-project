@@ -630,8 +630,8 @@ define i32 @logic_tree_with_mismatching_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %
 ; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    shll $15, %edi
 ; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    orl %esi, %edi
 ; X64-NEXT:    orl %ecx, %eax
-; X64-NEXT:    orl %esi, %eax
 ; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
   %a.shifted = shl i32 %a, 15
@@ -658,8 +658,8 @@ define i32 @logic_tree_with_mismatching_shifts2_i32(i32 %a, i32 %b, i32 %c, i32 
 ; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    shll $16, %edi
 ; X64-NEXT:    shrl $16, %eax
+; X64-NEXT:    orl %esi, %edi
 ; X64-NEXT:    orl %ecx, %eax
-; X64-NEXT:    orl %esi, %eax
 ; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
   %a.shifted = shl i32 %a, 16
@@ -777,8 +777,8 @@ define <4 x i32> @or_tree_with_mismatching_shifts_vec_i32(<4 x i32> %a, <4 x i32
 ; X64:       # %bb.0:
 ; X64-NEXT:    pslld $16, %xmm0
 ; X64-NEXT:    pslld $17, %xmm2
+; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    por %xmm3, %xmm2
-; X64-NEXT:    por %xmm1, %xmm2
 ; X64-NEXT:    por %xmm2, %xmm0
 ; X64-NEXT:    retq
   %a.shifted = shl <4 x i32> %a, <i32 16, i32 16, i32 16, i32 16>

@@ -36,3 +36,30 @@ loop.exit:
 exit:
   ret void
 }
+
+define void @exiting_terminator_is_switch() {
+; CHECK-LABEL: @exiting_terminator_is_switch(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    switch i1 true, label [[LOOP_BACKEDGE:%.*]] [
+; CHECK-NEXT:    i1 true, label [[EXIT:%.*]]
+; CHECK-NEXT:    i1 false, label [[LOOP_BACKEDGE]]
+; CHECK-NEXT:    ]
+; CHECK:       loop.backedge:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+bb:
+  br label %loop
+
+loop:
+  switch i1 true, label %loop [
+  i1 true, label %exit
+  i1 false, label %loop
+  ]
+
+exit:
+  ret void
+}

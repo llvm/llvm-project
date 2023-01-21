@@ -25,7 +25,11 @@ except for development and testing.
 
 **Enable in Clang**: `-Xclang -fexperimental-assignment-tracking`
 
-**Enable in LLVM tools**: `-experimental-assignment-tracking`
+That causes Clang to get LLVM to run the pass `declare-to-assign`. The pass
+converts conventional debug intrinsics to assignment tracking metadata and sets
+the module flag `debug-info-assignment-tracking` to the value `i1 true`. To
+check whether assignment tracking is enabled for a module call
+`isAssignmentTrackingEnabled(const Module &M)` (from `llvm/IR/DebugInfo.h`).
 
 ## Design and implementation
 

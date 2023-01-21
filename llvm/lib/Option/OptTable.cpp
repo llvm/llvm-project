@@ -233,7 +233,8 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
 
   // Consider each [option prefix + option name] pair as a candidate, finding
   // the closest match.
-  unsigned BestDistance = MaximumDistance + 1;
+  unsigned BestDistance =
+      MaximumDistance == UINT_MAX ? UINT_MAX : MaximumDistance + 1;
   SmallString<16> Candidate;
   SmallString<16> NormalizedName;
 
@@ -281,8 +282,12 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
       // characters of difference, no need to compute the edit distance, it's
       // going to be greater than BestDistance. Don't bother computing Candidate
       // at all.
-      if (std::abs((ssize_t)(CandidatePrefix.size() + CandidateName.size()) -
-                   (ssize_t)NormalizedName.size()) > (ssize_t)BestDistance) {
+      size_t CandidateSize = CandidatePrefix.size() + CandidateName.size(),
+             NormalizedSize = NormalizedName.size();
+      size_t AbsDiff = CandidateSize > NormalizedSize
+                           ? CandidateSize - NormalizedSize
+                           : NormalizedSize - CandidateSize;
+      if (AbsDiff > BestDistance) {
         continue;
       }
       Candidate = CandidatePrefix;

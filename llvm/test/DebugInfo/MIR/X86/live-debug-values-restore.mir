@@ -265,6 +265,7 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 tracksRegLiveness: true
+debugInstrRef: true
 hasWinCFI:       false
 registers:       []
 liveins:         
@@ -385,6 +386,7 @@ body:             |
 name:            g
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:       
@@ -462,6 +464,7 @@ body:             |
 name:            h
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:       
@@ -576,6 +579,7 @@ body:             |
 name:            i
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:       
@@ -690,6 +694,7 @@ body:             |
 
 name:            j
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:       
@@ -800,6 +805,7 @@ body:             |
 name:            k
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
   - { reg: '$r10', virtual-reg: '' }

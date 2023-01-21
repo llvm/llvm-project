@@ -651,14 +651,19 @@ class MemLocFragmentFill {
       // [  -   i   -  ]
       // +
       // [ i ][ f ][ i ]
+
+      // Save values for use after inserting a new interval.
       auto EndBitOfOverlap = FirstOverlap.stop();
+      unsigned OverlapValue = FirstOverlap.value();
+
+      // Shorten the overlapping interval.
       FirstOverlap.setStop(StartBit);
       insertMemLoc(BB, Before, Var, FirstOverlap.start(), StartBit,
-                   *FirstOverlap, VarLoc.DL);
+                   OverlapValue, VarLoc.DL);
 
       // Insert a new interval to represent the end part.
-      FragMap.insert(EndBit, EndBitOfOverlap, *FirstOverlap);
-      insertMemLoc(BB, Before, Var, EndBit, EndBitOfOverlap, *FirstOverlap,
+      FragMap.insert(EndBit, EndBitOfOverlap, OverlapValue);
+      insertMemLoc(BB, Before, Var, EndBit, EndBitOfOverlap, OverlapValue,
                    VarLoc.DL);
 
       // Insert the new (middle) fragment now there is space.
@@ -2389,6 +2394,9 @@ static void analyzeFunction(Function &Fn, const DataLayout &Layout,
 }
 
 bool AssignmentTrackingAnalysis::runOnFunction(Function &F) {
+  if (!isAssignmentTrackingEnabled(*F.getParent()))
+    return false;
+
   LLVM_DEBUG(dbgs() << "AssignmentTrackingAnalysis run on " << F.getName()
                     << "\n");
   auto DL = std::make_unique<DataLayout>(F.getParent());

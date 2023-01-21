@@ -6486,13 +6486,7 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPR:$temp),
                              NoItinerary, []>, Sched<[]>;
 }
 
-def CompilerBarrier : PseudoInst<(outs), (ins i32imm:$ordering), NoItinerary,
-                                 [(atomic_fence timm:$ordering, 0)]> {
-  let hasSideEffects = 1;
-  let Size = 0;
-  let AsmString = "@ COMPILER BARRIER";
-  let hasNoSchedulingInfo = 1;
-}
+def : Pat<(atomic_fence (timm), 0), (MEMBARRIER)>;
 
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on Windows.

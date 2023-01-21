@@ -2932,6 +2932,7 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE2-NEXT:    mulq %rdi
 ; SSE2-NEXT:    seto %r12b
 ; SSE2-NEXT:    orb %r15b, %r12b
+; SSE2-NEXT:    orb %bpl, %r12b
 ; SSE2-NEXT:    leaq (%rsi,%rax), %r10
 ; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    mulq %r8
@@ -2940,7 +2941,6 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE2-NEXT:    addq %r10, %rsi
 ; SSE2-NEXT:    setb %r10b
 ; SSE2-NEXT:    orb %r12b, %r10b
-; SSE2-NEXT:    orb %bpl, %r10b
 ; SSE2-NEXT:    testq %r9, %r9
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    testq %r11, %r11
@@ -2954,13 +2954,13 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE2-NEXT:    mulq %rcx
 ; SSE2-NEXT:    seto %r9b
 ; SSE2-NEXT:    orb %r11b, %r9b
+; SSE2-NEXT:    orb %bpl, %r9b
 ; SSE2-NEXT:    addq %rax, %r8
 ; SSE2-NEXT:    movq %rcx, %rax
 ; SSE2-NEXT:    mulq %r14
 ; SSE2-NEXT:    addq %r8, %rdx
 ; SSE2-NEXT:    setb %cl
 ; SSE2-NEXT:    orb %r9b, %cl
-; SSE2-NEXT:    orb %bpl, %cl
 ; SSE2-NEXT:    movzbl %cl, %ecx
 ; SSE2-NEXT:    negl %ecx
 ; SSE2-NEXT:    movd %ecx, %xmm1
@@ -3005,6 +3005,7 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSSE3-NEXT:    mulq %rdi
 ; SSSE3-NEXT:    seto %r12b
 ; SSSE3-NEXT:    orb %r15b, %r12b
+; SSSE3-NEXT:    orb %bpl, %r12b
 ; SSSE3-NEXT:    leaq (%rsi,%rax), %r10
 ; SSSE3-NEXT:    movq %rdi, %rax
 ; SSSE3-NEXT:    mulq %r8
@@ -3013,7 +3014,6 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSSE3-NEXT:    addq %r10, %rsi
 ; SSSE3-NEXT:    setb %r10b
 ; SSSE3-NEXT:    orb %r12b, %r10b
-; SSSE3-NEXT:    orb %bpl, %r10b
 ; SSSE3-NEXT:    testq %r9, %r9
 ; SSSE3-NEXT:    setne %al
 ; SSSE3-NEXT:    testq %r11, %r11
@@ -3027,13 +3027,13 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSSE3-NEXT:    mulq %rcx
 ; SSSE3-NEXT:    seto %r9b
 ; SSSE3-NEXT:    orb %r11b, %r9b
+; SSSE3-NEXT:    orb %bpl, %r9b
 ; SSSE3-NEXT:    addq %rax, %r8
 ; SSSE3-NEXT:    movq %rcx, %rax
 ; SSSE3-NEXT:    mulq %r14
 ; SSSE3-NEXT:    addq %r8, %rdx
 ; SSSE3-NEXT:    setb %cl
 ; SSSE3-NEXT:    orb %r9b, %cl
-; SSSE3-NEXT:    orb %bpl, %cl
 ; SSSE3-NEXT:    movzbl %cl, %ecx
 ; SSSE3-NEXT:    negl %ecx
 ; SSSE3-NEXT:    movd %ecx, %xmm1
@@ -3078,6 +3078,7 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE41-NEXT:    mulq %rdi
 ; SSE41-NEXT:    seto %r12b
 ; SSE41-NEXT:    orb %r15b, %r12b
+; SSE41-NEXT:    orb %bpl, %r12b
 ; SSE41-NEXT:    leaq (%rsi,%rax), %r10
 ; SSE41-NEXT:    movq %rdi, %rax
 ; SSE41-NEXT:    mulq %r8
@@ -3086,7 +3087,6 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE41-NEXT:    addq %r10, %rsi
 ; SSE41-NEXT:    setb %r10b
 ; SSE41-NEXT:    orb %r12b, %r10b
-; SSE41-NEXT:    orb %bpl, %r10b
 ; SSE41-NEXT:    testq %r9, %r9
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    testq %r11, %r11
@@ -3100,13 +3100,13 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE41-NEXT:    mulq %rcx
 ; SSE41-NEXT:    seto %r9b
 ; SSE41-NEXT:    orb %r11b, %r9b
+; SSE41-NEXT:    orb %bpl, %r9b
 ; SSE41-NEXT:    addq %rax, %r8
 ; SSE41-NEXT:    movq %rcx, %rax
 ; SSE41-NEXT:    mulq %r14
 ; SSE41-NEXT:    addq %r8, %rdx
 ; SSE41-NEXT:    setb %cl
 ; SSE41-NEXT:    orb %r9b, %cl
-; SSE41-NEXT:    orb %bpl, %cl
 ; SSE41-NEXT:    movzbl %cl, %ecx
 ; SSE41-NEXT:    negl %ecx
 ; SSE41-NEXT:    movzbl %r10b, %r8d
@@ -3150,6 +3150,7 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX-NEXT:    mulq %rdi
 ; AVX-NEXT:    seto %r12b
 ; AVX-NEXT:    orb %r15b, %r12b
+; AVX-NEXT:    orb %bpl, %r12b
 ; AVX-NEXT:    leaq (%rsi,%rax), %r10
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    mulq %r8
@@ -3158,7 +3159,6 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX-NEXT:    addq %r10, %rsi
 ; AVX-NEXT:    setb %r10b
 ; AVX-NEXT:    orb %r12b, %r10b
-; AVX-NEXT:    orb %bpl, %r10b
 ; AVX-NEXT:    testq %r9, %r9
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    testq %r11, %r11
@@ -3172,13 +3172,13 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX-NEXT:    mulq %rcx
 ; AVX-NEXT:    seto %r9b
 ; AVX-NEXT:    orb %r11b, %r9b
+; AVX-NEXT:    orb %bpl, %r9b
 ; AVX-NEXT:    addq %rax, %r8
 ; AVX-NEXT:    movq %rcx, %rax
 ; AVX-NEXT:    mulq %r14
 ; AVX-NEXT:    addq %r8, %rdx
 ; AVX-NEXT:    setb %cl
 ; AVX-NEXT:    orb %r9b, %cl
-; AVX-NEXT:    orb %bpl, %cl
 ; AVX-NEXT:    movzbl %cl, %ecx
 ; AVX-NEXT:    negl %ecx
 ; AVX-NEXT:    movzbl %r10b, %r8d
@@ -3221,6 +3221,7 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512F-NEXT:    mulq %rcx
 ; AVX512F-NEXT:    seto %r12b
 ; AVX512F-NEXT:    orb %r15b, %r12b
+; AVX512F-NEXT:    orb %bpl, %r12b
 ; AVX512F-NEXT:    addq %rax, %r11
 ; AVX512F-NEXT:    movq %rcx, %rax
 ; AVX512F-NEXT:    mulq %r14
@@ -3229,7 +3230,6 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512F-NEXT:    addq %r11, %rcx
 ; AVX512F-NEXT:    setb %al
 ; AVX512F-NEXT:    orb %r12b, %al
-; AVX512F-NEXT:    orb %bpl, %al
 ; AVX512F-NEXT:    kmovw %eax, %k0
 ; AVX512F-NEXT:    testq %r9, %r9
 ; AVX512F-NEXT:    setne %al
@@ -3244,13 +3244,13 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512F-NEXT:    mulq %rdi
 ; AVX512F-NEXT:    seto %r9b
 ; AVX512F-NEXT:    orb %bpl, %r9b
+; AVX512F-NEXT:    orb %r11b, %r9b
 ; AVX512F-NEXT:    addq %rax, %r10
 ; AVX512F-NEXT:    movq %rdi, %rax
 ; AVX512F-NEXT:    mulq %r8
 ; AVX512F-NEXT:    addq %r10, %rdx
 ; AVX512F-NEXT:    setb %dil
 ; AVX512F-NEXT:    orb %r9b, %dil
-; AVX512F-NEXT:    orb %r11b, %dil
 ; AVX512F-NEXT:    andl $1, %edi
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    kshiftlw $1, %k0, %k0
@@ -3293,6 +3293,7 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512BW-NEXT:    mulq %rcx
 ; AVX512BW-NEXT:    seto %r12b
 ; AVX512BW-NEXT:    orb %r15b, %r12b
+; AVX512BW-NEXT:    orb %bpl, %r12b
 ; AVX512BW-NEXT:    addq %rax, %r11
 ; AVX512BW-NEXT:    movq %rcx, %rax
 ; AVX512BW-NEXT:    mulq %r14
@@ -3301,7 +3302,6 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512BW-NEXT:    addq %r11, %rcx
 ; AVX512BW-NEXT:    setb %al
 ; AVX512BW-NEXT:    orb %r12b, %al
-; AVX512BW-NEXT:    orb %bpl, %al
 ; AVX512BW-NEXT:    kmovd %eax, %k0
 ; AVX512BW-NEXT:    testq %r9, %r9
 ; AVX512BW-NEXT:    setne %al
@@ -3316,13 +3316,13 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512BW-NEXT:    mulq %rdi
 ; AVX512BW-NEXT:    seto %r9b
 ; AVX512BW-NEXT:    orb %bpl, %r9b
+; AVX512BW-NEXT:    orb %r11b, %r9b
 ; AVX512BW-NEXT:    addq %rax, %r10
 ; AVX512BW-NEXT:    movq %rdi, %rax
 ; AVX512BW-NEXT:    mulq %r8
 ; AVX512BW-NEXT:    addq %r10, %rdx
 ; AVX512BW-NEXT:    setb %dil
 ; AVX512BW-NEXT:    orb %r9b, %dil
-; AVX512BW-NEXT:    orb %r11b, %dil
 ; AVX512BW-NEXT:    andl $1, %edi
 ; AVX512BW-NEXT:    kmovw %edi, %k1
 ; AVX512BW-NEXT:    kshiftlw $1, %k0, %k0

@@ -1195,7 +1195,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
   }
 }
 
-bool MachineFunction::useDebugInstrRef() const {
+bool MachineFunction::shouldUseDebugInstrRef() const {
   // Disable instr-ref at -O0: it's very slow (in compile time). We can still
   // have optimized code inlined into this unoptimized code, however with
   // fewer and less aggressive optimizations happening, coverage and accuracy
@@ -1211,6 +1211,14 @@ bool MachineFunction::useDebugInstrRef() const {
     return true;
 
   return false;
+}
+
+bool MachineFunction::useDebugInstrRef() const {
+  return UseDebugInstrRef;
+}
+
+void MachineFunction::setUseDebugInstrRef(bool Use) {
+  UseDebugInstrRef = Use;
 }
 
 // Use one million as a high / reserved number.

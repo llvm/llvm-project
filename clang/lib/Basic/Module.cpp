@@ -148,6 +148,26 @@ bool Module::isUnimportable(const LangOptions &LangOpts,
   llvm_unreachable("could not find a reason why module is unimportable");
 }
 
+// The -fmodule-name option tells the compiler to textually include headers in
+// the specified module, meaning Clang won't build the specified module. This
+// is useful in a number of situations, for instance, when building a library
+// that vends a module map, one might want to avoid hitting intermediate build
+// products containing the module map or avoid finding the system installed
+// modulemap for that library.
+bool Module::isForBuilding(const LangOptions &LangOpts) const {
+  StringRef TopLevelName = getTopLevelModuleName();
+  StringRef CurrentModule = LangOpts.CurrentModule;
+
+  // When building framework Foo, we want to make sure that Foo *and*
+  // Foo_Private are textually included and no modules are built for both.
+  if (getTopLevelModule()->IsFramework &&
+      CurrentModule == LangOpts.ModuleName &&
+      !CurrentModule.endswith("_Private") && TopLevelName.endswith("_Private"))
+    TopLevelName = TopLevelName.drop_back(8);
+
+  return TopLevelName == CurrentModule;
+}
+
 bool Module::isAvailable(const LangOptions &LangOpts, const TargetInfo &Target,
                          Requirement &Req,
                          UnresolvedHeaderDirective &MissingHeader,

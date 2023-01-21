@@ -1,4 +1,4 @@
-; RUN: opt %s -S -passes=sroa -o - -experimental-assignment-tracking | FileCheck %s
+; RUN: opt %s -S -passes=sroa -o - | FileCheck %s
 
 ;; $ cat test.cpp
 ;; class a {
@@ -115,7 +115,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #4
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !1000}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -204,3 +204,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !87 = !DILocation(line: 8, column: 14, scope: !64)
 !88 = !DILocation(line: 8, column: 19, scope: !57)
 
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

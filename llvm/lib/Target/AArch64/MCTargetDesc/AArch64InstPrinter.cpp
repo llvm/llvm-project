@@ -337,12 +337,6 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     }
   }
 
-  if (Opcode == AArch64::CompilerBarrier) {
-    O << '\t' << MAI.getCommentString() << " COMPILER BARRIER";
-    printAnnotation(O, Annot);
-    return;
-  }
-
   if (Opcode == AArch64::SPACE) {
     O << '\t' << MAI.getCommentString() << " SPACE "
       << MI->getOperand(1).getImm();

@@ -121,13 +121,10 @@ public:
   virtual void
   emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table) = 0;
 
-  /// Emit .debug_ranges for \p FuncRange by translating the
-  /// original \p Entries.
-  virtual void emitRangesEntries(
-      int64_t UnitPcOffset, uint64_t OrigLowPc,
-      std::optional<std::pair<AddressRange, int64_t>> FuncRange,
-      const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
-      unsigned AddressSize) = 0;
+  /// Emit piece of .debug_ranges for \p Ranges.
+  virtual void
+  emitDwarfDebugRangesTableFragment(const CompileUnit &Unit,
+                                    const AddressRanges &LinkedRanges) = 0;
 
   /// Emit .debug_aranges entries for \p Unit and if \p DoRangesSection is true,
   /// also emit the .debug_ranges entries for the DW_TAG_compile_unit's

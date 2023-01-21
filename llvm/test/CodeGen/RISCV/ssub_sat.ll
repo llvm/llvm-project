@@ -59,8 +59,8 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    mv a4, a1
 ; RV32-NEXT:    sltu a1, a0, a2
-; RV32-NEXT:    add a1, a3, a1
-; RV32-NEXT:    sub a1, a4, a1
+; RV32-NEXT:    sub a5, a4, a3
+; RV32-NEXT:    sub a1, a5, a1
 ; RV32-NEXT:    xor a5, a4, a1
 ; RV32-NEXT:    xor a3, a4, a3
 ; RV32-NEXT:    and a3, a3, a5

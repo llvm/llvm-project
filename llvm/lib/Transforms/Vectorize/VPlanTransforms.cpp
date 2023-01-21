@@ -28,8 +28,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
     SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE,
     const TargetLibraryInfo &TLI) {
 
-  ReversePostOrderTraversal<VPBlockRecursiveTraversalWrapper<VPBlockBase *>>
-      RPOT(Plan->getEntry());
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     VPRecipeBase *Term = VPBB->getTerminator();
     auto EndIter = Term ? Term->getIterator() : VPBB->end();
@@ -107,8 +107,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
 }
 
 bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
-  auto Iter = depth_first(
-      VPBlockRecursiveTraversalWrapper<VPBlockBase *>(Plan.getEntry()));
+  auto Iter = vp_depth_first_deep(Plan.getEntry());
   bool Changed = false;
   // First, collect the operands of all predicated replicate recipes as seeds
   // for sinking.
@@ -229,9 +228,8 @@ bool VPlanTransforms::mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
   // replicate region with matching masks to process front. This is to avoid
   // iterator invalidation issues while merging regions.
   SmallVector<VPRegionBlock *, 8> WorkList;
-  for (VPRegionBlock *Region1 :
-       VPBlockUtils::blocksOnly<VPRegionBlock>(depth_first(
-           VPBlockRecursiveTraversalWrapper<VPBlockBase *>(Plan.getEntry())))) {
+  for (VPRegionBlock *Region1 : VPBlockUtils::blocksOnly<VPRegionBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
     if (!Region1->isReplicator())
       continue;
     auto *MiddleBasicBlock =
@@ -313,8 +311,8 @@ bool VPlanTransforms::mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
 
 bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
   SmallVector<VPBasicBlock *> WorkList;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(depth_first(
-           VPBlockRecursiveTraversalWrapper<VPBlockBase *>(Plan.getEntry())))) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
     auto *PredVPBB =
         dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
     if (PredVPBB && PredVPBB->getNumSuccessors() == 1)
@@ -404,8 +402,8 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
 }
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
-  ReversePostOrderTraversal<VPBlockRecursiveTraversalWrapper<VPBlockBase *>>
-      RPOT(Plan.getEntry());
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
 
   for (VPBasicBlock *VPBB : reverse(VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))) {
     // The recipes in the block are processed in reverse order, to catch chains

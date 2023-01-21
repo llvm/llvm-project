@@ -1,4 +1,4 @@
-; RUN: opt -passes=sroa,verify -S %s -o - -experimental-assignment-tracking \
+; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ; Check that single sliced allocas retain their assignment tracking debug info.
@@ -47,7 +47,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!7, !8, !9}
+!llvm.module.flags = !{!7, !8, !9, !1000}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -80,3 +80,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !27 = !DILocation(line: 7, column: 3, scope: !11)
 !28 = !DILocation(line: 7, column: 18, scope: !11)
 !33 = !DILocation(line: 8, column: 1, scope: !11)
+!1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

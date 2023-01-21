@@ -335,7 +335,10 @@ def ConvertFuncToSPIRV : Pass<"convert-func-to-spirv"> {
 def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
   let summary = "Convert GPU dialect to LLVM dialect with GPU runtime calls";
   let constructor = "mlir::createGpuToLLVMConversionPass()";
-  let dependentDialects = ["LLVM::LLVMDialect"];
+  let dependentDialects = [
+    "LLVM::LLVMDialect",
+    "memref::MemRefDialect",
+  ];
 }
 
 def LowerHostCodeToLLVM : Pass<"lower-host-to-llvm", "ModuleOp"> {
@@ -359,7 +362,9 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">
+           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"hasRedux", "has-redux", "bool", /*default=*/"false",
+           "Target gpu supports redux">,
   ];
 }
 

@@ -1125,6 +1125,15 @@ CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_flags);
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_restorer);
 #endif
 
+#if SANITIZER_HAS_SIGINFO
+COMPILER_CHECK(alignof(siginfo_t) == alignof(__sanitizer_siginfo));
+using __sanitizer_siginfo_t = __sanitizer_siginfo;
+CHECK_TYPE_SIZE(siginfo_t);
+CHECK_SIZE_AND_OFFSET(siginfo_t, si_signo);
+CHECK_SIZE_AND_OFFSET(siginfo_t, si_errno);
+CHECK_SIZE_AND_OFFSET(siginfo_t, si_code);
+#endif
+
 #if SANITIZER_LINUX
 CHECK_TYPE_SIZE(__sysctl_args);
 CHECK_SIZE_AND_OFFSET(__sysctl_args, name);

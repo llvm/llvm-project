@@ -763,7 +763,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   DomTreeUpdater *DTUToUse = &DTU;
-  if (ExitingBlocks.size() == 1) {
+  if (ExitingBlocks.size() == 1 && ExitInfos.size() == 1) {
     // Manually update the DT if there's a single exiting node. In that case
     // there's a single exit node and it is sufficient to update the nodes
     // immediately dominated by the original exiting block. They will become
