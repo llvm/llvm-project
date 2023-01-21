@@ -251,9 +251,9 @@ libc_support_library(
     name = "__support_fputil_basic_operations",
     hdrs = ["src/__support/FPUtil/BasicOperations.h"],
     deps = [
+        ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
-        ":__support_common",
         ":libc_root",
     ],
 )
@@ -280,6 +280,7 @@ libc_support_library(
     name = "__support_fputil_division_and_remainder_operations",
     hdrs = ["src/__support/FPUtil/DivisionAndRemainderOperations.h"],
     deps = [
+        ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":__support_fputil_manipulation_functions",
