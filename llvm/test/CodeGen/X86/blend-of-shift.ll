@@ -278,16 +278,19 @@ define <2 x i64> @shuffle_i64_of_lshr_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; SSE2-LABEL: shuffle_i64_of_lshr_i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrlw $15, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; SSE2-NEXT:    psrlw $15, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
 ; AVX2-LABEL: shuffle_i64_of_lshr_i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; AVX2-NEXT:    vpsrlw $15, %xmm1, %xmm1
+; AVX2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7]
 ; AVX2-NEXT:    ret{{[l|q]}}
   %i1 = tail call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %x, i32 15)
-  %i2 = tail call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %x, i32 15)
+  %i2 = tail call <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16> %y, i32 15)
   %i3 = bitcast <8 x i16> %i1 to <2 x i64>
   %i4 = bitcast <8 x i16> %i2 to <2 x i64>
   %i5 = shufflevector <2 x i64> %i3, <2 x i64> %i4, <2 x i32> <i32 3, i32 0>
