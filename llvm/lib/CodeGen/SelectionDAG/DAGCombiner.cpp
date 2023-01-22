@@ -20263,6 +20263,32 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
             continue;
           }
 
+      // VECTOR_SHUFFLE - if all the operands match the shuffle's sources,
+      // update the shuffle mask (and second operand if we started with unary
+      // shuffle) and create a new legal shuffle.
+      if (CurVec.getOpcode() == ISD::VECTOR_SHUFFLE && CurVec.hasOneUse()) {
+        auto *SVN = cast<ShuffleVectorSDNode>(CurVec);
+        SDValue LHS = SVN->getOperand(0);
+        SDValue RHS = SVN->getOperand(1);
+        SmallVector<int, 16> Mask(SVN->getMask());
+        bool Merged = true;
+        for (auto I : enumerate(Ops)) {
+          SDValue &Op = I.value();
+          if (Op) {
+            SmallVector<int, 16> NewMask;
+            if (!mergeEltWithShuffle(LHS, RHS, Mask, NewMask, Op, I.index())) {
+              Merged = false;
+              break;
+            }
+            Mask = std::move(NewMask);
+          }
+        }
+        if (Merged)
+          if (SDValue NewShuffle =
+                  TLI.buildLegalVectorShuffle(VT, DL, LHS, RHS, Mask, DAG))
+            return NewShuffle;
+      }
+
       // Failed to find a match in the chain - bail.
       break;
     }
