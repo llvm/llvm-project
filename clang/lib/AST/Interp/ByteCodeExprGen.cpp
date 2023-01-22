@@ -498,10 +498,13 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     const CompoundAssignOperator *E) {
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  std::optional<PrimType> LT = classify(E->getLHS()->getType());
-  std::optional<PrimType> RT = classify(E->getRHS()->getType());
+  std::optional<PrimType> LHSComputationT =
+      classify(E->getComputationLHSType());
+  std::optional<PrimType> LT = classify(LHS->getType());
+  std::optional<PrimType> RT = classify(E->getComputationResultType());
+  std::optional<PrimType> ResultT = classify(E->getType());
 
-  if (!LT || !RT)
+  if (!LT || !RT || !ResultT || !LHSComputationT)
     return false;
 
   assert(!E->getType()->isPointerType() &&
@@ -512,29 +515,36 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     return false;
   if (!this->emitLoad(*LT, E))
     return false;
+  // If necessary, cast LHS to its computation type.
+  if (*LT != *LHSComputationT) {
+    if (!this->emitCast(*LT, *LHSComputationT, E))
+      return false;
+  }
+
   if (!visit(RHS))
     return false;
 
   // Perform operation.
   switch (E->getOpcode()) {
   case BO_AddAssign:
-    if (!this->emitAdd(*LT, E))
+    if (!this->emitAdd(*LHSComputationT, E))
       return false;
     break;
   case BO_SubAssign:
-    if (!this->emitSub(*LT, E))
+    if (!this->emitSub(*LHSComputationT, E))
       return false;
     break;
 
   case BO_MulAssign:
   case BO_DivAssign:
   case BO_RemAssign:
+
   case BO_ShlAssign:
-    if (!this->emitShl(*LT, *RT, E))
+    if (!this->emitShl(*LHSComputationT, *RT, E))
       return false;
     break;
   case BO_ShrAssign:
-    if (!this->emitShr(*LT, *RT, E))
+    if (!this->emitShr(*LHSComputationT, *RT, E))
       return false;
     break;
   case BO_AndAssign:
@@ -544,10 +554,16 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     llvm_unreachable("Unimplemented compound assign operator");
   }
 
+  // And now cast from LHSComputationT to ResultT.
+  if (*ResultT != *LHSComputationT) {
+    if (!this->emitCast(*LHSComputationT, *ResultT, E))
+      return false;
+  }
+
   // And store the result in LHS.
   if (DiscardResult)
-    return this->emitStorePop(*LT, E);
-  return this->emitStore(*LT, E);
+    return this->emitStorePop(*ResultT, E);
+  return this->emitStore(*ResultT, E);
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
