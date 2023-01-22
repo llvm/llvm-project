@@ -2113,7 +2113,7 @@ template<typename T> static InstructionCost costAndCollectOperands(
   auto CmpSelCost = [&](unsigned Opcode, unsigned NumRequired, unsigned MinIdx,
                         unsigned MaxIdx) -> InstructionCost {
     Operations.emplace_back(Opcode, MinIdx, MaxIdx);
-    Type *OpType = S->getOperand(0)->getType();
+    Type *OpType = S->getType();
     return NumRequired * TTI.getCmpSelInstrCost(
                              Opcode, OpType, CmpInst::makeCmpResultType(OpType),
                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
