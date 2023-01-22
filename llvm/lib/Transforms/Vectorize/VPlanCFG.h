@@ -29,10 +29,12 @@ namespace llvm {
 // successors/predecessors but not to the blocks inside the region.
 
 template <> struct GraphTraits<VPBlockBase *> {
+  using ParentPtrTy = VPRegionBlock *;
   using NodeRef = VPBlockBase *;
   using ChildIteratorType = SmallVectorImpl<VPBlockBase *>::iterator;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
+  static NodeRef getEntryNode(VPRegionBlock *R) { return R->getEntry(); }
 
   static inline ChildIteratorType child_begin(NodeRef N) {
     return N->getSuccessors().begin();
