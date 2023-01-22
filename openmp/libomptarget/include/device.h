@@ -444,12 +444,10 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
-  int32_t runRegion(void *TgtEntryPtr, void **TgtVarsPtr, ptrdiff_t *TgtOffsets,
-                    int32_t TgtVarsSize, AsyncInfoTy &AsyncInfo);
-  int32_t runTeamRegion(void *TgtEntryPtr, void **TgtVarsPtr,
-                        ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
-                        int32_t NumTeams, int32_t ThreadLimit,
-                        uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
+  // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
+  int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
+                       ptrdiff_t *TgtOffsets, const KernelArgsTy &KernelArgs,
+                       AsyncInfoTy &AsyncInfo);
 
   /// Synchronize device/queue/event based on \p AsyncInfo and return
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
@@ -530,6 +528,31 @@ struct PluginManager {
   /// Flag to indicate if we use events to ensure the atomicity of
   /// map clauses or not. Can be modified with an environment variable.
   const bool UseEventsForAtomicTransfers;
+
+  // Work around for plugins that call dlopen on shared libraries that call
+  // tgt_register_lib during their initialisation. Stash the pointers in a
+  // vector until the plugins are all initialised and then register them.
+  bool maybeDelayRegisterLib(__tgt_bin_desc *Desc) {
+    if (!RTLsLoaded) {
+      // Only reachable from libomptarget constructor
+      DelayedBinDesc.push_back(Desc);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void registerDelayedLibraries() {
+    // Only called by libomptarget constructor
+    RTLsLoaded = true;
+    for (auto *Desc : DelayedBinDesc)
+      __tgt_register_lib(Desc);
+    DelayedBinDesc.clear();
+  }
+
+private:
+  bool RTLsLoaded = false;
+  llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 };
 
 extern PluginManager *PM;

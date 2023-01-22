@@ -38,7 +38,7 @@ namespace ex = std::experimental::pmr;
 
 template <size_t S, size_t Align>
 void testForSizeAndAlign() {
-    using T = typename std::aligned_storage<S, Align>::type;
+    struct T { alignas(Align) char data[S]; };
     TestResource R;
     ex::polymorphic_allocator<T> a(&R);
 
@@ -54,7 +54,7 @@ void testForSizeAndAlign() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
 template <size_t S>
 void testAllocForSizeThrows() {
-    using T = typename std::aligned_storage<S>::type;
+    struct T { char data[S]; };
     using Alloc = ex::polymorphic_allocator<T>;
     using Traits = std::allocator_traits<Alloc>;
     NullResource R;

@@ -102,22 +102,17 @@ int32_t __tgt_rtl_data_exchange(int32_t SrcDevId, void *SrcPtr,
   return Manager->dataExchange(SrcDevId, SrcPtr, DstDevId, DstPtr, Size);
 }
 
-
-int32_t __tgt_rtl_run_target_region(int32_t DeviceId, void *TgtEntryPtr,
-                                    void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                    int32_t ArgNum) {
-  return Manager->runTargetRegion(DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets,
-                                  ArgNum);
-}
-
-int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,
-                                         void **TgtArgs, ptrdiff_t *TgtOffsets,
-                                         int32_t ArgNum, int32_t TeamNum,
-                                         int32_t ThreadLimit,
-                                         uint64_t LoopTripCount) {
-  return Manager->runTargetTeamRegion(DeviceId, TgtEntryPtr, TgtArgs,
-                                      TgtOffsets, ArgNum, TeamNum, ThreadLimit,
-                                      LoopTripCount);
+int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfoPtr) {
+  assert(!KernelArgs->NumTeams[1] && !KernelArgs->NumTeams[2] &&
+         !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
+         "Only one dimensional kernels supported.");
+  return Manager->runTargetTeamRegion(
+      DeviceId, TgtEntryPtr, TgtArgs, TgtOffsets, KernelArgs->NumArgs,
+      KernelArgs->NumTeams[0], KernelArgs->ThreadLimit[0],
+      KernelArgs->Tripcount);
 }
 
 // Exposed library API function
