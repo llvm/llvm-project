@@ -792,7 +792,7 @@
 // CHECK-ERROR:        fcmlt v29.2d, v5.2d, #2
 // CHECK-ERROR:                              ^
 
-/-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // Vector Integer Halving Add (Signed)
 // Vector Integer Halving Add (Unsigned)
 // Vector Integer Halving Sub (Signed)
