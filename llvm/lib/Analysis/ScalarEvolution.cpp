@@ -6542,17 +6542,15 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
     if (Cache.find(Expr) != Cache.end())
       return;
     switch (Expr->getSCEVType()) {
+    case scUnknown:
+      if (!isa<PHINode>(cast<SCEVUnknown>(Expr)->getValue()))
+        break;
+      [[fallthrough]];
     case scConstant:
     case scTruncate:
     case scZeroExtend:
     case scSignExtend:
     case scPtrToInt:
-      // FIXME: ???
-      break; // Don't bother recursing into these.
-    case scUnknown:
-      if (!isa<PHINode>(cast<SCEVUnknown>(Expr)->getValue()))
-        break;
-      [[fallthrough]];
     case scAddExpr:
     case scMulExpr:
     case scUDivExpr:
