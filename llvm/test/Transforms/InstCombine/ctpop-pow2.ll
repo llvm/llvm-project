@@ -13,7 +13,8 @@ define i16 @ctpop_x_and_negx(i16 %x) {
 ; CHECK-LABEL: @ctpop_x_and_negx(
 ; CHECK-NEXT:    [[V0:%.*]] = sub i16 0, [[X:%.*]]
 ; CHECK-NEXT:    [[V1:%.*]] = and i16 [[V0]], [[X]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i16 @llvm.ctpop.i16(i16 [[V1]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i16 [[V1]], 0
+; CHECK-NEXT:    [[CNT:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[CNT]]
 ;
   %v0 = sub i16 0, %x
@@ -24,11 +25,7 @@ define i16 @ctpop_x_and_negx(i16 %x) {
 
 define i8 @ctpop_x_nz_and_negx(i8 %x) {
 ; CHECK-LABEL: @ctpop_x_nz_and_negx(
-; CHECK-NEXT:    [[X1:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[V0:%.*]] = sub nsw i8 0, [[X1]]
-; CHECK-NEXT:    [[V1:%.*]] = and i8 [[X1]], [[V0]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[V1]]), !range [[RNG1:![0-9]+]]
-; CHECK-NEXT:    ret i8 [[CNT]]
+; CHECK-NEXT:    ret i8 1
 ;
   %x1 = or i8 %x, 1
   %v0 = sub i8 0, %x1
@@ -39,8 +36,8 @@ define i8 @ctpop_x_nz_and_negx(i8 %x) {
 
 define i32 @ctpop_2_shl(i32 %x) {
 ; CHECK-LABEL: @ctpop_2_shl(
-; CHECK-NEXT:    [[V:%.*]] = shl i32 2, [[X:%.*]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[V]]), !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[CNT:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CNT]]
 ;
   %v = shl i32 2, %x
@@ -50,10 +47,7 @@ define i32 @ctpop_2_shl(i32 %x) {
 
 define i32 @ctpop_2_shl_nz(i32 %x) {
 ; CHECK-LABEL: @ctpop_2_shl_nz(
-; CHECK-NEXT:    [[XA30:%.*]] = and i32 [[X:%.*]], 30
-; CHECK-NEXT:    [[V:%.*]] = shl i32 2, [[XA30]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[V]]), !range [[RNG3:![0-9]+]]
-; CHECK-NEXT:    ret i32 [[CNT]]
+; CHECK-NEXT:    ret i32 1
 ;
   %xa30 = and i32 30, %x
   %v = shl i32 2, %xa30
@@ -66,7 +60,7 @@ define i8 @ctpop_imin_plus1_lshr_nz(i8 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[V:%.*]] = lshr i8 -127, [[X]]
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[V]]), !range [[RNG4:![0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[V]]), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i8 [[CNT]]
 ;
   %cmp = icmp ne i8 %x, 0
@@ -83,8 +77,7 @@ define i64 @ctpop_x_and_negx_nz(i64 %x) {
 ; CHECK-NEXT:    [[V1:%.*]] = and i64 [[V0]], [[X]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[V1]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[CNT:%.*]] = call i64 @llvm.ctpop.i64(i64 [[V1]]), !range [[RNG5:![0-9]+]]
-; CHECK-NEXT:    ret i64 [[CNT]]
+; CHECK-NEXT:    ret i64 1
 ;
   %v0 = sub i64 0, %x
   %v1 = and i64 %x, %v0
@@ -97,7 +90,8 @@ define i64 @ctpop_x_and_negx_nz(i64 %x) {
 define <2 x i32> @ctpop_shl2_1_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_shl2_1_vec(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 2, i32 1>, [[X:%.*]]
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[SHL]], zeroinitializer
+; CHECK-NEXT:    [[CNT:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[CNT]]
 ;
   %shl = shl <2 x i32> <i32 2 ,i32 1>, %x
@@ -124,7 +118,8 @@ define <2 x i32> @ctpop_shl2_1_vec_nz(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_shl2_1_vec_nz(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 15, i32 15>
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 2, i32 1>, [[AND]]
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[SHL]], zeroinitializer
+; CHECK-NEXT:    [[CNT:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[CNT]]
 ;
   %and = and <2 x i32> %x, <i32 15 ,i32 15>
@@ -137,7 +132,8 @@ define <2 x i64> @ctpop_x_and_negx_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @ctpop_x_and_negx_vec(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[SUB]], [[X]]
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[CNT:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CNT]]
 ;
   %sub = sub <2 x i64> <i64 0 ,i64 0>, %x
@@ -148,11 +144,7 @@ define <2 x i64> @ctpop_x_and_negx_vec(<2 x i64> %x) {
 
 define <2 x i32> @ctpop_x_and_negx_vec_nz(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_x_and_negx_vec_nz(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X1]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X1]], [[SUB]]
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[AND]])
-; CHECK-NEXT:    ret <2 x i32> [[CNT]]
+; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 1>
 ;
   %x1 = or <2 x i32> %x, <i32 1 ,i32 1>
   %sub = sub <2 x i32> <i32 0 ,i32 0>, %x1
