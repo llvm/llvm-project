@@ -438,6 +438,7 @@ def OMPC_Bind : Clause<"bind"> {
 
 def OMPC_OMPX_DynCGroupMem : Clause<"ompx_dyn_cgroup_mem"> {
   let clangClass = "OMPXDynCGroupMemClause";
+  let flangClass = "ScalarIntExpr";
 }
 
 //===----------------------------------------------------------------------===//
