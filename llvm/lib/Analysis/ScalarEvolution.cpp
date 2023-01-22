@@ -6314,31 +6314,32 @@ const SCEV *ScalarEvolution::createNodeForGEP(GEPOperator *GEP) {
 }
 
 uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
-  if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S))
-    return C->getAPInt().countTrailingZeros();
-
-  if (const SCEVPtrToIntExpr *I = dyn_cast<SCEVPtrToIntExpr>(S))
-    return GetMinTrailingZeros(I->getOperand());
-
-  if (const SCEVTruncateExpr *T = dyn_cast<SCEVTruncateExpr>(S))
+  switch (S->getSCEVType()) {
+  case scConstant:
+    return cast<SCEVConstant>(S)->getAPInt().countTrailingZeros();
+  case scTruncate: {
+    const SCEVTruncateExpr *T = cast<SCEVTruncateExpr>(S);
     return std::min(GetMinTrailingZeros(T->getOperand()),
                     (uint32_t)getTypeSizeInBits(T->getType()));
-
-  if (const SCEVZeroExtendExpr *E = dyn_cast<SCEVZeroExtendExpr>(S)) {
+  }
+  case scZeroExtend: {
+    const SCEVZeroExtendExpr *E = cast<SCEVZeroExtendExpr>(S);
     uint32_t OpRes = GetMinTrailingZeros(E->getOperand());
     return OpRes == getTypeSizeInBits(E->getOperand()->getType())
                ? getTypeSizeInBits(E->getType())
                : OpRes;
   }
-
-  if (const SCEVSignExtendExpr *E = dyn_cast<SCEVSignExtendExpr>(S)) {
+  case scSignExtend: {
+    const SCEVSignExtendExpr *E = cast<SCEVSignExtendExpr>(S);
     uint32_t OpRes = GetMinTrailingZeros(E->getOperand());
     return OpRes == getTypeSizeInBits(E->getOperand()->getType())
                ? getTypeSizeInBits(E->getType())
                : OpRes;
   }
-
-  if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S)) {
+  case scPtrToInt:
+    return GetMinTrailingZeros(cast<SCEVPtrToIntExpr>(S)->getOperand());
+  case scMulExpr: {
+    const SCEVMulExpr *M = cast<SCEVMulExpr>(S);
     // The result is the sum of all operands results.
     uint32_t SumOpRes = GetMinTrailingZeros(M->getOperand(0));
     uint32_t BitWidth = getTypeSizeInBits(M->getType());
@@ -6348,9 +6349,15 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
           std::min(SumOpRes + GetMinTrailingZeros(M->getOperand(i)), BitWidth);
     return SumOpRes;
   }
-
-  if (isa<SCEVAddExpr>(S) || isa<SCEVAddRecExpr>(S) || isa<SCEVMinMaxExpr>(S) ||
-      isa<SCEVSequentialMinMaxExpr>(S)) {
+  case scUDivExpr:
+    return 0;
+  case scAddExpr:
+  case scAddRecExpr:
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
+  case scSequentialUMinExpr: {
     // The result is the min of all operands results.
     const SCEVNAryExpr *M = cast<SCEVNAryExpr>(S);
     uint32_t MinOpRes = GetMinTrailingZeros(M->getOperand(0));
@@ -6358,15 +6365,17 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
       MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(M->getOperand(I)));
     return MinOpRes;
   }
-
-  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
+  case scUnknown: {
+    const SCEVUnknown *U = cast<SCEVUnknown>(S);
     // For a SCEVUnknown, ask ValueTracking.
-    KnownBits Known = computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT);
+    KnownBits Known =
+        computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT);
     return Known.countMinTrailingZeros();
   }
-
-  // SCEVUDivExpr
-  return 0;
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+  }
+  llvm_unreachable("Unknown SCEV kind!");
 }
 
 uint32_t ScalarEvolution::GetMinTrailingZeros(const SCEV *S) {
