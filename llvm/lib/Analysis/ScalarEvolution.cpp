@@ -6336,8 +6336,6 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
                ? getTypeSizeInBits(E->getType())
                : OpRes;
   }
-  case scPtrToInt:
-    return GetMinTrailingZeros(cast<SCEVPtrToIntExpr>(S)->getOperand());
   case scMulExpr: {
     const SCEVMulExpr *M = cast<SCEVMulExpr>(S);
     // The result is the sum of all operands results.
@@ -6351,6 +6349,7 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
   }
   case scUDivExpr:
     return 0;
+  case scPtrToInt:
   case scAddExpr:
   case scAddRecExpr:
   case scUMaxExpr:
@@ -6359,10 +6358,10 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
   case scSMinExpr:
   case scSequentialUMinExpr: {
     // The result is the min of all operands results.
-    const SCEVNAryExpr *M = cast<SCEVNAryExpr>(S);
-    uint32_t MinOpRes = GetMinTrailingZeros(M->getOperand(0));
-    for (unsigned I = 1, E = M->getNumOperands(); MinOpRes && I != E; ++I)
-      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(M->getOperand(I)));
+    ArrayRef<const SCEV *> Ops = S->operands();
+    uint32_t MinOpRes = GetMinTrailingZeros(Ops[0]);
+    for (unsigned I = 1, E = Ops.size(); MinOpRes && I != E; ++I)
+      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(Ops[I]));
     return MinOpRes;
   }
   case scUnknown: {
