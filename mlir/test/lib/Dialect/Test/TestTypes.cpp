@@ -89,23 +89,21 @@ static llvm::hash_code test::hash_value(const FieldInfo &fi) { // NOLINT
 // TestCustomType
 //===----------------------------------------------------------------------===//
 
-static LogicalResult parseCustomTypeA(AsmParser &parser,
-                                      FailureOr<int> &aResult) {
-  aResult.emplace();
-  return parser.parseInteger(*aResult);
+static LogicalResult parseCustomTypeA(AsmParser &parser, int &aResult) {
+  return parser.parseInteger(aResult);
 }
 
 static void printCustomTypeA(AsmPrinter &printer, int a) { printer << a; }
 
 static LogicalResult parseCustomTypeB(AsmParser &parser, int a,
-                                      FailureOr<std::optional<int>> &bResult) {
+                                      std::optional<int> &bResult) {
   if (a < 0)
     return success();
   for (int i : llvm::seq(0, a))
     if (failed(parser.parseInteger(i)))
       return failure();
   bResult.emplace(0);
-  return parser.parseInteger(**bResult);
+  return parser.parseInteger(*bResult);
 }
 
 static void printCustomTypeB(AsmPrinter &printer, int a, std::optional<int> b) {
@@ -117,8 +115,7 @@ static void printCustomTypeB(AsmPrinter &printer, int a, std::optional<int> b) {
   printer << *b;
 }
 
-static LogicalResult parseFooString(AsmParser &parser,
-                                    FailureOr<std::string> &foo) {
+static LogicalResult parseFooString(AsmParser &parser, std::string &foo) {
   std::string result;
   if (parser.parseString(&result))
     return failure();
