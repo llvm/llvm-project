@@ -19966,31 +19966,21 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
 }
 
 // Merge an insertion into an existing shuffle:
-// (insert_vector_elt (vector_shuffle X, Y), (extract_vector_elt X, N),
-// InsIndex)
-//   --> (vector_shuffle X, Y) and variations where shuffle operands may be
-//   CONCAT_VECTORS.
-SDValue DAGCombiner::mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex) {
-  assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT &&
-         "Expected extract_vector_elt");
-  SDValue InsertVal = N->getOperand(1);
-  SDValue Vec = N->getOperand(0);
-
-  if (Vec.getOpcode() != ISD::VECTOR_SHUFFLE ||
-      InsertVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      !isa<ConstantSDNode>(InsertVal.getOperand(1)) || !Vec.hasOneUse())
-    return SDValue();
-
-  auto *SVN = cast<ShuffleVectorSDNode>(Vec.getNode());
-  ArrayRef<int> Mask = SVN->getMask();
-
-  SDValue X = Vec.getOperand(0);
-  SDValue Y = Vec.getOperand(1);
+// (insert_vector_elt (vector_shuffle X, Y, Mask),
+//                   .(extract_vector_elt X, N), InsIndex)
+//   --> (vector_shuffle X, Y, NewMask)
+//  and variations where shuffle operands may be CONCAT_VECTORS.
+static bool mergeEltWithShuffle(SDValue &X, SDValue &Y, ArrayRef<int> Mask,
+                                SmallVectorImpl<int> &NewMask, SDValue Elt,
+                                unsigned InsIndex) {
+  if (Elt.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      !isa<ConstantSDNode>(Elt.getOperand(1)))
+    return false;
 
   // Vec's operand 0 is using indices from 0 to N-1 and
   // operand 1 from N to 2N - 1, where N is the number of
   // elements in the vectors.
-  SDValue InsertVal0 = InsertVal.getOperand(0);
+  SDValue InsertVal0 = Elt.getOperand(0);
   int ElementOffset = -1;
 
   // We explore the inputs of the shuffle in order to see if we find the
@@ -20028,21 +20018,41 @@ SDValue DAGCombiner::mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex) {
 
   // If we failed to find a match, see if we can replace an UNDEF shuffle
   // operand.
-  if (ElementOffset == -1 && Y.isUndef() &&
-      InsertVal0.getValueType() == Y.getValueType()) {
+  if (ElementOffset == -1) {
+    if (!Y.isUndef() || InsertVal0.getValueType() != Y.getValueType())
+      return false;
     ElementOffset = Mask.size();
     Y = InsertVal0;
   }
 
-  if (ElementOffset != -1) {
-    SmallVector<int, 16> NewMask(Mask);
+  NewMask.assign(Mask.begin(), Mask.end());
+  NewMask[InsIndex] = ElementOffset + Elt.getConstantOperandVal(1);
+  assert(NewMask[InsIndex] < (int)(2 * Mask.size()) && NewMask[InsIndex] >= 0 &&
+         "NewMask[InsIndex] is out of bound");
+  return true;
+}
 
-    auto *ExtrIndex = cast<ConstantSDNode>(InsertVal.getOperand(1));
-    NewMask[InsIndex] = ElementOffset + ExtrIndex->getZExtValue();
-    assert(NewMask[InsIndex] <
-               (int)(2 * Vec.getValueType().getVectorNumElements()) &&
-           NewMask[InsIndex] >= 0 && "NewMask[InsIndex] is out of bound");
+// Merge an insertion into an existing shuffle:
+// (insert_vector_elt (vector_shuffle X, Y), (extract_vector_elt X, N),
+// InsIndex)
+//   --> (vector_shuffle X, Y) and variations where shuffle operands may be
+//   CONCAT_VECTORS.
+SDValue DAGCombiner::mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex) {
+  assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT &&
+         "Expected extract_vector_elt");
+  SDValue InsertVal = N->getOperand(1);
+  SDValue Vec = N->getOperand(0);
 
+  auto *SVN = dyn_cast<ShuffleVectorSDNode>(Vec);
+  if (!SVN || !Vec.hasOneUse())
+    return SDValue();
+
+  ArrayRef<int> Mask = SVN->getMask();
+  SDValue X = Vec.getOperand(0);
+  SDValue Y = Vec.getOperand(1);
+
+  SmallVector<int, 16> NewMask(Mask);
+  if (mergeEltWithShuffle(X, Y, Mask, NewMask, InsertVal, InsIndex)) {
     SDValue LegalShuffle = TLI.buildLegalVectorShuffle(
         Vec.getValueType(), SDLoc(N), X, Y, NewMask, DAG);
     if (LegalShuffle)
