@@ -73,9 +73,7 @@ namespace llvm {
 
     constexpr Type getAsInteger() const { return Mask; }
 
-    unsigned getNumLanes() const {
-      return countPopulation(Mask);
-    }
+    unsigned getNumLanes() const { return llvm::popcount(Mask); }
     unsigned getHighestLane() const {
       return Log2_64(Mask);
     }

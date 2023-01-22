@@ -11718,7 +11718,7 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
   }
 
-  assert(countPopulation(NonZeros) == 2 && "Simple cases not handled?");
+  assert(llvm::popcount(NonZeros) == 2 && "Simple cases not handled?");
 
   if (ResVT.getVectorNumElements() >= 16)
     return Op; // The operation is legal with KUNPCK

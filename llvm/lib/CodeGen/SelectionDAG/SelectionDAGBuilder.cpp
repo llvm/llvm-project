@@ -2895,7 +2895,7 @@ void SelectionDAGBuilder::visitBitTestCase(BitTestBlock &BB,
   MVT VT = BB.RegVT;
   SDValue ShiftOp = DAG.getCopyFromReg(getControlRoot(), dl, Reg, VT);
   SDValue Cmp;
-  unsigned PopCount = countPopulation(B.Mask);
+  unsigned PopCount = llvm::popcount(B.Mask);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (PopCount == 1) {
     // Testing for a single bit; just compare the shift count with what it

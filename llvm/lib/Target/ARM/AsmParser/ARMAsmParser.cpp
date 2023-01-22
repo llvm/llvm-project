@@ -1411,8 +1411,8 @@ public:
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
     int64_t Value = CE->getValue();
-    return Value > 0 && countPopulation((uint64_t)Value) == 1 &&
-           Value >= Min && Value <= Max;
+    return Value > 0 && llvm::popcount((uint64_t)Value) == 1 && Value >= Min &&
+           Value <= Max;
   }
   bool isModImm() const { return Kind == k_ModifiedImmediate; }
 
@@ -7727,7 +7727,7 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     // Conditions only allowing a 't' are those with no set bit except
     // the lowest-order one that indicates the end of the sequence. In
     // other words, powers of 2.
-    if (Cond == ARMCC::AL && countPopulation(Mask) != 1)
+    if (Cond == ARMCC::AL && llvm::popcount(Mask) != 1)
       return Error(Loc, "unpredictable IT predicate sequence");
     break;
   }

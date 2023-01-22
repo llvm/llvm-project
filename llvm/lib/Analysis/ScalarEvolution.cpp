@@ -6314,31 +6314,30 @@ const SCEV *ScalarEvolution::createNodeForGEP(GEPOperator *GEP) {
 }
 
 uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
-  if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S))
-    return C->getAPInt().countTrailingZeros();
-
-  if (const SCEVPtrToIntExpr *I = dyn_cast<SCEVPtrToIntExpr>(S))
-    return GetMinTrailingZeros(I->getOperand());
-
-  if (const SCEVTruncateExpr *T = dyn_cast<SCEVTruncateExpr>(S))
+  switch (S->getSCEVType()) {
+  case scConstant:
+    return cast<SCEVConstant>(S)->getAPInt().countTrailingZeros();
+  case scTruncate: {
+    const SCEVTruncateExpr *T = cast<SCEVTruncateExpr>(S);
     return std::min(GetMinTrailingZeros(T->getOperand()),
                     (uint32_t)getTypeSizeInBits(T->getType()));
-
-  if (const SCEVZeroExtendExpr *E = dyn_cast<SCEVZeroExtendExpr>(S)) {
+  }
+  case scZeroExtend: {
+    const SCEVZeroExtendExpr *E = cast<SCEVZeroExtendExpr>(S);
     uint32_t OpRes = GetMinTrailingZeros(E->getOperand());
     return OpRes == getTypeSizeInBits(E->getOperand()->getType())
                ? getTypeSizeInBits(E->getType())
                : OpRes;
   }
-
-  if (const SCEVSignExtendExpr *E = dyn_cast<SCEVSignExtendExpr>(S)) {
+  case scSignExtend: {
+    const SCEVSignExtendExpr *E = cast<SCEVSignExtendExpr>(S);
     uint32_t OpRes = GetMinTrailingZeros(E->getOperand());
     return OpRes == getTypeSizeInBits(E->getOperand()->getType())
                ? getTypeSizeInBits(E->getType())
                : OpRes;
   }
-
-  if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S)) {
+  case scMulExpr: {
+    const SCEVMulExpr *M = cast<SCEVMulExpr>(S);
     // The result is the sum of all operands results.
     uint32_t SumOpRes = GetMinTrailingZeros(M->getOperand(0));
     uint32_t BitWidth = getTypeSizeInBits(M->getType());
@@ -6348,25 +6347,34 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
           std::min(SumOpRes + GetMinTrailingZeros(M->getOperand(i)), BitWidth);
     return SumOpRes;
   }
-
-  if (isa<SCEVAddExpr>(S) || isa<SCEVAddRecExpr>(S) || isa<SCEVMinMaxExpr>(S) ||
-      isa<SCEVSequentialMinMaxExpr>(S)) {
+  case scUDivExpr:
+    return 0;
+  case scPtrToInt:
+  case scAddExpr:
+  case scAddRecExpr:
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
+  case scSequentialUMinExpr: {
     // The result is the min of all operands results.
-    const SCEVNAryExpr *M = cast<SCEVNAryExpr>(S);
-    uint32_t MinOpRes = GetMinTrailingZeros(M->getOperand(0));
-    for (unsigned I = 1, E = M->getNumOperands(); MinOpRes && I != E; ++I)
-      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(M->getOperand(I)));
+    ArrayRef<const SCEV *> Ops = S->operands();
+    uint32_t MinOpRes = GetMinTrailingZeros(Ops[0]);
+    for (unsigned I = 1, E = Ops.size(); MinOpRes && I != E; ++I)
+      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(Ops[I]));
     return MinOpRes;
   }
-
-  if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
+  case scUnknown: {
+    const SCEVUnknown *U = cast<SCEVUnknown>(S);
     // For a SCEVUnknown, ask ValueTracking.
-    KnownBits Known = computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT);
+    KnownBits Known =
+        computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT);
     return Known.countMinTrailingZeros();
   }
-
-  // SCEVUDivExpr
-  return 0;
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+  }
+  llvm_unreachable("Unknown SCEV kind!");
 }
 
 uint32_t ScalarEvolution::GetMinTrailingZeros(const SCEV *S) {
@@ -6533,31 +6541,49 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
       return;
     if (Cache.find(Expr) != Cache.end())
       return;
-    if (isa<SCEVNAryExpr>(Expr) || isa<SCEVUDivExpr>(Expr))
+    switch (Expr->getSCEVType()) {
+    case scUnknown:
+      if (!isa<PHINode>(cast<SCEVUnknown>(Expr)->getValue()))
+        break;
+      [[fallthrough]];
+    case scConstant:
+    case scTruncate:
+    case scZeroExtend:
+    case scSignExtend:
+    case scPtrToInt:
+    case scAddExpr:
+    case scMulExpr:
+    case scUDivExpr:
+    case scAddRecExpr:
+    case scUMaxExpr:
+    case scSMaxExpr:
+    case scUMinExpr:
+    case scSMinExpr:
+    case scSequentialUMinExpr:
       WorkList.push_back(Expr);
-    else if (auto *UnknownS = dyn_cast<SCEVUnknown>(Expr))
-      if (isa<PHINode>(UnknownS->getValue()))
-        WorkList.push_back(Expr);
+      break;
+    case scCouldNotCompute:
+      llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+    }
   };
   AddToWorklist(S);
 
   // Build worklist by queuing operands of N-ary expressions and phi nodes.
   for (unsigned I = 0; I != WorkList.size(); ++I) {
     const SCEV *P = WorkList[I];
-    if (auto *NaryS = dyn_cast<SCEVNAryExpr>(P)) {
-      for (const SCEV *Op : NaryS->operands())
+    auto *UnknownS = dyn_cast<SCEVUnknown>(P);
+    // If it is not a `SCEVUnknown`, just recurse into operands.
+    if (!UnknownS) {
+      for (const SCEV *Op : P->operands())
         AddToWorklist(Op);
-    } else if (auto *UDiv = dyn_cast<SCEVUDivExpr>(P)) {
-      AddToWorklist(UDiv->getLHS());
-      AddToWorklist(UDiv->getRHS());
-    } else {
-      auto *UnknownS = cast<SCEVUnknown>(P);
-      if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
-        if (!PendingPhiRangesIter.insert(P).second)
-          continue;
-        for (auto &Op : reverse(P->operands()))
-          AddToWorklist(getSCEV(Op));
-      }
+      continue;
+    }
+    // `SCEVUnknown`'s require special treatment.
+    if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
+      if (!PendingPhiRangesIter.insert(P).second)
+        continue;
+      for (auto &Op : reverse(P->operands()))
+        AddToWorklist(getSCEV(Op));
     }
   }
 

@@ -4906,7 +4906,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     if (BaseOpcode->Gather4) {
       DMaskLanes = 4;
     } else if (DMask != 0) {
-      DMaskLanes = countPopulation(DMask);
+      DMaskLanes = llvm::popcount(DMask);
     } else if (!IsTFE && !BaseOpcode->Store) {
       // If dmask is 0, this is a no-op load. This can be eliminated.
       B.buildUndef(MI.getOperand(0));

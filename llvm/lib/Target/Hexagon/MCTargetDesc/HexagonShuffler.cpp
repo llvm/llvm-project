@@ -48,7 +48,7 @@ class HexagonBid {
 
 public:
   HexagonBid() = default;
-  HexagonBid(unsigned B) { Bid = B ? MAX / countPopulation(B) : 0; }
+  HexagonBid(unsigned B) { Bid = B ? MAX / llvm::popcount(B) : 0; }
 
   // Check if the insn priority is overflowed.
   bool isSold() const { return (Bid >= MAX); }
@@ -100,7 +100,7 @@ unsigned HexagonResource::setWeight(unsigned s) {
   if (Key == 0 || Units == 0 || (SlotWeight * s >= 32))
     return Weight = 0;
 
-  unsigned Ctpop = countPopulation(Units);
+  unsigned Ctpop = llvm::popcount(Units);
   unsigned Cttz = countTrailingZeros(Units);
   Weight = (1u << (SlotWeight * s)) * ((MaskWeight - Ctpop) << Cttz);
   return Weight;
