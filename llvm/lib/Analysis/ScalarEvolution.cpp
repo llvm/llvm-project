@@ -6541,31 +6541,51 @@ ScalarEvolution::getRangeRefIter(const SCEV *S,
       return;
     if (Cache.find(Expr) != Cache.end())
       return;
-    if (isa<SCEVNAryExpr>(Expr) || isa<SCEVUDivExpr>(Expr))
+    switch (Expr->getSCEVType()) {
+    case scConstant:
+    case scTruncate:
+    case scZeroExtend:
+    case scSignExtend:
+    case scPtrToInt:
+      // FIXME: ???
+      break; // Don't bother recursing into these.
+    case scUnknown:
+      if (!isa<PHINode>(cast<SCEVUnknown>(Expr)->getValue()))
+        break;
+      [[fallthrough]];
+    case scAddExpr:
+    case scMulExpr:
+    case scUDivExpr:
+    case scAddRecExpr:
+    case scUMaxExpr:
+    case scSMaxExpr:
+    case scUMinExpr:
+    case scSMinExpr:
+    case scSequentialUMinExpr:
       WorkList.push_back(Expr);
-    else if (auto *UnknownS = dyn_cast<SCEVUnknown>(Expr))
-      if (isa<PHINode>(UnknownS->getValue()))
-        WorkList.push_back(Expr);
+      break;
+    case scCouldNotCompute:
+      llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+    }
   };
   AddToWorklist(S);
 
   // Build worklist by queuing operands of N-ary expressions and phi nodes.
   for (unsigned I = 0; I != WorkList.size(); ++I) {
     const SCEV *P = WorkList[I];
-    if (auto *NaryS = dyn_cast<SCEVNAryExpr>(P)) {
-      for (const SCEV *Op : NaryS->operands())
+    auto *UnknownS = dyn_cast<SCEVUnknown>(P);
+    // If it is not a `SCEVUnknown`, just recurse into operands.
+    if (!UnknownS) {
+      for (const SCEV *Op : P->operands())
         AddToWorklist(Op);
-    } else if (auto *UDiv = dyn_cast<SCEVUDivExpr>(P)) {
-      AddToWorklist(UDiv->getLHS());
-      AddToWorklist(UDiv->getRHS());
-    } else {
-      auto *UnknownS = cast<SCEVUnknown>(P);
-      if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
-        if (!PendingPhiRangesIter.insert(P).second)
-          continue;
-        for (auto &Op : reverse(P->operands()))
-          AddToWorklist(getSCEV(Op));
-      }
+      continue;
+    }
+    // `SCEVUnknown`'s require special treatment.
+    if (const PHINode *P = dyn_cast<PHINode>(UnknownS->getValue())) {
+      if (!PendingPhiRangesIter.insert(P).second)
+        continue;
+      for (auto &Op : reverse(P->operands()))
+        AddToWorklist(getSCEV(Op));
     }
   }
 
