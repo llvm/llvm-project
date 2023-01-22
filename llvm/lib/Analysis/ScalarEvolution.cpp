@@ -13740,11 +13740,6 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
   switch (S->getSCEVType()) {
   case scConstant:
     return ProperlyDominatesBlock;
-  case scPtrToInt:
-  case scTruncate:
-  case scZeroExtend:
-  case scSignExtend:
-    return getBlockDisposition(cast<SCEVCastExpr>(S)->getOperand(), BB);
   case scAddRecExpr: {
     // This uses a "dominates" query instead of "properly dominates" query
     // to test for proper dominance too, because the instruction which
@@ -13757,16 +13752,20 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
     // Fall through into SCEVNAryExpr handling.
     [[fallthrough]];
   }
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
+  case scUDivExpr:
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr:
   case scSequentialUMinExpr: {
-    const SCEVNAryExpr *NAry = cast<SCEVNAryExpr>(S);
     bool Proper = true;
-    for (const SCEV *NAryOp : NAry->operands()) {
+    for (const SCEV *NAryOp : S->operands()) {
       BlockDisposition D = getBlockDisposition(NAryOp, BB);
       if (D == DoesNotDominateBlock)
         return DoesNotDominateBlock;
@@ -13774,18 +13773,6 @@ ScalarEvolution::computeBlockDisposition(const SCEV *S, const BasicBlock *BB) {
         Proper = false;
     }
     return Proper ? ProperlyDominatesBlock : DominatesBlock;
-  }
-  case scUDivExpr: {
-    const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
-    const SCEV *LHS = UDiv->getLHS(), *RHS = UDiv->getRHS();
-    BlockDisposition LD = getBlockDisposition(LHS, BB);
-    if (LD == DoesNotDominateBlock)
-      return DoesNotDominateBlock;
-    BlockDisposition RD = getBlockDisposition(RHS, BB);
-    if (RD == DoesNotDominateBlock)
-      return DoesNotDominateBlock;
-    return (LD == ProperlyDominatesBlock && RD == ProperlyDominatesBlock) ?
-      ProperlyDominatesBlock : DominatesBlock;
   }
   case scUnknown:
     if (Instruction *I =
