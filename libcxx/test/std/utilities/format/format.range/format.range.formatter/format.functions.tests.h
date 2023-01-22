@@ -12,6 +12,7 @@
 #include <array>
 #include <charconv>
 #include <concepts>
+#include <deque>
 #include <format>
 #include <list>
 #include <ranges>
@@ -1262,6 +1263,66 @@ void test_with_ranges(TestFunction check, ExceptionTest check_exception) {
 }
 
 //
+// Adaptor
+//
+
+template <class CharT>
+class non_contiguous {
+  // A deque iterator is random access, but not contiguous.
+  using adaptee = std::deque<CharT>;
+
+public:
+  using iterator = typename adaptee::iterator;
+  using pointer  = typename adaptee::pointer;
+
+  iterator begin() { return data_.begin(); }
+  iterator end() { return data_.end(); }
+
+  explicit non_contiguous(adaptee&& data) : data_(std::move(data)) {}
+
+private:
+  adaptee data_;
+};
+
+template <class CharT>
+class contiguous {
+  // A vector iterator is contiguous.
+  using adaptee = std::vector<CharT>;
+
+public:
+  using iterator = typename adaptee::iterator;
+  using pointer  = typename adaptee::pointer;
+
+  iterator begin() { return data_.begin(); }
+  iterator end() { return data_.end(); }
+
+  explicit contiguous(adaptee&& data) : data_(std::move(data)) {}
+
+private:
+  adaptee data_;
+};
+
+// This tests two different implementations in libc++. A basic_string_view
+// formatter if the range is contiguous, a basic_string otherwise.
+template <class CharT, class TestFunction, class ExceptionTest>
+void test_adaptor(TestFunction check, ExceptionTest check_exception) {
+  static_assert(std::format_kind<non_contiguous<CharT>> == std::range_format::sequence);
+  static_assert(std::ranges::sized_range<non_contiguous<CharT>>);
+  static_assert(!std::ranges::contiguous_range<non_contiguous<CharT>>);
+  test_char_string<CharT>(
+      check,
+      check_exception,
+      non_contiguous<CharT>{std::deque{CharT('H'), CharT('e'), CharT('l'), CharT('l'), CharT('o')}});
+
+  static_assert(std::format_kind<contiguous<CharT>> == std::range_format::sequence);
+  static_assert(std::ranges::sized_range<contiguous<CharT>>);
+  static_assert(std::ranges::contiguous_range<contiguous<CharT>>);
+  test_char_string<CharT>(check,
+                          check_exception,
+                          contiguous<CharT>{std::vector{CharT('H'), CharT('e'), CharT('l'), CharT('l'), CharT('o')}});
+}
+
+//
 // Driver
 //
 
@@ -1285,6 +1346,8 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   test_tuple_int_int_int<CharT>(check, check_exception);
 
   test_with_ranges<CharT>(check, check_exception);
+
+  test_adaptor<CharT>(check, check_exception);
 }
 
 #endif // TEST_STD_UTILITIES_FORMAT_FORMAT_RANGE_FORMAT_RANGE_FORMATTER_FORMAT_FUNCTIONS_TESTS_H
