@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace altera {
+namespace clang::tidy::altera {
 
 /// Finds inner loops that have not been unrolled, as well as fully unrolled
 /// loops with unknown loop bounds or a large number of iterations.
@@ -71,8 +69,6 @@ private:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 };
 
-} // namespace altera
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::altera
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ALTERA_UNROLLLOOPSCHECK_H

@@ -19,8 +19,7 @@ namespace llvm {
 class raw_ostream;
 } // namespace llvm
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 class ClangTidyProfiling {
 public:
@@ -54,7 +53,6 @@ public:
   ~ClangTidyProfiling();
 };
 
-} // end namespace tidy
-} // end namespace clang
+} // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYPROFILING_H

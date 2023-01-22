@@ -17,8 +17,7 @@
 
 namespace clang {
 class Preprocessor;
-namespace tidy {
-namespace utils {
+namespace tidy::utils {
 
 /// Produces fixes to insert specified includes to source files, if not
 /// yet present.
@@ -99,7 +98,6 @@ private:
   friend class IncludeInserterCallback;
 };
 
-} // namespace utils
-} // namespace tidy
+} // namespace tidy::utils
 } // namespace clang
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDEINSERTER_H
