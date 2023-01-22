@@ -467,8 +467,9 @@ template <> bool AVRDAGToDAGISel::select<AVRISD::CALL>(SDNode *N) {
   Ops.push_back(Chain);
   Ops.push_back(Chain.getValue(1));
 
-  SDNode *ResNode =
-      CurDAG->getMachineNode(AVR::ICALL, DL, MVT::Other, MVT::Glue, Ops);
+  SDNode *ResNode = CurDAG->getMachineNode(
+      Subtarget->hasEIJMPCALL() ? AVR::EICALL : AVR::ICALL, DL, MVT::Other,
+      MVT::Glue, Ops);
 
   ReplaceUses(SDValue(N, 0), SDValue(ResNode, 0));
   ReplaceUses(SDValue(N, 1), SDValue(ResNode, 1));
