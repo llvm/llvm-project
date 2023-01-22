@@ -2445,7 +2445,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           llvm::getKnowledgeFromBundle(cast<AssumeInst>(*II), BOI);
         if (BOI.End - BOI.Begin > 2)
           continue; // Prevent reducing knowledge in an align with offset since
-                    // extracting a RetainedKnowledge form them looses offset
+                    // extracting a RetainedKnowledge from them looses offset
                     // information
         RetainedKnowledge CanonRK =
           llvm::simplifyRetainedKnowledge(cast<AssumeInst>(II), RK,

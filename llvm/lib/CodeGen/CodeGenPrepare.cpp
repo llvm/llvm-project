@@ -8485,7 +8485,7 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, ModifyDT &ModifiedDT) {
     // Replace the old BB with the new BB.
     TBB->replacePhiUsesWith(&BB, TmpBB);
 
-    // Add another incoming edge form the new BB.
+    // Add another incoming edge from the new BB.
     for (PHINode &PN : FBB->phis()) {
       auto *Val = PN.getIncomingValueForBlock(&BB);
       PN.addIncoming(Val, TmpBB);
