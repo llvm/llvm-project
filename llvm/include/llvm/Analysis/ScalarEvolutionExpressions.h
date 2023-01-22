@@ -677,28 +677,21 @@ public:
       case scTruncate:
       case scZeroExtend:
       case scSignExtend:
-        push(cast<SCEVCastExpr>(S)->getOperand());
-        continue;
       case scAddExpr:
       case scMulExpr:
+      case scUDivExpr:
       case scSMaxExpr:
       case scUMaxExpr:
       case scSMinExpr:
       case scUMinExpr:
       case scSequentialUMinExpr:
       case scAddRecExpr:
-        for (const auto *Op : cast<SCEVNAryExpr>(S)->operands()) {
+        for (const auto *Op : S->operands()) {
           push(Op);
           if (Visitor.isDone())
             break;
         }
         continue;
-      case scUDivExpr: {
-        const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
-        push(UDiv->getLHS());
-        push(UDiv->getRHS());
-        continue;
-      }
       case scCouldNotCompute:
         llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
       }
