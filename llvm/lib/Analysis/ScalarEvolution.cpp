@@ -9849,18 +9849,32 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           OpAtScope = getSCEVAtScope(Ops[i], L);
           NewOps.push_back(OpAtScope);
         }
-        if (isa<SCEVCastExpr>(V))
+
+        switch (V->getSCEVType()) {
+        case scTruncate:
+        case scZeroExtend:
+        case scSignExtend:
+        case scPtrToInt:
           return getCastExpr(V->getSCEVType(), NewOps[0], V->getType());
-        if (isa<SCEVAddExpr>(V))
+        case scAddExpr:
           return getAddExpr(NewOps, cast<SCEVAddExpr>(V)->getNoWrapFlags());
-        if (isa<SCEVMulExpr>(V))
+        case scMulExpr:
           return getMulExpr(NewOps, cast<SCEVMulExpr>(V)->getNoWrapFlags());
-        if (isa<SCEVUDivExpr>(V))
+        case scUDivExpr:
           return getUDivExpr(NewOps[0], NewOps[1]);
-        if (isa<SCEVMinMaxExpr>(V))
+        case scUMaxExpr:
+        case scSMaxExpr:
+        case scUMinExpr:
+        case scSMinExpr:
           return getMinMaxExpr(V->getSCEVType(), NewOps);
-        if (isa<SCEVSequentialMinMaxExpr>(V))
+        case scSequentialUMinExpr:
           return getSequentialMinMaxExpr(V->getSCEVType(), NewOps);
+        case scConstant:
+        case scAddRecExpr:
+        case scUnknown:
+        case scCouldNotCompute:
+          llvm_unreachable("Can not get those expressions here.");
+        }
         llvm_unreachable("Unknown n-ary-like SCEV type!");
       }
     }
