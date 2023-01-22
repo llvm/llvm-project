@@ -1095,7 +1095,7 @@ ObjCLoopChecker::checkPointerEscape(ProgramStateRef State,
                                     PointerEscapeKind Kind) const {
   SymbolRef ImmutableReceiver = getMethodReceiverIfKnownImmutable(Call);
 
-  // Remove the invalidated symbols form the collection count map.
+  // Remove the invalidated symbols from the collection count map.
   for (InvalidatedSymbols::const_iterator I = Escaped.begin(),
        E = Escaped.end();
        I != E; ++I) {
