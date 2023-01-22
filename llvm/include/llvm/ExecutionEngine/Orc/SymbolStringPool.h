@@ -24,11 +24,13 @@ class raw_ostream;
 
 namespace orc {
 
+class SymbolStringPtrBase;
 class SymbolStringPtr;
 
 /// String pool for symbol names used by the JIT.
 class SymbolStringPool {
-  friend class SymbolStringPtr;
+  friend class SymbolStringPoolTest;
+  friend class SymbolStringPtrBase;
 
   // Implemented in DebugUtils.h.
   friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
@@ -45,7 +47,16 @@ public:
 
   /// Returns true if the pool is empty.
   bool empty() const;
+
+#ifndef NDEBUG
+  // Useful for debugging and testing: This method can be used to identify
+  // non-owning pointers pointing to unowned pool entries.
+  bool isValid(const SymbolStringPtrBase &S) const { return getRefCount(S); }
+#endif
+
 private:
+  size_t getRefCount(const SymbolStringPtrBase &S) const;
+
   using RefCountType = std::atomic<size_t>;
   using PoolMap = StringMap<RefCountType>;
   using PoolMapEntry = StringMapEntry<RefCountType>;
@@ -53,8 +64,59 @@ private:
   PoolMap Pool;
 };
 
+/// Base class for both owning and non-owning symbol-string ptrs.
+///
+/// All symbol-string ptrs are convertible to bool, dereferenceable and
+/// comparable.
+///
+/// SymbolStringPtrBases are default-constructible and constructible
+/// from nullptr to enable comparison with these values.
+class SymbolStringPtrBase {
+  friend class SymbolStringPool;
+
+public:
+  SymbolStringPtrBase() = default;
+  SymbolStringPtrBase(std::nullptr_t) {}
+
+  explicit operator bool() const { return S; }
+
+  StringRef operator*() const { return S->first(); }
+
+  friend bool operator==(SymbolStringPtrBase LHS, SymbolStringPtrBase RHS) {
+    return LHS.S == RHS.S;
+  }
+
+  friend bool operator!=(SymbolStringPtrBase LHS, SymbolStringPtrBase RHS) {
+    return !(LHS == RHS);
+  }
+
+  friend bool operator<(SymbolStringPtrBase LHS, SymbolStringPtrBase RHS) {
+    return LHS.S < RHS.S;
+  }
+
+protected:
+  using PoolEntry = SymbolStringPool::PoolMapEntry;
+  using PoolEntryPtr = PoolEntry *;
+
+  SymbolStringPtrBase(PoolEntryPtr S) : S(S) {}
+
+  constexpr static uintptr_t EmptyBitPattern =
+      std::numeric_limits<uintptr_t>::max()
+      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
+
+  constexpr static uintptr_t TombstoneBitPattern =
+      (std::numeric_limits<uintptr_t>::max() - 1)
+      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
+
+  constexpr static uintptr_t InvalidPtrMask =
+      (std::numeric_limits<uintptr_t>::max() - 3)
+      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
+
+  PoolEntryPtr S = nullptr;
+};
+
 /// Pointer to a pooled string representing a symbol name.
-class SymbolStringPtr {
+class SymbolStringPtr : public SymbolStringPtrBase {
   friend class OrcV2CAPIHelper;
   friend class SymbolStringPool;
   friend struct DenseMapInfo<SymbolStringPtr>;
@@ -62,8 +124,7 @@ class SymbolStringPtr {
 public:
   SymbolStringPtr() = default;
   SymbolStringPtr(std::nullptr_t) {}
-  SymbolStringPtr(const SymbolStringPtr &Other)
-    : S(Other.S) {
+  SymbolStringPtr(const SymbolStringPtr &Other) : SymbolStringPtrBase(Other.S) {
     if (isRealPoolEntry(S))
       ++S->getValue();
   }
@@ -79,9 +140,7 @@ public:
     return *this;
   }
 
-  SymbolStringPtr(SymbolStringPtr &&Other) : S(nullptr) {
-    std::swap(S, Other.S);
-  }
+  SymbolStringPtr(SymbolStringPtr &&Other) { std::swap(S, Other.S); }
 
   SymbolStringPtr& operator=(SymbolStringPtr &&Other) {
     if (isRealPoolEntry(S)) {
@@ -100,31 +159,8 @@ public:
     }
   }
 
-  explicit operator bool() const { return S; }
-
-  StringRef operator*() const { return S->first(); }
-
-  friend bool operator==(const SymbolStringPtr &LHS,
-                         const SymbolStringPtr &RHS) {
-    return LHS.S == RHS.S;
-  }
-
-  friend bool operator!=(const SymbolStringPtr &LHS,
-                         const SymbolStringPtr &RHS) {
-    return !(LHS == RHS);
-  }
-
-  friend bool operator<(const SymbolStringPtr &LHS,
-                        const SymbolStringPtr &RHS) {
-    return LHS.S < RHS.S;
-  }
-
 private:
-  using PoolEntry = SymbolStringPool::PoolMapEntry;
-  using PoolEntryPtr = PoolEntry *;
-
-  SymbolStringPtr(SymbolStringPool::PoolMapEntry *S)
-      : S(S) {
+  SymbolStringPtr(PoolEntryPtr S) : SymbolStringPtrBase(S) {
     if (isRealPoolEntry(S))
       ++S->getValue();
   }
@@ -142,20 +178,42 @@ private:
   static SymbolStringPtr getTombstoneVal() {
     return SymbolStringPtr(reinterpret_cast<PoolEntryPtr>(TombstoneBitPattern));
   }
+};
 
-  constexpr static uintptr_t EmptyBitPattern =
-      std::numeric_limits<uintptr_t>::max()
-      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
+/// Non-owning SymbolStringPool entry pointer. Instances are comparable with
+/// SymbolStringPtr instances and guaranteed to have the same hash, but do not
+/// affect the ref-count of the pooled string (and are therefore cheaper to
+/// copy).
+///
+/// NonOwningSymbolStringPtrs are silently invalidated if the pool entry's
+/// ref-count drops to zero, so they should only be used in contexts where a
+/// corresponding SymbolStringPtr is known to exist (which will guarantee that
+/// the ref-count stays above zero). E.g. in a graph where nodes are
+/// represented by SymbolStringPtrs the edges can be represented by pairs of
+/// NonOwningSymbolStringPtrs and this will make the introduction of deletion
+/// of edges cheaper.
+class NonOwningSymbolStringPtr : public SymbolStringPtrBase {
+  friend struct DenseMapInfo<orc::NonOwningSymbolStringPtr>;
 
-  constexpr static uintptr_t TombstoneBitPattern =
-      (std::numeric_limits<uintptr_t>::max() - 1)
-      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
+public:
+  NonOwningSymbolStringPtr() = default;
+  explicit NonOwningSymbolStringPtr(const SymbolStringPtr &S)
+      : SymbolStringPtrBase(S) {}
 
-  constexpr static uintptr_t InvalidPtrMask =
-      (std::numeric_limits<uintptr_t>::max() - 3)
-      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
+  using SymbolStringPtrBase::operator=;
 
-  PoolEntryPtr S = nullptr;
+private:
+  NonOwningSymbolStringPtr(PoolEntryPtr S) : SymbolStringPtrBase(S) {}
+
+  static NonOwningSymbolStringPtr getEmptyVal() {
+    return NonOwningSymbolStringPtr(
+        reinterpret_cast<PoolEntryPtr>(EmptyBitPattern));
+  }
+
+  static NonOwningSymbolStringPtr getTombstoneVal() {
+    return NonOwningSymbolStringPtr(
+        reinterpret_cast<PoolEntryPtr>(TombstoneBitPattern));
+  }
 };
 
 inline SymbolStringPool::~SymbolStringPool() {
@@ -187,6 +245,11 @@ inline bool SymbolStringPool::empty() const {
   return Pool.empty();
 }
 
+inline size_t
+SymbolStringPool::getRefCount(const SymbolStringPtrBase &S) const {
+  return S.S->second;
+}
+
 } // end namespace orc
 
 template <>
@@ -206,6 +269,27 @@ struct DenseMapInfo<orc::SymbolStringPtr> {
 
   static bool isEqual(const orc::SymbolStringPtr &LHS,
                       const orc::SymbolStringPtr &RHS) {
+    return LHS.S == RHS.S;
+  }
+};
+
+template <> struct DenseMapInfo<orc::NonOwningSymbolStringPtr> {
+
+  static orc::NonOwningSymbolStringPtr getEmptyKey() {
+    return orc::NonOwningSymbolStringPtr::getEmptyVal();
+  }
+
+  static orc::NonOwningSymbolStringPtr getTombstoneKey() {
+    return orc::NonOwningSymbolStringPtr::getTombstoneVal();
+  }
+
+  static unsigned getHashValue(const orc::NonOwningSymbolStringPtr &V) {
+    return DenseMapInfo<
+        orc::NonOwningSymbolStringPtr::PoolEntryPtr>::getHashValue(V.S);
+  }
+
+  static bool isEqual(const orc::NonOwningSymbolStringPtr &LHS,
+                      const orc::NonOwningSymbolStringPtr &RHS) {
     return LHS.S == RHS.S;
   }
 };
