@@ -6103,8 +6103,11 @@ bool SCEVMinMaxExprContains(const SCEV *Root, const SCEV *OperandToFind,
   return FC.Found;
 }
 
-const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
-    Instruction *I, ICmpInst *Cond, Value *TrueVal, Value *FalseVal) {
+std::optional<const SCEV *>
+ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(Instruction *I,
+                                                              ICmpInst *Cond,
+                                                              Value *TrueVal,
+                                                              Value *FalseVal) {
   // Try to match some simple smax or umax patterns.
   auto *ICI = Cond;
 
@@ -6204,7 +6207,7 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHIInstWithICmpInstCond(
     break;
   }
 
-  return getUnknown(I);
+  return std::nullopt;
 }
 
 static std::optional<const SCEV *>
@@ -6280,10 +6283,10 @@ const SCEV *ScalarEvolution::createNodeForSelectOrPHI(Value *V, Value *Cond,
 
   if (auto *I = dyn_cast<Instruction>(V)) {
     if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
-      const SCEV *S = createNodeForSelectOrPHIInstWithICmpInstCond(
-          I, ICI, TrueVal, FalseVal);
-      if (!isa<SCEVUnknown>(S))
-        return S;
+      if (std::optional<const SCEV *> S =
+              createNodeForSelectOrPHIInstWithICmpInstCond(I, ICI, TrueVal,
+                                                           FalseVal))
+        return *S;
     }
   }
 

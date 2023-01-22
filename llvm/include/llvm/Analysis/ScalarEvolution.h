@@ -1705,10 +1705,9 @@ private:
   /// is either a select instruction or a phi node).  \p I is the instruction
   /// being processed, and it is assumed equivalent to "Cond ? TrueVal :
   /// FalseVal".
-  const SCEV *createNodeForSelectOrPHIInstWithICmpInstCond(Instruction *I,
-                                                           ICmpInst *Cond,
-                                                           Value *TrueVal,
-                                                           Value *FalseVal);
+  std::optional<const SCEV *>
+  createNodeForSelectOrPHIInstWithICmpInstCond(Instruction *I, ICmpInst *Cond,
+                                               Value *TrueVal, Value *FalseVal);
 
   /// See if we can model this select-like instruction via umin_seq expression.
   const SCEV *createNodeForSelectOrPHIViaUMinSeq(Value *I, Value *Cond,
