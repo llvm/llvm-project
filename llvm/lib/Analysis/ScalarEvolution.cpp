@@ -804,79 +804,37 @@ CompareSCEVComplexity(EquivalenceClasses<const SCEV *> &EqCacheSCEV,
       return -1;
     }
 
-    // Addrec complexity grows with operand count.
-    unsigned LNumOps = LA->getNumOperands(), RNumOps = RA->getNumOperands();
-    if (LNumOps != RNumOps)
-      return (int)LNumOps - (int)RNumOps;
-
-    // Lexicographically compare.
-    for (unsigned i = 0; i != LNumOps; ++i) {
-      auto X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI,
-                                     LA->getOperand(i), RA->getOperand(i), DT,
-                                     Depth + 1);
-      if (X != 0)
-        return X;
-    }
-    EqCacheSCEV.unionSets(LHS, RHS);
-    return 0;
+    [[fallthrough]];
   }
 
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
+  case scUDivExpr:
   case scSMaxExpr:
   case scUMaxExpr:
   case scSMinExpr:
   case scUMinExpr:
   case scSequentialUMinExpr: {
-    const SCEVNAryExpr *LC = cast<SCEVNAryExpr>(LHS);
-    const SCEVNAryExpr *RC = cast<SCEVNAryExpr>(RHS);
+    ArrayRef<const SCEV *> LOps = LHS->operands();
+    ArrayRef<const SCEV *> ROps = RHS->operands();
 
-    // Lexicographically compare n-ary expressions.
-    unsigned LNumOps = LC->getNumOperands(), RNumOps = RC->getNumOperands();
+    // Lexicographically compare n-ary-like expressions.
+    unsigned LNumOps = LOps.size(), RNumOps = ROps.size();
     if (LNumOps != RNumOps)
       return (int)LNumOps - (int)RNumOps;
 
     for (unsigned i = 0; i != LNumOps; ++i) {
-      auto X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI,
-                                     LC->getOperand(i), RC->getOperand(i), DT,
-                                     Depth + 1);
+      auto X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LOps[i],
+                                     ROps[i], DT, Depth + 1);
       if (X != 0)
         return X;
     }
     EqCacheSCEV.unionSets(LHS, RHS);
     return 0;
-  }
-
-  case scUDivExpr: {
-    const SCEVUDivExpr *LC = cast<SCEVUDivExpr>(LHS);
-    const SCEVUDivExpr *RC = cast<SCEVUDivExpr>(RHS);
-
-    // Lexicographically compare udiv expressions.
-    auto X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LC->getLHS(),
-                                   RC->getLHS(), DT, Depth + 1);
-    if (X != 0)
-      return X;
-    X = CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LC->getRHS(),
-                              RC->getRHS(), DT, Depth + 1);
-    if (X == 0)
-      EqCacheSCEV.unionSets(LHS, RHS);
-    return X;
-  }
-
-  case scPtrToInt:
-  case scTruncate:
-  case scZeroExtend:
-  case scSignExtend: {
-    const SCEVCastExpr *LC = cast<SCEVCastExpr>(LHS);
-    const SCEVCastExpr *RC = cast<SCEVCastExpr>(RHS);
-
-    // Compare cast expressions by operand.
-    auto X =
-        CompareSCEVComplexity(EqCacheSCEV, EqCacheValue, LI, LC->getOperand(),
-                              RC->getOperand(), DT, Depth + 1);
-    if (X == 0)
-      EqCacheSCEV.unionSets(LHS, RHS);
-    return X;
   }
 
   case scCouldNotCompute:
