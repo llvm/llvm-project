@@ -483,8 +483,7 @@ constexpr inline uint64_t NextPowerOf2(uint64_t A) {
 /// Returns the power of two which is less than or equal to the given value.
 /// Essentially, it is a floor operation across the domain of powers of two.
 inline uint64_t PowerOf2Floor(uint64_t A) {
-  if (!A) return 0;
-  return 1ull << (63 - llvm::countl_zero(A));
+  return llvm::bit_floor(A);
 }
 
 /// Returns the power of two which is greater than or equal to the given value.
