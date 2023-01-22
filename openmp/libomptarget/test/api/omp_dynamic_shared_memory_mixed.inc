@@ -1,5 +1,4 @@
-// RUN: env LIBOMPTARGET_NEXTGEN_PLUGINS=1 \
-// RUN: %libomptarget-compileopt-run-and-check-generic
+// Run lines are in the target specific versions.
 
 #include <omp.h>
 #include <stdio.h>
@@ -47,5 +46,4 @@ int main() {
 
   if (!Failed)
     printf("PASS\n");
-  // CHECK: PASS
 }
