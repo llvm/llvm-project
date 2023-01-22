@@ -20,6 +20,10 @@
 #include <limits>
 #include <type_traits>
 
+#if defined(_MSC_VER) && !defined(_DEBUG)
+#include <cstdlib>  // for _byteswap_{ushort,ulong,uint64}
+#endif
+
 #ifdef _MSC_VER
 // Declare these intrinsics manually rather including intrin.h. It's very
 // expensive, and bit.h is popular via MathExtras.h.
@@ -47,6 +51,52 @@ template <
   To to;
   std::memcpy(&to, &from, sizeof(To));
   return to;
+}
+
+/// Reverses the bytes in the given integer value V.
+template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+[[nodiscard]] constexpr T byteswap(T V) noexcept {
+  if constexpr (sizeof(T) == 1) {
+    return V;
+  } else if constexpr (sizeof(T) == 2) {
+    uint16_t UV = V;
+#if defined(_MSC_VER) && !defined(_DEBUG)
+    // The DLL version of the runtime lacks these functions (bug!?), but in a
+    // release build they're replaced with BSWAP instructions anyway.
+    return _byteswap_ushort(UV);
+#else
+    uint16_t Hi = UV << 8;
+    uint16_t Lo = UV >> 8;
+    return Hi | Lo;
+#endif
+  } else if constexpr (sizeof(T) == 4) {
+    uint32_t UV = V;
+#if __has_builtin(__builtin_bswap32)
+    return __builtin_bswap32(UV);
+#elif defined(_MSC_VER) && !defined(_DEBUG)
+    return _byteswap_ulong(UV);
+#else
+    uint32_t Byte0 = UV & 0x000000FF;
+    uint32_t Byte1 = UV & 0x0000FF00;
+    uint32_t Byte2 = UV & 0x00FF0000;
+    uint32_t Byte3 = UV & 0xFF000000;
+    return (Byte0 << 24) | (Byte1 << 8) | (Byte2 >> 8) | (Byte3 >> 24);
+#endif
+  } else if constexpr (sizeof(T) == 8) {
+    uint64_t UV = V;
+#if __has_builtin(__builtin_bswap64)
+    return __builtin_bswap64(UV);
+#elif defined(_MSC_VER) && !defined(_DEBUG)
+    return _byteswap_uint64(UV);
+#else
+    uint64_t Hi = llvm::byteswap<uint32_t>(UV);
+    uint32_t Lo = llvm::byteswap<uint32_t>(UV >> 32);
+    return (Hi << 32) | Lo;
+#endif
+  } else {
+    static_assert(!sizeof(T *), "Don't know how to handle the given type.");
+    return 0;
+  }
 }
 
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
