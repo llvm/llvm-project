@@ -593,7 +593,7 @@ def TypeK : TestType<"TestM"> {
 
 // TYPE-LABEL: ::mlir::Type TestNType::parse
 // TYPE: parseFoo(
-// TYPE-NEXT: _result_a,
+// TYPE-NEXT: ::mlir::detail::unwrapForCustomParse(_result_a),
 // TYPE-NEXT: 1);
 
 // TYPE-LABEL: void TestNType::print

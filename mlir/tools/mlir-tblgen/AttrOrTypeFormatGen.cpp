@@ -612,7 +612,8 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
   for (FormatElement *arg : el->getArguments()) {
     os << ",\n";
     if (auto *param = dyn_cast<ParameterElement>(arg))
-      os << "_result_" << param->getName();
+      os << "::mlir::detail::unwrapForCustomParse(_result_" << param->getName()
+         << ")";
     else if (auto *ref = dyn_cast<RefDirective>(arg))
       os << "*_result_" << cast<ParameterElement>(ref->getArg())->getName();
     else
