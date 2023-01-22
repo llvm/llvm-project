@@ -16,9 +16,12 @@
 
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
-#include <cstring>
 #include <limits>
 #include <type_traits>
+
+#if !__has_builtin(__builtin_bit_cast)
+#include <cstring>
+#endif
 
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #include <cstdlib>  // for _byteswap_{ushort,ulong,uint64}
@@ -48,9 +51,13 @@ template <
     typename = std::enable_if_t<std::is_trivially_copyable<To>::value>,
     typename = std::enable_if_t<std::is_trivially_copyable<From>::value>>
 [[nodiscard]] inline To bit_cast(const From &from) noexcept {
+#if __has_builtin(__builtin_bit_cast)
+  return __builtin_bit_cast(To, from);
+#else
   To to;
   std::memcpy(&to, &from, sizeof(To));
   return to;
+#endif
 }
 
 /// Reverses the bytes in the given integer value V.
