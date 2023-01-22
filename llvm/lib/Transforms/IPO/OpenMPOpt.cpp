@@ -621,6 +621,7 @@ struct KernelInfoState : AbstractState {
   /// See AbstractState::indicatePessimisticFixpoint(...)
   ChangeStatus indicatePessimisticFixpoint() override {
     IsAtFixpoint = true;
+    ParallelLevels.indicatePessimisticFixpoint();
     ReachingKernelEntries.indicatePessimisticFixpoint();
     SPMDCompatibilityTracker.indicatePessimisticFixpoint();
     ReachedKnownParallelRegions.indicatePessimisticFixpoint();
@@ -631,6 +632,7 @@ struct KernelInfoState : AbstractState {
   /// See AbstractState::indicateOptimisticFixpoint(...)
   ChangeStatus indicateOptimisticFixpoint() override {
     IsAtFixpoint = true;
+    ParallelLevels.indicateOptimisticFixpoint();
     ReachingKernelEntries.indicateOptimisticFixpoint();
     SPMDCompatibilityTracker.indicateOptimisticFixpoint();
     ReachedKnownParallelRegions.indicateOptimisticFixpoint();
@@ -650,6 +652,8 @@ struct KernelInfoState : AbstractState {
     if (ReachedUnknownParallelRegions != RHS.ReachedUnknownParallelRegions)
       return false;
     if (ReachingKernelEntries != RHS.ReachingKernelEntries)
+      return false;
+    if (ParallelLevels != RHS.ParallelLevels)
       return false;
     return true;
   }
@@ -3128,6 +3132,10 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
            ", #Reaching Kernels: " +
            (ReachingKernelEntries.isValidState()
                 ? std::to_string(ReachingKernelEntries.size())
+                : "<invalid>") +
+           ", #ParLevels: " +
+           (ParallelLevels.isValidState()
+                ? std::to_string(ParallelLevels.size())
                 : "<invalid>");
   }
 
