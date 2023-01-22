@@ -14,9 +14,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/StringSet.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Checker for signal handler functions.
 ///
@@ -76,8 +74,6 @@ private:
   llvm::StringSet<> ConformingFunctions;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIGNALHANDLERCHECK_H

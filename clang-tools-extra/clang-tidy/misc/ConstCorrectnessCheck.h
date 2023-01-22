@@ -13,10 +13,7 @@
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "llvm/ADT/DenseSet.h"
 
-namespace clang {
-namespace tidy {
-
-namespace misc {
+namespace clang::tidy::misc {
 
 /// This check warns on variables which could be declared const but are not.
 ///
@@ -50,8 +47,6 @@ private:
   const bool TransformPointersAsValues;
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONSTCORRECTNESSCHECK_H

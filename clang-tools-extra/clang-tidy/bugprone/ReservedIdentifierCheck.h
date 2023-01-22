@@ -14,9 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Checks for usages of identifiers reserved for use by the implementation.
 ///
@@ -50,8 +48,6 @@ private:
                        const NamingCheckFailure &Failure) const override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_RESERVEDIDENTIFIERCHECK_H
