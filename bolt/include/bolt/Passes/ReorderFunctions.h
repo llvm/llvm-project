@@ -23,6 +23,9 @@ class ReorderFunctions : public BinaryFunctionPass {
   void reorder(std::vector<Cluster> &&Clusters,
                std::map<uint64_t, BinaryFunction> &BFs);
 
+  void printStats(const std::vector<Cluster> &Clusters,
+                  const std::vector<uint64_t> &FuncAddr);
+
 public:
   enum ReorderType : char {
     RT_NONE = 0,

@@ -14,6 +14,7 @@
 
 #include "Delta.h"
 #include "ReducerWorkItem.h"
+#include "TestRunner.h"
 #include "Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
@@ -27,7 +28,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/ThreadPool.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include <fstream>
 #include <set>
 
@@ -45,11 +45,6 @@ static cl::opt<unsigned int> StartingGranularityLevel(
     cl::desc("Number of times to divide chunks prior to first test"),
     cl::cat(LLVMReduceOptions));
 
-static cl::opt<bool> TmpFilesAsBitcode(
-    "write-tmp-files-as-bitcode",
-    cl::desc("Always write temporary files as bitcode instead of textual IR"),
-    cl::init(false), cl::cat(LLVMReduceOptions));
-
 #ifdef LLVM_ENABLE_THREADS
 static cl::opt<unsigned> NumJobs(
     "j",
@@ -59,45 +54,6 @@ static cl::opt<unsigned> NumJobs(
 #else
 unsigned NumJobs = 1;
 #endif
-
-void writeBitcode(const ReducerWorkItem &M, raw_ostream &OutStream);
-
-void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
-                 StringRef ToolName);
-
-bool isReduced(const ReducerWorkItem &M, const TestRunner &Test) {
-  const bool UseBitcode = Test.inputIsBitcode() || TmpFilesAsBitcode;
-
-  SmallString<128> CurrentFilepath;
-
-  // Write ReducerWorkItem to tmp file
-  int FD;
-  std::error_code EC = sys::fs::createTemporaryFile(
-      "llvm-reduce", M.isMIR() ? "mir" : (UseBitcode ? "bc" : "ll"), FD,
-      CurrentFilepath,
-      UseBitcode && !M.isMIR() ? sys::fs::OF_None : sys::fs::OF_Text);
-  if (EC) {
-    errs() << "Error making unique filename: " << EC.message() << "!\n";
-    exit(1);
-  }
-
-  ToolOutputFile Out(CurrentFilepath, FD);
-
-  if (TmpFilesAsBitcode)
-    writeBitcode(M, Out.os());
-  else
-    M.print(Out.os(), /*AnnotationWriter=*/nullptr);
-
-  Out.os().close();
-  if (Out.os().has_error()) {
-    errs() << "Error emitting bitcode to file '" << CurrentFilepath
-           << "': " << Out.os().error().message();
-    exit(1);
-  }
-
-  // Current Chunks aren't interesting
-  return Test.run(CurrentFilepath);
-}
 
 /// Splits Chunks in half and prints them.
 /// If unable to split (when chunk size is 1) returns false.
@@ -157,7 +113,7 @@ CheckChunk(const Chunk ChunkToCheckForUninterestingness,
   ExtractChunksFromModule(O, *Clone);
 
   // Some reductions may result in invalid IR. Skip such reductions.
-  if (verifyReducerWorkItem(*Clone, &errs())) {
+  if (Clone->verify(&errs())) {
     if (AbortOnInvalidReduction) {
       errs() << "Invalid reduction, aborting.\n";
       Clone->print(errs());
@@ -178,7 +134,7 @@ CheckChunk(const Chunk ChunkToCheckForUninterestingness,
     errs() << "\n";
   }
 
-  if (!isReduced(*Clone, Test)) {
+  if (!Clone->isReduced(Test)) {
     // Program became non-reduced, so this chunk appears to be interesting.
     if (Verbose)
       errs() << "\n";
@@ -196,7 +152,7 @@ static SmallString<0> ProcessChunkFromSerializedBitcode(
   LLVMContext Ctx;
   auto CloneMMM = std::make_unique<ReducerWorkItem>();
   MemoryBufferRef Data(OriginalBC, "<bc file>");
-  readBitcode(*CloneMMM, Data, Ctx, Test.getToolName());
+  CloneMMM->readBitcode(Data, Ctx, Test.getToolName());
 
   SmallString<0> Result;
   if (std::unique_ptr<ReducerWorkItem> ChunkResult =
@@ -204,7 +160,7 @@ static SmallString<0> ProcessChunkFromSerializedBitcode(
                      Test, ExtractChunksFromModule, UninterestingChunks,
                      ChunksStillConsideredInteresting)) {
     raw_svector_ostream BCOS(Result);
-    writeBitcode(*ChunkResult, BCOS);
+    ChunkResult->writeBitcode(BCOS);
     // Communicate that the task reduced a chunk.
     AnyReduced = true;
   }
@@ -227,7 +183,7 @@ static void waitAndDiscardResultsBarrier(SharedTaskQueue &TaskQueue) {
 /// reduction pass where no change must be made to the module.
 void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
                         StringRef Message) {
-  assert(!verifyReducerWorkItem(Test.getProgram(), &errs()) &&
+  assert(!Test.getProgram().verify(&errs()) &&
          "input module is broken before making changes");
   errs() << "*** " << Message << "...\n";
 
@@ -241,9 +197,9 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
     ExtractChunksFromModule(Counter, Test.getProgram());
     Targets = Counter.count();
 
-    assert(!verifyReducerWorkItem(Test.getProgram(), &errs()) &&
+    assert(!Test.getProgram().verify(&errs()) &&
            "input module is broken after counting chunks");
-    assert(isReduced(Test.getProgram(), Test) &&
+    assert(Test.getProgram().isReduced(Test) &&
            "input module no longer interesting after counting chunks");
 
 #ifndef NDEBUG
@@ -251,7 +207,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
     std::vector<Chunk> NoChunks = {{0, INT_MAX}};
     Oracle NoChunksCounter(NoChunks);
     std::unique_ptr<ReducerWorkItem> Clone =
-        cloneReducerWorkItem(Test.getProgram(), Test.getTargetMachine());
+      Test.getProgram().clone(Test.getTargetMachine());
     ExtractChunksFromModule(NoChunksCounter, *Clone);
     assert(Targets == NoChunksCounter.count() &&
            "number of chunks changes when reducing");
@@ -288,7 +244,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
     SmallString<0> OriginalBC;
     if (NumJobs > 1) {
       raw_svector_ostream BCOS(OriginalBC);
-      writeBitcode(Test.getProgram(), BCOS);
+      Test.getProgram().writeBitcode(BCOS);
     }
 
     SharedTaskQueue TaskQueue;
@@ -351,8 +307,8 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
 
           Result = std::make_unique<ReducerWorkItem>();
           MemoryBufferRef Data(StringRef(Res), "<bc file>");
-          readBitcode(*Result, Data, Test.getProgram().M->getContext(),
-                      Test.getToolName());
+          Result->readBitcode(Data, Test.getProgram().M->getContext(),
+                              Test.getToolName());
           break;
         }
 
@@ -366,11 +322,10 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
         // Forward I to the last chunk processed in parallel.
         I += NumChunksProcessed - 1;
       } else {
-        Result = CheckChunk(
-            *I,
-            cloneReducerWorkItem(Test.getProgram(), Test.getTargetMachine()),
-            Test, ExtractChunksFromModule, UninterestingChunks,
-            ChunksStillConsideredInteresting);
+        Result =
+            CheckChunk(*I, Test.getProgram().clone(Test.getTargetMachine()),
+                       Test, ExtractChunksFromModule, UninterestingChunks,
+                       ChunksStillConsideredInteresting);
       }
 
       if (!Result)

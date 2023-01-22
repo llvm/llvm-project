@@ -23,8 +23,7 @@
 // RUN: %clang -fmodules-ts -fmodule-file=%t.pcm -fintegrated-as -Dexport= %s -c -o %t.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-USE
 //
 // CHECK-USE:  warning: the '-fmodules-ts' flag is deprecated and it will be removed in Clang 17; use '-std=c++20' or higher to use standard C++ modules instead [-Wdeprecated-module-ts]
-// CHECK-USE: -cc1
-// CHECK-USE-SAME: -emit-obj
+// CHECK-USE: -cc1 {{.*}} -emit-obj
 // CHECK-USE-SAME: -fmodule-file={{.*}}.pcm
 // CHECK-USE-SAME: -o {{.*}}.o{{"?}} {{.*}}-x c++
 // CHECK-USE-SAME: modules-ts.cpp

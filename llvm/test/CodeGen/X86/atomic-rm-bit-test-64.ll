@@ -15,7 +15,7 @@ define i64 @atomic_shl1_xor_64_gpr_val(ptr %v, i64 %c) nounwind {
 entry:
   %shl = shl nuw i64 1, %c
   %0 = atomicrmw xor ptr %v, i64 %shl monotonic, align 8
-  %and = and i64 %0, %shl
+  %and = and i64 %shl, %0
   ret i64 %and
 }
 
@@ -109,7 +109,7 @@ entry:
   %shl = shl nuw i64 1, %rem
   %0 = atomicrmw xor ptr %v, i64 %shl monotonic, align 8
   %shl1 = shl nuw i64 1, %c
-  %and = and i64 %0, %shl1
+  %and = and i64 %shl1, %0
   ret i64 %and
 }
 
@@ -200,7 +200,7 @@ define i64 @atomic_shl1_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 entry:
   %shl = shl nuw i64 1, %c
   %0 = atomicrmw xor ptr %v, i64 %shl monotonic, align 8
-  %1 = xor i64 %0, -1
+  %1 = sub i64 -1, %0
   %2 = lshr i64 %1, %c
   %conv = and i64 %2, 1
   ret i64 %conv
@@ -223,14 +223,14 @@ define i64 @atomic_shl2_xor_64_gpr_valz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    jne .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rdx, %rax
+; CHECK-NEXT:    testq %rax, %rdx
 ; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    movq %rcx, %rax
 ; CHECK-NEXT:    retq
 entry:
   %shl = shl i64 2, %c
   %0 = atomicrmw xor ptr %v, i64 %shl monotonic, align 8
-  %and = and i64 %0, %shl
+  %and = and i64 %shl, %0
   %tobool.not = icmp eq i64 %and, 0
   %conv = zext i1 %tobool.not to i64
   ret i64 %conv
@@ -670,7 +670,7 @@ define i64 @atomic_shl1_and_64_gpr_val(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    retq
 entry:
   %shl = shl nuw i64 1, %c
-  %not = xor i64 %shl, -1
+  %not = sub i64 -1, %shl
   %0 = atomicrmw and ptr %v, i64 %not monotonic, align 8
   %and = and i64 %0, %shl
   ret i64 %and
@@ -769,7 +769,7 @@ define i64 @atomic_shl1_mask0_and_64_gpr_val(ptr %v, i64 %c) nounwind {
 entry:
   %rem = and i64 %c, 63
   %shl = shl nuw i64 1, %rem
-  %not = xor i64 %shl, -1
+  %not = sub i64 -1, %shl
   %0 = atomicrmw and ptr %v, i64 %not monotonic, align 8
   %shl1 = shl nuw i64 1, %c
   %and = and i64 %0, %shl1
@@ -834,14 +834,15 @@ define i64 @atomic_blsi_and_64_gpr_val(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    lock cmpxchgq %rsi, (%rdi)
 ; CHECK-NEXT:    jne .LBB31_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
-; CHECK-NEXT:    andq %rcx, %rax
+; CHECK-NEXT:    andq %rax, %rcx
+; CHECK-NEXT:    movq %rcx, %rax
 ; CHECK-NEXT:    retq
 entry:
   %sub = sub i64 0, %c
   %and = and i64 %sub, %c
   %not = xor i64 %and, -1
   %0 = atomicrmw and ptr %v, i64 %not monotonic, align 8
-  %and3 = and i64 %0, %and
+  %and3 = and i64 %and, %0
   ret i64 %and3
 }
 
@@ -893,7 +894,7 @@ define i64 @atomic_shl2_and_64_gpr_valnz(ptr %v, i64 %c) nounwind {
 ; CHECK-NEXT:    jne .LBB33_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rdx, %rax
+; CHECK-NEXT:    testq %rax, %rdx
 ; CHECK-NEXT:    setne %cl
 ; CHECK-NEXT:    movq %rcx, %rax
 ; CHECK-NEXT:    retq
@@ -901,7 +902,7 @@ entry:
   %shl = shl i64 2, %c
   %not = xor i64 %shl, -1
   %0 = atomicrmw and ptr %v, i64 %not monotonic, align 8
-  %and = and i64 %0, %shl
+  %and = and i64 %shl, %0
   %tobool = icmp ne i64 %and, 0
   %conv = zext i1 %tobool to i64
   ret i64 %conv
@@ -1113,7 +1114,7 @@ entry:
   %shl = shl nuw i64 1, %c
   %not = xor i64 %shl, -1
   %0 = atomicrmw and ptr %v, i64 %not monotonic, align 8
-  %and = and i64 %0, %shl
+  %and = and i64 %shl, %0
   %tobool.not = icmp eq i64 %and, 0
   br i1 %tobool.not, label %return, label %if.then
 
@@ -1265,7 +1266,7 @@ entry:
   %not = xor i64 %shl, -1
   %0 = atomicrmw and ptr %v, i64 %not monotonic, align 8
   %shl1 = shl nuw i64 1, %c
-  %and = and i64 %0, %shl1
+  %and = and i64 %shl1, %0
   %tobool.not = icmp eq i64 %and, 0
   br i1 %tobool.not, label %return, label %if.then
 
@@ -1470,7 +1471,7 @@ define i64 @atomic_shl1_xor_64_const_brz(ptr %v) nounwind {
 ; CHECK-NEXT:    retq
 entry:
   %0 = atomicrmw xor ptr %v, i64 16 monotonic, align 8
-  %and = and i64 %0, 16
+  %and = and i64 16, %0
   %tobool.not = icmp eq i64 %and, 0
   br i1 %tobool.not, label %if.then, label %return
 

@@ -31520,12 +31520,16 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
       AI->getParent() != I->getParent())
     return AtomicExpansionKind::CmpXChg;
 
-  assert(I->getOperand(0) == AI);
+  unsigned OtherIdx = I->getOperand(0) == AI ? 1 : 0;
+
+  // This is a redundant AND, it should get cleaned up elsewhere.
+  if (AI == I->getOperand(OtherIdx))
+    return AtomicExpansionKind::CmpXChg;
+
   // The following instruction must be a AND single bit.
   if (BitChange.second == ConstantBit || BitChange.second == NotConstantBit) {
-    auto *C1 = dyn_cast<ConstantInt>(AI->getValOperand());
-    assert(C1 != nullptr);
-    auto *C2 = dyn_cast<ConstantInt>(I->getOperand(1));
+    auto *C1 = cast<ConstantInt>(AI->getValOperand());
+    auto *C2 = dyn_cast<ConstantInt>(I->getOperand(OtherIdx));
     if (!C2 || !isPowerOf2_64(C2->getZExtValue())) {
       return AtomicExpansionKind::CmpXChg;
     }
@@ -31540,7 +31544,7 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   assert(BitChange.second == ShiftBit || BitChange.second == NotShiftBit);
 
-  auto BitTested = FindSingleBitChange(I->getOperand(1));
+  auto BitTested = FindSingleBitChange(I->getOperand(OtherIdx));
   if (BitTested.second != ShiftBit && BitTested.second != NotShiftBit)
     return AtomicExpansionKind::CmpXChg;
 
@@ -31591,9 +31595,9 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   Value *Result = nullptr;
   auto BitTested = FindSingleBitChange(AI->getValOperand());
   assert(BitTested.first != nullptr);
+
   if (BitTested.second == ConstantBit || BitTested.second == NotConstantBit) {
-    auto *C = dyn_cast<ConstantInt>(I->getOperand(1));
-    assert(C != nullptr);
+    auto *C = cast<ConstantInt>(I->getOperand(I->getOperand(0) == AI ? 1 : 0));
 
     BitTest = Intrinsic::getDeclaration(AI->getModule(), IID_C, AI->getType());
 
