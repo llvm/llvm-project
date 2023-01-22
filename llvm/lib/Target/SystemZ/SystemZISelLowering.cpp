@@ -4104,7 +4104,7 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
 
   // Skip known-zero high parts of the operand.
   int64_t OrigBitSize = VT.getSizeInBits();
-  int64_t BitSize = (int64_t)1 << Log2_32_Ceil(NumSignificantBits);
+  int64_t BitSize = llvm::bit_ceil(NumSignificantBits);
   BitSize = std::min(BitSize, OrigBitSize);
 
   // The POPCNT instruction counts the number of bits in each byte.
