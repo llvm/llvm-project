@@ -29,6 +29,8 @@
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__ranges/concepts.h>
+#include <__ranges/data.h>
+#include <__ranges/size.h>
 #include <__type_traits/remove_cvref.h>
 #include <string_view>
 
@@ -165,11 +167,16 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT range_formatter {
     // When the range is contiguous use a basic_string_view instead to avoid a
     // copy of the underlying data. The basic_string_view formatter
     // specialization is the "basic" string formatter in libc++.
-    if constexpr (ranges::contiguous_range<_Rp>) {
+    if constexpr (ranges::contiguous_range<_Rp> && std::ranges::sized_range<_Rp>) {
       std::formatter<basic_string_view<_CharT>, _CharT> __formatter;
       if (__debug_format)
         __formatter.set_debug_format();
-      return __formatter.format(basic_string_view<_CharT>{__range.data(), __range.size()}, __ctx);
+      return __formatter.format(
+          basic_string_view<_CharT>{
+              ranges::data(__range),
+              ranges::size(__range),
+          },
+          __ctx);
     } else {
       std::formatter<basic_string<_CharT>, _CharT> __formatter;
       if (__debug_format)
