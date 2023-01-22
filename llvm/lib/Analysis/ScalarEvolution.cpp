@@ -4094,6 +4094,33 @@ public:
 
 } // namespace
 
+static bool scevUnconditionallyPropagatesPoisonFromOperands(SCEVTypes Kind) {
+  switch (Kind) {
+  case scConstant:
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend:
+  case scPtrToInt:
+  case scAddExpr:
+  case scMulExpr:
+  case scUDivExpr:
+  case scAddRecExpr:
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr:
+  case scUnknown:
+    // If any operand is poison, the whole expression is poison.
+    return true;
+  case scSequentialUMinExpr:
+    // FIXME: if the *first* operand is poison, the whole expression is poison.
+    return false; // Pessimistically, say that it does not propagate poison.
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+  }
+  llvm_unreachable("Unknown SCEV kind!");
+}
+
 /// Return true if V is poison given that AssumedPoison is already poison.
 static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
   // The only way poison may be introduced in a SCEV expression is from a
@@ -4110,10 +4137,33 @@ static bool impliesPoison(const SCEV *AssumedPoison, const SCEV *S) {
     SCEVPoisonCollector(bool LookThroughSeq) : LookThroughSeq(LookThroughSeq) {}
 
     bool follow(const SCEV *S) {
-      // TODO: We can always follow the first operand, but the SCEVTraversal
-      // API doesn't support this.
-      if (!LookThroughSeq && isa<SCEVSequentialMinMaxExpr>(S))
-        return false;
+      if (!scevUnconditionallyPropagatesPoisonFromOperands(S->getSCEVType())) {
+        switch (S->getSCEVType()) {
+        case scConstant:
+        case scTruncate:
+        case scZeroExtend:
+        case scSignExtend:
+        case scPtrToInt:
+        case scAddExpr:
+        case scMulExpr:
+        case scUDivExpr:
+        case scAddRecExpr:
+        case scUMaxExpr:
+        case scSMaxExpr:
+        case scUMinExpr:
+        case scSMinExpr:
+        case scUnknown:
+          llvm_unreachable("These all unconditionally propagate poison.");
+        case scSequentialUMinExpr:
+          // TODO: We can always follow the first operand,
+          // but the SCEVTraversal API doesn't support this.
+          if (!LookThroughSeq)
+            return false;
+          break;
+        case scCouldNotCompute:
+          llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+        }
+      }
 
       if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
         if (!isGuaranteedNotToBePoison(SU->getValue()))
