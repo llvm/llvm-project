@@ -149,7 +149,7 @@ void test_return() {
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   4: CFGScopeBegin(b)
 // CHECK-NEXT:   5: a
-// CHECK-NEXT:   6: [B4.5] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:   6: [B4.5] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:   7: [B4.6] (CXXConstructExpr, [B4.8], A)
 // CHECK-NEXT:   8: A b = a;
 // CHECK-NEXT:   9: b
@@ -242,7 +242,7 @@ void test_if_implicit_scope() {
 // CHECK-NEXT:   3: A a;
 // CHECK-NEXT:   4: CFGScopeBegin(b)
 // CHECK-NEXT:   5: a
-// CHECK-NEXT:   6: [B8.5] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:   6: [B8.5] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:   7: [B8.6] (CXXConstructExpr, [B8.8], A)
 // CHECK-NEXT:   8: A b = a;
 // CHECK-NEXT:   9: b
@@ -295,7 +295,7 @@ void test_if_jumps() {
 // CHECK:      [B4]
 // CHECK-NEXT:   1: CFGScopeBegin(b)
 // CHECK-NEXT:   2: a
-// CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, [B4.5], A)
 // CHECK-NEXT:   5: A b = a;
 // CHECK-NEXT:   6: b
@@ -394,7 +394,7 @@ void test_while_implicit_scope() {
 // CHECK:      [B10]
 // CHECK-NEXT:   1: CFGScopeBegin(b)
 // CHECK-NEXT:   2: a
-// CHECK-NEXT:   3: [B10.2] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:   3: [B10.2] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, [B10.5], A)
 // CHECK-NEXT:   5: A b = a;
 // CHECK-NEXT:   6: b
@@ -539,7 +539,7 @@ void test_do_jumps() {
 // CHECK:      [B4]
 // CHECK-NEXT:   1: CFGScopeBegin(b)
 // CHECK-NEXT:   2: a
-// CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:   3: [B4.2] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:   4: [B4.3] (CXXConstructExpr, [B4.5], A)
 // CHECK-NEXT:   5: A b = a;
 // CHECK-NEXT:   6: b
@@ -639,7 +639,7 @@ void test_for_implicit_scope() {
 // CHECK:      [B10]
 // CHECK-NEXT:   1: CFGScopeBegin(c)
 // CHECK-NEXT:   2: b
-// CHECK-NEXT:   3: [B10.2] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:   3: [B10.2] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:   4: [B10.3] (CXXConstructExpr, [B10.5], A)
 // CHECK-NEXT:   5: A c = b;
 // CHECK-NEXT:   6: c
@@ -836,10 +836,10 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   4: *[B4.3]
 // CHECK-NEXT:   5: auto &i
 // CHECK-NEXT:   6: operator=
-// CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, FunctionToPointerDecay, class A &(*)(const class A &)
+// CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, FunctionToPointerDecay, A &(*)(const A &)
 // CHECK-NEXT:   8: i
 // CHECK-NEXT:   9: b
-// CHECK-NEXT:  10: [B4.9] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:  10: [B4.9] (ImplicitCastExpr, NoOp, const A)
 // CHECK-NEXT:  11: [B4.8] = [B4.10] (OperatorCall)
 // CHECK-NEXT:  12: CFGScopeEnd(i)
 // CHECK-NEXT:   Preds (1): B2

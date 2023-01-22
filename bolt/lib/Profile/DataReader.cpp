@@ -41,17 +41,6 @@ DumpData("dump-data",
 namespace llvm {
 namespace bolt {
 
-std::optional<StringRef> getLTOCommonName(const StringRef Name) {
-  size_t LTOSuffixPos = Name.find(".lto_priv.");
-  if (LTOSuffixPos != StringRef::npos)
-    return Name.substr(0, LTOSuffixPos + 10);
-  if ((LTOSuffixPos = Name.find(".constprop.")) != StringRef::npos)
-    return Name.substr(0, LTOSuffixPos + 11);
-  if ((LTOSuffixPos = Name.find(".llvm.")) != StringRef::npos)
-    return Name.substr(0, LTOSuffixPos + 6);
-  return std::nullopt;
-}
-
 namespace {
 
 /// Return true if the function name can change across compilations.

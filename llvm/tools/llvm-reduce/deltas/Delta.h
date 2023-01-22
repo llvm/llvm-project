@@ -15,13 +15,17 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_DELTA_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_DELTA_H
 
-#include "TestRunner.h"
+#include "ReducerWorkItem.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <utility>
 #include <vector>
 
 namespace llvm {
+
+class TestRunner;
 
 struct Chunk {
   int Begin;

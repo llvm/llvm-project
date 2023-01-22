@@ -125,11 +125,12 @@ std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   return Index;
 }
 
-std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD) {
+std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
+                                                   const Expr *Init) {
   if (auto Idx = getGlobal(VD))
     return Idx;
 
-  if (auto Idx = createGlobal(VD, nullptr)) {
+  if (auto Idx = createGlobal(VD, Init)) {
     GlobalIndices[VD] = *Idx;
     return Idx;
   }
@@ -157,6 +158,7 @@ std::optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
 
 std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
                                               const Expr *Init) {
+  assert(!getGlobal(VD));
   bool IsStatic, IsExtern;
   if (auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = !Var->hasLocalStorage();

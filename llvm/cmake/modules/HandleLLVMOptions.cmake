@@ -81,7 +81,7 @@ if( LLVM_ENABLE_ASSERTIONS )
         string (REGEX REPLACE "(^| )[/-]D *NDEBUG($| )" " "
           "${flags_var_to_scrub}" "${${flags_var_to_scrub}}")
       endforeach()
-     endif()
+    endif()
   endif()
 endif()
 
@@ -299,15 +299,15 @@ if( LLVM_ENABLE_LLD )
   # compiler option.
   if ( MSVC )
     if(NOT CMAKE_LINKER MATCHES "lld-link")
-        get_filename_component(CXX_COMPILER_DIR ${CMAKE_CXX_COMPILER} DIRECTORY)
-        get_filename_component(C_COMPILER_DIR ${CMAKE_C_COMPILER} DIRECTORY)
-        find_program(LLD_LINK NAMES "lld-link" "lld-link.exe" HINTS ${CXX_COMPILER_DIR} ${C_COMPILER_DIR} DOC "lld linker")
-        if(NOT LLD_LINK)
-            message(FATAL_ERROR
-                "LLVM_ENABLE_LLD set, but cannot find lld-link. "
-                "Consider setting CMAKE_LINKER to lld-link path.")
-        endif()
-        set(CMAKE_LINKER ${LLD_LINK})
+      get_filename_component(CXX_COMPILER_DIR ${CMAKE_CXX_COMPILER} DIRECTORY)
+      get_filename_component(C_COMPILER_DIR ${CMAKE_C_COMPILER} DIRECTORY)
+      find_program(LLD_LINK NAMES "lld-link" "lld-link.exe" HINTS ${CXX_COMPILER_DIR} ${C_COMPILER_DIR} DOC "lld linker")
+      if(NOT LLD_LINK)
+        message(FATAL_ERROR
+          "LLVM_ENABLE_LLD set, but cannot find lld-link. "
+          "Consider setting CMAKE_LINKER to lld-link path.")
+      endif()
+      set(CMAKE_LINKER ${LLD_LINK})
     endif()
   else()
     set(LLVM_USE_LINKER "lld")
@@ -956,10 +956,10 @@ if (LLVM_USE_SPLIT_DWARF AND
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
       CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-gsplit-dwarf)
-  include(LLVMCheckLinkerFlag)
-  llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
-  append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
-    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+    include(LLVMCheckLinkerFlag)
+    llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
+    append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
+      CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
 endif()
 
@@ -1037,9 +1037,9 @@ if (LLVM_BUILD_INSTRUMENTED)
       CMAKE_CXX_FLAGS
       CMAKE_C_FLAGS)
     if(NOT LINKER_IS_LLD_LINK)
-        append("-fprofile-generate=\"${LLVM_PROFILE_DATA_DIR}\""
-          CMAKE_EXE_LINKER_FLAGS
-          CMAKE_SHARED_LINKER_FLAGS)
+      append("-fprofile-generate=\"${LLVM_PROFILE_DATA_DIR}\""
+        CMAKE_EXE_LINKER_FLAGS
+        CMAKE_SHARED_LINKER_FLAGS)
     endif()
     # Set this to avoid running out of the value profile node section
     # under clang in dynamic linking mode.

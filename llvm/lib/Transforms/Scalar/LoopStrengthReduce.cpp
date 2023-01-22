@@ -6835,6 +6835,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                         << *ToHelpFold << "\n");
 
       Value *StartValue = ToHelpFold->getIncomingValueForBlock(LoopPreheader);
+      (void)StartValue;
       Value *LoopValue = ToHelpFold->getIncomingValueForBlock(LoopLatch);
 
       // SCEVExpander for both use in preheader and latch

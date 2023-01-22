@@ -15,6 +15,7 @@
 namespace llvm {
 class LLVMContext;
 class MachineModuleInfo;
+class MemoryBufferRef;
 class raw_ostream;
 class TargetMachine;
 class TestRunner;
@@ -26,6 +27,11 @@ public:
   std::unique_ptr<BitcodeLTOInfo> LTOInfo;
   std::unique_ptr<MachineModuleInfo> MMI;
 
+  ReducerWorkItem();
+  ~ReducerWorkItem();
+  ReducerWorkItem(ReducerWorkItem &) = delete;
+  ReducerWorkItem(ReducerWorkItem &&) = default;
+
   bool isMIR() const { return MMI != nullptr; }
 
   LLVMContext &getContext() {
@@ -34,36 +40,31 @@ public:
 
   Module &getModule() { return *M; }
   const Module &getModule() const { return *M; }
+  operator Module &() const { return *M; }
 
   void print(raw_ostream &ROS, void *p = nullptr) const;
-  operator Module &() const { return *M; }
+  bool verify(raw_fd_ostream *OS) const;
+  std::unique_ptr<ReducerWorkItem> clone(const TargetMachine *TM) const;
 
   /// Return a number to indicate whether there was any reduction progress.
   uint64_t getComplexityScore() const {
     return isMIR() ? computeMIRComplexityScore() : computeIRComplexityScore();
   }
 
-  ReducerWorkItem();
-  ~ReducerWorkItem();
-  ReducerWorkItem(ReducerWorkItem &) = delete;
-  ReducerWorkItem(ReducerWorkItem &&) = default;
+  void writeOutput(raw_ostream &OS, bool EmitBitcode) const;
+  void readBitcode(MemoryBufferRef Data, LLVMContext &Ctx, StringRef ToolName);
+  void writeBitcode(raw_ostream &OutStream) const;
+
+  bool isReduced(const TestRunner &Test) const;
 
 private:
   uint64_t computeIRComplexityScore() const;
   uint64_t computeMIRComplexityScore() const;
 };
+
+std::pair<std::unique_ptr<ReducerWorkItem>, bool>
+parseReducerWorkItem(StringRef ToolName, StringRef Filename, LLVMContext &Ctxt,
+                     std::unique_ptr<TargetMachine> &TM, bool IsMIR);
 } // namespace llvm
-
-std::pair<std::unique_ptr<llvm::ReducerWorkItem>, bool>
-parseReducerWorkItem(llvm::StringRef ToolName, llvm::StringRef Filename,
-                     llvm::LLVMContext &Ctxt,
-                     std::unique_ptr<llvm::TargetMachine> &TM, bool IsMIR);
-
-std::unique_ptr<llvm::ReducerWorkItem>
-cloneReducerWorkItem(const llvm::ReducerWorkItem &MMM,
-                     const llvm::TargetMachine *TM);
-
-bool verifyReducerWorkItem(const llvm::ReducerWorkItem &MMM,
-                           llvm::raw_fd_ostream *OS);
 
 #endif
