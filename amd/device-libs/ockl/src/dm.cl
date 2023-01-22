@@ -421,7 +421,9 @@ __ockl_dm_dealloc(ulong addr)
 {
     // Check for non-block and handle elsewhere
     if ((addr & 0xfffUL) == 0UL) {
-        non_slab_free(addr);
+        if (addr)
+            non_slab_free(addr);
+
         return;
     }
 

@@ -332,6 +332,9 @@ NO_SANITIZE_ADDR
 void
 __asan_free_impl(ulong aa, ulong pc)
 {
+    if (!aa)
+        return;
+
     __global alloc_t *ap = (__global alloc_t *)(aa - ALLOC_HEADER_BYTES);
     if (ap->sp)
         slab_free(ap, pc);
