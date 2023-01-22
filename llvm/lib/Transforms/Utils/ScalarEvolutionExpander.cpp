@@ -684,32 +684,22 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
-  case scPtrToInt: {
-    const SCEVCastExpr *C = cast<SCEVCastExpr>(S);
-    const Loop *Result = getRelevantLoop(C->getOperand());
-    return RelevantLoops[C] = Result;
-  }
-  case scUDivExpr: {
-    const SCEVUDivExpr *D = cast<SCEVUDivExpr>(S);
-    const Loop *Result = PickMostRelevantLoop(
-        getRelevantLoop(D->getLHS()), getRelevantLoop(D->getRHS()), SE.DT);
-    return RelevantLoops[D] = Result;
-  }
+  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
+  case scUDivExpr:
   case scAddRecExpr:
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr:
   case scSequentialUMinExpr: {
-    const SCEVNAryExpr *N = cast<SCEVNAryExpr>(S);
     const Loop *L = nullptr;
     if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S))
       L = AR->getLoop();
-    for (const SCEV *Op : N->operands())
+    for (const SCEV *Op : S->operands())
       L = PickMostRelevantLoop(L, getRelevantLoop(Op), SE.DT);
-    return RelevantLoops[N] = L;
+    return RelevantLoops[S] = L;
   }
   case scUnknown: {
     const SCEVUnknown *U = cast<SCEVUnknown>(S);
