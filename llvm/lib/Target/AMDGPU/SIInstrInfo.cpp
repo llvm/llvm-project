@@ -4350,7 +4350,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (DMask) {
       uint64_t DMaskImm = DMask->getImm();
       uint32_t RegCount =
-          isGather4(MI.getOpcode()) ? 4 : countPopulation(DMaskImm);
+          isGather4(MI.getOpcode()) ? 4 : llvm::popcount(DMaskImm);
       const MachineOperand *TFE = getNamedOperand(MI, AMDGPU::OpName::tfe);
       const MachineOperand *LWE = getNamedOperand(MI, AMDGPU::OpName::lwe);
       const MachineOperand *D16 = getNamedOperand(MI, AMDGPU::OpName::d16);

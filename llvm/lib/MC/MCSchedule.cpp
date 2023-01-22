@@ -140,7 +140,7 @@ MCSchedModel::getReciprocalThroughput(unsigned SchedClass,
   for (; I != E; ++I) {
     if (!I->getCycles())
       continue;
-    double Temp = countPopulation(I->getUnits()) * 1.0 / I->getCycles();
+    double Temp = llvm::popcount(I->getUnits()) * 1.0 / I->getCycles();
     Throughput = Throughput ? std::min(*Throughput, Temp) : Temp;
   }
   if (Throughput)

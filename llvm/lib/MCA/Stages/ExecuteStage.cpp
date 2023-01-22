@@ -274,7 +274,7 @@ void ExecuteStage::notifyReservedOrReleasedBuffers(const InstRef &IR,
   if (!UsedBuffers)
     return;
 
-  SmallVector<unsigned, 4> BufferIDs(countPopulation(UsedBuffers), 0);
+  SmallVector<unsigned, 4> BufferIDs(llvm::popcount(UsedBuffers), 0);
   for (unsigned I = 0, E = BufferIDs.size(); I < E; ++I) {
     uint64_t CurrentBufferMask = UsedBuffers & (-UsedBuffers);
     BufferIDs[I] = HWS.getResourceID(CurrentBufferMask);

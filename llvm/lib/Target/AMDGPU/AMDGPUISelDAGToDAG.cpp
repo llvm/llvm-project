@@ -2151,7 +2151,7 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
         uint32_t MaskVal = Mask->getZExtValue();
 
         if (isMask_32(MaskVal)) {
-          uint32_t WidthVal = countPopulation(MaskVal);
+          uint32_t WidthVal = llvm::popcount(MaskVal);
           ReplaceNode(N, getBFE32(false, SDLoc(N), Srl.getOperand(0), ShiftVal,
                                   WidthVal));
           return;
@@ -2172,7 +2172,7 @@ void AMDGPUDAGToDAGISel::SelectS_BFE(SDNode *N) {
         uint32_t MaskVal = Mask->getZExtValue() >> ShiftVal;
 
         if (isMask_32(MaskVal)) {
-          uint32_t WidthVal = countPopulation(MaskVal);
+          uint32_t WidthVal = llvm::popcount(MaskVal);
           ReplaceNode(N, getBFE32(false, SDLoc(N), And.getOperand(0), ShiftVal,
                       WidthVal));
           return;

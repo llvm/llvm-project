@@ -279,9 +279,9 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     RISCVMatInt::InstSeq TmpSeq;
     generateInstSeqImpl(Lo, ActiveFeatures, TmpSeq);
     // Check if it is profitable to use BCLRI/BSETI.
-    if (Lo > 0 && TmpSeq.size() + countPopulation(Hi) < Res.size()) {
+    if (Lo > 0 && TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
       Opc = RISCV::BSETI;
-    } else if (Lo < 0 && TmpSeq.size() + countPopulation(~Hi) < Res.size()) {
+    } else if (Lo < 0 && TmpSeq.size() + llvm::popcount(~Hi) < Res.size()) {
       Opc = RISCV::BCLRI;
       Hi = ~Hi;
     }

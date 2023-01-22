@@ -99,7 +99,7 @@ def BSETINVTwoBitsMask : PatLeaf<(imm), [{
   if (isInt<12>(N->getSExtValue()))
     return false;
   // The immediate must have exactly two bits set.
-  return countPopulation(N->getZExtValue()) == 2;
+  return llvm::popcount(N->getZExtValue()) == 2;
 }]>;
 
 def BSETINVTwoBitsMaskHigh : SDNodeXForm<imm, [{
@@ -134,7 +134,7 @@ def BCLRITwoBitsMask : PatLeaf<(imm), [{
   if (isInt<12>(N->getSExtValue()))
     return false;
   // The immediate must have exactly two bits clear.
-  return countPopulation(N->getZExtValue()) == Subtarget->getXLen() - 2;
+  return (unsigned)llvm::popcount(N->getZExtValue()) == Subtarget->getXLen() - 2;
 }]>;
 
 def BCLRITwoBitsMaskLow : SDNodeXForm<imm, [{
