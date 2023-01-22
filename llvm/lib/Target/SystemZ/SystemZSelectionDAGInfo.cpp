@@ -105,9 +105,9 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
       // used if ByteVal is all zeros or all ones; in other cases,
       // we can move at most 2 halfwords.
       uint64_t ByteVal = CByte->getZExtValue();
-      if (ByteVal == 0 || ByteVal == 255 ?
-          Bytes <= 16 && countPopulation(Bytes) <= 2 :
-          Bytes <= 4) {
+      if (ByteVal == 0 || ByteVal == 255
+              ? Bytes <= 16 && llvm::popcount(Bytes) <= 2
+              : Bytes <= 4) {
         unsigned Size1 = Bytes == 16 ? 8 : 1 << findLastSet(Bytes);
         unsigned Size2 = Bytes - Size1;
         SDValue Chain1 = memsetStore(DAG, DL, Chain, Dst, ByteVal, Size1,

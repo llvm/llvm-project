@@ -3628,7 +3628,7 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst,
 
   bool IsPackedD16 = false;
   unsigned DataSize =
-    (Desc.TSFlags & SIInstrFlags::Gather4) ? 4 : countPopulation(DMask);
+      (Desc.TSFlags & SIInstrFlags::Gather4) ? 4 : llvm::popcount(DMask);
   if (hasPackedD16()) {
     int D16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::d16);
     IsPackedD16 = D16Idx >= 0;
