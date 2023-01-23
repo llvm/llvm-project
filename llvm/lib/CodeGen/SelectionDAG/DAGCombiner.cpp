@@ -14433,6 +14433,16 @@ static SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
+  // This needs to be the inverse of logic in foldSignChangeInBitcast.
+  // FIXME: I don't think looking for bitcast intrinsically makes sense, but
+  // removing this would require more changes.
+  auto IsBitCastOrFree = [&TLI, FPOpcode](SDValue Op, EVT VT) {
+    if (Op.getOpcode() == ISD::BITCAST && Op.getOperand(0).getValueType() == VT)
+      return true;
+
+    return FPOpcode == ISD::FABS ? TLI.isFAbsFree(VT) : TLI.isFNegFree(VT);
+  };
+
   // Fold (bitcast int (and (bitcast fp X to int), 0x7fff...) to fp) -> fabs X
   // Fold (bitcast int (xor (bitcast fp X to int), 0x8000...) to fp) -> fneg X
   // Fold (bitcast int (or (bitcast fp X to int), 0x8000...) to fp) ->
@@ -14440,9 +14450,9 @@ static SDValue foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
   SDValue LogicOp0 = N0.getOperand(0);
   ConstantSDNode *LogicOp1 = isConstOrConstSplat(N0.getOperand(1), true);
   if (LogicOp1 && LogicOp1->getAPIntValue() == SignMask &&
-      LogicOp0.getOpcode() == ISD::BITCAST &&
-      LogicOp0.getOperand(0).getValueType() == VT) {
-    SDValue FPOp = DAG.getNode(FPOpcode, SDLoc(N), VT, LogicOp0.getOperand(0));
+      IsBitCastOrFree(LogicOp0, VT)) {
+    SDValue CastOp0 = DAG.getNode(ISD::BITCAST, SDLoc(N), VT, LogicOp0);
+    SDValue FPOp = DAG.getNode(FPOpcode, SDLoc(N), VT, CastOp0);
     NumFPLogicOpsConv++;
     if (N0.getOpcode() == ISD::OR)
       return DAG.getNode(ISD::FNEG, SDLoc(N), VT, FPOp);
