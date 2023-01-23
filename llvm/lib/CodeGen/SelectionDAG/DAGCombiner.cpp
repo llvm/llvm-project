@@ -21180,6 +21180,29 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
       SmallVector<SDValue, 2> ConcatOps(2, DAG.getUNDEF(InVT2));
       ConcatOps[0] = VecIn2;
       VecIn2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
+    } else if (InVT1Size / VTSize > 1 && InVT1Size % VTSize == 0) {
+      if (!TLI.isExtractSubvectorCheap(VT, InVT1, NumElems) ||
+          !TLI.isTypeLegal(InVT1) || !TLI.isTypeLegal(InVT2))
+        return SDValue();
+      // If dest vector has less than two elements, then use shuffle and extract
+      // from larger regs will cost even more.
+      if (VT.getVectorNumElements() <= 2 || !VecIn2.getNode())
+        return SDValue();
+      assert(InVT2Size <= InVT1Size &&
+             "Second input is not going to be larger than the first one.");
+
+      // VecIn1 is wider than the output, and we have another, possibly
+      // smaller input. Pad the smaller input with undefs, shuffle at the
+      // input vector width, and extract the output.
+      // The shuffle type is different than VT, so check legality again.
+      if (LegalOperations && !TLI.isOperationLegal(ISD::VECTOR_SHUFFLE, InVT1))
+        return SDValue();
+
+      if (InVT1 != InVT2) {
+        VecIn2 = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, InVT1,
+                             DAG.getUNDEF(InVT1), VecIn2, ZeroIdx);
+      }
+      ShuffleNumElems = InVT1Size / VTSize * NumElems;
     } else {
       // TODO: Support cases where the length mismatch isn't exactly by a
       // factor of 2.
