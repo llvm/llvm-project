@@ -457,6 +457,8 @@ public:
                                 Type::ResolveState compiler_type_resolve_state,
                                 uint32_t opaque_payload = 0) = 0;
 
+  virtual lldb::TypeSP CopyType(const lldb::TypeSP &other_type) = 0;
+
 protected:
   void AssertModuleLock();
 
@@ -553,9 +555,9 @@ public:
     return type_sp;
   }
 
-  virtual lldb::TypeSP CopyType(const lldb::TypeSP &other_type) {
+  lldb::TypeSP CopyType(const lldb::TypeSP &other_type) override {
      // Make sure the real symbol file matches when copying types.
-     if (this != other_type->GetSymbolFile())
+     if (GetBackingSymbolFile() != other_type->GetSymbolFile())
       return lldb::TypeSP();
      lldb::TypeSP type_sp(new Type(*other_type));
      m_type_list.Insert(type_sp);

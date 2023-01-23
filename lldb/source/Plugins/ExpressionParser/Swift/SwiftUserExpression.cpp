@@ -353,9 +353,8 @@ static bool AddVariableInfo(
       0, variable_sp->GetName().GetCString(), "",
       std::make_shared<lldb_private::SymbolFileType>(
           *variable_sp->GetType()->GetSymbolFile(),
-          std::make_shared<lldb_private::Type>(
-              0, variable_sp->GetType()->GetSymbolFile(),
-              variable_sp->GetType()->GetName(), llvm::None,
+          variable_sp->GetType()->GetSymbolFile()->MakeType(
+              0, variable_sp->GetType()->GetName(), llvm::None,
               variable_sp->GetType()->GetSymbolContextScope(), LLDB_INVALID_UID,
               Type::eEncodingIsUID, variable_sp->GetType()->GetDeclaration(),
               target_type, lldb_private::Type::ResolveState::Full,
