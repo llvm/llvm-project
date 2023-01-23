@@ -456,6 +456,8 @@ public:
 
   virtual lldb::TypeSP CopyType(const lldb::TypeSP &other_type) = 0;
 
+  virtual lldb::TypeSP CopyType(const lldb::TypeSP &other_type) = 0;
+
 protected:
   void AssertModuleLock();
 

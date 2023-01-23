@@ -134,7 +134,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     if (name.GetStringRef().equals("$swift.fixedbuffer")) {
       if (auto wrapped_type = get_type(die.GetFirstChild())) {
         // Create a unique pointer for the type + fixed buffer flag.
-        type_sp.reset(new Type(*wrapped_type));
+        type_sp = wrapped_type->GetSymbolFile()->CopyType(wrapped_type);
         type_sp->SetPayload(TypePayloadSwift(true));
         return type_sp;
       }
@@ -194,13 +194,13 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   if (compiler_type) {
-    type_sp = TypeSP(new Type(
-        die.GetID(), die.GetDWARF(),
+    type_sp = die.GetDWARF()->MakeType(
+        die.GetID(),
         preferred_name ? preferred_name : compiler_type.GetTypeName(),
         // We don't have an exe_scope here by design, so we need to
         // read the size from DWARF.
         dwarf_byte_size, nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl,
-        compiler_type, Type::ResolveState::Full));
+        compiler_type, Type::ResolveState::Full);
   }
 
   // Cache this type.
