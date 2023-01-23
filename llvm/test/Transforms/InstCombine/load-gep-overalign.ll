@@ -12,9 +12,7 @@ define void @test_vector_load_i8() {
 ; OVERALIGNED and NATURAL should have the same result, because the layout of vectors ignores
 ; element type alignment, and thus the representation of @foo is the same in both cases.
 ;
-; TODO: The OVERALIGNED result is incorrect.
-; First, for nonzero even indices, the valid load is replaced by poison.
-; Second, the remaining bytes at indices >= 2 are also incorrect, as apparently padding bytes
+; TODO: The OVERALIGNED result is incorrect, as apparently padding bytes
 ; are assumed as they would appear in an array. In vectors, there is no padding.
 ;
 ; NATURAL-LABEL: @test_vector_load_i8(
@@ -31,11 +29,11 @@ define void @test_vector_load_i8() {
 ; OVERALIGNED-LABEL: @test_vector_load_i8(
 ; OVERALIGNED-NEXT:    call void @report(i64 0, i8 1)
 ; OVERALIGNED-NEXT:    call void @report(i64 1, i8 35)
-; OVERALIGNED-NEXT:    call void @report(i64 2, i8 poison)
+; OVERALIGNED-NEXT:    call void @report(i64 2, i8 0)
 ; OVERALIGNED-NEXT:    call void @report(i64 3, i8 0)
-; OVERALIGNED-NEXT:    call void @report(i64 4, i8 poison)
+; OVERALIGNED-NEXT:    call void @report(i64 4, i8 69)
 ; OVERALIGNED-NEXT:    call void @report(i64 5, i8 103)
-; OVERALIGNED-NEXT:    call void @report(i64 6, i8 poison)
+; OVERALIGNED-NEXT:    call void @report(i64 6, i8 0)
 ; OVERALIGNED-NEXT:    call void @report(i64 7, i8 0)
 ; OVERALIGNED-NEXT:    ret void
 ;

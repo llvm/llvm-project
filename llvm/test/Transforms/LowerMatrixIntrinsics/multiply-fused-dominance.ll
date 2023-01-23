@@ -188,7 +188,7 @@ define void @multiply_can_hoist_multiple_insts2(ptr noalias %A, ptr %B, ptr %C) 
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr double, ptr [[TMP3]], i64 1
 ; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <1 x double>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD13]], <1 x double> [[COL_LOAD14]], <1 x double> [[TMP9]])
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr <4 x double>, ptr [[C]], i64 42, i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[C]], i64 1352
 ; CHECK-NEXT:    store <1 x double> [[TMP12]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <1 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
@@ -199,7 +199,7 @@ define void @multiply_can_hoist_multiple_insts2(ptr noalias %A, ptr %B, ptr %C) 
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP3]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD25:%.*]] = load <1 x double>, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD24]], <1 x double> [[COL_LOAD25]], <1 x double> [[TMP15]])
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr <4 x double>, ptr [[C]], i64 42, i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[C]], i64 1360
 ; CHECK-NEXT:    store <1 x double> [[TMP18]], ptr [[TMP19]], align 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[COL_LOAD30:%.*]] = load <1 x double>, ptr [[TMP20]], align 8
@@ -211,7 +211,7 @@ define void @multiply_can_hoist_multiple_insts2(ptr noalias %A, ptr %B, ptr %C) 
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr double, ptr [[TMP3]], i64 3
 ; CHECK-NEXT:    [[COL_LOAD36:%.*]] = load <1 x double>, ptr [[TMP24]], align 8
 ; CHECK-NEXT:    [[TMP25:%.*]] = call contract <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[COL_LOAD35]], <1 x double> [[COL_LOAD36]], <1 x double> [[TMP22]])
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr <4 x double>, ptr [[C]], i64 42, i64 3
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[C]], i64 1368
 ; CHECK-NEXT:    store <1 x double> [[TMP25]], ptr [[TMP26]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -248,7 +248,7 @@ define void @multiply_dont_hoist_phi(ptr noalias %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT7]], <2 x double> [[TMP2]])
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr <4 x double>, ptr [[C:%.*]], i64 26
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[GEP_1]], align 8
-; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr <4 x double>, ptr [[C]], i64 26, i64 2
+; CHECK-NEXT:    [[VEC_GEP14:%.*]] = getelementptr i8, ptr [[C]], i64 848
 ; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[VEC_GEP14]], align 8
 ; CHECK-NEXT:    ret void
 ;
