@@ -17,7 +17,8 @@
 
 namespace llvm {
 namespace omp {
-enum OMPTgtExecModeFlags {
+
+enum OMPTgtExecModeFlags : unsigned char {
   OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
   OMP_TGT_EXEC_MODE_SPMD = 1 << 1,
   OMP_TGT_EXEC_MODE_GENERIC_SPMD =
@@ -25,7 +26,6 @@ enum OMPTgtExecModeFlags {
 };
 
 } // end namespace omp
-
 } // end namespace llvm
 
 #endif // LLVM_FRONTEND_OPENMP_OMPDEVICECONSTANTS_H
