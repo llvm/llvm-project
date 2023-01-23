@@ -55,7 +55,7 @@ template <size_t Size> struct BzeroCacheLine {
   }
 };
 
-inline static bool hasZva() {
+LIBC_INLINE static bool hasZva() {
   uint64_t zva_val;
   asm("mrs %[zva_val], dczid_el0" : [zva_val] "=r"(zva_val));
   // DC ZVA is permitted if DZP, bit [4] is zero.

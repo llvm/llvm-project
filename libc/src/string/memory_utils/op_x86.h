@@ -64,7 +64,7 @@ struct Memcpy {
 //  - BlockBcmp is the function that implements the bcmp logic.
 template <size_t Size, size_t BlockSize, auto BlockBcmp> struct BcmpImpl {
   static constexpr size_t SIZE = Size;
-  static inline BcmpReturnType block(CPtr p1, CPtr p2) {
+  LIBC_INLINE static BcmpReturnType block(CPtr p1, CPtr p2) {
     if constexpr (Size == BlockSize) {
       return BlockBcmp(p1, p2);
     } else if constexpr (Size % BlockSize == 0) {
@@ -77,15 +77,16 @@ template <size_t Size, size_t BlockSize, auto BlockBcmp> struct BcmpImpl {
     return BcmpReturnType::ZERO();
   }
 
-  static inline BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
     return block(p1 + count - Size, p2 + count - Size);
   }
 
-  static inline BcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static BcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
     return block(p1, p2) | tail(p1, p2, count);
   }
 
-  static inline BcmpReturnType loop_and_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
+                                                  size_t count) {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     size_t offset = 0;
     do {
@@ -98,7 +99,7 @@ template <size_t Size, size_t BlockSize, auto BlockBcmp> struct BcmpImpl {
 };
 
 namespace sse2 {
-static inline BcmpReturnType bcmp16(CPtr p1, CPtr p2) {
+LIBC_INLINE BcmpReturnType bcmp16(CPtr p1, CPtr p2) {
 #if defined(__SSE2__)
   using T = char __attribute__((__vector_size__(16)));
   // A mask indicating which bytes differ after loading 16 bytes from p1 and p2.
@@ -115,7 +116,7 @@ template <size_t Size> using Bcmp = BcmpImpl<Size, 16, bcmp16>;
 } // namespace sse2
 
 namespace avx2 {
-static inline BcmpReturnType bcmp32(CPtr p1, CPtr p2) {
+LIBC_INLINE BcmpReturnType bcmp32(CPtr p1, CPtr p2) {
 #if defined(__AVX2__)
   using T = char __attribute__((__vector_size__(32)));
   // A mask indicating which bytes differ after loading 32 bytes from p1 and p2.
@@ -134,7 +135,7 @@ template <size_t Size> using Bcmp = BcmpImpl<Size, 32, bcmp32>;
 } // namespace avx2
 
 namespace avx512bw {
-static inline BcmpReturnType bcmp64(CPtr p1, CPtr p2) {
+LIBC_INLINE BcmpReturnType bcmp64(CPtr p1, CPtr p2) {
 #if defined(__AVX512BW__)
   using T = char __attribute__((__vector_size__(64)));
   // A mask indicating which bytes differ after loading 64 bytes from p1 and p2.
@@ -154,8 +155,8 @@ template <size_t Size> using Bcmp = BcmpImpl<Size, 64, bcmp64>;
 // Assuming that the mask is non zero, the index of the first mismatching byte
 // is the number of trailing zeros in the mask. Trailing zeros and not leading
 // zeros because the x86 architecture is little endian.
-static inline MemcmpReturnType char_diff_no_zero(CPtr p1, CPtr p2,
-                                                 uint64_t mask) {
+LIBC_INLINE MemcmpReturnType char_diff_no_zero(CPtr p1, CPtr p2,
+                                               uint64_t mask) {
   const size_t diff_index = __builtin_ctzll(mask);
   const int16_t ca = cpp::to_integer<uint8_t>(p1[diff_index]);
   const int16_t cb = cpp::to_integer<uint8_t>(p2[diff_index]);
@@ -174,7 +175,7 @@ static inline MemcmpReturnType char_diff_no_zero(CPtr p1, CPtr p2,
 template <size_t Size, size_t BlockSize, auto BlockMemcmp, auto BlockBcmp>
 struct MemcmpImpl {
   static constexpr size_t SIZE = Size;
-  static inline MemcmpReturnType block(CPtr p1, CPtr p2) {
+  LIBC_INLINE static MemcmpReturnType block(CPtr p1, CPtr p2) {
     if constexpr (Size == BlockSize) {
       return BlockMemcmp(p1, p2);
     } else if constexpr (Size % BlockSize == 0) {
@@ -187,17 +188,19 @@ struct MemcmpImpl {
     return MemcmpReturnType::ZERO();
   }
 
-  static inline MemcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static MemcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
     return block(p1 + count - Size, p2 + count - Size);
   }
 
-  static inline MemcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static MemcmpReturnType head_tail(CPtr p1, CPtr p2,
+                                                size_t count) {
     if (auto value = block(p1, p2))
       return value;
     return tail(p1, p2, count);
   }
 
-  static inline MemcmpReturnType loop_and_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static MemcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
+                                                    size_t count) {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     size_t offset = 0;
     do {
@@ -210,7 +213,7 @@ struct MemcmpImpl {
 };
 
 namespace sse2 {
-static inline MemcmpReturnType memcmp16(CPtr p1, CPtr p2) {
+LIBC_INLINE MemcmpReturnType memcmp16(CPtr p1, CPtr p2) {
 #if defined(__SSE2__)
   using T = char __attribute__((__vector_size__(16)));
   // A mask indicating which bytes differ after loading 16 bytes from p1 and p2.
@@ -228,7 +231,7 @@ template <size_t Size> using Memcmp = MemcmpImpl<Size, 16, memcmp16, bcmp16>;
 } // namespace sse2
 
 namespace avx2 {
-static inline MemcmpReturnType memcmp32(CPtr p1, CPtr p2) {
+LIBC_INLINE MemcmpReturnType memcmp32(CPtr p1, CPtr p2) {
 #if defined(__AVX2__)
   using T = char __attribute__((__vector_size__(32)));
   // A mask indicating which bytes differ after loading 32 bytes from p1 and p2.
@@ -246,7 +249,7 @@ template <size_t Size> using Memcmp = MemcmpImpl<Size, 32, memcmp32, bcmp32>;
 } // namespace avx2
 
 namespace avx512bw {
-static inline MemcmpReturnType memcmp64(CPtr p1, CPtr p2) {
+LIBC_INLINE MemcmpReturnType memcmp64(CPtr p1, CPtr p2) {
 #if defined(__AVX512BW__)
   using T = char __attribute__((__vector_size__(64)));
   // A mask indicating which bytes differ after loading 64 bytes from p1 and p2.
