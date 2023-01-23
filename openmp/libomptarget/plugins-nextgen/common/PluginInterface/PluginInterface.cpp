@@ -182,9 +182,9 @@ public:
   void *alloc(uint64_t Size) {
     assert(MemoryStart && "Expected memory has been pre-allocated");
     void *Alloc = nullptr;
-    constexpr int ALIGN = 16;
+    constexpr int Alignment = 16;
     // Assumes alignment is a power of 2.
-    int64_t AlignedSize = Size + (ALIGN - 1) & (~(ALIGN - 1));
+    int64_t AlignedSize = (Size + (Alignment - 1)) & (~(Alignment - 1));
     std::lock_guard<std::mutex> LG(AllocationLock);
     Alloc = MemoryPtr;
     MemoryPtr = (char *)MemoryPtr + AlignedSize;
