@@ -2995,7 +2995,7 @@ class sme2_mova_vec_to_tile_vg2_multi_base<bits<2> sz, bit v,
                                            string mnemonic>
    : I<(outs tile_ty:$ZAd),
        (ins tile_ty:$_ZAd, MatrixIndexGPR32Op12_15:$Rs, index_ty:$imm, vector_ty:$Zn),
-       mnemonic, "\t$ZAd[$Rs, $imm, vgx2], $Zn",
+       mnemonic, "\t$ZAd[$Rs, $imm], $Zn",
        "", []>, Sched<[]> {
   bits<2> Rs;
   bits<4> Zn;
@@ -3156,7 +3156,7 @@ class sme2_mova_vec_to_tile_vg4_multi_base<bits<2> sz, bit v, bits<3> op,
        (ins tile_ty:$_ZAd, MatrixIndexGPR32Op12_15:$Rs, index_ty:$imm,
             vector_ty:$Zn),
        mnemonic,
-       "\t$ZAd[$Rs, $imm, vgx4], $Zn",
+       "\t$ZAd[$Rs, $imm], $Zn",
        "", []>, Sched<[]> {
   bits<2> Rs;
   bits<3> Zn;
@@ -3477,7 +3477,7 @@ class sme2_mova_tile_to_vec_vg2_multi_base<bits<2> sz, bit v, bits<3> op,
    : I<!if(op{1}, (outs vector_ty:$Zd, tile_ty:$_ZAn), (outs vector_ty:$Zd)),
        (ins tile_ty:$ZAn, MatrixIndexGPR32Op12_15:$Rs, index_ty:$imm),
        mnemonic,
-       "\t$Zd, $ZAn[$Rs, $imm, vgx2]",
+       "\t$Zd, $ZAn[$Rs, $imm]",
        "", []>, Sched<[]> {
   bits<4> Zd;
   bits<2> Rs;
@@ -3618,7 +3618,7 @@ class sme2_mova_tile_to_vec_vg4_multi_base<bits<2> sz, bit v, bits<6> op,
    : I<!if(op{4}, (outs vector_ty:$Zd, tile_ty:$_ZAn), (outs vector_ty:$Zd)),
        (ins tile_ty:$ZAn, MatrixIndexGPR32Op12_15:$Rs, index_ty:$imm),
        mnemonic,
-       "\t$Zd, $ZAn[$Rs, $imm, vgx4]",
+       "\t$Zd, $ZAn[$Rs, $imm]",
        "", []>, Sched<[]> {
   bits<3> Zd;
   bits<2> Rs;
