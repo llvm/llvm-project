@@ -181,6 +181,14 @@
 // CHECK-SVE-8_5-NOT: __ARM_FEATURE_SVE_MATMUL_INT8 1
 // CHECK-SVE-8_5: __ARM_FEATURE_SVE 1
 
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.6-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-8_6 %s
+// CHECK-8_6-NOT: __ARM_FEATURE_AES 1
+// CHECK-8_6: __ARM_FEATURE_BF16 1
+// CHECK-8_6: __ARM_FEATURE_MATMUL_INT8 1
+// CHECK-8_6-NOT: __ARM_FEATURE_SHA2 1
+// CHECK-8_6-NOT: __ARM_FEATURE_SHA3 1
+// CHECK-8_6-NOT: __ARM_FEATURE_SM4 1
+
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.6-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-8_6 %s
 // CHECK-SVE-8_6: __ARM_FEATURE_SVE 1
 // CHECK-SVE-8_6: __ARM_FEATURE_SVE_BF16 1
@@ -194,6 +202,10 @@
 // CHECK-SVE-8_6-NOFEATURES:     __ARM_FEATURE_SVE 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9.2-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9.3-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9.4-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // CHECK-SVE2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
@@ -217,6 +229,7 @@
 // CHECK-SVE2BITPERM: __ARM_FEATURE_SVE2_BITPERM 1
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.2a+dotprod -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.4a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-DOTPROD %s
 // CHECK-DOTPROD: __ARM_FEATURE_DOTPROD 1
 // CHECK-DOTPROD: __ARM_NEON 1
 // CHECK-DOTPROD: __ARM_NEON_FP 0xE

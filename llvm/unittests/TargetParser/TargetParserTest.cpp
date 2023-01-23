@@ -1337,9 +1337,9 @@ INSTANTIATE_TEST_SUITE_P(
                          AArch64::AEK_CRC  | AArch64::AEK_FP   | AArch64::AEK_FP16   |
                              AArch64::AEK_SIMD | AArch64::AEK_RAS  | AArch64::AEK_LSE     |
                              AArch64::AEK_RDM  | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
-                             AArch64::AEK_SM4  | AArch64::AEK_SHA3 | AArch64::AEK_BF16    |
-                             AArch64::AEK_SHA2 | AArch64::AEK_AES  | AArch64::AEK_I8MM    |
-                             AArch64::AEK_SSBS | AArch64::AEK_SB,
+                             AArch64::AEK_SHA3 | AArch64::AEK_BF16 | AArch64::AEK_SHA2 |
+                             AArch64::AEK_AES  | AArch64::AEK_I8MM | AArch64::AEK_SSBS |
+                             AArch64::AEK_SB,
                          "8.6-A"),
         ARMCPUTestParams(
             "neoverse-512tvb", "armv8.4-a", "crypto-neon-fp-armv8",
@@ -1352,13 +1352,13 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_FP16FML | AArch64::AEK_I8MM,
             "8.4-A"),
         ARMCPUTestParams("thunderx2t99", "armv8.1-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_NONE | AArch64::AEK_CRC |
+                         AArch64::AEK_CRC |
                              AArch64::AEK_CRYPTO | AArch64::AEK_LSE |
                              AArch64::AEK_RDM | AArch64::AEK_FP |
                              AArch64::AEK_SIMD,
                          "8.1-A"),
         ARMCPUTestParams("thunderx3t110", "armv8.3-a", "crypto-neon-fp-armv8",
-                         AArch64::AEK_NONE | AArch64::AEK_CRC |
+                         AArch64::AEK_CRC |
                              AArch64::AEK_CRYPTO | AArch64::AEK_LSE |
                              AArch64::AEK_RDM | AArch64::AEK_FP |
                              AArch64::AEK_SIMD | AArch64::AEK_RAS |

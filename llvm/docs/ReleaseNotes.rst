@@ -133,6 +133,10 @@ Changes to the AArch64 Backend
 * Added support for the Neoverse V2 CPU.
 * Added support for assembly for RME MEC (Memory Encryption Contexts).
 * Added codegen support for the Armv8.3 Complex Number extension.
+* Implemented `Function Multi Versioning
+  <https://arm-software.github.io/acle/main/acle.html#function-multi-versioning>`_
+  in accordance with Arm C Language Extensions specification. Currently in Beta
+  state.
 
 Changes to the AMDGPU Backend
 -----------------------------

@@ -75,6 +75,10 @@ public:
   // track register pressure for actual scheduling heuristics.
   bool HasHighPressure;
 
+  // Schedule known to have excess register pressure. Be more conservative in
+  // increasing ILP and preserving VGPRs.
+  bool KnownExcessRP = false;
+
   // An error margin is necessary because of poor performance of the generic RP
   // tracker and can be adjusted up for tuning heuristics to try and more
   // aggressively reduce register pressure.
@@ -301,6 +305,11 @@ public:
 
   // Returns true if scheduling should be reverted.
   virtual bool shouldRevertScheduling(unsigned WavesAfter);
+
+  // Returns true if current region has known excess pressure.
+  bool isRegionWithExcessRP() const {
+    return DAG.RegionsWithExcessRP[RegionIdx];
+  }
 
   // Returns true if the new schedule may result in more spilling.
   bool mayCauseSpilling(unsigned WavesAfter);
