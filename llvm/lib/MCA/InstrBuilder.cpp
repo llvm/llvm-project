@@ -331,7 +331,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     if (!Op.isReg())
       continue;
 
-    if (MCDesc.OpInfo[CurrentDef].isOptionalDef()) {
+    if (MCDesc.operands()[CurrentDef].isOptionalDef()) {
       OptionalDefIdx = CurrentDef++;
       continue;
     }
