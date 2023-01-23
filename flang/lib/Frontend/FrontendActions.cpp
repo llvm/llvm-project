@@ -587,7 +587,7 @@ void CodeGenAction::setUpTargetMachine() {
   // Create `TargetMachine`
   const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
   std::optional<llvm::CodeGenOpt::Level> OptLevelOrNone =
-      CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
+      llvm::CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
   assert(OptLevelOrNone && "Invalid optimization level!");
   llvm::CodeGenOpt::Level OptLevel = *OptLevelOrNone;
   std::string featuresStr = llvm::join(targetOpts.featuresAsWritten.begin(),
