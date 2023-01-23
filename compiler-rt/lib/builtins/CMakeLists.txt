@@ -192,13 +192,10 @@ set(GENERIC_SOURCES
 
 # Build BF16 files only when "__bf16" is available.
 if(COMPILER_RT_HAS_BFLOAT16 AND NOT APPLE)
-  set(GENERIC_BF_SOURCES
-    truncdfbf2.c
-    truncsfbf2.c
-  )
   set(GENERIC_SOURCES
     ${GENERIC_SOURCES}
-    ${GENERIC_BF_SOURCES}
+    truncdfbf2.c
+    truncsfbf2.c
   )
 endif()
 
@@ -371,11 +368,6 @@ if (NOT MSVC)
       i386/chkstk.S
       i386/chkstk2.S
     )
-  endif()
-
-  if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-    # Do not build bfloat16 sources i386-freebsd, as it is not supported.
-    list(REMOVE_ITEM i386_SOURCES ${GENERIC_BF_SOURCES})
   endif()
 else () # MSVC
   # Use C versions of functions when building on MSVC
@@ -755,6 +747,8 @@ else ()
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full BUILTIN_CFLAGS)
   endif()
 
+  append_list_if(COMPILER_RT_HAS_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS)
+
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
 
   # These flags would normally be added to CMAKE_C_FLAGS by the llvm
@@ -829,11 +823,6 @@ else ()
         )
 
         set(deps_aarch64 lse_builtin_symlinks)
-      endif()
-
-      # Do not enable float16 on i386-freebsd, as it is not supported.
-      if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD" AND ${arch} STREQUAL "i386"))
-        append_list_if(COMPILER_RT_HAS_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS)
       endif()
 
       add_compiler_rt_runtime(clang_rt.builtins
