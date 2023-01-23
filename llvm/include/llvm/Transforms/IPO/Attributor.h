@@ -110,6 +110,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -376,6 +377,12 @@ bool isPotentiallyReachable(
 bool isAssumedThreadLocalObject(Attributor &A, Value &Obj,
                                 const AbstractAttribute &QueryingAA);
 
+/// Return true if \p I is potentially affected by a barrier.
+bool isPotentiallyAffectedByBarrier(Attributor &A, const Instruction &I,
+                                    const AbstractAttribute &QueryingAA);
+bool isPotentiallyAffectedByBarrier(Attributor &A, ArrayRef<const Value *> Ptrs,
+                                    const AbstractAttribute &QueryingAA,
+                                    const Instruction *CtxI);
 } // namespace AA
 
 template <>
@@ -1921,7 +1928,8 @@ public:
   bool isAssumedDead(const Instruction &I, const AbstractAttribute *QueryingAA,
                      const AAIsDead *LivenessAA, bool &UsedAssumedInformation,
                      bool CheckBBLivenessOnly = false,
-                     DepClassTy DepClass = DepClassTy::OPTIONAL);
+                     DepClassTy DepClass = DepClassTy::OPTIONAL,
+                     bool CheckForDeadStore = false);
 
   /// Return true if \p U is assumed dead.
   ///
@@ -3324,6 +3332,10 @@ struct AANoSync
   /// Helper function specific for intrinsics which are potentially volatile.
   static bool isNoSyncIntrinsic(const Instruction *I);
 
+  /// Helper function to determine if \p CB is an aligned (GPU) barrier.
+  /// Aligned barriers have to be executed by all threads.
+  static bool isAlignedBarrier(const CallBase &CB);
+
   /// Create an abstract attribute view for the position \p IRP.
   static AANoSync &createForPosition(const IRPosition &IRP, Attributor &A);
 
@@ -3618,9 +3630,6 @@ protected:
   /// Returns true if the underlying value is known dead.
   virtual bool isKnownDead() const = 0;
 
-  /// Returns true if \p BB is assumed dead.
-  virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
-
   /// Returns true if \p BB is known dead.
   virtual bool isKnownDead(const BasicBlock *BB) const = 0;
 
@@ -3658,6 +3667,9 @@ public:
   static bool mayCatchAsynchronousExceptions(const Function &F) {
     return F.hasPersonalityFn() && !canSimplifyInvokeNoUnwind(&F);
   }
+
+  /// Returns true if \p BB is assumed dead.
+  virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
 
   /// Return if the edge from \p From BB to \p To BB is assumed dead.
   /// This is specifically useful in AAReachability.
@@ -4988,6 +5000,32 @@ struct AAExecutionDomain
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAExecutionDomain(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// Summary about the execution domain of a block or instruction.
+  struct ExecutionDomainTy {
+    using BarriersSetTy = SmallPtrSet<CallBase *, 2>;
+    using AssumesSetTy = SmallPtrSet<AssumeInst *, 4>;
+
+    void addAssumeInst(Attributor &A, AssumeInst &AI) {
+      EncounteredAssumes.insert(&AI);
+    }
+
+    void addAlignedBarrier(Attributor &A, CallBase &CB) {
+      AlignedBarriers.insert(&CB);
+    }
+
+    void clearAssumeInstAndAlignedBarriers() {
+      EncounteredAssumes.clear();
+      AlignedBarriers.clear();
+    }
+
+    bool IsExecutedByInitialThreadOnly = true;
+    bool IsReachedFromAlignedBarrierOnly = true;
+    bool IsReachingAlignedBarrierOnly = true;
+    bool EncounteredNonLocalSideEffect = false;
+    BarriersSetTy AlignedBarriers;
+    AssumesSetTy EncounteredAssumes;
+  };
+
   /// Create an abstract attribute view for the position \p IRP.
   static AAExecutionDomain &createForPosition(const IRPosition &IRP,
                                               Attributor &A);
@@ -4999,10 +5037,16 @@ struct AAExecutionDomain
   const char *getIdAddr() const override { return &ID; }
 
   /// Check if an instruction is executed only by the initial thread.
-  virtual bool isExecutedByInitialThreadOnly(const Instruction &) const = 0;
+  bool isExecutedByInitialThreadOnly(const Instruction &I) const {
+    return isExecutedByInitialThreadOnly(*I.getParent());
+  }
 
   /// Check if a basic block is executed only by the initial thread.
   virtual bool isExecutedByInitialThreadOnly(const BasicBlock &) const = 0;
+
+  virtual ExecutionDomainTy getExecutionDomain(const BasicBlock &) const = 0;
+  virtual ExecutionDomainTy getExecutionDomain(const CallBase &) const = 0;
+  virtual ExecutionDomainTy getFunctionExecutionDomain() const = 0;
 
   /// This function should return true if the type of the \p AA is
   /// AAExecutionDomain.

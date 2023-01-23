@@ -1901,16 +1901,14 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 
   // FIXME: Recurse on local labels?
 
-  // See what kind of statement we have.
-  switch (Lexer.getKind()) {
-  case AsmToken::Colon: {
-    if (!getTargetParser().isLabel(ID))
-      break;
+  // Check for a label.
+  //   ::= identifier ':'
+  //   ::= number ':'
+  if (Lexer.is(AsmToken::Colon) && getTargetParser().isLabel(ID)) {
     if (checkForValidSection())
       return true;
 
-    // identifier ':'   -> Label.
-    Lex();
+    Lex(); // Consume the ':'.
 
     // Diagnose attempt to use '.' as a label.
     if (IDVal == ".")
@@ -1971,16 +1969,11 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     return false;
   }
 
-  case AsmToken::Equal:
-    if (!getTargetParser().equalIsAsmAssignment())
-      break;
-    // identifier '=' ... -> assignment statement
+  // Check for an assignment statement.
+  //   ::= identifier '='
+  if (Lexer.is(AsmToken::Equal) && getTargetParser().equalIsAsmAssignment()) {
     Lex();
-
     return parseAssignment(IDVal, AssignmentKind::Equal);
-
-  default: // Normal instruction or directive.
-    break;
   }
 
   // If macros are enabled, check to see if this is a macro instantiation.
