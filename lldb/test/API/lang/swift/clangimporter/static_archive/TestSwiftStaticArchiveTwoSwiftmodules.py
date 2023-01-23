@@ -26,6 +26,7 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
 
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(archs=no_match("arm64"), bugnumber="rdar://104429667") # linker crash
     @skipUnlessDarwin
     @swiftTest
     def test(self):
