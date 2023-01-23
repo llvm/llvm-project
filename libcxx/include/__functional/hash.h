@@ -136,12 +136,12 @@ struct __murmur2_or_cityhash<_Size, 64>
         __hash_len_16(__v.second, __w.second) + __x);
   }
 
- private:
-  // Some primes between 2^63 and 2^64.
-  static const _Size __k0 = 0xc3a5c85c97cb3127ULL;
-  static const _Size __k1 = 0xb492b66fbe98f273ULL;
-  static const _Size __k2 = 0x9ae16a3b2f90404fULL;
-  static const _Size __k3 = 0xc949d7c7509e6557ULL;
+  private:
+    // Some primes between 2^63 and 2^64.
+    static const _Size __k0 = 0xc3a5c85c97cb3127ULL;
+    static const _Size __k1 = 0xb492b66fbe98f273ULL;
+    static const _Size __k2 = 0x9ae16a3b2f90404fULL;
+    static const _Size __k3 = 0xc949d7c7509e6557ULL;
 
   _LIBCPP_HIDE_FROM_ABI
   static _Size __rotate(_Size __val, int __shift) {

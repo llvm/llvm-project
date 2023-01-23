@@ -474,7 +474,7 @@ template <class _Ret, bool = is_void<_Ret>::value>
 struct __invoke_void_return_wrapper
 {
     template <class ..._Args>
-    static _Ret __call(_Args&&... __args) {
+    _LIBCPP_HIDE_FROM_ABI static _Ret __call(_Args&&... __args) {
         return std::__invoke(std::forward<_Args>(__args)...);
     }
 };
@@ -483,7 +483,7 @@ template <class _Ret>
 struct __invoke_void_return_wrapper<_Ret, true>
 {
     template <class ..._Args>
-    static void __call(_Args&&... __args) {
+    _LIBCPP_HIDE_FROM_ABI static void __call(_Args&&... __args) {
         std::__invoke(std::forward<_Args>(__args)...);
     }
 };

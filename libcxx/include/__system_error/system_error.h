@@ -32,7 +32,7 @@ public:
   system_error(int __ev, const error_category& __ecat, const string& __what_arg);
   system_error(int __ev, const error_category& __ecat, const char* __what_arg);
   system_error(int __ev, const error_category& __ecat);
-  system_error(const system_error&) _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI system_error(const system_error&) _NOEXCEPT = default;
   ~system_error() _NOEXCEPT override;
 
   _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }

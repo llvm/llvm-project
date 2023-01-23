@@ -56,10 +56,10 @@ public:
       : __stashed_elem_(), __path_ptr_(nullptr), __entry_(),
         __state_(_Singular) {}
 
-  iterator(const iterator&) = default;
-  ~iterator() = default;
+  _LIBCPP_HIDE_FROM_ABI iterator(const iterator&) = default;
+  _LIBCPP_HIDE_FROM_ABI ~iterator() = default;
 
-  iterator& operator=(const iterator&) = default;
+  _LIBCPP_HIDE_FROM_ABI iterator& operator=(const iterator&) = default;
 
   _LIBCPP_INLINE_VISIBILITY
   reference operator*() const { return __stashed_elem_; }

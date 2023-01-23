@@ -1588,11 +1588,11 @@ public:
     basic_filebuf<char_type, traits_type>* rdbuf() const;
     _LIBCPP_INLINE_VISIBILITY
     bool is_open() const;
-    void open(const char* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
+    _LIBCPP_HIDE_FROM_ABI void open(const char* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 #ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
     void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 #endif
-    void open(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
+    _LIBCPP_HIDE_FROM_ABI void open(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 
 #if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
     _LIBCPP_AVAILABILITY_FILESYSTEM _LIBCPP_INLINE_VISIBILITY

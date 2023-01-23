@@ -124,7 +124,7 @@ class __barrier_base {
 public:
     using arrival_token = __barrier_phase_t;
 
-    static constexpr ptrdiff_t max() noexcept {
+    static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept {
         return numeric_limits<ptrdiff_t>::max();
     }
 
@@ -293,7 +293,7 @@ class barrier {
 public:
     using arrival_token = typename __barrier_base<_CompletionF>::arrival_token;
 
-    static constexpr ptrdiff_t max() noexcept {
+    static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept {
         return __barrier_base<_CompletionF>::max();
     }
 
