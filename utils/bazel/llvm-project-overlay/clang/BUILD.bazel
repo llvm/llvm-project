@@ -1194,6 +1194,7 @@ cc_library(
     srcs = glob(["lib/CrossTU/*.cpp"]),
     hdrs = glob(["include/clang/CrossTU/*.h"]),
     deps = [
+        ":analysis",
         ":ast",
         ":basic",
         ":frontend",
