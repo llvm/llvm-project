@@ -43,7 +43,9 @@ SBModule::SBModule(const SBModuleSpec &module_spec) {
     SetSP(module_sp);
 }
 
-SBModule::SBModule(const SBModule &rhs) = default;
+SBModule::SBModule(const SBModule &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
 
 SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
   LLDB_INSTRUMENT_VA(this, process, header_addr);
