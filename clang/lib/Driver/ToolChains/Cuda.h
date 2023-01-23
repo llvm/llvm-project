@@ -152,6 +152,7 @@ protected:
   Tool *buildAssembler() const override; // ptxas.
   Tool *buildLinker() const override;    // nvlink.
 };
+
 class LLVM_LIBRARY_VISIBILITY CudaToolChain : public NVPTXToolChain {
 public:
   CudaToolChain(const Driver &D, const llvm::Triple &Triple,
@@ -189,6 +190,10 @@ public:
   VersionTuple
   computeMSVCVersion(const Driver *D,
                      const llvm::opt::ArgList &Args) const override;
+
+  Expected<SmallVector<std::string>>
+  getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
+
   const ToolChain &HostTC;
 protected:
   Tool *buildAssembler() const override; // ptxas

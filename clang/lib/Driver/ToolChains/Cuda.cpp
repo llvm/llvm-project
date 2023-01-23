@@ -956,7 +956,6 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   return DAL;
 }
 
-#if 0//<<<<<<< HEAD
 Expected<SmallVector<std::string>>
 CudaToolChain::getSystemGPUArchs(const ArgList &Args) const {
   // Detect NVIDIA GPUs availible on the system.
@@ -981,8 +980,6 @@ CudaToolChain::getSystemGPUArchs(const ArgList &Args) const {
 
   return std::move(GPUArchs);
 }
-
-#endif//>>>>>>> 10e1556ed530
 
 Tool *NVPTXToolChain::buildAssembler() const {
   return new tools::NVPTX::Assembler(*this);

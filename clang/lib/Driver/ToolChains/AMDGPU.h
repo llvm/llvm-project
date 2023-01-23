@@ -109,13 +109,10 @@ public:
 
   unsigned GetCodeObjectVersion() const { return CodeObjectVersion; }
 
-  /// Uses amdgpu_arch tool to get arch of the system GPU. Will return error
+  /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
-  llvm::Error getSystemGPUArch(const llvm::opt::ArgList &Args,
-                               std::string &GPUArch) const;
-
-  llvm::Error detectSystemGPUs(const llvm::opt::ArgList &Args,
-                               SmallVector<std::string, 1> &GPUArchs) const;
+  virtual Expected<SmallVector<std::string>>
+  getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
 protected:
   /// Check and diagnose invalid target ID specified by -mcpu.
