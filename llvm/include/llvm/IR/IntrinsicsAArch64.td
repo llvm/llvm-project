@@ -2684,6 +2684,8 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sve_sclamp : AdvSIMD_3VectorArg_Intrinsic;
   def int_aarch64_sve_uclamp : AdvSIMD_3VectorArg_Intrinsic;
+  def int_aarch64_sve_fclamp : AdvSIMD_3VectorArg_Intrinsic;
+
 
   //
   // Reversal
