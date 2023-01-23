@@ -765,4 +765,45 @@ TEST(VirtualOutputBackendAdaptors, makeMirroringOutputBackendCreateError) {
       FailedWithMessage(Error1->Msg));
 }
 
+TEST(OnDiskBackendTest, OnlyIfDifferent) {
+  OnDiskOutputBackendProvider Provider;
+  auto Backend = Provider.createBackend();
+  std::string FilePath = Provider.getFilePathToCreate();
+  StringRef Data = "some data";
+  OutputConfig Config = OutputConfig().setOnlyIfDifferent();
+
+  OutputFile O1, O2, O3;
+  sys::fs::file_status Status1, Status2, Status3;
+  // Write first file.
+  EXPECT_THAT_ERROR(Backend->createFile(FilePath, Config).moveInto(O1),
+                    Succeeded());
+  O1 << Data;
+  EXPECT_THAT_ERROR(O1.keep(), Succeeded());
+  EXPECT_FALSE(O1.isOpen());
+  EXPECT_FALSE(sys::fs::status(FilePath, Status1, /*follow=*/false));
+
+  // Write second with same content.
+  EXPECT_THAT_ERROR(Backend->createFile(FilePath, Config).moveInto(O2),
+                    Succeeded());
+  O2 << Data;
+  EXPECT_THAT_ERROR(O2.keep(), Succeeded());
+  EXPECT_FALSE(O2.isOpen());
+  EXPECT_FALSE(sys::fs::status(FilePath, Status2, /*follow=*/false));
+
+  // Make sure the output path file is not modified with same content.
+  EXPECT_EQ(Status1.getUniqueID(), Status2.getUniqueID());
+
+  // Write third with different content.
+  EXPECT_THAT_ERROR(Backend->createFile(FilePath, Config).moveInto(O3),
+                    Succeeded());
+  O3 << Data << "\n";
+  EXPECT_THAT_ERROR(O3.keep(), Succeeded());
+  EXPECT_FALSE(O3.isOpen());
+  EXPECT_FALSE(sys::fs::status(FilePath, Status3, /*follow=*/false));
+
+  // This should overwrite the file and create a different UniqueID.
+  EXPECT_NE(Status1.getUniqueID(), Status3.getUniqueID());
+}
+
+
 } // end namespace
