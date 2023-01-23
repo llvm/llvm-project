@@ -269,7 +269,7 @@ struct Z {
 // CHECK-SPELLING: 128:6 CXXMethod=operator[]:128:6 Extent=[128:3 - 128:36] Spelling=operator[] ([128:6 - 128:16])
 // CHECK-SPELLING: 129:6 CXXMethod=operator->:129:6 Extent=[129:3 - 129:18] Spelling=operator-> ([129:6 - 129:16])
 // CHECK-SPELLING: 130:6 CXXMethod=operator():130:6 (const) Extent=[130:3 - 130:37] Spelling=operator() ([130:6 - 130:16])
-// CHECK-SPELLING: 132:12 CXXConversion=operator bool:132:12 (const) (explicit) Extent=[132:3 - 132:33] Spelling=operator bool ([132:12 - 132:25])
+// CHECK-SPELLING: 132:12 CXXConversion=operator bool:132:12 (const) Extent=[132:3 - 132:33] Spelling=operator bool ([132:12 - 132:25])
 // CHECK-SPELLING: 146:11 FunctionDecl=operator""_toint:146:11 (Definition) Extent=[146:1 - 146:72] Spelling=operator""_toint ([146:11 - 146:27])
 // CHECK-SPELLING: 149:6 FunctionDecl=f_noexcept:149:6 (noexcept) Extent=[149:1 - 149:27] Spelling=f_noexcept ([149:6 - 149:16])
 // CHECK-SPELLING: 150:25 FunctionTemplate=f_computed_noexcept:150:25 (computed-noexcept) Extent=[150:1 - 150:73] Spelling=f_computed_noexcept ([150:25 - 150:44])

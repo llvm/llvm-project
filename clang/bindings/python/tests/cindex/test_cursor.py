@@ -277,57 +277,6 @@ class TestCursor(unittest.TestCase):
             for cursor in non_move_assignment_operators_cursors
         ]))
 
-    def test_is_explicit_method(self):
-        """Ensure Cursor.is_explicit_method works."""
-        source_with_explicit_methods = """
-        struct Foo {
-           // Those are explicit
-           explicit Foo(double);
-           explicit(true) Foo(char);
-           explicit operator double();
-           explicit(true) operator char();
-        };
-        """
-        source_without_explicit_methods = """
-        struct Foo {
-            // Those are not explicit
-            Foo(int);
-            explicit(false) Foo(float);
-            operator int();
-            explicit(false) operator float();
-        };
-        """
-        tu_with_explicit_methods = get_tu(
-            source_with_explicit_methods, lang="cpp"
-        )
-        tu_without_explicit_methods = get_tu(
-            source_without_explicit_methods, lang="cpp"
-        )
-
-        explicit_methods_cursors = [
-            *get_cursors(tu_with_explicit_methods, "Foo")[1:],
-            get_cursor(tu_with_explicit_methods, "operator double"),
-            get_cursor(tu_with_explicit_methods, "operator char"),
-        ]
-
-        non_explicit_methods_cursors = [
-            *get_cursors(tu_without_explicit_methods, "Foo")[1:],
-            get_cursor(tu_without_explicit_methods, "operator int"),
-            get_cursor(tu_without_explicit_methods, "operator float"),
-        ]
-
-        self.assertEqual(len(explicit_methods_cursors), 4)
-        self.assertTrue(len(non_explicit_methods_cursors), 4)
-
-        self.assertTrue(all([
-            cursor.is_explicit_method()
-            for cursor in explicit_methods_cursors
-        ]))
-        self.assertFalse(any([
-            cursor.is_explicit_method()
-            for cursor in non_explicit_methods_cursors
-        ]))
-
     def test_is_mutable_field(self):
         """Ensure Cursor.is_mutable_field works."""
         source = 'class X { int x_; mutable int y_; };'

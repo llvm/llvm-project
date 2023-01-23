@@ -976,9 +976,6 @@ libclang
 - Introduced the new function ``clang_CXXMethod_isMoveAssignmentOperator``,
   which identifies whether a method cursor is a move-assignment
   operator.
-- Introduced the new function ``clang_CXXMethod_isExplicit``,
-  which identifies whether a constructor or conversion function cursor
-  was marked with the explicit identifier.
 - ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``,
   ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and
   ``clang_Cursor_getTemplateArgumentUnsignedValue`` now work on struct, class,
