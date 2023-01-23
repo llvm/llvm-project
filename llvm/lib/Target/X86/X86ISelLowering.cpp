@@ -31505,7 +31505,11 @@ static std::pair<Value *, BitTestKind> FindSingleBitChange(Value *V) {
         match(I, m_Sub(m_AllOnes(), m_Value(PeekI)))) {
       Not = true;
       I = dyn_cast<Instruction>(PeekI);
-      assert(I != nullptr);
+
+      // If I is constant, it will fold and we can evaluate later. If its an
+      // argument or something of that nature, we can't analyze.
+      if (I == nullptr)
+        return {nullptr, UndefBit};
     }
     // We can only use 1 << X without more sophisticated analysis. C << X where
     // C is a power of 2 but not 1 can result in zero which cannot be translated
