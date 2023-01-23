@@ -89,18 +89,10 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   }
 
   // Subtract error margin and bias from register limits and avoid overflow.
-  SGPRCriticalLimit =
-      std::min(SGPRCriticalLimit - SGPRLimitBias, SGPRCriticalLimit);
-  SGPRCriticalLimit =
-      std::min(SGPRCriticalLimit - ErrorMargin, SGPRCriticalLimit);
-  VGPRCriticalLimit =
-      std::min(VGPRCriticalLimit - VGPRLimitBias, VGPRCriticalLimit);
-  VGPRCriticalLimit =
-      std::min(VGPRCriticalLimit - ErrorMargin, VGPRCriticalLimit);
-  SGPRExcessLimit = std::min(SGPRExcessLimit - SGPRLimitBias, SGPRExcessLimit);
-  SGPRExcessLimit = std::min(SGPRExcessLimit - ErrorMargin, SGPRExcessLimit);
-  VGPRExcessLimit = std::min(VGPRExcessLimit - VGPRLimitBias, VGPRExcessLimit);
-  VGPRExcessLimit = std::min(VGPRExcessLimit - ErrorMargin, VGPRExcessLimit);
+  SGPRCriticalLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRCriticalLimit);
+  VGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
+  SGPRExcessLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRExcessLimit);
+  VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
 
   LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
