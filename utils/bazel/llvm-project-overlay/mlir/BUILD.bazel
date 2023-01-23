@@ -7725,6 +7725,7 @@ cc_library(
         ":OpenMPInterfacesIncGen",
         ":OpenMPOpsIncGen",
         ":OpenMPTypeInterfacesIncGen",
+        "//llvm:FrontendOpenMP",
         "//llvm:Support",
     ],
 )
