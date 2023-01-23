@@ -2225,11 +2225,10 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
 
   // FIXME: Recurse on local labels?
 
-  // See what kind of statement we have.
-  switch (Lexer.getKind()) {
-  case AsmToken::Colon: {
-    if (!getTargetParser().isLabel(ID))
-      break;
+  // Check for a label.
+  //   ::= identifier ':'
+  //   ::= number ':'
+  if (Lexer.is(AsmToken::Colon) && getTargetParser().isLabel(ID)) {
     if (checkForValidSection())
       return true;
 
@@ -2293,10 +2292,6 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     getTargetParser().onLabelParsed(Sym);
 
     return false;
-  }
-
-  default: // Normal instruction or directive.
-    break;
   }
 
   // If macros are enabled, check to see if this is a macro instantiation.
