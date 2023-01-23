@@ -18,15 +18,25 @@
 #include "llvm/ADT/StringRef.h"
 using namespace clang;
 
+const char *HeaderDesc::getName() const {
+  switch (ID) {
+#define HEADER(ID, NAME)                                                       \
+  case ID:                                                                     \
+    return NAME;
+#include "clang/Basic/BuiltinHeaders.def"
+#undef HEADER
+  };
+}
+
 static constexpr Builtin::Info BuiltinInfo[] = {
-    {"not a builtin function", nullptr, nullptr, nullptr, ALL_LANGUAGES,
-     nullptr},
+    {"not a builtin function", nullptr, nullptr, nullptr, HeaderDesc::NO_HEADER,
+     ALL_LANGUAGES},
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr },
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define LANGBUILTIN(ID, TYPE, ATTRS, LANGS)                                    \
-  { #ID, TYPE, ATTRS, nullptr, LANGS, nullptr },
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANGS},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER, LANGS)                             \
-  { #ID, TYPE, ATTRS, HEADER, LANGS, nullptr },
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/Builtins.def"
 };
 
@@ -71,8 +81,7 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
           !LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG))
     return false;
   if (bool MathBuiltinsUnsupported =
-          LangOpts.NoMathBuiltin && BuiltinInfo.HeaderName &&
-          llvm::StringRef(BuiltinInfo.HeaderName).equals("math.h"))
+          LangOpts.NoMathBuiltin && BuiltinInfo.Header.ID == HeaderDesc::MATH_H)
     return false;
   if (bool GnuModeUnsupported =
           !LangOpts.GNUMode && (BuiltinInfo.Langs & GNU_LANG))
