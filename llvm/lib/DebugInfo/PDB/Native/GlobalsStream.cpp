@@ -156,7 +156,7 @@ readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
 
   uint32_t NumBuckets = 0;
   for (uint32_t B : HashBitmap)
-    NumBuckets += countPopulation(B);
+    NumBuckets += llvm::popcount(B);
 
   // Hash buckets follow.
   if (auto EC = Reader.readArray(HashBuckets, NumBuckets))

@@ -28,3 +28,11 @@ public:
     static const int value = 43; 
 };
 
+void deleted_fn_ok (void) = delete;
+
+struct S {
+   ~S() noexcept(false) = default;
+private:
+  S(S&);
+};
+S::S(S&) = default;

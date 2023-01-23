@@ -375,7 +375,11 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
 def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   let summary = "Generate ROCDL operations for gpu operations";
   let constructor = "mlir::createLowerGpuOpsToROCDLOpsPass()";
-  let dependentDialects = ["ROCDL::ROCDLDialect"];
+  let dependentDialects = [
+    "ROCDL::ROCDLDialect",
+    "cf::ControlFlowDialect",
+    "memref::MemRefDialect",
+  ];
   let options = [
     Option<"chipset", "chipset", "std::string",
            /*default=*/"\"gfx000\"",

@@ -200,7 +200,7 @@ public:
   size_type count() const {
     if (isSmall()) {
       uintptr_t Bits = getSmallBits();
-      return countPopulation(Bits);
+      return llvm::popcount(Bits);
     }
     return getPointer()->count();
   }

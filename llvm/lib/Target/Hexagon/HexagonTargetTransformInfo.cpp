@@ -139,14 +139,17 @@ ElementCount HexagonTTIImpl::getMinimumVF(unsigned ElemWidth,
 }
 
 InstructionCost HexagonTTIImpl::getScalarizationOverhead(
-    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract) {
-  return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
+    VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind) {
+  return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
+                                         CostKind);
 }
 
 InstructionCost
 HexagonTTIImpl::getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                                 ArrayRef<Type *> Tys) {
-  return BaseT::getOperandsScalarizationOverhead(Args, Tys);
+                                                 ArrayRef<Type *> Tys,
+                                                 TTI::TargetCostKind CostKind) {
+  return BaseT::getOperandsScalarizationOverhead(Args, Tys, CostKind);
 }
 
 InstructionCost HexagonTTIImpl::getCallInstrCost(Function *F, Type *RetTy,
@@ -329,6 +332,7 @@ InstructionCost HexagonTTIImpl::getCastInstrCost(unsigned Opcode, Type *DstTy,
 }
 
 InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                                   TTI::TargetCostKind CostKind,
                                                    unsigned Index, Value *Op0,
                                                    Value *Op1) {
   Type *ElemTy = Val->isVectorTy() ? cast<VectorType>(Val)->getElementType()
@@ -339,8 +343,8 @@ InstructionCost HexagonTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     if (ElemTy->isIntegerTy(32))
       return Cost;
     // If it's not a 32-bit value, there will need to be an extract.
-    return Cost + getVectorInstrCost(Instruction::ExtractElement, Val, Index,
-                                     Op0, Op1);
+    return Cost + getVectorInstrCost(Instruction::ExtractElement, Val, CostKind,
+                                     Index, Op0, Op1);
   }
 
   if (Opcode == Instruction::ExtractElement)

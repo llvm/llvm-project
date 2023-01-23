@@ -295,7 +295,7 @@ Module name requirement
 
 [module.unit]p1 says:
 
-::
+.. code-block:: text
 
   All module-names either beginning with an identifier consisting of std followed by zero
   or more digits or containing a reserved identifier ([lex.name]) are reserved and shall not

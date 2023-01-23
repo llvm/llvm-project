@@ -10347,7 +10347,9 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return;
     }
     Value *Stripped = getAssociatedValue().stripPointerCasts();
-    if (isa<Constant>(Stripped)) {
+    auto *CE = dyn_cast<ConstantExpr>(Stripped);
+    if (isa<Constant>(Stripped) &&
+        (!CE || CE->getOpcode() != Instruction::ICmp)) {
       addValue(A, getState(), *Stripped, getCtxI(), AA::AnyScope,
                getAnchorScope());
       indicateOptimisticFixpoint();
@@ -10549,10 +10551,9 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
   /// We handle multiple cases, one in which at least one operand is an
   /// (assumed) nullptr. If so, try to simplify it using AANonNull on the other
   /// operand. Return true if successful, in that case Worklist will be updated.
-  bool handleCmp(Attributor &A, CmpInst &Cmp, ItemInfo II,
+  bool handleCmp(Attributor &A, Value &Cmp, Value *LHS, Value *RHS,
+                 CmpInst::Predicate Pred, ItemInfo II,
                  SmallVectorImpl<ItemInfo> &Worklist) {
-    Value *LHS = Cmp.getOperand(0);
-    Value *RHS = Cmp.getOperand(1);
 
     // Simplify the operands first.
     bool UsedAssumedInformation = false;
@@ -10574,20 +10575,20 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       return false;
     RHS = *SimplifiedRHS;
 
-    LLVMContext &Ctx = Cmp.getContext();
+    LLVMContext &Ctx = LHS->getContext();
     // Handle the trivial case first in which we don't even need to think about
     // null or non-null.
-    if (LHS == RHS && (Cmp.isTrueWhenEqual() || Cmp.isFalseWhenEqual())) {
-      Constant *NewV =
-          ConstantInt::get(Type::getInt1Ty(Ctx), Cmp.isTrueWhenEqual());
+    if (LHS == RHS &&
+        (CmpInst::isTrueWhenEqual(Pred) || CmpInst::isFalseWhenEqual(Pred))) {
+      Constant *NewV = ConstantInt::get(Type::getInt1Ty(Ctx),
+                                        CmpInst::isTrueWhenEqual(Pred));
       addValue(A, getState(), *NewV, /* CtxI */ nullptr, II.S,
                getAnchorScope());
       return true;
     }
 
     // From now on we only handle equalities (==, !=).
-    ICmpInst *ICmp = dyn_cast<ICmpInst>(&Cmp);
-    if (!ICmp || !ICmp->isEquality())
+    if (!CmpInst::isEquality(Pred))
       return false;
 
     bool LHSIsNull = isa<ConstantPointerNull>(LHS);
@@ -10604,14 +10605,13 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     // The index is the operand that we assume is not null.
     unsigned PtrIdx = LHSIsNull;
     auto &PtrNonNullAA = A.getAAFor<AANonNull>(
-        *this, IRPosition::value(*ICmp->getOperand(PtrIdx)),
-        DepClassTy::REQUIRED);
+        *this, IRPosition::value(*(PtrIdx ? RHS : LHS)), DepClassTy::REQUIRED);
     if (!PtrNonNullAA.isAssumedNonNull())
       return false;
 
     // The new value depends on the predicate, true for != and false for ==.
-    Constant *NewV = ConstantInt::get(Type::getInt1Ty(Ctx),
-                                      ICmp->getPredicate() == CmpInst::ICMP_NE);
+    Constant *NewV =
+        ConstantInt::get(Type::getInt1Ty(Ctx), Pred == CmpInst::ICMP_NE);
     addValue(A, getState(), *NewV, /* CtxI */ nullptr, II.S, getAnchorScope());
     return true;
   }
@@ -10812,7 +10812,8 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       SmallVectorImpl<ItemInfo> &Worklist,
       SmallMapVector<const Function *, LivenessInfo, 4> &LivenessAAs) {
     if (auto *CI = dyn_cast<CmpInst>(&I))
-      if (handleCmp(A, *CI, II, Worklist))
+      if (handleCmp(A, *CI, CI->getOperand(0), CI->getOperand(1),
+                    CI->getPredicate(), II, Worklist))
         return true;
 
     switch (I.getOpcode()) {
@@ -10875,6 +10876,13 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       if (NewV && NewV != V) {
         Worklist.push_back({{*NewV, CtxI}, S});
         continue;
+      }
+
+      if (auto *CE = dyn_cast<ConstantExpr>(V)) {
+        if (CE->getOpcode() == Instruction::ICmp)
+          if (handleCmp(A, *CE, CE->getOperand(0), CE->getOperand(1),
+                        CmpInst::Predicate(CE->getPredicate()), II, Worklist))
+            continue;
       }
 
       if (auto *I = dyn_cast<Instruction>(V)) {

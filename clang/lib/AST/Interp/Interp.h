@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERP_H
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
+#include "Boolean.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"

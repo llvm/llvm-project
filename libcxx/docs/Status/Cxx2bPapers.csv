@@ -42,7 +42,7 @@
 "`P0533R9 <https://wg21.link/P0533R9>`__","LWG","``constexpr`` for ``<cmath>`` and ``<cstdlib>``","February 2022","|In progress| [#note-P0533R9]_",""
 "`P0627R6 <https://wg21.link/P0627R6>`__","LWG","Function to mark unreachable code","February 2022","|Complete|","15.0"
 "`P1206R7 <https://wg21.link/P1206R7>`__","LWG","``ranges::to``: A function to convert any range to a container","February 2022","","","|ranges|"
-"`P1413R3 <https://wg21.link/P1413R3>`__","LWG","Deprecate ``std::aligned_storage`` and ``std::aligned_union``","February 2022","",""
+"`P1413R3 <https://wg21.link/P1413R3>`__","LWG","Deprecate ``std::aligned_storage`` and ``std::aligned_union``","February 2022","|Complete| [#note-P1413R3]_",""
 "`P2255R2 <https://wg21.link/P2255R2>`__","LWG","A type trait to detect reference binding to temporary","February 2022","",""
 "`P2273R3 <https://wg21.link/P2273R3>`__","LWG","Making ``std::unique_ptr`` constexpr","February 2022","|Partial| [#note-P2273]_","16.0"
 "`P2387R3 <https://wg21.link/P2387R3>`__","LWG","Pipe support for user-defined range adaptors","February 2022","","","|ranges|"
