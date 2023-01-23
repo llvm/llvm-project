@@ -89,6 +89,8 @@ LIBC_INLINE constexpr uint32_t length_for_num(const uint32_t idx,
 // Rewritten slightly we get:
 // floor(5^(-9i) * 2^(e + c_1 - 9i) + 1) % (10^9 * 2^c_1)
 
+// TODO: Fix long doubles (needs bigger table or alternate algorithm.)
+// Currently the table values are generated, which is very slow.
 template <size_t INT_SIZE>
 LIBC_INLINE constexpr cpp::UInt<MID_INT_SIZE>
 get_table_positive(int exponent, size_t i, const size_t constant) {
