@@ -22300,6 +22300,30 @@ bool AArch64TargetLowering::shouldInsertFencesForAtomic(
   return isOpSuitableForLDPSTP(I);
 }
 
+bool AArch64TargetLowering::shouldInsertTrailingFenceForAtomicStore(
+    const Instruction *I) const {
+  // Store-Release instructions only provide seq_cst guarantees when paired with
+  // Load-Acquire instructions. MSVC CRT does not use these instructions to
+  // implement seq_cst loads and stores, so we need additional explicit fences
+  // after memory writes.
+  if (!Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
+    return false;
+
+  switch (I->getOpcode()) {
+  default:
+    return false;
+  case Instruction::AtomicCmpXchg:
+    return cast<AtomicCmpXchgInst>(I)->getSuccessOrdering() ==
+           AtomicOrdering::SequentiallyConsistent;
+  case Instruction::AtomicRMW:
+    return cast<AtomicRMWInst>(I)->getOrdering() ==
+           AtomicOrdering::SequentiallyConsistent;
+  case Instruction::Store:
+    return cast<StoreInst>(I)->getOrdering() ==
+           AtomicOrdering::SequentiallyConsistent;
+  }
+}
+
 // Loads and stores less than 128-bits are already atomic; ones above that
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
