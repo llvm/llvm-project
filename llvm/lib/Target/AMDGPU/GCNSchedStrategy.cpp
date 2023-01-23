@@ -70,8 +70,23 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   TargetOccupancy = MFI.getOccupancy();
   SGPRCriticalLimit =
       std::min(ST.getMaxNumSGPRs(TargetOccupancy, true), SGPRExcessLimit);
-  VGPRCriticalLimit =
-      std::min(ST.getMaxNumVGPRs(TargetOccupancy), VGPRExcessLimit);
+
+  if (!KnownExcessRP) {
+    VGPRCriticalLimit =
+        std::min(ST.getMaxNumVGPRs(TargetOccupancy), VGPRExcessLimit);
+  } else {
+    // This is similar to ST.getMaxNumVGPRs(TargetOccupancy) result except
+    // returns a reasonably small number for targets with lots of VGPRs, such
+    // as GFX10 and GFX11.
+    LLVM_DEBUG(dbgs() << "Region is known to spill, use alternative "
+                         "VGPRCriticalLimit calculation method.\n");
+
+    unsigned Granule = AMDGPU::IsaInfo::getVGPRAllocGranule(&ST);
+    unsigned Addressable = AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST);
+    unsigned VGPRBudget = alignDown(Addressable / TargetOccupancy, Granule);
+    VGPRBudget = std::max(VGPRBudget, Granule);
+    VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
+  }
 
   // Subtract error margin and bias from register limits and avoid overflow.
   SGPRCriticalLimit =
@@ -86,6 +101,11 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   SGPRExcessLimit = std::min(SGPRExcessLimit - ErrorMargin, SGPRExcessLimit);
   VGPRExcessLimit = std::min(VGPRExcessLimit - VGPRLimitBias, VGPRExcessLimit);
   VGPRExcessLimit = std::min(VGPRExcessLimit - ErrorMargin, VGPRExcessLimit);
+
+  LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
+                    << ", VGPRExcessLimit = " << VGPRExcessLimit
+                    << ", SGPRCriticalLimit = " << SGPRCriticalLimit
+                    << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -802,6 +822,7 @@ bool GCNSchedStage::initGCNRegion() {
              << "Region register pressure: " << print(PressureBefore));
 
   S.HasHighPressure = false;
+  S.KnownExcessRP = isRegionWithExcessRP();
 
   if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule) {
@@ -1142,7 +1163,7 @@ bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
   if (WavesAfter <= MFI.getMinWavesPerEU() &&
       !PressureAfter.less(ST, PressureBefore) &&
-      DAG.RegionsWithExcessRP[RegionIdx]) {
+      isRegionWithExcessRP()) {
     LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
     return true;
   }
