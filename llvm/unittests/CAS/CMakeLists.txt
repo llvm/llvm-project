@@ -26,6 +26,7 @@ add_llvm_unittest(CASTests
   HierarchicalTreeBuilderTest.cpp
   MockGRPCServer.cpp
   ObjectStoreTest.cpp
+  OnDiskGraphDBTest.cpp
   OnDiskHashMappedTrieTest.cpp
   ThreadSafeAllocatorTest.cpp
   TreeSchemaTest.cpp
