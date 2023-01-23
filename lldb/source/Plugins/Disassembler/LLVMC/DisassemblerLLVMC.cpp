@@ -1384,7 +1384,7 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsLoad(llvm::MCInst &mc_inst) const {
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
     llvm::MCInst &mc_inst) const {
-  auto InstrDesc = m_instr_info_up->get(mc_inst.getOpcode());
+  const auto &InstrDesc = m_instr_info_up->get(mc_inst.getOpcode());
 
   // Treat software auth traps (brk 0xc470 + aut key, where 0x70 == 'p', 0xc4
   // == 'a' + 'c') as authenticated instructions for reporting purposes, in
