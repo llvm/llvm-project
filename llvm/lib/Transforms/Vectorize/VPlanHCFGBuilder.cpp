@@ -391,7 +391,7 @@ void VPlanHCFGBuilder::buildHierarchicalCFG() {
   Verifier.verifyHierarchicalCFG(TopRegion);
 
   // Compute plain CFG dom tree for VPLInfo.
-  VPDomTree.recalculate(*TopRegion);
+  VPDomTree.recalculate(Plan);
   LLVM_DEBUG(dbgs() << "Dominator Tree after building the plain CFG.\n";
              VPDomTree.print(dbgs()));
 }
