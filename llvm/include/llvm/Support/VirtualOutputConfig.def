@@ -19,5 +19,7 @@ HANDLE_OUTPUT_CONFIG_FLAG(CRLF, false) // OF_CRLF.
 HANDLE_OUTPUT_CONFIG_FLAG(DiscardOnSignal, true) // E.g., RemoveFileOnSignal.
 HANDLE_OUTPUT_CONFIG_FLAG(AtomicWrite, true) // E.g., use temporaries.
 HANDLE_OUTPUT_CONFIG_FLAG(ImplyCreateDirectories, true)
+// Skip atomic write if existing file content is the same
+HANDLE_OUTPUT_CONFIG_FLAG(OnlyIfDifferent, false)
 
 #undef HANDLE_OUTPUT_CONFIG_FLAG
