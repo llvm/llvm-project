@@ -2809,7 +2809,8 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     ED.IsReachedFromAlignedBarrierOnly = true;
     // Aligned barrier collection has to come last.
     ED.clearAssumeInstAndAlignedBarriers();
-    ED.addAlignedBarrier(A, *CB);
+    if (CB)
+      ED.addAlignedBarrier(A, *CB);
   };
 
   auto &LivenessAA =
