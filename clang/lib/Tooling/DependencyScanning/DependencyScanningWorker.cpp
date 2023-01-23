@@ -285,6 +285,10 @@ private:
     // modules share their VFS.
     for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles)
       (void)FS->status(File);
+    // If the working directory is not otherwise accessed by the module build,
+    // we still need it due to -fcas-fs-working-directory being set.
+    if (auto CWD = FS->getCurrentWorkingDirectory())
+      (void)FS->status(*CWD);
     // Exclude the module cache from tracking. The implicit build pcms should
     // not be needed after scanning.
     if (!CI.getHeaderSearchOpts().ModuleCachePath.empty())
