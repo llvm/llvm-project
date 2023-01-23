@@ -578,6 +578,11 @@ Modified Compiler Flags
 - Clang now permits specifying ``--config=`` multiple times, to load multiple
   configuration files.
 
+- The option ``-rtlib=platform`` can now be used for all targets to override
+  a different option value (either one set earlier on the command line, or a
+  built-in hardcoded default). (Previously the MSVC and Darwin targets didn't
+  allow this parameter combination.)
+
 Removed Compiler Flags
 -------------------------
 - Clang now no longer supports ``-cc1 -fconcepts-ts``.  This flag has been deprecated
@@ -631,6 +636,16 @@ Windows Support
   and generation of address-taken function table.
 
 - Switched from SHA1 to BLAKE3 for PDB type hashing / ``-gcodeview-ghash``
+
+- Fixed code generation with emulated TLS, when the emulated TLS is enabled
+  by default (with downstream patches; no upstream configurations default
+  to this configuration, but some mingw downstreams change the default
+  in this way).
+
+- Improved detection of MinGW cross sysroots for finding sysroots provided
+  by Linux distributions such as Fedora. Also improved such setups by
+  avoiding to include ``/usr/include`` among the include paths when cross
+  compiling with a cross sysroot based in ``/usr``.
 
 AIX Support
 -----------

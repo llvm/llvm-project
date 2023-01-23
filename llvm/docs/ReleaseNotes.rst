@@ -222,6 +222,25 @@ Changes to the Windows Target
   an affinity mask issue.
   (`D138747 <https://reviews.llvm.org/D138747>`_)
 
+* When building LLVM and related tools for Windows with Clang in MinGW mode,
+  hidden symbol visiblity is now used to reduce the number of exports in
+  builds with dylibs (``LLVM_BUILD_LLVM_DYLIB`` or ``LLVM_LINK_LLVM_DYLIB``),
+  making such builds more manageable without running into the limit of
+  number of exported symbols.
+
+* AArch64 SEH unwind info generation bugs have been fixed; there were minor
+  cases of mismatches between the generated unwind info and actual
+  prologues/epilogues earlier in some cases.
+
+* AArch64 SEH unwind info is now generated correctly for the AArch64
+  security features BTI (Branch Target Identification) and PAC (Pointer
+  Authentication Code). In particular, using PAC with older versions of LLVM
+  would generate code that would fail to unwind at runtime, if the host
+  actually would use the pointer authentication feature.
+
+* Fixed stack alignment on Windows on AArch64, for stack frames with a
+  large enough allocation that requires stack probing.
+
 Changes to the X86 Backend
 --------------------------
 
@@ -308,10 +327,19 @@ Changes to the LLVM tools
 * ``llvm-objdump`` now uses ``--print-imm-hex`` by default, which brings its
   default behavior closer in line with ``objdump``.
 
+* ``llvm-objcopy`` no longer writes corrupt addresses to empty sections if
+  the input file had a nonzero address to an empty section.
+
 Changes to LLDB
 ---------------------------------
 
 * Initial support for debugging Linux LoongArch 64-bit binaries.
+
+* Improvements in COFF symbol handling; previously a DLL (without any other
+  debug info) would only use the DLL's exported symbols, while it now also
+  uses the full list of internal symbols, if available.
+
+* Avoiding duplicate DLLs in the runtime list of loaded modules on Windows.
 
 Changes to Sanitizers
 ---------------------
@@ -328,6 +356,12 @@ Other Changes
   matching to achieve the same effect. For example, ``UNSUPPORTED: arm``
   would now be ``UNSUPPORTED: target=arm{{.*}}`` and ``XFAIL: windows``
   would now be ``XFAIL: target={{.*}}-windows{{.*}}``.
+
+* When cross compiling LLVM (or building with ``LLVM_OPTIMIZED_TABLEGEN``),
+  it is now possible to point the build to prebuilt versions of all the
+  host tools with one CMake variable, ``LLVM_NATIVE_TOOL_DIR``, instead of
+  having to point out each individual tool with variables such as
+  ``LLVM_TABLEGEN``, ``CLANG_TABLEGEN``, ``LLDB_TABLEGEN`` etc.
 
 External Open Source Projects Using LLVM 15
 ===========================================
