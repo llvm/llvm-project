@@ -14,8 +14,6 @@
 #include <cassert>
 #include <cstddef>
 #include <deque>
-#include <hsa.h>
-#include <hsa_ext_amd.h>
 #include <mutex>
 #include <string>
 #include <system_error>
@@ -41,6 +39,17 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if defined(__has_include)
+#if __has_include("hsa/hsa.h")
+#include "hsa/hsa.h"
+#include "hsa/hsa_ext_amd.h"
+#elif __has_include("hsa.h")
+#include "hsa.h"
+#include "hsa_ext_amd.h"
+#endif
+#include "hsa/hsa.h"
+#endif
 
 namespace llvm {
 namespace omp {
