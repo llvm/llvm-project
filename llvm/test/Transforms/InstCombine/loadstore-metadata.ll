@@ -151,7 +151,7 @@ exit:
 define void @test_load_cast_combine_nonnull(ptr %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_nonnull(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !nonnull !{}
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PTR:%.*]], align 8, !nonnull
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[PTR]], i64 42
 ; CHECK-NEXT:    store ptr [[P]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    ret void
@@ -165,7 +165,7 @@ entry:
 
 define i32 @test_load_cast_combine_noundef(ptr %ptr) {
 ; CHECK-LABEL: @test_load_cast_combine_noundef(
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !noundef !{}
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !noundef
 ; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %l = load float, ptr %ptr, !noundef !{}
