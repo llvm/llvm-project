@@ -601,7 +601,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    br label [[BB8:%.*]]
 ; SCCP:       bb8:
 ; SCCP-NEXT:    [[TMP9:%.*]] = phi ptr [ undef, [[BB:%.*]] ], [ [[TMP17:%.*]], [[BB29:%.*]] ]
-; SCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP18:%.*]], [[BB29]] ]
+; SCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP17]], [[BB29]] ]
 ; SCCP-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP30:%.*]], [[BB29]] ]
 ; SCCP-NEXT:    [[C_1:%.*]] = icmp slt i32 [[TMP11]], 8
 ; SCCP-NEXT:    br i1 [[C_1]], label [[BB13:%.*]], label [[BB31:%.*]]
@@ -683,7 +683,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP-NEXT:    br label [[BB8:%.*]]
 ; IPSCCP:       bb8:
 ; IPSCCP-NEXT:    [[TMP9:%.*]] = phi ptr [ undef, [[BB:%.*]] ], [ [[TMP17:%.*]], [[BB29:%.*]] ]
-; IPSCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP18:%.*]], [[BB29]] ]
+; IPSCCP-NEXT:    [[TMP10:%.*]] = phi ptr [ undef, [[BB]] ], [ [[TMP17]], [[BB29]] ]
 ; IPSCCP-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP30:%.*]], [[BB29]] ]
 ; IPSCCP-NEXT:    [[C_1:%.*]] = icmp slt i32 [[TMP11]], 8
 ; IPSCCP-NEXT:    br i1 [[C_1]], label [[BB13:%.*]], label [[BB31:%.*]]
