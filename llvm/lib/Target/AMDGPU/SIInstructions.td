@@ -2819,7 +2819,7 @@ def : GCNPat <
 >;
 }
 
-let OtherPredicates = [HasVFmacF64Inst] in
+let OtherPredicates = [HasFmacF64Inst] in
 // Don't allow source modifiers. If there are any source modifiers then it's
 // better to select fma instead of fmac.
 def : GCNPat <
