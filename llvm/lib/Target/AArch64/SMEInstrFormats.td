@@ -2036,7 +2036,7 @@ class sme2_frint_zip_cvt_vg4_multi<bits<2>sz, bits<7>op, RegisterOperand first_t
 // SME2 multi-vec FP to int convert four registers
 // SME2 multi-vec int to FP four registers
 multiclass sme2_fp_cvt_vg4_multi<string mnemonic, bits<7> op> {
-  def _S : sme2_frint_zip_cvt_vg4_multi<0b00, op, ZZZZ_s_mul_r, ZZZZ_s_mul_r, mnemonic>;
+  def NAME : sme2_frint_zip_cvt_vg4_multi<0b00, op, ZZZZ_s_mul_r, ZZZZ_s_mul_r, mnemonic>;
 }
 
 // SME2 multi-vec quadwords ZIP four registers
