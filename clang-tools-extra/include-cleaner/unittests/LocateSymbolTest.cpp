@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "AnalysisInternal.h"
+#include "TypesInternal.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -20,6 +21,7 @@
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <memory>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -27,8 +29,11 @@
 
 namespace clang::include_cleaner {
 namespace {
+using testing::Each;
 using testing::ElementsAre;
 using testing::ElementsAreArray;
+using testing::Eq;
+using testing::Field;
 using testing::Pair;
 using testing::UnorderedElementsAre;
 
@@ -55,6 +60,10 @@ public:
       llvm::StringRef NameToFind;
       const NamedDecl *Out = nullptr;
       bool VisitNamedDecl(const NamedDecl *ND) {
+        // Skip the templated decls, as they have the same name and matches in
+        // this file care about the outer template name.
+        if (auto *TD = ND->getDescribedTemplate())
+          ND = TD;
         if (ND->getName() == NameToFind) {
           EXPECT_TRUE(Out == nullptr || Out == ND->getCanonicalDecl())
               << "Found multiple matches for " << NameToFind;
@@ -123,6 +132,58 @@ TEST(LocateSymbol, Macros) {
   LocateExample Test("#define FOO\n#undef FOO\n#define ^FOO");
   EXPECT_THAT(locateSymbol(Test.findMacro("FOO")),
               ElementsAreArray(Test.points()));
+}
+
+MATCHER_P2(HintedSymbol, Symbol, Hint, "") {
+  return std::tie(arg.Hint, arg) == std::tie(Hint, Symbol);
+}
+TEST(LocateSymbol, CompleteSymbolHint) {
+  {
+    // stdlib symbols are always complete.
+    LocateExample Test("namespace std { struct vector; }");
+    EXPECT_THAT(locateSymbol(Test.findDecl("vector")),
+                ElementsAre(HintedSymbol(
+                    *tooling::stdlib::Symbol::named("std::", "vector"),
+                    Hints::CompleteSymbol)));
+  }
+  {
+    // macros are always complete.
+    LocateExample Test("#define ^FOO");
+    EXPECT_THAT(locateSymbol(Test.findMacro("FOO")),
+                ElementsAre(HintedSymbol(Test.points().front(),
+                                         Hints::CompleteSymbol)));
+  }
+  {
+    // Completeness is only absent in cases that matters.
+    const llvm::StringLiteral Cases[] = {
+        "struct ^foo; struct ^foo {};",
+        "template <typename> struct ^foo; template <typename> struct ^foo {};",
+        "template <typename> void ^foo(); template <typename> void ^foo() {};",
+    };
+    for (auto &Case : Cases) {
+      SCOPED_TRACE(Case);
+      LocateExample Test(Case);
+      EXPECT_THAT(locateSymbol(Test.findDecl("foo")),
+                  ElementsAre(HintedSymbol(Test.points().front(), Hints::None),
+                              HintedSymbol(Test.points().back(),
+                                           Hints::CompleteSymbol)));
+    }
+  }
+  {
+    // All declarations should be marked as complete in cases that a definition
+    // is not usually needed.
+    const llvm::StringLiteral Cases[] = {
+        "void foo(); void foo() {}",
+        "extern int foo; int foo;",
+    };
+    for (auto &Case : Cases) {
+      SCOPED_TRACE(Case);
+      LocateExample Test(Case);
+      EXPECT_THAT(locateSymbol(Test.findDecl("foo")),
+                  Each(Field(&Hinted<SymbolLocation>::Hint,
+                             Eq(Hints::CompleteSymbol))));
+    }
+  }
 }
 
 } // namespace

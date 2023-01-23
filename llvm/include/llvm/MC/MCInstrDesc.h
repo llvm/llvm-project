@@ -572,6 +572,9 @@ public:
   ///
   /// This method returns null if the instruction has no implicit uses.
   const MCPhysReg *getImplicitUses() const { return ImplicitUses; }
+  ArrayRef<MCPhysReg> implicit_uses() const {
+    return {ImplicitUses, getNumImplicitUses()};
+  }
 
   /// Return the number of implicit uses this instruction has.
   unsigned getNumImplicitUses() const {
@@ -594,6 +597,9 @@ public:
   ///
   /// This method returns null if the instruction has no implicit defs.
   const MCPhysReg *getImplicitDefs() const { return ImplicitDefs; }
+  ArrayRef<MCPhysReg> implicit_defs() const {
+    return {ImplicitDefs, getNumImplicitDefs()};
+  }
 
   /// Return the number of implicit defs this instruct has.
   unsigned getNumImplicitDefs() const {
@@ -608,11 +614,7 @@ public:
   /// Return true if this instruction implicitly
   /// uses the specified physical register.
   bool hasImplicitUseOfPhysReg(unsigned Reg) const {
-    if (const MCPhysReg *ImpUses = getImplicitUses())
-      for (; *ImpUses; ++ImpUses)
-        if (*ImpUses == Reg)
-          return true;
-    return false;
+    return is_contained(implicit_uses(), Reg);
   }
 
   /// Return true if this instruction implicitly

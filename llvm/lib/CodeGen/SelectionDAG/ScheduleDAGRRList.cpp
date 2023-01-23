@@ -1284,11 +1284,11 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
     NumRes = 1;
   } else {
     const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    assert(MCID.getImplicitDefs() &&
+    assert(!MCID.implicit_defs().empty() &&
            "Physical reg def must be in implicit def list!");
     NumRes = MCID.getNumDefs();
-    for (const MCPhysReg *ImpDef = MCID.getImplicitDefs(); *ImpDef; ++ImpDef) {
-      if (Reg == *ImpDef)
+    for (MCPhysReg ImpDef : MCID.implicit_defs()) {
+      if (Reg == ImpDef)
         break;
       ++NumRes;
     }
@@ -1439,10 +1439,8 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
           CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
         }
     }
-    if (!MCID.getImplicitDefs())
-      continue;
-    for (const MCPhysReg *Reg = MCID.getImplicitDefs(); *Reg; ++Reg)
-      CheckForLiveRegDef(SU, *Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
+    for (MCPhysReg Reg : MCID.implicit_defs())
+      CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
   }
 
   return !LRegs.empty();
@@ -2867,10 +2865,10 @@ static bool canClobberReachingPhysRegUse(const SUnit *DepSU, const SUnit *SU,
                                          ScheduleDAGRRList *scheduleDAG,
                                          const TargetInstrInfo *TII,
                                          const TargetRegisterInfo *TRI) {
-  const MCPhysReg *ImpDefs
-    = TII->get(SU->getNode()->getMachineOpcode()).getImplicitDefs();
+  ArrayRef<MCPhysReg> ImpDefs =
+      TII->get(SU->getNode()->getMachineOpcode()).implicit_defs();
   const uint32_t *RegMask = getNodeRegMask(SU->getNode());
-  if(!ImpDefs && !RegMask)
+  if (ImpDefs.empty() && !RegMask)
     return false;
 
   for (const SDep &Succ : SU->Succs) {
@@ -2884,14 +2882,14 @@ static bool canClobberReachingPhysRegUse(const SUnit *DepSU, const SUnit *SU,
           scheduleDAG->IsReachable(DepSU, SuccPred.getSUnit()))
         return true;
 
-      if (ImpDefs)
-        for (const MCPhysReg *ImpDef = ImpDefs; *ImpDef; ++ImpDef)
-          // Return true if SU clobbers this physical register use and the
-          // definition of the register reaches from DepSU. IsReachable queries
-          // a topological forward sort of the DAG (following the successors).
-          if (TRI->regsOverlap(*ImpDef, SuccPred.getReg()) &&
-              scheduleDAG->IsReachable(DepSU, SuccPred.getSUnit()))
-            return true;
+      for (MCPhysReg ImpDef : ImpDefs) {
+        // Return true if SU clobbers this physical register use and the
+        // definition of the register reaches from DepSU. IsReachable queries
+        // a topological forward sort of the DAG (following the successors).
+        if (TRI->regsOverlap(ImpDef, SuccPred.getReg()) &&
+            scheduleDAG->IsReachable(DepSU, SuccPred.getSUnit()))
+          return true;
+      }
     }
   }
   return false;
@@ -2904,16 +2902,16 @@ static bool canClobberPhysRegDefs(const SUnit *SuccSU, const SUnit *SU,
                                   const TargetRegisterInfo *TRI) {
   SDNode *N = SuccSU->getNode();
   unsigned NumDefs = TII->get(N->getMachineOpcode()).getNumDefs();
-  const MCPhysReg *ImpDefs = TII->get(N->getMachineOpcode()).getImplicitDefs();
-  assert(ImpDefs && "Caller should check hasPhysRegDefs");
+  ArrayRef<MCPhysReg> ImpDefs = TII->get(N->getMachineOpcode()).implicit_defs();
+  assert(!ImpDefs.empty() && "Caller should check hasPhysRegDefs");
   for (const SDNode *SUNode = SU->getNode(); SUNode;
        SUNode = SUNode->getGluedNode()) {
     if (!SUNode->isMachineOpcode())
       continue;
-    const MCPhysReg *SUImpDefs =
-      TII->get(SUNode->getMachineOpcode()).getImplicitDefs();
+    ArrayRef<MCPhysReg> SUImpDefs =
+        TII->get(SUNode->getMachineOpcode()).implicit_defs();
     const uint32_t *SURegMask = getNodeRegMask(SUNode);
-    if (!SUImpDefs && !SURegMask)
+    if (SUImpDefs.empty() && !SURegMask)
       continue;
     for (unsigned i = NumDefs, e = N->getNumValues(); i != e; ++i) {
       MVT VT = N->getSimpleValueType(i);
@@ -2924,10 +2922,7 @@ static bool canClobberPhysRegDefs(const SUnit *SuccSU, const SUnit *SU,
       MCPhysReg Reg = ImpDefs[i - NumDefs];
       if (SURegMask && MachineOperand::clobbersPhysReg(SURegMask, Reg))
         return true;
-      if (!SUImpDefs)
-        continue;
-      for (;*SUImpDefs; ++SUImpDefs) {
-        MCPhysReg SUReg = *SUImpDefs;
+      for (MCPhysReg SUReg : SUImpDefs) {
         if (TRI->regsOverlap(Reg, SUReg))
           return true;
       }

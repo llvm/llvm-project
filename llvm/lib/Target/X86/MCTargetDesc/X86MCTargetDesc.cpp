@@ -522,7 +522,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
                                               APInt &Mask) const {
   const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
   unsigned NumDefs = Desc.getNumDefs();
-  unsigned NumImplicitDefs = Desc.getNumImplicitDefs();
+  unsigned NumImplicitDefs = Desc.implicit_defs().size();
   assert(Mask.getBitWidth() == NumDefs + NumImplicitDefs &&
          "Unexpected number of bits in the mask!");
 
@@ -561,7 +561,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   }
 
   for (unsigned I = 0, E = NumImplicitDefs; I < E; ++I) {
-    const MCPhysReg Reg = Desc.getImplicitDefs()[I];
+    const MCPhysReg Reg = Desc.implicit_defs()[I];
     if (ClearsSuperReg(Reg))
       Mask.setBit(NumDefs + I);
   }

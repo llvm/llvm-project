@@ -21,19 +21,19 @@
 #  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
-TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
-TARGET_HEADER_BUILTIN(__mulh,  "LLiLLiLLi",    "nch", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__umulh, "ULLiULLiULLi", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(_mul128, "LLiLLiLLiLLi*",      "nch",   "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(_umul128, "ULLiULLiULLiULLi*", "nch",   "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__mulh,  "LLiLLiLLi",    "nch", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__umulh, "ULLiULLiULLi", "nch", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_mul128, "LLiLLiLLiLLi*",      "nch",   INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_umul128, "ULLiULLiULLiULLi*", "nch",   INTRIN_H, ALL_MS_LANGUAGES, "")
 
-TARGET_HEADER_BUILTIN(__faststorefence, "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__shiftleft128, "ULLiULLiULLiUc", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__shiftright128, "ULLiULLiULLiUc", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__faststorefence, "v", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__shiftleft128, "ULLiULLiULLiUc", "nch", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__shiftright128, "ULLiULLiULLiUc", "nch", INTRIN_H, ALL_MS_LANGUAGES, "")
 
-TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128, "UcLLiD*LLiLLiLLi*", "nh", "intrin.h", ALL_MS_LANGUAGES, "cx16")
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128, "UcLLiD*LLiLLiLLi*", "nh", INTRIN_H, ALL_MS_LANGUAGES, "cx16")
 
 TARGET_BUILTIN(__builtin_ia32_readeflags_u64, "UOi", "n", "")
 TARGET_BUILTIN(__builtin_ia32_writeeflags_u64, "vUOi", "n", "")

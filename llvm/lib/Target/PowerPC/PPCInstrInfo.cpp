@@ -2740,18 +2740,18 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     const MCInstrDesc &NewDesc = get(NewOpC);
     MI->setDesc(NewDesc);
 
-    if (NewDesc.getImplicitDefs())
-      for (const MCPhysReg *ImpDefs = NewDesc.getImplicitDefs();
-           *ImpDefs; ++ImpDefs)
-        if (!MI->definesRegister(*ImpDefs))
-          MI->addOperand(*MI->getParent()->getParent(),
-                         MachineOperand::CreateReg(*ImpDefs, true, true));
-    if (NewDesc.getImplicitUses())
-      for (const MCPhysReg *ImpUses = NewDesc.getImplicitUses();
-           *ImpUses; ++ImpUses)
-        if (!MI->readsRegister(*ImpUses))
-          MI->addOperand(*MI->getParent()->getParent(),
-                         MachineOperand::CreateReg(*ImpUses, false, true));
+    for (MCPhysReg ImpDef : NewDesc.implicit_defs()) {
+      if (!MI->definesRegister(ImpDef)) {
+        MI->addOperand(*MI->getParent()->getParent(),
+                       MachineOperand::CreateReg(ImpDef, true, true));
+      }
+    }
+    for (MCPhysReg ImpUse : NewDesc.implicit_uses()) {
+      if (!MI->readsRegister(ImpUse)) {
+        MI->addOperand(*MI->getParent()->getParent(),
+                       MachineOperand::CreateReg(ImpUse, false, true));
+      }
+    }
   }
   assert(MI->definesRegister(PPC::CR0) &&
          "Record-form instruction does not define cr0?");
