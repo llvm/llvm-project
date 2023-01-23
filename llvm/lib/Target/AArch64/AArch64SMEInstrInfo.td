@@ -374,9 +374,9 @@ defm SQCVTU_Z2Z_StoH : sme2_cvt_vg2_single<"sqcvtu", 0b1110, nxv8i16, nxv4i32, i
 defm SQCVT_Z4Z      : sme2_int_cvt_vg4_single<"sqcvt", 0b000, int_aarch64_sve_sqcvt_x4>;
 defm UQCVT_Z4Z      : sme2_int_cvt_vg4_single<"uqcvt", 0b001, int_aarch64_sve_uqcvt_x4>;
 defm SQCVTU_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtu", 0b100, int_aarch64_sve_sqcvtu_x4>;
-defm SQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtn", 0b010, null_frag>;
-defm SQCVTUN_Z4Z    : sme2_int_cvt_vg4_single<"sqcvtun", 0b110, null_frag>;
-defm UQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"uqcvtn", 0b011, null_frag>;
+defm SQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtn", 0b010, int_aarch64_sve_sqcvtn_x4>;
+defm SQCVTUN_Z4Z    : sme2_int_cvt_vg4_single<"sqcvtun", 0b110, int_aarch64_sve_sqcvtun_x4>;
+defm UQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"uqcvtn", 0b011, int_aarch64_sve_uqcvtn_x4>;
 
 defm FCVTZS_2Z2Z_StoS : sme2_fp_cvt_vg2_multi<"fcvtzs", 0b00010>;
 defm FCVTZS_4Z4Z_StoS : sme2_fp_cvt_vg4_multi<"fcvtzs", 0b0001000>;
