@@ -4,12 +4,13 @@
 
 %struct.T = type { i32, [10 x [20 x i8]] }
 
+declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
+
 define i8 @select_offsets_simplifiable_1(i1 %cnd1, i1 %cnd2) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_simplifiable_1
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; CHECK-NEXT:    [[BYTES:%.*]] = call ptr @calloc(i64 noundef 1024, i64 noundef 1)
 ; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
 ; CHECK-NEXT:    store i8 23, ptr [[GEP23]], align 4
 ; CHECK-NEXT:    [[GEP29:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 29
@@ -24,7 +25,7 @@ define i8 @select_offsets_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
-  %Bytes = alloca [1024 x i8], align 16
+  %Bytes = call ptr @calloc(i64 1024, i64 1)
 
   %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
   store i8 23, ptr %gep23, align 4
@@ -47,7 +48,7 @@ entry:
 define i8 @select_offsets_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_simplifiable_2
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
@@ -90,7 +91,7 @@ entry:
 define i8 @select_offsets_simplifiable_3(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_simplifiable_3
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BUNDLE:%.*]] = alloca [[STRUCT_T:%.*]], align 64
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND1]], i64 1, i64 3
@@ -110,10 +111,33 @@ entry:
   ret i8 %i
 }
 
+; Similar to select_offsets_not_simplifiable_3 but with uninitialized memory.
+define i8 @select_offsets_simplifiable_4(i1 %cnd1, i1 %cnd2) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@select_offsets_simplifiable_4
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
+; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
+; CHECK-NEXT:    ret i8 100
+;
+entry:
+  %Bytes = alloca [1024 x i8], align 16
+  %sel0 = select i1 %cnd1, i64 23, i64 29
+  %sel1 = select i1 %cnd2, i64 %sel0, i64 7
+  %gep.sel = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %sel1
+  store i8 100, ptr %gep.sel, align 4
+  %gep29 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 29
+  %i = load i8, ptr %gep29, align 4
+  ret i8 %i
+}
+
 define i8 @select_offsets_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_not_simplifiable_1
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
@@ -138,7 +162,7 @@ entry:
 define i8 @select_offsets_not_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_not_simplifiable_2
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
@@ -163,11 +187,10 @@ entry:
 }
 
 define i8 @select_offsets_not_simplifiable_3(i1 %cnd1, i1 %cnd2) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_not_simplifiable_3
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; CHECK-NEXT:    [[BYTES:%.*]] = call ptr @calloc(i64 noundef 1024, i64 noundef 1)
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
 ; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
@@ -177,7 +200,7 @@ define i8 @select_offsets_not_simplifiable_3(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
-  %Bytes = alloca [1024 x i8], align 16
+  %Bytes = call ptr @calloc(i64 1024, i64 1)
   %sel0 = select i1 %cnd1, i64 23, i64 29
   %sel1 = select i1 %cnd2, i64 %sel0, i64 7
   %gep.sel = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %sel1
@@ -188,22 +211,21 @@ entry:
 }
 
 define i8 @select_offsets_not_simplifiable_4(i1 %cnd1, i1 %cnd2) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_not_simplifiable_4
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; CHECK-NEXT:    [[BYTES:%.*]] = call ptr @calloc(i64 noundef 1024, i64 noundef 1)
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[CND1]], i64 23, i64 29
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CND2]], i64 [[SEL0]], i64 7
 ; CHECK-NEXT:    [[GEP_SEL:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 [[SEL1]]
 ; CHECK-NEXT:    [[GEP_PLUS:%.*]] = getelementptr inbounds i8, ptr [[GEP_SEL]], i64 3
 ; CHECK-NEXT:    store i8 100, ptr [[GEP_PLUS]], align 4
 ; CHECK-NEXT:    [[GEP32:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 32
-; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP32]], align 16
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[GEP32]], align 4
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
-  %Bytes = alloca [1024 x i8], align 16
+  %Bytes = call ptr @calloc(i64 1024, i64 1)
   %sel0 = select i1 %cnd1, i64 23, i64 29
   %sel1 = select i1 %cnd2, i64 %sel0, i64 7
   %gep.sel = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 %sel1
@@ -217,7 +239,7 @@ entry:
 define i8 @select_offsets_not_simplifiable_5(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@select_offsets_not_simplifiable_5
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BUNDLE:%.*]] = alloca [[STRUCT_T:%.*]], align 64
 ; CHECK-NEXT:    [[GEP_FIXED:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[BUNDLE]], i64 0, i32 1, i64 3, i64 5
@@ -247,7 +269,7 @@ entry:
 define i8 @select_gep_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@select_gep_simplifiable_1
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 7
@@ -271,10 +293,11 @@ entry:
 define i8 @select_gep_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@select_gep_not_simplifiable_1
-; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 7
+; CHECK-NEXT:    store i8 1, ptr [[GEP7]], align 4
 ; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
 ; CHECK-NEXT:    [[SEL_PTR:%.*]] = select i1 [[CND1]], ptr [[GEP7]], ptr [[GEP23]]
 ; CHECK-NEXT:    store i8 42, ptr [[SEL_PTR]], align 4
@@ -284,6 +307,7 @@ define i8 @select_gep_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 entry:
   %Bytes = alloca [1024 x i8], align 16
   %gep7 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 7
+  store i8 1, ptr %gep7, align 4
   %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
   %sel.ptr = select i1 %cnd1, ptr %gep7, ptr %gep23
   store i8 42, ptr %sel.ptr, align 4
@@ -296,7 +320,7 @@ entry:
 define i8 @phi_gep_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_simplifiable_1
-; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -342,7 +366,7 @@ join:
 define i8 @phi_gep_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_simplifiable_2
-; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -383,7 +407,7 @@ join:
 define i8 @phi_gep_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_not_simplifiable_1
-; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
@@ -420,11 +444,10 @@ join:
 }
 
 define i8 @phi_gep_not_simplifiable_2(i1 %cnd1, i1 %cnd2) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_not_simplifiable_2
-; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: (i1 [[CND1:%.*]], i1 [[CND2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; CHECK-NEXT:    [[BYTES:%.*]] = call ptr @calloc(i64 noundef 1024, i64 noundef 1)
 ; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
@@ -439,7 +462,7 @@ define i8 @phi_gep_not_simplifiable_2(i1 %cnd1, i1 %cnd2) {
 ; CHECK-NEXT:    ret i8 [[I]]
 ;
 entry:
-  %Bytes = alloca [1024 x i8], align 16
+  %Bytes = call ptr @calloc(i64 1024, i64 1)
   %gep23 = getelementptr inbounds [1024 x i8], ptr %Bytes, i64 0, i64 23
   br i1 %cnd1, label %then, label %else
 
@@ -460,7 +483,7 @@ join:
 define i8 @phi_offsets(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@phi_offsets
-; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -493,9 +516,10 @@ join:
 }
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
-; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(write) }
-; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
+; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(write) }
+; CHECK: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind willreturn }
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CGSCC: {{.*}}

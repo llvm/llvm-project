@@ -20,7 +20,6 @@ using namespace clang;
 using namespace clang::interp;
 
 using APSInt = llvm::APSInt;
-template <typename T> using Expected = llvm::Expected<T>;
 
 namespace clang {
 namespace interp {

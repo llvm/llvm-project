@@ -1565,6 +1565,7 @@ module std [system] {
       module cmp                 { private header "__utility/cmp.h" }
       module convert_to_integral { private header "__utility/convert_to_integral.h" }
       module declval             { private header "__utility/declval.h" }
+      module exception_guard     { private header "__utility/exception_guard.h" }
       module exchange            { private header "__utility/exchange.h" }
       module forward             { private header "__utility/forward.h" }
       module forward_like        { private header "__utility/forward_like.h" }
@@ -1578,7 +1579,6 @@ module std [system] {
       module rel_ops             { private header "__utility/rel_ops.h" }
       module swap                { private header "__utility/swap.h" }
       module to_underlying       { private header "__utility/to_underlying.h" }
-      module transaction         { private header "__utility/transaction.h" }
       module unreachable         { private header "__utility/unreachable.h" }
     }
   }

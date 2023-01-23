@@ -717,6 +717,7 @@ END-SCRIPT
 #include <__utility/cmp.h> // expected-error@*:* {{use of private header from outside its module: '__utility/cmp.h'}}
 #include <__utility/convert_to_integral.h> // expected-error@*:* {{use of private header from outside its module: '__utility/convert_to_integral.h'}}
 #include <__utility/declval.h> // expected-error@*:* {{use of private header from outside its module: '__utility/declval.h'}}
+#include <__utility/exception_guard.h> // expected-error@*:* {{use of private header from outside its module: '__utility/exception_guard.h'}}
 #include <__utility/exchange.h> // expected-error@*:* {{use of private header from outside its module: '__utility/exchange.h'}}
 #include <__utility/forward.h> // expected-error@*:* {{use of private header from outside its module: '__utility/forward.h'}}
 #include <__utility/forward_like.h> // expected-error@*:* {{use of private header from outside its module: '__utility/forward_like.h'}}
@@ -729,7 +730,6 @@ END-SCRIPT
 #include <__utility/rel_ops.h> // expected-error@*:* {{use of private header from outside its module: '__utility/rel_ops.h'}}
 #include <__utility/swap.h> // expected-error@*:* {{use of private header from outside its module: '__utility/swap.h'}}
 #include <__utility/to_underlying.h> // expected-error@*:* {{use of private header from outside its module: '__utility/to_underlying.h'}}
-#include <__utility/transaction.h> // expected-error@*:* {{use of private header from outside its module: '__utility/transaction.h'}}
 #include <__utility/unreachable.h> // expected-error@*:* {{use of private header from outside its module: '__utility/unreachable.h'}}
 #include <__variant/monostate.h> // expected-error@*:* {{use of private header from outside its module: '__variant/monostate.h'}}
 // GENERATED-MARKER
