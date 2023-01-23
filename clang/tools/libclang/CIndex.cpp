@@ -8947,25 +8947,6 @@ unsigned clang_CXXMethod_isMoveAssignmentOperator(CXCursor C) {
   return (Method && Method->isMoveAssignmentOperator()) ? 1 : 0;
 }
 
-unsigned clang_CXXMethod_isExplicit(CXCursor C) {
-  if (!clang_isDeclaration(C.kind))
-    return 0;
-
-  const Decl *D = cxcursor::getCursorDecl(C);
-  const FunctionDecl *FD = D->getAsFunction();
-
-  if (!FD)
-    return 0;
-
-  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD))
-    return Ctor->isExplicit();
-
-  if (const auto *Conv = dyn_cast<CXXConversionDecl>(FD))
-    return Conv->isExplicit();
-
-  return 0;
-}
-
 unsigned clang_CXXRecord_isAbstract(CXCursor C) {
   if (!clang_isDeclaration(C.kind))
     return 0;

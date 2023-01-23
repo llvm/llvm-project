@@ -3673,7 +3673,7 @@ defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasSVE2p1_or_HasSME2] in {
-defm FCLAMP_ZZZ : sve2p1_fclamp<"fclamp">;
+defm FCLAMP_ZZZ : sve2p1_fclamp<"fclamp", int_aarch64_sve_fclamp>;
 def FDOT_ZZZ_S  : sve_float_dot<0b0, "fdot">;
 def FDOT_ZZZI_S : sve_float_dot_indexed<0b0, "fdot">;
 def BFMLSLB_ZZZ_S : sve2_fp_mla_long<0b110, "bfmlslb">;

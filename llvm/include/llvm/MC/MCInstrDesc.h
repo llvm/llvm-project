@@ -197,6 +197,14 @@ enum Flag {
 /// directly to describe itself.
 class MCInstrDesc {
 public:
+  // Do not allow MCInstrDescs to be copied or moved. They should only exist in
+  // the <Target>Insts table because they rely on knowing their own address to
+  // find other information elsewhere in the same table.
+  MCInstrDesc(const MCInstrDesc &) = delete;
+  MCInstrDesc(MCInstrDesc &&) = delete;
+  MCInstrDesc &operator=(const MCInstrDesc &) = delete;
+  MCInstrDesc &operator=(MCInstrDesc &&) = delete;
+
   unsigned short Opcode;         // The opcode number
   unsigned short NumOperands;    // Num of args (may be more if variable_ops)
   unsigned char NumDefs;         // Num of args that are definitions

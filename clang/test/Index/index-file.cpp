@@ -53,4 +53,4 @@ class C {
 // CHECK: [indexDeclaration]: kind: constructor | name: B | {{.*}} | loc: 33:12
 // CHECK: [indexDeclaration]: kind: constructor | name: B | {{.*}} (copy constructor) (converting constructor) | loc: 34:3
 // CHECK: [indexDeclaration]: kind: constructor | name: B | {{.*}} (move constructor) (converting constructor) | loc: 35:3
-// CHECK: [indexDeclaration]: kind: constructor | name: C | {{.*}} (copy constructor) (explicit) | loc: 39:12
+// CHECK: [indexDeclaration]: kind: constructor | name: C | {{.*}} (copy constructor) | loc: 39:12
