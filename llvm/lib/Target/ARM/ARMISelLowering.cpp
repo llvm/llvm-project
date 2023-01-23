@@ -12289,7 +12289,7 @@ void ARMTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
   // Any ARM instruction that sets the 's' bit should specify an optional
   // "cc_out" operand in the last operand position.
-  if (!MI.hasOptionalDef() || !MCID->OpInfo[ccOutIdx].isOptionalDef()) {
+  if (!MI.hasOptionalDef() || !MCID->operands()[ccOutIdx].isOptionalDef()) {
     assert(!NewOpc && "Optional cc_out operand required");
     return;
   }

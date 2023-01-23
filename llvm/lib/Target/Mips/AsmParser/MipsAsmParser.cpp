@@ -1834,7 +1834,7 @@ static bool needsExpandMemInst(MCInst &Inst, const MCInstrDesc &MCID) {
   if (NumOp != 3 && NumOp != 4)
     return false;
 
-  const MCOperandInfo &OpInfo = MCID.OpInfo[NumOp - 1];
+  const MCOperandInfo &OpInfo = MCID.operands()[NumOp - 1];
   if (OpInfo.OperandType != MCOI::OPERAND_MEMORY &&
       OpInfo.OperandType != MCOI::OPERAND_UNKNOWN &&
       OpInfo.OperandType != MipsII::OPERAND_MEM_SIMM9)
@@ -2148,7 +2148,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     // Check the offset of memory operand, if it is a symbol
     // reference or immediate we may have to expand instructions.
     if (needsExpandMemInst(Inst, MCID)) {
-      switch (MCID.OpInfo[MCID.getNumOperands() - 1].OperandType) {
+      switch (MCID.operands()[MCID.getNumOperands() - 1].OperandType) {
       case MipsII::OPERAND_MEM_SIMM9:
         expandMem9Inst(Inst, IDLoc, Out, STI, MCID.mayLoad());
         break;
@@ -2164,7 +2164,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     if (MCID.mayLoad() && Opcode != Mips::LWP_MM) {
       // Try to create 16-bit GP relative load instruction.
       for (unsigned i = 0; i < MCID.getNumOperands(); i++) {
-        const MCOperandInfo &OpInfo = MCID.OpInfo[i];
+        const MCOperandInfo &OpInfo = MCID.operands()[i];
         if ((OpInfo.OperandType == MCOI::OPERAND_MEMORY) ||
             (OpInfo.OperandType == MCOI::OPERAND_UNKNOWN)) {
           MCOperand &Op = Inst.getOperand(i);
@@ -3684,7 +3684,7 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   unsigned TmpReg = DstReg;
 
   const MCInstrDesc &Desc = MII.get(OpCode);
-  int16_t DstRegClass = Desc.OpInfo[StartOp].RegClass;
+  int16_t DstRegClass = Desc.operands()[StartOp].RegClass;
   unsigned DstRegClassID =
       getContext().getRegisterInfo()->getRegClass(DstRegClass).getID();
   bool IsGPR = (DstRegClassID == Mips::GPR32RegClassID) ||
@@ -3811,7 +3811,7 @@ void MipsAsmParser::expandMem9Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   unsigned TmpReg = DstReg;
 
   const MCInstrDesc &Desc = MII.get(OpCode);
-  int16_t DstRegClass = Desc.OpInfo[StartOp].RegClass;
+  int16_t DstRegClass = Desc.operands()[StartOp].RegClass;
   unsigned DstRegClassID =
       getContext().getRegisterInfo()->getRegClass(DstRegClass).getID();
   bool IsGPR = (DstRegClassID == Mips::GPR32RegClassID) ||

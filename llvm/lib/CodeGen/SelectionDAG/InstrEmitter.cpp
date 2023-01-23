@@ -218,7 +218,7 @@ void InstrEmitter::CreateVirtualRegisters(SDNode *Node,
         RC = VTRC;
     }
 
-    if (II.OpInfo != nullptr && II.OpInfo[i].isOptionalDef()) {
+    if (!II.operands().empty() && II.operands()[i].isOptionalDef()) {
       // Optional def must be a physical register.
       VRBase = cast<RegisterSDNode>(Node->getOperand(i-NumResults))->getReg();
       assert(VRBase.isPhysical());
@@ -304,7 +304,7 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
 
   const MCInstrDesc &MCID = MIB->getDesc();
   bool isOptDef = IIOpNum < MCID.getNumOperands() &&
-    MCID.OpInfo[IIOpNum].isOptionalDef();
+                  MCID.operands()[IIOpNum].isOptionalDef();
 
   // If the instruction requires a register in a different class, create
   // a new virtual register and copy the value into it, but first attempt to

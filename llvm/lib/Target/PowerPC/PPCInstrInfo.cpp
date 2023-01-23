@@ -2092,7 +2092,7 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   assert(UseIdx < UseMI.getNumOperands() && "Cannot find Reg in UseMI");
   assert(UseIdx < UseMCID.getNumOperands() && "No operand description for Reg");
 
-  const MCOperandInfo *UseInfo = &UseMCID.OpInfo[UseIdx];
+  const MCOperandInfo *UseInfo = &UseMCID.operands()[UseIdx];
 
   // We can fold the zero if this register requires a GPRC_NOR0/G8RC_NOX0
   // register (which might also be specified as a pointer class kind).

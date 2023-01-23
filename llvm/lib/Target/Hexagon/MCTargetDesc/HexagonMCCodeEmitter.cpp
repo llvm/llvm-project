@@ -773,7 +773,9 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
   assert(!MO.isImm());
   if (MO.isReg()) {
     unsigned Reg = MO.getReg();
-    switch (HexagonMCInstrInfo::getDesc(MCII, MI).OpInfo[OperandNumber].RegClass) {
+    switch (HexagonMCInstrInfo::getDesc(MCII, MI)
+                .operands()[OperandNumber]
+                .RegClass) {
     case GeneralSubRegsRegClassID:
     case GeneralDoubleLow8RegsRegClassID:
       return HexagonMCInstrInfo::getDuplexRegisterNumbering(Reg);

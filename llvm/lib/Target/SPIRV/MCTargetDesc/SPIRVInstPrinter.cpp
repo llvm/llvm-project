@@ -85,8 +85,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       const unsigned NumFixedOps = MCDesc.getNumOperands();
       const unsigned LastFixedIndex = NumFixedOps - 1;
       const int FirstVariableIndex = NumFixedOps;
-      if (NumFixedOps > 0 &&
-          MCDesc.OpInfo[LastFixedIndex].OperandType == MCOI::OPERAND_UNKNOWN) {
+      if (NumFixedOps > 0 && MCDesc.operands()[LastFixedIndex].OperandType ==
+                                 MCOI::OPERAND_UNKNOWN) {
         // For instructions where a custom type (not reg or immediate) comes as
         // the last operand before the variable_ops. This is usually a StringImm
         // operand, but there are a few other cases.

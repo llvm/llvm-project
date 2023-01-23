@@ -630,7 +630,8 @@ std::vector<std::pair<uint64_t, uint64_t>> X86MCInstrAnalysis::findPltEntries(
 bool X86MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
                                         uint64_t Size, uint64_t &Target) const {
   if (Inst.getNumOperands() == 0 ||
-      Info->get(Inst.getOpcode()).OpInfo[0].OperandType != MCOI::OPERAND_PCREL)
+      Info->get(Inst.getOpcode()).operands()[0].OperandType !=
+          MCOI::OPERAND_PCREL)
     return false;
   Target = Addr + Size + Inst.getOperand(0).getImm();
   return true;
