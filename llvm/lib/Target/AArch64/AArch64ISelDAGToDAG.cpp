@@ -335,6 +335,10 @@ public:
   // e.g. structured loads and stores (ldN, stN).
   SDValue createZTuple(ArrayRef<SDValue> Vecs);
 
+  // Similar to above, except the register must start at a multiple of the
+  // tuple, e.g. z2 for a 2-tuple, or z8 for a 4-tuple.
+  SDValue createZMulTuple(ArrayRef<SDValue> Regs);
+
   /// Generic helper for the createDTuple/createQTuple
   /// functions. Those should almost always be called instead.
   SDValue createTuple(ArrayRef<SDValue> Vecs, const unsigned RegClassIDs[],
@@ -358,6 +362,7 @@ public:
                             bool IsIntr = false);
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
+  void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
 
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
@@ -1454,6 +1459,18 @@ SDValue AArch64DAGToDAGISel::createZTuple(ArrayRef<SDValue> Regs) {
   return createTuple(Regs, RegClassIDs, SubRegs);
 }
 
+SDValue AArch64DAGToDAGISel::createZMulTuple(ArrayRef<SDValue> Regs) {
+  assert(Regs.size() == 2 || Regs.size() == 4);
+
+  // The createTuple interface requires 3 RegClassIDs for each possible
+  // tuple type even though we only have them for ZPR2 and ZPR4.
+  static const unsigned RegClassIDs[] = {AArch64::ZPR2Mul2RegClassID, 0,
+                                         AArch64::ZPR4Mul4RegClassID};
+  static const unsigned SubRegs[] = {AArch64::zsub0, AArch64::zsub1,
+                                     AArch64::zsub2, AArch64::zsub3};
+  return createTuple(Regs, RegClassIDs, SubRegs);
+}
+
 SDValue AArch64DAGToDAGISel::createTuple(ArrayRef<SDValue> Regs,
                                          const unsigned RegClassIDs[],
                                          const unsigned SubRegs[]) {
@@ -1692,6 +1709,8 @@ AArch64DAGToDAGISel::findAddrModeSVELoadStore(SDNode *N, unsigned Opc_rr,
 
 enum class SelectTypeKind {
   Int1 = 0,
+  Int = 1,
+  FP = 2,
 };
 
 /// This function selects an opcode from a list of opcodes, which is
@@ -1705,8 +1724,17 @@ static unsigned SelectOpcodeFromVT(EVT VT, ArrayRef<unsigned> Opcodes) {
 
   EVT EltVT = VT.getVectorElementType();
   switch (Kind) {
+  case SelectTypeKind::Int:
+    if (EltVT != MVT::i8 && EltVT != MVT::i16 && EltVT != MVT::i32 &&
+        EltVT != MVT::i64)
+      return 0;
+    break;
   case SelectTypeKind::Int1:
     if (EltVT != MVT::i1)
+      return 0;
+    break;
+  case SelectTypeKind::FP:
+    if (EltVT != MVT::f16 && EltVT != MVT::f32 && EltVT != MVT::f64)
       return 0;
     break;
   }
@@ -1795,6 +1823,28 @@ void AArch64DAGToDAGISel::SelectPredicatedLoad(SDNode *N, unsigned NumVecs,
   unsigned ChainIdx = NumVecs;
   ReplaceUses(SDValue(N, ChainIdx), SDValue(Load, 1));
   CurDAG->RemoveDeadNode(N);
+}
+
+void AArch64DAGToDAGISel::SelectClamp(SDNode *N, unsigned NumVecs,
+                                      unsigned Op) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  SmallVector<SDValue, 4> Regs(N->op_begin() + 1, N->op_begin() + 1 + NumVecs);
+  SDValue Zd = createZMulTuple(Regs);
+  SDValue Zn = N->getOperand(1 + NumVecs);
+  SDValue Zm = N->getOperand(2 + NumVecs);
+
+  SDValue Ops[] = {Zd, Zn, Zm};
+
+  SDNode *Intrinsic = CurDAG->getMachineNode(Op, DL, MVT::Untyped, Ops);
+  SDValue SuperReg = SDValue(Intrinsic, 0);
+  for (unsigned i = 0; i < NumVecs; ++i)
+    ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
+                                   AArch64::zsub0 + i, DL, VT, SuperReg));
+
+  CurDAG->RemoveDeadNode(N);
+  return;
 }
 
 void AArch64DAGToDAGISel::SelectStore(SDNode *N, unsigned NumVecs,
@@ -4772,6 +4822,48 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     case Intrinsic::aarch64_sve_ucvtf_x4:
       SelectCVTIntrinsic(Node, 4, AArch64::UCVTF_4Z4Z_StoS);
+      return;
+    case Intrinsic::aarch64_sve_sclamp_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SCLAMP_VG2_2Z2Z_B, AArch64::SCLAMP_VG2_2Z2Z_H,
+               AArch64::SCLAMP_VG2_2Z2Z_S, AArch64::SCLAMP_VG2_2Z2Z_D}))
+        SelectClamp(Node, 2, Op);
+      return;
+    case Intrinsic::aarch64_sve_uclamp_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UCLAMP_VG2_2Z2Z_B, AArch64::UCLAMP_VG2_2Z2Z_H,
+               AArch64::UCLAMP_VG2_2Z2Z_S, AArch64::UCLAMP_VG2_2Z2Z_D}))
+        SelectClamp(Node, 2, Op);
+      return;
+    case Intrinsic::aarch64_sve_fclamp_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FCLAMP_VG2_2Z2Z_H, AArch64::FCLAMP_VG2_2Z2Z_S,
+               AArch64::FCLAMP_VG2_2Z2Z_D}))
+        SelectClamp(Node, 2, Op);
+      return;
+    case Intrinsic::aarch64_sve_sclamp_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::SCLAMP_VG4_4Z4Z_B, AArch64::SCLAMP_VG4_4Z4Z_H,
+               AArch64::SCLAMP_VG4_4Z4Z_S, AArch64::SCLAMP_VG4_4Z4Z_D}))
+        SelectClamp(Node, 4, Op);
+      return;
+    case Intrinsic::aarch64_sve_uclamp_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
+              Node->getValueType(0),
+              {AArch64::UCLAMP_VG4_4Z4Z_B, AArch64::UCLAMP_VG4_4Z4Z_H,
+               AArch64::UCLAMP_VG4_4Z4Z_S, AArch64::UCLAMP_VG4_4Z4Z_D}))
+        SelectClamp(Node, 4, Op);
+      return;
+    case Intrinsic::aarch64_sve_fclamp_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FCLAMP_VG4_4Z4Z_H, AArch64::FCLAMP_VG4_4Z4Z_S,
+               AArch64::FCLAMP_VG4_4Z4Z_D}))
+        SelectClamp(Node, 4, Op);
       return;
     }
     break;
