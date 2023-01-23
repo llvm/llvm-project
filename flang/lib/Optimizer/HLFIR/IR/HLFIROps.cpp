@@ -489,6 +489,28 @@ mlir::LogicalResult hlfir::SumOp::verify() {
   return mlir::success();
 }
 
+void hlfir::SumOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                         mlir::Value array, mlir::Value dim, mlir::Value mask,
+                         mlir::Type stmtResultType) {
+  assert(array && "array argument is not optional");
+
+  fir::SequenceType arrayTy =
+      hlfir::getFortranElementOrSequenceType(array.getType())
+          .dyn_cast<fir::SequenceType>();
+  assert(arrayTy && "array must be of array type");
+  mlir::Type numTy = arrayTy.getEleTy();
+
+  // get the result shape from the statement context
+  hlfir::ExprType::Shape resultShape;
+  if (auto array = stmtResultType.dyn_cast<fir::SequenceType>()) {
+    resultShape = hlfir::ExprType::Shape{array.getShape()};
+  }
+  mlir::Type resultType = hlfir::ExprType::get(
+      builder.getContext(), resultShape, numTy, /*polymorphic=*/false);
+
+  build(builder, result, resultType, array, dim, mask);
+}
+
 //===----------------------------------------------------------------------===//
 // AssociateOp
 //===----------------------------------------------------------------------===//
