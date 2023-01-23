@@ -134,5 +134,6 @@ bool Header::operator<(const Header &RHS) const {
   case Header::Verbatim:
     return verbatim() < RHS.verbatim();
   }
+  llvm_unreachable("unhandled Header kind");
 }
 } // namespace clang::include_cleaner
