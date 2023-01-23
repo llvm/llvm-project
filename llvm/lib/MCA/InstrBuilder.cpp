@@ -312,7 +312,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   // According to assumption 2. register reads start at #(NumExplicitDefs-1).
   // That means, register R1 from the example is both read and written.
   unsigned NumExplicitDefs = MCDesc.getNumDefs();
-  unsigned NumImplicitDefs = MCDesc.getNumImplicitDefs();
+  unsigned NumImplicitDefs = MCDesc.implicit_defs().size();
   unsigned NumWriteLatencyEntries = SCDesc.NumWriteLatencyEntries;
   unsigned TotalDefs = NumExplicitDefs + NumImplicitDefs;
   if (MCDesc.hasOptionalDef())
@@ -365,7 +365,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     unsigned Index = NumExplicitDefs + CurrentDef;
     WriteDescriptor &Write = ID.Writes[Index];
     Write.OpIndex = ~CurrentDef;
-    Write.RegisterID = MCDesc.getImplicitDefs()[CurrentDef];
+    Write.RegisterID = MCDesc.implicit_defs()[CurrentDef];
     if (Index < NumWriteLatencyEntries) {
       const MCWriteLatencyEntry &WLE =
           *STI.getWriteLatencyEntry(&SCDesc, Index);
@@ -435,7 +435,7 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
                                  unsigned SchedClassID) {
   const MCInstrDesc &MCDesc = MCII.get(MCI.getOpcode());
   unsigned NumExplicitUses = MCDesc.getNumOperands() - MCDesc.getNumDefs();
-  unsigned NumImplicitUses = MCDesc.getNumImplicitUses();
+  unsigned NumImplicitUses = MCDesc.implicit_uses().size();
   // Remove the optional definition.
   if (MCDesc.hasOptionalDef())
     --NumExplicitUses;
@@ -464,7 +464,7 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     ReadDescriptor &Read = ID.Reads[CurrentUse + I];
     Read.OpIndex = ~I;
     Read.UseIndex = NumExplicitUses + I;
-    Read.RegisterID = MCDesc.getImplicitUses()[I];
+    Read.RegisterID = MCDesc.implicit_uses()[I];
     Read.SchedClassID = SchedClassID;
     LLVM_DEBUG(dbgs() << "\t\t[Use][I] OpIdx=" << ~Read.OpIndex
                       << ", UseIndex=" << Read.UseIndex << ", RegisterID="
