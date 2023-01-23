@@ -3332,9 +3332,12 @@ struct AANoSync
   /// Helper function specific for intrinsics which are potentially volatile.
   static bool isNoSyncIntrinsic(const Instruction *I);
 
-  /// Helper function to determine if \p CB is an aligned (GPU) barrier.
-  /// Aligned barriers have to be executed by all threads.
-  static bool isAlignedBarrier(const CallBase &CB);
+  /// Helper function to determine if \p CB is an aligned (GPU) barrier. Aligned
+  /// barriers have to be executed by all threads. The flag \p ExecutedAligned
+  /// indicates if the call is executed by all threads in a (thread) block in an
+  /// aligned way. If that is the case, non-aligned barriers are effectively
+  /// aligned barriers.
+  static bool isAlignedBarrier(const CallBase &CB, bool ExecutedAligned);
 
   /// Create an abstract attribute view for the position \p IRP.
   static AANoSync &createForPosition(const IRPosition &IRP, Attributor &A);
