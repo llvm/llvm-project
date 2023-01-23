@@ -75,6 +75,7 @@ void clang_experimental_ModuleDependencySet_dispose(
     clang_disposeString(MD.ModuleMapPath);
     clang_disposeStringSet(MD.FileDeps);
     clang_disposeStringSet(MD.ModuleDeps);
+    clang_disposeStringSet(MD.BuildArguments);
   }
   delete[] MDS->Modules;
   delete MDS;
@@ -145,6 +146,7 @@ void clang_experimental_FileDependencies_dispose(CXFileDependencies *ID) {
   clang_disposeString(ID->ContextHash);
   clang_disposeStringSet(ID->FileDeps);
   clang_disposeStringSet(ID->ModuleDeps);
+  clang_disposeStringSet(ID->BuildArguments);
   delete ID;
 }
 
