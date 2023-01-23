@@ -2704,6 +2704,17 @@ public:
           /// has the dummy attributes in BIND(C) contexts.
           mlir::Value box = builder.createBox(
               loc, fir::factory::genMutableBoxRead(builder, loc, mutableBox));
+
+          // NULL() passed as argument is passed as a !fir.box<none>. Since
+          // select op requires the same type for its two argument, convert
+          // !fir.box<none> to !fir.class<none> when the argument is
+          // polymorphic.
+          if (fir::isBoxNone(box.getType()) && fir::isPolymorphicType(argTy))
+            box = builder.createConvert(
+                loc,
+                fir::ClassType::get(mlir::NoneType::get(builder.getContext())),
+                box);
+
           // Need the box types to be exactly similar for the selectOp.
           mlir::Value convertedBox = builder.createConvert(loc, argTy, box);
           caller.placeInput(arg, builder.create<mlir::arith::SelectOp>(
