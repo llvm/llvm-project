@@ -18,14 +18,20 @@ contains
 
   subroutine test_temp_from_intrinsic_spread()
     class(*), pointer :: p
+    class(*), pointer :: pa(:)
     allocate(p2::p)
+    allocate(p2::pa(10))
 
     call pass_unlimited_poly_1d(spread(p, dim=1, ncopies=2))
+    call pass_unlimited_poly_1d(spread(pa(1), dim=1, ncopies=2))
+    
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_spread() {
-! CHECK: %[[TEMP_RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>>
+! CHECK: %[[TEMP_RES1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>>
+! CHECK: %[[TEMP_RES0:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>>
 ! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = "p", uniq_name = "_QMpoly_tmpFtest_temp_from_intrinsic_spreadEp"}
+! CHECK: %[[PA:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?xnone>>> {bindc_name = "pa", uniq_name = "_QMpoly_tmpFtest_temp_from_intrinsic_spreadEpa"}
 ! CHECK: fir.call @_FortranAPointerNullifyDerived
 ! CHECK: fir.call @_FortranAPointerAllocate
 ! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.ptr<none>>>
@@ -36,16 +42,22 @@ contains
 ! CHECK: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
 ! Make sure the fir.embox contains the source_box pointing to the polymoprhic entity
 ! CHECK: %[[BOX_RES:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) source_box %[[LOAD_P]] : (!fir.heap<!fir.array<?xnone>>, !fir.shape<1>, !fir.class<!fir.ptr<none>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>>
-! CHECK: fir.store %[[BOX_RES]] to %[[TEMP_RES]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
-! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TEMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: fir.store %[[BOX_RES]] to %[[TEMP_RES0]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TEMP_RES0]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[P_BOX_NONE:.*]] = fir.convert %[[LOAD_P]] : (!fir.class<!fir.ptr<none>>) -> !fir.box<none>
 ! CHECK: %[[C2_I64:.*]] = fir.convert %[[C2]] : (i32) -> i64
 ! CHECK: %{{.*}} = fir.call @_FortranASpread(%[[RES_BOX_NONE]], %[[P_BOX_NONE]], %[[C1]], %[[C2_I64]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> none
-! CHECK: %[[LOAD_RES:.*]] = fir.load %[[TEMP_RES]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+! CHECK: %[[LOAD_RES:.*]] = fir.load %[[TEMP_RES0]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
 ! CHECK: %[[RES_ADDR:.*]] = fir.box_addr %[[LOAD_RES]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.heap<!fir.array<?xnone>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD_RES]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.class<!fir.array<?xnone>>
 ! CHECK: fir.call @_QMpoly_tmpPpass_unlimited_poly_1d(%[[REBOX]]) {{.*}} : (!fir.class<!fir.array<?xnone>>) -> ()
 ! CHECK: fir.freemem %[[RES_ADDR]] : !fir.heap<!fir.array<?xnone>>
+! CHECK: %[[LOAD_PA:.*]] = fir.load %[[PA]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
+! CHECK: %[[COORD_PA_1:.*]] = fir.coordinate_of %[[LOAD_PA]], %{{.*}} : (!fir.class<!fir.ptr<!fir.array<?xnone>>>, i64) -> !fir.ref<none>
+! CHECK: %[[EMBOX_PA_1:.*]] = fir.embox %[[COORD_PA_1]] source_box %[[LOAD_PA]] : (!fir.ref<none>, !fir.class<!fir.ptr<!fir.array<?xnone>>>) -> !fir.class<none>
+! CHECK: %[[RES1_BOX_NONE:.*]] = fir.convert %[[TEMP_RES1]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[PA1_BOX_NONE:.*]] = fir.convert %[[EMBOX_PA_1]] : (!fir.class<none>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranASpread(%[[RES1_BOX_NONE]], %[[PA1_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i64, !fir.ref<i8>, i32) -> none
 
   subroutine test_temp_from_intrinsic_reshape(i)
     class(*), allocatable :: a(:,:)
