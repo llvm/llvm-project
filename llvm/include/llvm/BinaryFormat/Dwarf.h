@@ -418,6 +418,13 @@ enum CallingConvention {
   DW_CC_hi_user = 0xff
 };
 
+enum MemorySpace {
+#define HANDLE_DW_MSPACE(ID, NAME) DW_MSPACE_LLVM_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  DW_MSPACE_LLVM_lo_user = 0x8000,
+  DW_MSPACE_LLVM_hi_user = 0xffff
+};
+
 enum InlineAttribute {
   // Inline codes
   DW_INL_not_inlined = 0x00,
@@ -660,6 +667,7 @@ StringRef IndexString(unsigned Idx);
 StringRef FormatString(DwarfFormat Format);
 StringRef FormatString(bool IsDWARF64);
 StringRef RLEString(unsigned RLE);
+StringRef MemorySpaceString(unsigned MS);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions
@@ -677,6 +685,7 @@ unsigned getOperationEncoding(StringRef OperationEncodingString);
 unsigned getVirtuality(StringRef VirtualityString);
 unsigned getLanguage(StringRef LanguageString);
 unsigned getCallingConvention(StringRef LanguageString);
+unsigned getMemorySpace(StringRef LanguageString);
 unsigned getAttributeEncoding(StringRef EncodingString);
 unsigned getMacinfo(StringRef MacinfoString);
 unsigned getMacro(StringRef MacroString);

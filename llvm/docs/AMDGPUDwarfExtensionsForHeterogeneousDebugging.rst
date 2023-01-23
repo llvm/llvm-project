@@ -3678,9 +3678,9 @@ constant may have the following attributes:
 
 3.  ``DW_AT_LLVM_memory_space``
 
-    A ``DW_AT_memory_space`` attribute with a constant value representing a source
+    A ``DW_AT_LLVM_memory_space`` attribute with a constant value representing a source
     language specific DWARF memory space (see 2.14 "Memory Spaces"). If omitted,
-    defaults to ``DW_MSPACE_none``.
+    defaults to ``DW_MSPACE_LLVM_none``.
 
 
 A.4.2 Common Block Entries

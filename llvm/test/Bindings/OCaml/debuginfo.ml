@@ -341,7 +341,7 @@ let test_types dibuilder file_di m_di =
       ~address_space:0 ~name:""
   in
   stdout_metadata structptr_di;
-  (* CHECK: [[STRUCTPTR_PTR:<0x[0-9a-f]*>]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[STRUCT_PTR]], size: 192, dwarfAddressSpace: 0)
+  (* CHECK: [[STRUCTPTR_PTR:<0x[0-9a-f]*>]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[STRUCT_PTR]], size: 192, address_space: 0)
    *)
   insist
     ( Llvm_debuginfo.get_metadata_kind structptr_di

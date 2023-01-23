@@ -904,6 +904,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(CC, DwarfCC);
   DWKEYWORD(OP, DwarfOp);
   DWKEYWORD(MACINFO, DwarfMacinfo);
+  DWKEYWORD(MSPACE_LLVM, DwarfMSpaceLLVM);
 
 #undef DWKEYWORD
 

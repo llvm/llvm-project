@@ -325,7 +325,7 @@ attributes #1 = { "target-cpu"="generic" }
 !297 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Custom", scope: !284, file: !4, size: 128, align: 64, elements: !298, templateParams: !228, identifier: "df1a28723e4e04a13efa60934df6c3a6::Custom")
 !298 = !{!299}
 !299 = !DIDerivedType(tag: DW_TAG_member, name: "__0", scope: !297, file: !4, baseType: !300, size: 64, align: 64, offset: 64)
-!300 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "Box<std::io::error::Custom>", baseType: !301, size: 64, align: 64, dwarfAddressSpace: 0)
+!300 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "Box<std::io::error::Custom>", baseType: !301, size: 64, align: 64, addressSpace: 0)
 !301 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Custom", scope: !46, file: !4, size: 192, align: 64, elements: !302, templateParams: !228, identifier: "91f6b80e351df08f3582a1dba78d37a4")
 !302 = !{!303, !304}
 !303 = !DIDerivedType(tag: DW_TAG_member, name: "kind", scope: !301, file: !4, baseType: !45, size: 8, align: 8, offset: 128)
@@ -334,9 +334,9 @@ attributes #1 = { "target-cpu"="generic" }
 !306 = !DINamespace(name: "error", scope: !48)
 !307 = !{!308, !310}
 !308 = !DIDerivedType(tag: DW_TAG_member, name: "pointer", scope: !305, file: !4, baseType: !309, size: 64, align: 64, flags: DIFlagArtificial)
-!309 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "*mut u8", baseType: !7, size: 64, align: 64, dwarfAddressSpace: 0)
+!309 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "*mut u8", baseType: !7, size: 64, align: 64, addressSpace: 0)
 !310 = !DIDerivedType(tag: DW_TAG_member, name: "vtable", scope: !305, file: !4, baseType: !311, size: 64, align: 64, offset: 64, flags: DIFlagArtificial)
-!311 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "&[usize; 3]", baseType: !312, size: 64, align: 64, dwarfAddressSpace: 0)
+!311 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "&[usize; 3]", baseType: !312, size: 64, align: 64, addressSpace: 0)
 !312 = !DICompositeType(tag: DW_TAG_array_type, baseType: !313, size: 192, align: 64, elements: !314)
 !313 = !DIBasicType(name: "usize", size: 64, encoding: DW_ATE_unsigned)
 !314 = !{!315}
@@ -353,7 +353,7 @@ attributes #1 = { "target-cpu"="generic" }
 !325 = !{!326}
 !326 = !DIDerivedType(tag: DW_TAG_member, name: "__0", scope: !324, file: !4, baseType: !281, size: 128, align: 64, offset: 64)
 !327 = !DIDerivedType(tag: DW_TAG_member, scope: !32, file: !4, baseType: !254, size: 64, align: 64, flags: DIFlagArtificial)
-!328 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "&std::path::Path", baseType: !329, size: 128, align: 64, dwarfAddressSpace: 0)
+!328 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "&std::path::Path", baseType: !329, size: 128, align: 64, addressSpace: 0)
 !329 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Path", scope: !84, file: !4, align: 8, elements: !330, templateParams: !228, identifier: "59d4ec63209a24516bd1bdae88116f75")
 !330 = !{!331}
 !331 = !DIDerivedType(tag: DW_TAG_member, name: "inner", scope: !329, file: !4, baseType: !332, align: 8)
@@ -381,7 +381,7 @@ attributes #1 = { "target-cpu"="generic" }
 !353 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "alloc::boxed::Box<[u8]>", file: !4, size: 128, align: 64, elements: !354, templateParams: !358, identifier: "402fa17fda502b3dfe8af04b4513434e")
 !354 = !{!355, !357}
 !355 = !DIDerivedType(tag: DW_TAG_member, name: "data_ptr", scope: !353, file: !4, baseType: !356, size: 64, align: 64)
-!356 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "*const u8", baseType: !7, size: 64, align: 64, dwarfAddressSpace: 0)
+!356 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "*const u8", baseType: !7, size: 64, align: 64, addressSpace: 0)
 !357 = !DIDerivedType(tag: DW_TAG_member, name: "length", scope: !353, file: !4, baseType: !313, size: 64, align: 64, offset: 64)
 !358 = !{!359}
 !359 = !DITemplateTypeParameter(name: "T", type: !342)

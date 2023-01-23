@@ -1218,6 +1218,14 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
             "DWARF address space only applies to pointer or reference types",
             &N);
   }
+
+  if (N.getDWARFMemorySpace() != dwarf::DW_MSPACE_LLVM_none) {
+    CheckDI(N.getTag() == dwarf::DW_TAG_pointer_type ||
+                N.getTag() == dwarf::DW_TAG_reference_type ||
+                N.getTag() == dwarf::DW_TAG_rvalue_reference_type,
+            "DWARF memory space only applies to pointer or reference types",
+            &N);
+  }
 }
 
 /// Detect mutually exclusive flags.
@@ -6355,6 +6363,9 @@ void Verifier::verifyFragmentExpression(const DIVariable &V,
   CheckDI(FragSize + FragOffset <= *VarSize,
           "fragment is larger than or outside of variable", Desc, &V);
   CheckDI(FragSize != *VarSize, "fragment covers entire variable", Desc, &V);
+
+  auto MSpace = V.getDWARFMemorySpace();
+  CheckDI(MSpace <= dwarf::DW_MSPACE_LLVM_hi_user, "invalid memory space", &V);
 }
 
 void Verifier::visitDbgDefKillIntrinsic(StringRef Kind,

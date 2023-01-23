@@ -1032,10 +1032,10 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
     //  struct Node {
     //      Node* ptr;
     //  };
-    RetType =
-        Builder.createPointerType(nullptr, Layout.getTypeSizeInBits(Ty),
-                                  Layout.getABITypeAlign(Ty).value() * CHAR_BIT,
-                                  /*DWARFAddressSpace=*/std::nullopt, Name);
+    RetType = Builder.createPointerType(
+        nullptr, Layout.getTypeSizeInBits(Ty),
+        Layout.getABITypeAlign(Ty).value() * CHAR_BIT,
+        /*DWARFAddressSpace=*/std::nullopt, dwarf::DW_MSPACE_LLVM_none, Name);
   } else if (Ty->isStructTy()) {
     auto *DIStruct = Builder.createStructType(
         Scope, Name, Scope->getFile(), LineNum, Layout.getTypeSizeInBits(Ty),

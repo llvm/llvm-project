@@ -52,7 +52,7 @@
 ; CHECK-NEXT: !25 = !{!26, !27}
 ; CHECK-NEXT: !26 = !DIMacro(type: DW_MACINFO_define, name: "SIMPLE_DEFINE")
 ; CHECK-NEXT: !27 = !DIMacro(type: DW_MACINFO_define, name: "VALUE_DEFINE", value: "1")
-; CHECK-NEXT: !28 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !29, size: 192, dwarfAddressSpace: 0)
+; CHECK-NEXT: !28 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !29, size: 192, addressSpace: 0)
 ; CHECK-NEXT: !29 = !DICompositeType(tag: DW_TAG_structure_type, name: "MyStruct", scope: !4, file: !1, size: 192, elements: !30, runtimeLang: DW_LANG_C89, identifier: "MyStruct")
 ; CHECK-NEXT: !30 = !{!6, !6, !6}
 ; CHECK-NEXT: !31 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 42, type: !32, scopeLine: 42, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0, retainedNodes: !37)

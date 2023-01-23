@@ -274,8 +274,9 @@ TEST(DIBuilder, CreateStringType) {
       DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
   DIFile *F = DIB.createFile("main.c", "/");
   StringRef StrName = "string";
-  DIVariable *StringLen = DIB.createAutoVariable(Scope, StrName, F, 0, nullptr,
-                                                 false, DINode::FlagZero, 0);
+  DIVariable *StringLen =
+      DIB.createAutoVariable(Scope, StrName, F, 0, nullptr, false,
+                             DINode::FlagZero, dwarf::DW_MSPACE_LLVM_none, 0);
   auto getDIExpression = [&DIB](int offset) {
     SmallVector<uint64_t, 4> ops;
     ops.push_back(llvm::dwarf::DW_OP_push_object_address);

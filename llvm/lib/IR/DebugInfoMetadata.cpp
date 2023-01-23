@@ -662,23 +662,22 @@ Constant *DIDerivedType::getDiscriminantValue() const {
   return nullptr;
 }
 
-DIDerivedType *
-DIDerivedType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
-                       Metadata *File, unsigned Line, Metadata *Scope,
-                       Metadata *BaseType, uint64_t SizeInBits,
-                       uint32_t AlignInBits, uint64_t OffsetInBits,
-                       std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-                       Metadata *ExtraData, Metadata *Annotations,
-                       StorageType Storage, bool ShouldCreate) {
+DIDerivedType *DIDerivedType::getImpl(
+    LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
+    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+    uint32_t AlignInBits, uint64_t OffsetInBits,
+    std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
+    DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
+    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                         AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
-                         ExtraData, Annotations));
+                         AlignInBits, OffsetInBits, DWARFAddressSpace, MS,
+                         Flags, ExtraData, Annotations));
   Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
   DEFINE_GETIMPL_STORE(DIDerivedType,
                        (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
-                        DWARFAddressSpace, Flags),
+                        DWARFAddressSpace, MS, Flags),
                        Ops);
 }
 
@@ -1193,15 +1192,16 @@ DIGlobalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                           MDString *LinkageName, Metadata *File, unsigned Line,
                           Metadata *Type, bool IsLocalToUnit, bool IsDefinition,
                           Metadata *StaticDataMemberDeclaration,
-                          Metadata *TemplateParams, uint32_t AlignInBits,
-                          Metadata *Annotations, StorageType Storage,
-                          bool ShouldCreate) {
+                          Metadata *TemplateParams, dwarf::MemorySpace MS,
+                          uint32_t AlignInBits, Metadata *Annotations,
+                          StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(
-      DIGlobalVariable,
-      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
-       StaticDataMemberDeclaration, TemplateParams, AlignInBits, Annotations));
+  DEFINE_GETIMPL_LOOKUP(DIGlobalVariable,
+                        (Scope, Name, LinkageName, File, Line, Type,
+                         IsLocalToUnit, IsDefinition,
+                         StaticDataMemberDeclaration, TemplateParams, MS,
+                         AlignInBits, Annotations));
   Metadata *Ops[] = {Scope,
                      Name,
                      File,
@@ -1212,24 +1212,26 @@ DIGlobalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                      TemplateParams,
                      Annotations};
   DEFINE_GETIMPL_STORE(DIGlobalVariable,
-                       (Line, IsLocalToUnit, IsDefinition, AlignInBits), Ops);
+                       (Line, IsLocalToUnit, IsDefinition, MS, AlignInBits),
+                       Ops);
 }
 
 DILocalVariable *
 DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                          Metadata *File, unsigned Line, Metadata *Type,
-                         unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
-                         Metadata *Annotations, StorageType Storage,
-                         bool ShouldCreate) {
+                         unsigned Arg, DIFlags Flags, dwarf::MemorySpace MS,
+                         uint32_t AlignInBits, Metadata *Annotations,
+                         StorageType Storage, bool ShouldCreate) {
   // 64K ought to be enough for any frontend.
   assert(Arg <= UINT16_MAX && "Expected argument number to fit in 16-bits");
 
   assert(Scope && "Expected scope");
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DILocalVariable, (Scope, Name, File, Line, Type, Arg,
-                                          Flags, AlignInBits, Annotations));
+                                          Flags, MS, AlignInBits, Annotations));
   Metadata *Ops[] = {Scope, Name, File, Type, Annotations};
-  DEFINE_GETIMPL_STORE(DILocalVariable, (Line, Arg, Flags, AlignInBits), Ops);
+  DEFINE_GETIMPL_STORE(DILocalVariable, (Line, Arg, Flags, MS, AlignInBits),
+                       Ops);
 }
 
 DIFragment::DIFragment(LLVMContext &C, StorageType Storage)
@@ -1244,9 +1246,9 @@ DIFragment *DIFragment::getImpl(LLVMContext &Context, StorageType Storage) {
 
 DIVariable::DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
                        signed Line, ArrayRef<Metadata *> Ops,
-                       uint32_t AlignInBits)
+                       dwarf::MemorySpace MS, uint32_t AlignInBits)
     : DIObject(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
-      AlignInBits(AlignInBits) {}
+      AlignInBits(AlignInBits), MemorySpace(MS) {}
 
 std::optional<uint64_t> DIVariable::getSizeInBits() const {
   // This is used by the Verifier so be mindful of broken types.

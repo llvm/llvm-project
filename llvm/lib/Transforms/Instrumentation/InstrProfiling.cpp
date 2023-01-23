@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -1029,8 +1030,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
           SP, CounterPtr->getName(), /*LinkageName=*/StringRef(), SP->getFile(),
           /*LineNo=*/0, DB.createUnspecifiedType("Profile Data Type"),
           CounterPtr->hasLocalLinkage(), /*IsDefined=*/true, /*Expr=*/nullptr,
-          /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
-          Annotations);
+          /*Decl=*/nullptr, /*TemplateParams=*/nullptr,
+          llvm::dwarf::DW_MSPACE_LLVM_none, /*AlignInBits=*/0, Annotations);
       CounterPtr->addDebugInfo(DICounter);
       DB.finalize();
     } else {

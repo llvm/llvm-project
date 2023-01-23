@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
@@ -989,41 +990,43 @@ class DIDerivedType : public DIType {
   /// The DWARF address space of the memory pointed to or referenced by a
   /// pointer or reference type respectively.
   std::optional<unsigned> DWARFAddressSpace;
+  dwarf::MemorySpace DWARFMemorySpace;
 
   DIDerivedType(LLVMContext &C, StorageType Storage, unsigned Tag,
                 unsigned Line, uint64_t SizeInBits, uint32_t AlignInBits,
                 uint64_t OffsetInBits,
-                std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-                ArrayRef<Metadata *> Ops)
+                std::optional<unsigned> DWARFAddressSpace,
+                dwarf::MemorySpace MS, DIFlags Flags, ArrayRef<Metadata *> Ops)
       : DIType(C, DIDerivedTypeKind, Storage, Tag, Line, SizeInBits,
                AlignInBits, OffsetInBits, Flags, Ops),
-        DWARFAddressSpace(DWARFAddressSpace) {}
+        DWARFAddressSpace(DWARFAddressSpace), DWARFMemorySpace(MS) {}
   ~DIDerivedType() = default;
   static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, DIFile *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
           uint32_t AlignInBits, uint64_t OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-          Metadata *ExtraData, DINodeArray Annotations, StorageType Storage,
-          bool ShouldCreate = true) {
+          std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
+          DIFlags Flags, Metadata *ExtraData, DINodeArray Annotations,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
-                   DWARFAddressSpace, Flags, ExtraData, Annotations.get(),
+                   DWARFAddressSpace, MS, Flags, ExtraData, Annotations.get(),
                    Storage, ShouldCreate);
   }
   static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-          Metadata *ExtraData, Metadata *Annotations, StorageType Storage,
-          bool ShouldCreate = true);
+          std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
+          DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIDerivedType cloneImpl() const {
-    return getTemporary(
-        getContext(), getTag(), getName(), getFile(), getLine(), getScope(),
-        getBaseType(), getSizeInBits(), getAlignInBits(), getOffsetInBits(),
-        getDWARFAddressSpace(), getFlags(), getExtraData(), getAnnotations());
+    return getTemporary(getContext(), getTag(), getName(), getFile(), getLine(),
+                        getScope(), getBaseType(), getSizeInBits(),
+                        getAlignInBits(), getOffsetInBits(),
+                        getDWARFAddressSpace(), getDWARFMemorySpace(),
+                        getFlags(), getExtraData(), getAnnotations());
   }
 
 public:
@@ -1032,19 +1035,21 @@ public:
       (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
        Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
        uint32_t AlignInBits, uint64_t OffsetInBits,
-       std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-       Metadata *ExtraData = nullptr, Metadata *Annotations = nullptr),
+       std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
+       DIFlags Flags, Metadata *ExtraData = nullptr,
+       Metadata *Annotations = nullptr),
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
-       OffsetInBits, DWARFAddressSpace, Flags, ExtraData, Annotations))
+       OffsetInBits, DWARFAddressSpace, MS, Flags, ExtraData, Annotations))
   DEFINE_MDNODE_GET(DIDerivedType,
                     (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
                      DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
                      uint32_t AlignInBits, uint64_t OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
+                     std::optional<unsigned> DWARFAddressSpace,
+                     dwarf::MemorySpace MS, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      DINodeArray Annotations = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, MS, Flags,
                      ExtraData, Annotations))
 
   TempDIDerivedType clone() const { return cloneImpl(); }
@@ -1058,6 +1063,10 @@ public:
   std::optional<unsigned> getDWARFAddressSpace() const {
     return DWARFAddressSpace;
   }
+
+  /// \returns The DWARF memory space of the memory pointed to or referenced by
+  /// a pointer or reference type respectively.
+  dwarf::MemorySpace getDWARFMemorySpace() const { return DWARFMemorySpace; }
 
   /// Get extra data associated with this derived type.
   ///
@@ -2619,10 +2628,12 @@ public:
 class DIVariable : public DIObject {
   unsigned Line;
   uint32_t AlignInBits;
+  dwarf::MemorySpace MemorySpace;
 
 protected:
   DIVariable(LLVMContext &C, unsigned ID, StorageType Storage, signed Line,
-             ArrayRef<Metadata *> Ops, uint32_t AlignInBits = 0);
+             ArrayRef<Metadata *> Ops, dwarf::MemorySpace MS,
+             uint32_t AlignInBits = 0);
   ~DIVariable() = default;
 
 public:
@@ -2661,6 +2672,9 @@ public:
       return F->getSource();
     return std::nullopt;
   }
+
+  /// \returns The DWARF memory space in which the variable resides.
+  dwarf::MemorySpace getDWARFMemorySpace() const { return MemorySpace; }
 
   Metadata *getRawScope() const { return getOperand(0); }
   MDString *getRawName() const { return getOperandAs<MDString>(1); }
@@ -3375,9 +3389,10 @@ class DIGlobalVariable : public DIVariable {
   bool IsDefinition;
 
   DIGlobalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
-                   bool IsLocalToUnit, bool IsDefinition, uint32_t AlignInBits,
-                   ArrayRef<Metadata *> Ops)
-      : DIVariable(C, DIGlobalVariableKind, Storage, Line, Ops, AlignInBits),
+                   bool IsLocalToUnit, bool IsDefinition, dwarf::MemorySpace MS,
+                   uint32_t AlignInBits, ArrayRef<Metadata *> Ops)
+      : DIVariable(C, DIGlobalVariableKind, Storage, Line, Ops, MS,
+                   AlignInBits),
         IsLocalToUnit(IsLocalToUnit), IsDefinition(IsDefinition) {}
   ~DIGlobalVariable() = default;
 
@@ -3386,12 +3401,12 @@ class DIGlobalVariable : public DIVariable {
           StringRef LinkageName, DIFile *File, unsigned Line, DIType *Type,
           bool IsLocalToUnit, bool IsDefinition,
           DIDerivedType *StaticDataMemberDeclaration, MDTuple *TemplateParams,
-          uint32_t AlignInBits, DINodeArray Annotations, StorageType Storage,
-          bool ShouldCreate = true) {
+          dwarf::MemorySpace MS, uint32_t AlignInBits, DINodeArray Annotations,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
                    IsLocalToUnit, IsDefinition, StaticDataMemberDeclaration,
-                   cast_or_null<Metadata>(TemplateParams), AlignInBits,
+                   cast_or_null<Metadata>(TemplateParams), MS, AlignInBits,
                    Annotations.get(), Storage, ShouldCreate);
   }
   static DIGlobalVariable *
@@ -3399,34 +3414,38 @@ class DIGlobalVariable : public DIVariable {
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
           bool IsLocalToUnit, bool IsDefinition,
           Metadata *StaticDataMemberDeclaration, Metadata *TemplateParams,
-          uint32_t AlignInBits, Metadata *Annotations, StorageType Storage,
-          bool ShouldCreate = true);
+          dwarf::MemorySpace MS, uint32_t AlignInBits, Metadata *Annotations,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIGlobalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
                         getFile(), getLine(), getType(), isLocalToUnit(),
                         isDefinition(), getStaticDataMemberDeclaration(),
-                        getTemplateParams(), getAlignInBits(),
-                        getAnnotations());
+                        getTemplateParams(), getDWARFMemorySpace(),
+                        getAlignInBits(), getAnnotations());
   }
 
 public:
-  DEFINE_MDNODE_GET(
-      DIGlobalVariable,
-      (DIScope * Scope, StringRef Name, StringRef LinkageName, DIFile *File,
-       unsigned Line, DIType *Type, bool IsLocalToUnit, bool IsDefinition,
-       DIDerivedType *StaticDataMemberDeclaration, MDTuple *TemplateParams,
-       uint32_t AlignInBits, DINodeArray Annotations),
-      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
-       StaticDataMemberDeclaration, TemplateParams, AlignInBits, Annotations))
-  DEFINE_MDNODE_GET(
-      DIGlobalVariable,
-      (Metadata * Scope, MDString *Name, MDString *LinkageName, Metadata *File,
-       unsigned Line, Metadata *Type, bool IsLocalToUnit, bool IsDefinition,
-       Metadata *StaticDataMemberDeclaration, Metadata *TemplateParams,
-       uint32_t AlignInBits, Metadata *Annotations),
-      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
-       StaticDataMemberDeclaration, TemplateParams, AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DIGlobalVariable,
+                    (DIScope * Scope, StringRef Name, StringRef LinkageName,
+                     DIFile *File, unsigned Line, DIType *Type,
+                     bool IsLocalToUnit, bool IsDefinition,
+                     DIDerivedType *StaticDataMemberDeclaration,
+                     MDTuple *TemplateParams, dwarf::MemorySpace MS,
+                     uint32_t AlignInBits, DINodeArray Annotations),
+                    (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
+                     IsDefinition, StaticDataMemberDeclaration, TemplateParams,
+                     MS, AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DIGlobalVariable,
+                    (Metadata * Scope, MDString *Name, MDString *LinkageName,
+                     Metadata *File, unsigned Line, Metadata *Type,
+                     bool IsLocalToUnit, bool IsDefinition,
+                     Metadata *StaticDataMemberDeclaration,
+                     Metadata *TemplateParams, dwarf::MemorySpace MS,
+                     uint32_t AlignInBits, Metadata *Annotations),
+                    (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
+                     IsDefinition, StaticDataMemberDeclaration, TemplateParams,
+                     MS, AlignInBits, Annotations))
 
   TempDIGlobalVariable clone() const { return cloneImpl(); }
 
@@ -3519,9 +3538,9 @@ class DILocalVariable : public DIVariable {
   DIFlags Flags;
 
   DILocalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
-                  unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
-                  ArrayRef<Metadata *> Ops)
-      : DIVariable(C, DILocalVariableKind, Storage, Line, Ops, AlignInBits),
+                  unsigned Arg, DIFlags Flags, dwarf::MemorySpace MS,
+                  uint32_t AlignInBits, ArrayRef<Metadata *> Ops)
+      : DIVariable(C, DILocalVariableKind, Storage, Line, Ops, MS, AlignInBits),
         Arg(Arg), Flags(Flags) {
     assert(Arg < (1 << 16) && "DILocalVariable: Arg out of range");
   }
@@ -3530,38 +3549,41 @@ class DILocalVariable : public DIVariable {
   static DILocalVariable *getImpl(LLVMContext &Context, DIScope *Scope,
                                   StringRef Name, DIFile *File, unsigned Line,
                                   DIType *Type, unsigned Arg, DIFlags Flags,
-                                  uint32_t AlignInBits, DINodeArray Annotations,
-                                  StorageType Storage,
+                                  dwarf::MemorySpace MS, uint32_t AlignInBits,
+                                  DINodeArray Annotations, StorageType Storage,
                                   bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name), File,
-                   Line, Type, Arg, Flags, AlignInBits, Annotations.get(),
+                   Line, Type, Arg, Flags, MS, AlignInBits, Annotations.get(),
                    Storage, ShouldCreate);
   }
   static DILocalVariable *getImpl(LLVMContext &Context, Metadata *Scope,
                                   MDString *Name, Metadata *File, unsigned Line,
                                   Metadata *Type, unsigned Arg, DIFlags Flags,
-                                  uint32_t AlignInBits, Metadata *Annotations,
-                                  StorageType Storage,
+                                  dwarf::MemorySpace MS, uint32_t AlignInBits,
+                                  Metadata *Annotations, StorageType Storage,
                                   bool ShouldCreate = true);
 
   TempDILocalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),
                         getLine(), getType(), getArg(), getFlags(),
-                        getAlignInBits(), getAnnotations());
+                        getDWARFMemorySpace(), getAlignInBits(),
+                        getAnnotations());
   }
 
 public:
   DEFINE_MDNODE_GET(DILocalVariable,
                     (DILocalScope * Scope, StringRef Name, DIFile *File,
                      unsigned Line, DIType *Type, unsigned Arg, DIFlags Flags,
-                     uint32_t AlignInBits, DINodeArray Annotations),
-                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
+                     dwarf::MemorySpace MS, uint32_t AlignInBits,
+                     DINodeArray Annotations),
+                    (Scope, Name, File, Line, Type, Arg, Flags, MS, AlignInBits,
                      Annotations))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (Metadata * Scope, MDString *Name, Metadata *File,
                      unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
-                     uint32_t AlignInBits, Metadata *Annotations),
-                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
+                     dwarf::MemorySpace MS, uint32_t AlignInBits,
+                     Metadata *Annotations),
+                    (Scope, Name, File, Line, Type, Arg, Flags, MS, AlignInBits,
                      Annotations))
 
   TempDILocalVariable clone() const { return cloneImpl(); }
