@@ -939,7 +939,7 @@ std::optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
     return getElementIndex(getTypeAllocSize(ElemTy), Offset);
   }
 
-  if (auto *VecTy = dyn_cast<VectorType>(ElemTy)) {
+  if (isa<VectorType>(ElemTy)) {
     // Vector GEPs are partially broken (e.g. for overaligned element types),
     // and may be forbidden in the future, so avoid generating GEPs into
     // vectors. See https://discourse.llvm.org/t/67497
