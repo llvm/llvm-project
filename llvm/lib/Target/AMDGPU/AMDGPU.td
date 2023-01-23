@@ -355,6 +355,12 @@ def FeatureGFX12Insts : SubtargetFeature<"gfx12-insts",
   "Additional instructions for GFX12+"
 >;
 
+def FeatureGFX12_10Insts : SubtargetFeature<"gfx12-10-insts",
+  "GFX12_10Insts",
+  "true",
+  "Additional instructions for GFX1210+"
+>;
+
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
   "GFX10_3Insts",
   "true",
@@ -1439,6 +1445,23 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeatureExtendedImageInsts,
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard,
+   FeatureSALUFloatInsts,
+   FeaturePseudoScalarTrans]>;
+
+def FeatureISAVersion12_10 : FeatureSet<
+  [FeatureGFX12,
+   FeatureGFX12_10Insts,
+   FeatureLDSBankCount32, // TODO-GFX1210: redefine
+   FeatureDLInsts,
+   FeatureDot7Insts,
+   FeatureDot8Insts,
+   FeatureWavefrontSize32,
+   FeatureShaderCyclesRegister,
+   FeatureArchitectedFlatScratch,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,

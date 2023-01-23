@@ -122,6 +122,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
   {{"gfx1103"},   {"gfx1103"}, GK_GFX1103, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1150"},   {"gfx1150"}, GK_GFX1150, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+  {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
 };
 
 const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
@@ -243,6 +244,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1103: return {11, 0, 3};
   case GK_GFX1150: return {11, 5, 0};
   case GK_GFX1200: return {12, 0, 0};
+  case GK_GFX1210: return {12, 1, 0};
   default:         return {0, 0, 0};
   }
 }

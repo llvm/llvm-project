@@ -47,6 +47,7 @@
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1103 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1103 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1150 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1150 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1200 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1200 %s
+// RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1210 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1210 %s
 
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx1103 -target-feature +wavefrontsize64 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX1103-W64 %s
 
@@ -95,5 +96,6 @@
 // GFX1103-W64: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot10-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize64"
 // GFX1150: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot10-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
 // GFX1200: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dot9-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
+// GFX1210: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx12-10-insts,+gfx12-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
 
 kernel void test() {}

@@ -187,6 +187,22 @@ bool AMDGPUTargetInfo::initFeatureMap(
   // XXX - What does the member GPU mean if device name string passed here?
   if (isAMDGCN(getTriple())) {
     switch (llvm::AMDGPU::parseArchAMDGCN(CPU)) {
+    case GK_GFX1210:
+      IsWave32Capable = true;
+      Features["ci-insts"] = true;
+      Features["dot7-insts"] = true;
+      Features["dot8-insts"] = true;
+      Features["dl-insts"] = true;
+      Features["16-bit-insts"] = true;
+      Features["dpp"] = true;
+      Features["gfx8-insts"] = true;
+      Features["gfx9-insts"] = true;
+      Features["gfx10-insts"] = true;
+      Features["gfx10-3-insts"] = true;
+      Features["gfx11-insts"] = true;
+      Features["gfx12-insts"] = true;
+      Features["gfx12-10-insts"] = true;
+      break;
     case GK_GFX1200:
       IsWave32Capable = true;
       Features["ci-insts"] = true;
