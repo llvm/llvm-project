@@ -11,7 +11,6 @@
 
 #include "src/__support/architectures.h"
 #include "src/__support/common.h"
-#include "src/__support/cpu_features.h"
 
 #if !defined(LLVM_LIBC_ARCH_X86_64)
 #error "Invalid include"

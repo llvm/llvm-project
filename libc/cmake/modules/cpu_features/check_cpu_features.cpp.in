@@ -1,0 +1,32 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+// This file is instantiated by CMake.
+// DEFINITIONS below is replaced with a set of lines like so:
+//   #ifdef __SSE2__
+//     "SSE2",
+//   #endif
+//
+// This allows for introspection of compiler definitions.
+// The output of the program is a single line of semi colon separated feature
+// names.
+
+// MSVC is using a different set of preprocessor definitions for 
+// SSE and SSE2, see _M_IX86_FP in
+// https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros
+
+int main(int, char **) {
+  const char *strings[] = {
+      @DEFINITIONS@
+      // If DEFINITIONS turns out to be empty, we don't want to list
+      // an empty array. So, we add an end of list marker.
+      "<end_of_feature_list>"
+  };
+  const size_t size = sizeof(strings) / sizeof(strings[0]);
+  for (size_t i = 0; i < size; ++i) {
+    if (i)
+      putchar(';');
+    fputs(strings[i], stdout);
+  }
+  return EXIT_SUCCESS;
+}
