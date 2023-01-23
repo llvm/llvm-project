@@ -1339,10 +1339,10 @@ py::object PyOperation::createOpView() {
   checkValid();
   MlirIdentifier ident = mlirOperationGetName(get());
   MlirStringRef identStr = mlirIdentifierStr(ident);
-  auto opViewClass = PyGlobals::get().lookupRawOpViewClass(
+  auto operationCls = PyGlobals::get().lookupOperationClass(
       StringRef(identStr.data, identStr.length));
-  if (opViewClass)
-    return (*opViewClass)(getRef().getObject());
+  if (operationCls)
+    return PyOpView::constructDerived(*operationCls, *getRef().get());
   return py::cast(PyOpView(getRef().getObject()));
 }
 
@@ -1618,46 +1618,22 @@ PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
                              /*regions=*/*regions, location, maybeIp);
 }
 
+pybind11::object PyOpView::constructDerived(const pybind11::object &cls,
+                                            const PyOperation &operation) {
+  // TODO: pybind11 2.6 supports a more direct form.
+  // Upgrade many years from now.
+  //   auto opViewType = py::type::of<PyOpView>();
+  py::handle opViewType = py::detail::get_type_handle(typeid(PyOpView), true);
+  py::object instance = cls.attr("__new__")(cls);
+  opViewType.attr("__init__")(instance, operation);
+  return instance;
+}
+
 PyOpView::PyOpView(const py::object &operationObject)
     // Casting through the PyOperationBase base-class and then back to the
     // Operation lets us accept any PyOperationBase subclass.
     : operation(py::cast<PyOperationBase &>(operationObject).getOperation()),
       operationObject(operation.getRef().getObject()) {}
-
-py::object PyOpView::createRawSubclass(const py::object &userClass) {
-  // This is... a little gross. The typical pattern is to have a pure python
-  // class that extends OpView like:
-  //   class AddFOp(_cext.ir.OpView):
-  //     def __init__(self, loc, lhs, rhs):
-  //       operation = loc.context.create_operation(
-  //           "addf", lhs, rhs, results=[lhs.type])
-  //       super().__init__(operation)
-  //
-  // I.e. The goal of the user facing type is to provide a nice constructor
-  // that has complete freedom for the op under construction. This is at odds
-  // with our other desire to sometimes create this object by just passing an
-  // operation (to initialize the base class). We could do *arg and **kwargs
-  // munging to try to make it work, but instead, we synthesize a new class
-  // on the fly which extends this user class (AddFOp in this example) and
-  // *give it* the base class's __init__ method, thus bypassing the
-  // intermediate subclass's __init__ method entirely. While slightly,
-  // underhanded, this is safe/legal because the type hierarchy has not changed
-  // (we just added a new leaf) and we aren't mucking around with __new__.
-  // Typically, this new class will be stored on the original as "_Raw" and will
-  // be used for casts and other things that need a variant of the class that
-  // is initialized purely from an operation.
-  py::object parentMetaclass =
-      py::reinterpret_borrow<py::object>((PyObject *)&PyType_Type);
-  py::dict attributes;
-  // TODO: pybind11 2.6 supports a more direct form. Upgrade many years from
-  // now.
-  //   auto opViewType = py::type::of<PyOpView>();
-  auto opViewType = py::detail::get_type_handle(typeid(PyOpView), true);
-  attributes["__init__"] = opViewType.attr("__init__");
-  py::str origName = userClass.attr("__name__");
-  py::str newName = py::str("_") + origName;
-  return parentMetaclass(newName, py::make_tuple(userClass), attributes);
-}
 
 //------------------------------------------------------------------------------
 // PyInsertionPoint.
@@ -2863,7 +2839,7 @@ void mlir::python::populateIRCore(py::module &m) {
           throw py::value_error(
               "Expected a '" + clsOpName + "' op, got: '" +
               std::string(parsedOpName.data, parsedOpName.length) + "'");
-        return cls.attr("_Raw")(parsed.getObject());
+        return PyOpView::constructDerived(cls, *parsed.get());
       },
       py::arg("cls"), py::arg("source"), py::kw_only(),
       py::arg("source_name") = "", py::arg("context") = py::none(),
