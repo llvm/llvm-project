@@ -140,10 +140,14 @@ Changes to the AMDGPU Backend
 Changes to the ARM Backend
 --------------------------
 
-* Support for targeting armv2, armv2A, armv3 and armv3M has been removed.
+* Support for targeting Armv2, Armv2A, Armv3 and Armv3M has been removed.
   LLVM did not, and was not ever likely to generate correct code for those
   architecture versions so their presence was misleading.
 * Added codegen support for the complex arithmetic instructions in MVE.
+* Added Armv4 and Armv4T compatible thunks. LLD will no longer generate BX
+  instructions for Armv4 or BLX instructions for either Armv4 or Armv4T. Armv4T
+  is now fully supported.
+* Added compiler-rt builtins support for Armv4T, Armv5TE and Armv6.
 
 Changes to the AVR Backend
 --------------------------
