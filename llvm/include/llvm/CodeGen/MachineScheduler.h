@@ -374,6 +374,9 @@ protected:
 
   /// dump the scheduled Sequence.
   void dumpSchedule() const;
+  /// Print execution trace of the schedule top-down or bottom-up.
+  void dumpScheduleTraceTopDown() const;
+  void dumpScheduleTraceBottomUp() const;
 
   // Lesser helpers...
   bool checkSchedLimit();
