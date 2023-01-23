@@ -48,7 +48,9 @@
 #include "hsa.h"
 #include "hsa_ext_amd.h"
 #endif
+#else
 #include "hsa/hsa.h"
+#include "hsa_ext_amd.h"
 #endif
 
 namespace llvm {
