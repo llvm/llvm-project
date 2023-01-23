@@ -1021,8 +1021,8 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
     countOperands(Node, II.getNumOperands() - NumDefs, NumImpUses);
   bool HasVRegVariadicDefs = !MF->getTarget().usesPhysRegsForValues() &&
                              II.isVariadic() && II.variadicOpsAreDefs();
-  bool HasPhysRegOuts = NumResults > NumDefs &&
-                        II.getImplicitDefs() != nullptr && !HasVRegVariadicDefs;
+  bool HasPhysRegOuts = NumResults > NumDefs && !II.implicit_defs().empty() &&
+                        !HasVRegVariadicDefs;
 #ifndef NDEBUG
   unsigned NumMIOperands = NodeOperands + NumResults;
   if (II.isVariadic())
@@ -1030,8 +1030,8 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
            "Too few operands for a variadic node!");
   else
     assert(NumMIOperands >= II.getNumOperands() &&
-           NumMIOperands <= II.getNumOperands() + II.getNumImplicitDefs() +
-                            NumImpUses &&
+           NumMIOperands <=
+               II.getNumOperands() + II.implicit_defs().size() + NumImpUses &&
            "#operands for dag node doesn't match .td file!");
 #endif
 
@@ -1128,7 +1128,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   // Additional results must be physical register defs.
   if (HasPhysRegOuts) {
     for (unsigned i = NumDefs; i < NumResults; ++i) {
-      Register Reg = II.getImplicitDefs()[i - NumDefs];
+      Register Reg = II.implicit_defs()[i - NumDefs];
       if (!Node->hasAnyUseOfValue(i))
         continue;
       // This implicitly defined physreg has a use.
@@ -1149,8 +1149,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       }
       // Collect declared implicit uses.
       const MCInstrDesc &MCID = TII->get(F->getMachineOpcode());
-      UsedRegs.append(MCID.getImplicitUses(),
-                      MCID.getImplicitUses() + MCID.getNumImplicitUses());
+      append_range(UsedRegs, MCID.implicit_uses());
       // In addition to declared implicit uses, we must also check for
       // direct RegisterSDNode operands.
       for (unsigned i = 0, e = F->getNumOperands(); i != e; ++i)
@@ -1163,7 +1162,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   }
 
   // Finally mark unused registers as dead.
-  if (!UsedRegs.empty() || II.getImplicitDefs() || II.hasOptionalDef())
+  if (!UsedRegs.empty() || !II.implicit_defs().empty() || II.hasOptionalDef())
     MIB->setPhysRegsDeadExcept(UsedRegs, *TRI);
 
   // STATEPOINT is too 'dynamic' to have meaningful machine description.

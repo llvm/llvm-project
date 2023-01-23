@@ -592,7 +592,7 @@ public:
 
   /// Returns the total number of definitions.
   unsigned getNumDefs() const {
-    return getNumExplicitDefs() + MCID->getNumImplicitDefs();
+    return getNumExplicitDefs() + MCID->implicit_defs().size();
   }
 
   /// Returns true if the instruction has implicit definition.

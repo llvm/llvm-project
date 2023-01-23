@@ -789,6 +789,41 @@ module polymorphic_test
 ! CHECK: %[[ARG:.*]] = arith.select %[[IS_ALLOCATED_OR_ASSOCIATED]], %[[CLASS_NONE]], %[[ABSENT]] : !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPsub_with_poly_optional(%[[ARG]]) {{.*}} : (!fir.class<none>) -> ()
 
+  subroutine sub_with_poly_array_optional(a)
+    class(*), optional :: a(:)
+  end subroutine
+
+  subroutine test_call_with_pointer_to_optional()
+    real, pointer :: p(:)
+    call sub_with_poly_array_optional(p)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_call_with_pointer_to_optional() {
+! CHECK: %[[P:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = "p", uniq_name = "_QMpolymorphic_testFtest_call_with_pointer_to_optionalEp"}
+! CHECK: %[[IS_ALLOCATED_OR_ASSOCIATED:.*]] = arith.cmpi ne
+! CHECK: %[[ABSENT:.*]] = fir.absent !fir.class<!fir.array<?xnone>>
+! CHECK: %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD_P]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.class<!fir.array<?xnone>>
+! CHECK: %[[ARG:.*]] = arith.select %[[IS_ALLOCATED_OR_ASSOCIATED]], %[[REBOX]], %[[ABSENT]] : !fir.class<!fir.array<?xnone>>
+! CHECK: fir.call @_QMpolymorphic_testPsub_with_poly_array_optional(%[[ARG]]) {{.*}} : (!fir.class<!fir.array<?xnone>>) -> ()
+
+  subroutine sub_with_real_pointer_optional(p)
+    real, optional :: p(:)
+    call sub_with_poly_array_optional(p)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPsub_with_real_pointer_optional(
+! CHECK-SAME: %[[P:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "p", fir.optional}) {
+! CHECK: %[[IS_PRESENT:.*]] = fir.is_present %[[P]] : (!fir.box<!fir.array<?xf32>>) -> i1
+! CHECK: %[[BOX:.*]] = fir.if %[[IS_PRESENT]] -> (!fir.class<!fir.array<?xnone>>) {
+! CHECK:   %[[REBOX:.*]] = fir.rebox %[[P]] : (!fir.box<!fir.array<?xf32>>) -> !fir.class<!fir.array<?xnone>>
+! CHECK:   fir.result %[[REBOX]] : !fir.class<!fir.array<?xnone>>
+! CHECK: } else {
+! CHECK:   %[[ABSENT:.*]] = fir.absent !fir.class<!fir.array<?xnone>>
+! CHECK:   fir.result %[[ABSENT]] : !fir.class<!fir.array<?xnone>>
+! CHECK: }
+! CHECK: fir.call @_QMpolymorphic_testPsub_with_poly_array_optional(%[[BOX]]) {{.*}} : (!fir.class<!fir.array<?xnone>>) -> ()
+
 end module
 
 program test
