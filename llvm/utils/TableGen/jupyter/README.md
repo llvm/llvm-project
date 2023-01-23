@@ -1,4 +1,4 @@
-A Jupyter kernel for TableGen (llvm-tblgen)
+# A Jupyter kernel for TableGen (llvm-tblgen)
 
 To use the kernel, first install it into jupyter:
 
@@ -24,7 +24,7 @@ Then run one of:
 ```
 
 If you just want to see the results of the notebook, you can read
-`LLVM_Tablegen.md` instead.
+[`LLVM_TableGen.md`](LLVM_TableGen.md) instead.
 
 `llvm-tblgen` is expected to be either in the `PATH` or you can set
 the environment variable `LLVM_TBLGEN_EXECUTABLE` to point to it directly.
