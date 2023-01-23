@@ -3829,7 +3829,7 @@ define amdgpu_ps <4 x float> @load_1d_glc(<8 x i32> inreg %rsrc, i32 %s) {
 ;
 ; GFX12-LABEL: load_1d_glc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc
+; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_LOAD_NT
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -3870,7 +3870,7 @@ define amdgpu_ps <4 x float> @load_1d_slc(<8 x i32> inreg %rsrc, i32 %s) {
 ;
 ; GFX12-LABEL: load_1d_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm slc
+; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_LOAD_HT
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -3911,7 +3911,7 @@ define amdgpu_ps <4 x float> @load_1d_glc_slc(<8 x i32> inreg %rsrc, i32 %s) {
 ;
 ; GFX12-LABEL: load_1d_glc_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc slc
+; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_LOAD_LU
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -3953,7 +3953,7 @@ define amdgpu_ps void @store_1d_glc(<8 x i32> inreg %rsrc, <4 x float> %vdata, i
 ;
 ; GFX12-LABEL: store_1d_glc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc
+; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_STORE_NT
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 main_body:
@@ -3995,7 +3995,7 @@ define amdgpu_ps void @store_1d_slc(<8 x i32> inreg %rsrc, <4 x float> %vdata, i
 ;
 ; GFX12-LABEL: store_1d_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm slc
+; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_STORE_HT
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 main_body:
@@ -4037,7 +4037,7 @@ define amdgpu_ps void @store_1d_glc_slc(<8 x i32> inreg %rsrc, <4 x float> %vdat
 ;
 ; GFX12-LABEL: store_1d_glc_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc slc
+; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_STORE_RT_WB
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 main_body:

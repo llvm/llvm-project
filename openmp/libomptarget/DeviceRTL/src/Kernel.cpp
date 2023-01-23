@@ -17,6 +17,8 @@
 #include "Synchronization.h"
 #include "Types.h"
 
+#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
+
 using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
@@ -68,7 +70,8 @@ extern "C" {
 int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
                            bool UseGenericStateMachine) {
   FunctionTracingRAII();
-  const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
+  const bool IsSPMD =
+      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   if (IsSPMD) {
     inititializeRuntime(/* IsSPMD */ true);
     synchronize::threadsAligned();
@@ -127,7 +130,8 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
 ///
 void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode) {
   FunctionTracingRAII();
-  const bool IsSPMD = Mode & OMP_TGT_EXEC_MODE_SPMD;
+  const bool IsSPMD =
+      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   state::assumeInitialState(IsSPMD);
   if (IsSPMD)
     return;

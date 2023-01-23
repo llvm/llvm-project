@@ -887,9 +887,9 @@ void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
   MCInst::iterator I = MI.begin();
   for (unsigned i = 0; i < MCID.NumOperands; ++i, ++I) {
     if (I == MI.end()) break;
-    if (MCID.OpInfo[i].isOptionalDef() &&
-        MCID.OpInfo[i].RegClass == ARM::CCRRegClassID) {
-      if (i > 0 && MCID.OpInfo[i - 1].isPredicate())
+    if (MCID.operands()[i].isOptionalDef() &&
+        MCID.operands()[i].RegClass == ARM::CCRRegClassID) {
+      if (i > 0 && MCID.operands()[i - 1].isPredicate())
         continue;
       MI.insert(I, MCOperand::createReg(InITBlock ? 0 : ARM::CPSR));
       return;
@@ -902,7 +902,7 @@ void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
 bool ARMDisassembler::isVectorPredicable(const MCInst &MI) const {
   const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
   for (unsigned i = 0; i < MCID.NumOperands; ++i) {
-    if (ARM::isVpred(MCID.OpInfo[i].OperandType))
+    if (ARM::isVpred(MCID.operands()[i].OperandType))
       return true;
   }
   return false;
@@ -981,7 +981,7 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
 
   MCInst::iterator CCI = MI.begin();
   for (unsigned i = 0; i < MCID.NumOperands; ++i, ++CCI) {
-    if (MCID.OpInfo[i].isPredicate() || CCI == MI.end())
+    if (MCID.operands()[i].isPredicate() || CCI == MI.end())
       break;
   }
 
@@ -999,7 +999,7 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
   MCInst::iterator VCCI = MI.begin();
   unsigned VCCPos;
   for (VCCPos = 0; VCCPos < MCID.NumOperands; ++VCCPos, ++VCCI) {
-    if (ARM::isVpred(MCID.OpInfo[VCCPos].OperandType) || VCCI == MI.end())
+    if (ARM::isVpred(MCID.operands()[VCCPos].OperandType) || VCCI == MI.end())
       break;
   }
 
@@ -1013,7 +1013,7 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
     ++VCCI;
     VCCI = MI.insert(VCCI, MCOperand::createReg(0));
     ++VCCI;
-    if (MCID.OpInfo[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
+    if (MCID.operands()[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
       int TiedOp = MCID.getOperandConstraint(VCCPos + 3, MCOI::TIED_TO);
       assert(TiedOp >= 0 &&
              "Inactive register in vpred_r is not tied to an output!");
@@ -1046,7 +1046,7 @@ void ARMDisassembler::UpdateThumbVFPPredicate(
   }
 
   const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
-  const MCOperandInfo *OpInfo = MCID.OpInfo;
+  ArrayRef<MCOperandInfo> OpInfo = MCID.operands();
   MCInst::iterator I = MI.begin();
   unsigned short NumOps = MCID.NumOperands;
   for (unsigned i = 0; i < NumOps; ++i, ++I) {

@@ -1204,7 +1204,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   // to FP conversion.
   const MCInstrDesc &MCID = MI.getDesc();
   for (unsigned I = 0, E = MCID.getNumOperands(); I != E; ++I) {
-    const MCOperandInfo &MCOI = MCID.OpInfo[I];
+    const MCOperandInfo &MCOI = MCID.operands()[I];
     if (MCOI.OperandType != MCOI::OPERAND_REGISTER || I == OpNum)
       continue;
     const TargetRegisterClass *RC = TRI->getRegClass(MCOI.RegClass);
@@ -1999,7 +1999,7 @@ bool SystemZInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (I >= MCID.getNumOperands())
       break;
     const MachineOperand &Op = MI.getOperand(I);
-    const MCOperandInfo &MCOI = MCID.OpInfo[I];
+    const MCOperandInfo &MCOI = MCID.operands()[I];
     // Addressing modes have register and immediate operands. Op should be a
     // register (or frame index) operand if MCOI.RegClass contains a valid
     // register class, or an immediate otherwise.

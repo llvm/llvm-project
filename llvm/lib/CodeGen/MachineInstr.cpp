@@ -84,14 +84,10 @@ static void tryToGetTargetInfo(const MachineInstr &MI,
 }
 
 void MachineInstr::addImplicitDefUseOperands(MachineFunction &MF) {
-  if (MCID->getImplicitDefs())
-    for (const MCPhysReg *ImpDefs = MCID->getImplicitDefs(); *ImpDefs;
-           ++ImpDefs)
-      addOperand(MF, MachineOperand::CreateReg(*ImpDefs, true, true));
-  if (MCID->getImplicitUses())
-    for (const MCPhysReg *ImpUses = MCID->getImplicitUses(); *ImpUses;
-           ++ImpUses)
-      addOperand(MF, MachineOperand::CreateReg(*ImpUses, false, true));
+  for (MCPhysReg ImpDef : MCID->implicit_defs())
+    addOperand(MF, MachineOperand::CreateReg(ImpDef, true, true));
+  for (MCPhysReg ImpUse : MCID->implicit_uses())
+    addOperand(MF, MachineOperand::CreateReg(ImpUse, false, true));
 }
 
 /// MachineInstr ctor - This constructor creates a MachineInstr and adds the
@@ -103,8 +99,8 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   // Reserve space for the expected number of operands.
-  if (unsigned NumOps = MCID->getNumOperands() +
-    MCID->getNumImplicitDefs() + MCID->getNumImplicitUses()) {
+  if (unsigned NumOps = MCID->getNumOperands() + MCID->implicit_defs().size() +
+                        MCID->implicit_uses().size()) {
     CapOperands = OperandCapacity::get(NumOps);
     Operands = MF.allocateOperandArray(CapOperands);
   }
@@ -1086,7 +1082,7 @@ int MachineInstr::findFirstPredOperandIdx() const {
   const MCInstrDesc &MCID = getDesc();
   if (MCID.isPredicable()) {
     for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-      if (MCID.OpInfo[i].isPredicate())
+      if (MCID.operands()[i].isPredicate())
         return i;
   }
 
@@ -1524,7 +1520,7 @@ LLT MachineInstr::getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
   if (isVariadic() || OpIdx >= getNumExplicitOperands())
     return MRI.getType(Op.getReg());
 
-  auto &OpInfo = getDesc().OpInfo[OpIdx];
+  auto &OpInfo = getDesc().operands()[OpIdx];
   if (!OpInfo.isGenericType())
     return MRI.getType(Op.getReg());
 

@@ -98,7 +98,7 @@ image_sample v[34:35], v37, s[36:43], s[64:67] dmask:0x3 dim:SQ_RSRC_IMG_1D nv
 // GFX12: encoding: [0x80,0xc0,0xc6,0xe4,0x22,0x48,0x00,0x20,0x25,0x00,0x00,0x00]
 
 // FIXME: This test is incorrect because r128 assumes a 128-bit SRSRC.
-image_sample v[38:39], [v40, v41], s[40:47], s[60:63] dmask:0xc dim:SQ_RSRC_IMG_CUBE unorm r128 a16 th:TH_LOAD_HT scope:SCOPE_DEV nv tfe lwe d16
+image_sample v[38:39], [v40, v41], s[40:47], s[60:63] dmask:0xc dim:SQ_RSRC_IMG_CUBE unorm th:TH_LOAD_HT scope:SCOPE_DEV nv r128 a16 tfe lwe d16
 // GFX12: encoding: [0xfb,0xe0,0x06,0xe7,0x26,0x51,0x28,0x1e,0x28,0x29,0x00,0x00]
 
 image_sample_d v64, [v32, v33, v34], s[4:11], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_1D

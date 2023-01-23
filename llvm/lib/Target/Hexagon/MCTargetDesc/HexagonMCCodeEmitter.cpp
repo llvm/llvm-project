@@ -642,11 +642,8 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
           Hexagon::fixup_Hexagon_GPREL16_2, Hexagon::fixup_Hexagon_GPREL16_3
         };
         assert(Shift < std::size(GPRelFixups));
-        auto UsesGP = [] (const MCInstrDesc &D) {
-          for (const MCPhysReg *U = D.getImplicitUses(); U && *U; ++U)
-            if (*U == Hexagon::GP)
-              return true;
-          return false;
+        auto UsesGP = [](const MCInstrDesc &D) {
+          return is_contained(D.implicit_uses(), Hexagon::GP);
         };
         if (UsesGP(MCID))
           FixupKind = GPRelFixups[Shift];
@@ -773,7 +770,9 @@ HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
   assert(!MO.isImm());
   if (MO.isReg()) {
     unsigned Reg = MO.getReg();
-    switch (HexagonMCInstrInfo::getDesc(MCII, MI).OpInfo[OperandNumber].RegClass) {
+    switch (HexagonMCInstrInfo::getDesc(MCII, MI)
+                .operands()[OperandNumber]
+                .RegClass) {
     case GeneralSubRegsRegClassID:
     case GeneralDoubleLow8RegsRegClassID:
       return HexagonMCInstrInfo::getDuplexRegisterNumbering(Reg);

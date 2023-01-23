@@ -222,9 +222,9 @@ unsigned TargetSchedModel::computeOperandLatency(
   // If DefIdx does not exist in the model (e.g. implicit defs), then return
   // unit latency (defaultDefLatency may be too conservative).
 #ifndef NDEBUG
-  if (SCDesc->isValid() && !DefMI->getOperand(DefOperIdx).isImplicit()
-      && !DefMI->getDesc().OpInfo[DefOperIdx].isOptionalDef()
-      && SchedModel.isComplete()) {
+  if (SCDesc->isValid() && !DefMI->getOperand(DefOperIdx).isImplicit() &&
+      !DefMI->getDesc().operands()[DefOperIdx].isOptionalDef() &&
+      SchedModel.isComplete()) {
     errs() << "DefIdx " << DefIdx << " exceeds machine model writes for "
            << *DefMI << " (Try with MCSchedModel.CompleteModel set to false)";
     llvm_unreachable("incomplete machine model");

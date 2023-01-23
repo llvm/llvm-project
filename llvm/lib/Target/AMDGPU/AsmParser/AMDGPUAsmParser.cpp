@@ -120,8 +120,6 @@ public:
     ImmTyOffset0,
     ImmTyOffset1,
     ImmTyCPol,
-    ImmTyScope,
-    ImmTyTH,
     ImmTySWZ,
     ImmTyTFE,
     ImmTyD16,
@@ -138,7 +136,6 @@ public:
     ImmTyR128A16,
     ImmTyA16,
     ImmTyLWE,
-    ImmTyNV,
     ImmTyExpTgt,
     ImmTyExpCompr,
     ImmTyExpVM,
@@ -367,7 +364,6 @@ public:
   bool isR128A16() const { return isImmTy(ImmTyR128A16); }
   bool isA16() const { return isImmTy(ImmTyA16); }
   bool isLWE() const { return isImmTy(ImmTyLWE); }
-  bool isNV() const { return isImmTy(ImmTyNV); }
   bool isOff() const { return isImmTy(ImmTyOff); }
   bool isExpTgt() const { return isImmTy(ImmTyExpTgt); }
   bool isExpVM() const { return isImmTy(ImmTyExpVM); }
@@ -383,8 +379,6 @@ public:
   bool isGDS() const { return isImmTy(ImmTyGDS); }
   bool isLDS() const { return isImmTy(ImmTyLDS); }
   bool isCPol() const { return isImmTy(ImmTyCPol); }
-  bool isScope() const { return isImmTy(ImmTyScope); }
-  bool isTH() const { return isImmTy(ImmTyTH); }
   bool isSWZ() const { return isImmTy(ImmTySWZ); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isD16() const { return isImmTy(ImmTyD16); }
@@ -1047,8 +1041,6 @@ public:
     case ImmTyOffset0: OS << "Offset0"; break;
     case ImmTyOffset1: OS << "Offset1"; break;
     case ImmTyCPol: OS << "CPol"; break;
-    case ImmTyScope: OS << "Scope"; break;
-    case ImmTyTH: OS << "TH"; break;
     case ImmTySWZ: OS << "SWZ"; break;
     case ImmTyTFE: OS << "TFE"; break;
     case ImmTyD16: OS << "D16"; break;
@@ -1072,7 +1064,6 @@ public:
     case ImmTyR128A16: OS << "R128A16"; break;
     case ImmTyA16: OS << "A16"; break;
     case ImmTyLWE: OS << "LWE"; break;
-    case ImmTyNV: OS << "NV"; break;
     case ImmTyOff: OS << "Off"; break;
     case ImmTyExpTgt: OS << "ExpTgt"; break;
     case ImmTyExpCompr: OS << "ExpCompr"; break;
@@ -1586,8 +1577,8 @@ public:
                 AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone);
   unsigned getCPolKind(StringRef Id, StringRef Mnemo, bool &Disabling) const;
   OperandMatchResultTy parseCPol(OperandVector &Operands);
-  OperandMatchResultTy parseScope(OperandVector &Operands);
-  OperandMatchResultTy parseTH(OperandVector &Operands);
+  OperandMatchResultTy parseScope(OperandVector &Operands, int64_t &TH);
+  OperandMatchResultTy parseTH(OperandVector &Operands, int64_t &Scope);
   OperandMatchResultTy parseStringWithPrefix(StringRef Prefix,
                                              StringRef &Value,
                                              SMLoc &StringLoc);
@@ -1707,7 +1698,7 @@ private:
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
   bool validateTHandScopeBits(const MCInst &Inst, const OperandVector &Operands,
-                              const SMLoc &IDLoc);
+                              const unsigned CPol);
   bool validateExeczVcczOperands(const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
   std::optional<StringRef> validateLdsDirect(const MCInst &Inst);
@@ -1784,9 +1775,6 @@ public:
   void cvtMtbuf(MCInst &Inst, const OperandVector &Operands);
 
   AMDGPUOperand::Ptr defaultCPol() const;
-  AMDGPUOperand::Ptr defaultScope() const;
-  AMDGPUOperand::Ptr defaultTH() const;
-  AMDGPUOperand::Ptr defaultNV() const;
 
   AMDGPUOperand::Ptr defaultSMRDOffset8() const;
   AMDGPUOperand::Ptr defaultSMEMOffset() const;
@@ -2161,7 +2149,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   }
 
   APInt Literal(64, Val);
-  uint8_t OpTy = InstDesc.OpInfo[OpNum].OperandType;
+  uint8_t OpTy = InstDesc.operands()[OpNum].OperandType;
 
   if (Imm.IsFPImm) { // We got fp literal token
     switch (OpTy) {
@@ -3431,9 +3419,7 @@ StringRef AMDGPUAsmParser::getMatchedVariantName() const {
 
 unsigned AMDGPUAsmParser::findImplicitSGPRReadInVOP(const MCInst &Inst) const {
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
-  const unsigned Num = Desc.getNumImplicitUses();
-  for (unsigned i = 0; i < Num; ++i) {
-    unsigned Reg = Desc.getImplicitUses()[i];
+  for (MCPhysReg Reg : Desc.implicit_uses()) {
     switch (Reg) {
     case AMDGPU::FLAT_SCR:
     case AMDGPU::VCC:
@@ -3472,7 +3458,7 @@ bool AMDGPUAsmParser::isInlineConstant(const MCInst &Inst,
   case 4:
     return AMDGPU::isInlinableLiteral32(Val, hasInv2PiInlineImm());
   case 2: {
-    const unsigned OperandType = Desc.OpInfo[OpIdx].OperandType;
+    const unsigned OperandType = Desc.operands()[OpIdx].OperandType;
     if (OperandType == AMDGPU::OPERAND_REG_IMM_INT16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_C_INT16 ||
         OperandType == AMDGPU::OPERAND_REG_INLINE_AC_INT16)
@@ -3615,7 +3601,7 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
         }
       } else { // Expression or a literal
 
-        if (Desc.OpInfo[OpIdx].OperandType == MCOI::OPERAND_IMMEDIATE)
+        if (Desc.operands()[OpIdx].OperandType == MCOI::OPERAND_IMMEDIATE)
           continue; // special operand like VINTERP attr_chan
 
         // An instruction may use only one literal.
@@ -3997,7 +3983,7 @@ bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
     return true;
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  if (TRI->getRegClass(Desc.OpInfo[0].RegClass).getSizeInBits() <= 128)
+  if (TRI->getRegClass(Desc.operands()[0].RegClass).getSizeInBits() <= 128)
     return true;
 
   if (TRI->regsOverlap(Src2Reg, DstReg)) {
@@ -4632,6 +4618,9 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
+  if (isGFX12Plus())
+    return validateTHandScopeBits(Inst, Operands, CPol);
+
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
   if (TSFlags & SIInstrFlags::SMRD) {
     if (CPol && (isSI() || isCI())) {
@@ -4679,29 +4668,24 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
 bool AMDGPUAsmParser::validateTHandScopeBits(const MCInst &Inst,
                                              const OperandVector &Operands,
-                                             const SMLoc &IDLoc) {
-  int THPos =
-      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::th);
-  int ScopePos =
-      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::scope);
-  if (THPos == -1 || ScopePos == -1)
-    return true;
+                                             const unsigned CPol) {
+  const unsigned TH = CPol & AMDGPU::CPol::TH;
+  const unsigned Scope = CPol & AMDGPU::CPol::SCOPE;
 
-  unsigned TH = Inst.getOperand(THPos).getImm();
-  unsigned Scope = Inst.getOperand(ScopePos).getImm();
-
-  if ((TH & 0x7) == 0)
+  if (TH == 0)
     return true;
 
   auto PrintError = [&](StringRef Msg) {
-    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyTH, Operands);
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
     Error(S, Msg);
     return false;
   };
 
-  if ((TH & 0x7) == AMDGPU::TH::BYPASS) {
-    if ((Scope != AMDGPU::Scope::SCOPE_SYS && TH & AMDGPU::TH::REAL_BYPASS) ||
-        (Scope == AMDGPU::Scope::SCOPE_SYS && !(TH & AMDGPU::TH::REAL_BYPASS)))
+  if (TH == AMDGPU::CPol::TH_BYPASS) {
+    if ((Scope != AMDGPU::CPol::SCOPE_SYS &&
+         CPol & AMDGPU::CPol::TH_REAL_BYPASS) ||
+        (Scope == AMDGPU::CPol::SCOPE_SYS &&
+         !(CPol & AMDGPU::CPol::TH_REAL_BYPASS)))
       return PrintError("scope and th combination is not valid");
   }
 
@@ -4713,13 +4697,13 @@ bool AMDGPUAsmParser::validateTHandScopeBits(const MCInst &Inst,
       TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
 
   if (IsAtomic) {
-    if (!(TH & AMDGPU::TH::TYPE_ATOMIC))
+    if (!(CPol & AMDGPU::CPol::TH_TYPE_ATOMIC))
       return PrintError("invalid th value for atomic instructions");
   } else if (IsStore) {
-    if (!(TH & AMDGPU::TH::TYPE_STORE))
+    if (!(CPol & AMDGPU::CPol::TH_TYPE_STORE))
       return PrintError("invalid th value for store instructions");
   } else {
-    if (!(TH & AMDGPU::TH::TYPE_LOAD))
+    if (!(CPol & AMDGPU::CPol::TH_TYPE_LOAD))
       return PrintError("invalid th value for load instructions");
   }
 
@@ -4839,9 +4823,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
-    return false;
-  }
-  if (!validateTHandScopeBits(Inst, Operands, IDLoc)) {
     return false;
   }
 
@@ -6200,11 +6181,6 @@ AMDGPUAsmParser::parseNamedBit(StringRef Name, OperandVector &Operands,
     Error(S, "a16 modifier is not supported on this GPU");
     return MatchOperand_ParseFail;
   }
-  // TODO-GFX12: Should only be enabled for MI400
-  if (Name == "nv" && !isGFX12Plus()) {
-    Error(S, "nv modifier is not supported on this GPU");
-    return MatchOperand_ParseFail;
-  }
 
   if (isGFX9() && ImmTy == AMDGPUOperand::ImmTyA16)
     ImmTy = AMDGPUOperand::ImmTyR128A16;
@@ -6242,6 +6218,39 @@ unsigned AMDGPUAsmParser::getCPolKind(StringRef Id, StringRef Mnemo,
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
+  if (isGFX12Plus()) {
+    SMLoc StringLoc = getLoc();
+
+    int64_t TH;
+    OperandMatchResultTy Res1 = parseTH(Operands, TH);
+    if (Res1 == MatchOperand_ParseFail)
+      return Res1;
+
+    int64_t Scope;
+    OperandMatchResultTy Res2 = parseScope(Operands, Scope);
+    if (Res2 == MatchOperand_ParseFail)
+      return Res2;
+
+    // TODO-GFX12: NV modifier should only be enabled for MI400
+    bool NV = false;
+    OperandMatchResultTy Res3 = MatchOperand_NoMatch;
+    if (trySkipId("nv")) {
+      NV = true;
+      Res3 = MatchOperand_Success;
+    } else if (trySkipId("no", "nv")) {
+      Res3 = MatchOperand_Success;
+    }
+
+    if (Res1 == MatchOperand_NoMatch && Res2 == MatchOperand_NoMatch &&
+        Res3 == MatchOperand_NoMatch)
+      return MatchOperand_NoMatch;
+
+    int64_t CPolVal = (NV ? CPol::NV : 0) | Scope | TH;
+    Operands.push_back(AMDGPUOperand::CreateImm(this, CPolVal, StringLoc,
+                                                AMDGPUOperand::ImmTyCPol));
+    return MatchOperand_Success;
+  }
+
   StringRef Mnemo = ((AMDGPUOperand &)*Operands[0]).getToken();
   SMLoc OpLoc = getLoc();
   unsigned Enabled = 0, Seen = 0;
@@ -6283,30 +6292,24 @@ AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-OperandMatchResultTy
-AMDGPUAsmParser::parseScope(OperandVector &Operands) {
-  SMLoc S = getLoc();
+OperandMatchResultTy AMDGPUAsmParser::parseScope(OperandVector &Operands,
+                                                 int64_t &Scope) {
+  Scope = AMDGPU::CPol::SCOPE_CU; // default;
 
   StringRef Value;
+  SMLoc StringLoc;
   OperandMatchResultTy Res;
 
-  SMLoc StringLoc;
   Res = parseStringWithPrefix("scope", Value, StringLoc);
   if (Res != MatchOperand_Success) {
     return Res;
   }
 
-  if (!isGFX12Plus()) {
-    Error(S, "scope operand is not supported on this GPU");
-    return MatchOperand_ParseFail;
-  }
-
-  int64_t Scope;
   Scope = StringSwitch<int64_t>(Value)
-              .Case("SCOPE_CU", AMDGPU::Scope::SCOPE_CU)
-              .Case("SCOPE_SE", AMDGPU::Scope::SCOPE_SE)
-              .Case("SCOPE_DEV", AMDGPU::Scope::SCOPE_DEV)
-              .Case("SCOPE_SYS", AMDGPU::Scope::SCOPE_SYS)
+              .Case("SCOPE_CU", AMDGPU::CPol::SCOPE_CU)
+              .Case("SCOPE_SE", AMDGPU::CPol::SCOPE_SE)
+              .Case("SCOPE_DEV", AMDGPU::CPol::SCOPE_DEV)
+              .Case("SCOPE_SYS", AMDGPU::CPol::SCOPE_SYS)
               .Default(0xffffffff);
 
   if (Scope == 0xffffffff) {
@@ -6314,75 +6317,67 @@ AMDGPUAsmParser::parseScope(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  Operands.push_back(
-      AMDGPUOperand::CreateImm(this, Scope, S, AMDGPUOperand::ImmTyScope));
   return MatchOperand_Success;
 }
 
-OperandMatchResultTy
-AMDGPUAsmParser::parseTH(OperandVector &Operands) {
-  SMLoc S = getLoc();
+OperandMatchResultTy AMDGPUAsmParser::parseTH(OperandVector &Operands,
+                                              int64_t &TH) {
+  TH = AMDGPU::CPol::TH_RT; // default
+
   StringRef Value;
   SMLoc StringLoc;
   OperandMatchResultTy Res = parseStringWithPrefix("th", Value, StringLoc);
   if (Res != MatchOperand_Success)
     return Res;
 
-  if (!isGFX12Plus()) {
-    Error(S, "TH operand is not supported on this GPU");
-    return MatchOperand_ParseFail;
-  }
-
-  int64_t TH = 0xffffffff;
-
   if (Value == "TH_DEFAULT")
-    TH = 0;
+    TH = AMDGPU::CPol::TH_RT;
   else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_RT_WB" ||
            Value == "TH_LOAD_NT_WB") {
     Error(StringLoc, "invalid th value");
     return MatchOperand_ParseFail;
   } else if (Value.startswith("TH_ATOMIC_")) {
     Value = Value.drop_front(10);
-    TH = AMDGPU::TH::TYPE_ATOMIC;
+    TH = AMDGPU::CPol::TH_TYPE_ATOMIC;
   } else if (Value.startswith("TH_LOAD_")) {
     Value = Value.drop_front(8);
-    TH = AMDGPU::TH::TYPE_LOAD;
+    TH = AMDGPU::CPol::TH_TYPE_LOAD;
   } else if (Value.startswith("TH_STORE_")) {
     Value = Value.drop_front(9);
-    TH = AMDGPU::TH::TYPE_STORE;
+    TH = AMDGPU::CPol::TH_TYPE_STORE;
   } else {
     Error(StringLoc, "invalid th value");
     return MatchOperand_ParseFail;
   }
 
   if (Value == "BYPASS")
-    TH |= AMDGPU::TH::REAL_BYPASS;
+    TH |= AMDGPU::CPol::TH_REAL_BYPASS;
 
   if (TH != 0) {
-    if (TH & AMDGPU::TH::TYPE_ATOMIC)
+    if (TH & AMDGPU::CPol::TH_TYPE_ATOMIC)
       TH |= StringSwitch<int64_t>(Value)
-                .Case("RETURN", AMDGPU::TH::ATOMIC_RETURN)
-                .Case("RT", AMDGPU::TH::RT)
-                .Case("RT_RETURN", AMDGPU::TH::ATOMIC_RETURN)
-                .Case("NT", AMDGPU::TH::ATOMIC_NT)
-                .Case("NT_RETURN",
-                      AMDGPU::TH::ATOMIC_NT | AMDGPU::TH::ATOMIC_RETURN)
-                .Case("CASCADE_RT", AMDGPU::TH::ATOMIC_CASCADE)
-                .Case("CASCADE_NT",
-                      AMDGPU::TH::ATOMIC_CASCADE | AMDGPU::TH::ATOMIC_NT)
+                .Case("RETURN", AMDGPU::CPol::TH_ATOMIC_RETURN)
+                .Case("RT", AMDGPU::CPol::TH_RT)
+                .Case("RT_RETURN", AMDGPU::CPol::TH_ATOMIC_RETURN)
+                .Case("NT", AMDGPU::CPol::TH_ATOMIC_NT)
+                .Case("NT_RETURN", AMDGPU::CPol::TH_ATOMIC_NT |
+                                       AMDGPU::CPol::TH_ATOMIC_RETURN)
+                .Case("CASCADE_RT", AMDGPU::CPol::TH_ATOMIC_CASCADE)
+                .Case("CASCADE_NT", AMDGPU::CPol::TH_ATOMIC_CASCADE |
+                                        AMDGPU::CPol::TH_ATOMIC_NT)
                 .Default(0xffffffff);
     else
       TH |= StringSwitch<int64_t>(Value)
-                .Case("RT", AMDGPU::TH::RT)
-                .Case("NT", AMDGPU::TH::NT)
-                .Case("HT", AMDGPU::TH::HT)
-                .Case("LU", AMDGPU::TH::LU)
-                .Case("RT_WB", AMDGPU::TH::RT_WB)
-                .Case("NT_RT", AMDGPU::TH::NT_RT)
-                .Case("RT_NT", AMDGPU::TH::RT_NT)
-                .Case("NT_HT", AMDGPU::TH::NT_HT)
-                .Case("NT_WB", AMDGPU::TH::NT_WB)
-                .Case("BYPASS", AMDGPU::TH::BYPASS)
+                .Case("RT", AMDGPU::CPol::TH_RT)
+                .Case("NT", AMDGPU::CPol::TH_NT)
+                .Case("HT", AMDGPU::CPol::TH_HT)
+                .Case("LU", AMDGPU::CPol::TH_LU)
+                .Case("RT_WB", AMDGPU::CPol::TH_RT_WB)
+                .Case("NT_RT", AMDGPU::CPol::TH_NT_RT)
+                .Case("RT_NT", AMDGPU::CPol::TH_RT_NT)
+                .Case("NT_HT", AMDGPU::CPol::TH_NT_HT)
+                .Case("NT_WB", AMDGPU::CPol::TH_NT_WB)
+                .Case("BYPASS", AMDGPU::CPol::TH_BYPASS)
                 .Default(0xffffffff);
   }
 
@@ -6391,8 +6386,6 @@ AMDGPUAsmParser::parseTH(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  Operands.push_back(
-      AMDGPUOperand::CreateImm(this, TH, StringLoc, AMDGPUOperand::ImmTyTH));
   return MatchOperand_Success;
 }
 
@@ -8038,18 +8031,6 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultCPol() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyCPol);
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultScope() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyScope);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultTH() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyTH);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultNV() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyNV);
-}
-
 void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
                                    const OperandVector &Operands,
                                    bool IsAtomic) {
@@ -8182,23 +8163,16 @@ void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands,
   }
 
   bool IsGFX10Plus = isGFX10Plus();
-  bool IsGFX12Plus = isGFX12Plus();
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDMask);
   if (IsGFX10Plus)
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDim, -1);
   if (Desc.TSFlags & (SIInstrFlags::MIMG | SIInstrFlags::VSAMPLE))
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyUNorm);
-  if (!IsGFX12Plus)
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyR128A16);
   if (IsGFX10Plus)
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyA16);
-  if (IsGFX12Plus) {
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTH);
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyScope);
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyNV);
-  }
   if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::tfe))
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   if (Desc.TSFlags & (SIInstrFlags::MIMG | SIInstrFlags::VSAMPLE))
@@ -8280,17 +8254,11 @@ void AMDGPUAsmParser::cvtIntersectRay(MCInst &Inst,
       static_cast<AMDGPUOperand &>(*Operands[3 + I]).addRegOperands(Inst, 1);
   }
 
-  bool HasNVBit = false;
   for (unsigned I = 2; I < Operands.size(); ++I) {
     auto &Operand = (AMDGPUOperand &)*Operands[I];
     if (Operand.isReg())
       Operand.addRegOperands(Inst, 1);
-    if (Operand.isNV())
-      HasNVBit = true;
   }
-
-  if (isGFX12Plus())
-    Inst.addOperand(MCOperand::createImm(HasNVBit ? 1 : 0)); // nv
 
   Inst.addOperand(MCOperand::createImm(1)); // a16
 }
@@ -8433,14 +8401,16 @@ void AMDGPUAsmParser::cvtVOP3OpSel(MCInst &Inst, const OperandVector &Operands,
 }
 
 static bool isRegOrImmWithInputMods(const MCInstrDesc &Desc, unsigned OpNum) {
+  return
       // 1. This operand is input modifiers
-  return Desc.OpInfo[OpNum].OperandType == AMDGPU::OPERAND_INPUT_MODS
+      Desc.operands()[OpNum].OperandType == AMDGPU::OPERAND_INPUT_MODS
       // 2. This is not last operand
       && Desc.NumOperands > (OpNum + 1)
       // 3. Next operand is register class
-      && Desc.OpInfo[OpNum + 1].RegClass != -1
+      && Desc.operands()[OpNum + 1].RegClass != -1
       // 4. Next register is not tied to any other operand
-      && Desc.getOperandConstraint(OpNum + 1, MCOI::OperandConstraint::TIED_TO) == -1;
+      && Desc.getOperandConstraint(OpNum + 1,
+                                   MCOI::OperandConstraint::TIED_TO) == -1;
 }
 
 void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands)
@@ -9109,7 +9079,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     } else if (Op.isReg()) {
       Op.addRegOperands(Inst, 1);
     } else if (Op.isImm() &&
-               Desc.OpInfo[Inst.getNumOperands()].RegClass != -1) {
+               Desc.operands()[Inst.getNumOperands()].RegClass != -1) {
       assert(!Op.IsImmKindLiteral() && "Cannot use literal with DPP");
       Op.addImmOperands(Inst, 1);
     } else if (Op.isImm()) {
@@ -9475,10 +9445,6 @@ AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands, unsigned MCK) {
     return parseIntWithPrefix("cbsz", Operands, AMDGPUOperand::ImmTyCBSZ);
   case MCK_ImmCPol:
     return parseCPol(Operands);
-  case MCK_ImmTH:
-    return parseTH(Operands);
-  case MCK_ImmScope:
-    return parseScope(Operands);
   case MCK_ImmFI:
     return parseIntWithPrefix("fi", Operands, AMDGPUOperand::ImmTyDppFi);
   case MCK_gds:

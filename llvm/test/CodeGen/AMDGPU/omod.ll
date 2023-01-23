@@ -505,6 +505,13 @@ define amdgpu_ps void @v_omod_mul2_med3(float %x, float %y, float %z) #0 {
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: v_omod_mul2_med3:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_med3_num_f32 v0, v0, v1, v2 mul:2
+; GFX12-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %fmed3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float %z)
   %div2 = fmul float %fmed3, 2.0
   store float %div2, float addrspace(1)* undef
@@ -653,7 +660,7 @@ define amdgpu_ps void @v_omod_mul4_multi_use_f32(float %a) #0 {
 ; GFX12-NEXT:    v_mul_f32_e32 v1, 4.0, v0
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_store_b32 v[0:1], v1, off
-; GFX12-NEXT:    global_store_b32 v[0:1], v0, off dlc
+; GFX12-NEXT:    global_store_b32 v[0:1], v0, off th:TH_STORE_NT_RT
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm

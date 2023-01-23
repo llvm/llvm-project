@@ -762,7 +762,7 @@ bool HexagonMCInstrInfo::isPredRegister(MCInstrInfo const &MCII,
   MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, Inst);
 
   return Inst.getOperand(I).isReg() &&
-         Desc.OpInfo[I].RegClass == Hexagon::PredRegsRegClassID;
+         Desc.operands()[I].RegClass == Hexagon::PredRegsRegClassID;
 }
 
 /// Return whether the insn can be packaged only with A and X-type insns.
@@ -932,7 +932,7 @@ HexagonMCInstrInfo::predicateInfo(MCInstrInfo const &MCII, MCInst const &MCI) {
     return {0, 0, false};
   MCInstrDesc const &Desc = getDesc(MCII, MCI);
   for (auto I = Desc.getNumDefs(), N = Desc.getNumOperands(); I != N; ++I)
-    if (Desc.OpInfo[I].RegClass == Hexagon::PredRegsRegClassID)
+    if (Desc.operands()[I].RegClass == Hexagon::PredRegsRegClassID)
       return {MCI.getOperand(I).getReg(), I, isPredicatedTrue(MCII, MCI)};
   return {0, 0, false};
 }

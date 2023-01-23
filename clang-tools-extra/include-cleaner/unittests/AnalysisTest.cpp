@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Analysis.h"
+#include "AnalysisInternal.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTContext.h"
@@ -365,12 +366,24 @@ TEST(WalkUsed, FilterRefsNotSpelledInMainFile) {
     FileID MainFID = SM.getMainFileID();
     if (RefLoc.isValid()) {
       EXPECT_THAT(RefLoc, AllOf(expandedAt(MainFID, Main.point("expand"), &SM),
-                                 spelledAt(MainFID, Main.point("spell"), &SM)))
+                                spelledAt(MainFID, Main.point("spell"), &SM)))
           << T.Main;
     } else {
       EXPECT_THAT(Main.points(), testing::IsEmpty());
     }
   }
+}
+
+TEST(Hints, Ordering) {
+  struct Tag {};
+  auto Hinted = [](Hints Hints) {
+    return clang::include_cleaner::Hinted<Tag>({}, Hints);
+  };
+  EXPECT_LT(Hinted(Hints::None), Hinted(Hints::CompleteSymbol));
+  EXPECT_LT(Hinted(Hints::CompleteSymbol), Hinted(Hints::PublicHeader));
+  EXPECT_LT(Hinted(Hints::PublicHeader), Hinted(Hints::PreferredHeader));
+  EXPECT_LT(Hinted(Hints::CompleteSymbol | Hints::PublicHeader),
+            Hinted(Hints::PreferredHeader));
 }
 
 } // namespace

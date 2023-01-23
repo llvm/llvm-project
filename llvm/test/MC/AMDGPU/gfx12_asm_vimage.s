@@ -151,11 +151,11 @@ image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_BYPASS scope:S
 image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D nv
 // GFX12: encoding: [0x80,0x00,0x40,0xd0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 
-image_load v[0:2], [v4, v5], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY a16 th:TH_LOAD_HT scope:SCOPE_SE nv tfe d16
+image_load v[0:2], [v4, v5], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY th:TH_LOAD_HT scope:SCOPE_SE nv a16 tfe d16
 // GFX12: encoding: [0xe5,0x00,0xc0,0xd3,0x00,0x10,0xa4,0x00,0x04,0x05,0x00,0x00]
 
 // FIXME: This test is incorrect because r128 assumes a 128-bit RSRC.
-image_load v[0:2], [v4, v5], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY r128 a16 th:TH_LOAD_HT scope:SCOPE_SE nv tfe d16
+image_load v[0:2], [v4, v5], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY th:TH_LOAD_HT scope:SCOPE_SE nv r128 a16 tfe d16
 // GFX12: encoding: [0xf5,0x00,0xc0,0xd3,0x00,0x10,0xa4,0x00,0x04,0x05,0x00,0x00]
 
 image_load_mip v[252:255], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D

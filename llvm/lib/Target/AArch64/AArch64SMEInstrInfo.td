@@ -616,8 +616,8 @@ defm MOVA_4ZMXI : sme2_mova_tile_to_vec_vg4_multi<"mova">;
 
 defm MOVA_VG2_MXI2Z  : sme2_mova_vec_to_array_vg2_multi<"mova">;
 defm MOVA_VG4_MXI4Z  : sme2_mova_vec_to_array_vg4_multi<"mova">;
-defm MOVA_VG2_2ZMXI : sme2_mova_array_to_vec_vg2_multi<"mova">;
-defm MOVA_VG4_4ZMXI : sme2_mova_array_to_vec_vg4_multi<"mova">;
+defm MOVA_VG2_2ZMXI : sme2_mova_array_to_vec_vg2_multi<0b000, "mova">;
+defm MOVA_VG4_4ZMXI : sme2_mova_array_to_vec_vg4_multi<0b1000, "mova">;
 
 defm SQRSHR_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"sqrshr", 0b0, 0b0>;
 defm SQRSHR_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshr", 0b000>;
@@ -802,8 +802,8 @@ let Predicates = [HasSME2p1] in {
 defm MOVAZ_ZMI  : sme2p1_movaz_tile_to_vec<"movaz">;
 defm MOVAZ_2ZMI  : sme2p1_movaz_tile_to_vec_vg2<"movaz">;
 defm MOVAZ_4ZMI  : sme2p1_movaz_tile_to_vec_vg4<"movaz">;
-defm MOVAZ_VG2_2ZM : sme2p1_movaz_array_to_vec_vg2<"movaz">;
-defm MOVAZ_VG4_4ZM : sme2p1_movaz_array_to_vec_vg4<"movaz">;
+defm MOVAZ_VG2_2ZM : sme2_mova_array_to_vec_vg2_multi<0b010, "movaz">;
+defm MOVAZ_VG4_4ZM : sme2_mova_array_to_vec_vg4_multi<0b1100, "movaz">;
 
 defm ZERO_MXI :  sme2p1_zero_matrix<"zero">;
 

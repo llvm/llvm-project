@@ -214,7 +214,7 @@ bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
       if (!(Val & SISrcMods::OP_SEL_0) && (Val & SISrcMods::OP_SEL_1)) {
         // Only apply the following transformation if that operand requires
         // a packed immediate.
-        switch (TII->get(Opcode).OpInfo[OpNo].OperandType) {
+        switch (TII->get(Opcode).operands()[OpNo].OperandType) {
         case AMDGPU::OPERAND_REG_IMM_V2FP16:
         case AMDGPU::OPERAND_REG_IMM_V2INT16:
         case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
@@ -506,7 +506,7 @@ bool SIFoldOperands::tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
       MI->getOpcode() != AMDGPU::S_MOV_TO_GLOBAL_B32 &&
       MI->getOpcode() != AMDGPU::S_MOV_TO_GLOBAL_B64) {
     const MCInstrDesc &InstDesc = MI->getDesc();
-    const MCOperandInfo &OpInfo = InstDesc.OpInfo[OpNo];
+    const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
 
     // Fine if the operand can be encoded as an inline constant
     if (!OpToFold->isReg() && !TII->isInlineConstant(*OpToFold, OpInfo)) {
@@ -569,11 +569,10 @@ bool SIFoldOperands::tryToFoldACImm(
     const MachineOperand &OpToFold, MachineInstr *UseMI, unsigned UseOpIdx,
     SmallVectorImpl<FoldCandidate> &FoldList) const {
   const MCInstrDesc &Desc = UseMI->getDesc();
-  const MCOperandInfo *OpInfo = Desc.OpInfo;
-  if (!OpInfo || UseOpIdx >= Desc.getNumOperands())
+  if (UseOpIdx >= Desc.getNumOperands())
     return false;
 
-  uint8_t OpTy = OpInfo[UseOpIdx].OperandType;
+  uint8_t OpTy = Desc.operands()[UseOpIdx].OperandType;
   if ((OpTy < AMDGPU::OPERAND_REG_INLINE_AC_FIRST ||
        OpTy > AMDGPU::OPERAND_REG_INLINE_AC_LAST) &&
       (OpTy < AMDGPU::OPERAND_REG_INLINE_C_FIRST ||
@@ -930,9 +929,8 @@ void SIFoldOperands::foldOperand(
 
     // Don't fold into target independent nodes.  Target independent opcodes
     // don't have defined register classes.
-    if (UseDesc.isVariadic() ||
-        UseOp.isImplicit() ||
-        UseDesc.OpInfo[UseOpIdx].RegClass == -1)
+    if (UseDesc.isVariadic() || UseOp.isImplicit() ||
+        UseDesc.operands()[UseOpIdx].RegClass == -1)
       return;
   }
 
@@ -963,7 +961,7 @@ void SIFoldOperands::foldOperand(
 
   const MCInstrDesc &FoldDesc = OpToFold.getParent()->getDesc();
   const TargetRegisterClass *FoldRC =
-    TRI->getRegClass(FoldDesc.OpInfo[0].RegClass);
+      TRI->getRegClass(FoldDesc.operands()[0].RegClass);
 
   // Split 64-bit constants into 32-bits for folding.
   if (UseOp.getSubReg() && AMDGPU::getRegBitWidth(FoldRC->getID()) == 64) {
@@ -1066,9 +1064,8 @@ static void mutateCopyOp(MachineInstr &MI, const MCInstrDesc &NewDesc) {
   // if we replace an s_and_b32 with a copy, we don't need the implicit scc def
   // anymore.
   const MCInstrDesc &Desc = MI.getDesc();
-  unsigned NumOps = Desc.getNumOperands() +
-                    Desc.getNumImplicitUses() +
-                    Desc.getNumImplicitDefs();
+  unsigned NumOps = Desc.getNumOperands() + Desc.implicit_uses().size() +
+                    Desc.implicit_defs().size();
 
   for (unsigned I = MI.getNumOperands() - 1; I >= NumOps; --I)
     MI.removeOperand(I);

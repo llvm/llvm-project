@@ -260,7 +260,9 @@ public:
   bool isStaticTemporary() const { return isStatic() && isTemporary(); }
 
   /// Checks if the field is mutable.
-  bool isMutable() const { return Base != 0 && getInlineDesc()->IsMutable; }
+  bool isMutable() const {
+    return Base != 0 && getInlineDesc()->IsFieldMutable;
+  }
   /// Checks if an object was initialized.
   bool isInitialized() const;
   /// Checks if the object is active.

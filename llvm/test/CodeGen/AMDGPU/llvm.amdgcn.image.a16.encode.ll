@@ -1247,7 +1247,7 @@ define amdgpu_ps <4 x float> @load_1d_glc(<8 x i32> inreg %rsrc, <2 x i16> %coor
 ;
 ; GFX12-LABEL: load_1d_glc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc a16 ; encoding: [0x80,0x4f,0x01,0xf0,0x00,0x00,0x00,0x00]
+; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_LOAD_NT a16 ; encoding: [0x80,0x4f,0x01,0xf0,0x00,0x00,0x00,0x00]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -1277,7 +1277,7 @@ define amdgpu_ps <4 x float> @load_1d_slc(<8 x i32> inreg %rsrc, <2 x i16> %coor
 ;
 ; GFX12-LABEL: load_1d_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm slc a16 ; encoding: [0x80,0x1f,0x01,0xf0,0x00,0x00,0x00,0x00]
+; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_LOAD_HT a16 ; encoding: [0x80,0x1f,0x01,0xf0,0x00,0x00,0x00,0x00]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -1307,7 +1307,7 @@ define amdgpu_ps <4 x float> @load_1d_glc_slc(<8 x i32> inreg %rsrc, <2 x i16> %
 ;
 ; GFX12-LABEL: load_1d_glc_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc slc a16 ; encoding: [0x80,0x5f,0x01,0xf0,0x00,0x00,0x00,0x00]
+; GFX12-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_LOAD_LU a16 ; encoding: [0x80,0x5f,0x01,0xf0,0x00,0x00,0x00,0x00]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0 ; encoding: [0x00,0x00,0xc0,0xbf]
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -1335,7 +1335,7 @@ define amdgpu_ps void @store_1d_glc(<8 x i32> inreg %rsrc, <4 x float> %vdata, <
 ;
 ; GFX12-LABEL: store_1d_glc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc a16 ; encoding: [0x80,0x4f,0x19,0xf0,0x04,0x00,0x00,0x00]
+; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_STORE_NT a16 ; encoding: [0x80,0x4f,0x19,0xf0,0x04,0x00,0x00,0x00]
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX12-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
@@ -1363,7 +1363,7 @@ define amdgpu_ps void @store_1d_slc(<8 x i32> inreg %rsrc, <4 x float> %vdata, <
 ;
 ; GFX12-LABEL: store_1d_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm slc a16 ; encoding: [0x80,0x1f,0x19,0xf0,0x04,0x00,0x00,0x00]
+; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_STORE_HT a16 ; encoding: [0x80,0x1f,0x19,0xf0,0x04,0x00,0x00,0x00]
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX12-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
@@ -1391,7 +1391,7 @@ define amdgpu_ps void @store_1d_glc_slc(<8 x i32> inreg %rsrc, <4 x float> %vdat
 ;
 ; GFX12-LABEL: store_1d_glc_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc slc a16 ; encoding: [0x80,0x5f,0x19,0xf0,0x04,0x00,0x00,0x00]
+; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm th:TH_STORE_RT_WB a16 ; encoding: [0x80,0x5f,0x19,0xf0,0x04,0x00,0x00,0x00]
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX12-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:

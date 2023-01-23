@@ -281,6 +281,32 @@ join:
   ret i32 %v
 }
 
+define i32 @addrspace_diff_remove_alloca(i1 %cond) {
+; CHECK-LABEL: @addrspace_diff_remove_alloca(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr addrspace(1) [ @g2, [[IF]] ], [ getelementptr inbounds ([32 x i8], ptr addrspace(1) @g2, i64 0, i64 2), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[PHI1]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  %a = alloca [32 x i8]
+  call void @llvm.memcpy.p0.p1.i64(ptr %a, ptr addrspace(1) @g2, i64 32, i1 false)
+  %gep = getelementptr inbounds [32 x i8], ptr %a, i32 0, i32 2
+  br i1 %cond, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi ptr [ %a, %if ], [ %gep, %entry ]
+  %v = load i32, ptr %phi
+  ret i32 %v
+}
+
 define i32 @phi_loop(i1 %c) {
 ; CHECK-LABEL: @phi_loop(
 ; CHECK-NEXT:  entry:

@@ -487,10 +487,9 @@ class VIMAGE_NoSampler_gfx12<mimgopc op, string opcode,
   : VIMAGE_gfx12<op.GFX11, (outs DataRC:$vdata), num_addrs, dns> {
   let InOperandList = !con(AddrIns,
                            (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
-                                R128A16:$r128, A16:$a16, TH:$th,
-                                Scope:$scope, NV:$nv, TFE:$tfe),
+                                CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
-  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$r128$a16$th$scope$nv$tfe"
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$cpol$r128$a16$tfe"
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
@@ -689,10 +688,9 @@ class VIMAGE_Store_gfx12<mimgopc op, string opcode,
   let InOperandList = !con((ins DataRC:$vdata),
                            AddrIns,
                            (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
-                                R128A16:$r128, A16:$a16, TH:$th,
-                                Scope:$scope, NV:$nv, TFE:$tfe),
+                                CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
-  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$r128$a16$th$scope$nv$tfe"
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$cpol$r128$a16$tfe"
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
@@ -916,9 +914,8 @@ class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
   let InOperandList = !con((ins DataRC:$vdata),
                            AddrIns,
                            (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
-                                R128A16:$r128, A16:$a16, TH:$th,
-                                Scope:$scope, NV:$nv, TFE:$tfe));
-  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$r128$a16$th$scope$nv$tfe";
+                                 CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe));
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$cpol$r128$a16$tfe";
 }
 
 class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string opcode, string renamed,
@@ -1144,12 +1141,11 @@ class VSAMPLE_Sampler_gfx12<mimgopc op, string opcode,
   : VSAMPLE_gfx12<op.GFX11, (outs DataRC:$vdata), num_addrs, dns, Addr3RC> {
   let InOperandList = !con(AddrIns,
                            (ins SReg_256:$rsrc, SReg_128:$samp, DMask:$dmask,
-                                Dim:$dim, UNorm:$unorm, R128A16:$r128,
-                                A16:$a16, TH:$th, Scope:$scope, NV:$nv,
-                                TFE:$tfe, LWE:$lwe),
+                                Dim:$dim, UNorm:$unorm, CPol:$cpol,
+                                R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
   let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc, $samp$dmask$dim$unorm"
-                    #"$r128$a16$th$scope$nv$tfe$lwe"
+                    #"$cpol$r128$a16$tfe$lwe"
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
@@ -1429,9 +1425,9 @@ class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
                    num_addrs, "GFX12", addr_types> {
   let Constraints = !if(!or(isDual, isBVH8),
                         "$ray_origin_out = $vaddr2, $ray_dir_out = $vaddr3", "");
-  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$rsrc), (ins NV:$nv),
+  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$rsrc),
                            !if(IsA16, (ins A16:$a16), (ins)));
-  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $rsrc$nv"#!if(IsA16, "$a16", "");
+  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $rsrc"#!if(IsA16, "$a16", "");
   let SchedRW = !if(!or(isDual, isBVH8),
                     [WriteVMEM, WriteVMEM, WriteVMEM], [WriteVMEM]);
 }
@@ -1445,6 +1441,7 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
   let AsmMatchConverter = !if(IsA16, "cvtIntersectRay", ""),
       dmask = 0xf,
       d16 = 0,
+      cpol = 0,
       tfe = 0,
       r128 = 1,
       dim = {0, 0, 0},
@@ -1453,7 +1450,6 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
       BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
       VDataDwords = 4 in {
     let unorm = 1,
-        cpol = 0,
         lwe = 0,
         ssamp = 0 in {
       if op.HAS_GFX10M then
@@ -1475,14 +1471,11 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16,
         let VAddrDwords = info.num_addrs;
       }
     }
-    let scope = 0,
-        th = 0 in {
-      def _gfx12 : VIMAGE_IntersectRay_gfx12<op, opcode, info.GFX11PlusNSAAddrs,
-                                             IsA16, isDual, isBVH8,
-                                             info.GFX11PlusAddrTypes> {
-        let VDataDwords = !if(!or(isDual, isBVH8), 10, 4);
-        let VAddrDwords = info.num_addrs;
-      }
+    def _gfx12 : VIMAGE_IntersectRay_gfx12<op, opcode, info.GFX11PlusNSAAddrs,
+                                            IsA16, isDual, isBVH8,
+                                            info.GFX11PlusAddrTypes> {
+      let VDataDwords = !if(!or(isDual, isBVH8), 10, 4);
+      let VAddrDwords = info.num_addrs;
     }
   }
 }

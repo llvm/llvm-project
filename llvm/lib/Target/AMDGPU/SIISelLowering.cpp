@@ -7863,7 +7863,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     Ops.push_back(RayDir);
     Ops.push_back(Offsets);
     Ops.push_back(TDescr);
-    Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i1));
     Ops.push_back(M->getChain());
 
     auto *NewNode = DAG.getMachineNode(Opcode, DL, M->getVTList(), Ops);
@@ -7995,8 +7994,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
 
     Ops.push_back(TDescr);
-    if (IsGFX12Plus)
-      Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i1)); // nv
     if (IsA16)
       Ops.push_back(DAG.getTargetConstant(1, DL, MVT::i1));
     Ops.push_back(M->getChain());
@@ -12301,7 +12298,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     // Prefer VGPRs over AGPRs in mAI instructions where possible.
     // This saves a chain-copy of registers and better balance register
     // use between vgpr and agpr as agpr tuples tend to be big.
-    if (MI.getDesc().OpInfo) {
+    if (!MI.getDesc().operands().empty()) {
       unsigned Opc = MI.getOpcode();
       const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
       for (auto I : { AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),

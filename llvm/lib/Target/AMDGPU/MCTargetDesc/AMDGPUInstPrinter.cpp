@@ -225,6 +225,20 @@ void AMDGPUInstPrinter::printGDS(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Imm = MI->getOperand(OpNo).getImm();
+
+  if (AMDGPU::isGFX12Plus(STI)) {
+    const int64_t TH = Imm & CPol::TH;
+    const int64_t Scope = Imm & CPol::SCOPE;
+
+    printTH(MI, TH, Scope, O);
+    printScope(Scope, O);
+
+    if (Imm & CPol::NV)
+      O << " nv";
+
+    return;
+  }
+
   if (Imm & CPol::GLC)
     O << ((AMDGPU::isGFX940(STI) &&
            !(MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SMRD)) ? " sc0"
@@ -239,69 +253,62 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     O << " /* unexpected cache policy bit */";
 }
 
-void AMDGPUInstPrinter::printTH(const MCInst *MI, unsigned OpNo,
-                                const MCSubtargetInfo &STI, raw_ostream &O) {
-  auto Imm = MI->getOperand(OpNo).getImm() & 0x7;
-
+void AMDGPUInstPrinter::printTH(const MCInst *MI, int64_t TH, int64_t Scope,
+                                raw_ostream &O) {
   // For th = 0 do not print this field
-  if (Imm == 0)
+  if (TH == 0)
     return;
 
   const unsigned Opcode = MI->getOpcode();
   const MCInstrDesc &TID = MII.get(Opcode);
-
   bool IsStore = TID.mayStore();
   bool IsAtomic =
       TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
-
-  int ScopeIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::scope);
-  assert(ScopeIdx != -1);
-  int64_t Scope = MI->getOperand(ScopeIdx).getImm();
 
   O << " th:";
 
   if (IsAtomic) {
     O << "TH_ATOMIC_";
-    if (Imm & AMDGPU::TH::ATOMIC_CASCADE) {
-      if (Scope >= AMDGPU::Scope::SCOPE_DEV)
-        O << "CASCADE" << (Imm & AMDGPU::TH::ATOMIC_NT ? "_NT" : "_RT");
+    if (TH & AMDGPU::CPol::TH_ATOMIC_CASCADE) {
+      if (Scope >= AMDGPU::CPol::SCOPE_DEV)
+        O << "CASCADE" << (TH & AMDGPU::CPol::TH_ATOMIC_NT ? "_NT" : "_RT");
       else
-        O << formatHex(Imm);
-    } else if (Imm & AMDGPU::TH::ATOMIC_NT)
-      O << "NT" << (Imm & AMDGPU::TH::ATOMIC_RETURN ? "_RETURN" : "");
-    else if (Imm & AMDGPU::TH::ATOMIC_RETURN)
+        O << formatHex(TH);
+    } else if (TH & AMDGPU::CPol::TH_ATOMIC_NT)
+      O << "NT" << (TH & AMDGPU::CPol::TH_ATOMIC_RETURN ? "_RETURN" : "");
+    else if (TH & AMDGPU::CPol::TH_ATOMIC_RETURN)
       O << "RETURN";
     else
-      O << formatHex(Imm);
+      O << formatHex(TH);
   } else {
-    if (!IsStore && Imm == AMDGPU::TH::RESERVED)
-      O << formatHex(Imm);
+    if (!IsStore && TH == AMDGPU::CPol::TH_RESERVED)
+      O << formatHex(TH);
     else {
       // This will default to printing load variants when neither MayStore nor
-      // MayLoad flag is present which is the case with instructons like
+      // MayLoad flag is present which is the case with instructions like
       // image_get_resinfo.
       O << (IsStore ? "TH_STORE_" : "TH_LOAD_");
-      switch (Imm) {
-      case AMDGPU::TH::NT:
+      switch (TH) {
+      case AMDGPU::CPol::TH_NT:
         O << "NT";
         break;
-      case AMDGPU::TH::HT:
+      case AMDGPU::CPol::TH_HT:
         O << "HT";
         break;
-      case AMDGPU::TH::BYPASS: // or LU or RT_WB
-        O << (Scope == AMDGPU::Scope::SCOPE_SYS ? "BYPASS"
-                                                : (IsStore ? "RT_WB" : "LU"));
+      case AMDGPU::CPol::TH_BYPASS: // or LU or RT_WB
+        O << (Scope == AMDGPU::CPol::SCOPE_SYS ? "BYPASS"
+                                               : (IsStore ? "RT_WB" : "LU"));
         break;
-      case AMDGPU::TH::NT_RT:
+      case AMDGPU::CPol::TH_NT_RT:
         O << "NT_RT";
         break;
-      case AMDGPU::TH::RT_NT:
+      case AMDGPU::CPol::TH_RT_NT:
         O << "RT_NT";
         break;
-      case AMDGPU::TH::NT_HT:
+      case AMDGPU::CPol::TH_NT_HT:
         O << "NT_HT";
         break;
-      case AMDGPU::TH::NT_WB:
+      case AMDGPU::CPol::TH_NT_WB:
         O << "NT_WB";
         break;
       default:
@@ -311,22 +318,22 @@ void AMDGPUInstPrinter::printTH(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printScope(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI, raw_ostream &O) {
-  auto Imm = MI->getOperand(OpNo).getImm();
-
-  if (Imm == Scope::SCOPE_CU)
+void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
+  if (Scope == CPol::SCOPE_CU)
     return;
 
   O << " scope:";
-  if (Imm == Scope::SCOPE_SE)
+
+  if (Scope == CPol::SCOPE_SE)
     O << "SCOPE_SE";
-  else if (Imm == Scope::SCOPE_DEV)
+  else if (Scope == CPol::SCOPE_DEV)
     O << "SCOPE_DEV";
-  else if (Imm == Scope::SCOPE_SYS)
+  else if (Scope == CPol::SCOPE_SYS)
     O << "SCOPE_SYS";
   else
     llvm_unreachable("unexpected scope policy value");
+
+  return;
 }
 
 void AMDGPUInstPrinter::printSWZ(const MCInst *MI, unsigned OpNo,
@@ -336,11 +343,6 @@ void AMDGPUInstPrinter::printSWZ(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printTFE(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
   printNamedBit(MI, OpNo, O, "tfe");
-}
-
-void AMDGPUInstPrinter::printNV(const MCInst *MI, unsigned OpNo,
-                                const MCSubtargetInfo &STI, raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "nv");
 }
 
 void AMDGPUInstPrinter::printDMask(const MCInst *MI, unsigned OpNo,
@@ -816,7 +818,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     // Check if operand register class contains register used.
     // Intention: print disassembler message when invalid code is decoded,
     // for example sgpr register used in VReg or VISrc(VReg or imm) operand.
-    int RCID = Desc.OpInfo[OpNo].RegClass;
+    int RCID = Desc.operands()[OpNo].RegClass;
     if (RCID != -1) {
       const MCRegisterClass RC = MRI.getRegClass(RCID);
       auto Reg = mc2PseudoReg(Op.getReg());
@@ -826,7 +828,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       }
     }
   } else if (Op.isImm()) {
-    const uint8_t OpTy = Desc.OpInfo[OpNo].OperandType;
+    const uint8_t OpTy = Desc.operands()[OpNo].OperandType;
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_IMM_INT32:
     case AMDGPU::OPERAND_REG_IMM_FP32:
@@ -903,7 +905,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       O << "0.0";
     else {
       const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-      int RCID = Desc.OpInfo[OpNo].RegClass;
+      int RCID = Desc.operands()[OpNo].RegClass;
       unsigned RCBits = AMDGPU::getRegBitWidth(MRI.getRegClass(RCID));
       if (RCBits == 32)
         printImmediate32(FloatToBits(Value), STI, O);
@@ -1082,7 +1084,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
                                            AMDGPU::OpName::src0);
 
   if (Src0Idx >= 0 &&
-      Desc.OpInfo[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID &&
+      Desc.operands()[Src0Idx].RegClass == AMDGPU::VReg_64RegClassID &&
       !AMDGPU::isLegal64BitDPPControl(Imm)) {
     O << " /* 64 bit dpp only supports row_newbcast */";
     return;

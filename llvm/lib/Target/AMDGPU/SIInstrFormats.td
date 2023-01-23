@@ -419,12 +419,10 @@ class VIMAGE_VSAMPLE_Common <bits<8> op> : Enc96 {
   bits<1> r128;
   bit d16;
   bits<1> a16;
-  bits<1> nv;
   bits<4> dmask;
   bits<8> vdata;
   bits<9> rsrc;
-  bits<2> scope;
-  bits<3> th;
+  bits<6> cpol;
   bits<8> vaddr0;
   bits<8> vaddr1;
   bits<8> vaddr2;
@@ -434,13 +432,13 @@ class VIMAGE_VSAMPLE_Common <bits<8> op> : Enc96 {
   let Inst{4} = r128;
   let Inst{5} = d16;
   let Inst{6} = a16;
-  let Inst{7} = nv;
+  let Inst{7} = cpol{5}; // nv
   let Inst{21-14} = op;
   let Inst{25-22} = dmask;
   let Inst{39-32} = vdata;
   let Inst{49-41} = rsrc;
-  let Inst{51-50} = scope;
-  let Inst{54-52} = th;
+  let Inst{51-50} = cpol{4-3}; // scope
+  let Inst{54-52} = cpol{2-0}; // th
   let Inst{71-64} = vaddr0;
   let Inst{79-72} = vaddr1;
   let Inst{87-80} = vaddr2;

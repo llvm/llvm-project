@@ -14,6 +14,7 @@
 #ifndef LLVM_MC_MCINSTRDESC_H
 #define LLVM_MC_MCINSTRDESC_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCRegister.h"
 
@@ -196,6 +197,14 @@ enum Flag {
 /// directly to describe itself.
 class MCInstrDesc {
 public:
+  // Do not allow MCInstrDescs to be copied or moved. They should only exist in
+  // the <Target>Insts table because they rely on knowing their own address to
+  // find other information elsewhere in the same table.
+  MCInstrDesc(const MCInstrDesc &) = delete;
+  MCInstrDesc(MCInstrDesc &&) = delete;
+  MCInstrDesc &operator=(const MCInstrDesc &) = delete;
+  MCInstrDesc &operator=(MCInstrDesc &&) = delete;
+
   unsigned short Opcode;         // The opcode number
   unsigned short NumOperands;    // Num of args (may be more if variable_ops)
   unsigned char NumDefs;         // Num of args that are definitions
@@ -212,9 +221,9 @@ public:
   int getOperandConstraint(unsigned OpNum,
                            MCOI::OperandConstraint Constraint) const {
     if (OpNum < NumOperands &&
-        (OpInfo[OpNum].Constraints & (1 << Constraint))) {
+        (operands()[OpNum].Constraints & (1 << Constraint))) {
       unsigned ValuePos = 4 + Constraint * 4;
-      return (int)(OpInfo[OpNum].Constraints >> ValuePos) & 0x0f;
+      return (int)(operands()[OpNum].Constraints >> ValuePos) & 0x0f;
     }
     return -1;
   }
@@ -234,8 +243,8 @@ public:
   const_opInfo_iterator opInfo_begin() const { return OpInfo; }
   const_opInfo_iterator opInfo_end() const { return OpInfo + NumOperands; }
 
-  iterator_range<const_opInfo_iterator> operands() const {
-    return make_range(opInfo_begin(), opInfo_end());
+  ArrayRef<MCOperandInfo> operands() const {
+    return ArrayRef(OpInfo, NumOperands);
   }
 
   /// Return the number of MachineOperands that are register
@@ -563,6 +572,9 @@ public:
   ///
   /// This method returns null if the instruction has no implicit uses.
   const MCPhysReg *getImplicitUses() const { return ImplicitUses; }
+  ArrayRef<MCPhysReg> implicit_uses() const {
+    return {ImplicitUses, getNumImplicitUses()};
+  }
 
   /// Return the number of implicit uses this instruction has.
   unsigned getNumImplicitUses() const {
@@ -585,6 +597,9 @@ public:
   ///
   /// This method returns null if the instruction has no implicit defs.
   const MCPhysReg *getImplicitDefs() const { return ImplicitDefs; }
+  ArrayRef<MCPhysReg> implicit_defs() const {
+    return {ImplicitDefs, getNumImplicitDefs()};
+  }
 
   /// Return the number of implicit defs this instruct has.
   unsigned getNumImplicitDefs() const {
@@ -599,11 +614,7 @@ public:
   /// Return true if this instruction implicitly
   /// uses the specified physical register.
   bool hasImplicitUseOfPhysReg(unsigned Reg) const {
-    if (const MCPhysReg *ImpUses = getImplicitUses())
-      for (; *ImpUses; ++ImpUses)
-        if (*ImpUses == Reg)
-          return true;
-    return false;
+    return is_contained(implicit_uses(), Reg);
   }
 
   /// Return true if this instruction implicitly
@@ -627,7 +638,7 @@ public:
   int findFirstPredOperandIdx() const {
     if (isPredicable()) {
       for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-        if (OpInfo[i].isPredicate())
+        if (operands()[i].isPredicate())
           return i;
     }
     return -1;
