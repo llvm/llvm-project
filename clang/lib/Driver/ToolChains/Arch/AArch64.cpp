@@ -123,8 +123,8 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
 static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
                               std::vector<StringRef> &Features) {
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
+  CPU = Split.first;
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
-  CPU = llvm::AArch64::resolveCPUAlias(Split.first);
 
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
@@ -132,9 +132,12 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "generic") {
     Features.push_back("+neon");
   } else {
-    ArchInfo = &llvm::AArch64::parseCpu(CPU).Arch;
-    if (*ArchInfo == llvm::AArch64::INVALID)
+    const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
+        llvm::AArch64::parseCpu(CPU);
+    if (!CpuInfo)
       return false;
+    ArchInfo = &CpuInfo->Arch;
+
     Features.push_back(ArchInfo->ArchFeature);
 
     uint64_t Extension = llvm::AArch64::getDefaultExtensions(CPU, *ArchInfo);
@@ -156,11 +159,11 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
-  const llvm::AArch64::ArchInfo *ArchInfo =
-      &llvm::AArch64::parseArch(Split.first);
+  std::optional <llvm::AArch64::ArchInfo> ArchInfo =
+      llvm::AArch64::parseArch(Split.first);
   if (Split.first == "native")
-    ArchInfo = &llvm::AArch64::getArchForCpu(llvm::sys::getHostCPUName().str());
-  if (*ArchInfo == llvm::AArch64::INVALID)
+    ArchInfo = llvm::AArch64::getArchForCpu(llvm::sys::getHostCPUName().str());
+  if (!ArchInfo)
     return false;
   Features.push_back(ArchInfo->ArchFeature);
 

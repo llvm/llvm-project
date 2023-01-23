@@ -51,6 +51,7 @@
 #include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include <cassert>
 #include <cctype>
 #include <cstdint>
@@ -6880,8 +6881,8 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   std::tie(Arch, ExtensionString) =
       getParser().parseStringToEndOfStatement().trim().split('+');
 
-  const AArch64::ArchInfo &ArchInfo = AArch64::parseArch(Arch);
-  if (ArchInfo == AArch64::INVALID)
+  std::optional<AArch64::ArchInfo> ArchInfo = AArch64::parseArch(Arch);
+  if (!ArchInfo)
     return Error(ArchLoc, "unknown arch name");
 
   if (parseToken(AsmToken::EndOfStatement))
@@ -6889,9 +6890,9 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
 
   // Get the architecture and extension features.
   std::vector<StringRef> AArch64Features;
-  AArch64Features.push_back(ArchInfo.ArchFeature);
+  AArch64Features.push_back(ArchInfo->ArchFeature);
   AArch64::getExtensionFeatures(
-      AArch64::getDefaultExtensions("generic", ArchInfo), AArch64Features);
+      AArch64::getDefaultExtensions("generic", *ArchInfo), AArch64Features);
 
   MCSubtargetInfo &STI = copySTI();
   std::vector<std::string> ArchFeatures(AArch64Features.begin(), AArch64Features.end());
@@ -6902,7 +6903,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   if (!ExtensionString.empty())
     ExtensionString.split(RequestedExtensions, '+');
 
-  ExpandCryptoAEK(ArchInfo, RequestedExtensions);
+  ExpandCryptoAEK(*ArchInfo, RequestedExtensions);
 
   FeatureBitset Features = STI.getFeatureBits();
   for (auto Name : RequestedExtensions) {
@@ -6987,18 +6988,16 @@ bool AArch64AsmParser::parseDirectiveCPU(SMLoc L) {
   if (!ExtensionString.empty())
     ExtensionString.split(RequestedExtensions, '+');
 
-  // FIXME This is using tablegen data, but should be moved to ARMTargetParser
-  // once that is tablegen'ed
-  if (!getSTI().isCPUStringValid(CPU)) {
+  const std::optional<llvm::AArch64::ArchInfo> CpuArch = llvm::AArch64::getArchForCpu(CPU);
+  if (!CpuArch) {
     Error(CurLoc, "unknown CPU name");
     return false;
   }
+  ExpandCryptoAEK(*CpuArch, RequestedExtensions);
 
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures(CPU, /*TuneCPU*/ CPU, "");
   CurLoc = incrementLoc(CurLoc, CPU.size());
-
-  ExpandCryptoAEK(llvm::AArch64::getArchForCpu(CPU), RequestedExtensions);
 
   for (auto Name : RequestedExtensions) {
     // Advance source location past '+'.
