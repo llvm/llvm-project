@@ -26,6 +26,7 @@ const char *HeaderDesc::getName() const {
 #include "clang/Basic/BuiltinHeaders.def"
 #undef HEADER
   };
+  llvm_unreachable("Unknown HeaderDesc::HeaderID enum");
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {
