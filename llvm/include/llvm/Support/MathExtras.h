@@ -102,7 +102,7 @@ template <typename T> T findFirstSet(T Val, ZeroBehavior ZB = ZB_Max) {
   if (ZB == ZB_Max && Val == 0)
     return std::numeric_limits<T>::max();
 
-  return countTrailingZeros(Val);
+  return llvm::countr_zero(Val);
 }
 
 /// Create a bitmask with the N right-most bits set to 1, and all other
@@ -144,7 +144,7 @@ template <typename T> T findLastSet(T Val, ZeroBehavior ZB = ZB_Max) {
 
   // Use ^ instead of - because both gcc and llvm can remove the associated ^
   // in the __builtin_clz intrinsic on x86.
-  return countLeadingZeros(Val) ^ (std::numeric_limits<T>::digits - 1);
+  return llvm::countl_zero(Val) ^ (std::numeric_limits<T>::digits - 1);
 }
 
 /// Macro compressed bit reversal table for 256 bits.
@@ -375,8 +375,8 @@ inline bool isShiftedMask_32(uint32_t Value, unsigned &MaskIdx,
                              unsigned &MaskLen) {
   if (!isShiftedMask_32(Value))
     return false;
-  MaskIdx = countTrailingZeros(Value);
-  MaskLen = countPopulation(Value);
+  MaskIdx = llvm::countr_zero(Value);
+  MaskLen = llvm::popcount(Value);
   return true;
 }
 
@@ -388,8 +388,8 @@ inline bool isShiftedMask_64(uint64_t Value, unsigned &MaskIdx,
                              unsigned &MaskLen) {
   if (!isShiftedMask_64(Value))
     return false;
-  MaskIdx = countTrailingZeros(Value);
-  MaskLen = countPopulation(Value);
+  MaskIdx = llvm::countr_zero(Value);
+  MaskLen = llvm::popcount(Value);
   return true;
 }
 
@@ -407,26 +407,26 @@ template <> constexpr inline size_t CTLog2<1>() { return 0; }
 /// (32 bit edition.)
 /// Ex. Log2_32(32) == 5, Log2_32(1) == 0, Log2_32(0) == -1, Log2_32(6) == 2
 inline unsigned Log2_32(uint32_t Value) {
-  return 31 - countLeadingZeros(Value);
+  return 31 - llvm::countl_zero(Value);
 }
 
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (64 bit edition.)
 inline unsigned Log2_64(uint64_t Value) {
-  return 63 - countLeadingZeros(Value);
+  return 63 - llvm::countl_zero(Value);
 }
 
 /// Return the ceil log base 2 of the specified value, 32 if the value is zero.
 /// (32 bit edition).
 /// Ex. Log2_32_Ceil(32) == 5, Log2_32_Ceil(1) == 0, Log2_32_Ceil(6) == 3
 inline unsigned Log2_32_Ceil(uint32_t Value) {
-  return 32 - countLeadingZeros(Value - 1);
+  return 32 - llvm::countl_zero(Value - 1);
 }
 
 /// Return the ceil log base 2 of the specified value, 64 if the value is zero.
 /// (64 bit edition.)
 inline unsigned Log2_64_Ceil(uint64_t Value) {
-  return 64 - countLeadingZeros(Value - 1);
+  return 64 - llvm::countl_zero(Value - 1);
 }
 
 /// This function takes a 64-bit integer and returns the bit equivalent double.
@@ -484,7 +484,7 @@ constexpr inline uint64_t NextPowerOf2(uint64_t A) {
 /// Essentially, it is a floor operation across the domain of powers of two.
 inline uint64_t PowerOf2Floor(uint64_t A) {
   if (!A) return 0;
-  return 1ull << (63 - countLeadingZeros(A));
+  return 1ull << (63 - llvm::countl_zero(A));
 }
 
 /// Returns the power of two which is greater than or equal to the given value.

@@ -1003,11 +1003,30 @@ namespace llvm {
     /// legal as the hook is used before type legalization.
     bool isSafeMemOpType(MVT VT) const override;
 
+    bool isMemoryAccessFast(EVT VT, Align Alignment) const;
+
     /// Returns true if the target allows unaligned memory accesses of the
     /// specified type. Returns whether it is "fast" in the last argument.
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
                                         MachineMemOperand::Flags Flags,
                                         unsigned *Fast) const override;
+
+    /// This function returns true if the memory access is aligned or if the
+    /// target allows this specific unaligned memory access. If the access is
+    /// allowed, the optional final parameter returns a relative speed of the
+    /// access (as defined by the target).
+    bool allowsMemoryAccess(
+        LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
+        Align Alignment,
+        MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+        unsigned *Fast = nullptr) const override;
+
+    bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,
+                            const MachineMemOperand &MMO,
+                            unsigned *Fast) const {
+      return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(),
+                                MMO.getAlign(), MMO.getFlags(), Fast);
+    }
 
     /// Provide custom lowering hooks for some operations.
     ///

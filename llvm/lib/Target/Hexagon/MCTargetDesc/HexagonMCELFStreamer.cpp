@@ -127,7 +127,7 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
     if ((AccessSize) && (Size <= GPSize)) {
       uint64_t SectionIndex =
           (AccessSize <= GPSize)
-              ? ELF::SHN_HEXAGON_SCOMMON + (Log2_64(AccessSize) + 1)
+              ? ELF::SHN_HEXAGON_SCOMMON + llvm::bit_width(AccessSize)
               : (unsigned)ELF::SHN_HEXAGON_SCOMMON;
       ELFSymbol->setIndex(SectionIndex);
     }

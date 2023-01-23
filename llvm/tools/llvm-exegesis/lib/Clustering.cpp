@@ -314,7 +314,7 @@ void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
       // Actually append to-be-moved points to the new cluster.
       UnstableCluster.PointIndices.insert(UnstableCluster.PointIndices.end(),
                                           it, OldCluster.PointIndices.end());
-      // And finally, remove "to-be-moved" points form the old cluster.
+      // And finally, remove "to-be-moved" points from the old cluster.
       OldCluster.PointIndices.erase(it, OldCluster.PointIndices.end());
       // Now, the old cluster may end up being empty, but let's just keep it
       // in whatever state it ended up. Purging empty clusters isn't worth it.

@@ -138,7 +138,6 @@ coroutine cstddef
 coroutine cstdint
 coroutine cstring
 coroutine limits
-coroutine type_traits
 coroutine version
 cstddef version
 ctgmath ccomplex
@@ -452,12 +451,10 @@ new cstddef
 new cstdlib
 new exception
 new version
-numbers type_traits
 numbers version
 numeric cmath
 numeric cstddef
 numeric limits
-numeric type_traits
 numeric version
 optional compare
 optional cstddef

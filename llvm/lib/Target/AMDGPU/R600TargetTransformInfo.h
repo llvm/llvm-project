@@ -62,6 +62,7 @@ public:
                                  const Instruction *I = nullptr);
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
+                                     TTI::TargetCostKind CostKind,
                                      unsigned Index, Value *Op0, Value *Op1);
 };
 

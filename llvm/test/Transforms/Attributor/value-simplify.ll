@@ -7,9 +7,11 @@ declare void @f(i32)
 declare token @llvm.call.preallocated.setup(i32)
 declare ptr @llvm.call.preallocated.arg(token, i32)
 
+@str = private unnamed_addr addrspace(4) constant [1 x i8] c"\00", align 1
 @ConstAS3Ptr = addrspace(3) global i32 0, align 4
 
 ;.
+; CHECK: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ; CHECK: @[[CONSTAS3PTR:[a-zA-Z0-9_$"\\.-]+]] = addrspace(3) global i32 0, align 4
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external global [[STRUCT_X:%.*]]
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal constant { [2 x ptr] } { [2 x ptr] [ptr @f1, ptr @f2] }
@@ -1405,6 +1407,24 @@ define void @entry() {
 entry:
   call void @broker(void ()* @indirect)
   ret void
+}
+
+define i1 @constexpr_icmp1() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@constexpr_icmp1
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    ret i1 true
+;
+  ret i1 icmp ne (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null)
+}
+
+define i1 @constexpr_icmp2() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@constexpr_icmp2
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    ret i1 false
+;
+  ret i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null)
 }
 
 ;.

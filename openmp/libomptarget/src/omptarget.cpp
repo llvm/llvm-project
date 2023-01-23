@@ -225,9 +225,7 @@ static int initLibrary(DeviceTy &Device) {
         DP("Has pending ctors... call now\n");
         for (auto &Entry : Lib.second.PendingCtors) {
           void *Ctor = Entry;
-          int Rc = target(nullptr, Device, Ctor, 0, nullptr, nullptr, nullptr,
-                          nullptr, nullptr, nullptr, 1, 1, 0, true /*team*/,
-                          AsyncInfo);
+          int Rc = target(nullptr, Device, Ctor, CTorDTorKernelArgs, AsyncInfo);
           if (Rc != OFFLOAD_SUCCESS) {
             REPORT("Running ctor " DPxMOD " failed.\n", DPxPTR(Ctor));
             return OFFLOAD_FAIL;
@@ -1620,11 +1618,8 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
 /// performs the same action as data_update and data_end above. This function
 /// returns 0 if it was able to transfer the execution to a target and an
 /// integer different from zero otherwise.
-int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
-           void **ArgBases, void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
-           map_var_info_t *ArgNames, void **ArgMappers, int32_t TeamNum,
-           int32_t ThreadLimit, uint64_t Tripcount, int IsTeamConstruct,
-           AsyncInfoTy &AsyncInfo) {
+int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
+           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo) {
   int32_t DeviceId = Device.DeviceID;
   TableMap *TM = getTableMap(HostPtr);
   // No map for this host pointer found!
@@ -1644,7 +1639,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
   }
   assert(TargetTable && "Global data has not been mapped\n");
 
-  DP("loop trip count is %" PRIu64 ".\n", Tripcount);
+  DP("loop trip count is %" PRIu64 ".\n", KernelArgs.Tripcount);
 
   // We need to keep bases and offsets separate. Sometimes (e.g. in OpenCL) we
   // need to manifest base pointers prior to launching a kernel. Even if we have
@@ -1660,16 +1655,25 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
 
   PrivateArgumentManagerTy PrivateArgumentManager(Device, AsyncInfo);
 
+  int NumClangLaunchArgs = KernelArgs.NumArgs;
   int Ret = OFFLOAD_SUCCESS;
-  if (ArgNum) {
+  if (NumClangLaunchArgs) {
     // Process data, such as data mapping, before launching the kernel
-    Ret = processDataBefore(Loc, DeviceId, HostPtr, ArgNum, ArgBases, Args,
-                            ArgSizes, ArgTypes, ArgNames, ArgMappers, TgtArgs,
+    Ret = processDataBefore(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
+                            KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
+                            KernelArgs.ArgSizes, KernelArgs.ArgTypes,
+                            KernelArgs.ArgNames, KernelArgs.ArgMappers, TgtArgs,
                             TgtOffsets, PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT("Failed to process data before launching the kernel.\n");
       return OFFLOAD_FAIL;
     }
+
+    // Clang might pass more values via the ArgPtrs to the runtime that we pass
+    // on to the kernel.
+    // TOOD: Next time we adjust the KernelArgsTy we should introduce a new
+    // NumKernelArgs field.
+    KernelArgs.NumArgs = TgtArgs.size();
   }
 
   // Launch device execution.
@@ -1678,15 +1682,10 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
      TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
 
   {
-    TIMESCOPE_WITH_NAME_AND_IDENT(
-        IsTeamConstruct ? "runTargetTeamRegion" : "runTargetRegion", Loc);
-    if (IsTeamConstruct)
-      Ret = Device.runTeamRegion(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
-                                 TgtArgs.size(), TeamNum, ThreadLimit,
-                                 Tripcount, AsyncInfo);
-    else
-      Ret = Device.runRegion(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
-                             TgtArgs.size(), AsyncInfo);
+    assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
+    TIMESCOPE_WITH_NAME_AND_IDENT("Initiate Kernel Launch", Loc);
+    Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
+                              KernelArgs, AsyncInfo);
   }
 
   if (Ret != OFFLOAD_SUCCESS) {
@@ -1694,11 +1693,13 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
     return OFFLOAD_FAIL;
   }
 
-  if (ArgNum) {
+  if (NumClangLaunchArgs) {
     // Transfer data back and deallocate target memory for (first-)private
     // variables
-    Ret = processDataAfter(Loc, DeviceId, HostPtr, ArgNum, ArgBases, Args,
-                           ArgSizes, ArgTypes, ArgNames, ArgMappers,
+    Ret = processDataAfter(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
+                           KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
+                           KernelArgs.ArgSizes, KernelArgs.ArgTypes,
+                           KernelArgs.ArgNames, KernelArgs.ArgMappers,
                            PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT("Failed to process data after launching the kernel.\n");
@@ -1747,9 +1748,15 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                                   TARGET_ALLOC_DEFAULT);
   Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
 
-  int Ret =
-      Device.runTeamRegion(TgtEntryPtr, TgtArgs, TgtOffsets, NumArgs, NumTeams,
-                           ThreadLimit, LoopTripCount, AsyncInfo);
+  KernelArgsTy KernelArgs = {0};
+  KernelArgs.Version = 2;
+  KernelArgs.NumArgs = NumArgs;
+  KernelArgs.Tripcount = LoopTripCount;
+  KernelArgs.NumTeams[0] = NumTeams;
+  KernelArgs.ThreadLimit[0] = ThreadLimit;
+
+  int Ret = Device.launchKernel(TgtEntryPtr, TgtArgs, TgtOffsets, KernelArgs,
+                                AsyncInfo);
 
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Executing target region abort target.\n");

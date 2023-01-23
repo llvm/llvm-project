@@ -219,7 +219,7 @@ void printType(Type type, AsmPrinter &printer);
 } // namespace detail
 
 /// Parse any MLIR type or a concise syntax for LLVM types.
-ParseResult parsePrettyLLVMType(AsmParser &p, FailureOr<Type> &type);
+ParseResult parsePrettyLLVMType(AsmParser &p, Type &type);
 /// Print any MLIR type or a concise syntax for LLVM types.
 void printPrettyLLVMType(AsmPrinter &p, Type type);
 

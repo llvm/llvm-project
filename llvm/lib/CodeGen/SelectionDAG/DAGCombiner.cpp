@@ -561,6 +561,7 @@ namespace {
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
     SDValue foldSubToUSubSat(EVT DstVT, SDNode *N);
+    SDValue foldABSToABD(SDNode *N);
     SDValue unfoldMaskedMerge(SDNode *N);
     SDValue unfoldExtremeBitClearingToShifts(SDNode *N);
     SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
@@ -10116,8 +10117,7 @@ SDValue DAGCombiner::visitSHLSAT(SDNode *N) {
 // Given a ABS node, detect the following pattern:
 // (ABS (SUB (EXTEND a), (EXTEND b))).
 // Generates UABD/SABD instruction.
-static SDValue combineABSToABD(SDNode *N, SelectionDAG &DAG,
-                               const TargetLowering &TLI) {
+SDValue DAGCombiner::foldABSToABD(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue AbsOp1 = N->getOperand(0);
   SDValue Op0, Op1;
@@ -10175,7 +10175,7 @@ SDValue DAGCombiner::visitABS(SDNode *N) {
   if (DAG.SignBitIsZero(N0))
     return N0;
 
-  if (SDValue ABD = combineABSToABD(N, DAG, TLI))
+  if (SDValue ABD = foldABSToABD(N))
     return ABD;
 
   // fold (abs (sign_extend_inreg x)) -> (zero_extend (abs (truncate x)))
@@ -19966,31 +19966,21 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
 }
 
 // Merge an insertion into an existing shuffle:
-// (insert_vector_elt (vector_shuffle X, Y), (extract_vector_elt X, N),
-// InsIndex)
-//   --> (vector_shuffle X, Y) and variations where shuffle operands may be
-//   CONCAT_VECTORS.
-SDValue DAGCombiner::mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex) {
-  assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT &&
-         "Expected extract_vector_elt");
-  SDValue InsertVal = N->getOperand(1);
-  SDValue Vec = N->getOperand(0);
-
-  if (Vec.getOpcode() != ISD::VECTOR_SHUFFLE ||
-      InsertVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      !isa<ConstantSDNode>(InsertVal.getOperand(1)) || !Vec.hasOneUse())
-    return SDValue();
-
-  auto *SVN = cast<ShuffleVectorSDNode>(Vec.getNode());
-  ArrayRef<int> Mask = SVN->getMask();
-
-  SDValue X = Vec.getOperand(0);
-  SDValue Y = Vec.getOperand(1);
+// (insert_vector_elt (vector_shuffle X, Y, Mask),
+//                   .(extract_vector_elt X, N), InsIndex)
+//   --> (vector_shuffle X, Y, NewMask)
+//  and variations where shuffle operands may be CONCAT_VECTORS.
+static bool mergeEltWithShuffle(SDValue &X, SDValue &Y, ArrayRef<int> Mask,
+                                SmallVectorImpl<int> &NewMask, SDValue Elt,
+                                unsigned InsIndex) {
+  if (Elt.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      !isa<ConstantSDNode>(Elt.getOperand(1)))
+    return false;
 
   // Vec's operand 0 is using indices from 0 to N-1 and
   // operand 1 from N to 2N - 1, where N is the number of
   // elements in the vectors.
-  SDValue InsertVal0 = InsertVal.getOperand(0);
+  SDValue InsertVal0 = Elt.getOperand(0);
   int ElementOffset = -1;
 
   // We explore the inputs of the shuffle in order to see if we find the
@@ -20028,21 +20018,41 @@ SDValue DAGCombiner::mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex) {
 
   // If we failed to find a match, see if we can replace an UNDEF shuffle
   // operand.
-  if (ElementOffset == -1 && Y.isUndef() &&
-      InsertVal0.getValueType() == Y.getValueType()) {
+  if (ElementOffset == -1) {
+    if (!Y.isUndef() || InsertVal0.getValueType() != Y.getValueType())
+      return false;
     ElementOffset = Mask.size();
     Y = InsertVal0;
   }
 
-  if (ElementOffset != -1) {
-    SmallVector<int, 16> NewMask(Mask);
+  NewMask.assign(Mask.begin(), Mask.end());
+  NewMask[InsIndex] = ElementOffset + Elt.getConstantOperandVal(1);
+  assert(NewMask[InsIndex] < (int)(2 * Mask.size()) && NewMask[InsIndex] >= 0 &&
+         "NewMask[InsIndex] is out of bound");
+  return true;
+}
 
-    auto *ExtrIndex = cast<ConstantSDNode>(InsertVal.getOperand(1));
-    NewMask[InsIndex] = ElementOffset + ExtrIndex->getZExtValue();
-    assert(NewMask[InsIndex] <
-               (int)(2 * Vec.getValueType().getVectorNumElements()) &&
-           NewMask[InsIndex] >= 0 && "NewMask[InsIndex] is out of bound");
+// Merge an insertion into an existing shuffle:
+// (insert_vector_elt (vector_shuffle X, Y), (extract_vector_elt X, N),
+// InsIndex)
+//   --> (vector_shuffle X, Y) and variations where shuffle operands may be
+//   CONCAT_VECTORS.
+SDValue DAGCombiner::mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex) {
+  assert(N->getOpcode() == ISD::INSERT_VECTOR_ELT &&
+         "Expected extract_vector_elt");
+  SDValue InsertVal = N->getOperand(1);
+  SDValue Vec = N->getOperand(0);
 
+  auto *SVN = dyn_cast<ShuffleVectorSDNode>(Vec);
+  if (!SVN || !Vec.hasOneUse())
+    return SDValue();
+
+  ArrayRef<int> Mask = SVN->getMask();
+  SDValue X = Vec.getOperand(0);
+  SDValue Y = Vec.getOperand(1);
+
+  SmallVector<int, 16> NewMask(Mask);
+  if (mergeEltWithShuffle(X, Y, Mask, NewMask, InsertVal, InsIndex)) {
     SDValue LegalShuffle = TLI.buildLegalVectorShuffle(
         Vec.getValueType(), SDLoc(N), X, Y, NewMask, DAG);
     if (LegalShuffle)
@@ -20252,6 +20262,32 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
             CurVec = CurVec->getOperand(0);
             continue;
           }
+
+      // VECTOR_SHUFFLE - if all the operands match the shuffle's sources,
+      // update the shuffle mask (and second operand if we started with unary
+      // shuffle) and create a new legal shuffle.
+      if (CurVec.getOpcode() == ISD::VECTOR_SHUFFLE && CurVec.hasOneUse()) {
+        auto *SVN = cast<ShuffleVectorSDNode>(CurVec);
+        SDValue LHS = SVN->getOperand(0);
+        SDValue RHS = SVN->getOperand(1);
+        SmallVector<int, 16> Mask(SVN->getMask());
+        bool Merged = true;
+        for (auto I : enumerate(Ops)) {
+          SDValue &Op = I.value();
+          if (Op) {
+            SmallVector<int, 16> NewMask;
+            if (!mergeEltWithShuffle(LHS, RHS, Mask, NewMask, Op, I.index())) {
+              Merged = false;
+              break;
+            }
+            Mask = std::move(NewMask);
+          }
+        }
+        if (Merged)
+          if (SDValue NewShuffle =
+                  TLI.buildLegalVectorShuffle(VT, DL, LHS, RHS, Mask, DAG))
+            return NewShuffle;
+      }
 
       // Failed to find a match in the chain - bail.
       break;
