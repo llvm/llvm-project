@@ -147,6 +147,21 @@ static cl::opt<unsigned>
                          cl::desc("The threshold for fast cluster"),
                          cl::init(1000));
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static cl::opt<bool> MISchedDumpScheduleTrace(
+    "misched-dump-schedule-trace", cl::Hidden, cl::init(false),
+    cl::desc("Dump resource usage at schedule boundary."));
+static cl::opt<unsigned>
+    HeaderColWidth("misched-dump-schedule-trace-col-header-width", cl::Hidden,
+                   cl::desc("Set width of the columns with "
+                            "the resources and schedule units"),
+                   cl::init(19));
+static cl::opt<unsigned>
+    ColWidth("misched-dump-schedule-trace-col-width", cl::Hidden,
+             cl::desc("Set width of the columns showing resource booking."),
+             cl::init(5));
+#endif
+
 // DAG subtrees must have at least this many nodes.
 static const unsigned MinSubtreeSize = 8;
 
@@ -931,7 +946,152 @@ void ScheduleDAGMI::placeDebugValues() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static const char *scheduleTableLegend = "  i: issue\n  x: resource booked";
+
+LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
+  //  Nothing to show if there is no or just one instruction.
+  if (BB->size() < 2)
+    return;
+
+  dbgs() << " * Schedule table (TopDown):\n";
+  dbgs() << scheduleTableLegend << "\n";
+  const unsigned FirstCycle = getSUnit(&*(std::begin(*this)))->TopReadyCycle;
+  unsigned LastCycle = getSUnit(&*(std::prev(std::end(*this))))->TopReadyCycle;
+  for (MachineInstr &MI : *this) {
+    SUnit *SU = getSUnit(&MI);
+    if (!SU)
+      continue;
+    const MCSchedClassDesc *SC = getSchedClass(SU);
+    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
+                                       PE = SchedModel.getWriteProcResEnd(SC);
+         PI != PE; ++PI) {
+      if (SU->TopReadyCycle + PI->Cycles - 1 > LastCycle)
+        LastCycle = SU->TopReadyCycle + PI->Cycles - 1;
+    }
+  }
+  // Print the header with the cycles
+  dbgs() << llvm::left_justify("Cycle", HeaderColWidth);
+  for (unsigned C = FirstCycle; C <= LastCycle; ++C)
+    dbgs() << llvm::left_justify("| " + std::to_string(C), ColWidth);
+  dbgs() << "|\n";
+
+  for (MachineInstr &MI : *this) {
+    SUnit *SU = getSUnit(&MI);
+    if (!SU) {
+      dbgs() << "Missing SUnit\n";
+      continue;
+    }
+    std::string NodeName("SU(");
+    NodeName += std::to_string(SU->NodeNum) + ")";
+    dbgs() << llvm::left_justify(NodeName, HeaderColWidth);
+    unsigned C = FirstCycle;
+    for (; C <= LastCycle; ++C) {
+      if (C == SU->TopReadyCycle)
+        dbgs() << llvm::left_justify("| i", ColWidth);
+      else
+        dbgs() << llvm::left_justify("|", ColWidth);
+    }
+    dbgs() << "|\n";
+    const MCSchedClassDesc *SC = getSchedClass(SU);
+    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
+                                       PE = SchedModel.getWriteProcResEnd(SC);
+         PI != PE; ++PI) {
+      C = FirstCycle;
+      const std::string ResName =
+          SchedModel.getResourceName(PI->ProcResourceIdx);
+      dbgs() << llvm::left_justify(ResName, HeaderColWidth);
+      for (; C < SU->TopReadyCycle; ++C) {
+        dbgs() << llvm::left_justify("|", ColWidth);
+      }
+      for (unsigned i = 0; i < PI->Cycles; ++i, ++C)
+        dbgs() << llvm::left_justify("| x", ColWidth);
+      while (C++ <= LastCycle)
+        dbgs() << llvm::left_justify("|", ColWidth);
+      // Place end char
+      dbgs() << "| \n";
+    }
+  }
+}
+
+LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
+  //  Nothing to show if there is no or just one instruction.
+  if (BB->size() < 2)
+    return;
+
+  dbgs() << " * Schedule table (BottomUp):\n";
+  dbgs() << scheduleTableLegend << "\n";
+
+  const int FirstCycle = getSUnit(&*(std::begin(*this)))->BotReadyCycle;
+  int LastCycle = getSUnit(&*(std::prev(std::end(*this))))->BotReadyCycle;
+  for (MachineInstr &MI : *this) {
+    SUnit *SU = getSUnit(&MI);
+    if (!SU)
+      continue;
+    const MCSchedClassDesc *SC = getSchedClass(SU);
+    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
+                                       PE = SchedModel.getWriteProcResEnd(SC);
+         PI != PE; ++PI) {
+      if ((int)SU->BotReadyCycle - PI->Cycles + 1 < LastCycle)
+        LastCycle = (int)SU->BotReadyCycle - PI->Cycles + 1;
+    }
+  }
+  // Print the header with the cycles
+  dbgs() << llvm::left_justify("Cycle", HeaderColWidth);
+  for (int C = FirstCycle; C >= LastCycle; --C)
+    dbgs() << llvm::left_justify("| " + std::to_string(C), ColWidth);
+  dbgs() << "|\n";
+
+  for (MachineInstr &MI : *this) {
+    SUnit *SU = getSUnit(&MI);
+    if (!SU) {
+      dbgs() << "Missing SUnit\n";
+      continue;
+    }
+    std::string NodeName("SU(");
+    NodeName += std::to_string(SU->NodeNum) + ")";
+    dbgs() << llvm::left_justify(NodeName, HeaderColWidth);
+    int C = FirstCycle;
+    for (; C >= LastCycle; --C) {
+      if (C == (int)SU->BotReadyCycle)
+        dbgs() << llvm::left_justify("| i", ColWidth);
+      else
+        dbgs() << llvm::left_justify("|", ColWidth);
+    }
+    dbgs() << "|\n";
+    const MCSchedClassDesc *SC = getSchedClass(SU);
+    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
+                                       PE = SchedModel.getWriteProcResEnd(SC);
+         PI != PE; ++PI) {
+      C = FirstCycle;
+      const std::string ResName =
+          SchedModel.getResourceName(PI->ProcResourceIdx);
+      dbgs() << llvm::left_justify(ResName, HeaderColWidth);
+      for (; C > (int)SU->BotReadyCycle; --C) {
+        dbgs() << llvm::left_justify("|", ColWidth);
+      }
+      for (unsigned i = 0; i < PI->Cycles; ++i, --C)
+        dbgs() << llvm::left_justify("| x", ColWidth);
+      while (C-- >= LastCycle)
+        dbgs() << llvm::left_justify("|", ColWidth);
+      // Place end char
+      dbgs() << "| \n";
+    }
+  }
+}
+#endif
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
+  if (MISchedDumpScheduleTrace) {
+    if (ForceTopDown)
+      dumpScheduleTraceTopDown();
+    else if (ForceBottomUp)
+      dumpScheduleTraceBottomUp();
+    else {
+      dbgs() << "* Schedule table (Bidirectional): not implemented\n";
+    }
+  }
+
   for (MachineInstr &MI : *this) {
     if (SUnit *SU = getSUnit(&MI))
       dumpNode(*SU);
