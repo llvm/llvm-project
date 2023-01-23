@@ -71,7 +71,6 @@ def main():
     if not re.match(r'^%s(-\d+)?(\.exe)?$' % (initial_args.tool), tool_basename):
       common.error('Unexpected tool name: ' + tool_basename)
       sys.exit(1)
-  tool_basename = initial_args.tool
 
   for ti in common.itertests(initial_args.tests, parser,
                              script_name='utils/' + script_name):
@@ -80,6 +79,8 @@ def main():
       common.SCRUB_TRAILING_WHITESPACE_TEST_RE = common.SCRUB_TRAILING_WHITESPACE_AND_ATTRIBUTES_RE
     else:
       common.SCRUB_TRAILING_WHITESPACE_TEST_RE = common.SCRUB_TRAILING_WHITESPACE_RE
+
+    tool_basename = ti.args.tool
 
     prefix_list = []
     for l in ti.run_lines:
