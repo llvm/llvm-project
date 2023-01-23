@@ -4,9 +4,9 @@
 ; See that we only spilled one value for f
 ; CHECK: %f.Frame = type { ptr, ptr, i32, i1 }
 ; Check other variants where different levels of materialization are achieved
-; CHECK: %f_multiple_remat.Frame = type { ptr, ptr, i32, i32, i32, i1 }
-; CHECK: %f_common_def.Frame = type { ptr, ptr, i32, i32, i32, i1 }
-; CHECK: %f_common_def_multi_result.Frame = type { ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i1 }
+; CHECK: %f_multiple_remat.Frame = type { ptr, ptr, i32, i1 }
+; CHECK: %f_common_def.Frame = type { ptr, ptr, i32, i1 }
+; CHECK: %f_common_def_multi_result.Frame = type { ptr, ptr, i32, i1 }
 ; CHECK-LABEL: @f(
 ; CHECK-LABEL: @f_multiple_remat(
 ; CHECK-LABEL: @f_common_def(

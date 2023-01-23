@@ -2,7 +2,7 @@
 ; as expected
 ; RUN: opt < %s -O0 -S | FileCheck %s
 
-; CHECK: %f.Frame = type { i32, i32 }
+; CHECK: %f.Frame = type { i32 }
 
 define { i8*, i32 } @f(i8* %buffer, i32 %n) {
 entry:
