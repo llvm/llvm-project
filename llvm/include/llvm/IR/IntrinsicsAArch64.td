@@ -2780,6 +2780,11 @@ let TargetPrefix = "aarch64" in {
                             [llvm_nxv4f32_ty, llvm_nxv4f32_ty],
                             [IntrNoMem]>;
 
+  class SME2_CVT_VG4_SINGLE_Intrinsic
+    : DefaultAttrsIntrinsic<[LLVMSubdivide4VectorType<0>],
+                            [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [IntrNoMem]>;
+
   class SME2_CVT_FtoI_VG2_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                             [LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
@@ -2874,4 +2879,14 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_fcvtu_x4 : SME2_CVT_FtoI_VG4_Intrinsic;
   def int_aarch64_sve_scvtf_x4 : SME2_CVT_ItoF_VG4_Intrinsic;
   def int_aarch64_sve_ucvtf_x4 : SME2_CVT_ItoF_VG4_Intrinsic;
+
+  //
+  // Multi-vector saturating extract narrow
+  //
+  def int_aarch64_sve_sqcvt_x2  : SME2_CVT_VG2_SINGLE_Intrinsic;
+  def int_aarch64_sve_uqcvt_x2  : SME2_CVT_VG2_SINGLE_Intrinsic;
+  def int_aarch64_sve_sqcvtu_x2 : SME2_CVT_VG2_SINGLE_Intrinsic;
+  def int_aarch64_sve_sqcvt_x4  : SME2_CVT_VG4_SINGLE_Intrinsic;
+  def int_aarch64_sve_uqcvt_x4  : SME2_CVT_VG4_SINGLE_Intrinsic;
+  def int_aarch64_sve_sqcvtu_x4 : SME2_CVT_VG4_SINGLE_Intrinsic;
 }

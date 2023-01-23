@@ -137,6 +137,10 @@ class SME2_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_v
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
                   (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
 
+class SME2_Cvt_VG4_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
+    : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2, in_vt:$Zn3, in_vt:$Zn4)),
+                  (!cast<Instruction>(name) (REG_SEQUENCE ZPR4Mul4, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1, in_vt:$Zn3, zsub2, in_vt:$Zn4, zsub3))>;
+
 //===----------------------------------------------------------------------===//
 // SME Outer Products
 //===----------------------------------------------------------------------===//
@@ -2130,9 +2134,12 @@ class sme2_cvt_vg4_single<bit sz, bits<3> op, RegisterOperand first_ty,
 }
 
 // SME2 multi-vec int down convert four registers
-multiclass sme2_int_cvt_vg4_single<string mnemonic, bits<3> op> {
-def _StoB : sme2_cvt_vg4_single<0, op, ZPR8, ZZZZ_s_mul_r, mnemonic>;
-def _DtoH : sme2_cvt_vg4_single<1, op, ZPR16, ZZZZ_d_mul_r, mnemonic>;
+multiclass sme2_int_cvt_vg4_single<string mnemonic, bits<3> op, SDPatternOperator intrinsic> {
+  def _StoB : sme2_cvt_vg4_single<0, op, ZPR8, ZZZZ_s_mul_r, mnemonic>;
+  def _DtoH : sme2_cvt_vg4_single<1, op, ZPR16, ZZZZ_d_mul_r, mnemonic>;
+
+  def : SME2_Cvt_VG4_Pat<NAME # _StoB, intrinsic, nxv16i8, nxv4i32>;
+  def : SME2_Cvt_VG4_Pat<NAME # _DtoH, intrinsic, nxv8i16, nxv2i64>;
 }
 
 class sme2_unpk_vector_vg4<bits<2>sz, bit u, RegisterOperand first_ty,
