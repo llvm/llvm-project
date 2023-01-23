@@ -52,7 +52,7 @@ namespace llvm {
 
   namespace CodeGenOpt {
   /// Type for the unique integer IDs of code generation optimization levels.
-  using IDType = uint8_t;
+  using IDType = int;
   /// Code generation optimization level.
   enum Level : IDType {
     None = 0,      ///< -O0
@@ -64,13 +64,9 @@ namespace llvm {
   ///
   /// Returns std::nullopt if \p ID is invalid.
   inline std::optional<Level> getLevel(IDType ID) {
-    if (ID > 3)
+    if (ID < 0 || ID > 3)
       return std::nullopt;
     return static_cast<Level>(ID);
-  }
-  /// Get the integer \c ID of \p Level.
-  inline IDType getID(CodeGenOpt::Level Level) {
-    return static_cast<IDType>(Level);
   }
   /// Parse \p C as a single digit integer ID and get matching \c Level.
   ///
