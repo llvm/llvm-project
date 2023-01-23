@@ -1157,10 +1157,10 @@ define i1 @low_mask_eq_zext_use1(i8 %a, i32 %b) {
 
 define i1 @low_mask_eq_zext_use2(i8 %a, i32 %b) {
 ; CHECK-LABEL: @low_mask_eq_zext_use2(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[B:%.*]], 255
 ; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[A:%.*]] to i32
 ; CHECK-NEXT:    call void @use_i32(i32 [[Z]])
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[T]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[B:%.*]] to i8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %t = and i32 %b, 255
