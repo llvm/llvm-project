@@ -70,11 +70,131 @@ define void @pos_empty_6() {
   call i32 @llvm.nvvm.barrier0.popc(i32 0)
   ret void
 }
-define void @neg_empty_7() {
-; CHECK-LABEL: define {{[^@]+}}@neg_empty_7() {
+define void @pos_empty_7a() {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_7a() {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.amdgcn.s.barrier()
+  call void @unknown()
+  ret void
+}
+; FIXME: We should remove the barrier.
+define void @pos_empty_7b() {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_7b() {
+; CHECK-NEXT:    call void @unknown() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
+;
+  call void @unknown() nosync readnone
+  call void @llvm.amdgcn.s.barrier()
+  call void @unknown()
+  ret void
+}
+define void @neg_empty_8() {
+; CHECK-LABEL: define {{[^@]+}}@neg_empty_8() {
+; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    ret void
 ;
+  call void @unknown()
+  call void @llvm.amdgcn.s.barrier()
+  ret void
+}
+define void @neg_empty_9(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@neg_empty_9
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    br label [[M:%.*]]
+; CHECK:       f:
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    br label [[M]]
+; CHECK:       m:
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    ret void
+;
+  br i1 %c, label %t, label %f
+t:
+  call void @llvm.amdgcn.s.barrier()
+  br label %m
+f:
+  call void @llvm.amdgcn.s.barrier()
+  br label %m
+m:
+  call void @llvm.amdgcn.s.barrier()
+  ret void
+}
+; FIXME: We should remove the barrier
+define void @pos_empty_10() {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_10() {
+; CHECK-NEXT:    br label [[M:%.*]]
+; CHECK:       m:
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    ret void
+;
+  br label %m
+m:
+  call void @llvm.amdgcn.s.barrier()
+  ret void
+}
+define void @pos_empty_11() {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_11() {
+; CHECK-NEXT:    br label [[M:%.*]]
+; CHECK:       m:
+; CHECK-NEXT:    ret void
+;
+  br label %m
+m:
+  call void @aligned_barrier()
+  call void @llvm.amdgcn.s.barrier()
+  ret void
+}
+define void @empty() {
+; CHECK-LABEL: define {{[^@]+}}@empty() {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+; FIXME: We should remove the barrier in the end but not the first one.
+define void @neg_empty_12(i1 %c) {
+; MODULE-LABEL: define {{[^@]+}}@neg_empty_12
+; MODULE-SAME: (i1 [[C:%.*]]) {
+; MODULE-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; MODULE:       t:
+; MODULE-NEXT:    call void @llvm.amdgcn.s.barrier()
+; MODULE-NEXT:    br label [[M:%.*]]
+; MODULE:       f:
+; MODULE-NEXT:    br label [[M]]
+; MODULE:       m:
+; MODULE-NEXT:    call void @llvm.amdgcn.s.barrier()
+; MODULE-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@neg_empty_12
+; CGSCC-SAME: (i1 [[C:%.*]]) {
+; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; CGSCC:       t:
+; CGSCC-NEXT:    call void @empty()
+; CGSCC-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CGSCC-NEXT:    br label [[M:%.*]]
+; CGSCC:       f:
+; CGSCC-NEXT:    call void @empty()
+; CGSCC-NEXT:    br label [[M]]
+; CGSCC:       m:
+; CGSCC-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CGSCC-NEXT:    ret void
+;
+  br i1 %c, label %t, label %f
+t:
+  call void @empty()
+  call void @llvm.amdgcn.s.barrier()
+  br label %m
+f:
+  call void @empty()
+  br label %m
+m:
   call void @llvm.amdgcn.s.barrier()
   ret void
 }
@@ -214,7 +334,6 @@ define void @neg_mem() {
 
 define void @pos_multiple() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_multiple() {
-; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.nvvm.barrier0()
@@ -846,7 +965,7 @@ m3:
 }
 
 !llvm.module.flags = !{!16,!15}
-!nvvm.annotations = !{!0,!1,!2,!3,!4,!5,!6,!7,!8,!9,!10,!11,!12,!13,!14}
+!nvvm.annotations = !{!0,!1,!2,!3,!4,!5,!6,!7,!8,!9,!10,!11,!12,!13,!14,!17,!18,!19,!20,!21,!22}
 
 !0 = !{void ()* @pos_empty_1, !"kernel", i32 1}
 !1 = !{void ()* @pos_empty_2, !"kernel", i32 1}
@@ -854,7 +973,13 @@ m3:
 !3 = !{void ()* @pos_empty_4, !"kernel", i32 1}
 !4 = !{void ()* @pos_empty_5, !"kernel", i32 1}
 !5 = !{void ()* @pos_empty_6, !"kernel", i32 1}
-!6 = !{void ()* @neg_empty_7, !"kernel", i32 1}
+!17 = !{void ()* @pos_empty_7a, !"kernel", i32 1}
+!18 = !{void ()* @pos_empty_7b, !"kernel", i32 1}
+!6 = !{void ()* @neg_empty_8, !"kernel", i32 1}
+!19 = !{void (i1)* @neg_empty_9, !"kernel", i32 1}
+!20 = !{void ()* @pos_empty_10, !"kernel", i32 1}
+!21 = !{void ()* @pos_empty_11, !"kernel", i32 1}
+!22 = !{void (i1)* @neg_empty_12, !"kernel", i32 1}
 !7 = !{void ()* @pos_constant_loads, !"kernel", i32 1}
 !8 = !{void ()* @neg_loads, !"kernel", i32 1}
 !9 = !{void ()* @pos_priv_mem, !"kernel", i32 1}
@@ -870,6 +995,7 @@ m3:
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; CHECK: attributes #[[ATTR4]] = { nosync memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
@@ -879,7 +1005,7 @@ m3:
 ; CHECK: [[META5:![0-9]+]] = !{ptr @pos_empty_4, !"kernel", i32 1}
 ; CHECK: [[META6:![0-9]+]] = !{ptr @pos_empty_5, !"kernel", i32 1}
 ; CHECK: [[META7:![0-9]+]] = !{ptr @pos_empty_6, !"kernel", i32 1}
-; CHECK: [[META8:![0-9]+]] = !{ptr @neg_empty_7, !"kernel", i32 1}
+; CHECK: [[META8:![0-9]+]] = !{ptr @neg_empty_8, !"kernel", i32 1}
 ; CHECK: [[META9:![0-9]+]] = !{ptr @pos_constant_loads, !"kernel", i32 1}
 ; CHECK: [[META10:![0-9]+]] = !{ptr @neg_loads, !"kernel", i32 1}
 ; CHECK: [[META11:![0-9]+]] = !{ptr @pos_priv_mem, !"kernel", i32 1}
@@ -888,4 +1014,10 @@ m3:
 ; CHECK: [[META14:![0-9]+]] = !{ptr @multiple_blocks_kernel_1, !"kernel", i32 1}
 ; CHECK: [[META15:![0-9]+]] = !{ptr @multiple_blocks_kernel_2, !"kernel", i32 1}
 ; CHECK: [[META16:![0-9]+]] = !{ptr @multiple_blocks_functions_kernel_effects_0, !"kernel", i32 1}
+; CHECK: [[META17:![0-9]+]] = !{ptr @pos_empty_7a, !"kernel", i32 1}
+; CHECK: [[META18:![0-9]+]] = !{ptr @pos_empty_7b, !"kernel", i32 1}
+; CHECK: [[META19:![0-9]+]] = !{ptr @neg_empty_9, !"kernel", i32 1}
+; CHECK: [[META20:![0-9]+]] = !{ptr @pos_empty_10, !"kernel", i32 1}
+; CHECK: [[META21:![0-9]+]] = !{ptr @pos_empty_11, !"kernel", i32 1}
+; CHECK: [[META22:![0-9]+]] = !{ptr @neg_empty_12, !"kernel", i32 1}
 ;.

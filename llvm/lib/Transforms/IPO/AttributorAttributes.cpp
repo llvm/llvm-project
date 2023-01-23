@@ -2226,14 +2226,15 @@ struct AAReturnedValuesCallSite final : AAReturnedValuesImpl {
 
 /// ------------------------ NoSync Function Attribute -------------------------
 
-bool AANoSync::isAlignedBarrier(const CallBase &CB) {
+bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
   case Intrinsic::nvvm_barrier0:
   case Intrinsic::nvvm_barrier0_and:
   case Intrinsic::nvvm_barrier0_or:
   case Intrinsic::nvvm_barrier0_popc:
     return true;
-  // TODO: Check for amdgcn_s_barrier executed in a uniform/aligned way.
+  case Intrinsic::amdgcn_s_barrier:
+    return ExecutedAligned;
   default:
     break;
   }
