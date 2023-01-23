@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include <optional>
 
 using namespace clang;
@@ -223,8 +224,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
-  return Name == "generic" ||
-         llvm::AArch64::parseCpu(Name).Arch != llvm::AArch64::INVALID;
+  return Name == "generic" || llvm::AArch64::parseCpu(Name);
 }
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {
@@ -681,19 +681,19 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   Features[Name] = Enabled;
   // If the feature is an architecture feature (like v8.2a), add all previous
   // architecture versions and any dependant target features.
-  const llvm::AArch64::ArchInfo &ArchInfo =
+  const std::optional<llvm::AArch64::ArchInfo> ArchInfo =
       llvm::AArch64::ArchInfo::findBySubArch(Name);
 
-  if (ArchInfo == llvm::AArch64::INVALID)
+  if (!ArchInfo)
     return; // Not an architecure, nothing more to do.
 
   for (const auto *OtherArch : llvm::AArch64::ArchInfos)
-    if (ArchInfo.implies(*OtherArch))
+    if (ArchInfo->implies(*OtherArch))
       Features[OtherArch->getSubArch()] = Enabled;
 
   // Set any features implied by the architecture
   uint64_t Extensions =
-      llvm::AArch64::getDefaultExtensions("generic", ArchInfo);
+      llvm::AArch64::getDefaultExtensions("generic", *ArchInfo);
   std::vector<StringRef> CPUFeats;
   if (llvm::AArch64::getExtensionFeatures(Extensions, CPUFeats)) {
     for (auto F : CPUFeats) {
@@ -949,9 +949,9 @@ bool AArch64TargetInfo::initFeatureMap(
     const std::vector<std::string> &FeaturesVec) const {
   std::vector<std::string> UpdatedFeaturesVec;
   // Parse the CPU and add any implied features.
-  const llvm::AArch64::ArchInfo &Arch = llvm::AArch64::parseCpu(CPU).Arch;
-  if (Arch != llvm::AArch64::INVALID) {
-    uint64_t Exts = llvm::AArch64::getDefaultExtensions(CPU, Arch);
+  std::optional<llvm::AArch64::CpuInfo> CpuInfo = llvm::AArch64::parseCpu(CPU);
+  if (CpuInfo) {
+    uint64_t Exts = llvm::AArch64::getDefaultExtensions(CPU, CpuInfo->Arch);
     std::vector<StringRef> CPUFeats;
     llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
     for (auto F : CPUFeats) {
@@ -1033,13 +1033,14 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       FoundArch = true;
       std::pair<StringRef, StringRef> Split =
           Feature.split("=").second.trim().split("+");
-      const llvm::AArch64::ArchInfo &AI = llvm::AArch64::parseArch(Split.first);
+      const std::optional<llvm::AArch64::ArchInfo> AI =
+          llvm::AArch64::parseArch(Split.first);
 
       // Parse the architecture version, adding the required features to
       // Ret.Features.
-      if (AI == llvm::AArch64::INVALID)
+      if (!AI)
         continue;
-      Ret.Features.push_back(AI.ArchFeature.str());
+      Ret.Features.push_back(AI->ArchFeature.str());
       // Add any extra features, after the +
       SplitAndAddFeatures(Split.second, Ret.Features);
     } else if (Feature.startswith("cpu=")) {
