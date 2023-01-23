@@ -19,3 +19,8 @@ from the `LLVM releases web site <https://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
+
+* Support for building the OpenMP runtime for Windows on AArch64 and ARM
+  with MinGW based toolchains.
+
+* Made the OpenMP runtime tests run successfully on Windows.
