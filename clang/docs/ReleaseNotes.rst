@@ -283,6 +283,8 @@ Improvements to Clang's diagnostics
 - Clang constexpr evaluator now prints subobject's name instead of its type in notes
   when a constexpr variable has uninitialized subobjects after its constructor call.
   (`#58601 <https://github.com/llvm/llvm-project/issues/58601>`_)
+- Clang now warns when any predefined macro is undefined or redefined, instead
+  of only some of them.
 
 Bug Fixes in This Version
 -------------------------
