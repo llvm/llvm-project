@@ -2109,7 +2109,7 @@ public:
 private:
   class __destroy_vector {
     public:
-      _LIBCPP_CONSTEXPR __destroy_vector(vector& __vec) : __vec_(__vec) {}
+      _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI __destroy_vector(vector& __vec) : __vec_(__vec) {}
 
       _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void operator()() {
         if (__vec_.__begin_ != nullptr)
@@ -2306,7 +2306,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void clear() _NOEXCEPT {__size_ = 0;}
 
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(vector&)
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(vector&)
 #if _LIBCPP_STD_VER >= 14
         _NOEXCEPT;
 #else

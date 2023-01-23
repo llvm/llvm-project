@@ -359,7 +359,7 @@ class _LIBCPP_EXCEPTION_ABI bad_cast
 {
  public:
   bad_cast() _NOEXCEPT;
-  bad_cast(const bad_cast&) _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI bad_cast(const bad_cast&) _NOEXCEPT = default;
   ~bad_cast() _NOEXCEPT override;
   const char* what() const _NOEXCEPT override;
 };

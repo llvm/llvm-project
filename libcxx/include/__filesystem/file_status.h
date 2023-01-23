@@ -35,14 +35,14 @@ public:
       : __ft_(__ft),
         __prms_(__prms) {}
 
-  file_status(const file_status&) noexcept = default;
-  file_status(file_status&&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI file_status(const file_status&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI file_status(file_status&&) noexcept = default;
 
   _LIBCPP_INLINE_VISIBILITY
   ~file_status() {}
 
-  file_status& operator=(const file_status&) noexcept = default;
-  file_status& operator=(file_status&&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI file_status& operator=(const file_status&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI file_status& operator=(file_status&&) noexcept = default;
 
   // observers
   _LIBCPP_INLINE_VISIBILITY
