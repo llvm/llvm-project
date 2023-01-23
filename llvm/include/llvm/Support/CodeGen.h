@@ -64,7 +64,7 @@ namespace llvm {
   ///
   /// Returns std::nullopt if \p ID is invalid.
   inline std::optional<Level> getLevel(IDType ID) {
-    if (ID < 0 || ID > 3)
+    if (ID > 3)
       return std::nullopt;
     return static_cast<Level>(ID);
   }
