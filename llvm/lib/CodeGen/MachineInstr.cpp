@@ -84,14 +84,10 @@ static void tryToGetTargetInfo(const MachineInstr &MI,
 }
 
 void MachineInstr::addImplicitDefUseOperands(MachineFunction &MF) {
-  if (MCID->getImplicitDefs())
-    for (const MCPhysReg *ImpDefs = MCID->getImplicitDefs(); *ImpDefs;
-           ++ImpDefs)
-      addOperand(MF, MachineOperand::CreateReg(*ImpDefs, true, true));
-  if (MCID->getImplicitUses())
-    for (const MCPhysReg *ImpUses = MCID->getImplicitUses(); *ImpUses;
-           ++ImpUses)
-      addOperand(MF, MachineOperand::CreateReg(*ImpUses, false, true));
+  for (MCPhysReg ImpDef : MCID->implicit_defs())
+    addOperand(MF, MachineOperand::CreateReg(ImpDef, true, true));
+  for (MCPhysReg ImpUse : MCID->implicit_uses())
+    addOperand(MF, MachineOperand::CreateReg(ImpUse, false, true));
 }
 
 /// MachineInstr ctor - This constructor creates a MachineInstr and adds the
@@ -103,8 +99,8 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
   assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   // Reserve space for the expected number of operands.
-  if (unsigned NumOps = MCID->getNumOperands() +
-    MCID->getNumImplicitDefs() + MCID->getNumImplicitUses()) {
+  if (unsigned NumOps = MCID->getNumOperands() + MCID->implicit_defs().size() +
+                        MCID->implicit_uses().size()) {
     CapOperands = OperandCapacity::get(NumOps);
     Operands = MF.allocateOperandArray(CapOperands);
   }

@@ -2709,11 +2709,16 @@ public:
           // select op requires the same type for its two argument, convert
           // !fir.box<none> to !fir.class<none> when the argument is
           // polymorphic.
-          if (fir::isBoxNone(box.getType()) && fir::isPolymorphicType(argTy))
+          if (fir::isBoxNone(box.getType()) && fir::isPolymorphicType(argTy)) {
             box = builder.createConvert(
                 loc,
                 fir::ClassType::get(mlir::NoneType::get(builder.getContext())),
                 box);
+          } else if (box.getType().isa<fir::BoxType>() &&
+                     fir::isPolymorphicType(argTy)) {
+            box = builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
+                                               /*slice=*/mlir::Value{});
+          }
 
           // Need the box types to be exactly similar for the selectOp.
           mlir::Value convertedBox = builder.createConvert(loc, argTy, box);
@@ -2728,6 +2733,34 @@ public:
                                       fir::isPolymorphicType(argTy))
                   : builder.createBox(getLoc(), genTempExtAddr(*expr),
                                       fir::isPolymorphicType(argTy));
+
+          if (box.getType().isa<fir::BoxType>() &&
+              fir::isPolymorphicType(argTy)) {
+            // Rebox can only be performed on a present argument.
+            if (arg.isOptional()) {
+              mlir::Value isPresent = genActualIsPresentTest(builder, loc, box);
+              box =
+                  builder
+                      .genIfOp(loc, {argTy}, isPresent, /*withElseRegion=*/true)
+                      .genThen([&]() {
+                        auto rebox = builder
+                                         .create<fir::ReboxOp>(
+                                             loc, argTy, box, mlir::Value{},
+                                             /*slice=*/mlir::Value{})
+                                         .getResult();
+                        builder.create<fir::ResultOp>(loc, rebox);
+                      })
+                      .genElse([&]() {
+                        auto absent = builder.create<fir::AbsentOp>(loc, argTy)
+                                          .getResult();
+                        builder.create<fir::ResultOp>(loc, absent);
+                      })
+                      .getResults()[0];
+            } else {
+              box = builder.create<fir::ReboxOp>(loc, argTy, box, mlir::Value{},
+                                                 /*slice=*/mlir::Value{});
+            }
+          }
           caller.placeInput(arg, box);
         }
       } else if (arg.passBy == PassBy::AddressAndLength) {

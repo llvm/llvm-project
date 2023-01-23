@@ -1346,6 +1346,10 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   static bool isDerivedType(fir::BaseBoxType boxTy) {
     return static_cast<bool>(unwrapIfDerived(boxTy));
   }
+  static bool hasAddendum(fir::BaseBoxType boxTy) {
+    return static_cast<bool>(unwrapIfDerived(boxTy)) ||
+           fir::isUnlimitedPolymorphicType(boxTy);
+  }
 
   // Get the element size and CFI type code of the boxed value.
   std::tuple<mlir::Value, mlir::Value> getSizeAndTypeCode(
@@ -1647,6 +1651,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
                        mlir::Value typeDesc = {}) const {
     auto loc = box.getLoc();
     auto boxTy = box.getType().dyn_cast<fir::BaseBoxType>();
+    auto inputBoxTy = box.getBox().getType().dyn_cast<fir::BaseBoxType>();
     llvm::SmallVector<mlir::Value> typeparams = lenParams;
     if (!box.getSubstr().empty() && fir::hasDynamicSize(boxTy.getEleTy()))
       typeparams.push_back(box.getSubstr()[1]);
@@ -1654,17 +1659,22 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     auto [eleSize, cfiTy] =
         getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(), typeparams);
 
-    // Reboxing a polymorphic entities. eleSize and type code need to
+    // Reboxing to a polymorphic entity. eleSize and type code need to
     // be retrived from the initial box and propagated to the new box.
-    if (fir::isPolymorphicType(boxTy) &&
-        fir::isPolymorphicType(box.getBox().getType())) {
+    // If the initial box has an addendum, the type desc must be propagated as
+    // well.
+    if (fir::isPolymorphicType(boxTy)) {
       mlir::Type idxTy = this->lowerTy().indexType();
       eleSize =
           this->getElementSizeFromBox(loc, idxTy, boxTy, loweredBox, rewriter);
       cfiTy = this->getValueFromBox(loc, boxTy, loweredBox, cfiTy.getType(),
                                     rewriter, kTypePosInBox);
-      typeDesc = this->loadTypeDescAddress(loc, box.getBox().getType(),
-                                           loweredBox, rewriter);
+      // TODO: For initial box that are unlimited polymorphic entities, this
+      // code must be made conditional because unlimited polymorphic entities
+      // with intrinsic type spec does not have addendum.
+      if (hasAddendum(inputBoxTy))
+        typeDesc = this->loadTypeDescAddress(loc, box.getBox().getType(),
+                                             loweredBox, rewriter);
     }
 
     auto mod = box->template getParentOfType<mlir::ModuleOp>();

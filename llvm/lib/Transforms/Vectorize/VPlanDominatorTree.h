@@ -19,16 +19,17 @@
 #include "VPlanCFG.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Support/GenericDomTree.h"
 
 namespace llvm {
 
 template <> struct DomTreeNodeTraits<VPBlockBase> {
   using NodeType = VPBlockBase;
   using NodePtr = VPBlockBase *;
-  using ParentPtr = VPRegionBlock *;
+  using ParentPtr = VPlan *;
 
   static NodePtr getEntryNode(ParentPtr Parent) { return Parent->getEntry(); }
-  static ParentPtr getParent(VPBlockBase *B) { return B->getParent(); }
+  static ParentPtr getParent(NodePtr B) { return B->getPlan(); }
 };
 
 ///
