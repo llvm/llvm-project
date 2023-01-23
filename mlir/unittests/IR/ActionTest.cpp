@@ -1,4 +1,4 @@
-//===- DebugActionTest.cpp - Debug Action Tests ---------------------------===//
+//===- ActionTest.cpp - Debug Action Tests ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,50 +6,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/DebugAction.h"
+#include "mlir/IR/Action.h"
 #include "mlir/Support/TypeID.h"
 #include "gmock/gmock.h"
 
 using namespace mlir;
+using namespace mlir::tracing;
 
 namespace {
-struct SimpleAction : DebugAction<SimpleAction> {
+struct SimpleAction : ActionImpl<SimpleAction> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SimpleAction)
-  static StringRef getTag() { return "simple-action"; }
-  static StringRef getDescription() { return "simple-action-description"; }
+  static constexpr StringLiteral tag = "simple-action";
 };
-struct OtherSimpleAction : DebugAction<OtherSimpleAction> {
+struct OtherSimpleAction : ActionImpl<OtherSimpleAction> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OtherSimpleAction)
-  static StringRef getTag() { return "other-simple-action"; }
-  static StringRef getDescription() {
-    return "other-simple-action-description";
-  }
+  static constexpr StringLiteral tag = "other-simple-action";
 };
-struct ParametricAction : DebugAction<ParametricAction, bool> {
+struct ParametricAction : ActionImpl<ParametricAction, bool> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ParametricAction)
   ParametricAction(bool executeParam) : executeParam(executeParam) {}
   bool executeParam;
-  static StringRef getTag() { return "param-action"; }
-  static StringRef getDescription() { return "param-action-description"; }
+  static constexpr StringLiteral tag = "param-action";
 };
 
-TEST(DebugActionTest, GenericHandler) {
-  DebugActionManager manager;
+TEST(ActionTest, GenericHandler) {
+  ActionManager manager;
 
   // A generic handler that always executes the simple action, but not the
   // parametric action.
-  struct GenericHandler : DebugActionManager::GenericHandler {
+  struct GenericHandler : ActionManager::GenericHandler {
     FailureOr<bool> execute(llvm::function_ref<void()> transform,
-                            const DebugActionBase &action) final {
-      StringRef desc = action.getDescription();
+                            const Action &action) final {
+      StringRef tag = action.getTag();
       if (isa<SimpleAction>(action)) {
-        EXPECT_EQ(desc, SimpleAction::getDescription());
+        EXPECT_EQ(tag, SimpleAction::tag);
         transform();
         return true;
       }
 
       EXPECT_TRUE(isa<ParametricAction>(action));
-      EXPECT_EQ(desc, ParametricAction::getDescription());
       return false;
     }
   };
@@ -60,8 +55,8 @@ TEST(DebugActionTest, GenericHandler) {
   EXPECT_FALSE(manager.execute<ParametricAction>(noOp, true));
 }
 
-TEST(DebugActionTest, ActionSpecificHandler) {
-  DebugActionManager manager;
+TEST(ActionTest, ActionSpecificHandler) {
+  ActionManager manager;
 
   // Handler that simply uses the input as the decider.
   struct ActionSpecificHandler : ParametricAction::Handler {
@@ -86,8 +81,8 @@ TEST(DebugActionTest, ActionSpecificHandler) {
   EXPECT_EQ(count, 2);
 }
 
-TEST(DebugActionTest, DebugCounterHandler) {
-  DebugActionManager manager;
+TEST(ActionTest, DebugCounterHandler) {
+  ActionManager manager;
 
   // Handler that uses the number of action executions as the decider.
   struct DebugCounterHandler : SimpleAction::Handler {
@@ -111,8 +106,8 @@ TEST(DebugActionTest, DebugCounterHandler) {
   EXPECT_FALSE(manager.execute<SimpleAction>(noOp));
 }
 
-TEST(DebugActionTest, NonOverlappingActionSpecificHandlers) {
-  DebugActionManager manager;
+TEST(ActionTest, NonOverlappingActionSpecificHandlers) {
+  ActionManager manager;
 
   // One handler returns true and another returns false
   struct SimpleActionHandler : SimpleAction::Handler {
