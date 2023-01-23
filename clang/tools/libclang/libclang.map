@@ -416,6 +416,7 @@ LLVM_16 {
     clang_disposeAPISet;
     clang_getSymbolGraphForCursor;
     clang_getSymbolGraphForUSR;
+    clang_CXXMethod_isExplicit;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol
