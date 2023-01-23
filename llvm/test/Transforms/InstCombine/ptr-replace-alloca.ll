@@ -284,15 +284,12 @@ join:
 define i32 @addrspace_diff_remove_alloca(i1 %cond) {
 ; CHECK-LABEL: @addrspace_diff_remove_alloca(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca [32 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 1 dereferenceable(32) [[A]], ptr addrspace(1) noundef align 16 dereferenceable(32) @g2, i64 32, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], ptr [[A]], i64 0, i64 2
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[A]], [[IF]] ], [ [[GEP]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PHI]], align 4
+; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr addrspace(1) [ @g2, [[IF]] ], [ getelementptr inbounds ([32 x i8], ptr addrspace(1) @g2, i64 0, i64 2), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[PHI1]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
