@@ -67,7 +67,7 @@ unsigned Operand::getVariableIndex() const { return *VariableIndex; }
 
 unsigned Operand::getImplicitReg() const {
   assert(ImplicitReg);
-  return *ImplicitReg;
+  return ImplicitReg;
 }
 
 const RegisterAliasingTracker &Operand::getRegisterAliasing() const {
@@ -128,21 +128,19 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand.Info = &OpInfo;
     Operands.push_back(Operand);
   }
-  for (const MCPhysReg *MCPhysReg = Description->getImplicitDefs();
-       MCPhysReg && *MCPhysReg; ++MCPhysReg, ++OpIndex) {
+  for (MCPhysReg MCPhysReg : Description->implicit_defs()) {
     Operand Operand;
-    Operand.Index = OpIndex;
+    Operand.Index = OpIndex++;
     Operand.IsDef = true;
-    Operand.Tracker = &RATC.getRegister(*MCPhysReg);
+    Operand.Tracker = &RATC.getRegister(MCPhysReg);
     Operand.ImplicitReg = MCPhysReg;
     Operands.push_back(Operand);
   }
-  for (const MCPhysReg *MCPhysReg = Description->getImplicitUses();
-       MCPhysReg && *MCPhysReg; ++MCPhysReg, ++OpIndex) {
+  for (MCPhysReg MCPhysReg : Description->implicit_uses()) {
     Operand Operand;
-    Operand.Index = OpIndex;
+    Operand.Index = OpIndex++;
     Operand.IsDef = false;
-    Operand.Tracker = &RATC.getRegister(*MCPhysReg);
+    Operand.Tracker = &RATC.getRegister(MCPhysReg);
     Operand.ImplicitReg = MCPhysReg;
     Operands.push_back(Operand);
   }

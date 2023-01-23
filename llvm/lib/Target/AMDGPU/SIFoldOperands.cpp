@@ -993,9 +993,8 @@ static void mutateCopyOp(MachineInstr &MI, const MCInstrDesc &NewDesc) {
   // if we replace an s_and_b32 with a copy, we don't need the implicit scc def
   // anymore.
   const MCInstrDesc &Desc = MI.getDesc();
-  unsigned NumOps = Desc.getNumOperands() +
-                    Desc.getNumImplicitUses() +
-                    Desc.getNumImplicitDefs();
+  unsigned NumOps = Desc.getNumOperands() + Desc.implicit_uses().size() +
+                    Desc.implicit_defs().size();
 
   for (unsigned I = MI.getNumOperands() - 1; I >= NumOps; --I)
     MI.removeOperand(I);

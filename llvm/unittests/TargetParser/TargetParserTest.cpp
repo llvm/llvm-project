@@ -1553,6 +1553,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_B16B16,  AArch64::AEK_SMEF16F16, AArch64::AEK_CSSC,
       AArch64::AEK_RCPC3,   AArch64::AEK_THE,       AArch64::AEK_D128,
       AArch64::AEK_LSE128,  AArch64::AEK_SPECRES2,  AArch64::AEK_RASv2,
+      AArch64::AEK_ITE,
   };
 
   std::vector<StringRef> Features;
@@ -1624,6 +1625,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+d128"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lse128"));
   EXPECT_TRUE(llvm::is_contained(Features, "+specres2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+ite"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the

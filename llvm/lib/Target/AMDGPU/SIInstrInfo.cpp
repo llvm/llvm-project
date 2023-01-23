@@ -120,7 +120,7 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(
     // rematerialization if there are virtual register uses. We allow this,
     // therefore this method includes SOP instructions as well.
     return !MI.hasImplicitDef() &&
-           MI.getNumImplicitOperands() == MI.getDesc().getNumImplicitUses() &&
+           MI.getNumImplicitOperands() == MI.getDesc().implicit_uses().size() &&
            !MI.mayRaiseFPException();
   }
 
@@ -2115,7 +2115,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(VecReg, RegState::Implicit | (IsUndef ? RegState::Undef : 0));
 
     const int ImpDefIdx =
-      OpDesc.getNumOperands() + OpDesc.getNumImplicitUses();
+        OpDesc.getNumOperands() + OpDesc.implicit_uses().size();
     const int ImpUseIdx = ImpDefIdx + 1;
     MIB->tieOperands(ImpDefIdx, ImpUseIdx);
     MI.eraseFromParent();
@@ -2153,7 +2153,8 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
             .addReg(VecReg,
                     RegState::Implicit | (IsUndef ? RegState::Undef : 0));
 
-    const int ImpDefIdx = OpDesc.getNumOperands() + OpDesc.getNumImplicitUses();
+    const int ImpDefIdx =
+        OpDesc.getNumOperands() + OpDesc.implicit_uses().size();
     const int ImpUseIdx = ImpDefIdx + 1;
     MIB->tieOperands(ImpDefIdx, ImpUseIdx);
 
@@ -3653,14 +3654,7 @@ bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
   // Skip the full operand and register alias search modifiesRegister
   // does. There's only a handful of instructions that touch this, it's only an
   // implicit def, and doesn't alias any other registers.
-  if (const MCPhysReg *ImpDef = MI.getDesc().getImplicitDefs()) {
-    for (; ImpDef && *ImpDef; ++ImpDef) {
-      if (*ImpDef == AMDGPU::MODE)
-        return true;
-    }
-  }
-
-  return false;
+  return is_contained(MI.getDesc().implicit_defs(), AMDGPU::MODE);
 }
 
 bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const {
@@ -4541,8 +4535,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const bool IsDst = Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e32 ||
                        Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e64;
 
-    const unsigned StaticNumOps = Desc.getNumOperands() +
-      Desc.getNumImplicitUses();
+    const unsigned StaticNumOps =
+        Desc.getNumOperands() + Desc.implicit_uses().size();
     const unsigned NumImplicitOps = IsDst ? 2 : 1;
 
     // Allow additional implicit operands. This allows a fixup done by the post
