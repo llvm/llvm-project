@@ -1698,8 +1698,8 @@ def : RWSysReg<"CNTSCALE_EL2",     0b11, 0b100, 0b1110, 0b0000, 0b100>;
 def : RWSysReg<"CNTISCALE_EL2",    0b11, 0b100, 0b1110, 0b0000, 0b101>;
 def : RWSysReg<"CNTPOFF_EL2",      0b11, 0b100, 0b1110, 0b0000, 0b110>;
 def : RWSysReg<"CNTVFRQ_EL2",      0b11, 0b100, 0b1110, 0b0000, 0b111>;
-def : RWSysReg<"CNTPCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b101>;
-def : RWSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
+def : ROSysReg<"CNTPCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b101>;
+def : ROSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
 }
 
 // v8.7a LD64B/ST64B Accelerator Extension system register
