@@ -920,8 +920,6 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (copy-assignment operator)");
     if (clang_CXXMethod_isMoveAssignmentOperator(Cursor))
       printf(" (move-assignment operator)");
-    if (clang_CXXMethod_isExplicit(Cursor))
-      printf(" (explicit)");
     if (clang_CXXRecord_isAbstract(Cursor))
       printf(" (abstract)");
     if (clang_EnumDecl_isScoped(Cursor))
