@@ -3370,7 +3370,7 @@ bool AMDGPULegalizerInfo::legalizeWorkitemIDIntrinsic(
     Register TmpReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
     if (!loadInputValue(TmpReg, B, ArgType))
       return false;
-    B.buildAssertZExt(DstReg, TmpReg, 32 - countLeadingZeros(MaxID));
+    B.buildAssertZExt(DstReg, TmpReg, llvm::bit_width(MaxID));
   }
 
   MI.eraseFromParent();
@@ -4920,7 +4920,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     if (BaseOpcode->Gather4) {
       DMaskLanes = 4;
     } else if (DMask != 0) {
-      DMaskLanes = countPopulation(DMask);
+      DMaskLanes = llvm::popcount(DMask);
     } else if (!IsTFE && !BaseOpcode->Store) {
       // If dmask is 0, this is a no-op load. This can be eliminated.
       B.buildUndef(MI.getOperand(0));

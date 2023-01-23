@@ -96,7 +96,7 @@ def msksize_xform : SDNodeXForm<imm, [{
   // Transformation function: get the size of a mask
   assert(isMask_32(N->getZExtValue()));
   // look for the first non-zero bit
-  return getI32Imm(32 - countLeadingZeros((uint32_t)N->getZExtValue()),
+  return getI32Imm(llvm::bit_width((uint32_t)N->getZExtValue()),
                    SDLoc(N));
 }]>;
 

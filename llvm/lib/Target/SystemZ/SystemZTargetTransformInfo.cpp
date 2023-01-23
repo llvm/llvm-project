@@ -532,7 +532,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
       return (NumVectors * (SignedDivRem ? SDivPow2Cost : 1));
     if (DivRemConst) {
       SmallVector<Type *> Tys(Args.size(), Ty);
-      return VF * DivMulSeqCost + getScalarizationOverhead(VTy, Args, Tys);
+      return VF * DivMulSeqCost +
+             getScalarizationOverhead(VTy, Args, Tys, CostKind);
     }
     if ((SignedDivRem || UnsignedDivRem) && VF > 4)
       // Temporary hack: disable high vectorization factors with integer
@@ -558,7 +559,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
             getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind);
         SmallVector<Type *> Tys(Args.size(), Ty);
         InstructionCost Cost =
-            (VF * ScalarCost) + getScalarizationOverhead(VTy, Args, Tys);
+            (VF * ScalarCost) +
+            getScalarizationOverhead(VTy, Args, Tys, CostKind);
         // FIXME: VF 2 for these FP operations are currently just as
         // expensive as for VF 4.
         if (VF == 2)
@@ -576,8 +578,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     // There is no native support for FRem.
     if (Opcode == Instruction::FRem) {
       SmallVector<Type *> Tys(Args.size(), Ty);
-      InstructionCost Cost =
-          (VF * LIBCALL_COST) + getScalarizationOverhead(VTy, Args, Tys);
+      InstructionCost Cost = (VF * LIBCALL_COST) +
+                             getScalarizationOverhead(VTy, Args, Tys, CostKind);
       // FIXME: VF 2 for float is currently just as expensive as for VF 4.
       if (VF == 2 && ScalarBits == 32)
         Cost *= 2;
@@ -865,8 +867,10 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
           (Opcode == Instruction::FPToSI || Opcode == Instruction::FPToUI))
         NeedsExtracts = false;
 
-      TotCost += getScalarizationOverhead(SrcVecTy, false, NeedsExtracts);
-      TotCost += getScalarizationOverhead(DstVecTy, NeedsInserts, false);
+      TotCost += getScalarizationOverhead(SrcVecTy, /*Insert*/ false,
+                                          NeedsExtracts, CostKind);
+      TotCost += getScalarizationOverhead(DstVecTy, NeedsInserts,
+                                          /*Extract*/ false, CostKind);
 
       // FIXME: VF 2 for float<->i32 is currently just as expensive as for VF 4.
       if (VF == 2 && SrcScalarBits == 32 && DstScalarBits == 32)
@@ -878,7 +882,8 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     if (Opcode == Instruction::FPTrunc) {
       if (SrcScalarBits == 128)  // fp128 -> double/float + inserts of elements.
         return VF /*ldxbr/lexbr*/ +
-               getScalarizationOverhead(DstVecTy, true, false);
+               getScalarizationOverhead(DstVecTy, /*Insert*/ true,
+                                        /*Extract*/ false, CostKind);
       else // double -> float
         return VF / 2 /*vledb*/ + std::max(1U, VF / 4 /*vperm*/);
     }
@@ -891,7 +896,8 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         return VF * 2;
       }
       // -> fp128.  VF * lxdb/lxeb + extraction of elements.
-      return VF + getScalarizationOverhead(SrcVecTy, false, true);
+      return VF + getScalarizationOverhead(SrcVecTy, /*Insert*/ false,
+                                           /*Extract*/ true, CostKind);
     }
   }
 
@@ -996,6 +1002,7 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 }
 
 InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                                   TTI::TargetCostKind CostKind,
                                                    unsigned Index, Value *Op0,
                                                    Value *Op1) {
   // vlvgp will insert two grs into a vector register, so only count half the
@@ -1013,7 +1020,7 @@ InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return Cost;
   }
 
-  return BaseT::getVectorInstrCost(Opcode, Val, Index, Op0, Op1);
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
 }
 
 // Check if a load may be folded as a memory operand in its user.

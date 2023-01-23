@@ -13,16 +13,16 @@
 #ifndef LLVM_CLANG_AST_INTERP_TYPE_H
 #define LLVM_CLANG_AST_INTERP_TYPE_H
 
+#include "Integral.h"
 #include <climits>
 #include <cstddef>
 #include <cstdint>
-#include "Boolean.h"
-#include "Integral.h"
 
 namespace clang {
 namespace interp {
 
 class Pointer;
+class Boolean;
 
 /// Enumeration of the primitive types of the VM.
 enum PrimType : unsigned {

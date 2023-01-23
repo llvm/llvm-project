@@ -1222,6 +1222,7 @@ include "ARMScheduleSwift.td"
 include "ARMScheduleR52.td"
 include "ARMScheduleA57.td"
 include "ARMScheduleM4.td"
+include "ARMScheduleM55.td"
 include "ARMScheduleM7.td"
 
 //===----------------------------------------------------------------------===//
@@ -1497,7 +1498,7 @@ def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
                                                          FeatureHasNoBranchPredictor,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
-def : ProcessorModel<"cortex-m55", CortexM4Model,      [ARMv81mMainline,
+def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeatureUseMISched,
