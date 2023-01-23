@@ -185,14 +185,6 @@ enum class OMPScheduleType {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ ModifierMask)
 };
 
-enum OMPTgtExecModeFlags : int8_t {
-  OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
-  OMP_TGT_EXEC_MODE_SPMD = 1 << 1,
-  OMP_TGT_EXEC_MODE_GENERIC_SPMD =
-      OMP_TGT_EXEC_MODE_GENERIC | OMP_TGT_EXEC_MODE_SPMD,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ OMP_TGT_EXEC_MODE_GENERIC_SPMD)
-};
-
 /// Values for bit flags used to specify the mapping type for
 /// offloading.
 enum class OpenMPOffloadMappingFlags : uint64_t {
@@ -279,5 +271,7 @@ enum class RTLDependenceKindTy {
 } // end namespace omp
 
 } // end namespace llvm
+
+#include "OMPDeviceConstants.h"
 
 #endif // LLVM_FRONTEND_OPENMP_OMPCONSTANTS_H

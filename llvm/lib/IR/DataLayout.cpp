@@ -406,6 +406,9 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
         return reportError("Invalid ABI alignment, must be a 16bit integer");
       if (ABIAlign != 0 && !isPowerOf2_64(ABIAlign))
         return reportError("Invalid ABI alignment, must be a power of 2");
+      if (AlignType == INTEGER_ALIGN && Size == 8 && ABIAlign != 1)
+        return reportError(
+            "Invalid ABI alignment, i8 must be naturally aligned");
 
       // Preferred alignment.
       unsigned PrefAlign = ABIAlign;
@@ -937,13 +940,10 @@ std::optional<APInt> DataLayout::getGEPIndexForOffset(Type *&ElemTy,
   }
 
   if (auto *VecTy = dyn_cast<VectorType>(ElemTy)) {
-    ElemTy = VecTy->getElementType();
-    unsigned ElemSizeInBits = getTypeSizeInBits(ElemTy).getFixedValue();
-    // GEPs over non-multiple of 8 size vector elements are invalid.
-    if (ElemSizeInBits % 8 != 0)
-      return std::nullopt;
-
-    return getElementIndex(TypeSize::Fixed(ElemSizeInBits / 8), Offset);
+    // Vector GEPs are partially broken (e.g. for overaligned element types),
+    // and may be forbidden in the future, so avoid generating GEPs into
+    // vectors. See https://discourse.llvm.org/t/67497
+    return std::nullopt;
   }
 
   if (auto *STy = dyn_cast<StructType>(ElemTy)) {

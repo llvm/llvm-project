@@ -6256,6 +6256,9 @@ namespace {
     void VisitTagTypeLoc(TagTypeLoc TL) {
       TL.setNameLoc(DS.getTypeSpecTypeNameLoc());
     }
+    void VisitUsingTypeLoc(UsingTypeLoc TL) {
+      TL.setNameLoc(DS.getTypeSpecTypeNameLoc());
+    }
     void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
       // An AtomicTypeLoc can come from either an _Atomic(...) type specifier
       // or an _Atomic qualifier.

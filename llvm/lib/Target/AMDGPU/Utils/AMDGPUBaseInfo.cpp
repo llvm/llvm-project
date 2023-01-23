@@ -580,7 +580,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto OperandsNum = OpDesc.getNumOperands();
   unsigned CompOprIdx;
   for (CompOprIdx = Component::SRC1; CompOprIdx < OperandsNum; ++CompOprIdx) {
-    if (OpDesc.OpInfo[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
+    if (OpDesc.operands()[CompOprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
       MandatoryLiteralIdx = CompOprIdx;
       break;
     }
@@ -2293,21 +2293,21 @@ bool isInlineValue(unsigned Reg) {
 
 bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_SRC_FIRST &&
          OpType <= AMDGPU::OPERAND_SRC_LAST;
 }
 
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_KIMM_FIRST &&
          OpType <= AMDGPU::OPERAND_KIMM_LAST;
 }
 
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
   case AMDGPU::OPERAND_REG_IMM_FP32_DEFERRED:
@@ -2336,7 +2336,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+  unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
 }
@@ -2491,7 +2491,7 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
                            unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
-  unsigned RCID = Desc.OpInfo[OpNo].RegClass;
+  unsigned RCID = Desc.operands()[OpNo].RegClass;
   return getRegBitWidth(MRI->getRegClass(RCID)) / 8;
 }
 

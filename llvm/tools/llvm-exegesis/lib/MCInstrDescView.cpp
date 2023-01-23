@@ -111,7 +111,7 @@ Instruction::create(const MCInstrInfo &InstrInfo,
   SmallVector<Operand, 8> Operands;
   SmallVector<Variable, 4> Variables;
   for (; OpIndex < Description->getNumOperands(); ++OpIndex) {
-    const auto &OpInfo = Description->opInfo_begin()[OpIndex];
+    const auto &OpInfo = Description->operands()[OpIndex];
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = (OpIndex < Description->getNumDefs());
