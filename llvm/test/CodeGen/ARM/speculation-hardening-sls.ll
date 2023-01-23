@@ -256,4 +256,5 @@ entry:
 ; SB-NEXT:     isb
 ; HARDEN-NEXT: .Lfunc_end
 
-
+; THUMB-NOT: __llvm_slsblr_thunk_arm
+; ARM-NOT: __llvm_slsblr_thunk_thumb
