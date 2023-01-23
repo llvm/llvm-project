@@ -4655,11 +4655,11 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
 
   // (B & (Pow2C-1)) == zext A --> A == trunc B
   // (B & (Pow2C-1)) != zext A --> A != trunc B
-  // TODO: The one use check could be relaxed.
   // TODO: This can be generalized for vector types.
   ConstantInt *Cst1;
   if (match(Op0, m_And(m_Value(B), m_ConstantInt(Cst1))) &&
-      match(Op1, m_OneUse(m_ZExt(m_Value(A))))) {
+      match(Op1, m_ZExt(m_Value(A))) &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
     APInt Pow2 = Cst1->getValue() + 1;
     if (Pow2.isPowerOf2() && isa<IntegerType>(A->getType()) &&
         Pow2.logBase2() == cast<IntegerType>(A->getType())->getBitWidth())
