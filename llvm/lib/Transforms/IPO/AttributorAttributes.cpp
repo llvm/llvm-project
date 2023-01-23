@@ -832,7 +832,7 @@ protected:
       bool IsExact = Range == ItRange && !Range.offsetOrSizeAreUnknown();
       for (auto Index : It.getSecond()) {
         auto &Access = AccessList[Index];
-        if (!CB(Access, IsExact && Access.hasUniqueRange()))
+        if (!CB(Access, IsExact))
           return false;
       }
     }
