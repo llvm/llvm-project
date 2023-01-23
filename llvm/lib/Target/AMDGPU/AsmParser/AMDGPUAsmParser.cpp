@@ -1577,8 +1577,8 @@ public:
                 AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone);
   unsigned getCPolKind(StringRef Id, StringRef Mnemo, bool &Disabling) const;
   OperandMatchResultTy parseCPol(OperandVector &Operands);
-  OperandMatchResultTy parseScope(OperandVector &Operands, int64_t &TH);
-  OperandMatchResultTy parseTH(OperandVector &Operands, int64_t &Scope);
+  OperandMatchResultTy parseScope(OperandVector &Operands, int64_t &Scope);
+  OperandMatchResultTy parseTH(OperandVector &Operands, int64_t &TH);
   OperandMatchResultTy parseStringWithPrefix(StringRef Prefix,
                                              StringRef &Value,
                                              SMLoc &StringLoc);
@@ -1697,7 +1697,7 @@ private:
   bool validateWaitCnt(const MCInst &Inst, const OperandVector &Operands);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
-  bool validateTHandScopeBits(const MCInst &Inst, const OperandVector &Operands,
+  bool validateTHAndScopeBits(const MCInst &Inst, const OperandVector &Operands,
                               const unsigned CPol);
   bool validateExeczVcczOperands(const OperandVector &Operands);
   bool validateTFE(const MCInst &Inst, const OperandVector &Operands);
@@ -4619,7 +4619,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
   if (isGFX12Plus())
-    return validateTHandScopeBits(Inst, Operands, CPol);
+    return validateTHAndScopeBits(Inst, Operands, CPol);
 
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
   if (TSFlags & SIInstrFlags::SMRD) {
@@ -4666,7 +4666,7 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   return true;
 }
 
-bool AMDGPUAsmParser::validateTHandScopeBits(const MCInst &Inst,
+bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
                                              const OperandVector &Operands,
                                              const unsigned CPol) {
   const unsigned TH = CPol & AMDGPU::CPol::TH;
