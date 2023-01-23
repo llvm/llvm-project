@@ -1183,16 +1183,22 @@ bool SwiftASTManipulator::FixCaptures() {
   return true;
 }
 
-swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
-    swift::Identifier name, CompilerType &type, bool make_private) {
+swift::TypeAliasDecl *
+SwiftASTManipulator::MakeTypealias(swift::Identifier name, CompilerType &type,
+                                   bool make_private,
+                                   swift::DeclContext *decl_ctx) {
   if (!IsValid())
     return nullptr;
+
+  // If no DeclContext was passed in make this a global typealias.
+  if (!decl_ctx)
+    decl_ctx = &m_source_file;
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
 
   swift::TypeAliasDecl *type_alias_decl = new (ast_context)
       swift::TypeAliasDecl(swift::SourceLoc(), swift::SourceLoc(), name,
-                           swift::SourceLoc(), nullptr, &m_source_file);
+                           swift::SourceLoc(), nullptr, decl_ctx);
   swift::Type underlying_type = GetSwiftType(type);
   if (!underlying_type)
     return nullptr;
@@ -1202,6 +1208,15 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
   type_alias_decl->setImplicit(true);
 
   Log *log = GetLog(LLDBLog::Expressions);
+
+  if (!type_alias_decl) {
+    LLDB_LOGF(log,
+              "Could not make typealias from %s to %s in decl context (%p) and "
+              "context (%p)",
+              name.get(), type.GetMangledTypeName().GetCString(),
+              static_cast<void *>(decl_ctx), static_cast<void *>(&ast_context));
+    return nullptr;
+  }
   if (log) {
 
     std::string s;
@@ -1209,15 +1224,22 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
     type_alias_decl->dump(ss);
     ss.flush();
 
-    log->Printf("Made global type alias for %s (%p) in context (%p):\n%s",
-                name.get(), static_cast<void *>(GetSwiftType(type).getPointer()),
+    log->Printf("Made type alias for %s (%p) in decl context (%p) and context "
+                "(%p):\n%s",
+                name.get(),
+                static_cast<void *>(GetSwiftType(type).getPointer()),
+                static_cast<void *>(decl_ctx),
                 static_cast<void *>(&ast_context), s.c_str());
   }
 
-  if (type_alias_decl) {
-    if (make_private) {
-      type_alias_decl->overwriteAccess(swift::AccessLevel::Private);
-    }
+  if (make_private)
+    type_alias_decl->overwriteAccess(swift::AccessLevel::Private);
+
+  if (auto *f = llvm::dyn_cast<swift::FuncDecl>(decl_ctx)) {
+    llvm::SmallVector<swift::ASTNode, 1> node;
+    node.push_back(type_alias_decl);
+    AddNodesToBeginningFunction(f, node, ast_context);
+  } else {
     m_source_file.addTopLevelDecl(type_alias_decl);
   }
 

@@ -4583,6 +4583,13 @@ SwiftASTContext::GetNonTriviallyManagedReferenceKind(
   return {};
 }
 
+CompilerType
+SwiftASTContext::CreateGenericTypeParamType(unsigned int depth,
+                                                 unsigned int index) {
+  return ToCompilerType(
+      swift::GenericTypeParamType::get(false, depth, index, *GetASTContext()));
+}
+
 CompilerType SwiftASTContext::GetErrorType() {
   VALID_OR_RETURN(CompilerType());
 
