@@ -305,6 +305,8 @@ Improvements to Clang's diagnostics
   (`#58601 <https://github.com/llvm/llvm-project/issues/58601>`_)
 - Clang's `-Wshadow` warning now warns about shadowings by static local variables
   (`#62850: <https://github.com/llvm/llvm-project/issues/62850>`_).
+- Clang now warns when any predefined macro is undefined or redefined, instead
+  of only some of them.
 
 Bug Fixes in This Version
 -------------------------
