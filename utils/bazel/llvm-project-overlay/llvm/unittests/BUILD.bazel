@@ -4,7 +4,10 @@
 
 load("//llvm:tblgen.bzl", "gentbl")
 
-package(default_visibility = ["//visibility:public"])
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
 
 licenses(["notice"])
 
