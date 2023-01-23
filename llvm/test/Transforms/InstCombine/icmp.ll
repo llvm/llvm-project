@@ -5,6 +5,10 @@ target datalayout = "e-p:64:64:64-p1:16:16:16-p2:32:32:32-p3:64:64:64-i1:8:8-i8:
 
 declare i8 @llvm.abs.i8(i8, i1)
 
+declare void @use_i1(i1)
+declare void @use_i32(i32)
+declare void @use_i64(i64)
+
 define i32 @test1(i32 %X) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr i32 [[X:%.*]], 31
@@ -528,16 +532,16 @@ define i1 @test27(i32 %x, i32 %y, i32 %z) {
 define i1 @test27_extra_uses(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test27_extra_uses(
 ; CHECK-NEXT:    [[LHS:%.*]] = sub nsw i32 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    call void @foo(i32 [[LHS]])
+; CHECK-NEXT:    call void @use_i32(i32 [[LHS]])
 ; CHECK-NEXT:    [[RHS:%.*]] = sub nsw i32 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    call void @foo(i32 [[RHS]])
+; CHECK-NEXT:    call void @use_i32(i32 [[RHS]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %lhs = sub nsw i32 %x, %z
-  call void @foo(i32 %lhs)
+  call void @use_i32(i32 %lhs)
   %rhs = sub nsw i32 %y, %z
-  call void @foo(i32 %rhs)
+  call void @use_i32(i32 %rhs)
   %c = icmp sgt i32 %lhs, %rhs
   ret i1 %c
 }
@@ -557,16 +561,16 @@ define i1 @test28(i32 %x, i32 %y, i32 %z) {
 define i1 @test28_extra_uses(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test28_extra_uses(
 ; CHECK-NEXT:    [[LHS:%.*]] = sub nuw i32 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    call void @foo(i32 [[LHS]])
+; CHECK-NEXT:    call void @use_i32(i32 [[LHS]])
 ; CHECK-NEXT:    [[RHS:%.*]] = sub nuw i32 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    call void @foo(i32 [[RHS]])
+; CHECK-NEXT:    call void @use_i32(i32 [[RHS]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %lhs = sub nuw i32 %x, %z
-  call void @foo(i32 %lhs)
+  call void @use_i32(i32 %lhs)
   %rhs = sub nuw i32 %y, %z
-  call void @foo(i32 %rhs)
+  call void @use_i32(i32 %rhs)
   %c = icmp ugt i32 %lhs, %rhs
   ret i1 %c
 }
@@ -657,16 +661,16 @@ define i1 @test37(i32 %x, i32 %y, i32 %z) {
 define i1 @test37_extra_uses(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test37_extra_uses(
 ; CHECK-NEXT:    [[LHS:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    call void @foo(i32 [[LHS]])
+; CHECK-NEXT:    call void @use_i32(i32 [[LHS]])
 ; CHECK-NEXT:    [[RHS:%.*]] = sub nsw i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    call void @foo(i32 [[RHS]])
+; CHECK-NEXT:    call void @use_i32(i32 [[RHS]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[Z]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %lhs = sub nsw i32 %x, %y
-  call void @foo(i32 %lhs)
+  call void @use_i32(i32 %lhs)
   %rhs = sub nsw i32 %x, %z
-  call void @foo(i32 %rhs)
+  call void @use_i32(i32 %rhs)
   %c = icmp sgt i32 %lhs, %rhs
   ret i1 %c
 }
@@ -714,16 +718,16 @@ define i1 @test38(i32 %x, i32 %y, i32 %z) {
 define i1 @test38_extra_uses(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @test38_extra_uses(
 ; CHECK-NEXT:    [[LHS:%.*]] = sub nuw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    call void @foo(i32 [[LHS]])
+; CHECK-NEXT:    call void @use_i32(i32 [[LHS]])
 ; CHECK-NEXT:    [[RHS:%.*]] = sub nuw i32 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    call void @foo(i32 [[RHS]])
+; CHECK-NEXT:    call void @use_i32(i32 [[RHS]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[Z]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %lhs = sub nuw i32 %x, %y
-  call void @foo(i32 %lhs)
+  call void @use_i32(i32 %lhs)
   %rhs = sub nuw i32 %x, %z
-  call void @foo(i32 %rhs)
+  call void @use_i32(i32 %rhs)
   %c = icmp ugt i32 %lhs, %rhs
   ret i1 %c
 }
@@ -1016,17 +1020,16 @@ define <2 x i1> @test56vec(<2 x i32> %a) {
 }
 
 ; PR10267 Don't make icmps more expensive when no other inst is subsumed.
-declare void @foo(i32)
 define i1 @test57(i32 %a) {
 ; CHECK-LABEL: @test57(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], -2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    call void @foo(i32 [[AND]])
+; CHECK-NEXT:    call void @use_i32(i32 [[AND]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %and = and i32 %a, -2
   %cmp = icmp ne i32 %and, 0
-  call void @foo(i32 %and)
+  call void @use_i32(i32 %and)
   ret i1 %cmp
 }
 
@@ -1135,6 +1138,66 @@ define i1 @low_mask_eq_zext_commute(i8 %a, i32 %b) {
   %z = zext i8 %a to i32
   %c = icmp eq i32 %t, %z
   ret i1 %c
+}
+
+define i1 @low_mask_eq_zext_use1(i8 %a, i32 %b) {
+; CHECK-LABEL: @low_mask_eq_zext_use1(
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[B:%.*]], 255
+; CHECK-NEXT:    call void @use_i32(i32 [[T]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[B]] to i8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %t = and i32 %b, 255
+  call void @use_i32(i32 %t)
+  %z = zext i8 %a to i32
+  %c = icmp eq i32 %t, %z
+  ret i1 %c
+}
+
+define i1 @low_mask_eq_zext_use2(i8 %a, i32 %b) {
+; CHECK-LABEL: @low_mask_eq_zext_use2(
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[B:%.*]], 255
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[Z]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[T]], [[Z]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %t = and i32 %b, 255
+  %z = zext i8 %a to i32
+  call void @use_i32(i32 %z)
+  %c = icmp eq i32 %t, %z
+  ret i1 %c
+}
+
+define i1 @low_mask_eq_zext_use3(i8 %a, i32 %b) {
+; CHECK-LABEL: @low_mask_eq_zext_use3(
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[B:%.*]], 255
+; CHECK-NEXT:    call void @use_i32(i32 [[T]])
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    call void @use_i32(i32 [[Z]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[T]], [[Z]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %t = and i32 %b, 255
+  call void @use_i32(i32 %t)
+  %z = zext i8 %a to i32
+  call void @use_i32(i32 %z)
+  %c = icmp eq i32 %t, %z
+  ret i1 %c
+}
+
+define <2 x i1> @low_mask_eq_zext_vec_splat(<2 x i8> %a, <2 x i32> %b) {
+; CHECK-LABEL: @low_mask_eq_zext_vec_splat(
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[B:%.*]], <i32 255, i32 255>
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[T]], [[Z]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %t = and <2 x i32> %b, <i32 255, i32 255>
+  %z = zext <2 x i8> %a to <2 x i32>
+  %c = icmp eq <2 x i32> %t, %z
+  ret <2 x i1> %c
 }
 
 define i1 @test65(i64 %A, i64 %B) {
@@ -4084,9 +4147,6 @@ define <4 x i1> @signbit_bitcast_fpext_vec_wrong_bitcast(<2 x half> %x) {
   ret <4 x i1> %r
 }
 
-declare void @use_i1(i1)
-declare void @use_i64(i64)
-
 define i1 @signbit_bitcast_fpext_extra_use(float %x, ptr %p) {
 ; CHECK-LABEL: @signbit_bitcast_fpext_extra_use(
 ; CHECK-NEXT:    [[F:%.*]] = fpext float [[X:%.*]] to double
@@ -4263,8 +4323,6 @@ define i1 @redundant_sign_bit_count_ult_31_30(i32 %x) {
   %c = icmp ult i32 %z, 1073741824
   ret i1 %c
 }
-
-declare void @use_i32(i32)
 
 define i1 @redundant_sign_bit_count_ult_31_30_extra_use_ashr(i32 %x) {
 ; CHECK-LABEL: @redundant_sign_bit_count_ult_31_30_extra_use_ashr(
