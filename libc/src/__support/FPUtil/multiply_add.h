@@ -11,7 +11,6 @@
 
 #include "src/__support/architectures.h"
 #include "src/__support/common.h"
-#include "src/__support/cpu_features.h"
 
 namespace __llvm_libc {
 namespace fputil {
