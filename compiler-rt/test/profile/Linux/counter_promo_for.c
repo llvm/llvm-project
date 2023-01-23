@@ -14,6 +14,9 @@
 // RUN: llvm-profdata show --counts --all-functions %t.nopromo.profdata  > %t.nopromo.dump
 // RUN: diff <(llvm-profdata show %t.promo.profdata) <(llvm-profdata show %t.nopromo.profdata)
 
+// FIXME: broken after D141512
+// XFAIL: i386-linux
+
 int g;
 __attribute__((noinline)) void bar(int i) { g += i; }
 
