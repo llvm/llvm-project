@@ -3540,8 +3540,48 @@ bool fir::hasHostAssociationArgument(mlir::func::FuncOp func) {
   return false;
 }
 
-bool fir::valueHasFirAttribute(mlir::Value value,
-                               llvm::StringRef attributeName) {
+// Test if value's definition has the specified set of
+// attributeNames. The value's definition is one of the operations
+// that are able to carry the Fortran variable attributes, e.g.
+// fir.alloca or fir.allocmem. Function arguments may also represent
+// value definitions and carry relevant attributes.
+//
+// If it is not possible to reach the limited set of definition
+// entities from the given value, then the function will return
+// std::nullopt. Otherwise, the definition is known and the return
+// value is computed as:
+//   * if checkAny is true, then the function will return true
+//     iff any of the attributeNames attributes is set on the definition.
+//   * if checkAny is false, then the function will return true
+//     iff all of the attributeNames attributes are set on the definition.
+static std::optional<bool>
+valueCheckFirAttributes(mlir::Value value,
+                        llvm::ArrayRef<llvm::StringRef> attributeNames,
+                        bool checkAny) {
+  auto testAttributeSets = [&](llvm::ArrayRef<mlir::NamedAttribute> setAttrs,
+                               llvm::ArrayRef<llvm::StringRef> checkAttrs) {
+    if (checkAny) {
+      // Return true iff any of checkAttrs attributes is present
+      // in setAttrs set.
+      for (llvm::StringRef checkAttrName : checkAttrs)
+        if (llvm::any_of(setAttrs, [&](mlir::NamedAttribute setAttr) {
+              return setAttr.getName() == checkAttrName;
+            }))
+          return true;
+
+      return false;
+    }
+
+    // Return true iff all attributes from checkAttrs are present
+    // in setAttrs set.
+    for (mlir::StringRef checkAttrName : checkAttrs)
+      if (llvm::none_of(setAttrs, [&](mlir::NamedAttribute setAttr) {
+            return setAttr.getName() == checkAttrName;
+          }))
+        return false;
+
+    return true;
+  };
   // If this is a fir.box that was loaded, the fir attributes will be on the
   // related fir.ref<fir.box> creation.
   if (value.getType().isa<fir::BoxType>())
@@ -3553,32 +3593,50 @@ bool fir::valueHasFirAttribute(mlir::Value value,
     if (blockArg.getOwner() && blockArg.getOwner()->isEntryBlock())
       if (auto funcOp = mlir::dyn_cast<mlir::func::FuncOp>(
               blockArg.getOwner()->getParentOp()))
-        if (funcOp.getArgAttr(blockArg.getArgNumber(), attributeName))
-          return true;
-    return false;
+        return testAttributeSets(
+            mlir::cast<mlir::FunctionOpInterface>(*funcOp).getArgAttrs(
+                blockArg.getArgNumber()),
+            attributeNames);
+
+    // If it is not a function argument, the attributes are unknown.
+    return std::nullopt;
   }
 
   if (auto definingOp = value.getDefiningOp()) {
     // If this is an allocated value, look at the allocation attributes.
     if (mlir::isa<fir::AllocMemOp>(definingOp) ||
-        mlir::isa<AllocaOp>(definingOp))
-      return definingOp->hasAttr(attributeName);
+        mlir::isa<fir::AllocaOp>(definingOp))
+      return testAttributeSets(definingOp->getAttrs(), attributeNames);
     // If this is an imported global, look at AddrOfOp and GlobalOp attributes.
     // Both operations are looked at because use/host associated variable (the
     // AddrOfOp) can have ASYNCHRONOUS/VOLATILE attributes even if the ultimate
     // entity (the globalOp) does not have them.
     if (auto addressOfOp = mlir::dyn_cast<fir::AddrOfOp>(definingOp)) {
-      if (addressOfOp->hasAttr(attributeName))
+      if (testAttributeSets(addressOfOp->getAttrs(), attributeNames))
         return true;
       if (auto module = definingOp->getParentOfType<mlir::ModuleOp>())
         if (auto globalOp =
                 module.lookupSymbol<fir::GlobalOp>(addressOfOp.getSymbol()))
-          return globalOp->hasAttr(attributeName);
+          return testAttributeSets(globalOp->getAttrs(), attributeNames);
     }
   }
   // TODO: Construct associated entities attributes. Decide where the fir
   // attributes must be placed/looked for in this case.
-  return false;
+  return std::nullopt;
+}
+
+bool fir::valueMayHaveFirAttributes(
+    mlir::Value value, llvm::ArrayRef<llvm::StringRef> attributeNames) {
+  std::optional<bool> mayHaveAttr =
+      valueCheckFirAttributes(value, attributeNames, /*checkAny=*/true);
+  return mayHaveAttr.value_or(true);
+}
+
+bool fir::valueHasFirAttribute(mlir::Value value,
+                               llvm::StringRef attributeName) {
+  std::optional<bool> mayHaveAttr =
+      valueCheckFirAttributes(value, {attributeName}, /*checkAny=*/false);
+  return mayHaveAttr.value_or(false);
 }
 
 bool fir::anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr) {
