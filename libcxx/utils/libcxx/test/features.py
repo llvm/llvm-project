@@ -159,9 +159,6 @@ DEFAULT_FEATURES = [
   Feature(name='has-clang-tidy',
           when=lambda cfg: _getSuitableClangTidy(cfg) is not None,
           actions=[AddSubstitution('%{clang-tidy}', lambda cfg: _getSuitableClangTidy(cfg))]),
-  Feature(name='has-clang-query',
-          when=lambda cfg: runScriptExitCode(cfg, ['clang-query-15 --version']) == 0,
-          actions=[AddSubstitution('%{clang-query}', 'clang-query-15')]),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),
