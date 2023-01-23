@@ -1086,7 +1086,7 @@ int MachineInstr::findFirstPredOperandIdx() const {
   const MCInstrDesc &MCID = getDesc();
   if (MCID.isPredicable()) {
     for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
-      if (MCID.OpInfo[i].isPredicate())
+      if (MCID.operands()[i].isPredicate())
         return i;
   }
 
@@ -1524,7 +1524,7 @@ LLT MachineInstr::getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
   if (isVariadic() || OpIdx >= getNumExplicitOperands())
     return MRI.getType(Op.getReg());
 
-  auto &OpInfo = getDesc().OpInfo[OpIdx];
+  auto &OpInfo = getDesc().operands()[OpIdx];
   if (!OpInfo.isGenericType())
     return MRI.getType(Op.getReg());
 

@@ -8,7 +8,8 @@
 
 // UNSUPPORTED: c++03
 
-#include <utility> // for __transaction
+// UNSUPPORTED: no-exceptions
+
 #include <cassert>
 #include <type_traits>
 #include <utility>
@@ -22,7 +23,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
         bool rolled_back = false;
         {
             auto rollback = [&] { rolled_back = true; };
-            std::__transaction<decltype(rollback)> t(rollback);
+            std::__exception_guard<decltype(rollback)> g(rollback);
         }
         assert(rolled_back);
     }
@@ -33,8 +34,8 @@ TEST_CONSTEXPR_CXX20 bool test() {
         bool rolled_back = false;
         {
             auto rollback = [&] { rolled_back = true; };
-            std::__transaction<decltype(rollback)> t(rollback);
-            t.__complete();
+            std::__exception_guard<decltype(rollback)> g(rollback);
+            g.__complete();
         }
         assert(!rolled_back);
     }
@@ -47,8 +48,8 @@ TEST_CONSTEXPR_CXX20 bool test() {
             int rollbacks = 0;
             {
                 auto rollback = [&] { ++rollbacks; };
-                std::__transaction<decltype(rollback)> t(rollback);
-                auto other = std::move(t);
+                std::__exception_guard<decltype(rollback)> g(rollback);
+                auto other = std::move(g);
             }
             assert(rollbacks == 1);
         }
@@ -58,8 +59,8 @@ TEST_CONSTEXPR_CXX20 bool test() {
             int rollbacks = 0;
             {
                 auto rollback = [&] { ++rollbacks; };
-                std::__transaction<decltype(rollback)> t(rollback);
-                auto other = std::move(t);
+                std::__exception_guard<decltype(rollback)> g(rollback);
+                auto other = std::move(g);
                 other.__complete();
             }
             assert(rollbacks == 0);
@@ -69,7 +70,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     // Basic properties of the type
     {
         struct Rollback { void operator()() const { } };
-        using Transaction = std::__transaction<Rollback>;
+        using Transaction = std::__exception_guard<Rollback>;
 
         static_assert(!std::is_default_constructible<Transaction>::value, "");
 
@@ -85,7 +86,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
                 ThrowOnMove(ThrowOnMove&&) noexcept(false) { }
                 void operator()() const { }
             };
-            using ThrowOnMoveTransaction = std::__transaction<ThrowOnMove>;
+            using ThrowOnMoveTransaction = std::__exception_guard<ThrowOnMove>;
 
             ASSERT_NOEXCEPT(std::declval<Transaction>().__complete());
             static_assert( std::is_nothrow_move_constructible<Transaction>::value, "");
@@ -104,7 +105,7 @@ void test_exceptions() {
         bool rolled_back = false;
         auto rollback = [&] { rolled_back = true; };
         try {
-            std::__transaction<decltype(rollback)> t(rollback);
+            std::__exception_guard<decltype(rollback)> g(rollback);
             throw 0;
         } catch (...) { }
         assert(rolled_back);
@@ -116,14 +117,14 @@ void test_exceptions() {
         bool rolled_back = false;
         auto rollback = [&] { rolled_back = true; };
         try {
-            std::__transaction<decltype(rollback)> t(rollback);
-            t.__complete();
+            std::__exception_guard<decltype(rollback)> g(rollback);
+            g.__complete();
             throw 0;
         } catch (...) { }
         assert(!rolled_back);
     }
 
-    // Make sure __transaction does not rollback if the transaction is marked as
+    // Make sure __exception_guard does not rollback if the transaction is marked as
     // completed within a destructor.
     {
         struct S {
@@ -131,8 +132,8 @@ void test_exceptions() {
 
             ~S() {
                 auto rollback = [this]{ x_ = true; };
-                std::__transaction<decltype(rollback)> t(rollback);
-                t.__complete();
+                std::__exception_guard<decltype(rollback)> g(rollback);
+                g.__complete();
             }
 
             bool& x_;

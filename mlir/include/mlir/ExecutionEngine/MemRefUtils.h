@@ -191,7 +191,7 @@ public:
     freeFunc = other.freeFunc;
     descriptor = other.descriptor;
     other.freeFunc = nullptr;
-    memset(0, &other.descriptor, sizeof(other.descriptor));
+    memset(&other.descriptor, 0, sizeof(other.descriptor));
   }
   OwningMemRef(OwningMemRef &&other) { *this = std::move(other); }
 

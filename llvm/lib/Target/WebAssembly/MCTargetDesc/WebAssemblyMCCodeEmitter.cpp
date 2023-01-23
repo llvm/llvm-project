@@ -92,7 +92,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
 
     } else if (MO.isImm()) {
       if (I < Desc.getNumOperands()) {
-        const MCOperandInfo &Info = Desc.OpInfo[I];
+        const MCOperandInfo &Info = Desc.operands()[I];
         LLVM_DEBUG(dbgs() << "Encoding immediate: type="
                           << int(Info.OperandType) << "\n");
         switch (Info.OperandType) {
@@ -134,7 +134,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
       uint64_t D = MO.getDFPImm();
       support::endian::write<uint64_t>(OS, D, support::little);
     } else if (MO.isExpr()) {
-      const MCOperandInfo &Info = Desc.OpInfo[I];
+      const MCOperandInfo &Info = Desc.operands()[I];
       llvm::MCFixupKind FixupKind;
       size_t PaddedSize = 5;
       switch (Info.OperandType) {

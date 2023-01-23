@@ -385,7 +385,7 @@ public:
                       uint64_t &Target) const override {
     unsigned NumOps = Inst.getNumOperands();
     if (NumOps == 0 ||
-        Info->get(Inst.getOpcode()).OpInfo[NumOps - 1].OperandType !=
+        Info->get(Inst.getOpcode()).operands()[NumOps - 1].OperandType !=
             MCOI::OPERAND_PCREL)
       return false;
     Target = Addr + Inst.getOperand(NumOps - 1).getImm() * Size;

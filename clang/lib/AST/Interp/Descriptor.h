@@ -70,7 +70,7 @@ struct InlineDescriptor {
   /// Flag indicating if the field is the active member of a union.
   unsigned IsActive : 1;
   /// Flag indicating if the field is mutable (if in a record).
-  unsigned IsMutable : 1; // TODO: Rename to IsFieldMutable.
+  unsigned IsFieldMutable : 1;
 
   Descriptor *Desc;
 };

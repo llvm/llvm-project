@@ -340,7 +340,7 @@ static void GetCostForDef(const ScheduleDAGSDNodes::RegDefIter &RegDefPos,
     }
 
     unsigned Idx = RegDefPos.GetIdx();
-    const MCInstrDesc Desc = TII->get(Opcode);
+    const MCInstrDesc &Desc = TII->get(Opcode);
     const TargetRegisterClass *RC = TII->getRegClass(Desc, Idx, TRI, MF);
     assert(RC && "Not a valid register class");
     RegClass = RC->getID();
@@ -1433,7 +1433,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
       // of %noreg.  When the OptionalDef is set to a valid register, we need to
       // handle it in the same way as an ImplicitDef.
       for (unsigned i = 0; i < MCID.getNumDefs(); ++i)
-        if (MCID.OpInfo[i].isOptionalDef()) {
+        if (MCID.operands()[i].isOptionalDef()) {
           const SDValue &OptionalDef = Node->getOperand(i - Node->getNumValues());
           Register Reg = cast<RegisterSDNode>(OptionalDef)->getReg();
           CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
