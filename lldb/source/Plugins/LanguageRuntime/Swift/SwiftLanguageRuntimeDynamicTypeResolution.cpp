@@ -270,7 +270,36 @@ public:
   const swift::reflection::TypeInfo *
   getTypeInfo(const swift::reflection::TypeRef *type_ref,
               swift::remote::TypeInfoProvider *provider) override {
-    return m_reflection_ctx.getTypeInfo(type_ref, provider);
+    if (!type_ref)
+      return nullptr;
+
+    Log *log(GetLog(LLDBLog::Types));
+    if (log && log->GetVerbose()) {
+      std::stringstream ss;
+      type_ref->dump(ss);
+      LLDB_LOG(log, "[TargetReflectionContext::getTypeInfo] Getting "
+                  "type info for typeref:\n%s",
+                  ss.str());
+    }
+
+    auto type_info = m_reflection_ctx.getTypeInfo(type_ref, provider);
+    if (log && !type_info) {
+      std::stringstream ss;
+      type_ref->dump(ss);
+      LLDB_LOG(log,
+                "[TargetReflectionContext::getTypeInfo] Could not get "
+                "type info for typeref:\n%s",
+                ss.str());
+    }
+
+    if (log && log->GetVerbose()) {
+      std::stringstream ss;
+      type_info->dump(ss);
+      log->Printf("[TargetReflectionContext::getTypeInfo] Found "
+                  "type info:\n%s",
+                  ss.str().c_str());
+    }
+    return type_info;
   }
 
   swift::reflection::MemoryReader &getReader() override {
@@ -3173,6 +3202,12 @@ lldb::addr_t SwiftLanguageRuntimeImpl::FixupAddress(lldb::addr_t addr,
 const swift::reflection::TypeRef *
 SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
                                      TypeSystemSwiftTypeRef *module_holder) {
+  Log *log(GetLog(LLDBLog::Types));
+  if (log && log->GetVerbose())
+    LLDB_LOG(log, "[SwiftLanguageRuntimeImpl::GetTypeRef] Getting typeref for "
+                "type: %s\n",
+                type.GetMangledTypeName());
+
   // Demangle the mangled name.
   swift::Demangle::Demangler dem;
   ConstString mangled_name = type.GetMangledTypeName();
@@ -3190,10 +3225,23 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
     return nullptr;
 
   auto type_ref_or_err =
-    swift::Demangle::decodeMangledType(reflection_ctx->getBuilder(), node);
-  if (type_ref_or_err.isError())
+      swift::Demangle::decodeMangledType(reflection_ctx->getBuilder(), node);
+  if (type_ref_or_err.isError()) {
+    LLDB_LOG(log,
+              "[SwiftLanguageRuntimeImpl::GetTypeRef] Could not find typeref "
+              "for type: %s. Decode mangled type failed. Error: %s\n.",
+              type.GetMangledTypeName(),
+              type_ref_or_err.getError()->copyErrorString());
     return nullptr;
+  }
   const swift::reflection::TypeRef *type_ref = type_ref_or_err.getType();
+  if (log && log->GetVerbose()) {
+    std::stringstream ss;
+    type_ref->dump(ss);
+    LLDB_LOG(log, "[SwiftLanguageRuntimeImpl::GetTypeRef] Found typeref for "
+                "type: %s:\n%s",
+                type.GetMangledTypeName(), ss.str());
+  }
   return type_ref;
 }
 
@@ -3201,6 +3249,13 @@ const swift::reflection::TypeInfo *
 SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo(
     CompilerType type, ExecutionContextScope *exe_scope,
     swift::reflection::TypeRef const **out_tr) {
+  Log *log(GetLog(LLDBLog::Types));
+
+  if (log && log->GetVerbose())
+    LLDB_LOG(log, "[SwiftLanguageRuntimeImpl::GetSwiftRuntimeTypeInfo] Getting "
+                "type info for type: %s\n",
+                type.GetMangledTypeName());
+
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
   if (!ts)
     return nullptr;
