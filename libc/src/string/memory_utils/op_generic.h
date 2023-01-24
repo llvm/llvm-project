@@ -46,7 +46,9 @@ namespace __llvm_libc::generic {
 // using UInt8T = MyMap::find_type<1>;
 template <size_t I, typename T> struct CTPair {
   using type = T;
-  static CTPair get_pair(cpp::integral_constant<size_t, I>) { return {}; }
+  LIBC_INLINE static CTPair get_pair(cpp::integral_constant<size_t, I>) {
+    return {};
+  }
 };
 template <typename... Pairs> struct CTMap : public Pairs... {
   using Pairs::get_pair...;
@@ -63,11 +65,13 @@ template <typename T> struct ScalarType {
   using Type = T;
   static_assert(cpp::is_integral_v<Type> && !cpp::is_signed_v<Type>);
 
-  static inline Type load(CPtr src) { return ::__llvm_libc::load<Type>(src); }
-  static inline void store(Ptr dst, Type value) {
+  LIBC_INLINE static Type load(CPtr src) {
+    return ::__llvm_libc::load<Type>(src);
+  }
+  LIBC_INLINE static void store(Ptr dst, Type value) {
     ::__llvm_libc::store<Type>(dst, value);
   }
-  static inline Type splat(uint8_t value) {
+  LIBC_INLINE static Type splat(uint8_t value) {
     return Type(~0) / Type(0xFF) * Type(value);
   }
 };
@@ -100,11 +104,13 @@ template <> struct VectorValueType<64> {
 // Implements load, store and splat for vector types.
 template <size_t Size> struct VectorType {
   using Type = typename VectorValueType<Size>::type;
-  static inline Type load(CPtr src) { return ::__llvm_libc::load<Type>(src); }
-  static inline void store(Ptr dst, Type value) {
+  LIBC_INLINE static Type load(CPtr src) {
+    return ::__llvm_libc::load<Type>(src);
+  }
+  LIBC_INLINE static void store(Ptr dst, Type value) {
     ::__llvm_libc::store<Type>(dst, value);
   }
-  static inline Type splat(uint8_t value) {
+  LIBC_INLINE static Type splat(uint8_t value) {
     Type Out;
     // This for loop is optimized out for vector types.
     for (size_t i = 0; i < Size; ++i)
@@ -140,17 +146,17 @@ using NativeTypeMap =
 template <typename SubType, size_t ArraySize> struct ArrayType {
   using Type = cpp::array<typename SubType::Type, ArraySize>;
   static constexpr size_t SizeOfElement = sizeof(typename SubType::Type);
-  static inline Type load(CPtr src) {
+  LIBC_INLINE static Type load(CPtr src) {
     Type Value;
     for (size_t I = 0; I < ArraySize; ++I)
       Value[I] = SubType::load(src + (I * SizeOfElement));
     return Value;
   }
-  static inline void store(Ptr dst, Type Value) {
+  LIBC_INLINE static void store(Ptr dst, Type Value) {
     for (size_t I = 0; I < ArraySize; ++I)
       SubType::store(dst + (I * SizeOfElement), Value[I]);
   }
-  static inline Type splat(uint8_t value) {
+  LIBC_INLINE static Type splat(uint8_t value) {
     Type Out;
     for (size_t I = 0; I < ArraySize; ++I)
       Out[I] = SubType::splat(value);
@@ -190,7 +196,7 @@ template <size_t Size, size_t MaxSize> struct Memset {
   static_assert(is_power2(MaxSize));
   static constexpr size_t SIZE = Size;
 
-  static inline void block(Ptr dst, uint8_t value) {
+  LIBC_INLINE static void block(Ptr dst, uint8_t value) {
     if constexpr (Size == 3) {
       Memset<1, MaxSize>::block(dst + 2, value);
       Memset<2, MaxSize>::block(dst, value);
@@ -204,16 +210,16 @@ template <size_t Size, size_t MaxSize> struct Memset {
     }
   }
 
-  static inline void tail(Ptr dst, uint8_t value, size_t count) {
+  LIBC_INLINE static void tail(Ptr dst, uint8_t value, size_t count) {
     block(dst + count - SIZE, value);
   }
 
-  static inline void head_tail(Ptr dst, uint8_t value, size_t count) {
+  LIBC_INLINE static void head_tail(Ptr dst, uint8_t value, size_t count) {
     block(dst, value);
     tail(dst, value, count);
   }
 
-  static inline void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
+  LIBC_INLINE static void loop_and_tail(Ptr dst, uint8_t value, size_t count) {
     static_assert(SIZE > 1);
     size_t offset = 0;
     do {
@@ -233,16 +239,16 @@ template <size_t Size> struct Bcmp {
                                         ? sizeof(uint64_t)
                                         : sizeof(uint32_t);
 
-  template <typename T> static inline uint32_t load_xor(CPtr p1, CPtr p2) {
+  template <typename T> LIBC_INLINE static uint32_t load_xor(CPtr p1, CPtr p2) {
     return load<T>(p1) ^ load<T>(p2);
   }
 
   template <typename T>
-  static inline uint32_t load_not_equal(CPtr p1, CPtr p2) {
+  LIBC_INLINE static uint32_t load_not_equal(CPtr p1, CPtr p2) {
     return load<T>(p1) != load<T>(p2);
   }
 
-  static inline BcmpReturnType block(CPtr p1, CPtr p2) {
+  LIBC_INLINE static BcmpReturnType block(CPtr p1, CPtr p2) {
     if constexpr (Size == 1) {
       return load_xor<uint8_t>(p1, p2);
     } else if constexpr (Size == 2) {
@@ -261,15 +267,16 @@ template <size_t Size> struct Bcmp {
     return BcmpReturnType::ZERO();
   }
 
-  static inline BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
     return block(p1 + count - SIZE, p2 + count - SIZE);
   }
 
-  static inline BcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static BcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
     return block(p1, p2) | tail(p1, p2, count);
   }
 
-  static inline BcmpReturnType loop_and_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
+                                                  size_t count) {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     size_t offset = 0;
     do {
@@ -290,23 +297,23 @@ template <size_t Size> struct Memcmp {
                                         ? sizeof(uint64_t)
                                         : sizeof(uint32_t);
 
-  template <typename T> static inline T load_be(CPtr ptr) {
+  template <typename T> LIBC_INLINE static T load_be(CPtr ptr) {
     return Endian::to_big_endian(load<T>(ptr));
   }
 
   template <typename T>
-  static inline MemcmpReturnType load_be_diff(CPtr p1, CPtr p2) {
+  LIBC_INLINE static MemcmpReturnType load_be_diff(CPtr p1, CPtr p2) {
     return load_be<T>(p1) - load_be<T>(p2);
   }
 
   template <typename T>
-  static inline MemcmpReturnType load_be_cmp(CPtr p1, CPtr p2) {
+  LIBC_INLINE static MemcmpReturnType load_be_cmp(CPtr p1, CPtr p2) {
     const auto la = load_be<T>(p1);
     const auto lb = load_be<T>(p2);
     return la > lb ? 1 : la < lb ? -1 : 0;
   }
 
-  static inline MemcmpReturnType block(CPtr p1, CPtr p2) {
+  LIBC_INLINE static MemcmpReturnType block(CPtr p1, CPtr p2) {
     if constexpr (Size == 1) {
       return load_be_diff<uint8_t>(p1, p2);
     } else if constexpr (Size == 2) {
@@ -329,17 +336,19 @@ template <size_t Size> struct Memcmp {
     }
   }
 
-  static inline MemcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static MemcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
     return block(p1 + count - SIZE, p2 + count - SIZE);
   }
 
-  static inline MemcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static MemcmpReturnType head_tail(CPtr p1, CPtr p2,
+                                                size_t count) {
     if (auto value = block(p1, p2))
       return value;
     return tail(p1, p2, count);
   }
 
-  static inline MemcmpReturnType loop_and_tail(CPtr p1, CPtr p2, size_t count) {
+  LIBC_INLINE static MemcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
+                                                    size_t count) {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     size_t offset = 0;
     do {
@@ -360,7 +369,7 @@ template <size_t Size, size_t MaxSize> struct Memmove {
   using T = getTypeFor<Size, MaxSize>;
   static constexpr size_t SIZE = Size;
 
-  static inline void block(Ptr dst, CPtr src) {
+  LIBC_INLINE static void block(Ptr dst, CPtr src) {
     if constexpr (is_void_v<T>) {
       deferred_static_assert("Unimplemented Size");
     } else {
@@ -368,7 +377,7 @@ template <size_t Size, size_t MaxSize> struct Memmove {
     }
   }
 
-  static inline void head_tail(Ptr dst, CPtr src, size_t count) {
+  LIBC_INLINE static void head_tail(Ptr dst, CPtr src, size_t count) {
     const size_t offset = count - Size;
     if constexpr (is_void_v<T>) {
       deferred_static_assert("Unimplemented Size");
@@ -402,7 +411,7 @@ template <size_t Size, size_t MaxSize> struct Memmove {
   // [_SSSSSSSS________________________]
   // [___SSSSSSSA______________________]
   template <Arg AlignOn>
-  static inline void align_forward(Ptr &dst, CPtr &src, size_t &count) {
+  LIBC_INLINE static void align_forward(Ptr &dst, CPtr &src, size_t &count) {
     Ptr prev_dst = dst;
     CPtr prev_src = src;
     size_t prev_count = count;
@@ -430,7 +439,7 @@ template <size_t Size, size_t MaxSize> struct Memmove {
   // [__________________ASSSSSSS_______]
   // [______________________SSSSSSSS___]
   template <Arg AlignOn>
-  static inline void align_backward(Ptr &dst, CPtr &src, size_t &count) {
+  LIBC_INLINE static void align_backward(Ptr &dst, CPtr &src, size_t &count) {
     Ptr headtail_dst = dst + count;
     CPtr headtail_src = src + count;
     size_t headtail_size = 0;
@@ -455,7 +464,8 @@ template <size_t Size, size_t MaxSize> struct Memmove {
   // [___________________LLLLLLLL_________]
   // [_________________SSSSSSSS___________]
   // [_______________________SSSSSSSS_____]
-  static inline void loop_and_tail_forward(Ptr dst, CPtr src, size_t count) {
+  LIBC_INLINE static void loop_and_tail_forward(Ptr dst, CPtr src,
+                                                size_t count) {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     const size_t tail_offset = count - Size;
     const auto tail_value = T::load(src + tail_offset);
@@ -482,7 +492,8 @@ template <size_t Size, size_t MaxSize> struct Memmove {
   // [_________LLLLLLLL___________________]
   // [___________SSSSSSSS_________________]
   // [_____SSSSSSSS_______________________]
-  static inline void loop_and_tail_backward(Ptr dst, CPtr src, size_t count) {
+  LIBC_INLINE static void loop_and_tail_backward(Ptr dst, CPtr src,
+                                                 size_t count) {
     static_assert(Size > 1, "a loop of size 1 does not need tail");
     const auto head_value = T::load(src);
     ptrdiff_t offset = count - Size;
