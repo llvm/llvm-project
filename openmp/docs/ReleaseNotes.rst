@@ -87,3 +87,14 @@ Non-comprehensive list of changes in this release
 * OpenMP-Opt (run as part of O1/O2/O3) will more effectively lower GPU resource
   usage and improve performance.
 
+* Support record-and-replay functionality for individual OpenMP offload kernels.
+  Enabling recording in the host OpenMP target runtime library stores per-kernel
+  the device image, device memory state, and kernel launching information. The
+  newly added command-line tool `llvm-omp-kernel-replay` replays kernel execution.
+  Environment variables control recording/replaying:
+   * LIBOMPTARGET_RECORDING=<0|1>, 0: disable recording (default), 1: enable recording
+   * LIBOMPTARGET_RR_DEVMEM_SIZE = <integer in bytes>, default 64GB, amount of device
+     memory to pre-allocate for storing/loading when recording/replaying
+   * LIBOMPTARGET_RR_SAVE_OUTPUT=<0|1>, 0: disable saving device memory post-kernel execution
+     (default), 1: enable saving device memory post-kernel execution (used for verification
+     with `llvm-omp-kernel-replay`)
