@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FMA_H
 
 #include "src/__support/architectures.h"
-#include "src/__support/cpu_features.h"
 
 #if !defined(LLVM_LIBC_ARCH_AARCH64)
 #error "Invalid include"
