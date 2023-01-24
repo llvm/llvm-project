@@ -203,7 +203,7 @@
 // ALL-NOT: error:
 // ALL: {{"[^"]*clang[^"]*"}}
 
-// RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
+// RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(64)?(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
 // ROCMDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
 
 // ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ocml.bc"
