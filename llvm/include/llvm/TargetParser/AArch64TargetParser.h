@@ -486,7 +486,8 @@ inline constexpr CpuInfo CpuInfos[] = {
     {"carmel", ARMV8_2A, (AArch64::AEK_CRYPTO | AArch64::AEK_FP16)},
     {"ampere1", ARMV8_6A,
      (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
-      AArch64::AEK_FP16 | AArch64::AEK_SB | AArch64::AEK_SSBS)},
+      AArch64::AEK_FP16 | AArch64::AEK_SB | AArch64::AEK_SSBS |
+      AArch64::AEK_RAND)},
     // Invalid CPU
     {"invalid", INVALID, (AArch64::AEK_INVALID)},
 };
