@@ -65,5 +65,7 @@ func.func @main() {
   // CHECK-NOT: ERROR: Runtime op verification failed
   func.call @valid_cast(%3) : (memref<*xf32>) -> (memref<?xf32>)
 
+  memref.dealloc %alloc : memref<5xf32>
+
   return
 }
