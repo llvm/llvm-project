@@ -24,3 +24,23 @@ Non-comprehensive list of changes in this release
   with MinGW based toolchains.
 
 * Made the OpenMP runtime tests run successfully on Windows.
+
+* Improved performance and internalization when compiling in LTO mode using 
+  ``-foffload-lto``.
+
+* Created the ``nvptx-arch`` and ``amdgpu-arch`` tools to query the user's 
+  installed GPUs.
+
+* Removed ``CLANG_OPENMP_NVPTX_DEFAULT_ARCH`` in favor of using the new 
+  ``nvptx-arch`` tool.
+
+* Added support for ``--offload-arch=native`` which queries the user's locally 
+  available GPU architectures. Now ``-fopenmp --offload-arch=native`` is 
+  sufficient to target all of the user's GPUs.
+
+* Added ``-fopenmp-target-jit`` to enable JIT support.
+
+* OpenMP now supports ``-Xarch_host`` to control sending compiler arguments only 
+  to the host compilation.
+
+* Improved ``clang-format`` when used on OpenMP offloading applications.
