@@ -592,22 +592,20 @@ define void @vlmax(i64 %N, double* %c, double* %a, double* %b) {
 ; CHECK-NEXT:    vsetvli a6, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    blez a0, .LBB11_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    li t1, 0
-; CHECK-NEXT:    slli a7, a6, 3
+; CHECK-NEXT:    li a5, 0
+; CHECK-NEXT:    slli a4, a6, 3
 ; CHECK-NEXT:  .LBB11_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add t0, a2, a4
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (t0)
-; CHECK-NEXT:    add a5, a3, a4
-; CHECK-NEXT:    vle64.v v9, (a5)
+; CHECK-NEXT:    vle64.v v8, (a2)
+; CHECK-NEXT:    vle64.v v9, (a3)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    add a5, a1, a4
-; CHECK-NEXT:    vse64.v v8, (a5)
-; CHECK-NEXT:    add t1, t1, a6
-; CHECK-NEXT:    add a4, a4, a7
-; CHECK-NEXT:    blt t1, a0, .LBB11_2
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    add a5, a5, a6
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    add a3, a3, a4
+; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    blt a5, a0, .LBB11_2
 ; CHECK-NEXT:  .LBB11_3: # %for.end
 ; CHECK-NEXT:    ret
 entry:
@@ -962,17 +960,16 @@ if.end:
 define void @pre_over_vle(ptr %A) {
 ; CHECK-LABEL: pre_over_vle:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    li a2, 800
+; CHECK-NEXT:    li a1, 100
 ; CHECK-NEXT:  .LBB22_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add a3, a0, a1
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a3)
+; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsext.vf4 v9, v8
-; CHECK-NEXT:    addi a1, a1, 8
-; CHECK-NEXT:    vse32.v v9, (a3)
-; CHECK-NEXT:    bne a1, a2, .LBB22_1
+; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    bnez a1, .LBB22_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    ret
 entry:
