@@ -1045,6 +1045,10 @@ struct AAPointerInfoImpl
     const auto *ExecDomainAA = A.lookupAAFor<AAExecutionDomain>(
         IRPosition::function(Scope), &QueryingAA, DepClassTy::OPTIONAL);
     bool AllInSameNoSyncFn = NoSyncAA.isAssumedNoSync();
+    bool InstIsExecutedByInitialThreadOnly =
+        ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I);
+    bool InstIsExecutedInAlignedRegion =
+        ExecDomainAA && ExecDomainAA->isExecutedInAlignedRegion(A, I);
 
     InformationCache &InfoCache = A.getInfoCache();
     bool IsThreadLocalObj =
@@ -1054,10 +1058,18 @@ struct AAPointerInfoImpl
     // right now. However, if the function is (assumed) nosync or the thread
     // executing all instructions is the main thread only we can ignore
     // threading. Also, thread-local objects do not require threading reasoning.
-    auto CanIgnoreThreading = [&](const Instruction &I) -> bool {
-      if (IsThreadLocalObj)
+    // Finally, we can ignore threading if either access is executed in an
+    // aligned region.
+    auto CanIgnoreThreadingForInst = [&](const Instruction &I) -> bool {
+      if (IsThreadLocalObj || AllInSameNoSyncFn)
         return true;
-      if (ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I))
+      if (!ExecDomainAA)
+        return false;
+      if (InstIsExecutedInAlignedRegion ||
+          ExecDomainAA->isExecutedInAlignedRegion(A, I))
+        return true;
+      if (InstIsExecutedByInitialThreadOnly &&
+          ExecDomainAA->isExecutedByInitialThreadOnly(I))
         return true;
       return false;
     };
@@ -1065,8 +1077,10 @@ struct AAPointerInfoImpl
     // Helper to determine if the access is executed by the same thread as the
     // given instruction, for now it is sufficient to avoid any potential
     // threading effects as we cannot deal with them anyway.
-    auto IsSameThreadAsInst = [&](const Access &Acc) -> bool {
-      return AllInSameNoSyncFn || CanIgnoreThreading(*Acc.getLocalInst());
+    auto CanIgnoreThreading = [&](const Access &Acc) -> bool {
+      return CanIgnoreThreadingForInst(*Acc.getRemoteInst()) ||
+             (Acc.getRemoteInst() != Acc.getLocalInst() &&
+              CanIgnoreThreadingForInst(*Acc.getLocalInst()));
     };
 
     // TODO: Use inter-procedural reachability and dominance.
@@ -1168,7 +1182,7 @@ struct AAPointerInfoImpl
 
     // Helper to determine if we can skip a specific write access.
     auto CanSkipAccess = [&](const Access &Acc, bool Exact) {
-      if (!IsSameThreadAsInst(Acc))
+      if (!CanIgnoreThreading(Acc))
         return false;
 
       // Check read (RAW) dependences and write (WAR) dependences as necessary.
@@ -1236,7 +1250,7 @@ struct AAPointerInfoImpl
     // Run the user callback on all accesses we cannot skip and return if
     // that succeeded for all or not.
     for (auto &It : InterferingAccesses) {
-      if ((!AllInSameNoSyncFn && !IsThreadLocalObj) ||
+      if ((!AllInSameNoSyncFn && !IsThreadLocalObj && !ExecDomainAA) ||
           !CanSkipAccess(*It.first, It.second)) {
         if (!UserCB(*It.first, It.second))
           return false;
