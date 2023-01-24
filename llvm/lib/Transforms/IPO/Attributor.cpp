@@ -665,7 +665,7 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
     if (A.checkForAllInstructions(ReturnInstCB, FromFn, QueryingAA,
                                   {Instruction::Ret}, UsedAssumedInformation)) {
       LLVM_DEBUG(dbgs() << "[AA] No return is reachable, done\n");
-      return false;
+      continue;
     }
 
     if (!GoBackwardsCB) {
