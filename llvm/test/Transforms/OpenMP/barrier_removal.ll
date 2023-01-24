@@ -92,6 +92,22 @@ define void @pos_empty_7b() {
   call void @unknown()
   ret void
 }
+define void @pos_empty_8(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@pos_empty_8
+; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[F]]
+; CHECK:       f:
+; CHECK-NEXT:    ret void
+;
+  br i1 %c, label %t, label %f
+t:
+  call void @llvm.amdgcn.s.barrier() "llvm.assume"="ompx_aligned_barrier"
+  br label %f
+f:
+  ret void
+}
 define void @neg_empty_8() {
 ; CHECK-LABEL: define {{[^@]+}}@neg_empty_8() {
 ; CHECK-NEXT:    call void @unknown()
@@ -965,7 +981,7 @@ m3:
 }
 
 !llvm.module.flags = !{!16,!15}
-!nvvm.annotations = !{!0,!1,!2,!3,!4,!5,!6,!7,!8,!9,!10,!11,!12,!13,!14,!17,!18,!19,!20,!21,!22}
+!nvvm.annotations = !{!0,!1,!2,!3,!4,!5,!6,!7,!8,!9,!10,!11,!12,!13,!14,!17,!18,!19,!20,!21,!22,!23}
 
 !0 = !{void ()* @pos_empty_1, !"kernel", i32 1}
 !1 = !{void ()* @pos_empty_2, !"kernel", i32 1}
@@ -975,6 +991,7 @@ m3:
 !5 = !{void ()* @pos_empty_6, !"kernel", i32 1}
 !17 = !{void ()* @pos_empty_7a, !"kernel", i32 1}
 !18 = !{void ()* @pos_empty_7b, !"kernel", i32 1}
+!23 = !{void (i1)* @pos_empty_8, !"kernel", i32 1}
 !6 = !{void ()* @neg_empty_8, !"kernel", i32 1}
 !19 = !{void (i1)* @neg_empty_9, !"kernel", i32 1}
 !20 = !{void ()* @pos_empty_10, !"kernel", i32 1}
@@ -1020,4 +1037,5 @@ m3:
 ; CHECK: [[META20:![0-9]+]] = !{ptr @pos_empty_10, !"kernel", i32 1}
 ; CHECK: [[META21:![0-9]+]] = !{ptr @pos_empty_11, !"kernel", i32 1}
 ; CHECK: [[META22:![0-9]+]] = !{ptr @neg_empty_12, !"kernel", i32 1}
+; CHECK: [[META23:![0-9]+]] = !{ptr @pos_empty_8, !"kernel", i32 1}
 ;.
