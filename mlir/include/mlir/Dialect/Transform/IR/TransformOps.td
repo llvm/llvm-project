@@ -225,7 +225,7 @@ def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        I64Attr:$operand_number);
-  let results = (outs TransformHandleTypeInterface:$parent);
+  let results = (outs TransformHandleTypeInterface:$producer);
   let assemblyFormat = "$target `[` $operand_number `]` attr-dict `:` "
                        "functional-type(operands, results)";
 }
