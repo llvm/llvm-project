@@ -59,6 +59,20 @@ TEST(LlvmLibcSScanfTest, IntConvSimple) {
   EXPECT_EQ(ret_val, 1);
   EXPECT_EQ(result, 345);
 
+  // 288 characters
+  ret_val = __llvm_libc::sscanf("10000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000",
+                                "%d", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, int(__llvm_libc::cpp::numeric_limits<intmax_t>::max()));
+
   ret_val = __llvm_libc::sscanf("Not an integer", "%d", &result);
   EXPECT_EQ(ret_val, 0);
 }
@@ -445,11 +459,6 @@ TEST(LlvmLibcSScanfTest, FloatConvComplexParsing) {
   EXPECT_FP_EQ(result, 1.2);
 }
 
-/*
-TODO:
-  Max width tests
-*/
-
 TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
   int ret_val;
   float result = 0;
@@ -570,6 +579,54 @@ TEST(LlvmLibcSScanfTest, FloatConvNoWrite) {
 
   ret_val = __llvm_libc::sscanf("Not a float", "%*f", &result);
   EXPECT_EQ(ret_val, 0);
+}
+
+TEST(LlvmLibcSScanfTest, CurPosCombined) {
+  int ret_val;
+  int result = -1;
+  char c_result = 0;
+
+  ret_val = __llvm_libc::sscanf("some text", "%n", &result);
+  // %n doesn't count as a conversion for the return value.
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, 0);
+
+  ret_val = __llvm_libc::sscanf("1234567890", "12345%n", &result);
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, 5);
+
+  ret_val = __llvm_libc::sscanf("1234567890", "12345%n", &result);
+  EXPECT_EQ(ret_val, 0);
+  EXPECT_EQ(result, 5);
+
+  // 288 characters
+  ret_val = __llvm_libc::sscanf("10000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000",
+                                "%*d%hhn", &c_result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(c_result, char(288)); // Overflow is handled by casting.
+
+  // 320 characters
+  ret_val = __llvm_libc::sscanf("10000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000"
+                                "00000000000000000000000000000000",
+                                "%*d%n", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, 320);
 }
 
 TEST(LlvmLibcSScanfTest, CombinedConv) {
