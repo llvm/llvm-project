@@ -219,7 +219,7 @@ struct TiledLinalgOp {
 FailureOr<TiledLinalgOp> tileLinalgOp(RewriterBase &b, LinalgOp op,
                                       const LinalgTilingOptions &options);
 
-/// Try to peel anad canonicalize loop `op` and return the new result.
+/// Try to peel and canonicalize loop `op` and return the new result.
 // TODO: Add support for scf.parallel and affine.for loops.
 SmallVector<Value> peelLoop(RewriterBase &rewriter, Operation *op);
 /// Peel and canonicalize 'loops'.
@@ -1141,6 +1141,12 @@ FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
     GenericOp genericOp, ArrayRef<ReassociationIndices> foldedIterationDims,
     RewriterBase &rewriter);
 
+/// Implement packing of a single LinalgOp by performing packing by
+/// `packedSizes`. There must be one packedSizes entry per `linalgOp` iterator.
+/// Return the packed Linalg op on success, failure otherwise.
+FailureOr<linalg::LinalgOp> pack(RewriterBase &rewriter,
+                                 linalg::LinalgOp linalgOp,
+                                 ArrayRef<OpFoldResult> packedSizes);
 } // namespace linalg
 } // namespace mlir
 
