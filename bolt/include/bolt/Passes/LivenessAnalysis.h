@@ -142,10 +142,8 @@ protected:
         Used |= BC.MIB->getAliases(Point.getOperand(I).getReg(),
                                    /*OnlySmaller=*/false);
       }
-      for (auto I = InstInfo.getImplicitUses(),
-                E = InstInfo.getImplicitUses() + InstInfo.getNumImplicitUses();
-           I != E; ++I)
-        Used |= BC.MIB->getAliases(*I, false);
+      for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
+        Used |= BC.MIB->getAliases(ImplicitUse, false);
       if (IsCall &&
           (!BC.MIB->isTailCall(Point) || !BC.MIB->isConditionalBranch(Point))) {
         // Never gen FLAGS from a non-conditional call... this is overly
