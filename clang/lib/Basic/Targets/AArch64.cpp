@@ -692,10 +692,8 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
       Features[OtherArch->getSubArch()] = Enabled;
 
   // Set any features implied by the architecture
-  uint64_t Extensions =
-      llvm::AArch64::getDefaultExtensions("generic", *ArchInfo);
   std::vector<StringRef> CPUFeats;
-  if (llvm::AArch64::getExtensionFeatures(Extensions, CPUFeats)) {
+  if (llvm::AArch64::getExtensionFeatures(ArchInfo->DefaultExts, CPUFeats)) {
     for (auto F : CPUFeats) {
       assert(F[0] == '+' && "Expected + in target feature!");
       Features[F.drop_front(1)] = true;
@@ -951,7 +949,7 @@ bool AArch64TargetInfo::initFeatureMap(
   // Parse the CPU and add any implied features.
   std::optional<llvm::AArch64::CpuInfo> CpuInfo = llvm::AArch64::parseCpu(CPU);
   if (CpuInfo) {
-    uint64_t Exts = llvm::AArch64::getDefaultExtensions(CPU, CpuInfo->Arch);
+    uint64_t Exts = CpuInfo->getImpliedExtensions();
     std::vector<StringRef> CPUFeats;
     llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
     for (auto F : CPUFeats) {
