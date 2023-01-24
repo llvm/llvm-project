@@ -258,7 +258,7 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
                   .getModuleMap()
                   .getModuleMapFileForUniquing(CurrentModule))
         CI.getFrontendOpts().ModuleMapFiles.emplace_back(
-            CurrentModuleMap->getName());
+            CurrentModuleMap->getNameAsRequested());
 
     SmallVector<ModuleID> DirectDeps;
     for (const auto &KV : ModularDeps)
