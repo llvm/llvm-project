@@ -824,6 +824,21 @@ module polymorphic_test
 ! CHECK: }
 ! CHECK: fir.call @_QMpolymorphic_testPsub_with_poly_array_optional(%[[BOX]]) {{.*}} : (!fir.class<!fir.array<?xnone>>) -> ()
 
+  subroutine pass_poly_pointer_optional(p)
+    class(p1), pointer, optional :: p
+  end subroutine
+
+  subroutine test_poly_pointer_null()
+    call pass_poly_pointer_optional(null())
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPtest_poly_pointer_null() {
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>
+! CHECK: fir.store %[[EMBOX]] to %[[ALLOCA]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>
+! CHECK: fir.call @_QMpolymorphic_testPpass_poly_pointer_optional(%[[ALLOCA]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>>>) -> ()
+
 end module
 
 program test
