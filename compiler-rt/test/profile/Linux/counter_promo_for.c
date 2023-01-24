@@ -1,21 +1,18 @@
 // RUN: rm -fr %t.promo.prof
 // RUN: rm -fr %t.nopromo.prof
-// RUN: %clang_pgogen=%t.promo.prof/ -o %t.promo.gen -O2 %s
-// RUN: %clang_pgogen=%t.promo.prof/ -o %t.promo.gen.ll -emit-llvm -S -O2 %s
+// RUN: %clang_pgogen=%t.promo.prof/ -o %t.promo.gen -O2 %s -fno-slp-vectorize
+// RUN: %clang_pgogen=%t.promo.prof/ -o %t.promo.gen.ll -emit-llvm -S -O2 %s -fno-slp-vectorize
 // RUN: cat %t.promo.gen.ll | FileCheck --check-prefix=PROMO %s
 // RUN: %run %t.promo.gen
 // RUN: llvm-profdata merge -o %t.promo.profdata %t.promo.prof/
 // RUN: llvm-profdata show --counts --all-functions %t.promo.profdata  > %t.promo.dump
-// RUN: %clang_pgogen=%t.nopromo.prof/ -mllvm -do-counter-promotion=false -mllvm -simplifycfg-sink-common=false -o %t.nopromo.gen -O2 %s
-// RUN: %clang_pgogen=%t.nopromo.prof/ -mllvm -do-counter-promotion=false -mllvm -simplifycfg-sink-common=false -o %t.nopromo.gen.ll -emit-llvm -S -O2 %s
+// RUN: %clang_pgogen=%t.nopromo.prof/ -mllvm -do-counter-promotion=false -mllvm -simplifycfg-sink-common=false -o %t.nopromo.gen -O2 %s -fno-slp-vectorize
+// RUN: %clang_pgogen=%t.nopromo.prof/ -mllvm -do-counter-promotion=false -mllvm -simplifycfg-sink-common=false -o %t.nopromo.gen.ll -emit-llvm -S -O2 %s -fno-slp-vectorize
 // RUN: cat %t.nopromo.gen.ll | FileCheck --check-prefix=NOPROMO %s
 // RUN: %run %t.nopromo.gen
 // RUN: llvm-profdata merge -o %t.nopromo.profdata %t.nopromo.prof/
 // RUN: llvm-profdata show --counts --all-functions %t.nopromo.profdata  > %t.nopromo.dump
 // RUN: diff <(llvm-profdata show %t.promo.profdata) <(llvm-profdata show %t.nopromo.profdata)
-
-// FIXME: broken after D141512
-// XFAIL: i386-linux
 
 int g;
 __attribute__((noinline)) void bar(int i) { g += i; }
