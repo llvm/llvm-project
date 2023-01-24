@@ -17,7 +17,7 @@
 #ifndef LLVM_ADT_STLEXTRAS_H
 #define LLVM_ADT_STLEXTRAS_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/identity.h"
@@ -26,6 +26,7 @@
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -832,9 +833,10 @@ class zip_shortest : public zip_common<zip_shortest<Iters...>, Iters...> {
   template <size_t... Ns>
   bool test(const zip_shortest<Iters...> &other,
             std::index_sequence<Ns...>) const {
-    return all_of(llvm::ArrayRef<bool>({std::get<Ns>(this->iterators) !=
-                                        std::get<Ns>(other.iterators)...}),
-                  identity<bool>{});
+    return all_of(
+        std::array<bool, sizeof...(Ns)>({std::get<Ns>(this->iterators) !=
+                                         std::get<Ns>(other.iterators)...}),
+        identity<bool>{});
   }
 
 public:
