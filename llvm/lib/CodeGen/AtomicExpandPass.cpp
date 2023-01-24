@@ -289,6 +289,24 @@ bool AtomicExpand::runOnFunction(Function &F) {
       if (FenceOrdering != AtomicOrdering::Monotonic) {
         MadeChange |= bracketInstWithFences(I, FenceOrdering);
       }
+    } else if (I->hasAtomicStore() &&
+               TLI->shouldInsertTrailingFenceForAtomicStore(I)) {
+      auto FenceOrdering = AtomicOrdering::Monotonic;
+      if (SI)
+        FenceOrdering = SI->getOrdering();
+      else if (RMWI)
+        FenceOrdering = RMWI->getOrdering();
+      else if (CASI && TLI->shouldExpandAtomicCmpXchgInIR(CASI) !=
+                           TargetLoweringBase::AtomicExpansionKind::LLSC)
+        // LLSC is handled in expandAtomicCmpXchg().
+        FenceOrdering = CASI->getSuccessOrdering();
+
+      IRBuilder Builder(I);
+      if (auto TrailingFence =
+              TLI->emitTrailingFence(Builder, I, FenceOrdering)) {
+        TrailingFence->moveAfter(I);
+        MadeChange = true;
+      }
     }
 
     if (LI)
@@ -1356,7 +1374,8 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // Make sure later instructions don't get reordered with a fence if
   // necessary.
   Builder.SetInsertPoint(SuccessBB);
-  if (ShouldInsertFencesForAtomic)
+  if (ShouldInsertFencesForAtomic ||
+      TLI->shouldInsertTrailingFenceForAtomicStore(CI))
     TLI->emitTrailingFence(Builder, CI, SuccessOrder);
   Builder.CreateBr(ExitBB);
 

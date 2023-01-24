@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Checks for member expressions that access static members through
 /// instances and replaces them with uses of the appropriate qualified-id.
@@ -38,8 +36,6 @@ private:
   const unsigned NameSpecifierNestingThreshold;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_STATIC_ACCESSED_THROUGH_INSTANCE_H

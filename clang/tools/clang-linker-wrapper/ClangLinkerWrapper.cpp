@@ -491,20 +491,6 @@ std::vector<std::string> getTargetFeatures(ArrayRef<OffloadFile> InputFiles) {
   return UnifiedFeatures;
 }
 
-CodeGenOpt::Level getCGOptLevel(unsigned OptLevel) {
-  switch (OptLevel) {
-  case 0:
-    return CodeGenOpt::None;
-  case 1:
-    return CodeGenOpt::Less;
-  case 2:
-    return CodeGenOpt::Default;
-  case 3:
-    return CodeGenOpt::Aggressive;
-  }
-  llvm_unreachable("Invalid optimization level");
-}
-
 template <typename ModuleHook = function_ref<bool(size_t, const Module &)>>
 std::unique_ptr<lto::LTO> createLTO(
     const ArgList &Args, const std::vector<std::string> &Features,
@@ -522,7 +508,10 @@ std::unique_ptr<lto::LTO> createLTO(
 
   StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
   Conf.MAttrs = Features;
-  Conf.CGOptLevel = getCGOptLevel(OptLevel[1] - '0');
+  std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+      CodeGenOpt::parseLevel(OptLevel[1]);
+  assert(CGOptLevelOrNone && "Invalid optimization level");
+  Conf.CGOptLevel = *CGOptLevelOrNone;
   Conf.OptLevel = OptLevel[1] - '0';
   if (Conf.OptLevel > 0)
     Conf.UseDefaultPipeline = true;

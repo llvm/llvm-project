@@ -130,8 +130,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(always_clean clean)
   endif()
 
-  list(FIND TOOLCHAIN_TOOLS clang FOUND_CLANG)
-  if(FOUND_CLANG GREATER -1)
+  if(clang IN_LIST TOOLCHAIN_TOOLS)
     set(CLANG_IN_TOOLCHAIN On)
   endif()
 

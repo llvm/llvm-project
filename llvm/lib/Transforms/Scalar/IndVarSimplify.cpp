@@ -1403,8 +1403,17 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
   }
 
   if (SkipLastIter) {
-    const SCEV *One = SE->getOne(MaxIter->getType());
-    MaxIter = SE->getMinusSCEV(MaxIter, One);
+    // Semantically skip last iter is "subtract 1, do not bother about unsigned
+    // wrap". getLoopInvariantExitCondDuringFirstIterations knows how to deal
+    // with umin in a smart way, but umin(a, b) - 1 will likely not simplify.
+    // So we manually construct umin(a - 1, b - 1).
+    SmallVector<const SCEV *, 4> Elements;
+    if (auto *UMin = dyn_cast<SCEVUMinExpr>(MaxIter)) {
+      for (auto *Op : UMin->operands())
+        Elements.push_back(SE->getMinusSCEV(Op, SE->getOne(Op->getType())));
+      MaxIter = SE->getUMinFromMismatchedTypes(Elements);
+    } else
+      MaxIter = SE->getMinusSCEV(MaxIter, SE->getOne(MaxIter->getType()));
   }
 
   // Check if there is a loop-invariant predicate equivalent to our check.
@@ -1465,11 +1474,47 @@ static bool optimizeLoopExitWithUnknownExitCount(
           LeafConditions.push_back(ICmp);
   } while (!Worklist.empty());
 
+  // If the current basic block has the same exit count as the whole loop, and
+  // it consists of multiple icmp's, try to collect all icmp's that give exact
+  // same exit count. For all other icmp's, we could use one less iteration,
+  // because their value on the last iteration doesn't really matter.
+  SmallPtrSet<ICmpInst *, 4> ICmpsFailingOnLastIter;
+  if (!SkipLastIter && LeafConditions.size() > 1 &&
+      SE->getExitCount(L, ExitingBB,
+                       ScalarEvolution::ExitCountKind::SymbolicMaximum) ==
+          MaxIter)
+    for (auto *ICmp : LeafConditions) {
+      auto EL = SE->computeExitLimitFromCond(L, ICmp, Inverted,
+                                             /*ControlsExit*/ false);
+      auto *ExitMax = EL.SymbolicMaxNotTaken;
+      if (isa<SCEVCouldNotCompute>(ExitMax))
+        continue;
+      // They could be of different types (specifically this happens after
+      // IV widening).
+      auto *WiderType =
+          SE->getWiderType(ExitMax->getType(), MaxIter->getType());
+      auto *WideExitMax = SE->getNoopOrZeroExtend(ExitMax, WiderType);
+      auto *WideMaxIter = SE->getNoopOrZeroExtend(MaxIter, WiderType);
+      if (WideExitMax == WideMaxIter)
+        ICmpsFailingOnLastIter.insert(ICmp);
+    }
+
   bool Changed = false;
-  for (auto *OldCond : LeafConditions)
+  for (auto *OldCond : LeafConditions) {
+    // Skip last iteration for this icmp under one of two conditions:
+    // - We do it for all conditions;
+    // - There is another ICmp that would fail on last iter, so this one doesn't
+    // really matter.
+    bool OptimisticSkipLastIter = SkipLastIter;
+    if (!OptimisticSkipLastIter) {
+      if (ICmpsFailingOnLastIter.size() > 1)
+        OptimisticSkipLastIter = true;
+      else if (ICmpsFailingOnLastIter.size() == 1)
+        OptimisticSkipLastIter = !ICmpsFailingOnLastIter.count(OldCond);
+    }
     if (auto Replaced =
             createReplacement(OldCond, L, ExitingBB, MaxIter, Inverted,
-                              SkipLastIter, SE, Rewriter)) {
+                              OptimisticSkipLastIter, SE, Rewriter)) {
       Changed = true;
       auto *NewCond = *Replaced;
       if (auto *NCI = dyn_cast<Instruction>(NewCond)) {
@@ -1481,7 +1526,11 @@ static bool optimizeLoopExitWithUnknownExitCount(
       assert(OldCond->hasOneUse() && "Must be!");
       OldCond->replaceAllUsesWith(NewCond);
       DeadInsts.push_back(OldCond);
+      // Make sure we no longer consider this condition as failing on last
+      // iteration.
+      ICmpsFailingOnLastIter.erase(OldCond);
     }
+  }
   return Changed;
 }
 
@@ -1684,6 +1733,19 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
   bool Changed = false;
   bool SkipLastIter = false;
+  const SCEV *CurrMaxExit = SE->getCouldNotCompute();
+  auto UpdateSkipLastIter = [&](const SCEV *MaxExitCount) {
+    if (SkipLastIter || isa<SCEVCouldNotCompute>(MaxExitCount))
+      return;
+    if (isa<SCEVCouldNotCompute>(CurrMaxExit))
+      CurrMaxExit = MaxExitCount;
+    else
+      CurrMaxExit = SE->getUMinFromMismatchedTypes(CurrMaxExit, MaxExitCount);
+    // If the loop has more than 1 iteration, all further checks will be
+    // executed 1 iteration less.
+    if (CurrMaxExit == MaxBECount)
+      SkipLastIter = true;
+  };
   SmallSet<const SCEV *, 8> DominatingExactExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExactExitCount = SE->getExitCount(L, ExitingBB);
@@ -1719,17 +1781,11 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
         Changed = true;
       else if (SkipLastIter && OptimizeCond(true))
         Changed = true;
-      if (MaxBECount == MaxExitCount)
-        // If the loop has more than 1 iteration, all further checks will be
-        // executed 1 iteration less.
-        SkipLastIter = true;
+      UpdateSkipLastIter(MaxExitCount);
       continue;
     }
 
-    if (MaxBECount == MaxExitCount)
-      // If the loop has more than 1 iteration, all further checks will be
-      // executed 1 iteration less.
-      SkipLastIter = true;
+    UpdateSkipLastIter(ExactExitCount);
 
     // If we know we'd exit on the first iteration, rewrite the exit to
     // reflect this.  This does not imply the loop must exit through this

@@ -706,6 +706,8 @@ public:
 
   bool isOpSuitableForLDPSTP(const Instruction *I) const;
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
+  bool
+  shouldInsertTrailingFenceForAtomicStore(const Instruction *I) const override;
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;

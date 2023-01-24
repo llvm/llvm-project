@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace openmp {
+namespace clang::tidy::openmp {
 
 /// Finds OpenMP directives that are allowed to contain a ``default`` clause,
 /// but either don't specify it or the clause is specified but with the kind
@@ -32,8 +30,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace openmp
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::openmp
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OPENMP_USEDEFAULTNONECHECK_H

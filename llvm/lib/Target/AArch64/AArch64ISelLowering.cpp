@@ -22300,6 +22300,30 @@ bool AArch64TargetLowering::shouldInsertFencesForAtomic(
   return isOpSuitableForLDPSTP(I);
 }
 
+bool AArch64TargetLowering::shouldInsertTrailingFenceForAtomicStore(
+    const Instruction *I) const {
+  // Store-Release instructions only provide seq_cst guarantees when paired with
+  // Load-Acquire instructions. MSVC CRT does not use these instructions to
+  // implement seq_cst loads and stores, so we need additional explicit fences
+  // after memory writes.
+  if (!Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
+    return false;
+
+  switch (I->getOpcode()) {
+  default:
+    return false;
+  case Instruction::AtomicCmpXchg:
+    return cast<AtomicCmpXchgInst>(I)->getSuccessOrdering() ==
+           AtomicOrdering::SequentiallyConsistent;
+  case Instruction::AtomicRMW:
+    return cast<AtomicRMWInst>(I)->getOrdering() ==
+           AtomicOrdering::SequentiallyConsistent;
+  case Instruction::Store:
+    return cast<StoreInst>(I)->getOrdering() ==
+           AtomicOrdering::SequentiallyConsistent;
+  }
+}
+
 // Loads and stores less than 128-bits are already atomic; ones above that
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
@@ -23595,10 +23619,10 @@ AArch64TargetLowering::LowerFixedLengthIntToFPToSVE(SDValue Op,
     Val = DAG.getNode(IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL,
                       VT.changeTypeToInteger(), Val);
 
-    Val = convertToScalableVector(DAG, ContainerSrcVT, Val);
-    Val = getSVESafeBitCast(ContainerDstVT.changeTypeToInteger(), Val, DAG);
-    // Safe to use a larger than specified operand since we just unpacked the
-    // data, hence the upper bits are zero.
+    // Safe to use a larger than specified operand because by promoting the
+    // value nothing has changed from an arithmetic point of view.
+    Val =
+        convertToScalableVector(DAG, ContainerDstVT.changeTypeToInteger(), Val);
     Val = DAG.getNode(Opcode, DL, ContainerDstVT, Pg, Val,
                       DAG.getUNDEF(ContainerDstVT));
     return convertFromScalableVector(DAG, VT, Val);
@@ -23641,7 +23665,7 @@ AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
     Val = DAG.getNode(ISD::BITCAST, DL, SrcVT.changeTypeToInteger(), Val);
     Val = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Val);
 
-    Val = convertToScalableVector(DAG, ContainerSrcVT, Val);
+    Val = convertToScalableVector(DAG, ContainerDstVT, Val);
     Val = getSVESafeBitCast(CvtVT, Val, DAG);
     Val = DAG.getNode(Opcode, DL, ContainerDstVT, Pg, Val,
                       DAG.getUNDEF(ContainerDstVT));

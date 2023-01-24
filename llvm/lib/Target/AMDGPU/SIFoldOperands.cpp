@@ -1706,6 +1706,9 @@ bool SIFoldOperands::tryFoldLoad(MachineInstr &MI) {
     if (!I->isCopy() && !I->isRegSequence())
       return false;
     Register DstReg = I->getOperand(0).getReg();
+    // Physical registers may have more than one instruction definitions
+    if (DstReg.isPhysical())
+      return false;
     if (TRI->isAGPR(*MRI, DstReg))
       continue;
     MoveRegs.push_back(DstReg);

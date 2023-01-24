@@ -114,7 +114,7 @@ set(src_files
 )
 
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
-set(link_opt_flags  -O3        -openmp-opt-disable)
+set(link_opt_flags  -O3        -openmp-opt-disable -attributor-enable=module)
 set(link_export_flag -passes=internalize -internalize-public-api-file=${source_directory}/exports)
 set(link_extract_flag --func='__keep_alive' --delete)
 
