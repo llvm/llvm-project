@@ -192,6 +192,10 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI);
 /// \returns Local memory size in bytes for given subtarget \p STI.
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI);
 
+/// \returns Maximum addressable local memory size in bytes for given subtarget
+/// \p STI.
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI);
+
 /// \returns Number of execution units per compute unit for given subtarget \p
 /// STI.
 unsigned getEUsPerCU(const MCSubtargetInfo *STI);

@@ -363,8 +363,8 @@ JITEngine::compile(const __tgt_device_image &Image,
 
   auto &ImageMB = CUI.JITImages.back();
 
-  JITedImage->ImageStart = (void *)ImageMB->getBufferStart();
-  JITedImage->ImageEnd = (void *)ImageMB->getBufferEnd();
+  JITedImage->ImageStart = const_cast<char *>(ImageMB->getBufferStart());
+  JITedImage->ImageEnd = const_cast<char *>(ImageMB->getBufferEnd());
 
   return JITedImage;
 }

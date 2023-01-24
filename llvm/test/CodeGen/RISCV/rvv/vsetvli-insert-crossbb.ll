@@ -956,6 +956,40 @@ if.end:
   ret <vscale x 2 x i32> %e
 }
 
+; This case demonstrates a PRE oppurtunity where the first instruction
+; in the block doesn't require a state transition.  Essentially, we need
+; to FRE the transition to the start of the block, and *then* PRE it.
+define void @pre_over_vle(ptr %A) {
+; CHECK-LABEL: pre_over_vle:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    li a2, 800
+; CHECK-NEXT:  .LBB22_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add a3, a0, a1
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a3)
+; CHECK-NEXT:    vsext.vf4 v9, v8
+; CHECK-NEXT:    addi a1, a1, 8
+; CHECK-NEXT:    vse32.v v9, (a3)
+; CHECK-NEXT:    bne a1, a2, .LBB22_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:
+  %iv = phi i64 [ 0, %entry], [%iv.next, %vector.body]
+  %addr = getelementptr inbounds <2 x i32>, ptr %A, i64 %iv
+  %v = load <2 x i8>, ptr %addr
+  %v2 = sext <2 x i8> %v to <2 x i32>
+  store <2 x i32> %v2, ptr %addr
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp ne i64 %iv.next, 100
+  br i1 %cmp, label %vector.body, label %exit
+exit:
+  ret void
+}
 
 declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)
 declare <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>* nocapture, i64)

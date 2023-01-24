@@ -1,6 +1,14 @@
 # RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass machine-scheduler -amdgpu-disable-unclustred-high-rp-reschedule -verify-machineinstrs %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck -check-prefix=DEBUG %s
 # REQUIRES: asserts
 
+--- |
+  define void @sink_and_inc_idx_when_skipping_small_region_1() "amdgpu-flat-work-group-size"="1,64" {
+    ret void
+  }
+
+  define void @sink_and_inc_idx_when_skipping_small_regions_2() "amdgpu-flat-work-group-size"="1,64" {
+    ret void
+  }
 ---
 name:            sink_and_inc_idx_when_skipping_small_region_1
 tracksRegLiveness: true

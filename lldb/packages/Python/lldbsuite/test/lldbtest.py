@@ -1243,6 +1243,8 @@ class Base(unittest2.TestCase):
         return self.isAArch64() and "mte" in self.getCPUInfo()
 
     def isAArch64PAuth(self):
+        if self.getArchitecture() == "arm64e":
+            return True
         return self.isAArch64() and "paca" in self.getCPUInfo()
 
     def getArchitecture(self):

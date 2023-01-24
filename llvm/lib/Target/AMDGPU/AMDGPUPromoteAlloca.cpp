@@ -798,7 +798,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
     }
   }
 
-  LocalMemLimit = ST.getLocalMemorySize();
+  LocalMemLimit = ST.getAddressableLocalMemorySize();
   if (LocalMemLimit == 0)
     return false;
 

@@ -842,11 +842,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     Ctx.diagnose(Diag);
   }
 
-  if (MFI->getLDSSize() > static_cast<unsigned>(STM.getLocalMemorySize())) {
+  if (MFI->getLDSSize() >
+      static_cast<unsigned>(STM.getAddressableLocalMemorySize())) {
     LLVMContext &Ctx = MF.getFunction().getContext();
-    DiagnosticInfoResourceLimit Diag(MF.getFunction(), "local memory",
-                                     MFI->getLDSSize(),
-                                     STM.getLocalMemorySize(), DS_Error);
+    DiagnosticInfoResourceLimit Diag(
+        MF.getFunction(), "local memory", MFI->getLDSSize(),
+        STM.getAddressableLocalMemorySize(), DS_Error);
     Ctx.diagnose(Diag);
   }
 

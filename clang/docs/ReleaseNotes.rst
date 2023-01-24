@@ -578,6 +578,11 @@ Modified Compiler Flags
 - Clang now permits specifying ``--config=`` multiple times, to load multiple
   configuration files.
 
+- The option ``-rtlib=platform`` can now be used for all targets to override
+  a different option value (either one set earlier on the command line, or a
+  built-in hardcoded default). (Previously the MSVC and Darwin targets didn't
+  allow this parameter combination.)
+
 Removed Compiler Flags
 -------------------------
 - Clang now no longer supports ``-cc1 -fconcepts-ts``.  This flag has been deprecated
@@ -614,6 +619,15 @@ Attribute Changes in Clang
   memory placement. It emits a warning if something in the code provably prevents
   an instance from a read-only memory placement.
 
+- Introduced new attribute ``__attribute__((target_version("cpu_features")))``
+  and expanded the functionality of the existing attribute
+  ``__attribute__((target_clones("cpu_features1","cpu_features2",...)))`` to
+  support Function Multi Versioning on AArch64 target. It detects at runtime
+  which function versions are supported by CPU and calls the one with highest
+  priority. Refer to `clang attributes
+  <https://clang.llvm.org/docs/AttributeReference.html#target-version>`_ for
+  more details.
+
 Windows Support
 ---------------
 - For the MinGW driver, added the options ``-mguard=none``, ``-mguard=cf`` and
@@ -622,6 +636,16 @@ Windows Support
   and generation of address-taken function table.
 
 - Switched from SHA1 to BLAKE3 for PDB type hashing / ``-gcodeview-ghash``
+
+- Fixed code generation with emulated TLS, when the emulated TLS is enabled
+  by default (with downstream patches; no upstream configurations default
+  to this configuration, but some mingw downstreams change the default
+  in this way).
+
+- Improved detection of MinGW cross sysroots for finding sysroots provided
+  by Linux distributions such as Fedora. Also improved such setups by
+  avoiding to include ``/usr/include`` among the include paths when cross
+  compiling with a cross sysroot based in ``/usr``.
 
 AIX Support
 -----------
