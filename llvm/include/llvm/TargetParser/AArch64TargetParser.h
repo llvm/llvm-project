@@ -488,6 +488,10 @@ inline constexpr CpuInfo CpuInfos[] = {
      (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_SHA3 |
       AArch64::AEK_FP16 | AArch64::AEK_SB | AArch64::AEK_SSBS |
       AArch64::AEK_RAND)},
+    {"ampere1a", ARMV8_6A,
+     (AArch64::AEK_FP16 | AArch64::AEK_RAND | AArch64::AEK_SM4 |
+      AArch64::AEK_SHA3 | AArch64::AEK_SHA2 | AArch64::AEK_AES |
+      AArch64::AEK_MTE | AArch64::AEK_SB | AArch64::AEK_SSBS)},
     // Invalid CPU
     {"invalid", INVALID, (AArch64::AEK_INVALID)},
 };
