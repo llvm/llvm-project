@@ -2,14 +2,14 @@
 // RUN: split-file %s %t
 
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t.rsp -cc1-args \
-// RUN:   -cc1 -triple x86_64-apple-macos11 %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
+// RUN:   -cc1 -fcas-path %t/cas -faction-cache-path %t/cache -triple x86_64-apple-macos11 %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
 // RUN:     -MT deps -dependency-file %t/t.d
 // RUN: FileCheck %s -input-file=%t/t.d -check-prefix=NOSYS
 // RUN: FileCheck %s -input-file=%t/t.d -check-prefix=COMMON
 
 // Including system headers.
 // RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/t.rsp -cc1-args \
-// RUN:   -cc1 -triple x86_64-apple-macos11 %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
+// RUN:   -cc1 -fcas-path %t/cas -faction-cache-path %t/cache -triple x86_64-apple-macos11 %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
 // RUN:     -MT deps -sys-header-deps -dependency-file %t/t-sys.d
 // RUN: FileCheck %s -input-file=%t/t-sys.d -check-prefix=WITHSYS -check-prefix=COMMON
 
