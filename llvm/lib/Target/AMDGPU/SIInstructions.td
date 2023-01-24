@@ -2055,7 +2055,9 @@ def BFIImm32 : PatFrag<
 // (y & x) | (z & ~x)
 def : AMDGPUPat <
   (DivergentBinFrag<or> (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
-  (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
+  (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
+                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
+                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
 // (y & C) | (z & ~C)
@@ -2080,7 +2082,9 @@ def : AMDGPUPat <
 // z ^ (x & (y ^ z))
 def : AMDGPUPat <
   (DivergentBinFrag<xor> i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
-  (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
+  (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
+                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
+                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
 // 64-bit version
@@ -3196,7 +3200,10 @@ def : AMDGPUPat <
 def : AMDGPUPat <
   (DivergentBinFrag<or> (and i32:$x, i32:$z),
                         (and i32:$y, (or i32:$x, i32:$z))),
-  (V_BFI_B32_e64 (V_XOR_B32_e64 VSrc_b32:$x, VSrc_b32:$y), VSrc_b32:$z, VSrc_b32:$y)
+  (V_BFI_B32_e64 (V_XOR_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
+                                (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32)),
+                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32),
+                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32))
 >;
 
 def : AMDGPUPat <
