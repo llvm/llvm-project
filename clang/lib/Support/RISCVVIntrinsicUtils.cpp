@@ -918,12 +918,6 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
   // Update PolicyAttrs if need (TA or TAMA) for compute builtin types.
   if (PolicyAttrs.isMAPolicy())
     PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic; // TAMA
-  if (PolicyAttrs.isUnspecified()) {
-    if (!IsMasked) {
-      PolicyAttrs.IsUnspecified = false;
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic; // TA
-    }
-  }
   bool HasPassthruOp = DefaultScheme == PolicyScheme::HasPassthruOperand;
   if (IsMasked) {
     // If HasMaskedOffOperand, insert result type as first input operand if
