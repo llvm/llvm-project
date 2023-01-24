@@ -2745,11 +2745,11 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
                           DAG.getConstant(Offsets[VecIdx], dl, PtrVT));
           Value *srcValue = Constant::getNullValue(PointerType::get(
               EltVT.getTypeForEVT(F->getContext()), ADDRESS_SPACE_PARAM));
-          SDValue P =
-              DAG.getLoad(VecVT, dl, Root, VecAddr,
-                          MachinePointerInfo(srcValue), aggregateIsPacked,
-                          MachineMemOperand::MODereferenceable |
-                              MachineMemOperand::MOInvariant);
+          SDValue P = DAG.getLoad(VecVT, dl, Root, VecAddr,
+                                  MachinePointerInfo(srcValue),
+                                  MaybeAlign(aggregateIsPacked ? 1 : 0),
+                                  MachineMemOperand::MODereferenceable |
+                                      MachineMemOperand::MOInvariant);
           if (P.getNode())
             P.getNode()->setIROrder(idx + 1);
           for (unsigned j = 0; j < NumElts; ++j) {
