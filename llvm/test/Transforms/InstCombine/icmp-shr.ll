@@ -1302,10 +1302,8 @@ define i1 @lshr_neg_sgt_zero(i8 %x) {
 
 define i1 @exactly_one_set_signbit(i8 %x, i8 %y) {
 ; CHECK-LABEL: @exactly_one_set_signbit(
-; CHECK-NEXT:    [[XSIGN:%.*]] = lshr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[YPOS:%.*]] = icmp sgt i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[YPOSZ:%.*]] = zext i1 [[YPOS]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[XSIGN]], [[YPOSZ]]
+; CHECK-NEXT:    [[XOR_SIGNBITS:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[XOR_SIGNBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xsign = lshr i8 %x, 7
@@ -1319,9 +1317,8 @@ define i1 @exactly_one_set_signbit_use1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @exactly_one_set_signbit_use1(
 ; CHECK-NEXT:    [[XSIGN:%.*]] = lshr i8 [[X:%.*]], 7
 ; CHECK-NEXT:    call void @use(i8 [[XSIGN]])
-; CHECK-NEXT:    [[YPOS:%.*]] = icmp sgt i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[YPOSZ:%.*]] = zext i1 [[YPOS]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[XSIGN]], [[YPOSZ]]
+; CHECK-NEXT:    [[XOR_SIGNBITS:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[XOR_SIGNBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xsign = lshr i8 %x, 7
@@ -1334,10 +1331,8 @@ define i1 @exactly_one_set_signbit_use1(i8 %x, i8 %y) {
 
 define <2 x i1> @same_signbit(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @same_signbit(
-; CHECK-NEXT:    [[XSIGN:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    [[YPOS:%.*]] = icmp sgt <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[YPOSZ:%.*]] = zext <2 x i1> [[YPOS]] to <2 x i8>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[XSIGN]], [[YPOSZ]]
+; CHECK-NEXT:    [[XOR_SIGNBITS:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[XOR_SIGNBITS]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %xsign = lshr <2 x i8> %x, <i8 7, i8 7>
@@ -1349,11 +1344,11 @@ define <2 x i1> @same_signbit(<2 x i8> %x, <2 x i8> %y) {
 
 define i1 @same_signbit_use2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @same_signbit_use2(
-; CHECK-NEXT:    [[XSIGN:%.*]] = lshr i8 [[X:%.*]], 7
 ; CHECK-NEXT:    [[YPOS:%.*]] = icmp sgt i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[YPOSZ:%.*]] = zext i1 [[YPOS]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[YPOSZ]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[XSIGN]], [[YPOSZ]]
+; CHECK-NEXT:    [[XOR_SIGNBITS:%.*]] = xor i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[XOR_SIGNBITS]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xsign = lshr i8 %x, 7
@@ -1363,6 +1358,8 @@ define i1 @same_signbit_use2(i8 %x, i8 %y) {
   %r = icmp ne i8 %xsign, %yposz
   ret i1 %r
 }
+
+; negative test
 
 define i1 @same_signbit_use3(i8 %x, i8 %y) {
 ; CHECK-LABEL: @same_signbit_use3(
@@ -1385,10 +1382,8 @@ define i1 @same_signbit_use3(i8 %x, i8 %y) {
 
 define <2 x i1> @same_signbit_poison_elts(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @same_signbit_poison_elts(
-; CHECK-NEXT:    [[XSIGN:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 7, i8 poison>
-; CHECK-NEXT:    [[YPOS:%.*]] = icmp sgt <2 x i8> [[Y:%.*]], <i8 -1, i8 poison>
-; CHECK-NEXT:    [[YPOSZ:%.*]] = zext <2 x i1> [[YPOS]] to <2 x i8>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[XSIGN]], [[YPOSZ]]
+; CHECK-NEXT:    [[XOR_SIGNBITS:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[XOR_SIGNBITS]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %xsign = lshr <2 x i8> %x, <i8 7, i8 poison>
@@ -1397,6 +1392,8 @@ define <2 x i1> @same_signbit_poison_elts(<2 x i8> %x, <2 x i8> %y) {
   %r = icmp ne <2 x i8> %xsign, %yposz
   ret <2 x i1> %r
 }
+
+; negative test
 
 define i1 @same_signbit_wrong_type(i8 %x, i32 %y) {
 ; CHECK-LABEL: @same_signbit_wrong_type(
@@ -1412,6 +1409,9 @@ define i1 @same_signbit_wrong_type(i8 %x, i32 %y) {
   %r = icmp ne i8 %xsign, %yposz
   ret i1 %r
 }
+
+; negative test
+
 define i1 @exactly_one_set_signbit_wrong_shamt(i8 %x, i8 %y) {
 ; CHECK-LABEL: @exactly_one_set_signbit_wrong_shamt(
 ; CHECK-NEXT:    [[XSIGN:%.*]] = lshr i8 [[X:%.*]], 6
@@ -1427,6 +1427,9 @@ define i1 @exactly_one_set_signbit_wrong_shamt(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+; negative test
+; TODO: This could reduce.
+
 define i1 @exactly_one_set_signbit_wrong_shr(i8 %x, i8 %y) {
 ; CHECK-LABEL: @exactly_one_set_signbit_wrong_shr(
 ; CHECK-NEXT:    [[XSIGN:%.*]] = ashr i8 [[X:%.*]], 7
@@ -1441,6 +1444,9 @@ define i1 @exactly_one_set_signbit_wrong_shr(i8 %x, i8 %y) {
   %r = icmp eq i8 %xsign, %yposz
   ret i1 %r
 }
+
+; negative test
+; TODO: This could reduce.
 
 define i1 @exactly_one_set_signbit_wrong_pred(i8 %x, i8 %y) {
 ; CHECK-LABEL: @exactly_one_set_signbit_wrong_pred(
