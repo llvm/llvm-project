@@ -79,4 +79,26 @@ contains
 ! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[LOAD_RES]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[RES_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
 
+  subroutine check_pack(r)
+    class(p1) :: r(:)
+  end subroutine
+
+  subroutine test_temp_from_intrinsic_pack(i, mask)
+    class(p1), intent(in) :: i(20, 20)
+    logical, intent(in) :: mask(20, 20)
+    call check_pack(pack(i, mask))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_pack(
+! CHECK-SAME: %[[I:.*]]: !fir.class<!fir.array<20x20x!fir.type<_QMpoly_tmpTp1{a:i32}>>> {fir.bindc_name = "i"}, %[[MASK:.*]]: !fir.ref<!fir.array<20x20x!fir.logical<4>>> {fir.bindc_name = "mask"}) {
+! CHECK: %[[TMP_RES:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
+! CHECK: %[[EMBOXED_MASK:.*]] = fir.embox %[[MASK]](%{{.*}}) : (!fir.ref<!fir.array<20x20x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<20x20x!fir.logical<4>>>
+! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>
+! CHECK: %[[EMBOX_RES:.*]] = fir.embox %[[ZERO]](%{{.*}}) source_box %[[I]] : (!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>, !fir.shape<1>, !fir.class<!fir.array<20x20x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>
+! CHECK: fir.store %[[EMBOX_RES]] to %[[TMP_RES]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>
+! CHECK: %[[RES_BOX_NONE:.*]] = fir.convert %[[TMP_RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpoly_tmpTp1{a:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[I_BOX_NONE:.*]] = fir.convert %[[I]] : (!fir.class<!fir.array<20x20x!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<none>
+! CHECK: %[[MASK_BOX_NONE:.*]] = fir.convert %[[EMBOXED_MASK]] : (!fir.box<!fir.array<20x20x!fir.logical<4>>>) -> !fir.box<none>
+! CHECK: %{{.*}} = fir.call @_FortranAPack(%[[RES_BOX_NONE]], %[[I_BOX_NONE]], %[[MASK_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
 end module
