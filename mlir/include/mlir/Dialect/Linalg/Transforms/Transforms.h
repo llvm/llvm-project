@@ -55,6 +55,10 @@ void populatePadTensorTilingPatterns(RewritePatternSet &patterns,
 void populateDecomposeLinalgOpsPattern(RewritePatternSet &patterns,
                                        bool removeDeadArgsAndResults = true);
 
+/// Populate patterns that convert non-destination-style ops to destination
+/// style ops.
+void populateConvertToDestinationStylePatterns(RewritePatternSet &patterns);
+
 /// Populate patterns for vectorizing low-D convolution ops. This is a step in
 /// progressive lowering for convolution ops, it assume high-D convolution ops
 /// were decomposed previously.
