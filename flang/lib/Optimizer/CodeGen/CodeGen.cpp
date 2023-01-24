@@ -1660,7 +1660,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
         getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(), typeparams);
 
     // Reboxing to a polymorphic entity. eleSize and type code need to
-    // be retrived from the initial box and propagated to the new box.
+    // be retrieved from the initial box and propagated to the new box.
     // If the initial box has an addendum, the type desc must be propagated as
     // well.
     if (fir::isPolymorphicType(boxTy)) {
