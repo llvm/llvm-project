@@ -1622,7 +1622,33 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_NE>(RangeSet LHS,
   if (LHS.getAPSIntType() == RHS.getAPSIntType()) {
     if (intersect(RangeFactory, LHS, RHS).isEmpty())
       return getTrueRange(T);
+
   } else {
+    // We can only lose information if we are casting smaller signed type to
+    // bigger unsigned type. For e.g.,
+    //    LHS (unsigned short): [2, USHRT_MAX]
+    //    RHS   (signed short): [SHRT_MIN, 0]
+    //
+    // Casting RHS to LHS type will leave us with overlapping values
+    //    CastedRHS : [0, 0] U [SHRT_MAX + 1, USHRT_MAX]
+    //
+    // We can avoid this by checking if signed type's maximum value is lesser
+    // than unsigned type's minimum value.
+
+    // If both have different signs then only we can get more information.
+    if (LHS.isUnsigned() != RHS.isUnsigned()) {
+      if (LHS.isUnsigned() && (LHS.getBitWidth() >= RHS.getBitWidth())) {
+        if (RHS.getMaxValue().isNegative() ||
+            LHS.getAPSIntType().convert(RHS.getMaxValue()) < LHS.getMinValue())
+          return getTrueRange(T);
+
+      } else if (RHS.isUnsigned() && (LHS.getBitWidth() <= RHS.getBitWidth())) {
+        if (LHS.getMaxValue().isNegative() ||
+            RHS.getAPSIntType().convert(LHS.getMaxValue()) < RHS.getMinValue())
+          return getTrueRange(T);
+      }
+    }
+
     // Both RangeSets should be casted to bigger unsigned type.
     APSIntType CastingType(std::max(LHS.getBitWidth(), RHS.getBitWidth()),
                            LHS.isUnsigned() || RHS.isUnsigned());
@@ -2150,7 +2176,6 @@ private:
   SValBuilder &Builder;
   RangeSet::Factory &RangeFactory;
 };
-
 
 bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
                                               const llvm::APSInt &Constraint) {
