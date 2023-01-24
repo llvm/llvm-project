@@ -879,6 +879,8 @@ RISC-V Support in Clang
 - Fix interaction of ``-mcpu`` and ``-march``, RISC-V backend will take the
   architecture extension union of ``-mcpu`` and ``-march`` before, and now will
   take architecture extensions from ``-march`` if both are given.
+- An ABI mismatch between GCC and Clang that related to the
+  sign/zero-extension of integer scalars was fixed.
 
 X86 Support in Clang
 --------------------
