@@ -2770,6 +2770,19 @@ let TargetPrefix = "aarch64" in {
                  LLVMMatchType<0>, llvm_i32_ty],
                 [ImmArg<ArgIndex<6>>]>;
 
+  class SME2_ZA_Write_VG2_Intrinsic
+   : DefaultAttrsIntrinsic<[],
+               [llvm_i32_ty,
+                llvm_anyvector_ty, LLVMMatchType<0>],
+               []>;
+
+  class SME2_ZA_Write_VG4_Intrinsic
+   : DefaultAttrsIntrinsic<[],
+               [llvm_i32_ty,
+                llvm_anyvector_ty, LLVMMatchType<0>,
+                LLVMMatchType<0>,  LLVMMatchType<0>],
+               []>;
+
   class SME2_CVT_VG2_SINGLE_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMSubdivide2VectorType<0>],
                             [llvm_anyvector_ty, LLVMMatchType<0>],
@@ -2899,4 +2912,20 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sqcvtn_x4  : SME2_CVT_VG4_SINGLE_Intrinsic;
   def int_aarch64_sve_uqcvtn_x4  : SME2_CVT_VG4_SINGLE_Intrinsic;
   def int_aarch64_sve_sqcvtun_x4 : SME2_CVT_VG4_SINGLE_Intrinsic;
+
+  //
+  // Multi-Single add/sub
+  //
+  def int_aarch64_sme_add_write_single_za_vg1x2 : SME2_Matrix_ArrayVector_VG2_Multi_Single_Intrinsic;
+  def int_aarch64_sme_sub_write_single_za_vg1x2 : SME2_Matrix_ArrayVector_VG2_Multi_Single_Intrinsic;
+  def int_aarch64_sme_add_write_single_za_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Single_Intrinsic;
+  def int_aarch64_sme_sub_write_single_za_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Single_Intrinsic;
+
+  //
+  // Multi-Multi add/sub
+  //
+  def int_aarch64_sme_add_write_za_vg1x2 : SME2_Matrix_ArrayVector_VG2_Multi_Multi_Intrinsic;
+  def int_aarch64_sme_sub_write_za_vg1x2 : SME2_Matrix_ArrayVector_VG2_Multi_Multi_Intrinsic;
+  def int_aarch64_sme_add_write_za_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Multi_Intrinsic;
+  def int_aarch64_sme_sub_write_za_vg1x4 : SME2_Matrix_ArrayVector_VG4_Multi_Multi_Intrinsic;
 }

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm -fobjc-arc -fexceptions -fobjc-exceptions -fobjc-arc-exceptions -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-O0
-// RUN: %clang_cc1 -O2 -triple x86_64-pc-windows-msvc -emit-llvm -fobjc-arc -fexceptions -fobjc-exceptions -fobjc-arc-exceptions -fobjc-runtime=gnustep-2.0 -mllvm -enable-objc-arc-opts=false -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-O2
+// RUN: %clang_cc1 -O0 -triple x86_64-pc-windows-msvc -emit-llvm -fobjc-arc -fexceptions -fobjc-exceptions -fobjc-arc-exceptions -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-O0
+// RUN: %clang_cc1 -O2 -triple x86_64-pc-windows-msvc -emit-llvm -fobjc-arc -fexceptions -fobjc-exceptions -fobjc-arc-exceptions -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-O2
 
 // WinEH requires funclet tokens on nounwind intrinsics if they can lower to
 // regular function calls in the course of IR transformations.
@@ -24,7 +24,9 @@ void try_catch_with_objc_intrinsic() {
 // CHECK-LABEL:   try_catch_with_objc_intrinsic
 //
 // CHECK:         catch.dispatch:
-// CHECK-NEXT:      [[CATCHSWITCH:%[0-9]+]] = catchswitch within none [label %catch] unwind label %[[CLEANUP1:.*]]
+// CHECK-NEXT:      [[CATCHSWITCH:%[0-9]+]] = catchswitch within none [label %catch]
+// CHECK-O0:          unwind label %[[CLEANUP1:.*]]
+// CHECK-O2:          unwind to caller
 //
 // All calls within a catchpad must have funclet tokens that refer to it:
 // CHECK:         catch:
@@ -58,12 +60,12 @@ void try_catch_with_objc_intrinsic() {
 // CHECK-O2:          @llvm.objc.release
 // CHECK:             [ "funclet"(token [[CLEANUPPAD2]]) ]
 // CHECK:           cleanupret from [[CLEANUPPAD2]]
-// CHECK:             unwind label %[[CLEANUP1]]
+// CHECK-O0:          unwind label %[[CLEANUP1]]
+// CHECK-O2:          unwind to caller
 //
-// CHECK:         [[CLEANUP1]]:
-// CHECK-NEXT:      [[CLEANUPPAD1:%[0-9]+]] = cleanuppad within none
-// CHECK:           call
+// CHECK-O0:      [[CLEANUP1]]:
+// CHECK-O0-NEXT:   [[CLEANUPPAD1:%[0-9]+]] = cleanuppad within none
+// CHECK-O0:        call
 // CHECK-O0:          @llvm.objc.storeStrong
-// CHECK-O2:          @llvm.objc.release
-// CHECK:             [ "funclet"(token [[CLEANUPPAD1]]) ]
-// CHECK:           cleanupret from [[CLEANUPPAD1]] unwind to caller
+// CHECK-O0:          [ "funclet"(token [[CLEANUPPAD1]]) ]
+// CHECK-O0:        cleanupret from [[CLEANUPPAD1]] unwind to caller

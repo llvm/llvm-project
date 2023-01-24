@@ -969,10 +969,10 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
 llvm::SmallVector<Policy>
 RVVIntrinsic::getSupportedUnMaskedPolicies(bool HasTailPolicy,
                                            bool HasMaskPolicy) {
-  return {Policy(Policy::PolicyType::Undisturbed, Policy::PolicyType::Omit,
-                 HasTailPolicy, HasMaskPolicy), // TU
-          Policy(Policy::PolicyType::Agnostic, Policy::PolicyType::Omit,
-                 HasTailPolicy, HasMaskPolicy)}; // TA
+  return {
+      Policy(Policy::PolicyType::Undisturbed, HasTailPolicy,
+             HasMaskPolicy),                                               // TU
+      Policy(Policy::PolicyType::Agnostic, HasTailPolicy, HasMaskPolicy)}; // TA
 }
 
 llvm::SmallVector<Policy>
@@ -1017,45 +1017,44 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
   };
 
   if (PolicyAttrs.isUnspecified()) {
-    PolicyAttrs.IsUnspecified = false;
     if (IsMasked) {
       Name += "_m";
-      // FIXME: Currently _m default policy implementation is different with
-      // RVV intrinsic spec (TUMA)
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Undisturbed;
-      PolicyAttrs.MaskPolicy = Policy::PolicyType::Undisturbed;
       if (HasPolicy)
-        BuiltinName += "_tumu";
+        BuiltinName += "_tama";
       else
         BuiltinName += "_m";
     } else {
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic;
       if (HasPolicy)
         BuiltinName += "_ta";
     }
   } else {
-    if (PolicyAttrs.isTUMAPolicy() && !PolicyAttrs.hasMaskPolicy())
-      appendPolicySuffix("_tum");
-    else if (PolicyAttrs.isTAMAPolicy() && !PolicyAttrs.hasMaskPolicy())
-      appendPolicySuffix("_tam");
-    else if (PolicyAttrs.isMUPolicy() && !PolicyAttrs.hasTailPolicy())
-      appendPolicySuffix("_mu");
-    else if (PolicyAttrs.isMAPolicy() && !PolicyAttrs.hasTailPolicy())
-      appendPolicySuffix("_ma");
-    else if (PolicyAttrs.isTUMUPolicy())
-      appendPolicySuffix("_tumu");
-    else if (PolicyAttrs.isTAMUPolicy())
-      appendPolicySuffix("_tamu");
-    else if (PolicyAttrs.isTUMAPolicy())
-      appendPolicySuffix("_tuma");
-    else if (PolicyAttrs.isTAMAPolicy())
-      appendPolicySuffix("_tama");
-    else if (PolicyAttrs.isTUPolicy() && !IsMasked)
-      appendPolicySuffix("_tu");
-    else if (PolicyAttrs.isTAPolicy() && !IsMasked)
-      appendPolicySuffix("_ta");
-    else
-      llvm_unreachable("Unhandled policy condition");
+    if (IsMasked) {
+      if (PolicyAttrs.isTUMAPolicy() && !PolicyAttrs.hasMaskPolicy())
+        appendPolicySuffix("_tum");
+      else if (PolicyAttrs.isTAMAPolicy() && !PolicyAttrs.hasMaskPolicy())
+        appendPolicySuffix("_tam");
+      else if (PolicyAttrs.isMUPolicy() && !PolicyAttrs.hasTailPolicy())
+        appendPolicySuffix("_mu");
+      else if (PolicyAttrs.isMAPolicy() && !PolicyAttrs.hasTailPolicy())
+        appendPolicySuffix("_ma");
+      else if (PolicyAttrs.isTUMUPolicy())
+        appendPolicySuffix("_tumu");
+      else if (PolicyAttrs.isTAMUPolicy())
+        appendPolicySuffix("_tamu");
+      else if (PolicyAttrs.isTUMAPolicy())
+        appendPolicySuffix("_tuma");
+      else if (PolicyAttrs.isTAMAPolicy())
+        appendPolicySuffix("_tama");
+      else
+        llvm_unreachable("Unhandled policy condition");
+    } else {
+      if (PolicyAttrs.isTUPolicy())
+        appendPolicySuffix("_tu");
+      else if (PolicyAttrs.isTAPolicy())
+        appendPolicySuffix("_ta");
+      else
+        llvm_unreachable("Unhandled policy condition");
+    }
   }
 }
 

@@ -92,18 +92,27 @@ enum class TypeModifier : uint8_t {
   LLVM_MARK_AS_BITMASK_ENUM(LMUL1),
 };
 
-struct Policy {
-  bool IsUnspecified = false;
+class Policy {
+public:
   enum PolicyType {
     Undisturbed,
     Agnostic,
-    Omit, // No policy required.
   };
-  PolicyType TailPolicy = Agnostic;
-  PolicyType MaskPolicy = Undisturbed;
+
+private:
+  const bool IsUnspecified = false;
+  // The default assumption for an RVV instruction is TAMA, as an undisturbed
+  // policy generally will affect the performance of an out-of-order core.
+  const PolicyType TailPolicy = Agnostic;
+  const PolicyType MaskPolicy = Agnostic;
   bool HasTailPolicy, HasMaskPolicy;
+
+public:
   Policy(bool HasTailPolicy, bool HasMaskPolicy)
       : IsUnspecified(true), HasTailPolicy(HasTailPolicy),
+        HasMaskPolicy(HasMaskPolicy) {}
+  Policy(PolicyType TailPolicy, bool HasTailPolicy, bool HasMaskPolicy)
+      : TailPolicy(TailPolicy), HasTailPolicy(HasTailPolicy),
         HasMaskPolicy(HasMaskPolicy) {}
   Policy(PolicyType TailPolicy, PolicyType MaskPolicy, bool HasTailPolicy,
          bool HasMaskPolicy)
@@ -126,13 +135,9 @@ struct Policy {
     return TailPolicy == Undisturbed && MaskPolicy == Undisturbed;
   }
 
-  bool isTAPolicy() const {
-    return TailPolicy == Agnostic && MaskPolicy == Omit;
-  }
+  bool isTAPolicy() const { return TailPolicy == Agnostic; }
 
-  bool isTUPolicy() const {
-    return TailPolicy == Undisturbed && MaskPolicy == Omit;
-  }
+  bool isTUPolicy() const { return TailPolicy == Undisturbed; }
 
   bool isMAPolicy() const { return MaskPolicy == Agnostic; }
 
@@ -424,17 +429,13 @@ public:
     return IntrinsicTypes;
   }
   Policy getPolicyAttrs() const {
-    assert(PolicyAttrs.IsUnspecified == false);
     return PolicyAttrs;
   }
   unsigned getPolicyAttrsBits() const {
-    // Return following value.
-    // constexpr unsigned TAIL_UNDISTURBED = 0;
-    // constexpr unsigned TAIL_AGNOSTIC = 1;
-    // constexpr unsigned TAIL_AGNOSTIC_MASK_AGNOSTIC = 3;
-    // FIXME: how about value 2
-    // int PolicyAttrs = TAIL_UNDISTURBED;
-    assert(PolicyAttrs.IsUnspecified == false);
+    // CGBuiltin.cpp
+    // The 0th bit simulates the `vta` of RVV
+    // The 1st bit simulates the `vma` of RVV
+    // int PolicyAttrs = 0;
 
     if (PolicyAttrs.isTUMAPolicy())
       return 2;
@@ -443,10 +444,6 @@ public:
     if (PolicyAttrs.isTUMUPolicy())
       return 0;
     if (PolicyAttrs.isTAMUPolicy())
-      return 1;
-    if (PolicyAttrs.isTUPolicy())
-      return 0;
-    if (PolicyAttrs.isTAPolicy())
       return 1;
 
     llvm_unreachable("unsupport policy");

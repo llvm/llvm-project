@@ -1304,6 +1304,8 @@ public:
                   const AAMDNodes &AAInfo = AAMDNodes(),
                   const MDNode *Ranges = nullptr);
   /// FIXME: Remove once transition to Align is over.
+  LLVM_DEPRECATED("Use the getLoad function that takes a MaybeAlign instead",
+                  "")
   inline SDValue
   getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
           MachinePointerInfo PtrInfo, unsigned Alignment,
@@ -1321,16 +1323,6 @@ public:
              MaybeAlign Alignment = MaybeAlign(),
              MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
              const AAMDNodes &AAInfo = AAMDNodes());
-  /// FIXME: Remove once transition to Align is over.
-  inline SDValue
-  getExtLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT VT, SDValue Chain,
-             SDValue Ptr, MachinePointerInfo PtrInfo, EVT MemVT,
-             unsigned Alignment,
-             MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-             const AAMDNodes &AAInfo = AAMDNodes()) {
-    return getExtLoad(ExtType, dl, VT, Chain, Ptr, PtrInfo, MemVT,
-                      MaybeAlign(Alignment), MMOFlags, AAInfo);
-  }
   SDValue getExtLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT VT,
                      SDValue Chain, SDValue Ptr, EVT MemVT,
                      MachineMemOperand *MMO);
@@ -1354,6 +1346,8 @@ public:
                    Ranges);
   }
   /// FIXME: Remove once transition to Align is over.
+  LLVM_DEPRECATED("Use the getLoad function that takes a MaybeAlign instead",
+                  "")
   inline SDValue
   getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
           const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
@@ -1388,6 +1382,7 @@ public:
                     MMOFlags, AAInfo);
   }
   /// FIXME: Remove once transition to Align is over.
+  LLVM_DEPRECATED("Use the version that takes a MaybeAlign instead", "")
   inline SDValue
   getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
            MachinePointerInfo PtrInfo, unsigned Alignment,
@@ -1414,6 +1409,7 @@ public:
                          AAInfo);
   }
   /// FIXME: Remove once transition to Align is over.
+  LLVM_DEPRECATED("Use the version that takes a MaybeAlign instead", "")
   inline SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT, unsigned Alignment,

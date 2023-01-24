@@ -5447,7 +5447,7 @@ static void prepareDescriptorIndirectCall(SelectionDAG &DAG, SDValue &Callee,
   const unsigned EnvPtrOffset = Subtarget.descriptorEnvironmentPointerOffset();
 
   const MVT RegVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
-  const unsigned Alignment = Subtarget.isPPC64() ? 8 : 4;
+  const Align Alignment = Subtarget.isPPC64() ? Align(8) : Align(4);
 
   // One load for the functions entry point address.
   SDValue LoadFuncPtr = DAG.getLoad(RegVT, dl, LDChain, Callee, MPI,

@@ -183,16 +183,16 @@ v32i8 f_vec_large_v32i8_ret(void) {
   return (v32i8){1, 2, 3, 4, 5, 6, 7, 8};
 }
 
-// Scalars passed on the stack should not have signext/zeroext attributes
-// (they are anyext).
+// Scalars passed on the stack should have signext/zeroext attributes, just as
+// if they were passed in registers.
 
-// CHECK-LABEL: define{{.*}} signext i32 @f_scalar_stack_1(i64 %a.coerce, [2 x i64] %b.coerce, i128 %c.coerce, ptr noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef %g, i8 noundef %h)
+// CHECK-LABEL: define{{.*}} signext i32 @f_scalar_stack_1(i64 %a.coerce, [2 x i64] %b.coerce, i128 %c.coerce, ptr noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g, i8 noundef signext %h)
 int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
                      struct large d, uint8_t e, int8_t f, uint8_t g, int8_t h) {
   return g + h;
 }
 
-// CHECK-LABEL: define{{.*}} signext i32 @f_scalar_stack_2(i32 noundef signext %a, i128 noundef %b, i64 noundef %c, fp128 noundef %d, ptr noundef %0, i8 noundef zeroext %f, i8 noundef %g, i8 noundef %h)
+// CHECK-LABEL: define{{.*}} signext i32 @f_scalar_stack_2(i32 noundef signext %a, i128 noundef %b, i64 noundef %c, fp128 noundef %d, ptr noundef %0, i8 noundef zeroext %f, i8 noundef signext %g, i8 noundef zeroext %h)
 int f_scalar_stack_2(int32_t a, __int128_t b, int64_t c, long double d, v32i8 e,
                      uint8_t f, int8_t g, uint8_t h) {
   return g + h;
@@ -202,16 +202,13 @@ int f_scalar_stack_2(int32_t a, __int128_t b, int64_t c, long double d, v32i8 e,
 // the presence of large return values that consume a register due to the need
 // to pass a pointer.
 
-// CHECK-LABEL: define{{.*}} void @f_scalar_stack_3(ptr noalias sret(%struct.large) align 8 %agg.result, i32 noundef signext %a, i128 noundef %b, fp128 noundef %c, ptr noundef %0, i8 noundef zeroext %e, i8 noundef %f, i8 noundef %g)
+// CHECK-LABEL: define{{.*}} void @f_scalar_stack_3(ptr noalias sret(%struct.large) align 8 %agg.result, i32 noundef signext %a, i128 noundef %b, fp128 noundef %c, ptr noundef %0, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g)
 struct large f_scalar_stack_3(uint32_t a, __int128_t b, long double c, v32i8 d,
                               uint8_t e, int8_t f, uint8_t g) {
   return (struct large){a, e, f, g};
 }
 
 // Ensure that ABI lowering happens as expected for vararg calls.
-// Specifically, ensure that signext is emitted for varargs that will be
-// passed in registers but not on the stack. Ensure this takes into account
-// the use of "aligned" register pairs for varargs with 2*xlen alignment.
 
 int f_va_callee(int, ...);
 
@@ -221,23 +218,23 @@ void f_va_caller(void) {
   f_va_callee(1, 2, 3LL, 4.0f, 5.0, (struct tiny){6, 7, 8, 9},
               (struct small){10, NULL}, (struct small_aligned){11},
               (struct large){12, 13, 14, 15});
-  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, fp128 noundef 0xL00000000000000004001400000000000, i32 noundef signext 6, i32 noundef signext 7, i32 noundef 8, i32 noundef 9)
+  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, fp128 noundef 0xL00000000000000004001400000000000, i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
   f_va_callee(1, 2, 3, 4, 5.0L, 6, 7, 8, 9);
-  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i128 {{%.*}}, i32 noundef signext 6, i32 noundef signext 7, i32 noundef 8, i32 noundef 9)
+  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i128 {{%.*}}, i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
   f_va_callee(1, 2, 3, 4, (struct small_aligned){5}, 6, 7, 8, 9);
-  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, [2 x i64] {{%.*}}, i32 noundef signext 6, i32 noundef signext 7, i32 noundef 8, i32 noundef 9)
+  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, [2 x i64] {{%.*}}, i32 noundef signext 6, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
   f_va_callee(1, 2, 3, 4, (struct small){5, NULL}, 6, 7, 8, 9);
-  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, fp128 noundef 0xL00000000000000004001800000000000, i32 noundef 7, i32 noundef 8, i32 noundef 9)
+  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, fp128 noundef 0xL00000000000000004001800000000000, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
   f_va_callee(1, 2, 3, 4, 5, 6.0L, 7, 8, 9);
-  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i128 {{%.*}}, i32 noundef 7, i32 noundef 8, i32 noundef 9)
+  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i128 {{%.*}}, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
   f_va_callee(1, 2, 3, 4, 5, (struct small_aligned){6}, 7, 8, 9);
-  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, [2 x i64] {{%.*}}, i32 noundef signext 7, i32 noundef 8, i32 noundef 9)
+  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, [2 x i64] {{%.*}}, i32 noundef signext 7, i32 noundef signext 8, i32 noundef signext 9)
   f_va_callee(1, 2, 3, 4, 5, (struct small){6, NULL}, 7, 8, 9);
-  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, fp128 noundef 0xL00000000000000004001C00000000000, i32 noundef 8, i32 noundef 9)
+  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, fp128 noundef 0xL00000000000000004001C00000000000, i32 noundef signext 8, i32 noundef signext 9)
   f_va_callee(1, 2, 3, 4, 5, 6, 7.0L, 8, 9);
-  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, i128 {{%.*}}, i32 noundef 8, i32 noundef 9)
+  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, i128 {{%.*}}, i32 noundef signext 8, i32 noundef signext 9)
   f_va_callee(1, 2, 3, 4, 5, 6, (struct small_aligned){7}, 8, 9);
-  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, [2 x i64] {{.*}}, i32 noundef 8, i32 noundef 9)
+  // CHECK: call signext i32 (i32, ...) @f_va_callee(i32 noundef signext 1, i32 noundef signext 2, i32 noundef signext 3, i32 noundef signext 4, i32 noundef signext 5, i32 noundef signext 6, [2 x i64] {{.*}}, i32 noundef signext 8, i32 noundef signext 9)
   f_va_callee(1, 2, 3, 4, 5, 6, (struct small){7, NULL}, 8, 9);
 }
 

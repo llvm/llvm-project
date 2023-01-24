@@ -163,18 +163,11 @@ void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {
     OS << "  ID = Intrinsic::riscv_" + RVVI->getIRName() + ";\n";
   if (RVVI->getNF() >= 2)
     OS << "  NF = " + utostr(RVVI->getNF()) + ";\n";
-  // We had initialized PolicyAttrs as TU/TUMU in CodeGen function.
-  if (!RVVI->getPolicyAttrs().isTUPolicy() &&
-      !RVVI->getPolicyAttrs().isTUMUPolicy() && !RVVI->hasPassthruOperand() &&
-      !RVVI->hasManualCodegen() && RVVI->hasVL())
-    OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
+
+  OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
 
   if (RVVI->hasManualCodegen()) {
-    OS << "  PolicyAttrs = " << RVVI->getPolicyAttrsBits() << ";\n";
-    if (RVVI->isMasked())
-      OS << "IsMasked = true;\n";
-    else
-      OS << "IsMasked = false;\n";
+    OS << "IsMasked = " << (RVVI->isMasked() ? "true" : "false") << ";\n";
     OS << RVVI->getManualCodegen();
     OS << "break;\n";
     return;
@@ -594,7 +587,7 @@ void RVVEmitter::createRVVIntrinsics(
           continue;
         // Create a masked intrinsic
         std::optional<RVVTypes> MaskTypes =
-            TypeCache.computeTypes(BT, Log2LMUL, NF, Prototype);
+            TypeCache.computeTypes(BT, Log2LMUL, NF, MaskedPrototype);
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
