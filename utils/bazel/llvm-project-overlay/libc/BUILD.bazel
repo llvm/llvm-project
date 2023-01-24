@@ -144,7 +144,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_cpp_string_view",
     hdrs = ["src/__support/CPP/string_view.h"],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_common",
+        ":libc_root",
+    ],
 )
 
 libc_support_library(
@@ -393,6 +396,7 @@ libc_support_library(
     name = "__support_fputil_normal_float",
     hdrs = ["src/__support/FPUtil/NormalFloat.h"],
     deps = [
+        ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":libc_root",
