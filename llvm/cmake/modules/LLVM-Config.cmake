@@ -236,7 +236,7 @@ function(llvm_map_components_to_libnames out_libs)
       list(APPEND link_components "interpreter")
     endif()
   endif()
-  if(native IN_LIST link_components AND ${LLVM_NATIVE_ARCH} IN_LIST LLVM_TARGETS_TO_BUILD)
+  if(native IN_LIST link_components AND "${LLVM_NATIVE_ARCH}" IN_LIST LLVM_TARGETS_TO_BUILD)
     list(APPEND link_components ${LLVM_NATIVE_ARCH})
   endif()
 
