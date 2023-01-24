@@ -149,8 +149,8 @@ Notice that:
   original folder where LLVMN was built
   (`$builddir!=$builddir_subproj`).
 * ``LLVM_ROOT`` should point to the prefix of your llvm installation,
-   so for example, if llvm is installed into ``/usr/bin`` and
-   ``/usr/lib64``, then you should pass ``-DLLVM_ROOT=/usr/``.
+  so for example, if llvm is installed into ``/usr/bin`` and
+  ``/usr/lib64``, then you should pass ``-DLLVM_ROOT=/usr/``.
 * Both the ``LLVM_ROOT`` and ``LLVM_EXTERNAL_LIT`` options are
   required to do stand-alone builds for all sub-projects.  Additional
   required options for each sub-project can be found in the table
