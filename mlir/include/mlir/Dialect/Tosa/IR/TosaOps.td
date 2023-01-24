@@ -271,6 +271,34 @@ def Tosa_MaxPool2dOp : Tosa_Op<"max_pool2d", [
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: rfft2d
+//===----------------------------------------------------------------------===//
+def Tosa_RFFT2dOp : Tosa_Op<"rfft2d", [
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+                              ["inferReturnTypeComponents"]>,
+    Pure]> {
+  let summary = "Performs RFFT2D operation on the input.";
+
+  let description = [{
+    Performs a batched 2D real-valued Fast Fourier Transform over the input where
+    the input tensor consists of real values producing complex valued output. The
+    complex output values will be split into the output_real and output_imag
+    tensor arguments. RFFT2D takes advantage of Hermitian symmetry to only
+    calculate the first half of the final output axis. Imaginary values with
+    locations (0,0), (0,W/2), (H/2,0) and (H/2,W/2) are zero.
+  }];
+
+  let arguments = (ins
+    Tosa_Tensor3D:$input
+  );
+
+  let results = (outs
+    Tosa_Tensor3D:$output_real,
+    Tosa_Tensor3D:$output_imag
+  );
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: transpose_conv2d
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeConv2DOp : Tosa_Op<"transpose_conv2d", [
