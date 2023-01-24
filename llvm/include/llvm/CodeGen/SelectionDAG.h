@@ -1323,16 +1323,6 @@ public:
              MaybeAlign Alignment = MaybeAlign(),
              MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
              const AAMDNodes &AAInfo = AAMDNodes());
-  /// FIXME: Remove once transition to Align is over.
-  inline SDValue
-  getExtLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT VT, SDValue Chain,
-             SDValue Ptr, MachinePointerInfo PtrInfo, EVT MemVT,
-             unsigned Alignment,
-             MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-             const AAMDNodes &AAInfo = AAMDNodes()) {
-    return getExtLoad(ExtType, dl, VT, Chain, Ptr, PtrInfo, MemVT,
-                      MaybeAlign(Alignment), MMOFlags, AAInfo);
-  }
   SDValue getExtLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT VT,
                      SDValue Chain, SDValue Ptr, EVT MemVT,
                      MachineMemOperand *MMO);
