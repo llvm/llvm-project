@@ -5047,6 +5047,12 @@ struct AAExecutionDomain
   /// Check if a basic block is executed only by the initial thread.
   virtual bool isExecutedByInitialThreadOnly(const BasicBlock &) const = 0;
 
+  /// Check if the instruction \p I is executed in an aligned region, that is,
+  /// the synchronizing effects before and after \p I are both aligned barriers.
+  /// This effectively means all threads execute \p I together.
+  virtual bool isExecutedInAlignedRegion(Attributor &A,
+                                         const Instruction &I) const = 0;
+
   virtual ExecutionDomainTy getExecutionDomain(const BasicBlock &) const = 0;
   virtual ExecutionDomainTy getExecutionDomain(const CallBase &) const = 0;
   virtual ExecutionDomainTy getFunctionExecutionDomain() const = 0;

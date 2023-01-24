@@ -2654,6 +2654,68 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
     return BEDMap.lookup(&BB).IsExecutedByInitialThreadOnly;
   }
 
+  bool isExecutedInAlignedRegion(Attributor &A,
+                                 const Instruction &I) const override {
+    if (!isValidState() || isa<CallBase>(I))
+      return false;
+
+    const Instruction *CurI;
+
+    // Check forward until a call or the block end is reached.
+    CurI = &I;
+    do {
+      auto *CB = dyn_cast<CallBase>(CurI);
+      if (!CB)
+        continue;
+      const auto &It = CEDMap.find(CB);
+      if (It == CEDMap.end())
+        continue;
+      if (!It->getSecond().IsReachedFromAlignedBarrierOnly)
+        return false;
+    } while ((CurI = CurI->getNextNonDebugInstruction()));
+
+    if (!CurI && !BEDMap.lookup(I.getParent()).IsReachedFromAlignedBarrierOnly)
+      return false;
+
+    // Check backward until a call or the block beginning is reached.
+    CurI = &I;
+    do {
+      auto *CB = dyn_cast<CallBase>(CurI);
+      if (!CB)
+        continue;
+      const auto &It = CEDMap.find(CB);
+      if (It == CEDMap.end())
+        continue;
+      if (!AA::isNoSyncInst(A, *CB, *this)) {
+        if (It->getSecond().IsReachedFromAlignedBarrierOnly)
+          break;
+        return false;
+      }
+
+      Function *Callee = CB->getCalledFunction();
+      if (!Callee || Callee->isDeclaration())
+        return false;
+      const auto &EDAA = A.getAAFor<AAExecutionDomain>(
+          *this, IRPosition::function(*Callee), DepClassTy::OPTIONAL);
+      if (!EDAA.getState().isValidState())
+        return false;
+      if (!EDAA.getFunctionExecutionDomain().IsReachedFromAlignedBarrierOnly)
+        return false;
+      break;
+    } while ((CurI = CurI->getPrevNonDebugInstruction()));
+
+    if (!CurI &&
+        !llvm::all_of(
+            predecessors(I.getParent()), [&](const BasicBlock *PredBB) {
+              return BEDMap.lookup(PredBB).IsReachedFromAlignedBarrierOnly;
+            })) {
+      return false;
+    }
+
+    // On neither traversal we found a anything but aligned barriers.
+    return true;
+  }
+
   ExecutionDomainTy getExecutionDomain(const BasicBlock &BB) const override {
     assert(isValidState() &&
            "No request should be made against an invalid state!");
