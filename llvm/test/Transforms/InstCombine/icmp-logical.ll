@@ -1747,11 +1747,8 @@ define i1 @masked_icmps_mask_notallzeros_bmask_mixed_negated_swapped_7b_logical(
 
 define i1 @masked_icmps_bmask_notmixed_or(i32 %A) {
 ; CHECK-LABEL: @masked_icmps_bmask_notmixed_or(
-; CHECK-NEXT:    [[MASK1:%.*]] = and i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[TST1:%.*]] = icmp eq i32 [[MASK1]], 3
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 255
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASK2]], 243
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[TST1]], [[TST2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[TMP1]], 3
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %mask1 = and i32 %A, 15 ; 0x0f
@@ -1764,10 +1761,8 @@ define i1 @masked_icmps_bmask_notmixed_or(i32 %A) {
 
 define <2 x i1> @masked_icmps_bmask_notmixed_or_vec(<2 x i8> %A) {
 ; CHECK-LABEL: @masked_icmps_bmask_notmixed_or_vec(
-; CHECK-NEXT:    [[MASK1:%.*]] = and <2 x i8> [[A:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[TST1:%.*]] = icmp eq <2 x i8> [[MASK1]], <i8 3, i8 3>
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq <2 x i8> [[A]], <i8 -13, i8 -13>
-; CHECK-NEXT:    [[RES:%.*]] = or <2 x i1> [[TST1]], [[TST2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], <i8 15, i8 15>
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 3, i8 3>
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %mask1 = and <2 x i8> %A, <i8 15, i8 15> ; 0x0f
@@ -1829,11 +1824,8 @@ define i1 @masked_icmps_bmask_notmixed_or_contradict_notoptimized(i32 %A) {
 
 define i1 @masked_icmps_bmask_notmixed_and(i32 %A) {
 ; CHECK-LABEL: @masked_icmps_bmask_notmixed_and(
-; CHECK-NEXT:    [[MASK1:%.*]] = and i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[TST1:%.*]] = icmp ne i32 [[MASK1]], 3
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 255
-; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[MASK2]], 243
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[TST1]], [[TST2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i32 [[TMP1]], 3
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %mask1 = and i32 %A, 15 ; 0x0f
