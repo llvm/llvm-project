@@ -567,25 +567,15 @@ class ObjCARCOpt {
 
   void OptimizeReturns(Function &F);
 
-  Instruction *cloneCallInstForBB(CallInst &CI, BasicBlock &BB) {
-    SmallVector<OperandBundleDef, 1> OpBundles;
-    for (unsigned I = 0, E = CI.getNumOperandBundles(); I != E; ++I) {
-      auto Bundle = CI.getOperandBundleAt(I);
-      // Funclets will be reassociated in the future.
-      if (Bundle.getTagID() == LLVMContext::OB_funclet)
-        continue;
-      OpBundles.emplace_back(Bundle);
+  template <typename PredicateT>
+  static void cloneOpBundlesIf(CallBase *CI,
+                               SmallVectorImpl<OperandBundleDef> &OpBundles,
+                               PredicateT Predicate) {
+    for (unsigned I = 0, E = CI->getNumOperandBundles(); I != E; ++I) {
+      OperandBundleUse B = CI->getOperandBundleAt(I);
+      if (Predicate(B))
+        OpBundles.emplace_back(B);
     }
-
-    if (!BlockEHColors.empty()) {
-      const ColorVector &CV = BlockEHColors.find(&BB)->second;
-      assert(CV.size() > 0 && "non-unique color for block!");
-      Instruction *EHPad = CV.front()->getFirstNonPHI();
-      if (EHPad->isEHPad())
-        OpBundles.emplace_back("funclet", EHPad);
-    }
-
-    return CallInst::Create(&CI, OpBundles);
   }
 
   void addOpBundleForFunclet(BasicBlock *BB,
@@ -1152,8 +1142,12 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
         continue;
       Value *Op = PN->getIncomingValue(i);
       Instruction *InsertPos = &PN->getIncomingBlock(i)->back();
-      CallInst *Clone =
-          cast<CallInst>(cloneCallInstForBB(*CInst, *InsertPos->getParent()));
+      SmallVector<OperandBundleDef, 1> OpBundles;
+      cloneOpBundlesIf(CInst, OpBundles, [](const OperandBundleUse &B) {
+        return B.getTagID() != LLVMContext::OB_funclet;
+      });
+      addOpBundleForFunclet(InsertPos->getParent(), OpBundles);
+      CallInst *Clone = CallInst::Create(CInst, OpBundles);
       if (Op->getType() != ParamTy)
         Op = new BitCastInst(Op, ParamTy, "", InsertPos);
       Clone->setArgOperand(0, Op);
