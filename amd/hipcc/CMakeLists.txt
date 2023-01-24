@@ -18,9 +18,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(ADDITIONAL_SHARED_LIBRARIES_TO_LINK
   libstdc++fs.so)
 
-set(HIP_VERSION_MAJOR 4 PARENT_SCOPE)
-set(HIP_VERSION_MINOR 4 PARENT_SCOPE)
-set(HIP_VERSION_PATCH 4 PARENT_SCOPE)
+get_directory_property(HAS_PARENT_SCOPE PARENT_DIRECTORY)
+if(HAS_PARENT_SCOPE)
+  # FIXME(kzhuravl): Do we need these here? If yes, what is the default?
+  set(HIP_VERSION_MAJOR 4 PARENT_SCOPE)
+  set(HIP_VERSION_MINOR 4 PARENT_SCOPE)
+  set(HIP_VERSION_PATCH 4 PARENT_SCOPE)
+else()
+  message(STATUS "Current scope has no parent")
+endif()
 
 set(HIPCC_BIN
   hipcc.bin)
