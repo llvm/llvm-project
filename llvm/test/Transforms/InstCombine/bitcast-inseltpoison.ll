@@ -380,8 +380,8 @@ define double @bitcast_extelt4(i128 %A) {
 define <2 x i32> @test4(i32 %A, i32 %B){
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i64 1
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[T43:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i64 1
+; CHECK-NEXT:    ret <2 x i32> [[T43]]
 ;
   %t38 = zext i32 %A to i64
   %t32 = zext i32 %B to i64
@@ -395,8 +395,8 @@ define <2 x i32> @test4(i32 %A, i32 %B){
 define <2 x float> @test5(float %A, float %B) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B:%.*]], i64 1
-; CHECK-NEXT:    ret <2 x float> [[TMP2]]
+; CHECK-NEXT:    [[T43:%.*]] = insertelement <2 x float> [[TMP1]], float [[B:%.*]], i64 1
+; CHECK-NEXT:    ret <2 x float> [[T43]]
 ;
   %t37 = bitcast float %A to i32
   %t38 = zext i32 %t37 to i64
@@ -410,8 +410,8 @@ define <2 x float> @test5(float %A, float %B) {
 
 define <2 x float> @test6(float %A){
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float 4.200000e+01, float poison>, float [[A:%.*]], i64 1
-; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[T35:%.*]] = insertelement <2 x float> <float 4.200000e+01, float poison>, float [[A:%.*]], i64 1
+; CHECK-NEXT:    ret <2 x float> [[T35]]
 ;
   %t23 = bitcast float %A to i32
   %t24 = zext i32 %t23 to i64
