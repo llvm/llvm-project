@@ -8,9 +8,9 @@ define <2 x i64> @PR61061(<2 x i64> noundef %vect) {
 ; CHECK-LABEL: define <2 x i64> @PR61061
 ; CHECK-SAME: (<2 x i64> noundef [[VECT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[BC0:%.*]] = bitcast <2 x i64> [[VECT]] to <16 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[BC0]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[PTR_0_PTR_0_PTR_0_BASE_CAST:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[PTR_0_PTR_0_PTR_0_BASE_CAST]]
+; CHECK-NEXT:    [[PTR_SROA_0_15_VEC_INSERT:%.*]] = shufflevector <16 x i8> [[BC0]], <16 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[PTR_SROA_0_15_VEC_INSERT]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %ptr = alloca <2 x i64>, align 16
   call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %ptr)
