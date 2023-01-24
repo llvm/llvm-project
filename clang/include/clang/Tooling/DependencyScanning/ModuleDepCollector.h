@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -170,7 +171,8 @@ private:
   /// Traverses the previously collected direct modular dependencies to discover
   /// transitive modular dependencies and fills the parent \c ModuleDepCollector
   /// with both.
-  ModuleID handleTopLevelModule(const Module *M);
+  /// Returns the ID or nothing if the dependency is spurious and is ignored.
+  std::optional<ModuleID> handleTopLevelModule(const Module *M);
   void addAllSubmoduleDeps(const Module *M, ModuleDeps &MD,
                            llvm::DenseSet<const Module *> &AddedModules);
   void addModuleDep(const Module *M, ModuleDeps &MD,
