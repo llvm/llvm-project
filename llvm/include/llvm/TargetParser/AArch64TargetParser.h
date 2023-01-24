@@ -334,6 +334,10 @@ struct CpuInfo {
   const ArchInfo &Arch;
   uint64_t DefaultExtensions; // Default extensions for this CPU. These will be
                               // ORd with the architecture defaults.
+
+  uint64_t getImpliedExtensions() const {
+    return DefaultExtensions | Arch.DefaultExts;
+  }
 };
 
 inline constexpr CpuInfo CpuInfos[] = {
@@ -509,7 +513,6 @@ StringRef getArchExtFeature(StringRef ArchExt);
 StringRef resolveCPUAlias(StringRef CPU);
 
 // Information by Name
-uint64_t getDefaultExtensions(StringRef CPU, const ArchInfo &AI);
 void getFeatureOption(StringRef Name, std::string &Feature);
 std::optional<ArchInfo> getArchForCpu(StringRef CPU);
 

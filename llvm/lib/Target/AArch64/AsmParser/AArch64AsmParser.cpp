@@ -6891,8 +6891,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
   // Get the architecture and extension features.
   std::vector<StringRef> AArch64Features;
   AArch64Features.push_back(ArchInfo->ArchFeature);
-  AArch64::getExtensionFeatures(
-      AArch64::getDefaultExtensions("generic", *ArchInfo), AArch64Features);
+  AArch64::getExtensionFeatures(ArchInfo->DefaultExts, AArch64Features);
 
   MCSubtargetInfo &STI = copySTI();
   std::vector<std::string> ArchFeatures(AArch64Features.begin(), AArch64Features.end());

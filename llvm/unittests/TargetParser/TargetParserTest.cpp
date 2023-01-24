@@ -966,11 +966,9 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
   EXPECT_TRUE(Cpu);
   EXPECT_EQ(params.ExpectedArch, Cpu->Arch.Name);
 
-  uint64_t default_extensions =
-      AArch64::getDefaultExtensions(params.CPUName, Cpu->Arch);
   EXPECT_PRED_FORMAT2(
       AssertSameExtensionFlags<ARM::ISAKind::AARCH64>(params.CPUName),
-      params.ExpectedFlags, default_extensions);
+      params.ExpectedFlags, Cpu->getImpliedExtensions());
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1472,7 +1470,7 @@ bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
   if (!Extension)
     return false;
   std::optional<AArch64::CpuInfo> CpuInfo = AArch64::parseCpu(CPUName);
-  return (CpuInfo->Arch.DefaultExts | CpuInfo->DefaultExtensions) & Extension->ID;
+  return CpuInfo->getImpliedExtensions() & Extension->ID;
 }
 
 bool testAArch64Extension(const AArch64::ArchInfo &AI, StringRef ArchExt) {
