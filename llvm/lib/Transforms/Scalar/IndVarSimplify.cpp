@@ -1465,11 +1465,47 @@ static bool optimizeLoopExitWithUnknownExitCount(
           LeafConditions.push_back(ICmp);
   } while (!Worklist.empty());
 
+  // If the current basic block has the same exit count as the whole loop, and
+  // it consists of multiple icmp's, try to collect all icmp's that give exact
+  // same exit count. For all other icmp's, we could use one less iteration,
+  // because their value on the last iteration doesn't really matter.
+  SmallPtrSet<ICmpInst *, 4> ICmpsFailingOnLastIter;
+  if (!SkipLastIter && LeafConditions.size() > 1 &&
+      SE->getExitCount(L, ExitingBB,
+                       ScalarEvolution::ExitCountKind::SymbolicMaximum) ==
+          MaxIter)
+    for (auto *ICmp : LeafConditions) {
+      auto EL = SE->computeExitLimitFromCond(L, ICmp, Inverted,
+                                             /*ControlsExit*/ false);
+      auto *ExitMax = EL.SymbolicMaxNotTaken;
+      if (isa<SCEVCouldNotCompute>(ExitMax))
+        continue;
+      // They could be of different types (specifically this happens after
+      // IV widening).
+      auto *WiderType =
+          SE->getWiderType(ExitMax->getType(), MaxIter->getType());
+      auto *WideExitMax = SE->getNoopOrZeroExtend(ExitMax, WiderType);
+      auto *WideMaxIter = SE->getNoopOrZeroExtend(MaxIter, WiderType);
+      if (WideExitMax == WideMaxIter)
+        ICmpsFailingOnLastIter.insert(ICmp);
+    }
+
   bool Changed = false;
-  for (auto *OldCond : LeafConditions)
+  for (auto *OldCond : LeafConditions) {
+    // Skip last iteration for this icmp under one of two conditions:
+    // - We do it for all conditions;
+    // - There is another ICmp that would fail on last iter, so this one doesn't
+    // really matter.
+    bool OptimisticSkipLastIter = SkipLastIter;
+    if (!OptimisticSkipLastIter) {
+      if (ICmpsFailingOnLastIter.size() > 1)
+        OptimisticSkipLastIter = true;
+      else if (ICmpsFailingOnLastIter.size() == 1)
+        OptimisticSkipLastIter = !ICmpsFailingOnLastIter.count(OldCond);
+    }
     if (auto Replaced =
             createReplacement(OldCond, L, ExitingBB, MaxIter, Inverted,
-                              SkipLastIter, SE, Rewriter)) {
+                              OptimisticSkipLastIter, SE, Rewriter)) {
       Changed = true;
       auto *NewCond = *Replaced;
       if (auto *NCI = dyn_cast<Instruction>(NewCond)) {
@@ -1481,7 +1517,11 @@ static bool optimizeLoopExitWithUnknownExitCount(
       assert(OldCond->hasOneUse() && "Must be!");
       OldCond->replaceAllUsesWith(NewCond);
       DeadInsts.push_back(OldCond);
+      // Make sure we no longer consider this condition as failing on last
+      // iteration.
+      ICmpsFailingOnLastIter.erase(OldCond);
     }
+  }
   return Changed;
 }
 
