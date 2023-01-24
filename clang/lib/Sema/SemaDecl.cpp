@@ -17203,6 +17203,10 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                   SkipBody->Previous = Def;
                   return Def;
                 } else {
+                  llvm::errs() << "got here\n";
+                  Def->dump();
+                  Hidden->dump();
+                  NameLoc.dump(getSourceManager());
                   SkipBody->ShouldSkip = true;
                   SkipBody->Previous = Def;
                   makeMergedDefinitionVisible(Hidden);

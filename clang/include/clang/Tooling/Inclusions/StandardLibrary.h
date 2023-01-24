@@ -37,6 +37,7 @@ class Symbol;
 // "<cstdio>" and "<stdio.h>" (and their symbols) are treated differently.
 class Header {
 public:
+  static std::vector<Header> all();
   // Name should contain the angle brackets, e.g. "<vector>".
   static std::optional<Header> named(llvm::StringRef Name);
 
@@ -63,16 +64,18 @@ private:
 // for them.
 class Symbol {
 public:
+  static std::vector<Symbol> all();
   /// \p Scope should have the trailing "::", for example:
   /// named("std::chrono::", "system_clock")
   static std::optional<Symbol> named(llvm::StringRef Scope,
                                       llvm::StringRef Name);
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
-    return OS << S.scope() << S.name();
+    return OS << S.qualified_name();
   }
   llvm::StringRef scope() const;
   llvm::StringRef name() const;
+  llvm::StringRef qualified_name() const;
   // The preferred header for this symbol (e.g. the suggested insertion).
   Header header() const;
   // Some symbols may be provided by multiple headers.

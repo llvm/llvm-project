@@ -18,6 +18,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using ::testing::Contains;
 using ::testing::ElementsAre;
 
 namespace clang {
@@ -35,17 +36,24 @@ const NamedDecl &lookup(TestAST &AST, llvm::StringRef Name) {
 TEST(StdlibTest, All) {
   auto VectorH = stdlib::Header::named("<vector>");
   EXPECT_TRUE(VectorH);
+  EXPECT_EQ(VectorH->name(), "<vector>");
   EXPECT_EQ(llvm::to_string(*VectorH), "<vector>");
   EXPECT_FALSE(stdlib::Header::named("HeadersTests.cpp"));
 
   auto Vector = stdlib::Symbol::named("std::", "vector");
   EXPECT_TRUE(Vector);
+  EXPECT_EQ(Vector->scope(), "std::");
+  EXPECT_EQ(Vector->name(), "vector");
+  EXPECT_EQ(Vector->qualified_name(), "std::vector");
   EXPECT_EQ(llvm::to_string(*Vector), "std::vector");
   EXPECT_FALSE(stdlib::Symbol::named("std::", "dongle"));
   EXPECT_FALSE(stdlib::Symbol::named("clang::", "ASTContext"));
 
   EXPECT_EQ(Vector->header(), *VectorH);
   EXPECT_THAT(Vector->headers(), ElementsAre(*VectorH));
+
+  EXPECT_THAT(stdlib::Header::all(), Contains(*VectorH));
+  EXPECT_THAT(stdlib::Symbol::all(), Contains(*Vector));
 }
 
 TEST(StdlibTest, Recognizer) {
