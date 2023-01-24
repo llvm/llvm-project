@@ -88,9 +88,6 @@ struct ModuleDeps {
   /// additionally appear in \c FileDeps as a dependency.
   std::string ClangModuleMapFile;
 
-  /// The path to where an implicit build would put the PCM for this module.
-  std::string ImplicitModulePCMPath;
-
   /// A collection of absolute paths to files that this module directly depends
   /// on, not including transitive dependencies.
   llvm::StringSet<> FileDeps;
