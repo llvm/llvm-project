@@ -1557,6 +1557,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     auto llvmBoxPtrTy = convTy.template cast<mlir::LLVM::LLVMPointerType>();
     auto llvmBoxTy = llvmBoxPtrTy.getElementType();
     bool isUnlimitedPolymorphic = fir::isUnlimitedPolymorphicType(boxTy);
+    bool useInputType = fir::isPolymorphicType(boxTy) || isUnlimitedPolymorphic;
     mlir::Value descriptor =
         rewriter.create<mlir::LLVM::UndefOp>(loc, llvmBoxTy);
     descriptor =
@@ -1577,7 +1578,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     if (hasAddendum) {
       unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
       if (!typeDesc) {
-        if (isUnlimitedPolymorphic) {
+        if (useInputType) {
           mlir::Type innerType = fir::unwrapInnerType(inputType);
           if (innerType && innerType.template isa<fir::RecordType>()) {
             auto recTy = innerType.template dyn_cast<fir::RecordType>();
