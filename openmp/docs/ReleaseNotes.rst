@@ -23,6 +23,17 @@ Non-comprehensive list of changes in this release
 * OpenMP target offloading will no longer support on 32-bit Linux systems.
   ``libomptarget`` and plugins will not be built on 32-bit systems.
 
+* OpenMP target offloading plugins are re-implemented and named as the NextGen
+  plugins. These have an internal unified interface that implement the common
+  behavior of all the plugins. This way, generic optimizations or features can
+  be implemented once, in the plugin interface, so all the plugins include them
+  with no additional effort. Also, all new plugins now behave more similarly and
+  debugging is simplified. The NextGen module includes the NVIDIA CUDA, the
+  AMDGPU and the GenericELF64bit plugins. These NextGen plugins are enabled by
+  default and replace the original ones. The new plugins can be disabled by
+  setting the environment variable ``LIBOMPTARGET_NEXTGEN_PLUGINS`` to ``false``
+  (default: ``true``).
+
 * Support for building the OpenMP runtime for Windows on AArch64 and ARM
   with MinGW based toolchains.
 
