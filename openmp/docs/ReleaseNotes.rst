@@ -79,3 +79,11 @@ Non-comprehensive list of changes in this release
   maximum value for the per-thread re-enqueue counter (defaults to 5).
   ``OMPTARGET_QUERY_COUNT_BACKOFF_FACTOR`` defines the decrement factor applied
   to the counter when a target task is completed (defaults to 0.5).
+
+* GPU dynamic shared memory (aka. local data share (lds)) can now be allocated
+  per kernel via the ``ompx_dyn_cgroup_mem(<Bytes>)`` clause. For an example,
+  see https://openmp.llvm.org/design/Runtimes.html#dynamic-shared-memory.
+
+* OpenMP-Opt (run as part of O1/O2/O3) will more effectively lower GPU resource
+  usage and improve performance.
+
