@@ -41,6 +41,7 @@ class CallOp;
 
 namespace {
 class ScalarExprEmitter;
+class AggExprEmitter;
 }
 
 namespace cir {
@@ -56,6 +57,7 @@ public:
 
 private:
   friend class ::ScalarExprEmitter;
+  friend class ::AggExprEmitter;
 
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
