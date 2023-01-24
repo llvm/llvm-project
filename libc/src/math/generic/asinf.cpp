@@ -13,7 +13,6 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
-#include "src/__support/cpu_features.h"
 
 #include <errno.h>
 
