@@ -629,6 +629,45 @@ TEST(LlvmLibcSScanfTest, CurPosCombined) {
   EXPECT_EQ(result, 320);
 }
 
+TEST(LlvmLibcSScanfTest, PointerConvCombined) {
+  int ret_val;
+  void *result;
+
+  ret_val = __llvm_libc::sscanf("(nullptr)", "%p", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, static_cast<void *>(nullptr));
+
+  ret_val = __llvm_libc::sscanf("(NuLlPtR)", "%p", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, static_cast<void *>(nullptr));
+
+  ret_val = __llvm_libc::sscanf("(NULLPTR)", "%p", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, static_cast<void *>(nullptr));
+
+  ret_val = __llvm_libc::sscanf("(null)", "%p", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("(nullptr2", "%p", &result);
+  EXPECT_EQ(ret_val, 0);
+
+  ret_val = __llvm_libc::sscanf("0", "%p", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, reinterpret_cast<void *>(0));
+
+  ret_val = __llvm_libc::sscanf("100", "%p", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, reinterpret_cast<void *>(0x100));
+
+  ret_val = __llvm_libc::sscanf("-1", "%p", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, reinterpret_cast<void *>(-1));
+
+  ret_val = __llvm_libc::sscanf("0xabcDEFG", "%p", &result);
+  EXPECT_EQ(ret_val, 1);
+  EXPECT_EQ(result, reinterpret_cast<void *>(0xabcdef));
+}
+
 TEST(LlvmLibcSScanfTest, CombinedConv) {
   int ret_val;
   int result = 0;

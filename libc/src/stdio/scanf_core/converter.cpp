@@ -17,6 +17,7 @@
 #endif // LLVM_LIBC_SCANF_DISABLE_FLOAT
 #include "src/stdio/scanf_core/current_pos_converter.h"
 #include "src/stdio/scanf_core/int_converter.h"
+#include "src/stdio/scanf_core/ptr_converter.h"
 #include "src/stdio/scanf_core/string_converter.h"
 
 #include <stddef.h>
@@ -63,11 +64,11 @@ int convert(Reader *reader, const FormatSection &to_conv) {
 #endif // LLVM_LIBC_SCANF_DISABLE_FLOAT
   case 'n':
     return convert_current_pos(reader, to_conv);
-    //   case 'p':
-    //     ret_val = raw_match(reader, " ");
-    //     if (ret_val != READ_OK)
-    //       return ret_val;
-    //     return convert_pointer(reader, to_conv);
+  case 'p':
+    ret_val = raw_match(reader, " ");
+    if (ret_val != READ_OK)
+      return ret_val;
+    return convert_pointer(reader, to_conv);
   default:
     return raw_match(reader, to_conv.raw_string);
   }

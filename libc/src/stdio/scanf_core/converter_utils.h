@@ -35,8 +35,14 @@ LIBC_INLINE void write_int_with_length(uintmax_t output_val,
   if ((to_conv.flags & NO_WRITE) != 0) {
     return;
   }
-  LengthModifier lm = to_conv.length_modifier;
   void *output_ptr = to_conv.output_ptr;
+  // The %p conversion uses this function, and is always void*.
+  if (to_conv.conv_name == 'p') {
+    *reinterpret_cast<void **>(output_ptr) =
+        reinterpret_cast<void *>(output_val);
+    return;
+  }
+  LengthModifier lm = to_conv.length_modifier;
   switch (lm) {
   case (LengthModifier::hh):
     *reinterpret_cast<unsigned char *>(output_ptr) =
