@@ -8369,9 +8369,9 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     return;
   }
 
-  if (Function *F = I.getCalledFunction()) {
-    diagnoseDontCall(I);
+  diagnoseDontCall(I);
 
+  if (Function *F = I.getCalledFunction()) {
     if (F->isDeclaration()) {
       // Is this an LLVM intrinsic or a target-specific intrinsic?
       unsigned IID = F->getIntrinsicID();
