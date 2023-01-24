@@ -53,16 +53,15 @@ static void getMangledSortHelperFuncName(llvm::raw_svector_ostream &nameOstream,
                                          StringRef namePrefix, uint64_t nx,
                                          uint64_t ny, bool isCoo,
                                          ValueRange operands) {
-  nameOstream
-      << namePrefix << nx << "_"
-      << operands[xStartIdx].getType().cast<MemRefType>().getElementType();
+  nameOstream << namePrefix << nx << "_"
+              << getMemRefType(operands[xStartIdx]).getElementType();
 
   if (isCoo)
     nameOstream << "_coo_" << ny;
 
   uint64_t yBufferOffset = isCoo ? 1 : nx;
   for (Value v : operands.drop_front(xStartIdx + yBufferOffset))
-    nameOstream << "_" << v.getType().cast<MemRefType>().getElementType();
+    nameOstream << "_" << getMemRefType(v).getElementType();
 }
 
 /// Looks up a function that is appropriate for the given operands being
@@ -719,7 +718,7 @@ LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, uint64_t nx,
 
   // Convert `values` to have dynamic shape and append them to `operands`.
   for (Value v : xys) {
-    auto mtp = v.getType().cast<MemRefType>();
+    auto mtp = getMemRefType(v);
     if (!mtp.isDynamicDim(0)) {
       auto newMtp =
           MemRefType::get({ShapedType::kDynamic}, mtp.getElementType());
