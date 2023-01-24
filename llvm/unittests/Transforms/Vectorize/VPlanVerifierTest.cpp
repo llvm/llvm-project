@@ -108,5 +108,7 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 #if GTEST_HAS_STREAM_REDIRECTION
   EXPECT_STREQ("", ::testing::internal::GetCapturedStderr().c_str());
 #endif
+
+  delete Phi;
 }
 } // namespace
