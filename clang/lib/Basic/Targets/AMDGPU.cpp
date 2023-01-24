@@ -193,9 +193,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX1100:
       IsWave32Capable = true;
       Features["ci-insts"] = true;
-      Features["dot1-insts"] = true;
       Features["dot5-insts"] = true;
-      Features["dot6-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
       Features["dl-insts"] = true;

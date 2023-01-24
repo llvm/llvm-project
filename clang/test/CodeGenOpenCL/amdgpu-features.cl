@@ -86,10 +86,10 @@
 // GFX1034: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 // GFX1035: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
 // GFX1036: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize32"
-// GFX1100: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
-// GFX1101: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
-// GFX1102: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
-// GFX1103: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
-// GFX1103-W64: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize64"
+// GFX1100: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
+// GFX1101: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
+// GFX1102: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
+// GFX1103: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize32"
+// GFX1103-W64: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot5-insts,+dot7-insts,+dot8-insts,+dpp,+gfx10-3-insts,+gfx10-insts,+gfx11-insts,+gfx8-insts,+gfx9-insts,+wavefrontsize64"
 
 kernel void test() {}
