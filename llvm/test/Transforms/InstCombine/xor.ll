@@ -1124,8 +1124,8 @@ define i8 @not_ashr(i8 %x) {
 
 define <2 x i8> @not_ashr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @not_ashr_vec(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[A]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = sext <2 x i1> [[ISNOTNEG]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = ashr <2 x i8> %x, <i8 7, i8 7>

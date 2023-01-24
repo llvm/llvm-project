@@ -77,9 +77,9 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 
 define <2 x i64> @is_negative(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative(
-; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[LOBIT]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[NOTNOT:%.*]] = bitcast <4 x i32> [[X_LOBIT]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[NOTNOT]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %not = xor <4 x i32> %lobit, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -93,8 +93,8 @@ define <2 x i64> @is_negative(<4 x i32> %x) {
 
 define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative_bonus_bitcast(
-; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    ret <4 x i32> [[LOBIT]]
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    ret <4 x i32> [[X_LOBIT]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %not = xor <4 x i32> %lobit, <i32 -1, i32 -1, i32 -1, i32 -1>
