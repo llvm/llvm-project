@@ -36,6 +36,14 @@ body:             |
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_2:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY2]], implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_3:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY3]], implicit $mode, implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_4:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY4]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_5:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY5]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_6:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY6]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_7:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY7]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_8:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY8]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_9:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY9]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_10:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY10]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_11:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY11]], implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_12:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY12]], implicit $mode, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
@@ -47,22 +55,14 @@ body:             |
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_2]], implicit $exec
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_3]], implicit $exec
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_4]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_5:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY5]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_5]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_6:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY6]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_6]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_7:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY7]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_7]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_8:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY8]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_8]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_9:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY9]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_9]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_10:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY10]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_10]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_11:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY11]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_11]], implicit $exec
-  ; GCN-NEXT:   [[V_CVT_F64_I32_e32_12:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY12]], implicit $mode, implicit $exec
-  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_12]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_5]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_6]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_7]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_8]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_9]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_10]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_11]], implicit $exec
+  ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, [[V_CVT_F64_I32_e32_12]], implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_13:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY13]], implicit $mode, implicit $exec
   ; GCN-NEXT:   $vcc = V_CMP_EQ_U64_e64 $vcc, killed [[V_CVT_F64_I32_e32_13]], implicit $exec
   ; GCN-NEXT:   [[V_CVT_F64_I32_e32_14:%[0-9]+]]:vreg_64 = nofpexcept V_CVT_F64_I32_e32 [[COPY14]], implicit $mode, implicit $exec

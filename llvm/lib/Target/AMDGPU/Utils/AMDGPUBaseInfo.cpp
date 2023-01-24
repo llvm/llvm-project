@@ -828,11 +828,26 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
+  unsigned BytesPerCU = 0;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
+    BytesPerCU = 32768;
+  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
+    BytesPerCU = 65536;
+
+  // "Per CU" really means "per whatever functional block the waves of a
+  // workgroup must share". So the effective local memory size is doubled in
+  // WGP mode on gfx10.
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    BytesPerCU *= 2;
+
+  return BytesPerCU;
+}
+
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
     return 32768;
   if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
     return 65536;
-
   return 0;
 }
 
@@ -852,11 +867,18 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
   assert(FlatWorkGroupSize != 0);
   if (STI->getTargetTriple().getArch() != Triple::amdgcn)
     return 8;
+  unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
-  if (N == 1)
-    return 40;
-  N = 40 / N;
-  return std::min(N, 16u);
+  if (N == 1) {
+    // Single-wave workgroups don't consume barrier resources.
+    return MaxWaves;
+  }
+
+  unsigned MaxBarriers = 16;
+  if (isGFX10Plus(*STI) && !STI->getFeatureBits().test(FeatureCuMode))
+    MaxBarriers = 32;
+
+  return std::min(MaxWaves / N, MaxBarriers);
 }
 
 unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
