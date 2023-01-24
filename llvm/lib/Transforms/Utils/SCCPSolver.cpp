@@ -41,6 +41,14 @@ static ValueLatticeElement::MergeOptions getMaxWidenStepsOpts() {
       MaxNumRangeExtensions);
 }
 
+static ConstantRange getConstantRange(const ValueLatticeElement &LV, Type *Ty,
+                                      bool UndefAllowed = true) {
+  assert(Ty->isIntOrIntVectorTy() && "Should be int or int vector");
+  if (LV.isConstantRange(UndefAllowed))
+    return LV.getConstantRange();
+  return ConstantRange::getFull(Ty->getScalarSizeInBits());
+}
+
 namespace llvm {
 
 bool SCCPSolver::isConstant(const ValueLatticeElement &LV) {
@@ -115,8 +123,10 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   return true;
 }
 
-/// Try to replace signed instructions with their unsigned equivalent.
-static bool replaceSignedInst(SCCPSolver &Solver,
+/// Try to replace refine \p Inst with information of its value ranges from \p
+/// Solver. For example, SExts are replaced by ZExt, if the value range of the
+/// result is non-negative.
+static bool refineInstruction(SCCPSolver &Solver,
                               SmallPtrSetImpl<Value *> &InsertedValues,
                               Instruction &Inst) {
   // Determine if a signed value is known to be >= 0.
@@ -164,6 +174,29 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
     break;
   }
+  case Instruction::Add: {
+    auto GetRange = [&Solver, &InsertedValues](Value *Op) {
+      unsigned Bitwidth = Op->getType()->getScalarSizeInBits();
+      if (InsertedValues.contains(Op) || isa<UndefValue>(Op))
+        return ConstantRange::getFull(Bitwidth);
+      if (auto *Const = dyn_cast<ConstantInt>(Op))
+        return ConstantRange(Const->getValue());
+
+      return getConstantRange(Solver.getLatticeValueFor(Op), Op->getType(),
+                              /*UndefAllowed=*/false);
+    };
+
+    auto RangeA = GetRange(Inst.getOperand(0));
+    auto RangeB = GetRange(Inst.getOperand(1));
+    auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Add, RangeB, OverflowingBinaryOperator::NoUnsignedWrap);
+    if (!Inst.hasNoUnsignedWrap() && NUWRange.contains(RangeA)) {
+      Inst.setHasNoUnsignedWrap();
+      return true;
+    }
+
+    return false;
+  }
   default:
     return false;
   }
@@ -192,7 +225,7 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
 
       MadeChanges = true;
       ++InstRemovedStat;
-    } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
+    } else if (refineInstruction(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
     }
@@ -682,7 +715,6 @@ public:
   bool isStructLatticeConstant(Function *F, StructType *STy);
 
   Constant *getConstant(const ValueLatticeElement &LV) const;
-  ConstantRange getConstantRange(const ValueLatticeElement &LV, Type *Ty) const;
 
   SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() {
     return TrackingIncomingArguments;
@@ -781,15 +813,6 @@ Constant *SCCPInstVisitor::getConstant(const ValueLatticeElement &LV) const {
       return ConstantInt::get(Ctx, *CR.getSingleElement());
   }
   return nullptr;
-}
-
-ConstantRange
-SCCPInstVisitor::getConstantRange(const ValueLatticeElement &LV,
-                                  Type *Ty) const {
-  assert(Ty->isIntOrIntVectorTy() && "Should be int or int vector");
-  if (LV.isConstantRange())
-    return LV.getConstantRange();
-  return ConstantRange::getFull(Ty->getScalarSizeInBits());
 }
 
 void SCCPInstVisitor::markArgInFuncSpecialization(
