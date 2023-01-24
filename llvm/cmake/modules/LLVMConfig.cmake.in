@@ -140,9 +140,9 @@ if(NOT TARGET LLVMSupport)
   @llvm_config_include_buildtree_only_exports@
 endif()
 
-# By creating the following targets here, subprojects that depend on
-# LLVM's tablegen-generated headers can always depend on this target
-# whether building in-tree with LLVM or not.
+# By creating intrinsics_gen, omp_gen and acc_gen here, subprojects that depend
+# on LLVM's tablegen-generated headers can always depend on this target whether
+# building in-tree with LLVM or not.
 if(NOT TARGET intrinsics_gen)
   add_custom_target(intrinsics_gen)
 endif()
@@ -151,9 +151,6 @@ if(NOT TARGET omp_gen)
 endif()
 if(NOT TARGET acc_gen)
   add_custom_target(acc_gen)
-endif()
-if(NOT TARGET RISCVTargetParserTablegen)
-  add_custom_target(RISCVTargetParserTableGen)
 endif()
 
 set_property(GLOBAL PROPERTY LLVM_TARGETS_CONFIGURED On)
