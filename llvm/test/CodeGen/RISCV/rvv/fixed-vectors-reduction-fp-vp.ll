@@ -133,17 +133,14 @@ define float @vpreduce_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
 ; CHECK-NEXT:    vfredusum.vs v25, v8, v25, v0.t
-; CHECK-NEXT:    vfmv.f.s ft0, v25
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, ft0
 ; CHECK-NEXT:    addi a1, a0, -32
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vfredusum.vs v8, v16, v8, v0.t
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfredusum.vs v25, v16, v25, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v25
 ; CHECK-NEXT:    ret
   %r = call reassoc float @llvm.vp.reduce.fadd.v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 %evl)
   ret float %r
@@ -164,17 +161,14 @@ define float @vpreduce_ord_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, 
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
 ; CHECK-NEXT:    vfredosum.vs v25, v8, v25, v0.t
-; CHECK-NEXT:    vfmv.f.s ft0, v25
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v8, ft0
 ; CHECK-NEXT:    addi a1, a0, -32
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vfredosum.vs v8, v16, v8, v0.t
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    vfredosum.vs v25, v16, v25, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v25
 ; CHECK-NEXT:    ret
   %r = call float @llvm.vp.reduce.fadd.v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 %evl)
   ret float %r
