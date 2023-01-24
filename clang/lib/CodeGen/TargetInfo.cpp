@@ -11008,11 +11008,6 @@ void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
     }
   }
 
-  // We must track the number of GPRs used in order to conform to the RISC-V
-  // ABI, as integer scalars passed in registers should have signext/zeroext
-  // when promoted, but are anyext if passed on the stack. As GPR usage is
-  // different for variadic arguments, we must also track whether we are
-  // examining a vararg or not.
   int ArgGPRsLeft = IsRetIndirect ? NumArgGPRs - 1 : NumArgGPRs;
   int ArgFPRsLeft = FLen ? NumArgFPRs : 0;
   int NumFixedArgs = FI.getNumRequiredArgs();
@@ -11290,7 +11285,6 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   }
 
   uint64_t NeededAlign = getContext().getTypeAlign(Ty);
-  bool MustUseStack = false;
   // Determine the number of GPRs needed to pass the current argument
   // according to the ABI. 2*XLen-aligned varargs are passed in "aligned"
   // register pairs, so may consume 3 registers.
@@ -11301,7 +11295,6 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     NeededArgGPRs = 2;
 
   if (NeededArgGPRs > ArgGPRsLeft) {
-    MustUseStack = true;
     NeededArgGPRs = ArgGPRsLeft;
   }
 
@@ -11312,14 +11305,13 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
       Ty = EnumTy->getDecl()->getIntegerType();
 
-    // All integral types are promoted to XLen width, unless passed on the
-    // stack.
-    if (Size < XLen && Ty->isIntegralOrEnumerationType() && !MustUseStack) {
+    // All integral types are promoted to XLen width
+    if (Size < XLen && Ty->isIntegralOrEnumerationType()) {
       return extendType(Ty);
     }
 
     if (const auto *EIT = Ty->getAs<BitIntType>()) {
-      if (EIT->getNumBits() < XLen && !MustUseStack)
+      if (EIT->getNumBits() < XLen)
         return extendType(Ty);
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
