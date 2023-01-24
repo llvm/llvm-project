@@ -2940,7 +2940,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         ED.IsReachedFromAlignedBarrierOnly =
             IsNoSync && ED.IsReachedFromAlignedBarrierOnly;
         AlignedBarrierLastInBlock &= ED.IsReachedFromAlignedBarrierOnly;
-        ED.EncounteredNonLocalSideEffect |= true;
+        ED.EncounteredNonLocalSideEffect |= !CB->doesNotAccessMemory();
         if (!IsNoSync)
           SyncInstWorklist.push_back(&I);
       }
