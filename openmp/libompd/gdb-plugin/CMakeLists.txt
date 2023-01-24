@@ -58,9 +58,13 @@ find_package (PythonLibs REQUIRED)
 
 include_directories (${OMPD_INCLUDE_PATH})
 include_directories (${LIBOMP_INCLUDE_DIR})
+
+# Needed for dlsym in the module.
+find_library(CLANG_CPP clang-cpp HINTS ${LLVM_LIBRARY_DIR} ${LLVM_LIBRARY_DIR}/../lib REQUIRED)
+
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd/__init__.py
                    DEPENDS ompdModule.c DLSymService.cpp ompdAPITests.c setup.py ompd/frame_filter.py ompd/__init__.py ompd/ompd_address_space.py ompd/ompd_callbacks.py ompd/ompd_handles.py ompd/ompd.py
-                   COMMAND ${CMAKE_COMMAND} -E env LIBOMP_INCLUDE_DIR=${LIBOMP_INCLUDE_DIR} LLVM_MAIN_INCLUDE_DIR=${LLVM_MAIN_INCLUDE_DIR}
+		    COMMAND ${CMAKE_COMMAND} -E env LIBOMP_INCLUDE_DIR=${LIBOMP_INCLUDE_DIR} LLVM_MAIN_INCLUDE_DIR=${LLVM_MAIN_INCLUDE_DIR} CLANG_CPP=${CLANG_CPP} INSTALL_LIB_LOC=${CLANG_CPP}../
                    ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/setup.py -v bdist_wheel -b ${CMAKE_CURRENT_BINARY_DIR}/build -d ${CMAKE_CURRENT_BINARY_DIR}
                    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/setup.py clean --all
                    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_SOURCE_DIR}/ompd.egg-info
@@ -81,6 +85,7 @@ include_directories (
         ${LIBOMP_SRC_DIR}
         ${Python3_INCLUDE_DIRS}
 )
+
 target_link_libraries (ompdModule ${Python3_LIBRARIES})
 target_link_libraries (ompdModule ${CMAKE_DL_LIBS})
 
