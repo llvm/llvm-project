@@ -54,6 +54,12 @@ void tooling::dependencies::configureInvocationForCaching(
       PPOpts.MacroIncludes.clear();
       PPOpts.Includes.clear();
     }
+    // Disable `-gmodules` to avoid debug info referencing a non-existent PCH
+    // filename.
+    // NOTE: We'd have to preserve \p HeaderSearchOptions::ModuleFormat (code
+    // above resets \p HeaderSearchOptions) when properly supporting
+    // `-gmodules`.
+    CI.getCodeGenOpts().DebugTypeExtRefs = false;
   } else {
     FileSystemOpts.CASFileSystemRootID = std::move(RootID);
     FileSystemOpts.CASFileSystemWorkingDirectory = std::move(WorkingDir);
