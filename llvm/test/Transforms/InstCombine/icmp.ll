@@ -1140,6 +1140,36 @@ define i1 @low_mask_eq_zext_commute(i8 %a, i32 %b) {
   ret i1 %c
 }
 
+; negative test
+
+define i1 @wrong_low_mask_eq_zext(i8 %a, i32 %b) {
+; CHECK-LABEL: @wrong_low_mask_eq_zext(
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[B:%.*]], 127
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[T]], [[Z]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %t = and i32 %b, 127
+  %z = zext i8 %a to i32
+  %c = icmp eq i32 %t, %z
+  ret i1 %c
+}
+
+; negative test
+
+define i1 @wrong_low_mask_eq_zext2(i8 %a, i32 %b) {
+; CHECK-LABEL: @wrong_low_mask_eq_zext2(
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[B:%.*]], 254
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[T]], [[Z]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %t = and i32 %b, 254
+  %z = zext i8 %a to i32
+  %c = icmp eq i32 %t, %z
+  ret i1 %c
+}
+
 define i1 @low_mask_eq_zext_use1(i8 %a, i32 %b) {
 ; CHECK-LABEL: @low_mask_eq_zext_use1(
 ; CHECK-NEXT:    [[T:%.*]] = and i32 [[B:%.*]], 255
@@ -1189,9 +1219,8 @@ define i1 @low_mask_eq_zext_use3(i8 %a, i32 %b) {
 
 define <2 x i1> @low_mask_eq_zext_vec_splat(<2 x i8> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @low_mask_eq_zext_vec_splat(
-; CHECK-NEXT:    [[T:%.*]] = and <2 x i32> [[B:%.*]], <i32 255, i32 255>
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[T]], [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[B:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %t = and <2 x i32> %b, <i32 255, i32 255>
