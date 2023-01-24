@@ -82,19 +82,21 @@ add_object_library(
     float_converter.cpp
   HDRS
     converter.h
+    converter_utils.h
     int_converter.h
     string_converter.h
     float_converter.h
+    current_pos_converter.h
   DEPENDS
     .reader
     .core_structs
+    libc.src.__support.common
     libc.src.__support.ctype_utils
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.limits
     libc.src.__support.char_vector
-    libc.include.errno
-    libc.src.errno.errno
+    libc.src.__support.str_to_float
 )
 
 add_object_library(
