@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Finds dynamically initialized static variables in header files.
 ///
@@ -40,8 +38,6 @@ private:
   utils::FileExtensionsSet HeaderFileExtensions;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DYNAMIC_STATIC_INITIALIZERS_CHECK_H

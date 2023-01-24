@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Finds ``pthread_kill`` function calls when thread is terminated by
 /// ``SIGTERM`` signal.
@@ -31,8 +29,6 @@ public:
   std::optional<unsigned> SigtermValue;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_BADSIGNALTOKILLTHREADCHECK_H

@@ -13,9 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Finds unnecessary string initializations.
 class RedundantStringInitCheck : public ClangTidyCheck {
@@ -32,8 +30,6 @@ private:
   std::vector<StringRef> StringNames;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_REDUNDANT_STRING_INIT_H
