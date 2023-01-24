@@ -2265,7 +2265,9 @@ bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   case Intrinsic::nvvm_barrier0_popc:
     return true;
   case Intrinsic::amdgcn_s_barrier:
-    return ExecutedAligned;
+    if (ExecutedAligned)
+      return true;
+    break;
   default:
     break;
   }
