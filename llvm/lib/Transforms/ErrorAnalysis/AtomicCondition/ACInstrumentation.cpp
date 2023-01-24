@@ -139,14 +139,14 @@ void ACInstrumentation::instrumentCallsForACComputation(
       if (OpRegisterNamePointer != EmptyValuePointer) {
         OperandValue = InstructionBuilder.CreateFPCast(
             BaseInstruction->getOperand(I),
-            Type::getDoubleTy(BaseInstruction->getModule()->getContext()));
+            Type::getDoubleTy(BaseInstruction->getModule()->getContext()),
+            "AFCast");
 
         (*InstructionIterator)++;
         (*NumInstrumentedInstructions)++;
       } else if(isa<ConstantFP>(BaseInstruction->getOperand(I))){
         OperandValue = ConstantFP::get(InstructionBuilder.getDoubleTy(),
                                        APFloat(static_cast<ConstantFP*>(BaseInstruction->getOperand(I))->getValue().convertToDouble()));
-//        ConstantData(InstructionBuilder.getDoubleTy(), Value::ConstantFPVal);
       }
     }
 
@@ -184,7 +184,7 @@ void ACInstrumentation::instrumentCallsForACComputation(
   // Creating a call to ACComputingFunction with above parameters
   ArrayRef<Value *> ACArgsRef(ACArgs);
   CallInst *ACComputingCallInstruction =
-      InstructionBuilder.CreateCall(ACComputingFunction, ACArgsRef);
+      InstructionBuilder.CreateCall(ACComputingFunction, ACArgsRef, "AFACCall");
 
   // 2*(Get Location + Store Value at Location) * NumOperands +
   // 2*(Allocate for Array + GetArrayLocation) + ACComputation Function Call
@@ -263,7 +263,7 @@ void ACInstrumentation::instrumentCallsForAFComputation(
   // Creating a call to AFComputingFunction with above parameters
   ArrayRef<Value *> AFArgsRef(AFArgs);
   AFComputingCallInstruction =
-      InstructionBuilder.CreateCall(AFComputingFunction, AFArgsRef);
+      InstructionBuilder.CreateCall(AFComputingFunction, AFArgsRef, "AFCall");
 
   // Setting IncomingValue for the BasicBlock-IncomingValue pair coming from the
   // Current BasicBlock.
@@ -303,7 +303,7 @@ ACInstrumentation::instrumentPhiNodeForAF(Value *OriginalPHI,
 
   Value *AFPhi = InstructionBuilder.CreatePHI(
       InstructionBuilder.getPtrTy(),
-      static_cast<PHINode *>(OriginalPHI)->getNumIncomingValues(), "Fi");
+      static_cast<PHINode *>(OriginalPHI)->getNumIncomingValues(), "AFFi");
 
   // Looping through the Incoming Values and setting the IncomingBlocks for the new PhiNode
   for (unsigned int I = 0;
@@ -378,7 +378,7 @@ Value *ACInstrumentation::instrumentSelectForAF(
   // and incrementing insert pointer.
   Value *AFSel = InstructionBuilder.CreateSelect(
       static_cast<SelectInst *>(OriginalSelInstr)->getCondition(), TrueAFValue,
-      FalseAFValue);
+      FalseAFValue, "AFSel");
   (*NumInstrumentedInstructions)++;
   (*InstructionIterator)++;
 
@@ -521,7 +521,8 @@ ACInstrumentation::createArrayInIR(vector<Value *> ArrayOfValues,
                                    BasicBlock::iterator *InstructionIterator) {
   // Inserting an Alloca Instruction to allocate memory for the array.
   Value *AllocatedArray = InstructionBuilder->CreateAlloca(
-      ArrayType::get(InstructionBuilder->getPtrTy(), ArrayOfValues.size()));
+      ArrayType::get(InstructionBuilder->getPtrTy(), ArrayOfValues.size()),
+      NULL, "AFAlloca");
   (*InstructionIterator)++;
 
   // Looping through operands of BaseInstruction
@@ -529,16 +530,17 @@ ACInstrumentation::createArrayInIR(vector<Value *> ArrayOfValues,
     // Setting Value in OperandNameArray
     Value *LocationInArray = InstructionBuilder->CreateGEP(
         InstructionBuilder->getPtrTy(), AllocatedArray,
-        InstructionBuilder->getInt32(I));
+        InstructionBuilder->getInt32(I), "AFGep");
     (*InstructionIterator)++;
-    InstructionBuilder->CreateStore(ArrayOfValues[I], LocationInArray);
+    InstructionBuilder->CreateStore(ArrayOfValues[I], LocationInArray, "AFStore");
     (*InstructionIterator)++;
   }
 
   // Get pointers to arrays
   Value *Array = InstructionBuilder->CreateGEP(InstructionBuilder->getPtrTy(),
                                                AllocatedArray,
-                                               InstructionBuilder->getInt32(0));
+                                               InstructionBuilder->getInt32(0),
+                                               "AFGep");
   (*InstructionIterator)++;
 
   return Array;
