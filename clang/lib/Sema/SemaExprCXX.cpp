@@ -1483,13 +1483,14 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   //   Otherwise, if the type contains a placeholder type, it is replaced by the
   //   type determined by placeholder type deduction.
   DeducedType *Deduced = Ty->getContainedDeducedType();
-  if (Deduced && isa<DeducedTemplateSpecializationType>(Deduced)) {
+  if (Deduced && !Deduced->isDeduced() &&
+      isa<DeducedTemplateSpecializationType>(Deduced)) {
     Ty = DeduceTemplateSpecializationFromInitializer(TInfo, Entity,
                                                      Kind, Exprs);
     if (Ty.isNull())
       return ExprError();
     Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
-  } else if (Deduced) {
+  } else if (Deduced && !Deduced->isDeduced()) {
     MultiExprArg Inits = Exprs;
     if (ListInitialization) {
       auto *ILE = cast<InitListExpr>(Exprs[0]);
@@ -2016,7 +2017,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   auto *Deduced = AllocType->getContainedDeducedType();
-  if (Deduced && isa<DeducedTemplateSpecializationType>(Deduced)) {
+  if (Deduced && !Deduced->isDeduced() &&
+      isa<DeducedTemplateSpecializationType>(Deduced)) {
     if (ArraySize)
       return ExprError(
           Diag(*ArraySize ? (*ArraySize)->getExprLoc() : TypeRange.getBegin(),
@@ -2030,7 +2032,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
       return ExprError();
-  } else if (Deduced) {
+  } else if (Deduced && !Deduced->isDeduced()) {
     MultiExprArg Inits = Exprs;
     bool Braced = (initStyle == CXXNewExpr::ListInit);
     if (Braced) {
