@@ -1464,9 +1464,9 @@ static SDValue lowerStoreF128(SDValue Op, SelectionDAG &DAG) {
   SDNode *Lo64 = DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, MVT::i64,
                                     StNode->getValue(), SubRegOdd);
 
-  unsigned Alignment = StNode->getAlign().value();
+  Align Alignment = StNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
 
   // VE stores Hi64 to 8(addr) and Lo64 to 0(addr)
   SDValue OutChains[2];
@@ -1498,9 +1498,9 @@ static SDValue lowerStoreI1(SDValue Op, SelectionDAG &DAG) {
   assert(StNode && StNode->getOffset().isUndef() && "Unexpected node type");
 
   SDValue BasePtr = StNode->getBasePtr();
-  unsigned Alignment = StNode->getAlign().value();
+  Align Alignment = StNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
   EVT AddrVT = BasePtr.getValueType();
   EVT MemVT = StNode->getMemoryVT();
   if (MemVT == MVT::v256i1 || MemVT == MVT::v4i64) {

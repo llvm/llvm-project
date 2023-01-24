@@ -1346,6 +1346,8 @@ public:
                    Ranges);
   }
   /// FIXME: Remove once transition to Align is over.
+  LLVM_DEPRECATED("Use the getLoad function that takes a MaybeAlign instead",
+                  "")
   inline SDValue
   getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
           const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
@@ -1380,6 +1382,7 @@ public:
                     MMOFlags, AAInfo);
   }
   /// FIXME: Remove once transition to Align is over.
+  LLVM_DEPRECATED("Use the version that takes a MaybeAlign instead", "")
   inline SDValue
   getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
            MachinePointerInfo PtrInfo, unsigned Alignment,
@@ -1406,6 +1409,7 @@ public:
                          AAInfo);
   }
   /// FIXME: Remove once transition to Align is over.
+  LLVM_DEPRECATED("Use the version that takes a MaybeAlign instead", "")
   inline SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT, unsigned Alignment,
