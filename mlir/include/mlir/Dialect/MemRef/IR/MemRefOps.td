@@ -572,7 +572,7 @@ def MemRef_DimOp : MemRef_Op<"dim", [
     ```
   }];
 
-  let arguments = (ins AnyRankedOrUnrankedMemRef:$source,
+  let arguments = (ins AnyNon0RankedOrUnrankedMemRef:$source,
                        Index:$index);
   let results = (outs Index:$result);
 

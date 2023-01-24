@@ -548,6 +548,12 @@ class HasAnyRankOfPred<list<int> ranks> : And<[
                          == }]
                       # rank>)>]>;
 
+// Whether a shaped type has a rank greater than or equal of the specified rank.
+class HasRankGreaterOrEqualPred<int rank> : And<[
+    HasRankPred,
+    CPred<[{$_self.cast<::mlir::ShapedType>().getRank() >= }] # rank>
+]>;
+
 // Vector types.
 
 class VectorOf<list<Type> allowedTypes> :
@@ -748,7 +754,16 @@ class RankedTensorOf<
     string summary = "ranked tensor">
   : TensorOf<allowedTypes, !listconcat([HasRankPred], preds), summary>;
 
+class Non0RankedTensorOf<list<Type> allowedTypes>
+  : TensorOf<allowedTypes, [HasRankGreaterOrEqualPred<1>],
+      "non-0-ranked.tensor">;
+
 def AnyRankedTensor : RankedTensorOf<[AnyType]>;
+def AnyNon0RankedTensor  : Non0RankedTensorOf<[AnyType]>;
+def AnyUnrankedTensor  : UnrankedTensorOf<[AnyType]>;
+
+def AnyNon0RankedOrUnrankedTensor:
+    AnyTypeOf<[AnyUnrankedTensor, AnyNon0RankedTensor]>;
 
 // Ranked tensor type with one of the specified types and ranks.
 class TensorRankOf<list<Type> allowedTypes, list<int> ranks>
@@ -782,13 +797,20 @@ def AnyUnrankedMemRef : UnrankedMemRefOf<[AnyType]>;
 class MemRefOf<list<Type> allowedTypes> :
     ShapedContainerType<allowedTypes, IsMemRefTypePred, "memref",
                         "::mlir::MemRefType">;
+class Non0RankedMemRefOf<list<Type> allowedTypes> :
+    ConfinedType<MemRefOf<allowedTypes>, [HasRankGreaterOrEqualPred<1>],
+         "non-0-ranked." # MemRefOf<allowedTypes>.summary,
+         "::mlir::MemRefType">;
 
 def AnyMemRef : MemRefOf<[AnyType]>;
+def AnyNon0RankedMemRef : Non0RankedMemRefOf<[AnyType]>;
 
 class RankedOrUnrankedMemRefOf<list<Type> allowedTypes>:
     AnyTypeOf<[UnrankedMemRefOf<allowedTypes>, MemRefOf<allowedTypes>]>;
 
 def AnyRankedOrUnrankedMemRef: AnyTypeOf<[AnyUnrankedMemRef, AnyMemRef]>;
+def AnyNon0RankedOrUnrankedMemRef:
+    AnyTypeOf<[AnyUnrankedMemRef, AnyNon0RankedMemRef]>;
 
 // Memref declarations handle any memref, independent of rank, size, (static or
 // dynamic), layout, or memory space.
