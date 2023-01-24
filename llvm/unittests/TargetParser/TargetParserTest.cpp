@@ -1657,9 +1657,6 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
 
   for (const auto *A : AArch64::ArchInfos) {
     EXPECT_EQ(*A, *A);
-    if (!(*A == *A)) {
-      EXPECT_NE(*A, *A);
-    }
     // Comparison with invalid is always false
     EXPECT_FALSE(A->implies(AArch64::INVALID));
     EXPECT_FALSE(AArch64::INVALID.implies(*A));
