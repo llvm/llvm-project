@@ -101,12 +101,14 @@ struct Policy {
   };
   PolicyType TailPolicy = Omit;
   PolicyType MaskPolicy = Omit;
-  bool IntrinsicWithoutMU = false;
-  Policy() : IsUnspecified(true) {}
-  Policy(PolicyType _TailPolicy, PolicyType _MaskPolicy,
-         bool _IntrinsicWithoutMU = false)
-      : TailPolicy(_TailPolicy), MaskPolicy(_MaskPolicy),
-        IntrinsicWithoutMU(_IntrinsicWithoutMU) {}
+  bool HasTailPolicy, HasMaskPolicy;
+  Policy(bool HasTailPolicy, bool HasMaskPolicy)
+      : IsUnspecified(true), HasTailPolicy(HasTailPolicy),
+        HasMaskPolicy(HasMaskPolicy) {}
+  Policy(PolicyType TailPolicy, PolicyType MaskPolicy, bool HasTailPolicy,
+         bool HasMaskPolicy)
+      : TailPolicy(TailPolicy), MaskPolicy(MaskPolicy),
+        HasTailPolicy(HasTailPolicy), HasMaskPolicy(HasMaskPolicy) {}
 
   bool isTAMAPolicy() const {
     return TailPolicy == Agnostic && MaskPolicy == Agnostic;
@@ -122,16 +124,6 @@ struct Policy {
 
   bool isTUMUPolicy() const {
     return TailPolicy == Undisturbed && MaskPolicy == Undisturbed;
-  }
-
-  bool isTUMPolicy() const {
-    return TailPolicy == Undisturbed && MaskPolicy == Agnostic &&
-           IntrinsicWithoutMU;
-  }
-
-  bool isTAMPolicy() const {
-    return TailPolicy == Agnostic && MaskPolicy == Agnostic &&
-           IntrinsicWithoutMU;
   }
 
   bool isTAPolicy() const {
@@ -150,12 +142,17 @@ struct Policy {
     return MaskPolicy == Undisturbed && TailPolicy == Omit;
   }
 
+  bool hasTailPolicy() const { return HasTailPolicy; }
+
+  bool hasMaskPolicy() const { return HasMaskPolicy; }
+
   bool isUnspecified() const { return IsUnspecified; }
 
   bool operator==(const Policy &Other) const {
     return IsUnspecified == Other.IsUnspecified &&
            TailPolicy == Other.TailPolicy && MaskPolicy == Other.MaskPolicy &&
-           IntrinsicWithoutMU == Other.IntrinsicWithoutMU;
+           HasTailPolicy == Other.HasTailPolicy &&
+           HasMaskPolicy == Other.HasMaskPolicy;
   }
 
   bool operator!=(const Policy &Other) const { return !(*this == Other); }
@@ -473,7 +470,8 @@ public:
                       unsigned NF, PolicyScheme DefaultScheme,
                       Policy PolicyAttrs);
 
-  static llvm::SmallVector<Policy> getSupportedUnMaskedPolicies();
+  static llvm::SmallVector<Policy>
+  getSupportedUnMaskedPolicies(bool HasTailPolicy, bool HasMaskPolicy);
   static llvm::SmallVector<Policy>
       getSupportedMaskedPolicies(bool HasTailPolicy, bool HasMaskPolicy);
 
