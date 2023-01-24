@@ -127,6 +127,7 @@ co_invoke_fn co_invoke;
 }} // namespace folly::coro
 
 // CHECK: ![[VoidTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", i8>
+// CHECK: ![[IntTask:ty_.*]] = !cir.struct<"struct.folly::coro::Task", i8>
 // CHECK: ![[VoidPromisse:ty_.*]] = !cir.struct<"struct.folly::coro::Task<void>::promise_type", i8>
 // CHECK: ![[CoroHandleVoid:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", i8>
 // CHECK: ![[CoroHandlePromise:ty_.*]] = !cir.struct<"struct.std::coroutine_handle", i8>
@@ -299,20 +300,30 @@ folly::coro::Task<void> silly_coro() {
 // CHECK-NOT: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv
 // CHECK: cir.await(final, ready : {
 
-folly::coro::Task<int> go(int const& val) {
-  co_return val;
-}
+folly::coro::Task<int> go(int const& val);
 folly::coro::Task<int> go1() {
   auto task = go(1);
   co_return co_await task;
 }
 
 // CHECK: cir.func coroutine @_Z3go1v()
+// CHECK: %[[#IntTaskAddr:]] = cir.alloca ![[IntTask]], cir.ptr <![[IntTask]]>, ["task", init]
+
 // CHECK:   cir.await(init, ready : {
 // CHECK:   }, suspend : {
 // CHECK:   }, resume : {
 // CHECK:   },)
 // CHECK: }
+
+// The call to go(1) has its own scope due to full-expression rules.
+// CHECK: cir.scope {
+// CHECK:   %[[#OneAddr:]] = cir.alloca i32, cir.ptr <i32>, ["ref.tmp1", init] {alignment = 4 : i64}
+// CHECK:   %[[#One:]] = cir.cst(1 : i32) : i32
+// CHECK:   cir.store %[[#One]], %[[#OneAddr]] : i32, cir.ptr <i32>
+// CHECK:   %[[#IntTaskTmp:]] = cir.call @_Z2goRKi(%[[#OneAddr]]) : (!cir.ptr<i32>) -> ![[IntTask]]
+// CHECK:   cir.store %[[#IntTaskTmp]], %[[#IntTaskAddr]] : ![[IntTask]], cir.ptr <![[IntTask]]>
+// CHECK: }
+
 // CHECK: %[[#CoReturnValAddr:]] = cir.alloca i32, cir.ptr <i32>, ["__coawait_resume_rval"] {alignment = 1 : i64}
 // CHECK: cir.await(user, ready : {
 // CHECK: }, suspend : {

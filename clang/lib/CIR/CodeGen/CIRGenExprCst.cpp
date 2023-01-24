@@ -745,6 +745,7 @@ public:
   }
 
   mlir::Attribute VisitExprWithCleanups(ExprWithCleanups *E, QualType T) {
+    // Since this about constant emission no need to wrap this under a scope.
     return Visit(E->getSubExpr(), T);
   }
 
