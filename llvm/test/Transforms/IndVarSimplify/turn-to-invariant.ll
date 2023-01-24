@@ -842,13 +842,14 @@ failed:
   ret i32 -3
 }
 
-; TODO: Same as test_litter_conditions, but an extra check with known exact exit count is preventing the opt.
+; Same as test_litter_conditions, but an extra check with known exact exit count is preventing the opt.
 define i32 @test_litter_conditions_constant(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_constant(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[CANONICAL_IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[CANONICAL_IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[CONSTANT_CHECK:%.*]] = icmp ult i32 [[CANONICAL_IV]], 65635
 ; CHECK-NEXT:    br i1 [[CONSTANT_CHECK]], label [[CONSTANT_CHECK_PASSED:%.*]], label [[CONSTANT_CHECK_FAILED:%.*]]
@@ -858,10 +859,9 @@ define i32 @test_litter_conditions_constant(i32 %start, i32 %len) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
-; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IV_MINUS_1]], [[LEN:%.*]]
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
-; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[RANGE_CHECK]], [[FAKE_2]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[RANGE_CHECK_FIRST_ITER]], [[FAKE_2]]
 ; CHECK-NEXT:    br i1 [[AND_2]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
