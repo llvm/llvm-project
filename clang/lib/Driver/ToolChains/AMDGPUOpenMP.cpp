@@ -66,8 +66,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   // Link the bitcode library late if we're using device LTO.
   if (getDriver().isUsingLTO(/* IsOffload */ true))
     return;
-
-  addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GPUArch, getTriple());
 }
 
 llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
