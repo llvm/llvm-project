@@ -1,4 +1,5 @@
 // RUN: %clang -x objective-c -target arm64-apple-macos12.0 -fobjc-arc -std=gnu99  -O0 -fsanitize=undefined -fsanitize=nullability -c %s -v -g
+// REQUIRES: aarch64-registered-target
 
 @interface NSString
 @end
