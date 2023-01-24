@@ -240,6 +240,17 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
   return emitSilenceableError() << "all alternatives failed";
 }
 
+void transform::AlternativesOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getOperands(), effects);
+  producesHandle(getResults(), effects);
+  for (Region *region : getRegions()) {
+    if (!region->empty())
+      producesHandle(region->front().getArguments(), effects);
+  }
+  modifiesPayload(effects);
+}
+
 LogicalResult transform::AlternativesOp::verify() {
   for (Region &alternative : getAlternatives()) {
     Block &block = alternative.front();

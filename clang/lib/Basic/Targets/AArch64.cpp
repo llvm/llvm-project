@@ -698,8 +698,6 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   if (llvm::AArch64::getExtensionFeatures(Extensions, CPUFeats)) {
     for (auto F : CPUFeats) {
       assert(F[0] == '+' && "Expected + in target feature!");
-      if (F == "+crypto")
-        continue;
       Features[F.drop_front(1)] = true;
     }
   }

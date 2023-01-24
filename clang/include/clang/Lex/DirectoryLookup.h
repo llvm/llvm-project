@@ -50,7 +50,7 @@ private:
 
   /// DirCharacteristic - The type of directory this is: this is an instance of
   /// SrcMgr::CharacteristicKind.
-  unsigned DirCharacteristic : 2;
+  unsigned DirCharacteristic : 3;
 
   /// LookupType - This indicates whether this DirectoryLookup object is a
   /// normal directory, a framework, or a headermap.
