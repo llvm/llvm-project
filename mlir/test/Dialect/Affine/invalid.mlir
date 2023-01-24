@@ -501,3 +501,17 @@ func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
   affine.delinearize_index %idx into () : index
   return
 }
+
+// -----
+
+func.func @dynamic_dimension_index() {
+  "unknown.region"() ({
+    %idx = "unknown.test"() : () -> (index)
+    %memref = "unknown.test"() : () -> memref<?x?xf32>
+    %dim = memref.dim %memref, %idx : memref<?x?xf32>
+    // expected-error @below {{op index must be a dimension or symbol identifier}}
+    affine.load %memref[%dim, %dim] : memref<?x?xf32>
+    "unknown.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}

@@ -127,6 +127,7 @@ set(bc_flags -c -emit-llvm -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
              -nocudalib -nogpulib -nostdinc
              -fopenmp -fopenmp-cuda-mode
+             -Wno-unknown-cuda-version
              -I${include_directory}
              -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}

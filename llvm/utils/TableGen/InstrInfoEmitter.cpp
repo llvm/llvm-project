@@ -907,16 +907,19 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   // Emit all of the instruction's implicit uses and defs.
   Records.startTimer("Emit uses/defs");
   for (const CodeGenInstruction *II : Target.getInstructionsByEnumValue()) {
-    Record *Inst = II->TheDef;
-    std::vector<Record*> Uses = Inst->getValueAsListOfDefs("Uses");
-    if (!Uses.empty()) {
-      unsigned &IL = EmittedLists[Uses];
-      if (!IL) PrintDefList(Uses, IL = ++ListNumber, OS);
+    if (!II->ImplicitUses.empty()) {
+      unsigned &IL = EmittedLists[II->ImplicitUses];
+      if (!IL) {
+        IL = ++ListNumber;
+        PrintDefList(II->ImplicitUses, IL, OS);
+      }
     }
-    std::vector<Record*> Defs = Inst->getValueAsListOfDefs("Defs");
-    if (!Defs.empty()) {
-      unsigned &IL = EmittedLists[Defs];
-      if (!IL) PrintDefList(Defs, IL = ++ListNumber, OS);
+    if (!II->ImplicitDefs.empty()) {
+      unsigned &IL = EmittedLists[II->ImplicitDefs];
+      if (!IL) {
+        IL = ++ListNumber;
+        PrintDefList(II->ImplicitDefs, IL, OS);
+      }
     }
   }
 
@@ -1185,17 +1188,15 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   OS << "ULL, ";
 
   // Emit the implicit uses and defs lists...
-  std::vector<Record*> UseList = Inst.TheDef->getValueAsListOfDefs("Uses");
-  if (UseList.empty())
+  if (Inst.ImplicitUses.empty())
     OS << "nullptr, ";
   else
-    OS << "ImplicitList" << EmittedLists[UseList] << ", ";
+    OS << "ImplicitList" << EmittedLists[Inst.ImplicitUses] << ", ";
 
-  std::vector<Record*> DefList = Inst.TheDef->getValueAsListOfDefs("Defs");
-  if (DefList.empty())
+  if (Inst.ImplicitDefs.empty())
     OS << "nullptr, ";
   else
-    OS << "ImplicitList" << EmittedLists[DefList] << ", ";
+    OS << "ImplicitList" << EmittedLists[Inst.ImplicitDefs] << ", ";
 
   // Emit the operand info.
   std::vector<std::string> OperandInfo = GetOperandInfo(Inst);

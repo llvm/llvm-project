@@ -245,10 +245,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   KernelArgs =
       upgradeKernelArgs(KernelArgs, LocalKernelArgs, NumTeams, ThreadLimit);
 
-  assert(KernelArgs->NumTeams[0] == NumTeams && !KernelArgs->NumTeams[1] &&
-         !KernelArgs->NumTeams[2] &&
+  assert(KernelArgs->NumTeams[0] == static_cast<uint32_t>(NumTeams) &&
+         !KernelArgs->NumTeams[1] && !KernelArgs->NumTeams[2] &&
          "OpenMP interface should not use multiple dimensions");
-  assert(KernelArgs->ThreadLimit[0] == ThreadLimit &&
+  assert(KernelArgs->ThreadLimit[0] == static_cast<uint32_t>(ThreadLimit) &&
          !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
          "OpenMP interface should not use multiple dimensions");
 
@@ -257,7 +257,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                          KernelArgs->ArgSizes, KernelArgs->ArgTypes,
                          KernelArgs->ArgNames, "Entering OpenMP kernel");
 #ifdef OMPTARGET_DEBUG
-  for (int I = 0; I < KernelArgs->NumArgs; ++I) {
+  for (uint32_t I = 0; I < KernelArgs->NumArgs; ++I) {
     DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
        ", Type=0x%" PRIx64 ", Name=%s\n",
        I, DPxPTR(KernelArgs->ArgBasePtrs[I]), DPxPTR(KernelArgs->ArgPtrs[I]),

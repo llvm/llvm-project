@@ -187,26 +187,29 @@ public:
 
   void visit(Instruction *I);
   void visitCall(CallInst &I);
+
+  bool simplifyInstsInBlock(BasicBlock &BB,
+                            SmallPtrSetImpl<Value *> &InsertedValues,
+                            Statistic &InstRemovedStat,
+                            Statistic &InstReplacedStat);
+
+  bool removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
+                              BasicBlock *&NewUnreachableBB) const;
+
+  bool tryToReplaceWithConstant(Value *V);
+
+  // Helper to check if \p LV is either a constant or a constant
+  // range with a single element. This should cover exactly the same cases as
+  // the old ValueLatticeElement::isConstant() and is intended to be used in the
+  // transition to ValueLatticeElement.
+  static bool isConstant(const ValueLatticeElement &LV);
+
+  // Helper to check if \p LV is either overdefined or a constant range with
+  // more than a single element. This should cover exactly the same cases as the
+  // old ValueLatticeElement::isOverdefined() and is intended to be used in the
+  // transition to ValueLatticeElement.
+  static bool isOverdefined(const ValueLatticeElement &LV);
 };
-
-//===----------------------------------------------------------------------===//
-//
-/// Helper functions used by the SCCP and IPSCCP passes.
-//
-bool isConstant(const ValueLatticeElement &LV);
-
-bool isOverdefined(const ValueLatticeElement &LV);
-
-bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
-                          SmallPtrSetImpl<Value *> &InsertedValues,
-                          Statistic &InstRemovedStat,
-                          Statistic &InstReplacedStat);
-
-bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V);
-
-bool removeNonFeasibleEdges(const llvm::SCCPSolver &Solver, BasicBlock *BB,
-                            DomTreeUpdater &DTU,
-                            BasicBlock *&NewUnreachableBB);
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H
