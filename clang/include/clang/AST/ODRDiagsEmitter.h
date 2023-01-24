@@ -44,6 +44,12 @@ public:
                    const CXXRecordDecl *SecondRecord,
                    const struct CXXRecordDecl::DefinitionData *SecondDD) const;
 
+  /// Diagnose ODR mismatch between 2 RecordDecl that are not CXXRecordDecl.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  bool diagnoseMismatch(const RecordDecl *FirstRecord,
+                        const RecordDecl *SecondRecord) const;
+
   /// Get the best name we know for the module that owns the given
   /// declaration, or an empty string if the declaration is not from a module.
   static std::string getOwningModuleNameForDiagnostic(const Decl *D);
