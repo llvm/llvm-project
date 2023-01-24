@@ -11,7 +11,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-__attribute__((target("dot7-insts"), const)) static float amdgcn_fdot2(half2 a, half2 b, float c, bool s)
+__attribute__((target("dot10-insts"), const)) static float amdgcn_fdot2(half2 a, half2 b, float c, bool s)
 { if (s) return __builtin_amdgcn_fdot2(a, b, c, true);
   else   return __builtin_amdgcn_fdot2(a, b, c, false); }
 
