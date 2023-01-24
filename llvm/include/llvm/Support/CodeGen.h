@@ -14,6 +14,9 @@
 #ifndef LLVM_SUPPORT_CODEGEN_H
 #define LLVM_SUPPORT_CODEGEN_H
 
+#include <cstdint>
+#include <optional>
+
 namespace llvm {
 
   // Relocation model types.
@@ -47,15 +50,37 @@ namespace llvm {
     };
   }
 
-  // Code generation optimization level.
   namespace CodeGenOpt {
-    enum Level {
-      None = 0,      // -O0
-      Less = 1,      // -O1
-      Default = 2,   // -O2, -Os
-      Aggressive = 3 // -O3
-    };
+  /// Type for the unique integer IDs of code generation optimization levels.
+  using IDType = uint8_t;
+  /// Code generation optimization level.
+  enum Level : IDType {
+    None = 0,      ///< -O0
+    Less = 1,      ///< -O1
+    Default = 2,   ///< -O2, -Os
+    Aggressive = 3 ///< -O3
+  };
+  /// Get the \c Level identified by the integer \p ID.
+  ///
+  /// Returns std::nullopt if \p ID is invalid.
+  inline std::optional<Level> getLevel(IDType ID) {
+    if (ID < 0 || ID > 3)
+      return std::nullopt;
+    return static_cast<Level>(ID);
   }
+  /// Get the integer \c ID of \p Level.
+  inline IDType getID(CodeGenOpt::Level Level) {
+    return static_cast<IDType>(Level);
+  }
+  /// Parse \p C as a single digit integer ID and get matching \c Level.
+  ///
+  /// Returns std::nullopt if the input is not a valid digit or not a valid ID.
+  inline std::optional<Level> parseLevel(char C) {
+    if (C < '0')
+      return std::nullopt;
+    return getLevel(static_cast<IDType>(C - '0'));
+  }
+  } // namespace CodeGenOpt
 
   /// These enums are meant to be passed into addPassesToEmitFile to indicate
   /// what type of file to emit, and returned by it to indicate what type of
