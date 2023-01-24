@@ -90,7 +90,7 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
   populateLinalgToLLVMConversionPatterns(converter, patterns);
-  populateMemRefToLLVMConversionPatterns(converter, patterns);
+  populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
   target.addLegalOp<ModuleOp>();

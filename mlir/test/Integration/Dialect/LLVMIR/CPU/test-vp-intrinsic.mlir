@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm -convert-memref-to-llvm \
+// RUN: mlir-opt %s -convert-vector-to-llvm -finalize-memref-to-llvm \
 // RUN:             -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry \
