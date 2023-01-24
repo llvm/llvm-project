@@ -2029,6 +2029,10 @@ OptionalFileEntryRef Preprocessor::LookupHeaderIncludeOrImport(
   if (File)
     return File;
 
+  // Give the clients a chance to silently skip this include.
+  if (Callbacks && Callbacks->FileNotFound(Filename))
+    return std::nullopt;
+
   if (SuppressIncludeNotFoundError)
     return std::nullopt;
 
