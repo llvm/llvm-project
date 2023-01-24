@@ -150,7 +150,7 @@ struct MachineValueTypeSet {
         WordType W = Set->Words[SkipWords];
         W &= maskLeadingOnes<WordType>(WordWidth-SkipBits);
         if (W != 0)
-          return Count + findFirstSet(W);
+          return Count + llvm::countr_zero(W);
         Count += WordWidth;
         SkipWords++;
       }
@@ -158,7 +158,7 @@ struct MachineValueTypeSet {
       for (unsigned i = SkipWords; i != NumWords; ++i) {
         WordType W = Set->Words[i];
         if (W != 0)
-          return Count + findFirstSet(W);
+          return Count + llvm::countr_zero(W);
         Count += WordWidth;
       }
       return Capacity;
