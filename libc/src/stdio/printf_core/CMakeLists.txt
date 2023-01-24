@@ -22,6 +22,7 @@ add_object_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
 )
 
 add_object_library(
