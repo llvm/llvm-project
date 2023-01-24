@@ -377,15 +377,8 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     if (!MDC.isPrebuiltModule(M))
       DirectModularDeps.insert(M);
 
-  for (const Module *M : DirectModularDeps) {
-    // A top-level module might not be actually imported as a module when
-    // -fmodule-name is used to compile a translation unit that imports this
-    // module. In that case it can be skipped. The appropriate header
-    // dependencies will still be reported as expected.
-    if (!M->getASTFile())
-      continue;
+  for (const Module *M : DirectModularDeps)
     handleTopLevelModule(M);
-  }
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
@@ -399,8 +392,16 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     MDC.Consumer.handlePrebuiltModuleDependency(I.second);
 }
 
-ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
+std::optional<ModuleID>
+ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   assert(M == M->getTopLevelModule() && "Expected top level module!");
+
+  // A top-level module might not be actually imported as a module when
+  // -fmodule-name is used to compile a translation unit that imports this
+  // module. In that case it can be skipped. The appropriate header
+  // dependencies will still be reported as expected.
+  if (!M->getASTFile())
+    return {};
 
   // If this module has been handled already, just return its ID.
   auto ModI = MDC.ModularDeps.insert({M, nullptr});
@@ -522,9 +523,9 @@ void ModuleDepCollectorPP::addModuleDep(
   for (const Module *Import : M->Imports) {
     if (Import->getTopLevelModule() != M->getTopLevelModule() &&
         !MDC.isPrebuiltModule(Import)) {
-      ModuleID ImportID = handleTopLevelModule(Import->getTopLevelModule());
-      if (AddedModules.insert(Import->getTopLevelModule()).second)
-        MD.ClangModuleDeps.push_back(ImportID);
+      if (auto ImportID = handleTopLevelModule(Import->getTopLevelModule()))
+        if (AddedModules.insert(Import->getTopLevelModule()).second)
+          MD.ClangModuleDeps.push_back(*ImportID);
     }
   }
 }
@@ -546,9 +547,9 @@ void ModuleDepCollectorPP::addAffectingClangModule(
            "Not quite import not top-level module");
     if (Affecting != M->getTopLevelModule() &&
         !MDC.isPrebuiltModule(Affecting)) {
-      ModuleID ImportID = handleTopLevelModule(Affecting);
-      if (AddedModules.insert(Affecting).second)
-        MD.ClangModuleDeps.push_back(ImportID);
+      if (auto ImportID = handleTopLevelModule(Affecting))
+        if (AddedModules.insert(Affecting).second)
+          MD.ClangModuleDeps.push_back(*ImportID);
     }
   }
 }
