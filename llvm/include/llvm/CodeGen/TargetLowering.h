@@ -644,14 +644,6 @@ public:
   /// gen prepare.
   virtual bool preferZeroCompareBranch() const { return false; }
 
-  /// Return true if it is safe to transform an integer-domain bitwise operation
-  /// into the equivalent floating-point operation. This should be set to true
-  /// if the target has IEEE-754-compliant fabs/fneg operations for the input
-  /// type.
-  virtual bool hasBitPreservingFPLogic(EVT VT) const {
-    return false;
-  }
-
   /// Return true if it is cheaper to split the store of a merged int val
   /// from a pair of smaller values into multiple stores.
   virtual bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const {
