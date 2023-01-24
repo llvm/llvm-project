@@ -468,14 +468,26 @@ let UnMaskedPolicyScheme = HasPolicyOperand,
   }
 }
 
-let UnMaskedPolicyScheme = HasPolicyOperand,
-    HasMaskedOffOperand = false,
-    IsPrototypeDefaultTU = true in {
+let UnMaskedPolicyScheme = HasPassthruOperand,
+    IsPrototypeDefaultTU = false,
+    ManualCodegen = [{
+      if (IsMasked) {
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        if (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+      } else {
+        if (PolicyAttrs == TAIL_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+      }
+
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
+    }] in {
   multiclass RVVSlideDownBuiltinSet {
     defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
-                               [["vx","v", "vvvz"]]>;
+                               [["vx","v", "vvz"]]>;
     defm "" : RVVOutBuiltinSet<NAME, "csil",
-                               [["vx","Uv", "UvUvUvz"]]>;
+                               [["vx","Uv", "UvUvz"]]>;
   }
 }
 
