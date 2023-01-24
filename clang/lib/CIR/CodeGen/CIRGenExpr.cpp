@@ -1497,17 +1497,37 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     return buildCallExprLValue(cast<CallExpr>(E));
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(E);
-    // RunCleanupsScope Scope(*this);
-    LValue LV = buildLValue(cleanups->getSubExpr());
-    if (LV.isSimple()) {
-      // Defend against branches out of gnu statement expressions surrounded by
-      // cleanups.
-      Address Addr = LV.getAddress();
-      auto V = Addr.getPointer();
-      // Scope.ForceCleanup({&V});
-      return LValue::makeAddr(Addr.withPointer(V), LV.getType(), getContext(),
-                              LV.getBaseInfo() /*TODO(cir):TBAA*/);
-    }
+    LValue LV;
+
+    auto scopeLoc = getLoc(E->getSourceRange());
+    [[maybe_unused]] auto scope = builder.create<mlir::cir::ScopeOp>(
+        scopeLoc, /*scopeBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          SmallVector<mlir::Location, 2> locs;
+          if (loc.isa<mlir::FileLineColLoc>()) {
+            locs.push_back(loc);
+            locs.push_back(loc);
+          } else if (loc.isa<mlir::FusedLoc>()) {
+            auto fusedLoc = loc.cast<mlir::FusedLoc>();
+            locs.push_back(fusedLoc.getLocations()[0]);
+            locs.push_back(fusedLoc.getLocations()[1]);
+          }
+          CIRGenFunction::LexicalScopeContext lexScope{
+              locs[0], locs[1], builder.getInsertionBlock()};
+          CIRGenFunction::LexicalScopeGuard lexScopeGuard{*this, &lexScope};
+
+          LV = buildLValue(cleanups->getSubExpr());
+          if (LV.isSimple()) {
+            // Defend against branches out of gnu statement expressions
+            // surrounded by cleanups.
+            Address Addr = LV.getAddress();
+            auto V = Addr.getPointer();
+            LV = LValue::makeAddr(Addr.withPointer(V), LV.getType(),
+                                  getContext(),
+                                  LV.getBaseInfo() /*TODO(cir):TBAA*/);
+          }
+        });
+
     // FIXME: Is it possible to create an ExprWithCleanups that produces a
     // bitfield lvalue or some other non-simple lvalue?
     return LV;
