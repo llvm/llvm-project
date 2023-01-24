@@ -7,15 +7,18 @@ target triple = "amdgcn-amd-amdhsa"
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 @G = internal addrspace(3) global i32 undef, align 4
+@H = internal addrspace(3) global i32 undef, align 4
 @str = private unnamed_addr addrspace(4) constant [1 x i8] c"\00", align 1
 
 ; Make sure we do not delete the stores to @G without also replacing the load with `1`.
 ;.
 ; TUNIT: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; TUNIT: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ; TUNIT: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
 ; CGSCC: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; CGSCC: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ;.
 define void @kernel() "kernel" {
@@ -33,8 +36,10 @@ define void @kernel() "kernel" {
 ; CHECK-NEXT:    call void @barrier() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @G, align 4
 ; CHECK-NEXT:    call void @use1(i32 [[L]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @barrier() #[[ATTR5]]
 ; CHECK-NEXT:    br label [[IF_MERGE]]
 ; CHECK:       if.merge:
+; CHECK-NEXT:    call void @use1(i32 2) #[[ATTR5]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    store i32 2, ptr addrspace(3) @G, align 4
@@ -49,13 +54,20 @@ define void @kernel() "kernel" {
   br i1 %cmp, label %if.then, label %if.else
 if.then:
   store i32 1, ptr addrspace(3) @G
+  store i32 2, ptr addrspace(3) @H
   br label %if.merge
 if.else:
   call void @barrier();
   %l = load i32, ptr addrspace(3) @G
   call void @use1(i32 %l)
+  %hv = load i32, ptr addrspace(3) @H
+  %hc = icmp eq i32 %hv, 2
+  call void @llvm.assume(i1 %hc)
+  call void @barrier();
   br label %if.merge
 if.merge:
+  %hreload = load i32, ptr addrspace(3) @H
+  call void @use1(i32 %hreload)
   br i1 %cmp, label %if.then2, label %if.end
 if.then2:
   store i32 2, ptr addrspace(3) @G
@@ -75,7 +87,7 @@ define void @test_assume() {
   ret void
 }
 
-declare void @barrier() norecurse nounwind nocallback
+declare void @barrier() norecurse nounwind nocallback "llvm.assume"="ompx_aligned_barrier"
 declare void @use1(i32) nosync norecurse nounwind nocallback
 declare i32 @__kmpc_target_init(ptr, i8, i1) nocallback
 declare void @__kmpc_target_deinit(ptr, i8) nocallback
@@ -90,7 +102,7 @@ declare void @llvm.assume(i1)
 
 ;.
 ; CHECK: attributes #[[ATTR0]] = { norecurse "kernel" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback norecurse nounwind }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback norecurse nounwind "llvm.assume"="ompx_aligned_barrier" }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback norecurse nosync nounwind }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
