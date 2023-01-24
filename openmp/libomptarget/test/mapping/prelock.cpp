@@ -1,4 +1,5 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
+// RUN: %libomptarget-compilexx-generic
+// RUN: env LIBOMPTARGET_NEXTGEN_PLUGINS=0 %libomptarget-run-generic %fcheck-generic
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
