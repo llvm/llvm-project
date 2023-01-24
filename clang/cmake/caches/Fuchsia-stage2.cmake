@@ -69,44 +69,12 @@ if(APPLE)
   set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
 endif()
 
-if(WIN32 OR LLVM_WINSYSROOT)
-  if((NOT WIN32) AND (NOT LLVM_VFSOVERLAY))
-    message(FATAL_ERROR "LLVM_VFSOVERLAY should be defined.")
-  endif()
+if(WIN32)
   set(target "x86_64-pc-windows-msvc")
-
-  if (LLVM_WINSYSROOT)
-    set(WINDOWS_COMPILER_FLAGS
-      -Xclang
-      -ivfsoverlay
-      -Xclang
-      ${LLVM_VFSOVERLAY}
-      # TODO: /winsysroot should be set by HandleLLVMOptions.cmake automatically
-      # but it current has a bug that prevents it from working under cross
-      # compilation. Set this flag manually for now.
-      /winsysroot
-      ${LLVM_WINSYSROOT})
-    string(REPLACE ";" " " WINDOWS_COMPILER_FLAGS "${WINDOWS_COMPILER_FLAGS}")
-    set(WINDOWS_LINK_FLAGS
-        /vfsoverlay:${LLVM_VFSOVERLAY}
-        # TODO: On Windows, linker is invoked by cmake instead of the clang-cl driver,
-        # so we have to manually set the libpath. We use clang-cl driver if we can
-        # and remove these libpath flags.
-        -libpath:"${LLVM_WINSYSROOT}/VC/Tools/MSVC/14.34.31933/lib/x64"
-        -libpath:"${LLVM_WINSYSROOT}/VC/Tools/MSVC/14.34.31933/atlmfc/lib/x64"
-        -libpath:"${LLVM_WINSYSROOT}/Windows Kits/10/Lib/10.0.19041.0/ucrt/x64"
-        -libpath:"${LLVM_WINSYSROOT}/Windows Kits/10/Lib/10.0.19041.0/um/x64")
-    string(REPLACE ";" " " WINDOWS_LINK_FLAGS "${WINDOWS_LINK_FLAGS}")
-  endif()
 
   list(APPEND BUILTIN_TARGETS "${target}")
   set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Windows CACHE STRING "")
   set(BUILTINS_${target}_CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "")
-  set(BUILTINS_${target}_CMAKE_C_FLAGS ${WINDOWS_COMPILER_FLAGS} CACHE STRING "")
-  set(BUILTINS_${target}_CMAKE_CXX_FLAGS ${WINDOWS_COMPILER_FLAGS} CACHE STRING "")
-  set(BUILTINS_${target}_CMAKE_EXE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
-  set(BUILTINS_${target}_CMAKE_SHARED_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
-  set(BUILTINS_${target}_CMAKE_MODULE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
 
   list(APPEND RUNTIME_TARGETS "${target}")
   set(RUNTIMES_${target}_CMAKE_SYSTEM_NAME Windows CACHE STRING "")
@@ -116,11 +84,6 @@ if(WIN32 OR LLVM_WINSYSROOT)
   set(RUNTIMES_${target}_LIBCXX_ENABLE_ABI_LINKER_SCRIPT OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx" CACHE STRING "")
-  set(RUNTIMES_${target}_CMAKE_C_FLAGS ${WINDOWS_COMPILER_FLAGS} CACHE STRING "")
-  set(RUNTIMES_${target}_CMAKE_CXX_FLAGS ${WINDOWS_COMPILER_FLAGS} CACHE STRING "")
-  set(RUNTIMES_${target}_CMAKE_EXE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
-  set(RUNTIMES_${target}_CMAKE_SHARED_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
-  set(RUNTIMES_${target}_CMAKE_MODULE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
 endif()
 
 foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unknown-linux-gnu;x86_64-unknown-linux-gnu)
