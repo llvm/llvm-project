@@ -169,11 +169,11 @@ void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
                         std::optional<size_t> Precision) {
   size_t Prec = Precision.value_or(getDefaultPrecision(Style));
 
-  if (std::isnan(N)) {
+  if (isnan(N)) {
     S << "nan";
     return;
-  } else if (std::isinf(N)) {
-    S << (std::signbit(N) ? "-INF" : "INF");
+  } else if (isinf(N)) {
+    S << (signbit(N) ? "-INF" : "INF");
     return;
   }
 
