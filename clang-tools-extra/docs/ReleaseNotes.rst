@@ -213,7 +213,7 @@ Changes in existing checks
 
 - Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
   in :doc:`misc-unused-using-decls
-  <clang-tidy/checks/misc/misc-unused-using-decls>` check.
+  <clang-tidy/checks/misc/unused-using-decls>` check.
   Global options of the same name should be used instead.
 
 - Improved :doc:`modernize-loop-convert <clang-tidy/checks/modernize/loop-convert>`
