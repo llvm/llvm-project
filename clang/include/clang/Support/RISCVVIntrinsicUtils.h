@@ -97,13 +97,15 @@ struct Policy {
   enum PolicyType {
     Undisturbed,
     Agnostic,
-    Omit, // No policy required.
   };
   PolicyType TailPolicy = Agnostic;
   PolicyType MaskPolicy = Undisturbed;
   bool HasTailPolicy, HasMaskPolicy;
   Policy(bool HasTailPolicy, bool HasMaskPolicy)
       : IsUnspecified(true), HasTailPolicy(HasTailPolicy),
+        HasMaskPolicy(HasMaskPolicy) {}
+  Policy(PolicyType TailPolicy, bool HasTailPolicy, bool HasMaskPolicy)
+      : TailPolicy(TailPolicy), HasTailPolicy(HasTailPolicy),
         HasMaskPolicy(HasMaskPolicy) {}
   Policy(PolicyType TailPolicy, PolicyType MaskPolicy, bool HasTailPolicy,
          bool HasMaskPolicy)
