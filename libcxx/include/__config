@@ -1227,12 +1227,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 // functions are declared by the C library.
 #  define _LIBCPP_HAS_NO_C8RTOMB_MBRTOC8
 // GNU libc 2.36 and newer declare c8rtomb() and mbrtoc8() in C++ modes if
-// __cpp_char8_t is defined or if C2X extensions are enabled. Unfortunately,
-// determining the latter depends on internal GNU libc details. If the
-// __cpp_char8_t feature test macro is not defined, then a char8_t typedef
-// will be declared as well.
-#  if defined(_LIBCPP_GLIBC_PREREQ) && defined(__GLIBC_USE)
-#    if _LIBCPP_GLIBC_PREREQ(2, 36) && (defined(__cpp_char8_t) || __GLIBC_USE(ISOC2X))
+// __cpp_char8_t is defined or if C2X extensions are enabled. Determining
+// the latter depends on internal GNU libc details that are not appropriate
+// to depend on here, so any declarations present when __cpp_char8_t is not
+// defined are ignored.
+#  if defined(_LIBCPP_GLIBC_PREREQ)
+#    if _LIBCPP_GLIBC_PREREQ(2, 36) && defined(__cpp_char8_t)
 #      undef _LIBCPP_HAS_NO_C8RTOMB_MBRTOC8
 #    endif
 #  endif
