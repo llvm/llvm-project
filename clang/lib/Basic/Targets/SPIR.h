@@ -191,6 +191,8 @@ public:
   bool hasFeature(StringRef Feature) const override {
     return Feature == "spir";
   }
+
+  bool checkArithmeticFenceSupported() const override { return true; }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIR32TargetInfo : public SPIRTargetInfo {
