@@ -16,7 +16,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -126,9 +125,14 @@ static void RemoveInstInputs(Value *V,
       RemoveInstInputs(OpInst, InstInputs);
 }
 
+/// translateSubExpr - recursively translate value \p V from \p CurBB to \p
+/// PredBB, and if value depends from selects with \p Cond condition, also
+/// translate it through these selects with \p CondVal predicate. Return nullptr
+/// on failure.
 Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
                                       BasicBlock *PredBB,
-                                      const DominatorTree *DT) {
+                                      const DominatorTree *DT, Value *Cond,
+                                      bool CondVal) {
   // If this is a non-instruction value, it can't require PHI translation.
   Instruction *Inst = dyn_cast<Instruction>(V);
   if (!Inst) return V;
@@ -151,8 +155,13 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     InstInputs.erase(find(InstInputs, Inst));
 
     // If this is a PHI, go ahead and translate it.
-    if (PHINode *PN = dyn_cast<PHINode>(Inst))
-      return addAsInput(PN->getIncomingValueForBlock(PredBB));
+    if (PHINode *PN = dyn_cast<PHINode>(Inst)) {
+      auto *V = PN->getIncomingValueForBlock(PredBB);
+      if (auto *SI = dyn_cast<SelectInst>(V))
+        if (SI->getCondition() == Cond)
+          return addAsInput(CondVal ? SI->getTrueValue() : SI->getFalseValue());
+      return addAsInput(V);
+    }
 
     // If this is a non-phi value, and it is analyzable, we can incorporate it
     // into the expression by making all instruction operands be inputs.
@@ -170,7 +179,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   // operands need to be phi translated, and if so, reconstruct it.
 
   if (CastInst *Cast = dyn_cast<CastInst>(Inst)) {
-    Value *PHIIn = translateSubExpr(Cast->getOperand(0), CurBB, PredBB, DT);
+    Value *PHIIn =
+        translateSubExpr(Cast->getOperand(0), CurBB, PredBB, DT, Cond, CondVal);
     if (!PHIIn) return nullptr;
     if (PHIIn == Cast->getOperand(0))
       return Cast;
@@ -201,7 +211,7 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     SmallVector<Value*, 8> GEPOps;
     bool AnyChanged = false;
     for (Value *Op : GEP->operands()) {
-      Value *GEPOp = translateSubExpr(Op, CurBB, PredBB, DT);
+      Value *GEPOp = translateSubExpr(Op, CurBB, PredBB, DT, Cond, CondVal);
       if (!GEPOp) return nullptr;
 
       AnyChanged |= GEPOp != Op;
@@ -245,7 +255,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     bool isNSW = cast<BinaryOperator>(Inst)->hasNoSignedWrap();
     bool isNUW = cast<BinaryOperator>(Inst)->hasNoUnsignedWrap();
 
-    Value *LHS = translateSubExpr(Inst->getOperand(0), CurBB, PredBB, DT);
+    Value *LHS =
+        translateSubExpr(Inst->getOperand(0), CurBB, PredBB, DT, Cond, CondVal);
     if (!LHS) return nullptr;
 
     // If the PHI translated LHS is an add of a constant, fold the immediates.
@@ -313,6 +324,20 @@ Value *PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
         Addr = nullptr;
 
   return Addr;
+}
+
+/// translateValue - PHI translate the current address from \p CurBB to \p
+/// PredBB, and if the resulted address depends on select instructions with \p
+/// Cond predicate, translate both cases of this selects.
+SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
+                                                     BasicBlock *PredBB,
+                                                     const DominatorTree *DT,
+                                                     Value *Cond) {
+  Value *TrueAddr =
+      PHITransAddr(*this).translateSubExpr(Addr, CurBB, PredBB, DT, Cond, true);
+  Value *FalseAddr = PHITransAddr(*this).translateSubExpr(Addr, CurBB, PredBB,
+                                                          DT, Cond, false);
+  return {TrueAddr, FalseAddr};
 }
 
 /// PHITranslateWithInsertion - PHI translate this value into the specified

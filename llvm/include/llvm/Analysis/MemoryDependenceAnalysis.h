@@ -19,6 +19,7 @@
 #include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/IR/ValueHandle.h"
@@ -31,7 +32,6 @@ class AAResults;
 class AssumptionCache;
 class BatchAAResults;
 class DominatorTree;
-class PHITransAddr;
 
 /// A memory dependence query can return one of three different answers.
 class MemDepResult {
@@ -77,11 +77,6 @@ class MemDepResult {
     ///      calls or memory use intrinsics with identical callees and no
     ///      intervening clobbers.  No validation is done that the operands to
     ///      the calls are the same.
-    ///   4. For loads and stores, this could be a select instruction that
-    ///      defines pointer to this memory location. In this case, users can
-    ///      find non-clobbered Defs for both select values that are reaching
-    //       the desired memory location (there is still a guarantee that there
-    //       are no clobbers between analyzed memory location and select).
     Def,
 
     /// This marker indicates that the query has no known dependency in the
@@ -103,6 +98,8 @@ class MemDepResult {
     /// This marker indicates that the query has no dependency in the specified
     /// function.
     NonFuncLocal,
+    /// This marker indicates that the query depends from select instruction.
+    Select,
     /// This marker indicates that the query dependency is unknown.
     Unknown
   };
@@ -135,6 +132,9 @@ public:
   static MemDepResult getNonFuncLocal() {
     return MemDepResult(ValueTy::create<Other>(NonFuncLocal));
   }
+  static MemDepResult getSelect() {
+    return MemDepResult(ValueTy::create<Other>(Select));
+  }
   static MemDepResult getUnknown() {
     return MemDepResult(ValueTy::create<Other>(Unknown));
   }
@@ -160,6 +160,12 @@ public:
   /// start of the function.
   bool isNonFuncLocal() const {
     return Value.is<Other>() && Value.cast<Other>() == NonFuncLocal;
+  }
+
+  /// Tests if this MemDepResult represents a query that has a dependency from
+  /// the select instruction.
+  bool isSelect() const {
+    return Value.is<Other>() && Value.cast<Other>() == Select;
   }
 
   /// Tests if this MemDepResult represents a query which cannot and/or will
@@ -230,10 +236,11 @@ public:
 /// (potentially phi translated) address that was live in the block.
 class NonLocalDepResult {
   NonLocalDepEntry Entry;
-  Value *Address;
+  SelectAddr Address;
 
 public:
-  NonLocalDepResult(BasicBlock *BB, MemDepResult Result, Value *Address)
+  NonLocalDepResult(BasicBlock *BB, MemDepResult Result,
+                    const SelectAddr &Address)
       : Entry(BB, Result), Address(Address) {}
 
   // BB is the sort key, it can't be changed.
@@ -254,7 +261,7 @@ public:
   /// a cached result and that address was deleted.
   ///
   /// The address is always null for a non-local 'call' dependence.
-  Value *getAddress() const { return Address; }
+  SelectAddr getAddress() const { return Address; }
 };
 
 /// Provides a lazy, caching interface for making common memory aliasing
