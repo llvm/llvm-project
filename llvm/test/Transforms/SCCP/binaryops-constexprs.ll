@@ -36,7 +36,7 @@ entry:
 define void @add_constexpr(i32 %a) {
 ; CHECK-LABEL: @add_constexpr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 0, [[A:%.*]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i32 0, [[A:%.*]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[ADD_1]])
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 20, [[A]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[ADD_2]])
