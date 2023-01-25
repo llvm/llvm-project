@@ -109,13 +109,19 @@ A program transformation expressed using the Transform dialect can be
 programmatically triggered by calling:
 
 ```c++
-LogicalResult transform::applyTransforms(Operation *payloadRoot,
-                                         TransformOpInterface transform,
-                                         const TransformOptions &options);
+LogicalResult transform::applyTransforms(
+    Operation *payloadRoot,
+    ArrayRef<ArrayRef<PointerUnion<Operation *, Attribute>> extraMappings,
+    TransformOpInterface transform,
+    const TransformOptions &options);
 ```
 
 that applies the transformations specified by the top-level `transform` to
-payload IR contained in `payloadRoot`.
+payload IR contained in `payloadRoot`. The payload root operation will be
+associated with the first argument of the entry block of the top-level transform
+op. This block may have additional arguments, handles or parameters. They will
+be associated with values provided as `extraMappings`. The call will report an
+error and return if the wrong number of mappings is provided.
 
 ## Dialect Extension Mechanism
 

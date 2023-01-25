@@ -27,10 +27,20 @@ using namespace mlir;
 
 constexpr const Value transform::TransformState::kTopLevelValue;
 
-transform::TransformState::TransformState(Region *region,
-                                          Operation *payloadRoot,
-                                          const TransformOptions &options)
+transform::TransformState::TransformState(
+    Region *region, Operation *payloadRoot,
+    ArrayRef<ArrayRef<MappedValue>> extraMappings,
+    const TransformOptions &options)
     : topLevel(payloadRoot), options(options) {
+  topLevelMappedValues.reserve(extraMappings.size());
+  for (ArrayRef<MappedValue> mapping : extraMappings) {
+    size_t start = topLevelMappedValueStorage.size();
+    llvm::append_range(topLevelMappedValueStorage, mapping);
+    topLevelMappedValues.push_back(
+        ArrayRef<MappedValue>(topLevelMappedValueStorage)
+            .slice(start, mapping.size()));
+  }
+
   auto result = mappings.try_emplace(region);
   assert(result.second && "the region scope is already present");
   (void)result;
@@ -70,6 +80,38 @@ LogicalResult transform::TransformState::getHandlesForPayloadOp(
   }
 
   return success(found);
+}
+
+LogicalResult
+transform::TransformState::mapBlockArgument(BlockArgument argument,
+                                            ArrayRef<MappedValue> values) {
+  if (argument.getType().isa<TransformHandleTypeInterface>()) {
+    SmallVector<Operation *> operations;
+    operations.reserve(values.size());
+    for (MappedValue value : values) {
+      if (auto *op = value.dyn_cast<Operation *>()) {
+        operations.push_back(op);
+        continue;
+      }
+      return emitError(argument.getLoc())
+             << "wrong kind of value provided for top-level operation handle";
+    }
+    return setPayloadOps(argument, operations);
+  }
+
+  assert(argument.getType().isa<TransformParamTypeInterface>() &&
+         "unsupported kind of block argument");
+  SmallVector<Param> parameters;
+  parameters.reserve(values.size());
+  for (MappedValue value : values) {
+    if (auto attr = value.dyn_cast<Attribute>()) {
+      parameters.push_back(attr);
+      continue;
+    }
+    return emitError(argument.getLoc())
+           << "wrong kind of value provided for top-level parameter";
+  }
+  return setParams(argument, parameters);
 }
 
 LogicalResult
@@ -522,12 +564,43 @@ void transform::detail::setApplyToOneResults(
 LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
     TransformState &state, Operation *op, Region &region) {
   SmallVector<Operation *> targets;
-  if (op->getNumOperands() != 0)
+  SmallVector<SmallVector<MappedValue>> extraMappings;
+  if (op->getNumOperands() != 0) {
     llvm::append_range(targets, state.getPayloadOps(op->getOperand(0)));
-  else
-    targets.push_back(state.getTopLevel());
+    for (Value operand : op->getOperands().drop_front()) {
+      SmallVector<MappedValue> &mapped = extraMappings.emplace_back();
+      if (operand.getType().isa<TransformHandleTypeInterface>()) {
+        llvm::append_range(mapped, state.getPayloadOps(operand));
+      } else {
+        assert(operand.getType().isa<TransformParamTypeInterface>() &&
+               "unsupported kind of transform dialect value");
+        llvm::append_range(mapped, state.getParams(operand));
+      }
+    }
+  } else {
+    if (state.getNumTopLevelMappings() !=
+        region.front().getNumArguments() - 1) {
+      return emitError(op->getLoc())
+             << "operation expects " << region.front().getNumArguments() - 1
+             << " extra value bindings, but " << state.getNumTopLevelMappings()
+             << " were provided to the interpreter";
+    }
 
-  return state.mapBlockArguments(region.front().getArgument(0), targets);
+    targets.push_back(state.getTopLevel());
+    for (unsigned i = 0, e = state.getNumTopLevelMappings(); i < e; ++i)
+      extraMappings.push_back(llvm::to_vector(state.getTopLevelMapping(i)));
+  }
+
+  if (failed(state.mapBlockArguments(region.front().getArgument(0), targets)))
+    return failure();
+
+  for (BlockArgument argument : region.front().getArguments().drop_front()) {
+    if (failed(state.mapBlockArgument(
+            argument, extraMappings[argument.getArgNumber() - 1])))
+      return failure();
+  }
+
+  return success();
 }
 
 LogicalResult
@@ -547,19 +620,42 @@ transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
     return op->emitOpError() << "expects a single-block region";
 
   Block *body = &bodyRegion->front();
-  if (body->getNumArguments() != 1 ||
-      !body->getArgumentTypes()[0].isa<TransformHandleTypeInterface>()) {
+  if (body->getNumArguments() == 0) {
     return op->emitOpError()
-           << "expects the entry block to have one argument "
-              "of type implementing TransformHandleTypeInterface";
+           << "expects the entry block to have at least one argument";
+  }
+  if (!body->getArgument(0).getType().isa<TransformHandleTypeInterface>()) {
+    return op->emitOpError()
+           << "expects the first entry block argument to be of type "
+              "implementing TransformHandleTypeInterface";
+  }
+  BlockArgument arg = body->getArgument(0);
+  if (op->getNumOperands() != 0) {
+    if (arg.getType() != op->getOperand(0).getType()) {
+      return op->emitOpError()
+             << "expects the type of the block argument to match "
+                "the type of the operand";
+    }
+  }
+  for (BlockArgument arg : body->getArguments().drop_front()) {
+    if (arg.getType()
+            .isa<TransformHandleTypeInterface, TransformParamTypeInterface>())
+      continue;
+
+    InFlightDiagnostic diag =
+        op->emitOpError()
+        << "expects trailing entry block arguments to be of type implementing "
+           "TransformHandleTypeInterface or TransformParamTypeInterface";
+    diag.attachNote() << "argument #" << arg.getArgNumber() << " does not";
+    return diag;
   }
 
   if (auto *parent =
           op->getParentWithTrait<PossibleTopLevelTransformOpTrait>()) {
-    if (op->getNumOperands() == 0) {
+    if (op->getNumOperands() != body->getNumArguments()) {
       InFlightDiagnostic diag =
           op->emitOpError()
-          << "expects the root operation to be provided for a nested op";
+          << "expects operands to be provided for a nested op";
       diag.attachNote(parent->getLoc())
           << "nested in another possible top-level op";
       return diag;
@@ -717,9 +813,11 @@ LogicalResult transform::detail::verifyTransformOpInterface(Operation *op) {
 // Entry point.
 //===----------------------------------------------------------------------===//
 
-LogicalResult transform::applyTransforms(Operation *payloadRoot,
-                                         TransformOpInterface transform,
-                                         const TransformOptions &options) {
+LogicalResult
+transform::applyTransforms(Operation *payloadRoot,
+                           TransformOpInterface transform,
+                           ArrayRef<ArrayRef<MappedValue>> extraMapping,
+                           const TransformOptions &options) {
 #ifndef NDEBUG
   if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
       transform->getNumOperands() != 0) {
@@ -730,7 +828,8 @@ LogicalResult transform::applyTransforms(Operation *payloadRoot,
   }
 #endif // NDEBUG
 
-  TransformState state(transform->getParentRegion(), payloadRoot, options);
+  TransformState state(transform->getParentRegion(), payloadRoot, extraMapping,
+                       options);
   return state.applyTransform(transform).checkAndReport();
 }
 

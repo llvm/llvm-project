@@ -384,7 +384,8 @@ def SequenceOp : TransformDialectOp<"sequence",
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      OpAsmOpInterface, PossibleTopLevelTransformOpTrait,
-     SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">]> {
+     SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">,
+     AttrSizedOperandSegments]> {
   let summary = "Contains a sequence of other transform ops to apply";
   let description = [{
     The transformations indicated by the sequence are applied in order of their
@@ -417,12 +418,14 @@ def SequenceOp : TransformDialectOp<"sequence",
   }];
 
   let arguments = (ins FailurePropagationMode:$failure_propagation_mode,
-                       Optional<TransformHandleTypeInterface>:$root);
+                       Optional<TransformHandleTypeInterface>:$root,
+                       Variadic<Transform_AnyHandleOrParamType>:$extra_bindings);
   let results = (outs Variadic<TransformHandleTypeInterface>:$results);
   let regions = (region SizedRegion<1>:$body);
 
   let assemblyFormat =
-    "($root^ `:` type($root))? (`->` type($results)^)? `failures` `(` "
+    "custom<SequenceOpOperands>($root, type($root), $extra_bindings, type($extra_bindings))"
+    " (`->` type($results)^)? `failures` `(` "
     "$failure_propagation_mode `)` attr-dict-with-keyword regions";
 
   let builders = [
@@ -432,11 +435,25 @@ def SequenceOp : TransformDialectOp<"sequence",
         "::mlir::transform::FailurePropagationMode":$failure_propagation_mode,
         "::mlir::Value":$root, "SequenceBodyBuilderFn":$bodyBuilder)>,
 
-    // Build a sequence without a root but a certain bbArg type.
+    // Build a sequence with a root and additional arguments.
     OpBuilder<(ins
         "::mlir::TypeRange":$resultTypes,
         "::mlir::transform::FailurePropagationMode":$failure_propagation_mode,
-        "::mlir::Type":$bbArgType, "SequenceBodyBuilderFn":$bodyBuilder)>
+        "::mlir::Value":$root, "::mlir::ValueRange":$extraBindings,
+        "SequenceBodyBuilderArgsFn":$bodyBuilder)>,
+
+    // Build a top-level sequence (no root).
+    OpBuilder<(ins
+        "::mlir::TypeRange":$resultTypes,
+        "::mlir::transform::FailurePropagationMode":$failure_propagation_mode,
+        "::mlir::Type":$bbArgType, "SequenceBodyBuilderFn":$bodyBuilder)>,
+
+    // Build a top-level sequence (no root) with extra arguments.
+    OpBuilder<(ins
+        "::mlir::TypeRange":$resultTypes,
+        "::mlir::transform::FailurePropagationMode":$failure_propagation_mode,
+        "::mlir::Type":$bbArgType, "::mlir::TypeRange":$extraBindingTypes,
+        "SequenceBodyBuilderArgsFn":$bodyBuilder)>
   ];
 
   let extraClassDeclaration = [{
