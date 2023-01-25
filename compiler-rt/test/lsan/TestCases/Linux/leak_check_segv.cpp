@@ -1,5 +1,6 @@
 // Test that SIGSEGV during leak checking does not crash the process.
 // RUN: %clangxx_lsan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// UNSUPPORTED: ppc
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/mman.h>
