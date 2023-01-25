@@ -14,10 +14,6 @@ Options
 
 .. option:: HeaderFileExtensions
 
-   Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 18. Please use the global configuration option
-   `HeaderFileExtensions`.
-
    A comma-separated list of filename extensions of header files (the filename
    extensions should not contain "." prefix). Default is "h".
    For header files without an extension, use an empty string (if there are no
