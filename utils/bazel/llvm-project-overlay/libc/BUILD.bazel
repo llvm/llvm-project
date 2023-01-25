@@ -190,6 +190,7 @@ libc_support_library(
     hdrs = ["src/__support/integer_utils.h"],
     deps = [
         "__support_builtin_wrappers",
+        "__support_common",
         "__support_cpp_type_traits",
         "__support_number_pair",
         ":libc_root",
