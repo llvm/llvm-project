@@ -246,3 +246,17 @@ func.func @test_switch(%arg0 : index, %m0: memref<i32>) {
   memref.store %1, %m0[] {tag_name = "b"} : memref<i32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @decl(i64)
+// CHECK-LABEL: llvm.func @func(%arg0: i64) {
+// CHECK-NEXT:  llvm.call @decl(%arg0) : (i64) -> ()
+// CHECK-NEXT:  llvm.return
+
+llvm.func @decl(i64)
+
+llvm.func @func(%lb : i64) -> () {
+  llvm.call @decl(%lb) : (i64) -> ()
+  llvm.return
+} 
