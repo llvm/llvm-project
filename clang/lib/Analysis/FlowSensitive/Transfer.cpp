@@ -197,6 +197,8 @@ public:
       return;
 
     if (VD->getType()->isReferenceType()) {
+      assert(isa_and_nonnull<ReferenceValue>(Env.getValue((*DeclLoc))) &&
+             "reference-typed declarations map to `ReferenceValue`s");
       Env.setStorageLocation(*S, *DeclLoc);
     } else {
       auto &Loc = Env.createStorageLocation(*S);
@@ -474,6 +476,8 @@ public:
           return;
 
         if (VarDeclLoc->getType()->isReferenceType()) {
+          assert(isa_and_nonnull<ReferenceValue>(Env.getValue((*VarDeclLoc))) &&
+                 "reference-typed declarations map to `ReferenceValue`s");
           Env.setStorageLocation(*S, *VarDeclLoc);
         } else {
           auto &Loc = Env.createStorageLocation(*S);
@@ -494,7 +498,22 @@ public:
 
     auto &MemberLoc = BaseLoc->getChild(*Member);
     if (MemberLoc.getType()->isReferenceType()) {
-      Env.setStorageLocation(*S, MemberLoc);
+      // Based on its type, `MemberLoc` must be mapped either to nothing or to a
+      // `ReferenceValue`. For the former, we won't set a storage location for
+      // this expression, so as to maintain an invariant lvalue expressions;
+      // namely, that their location maps to a `ReferenceValue`.  In this,
+      // lvalues are unlike other expressions, where it is valid for their
+      // location to map to nothing (because they are not modeled).
+      //
+      // Note: we need this invariant for lvalues so that, when accessing a
+      // value, we can distinguish an rvalue from an lvalue. An alternative
+      // design, which takes the expression's value category into account, would
+      // avoid the need for this invariant.
+      if (auto *V = Env.getValue(MemberLoc)) {
+        assert(isa<ReferenceValue>(V) &&
+               "reference-typed declarations map to `ReferenceValue`s");
+        Env.setStorageLocation(*S, MemberLoc);
+      }
     } else {
       auto &Loc = Env.createStorageLocation(*S);
       Env.setStorageLocation(*S, Loc);
