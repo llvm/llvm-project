@@ -210,6 +210,14 @@ private:
   LogicalResult convertCallTypeAndOperands(llvm::CallBase *callInst,
                                            SmallVectorImpl<Type> &types,
                                            SmallVectorImpl<Value> &operands);
+  /// Converts the parameter attributes attached to `func` and adds them to the
+  /// `funcOp`.
+  void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,
+                                  OpBuilder &builder);
+  /// Converts the AttributeSet of one parameter in LLVM IR to a corresponding
+  /// DictionaryAttr for the LLVM dialect.
+  DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
+                                           OpBuilder &builder);
   /// Returns the builtin type equivalent to be used in attributes for the given
   /// LLVM IR dialect type.
   Type getStdTypeForAttr(Type type);
