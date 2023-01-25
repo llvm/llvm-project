@@ -14,7 +14,6 @@
 #define LLVM_CLANG_AST_INTERP_INTERP_H
 
 #include "Boolean.h"
-#include "Floating.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -138,10 +137,6 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   return true;
 }
 
-/// Checks if the result is a floating-point operation is valid
-/// in the current context.
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
-
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
 
@@ -193,32 +188,12 @@ bool Add(InterpState &S, CodePtr OpPC) {
   return AddSubMulHelper<T, T::add, std::plus>(S, OpPC, Bits, LHS, RHS);
 }
 
-inline bool Addf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
-  const Floating &RHS = S.Stk.pop<Floating>();
-  const Floating &LHS = S.Stk.pop<Floating>();
-
-  Floating Result;
-  auto Status = Floating::add(LHS, RHS, RM, &Result);
-  S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
-}
-
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Sub(InterpState &S, CodePtr OpPC) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
   const unsigned Bits = RHS.bitWidth() + 1;
   return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, Bits, LHS, RHS);
-}
-
-inline bool Subf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
-  const Floating &RHS = S.Stk.pop<Floating>();
-  const Floating &LHS = S.Stk.pop<Floating>();
-
-  Floating Result;
-  auto Status = Floating::sub(LHS, RHS, RM, &Result);
-  S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -229,15 +204,6 @@ bool Mul(InterpState &S, CodePtr OpPC) {
   return AddSubMulHelper<T, T::mul, std::multiplies>(S, OpPC, Bits, LHS, RHS);
 }
 
-inline bool Mulf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
-  const Floating &RHS = S.Stk.pop<Floating>();
-  const Floating &LHS = S.Stk.pop<Floating>();
-
-  Floating Result;
-  auto Status = Floating::mul(LHS, RHS, RM, &Result);
-  S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
-}
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS & RHS' on the stack
@@ -327,19 +293,6 @@ bool Div(InterpState &S, CodePtr OpPC) {
     return true;
   }
   return false;
-}
-
-inline bool Divf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
-  const Floating &RHS = S.Stk.pop<Floating>();
-  const Floating &LHS = S.Stk.pop<Floating>();
-
-  if (!CheckDivRem(S, OpPC, LHS, RHS))
-    return false;
-
-  Floating Result;
-  auto Status = Floating::div(LHS, RHS, RM, &Result);
-  S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1227,52 +1180,6 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
   using U = typename PrimConv<TOut>::T;
   S.Stk.push<U>(U::from(S.Stk.pop<T>()));
   return true;
-}
-
-/// 1) Pops a Floating from the stack.
-/// 2) Pushes a new floating on the stack that uses the given semantics.
-/// Not templated, so implemented in Interp.cpp.
-bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
-            llvm::RoundingMode RM);
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
-                          const llvm::fltSemantics *Sem,
-                          llvm::RoundingMode RM) {
-  const T &From = S.Stk.pop<T>();
-  APSInt FromAP = From.toAPSInt();
-  Floating Result;
-
-  auto Status = Floating::fromIntegral(FromAP, *Sem, RM, Result);
-  S.Stk.push<Floating>(Result);
-
-  return CheckFloatResult(S, OpPC, Status);
-}
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
-  const Floating &F = S.Stk.pop<Floating>();
-
-  if constexpr (std::is_same_v<T, Boolean>) {
-    S.Stk.push<T>(T(F.isNonZero()));
-    return true;
-  } else {
-    APSInt Result(std::max(8u, T::bitWidth() + 1),
-                  /*IsUnsigned=*/!T::isSigned());
-    auto Status = F.convertToInteger(Result);
-
-    // Float-to-Integral overflow check.
-    if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite()) {
-      const Expr *E = S.Current->getExpr(OpPC);
-      QualType Type = E->getType();
-
-      S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
-      return S.noteUndefinedBehavior();
-    }
-
-    S.Stk.push<T>(T(Result));
-    return CheckFloatResult(S, OpPC, Status);
-  }
 }
 
 //===----------------------------------------------------------------------===//
