@@ -1368,18 +1368,14 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
   if (!Op1->getType()->isIntOrIntVectorTy())
     return nullptr;
 
-  if ((Pred == ICmpInst::ICMP_SLT && match(Op1, m_ZeroInt())) ||
-      (Pred == ICmpInst::ICMP_SGT && match(Op1, m_AllOnes()))) {
-    // (x <s  0) ? -1 : 0 -> ashr x, 31        -> all ones if negative
-    // (x >s -1) ? -1 : 0 -> not (ashr x, 31)  -> all ones if positive
+  if (Pred == ICmpInst::ICMP_SLT && match(Op1, m_ZeroInt())) {
+    // sext (x <s 0) --> ashr x, 31 (all ones if negative)
     Value *Sh = ConstantInt::get(Op0->getType(),
                                  Op0->getType()->getScalarSizeInBits() - 1);
     Value *In = Builder.CreateAShr(Op0, Sh, Op0->getName() + ".lobit");
     if (In->getType() != Sext.getType())
       In = Builder.CreateIntCast(In, Sext.getType(), true /*SExt*/);
 
-    if (Pred == ICmpInst::ICMP_SGT)
-      In = Builder.CreateNot(In, In->getName() + ".not");
     return replaceInstUsesWith(Sext, In);
   }
 
