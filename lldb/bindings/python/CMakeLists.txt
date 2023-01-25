@@ -191,7 +191,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   endif()
 endfunction()
 
-if(${LLDB_USE_STATIC_BINDINGS})
+if(NOT ${LLDB_USE_STATIC_BINDINGS})
   set(SOURCE_STATIC_BINDING ${CMAKE_CURRENT_SOURCE_DIR}/static-binding/lldb.py)
   set(BINARY_STATIC_BINDING ${CMAKE_CURRENT_BINARY_DIR}/lldb.py)
   set(COPY_STATIC_BINDING ${LLDB_SOURCE_DIR}/scripts/copy-static-bindings.py)
